@@ -12,16 +12,30 @@ import (
 // Declaration carries no yaml tags and the file can nest (voltage_domains: [{name, nominal, rails}])
 // where the domain struct stays plain. A customer authors one of these in their overlay.
 type declarationDoc struct {
-	Name           string           `yaml:"name"`
-	Modules        []moduleDoc      `yaml:"modules"`
-	VoltageDomains []vDomainDoc     `yaml:"voltage_domains"`
-	Subsystems     []subsystemDoc   `yaml:"subsystems"`
-	Protections    []protectionDoc  `yaml:"protections"`
-	NetProperties  []netPropertyDoc `yaml:"net_properties"`
-	StrapGroups    []strapGroupDoc  `yaml:"strap_groups"`
-	RailBudgets    []railBudgetDoc  `yaml:"rail_budgets"`
-	Sequences      []sequenceDoc    `yaml:"sequences"`
-	MarginFactor   float64          `yaml:"margin_factor"`
+	Name           string            `yaml:"name"`
+	Modules        []moduleDoc       `yaml:"modules"`
+	VoltageDomains []vDomainDoc      `yaml:"voltage_domains"`
+	Subsystems     []subsystemDoc    `yaml:"subsystems"`
+	Protections    []protectionDoc   `yaml:"protections"`
+	NetProperties  []netPropertyDoc  `yaml:"net_properties"`
+	StrapGroups    []strapGroupDoc   `yaml:"strap_groups"`
+	RailBudgets    []railBudgetDoc   `yaml:"rail_budgets"`
+	Sequences      []sequenceDoc     `yaml:"sequences"`
+	IOMap          []ioAssignmentDoc `yaml:"io_map"`
+	MarginFactor   float64           `yaml:"margin_factor"`
+}
+
+type ioAssignmentDoc struct {
+	Net      string         `yaml:"net"`
+	Device   string         `yaml:"device"`
+	Pin      string         `yaml:"pin"`
+	Function string         `yaml:"function"`
+	To       *ioEndpointDoc `yaml:"to"`
+}
+
+type ioEndpointDoc struct {
+	Device string `yaml:"device"`
+	Pin    string `yaml:"pin"`
 }
 
 type sequenceDoc struct {
@@ -102,8 +116,9 @@ func Parse(b []byte) (Declaration, error) {
 		return Declaration{}, fmt.Errorf("intent: missing required field \"name\"")
 	}
 	if len(doc.Modules) == 0 && len(doc.VoltageDomains) == 0 && len(doc.Subsystems) == 0 && len(doc.Protections) == 0 &&
-		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 && len(doc.Sequences) == 0 && len(doc.StrapGroups) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, rail_budgets, sequences, or strap_groups", doc.Name)
+		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 && len(doc.Sequences) == 0 && len(doc.StrapGroups) == 0 &&
+		len(doc.IOMap) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, rail_budgets, sequences, strap_groups, or io_map", doc.Name)
 	}
 	d := Declaration{Name: doc.Name}
 	for i, m := range doc.Modules {
@@ -267,7 +282,60 @@ func Parse(b []byte) (Declaration, error) {
 		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" is declared with no rail_budgets, so nothing applies it", doc.Name)
 	}
 	d.MarginFactor = doc.MarginFactor
+	for i, a := range doc.IOMap {
+		asg, err := parseIOAssignment(doc.Name, i, a)
+		if err != nil {
+			return Declaration{}, err
+		}
+		d.IOMap = append(d.IOMap, asg)
+	}
 	return d, nil
+}
+
+// parseIOAssignment validates one declared pin-map row.
+//
+// The three required fields are required because a row missing any of them states nothing checkable:
+// without a net there is no assignment, without a device there is nothing to look the pin up on, and
+// without a pin the row is a net-presence claim that io-map-net-absent already makes for every row.
+//
+// A far end must be COMPLETE or absent. A `to` naming a device and no pin is the shape that would
+// otherwise reach the rule as a half-question, and the rule would have to invent a reading of it.
+// Rejecting it at load is the same discipline the rail-budget and strap-group checks above use.
+func parseIOAssignment(declName string, i int, a ioAssignmentDoc) (IOAssignment, error) {
+	row := fmt.Sprintf("io_map #%d", i+1)
+	if strings.TrimSpace(a.Net) == "" {
+		return IOAssignment{}, fmt.Errorf("intent %q: %s is missing its \"net\"", declName, row)
+	}
+	row = fmt.Sprintf("io_map row for net %q", a.Net)
+	if strings.TrimSpace(a.Device) == "" {
+		return IOAssignment{}, fmt.Errorf("intent %q: %s is missing its \"device\"", declName, row)
+	}
+	if strings.TrimSpace(a.Pin) == "" {
+		return IOAssignment{}, fmt.Errorf("intent %q: %s is missing its \"pin\"", declName, row)
+	}
+	asg := IOAssignment{
+		Net: strings.TrimSpace(a.Net), Device: strings.TrimSpace(a.Device),
+		Pin: strings.TrimSpace(a.Pin), Function: strings.TrimSpace(a.Function),
+	}
+	if a.To != nil {
+		if strings.TrimSpace(a.To.Device) == "" || strings.TrimSpace(a.To.Pin) == "" {
+			return IOAssignment{}, fmt.Errorf("intent %q: %s declares a \"to\" with %s; a far end needs both a device and a pin",
+				declName, row, missingHalf(a.To))
+		}
+		asg.To = &IOEndpoint{Device: strings.TrimSpace(a.To.Device), Pin: strings.TrimSpace(a.To.Pin)}
+	}
+	return asg, nil
+}
+
+func missingHalf(e *ioEndpointDoc) string {
+	switch {
+	case strings.TrimSpace(e.Device) == "" && strings.TrimSpace(e.Pin) == "":
+		return "neither a device nor a pin"
+	case strings.TrimSpace(e.Device) == "":
+		return "no device"
+	default:
+		return "no pin"
+	}
 }
 
 // parseSequence validates one declared sequence and converts it. It is split out of Parse because it

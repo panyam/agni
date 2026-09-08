@@ -50,7 +50,7 @@ rather than with the team.
 project already declares intent is an error rather than a silent double-load, so you find out
 immediately instead of reading every finding twice.
 
-## The eight forms
+## The nine forms
 
 Each form answers a question the netlist cannot, and each compiles to its own rule so a reviewer
 signing them off separately gets separate verdicts.
@@ -65,6 +65,37 @@ signing them off separately gets separate verdicts.
 | `rail_budgets` | the peak current a rail draws, with an optional `margin_factor` | the supply reaching it is rated below the peak, or below the margin |
 | `sequences` | the power-up order of groups of rails | the gating chain is absent, or runs the other way round |
 | `strap_groups` | several strap nets read together as one binary number, and the value it encodes | the group does not encode the declared value, or two devices collide |
+| `io_map` | which net lands on which pin of which device, and optionally what sits at the far end | the net is on a different pin, the declared net is absent, or the far end is wrong |
+
+`io_map` is the largest of them in practice and the one most boards already have, usually as a
+spreadsheet. On any board carrying a big MCU or SoC, someone decides which peripheral lands on which
+pin long before the schematic exists, firmware is written against that decision, and the schematic is
+drawn from it. What goes wrong is ordinary: an assignment moves late, the map is updated, and one net
+does not get redrawn. Nothing about the resulting board is electrically wrong, so every other rule
+passes, and it surfaces at bring-up as a peripheral that does not respond.
+
+```yaml
+io_map:
+  - net: I2C_SDA
+    device: U3
+    pin: '9'
+  - net: MCU_NRST
+    device: U3
+    pin: PTC11                     # the datasheet's name works as well as the designator
+    to: {device: U1, pin: '5'}     # optional far end
+```
+
+Write the pin either way. A map is authored in the vocabulary a datasheet and a firmware header use,
+and a netlist answers in package designators, so both are resolved: `PTE7`, `PTE07`, `pte7` and a
+name carrying a zero-width space pasted out of a spreadsheet all reach the same pin. A match that
+needed any of that says so in the verdict, so a note always means something was inferred.
+
+It compiles to three rules rather than one, because a reviewer acts on the three answers differently
+and because two of them are opposite defects: a net the map declares and the netlist does not have is
+usually a real disconnection, where a net the netlist has and the map does not declare is an
+incomplete map. `function` is accepted and NOT yet evaluated, since deciding whether a function is
+legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so
+outright.
 
 `rail_budgets` is the one that joins two tiers. The declaration supplies the demand, which no design
 artifact carries, and a seeded {{ explainable "absolute-maximum-rating" "datasheet parameter" }}

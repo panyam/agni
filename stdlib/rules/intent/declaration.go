@@ -69,6 +69,17 @@ type Declaration struct {
 	// per group, intent/strap-group-<slug>; the collision check is cross-group and gets one rule for
 	// all of them.
 	StrapGroups []StrapGroup
+	// IOMap is the design's declared PIN ASSIGNMENT: which net lands on which pin of which device,
+	// and optionally what sits at the far end of it. It is the most common declared-intent artifact
+	// on any board carrying a large MCU or SoC, and it is decided long before the schematic exists,
+	// since the schematic is drawn FROM it.
+	//
+	// It compiles to three fixed-name rules rather than one per entry, which is the documented
+	// exception to the one-rule-per-declared-thing principle above. A real map is hundreds of rows
+	// and nobody signs off "net 137 is on the right pin" as its own checklist item; they sign off
+	// "the netlist matches the IO map". The three names are the three questions a reviewer acts on
+	// differently: the net is on a different pin, the declared net is absent, the far end is wrong.
+	IOMap []IOAssignment
 	// MarginFactor is the house headroom policy: the multiple of a rail's peak budget its supply must
 	// be rated for (1.2 means 20% headroom). It compiles intent/rail-current-margin, and it has NO
 	// DEFAULT on purpose: a default puts one company's policy in a rule literal (what WS3-069 moved
@@ -306,4 +317,42 @@ type Protection struct {
 	Rail string
 	// Kind is the protection type: "ovp" or "discharge".
 	Kind string
+}
+
+// IOAssignment is one row of a declared pin map: this net lands on this pin of this device.
+//
+// Pin may be spelled either way. A map is authored in the vocabulary a datasheet and a firmware
+// header use (the functional NAME, "PTC11"), while a netlist answers in the package DESIGNATOR
+// ("41"), and an author should not have to know which one the checker wants. Both are resolved,
+// through core/ident, so the two spellings of one pin agree.
+type IOAssignment struct {
+	// Net is the net the map says lands here, named as the design names it.
+	Net string
+	// Device is the ref-des the pin belongs to.
+	Device string
+	// Pin is the pin, spelled as a package designator or as the part type's functional name.
+	Pin string
+	// Function is the peripheral function selected on this pin ("ADC0_S17"), and NOTHING READS IT
+	// YET.
+	//
+	// Deciding whether a selected function is LEGAL on a given pin means reading the part's
+	// alternate-function table, which is a different modality and is agni issue 188's job. The field
+	// is carried now so a map is authored once rather than twice.
+	//
+	// Carrying a field nothing checks is a real hazard and this package says so elsewhere: the
+	// rail-budget card explains why there is deliberately no `typical`, because an author who fills
+	// a field in believes it is being verified. The resolution here is that a declared function is
+	// LOUD rather than silent. Every verdict on a row carrying one states that the function was not
+	// evaluated, so its absence can never read as a pass.
+	Function string
+	// To is the far end this net is declared to reach, or nil when the row does not say. A real map
+	// fills these columns sparsely (roughly a third of rows in the one we measured), which is why
+	// the far-end rule reports its denominator rather than only its findings.
+	To *IOEndpoint
+}
+
+// IOEndpoint names one end of a declared connection.
+type IOEndpoint struct {
+	Device string
+	Pin    string
 }

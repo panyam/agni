@@ -85,6 +85,9 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | Rule | Source | Severity | What it checks |
 |---|---|---|---|
 | [bus-not-modeled](bus-not-modeled/) | built-in | info | A bus's member signals are not resolved into distinct nets. |
+| [intent/io-map-far-end](intent-io-map-far-end/) | intent | warning | A net does not reach the far-end device pin the design intent's IO map declares. |
+| [intent/io-map-net-absent](intent-io-map-net-absent/) | intent | warning | The design intent's IO map declares a net the netlist does not have. |
+| [intent/io-map-pin-mismatch](intent-io-map-pin-mismatch/) | intent | warning | A net is not on the pin the design intent's IO map assigns it to. |
 | [intent/load-switch-trip-below-budget](intent-load-switch-trip-below-budget/) | intent | warning | A load switch's current limit is set below the peak current the design intent declares for the rail it feeds. |
 | [intent/module-count](intent-module-count/) | intent | warning | The number of components for a declared module does not match the design intent. |
 | [intent/module-missing](intent-module-missing/) | intent | warning | A functional block the design intent declares required is absent from the design. |

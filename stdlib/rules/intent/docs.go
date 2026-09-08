@@ -65,6 +65,9 @@ var docKeys = []string{
 	docKeySequence,                      // sequence (family doc for intent/sequence-<slug>)
 	docKeyStrapGroup,                    // strap-group (family doc for intent/strap-group-<slug>)
 	RuleStrapAddressCollision,           // strap-address-collision (cross-group, one for all)
+	RuleIOMapPin,                        // io-map-pin-mismatch
+	RuleIOMapNetAbsent,                  // io-map-net-absent
+	RuleIOMapFarEnd,                     // io-map-far-end
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
@@ -105,6 +108,9 @@ var docSummaries = map[string]string{
 	docKeySequence:                      "A declared power-up order is not enforced by the design's power-good/enable chain, or the chain runs the other way round.",
 	docKeyStrapGroup:                    "a group of strap nets does not encode the value the design intent declares",
 	RuleStrapAddressCollision:           "two devices on one bus strap to the same address",
+	RuleIOMapPin:                        "A net is not on the pin the design intent's IO map assigns it to.",
+	RuleIOMapNetAbsent:                  "The design intent's IO map declares a net the netlist does not have.",
+	RuleIOMapFarEnd:                     "A net does not reach the far-end device pin the design intent's IO map declares.",
 }
 
 // docRemedies is what to DO about each intent rule KIND, in the imperative (check.Rule.Remedy).
@@ -129,6 +135,9 @@ var docRemedies = map[string]string{
 	docKeySequence:                      "Wire the power-good or enable chain so each rail's release depends on the one before it, in the declared order. Check the direction as well as the presence, since a chain wired backwards satisfies neither.",
 	docKeyStrapGroup:                    "Re-bias the straps in the group until they encode the declared value, working the value out from the datasheet's strap table rather than from the resistors one at a time.",
 	RuleStrapAddressCollision:           "Re-strap one of the two devices to a free address, taking the address map from each part's datasheet rather than from the schematic.",
+	RuleIOMapPin:                        "Move the net to the declared pin, or amend the IO map. A pin assignment that moved late and a map nobody updated look identical from here, and the firmware was written against the map.",
+	RuleIOMapNetAbsent:                  "Add the missing net, or amend the IO map. Check for a misspelling first: a net present under a slightly different name is a different fix from one that was never drawn.",
+	RuleIOMapFarEnd:                     "Route the net to the declared device pin, or amend the far end the map declares. The reported route shows what the net actually goes through, so start by reading where it diverges.",
 }
 
 // intentRemedy is the Remedy a rule of this kind carries, for the rule builders and DocRules alike.
