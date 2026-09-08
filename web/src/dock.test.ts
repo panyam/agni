@@ -54,7 +54,7 @@ describe("layout persistence", () => {
 });
 
 describe("panel registry", () => {
-  it("covers exactly the eleven viewer panels with unique ids", () => {
+  it("covers exactly the twelve viewer panels with unique ids", () => {
     const ids = VIEWER_PANELS.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.sort()).toEqual([
@@ -69,6 +69,7 @@ describe("panel registry", () => {
       "query",
       "review",
       "rules",
+      "trace",
     ]);
   });
 

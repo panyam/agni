@@ -15,6 +15,13 @@ a real browser or a composition-root test can see. The architecture underneath i
 (`web/src/<panel>.tsx`), its hole in `web/templates/ViewerPage.html` (`data-component="..."`), its
 field on `ViewSink` in `web/src/viewer.ts`, and its construction plus wiring in `web/src/main.ts`.
 
+**A panel that DOCKS costs two more**, and they are not optional: an entry in `VIEWER_PANELS` and a
+line in `defaultLayout`, both in `web/src/dock.ts`. `dock.test.ts` asserts the registry by exact list,
+so the first is caught; the second is not, and it has an ordering rule. dockview resolves
+`referencePanel` against panels that ALREADY EXIST, so tabbing a new panel with one the layout places
+later throws at boot rather than deferring, which is how the trace panel first failed
+`composition.test.ts`. Add the panel after the one it tabs with.
+
 `main.ts` is the composition root and nothing else constructs it, so a missed fourth edit is invisible
 to every other test: the presenter's view ports are OPTIONAL by design (an embedding host may leave a
 panel out, see `build/extending.md`), which means an unwired port is a silent no-op rather than a type

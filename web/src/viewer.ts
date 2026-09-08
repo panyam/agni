@@ -23,6 +23,7 @@ import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
 import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
+import { type TraceView, errorTrace, loadingTrace, parseEndpoint, traceFromResponse, traceSubjects } from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
 import { type ConventionBarView } from "./conventions.js";
@@ -131,6 +132,9 @@ export interface ViewSink {
   // coverage receives the per-interface coverage matrix (WS9-041) on each design load. Optional
   // like query; the presenter no-ops refreshCoverage when it is absent.
   coverage?: CoverageView;
+  // trace receives each pin-to-pin answer (agni issue 600). Optional like coverage; runTrace no-ops
+  // when the host left the panel out.
+  trace?: TraceView;
   // The datasheet-params panel (WS9-035), optional like coverage; refreshParts no-ops when absent.
   parts?: PartsView;
   // review receives the project's checklist verdict for the open design (WS9-052). Optional like
@@ -1064,6 +1068,52 @@ export class ViewerPresenter {
     if (!this.views.review) return;
     this.reviewState.checklist = ref;
     this.pushReview();
+  }
+
+  // runTrace walks from one named pin to another over the open design and lights the answer.
+  //
+  // The highlight goes through the SAME two-layer stack a query cell and a verdict use: the findings
+  // layer becomes context underneath and the route is the figure on top. Nothing about a route needed
+  // a new painting path, which is the whole reason this is a small method.
+  //
+  // It lights the answer whatever the answer was, and traceSubjects decides what that means. A
+  // no-route lights the two nets that fail to join, because that is the picture a reader goes looking
+  // for the moment they read the words.
+  //
+  // A malformed pin is caught HERE rather than at the server: it is a typo in the box, the panel is
+  // showing the box, and a round trip to be told the same thing would only make it slower.
+  async runTrace(fromText: string, toText: string): Promise<void> {
+    const view = this.views.trace;
+    if (!view) return;
+    const from = parseEndpoint(fromText);
+    const to = parseEndpoint(toText);
+    if (!from || !to) {
+      view.setState(errorTrace("Name each end as <ref-des>.<pin>, for example U1.3"));
+      return;
+    }
+    if (!this.mount || !this.path) {
+      view.setState(errorTrace("Open a design first"));
+      return;
+    }
+    view.setState(loadingTrace());
+    let state;
+    try {
+      const resp = await this.client.traceDesign({ uri: artifactUri(this.mount, this.path), from, to });
+      if (!resp.trace) {
+        view.setState(errorTrace("The server answered with no trace"));
+        return;
+      }
+      state = traceFromResponse(resp.trace);
+    } catch (e) {
+      view.setState(errorTrace(e instanceof Error ? e.message : String(e)));
+      return;
+    }
+    view.setState(state);
+    const subjects = traceSubjects(state);
+    if (subjects.length === 0) return;
+    if (this.mode === "native") await this.setMode("webgl");
+    const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
+    await this.setHighlights(focusStack(this.findings, subjects, focus));
   }
 
   // refreshCoverage fetches the interface-coverage matrix for the open design (WS9-041) and pushes

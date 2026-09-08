@@ -45,6 +45,10 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   { id: "query", title: "Query", defaultOpen: true },
   // The interface-coverage panel (WS9-041): per-interface signal matrix, tabbed with the checks.
   { id: "coverage", title: "Coverage", defaultOpen: true },
+  // The trace panel (agni issue 600): follow one pin to another and light the route on the canvas.
+  // Tabbed with Query, because both are questions a reader asks ABOUT the drawing rather than
+  // results the run produced, and both answer by highlighting what they found.
+  { id: "trace", title: "Trace", defaultOpen: true },
   // The datasheet-params panel (WS9-035): per-component parameter tree, tabbed with Details since
   // both answer "what is this thing I selected". Populated only when serve was started with --params.
   { id: "parts", title: "Parts", defaultOpen: true },
@@ -216,6 +220,10 @@ export function defaultLayout(api: DockviewApi): void {
 
   // The centre column's bottom fifth, after both rails exist so it splits the centre alone.
   api.addPanel({ id: "query", component: "query", title: "Query", position: { direction: "below", referencePanel: "canvas" } });
+  // Trace tabs with Query, and has to be added AFTER it: dockview resolves referencePanel against
+  // panels that already exist, so naming one the layout has not placed yet throws rather than
+  // deferring. Both are questions a reader asks ABOUT the drawing, which is why they share a strip.
+  api.addPanel({ id: "trace", component: "trace", title: "Trace", position: { direction: "within", referencePanel: "query" } });
 
   // Diff and Changes ride as tabs beside the canvas rather than opening on demand. Both render an
   // empty state naming the Compare button, so a reader who clicks one learns the feature exists

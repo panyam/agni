@@ -434,6 +434,33 @@
     .query-drawer-close { border: 0; background: transparent; cursor: pointer; color: #889; font-size: 14px; padding: 0 2px; }
     .query-drawer-close:hover { color: #334; }
     .query-drawer-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; }
+    /* agni issue 600 trace panel: two pin boxes, then the route as an alternating net/cross list */
+    .trace { padding: 6px; font-size: 12px; }
+    .trace-ask { display: flex; gap: 6px; padding: 2px 2px 8px; }
+    .trace-pin { flex: 1 1 0; min-width: 0; font: inherit; padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; }
+    .trace-run { font: inherit; padding: 3px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
+    .trace-run:disabled { color: #999; cursor: default; }
+    .trace-empty { color: #999; padding: 8px 4px; }
+    .trace-error { color: #dc2626; padding: 6px 4px; }
+    .trace-headline { font-weight: 600; padding: 4px 4px 6px; }
+    .trace-reason { padding: 0 4px 4px; }
+    /* The note explains what the walk does and does not cross, so a negative answer is checkable
+       rather than something to take on trust. Muted, because it is the same sentence every time. */
+    .trace-note { color: #666; font-size: 11px; padding: 0 4px 6px; }
+    .trace-route { list-style: none; margin: 0; padding: 0 4px; }
+    .trace-net { padding: 3px 0; }
+    .trace-net-name { font-weight: 600; }
+    .trace-net.bus-like .trace-net-name { color: #b45309; }
+    .trace-rail-note { color: #b45309; font-size: 11px; margin-left: 6px; }
+    .trace-cross { padding: 3px 0 3px 12px; color: #444; border-left: 2px solid #e11d48; margin-left: 4px; }
+    .trace-cross-pins { color: #666; }
+    .trace-stubs { list-style: none; margin: 2px 0 0; padding: 0 0 0 14px; color: #666; font-size: 11px; }
+    /* A probe point is the most actionable thing on a route net, so it is the one stub that is not
+       grey. */
+    .trace-stub.probe { color: #16a34a; font-weight: 600; }
+    .trace-stub.elided { font-style: italic; }
+    .trace-stub-class { color: #999; }
+    .trace-summary { color: #666; font-size: 11px; padding: 8px 4px 2px; border-top: 1px solid #eee; margin-top: 6px; }
     /* WS9-041 interface-coverage panel: one block per detected interface, a chip per signal */
     .coverage { padding: 4px; }
     .coverage-empty { color: #999; font-size: 12px; padding: 8px 4px; }
