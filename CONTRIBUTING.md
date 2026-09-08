@@ -194,6 +194,12 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   commit, before any red-check pass; then break and un-break with the same replace run applied
   backwards. The symptom is confusing rather than obvious, since a test that just passed starts
   failing and the cause looks like the change rather than the undo.
+- **A capture restamp belongs in its OWN commit, after the fixture that moved it.** A capture's stamp
+  hashes every TRACKED file in its fixture directory, so adding one file there restamps every capture
+  rooted at it: one change put 25 `.output` files in the diff, each a single `#agni-run` line, none of
+  them a change in output. Committing the fixture, regenerating, then committing the restamps
+  separately keeps a reviewer from reading two dozen one-line stamp diffs interleaved with the work.
+  The commit-first half is not optional either, since the stamp is computed from what git tracks.
 - **A two-tree comparison needs each side in its OWN subshell.** `( cd $before && cmd ); ( cd $after && cmd )`,
   never `cd $before && cmd_a; cmd_b`, because the `cd` persists and BOTH commands run in the worktree.
   That reports the two sides identical, which is the same false-identical trap as the zsh loop above

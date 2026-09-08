@@ -39,6 +39,18 @@ has validated a different program.
 
 {{ includeFile "figures/positive-control.svg" }}
 
+**1a. A CHECK RUN BEFORE THE EDIT IS NOT EVIDENCE ABOUT THE EDIT.** The instrument can be right, the
+invocation can be right, and the run can still be stale, because it happened before the code it is
+being cited about existed. A `tsc --noEmit` passed, two more files were written, the gate then failed
+on one of them, and the pass was reported as proof that the gate and the local check "resolve
+differently". They do not: all three spellings of that command catch the error, and re-running it
+would have said so in two seconds. Nothing about the output looks stale, which is what makes this
+worth a rule rather than a shrug.
+
+The habit is cheap: re-run the check as the LAST thing before you believe it, and when a local pass
+and a gate failure disagree, suspect the ordering before you theorise about the tools. The theory is
+the expensive answer and it is almost never the right one.
+
 **2. A detector that FIRES is a claim about the instrument too.** A sweep for "does this document print a
 document number" reported 86% coverage on a regex that accepted `TPS22918` and `TCAN1145`, both PART
 numbers, while missing `SLVSAG5`, a real one. Wrong in both directions, and the headline would have

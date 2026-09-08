@@ -171,11 +171,25 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `make tutorial-runs` is no longer in that company: `tutorial-runs-check` regenerates every capture
   and fails on any difference, and it is in `testall`. A capture's stamp hashes the spec and the
   fixture but NOT the engine, so regenerating is the only way to see engine drift.
-- CLI: `agni stats|check|diff|render|query|review|serve|open <file>`, plus `agni params <mpn>`.
+- CLI: `agni stats|check|diff|render|query|trace|review|serve|open <file>`, plus `agni params <mpn>`.
   `open` serves ONE design and
   prints its URL, minting the mount itself; `serve` takes `--mount` per folder and `--web-dir`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
+- **A command's `--format json` is protojson of that command's WIRE MESSAGE** (C31), so a script
+  reading the CLI and a client reading the rpc parse one shape. `agni intake` is the one declared
+  exception and its reasoning is on `intake.Skeleton`, because that type's confidentiality guarantee is
+  structural and a proto twin would have to carry it into a file people edit for other reasons.
+  `TestEveryJSONFormatEmitsAProto` enforces it and reads SOURCE in `cmd/agni`, so it cannot see an
+  encoder reached through a helper in another package; that is why `report.TableJSON` was deleted
+  rather than pattern-matched.
+- **`agni trace <design> --from U7.3 --to U12.4` follows a signal through the series parts between
+  them** and prints the route, the nets, and the probe points on each. `--render <file.svg>` draws it,
+  on the design's own schematic where it has one and on an auto-layout where it does not, saying which.
+  `--url-base` mints a link that re-asks the question in the viewer, and unlike a verdict link it
+  carries the QUESTION, so it needs no content hash. Three outcomes stay apart: a route, no route
+  within the radius, and an endpoint naming nothing the design has, which exits non-zero because a pin
+  spelled wrong and two pins genuinely unconnected are opposite problems.
 - **Two HTML reports, one stylesheet, different axes.** `check --format html` is the verdict report,
   rule-major, and implies `--verdicts`. `review --format html` is the checklist, question-major, in
   the manifest's order with every finding per item. Both take `--url-base` and share
