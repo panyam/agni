@@ -13,13 +13,21 @@ branch and the section silently renders the generic fallback nav.
 drifts when it landed. If you are adding a SECTION, let the test tell you what you forgot rather than
 working from this list.
 
-**For a PAGE it covers less than this list implies, so check your four edits by hand.** It catches a
-missing `templates/nav/<Section>Nav.html` entry. It does NOT catch a missing `HeaderNavLinks.json`
-entry or a missing line in the section's `index.md`: `TestHeaderNavLinksResolve` checks that every
-entry points at content that exists, which is the json-to-content direction, and nothing checks
-content-to-json. A page you forget to register in those two renders fine at its URL and is reachable
-from nothing. The reverse check is not written because `learn/`'s twelve chapters are deliberately
-absent from the header dropdown, so it needs a per-section exemption rather than a blanket rule.
+**For a PAGE all four edits are now checked, with one gap named below.**
+`TestEveryPageIsReachable` catches a missing `templates/nav/<Section>Nav.html` entry,
+`TestSectionIndexLinksEveryPage` catches a missing line in the section's `index.md`, and
+`TestHeaderDropdownListsEveryPage` catches a missing `HeaderNavLinks.json` entry (agni issue 574).
+That last one is the content-to-json direction; `TestHeaderNavLinksResolve` is json-to-content, and
+having only that half is what let a page ship reachable from the sidebar and absent from the header.
+
+**The header check exempts a section that has no top-level dropdown of its own**, which today means
+`learn/` and `build/`. It is derived from the file rather than a list in the test: a section is
+required to be complete only when its own top-level entry carries `children`. `learn/` lists two of
+its fifteen pages on purpose, since twelve chapters would swamp the menu. Give it a top-level
+dropdown and every chapter becomes required with no edit to the test. The gap that buys is a section
+itemised only as a group heading inside another dropdown, `build/` being the live case: its six pages
+are all listed today and nothing would notice a seventh going missing. The index check has no
+exemption, so such a page is still caught there.
 
 **A blank line inside raw HTML SPLITS it, and the render breaks silently.** Content pages may embed
 raw HTML (inline SVG figures, the home page's cards) because the renderer passes it through. But
