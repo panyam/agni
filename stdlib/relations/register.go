@@ -57,6 +57,7 @@ var builtinSchema = map[string][]facts.Field{
 	RelPinRole:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.role(ref, pin, role)
 	RelPinType:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.type(ref, pin, etype)
 	RelPinNet:        {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.net(ref, pin, net)
+	RelPinName:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.name(ref, pin, name)
 	RelNetPinCount:   {facts.FieldSubject, facts.FieldNum},                      // net.pin_count(net, count)
 	RelHasNCChannel:  {facts.FieldSubject},                                      // has_nc_channel(present)
 	RelTypesPowerOut: {facts.FieldSubject},                                      // types_power_out(present)
@@ -112,6 +113,7 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "pin", Args: []string{"ref_des", "pin"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a part-type pin of a placed component", Kind: facts.KindNetlist},
 	{Name: "pin.role", Args: []string{"ref_des", "pin", "role"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a pin's derived role (power/ground/anode/cathode)", Kind: facts.KindNetlist},
 	{Name: "pin.type", Args: []string{"ref_des", "pin", "etype"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a pin's electrical type (power_in, input, output, ...)", Kind: facts.KindNetlist},
+	{Name: "pin.name", Args: []string{"ref_des", "pin", "name"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "the part type's functional name for a pin (\"SDA\", \"PTC11\"), the spelling a datasheet and a firmware header use, against the package designator every other pin relation is keyed on; absent when the part type declares none", Kind: facts.KindNetlist},
 	{Name: "pin.net", Args: []string{"ref_des", "pin", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "net": {Entity: check.KindNet}}, Summary: "the net a pin is on (absent if unconnected)", Kind: facts.KindNetlist},
 	{Name: "net.pin_count", Args: []string{"net", "count"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the number of connections on a net", Kind: facts.KindNetlist},
 	{Name: "has_nc_channel", Args: []string{"present"}, Summary: "one row when the design can express intentional no-connect", Kind: facts.KindNetlist},

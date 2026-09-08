@@ -99,6 +99,9 @@ part.audience	arg0=mpn	kind=""	kindVar=""	ref=-
 part.audience	arg1=who	kind=""	kindVar=""	ref=-
 pin	arg0=ref_des	kind="component"	kindVar=""	ref=-
 pin	arg1=pin	kind="pin"	kindVar=""	ref=?a0
+pin.name	arg0=ref_des	kind="component"	kindVar=""	ref=-
+pin.name	arg1=pin	kind="pin"	kindVar=""	ref=?a0
+pin.name	arg2=name	kind=""	kindVar=""	ref=-
 pin.net	arg0=ref_des	kind="component"	kindVar=""	ref=-
 pin.net	arg1=pin	kind="pin"	kindVar=""	ref=?a0
 pin.net	arg2=net	kind="net"	kindVar=""	ref=-

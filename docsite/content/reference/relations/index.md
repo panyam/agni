@@ -37,6 +37,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`netclass.via_diameter(class, mm)`](netclass.via_diameter/) | the via diameter a net class declares (millimetres) |
 | [`netclass.via_drill(class, mm)`](netclass.via_drill/) | the via drill a net class declares (millimetres) |
 | [`pin(ref_des, pin)`](pin/) | a part-type pin of a placed component |
+| [`pin.name(ref_des, pin, name)`](pin.name/) | the part type's functional name for a pin ("SDA", "PTC11"), the spelling a datasheet and a firmware header use, against the package designator every other pin relation is keyed on; absent when the part type declares none |
 | [`pin.net(ref_des, pin, net)`](pin.net/) | the net a pin is on (absent if unconnected) |
 | [`pin.role(ref_des, pin, role)`](pin.role/) | a pin's derived role (power/ground/anode/cathode) |
 | [`pin.type(ref_des, pin, etype)`](pin.type/) | a pin's electrical type (power_in, input, output, ...) |
