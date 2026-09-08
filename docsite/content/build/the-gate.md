@@ -144,6 +144,32 @@ It snapshots and restores, so it carries no commit-first trap and leaves the tre
 whether it passes or fails. That matters more here than for the catalog, because captures move on any
 fixture or output change and the natural loop is to regenerate and run the gate before committing.
 
+**The GENERATOR has the ordering rule the checker does not.** A stamp hashes `git ls-files` for the
+fixture directory, so it is a hash of COMMITTED content and of the tracked file LIST. `make
+tutorial-runs` run before you commit a new fixture file computes a stamp that does not know about it,
+and the gate then goes red after the commit lands. Commit the fixtures first, regenerate second.
+
+That has a consequence worth knowing before it surprises you: **a file added to a fixture directory
+restamps every capture reading that directory, whatever the file is for.** The directories are shared
+test-data trees, not per-capture folders, so an addition made for an unrelated reason moves captures
+that have nothing to do with it. Adding bus fixtures to `readers/kicad/testdata/` restamped five
+captures across `guide/` and `learn/`.
+
+| fixture directory | captures riding on it |
+|---|---:|
+| `examples/tutorial-project` | 58 |
+| `cmd/agni/testdata/conformance` | 23 |
+| `demo` | 8 |
+| `readers/kicad/testdata` | 5 |
+| `cmd/agni/testdata/intent` | 4 |
+| `examples/common/designs` | 2 |
+
+`readers/kicad/oracle_corpus.baseline` used to sit in `readers/kicad/testdata/`, so regenerating it
+churned those five captures for no reason anyone could act on. It was moved out to break that. The
+coupling is gone in both directions now, which is the point and also the catch: a reader fix that
+shrinks the baseline no longer moves the captures, and a change touching the fixtures still needs its
+own `make tutorial-runs` after the commit.
+
 ## The three traps
 
 **Never judge it through a pipe.** `make testall | tail` reports *tail's* exit code, so a red gate
