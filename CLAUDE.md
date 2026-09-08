@@ -195,6 +195,17 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   revisions: staleness is decided on the content hash and NEVER on the printed one, so the two strings
   are for the reader (`DECISIONS.md`, "A document revision is recorded for the reader, and never
   compared").
+- **`emit --format edif` writes for a reader that is NOT ours, and that is a stricter target than the
+  round trip.** Our reader resolves references after parsing the whole file, accepts any atom as an
+  identifier, and reads a port reference as a pin designator when nothing maps it, so a writer leaning
+  on all three round-trips perfectly and produces a file nobody else can open (agni issues 563, 580).
+  Four rules follow: libraries before the design node, a `portRef` naming the cell's PORT with a
+  `portInstance` table carrying the pin, identifiers holding no character a reader rejects, and
+  everything the file references also declared, including cells and a top cell a board read gives no
+  source for. Semantics are in `guide/cli-reference.md`; the properties are asserted over the emitted
+  TEXT in `readers/formats/e2e_edif_conformance_test.go`, because a re-read goes back through the same
+  forgiving reader and agrees with the writer whatever either does. `build/evidence.md` carries the
+  out-of-tree oracle that says which properties are the right ones.
 - **`query` emits five formats and two of them are DOCUMENTS.** `--format text|csv|json|markdown|html`
   plus `--title`. markdown and html carry the title, the design and THE QUERY above the answer, so a
   saved view states the question it answers; csv deliberately carries no preamble, because its first

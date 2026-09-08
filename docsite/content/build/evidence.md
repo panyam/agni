@@ -181,6 +181,7 @@ where nothing can half-apply, and check that the run produced output at all befo
 | **`innerText` does not mean visible** | An assertion written `expect(await locator.innerText()).toBe("...")` passed with `display: none` on the element, because the spec falls back to `textContent` for a node that is not rendered. The comment above it claimed it tested visibility. | Assert a non-zero `boundingBox()`, or read the computed style. |
 | **The assertion was already true before the action** | A composition test clicks a finding and asserts `expect(called).toContain("HighlightSheet")`. It passes with the handler unwired, because deep-link restore highlights during boot, so it asserts that the page booted. | Count across the action (`before` and `after` filtered lengths) or clear the log first. Every "did X happen" assertion over a running system has this shape. |
 | **The oracle is the code under test** | `if skipRefDes(x) { t.Error(...) }` went green under a deliberately broken `skipRefDes`, while its siblings written against literals went red. The test and the code agree by construction. | Assert against literals, or against a set the production path produced. |
+| **The round trip goes through the forgiving half** | `TestWriteRoundTripsIR` read an EDIF file, wrote it, read it back and compared, and stayed green through four defects that made the output unreadable to anyone else. Our reader resolves references after parsing the whole file, takes any token as an identifier, and guesses a port reference is a pin designator when no mapping says otherwise. The writer leaned on all three, and the test could not see it because the same reader closed the loop. | Assert the emitted TEXT, or bring in an implementation that did not grow up with yours. Both, if the format is one other tools read. |
 | **The sweep is empty** | A catalog-wide test iterating "every rule that sets this field" passes trivially when no rule sets it. | Count the rules it asserted over and fail at zero. A positive control belongs IN the test, not beside it. |
 | **The fixture encodes the rule's own assumption** | Two `i2c-pull-up` fixtures gave their "pull-up" resistor exactly one net, no second end and no rail, so a rule correctly requiring a rail turned them red. | Complete the fixture. Loosening the check until it passes again looks identical from inside the failing run. |
 | **The counter-example survives for the wrong reason** | A considered-set test asserted that a NO_CONNECT pin stayed OUT of a rule's domain, and still could not tell a supply-scoped domain from one sweeping in every pin on the part, because the NC pin sat on no net and dropped out of both. | A fixture case differing from the failing one in EXACTLY the property under test, here a signal pin alone on its own net. |
@@ -228,6 +229,51 @@ one, since Go says `ok ... [no tests to run]` when a pattern matches nothing at 
 is what lies, because the passes it reports are real and belong to other tests. Run a new test by its
 exact name once and read the `--- PASS` line carrying that name, before trusting any filtered run that
 claims to include it.
+
+### An out-of-tree oracle, for a format someone else reads
+
+A round trip proves the two halves of ONE implementation agree. That is worth having and it is not
+portability, and the gap between the two claims is where agni issue 580 lived: four defects, none
+visible to the round trip, all of them fatal to a reader that had not been written alongside our
+writer.
+
+Two oracles have paid for themselves, and both are free.
+
+**kicad-cli** answers questions about what a KiCad file MEANS. Export the netlist, read the `(net ...)`
+blocks, compare which pins share a net. The technique that matters is asking rather than reasoning:
+build a fixture that isolates exactly the question, and let the answer decide the code. Twice now the
+answer has been the opposite of the obvious one. A vector bus crossing a sheet boundary pairs its
+members by bit POSITION, so a child's bit 0 joins the parent's `A0` whatever the parent's range is
+spelled; a group bus pairs by member NAME, so two buses of equal width with different member names
+join nothing at all. Guessing either would have shorted unrelated signals while moving the net count
+the flattering way. `readers/kicad/testdata/*.oracle` are those answers, committed beside their
+fixtures with the regenerate command in each header, so the expected result is not one we chose.
+
+**GNU Electric** answers whether a file we WROTE is one another tool can read. Its EDIF reader is an
+independent implementation with source bundled in the jar. Its batch mode asserts before reaching the
+importer, so drive it through BeanShell, which runs inside the initialized database:
+
+    curl -O https://ftp.gnu.org/gnu/electric/electric-9.08.1.jar
+    curl -o bsh.jar https://repo1.maven.org/maven2/org/apache-extras/beanshell/bsh/2.0b6/bsh-2.0b6.jar
+    java -Dagni.edif=<file>.edn -classpath electric-9.08.1.jar:bsh.jar \
+         com.sun.electric.Electric -batch -s check.bsh
+
+where `check.bsh` reaches the importer by reflection on `EDIF$EDIFPreferences.doInput` and prints the
+cell, node and arc counts. Passing `-s` is what removes the script from the argument list and so
+avoids the batch-mode assertion. It prints a bogus `0 errors` summary after printing every `Error,`
+line, so count the lines rather than trusting the total.
+
+Neither belongs in the gate: one needs a 19MB corpus, the other a 23MB Java download. What belongs in
+the gate is a test asserting the PROPERTY the out-of-tree oracle established, over the emitted text,
+which is what `readers/formats/e2e_edif_conformance_test.go` is. The oracle says which properties are
+the right ones; the committed test keeps them true.
+
+Read a foreign tool's diagnostics as evidence about the FILE and not about the standard. Electric
+takes a cell rename's display string as the cell's name where ours takes the identifier, and reads
+exactly one token as a design's name where the grammar allows a rename. The first is a real
+disagreement worth conceding, since a name it rejects is a file nobody can load. The second costs
+nothing, verified by loading the same file both ways and getting identical counts, and conceding it
+would have meant discarding the design's name.
 
 ## Text you cannot match literally
 

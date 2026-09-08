@@ -234,7 +234,13 @@ the probe, does not serve the tests' `demo` mount, and every link is withheld:
 
 `TestVerdictRowsCarryAProofURL`, `TestEveryFormatComposesTheSameLink` and
 `TestAPlainPathThroughADeclaredMountIsLinkable` then fail on a tree that is fine. Before believing a
-failure in that trio, check the port. The general rule is worth more than the instance: this suite
+failure in that trio, check the port.
+
+**The server does not have to be one you started.** A gate run that dies partway can leave its own
+`agni serve` behind, and the next run then fails this trio for a reason the previous run created. Its
+command line names a binary under `~/Library/Caches/go-build` and the tests' own `--mount demo=demo`,
+which is how you tell a leaked one from a development server worth keeping. `lsof -nP -iTCP:8080
+-sTCP:LISTEN` is the whole diagnosis. The general rule is worth more than the instance: this suite
 reaches out of the process, so **reproduce a suspected regression against unmodified `main` before
 reporting it**, which is what turned this one from a bug report into a `pkill`.
 
