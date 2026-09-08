@@ -10,8 +10,11 @@ Enforceable architectural rules for this project. Background and rationale in
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
 that to being true, because a rule with nothing to run is not enforceable and that is exactly how C6
 went unchecked. A Verify is one of two things. Sixteen are TESTS the gate runs, so a violation turns
-CI red. Thirteen are REVIEW questions a machine cannot answer, and each says what a reviewer should
-ask instead. None is a command typed into this document for someone to remember to run, and a new
+CI red. Fifteen are REVIEW questions, and each says what a reviewer should ask instead. That second
+number is the one to watch: C32 joined it knowing its test was missing rather than by deciding a
+machine could not answer it, so a review question is now either "no test is possible" or "no test
+yet", and the two read alike from here. C15 carries no Verify at all because it was merged into C17
+and kept as a tombstone. None is a command typed into this document for someone to remember to run, and a new
 rule must not add one.
 
 A test goes in one of three places, and what it READS decides which. The package graph and the module
