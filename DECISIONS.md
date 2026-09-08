@@ -1524,6 +1524,25 @@ counting datalog is otherwise unable to do (agni issue 374 names it as a motivat
 which the tuple form cannot express without the caller re-sorting by `?i`. Rendering a saved view is
 the likely candidate, and the answer there may be a report-side join rather than a column type.
 
+**REOPENED AND REVERSED (agni issue 518, PR 647).** The candidate above is the one that turned up.
+`query --format markdown|html|csv` renders a saved view, a rule's finding carries its evidence as one
+sentence, and neither can express a route as tuples without re-sorting and re-joining what the walk
+already had in order. `route(from, net, path)` ships, and `path` is a rendered string.
+
+What was accepted with it, since the objections above were right and none of them went away:
+
+- **Nothing joins, sorts or counts on `path`.** Those questions still want the tuple form, which is
+  still unbuilt. `route` answers "show me", never "how many".
+- **The rendering IS a format now.** That was the sharpest objection and it bit within the week: the
+  IO-map rules grew a second implementation of the same string (PR 653), agreeing with the first only
+  because one person wrote both. `model.RenderRoute` is now the single owner and
+  `TestRenderRouteIsTheOnlyFormat` holds the two callers to one answer. Treat the format as a
+  contract, because it is one.
+- **One route per pair**, the BFS tree path, so `route` cannot answer about parallel paths at all.
+
+The tuple form is not superseded. A `hop(?from, ?through, ?to, ?i)` relation remains the right answer
+for counting and joining, and issue 374 still names it; this decided the rendering question only.
+
 ## A KiCad part's library prefix is stripped by the WRITER, not by the reader
 
 A KiCad part is named `gateway:CONN4` and sits in a library already called `gateway`, so the
