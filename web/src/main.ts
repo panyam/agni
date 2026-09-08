@@ -17,6 +17,7 @@ import { diffChangesPanelIsland } from "./diffchangespanel.js";
 import { sheetOverviewPanelIsland } from "./sheetoverviewpanel.js";
 import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
+import { tracePanelIsland } from "./tracepanel.js";
 import { reviewPanelIsland } from "./reviewpanel.js";
 import { conventionBarIsland } from "./conventionbar.js";
 import { projectBarIsland } from "./projectbar.js";
@@ -92,6 +93,7 @@ class AppRoot extends BaseComponent {
     const sheetOverviewEl = document.getElementById("sheet-overview");
     const queryEl = document.getElementById("query-panel");
     const coverageEl = document.getElementById("coverage-panel");
+    const traceEl = document.getElementById("trace-panel");
     const reviewEl = document.getElementById("review-panel");
     const conventionEl = document.getElementById("convention-bar");
     const projectEl = document.getElementById("project-bar");
@@ -102,6 +104,7 @@ class AppRoot extends BaseComponent {
     if (!compareEl || !diffBarEl || !diffSvgA || !diffSvgB || !diffPhA || !diffPhB || !diffChangesEl)
       return children;
     if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl || !reviewEl || !conventionEl) return children;
+    if (!traceEl) return children;
     if (!projectEl) return children;
 
     // RenderView reveals whichever renderer drew the sheet: the SVG host overlays the canvas,
@@ -318,6 +321,11 @@ class AppRoot extends BaseComponent {
     const coverage = coveragePanelIsland(coverageEl, this._eventBus, {
       onLocate: (net) => void presenter.locateEntity("net", net),
     });
+    // The trace panel (agni issue 600): the reader names two pins, the presenter walks between them
+    // and lights the route through the same highlight stack a query cell and a verdict use.
+    const trace = tracePanelIsland(traceEl, this._eventBus, {
+      onTrace: (from, to) => void presenter.runTrace(from, to),
+    });
     // The datasheet-params panel (WS9-035): clicking a component locates it on the canvas, the same
     // component-highlight path a finding uses (zero new highlight code).
     const parts = partsPanelIsland(partsEl, this._eventBus, {
@@ -392,6 +400,7 @@ class AppRoot extends BaseComponent {
         overview: sheetOverview.view,
         query: query.view,
         coverage: coverage.view,
+        trace: trace.view,
         review: review.view,
         conventionBar: conventionBar.view,
         projectBar: projectBar.view,
@@ -426,6 +435,7 @@ class AppRoot extends BaseComponent {
       sheetOverview.island,
       query.island,
       coverage.island,
+      trace.island,
       review.island,
       conventionBar.island,
       projectBar.island,
