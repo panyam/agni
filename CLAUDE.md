@@ -346,10 +346,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   replaces that DEFAULT, so the prompt still shows it, a typed path still wins, and
   `--non-interactive`, `--record` and `--replay` pick it up, which is the whole reason it beats typing.
   A blank value is not a value. **A demo over someone's real board is an example driven this way**,
-  not a script of its own: `dft-coverage` is the coverage walkthrough and `whole-enchilada` the tour,
+  not a script of its own: `design-review` is the checklist walk, `dft-coverage` the coverage one and
+  `whole-enchilada` the tour,
   so orchestrating beats in bash duplicates demokit and produces no recording. **Run an example over a
   REAL board before trusting it** — the fixtures are small enough to hide scale bugs, and printing
   every ref-des in a bucket read fine at three parts and buried the screen at 531 (agni issue 644).
+- **`AGNI_EXAMPLE_REVIEW` is the same idea for a review manifest**, which `design-review` needs beside
+  the design: a team's checklist is as unshippable here as their board. **Both variables must be
+  cleared in a package's `TestMain`**, because they replace the defaults the tests assert against, so
+  a developer who exports either to drive a walk over their own board cannot run the gate and the
+  failure prints their path into the log. That was green in CI and red on the machine that had them.
 
 **A declared pin map is the ninth intent form, and it compiles to FOUR rules.** `io_map` on a design's
 `intent.yaml` says which net lands on which pin of which device. Three rules ask whether the design
@@ -417,9 +423,33 @@ on which name you typed. Nothing errored, because "no geometry" is a legitimate 
 be. Four symptoms followed and each read as its own defect: findings with no sheet badges, query
 cells reporting `LOCATE_REASON_NO_GEOMETRY`, `trace --render` writing the first sheet whatever the
 route crossed, and every minted link opening on an auto-layout. C32 is the rule, agni 656 the fix.
-Two things it leaves behind. `as_named` is on the wire because the CLI is itself a client of these
-services and resolving unconditionally overrode its own flag. And a trace still carries no sheet
-(agni 657), so `trace --render` is the one symptom 656 did not cure.
+`as_named` rides the wire because the CLI is itself a client of these services, and resolving
+unconditionally overrode its own flag.
+
+**A trace answer carries where each net and endpoint is DRAWN**, per net rather than one sheet for the
+answer, because a route crossing three sheets is when a reader most wants to choose (agni 657). An
+ENDPOINT resolves by its PLACEMENT and not by its net: it is a pin on a part, and resolving by net
+first put a route on a sheet carrying the middle net and none of the parts. Filled on a no-route too,
+since the two nets that fail to join are drawn somewhere and that is the picture someone goes looking
+for; empty then means drawn nowhere rather than nobody looked. The CLI takes the sheet off the
+response rather than choosing, which is C32 at one more call site.
+
+**A rule proves a PASS with entities, not only with prose, and there are two mechanisms.** A Go-walk
+requirement returns its hops (`check.PullUpVerdict` emits every resistor and net as ordered context
+with a role). A query-backed one needs `Domain.Evidence`, a third goal run over the passing set whose
+rows project through the rule's own `ContextVars` (agni 662). It is a third goal rather than a wider
+domain for a structural reason: the domain is the CONSIDERED SET, passing and failing alike, and a
+failing subject has no proof to name, so no single query can both enumerate the failures and bind the
+evidence. On the ESD requirement the evidence is a SECOND head (`esd_by`) rather than a widened
+`esd_ok`, because the finding goal NEGATES `esd_ok` and a negated atom must stay unary.
+
+**A thermistor is a `thermistor` AND a `resistor`**, the family shape `ferrite`/`inductor` already
+uses (agni 627). It classified UNKNOWN before, which emits no `component.class` row at all, so it fell
+out of every class-scoped rule and query silently. **A project cannot yet name a class of its own**:
+`conventions.yaml` accepts a `lexicon.class` block keyed by any name, and a name the engine does not
+know resolves nowhere, because `resolveHint` walks a fixed `hintPriority` and `classFamily` is a fixed
+map. Ref-des prefixes are not configurable at all. So the config surface reads as yes and behaves as
+no, with no error (agni 677).
 
 **A variable's entity kind survives a DERIVED relation, and the three rules of that walk are worth
 knowing before you widen it.** `varKind` types a projected variable from the catalog relations in the
@@ -485,6 +515,22 @@ real work, and what agni ADDS to the PR body shape defined by the `start_pr` ski
 a hardware primer ahead of the reviewer's guide, which docsite pages the prerequisite block names,
 and the fixture-only rule for rendering captures). The general skeleton lives in the skill, so do
 not copy it back into this repo.
+
+**Four ways to be told a thing worked when it did not, all hit in one sitting, all exit 0.**
+
+- **A stray `agni serve` answers instead of yours.** Two measurements were taken against a server on a
+  port a newer binary had failed to bind, and the "address already in use" line scrolled past.
+  `pkill -f "agni serve"` before believing anything served, and re-check the version the answer came
+  from.
+- **`go test` prints FAIL for a BUILD failure too.** A red-check greping for `^ok` read a package that
+  would not compile as a pass, so a test that never ran looked like a test that could not fail.
+  Confirm a red-check names the assertion it failed on.
+- **An unquoted heredoc runs the backticks in your markdown.** `gh pr edit` then returns 0 having
+  posted a body with a block silently triplicated and a flag eaten out of the prose. Quote the
+  delimiter, and READ A PR BODY BACK after editing it.
+- **`catalog-docs-check` reads `git status`, not a diff against a temp copy.** So regenerating is not
+  enough: the generated file has to be COMMITTED or the gate stays red on a tree that is correct. The
+  same is true of `tutorial-runs`.
 
 ## Architectural constraints
 
