@@ -8,8 +8,8 @@ description: "a device class the part is in (a family tag too, e.g. a TVS is bot
 `component.class(ref_des, class)` yields the device classes a part belongs to. It emits ONE ROW
 PER TAG in the part's class set, not a single most-specific class, so a part with a family tag
 answers more than once: a TVS diode answers both `component.class(D1, "tvs")` and
-`component.class(D1, "diode")`, an LED answers both `led` and `diode`, and a ferrite bead answers
-both `ferrite` and `inductor`. The `class` string is the canonical lowercase name (`resistor`,
+`component.class(D1, "diode")`, an LED answers both `led` and `diode`, a ferrite bead answers
+both `ferrite` and `inductor`, and a thermistor answers both `thermistor` and `resistor`. The `class` string is the canonical lowercase name (`resistor`,
 `capacitor`, `crystal`, ...). An unclassified component produces no row (no class is guessed).
 
 ### For hardware engineers

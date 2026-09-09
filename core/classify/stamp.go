@@ -98,6 +98,9 @@ var classFamily = map[ComponentClass]ComponentClass{
 	ClassLED:     ClassDiode,
 	ClassZener:   ClassDiode,
 	ClassFerrite: ClassInductor,
+	// A thermistor is a two-terminal resistor for every topological question and is not one for
+	// anything temperature-related, which is the split ClassFerrite makes against ClassInductor.
+	ClassThermistor: ClassResistor,
 	// Clock sources (WS10-015). The family is ClassClock, deliberately NOT ClassCrystal: an oscillator
 	// is-NOT-a crystal (it contains one), so a family-level clock rule must not read HasClass(crystal)
 	// true for it. All three carry the clock family tag so a family-level rule quantifies over every

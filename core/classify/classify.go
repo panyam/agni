@@ -13,6 +13,7 @@ import (
 var prefixClasses = map[string]ComponentClass{
 	"R":    ClassResistor,
 	"RN":   ClassResistor,
+	"RT":   ClassThermistor,
 	"C":    ClassCapacitor,
 	"L":    ClassInductor,
 	"FB":   ClassFerrite,
@@ -39,19 +40,22 @@ var prefixClasses = map[string]ComponentClass{
 // tokenClasses maps a word appearing in part-type text (name, kind, Value attribute) to a
 // class. Matching is on whole tokens, not substrings, so "shielded" does not read as an LED.
 var tokenClasses = map[string]ComponentClass{
-	"resistor":  ClassResistor,
-	"capacitor": ClassCapacitor,
-	"inductor":  ClassInductor,
-	"ferrite":   ClassFerrite,
-	"bead":      ClassFerrite,
-	"diode":     ClassDiode,
-	"led":       ClassLED,
-	"tvs":       ClassTVS,
-	"esd":       ClassTVS,
-	"zener":     ClassZener,
-	"fuse":      ClassFuse,
-	"connector": ClassConnector,
-	"conn":      ClassConnector,
+	"resistor":   ClassResistor,
+	"capacitor":  ClassCapacitor,
+	"inductor":   ClassInductor,
+	"ferrite":    ClassFerrite,
+	"bead":       ClassFerrite,
+	"thermistor": ClassThermistor,
+	"ntc":        ClassThermistor,
+	"ptc":        ClassThermistor,
+	"diode":      ClassDiode,
+	"led":        ClassLED,
+	"tvs":        ClassTVS,
+	"esd":        ClassTVS,
+	"zener":      ClassZener,
+	"fuse":       ClassFuse,
+	"connector":  ClassConnector,
+	"conn":       ClassConnector,
 	// A debug / test / edge-card / programming connector is a bench interface, refined out of the
 	// connector base so protection rules skip it (WS3-066).
 	"debug":       ClassTestConnector,
@@ -171,7 +175,7 @@ var hintPriority = []ComponentClass{
 	// above the leaf classes so a bare clock candidate resolves to clock, not further down the list.
 	ClassOscillator, ClassCrystal, ClassCeramicResonator, ClassClock,
 	ClassTestPoint, ClassTestConnector, ClassConnector,
-	ClassFuse, ClassTransistor, ClassDiode, ClassResistor, ClassCapacitor, ClassInductor,
+	ClassFuse, ClassTransistor, ClassDiode, ClassThermistor, ClassResistor, ClassCapacitor, ClassInductor,
 }
 
 func resolveHint(hints map[ComponentClass]bool) ComponentClass {

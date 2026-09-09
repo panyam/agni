@@ -105,3 +105,59 @@ func equal(a, b []string) bool {
 	}
 	return true
 }
+
+// A thermistor classified UNKNOWN, so component.class emitted no row for it and it fell out of every
+// class-scoped rule and query. Silently, because an absent row and a row that did not match look
+// identical downstream. Found reconciling per-part coverage against a second tool on a real board,
+// where the whole residual in one direction was 15 thermistors, present in the netlist and invisible
+// (agni issue 627).
+func TestClassifyThermistor(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		c    *ir.Component
+		pt   *ir.PartType
+	}{
+		{"the RT prefix", &ir.Component{RefDes: "RT1"}, nil},
+		// A project whose ref-des convention differs still resolves from the part text, which is the
+		// only route open to it: the prefix table is not configurable.
+		{"an NTC in the part text", &ir.Component{RefDes: "X9"}, &ir.PartType{Name: "NTC 10K 0603"}},
+		{"a PTC in the part text", &ir.Component{RefDes: "X9"}, &ir.PartType{Name: "PTC resettable"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := Classify(tc.c, tc.pt); got != ClassThermistor {
+				t.Errorf("Classify = %s, want thermistor", got)
+			}
+		})
+	}
+}
+
+// The family tag is what makes the fix reach the analyses that motivated it: a thermistor is a
+// two-terminal resistor for every topological question, so test-point coverage and divider topology
+// must see it without each learning a new class name.
+func TestThermistorCarriesTheResistorFamily(t *testing.T) {
+	got := ClassesOf(ClassThermistor)
+	want := map[string]bool{"thermistor": true, "resistor": true}
+	if len(got) != len(want) {
+		t.Fatalf("ClassesOf(thermistor) = %v, want thermistor and resistor", got)
+	}
+	for _, g := range got {
+		if !want[g] {
+			t.Errorf("unexpected tag %q in %v", g, got)
+		}
+	}
+}
+
+// THE CONTROL, and the direction that is easy to get backwards. A family points from the specific to
+// the general, so a thermistor is a resistor and a plain resistor is NOT a thermistor. Declaring the
+// family the other way round would pass every other test here while tagging 1110 resistors on a real
+// board as temperature sensors.
+func TestAPlainResistorIsNotAThermistor(t *testing.T) {
+	if got := Classify(&ir.Component{RefDes: "R1"}, nil); got != ClassResistor {
+		t.Fatalf("Classify(R1) = %s, want resistor", got)
+	}
+	for _, tag := range ClassesOf(ClassResistor) {
+		if tag == string(ClassThermistor) {
+			t.Error("a plain resistor carries the thermistor tag, so the family points the wrong way")
+		}
+	}
+}
