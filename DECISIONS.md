@@ -1607,3 +1607,26 @@ does exactly that, because an error that names the thing you actually wanted cos
 **Reopen if** a consumer needs the rollup as data rather than as a page, which is the json half and
 the only one with a real gap behind it. That wants a wire message first, and at that point the
 markdown renderer becomes one projection of it rather than the source of truth.
+
+## A component class is a built-in, and letting a project declare one is a different question
+
+**Question.** A thermistor had no device class, so it was invisible to every class-scoped rule and
+query (agni 627). Should the fix be a new built-in class, or should a project be able to declare the
+class it needs without waiting for a release?
+
+**Answer. Built-in for this one, and the configurable form is a separate ticket rather than a
+better version of the same fix.** `RT` sitting beside `RN` in the prefix table is a gap in the
+STOCK vocabulary: a stock read of a stock board should classify a thermistor, whatever any project
+does or does not configure. Fixing it by asking every project to write a lexicon block would be
+shipping a hole and a workaround together.
+
+**What the investigation turned up, which is the more interesting half.** A project can already
+write a `lexicon.class` block naming a class the engine has never heard of. It parses, loads, and
+does nothing, because `resolveHint` walks a fixed `hintPriority` and `classFamily` is a fixed map,
+and ref-des prefixes are not configurable at all. So the config surface reads as yes and behaves as
+no, with no error. That is agni 677, and it is a different defect from 627: one is a missing entry,
+the other is a promise the resolver cannot keep.
+
+**Reopen if** the built-in list starts growing to accommodate one project's parts. A house `esd_array`
+or a vendor's part-number family belongs in that project's config, and the moment two of them are
+argued about in this repo, 677 is the answer rather than a third entry in the table.

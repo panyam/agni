@@ -9,8 +9,8 @@ Enforceable architectural rules for this project. Background and rationale in
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
 that to being true, because a rule with nothing to run is not enforceable and that is exactly how C6
-went unchecked. A Verify is one of two things. Sixteen are TESTS the gate runs, so a violation turns
-CI red. Fourteen are REVIEW questions, and each says what a reviewer should ask instead. That second
+went unchecked. A Verify is one of two things. Seventeen are TESTS the gate runs, so a violation
+turns CI red. Fourteen are REVIEW questions, and each says what a reviewer should ask instead. That second
 number is the one to watch, and C32 is why: it joined the review column knowing its test was missing
 rather than by deciding a machine could not answer it, and left again once the test existed. So a
 review question is either "no test is possible" or "no test yet", and the two read alike from here. C15 carries no Verify at all because it was merged into C17
@@ -1037,5 +1037,6 @@ catch. It pins an undeclared sibling revision to being read as named on both sid
 the design's own entry DOES resolve, so "read as named" stays a decision rather than a resolver that
 never works. Reverting 656 fails the first test alone; disabling resolution entirely fails both.
 
-Still open: the KIND clause has no test of its own (agni 654), and the LINK clause is asserted only
-through the two surfaces' agreement on tiers rather than on what a minted link opens.
+The KIND clause gained its own tests with agni 654 (`TestColumnKindsFollowDerivedRelations`,
+`service`). Still open: the LINK clause is asserted only through the two surfaces agreeing on tiers,
+rather than on what a minted link opens, which needs a served viewer rather than a resolver.
