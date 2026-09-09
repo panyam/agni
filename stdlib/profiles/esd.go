@@ -84,10 +84,36 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		query.Pos(query.Rel("needs_esd", query.V("n"))),
 		query.Pos(query.Rel("in_use", query.V("iu")))))
 
+	// The clamp, for a passing net. esd_ok proves the positive case and already binds the part that
+	// does the clamping; it just projected the net alone, so the one thing a reviewer wanted to check
+	// on a pass was the one thing the verdict could not name (agni issue 662).
+	//
+	// A SECOND head rather than a widening of esd_ok, because unprotected negates that relation and a
+	// negated atom must stay unary: giving esd_ok an arity of two would change what `not esd_ok(?n)`
+	// means. The clauses below mirror the three above, which is duplication the alternative does not
+	// avoid, only relocates.
+	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
+		rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V(c.v)),
+			query.Pos(query.Rel("needs_esd", query.V("n"))),
+			query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
+			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
+			query.Pos(query.Rel("component-on-net", query.V(c.v), query.V("rn"))),
+			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class)))))
+	}
+	rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V("u")),
+		query.Pos(query.Rel("needs_esd", query.V("n"))),
+		query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
+		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
+		query.Pos(query.Rel("component-on-net", query.V("u"), query.V("rn"))),
+		query.Pos(query.Rel("component.esd_rated", query.V("u")))))
+
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("unprotected", query.V("n")))}, query.V("n"))
 	domain := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("esd_scope", query.V("n")))}, query.V("n"))
+	evidence := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("esd_by", query.V("n"), query.V("clamp")))},
+		query.V("n"), query.V("clamp"))
 	return query.MustRuleFromQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-esd-missing",
@@ -102,10 +128,16 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} is exposed on a connector with no ESD protection in reach", p.Name),
+		// ContextVars applies to the finding path and the evidence path alike, so a pass names the
+		// clamp as an entity a reader can click rather than only in prose. The finding goal binds no
+		// clamp (there is none to bind, which is why it is a finding), and a context var that does not
+		// bind contributes nothing.
+		ContextVars: []query.ContextVar{{Var: "clamp", Kind: check.KindComponent, Role: "clamp"}},
 		Domain: &query.Domain{
 			Query: mustBindHeadFirst(domain),
 			Witness: fmt.Sprintf("%s signal net {n} is exposed on a connector and reaches ESD protection within %d hops",
 				p.Name, check.ProtectionReachHops),
+			Evidence: &evidence,
 		},
 	})
 }
