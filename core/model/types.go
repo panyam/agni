@@ -31,10 +31,21 @@ type ComponentClass string
 // alike — so the keyword/structural path only ever resolves the oscillator subtype or stays at the
 // family; the crystal / ceramic_resonator subtype comes from a seeded device_class.
 const (
-	ClassResistor         ComponentClass = "resistor"
-	ClassCapacitor        ComponentClass = "capacitor"
-	ClassInductor         ComponentClass = "inductor"
-	ClassFerrite          ComponentClass = "ferrite"
+	ClassResistor  ComponentClass = "resistor"
+	ClassCapacitor ComponentClass = "capacitor"
+	ClassInductor  ComponentClass = "inductor"
+	ClassFerrite   ComponentClass = "ferrite"
+	// ClassThermistor is a temperature-dependent resistor: NTC inrush limiters, PTC resettable fuses,
+	// and the sense elements a temperature circuit is built around. Its family is ClassResistor,
+	// because it is a two-terminal resistor for every topological question (in series, in a divider,
+	// probed at both ends) and is not one for anything temperature-related, which is the same split
+	// ClassFerrite makes against ClassInductor.
+	//
+	// Before it existed a thermistor classified UNKNOWN, so component.class emitted no row for it and
+	// it fell out of every class-scoped rule and query silently, an absent row being indistinguishable
+	// from one that did not match. Found reconciling per-part coverage against a second tool on a real
+	// board, where the whole residual in one direction was 15 thermistors (agni issue 627).
+	ClassThermistor       ComponentClass = "thermistor"
 	ClassDiode            ComponentClass = "diode"
 	ClassLED              ComponentClass = "led"
 	ClassTVS              ComponentClass = "tvs"

@@ -73,6 +73,7 @@ const (
 	ClassCapacitor            = model.ClassCapacitor
 	ClassInductor             = model.ClassInductor
 	ClassFerrite              = model.ClassFerrite
+	ClassThermistor           = model.ClassThermistor
 	ClassDiode                = model.ClassDiode
 	ClassLED                  = model.ClassLED
 	ClassTVS                  = model.ClassTVS
