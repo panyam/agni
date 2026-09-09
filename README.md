@@ -13,7 +13,7 @@ so every analysis downstream is written once and works on all of them.
 
 ![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docsite/static/images/demo-viewer.gif)
 
-## What it does
+## What does it do
 
 - **Reads many formats into one IR.** EDIF netlists and schematics, KiCad schematics and
   boards, IPC-2581, xschem, and gEDA all parse into the same `ir.Design`. Adding a reader is
