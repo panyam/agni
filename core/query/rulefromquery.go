@@ -85,6 +85,24 @@ type Domain struct {
 	// the domain goal does not prove it: a subject in the domain that is not in the failures is one
 	// the finding goal declined to report, and for these rules that is precisely the good case.
 	Witness string
+	// Evidence, when set, names the entities a PASSING subject's proof rests on, through the rule's
+	// own ContextVars. Its rows are matched to passing subjects by the subject tuple.
+	//
+	// It is a third goal rather than a widening of the domain, and the reason is structural. The
+	// domain is the CONSIDERED SET: every subject the requirement applied to, passing and failing
+	// alike. A failing subject has no proof to name, so a domain query that bound one could not
+	// enumerate the failures, and a domain that enumerates them cannot bind it. The evidence lives in
+	// the rule that decides the positive case, which the finding goal already negates.
+	//
+	// Optional, and a passing subject with no evidence row keeps an empty context. Some requirements
+	// prove a negative and have nothing to point at; that is a property of the question rather than a
+	// gap, and inventing a chip for it would be worse than the silence it replaces.
+	//
+	// Without it a query-backed requirement could state its proof only in prose: the ESD requirement
+	// said a net "reaches ESD protection within 2 hops" and named no clamp, so the one claim a
+	// reviewer wanted to check was the one thing they could not click (agni issue 662). The Go-walk
+	// requirements never had this problem, because check.PullUpVerdict returns its hops as entities.
+	Evidence *Query
 }
 
 // TupleVar binds one projected datalog variable to an element of the verdict's subject tuple. Kind is
@@ -177,13 +195,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 		// that did not bind in this row contributes nothing rather than an empty chip: the row could
 		// not have been projected without it, so an unbound one means the rule was mis-declared and a
 		// blank chip would hide that behind something that looks deliberate.
-		for _, cv := range fq.ContextVars {
-			ref := row.Bind[Var(cv.Var)].S
-			if ref == "" {
-				continue
-			}
-			f.Context = append(f.Context, check.ContextSubject{Entity: check.Entity{Kind: cv.Kind, Ref: ref}, Role: cv.Role})
-		}
+		f.Context = append(f.Context, fq.contextOf(row)...)
 		if fq.ParamSymbol != "" && fq.Kind == check.KindComponent {
 			if dp := check.DatasheetProvFor(m, subj, fq.ParamSymbol); dp != nil {
 				f.DatasheetProv = []*check.DatasheetCitation{dp}
@@ -264,6 +276,29 @@ func buildRule(fq FindingQuery) *check.Rule {
 			// even though the rule then reports fewer passes than it examined.
 			return vs
 		}
+		// The entities a pass rests on, indexed by subject tuple. Evaluated once for the whole rule
+		// rather than per passing subject, because it is one goal over the same fact base and running
+		// it per subject would re-derive the entire program for each row.
+		//
+		// A failure to evaluate is treated as no evidence rather than as an error, matching the domain
+		// above: the verdicts are the answer, and losing the chips a pass could have carried must not
+		// cost the reader the pass itself.
+		evidence := map[string][]check.ContextSubject{}
+		if fq.Domain.Evidence != nil {
+			if erows, err := (Naive{}).Eval(*fq.Domain.Evidence, base); err == nil {
+				for _, row := range erows {
+					subjects := fq.tuple(row)
+					if len(subjects) == 0 {
+						continue
+					}
+					key := tupleKey(subjects)
+					if _, seen := evidence[key]; seen {
+						continue // one proof is enough; a second path says nothing new about the pass
+					}
+					evidence[key] = fq.contextOf(row)
+				}
+			}
+		}
 		for _, row := range drows {
 			subjects := fq.tuple(row)
 			if len(subjects) == 0 || failed[tupleKey(subjects)] {
@@ -273,11 +308,33 @@ func buildRule(fq FindingQuery) *check.Rule {
 				Outcome:  check.Pass,
 				Subjects: subjects,
 				Witness:  &check.Witness{Statement: interpolate(fq.Domain.Witness, row)},
+				Context:  evidence[tupleKey(subjects)],
 			})
 		}
 		return vs
 	}
 	return &r
+}
+
+// contextOf projects a row's declared ContextVars as context entities, in the author's order, which
+// is the order the message names them.
+//
+// A context var that did not bind in this row contributes nothing rather than an empty chip: the row
+// could not have been projected without it, so an unbound one means the rule was mis-declared and a
+// blank chip would hide that behind something that looks deliberate.
+//
+// Shared by the finding path and the evidence path so the two cannot drift about what a context
+// entity is. They were one loop and a missing one when a pass had no way to carry any.
+func (fq FindingQuery) contextOf(row Row) []check.ContextSubject {
+	var out []check.ContextSubject
+	for _, cv := range fq.ContextVars {
+		ref := row.Bind[Var(cv.Var)].S
+		if ref == "" {
+			continue
+		}
+		out = append(out, check.ContextSubject{Entity: check.Entity{Kind: cv.Kind, Ref: ref}, Role: cv.Role})
+	}
+	return out
 }
 
 // tuple builds the verdict's subject tuple from one answer row: the primary subject, then each

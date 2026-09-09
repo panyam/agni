@@ -136,3 +136,74 @@ func TestESDRequirementCreditsZener(t *testing.T) {
 		t.Errorf("BUS_CANL is still unclamped and must still be reported: %v", got)
 	}
 }
+
+// esdVerdicts runs the requirement for its considered set rather than its findings, which is where a
+// pass lives.
+func esdVerdicts(t *testing.T, d *ir.Design) []check.Verdict {
+	t.Helper()
+	r := esdRule(CAN, Requirement{Type: "esd"})
+	if r == nil {
+		t.Fatal("esdRule(CAN) returned nil")
+	}
+	return r.Eval(check.NewModel(d))
+}
+
+// A query-backed requirement proved a path in prose and discarded the entities, so its PASS said a
+// net "reaches ESD protection within 2 hops" and named no clamp: the one claim a reviewer wanted to
+// check was the one thing they could not click (agni issue 662). The Go-walk requirements never had
+// this, because check.PullUpVerdict returns its hops as entities.
+//
+// The fixture's clamped line is BUS_CANH, protected by TVS1, so the pass on that net must name TVS1.
+func TestESDPassNamesTheClampItFound(t *testing.T) {
+	for _, v := range esdVerdicts(t, canExposed()) {
+		if v.Outcome != check.Pass || check.EntityRef(v.Subjects[0]) != "BUS_CANH" {
+			continue
+		}
+		var clamps []string
+		for _, c := range v.Context {
+			if c.Role == "clamp" {
+				clamps = append(clamps, c.Entity.Ref)
+			}
+		}
+		if len(clamps) != 1 || clamps[0] != "TVS1" {
+			t.Errorf("the pass on BUS_CANH names clamps %v, want [TVS1]", clamps)
+		}
+		return
+	}
+	t.Fatal("no passing verdict on BUS_CANH, so the fixture no longer exercises a clamped line")
+}
+
+// THE CONTROL. A failing subject has no proof to name, and inventing an empty chip for it would be
+// worse than the silence. This also separates "the evidence query bound the right thing" from "the
+// evidence query bound everything": a version that attached every clamp on the board to every net
+// would pass the test above and fail here.
+func TestESDFailNamesNoClamp(t *testing.T) {
+	found := false
+	for _, v := range esdVerdicts(t, canExposed()) {
+		if v.Outcome != check.Fail {
+			continue
+		}
+		found = true
+		for _, c := range v.Context {
+			if c.Role == "clamp" {
+				t.Errorf("%s failed and yet names clamp %s", check.EntityRef(v.Subjects[0]), c.Entity.Ref)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no failing verdict, so the control asserts nothing")
+	}
+}
+
+// Negating esd_ok must keep working. The evidence lives in a SECOND head (esd_by) rather than in a
+// widened esd_ok, because `not esd_ok(?n)` requires that relation to stay unary; widening it would
+// silently change what the finding goal asks.
+func TestESDStillReportsTheUnclampedLine(t *testing.T) {
+	got := map[string]bool{}
+	for _, f := range esdFindings(t, canExposed()) {
+		got[check.EntityRef(f.Subject)] = true
+	}
+	if !got["BUS_CANL"] || got["BUS_CANH"] {
+		t.Errorf("findings = %v, want the unclamped line alone", got)
+	}
+}
