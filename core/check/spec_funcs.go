@@ -104,6 +104,13 @@ func registerBuiltinSpecFuncs() {
 			return m.IsFeedbackName(args[0].(string))
 		},
 	})
+	RegisterSpecFunc("switching_name", &SpecFunc{
+		Reads:      []string{"net.names"},
+		Primitives: []string{"pattern"},
+		Fn: func(m Model, _ map[string]any, args []any) any {
+			return m.IsSwitchingName(args[0].(string))
+		},
+	})
 	RegisterSpecFunc("diff_negative", &SpecFunc{
 		// The expected complementary net name for a diff-pair positive member, "" when the
 		// name is not a positive member (so a Cmp against "" is the ok-check).

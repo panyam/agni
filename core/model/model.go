@@ -123,6 +123,7 @@ type Model interface {
 	IsPowerRailName(name string) bool
 	IsGroundName(name string) bool
 	IsFeedbackName(name string) bool
+	IsSwitchingName(name string) bool
 	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName's
 	// pairing lookup). More than one means the design states the same name for electrically
 	// distinct nets, which is impossible on connect-by-name formats (the solver merges them)

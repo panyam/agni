@@ -164,6 +164,7 @@ func (m *irModel) lexicon() *classify.Lexicon {
 func (m *irModel) IsPowerRailName(name string) bool { return m.lexicon().RoleVocab().IsRail(name) }
 func (m *irModel) IsGroundName(name string) bool    { return m.lexicon().RoleVocab().IsGround(name) }
 func (m *irModel) IsFeedbackName(name string) bool  { return m.lexicon().RoleVocab().IsFeedback(name) }
+func (m *irModel) IsSwitchingName(name string) bool { return m.lexicon().RoleVocab().IsSwitching(name) }
 
 // IsGroundNet / IsRailNet answer the role question about a net: the stamped role set when the net
 // carries one (authoritative, filled at ingestion), else this model's lexicon over the name. Taking
@@ -172,8 +173,28 @@ func (m *irModel) IsGroundNet(n *ir.Net) bool {
 	return NetHasRole(n, NetRoleGround, m.IsGroundName)
 }
 
+// A REGULATOR INTERNAL IS NOT A RAIL, and this is the one place that decides it (agni 679, 680).
+// A buck's feedback tap, switch node and bootstrap node all inherit the name of the rail they serve,
+// so all three match the rail vocabulary and none carries the rail's voltage: the feedback tap sits
+// at the regulator's internal reference, the switch node swings to the INPUT rail at the switching
+// frequency, and the bootstrap node rides above the output.
+//
+// Deciding it here rather than per consumer reverses what the role tokens used to say, deliberately.
+// Seven rail-quantified consumers read this model and exactly one, the test-point rule, remembered to
+// exclude feedback for itself. On one real board that left 48 of 77 "rails" as regulator internals.
+// A consumer that genuinely wants every rail-NAMED net still has IsPowerRailName.
 func (m *irModel) IsRailNet(n *ir.Net) bool {
-	return NetHasRole(n, NetRoleRail, m.IsPowerRailName)
+	if !NetHasRole(n, NetRoleRail, m.IsPowerRailName) {
+		return false
+	}
+	return !m.isRegulatorInternal(n)
+}
+
+// isRegulatorInternal reports whether a net is a regulator's own plumbing rather than a supply it
+// produces. Read only through IsRailNet, so the rail question has one answer.
+func (m *irModel) isRegulatorInternal(n *ir.Net) bool {
+	return NetHasRole(n, NetRoleFeedback, m.IsFeedbackName) ||
+		NetHasRole(n, NetRoleSwitching, m.IsSwitchingName)
 }
 
 // componentClassesOf resolves a component's device_classes SET: the normalized set stamped at

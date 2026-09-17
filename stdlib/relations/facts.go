@@ -354,7 +354,7 @@ func netMaxVoltageFacts(m check.Model) []facts.Row {
 func netNominalVoltageFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		if !m.IsRailNet(n) {
+		if !m.IsRailNet(n) || isRegulatorInternalName(m, n) {
 			continue
 		}
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
@@ -370,14 +370,19 @@ func netNominalVoltageFacts(m check.Model) []facts.Row {
 // is stating something real, and gating net.nominal_voltage on the rail role would otherwise throw
 // it away.
 //
-// The two relations are exhaustive and disjoint over the nets whose names parse: rail-role nets go
-// to net.nominal_voltage, everything else here. So a consumer that genuinely wants both asks for
-// both, and one that wants rails cannot get a signal level by accident. Ground is a rail role, so
-// a ground net named with a token stays on the nominal side.
+// The two relations are DISJOINT but no longer exhaustive, and the gap is deliberate (agni 679). A
+// regulator internal parses a number and belongs to neither: "12V_FB" is not a 12V rail, and it is
+// not a 12V signalling level either, because the number in its name is the voltage of a DIFFERENT
+// net. The divider tap itself sits near the regulator's internal reference, typically 0.6V to 0.8V.
+//
+// So the third outcome is no row at all. Moving these eight nets from one relation to the other is
+// the fix that looks right and states the same wrong number under a new name; a relation that cannot
+// say what a net carries should say nothing. Ground is a rail role, so a ground net named with a
+// token stays on the nominal side.
 func netSignalLevelFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		if m.IsRailNet(n) {
+		if m.IsRailNet(n) || isRegulatorInternalName(m, n) {
 			continue
 		}
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
@@ -386,6 +391,15 @@ func netSignalLevelFacts(m check.Model) []facts.Row {
 		}
 	}
 	return out
+}
+
+// isRegulatorInternalName reports whether a net is a regulator's feedback tap or power-stage node,
+// the nets whose name-derived voltage belongs to a different net. Model.IsRailNet already excludes
+// these from the rail side; this is the SIGNAL side asking the same question, so that a net dropped
+// from net.nominal_voltage does not reappear in net.signal_level restating the same wrong number.
+func isRegulatorInternalName(m check.Model, n *ir.Net) bool {
+	return check.NetHasRole(n, check.NetRoleFeedback, m.IsFeedbackName) ||
+		check.NetHasRole(n, check.NetRoleSwitching, m.IsSwitchingName)
 }
 
 func componentMPNFacts(m check.Model) []facts.Row {

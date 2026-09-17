@@ -9,12 +9,20 @@ import (
 )
 
 // The net-role tokens stamped onto ir.Net.roles and read back by the core. A net may carry more than
-// one (a rail-named feedback node is both "rail" and "feedback"); consumers decide precedence, the same
-// way the device_classes SET (WS3-071) records every matched class and the reader picks the specific one.
+// one (a rail-named feedback node is both "rail" and "feedback"), the same way the device_classes SET
+// (WS3-071) records every matched class and the reader picks the specific one.
+//
+// FEEDBACK AND SWITCHING BOTH MEAN "A RAIL-NAMED NET THAT IS NOT A RAIL", and unlike the other roles
+// their precedence against rail is NOT the consumer's call. It is decided once, in Model.IsRailNet,
+// because leaving it to each consumer is what agni issues 679 and 680 measured: seven rail-quantified
+// consumers, of which exactly one remembered to exclude feedback. A regulator's switch node is the
+// highest dV/dt net in the design, so a rule that treats it as a rail does not give weaker advice, it
+// gives the opposite advice.
 const (
-	NetRoleRail     = "rail"
-	NetRoleGround   = "ground"
-	NetRoleFeedback = "feedback"
+	NetRoleRail      = "rail"
+	NetRoleGround    = "ground"
+	NetRoleFeedback  = "feedback"
+	NetRoleSwitching = "switching"
 )
 
 // AttrDeclaredRole is the ir.Net.attributes key carrying a role the SOURCE FILE stated outright,
@@ -55,7 +63,7 @@ const AttrDeclaredRole = "declared_role"
 // deliberately absent from it. It lives here so both the net-role and pin-supply naming conventions are
 // one config-overridable lexicon (WS3-069), not a frozen literal.
 type RoleVocab struct {
-	rail, ground, feedback, supplyPin []*regexp.Regexp
+	rail, ground, feedback, switching, supplyPin []*regexp.Regexp
 	// Transistor TERMINAL pin names (WS3-117), each its own vocabulary because the three are
 	// independent conventions a house can spell differently (a gate is "G", "GATE", sometimes "DRV"
 	// on a driver). They are consumed ONLY where the component's class is a transistor — see
@@ -84,6 +92,17 @@ func DefaultRoleVocab() *RoleVocab {
 		ground: mustCompileRole(`GND`, `EARTH`, `^VSS`),
 		// feedback: a regulator sense node named with an _FB / feedback / sense suffix.
 		feedback: mustCompileRole(`_FB$`, `_VFB$`, `_FEEDBACK$`, `_VSENSE$`, `_SENSE$`, `_SNS$`, `^V?FB$`),
+		// switching: a regulator's power-stage node, which inherits a rail's name because it is named
+		// after the rail it produces. _SW and _PHASE are the switch node, _BOOT the bootstrap cap node
+		// riding above it, _LX the same node in the vendor spelling most common outside the US.
+		//
+		// A LOAD SWITCH OUTPUT COLLIDES WITH THIS and the name alone cannot separate them: "3V3_SW"
+		// is a switch node on a buck and a switched rail on a load switch, and both are real house
+		// conventions. Reading it as a regulator internal is the safe direction, because the cost of
+		// being wrong is one rail going unprobed while the other way round asks a factory test to put
+		// a probe on a node swinging to the input rail at the switching frequency. A project whose
+		// convention is the other one narrows this vocabulary in conventions.yaml (WS3-069).
+		switching: mustCompileRole(`_SW$`, `_BOOT$`, `_PHASE$`, `_LX$`),
 		// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
 		// VCCIO). Stricter than rail on purpose: no bare "+", no digit-then-V net form, and VOUT (a
 		// supply output) is excluded.
@@ -119,6 +138,7 @@ func anyRoleMatch(name string, pats []*regexp.Regexp) bool {
 func (v *RoleVocab) IsRail(name string) bool      { return anyRoleMatch(name, v.rail) }
 func (v *RoleVocab) IsGround(name string) bool    { return anyRoleMatch(name, v.ground) }
 func (v *RoleVocab) IsFeedback(name string) bool  { return anyRoleMatch(name, v.feedback) }
+func (v *RoleVocab) IsSwitching(name string) bool { return anyRoleMatch(name, v.switching) }
 func (v *RoleVocab) IsSupplyPin(name string) bool { return anyRoleMatch(name, v.supplyPin) }
 
 // IsGate / IsSource / IsDrain classify a TRANSISTOR's pin name. The caller is responsible for the
@@ -157,6 +177,7 @@ type RoleVocabConfig struct {
 	Rail      VocabPatterns
 	Ground    VocabPatterns
 	Feedback  VocabPatterns
+	Switching VocabPatterns
 	SupplyPin VocabPatterns
 	Gate      VocabPatterns
 	Source    VocabPatterns
@@ -193,6 +214,7 @@ func BuildRoleVocab(cfg RoleVocabConfig) (*RoleVocab, error) {
 		{"rail", def.rail, cfg.Rail, &v.rail},
 		{"ground", def.ground, cfg.Ground, &v.ground},
 		{"feedback", def.feedback, cfg.Feedback, &v.feedback},
+		{"switching", def.switching, cfg.Switching, &v.switching},
 		{"supply_pin", def.supplyPin, cfg.SupplyPin, &v.supplyPin},
 		{"gate", def.gate, cfg.Gate, &v.gate},
 		{"source", def.source, cfg.Source, &v.source},
@@ -291,6 +313,9 @@ func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
 	}
 	if v.IsFeedback(name) {
 		add(NetRoleFeedback, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+	}
+	if v.IsSwitching(name) {
+		add(NetRoleSwitching, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	return stub.Roles
 }
