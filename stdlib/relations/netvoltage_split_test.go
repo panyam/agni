@@ -102,3 +102,50 @@ func TestNominalAndLevelArePartitioned(t *testing.T) {
 		}
 	}
 }
+
+// regulatorInternalDesign names one buck's output beside its feedback tap and switch node. All three
+// parse a voltage token and all three match the rail vocabulary, which is what makes the two of them
+// that are not rails invisible on any synthetic fixture that omits them.
+func regulatorInternalDesign() *ir.Design {
+	return &ir.Design{
+		Nets: []*ir.Net{
+			{Name: "12V_OUT", Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "12V_FB", Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "12V_SW", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+	}
+}
+
+// TestRegulatorInternalIsNeitherRailNorSignal: the third outcome (agni 679). A feedback tap and a
+// switch node must project NO voltage row at all.
+//
+// Asserting the absence from BOTH relations is the whole point. The fix that suggests itself is to
+// flip the rail gate, which drops these nets from net.nominal_voltage and lands them in
+// net.signal_level restating the identical wrong number under a relation that claims less. This test
+// fails for that fix as loudly as it does for no fix.
+func TestRegulatorInternalIsNeitherRailNorSignal(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(regulatorInternalDesign())))
+
+	for _, rel := range []string{RelNetNominalVoltage, RelNetSignalLevel} {
+		for _, f := range byRel[rel] {
+			if f.Subject == "12V_FB" || f.Subject == "12V_SW" {
+				t.Errorf("%s(%s) = %s: the number in the name is a DIFFERENT net's voltage, so neither relation can carry it", rel, f.Subject, f.Value)
+			}
+		}
+	}
+
+	// The positive control: the rail those internals serve still projects its nominal. Without it an
+	// implementation that emitted nothing at all would pass the half above.
+	found := false
+	for _, f := range byRel[RelNetNominalVoltage] {
+		if f.Subject == "12V_OUT" {
+			found = true
+			if f.Num == nil || *f.Num != 12 {
+				t.Errorf("net.nominal_voltage(12V_OUT) num = %v, want 12", f.Num)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("the rail itself must survive: %+v", byRel[RelNetNominalVoltage])
+	}
+}

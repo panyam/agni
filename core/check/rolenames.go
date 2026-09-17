@@ -18,6 +18,12 @@ import (
 // probe-able rail. Consults the active lexicon (WS3-069), now owned by classify.
 func IsFeedbackName(name string) bool { return classify.ActiveRoleVocab().IsFeedback(name) }
 
+// IsSwitchingName reports whether a net name is a regulator's power-stage node (the switch node, its
+// bootstrap cap, or the same node under a vendor spelling): "12V_SW" is named after the rail it
+// produces and is not one. The twin of IsFeedbackName, and the two are read together wherever a rule
+// asks whether a rail-named net is really a rail.
+func IsSwitchingName(name string) bool { return classify.ActiveRoleVocab().IsSwitching(name) }
+
 // NetHasRole reports whether a net carries a naming role (rail / ground / feedback), trusting the
 // stamped role fact (ir.Net.roles, filled at ingestion by classify.StampNetRoles, WS3-072) when the
 // net has ANY stamped role — the set is then authoritative, so a role is present iff it is in the set

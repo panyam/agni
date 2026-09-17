@@ -62,9 +62,10 @@ var (
 // The net-role tokens ir.Net.roles carries, re-exported from classify so check code reads a role by a
 // check.NetRole* name (the fallback helpers and the fact projectors).
 const (
-	NetRoleRail     = classify.NetRoleRail
-	NetRoleGround   = classify.NetRoleGround
-	NetRoleFeedback = classify.NetRoleFeedback
+	NetRoleRail      = classify.NetRoleRail
+	NetRoleGround    = classify.NetRoleGround
+	NetRoleFeedback  = classify.NetRoleFeedback
+	NetRoleSwitching = classify.NetRoleSwitching
 )
 
 // The component.class and pin-role vocabularies, re-exported from model.
