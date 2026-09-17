@@ -44,6 +44,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`pin_net_conflict(ref_des, pin, net)`](pin_net_conflict/) | a pin the read placed on more than one net; one row per net (reader integrity diagnostic) |
 | [`rail(net)`](rail/) | the net is a power or ground rail |
 | [`ref_des_collision(ref_des)`](ref_des_collision/) | a reference designator used by more than one part (reader integrity diagnostic) |
+| [`switching(net)`](switching/) | the net is a regulator power-stage node, the switch node or its bootstrap (must not be probed); the twin of feedback |
 | [`types_power_out(present)`](types_power_out/) | one row when the source format classifies power-output pins (EDIF/IPC do not, so a driver-absence check is unsound there) |
 | [`unresolved_symbol(ref_des, symref)`](unresolved_symbol/) | a placement whose symbol did not resolve, so it carries no pins (WS1-052) |
 
