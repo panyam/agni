@@ -8,8 +8,15 @@ back to), so a net whose name carries no parseable voltage token, or whose token
 (`12V_TO_5V`), yields no row: the relation refuses to guess. Every row cites the net's IR source.
 
 **Rails only.** The net must carry the rail role (ground counts) before its name is read. A non-rail
-net whose name declares a level is on `net.signal_level` instead, and the two relations are
-exhaustive and disjoint over the nets whose names parse.
+net whose name declares a level is on `net.signal_level` instead.
+
+**A regulator internal is on neither relation.** A buck's feedback tap, switch node and bootstrap
+node are named after the rail they serve, so `12V_FB` and `12V_SW` match the rail vocabulary on the
+prefix, and neither is at 12V: the tap sits at the regulator's internal reference and the switch node
+swings to the input rail at the switching frequency. The number in the name belongs to a different
+net, which makes it neither a rail nominal nor a signalling level, so the projector emits nothing
+rather than restating it under whichever relation is left. The two relations are therefore disjoint
+but NOT exhaustive (agni 679).
 
 That gate was missing until agni issue 194, and its absence is worth knowing about because the
 relation still *worked*: the projector emitted a row for any net whose name parsed, so a team

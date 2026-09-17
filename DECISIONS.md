@@ -1630,3 +1630,36 @@ the other is a promise the resolver cannot keep.
 **Reopen if** the built-in list starts growing to accommodate one project's parts. A house `esd_array`
 or a vendor's part-number family belongs in that project's config, and the moment two of them are
 argued about in this repo, 677 is the answer rather than a third entry in the table.
+
+---
+
+## A regulator internal projects no voltage at all, and the two voltage relations stop being exhaustive
+
+**Question.** `net.nominal_voltage` reported a buck's feedback tap at the regulated voltage, so
+`/DCDC/12V_FB` answered 12 (agni 679). The relation is gated on the rail role, and the obvious fix is
+to make that gate reject a feedback node. Where does the row go then?
+
+**Answer. Nowhere, and that is the whole decision.** `net.nominal_voltage` and `net.signal_level`
+were deliberately exhaustive and disjoint over the nets whose names parse a voltage token: rail-role
+nets on one side, everything else on the other. That was agni 194's fix and it was right for what it
+addressed, a house convention encoding a signalling level into a signal net's name.
+
+A regulator internal fits neither side. `12V_FB` is not a 12V rail, and it is not a 12V signalling
+level either, because the number in its name is a DIFFERENT net's voltage: the tap sits at the
+regulator's internal reference, typically 0.6V to 0.8V. So flipping the rail gate alone moves eight
+wrong rows from one relation to the other and restates the identical wrong number under a relation
+that claims less. A relation that cannot say what a net carries should say nothing.
+
+The cost is real and worth naming: exhaustiveness was a property a consumer could rely on, and it is
+gone. What it buys is that neither relation states a number we know to be false.
+
+**The precedence change that came with it.** `classify.rolesFor` used to say outright that when a net
+carries two roles, precedence between them is the consumer's call. That is now false for one pair:
+`feedback` and `switching` both mean "a rail-named net that is not a rail", and `Model.IsRailNet`
+settles it once. The old arrangement is exactly what produced the bug. Seven rail-quantified
+consumers read this model, and exactly one, the test-point rule, had remembered to exclude feedback
+for itself. A consumer that genuinely wants every rail-NAMED net still has `IsPowerRailName`.
+
+**Reopen if** a consumer turns up that needs the name-derived number for a regulator internal. It
+would need its own relation carrying what that number actually means (the voltage of the net this one
+regulates), which is a different fact from either of these two and should be named as one.
