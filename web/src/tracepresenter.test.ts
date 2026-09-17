@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, type Mock } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { artifactUri } from "./uri.js";
+import { type ViewerLocation } from "./router.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { SheetFormat, TraceSchema, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
 import { stubQueryView } from "./testviews.js";
@@ -9,7 +10,7 @@ import type { TraceState } from "./trace.js";
 // harness builds a presenter with only what the trace path needs; every other collaborator is a stub
 // sufficient for openFile to complete. wireTrace off is the unwired-panel case, which must be a
 // no-op rather than a throw, since the presenter's view ports are optional by design.
-function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<typeof TraceSchema>>; fail?: Error; onLocation?: ReturnType<typeof vi.fn>; sheets?: string[] } = {}) {
+function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<typeof TraceSchema>>; fail?: Error; onLocation?: Mock<(loc: ViewerLocation) => void>; sheets?: string[] } = {}) {
   const wireTrace = opts.wireTrace !== false;
   const answer =
     opts.trace ??
@@ -187,7 +188,7 @@ describe("a trace arriving in the URL", () => {
 // do not join" is a thing worth sending someone.
 describe("a trace reaching the URL", () => {
   it("reports the question it asked, whatever the outcome", async () => {
-    const onLocation = vi.fn();
+    const onLocation = vi.fn<(loc: ViewerLocation) => void>();
     const h = harness({ onLocation });
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.runTrace("U1.3", "J1.1");

@@ -10,11 +10,11 @@ function harness() {
     open: document.createElement("button"),
   };
   els.open.disabled = true;
-  const svg: SvgSurface & { setSvg: ReturnType<typeof vi.fn>; show: ReturnType<typeof vi.fn>; hide: ReturnType<typeof vi.fn> } = {
-    setSvg: vi.fn(),
-    show: vi.fn(),
-    hide: vi.fn(),
-  };
+  const svg = {
+    setSvg: vi.fn<SvgSurface["setSvg"]>(),
+    show: vi.fn<SvgSurface["show"]>(),
+    hide: vi.fn<SvgSurface["hide"]>(),
+  } satisfies SvgSurface;
   const navigate = vi.fn();
   return { stage: browseStage(els, svg, navigate), els, svg, navigate };
 }
