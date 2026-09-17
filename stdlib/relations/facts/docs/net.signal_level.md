@@ -5,10 +5,16 @@
 `net.signal_level(net, volts)` yields the voltage a **non-rail** net's name declares. It is the other
 half of `net.nominal_voltage`: the same name-derived number, over the nets that are not rails.
 
-The two are exhaustive and disjoint over the nets whose names parse. A net carrying the rail role
-(which includes ground) goes to `net.nominal_voltage`; every other net whose name carries a voltage
-token lands here. A name with no parseable token, or with tokens that disagree (`12V_TO_5V`), yields
-no row in either relation.
+The two are disjoint, and since agni 679 they are not exhaustive. A net carrying the rail role (which
+includes ground) goes to `net.nominal_voltage`; every other net whose name carries a voltage token
+lands here. A name with no parseable token, or with tokens that disagree (`12V_TO_5V`), yields no row
+in either relation.
+
+**A regulator internal is the third case and yields no row either.** `12V_FB` and `12V_SW` are named
+after the rail they serve rather than after what they carry, so the number is a different net's
+voltage: not a rail nominal, and not a signalling level. Dropping them from the rail side alone would
+have landed them here restating the same wrong number under a relation that claims less, so both
+projectors exclude them.
 
 ### Why the split exists
 
