@@ -23,6 +23,8 @@ const (
 	NetRoleGround    = "ground"
 	NetRoleFeedback  = "feedback"
 	NetRoleSwitching = "switching"
+	NetRoleControl   = "control"
+	NetRoleGateDrive = "gate_drive"
 )
 
 // AttrDeclaredRole is the ir.Net.attributes key carrying a role the SOURCE FILE stated outright,
@@ -63,7 +65,7 @@ const AttrDeclaredRole = "declared_role"
 // deliberately absent from it. It lives here so both the net-role and pin-supply naming conventions are
 // one config-overridable lexicon (WS3-069), not a frozen literal.
 type RoleVocab struct {
-	rail, ground, feedback, switching, supplyPin []*regexp.Regexp
+	rail, ground, feedback, switching, control, gateDrive, supplyPin []*regexp.Regexp
 	// Transistor TERMINAL pin names (WS3-117), each its own vocabulary because the three are
 	// independent conventions a house can spell differently (a gate is "G", "GATE", sometimes "DRV"
 	// on a driver). They are consumed ONLY where the component's class is a transistor — see
@@ -103,6 +105,21 @@ func DefaultRoleVocab() *RoleVocab {
 		// a probe on a node swinging to the input rail at the switching frequency. A project whose
 		// convention is the other one narrows this vocabulary in conventions.yaml (WS3-069).
 		switching: mustCompileRole(`_SW$`, `_BOOT$`, `_PHASE$`, `_LX$`),
+		// control: a regulator's configuration and enable inputs, named after the rail whose converter
+		// they configure. "20V_EN" enables the 20V converter and is driven by whatever logic the
+		// sequencer runs at, never by 20V; "12V_MODE1" selects the 12V converter's operating mode.
+		//
+		// These differ from feedback and switching in WHY they are not rails. Those two are the
+		// regulator's power plumbing and must not be probed. These are ordinary control signals that a
+		// test point is welcome on. What they share, and the only thing this vocabulary claims, is that
+		// the voltage token in the name identifies the CONVERTER rather than the net.
+		control: mustCompileRole(`_EN$`, `_MODE\d*$`, `_SEL\d*$`),
+		// gateDrive: the supply a regulator's gate driver runs from, again named after the rail the
+		// converter produces. Its own right to the word "rail" is arguable, since it genuinely is a
+		// supply, which is why it is its own role rather than lumped in with control. What is not
+		// arguable is the number: "12V_VDRV" is a gate-drive supply on the 12V converter and sits at
+		// whatever that part's driver rail is, commonly 5V.
+		gateDrive: mustCompileRole(`_VDRV$`, `_VDRIVE$`, `_VGATE$`),
 		// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
 		// VCCIO). Stricter than rail on purpose: no bare "+", no digit-then-V net form, and VOUT (a
 		// supply output) is excluded.
@@ -139,6 +156,8 @@ func (v *RoleVocab) IsRail(name string) bool      { return anyRoleMatch(name, v.
 func (v *RoleVocab) IsGround(name string) bool    { return anyRoleMatch(name, v.ground) }
 func (v *RoleVocab) IsFeedback(name string) bool  { return anyRoleMatch(name, v.feedback) }
 func (v *RoleVocab) IsSwitching(name string) bool { return anyRoleMatch(name, v.switching) }
+func (v *RoleVocab) IsControl(name string) bool   { return anyRoleMatch(name, v.control) }
+func (v *RoleVocab) IsGateDrive(name string) bool { return anyRoleMatch(name, v.gateDrive) }
 func (v *RoleVocab) IsSupplyPin(name string) bool { return anyRoleMatch(name, v.supplyPin) }
 
 // IsGate / IsSource / IsDrain classify a TRANSISTOR's pin name. The caller is responsible for the
@@ -178,6 +197,8 @@ type RoleVocabConfig struct {
 	Ground    VocabPatterns
 	Feedback  VocabPatterns
 	Switching VocabPatterns
+	Control   VocabPatterns
+	GateDrive VocabPatterns
 	SupplyPin VocabPatterns
 	Gate      VocabPatterns
 	Source    VocabPatterns
@@ -215,6 +236,8 @@ func BuildRoleVocab(cfg RoleVocabConfig) (*RoleVocab, error) {
 		{"ground", def.ground, cfg.Ground, &v.ground},
 		{"feedback", def.feedback, cfg.Feedback, &v.feedback},
 		{"switching", def.switching, cfg.Switching, &v.switching},
+		{"control", def.control, cfg.Control, &v.control},
+		{"gate_drive", def.gateDrive, cfg.GateDrive, &v.gateDrive},
 		{"supply_pin", def.supplyPin, cfg.SupplyPin, &v.supplyPin},
 		{"gate", def.gate, cfg.Gate, &v.gate},
 		{"source", def.source, cfg.Source, &v.source},
@@ -316,6 +339,12 @@ func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
 	}
 	if v.IsSwitching(name) {
 		add(NetRoleSwitching, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+	}
+	if v.IsControl(name) {
+		add(NetRoleControl, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+	}
+	if v.IsGateDrive(name) {
+		add(NetRoleGateDrive, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	return stub.Roles
 }

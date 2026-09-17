@@ -165,6 +165,8 @@ func (m *irModel) IsPowerRailName(name string) bool { return m.lexicon().RoleVoc
 func (m *irModel) IsGroundName(name string) bool    { return m.lexicon().RoleVocab().IsGround(name) }
 func (m *irModel) IsFeedbackName(name string) bool  { return m.lexicon().RoleVocab().IsFeedback(name) }
 func (m *irModel) IsSwitchingName(name string) bool { return m.lexicon().RoleVocab().IsSwitching(name) }
+func (m *irModel) IsControlName(name string) bool   { return m.lexicon().RoleVocab().IsControl(name) }
+func (m *irModel) IsGateDriveName(name string) bool { return m.lexicon().RoleVocab().IsGateDrive(name) }
 
 // IsGroundNet / IsRailNet answer the role question about a net: the stamped role set when the net
 // carries one (authoritative, filled at ingestion), else this model's lexicon over the name. Taking
@@ -174,10 +176,18 @@ func (m *irModel) IsGroundNet(n *ir.Net) bool {
 }
 
 // A REGULATOR INTERNAL IS NOT A RAIL, and this is the one place that decides it (agni 679, 680).
-// A buck's feedback tap, switch node and bootstrap node all inherit the name of the rail they serve,
-// so all three match the rail vocabulary and none carries the rail's voltage: the feedback tap sits
-// at the regulator's internal reference, the switch node swings to the INPUT rail at the switching
-// frequency, and the bootstrap node rides above the output.
+// A buck's feedback tap, switch node, bootstrap node, mode straps, enable and gate-drive supply all
+// inherit the name of the rail they serve, so all of them match the rail vocabulary and none carries
+// the rail's voltage: the feedback tap sits at the regulator's internal reference, the switch node
+// swings to the INPUT rail at the switching frequency, the bootstrap node rides above the output, and
+// a mode strap or enable is a logic input at whatever level the sequencer drives.
+//
+// The general rule the vocabularies encode piecemeal: WHEN A RAIL TOKEN IS A PREFIX AND A KNOWN
+// REGULATOR-PIN-FUNCTION SUFFIX FOLLOWS, THE TOKEN NAMES THE CONVERTER RATHER THAN THE VOLTAGE.
+// That is why this does not disturb net.signal_level's own case, agni 194's `U3_12_U7_4_3V3`, where
+// the token stands free rather than heading a `<rail>_<function>` name. Encoding the grammar itself
+// was considered and held: it would decide railhood from a suffix list nobody has enumerated, and
+// changing what every board reads as a rail is a larger bet than naming the functions we have met.
 //
 // Deciding it here rather than per consumer reverses what the role tokens used to say, deliberately.
 // Seven rail-quantified consumers read this model and exactly one, the test-point rule, remembered to
@@ -187,14 +197,25 @@ func (m *irModel) IsRailNet(n *ir.Net) bool {
 	if !NetHasRole(n, NetRoleRail, m.IsPowerRailName) {
 		return false
 	}
-	return !m.isRegulatorInternal(n)
+	return !m.IsRegulatorInternalNet(n)
 }
 
-// isRegulatorInternal reports whether a net is a regulator's own plumbing rather than a supply it
-// produces. Read only through IsRailNet, so the rail question has one answer.
-func (m *irModel) isRegulatorInternal(n *ir.Net) bool {
+// IsRegulatorInternalNet reports whether a net belongs to a regulator's own plumbing rather than
+// being a supply it produces: a feedback tap, a power-stage node, a configuration or enable input, or
+// a gate-drive supply. All four are named after the rail the converter produces, so all four match the
+// rail vocabulary, and for all four the voltage token in the name identifies the CONVERTER rather than
+// what the net carries.
+//
+// Exported, and on the interface, because it has two callers that must not drift: IsRailNet
+// subtracts it from the rail role, and the two name-derived voltage relations subtract it from BOTH
+// sides of their split so a net dropped from one does not reappear in the other. It was briefly a
+// private method plus a copy in stdlib/relations, which is the shape that agreed by luck until
+// someone added a role to one of them.
+func (m *irModel) IsRegulatorInternalNet(n *ir.Net) bool {
 	return NetHasRole(n, NetRoleFeedback, m.IsFeedbackName) ||
-		NetHasRole(n, NetRoleSwitching, m.IsSwitchingName)
+		NetHasRole(n, NetRoleSwitching, m.IsSwitchingName) ||
+		NetHasRole(n, NetRoleControl, m.IsControlName) ||
+		NetHasRole(n, NetRoleGateDrive, m.IsGateDriveName)
 }
 
 // componentClassesOf resolves a component's device_classes SET: the normalized set stamped at
