@@ -1,0 +1,11 @@
+# esbuild ships its platform binary as an optional dependency and its postinstall links and verifies
+# it. pnpm refuses to run a dependency's build script until the repo declares a decision about it, so
+# an undeclared esbuild is a hard ERR_PNPM_IGNORED_BUILDS on pnpm 12 and a warning on pnpm 10. The two
+# spellings are the same decision for the two versions: pnpm 12 reads allowBuilds and ignores
+# onlyBuiltDependencies, pnpm 10 reads onlyBuiltDependencies and tolerates allowBuilds. CI pins pnpm
+# 10 (.github/workflows/ci.yml) while a developer's pnpm is usually newer, so both have to be here or
+# the install fails on one of them.
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild
