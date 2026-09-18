@@ -292,9 +292,13 @@ Two mechanisms keep the schema from drifting toward whatever format is read most
 
 ## Derived fields, and the tiers that fill them
 
-Some fields no reader populates. A net's role ({{ explainable "rail" }} / ground / feedback) and a component's device
-class are *derived* from the already-read IR by a shared, format-neutral pass, so every format gets
-them the same way rather than each reader inventing its own answer.
+Some fields no reader populates. A net's role (a {{ explainable "rail" }}, a ground, and the four that
+mean "named after a rail without being one"; see [naming conventions](../../guide/naming-conventions/))
+and a component's device class are *derived* from the already-read IR by a shared, format-neutral pass,
+so every format gets them the same way rather than each reader inventing its own answer.
+
+The roles themselves are the `ir.Role` enum, so the vocabulary is generated for Go and TypeScript from
+one definition rather than being a list each language keeps its own copy of.
 
 Those passes originally all ran at ingestion, and the rule was one shared pass per field. That
 assumed everything a derived field needs is available at read time. It stopped being true when the
