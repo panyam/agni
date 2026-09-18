@@ -9,7 +9,7 @@ Enforceable architectural rules for this project. Background and rationale in
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
 that to being true, because a rule with nothing to run is not enforceable and that is exactly how C6
-went unchecked. A Verify is one of two things. Seventeen are TESTS the gate runs, so a violation
+went unchecked. A Verify is one of two things. Eighteen are TESTS the gate runs, so a violation
 turns CI red. Fourteen are REVIEW questions, and each says what a reviewer should ask instead. That second
 number is the one to watch, and C32 is why: it joined the review column knowing its test was missing
 rather than by deciding a machine could not answer it, and left again once the test existed. So a
@@ -1050,3 +1050,24 @@ never works. Reverting 656 fails the first test alone; disabling resolution enti
 The KIND clause gained its own tests with agni 654 (`TestColumnKindsFollowDerivedRelations`,
 `service`). Still open: the LINK clause is asserted only through the two surfaces agreeing on tiers,
 rather than on what a minted link opens, which needs a served viewer rather than a resolver.
+
+## C33: A function body is not copied into a second package
+**Rule:** When code in one package needs logic another package already has, the logic moves to a
+package both can import, named for what it does. It is not copied. There is no `utils` package, and
+C33 does not create one: `internal/geomath` is the precedent for a focused helper package.
+**Why:** Two copies agree until one is edited, and nothing notices when they stop. Agni issue 698
+audited the engine tree for this and found the shape repeatedly. `model.RenderRoute` was written
+twice in one week. `isRegulatorInternal` had a private copy in `stdlib/relations` that would have
+missed the next regulator role. The net-class cascade that decides which class's track width binds
+a net lived in both the `net.declared_*` relations and the `netclass-conformance` rules, which
+agreed only because nobody had touched either. Two more had already drifted when the audit found
+them, and they are tracked as issues rather than hidden behind this rule.
+**Verify:** `TestC33NoFunctionBodyIsCopiedAcrossPackages` (`internal/constraints`) sweeps the engine
+tiers for any function body of six or more lines that appears in more than one package, comments
+ignored. `TestC33DetectsACopiedBody` is its positive control. A duplicate that is coincidence goes
+in the test's allowlist with its reason, and an entry that no longer matches fails.
+
+The sweep fires at the COPY, which is the one moment the two are identical. It cannot see copies
+that have since diverged, so "does this already exist somewhere" stays a review question. The
+example modules are outside the sweep because they cannot import `internal/`, so a duplicate there
+is forced by the module boundary. Which ones matter is agni issue 380's question.

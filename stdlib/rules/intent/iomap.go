@@ -7,7 +7,6 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/ident"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // The declared pin map checked against the netlist (agni issue 517).
@@ -138,7 +137,7 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 			Subject: check.PinEntity(a.Device, res.designator),
 			Message: fmt.Sprintf("the IO map assigns %q to %s pin %s, which carries %s",
 				a.Net, a.Device, res.label(), orNone(actual)),
-			Prov: componentProv(m, a.Device),
+			Prov: check.ComponentProv(m, a.Device),
 		}
 		out = append(out, notEvaluatedFunction(v, a))
 	}
@@ -241,7 +240,7 @@ func ioMapFarEndVerdicts(m check.Model, d Declaration) []check.Verdict {
 				Message: fmt.Sprintf("the IO map declares %s reaches %s, and it does not: %s sits on %q and %s sits on %q",
 					near.endpoint(a.Device), far.endpoint(a.To.Device),
 					near.endpoint(a.Device), t.From.Net, far.endpoint(a.To.Device), t.To.Net),
-				Prov: componentProv(m, a.Device),
+				Prov: check.ComponentProv(m, a.Device),
 			}
 		default:
 			// An endpoint that resolved to a pin the design has but that sits on no net at all. The
@@ -338,7 +337,7 @@ func resolvePin(m check.Model, refDes, declared string) pinMatch {
 		out.finding = &check.Finding{
 			Subject: check.ComponentEntity(refDes),
 			Message: fmt.Sprintf("the IO map names pin %q on %s, which declares no such pin by designator or by name", declared, refDes),
-			Prov:    componentProv(m, refDes),
+			Prov:    check.ComponentProv(m, refDes),
 		}
 		return out
 	case 1:
@@ -360,7 +359,7 @@ func resolvePin(m check.Model, refDes, declared string) pinMatch {
 		Subject:      check.ComponentEntity(refDes),
 		Message:      fmt.Sprintf("the IO map names pin %q on %s, which has %d pins of that name (%s); name the package designator to make the row decidable", declared, refDes, len(hits), strings.Join(named, ", ")),
 		Inconclusive: true,
-		Prov:         componentProv(m, refDes),
+		Prov:         check.ComponentProv(m, refDes),
 	}
 	return out
 }
@@ -454,13 +453,4 @@ func orNone(net string) string {
 		return "no net"
 	}
 	return fmt.Sprintf("%q", net)
-}
-
-func componentProv(m check.Model, refDes string) *ir.Provenance {
-	for _, c := range m.Components() {
-		if c.GetRefDes() == refDes {
-			return c.GetProv()
-		}
-	}
-	return nil
 }

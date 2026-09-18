@@ -2,12 +2,9 @@ package builtin
 
 import (
 	"fmt"
-	"math"
-	"sort"
 	"strconv"
 
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // Declared-vs-actual net-class conformance (WS3-111). These are the first rules in the catalog that
@@ -95,16 +92,12 @@ func declaredVsActual(
 	msg string,
 ) []check.Verdict {
 	// No explicit empty-definitions guard: with no definitions there is no class stating anything,
-	// so declaredFor reports "not stated" for every net and every verdict is NoLimit.
+	// so the cascade reports "not stated" for every net and every verdict is NoLimit.
 	// CapNetClassDefs is what reports that situation to a review as a rule-level answer.
-	defs := m.NetClassDefs()
-	byName := make(map[string]*ir.Constraint, len(defs))
-	var defaultClass string
-	for _, c := range defs {
-		byName[c.GetName()] = c
-		if c.GetParams()["is_default"] == "true" {
-			defaultClass = c.GetName()
-		}
+	cascade := check.NewNetClassCascade(m.NetClassDefs())
+	classesOf := map[string][]string{}
+	for _, n := range m.Nets() {
+		classesOf[n.GetName()] = n.GetNetClasses()
 	}
 
 	var out []check.Verdict
@@ -119,7 +112,7 @@ func declaredVsActual(
 			out = append(out, v)
 			continue
 		}
-		declared, from, stated := declaredFor(m, bn.Net, param, byName, defaultClass)
+		declared, from, stated := cascade.Declared(classesOf[bn.Net], param)
 		bound := check.Bound{}
 		if stated {
 			bound.Min = &declared
@@ -137,45 +130,6 @@ func declaredVsActual(
 		out = append(out, v)
 	}
 	return out
-}
-
-// declaredFor resolves one quantity for one net: the value from the highest-priority class stating
-// it, and the name of that class so a finding can say where the limit came from.
-func declaredFor(m check.Model, netName, param string, byName map[string]*ir.Constraint, defaultClass string) (float64, string, bool) {
-	var classes []string
-	for _, n := range m.Nets() {
-		if n.GetName() == netName {
-			classes = append(classes, n.GetNetClasses()...)
-			break
-		}
-	}
-	sort.SliceStable(classes, func(i, j int) bool {
-		return constraintPriority(byName[classes[i]]) < constraintPriority(byName[classes[j]])
-	})
-	if defaultClass != "" {
-		classes = append(classes, defaultClass) // always last, and applies even to an unclassed net
-	}
-	for _, cls := range classes {
-		c := byName[cls]
-		if c == nil {
-			continue // assigned to a class the project never defined; states nothing
-		}
-		if v, err := strconv.ParseFloat(c.GetParams()[param], 64); err == nil {
-			return v, cls, true
-		}
-	}
-	return 0, "", false
-}
-
-func constraintPriority(c *ir.Constraint) int {
-	if c == nil {
-		return math.MaxInt32
-	}
-	p, err := strconv.Atoi(c.GetParams()["priority"])
-	if err != nil {
-		return math.MaxInt32
-	}
-	return p
 }
 
 func mmText(mm float64) string { return strconv.FormatFloat(mm, 'g', -1, 64) + "mm" }

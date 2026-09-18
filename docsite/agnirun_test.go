@@ -209,6 +209,45 @@ func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
 	}
 }
 
+// A fetched fixture has nothing tracked, so its stamp has to cover something else, or naming a board
+// as the fixture stamps identically to naming none (agni issue 682). It covers the samples pin, and
+// needs no corpus on disk to do so: the fixture below does not exist.
+func TestInputHashCoversAFetchedFixtureByItsPin(t *testing.T) {
+	pin := filepath.Join(t.TempDir(), "samples.pin")
+	if err := os.WriteFile(pin, []byte("VERSION v1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	orig := samplesPin
+	samplesPin = pin
+	t.Cleanup(func() { samplesPin = orig })
+
+	const fixture = "tools/samples/boards/not-fetched-here"
+	none, err := inputHash([]byte("spec"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatalf("a fetched fixture must stamp without the corpus present: %v", err)
+	}
+	if before == none {
+		t.Error("a fetched fixture stamped identically to no fixture at all")
+	}
+	if other, _ := inputHash([]byte("spec"), "tools/samples/boards/another"); other == before {
+		t.Error("two fetched boards under one pin stamped identically")
+	}
+	if err := os.WriteFile(pin, []byte("VERSION v2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	after, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after == before {
+		t.Error("bumping the samples pin must move a fetched fixture's stamp, or its capture never regenerates")
+	}
+}
+
 // A continued command carries ONE prompt. Prefixing the continuation line too rendered a second `$`
 // where there is no second command, and a reader copying the block got a command broken in half.
 func TestAContinuedCommandCarriesOnePrompt(t *testing.T) {

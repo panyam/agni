@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -352,10 +353,28 @@ func readOutput(path string) (bodies []string, stamp string, err error) {
 //
 // Regenerating the output would have moved the staleness rather than fixed it: the new stamp would
 // have been right for a tree that had run the tutorial and wrong for every clean checkout.
+//
+// A FETCHED fixture is the exception, since none of it is committed and so none of it is tracked.
+// Its stamp covers hack/samples.pin instead, which is tracked and names the release and a checksum
+// per artifact, so it changes exactly when the corpus does. That also means the stamp can be checked
+// on a machine that never fetched the corpus, which is how the docs workflow builds (agni issue 682).
 func inputHash(spec []byte, fixture string) (string, error) {
 	h := sha256.New()
 	h.Write(spec)
 	if fixture == "" {
+		return hex.EncodeToString(h.Sum(nil))[:16], nil
+	}
+	if isFetched(fixture) {
+		pinPath := samplesPin
+		if !filepath.IsAbs(pinPath) {
+			pinPath = filepath.Join("..", pinPath)
+		}
+		pin, err := os.ReadFile(pinPath)
+		if err != nil {
+			return "", fmt.Errorf("hashing fetched fixture %s: %w", fixture, err)
+		}
+		h.Write([]byte(path.Clean(fixture)))
+		h.Write(pin)
 		return hex.EncodeToString(h.Sum(nil))[:16], nil
 	}
 	if stray, err := untrackedFixtureFiles(fixture); err != nil {
@@ -405,6 +424,20 @@ func inputHash(spec []byte, fixture string) (string, error) {
 // output into examples/tutorial-project/reports/, and counting that is what agni issue 357 was: every
 // gate run by anyone who had followed the tutorial rewrote the committed stamp. --exclude-standard is
 // exactly the line between generated output nobody commits and a fixture somebody forgot to.
+// fetchedRoot is where `make samples` extracts the pinned board corpus (hack/fetch_samples.sh). It
+// is gitignored, because the boards are other people's and carry their own licences.
+const fetchedRoot = "tools/samples"
+
+// samplesPin is the tracked file a fetched fixture's stamp covers in place of its content, relative
+// to the repo root. A variable so a test can point it at a pin it is free to edit, which it does
+// with an absolute path.
+var samplesPin = "hack/samples.pin"
+
+func isFetched(fixture string) bool {
+	c := path.Clean(fixture)
+	return c == fetchedRoot || strings.HasPrefix(c, fetchedRoot+"/")
+}
+
 func untrackedFixtureFiles(fixture string) ([]string, error) {
 	cmd := exec.Command("git", "ls-files", "-z", "--others", "--exclude-standard", "--", fixture)
 	cmd.Dir = ".."
@@ -473,6 +506,9 @@ func execute(spec runSpec) ([]string, error) {
 			}
 		} else {
 			work = dest
+		}
+		if _, err := os.Stat(filepath.Join("..", spec.Fixture)); err != nil && isFetched(spec.Fixture) {
+			return nil, fmt.Errorf("fixture %s is fetched rather than committed, and is not here: run `make samples`", spec.Fixture)
 		}
 		if out, err := exec.Command("cp", "-R", filepath.Join("..", spec.Fixture), dest).CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("copying fixture: %v: %s", err, out)
