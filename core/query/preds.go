@@ -262,7 +262,7 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 // Splitting it matters for a reason worth stating: solving stops as soon as an atom yields nothing,
 // so a wrong-arity atom LATER in a body is never reached on a design where an earlier one matches
 // nothing. Checking arity only where a solve happens to arrive is checking it sometimes.
-// checkArgDomains rejects a CONSTANT naming a value its column cannot hold, for the few columns whose
+// checkArgValues rejects a CONSTANT naming a value its column cannot hold, for the few columns whose
 // values are a vocabulary the engine defines (agni 696). A variable is unaffected, and a relation
 // declaring no domain is unchanged.
 //
@@ -270,7 +270,7 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 // answered "no results", which reads as a fact about the board rather than a typo, and is the same
 // shape as the unsafe negation of agni 522 one layer further in. An empty answer to a question that
 // was never valid is the worst available outcome.
-func (b *Base) checkArgDomains(atom *Atom) error {
+func (b *Base) checkArgValues(atom *Atom) error {
 	info, ok := b.reg.InfoOf(atom.Relation)
 	if !ok || len(info.ArgKinds) == 0 {
 		return nil
@@ -280,16 +280,16 @@ func (b *Base) checkArgDomains(atom *Atom) error {
 			continue
 		}
 		label := info.Args[i]
-		domain := info.ArgKinds[label].Domain
-		if len(domain) == 0 {
+		allowed := info.ArgKinds[label].ValidOptions
+		if len(allowed) == 0 {
 			continue
 		}
 		got := arg.Const.S
-		if slices.Contains(domain, got) {
+		if slices.Contains(allowed, got) {
 			continue
 		}
 		return fmt.Errorf("query: %s's %q argument cannot be %q%s (it holds one of: %s)",
-			atom.Relation, label, got, didYouMeanValue(domain, got), strings.Join(domain, ", "))
+			atom.Relation, label, got, didYouMeanValue(allowed, got), strings.Join(allowed, ", "))
 	}
 	return nil
 }
@@ -306,7 +306,7 @@ func (b *Base) checkAtom(atom *Atom) error {
 		if len(atom.Args) != len(fields) {
 			return fmt.Errorf("query: relation %q takes %d args, got %d", rel, len(fields), len(atom.Args))
 		}
-		return b.checkArgDomains(atom)
+		return b.checkArgValues(atom)
 	}
 	if b.isIDB(rel) {
 		if len(atom.Args) != b.idbArity[rel] {

@@ -26,7 +26,7 @@ func infoFor(t *testing.T, rel string) facts.RelationInfo {
 // copy of it. A literal list here would go stale the way the tokens did before agni 692, and the
 // column would then reject a role the engine had just added.
 func TestRoleDomainIsTheVocabularyItself(t *testing.T) {
-	got := infoFor(t, RelNetRole).ArgKinds["role"].Domain
+	got := infoFor(t, RelNetRole).ArgKinds["role"].ValidOptions
 	if len(got) != len(classify.AllNetRoles()) {
 		t.Fatalf("net.role domain has %d values, the vocabulary has %d", len(got), len(classify.AllNetRoles()))
 	}
@@ -40,7 +40,7 @@ func TestRoleDomainIsTheVocabularyItself(t *testing.T) {
 // TestPinTypeDomainCoversEveryDirection: same property for the other closed column. Every spelling
 // DirString can produce must be askable, or the domain rejects a value the projector emits.
 func TestPinTypeDomainCoversEveryDirection(t *testing.T) {
-	got := infoFor(t, RelPinType).ArgKinds["etype"].Domain
+	got := infoFor(t, RelPinType).ArgKinds["etype"].ValidOptions
 	for i := range ir.PinDirection_name {
 		want := check.DirString(ir.PinDirection(i))
 		if want == "" {
@@ -61,7 +61,7 @@ func TestOpenColumnsDeclareNoDomain(t *testing.T) {
 		{RelComponentAttr, "key"}, {RelComponentAttr, "value"},
 		{RelNetRole, "net"}, {RelComponentMPN, "mpn"},
 	} {
-		if d := infoFor(t, c.rel).ArgKinds[c.arg].Domain; len(d) != 0 {
+		if d := infoFor(t, c.rel).ArgKinds[c.arg].ValidOptions; len(d) != 0 {
 			t.Errorf("%s's %q is an open column and declares a domain %v; it would reject valid questions", c.rel, c.arg, d)
 		}
 	}
@@ -73,13 +73,13 @@ func TestOpenColumnsDeclareNoDomain(t *testing.T) {
 func TestEveryDeclaredDomainIsNonEmpty(t *testing.T) {
 	for _, info := range builtinCatalog {
 		for arg, kind := range info.ArgKinds {
-			if kind.Domain == nil {
+			if kind.ValidOptions == nil {
 				continue
 			}
-			if len(kind.Domain) == 0 {
+			if len(kind.ValidOptions) == 0 {
 				t.Errorf("%s's %q declares an EMPTY domain, which rejects every constant", info.Name, arg)
 			}
-			for _, v := range kind.Domain {
+			for _, v := range kind.ValidOptions {
 				if strings.TrimSpace(v) != v || v == "" {
 					t.Errorf("%s's %q domain holds %q, which no projector can emit", info.Name, arg, v)
 				}
