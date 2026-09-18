@@ -34,20 +34,23 @@ func TestNetRoleProjectsEveryStampedRole(t *testing.T) {
 		got[f.Subject][f.Value] = true
 	}
 
-	for _, c := range []struct{ net, role string }{
-		{"12V_OUT", check.NetRoleRail},
-		{"12V_FB", check.NetRoleFeedback},
-		{"12V_SW", check.NetRoleSwitching},
-		{"12V_MODE1", check.NetRoleControl},
-		{"12V_VDRV", check.NetRoleGateDrive},
-		{"GND", check.NetRoleGround},
+	for _, c := range []struct {
+		net  string
+		role ir.Role
+	}{
+		{"12V_OUT", ir.Role_ROLE_RAIL},
+		{"12V_FB", ir.Role_ROLE_FEEDBACK},
+		{"12V_SW", ir.Role_ROLE_SWITCHING},
+		{"12V_MODE1", ir.Role_ROLE_CONTROL},
+		{"12V_VDRV", ir.Role_ROLE_GATE_DRIVE},
+		{"GND", ir.Role_ROLE_GROUND},
 	} {
-		if !got[c.net][c.role] {
+		if !got[c.net][classify.RoleToken(c.role)] {
 			t.Errorf("net.role(%s, %s) missing; got %v", c.net, c.role, got[c.net])
 		}
 	}
 	// A net can carry several: 12V_SW is rail by prefix and switching by suffix.
-	if !got["12V_SW"][check.NetRoleRail] {
+	if !got["12V_SW"][classify.RoleToken(ir.Role_ROLE_RAIL)] {
 		t.Errorf("net.role must emit EVERY role, not the first: 12V_SW = %v", got["12V_SW"])
 	}
 	// The negative half. A plain signal carries none.
@@ -66,7 +69,7 @@ func TestEveryRoleInTheVocabularyIsProjectable(t *testing.T) {
 		seen[f.Value] = true
 	}
 	for _, role := range classify.AllNetRoles() {
-		if !seen[role] {
+		if !seen[classify.RoleToken(role)] {
 			t.Errorf("role %q is in AllNetRoles but no fixture net projects it; either the fixture or the projector is short", role)
 		}
 	}

@@ -43,9 +43,9 @@ func IsGateDriveName(name string) bool { return classify.ActiveRoleVocab().IsGat
 // counterpart of the Model reading device_classes with a re-derive fallback, and the seam where a
 // future structural signal can make the stamp beat the name. IsPowerRail (the Model core) and the
 // net-role relations (stdlib/relations) both read through it, so the trust rule has one home.
-func NetHasRole(n *ir.Net, role string, nameMatch func(string) bool) bool {
+func NetHasRole(n *ir.Net, role ir.Role, nameMatch func(string) bool) bool {
 	if roles := n.GetRoles(); len(roles) > 0 {
-		return slices.ContainsFunc(roles, func(r *ir.NetRole) bool { return r.GetRole() == role })
+		return slices.ContainsFunc(roles, func(r *ir.NetRole) bool { return r.GetRoleKind() == role })
 	}
 	return nameMatch(n.GetName())
 }
@@ -58,9 +58,9 @@ func NetHasRole(n *ir.Net, role string, nameMatch func(string) bool) bool {
 // A net whose role came from the NAME fallback (no stamped set at all, e.g. a hand-authored test IR)
 // reports ROLE_SOURCE_CONVENTION, because that is exactly what the fallback is: a naming convention
 // read at the point of use rather than at ingestion.
-func NetRoleSource(n *ir.Net, role string, nameMatch func(string) bool) (ir.RoleSource, bool) {
+func NetRoleSource(n *ir.Net, role ir.Role, nameMatch func(string) bool) (ir.RoleSource, bool) {
 	for _, r := range n.GetRoles() {
-		if r.GetRole() == role {
+		if r.GetRoleKind() == role {
 			return r.GetSource(), true
 		}
 	}

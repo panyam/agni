@@ -21,10 +21,10 @@ func railVocab(t *testing.T, pattern string) *classify.Lexicon {
 	return &classify.Lexicon{Role: rv}
 }
 
-func rolesOf(d *ir.Design, net string) []string {
+func rolesOf(d *ir.Design, net string) []ir.Role {
 	for _, n := range d.GetNets() {
 		if n.GetName() == net {
-			return classify.RoleTokens(n)
+			return classify.NetRoles(n)
 		}
 	}
 	return nil
@@ -49,8 +49,8 @@ func TestReadDesignStampsPerLoaderLexicon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadDesign (project lexicon): %v", err)
 	}
-	if got := rolesOf(project, "SIG"); !slices.Contains(got, classify.NetRoleRail) {
-		t.Errorf("SIG roles with the project lexicon = %v, want it to carry %q", got, classify.NetRoleRail)
+	if got := rolesOf(project, "SIG"); !slices.Contains(got, ir.Role_ROLE_RAIL) {
+		t.Errorf("SIG roles with the project lexicon = %v, want it to carry %q", got, ir.Role_ROLE_RAIL)
 	}
 
 	// The first read's design is untouched by the second loader: the vocabulary travelled with each
@@ -65,8 +65,8 @@ func TestReadDesignStampsPerLoaderLexicon(t *testing.T) {
 	// A name every vocabulary agrees on is stamped the same either way, so the per-read lexicon
 	// EXTENDS the conventions rather than replacing them.
 	for _, d := range []*ir.Design{plain, project} {
-		if got := rolesOf(d, "GND"); !slices.Contains(got, classify.NetRoleGround) {
-			t.Errorf("GND roles = %v, want it to carry %q under both lexicons", got, classify.NetRoleGround)
+		if got := rolesOf(d, "GND"); !slices.Contains(got, ir.Role_ROLE_GROUND) {
+			t.Errorf("GND roles = %v, want it to carry %q under both lexicons", got, ir.Role_ROLE_GROUND)
 		}
 	}
 }
@@ -88,7 +88,7 @@ func TestNilLexiconReadsAsDefaults(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ReadDesign: %v", err)
 			}
-			if got := rolesOf(d, "GND"); !slices.Contains(got, classify.NetRoleGround) {
+			if got := rolesOf(d, "GND"); !slices.Contains(got, ir.Role_ROLE_GROUND) {
 				t.Errorf("GND roles = %v, want the built-in ground vocabulary to still apply", got)
 			}
 		})

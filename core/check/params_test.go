@@ -248,7 +248,7 @@ func TestDatasheetEvidenceRecordsItsSource(t *testing.T) {
 	mpn := "ACME-IC"
 	m := NewModelWithParams(houseNamedRailDesign(mpn), nil, param.ParamSet{mpn: railSpec(mpn)})
 
-	src, ok := NetRoleSource(netNamed(m, "PMIC_CORE_3V3"), NetRoleRail, func(string) bool { return false })
+	src, ok := NetRoleSource(netNamed(m, "PMIC_CORE_3V3"), ir.Role_ROLE_RAIL, func(string) bool { return false })
 	if !ok || src != ir.RoleSource_ROLE_SOURCE_DATASHEET {
 		t.Errorf("got (%v, %v), want (DATASHEET, true)", src, ok)
 	}
@@ -282,7 +282,7 @@ func TestDatasheetEvidenceOnlyAdds(t *testing.T) {
 		t.Errorf("one role established by two tiers stays one role, got %d: %v", got, n.GetRoles())
 	}
 	// Stronger evidence upgrades the record; the role itself was never at risk.
-	if src, _ := NetRoleSource(n, NetRoleRail, func(string) bool { return false }); src != ir.RoleSource_ROLE_SOURCE_DATASHEET {
+	if src, _ := NetRoleSource(n, ir.Role_ROLE_RAIL, func(string) bool { return false }); src != ir.RoleSource_ROLE_SOURCE_DATASHEET {
 		t.Errorf("datasheet outranks convention for the same role, got %v", src)
 	}
 }

@@ -10,30 +10,46 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// The net-role tokens stamped onto ir.Net.roles and read back by the core. A net may carry more than
-// one (a rail-named feedback node is both "rail" and "feedback"), the same way the device_classes SET
-// (WS3-071) records every matched class and the reader picks the specific one.
+// RoleToken renders a role as the lowercase token the query surface and the config lexicon speak:
+// ROLE_GATE_DRIVE becomes "gate_drive". It is DERIVED from the generated enum name rather than read
+// from a table, so the tokens cannot drift from the vocabulary and a language other than Go can
+// perform the identical transform on its own generated enum.
 //
-// FEEDBACK AND SWITCHING BOTH MEAN "A RAIL-NAMED NET THAT IS NOT A RAIL", and unlike the other roles
-// their precedence against rail is NOT the consumer's call. It is decided once, in Model.IsRailNet,
-// because leaving it to each consumer is what agni issues 679 and 680 measured: seven rail-quantified
-// consumers, of which exactly one remembered to exclude feedback. A regulator's switch node is the
-// highest dV/dt net in the design, so a rule that treats it as a rail does not give weaker advice, it
-// gives the opposite advice.
-const (
-	NetRoleRail      = "rail"
-	NetRoleGround    = "ground"
-	NetRoleFeedback  = "feedback"
-	NetRoleSwitching = "switching"
-	NetRoleControl   = "control"
-	NetRoleGateDrive = "gate_drive"
-)
+// ROLE_UNSPECIFIED renders empty, so a zero value never reaches a fact row looking like a real role.
+func RoleToken(r ir.Role) string {
+	if r == ir.Role_ROLE_UNSPECIFIED {
+		return ""
+	}
+	return strings.ToLower(strings.TrimPrefix(r.String(), "ROLE_"))
+}
 
-// AllNetRoles is every role token the engine stamps, in a stable order. It exists so a consumer can
-// iterate the vocabulary rather than hard-coding a list that goes stale: net.role projects through it,
-// and a role added above without being added here is invisible to every query.
-func AllNetRoles() []string {
-	return []string{NetRoleRail, NetRoleGround, NetRoleFeedback, NetRoleSwitching, NetRoleControl, NetRoleGateDrive}
+// ParseRole maps a token back to its role, reporting whether the vocabulary has one. It is the
+// LOUD half of a closed vocabulary: a reader translating a source format's own netclass, or a config
+// naming a role, gets a false here rather than a value that silently matches nothing. That silence is
+// what agni 677 is about on the classification side.
+func ParseRole(token string) (ir.Role, bool) {
+	for _, r := range AllNetRoles() {
+		if RoleToken(r) == token {
+			return r, true
+		}
+	}
+	return ir.Role_ROLE_UNSPECIFIED, false
+}
+
+// AllNetRoles is every role the engine stamps, in declaration order and without the zero value. It
+// reads the GENERATED enum rather than a hand-kept list, so a role added to the proto is projected,
+// parseable and configurable without anyone remembering a second place.
+func AllNetRoles() []ir.Role {
+	out := make([]ir.Role, 0, len(ir.Role_name)-1)
+	for i := int32(1); ; i++ {
+		name, ok := ir.Role_name[i]
+		if !ok {
+			break
+		}
+		_ = name
+		out = append(out, ir.Role(i))
+	}
+	return out
 }
 
 // AttrDeclaredRole is the ir.Net.attributes key carrying a role the SOURCE FILE stated outright,
@@ -357,7 +373,21 @@ func RoleTokens(n *ir.Net) []string {
 	}
 	out := make([]string, 0, len(roles))
 	for _, r := range roles {
-		out = append(out, r.GetRole())
+		out = append(out, RoleToken(r.GetRoleKind()))
+	}
+	return out
+}
+
+// NetRoles returns the roles a net carries, dropping the evidence. The typed counterpart of
+// RoleTokens, for a caller comparing against the vocabulary rather than rendering it.
+func NetRoles(n *ir.Net) []ir.Role {
+	roles := n.GetRoles()
+	if len(roles) == 0 {
+		return nil
+	}
+	out := make([]ir.Role, 0, len(roles))
+	for _, r := range roles {
+		out = append(out, r.GetRoleKind())
 	}
 	return out
 }
@@ -366,10 +396,10 @@ func RoleTokens(n *ir.Net) []string {
 // rather than by the ingestion pass (a test fixture, an overlay composing a design in memory). It
 // names CONVENTION explicitly rather than leaving the source unspecified, so a hand-built net states
 // the same thing the pass would have stated about the same name.
-func ConventionRoles(roles ...string) []*ir.NetRole {
+func ConventionRoles(roles ...ir.Role) []*ir.NetRole {
 	out := make([]*ir.NetRole, 0, len(roles))
 	for _, r := range roles {
-		out = append(out, &ir.NetRole{Role: r, Source: ir.RoleSource_ROLE_SOURCE_CONVENTION})
+		out = append(out, &ir.NetRole{RoleKind: r, Source: ir.RoleSource_ROLE_SOURCE_CONVENTION})
 	}
 	return out
 }
@@ -384,43 +414,51 @@ func ConventionRoles(roles ...string) []*ir.NetRole {
 // the weaker of two true sources would understate what is known and is the one way this can lose
 // information. It also makes every tier idempotent, so running a pass twice over one design merges
 // rather than duplicating.
-func AddNetRole(n *ir.Net, role string, src ir.RoleSource) {
-	if role == "" {
+func AddNetRole(n *ir.Net, role ir.Role, src ir.RoleSource) {
+	if role == ir.Role_ROLE_UNSPECIFIED {
 		return
 	}
 	for _, r := range n.GetRoles() {
-		if r.GetRole() == role {
+		if r.GetRoleKind() == role {
 			if src > r.GetSource() {
 				r.Source = src
 			}
 			return
 		}
 	}
-	n.Roles = append(n.Roles, &ir.NetRole{Role: role, Source: src})
+	n.Roles = append(n.Roles, &ir.NetRole{RoleKind: role, Source: src})
 }
 
 func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
 	stub := &ir.Net{}
-	add := func(role string, src ir.RoleSource) { AddNetRole(stub, role, src) }
-	add(n.GetAttributes()[AttrDeclaredRole], ir.RoleSource_ROLE_SOURCE_DECLARED)
+	add := func(role ir.Role, src ir.RoleSource) { AddNetRole(stub, role, src) }
+	// The declared role arrives as TEXT, because a reader translates its format's own vocabulary at the
+	// edge and writes the token into an attribute (C9). This is the one place a string crosses into the
+	// closed vocabulary, so it is the one place a parse can fail. A failure means a reader wrote a token
+	// outside the enum, which is a reader bug rather than a property of the design; it is dropped here
+	// because StampNetRoles has no error channel, and AttrDeclaredRole's contract is that a reader
+	// writes a valid token or writes nothing.
+	if declared, ok := ParseRole(n.GetAttributes()[AttrDeclaredRole]); ok {
+		add(declared, ir.RoleSource_ROLE_SOURCE_DECLARED)
+	}
 	name := n.GetName()
 	if v.IsRail(name) {
-		add(NetRoleRail, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+		add(ir.Role_ROLE_RAIL, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	if v.IsGround(name) {
-		add(NetRoleGround, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+		add(ir.Role_ROLE_GROUND, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	if v.IsFeedback(name) {
-		add(NetRoleFeedback, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+		add(ir.Role_ROLE_FEEDBACK, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	if v.IsSwitching(name) {
-		add(NetRoleSwitching, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+		add(ir.Role_ROLE_SWITCHING, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	if v.IsControl(name) {
-		add(NetRoleControl, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+		add(ir.Role_ROLE_CONTROL, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	if v.IsGateDrive(name) {
-		add(NetRoleGateDrive, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+		add(ir.Role_ROLE_GATE_DRIVE, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	return stub.Roles
 }

@@ -76,7 +76,7 @@ func (m *irModel) enrichRolesFromParams() {
 	for _, n := range m.d.GetNets() {
 		for _, c := range n.GetConnections() {
 			role := roleForPinFunction(fn[c.GetComponentRef()+"\x00"+c.GetPinRef()])
-			if role == "" {
+			if role == ir.Role_ROLE_UNSPECIFIED {
 				continue
 			}
 			classify.AddNetRole(n, role, ir.RoleSource_ROLE_SOURCE_DATASHEET)
@@ -88,14 +88,14 @@ func (m *irModel) enrichRolesFromParams() {
 // power INPUT or a power OUTPUT is a rail either way: one is fed by a supply, the other is driven as
 // one. Everything else (signal pins, passives, no-connects) evidences nothing about the net, which is
 // why the default is silence rather than a guess.
-func roleForPinFunction(f parampb.PinFunction) string {
+func roleForPinFunction(f parampb.PinFunction) ir.Role {
 	switch f {
 	case parampb.PinFunction_PIN_FUNCTION_POWER_INPUT, parampb.PinFunction_PIN_FUNCTION_POWER_OUTPUT:
-		return NetRoleRail
+		return ir.Role_ROLE_RAIL
 	case parampb.PinFunction_PIN_FUNCTION_GROUND:
-		return NetRoleGround
+		return ir.Role_ROLE_GROUND
 	default:
-		return ""
+		return ir.Role_ROLE_UNSPECIFIED
 	}
 }
 

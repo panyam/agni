@@ -117,7 +117,7 @@ type Model interface {
 	IsGroundNet(n *ir.Net) bool
 	IsRailNet(n *ir.Net) bool
 	IsRegulatorInternalNet(n *ir.Net) bool
-	HasAnyRole(n *ir.Net, roles ...string) bool
+	HasAnyRole(n *ir.Net, roles ...ir.Role) bool
 	// naming lexicon: does a bare NAME match a role vocabulary, for the callers that hold no net to
 	// read a stamped role from (the spec-language name FFIs over a literal, and pin-name role
 	// derivation). Reads the lexicon this model's design was READ with (WS3-106), so a project's

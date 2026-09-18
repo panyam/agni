@@ -145,11 +145,14 @@ func TestDeclaredNetRole(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, tc := range []struct{ net, raw, role string }{
-		{"GND", "GROUND", classify.NetRoleGround},
-		{"VCC", "POWER", classify.NetRoleRail},
-		{"N$17", "GROUND", classify.NetRoleGround}, // the point: the name says nothing
-		{"SIGNAL_ONLY", "SIGNAL", ""},              // maps to no role; must not invent one
+	for _, tc := range []struct {
+		net, raw string
+		role     ir.Role
+	}{
+		{"GND", "GROUND", ir.Role_ROLE_GROUND},
+		{"VCC", "POWER", ir.Role_ROLE_RAIL},
+		{"N$17", "GROUND", ir.Role_ROLE_GROUND},             // the point: the name says nothing
+		{"SIGNAL_ONLY", "SIGNAL", ir.Role_ROLE_UNSPECIFIED}, // maps to no role; must not invent one
 	} {
 		n := findNet(d, tc.net)
 		if n == nil {
@@ -159,8 +162,8 @@ func TestDeclaredNetRole(t *testing.T) {
 		if got := n.Attributes["netclass_raw"]; got != tc.raw {
 			t.Errorf("net %q netclass_raw = %q, want %q", tc.net, got, tc.raw)
 		}
-		if got := n.Attributes[classify.AttrDeclaredRole]; got != tc.role {
-			t.Errorf("net %q %s = %q, want %q", tc.net, classify.AttrDeclaredRole, got, tc.role)
+		if got := n.Attributes[classify.AttrDeclaredRole]; got != classify.RoleToken(tc.role) {
+			t.Errorf("net %q %s = %q, want %q", tc.net, classify.AttrDeclaredRole, got, classify.RoleToken(tc.role))
 		}
 	}
 }

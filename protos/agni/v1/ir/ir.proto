@@ -489,11 +489,47 @@ enum RoleSource {
 // net may disagree in strength -- ground by declaration and rail by naming -- and both are kept,
 // because collapsing them is what made "how do we know" unanswerable.
 message NetRole {
-  // The role token: rail | ground | feedback. A STRING rather than an enum because the vocabulary is
-  // open at the edges (a project lexicon and the relations layer both speak these tokens as text),
-  // and closing it here would force a second migration the moment a project names a fourth role.
-  string role = 1;
+  // Field 1 was `string role`, the token as text. It became an enum in agni 692: the vocabulary was
+  // documented as "open at the edges" so a project could name a role, and no project ever could --
+  // the conventions.yaml lexicon has a fixed field per role, so the only thing that ever extended the
+  // vocabulary was the engine. Meanwhile the tokens existed solely as Go constants, so no other
+  // language could see them. Reserved rather than reused, to keep the wire history honest.
+  reserved 1;
+  reserved "role";
+
+  Role role_kind = 3;
   RoleSource source = 2;
+}
+
+// Role is what a net IS, as the engine worked it out from the naming lexicon. A net may carry several
+// at once: a buck's switch node is named after the rail it produces, so "12V_SW" is both RAIL by its
+// prefix and SWITCHING by its suffix, and the second reading is the one that decides whether rules
+// treat it as a supply.
+//
+// A CLOSED vocabulary, deliberately, and the reasoning is worth keeping because the previous decision
+// went the other way. A string field was chosen so a project could name a role the engine does not
+// ship; no project ever could, because the lexicon that supplies the patterns has one field per role.
+// So the openness was theoretical while the cost was real: the tokens lived only in Go, nothing
+// generated them for the viewer, and two roles the engine acts on went unprojected for a release
+// because adding one was expensive.
+//
+// If the vocabulary is ever opened, the intended shape is a registry of declared role types keyed by
+// name, with these as the pre-registered entries, so the enum becomes a generated convenience rather
+// than a competing model and no consumer has to learn two representations. That is the shape
+// facts.Registry and check.Catalog already use. See agni 692.
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  // A power or ground distribution net, by name: a "+" prefix, a supply-name prefix, or a
+  // digits-then-V form.
+  ROLE_RAIL = 1;
+  ROLE_GROUND = 2;
+  // The four that mean "named after a rail, and not one", because a regulator's pins are
+  // conventionally named for the supply they serve. The first two must never be probed; the last two
+  // are ordinary signals excluded from rail rules only because they are not rails.
+  ROLE_FEEDBACK = 3;
+  ROLE_SWITCHING = 4;
+  ROLE_CONTROL = 5;
+  ROLE_GATE_DRIVE = 6;
 }
 
 message Net {

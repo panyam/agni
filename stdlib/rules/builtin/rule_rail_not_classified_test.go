@@ -85,7 +85,7 @@ func TestRailNotClassifiedGoesSilentOnceTheLexiconIsDeclared(t *testing.T) {
 	// Stamp the role the way the ingestion pass would under a project lexicon matching `_<n>V<n>`.
 	for _, n := range d.Nets {
 		if n.Name == "PMIC_CORE_3V3" {
-			n.Roles = classify.ConventionRoles(check.NetRoleRail)
+			n.Roles = classify.ConventionRoles(ir.Role_ROLE_RAIL)
 		}
 	}
 	if fs := railNotClassified.Findings(check.NewModel(d)); len(fs) != 0 {

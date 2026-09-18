@@ -15,7 +15,7 @@ import (
 // would yield nothing.
 func TestNetRoleStampedIsAuthoritative(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
-		{Name: "MYSTERY", Roles: classify.ConventionRoles(check.NetRoleGround), Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "MYSTERY", Roles: classify.ConventionRoles(ir.Role_ROLE_GROUND), Prov: &ir.Provenance{SourceFile: "t"}},
 	}}
 	gf := factsByRelation(Facts(check.NewModel(d)))[RelNetGround]
 	if len(gf) != 1 || gf[0].Subject != "MYSTERY" {
