@@ -130,6 +130,7 @@ const (
 	RelTypesPowerOut = "types_power_out" // types_power_out(present): one row when the source format types power-output pins (WS3-072). doc: facts/docs/types_power_out.md
 	RelRail          = "rail"            // rail(net): the net is a power/ground rail (Model.IsPowerRail). doc: facts/docs/rail.md
 	RelFeedback      = "feedback"        // feedback(net): the net is a regulator feedback/sense node (naming lexicon). doc: facts/docs/feedback.md
+	RelSwitching     = "switching"       // switching(net): the net is a regulator power-stage node (naming lexicon). doc: facts/docs/switching.md
 	RelComponentAttr = "component.attr"  // component.attr(ref_des, key, value): a component-level attribute. doc: facts/docs/component.attr.md
 
 	// Device-class and net-attribute relations (WS3-074): the projections a class-quantified rule
@@ -283,6 +284,7 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, typesPowerOutFacts(m)...)
 	out = append(out, railFacts(m)...)
 	out = append(out, feedbackFacts(m)...)
+	out = append(out, switchingFacts(m)...)
 	out = append(out, componentAttrFacts(m)...)
 	out = append(out, componentClassFacts(m)...)
 	out = append(out, esdRatedFacts(m)...)
@@ -1008,6 +1010,21 @@ func feedbackFacts(m check.Model) []facts.Row {
 	for _, n := range m.Nets() {
 		if check.NetHasRole(n, check.NetRoleFeedback, m.IsFeedbackName) {
 			out = append(out, facts.Row{Relation: RelFeedback, Subject: n.Name, Cites: cite(irCite(n.Prov))})
+		}
+	}
+	return out
+}
+
+// switchingFacts emits one row per net the naming lexicon reads as a regulator power-stage node: the
+// switch node, its bootstrap cap node, or the same node under a vendor spelling (agni 680). It is the
+// twin of feedbackFacts and completes the pair a coverage rule subtracts from rail: both roles mean
+// "a rail-named net that is not a rail", and until this existed only one of them could be named in a
+// query.
+func switchingFacts(m check.Model) []facts.Row {
+	var out []facts.Row
+	for _, n := range m.Nets() {
+		if check.NetHasRole(n, check.NetRoleSwitching, m.IsSwitchingName) {
+			out = append(out, facts.Row{Relation: RelSwitching, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out

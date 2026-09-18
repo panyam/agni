@@ -126,6 +126,7 @@ route	arg1=net	kind="net"	kindVar=""	ref=-
 route	arg2=path	kind=""	kindVar=""	ref=-
 suffix	arg0=string	kind=""	kindVar=""	ref=-
 suffix	arg1=suffix	kind=""	kindVar=""	ref=-
+switching	arg0=net	kind="net"	kindVar=""	ref=-
 types_power_out	arg0=present	kind=""	kindVar=""	ref=-
 unresolved_symbol	arg0=ref_des	kind="component"	kindVar=""	ref=-
 unresolved_symbol	arg1=symref	kind=""	kindVar=""	ref=-
