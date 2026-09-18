@@ -21,6 +21,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`has_netclass(present)`](has_netclass/) | one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean) |
 | [`has_netclass_defs(present)`](has_netclass_defs/) | one row when the design declares net-class definitions at all (absent it, a declared-vs-actual rule has no limit to compare against and reads clean) |
 | [`net.ac_coupled(net)`](net.ac_coupled/) | a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count) |
+| [`net.attr(net, key, value)`](net.attr/) | a net-level attribute DECLARED by the source file (external, global, power_driven), the twin of component.attr; a role the engine derived is net.role |
 | [`net.bias(net, level)`](net.bias/) | a bias resistor holds the net at a rail (high) or ground (low); absent when unbiased or held by a divider |
 | [`net.bus_like(net)`](net.bus_like/) | a shared-distribution net (ground plane, global rail, or rail-scale fan-out), the series-reach walk's stop predicate |
 | [`net.declared_track_width(net, mm)`](net.declared_track_width/) | the track width a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows) |
@@ -31,6 +32,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`net.netclass(net, class)`](net.netclass/) | the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role) |
 | [`net.nominal_voltage(net, volts)`](net.nominal_voltage/) | a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level, and a regulator internal (_FB, _SW, _BOOT) is on neither because the number in its name is another net's voltage |
 | [`net.pin_count(net, count)`](net.pin_count/) | the number of connections on a net |
+| [`net.role(net, role)`](net.role/) | a role the net carries, derived from its name by the lexicon (rail, ground, feedback, switching, control, gate_drive); one row per role, the net-side twin of component.class |
 | [`net.signal_level(net, volts)`](net.signal_level/) | the signalling level a NON-RAIL net's name declares, the other half of net.nominal_voltage. A house convention that encodes a level into a signal net's name lands here rather than being read as a rail nominal; a regulator internal is on neither relation |
 | [`netclass.clearance(class, mm)`](netclass.clearance/) | the clearance a net class declares its nets should route at (millimetres) |
 | [`netclass.track_width(class, mm)`](netclass.track_width/) | the track width a net class declares its nets should route at (millimetres) |

@@ -131,6 +131,8 @@ const (
 	RelRail          = "rail"            // rail(net): the net is a power/ground rail (Model.IsPowerRail). doc: facts/docs/rail.md
 	RelFeedback      = "feedback"        // feedback(net): the net is a regulator feedback/sense node (naming lexicon). doc: facts/docs/feedback.md
 	RelSwitching     = "switching"       // switching(net): the net is a regulator power-stage node (naming lexicon). doc: facts/docs/switching.md
+	RelNetRole       = "net.role"        // net.role(net, role): a role the net carries, one row per role. doc: facts/docs/net.role.md
+	RelNetAttr       = "net.attr"        // net.attr(net, key, value): a net-level attribute. doc: facts/docs/net.attr.md
 	RelComponentAttr = "component.attr"  // component.attr(ref_des, key, value): a component-level attribute. doc: facts/docs/component.attr.md
 
 	// Device-class and net-attribute relations (WS3-074): the projections a class-quantified rule
@@ -285,6 +287,8 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, railFacts(m)...)
 	out = append(out, feedbackFacts(m)...)
 	out = append(out, switchingFacts(m)...)
+	out = append(out, netRoleFacts(m)...)
+	out = append(out, netAttrFacts(m)...)
 	out = append(out, componentAttrFacts(m)...)
 	out = append(out, componentClassFacts(m)...)
 	out = append(out, esdRatedFacts(m)...)
@@ -1016,6 +1020,51 @@ func switchingFacts(m check.Model) []facts.Row {
 	for _, n := range m.Nets() {
 		if check.NetHasRole(n, check.NetRoleSwitching, m.IsSwitchingName) {
 			out = append(out, facts.Row{Relation: RelSwitching, Subject: n.Name, Cites: cite(irCite(n.Prov))})
+		}
+	}
+	return out
+}
+
+// netRoleFacts emits one row per ROLE a net carries, which is the net-side twin of component.class
+// (agni 691). A net can hold several at once, so it is one row each rather than one per net.
+//
+// It exists because roles were projected one relation per role — rail, feedback, switching — while a
+// component's classes have always been one relation with the class as an argument. Adding a role
+// therefore cost the whole relation wiring, and two roles the engine acts on (control, gate_drive)
+// went unprojected because nobody wanted to pay it again. Here a seventh role costs a row.
+//
+// It iterates classify.AllNetRoles rather than reading the stamped set directly, so a net that skipped
+// the ingestion stamp still answers through the same name fallback every other role relation uses.
+//
+// THE PER-ROLE RELATIONS STAY, and they are not all redundant. `rail` is Model.IsPowerRail, which is
+// power-driven OR global OR ground OR the rail role, so rail(?n) is a CONCLUSION while
+// net.role(?n, "rail") is what was STAMPED, and they are different sets. feedback(?n) and
+// switching(?n) are exact shorthands for their net.role rows and are kept for readability.
+func netRoleFacts(m check.Model) []facts.Row {
+	var out []facts.Row
+	for _, n := range m.Nets() {
+		for _, role := range classify.AllNetRoles() {
+			if m.HasAnyRole(n, role) {
+				out = append(out, facts.Row{Relation: RelNetRole, Subject: n.Name, Value: role, Cites: cite(irCite(n.Prov))})
+			}
+		}
+	}
+	return out
+}
+
+// netAttrFacts emits each net-level attribute as net.attr(net, key, value), the twin of
+// component.attr. Nets had no key/value relation at all: a net's attributes reached only the SPEC
+// language, one boolean fact per key (net.attr.external, net.attr.global), and never the query
+// surface, so a question a rule could ask about a component could not be asked about a net.
+//
+// Attributes are DECLARED by the source file where roles are DERIVED by the engine, which is why
+// these are two relations rather than one. The same split is why component.class and component.attr
+// are two.
+func netAttrFacts(m check.Model) []facts.Row {
+	var out []facts.Row
+	for _, n := range m.Nets() {
+		for k, v := range n.GetAttributes() {
+			out = append(out, facts.Row{Relation: RelNetAttr, Subject: n.Name, Object: k, Value: v, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
