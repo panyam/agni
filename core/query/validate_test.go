@@ -146,3 +146,41 @@ func TestEvalFailureIsInconclusiveNotClean(t *testing.T) {
 		t.Errorf("message %q names neither the rule nor what happened", fs[0].Message)
 	}
 }
+
+// TestValueDomainRejectsAConstantOutsideIt: agni 696. A misspelled value used to return no rows, which
+// reads as a fact about the design rather than a typo, and is the unsafe-negation shape of agni 522 one
+// layer in.
+func TestValueDomainRejectsAConstantOutsideIt(t *testing.T) {
+	q, err := Parse(`net.role(?n, "swiching") => ?n`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	err = Validate(q, facts.DefaultRegistry())
+	if err == nil {
+		t.Fatal("a value outside the column's domain must be refused, not answered with no rows")
+	}
+	for _, want := range []string{"swiching", "switching", "role"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should name %q, got: %v", want, err)
+		}
+	}
+}
+
+// TestValueDomainAcceptsWhatTheColumnHolds is the positive control. A check that refused everything
+// would satisfy the test above on its own, and would break every query in the docs.
+func TestValueDomainAcceptsWhatTheColumnHolds(t *testing.T) {
+	for _, goal := range []string{
+		`net.role(?n, "switching") => ?n`,
+		`net.role(?n, "gate_drive") => ?n`,
+		`net.role(?n, ?r) => ?n, ?r`,          // a VARIABLE is never domain-checked
+		`net.attr(?n, "anything", "x") => ?n`, // an OPEN column declares no domain
+	} {
+		q, err := Parse(goal)
+		if err != nil {
+			t.Fatalf("Parse(%s): %v", goal, err)
+		}
+		if err := Validate(q, facts.DefaultRegistry()); err != nil {
+			t.Errorf("Validate(%s) = %v, want nil", goal, err)
+		}
+	}
+}
