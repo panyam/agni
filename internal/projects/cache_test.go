@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -39,11 +40,35 @@ func writeFile(t *testing.T, root, rel, body string) {
 	// Filesystems record mtime at limited resolution, and a test writes far faster than that. Nudging
 	// the timestamp forward keeps the test measuring the CACHE rather than the clock's granularity;
 	// an operator editing a file by hand never hits this.
-	future := time.Now().Add(time.Second)
-	if err := os.Chtimes(full, future, future); err != nil {
+	touchForward(t, full)
+	// Every ANCESTOR up to the root, not only the immediate parent, because discovery is keyed on the
+	// directories the walk VISITED and a new descriptor sits one level below one of them. Adding
+	// `second/project.yaml` creates `second/`, whose own mtime nothing has stamped yet; the stamp that
+	// has to move is the root's.
+	for dir := filepath.Dir(full); strings.HasPrefix(dir, root); dir = filepath.Dir(dir) {
+		touchForward(t, dir)
+	}
+}
+
+// touchForward moves a path's mtime a second past both now and whatever it already carried.
+//
+// Past NOW is what defeats the filesystem's resolution. Past the EXISTING stamp is what defeats the
+// clock's: a kernel stamps inodes at its own granularity, about a millisecond on the machine this
+// was written against, and a test does several writes inside one of those. Two nudges computed from
+// `time.Now()` in the same tick then land on the same instant, a cache keyed on mtime is correct to
+// report no change, and the test reads that as a stale cache.
+func touchForward(t *testing.T, path string) {
+	t.Helper()
+	info, err := os.Stat(path)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chtimes(filepath.Dir(full), future, future); err != nil {
+	next := time.Now()
+	if info.ModTime().After(next) {
+		next = info.ModTime()
+	}
+	next = next.Add(time.Second)
+	if err := os.Chtimes(path, next, next); err != nil {
 		t.Fatal(err)
 	}
 }
