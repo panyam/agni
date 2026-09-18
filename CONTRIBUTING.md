@@ -238,6 +238,21 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   than red because the package does not compile. What that red-check tells you, and the two ways it
   misleads, is on the [evidence page](docsite/content/build/evidence.md).
 
+## Check a ticket against the tree before planning against it
+
+A closed defect can sit OPEN on the issue list for weeks. In one September 2026 session, three of the
+four issues ranked highest were already fixed: 522 (the guard had landed in 26cae20), 561 (five
+commits, none naming it in the subject) and 578 (a duplicate of two later tickets).
+
+Grepping for the issue number finds none of them, because a fix lands under its own name. What does
+find them is running the ticket's own reproduction, or one line of prose in an adjacent artifact:
+`readers/kicad/oracle_corpus.baseline` opens with "Known families still open, as of the agni issue 561
+fix", and `checkNegationAnchored`'s doc comment cites 522.
+
+This cuts both ways. In the same session an issue filed that morning (684) claimed two relations
+disagreed; one query against a real board showed they already agreed, and the fix it proposed would
+have been a regression. Ranking a backlog off issue bodies alone produces a confident wrong plan.
+
 ## PR prose conventions
 
 The shape of a PR body is defined by the **`start_pr` skill**, distributed separately from this

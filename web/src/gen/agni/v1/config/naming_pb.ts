@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/naming.proto.
  */
 export const file_agni_v1_config_naming: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6wEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpLCgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnM6AjgBIpsBCgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMixwEKDFBpbk5hbWVWb2NhYhItCgZzdXBwbHkYASABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEisKBGdhdGUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi0KBnNvdXJjZRgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLAoFZHJhaW4YBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zIjIKDVZvY2FiUGF0dGVybnMSEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCCJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6wEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpLCgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnM6AjgBIrACCgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyLHAQoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMiMgoNVm9jYWJQYXR0ZXJucxIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIImwKCk5hbWluZ1J1bGUSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRILCgN3aHkYAyABKAkSDQoFYWxsb3cYBCADKAkSDgoGZXhlbXB0GAUgAygJEhIKCm1hdGNoX2Z1bGwYBiABKAhCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jb25maWdiBnByb3RvMw");
 
 /**
  * This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
@@ -116,6 +116,28 @@ export type NetNameVocab = Message<"agni.v1.config.NetNameVocab"> & {
    * @generated from field: agni.v1.config.VocabPatterns feedback = 3;
    */
   feedback?: VocabPatterns | undefined;
+
+  /**
+   * feedback, switching, control and gate_drive are the four ways a net can be NAMED after a rail
+   * without being one, because a regulator's pins are conventionally named for the supply they serve.
+   * Model.IsRailNet subtracts all four. They are separate vocabularies rather than one because they
+   * differ in what they are: the first two are the regulator's power plumbing and must never be
+   * probed, a control input is an ordinary signal that a test point is welcome on, and a gate drive
+   * is a real supply sitting at a voltage its name does not state.
+   *
+   * @generated from field: agni.v1.config.VocabPatterns switching = 4;
+   */
+  switching?: VocabPatterns | undefined;
+
+  /**
+   * @generated from field: agni.v1.config.VocabPatterns control = 5;
+   */
+  control?: VocabPatterns | undefined;
+
+  /**
+   * @generated from field: agni.v1.config.VocabPatterns gate_drive = 6;
+   */
+  gateDrive?: VocabPatterns | undefined;
 };
 
 /**

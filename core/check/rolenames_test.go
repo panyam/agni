@@ -1,6 +1,7 @@
 package check
 
 import (
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -40,7 +41,7 @@ func TestDefaultRoleVocab(t *testing.T) {
 // TestBuildRoleVocabExtendReplace: a project's patterns extend the built-ins by default and replace
 // them when Replace is set; a bad regex is a returned error.
 func TestBuildRoleVocabExtendReplace(t *testing.T) {
-	ext, err := BuildRoleVocab(RoleVocabConfig{Rail: VocabPatterns{Patterns: []string{`^HV_`}}})
+	ext, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{`^HV_`}}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestBuildRoleVocabExtendReplace(t *testing.T) {
 		t.Error("extend keeps the built-in rail patterns")
 	}
 
-	repl, err := BuildRoleVocab(RoleVocabConfig{Rail: VocabPatterns{Patterns: []string{`^HV_`}, Replace: true}})
+	repl, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{`^HV_`}, Replace: true}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -62,7 +63,7 @@ func TestBuildRoleVocabExtendReplace(t *testing.T) {
 		t.Error("replace drops the built-in rail patterns")
 	}
 
-	if _, err := BuildRoleVocab(RoleVocabConfig{Rail: VocabPatterns{Patterns: []string{`(bad`}}}); err == nil {
+	if _, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{`(bad`}}}}); err == nil {
 		t.Error("a malformed regex must be a returned error")
 	}
 }
@@ -71,10 +72,7 @@ func TestBuildRoleVocabExtendReplace(t *testing.T) {
 // restores the defaults.
 func TestSetActiveRoleVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
-	v, err := BuildRoleVocab(RoleVocabConfig{
-		Rail:     VocabPatterns{Patterns: []string{`^HV_`}},
-		Feedback: VocabPatterns{Patterns: []string{`_ETH_FB$`}},
-	})
+	v, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{`^HV_`}}, Feedback: &configpb.VocabPatterns{Patterns: []string{`_ETH_FB$`}}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

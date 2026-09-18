@@ -1,6 +1,7 @@
 package check
 
 import (
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
@@ -94,9 +95,7 @@ func TestTerminalVocabIsAnchored(t *testing.T) {
 // rather than patching the engine, which is the whole reason these are vocabularies and not literals
 // (C20, and the polarity tokens above them are the counter-example this deliberately does not copy).
 func TestTerminalRolesHonourConventions(t *testing.T) {
-	v, err := classify.BuildRoleVocab(classify.RoleVocabConfig{
-		Gate: classify.VocabPatterns{Patterns: []string{`^DRV$`}},
-	})
+	v, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{Gate: &configpb.VocabPatterns{Patterns: []string{`^DRV$`}}}})
 	if err != nil {
 		t.Fatalf("BuildRoleVocab: %v", err)
 	}

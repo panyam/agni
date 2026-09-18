@@ -1,6 +1,7 @@
 package classify
 
 import (
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -31,7 +32,7 @@ func TestClassVocabConfigExtendsClassification(t *testing.T) {
 	if got := Classify(part, &ir.PartType{}); got != ClassDiode {
 		t.Fatalf("default: a PESD part with no tvs/esd word stays diode, got %s", got)
 	}
-	cv, err := BuildClassVocab(map[ComponentClass]VocabPatterns{ClassTVS: {Patterns: []string{"^pesd"}}})
+	cv, err := BuildClassVocab(map[ComponentClass]*configpb.VocabPatterns{ClassTVS: {Patterns: []string{"^pesd"}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -47,7 +48,7 @@ func TestClassVocabConfigExtendsClassification(t *testing.T) {
 // TestBuildClassVocabReplaceAndErrors: Replace drops the built-ins for that class; a bad regex is a
 // returned error.
 func TestBuildClassVocabReplaceAndErrors(t *testing.T) {
-	repl, err := BuildClassVocab(map[ComponentClass]VocabPatterns{ClassTVS: {Patterns: []string{"^myTvs$"}, Replace: true}})
+	repl, err := BuildClassVocab(map[ComponentClass]*configpb.VocabPatterns{ClassTVS: {Patterns: []string{"^myTvs$"}, Replace: true}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -57,7 +58,7 @@ func TestBuildClassVocabReplaceAndErrors(t *testing.T) {
 	if !repl.HintsFor([]string{"mytvs"})[ClassTVS] {
 		t.Error("replace should honor the project pattern")
 	}
-	if _, err := BuildClassVocab(map[ComponentClass]VocabPatterns{ClassTVS: {Patterns: []string{"(bad"}}}); err == nil {
+	if _, err := BuildClassVocab(map[ComponentClass]*configpb.VocabPatterns{ClassTVS: {Patterns: []string{"(bad"}}}); err == nil {
 		t.Error("a malformed regex must be a returned error")
 	}
 }
