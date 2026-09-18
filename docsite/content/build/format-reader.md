@@ -186,7 +186,7 @@ d, err := f.Design(l, path)
 // ...
 netgraph.StampNetIDs(d)      // deterministic per-instance net ids
 classify.Stamp(d)            // component device_classes
-classify.StampNetRoles(d)    // net roles (rail / ground / feedback) from the naming lexicon
+classify.StampNetRoles(d)    // net roles (ir.Role) from the naming lexicon
 classify.StampValues(d)      // component values as machine-comparable quantities
 classify.StampPowerInPins(d) // fill POWER_IN on under-typed supply pins
 classify.StampMPN(d)         // promote the part number to one canonical attribute

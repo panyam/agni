@@ -243,6 +243,44 @@ protection.
 A defined relation is fully derived before anything negates it, so the answer does not depend on the
 order you wrote the clauses in.
 
+### Ask what a net IS (roles)
+
+`net.role` gives you what the engine worked out about a net from its name. A net can carry more than
+one, so the relation yields a row per role:
+
+```
+net.role(?n, ?r) => ?n, ?r
+```
+
+Four of the six roles exist to say **named after a rail, and not one**. A regulator's pins are
+conventionally named for the supply they serve, so a 12V converter's nodes are `12V_FB`, `12V_SW`,
+`12V_MODE1` and `12V_VDRV`, none of which carries 12V. Listing them is one clause:
+
+```
+net.role(?n, ?r), ?r != "rail", ?r != "ground" => ?n, ?r
+```
+
+The one worth knowing before you scope a question by it: **`rail(?n)` and `net.role(?n, "rail")` are
+different sets.** `rail` is a conclusion, true for a net that is asserted-driven or global or a ground
+*or* carries the rail role. `net.role` is what the naming lexicon stamped. On a board with a few
+regulators the second is the larger of the two, and a probe-point or decoupling question almost always
+wants the first.
+
+The vocabularies behind each role are config you extend in
+[your conventions file](../naming-conventions/#teach-it-your-vocabulary).
+
+### Ask what the design DECLARED about a net (attributes)
+
+`net.role` is what the engine inferred. `net.attr` is what the file said:
+
+```
+net.attr(?n, "external", "true") => ?n
+```
+
+`external` marks a net whose full connectivity was not read, because it continues onto a sheet the
+read did not cover. Most connectivity rules exclude those rather than report a one-pin net that is an
+artefact of what was opened. It is the net-side twin of `component.attr`.
+
 ### Count parts per net (aggregation)
 
 `count`, `min`, `max`, `sum` and `list` summarize. Group by the plain columns. The aggregate reduces
