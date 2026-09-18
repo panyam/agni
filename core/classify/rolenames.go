@@ -29,6 +29,13 @@ const (
 	NetRoleGateDrive = "gate_drive"
 )
 
+// AllNetRoles is every role token the engine stamps, in a stable order. It exists so a consumer can
+// iterate the vocabulary rather than hard-coding a list that goes stale: net.role projects through it,
+// and a role added above without being added here is invisible to every query.
+func AllNetRoles() []string {
+	return []string{NetRoleRail, NetRoleGround, NetRoleFeedback, NetRoleSwitching, NetRoleControl, NetRoleGateDrive}
+}
+
 // AttrDeclaredRole is the ir.Net.attributes key carrying a role the SOURCE FILE stated outright,
 // already translated into the NetRole vocabulary above by the reader that understood the format.
 // StampNetRoles unions it with what the naming lexicon infers.

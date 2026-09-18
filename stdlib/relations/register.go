@@ -63,7 +63,9 @@ var builtinSchema = map[string][]facts.Field{
 	RelTypesPowerOut: {facts.FieldSubject},                                      // types_power_out(present)
 	RelRail:          {facts.FieldSubject},                                      // rail(net)
 	RelFeedback:      {facts.FieldSubject},
-	RelSwitching:     {facts.FieldSubject},                                      // feedback(net)
+	RelSwitching:     {facts.FieldSubject},
+	RelNetRole:       {facts.FieldSubject, facts.FieldValue},
+	RelNetAttr:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // feedback(net)
 	RelComponentAttr: {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // component.attr(ref, key, value)
 	// Device-class and net-attribute relations (WS3-074). component.class emits one row per class
 	// tag in the device_classes SET (WS3-071), so a family tag answers too.
@@ -122,6 +124,8 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "rail", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a power or ground rail", Kind: facts.KindNetlist},
 	{Name: "feedback", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator feedback / sense node (must not be probed)", Kind: facts.KindNetlist},
 	{Name: "switching", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator power-stage node, the switch node or its bootstrap (must not be probed); the twin of feedback", Kind: facts.KindNetlist},
+	{Name: "net.role", Args: []string{"net", "role"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a role the net carries, derived from its name by the lexicon (rail, ground, feedback, switching, control, gate_drive); one row per role, the net-side twin of component.class", Kind: facts.KindNetlist},
+	{Name: "net.attr", Args: []string{"net", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net-level attribute DECLARED by the source file (external, global, power_driven), the twin of component.attr; a role the engine derived is net.role", Kind: facts.KindNetlist},
 	{Name: "component.attr", Args: []string{"ref_des", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a component-level attribute (e.g. interface, MPN)", Kind: facts.KindNetlist},
 	{Name: "component.class", Args: []string{"ref_des", "class"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a device class the part is in (a family tag too, e.g. a TVS is both tvs and diode)", Kind: facts.KindNetlist},
 	{Name: "component.esd_rated", Args: []string{"ref_des"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the part carries a datasheet ESD rating at or above the credit floor (needs --params)", Kind: facts.KindDatasheet},

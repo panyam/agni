@@ -212,10 +212,43 @@ func (m *irModel) IsRailNet(n *ir.Net) bool {
 // private method plus a copy in stdlib/relations, which is the shape that agreed by luck until
 // someone added a role to one of them.
 func (m *irModel) IsRegulatorInternalNet(n *ir.Net) bool {
-	return NetHasRole(n, NetRoleFeedback, m.IsFeedbackName) ||
-		NetHasRole(n, NetRoleSwitching, m.IsSwitchingName) ||
-		NetHasRole(n, NetRoleControl, m.IsControlName) ||
-		NetHasRole(n, NetRoleGateDrive, m.IsGateDriveName)
+	return m.HasAnyRole(n, NetRoleFeedback, NetRoleSwitching, NetRoleControl, NetRoleGateDrive)
+}
+
+// HasAnyRole reports whether a net carries any of the named roles, each resolved the way NetHasRole
+// resolves one: the stamped set when the net has one, else this model's lexicon over the name.
+//
+// It exists so a question about SEVERAL roles reads as a list rather than as a boolean expression
+// somebody has to extend correctly. IsRegulatorInternalNet was four hand-written disjuncts that grew
+// one at a time, and each addition had to remember the matching name fallback.
+func (m *irModel) HasAnyRole(n *ir.Net, roles ...string) bool {
+	for _, r := range roles {
+		if NetHasRole(n, r, m.nameMatcherFor(r)) {
+			return true
+		}
+	}
+	return false
+}
+
+// nameMatcherFor returns the lexicon projection that answers for a role when a net carries no stamped
+// role set, which is the hand-authored-IR path NetHasRole falls back to. A role with no matcher here
+// answers on the stamp alone, which is correct for anything the lexicon does not name.
+func (m *irModel) nameMatcherFor(role string) func(string) bool {
+	switch role {
+	case NetRoleRail:
+		return m.IsPowerRailName
+	case NetRoleGround:
+		return m.IsGroundName
+	case NetRoleFeedback:
+		return m.IsFeedbackName
+	case NetRoleSwitching:
+		return m.IsSwitchingName
+	case NetRoleControl:
+		return m.IsControlName
+	case NetRoleGateDrive:
+		return m.IsGateDriveName
+	}
+	return func(string) bool { return false }
 }
 
 // componentClassesOf resolves a component's device_classes SET: the normalized set stamped at

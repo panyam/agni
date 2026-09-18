@@ -33,6 +33,9 @@ has_netclass_defs	arg0=present	kind=""	kindVar=""	ref=-
 match	arg0=string	kind=""	kindVar=""	ref=-
 match	arg1=regex	kind=""	kindVar=""	ref=-
 net.ac_coupled	arg0=net	kind="net"	kindVar=""	ref=-
+net.attr	arg0=net	kind="net"	kindVar=""	ref=-
+net.attr	arg1=key	kind=""	kindVar=""	ref=-
+net.attr	arg2=value	kind=""	kindVar=""	ref=-
 net.bias	arg0=net	kind="net"	kindVar=""	ref=-
 net.bias	arg1=level	kind=""	kindVar=""	ref=-
 net.bus_like	arg0=net	kind="net"	kindVar=""	ref=-
@@ -50,6 +53,8 @@ net.nominal_voltage	arg0=net	kind="net"	kindVar=""	ref=-
 net.nominal_voltage	arg1=volts	kind=""	kindVar=""	ref=-
 net.pin_count	arg0=net	kind="net"	kindVar=""	ref=-
 net.pin_count	arg1=count	kind=""	kindVar=""	ref=-
+net.role	arg0=net	kind="net"	kindVar=""	ref=-
+net.role	arg1=role	kind=""	kindVar=""	ref=-
 net.signal_level	arg0=net	kind="net"	kindVar=""	ref=-
 net.signal_level	arg1=volts	kind=""	kindVar=""	ref=-
 netclass.clearance	arg0=class	kind=""	kindVar=""	ref=-
