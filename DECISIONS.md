@@ -1663,3 +1663,63 @@ for itself. A consumer that genuinely wants every rail-NAMED net still has `IsPo
 **Reopen if** a consumer turns up that needs the name-derived number for a regulator internal. It
 would need its own relation carrying what that number actually means (the voltage of the net this one
 regulates), which is a different fact from either of these two and should be named as one.
+
+---
+
+## The engine's derived vocabularies are CLOSED, and a registry is how they would open
+
+**Question.** Net roles were a string in the IR, chosen so a project could name a role the engine does
+not ship. Should they stay open, become a closed enum, or become something else? Component classes
+face the same question (agni 677), and the two had drifted into answering it differently.
+
+**Answer. Closed, as a proto enum, with a registry named as the end state if that ever changes.**
+
+The openness was theoretical. A project could never name a role, because the `conventions.yaml`
+lexicon has one field per role and protojson refuses an unknown key, so the only thing that ever
+extended the vocabulary was the engine itself. Meanwhile the tokens lived only as Go constants, so no
+other language could see them, and two roles the engine acts on went a release unprojected because
+adding one was expensive.
+
+**What closing bought, and what it did not.** It bought one definition generated for Go and
+TypeScript, a derived token (`RoleToken` strips the enum prefix, so the strings cannot drift from the
+vocabulary), a derived value list, and `ParseRole` refusing a token the vocabulary does not have. It
+did NOT buy exhaustive switches: Go does not check enum switch exhaustiveness and this repo runs no
+linter, so `nameMatcherFor`'s default still silently returns a never-matches function and
+`TestEveryRoleHasANameMatcher` is what actually holds it.
+
+**If it is ever opened, it opens as a REGISTRY** of declared role types keyed by name, with the enum's
+members as pre-registered entries. The enum then becomes a generated convenience rather than a
+competing model, so no consumer learns two representations. That is the shape `facts.Registry` and
+`check.Catalog` already use, and `Registry.Installed` is the property that makes it better than the
+string: it separates "no such role" from "no roles at all", which is the silence agni 677 is about.
+
+**The thing to avoid** is opening it later WITHOUT that framing, and ending up with an enum for known
+roles and a string for custom ones, with every consumer handling both.
+
+**Reopen if** a project asks for a role the engine does not ship. That is the trigger, and nothing
+before it.
+
+---
+
+## Two relations, when one side is derived and the other is declared
+
+**Question.** A net's roles and a net's attributes are both "things true of a net". Should they be one
+key/value relation (`net.attr(net, key, value)` carrying roles as `key="role"`) or two?
+
+**Answer. Two, and components had already answered it.** `component.class` projects what the engine
+DERIVED from a part's text; `component.attr` projects what the source file DECLARED. Folding a net's
+roles into its attributes would have made nets the only entity where the two are indistinguishable.
+
+Two structural reasons beyond the symmetry. `ir.Net.attributes` is `map<string, string>`, one value
+per key, while roles are a set, so a role as an attribute key needs a packed list. And
+`ir.NetRole.source` records whether a role was DECLARED by the format, read from a naming CONVENTION,
+or established by a DATASHEET pin function; an attribute is a bare string with nowhere to put that.
+Nothing in production reads provenance today, but a third column on `net.role` is a natural home for it
+and a fourth column on a general key/value relation is not.
+
+**Worth knowing:** the two are a pipeline rather than rivals. `AttrDeclaredRole` is
+`attributes["declared_role"]`, which a reader writes and `rolesFor` reads out and unions into `roles`
+with source DECLARED. Attributes are the input channel; roles are the normalized output.
+
+**Reopen if** an entity turns up whose facts are genuinely all one kind. The test is whether "the
+design said so" and "we inferred it" are distinguishable and worth distinguishing.

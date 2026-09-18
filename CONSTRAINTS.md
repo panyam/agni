@@ -54,10 +54,20 @@ No hand-written or duplicated IR types. This extends to the application/web API 
 its request/response messages and services are defined in `.proto` and served over
 **Connect** (connect-go on the server, connect-web in the browser), with no hand-written
 JSON DTOs or ad-hoc `net/http` handlers for a proto-defined service.
+This extends again to ENGINE CONFIG schemas an operator authors and the engine reads
+(the naming lexicon in `agni.v1.config`): one message, consumed by the engine directly,
+with no Go struct mirroring its shape for a converter to copy field by field.
 **Why:** one schema, no drift between Go and TS, free unknown-field retention. The web API
-is a cross-runtime contract just like the IR, so it earns the same guarantee.
+is a cross-runtime contract just like the IR, so it earns the same guarantee. Config earns it
+for a narrower reason with a longer scar: a Go mirror of `NamingLexicon` lost three
+vocabularies to a hand-copy in WS3-117 and three more in agni 680, each time silently, because
+the two shapes were related only by someone remembering. `naming.proto`'s own header records
+the first; agni 690 deleted the mirror.
 **Verify:** IR types are imported from generated packages; web API endpoints are the
-generated Connect handlers (`*connect` packages), not hand-rolled JSON routes.
+generated Connect handlers (`*connect` packages), not hand-rolled JSON routes. The config
+clause is a REVIEW QUESTION, and no sweep enforces it yet: ask whether a new Go type mirrors
+a message field-for-field, and whether a converter between them exists that a future field
+could be left out of.
 
 ## C3: Duplex presenter contract, semantic both ways, camera/picking view-local
 **Rule:** The view<->presenter contract is a duplex of **semantic** messages expressed as
