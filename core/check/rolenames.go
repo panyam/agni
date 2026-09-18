@@ -24,6 +24,17 @@ func IsFeedbackName(name string) bool { return classify.ActiveRoleVocab().IsFeed
 // asks whether a rail-named net is really a rail.
 func IsSwitchingName(name string) bool { return classify.ActiveRoleVocab().IsSwitching(name) }
 
+// IsControlName reports whether a net name is a regulator's enable or mode-select input: "20V_EN"
+// enables the 20V converter and is driven by the sequencer's logic level, not by 20V. Unlike a
+// feedback tap or a switch node these are perfectly safe to probe; what makes them not rails is that
+// the voltage token names the converter rather than the net.
+func IsControlName(name string) bool { return classify.ActiveRoleVocab().IsControl(name) }
+
+// IsGateDriveName reports whether a net name is the supply a regulator's gate driver runs from
+// ("12V_VDRV"). It is genuinely a supply, which is why it is separate from IsControlName, but it sits
+// at the driver's own rail rather than at the converter's output.
+func IsGateDriveName(name string) bool { return classify.ActiveRoleVocab().IsGateDrive(name) }
+
 // NetHasRole reports whether a net carries a naming role (rail / ground / feedback), trusting the
 // stamped role fact (ir.Net.roles, filled at ingestion by classify.StampNetRoles, WS3-072) when the
 // net has ANY stamped role — the set is then authoritative, so a role is present iff it is in the set

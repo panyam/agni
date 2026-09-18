@@ -356,7 +356,7 @@ func netMaxVoltageFacts(m check.Model) []facts.Row {
 func netNominalVoltageFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		if !m.IsRailNet(n) || isRegulatorInternalName(m, n) {
+		if !m.IsRailNet(n) || m.IsRegulatorInternalNet(n) {
 			continue
 		}
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
@@ -384,7 +384,7 @@ func netNominalVoltageFacts(m check.Model) []facts.Row {
 func netSignalLevelFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		if m.IsRailNet(n) || isRegulatorInternalName(m, n) {
+		if m.IsRailNet(n) || m.IsRegulatorInternalNet(n) {
 			continue
 		}
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
@@ -393,15 +393,6 @@ func netSignalLevelFacts(m check.Model) []facts.Row {
 		}
 	}
 	return out
-}
-
-// isRegulatorInternalName reports whether a net is a regulator's feedback tap or power-stage node,
-// the nets whose name-derived voltage belongs to a different net. Model.IsRailNet already excludes
-// these from the rail side; this is the SIGNAL side asking the same question, so that a net dropped
-// from net.nominal_voltage does not reappear in net.signal_level restating the same wrong number.
-func isRegulatorInternalName(m check.Model, n *ir.Net) bool {
-	return check.NetHasRole(n, check.NetRoleFeedback, m.IsFeedbackName) ||
-		check.NetHasRole(n, check.NetRoleSwitching, m.IsSwitchingName)
 }
 
 func componentMPNFacts(m check.Model) []facts.Row {

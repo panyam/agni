@@ -55,6 +55,13 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 			// Stated here rather than inherited from Model.IsRailNet because this rule's scope is
 			// built from the name FFIs, not from a net's stamped role.
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "switching_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
+			// A mode strap, an enable and a gate-drive supply are excluded for a DIFFERENT reason
+			// from the two above, and the message is why the difference matters (agni 680). Those are
+			// must-not-probe nets. These are perfectly safe to probe and a test point on one is often
+			// useful. They are excluded because they are not RAILS, so "rail carries no test point"
+			// names the wrong subject: `12V_MODE1` configures the 12V converter and is not 12V.
+			check.Not{X: check.IsTrue{T: check.Call{Fn: "control_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
+			check.Not{X: check.IsTrue{T: check.Call{Fn: "gate_drive_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		}},
 		// THE VIOLATION, and the only clause that is one: an in-scope rail with no test point on it.
 		// A pass here means the rail carries one, which is a claim worth making.

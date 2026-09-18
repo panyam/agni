@@ -66,6 +66,8 @@ const (
 	NetRoleGround    = classify.NetRoleGround
 	NetRoleFeedback  = classify.NetRoleFeedback
 	NetRoleSwitching = classify.NetRoleSwitching
+	NetRoleControl   = classify.NetRoleControl
+	NetRoleGateDrive = classify.NetRoleGateDrive
 )
 
 // The component.class and pin-role vocabularies, re-exported from model.

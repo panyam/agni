@@ -116,6 +116,7 @@ type Model interface {
 	// wants IsRailNet.
 	IsGroundNet(n *ir.Net) bool
 	IsRailNet(n *ir.Net) bool
+	IsRegulatorInternalNet(n *ir.Net) bool
 	// naming lexicon: does a bare NAME match a role vocabulary, for the callers that hold no net to
 	// read a stamped role from (the spec-language name FFIs over a literal, and pin-name role
 	// derivation). Reads the lexicon this model's design was READ with (WS3-106), so a project's
@@ -124,6 +125,8 @@ type Model interface {
 	IsGroundName(name string) bool
 	IsFeedbackName(name string) bool
 	IsSwitchingName(name string) bool
+	IsControlName(name string) bool
+	IsGateDriveName(name string) bool
 	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName's
 	// pairing lookup). More than one means the design states the same name for electrically
 	// distinct nets, which is impossible on connect-by-name formats (the solver merges them)

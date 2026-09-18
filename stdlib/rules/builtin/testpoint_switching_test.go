@@ -31,6 +31,11 @@ func TestTestPointCoverageSkipsRegulatorInternals(t *testing.T) {
 			tnet("12V_SW", "REG1.1", "U1.1"),      // switch node, must not be probed -> quiet
 			tnet("12V_BOOT", "REG1.1", "U1.1"),    // bootstrap node -> quiet
 			tnet("12V_PHASE", "REG1.1", "U1.1"),   // phase node -> quiet
+			// Not must-not-probe nets. Quiet because they are not rails, so the rule's message
+			// would name the wrong subject (agni 680).
+			tnet("12V_MODE1", "REG1.1", "U1.1"), // mode strap -> quiet
+			tnet("20V_EN", "REG1.1", "U1.1"),    // enable input -> quiet
+			tnet("12V_VDRV", "REG1.1", "U1.1"),  // gate-drive supply -> quiet
 		},
 	}
 
@@ -46,7 +51,7 @@ func TestTestPointCoverageSkipsRegulatorInternals(t *testing.T) {
 	if !fired["12V_OUT"] {
 		t.Error("12V_OUT (a rail with no test point) should be flagged; the rule is not running")
 	}
-	for _, quiet := range []string{"12V_PROBED", "12V_FB", "12V_SW", "12V_BOOT", "12V_PHASE"} {
+	for _, quiet := range []string{"12V_PROBED", "12V_FB", "12V_SW", "12V_BOOT", "12V_PHASE", "12V_MODE1", "20V_EN", "12V_VDRV"} {
 		if fired[quiet] {
 			t.Errorf("%s must not be flagged: a regulator internal is not a rail to probe", quiet)
 		}
