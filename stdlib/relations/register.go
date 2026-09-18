@@ -8,8 +8,12 @@
 package relations
 
 import (
+	"sort"
+
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/facts"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // init installs the built-in relations with the query engine by import side effect, the way an
@@ -115,7 +119,7 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "board.via_drill", Args: []string{"net", "mm"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a via's drill diameter on a net (millimetres)", Kind: facts.KindBoard},
 	{Name: "pin", Args: []string{"ref_des", "pin"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a part-type pin of a placed component", Kind: facts.KindNetlist},
 	{Name: "pin.role", Args: []string{"ref_des", "pin", "role"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a pin's derived role (power/ground/anode/cathode)", Kind: facts.KindNetlist},
-	{Name: "pin.type", Args: []string{"ref_des", "pin", "etype"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a pin's electrical type (power_in, input, output, ...)", Kind: facts.KindNetlist},
+	{Name: "pin.type", Args: []string{"ref_des", "pin", "etype"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "etype": {Domain: pinTypeDomain()}}, Summary: "a pin's electrical type (power_in, input, output, ...)", Kind: facts.KindNetlist},
 	{Name: "pin.name", Args: []string{"ref_des", "pin", "name"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "the part type's functional name for a pin (\"SDA\", \"PTC11\"), the spelling a datasheet and a firmware header use, against the package designator every other pin relation is keyed on; absent when the part type declares none", Kind: facts.KindNetlist},
 	{Name: "pin.net", Args: []string{"ref_des", "pin", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "net": {Entity: check.KindNet}}, Summary: "the net a pin is on (absent if unconnected)", Kind: facts.KindNetlist},
 	{Name: "net.pin_count", Args: []string{"net", "count"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the number of connections on a net", Kind: facts.KindNetlist},
@@ -124,7 +128,7 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "rail", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a power or ground rail", Kind: facts.KindNetlist},
 	{Name: "feedback", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator feedback / sense node (must not be probed)", Kind: facts.KindNetlist},
 	{Name: "switching", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator power-stage node, the switch node or its bootstrap (must not be probed); the twin of feedback", Kind: facts.KindNetlist},
-	{Name: "net.role", Args: []string{"net", "role"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a role the net carries, derived from its name by the lexicon (rail, ground, feedback, switching, control, gate_drive); one row per role, the net-side twin of component.class", Kind: facts.KindNetlist},
+	{Name: "net.role", Args: []string{"net", "role"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}, "role": {Domain: roleDomain()}}, Summary: "a role the net carries, derived from its name by the lexicon (rail, ground, feedback, switching, control, gate_drive); one row per role, the net-side twin of component.class", Kind: facts.KindNetlist},
 	{Name: "net.attr", Args: []string{"net", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net-level attribute DECLARED by the source file (external, global, power_driven), the twin of component.attr; a role the engine derived is net.role", Kind: facts.KindNetlist},
 	{Name: "component.attr", Args: []string{"ref_des", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a component-level attribute (e.g. interface, MPN)", Kind: facts.KindNetlist},
 	{Name: "component.class", Args: []string{"ref_des", "class"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a device class the part is in (a family tag too, e.g. a TVS is both tvs and diode)", Kind: facts.KindNetlist},
@@ -158,4 +162,32 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "param.pin_range", Args: []string{"mpn", "pin", "symbol", "kind", "min", "max"}, Summary: "a datasheet limit bound to ONE pin, both bounds in the SI base unit, the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.pin_relation", Args: []string{"mpn", "subject_pin", "reference_pin", "modality", "min", "max"}, Summary: "a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order is load-bearing, so swapping the two inverts the requirement (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "part.audience", Args: []string{"mpn", "who"}, Summary: "a team/license entitled to see a part's datasheet data (record-only, needs --params)", Kind: facts.KindDatasheet},
+}
+
+// roleDomain and pinTypeDomain are the CLOSED value sets their columns may hold, so a query naming a
+// constant outside one is rejected rather than answered with no rows (agni 696).
+//
+// Both are COMPUTED from the generated enum that owns the vocabulary rather than written out here. A
+// literal list would be a second copy of a vocabulary, which is the duplication agni 692 removed from
+// the roles in the first place, and it would go stale the same way.
+func roleDomain() []string {
+	out := make([]string, 0, len(classify.AllNetRoles()))
+	for _, r := range classify.AllNetRoles() {
+		out = append(out, classify.RoleToken(r))
+	}
+	return out
+}
+
+func pinTypeDomain() []string {
+	seen := map[string]bool{}
+	var out []string
+	for i := range ir.PinDirection_name {
+		t := check.DirString(ir.PinDirection(i))
+		if t != "" && !seen[t] {
+			seen[t] = true
+			out = append(out, t)
+		}
+	}
+	sort.Strings(out)
+	return out
 }

@@ -69,3 +69,27 @@ func levenshtein(a, b string) int {
 	}
 	return prev[len(rb)]
 }
+
+// didYouMeanValue suggests the closest legal value for a rejected constant, the value-level twin of
+// suggestRelation. A typo is the common case this whole check exists for, so naming the intended
+// value is most of its worth; returns "" when nothing is close enough to be worth guessing.
+func didYouMeanValue(domain []string, got string) string {
+	best, bestDist := "", 0
+	for _, want := range domain {
+		d := levenshtein(got, want)
+		if best == "" || d < bestDist {
+			best, bestDist = want, d
+		}
+	}
+	threshold := len(got)/4 + 1
+	if threshold < 2 {
+		threshold = 2
+	}
+	if bestDist > threshold {
+		best = ""
+	}
+	if best == "" {
+		return ""
+	}
+	return fmt.Sprintf(", did you mean %q?", best)
+}

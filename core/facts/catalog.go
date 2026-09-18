@@ -44,6 +44,18 @@ type ArgKind struct {
 	// OwnerArg is the argument naming the component this one belongs to. Set only on a pin, where a
 	// pin without its component cannot be located.
 	OwnerArg string
+	// Domain is the CLOSED set of values this argument may take, when it has one. A query naming a
+	// constant outside it is rejected rather than answered with no rows (agni 696).
+	//
+	// Most columns must leave this empty, and that is the normal case: a net name, a part number, an
+	// attribute key and a regex are all open, and a domain on one would reject legitimate questions.
+	// It is for the few arguments whose values are a vocabulary the engine defines, such as a net role
+	// or a pin's electrical type.
+	//
+	// Strings rather than a typed enum because this package deliberately imports nothing (it is
+	// metadata over the schema, not a consumer of it). A registration site computes the list from
+	// whatever generated enum owns the vocabulary, so the domain cannot drift from it.
+	Domain []string
 }
 
 // Relation kinds. A picker groups by these and orders the groups netlist → board → datasheet →

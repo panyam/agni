@@ -185,6 +185,18 @@ func (r *Registry) SchemaOf(rel string) ([]Field, bool) {
 // rule redefine one.
 func (r *Registry) IsRelation(rel string) bool { _, ok := r.schema[rel]; return ok }
 
+// InfoOf resolves one relation's catalog entry, for a caller that needs its per-argument metadata
+// rather than its row layout. Scans the catalog: it runs once per query at validation time, over a
+// list of about a hundred, so an index would be machinery without a reason.
+func (r *Registry) InfoOf(rel string) (RelationInfo, bool) {
+	for _, info := range r.builtin.Catalog {
+		if info.Name == rel {
+			return info, true
+		}
+	}
+	return RelationInfo{}, false
+}
+
 // Schema returns every relation's layout as a copy. It exists for the drift guard that asserts the
 // catalog covers the schema: a relation that is queryable but undiscoverable is what that catches,
 // and catching it needs the whole set rather than one lookup.

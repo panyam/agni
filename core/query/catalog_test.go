@@ -156,8 +156,15 @@ func TestDeclaredArgKindsAreCoherent(t *testing.T) {
 				t.Errorf("%s/%s takes its kind from %q, which is not one of its arguments %v", ri.Name, label, k.KindArg, ri.Args)
 			case k.OwnerArg != "" && !args[k.OwnerArg]:
 				t.Errorf("%s/%s names owner %q, which is not one of its arguments %v", ri.Name, label, k.OwnerArg, ri.Args)
-			case k.KindArg == "" && k.Entity == "":
-				t.Errorf("%s/%s declares neither an Entity nor a KindArg, so it says nothing; omit it instead", ri.Name, label)
+			case k.KindArg == "" && k.Entity == "" && len(k.Domain) == 0:
+				// Domain joined Entity and KindArg as a third thing an ArgKind can say (agni 696): the
+				// column names no entity but holds a closed set of values. The invariant is unchanged,
+				// an ArgKind that says NOTHING should be omitted; what counts as saying something grew.
+				t.Errorf("%s/%s declares no Entity, KindArg or Domain, so it says nothing; omit it instead", ri.Name, label)
+			case len(k.Domain) > 0 && k.Entity != "":
+				// An entity column's values are names the design chose, so they cannot also be a closed
+				// set the engine defines. Declaring both would reject every real net or part.
+				t.Errorf("%s/%s declares both an Entity and a Domain; an entity's names are the design's, not a vocabulary", ri.Name, label)
 			}
 		}
 	}
