@@ -35,9 +35,10 @@ message NamingConvention {
 message NamingLexicon {
   NetNameVocab net = 1;
   PinNameVocab pin = 2;
-  // Component-class name (e.g. "tvs") -> the patterns that mark a part as that class. Its own name
-  // space again: this matches a PART, not a net or a pin.
-  map<string, VocabPatterns> class = 3;
+  // Component-class name (e.g. "tvs") -> what marks a part as that class. Its own name space again:
+  // this matches a PART, not a net or a pin. The key must name a class the engine ships; an unknown
+  // one is a load error, because a class the resolver has no place for would classify nothing.
+  map<string, ClassVocab> class = 3;
 }
 
 // NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read
@@ -76,6 +77,21 @@ message PinNameVocab {
 message VocabPatterns {
   repeated string patterns = 1;
   bool replace = 2;
+}
+
+// ClassVocab is one component class's override. patterns and replace mean what they mean on
+// VocabPatterns, matched against a part's text TOKENS, and field numbers are shared with it so a
+// block written before prefixes existed reads the same.
+//
+// prefixes are ref-des letter prefixes (TH, Z) that mark a part as this class, matched against the
+// leading run of letters of a ref-des or a part's declared designator prefix, case-insensitively. They
+// are ADDED to the built-in prefix table and win over it, so a house that writes F for a ferrite
+// re-points F. replace does not touch them. A prefix holding anything but letters, or one listed under
+// two classes, is a load error: the first could never match and the second has no defensible answer.
+message ClassVocab {
+  repeated string patterns = 1;
+  bool replace = 2;
+  repeated string prefixes = 3;
 }
 
 // NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching

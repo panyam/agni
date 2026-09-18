@@ -73,6 +73,21 @@ const (
 	ClassUnknown              ComponentClass = "unknown"
 )
 
+// ComponentClasses is every class in the vocabulary above except ClassUnknown, in declaration order.
+// Anything that enumerates the vocabulary reads this rather than keeping its own list: the class
+// names a project's conventions may extend were a hand-kept copy, and it silently lacked thermistor,
+// zener and ideal_diode_controller (agni issue 677). Go cannot enumerate constants, so
+// TestComponentClassesListsEveryConstant reads the const block and holds this list to it.
+func ComponentClasses() []ComponentClass {
+	return []ComponentClass{
+		ClassResistor, ClassCapacitor, ClassInductor, ClassFerrite, ClassThermistor,
+		ClassDiode, ClassLED, ClassTVS, ClassZener, ClassFuse,
+		ClassConnector, ClassTestConnector, ClassTestPoint,
+		ClassClock, ClassOscillator, ClassCrystal, ClassCeramicResonator,
+		ClassIC, ClassTransistor, ClassIdealDiodeController,
+	}
+}
+
 // PinRole is the semantic role of a pin, derived from its declared name within the
 // component's device-class context (Model.PinRole).
 type PinRole string

@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/model"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -148,6 +150,53 @@ lexicon:
 	bad, _ := Parse([]byte("name: acme\nlexicon:\n  class:\n    bogus:\n      patterns: [\"^x\"]\n"))
 	if err := ApplyLexicon(bad); err == nil {
 		t.Error("an unknown component class in a lexicon must error")
+	}
+}
+
+// TestEveryShippedClassLoadsFromYAML: a project may extend every class the engine ships, walked from
+// the YAML a project writes. The names a config may use were a hand-kept list that lacked thermistor,
+// zener and ideal_diode_controller, so conventions naming any of them failed to load (agni 677).
+func TestEveryShippedClassLoadsFromYAML(t *testing.T) {
+	for _, cl := range model.ComponentClasses() {
+		cfg, err := Parse([]byte("name: acme\nlexicon:\n  class:\n    " + string(cl) + ":\n      patterns: [\"^zzz$\"]\n"))
+		if err != nil {
+			t.Fatalf("parse %s: %v", cl, err)
+		}
+		if _, err := BuildLexicon(cfg); err != nil {
+			t.Errorf("class %q ships with the engine and must be extendable: %v", cl, err)
+		}
+	}
+}
+
+// TestClassPrefixesReachTheReadFromYAML: a prefix declared in YAML gives a part its class, and the
+// family tag rides along, through the per-read lexicon rather than a process install.
+func TestClassPrefixesReachTheReadFromYAML(t *testing.T) {
+	cfg, err := Parse([]byte(`
+name: acme
+lexicon:
+  class:
+    thermistor: { prefixes: ["TH"] }
+    zener:      { prefixes: ["z"] }
+`))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	lex, err := BuildLexicon(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "TH3"}, {RefDes: "Z1"}, {RefDes: "R1"}}}
+	lex.Stamp(d)
+	want := map[string]string{"TH3": "thermistor,resistor", "Z1": "zener,diode", "R1": "resistor"}
+	for _, c := range d.GetComponents() {
+		if got := strings.Join(c.GetDeviceClasses(), ","); got != want[c.GetRefDes()] {
+			t.Errorf("%s: classes %q, want %q", c.GetRefDes(), got, want[c.GetRefDes()])
+		}
+	}
+	// Positive control: without the project's prefixes neither part classifies.
+	classify.DefaultLexicon().Stamp(d)
+	if got := d.GetComponents()[0].GetDeviceClasses(); len(got) != 0 {
+		t.Errorf("TH3 classified %v under the built-in vocabulary, so the test above proves nothing", got)
 	}
 }
 

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/naming.proto.
  */
 export const file_agni_v1_config_naming: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6wEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpLCgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnM6AjgBIrACCgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyLHAQoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMiMgoNVm9jYWJQYXR0ZXJucxIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIImwKCk5hbWluZ1J1bGUSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRILCgN3aHkYAyABKAkSDQoFYWxsb3cYBCADKAkSDgoGZXhlbXB0GAUgAygJEhIKCm1hdGNoX2Z1bGwYBiABKAhCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jb25maWdiBnByb3RvMw");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6AEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBIrACCgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyLHAQoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMiMgoNVm9jYWJQYXR0ZXJucxIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIIkEKCkNsYXNzVm9jYWISEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCBIQCghwcmVmaXhlcxgDIAMoCSJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
 
 /**
  * This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
@@ -80,12 +80,13 @@ export type NamingLexicon = Message<"agni.v1.config.NamingLexicon"> & {
   pin?: PinNameVocab | undefined;
 
   /**
-   * Component-class name (e.g. "tvs") -> the patterns that mark a part as that class. Its own name
-   * space again: this matches a PART, not a net or a pin.
+   * Component-class name (e.g. "tvs") -> what marks a part as that class. Its own name space again:
+   * this matches a PART, not a net or a pin. The key must name a class the engine ships; an unknown
+   * one is a load error, because a class the resolver has no place for would classify nothing.
    *
-   * @generated from field: map<string, agni.v1.config.VocabPatterns> class = 3;
+   * @generated from field: map<string, agni.v1.config.ClassVocab> class = 3;
    */
-  class: { [key: string]: VocabPatterns };
+  class: { [key: string]: ClassVocab };
 };
 
 /**
@@ -217,6 +218,43 @@ export const VocabPatternsSchema: GenMessage<VocabPatterns> = /*@__PURE__*/
   messageDesc(file_agni_v1_config_naming, 4);
 
 /**
+ * ClassVocab is one component class's override. patterns and replace mean what they mean on
+ * VocabPatterns, matched against a part's text TOKENS, and field numbers are shared with it so a
+ * block written before prefixes existed reads the same.
+ *
+ * prefixes are ref-des letter prefixes (TH, Z) that mark a part as this class, matched against the
+ * leading run of letters of a ref-des or a part's declared designator prefix, case-insensitively. They
+ * are ADDED to the built-in prefix table and win over it, so a house that writes F for a ferrite
+ * re-points F. replace does not touch them. A prefix holding anything but letters, or one listed under
+ * two classes, is a load error: the first could never match and the second has no defensible answer.
+ *
+ * @generated from message agni.v1.config.ClassVocab
+ */
+export type ClassVocab = Message<"agni.v1.config.ClassVocab"> & {
+  /**
+   * @generated from field: repeated string patterns = 1;
+   */
+  patterns: string[];
+
+  /**
+   * @generated from field: bool replace = 2;
+   */
+  replace: boolean;
+
+  /**
+   * @generated from field: repeated string prefixes = 3;
+   */
+  prefixes: string[];
+};
+
+/**
+ * Describes the message agni.v1.config.ClassVocab.
+ * Use `create(ClassVocabSchema)` to create a new message.
+ */
+export const ClassVocabSchema: GenMessage<ClassVocab> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_naming, 5);
+
+/**
  * NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
  * any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
  * they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
@@ -265,5 +303,5 @@ export type NamingRule = Message<"agni.v1.config.NamingRule"> & {
  * Use `create(NamingRuleSchema)` to create a new message.
  */
 export const NamingRuleSchema: GenMessage<NamingRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 5);
+  messageDesc(file_agni_v1_config_naming, 6);
 

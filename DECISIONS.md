@@ -1620,12 +1620,20 @@ STOCK vocabulary: a stock read of a stock board should classify a thermistor, wh
 does or does not configure. Fixing it by asking every project to write a lexicon block would be
 shipping a hole and a workaround together.
 
-**What the investigation turned up, which is the more interesting half.** A project can already
-write a `lexicon.class` block naming a class the engine has never heard of. It parses, loads, and
-does nothing, because `resolveHint` walks a fixed `hintPriority` and `classFamily` is a fixed map,
-and ref-des prefixes are not configurable at all. So the config surface reads as yes and behaves as
-no, with no error. That is agni 677, and it is a different defect from 627: one is a missing entry,
-the other is a promise the resolver cannot keep.
+**What the investigation turned up, which is the more interesting half.** A project cannot declare
+a class of its own. `resolveHint` walks a fixed `hintPriority`, `classFamily` is a fixed map, and
+ref-des prefixes were not configurable at all. That is agni 677, and it is a different question from
+627: one is a missing entry, the other is whether the vocabulary is open.
+
+**Correction, found working 677.** This entry first said a `lexicon.class` block naming an unknown
+class "parses, loads, and does nothing". It never did. `naming.BuildLexicon` refused the name at load
+before 677 was filed, on the `--conventions` path and the project path alike. The real defect ran the
+other way: the list of names a config could use was a hand-kept copy of the class constants, and it
+lacked `thermistor`, `zener` and `ideal_diode_controller`. So a project could not add a pattern to
+the very class 627 had just shipped, and was told the class did not exist. That list is now derived
+from `model.ComponentClasses`, which a test holds to the const block. The same change made ref-des
+prefixes configurable for the classes the engine ships, which extends a vocabulary without opening
+it, and left declaring a NEW class to the registry decision below.
 
 **Reopen if** the built-in list starts growing to accommodate one project's parts. A house `esd_array`
 or a vendor's part-number family belongs in that project's config, and the moment two of them are
@@ -1691,7 +1699,8 @@ linter, so `nameMatcherFor`'s default still silently returns a never-matches fun
 members as pre-registered entries. The enum then becomes a generated convenience rather than a
 competing model, so no consumer learns two representations. That is the shape `facts.Registry` and
 `check.Catalog` already use, and `Registry.Installed` is the property that makes it better than the
-string: it separates "no such role" from "no roles at all", which is the silence agni 677 is about.
+string: it separates "no such role" from "no roles at all". A class block naming a class that does
+not exist is already refused at load; a registry is what would let it be declared instead.
 
 **The thing to avoid** is opening it later WITHOUT that framing, and ending up with an enum for known
 roles and a string for custom ones, with every consumer handling both.

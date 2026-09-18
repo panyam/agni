@@ -6,19 +6,22 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/panyam/agni/core/model"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 )
 
 // ClassVocab is the component-classification lexicon: per-class regex patterns matched against a part's
-// text TOKENS to hint its ComponentClass. Like the RoleVocab naming lexicon (WS3-069), it exists so the
-// classification vocabulary stops being frozen Go literals — a project extends it (an ESD-array MPN
-// family, a house part-name convention) or tightens a fickle token via config (WS3-070).
+// text TOKENS to hint its ComponentClass, and the ref-des prefix table that gives a part its base class.
+// Like the RoleVocab naming lexicon (WS3-069), it exists so the classification vocabulary stops being
+// frozen Go literals — a project extends it (an ESD-array MPN family, a house part-name convention, a
+// TH prefix for its thermistors) or tightens a fickle token via config (WS3-070, agni issue 677).
 //
 // Patterns match a single token, case-insensitively; the built-in defaults are exact-anchored ("^tvs$")
 // so classification is whole-token, never a substring (the pre-existing `tokenClasses` contract). A
 // project may use looser patterns ("^pesd") to catch a part-number family.
 type ClassVocab struct {
 	patterns map[ComponentClass][]*regexp.Regexp
+	prefixes map[string]ComponentClass
 }
 
 // DefaultClassVocab is the built-in classification lexicon: the historical tokenClasses map inverted to
@@ -28,7 +31,10 @@ func DefaultClassVocab() *ClassVocab {
 	for tok, cl := range tokenClasses {
 		byClass[cl] = append(byClass[cl], "^"+regexp.QuoteMeta(tok)+"$")
 	}
-	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}}
+	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: map[string]ComponentClass{}}
+	for p, cl := range prefixClasses {
+		v.prefixes[p] = cl
+	}
 	for cl, pats := range byClass {
 		sort.Strings(pats) // deterministic order (tokenClasses map iteration is not)
 		v.patterns[cl] = compileClassPatterns(pats)
@@ -58,6 +64,16 @@ func (v *ClassVocab) HintsFor(tokens []string) map[ComponentClass]bool {
 	return hints
 }
 
+// ClassForPrefix is the base class a ref-des letter prefix ("R", "TP") conventionally marks, or
+// ClassUnknown when neither the built-in table nor the project names it. The prefix is expected
+// uppercased, as refDesPrefix returns it.
+func (v *ClassVocab) ClassForPrefix(prefix string) ComponentClass {
+	if cl, ok := v.prefixes[prefix]; ok {
+		return cl
+	}
+	return ClassUnknown
+}
+
 func matchesAny(tok string, pats []*regexp.Regexp) bool {
 	for _, p := range pats {
 		if p.MatchString(tok) {
@@ -67,19 +83,17 @@ func matchesAny(tok string, pats []*regexp.Regexp) bool {
 	return false
 }
 
-// componentClassByName is the set of classes a config may override, keyed by their string value.
-// ClassUnknown is deliberately absent (there is no vocabulary for "unknown").
-var componentClassByName = map[string]ComponentClass{
-	string(ClassResistor): ClassResistor, string(ClassCapacitor): ClassCapacitor,
-	string(ClassInductor): ClassInductor, string(ClassFerrite): ClassFerrite,
-	string(ClassDiode): ClassDiode, string(ClassLED): ClassLED, string(ClassTVS): ClassTVS,
-	string(ClassFuse): ClassFuse, string(ClassConnector): ClassConnector,
-	string(ClassTestConnector): ClassTestConnector,
-	string(ClassTestPoint):     ClassTestPoint,
-	string(ClassClock):         ClassClock, string(ClassOscillator): ClassOscillator,
-	string(ClassCrystal): ClassCrystal, string(ClassCeramicResonator): ClassCeramicResonator,
-	string(ClassIC): ClassIC, string(ClassTransistor): ClassTransistor,
-}
+// componentClassByName is the set of classes a config may override, keyed by their string value. It is
+// derived from model.ComponentClasses, which already leaves ClassUnknown out (there is no vocabulary
+// for "unknown"). It used to be a hand-kept literal, and it lacked thermistor, zener and
+// ideal_diode_controller, so a project extending any of the three was refused (agni issue 677).
+var componentClassByName = func() map[string]ComponentClass {
+	m := map[string]ComponentClass{}
+	for _, cl := range model.ComponentClasses() {
+		m[string(cl)] = cl
+	}
+	return m
+}()
 
 // deviceClassAliases maps common datasheet device_class spellings to a canonical ComponentClass, keyed
 // by the alnum-lowercased form (so "ceramic resonator", "Ceramic-Resonator", and "CERAMICRESONATOR" all
@@ -166,17 +180,26 @@ func SetActiveClassVocab(v *ClassVocab) {
 // ActiveClassVocab returns the classification lexicon currently in effect.
 func ActiveClassVocab() *ClassVocab { return activeClassVocab }
 
-// BuildClassVocab applies per-class pattern overrides onto DefaultClassVocab, compiling and VALIDATING
-// each pattern (config is operator input, so a bad regex is a returned error). An empty override leaves
-// that class at its default; Replace drops the built-in patterns for that class. Overrides are keyed by
-// the class's string value (e.g. "tvs"); an unknown class name is an error.
-func BuildClassVocab(overrides map[ComponentClass]*configpb.VocabPatterns) (*ClassVocab, error) {
+// BuildClassVocab applies per-class overrides onto DefaultClassVocab, compiling and VALIDATING each
+// pattern and prefix (config is operator input, so a bad one is a returned error). An empty override
+// leaves that class at its default; Replace drops the built-in patterns for that class and leaves its
+// prefixes alone. A prefix is added to the built-in table and wins over it. Overrides are keyed by the
+// class; the caller has already refused a name the engine does not know (ParseComponentClass).
+func BuildClassVocab(overrides map[ComponentClass]*configpb.ClassVocab) (*ClassVocab, error) {
 	def := DefaultClassVocab()
-	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}}
+	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: def.prefixes}
 	for cl, pats := range def.patterns {
 		v.patterns[cl] = append([]*regexp.Regexp{}, pats...)
 	}
-	for cl, o := range overrides {
+	// Sorted so which of two colliding classes an error names does not depend on map order.
+	classes := make([]ComponentClass, 0, len(overrides))
+	for cl := range overrides {
+		classes = append(classes, cl)
+	}
+	sort.Slice(classes, func(i, j int) bool { return classes[i] < classes[j] })
+	claimed := map[string]ComponentClass{}
+	for _, cl := range classes {
+		o := overrides[cl]
 		var base []*regexp.Regexp
 		if !o.GetReplace() {
 			base = v.patterns[cl]
@@ -189,6 +212,29 @@ func BuildClassVocab(overrides map[ComponentClass]*configpb.VocabPatterns) (*Cla
 			base = append(base, re)
 		}
 		v.patterns[cl] = base
+		for _, raw := range o.GetPrefixes() {
+			p := strings.ToUpper(raw)
+			if !isLetters(p) {
+				return nil, fmt.Errorf("class %q prefix %q: a ref-des prefix is a run of letters, so this one can never match", cl, raw)
+			}
+			if other, ok := claimed[p]; ok && other != cl {
+				return nil, fmt.Errorf("prefix %q is listed under both class %q and class %q", raw, other, cl)
+			}
+			claimed[p] = cl
+			v.prefixes[p] = cl
+		}
 	}
 	return v, nil
+}
+
+func isLetters(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+	return true
 }

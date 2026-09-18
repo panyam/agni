@@ -7,9 +7,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// prefixClasses maps a ref-des letter prefix to its conventional class. "X" is absent on
-// purpose: it means crystal in some house styles and terminal block in others, so it stays
-// UNKNOWN unless part data resolves it.
+// prefixClasses is the built-in ref-des prefix table, the one DefaultClassVocab starts from and a
+// project's conventions add to. "X" is absent on purpose: it means crystal in some house styles and
+// terminal block in others, so it stays UNKNOWN unless part data or a project's prefixes resolve it.
 var prefixClasses = map[string]ComponentClass{
 	"R":    ClassResistor,
 	"RN":   ClassResistor,
@@ -102,7 +102,7 @@ func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	if p := strings.TrimRight(strings.ToUpper(pt.GetDesignatorPrefix()), "?*"); p != "" {
 		prefix = p
 	}
-	base := prefixClasses[prefix]
+	base := l.class().ClassForPrefix(prefix)
 
 	// Collect the SET of hints from the active classification lexicon (WS3-070), not the first: a "Tvs
 	// Diode" description carries both a "tvs" and a "diode" token, and the generic "diode" must not

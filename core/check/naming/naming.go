@@ -88,7 +88,7 @@ func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
 	}
 	lex := &check.Lexicon{Role: v}
 	if cls := lx.GetClass(); len(cls) > 0 {
-		overrides := map[check.ComponentClass]*configpb.VocabPatterns{}
+		overrides := map[check.ComponentClass]*configpb.ClassVocab{}
 		for name, v := range cls {
 			cl, ok := check.ParseComponentClass(name)
 			if !ok {
