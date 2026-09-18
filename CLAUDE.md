@@ -451,25 +451,12 @@ know resolves nowhere, because `resolveHint` walks a fixed `hintPriority` and `c
 map. Ref-des prefixes are not configurable at all. So the config surface reads as yes and behaves as
 no, with no error (agni 677).
 
-**A rail-named net is not always a rail, and precedence is settled ONCE rather than per consumer.**
-A buck's feedback tap, switch node and bootstrap node are all named after the rail they serve
-(`12V_FB`, `12V_SW`, `12V_BOOT`), so all three match the rail vocabulary on the prefix and none
-carries the rail's voltage. `feedback` and `switching` are the two roles meaning "rail-named but not a
-rail", and `Model.IsRailNet` subtracts them, because leaving it to each consumer is what the bug was:
-seven rail-quantified consumers, one of which remembered to exclude feedback (agni 679, 680). A caller
-that wants every rail-NAMED net still has `IsPowerRailName`. **`net.nominal_voltage` and
-`net.signal_level` are no longer exhaustive**: a regulator internal projects NO row, because the
-number in its name is a different net's voltage, so the fix that merely flips the rail gate moves the
-wrong rows sideways instead of removing them. DECISIONS.md carries the reversal. **A rule built from
-the name FFIs inherits none of this** — the test-point rule's scope is `rail_name`/`feedback_name`/
-`switching_name`, not a stamped role, so it states its own exclusions. Still open on 680: `_MODE`,
-`_VDRV` and `_EN`, which are the whole gap between the 49 rails a real board now reports and the ~29
-it has, and which need the rail vocabulary itself narrowed rather than another role.
-
-**A net ROLE is project-extensible and a component CLASS is not**, which is the sharpest way to see
-agni 677. Adding a pattern to `lexicon.switching` in `conventions.yaml` works and is asserted
-(`TestSwitchingVocabularyIsProjectExtensible`); adding a class name the engine does not know parses,
-loads, and does nothing.
+**A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
+so `12V_FB`, `12V_SW`, `12V_MODE1` and `12V_VDRV` all match the rail vocabulary and none carries 12V.
+Four roles say so and `Model.IsRailNet` subtracts them ONCE rather than per consumer, which is what
+seven rail-quantified consumers and one remembering to do it had cost (agni 679, 680). The six net
+vocabularies and when to narrow one are in `guide/naming-conventions.md`; why the two voltage
+relations stopped being exhaustive is in DECISIONS.md.
 
 **A variable's entity kind survives a DERIVED relation, and the three rules of that walk are worth
 knowing before you widen it.** `varKind` types a projected variable from the catalog relations in the
@@ -535,15 +522,6 @@ real work, and what agni ADDS to the PR body shape defined by the `start_pr` ski
 a hardware primer ahead of the reviewer's guide, which docsite pages the prerequisite block names,
 and the fixture-only rule for rendering captures). The general skeleton lives in the skill, so do
 not copy it back into this repo.
-
-**A closed defect can sit OPEN on the issue list for weeks, so verify a ticket against the tree
-before planning against it.** Three of the four issues ranked highest in one session were already
-fixed: 522 (the guard landed in 26cae20), 561 (five commits, none naming it in the subject), and 578
-(a duplicate of two later tickets). Grepping the issue number finds nothing in all three cases,
-because a fix lands under its own name. What does find it is running the ticket's own reproduction, or
-one line of prose in an adjacent artifact: `readers/kicad/oracle_corpus.baseline` opens with "Known
-families still open, as of the agni issue 561 fix", and `checkNegationAnchored`'s doc comment cites
-522. Ranking a backlog off issue bodies alone produces a confident wrong plan.
 
 **Four ways to be told a thing worked when it did not, all hit in one sitting, all exit 0.**
 

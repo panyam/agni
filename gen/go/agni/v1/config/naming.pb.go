@@ -168,10 +168,19 @@ func (x *NamingLexicon) GetClass() map[string]*VocabPatterns {
 // NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read
 // afterwards as a normalized net.role fact (C20).
 type NetNameVocab struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rail          *VocabPatterns         `protobuf:"bytes,1,opt,name=rail,proto3" json:"rail,omitempty"`
-	Ground        *VocabPatterns         `protobuf:"bytes,2,opt,name=ground,proto3" json:"ground,omitempty"`
-	Feedback      *VocabPatterns         `protobuf:"bytes,3,opt,name=feedback,proto3" json:"feedback,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Rail     *VocabPatterns         `protobuf:"bytes,1,opt,name=rail,proto3" json:"rail,omitempty"`
+	Ground   *VocabPatterns         `protobuf:"bytes,2,opt,name=ground,proto3" json:"ground,omitempty"`
+	Feedback *VocabPatterns         `protobuf:"bytes,3,opt,name=feedback,proto3" json:"feedback,omitempty"`
+	// feedback, switching, control and gate_drive are the four ways a net can be NAMED after a rail
+	// without being one, because a regulator's pins are conventionally named for the supply they serve.
+	// Model.IsRailNet subtracts all four. They are separate vocabularies rather than one because they
+	// differ in what they are: the first two are the regulator's power plumbing and must never be
+	// probed, a control input is an ordinary signal that a test point is welcome on, and a gate drive
+	// is a real supply sitting at a voltage its name does not state.
+	Switching     *VocabPatterns `protobuf:"bytes,4,opt,name=switching,proto3" json:"switching,omitempty"`
+	Control       *VocabPatterns `protobuf:"bytes,5,opt,name=control,proto3" json:"control,omitempty"`
+	GateDrive     *VocabPatterns `protobuf:"bytes,6,opt,name=gate_drive,json=gateDrive,proto3" json:"gate_drive,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -223,6 +232,27 @@ func (x *NetNameVocab) GetGround() *VocabPatterns {
 func (x *NetNameVocab) GetFeedback() *VocabPatterns {
 	if x != nil {
 		return x.Feedback
+	}
+	return nil
+}
+
+func (x *NetNameVocab) GetSwitching() *VocabPatterns {
+	if x != nil {
+		return x.Switching
+	}
+	return nil
+}
+
+func (x *NetNameVocab) GetControl() *VocabPatterns {
+	if x != nil {
+		return x.Control
+	}
+	return nil
+}
+
+func (x *NetNameVocab) GetGateDrive() *VocabPatterns {
+	if x != nil {
+		return x.GateDrive
 	}
 	return nil
 }
@@ -460,11 +490,15 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\n" +
 	"ClassEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
-	"\x05value\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x05value:\x028\x01\"\xb3\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x05value:\x028\x01\"\xe7\x02\n" +
 	"\fNetNameVocab\x121\n" +
 	"\x04rail\x18\x01 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x04rail\x125\n" +
 	"\x06ground\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06ground\x129\n" +
-	"\bfeedback\x18\x03 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\bfeedback\"\xe4\x01\n" +
+	"\bfeedback\x18\x03 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\bfeedback\x12;\n" +
+	"\tswitching\x18\x04 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\tswitching\x127\n" +
+	"\acontrol\x18\x05 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\acontrol\x12<\n" +
+	"\n" +
+	"gate_drive\x18\x06 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\tgateDrive\"\xe4\x01\n" +
 	"\fPinNameVocab\x125\n" +
 	"\x06supply\x18\x01 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06supply\x121\n" +
 	"\x04gate\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x04gate\x125\n" +
@@ -514,16 +548,19 @@ var file_agni_v1_config_naming_proto_depIdxs = []int32{
 	4,  // 5: agni.v1.config.NetNameVocab.rail:type_name -> agni.v1.config.VocabPatterns
 	4,  // 6: agni.v1.config.NetNameVocab.ground:type_name -> agni.v1.config.VocabPatterns
 	4,  // 7: agni.v1.config.NetNameVocab.feedback:type_name -> agni.v1.config.VocabPatterns
-	4,  // 8: agni.v1.config.PinNameVocab.supply:type_name -> agni.v1.config.VocabPatterns
-	4,  // 9: agni.v1.config.PinNameVocab.gate:type_name -> agni.v1.config.VocabPatterns
-	4,  // 10: agni.v1.config.PinNameVocab.source:type_name -> agni.v1.config.VocabPatterns
-	4,  // 11: agni.v1.config.PinNameVocab.drain:type_name -> agni.v1.config.VocabPatterns
-	4,  // 12: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.VocabPatterns
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	4,  // 8: agni.v1.config.NetNameVocab.switching:type_name -> agni.v1.config.VocabPatterns
+	4,  // 9: agni.v1.config.NetNameVocab.control:type_name -> agni.v1.config.VocabPatterns
+	4,  // 10: agni.v1.config.NetNameVocab.gate_drive:type_name -> agni.v1.config.VocabPatterns
+	4,  // 11: agni.v1.config.PinNameVocab.supply:type_name -> agni.v1.config.VocabPatterns
+	4,  // 12: agni.v1.config.PinNameVocab.gate:type_name -> agni.v1.config.VocabPatterns
+	4,  // 13: agni.v1.config.PinNameVocab.source:type_name -> agni.v1.config.VocabPatterns
+	4,  // 14: agni.v1.config.PinNameVocab.drain:type_name -> agni.v1.config.VocabPatterns
+	4,  // 15: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.VocabPatterns
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_config_naming_proto_init() }

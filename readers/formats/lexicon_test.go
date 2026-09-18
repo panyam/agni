@@ -1,6 +1,7 @@
 package formats
 
 import (
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"slices"
 	"testing"
 
@@ -13,9 +14,7 @@ import (
 // start-anchored built-ins.
 func railVocab(t *testing.T, pattern string) *classify.Lexicon {
 	t.Helper()
-	rv, err := classify.BuildRoleVocab(classify.RoleVocabConfig{
-		Rail: classify.VocabPatterns{Patterns: []string{pattern}},
-	})
+	rv, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{pattern}}}})
 	if err != nil {
 		t.Fatalf("BuildRoleVocab: %v", err)
 	}

@@ -1,6 +1,7 @@
 package classify
 
 import (
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"reflect"
 	"testing"
 
@@ -49,7 +50,7 @@ func TestStampNetRolesStampsSwitching(t *testing.T) {
 // convention the built-in patterns miss is reachable without patching the engine. This is the
 // property agni 677 says a component CLASS does not have.
 func TestSwitchingVocabularyIsProjectExtensible(t *testing.T) {
-	v, err := BuildRoleVocab(RoleVocabConfig{Switching: VocabPatterns{Patterns: []string{`_HSD$`}}})
+	v, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Switching: &configpb.VocabPatterns{Patterns: []string{`_HSD$`}}}})
 	if err != nil {
 		t.Fatalf("BuildRoleVocab: %v", err)
 	}

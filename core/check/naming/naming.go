@@ -82,31 +82,19 @@ func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
 	if lx == nil {
 		return nil, nil
 	}
-	vp := func(v *configpb.VocabPatterns) check.VocabPatterns {
-		return check.VocabPatterns{Patterns: v.GetPatterns(), Replace: v.GetReplace()}
-	}
-	net, pin := lx.GetNet(), lx.GetPin()
-	v, err := check.BuildRoleVocab(check.RoleVocabConfig{
-		Rail:      vp(net.GetRail()),
-		Ground:    vp(net.GetGround()),
-		Feedback:  vp(net.GetFeedback()),
-		SupplyPin: vp(pin.GetSupply()),
-		Gate:      vp(pin.GetGate()),
-		Source:    vp(pin.GetSource()),
-		Drain:     vp(pin.GetDrain()),
-	})
+	v, err := check.BuildRoleVocab(lx)
 	if err != nil {
 		return nil, fmt.Errorf("naming config %q lexicon: %w", cfg.GetName(), err)
 	}
 	lex := &check.Lexicon{Role: v}
 	if cls := lx.GetClass(); len(cls) > 0 {
-		overrides := map[check.ComponentClass]check.VocabPatterns{}
+		overrides := map[check.ComponentClass]*configpb.VocabPatterns{}
 		for name, v := range cls {
 			cl, ok := check.ParseComponentClass(name)
 			if !ok {
 				return nil, fmt.Errorf("naming config %q lexicon: unknown component class %q", cfg.GetName(), name)
 			}
-			overrides[cl] = vp(v)
+			overrides[cl] = v
 		}
 		cv, err := check.BuildClassVocab(overrides)
 		if err != nil {

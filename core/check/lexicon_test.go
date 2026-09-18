@@ -1,6 +1,7 @@
 package check
 
 import (
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
@@ -9,9 +10,7 @@ import (
 
 func projectLexicon(t *testing.T, railPattern string) *classify.Lexicon {
 	t.Helper()
-	rv, err := classify.BuildRoleVocab(classify.RoleVocabConfig{
-		Rail: classify.VocabPatterns{Patterns: []string{railPattern}},
-	})
+	rv, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{railPattern}}}})
 	if err != nil {
 		t.Fatalf("BuildRoleVocab: %v", err)
 	}

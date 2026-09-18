@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -65,6 +67,19 @@ const AttrDeclaredRole = "declared_role"
 // deliberately absent from it. It lives here so both the net-role and pin-supply naming conventions are
 // one config-overridable lexicon (WS3-069), not a frozen literal.
 type RoleVocab struct {
+	// The patterns this vocabulary was built from, so a caller can read back the EFFECTIVE lexicon a
+	// project installed rather than only asking it yes/no questions. ActiveRoleVocab's doc has promised
+	// that inspection since WS3-069 and could not deliver it while the patterns were discarded at
+	// compile time.
+	//
+	// Embedded by POINTER, deliberately. A protobuf-go message carries a MessageState holding a
+	// DoNotCopy, so embedding by value makes every copy of a RoleVocab a vet copylocks violation.
+	*configpb.NamingLexicon
+
+	// The compiled form, derived from the patterns above at construction and never written again.
+	// That immutability is the whole safety argument for the embedding: a decorator over a mutable
+	// value would be two sources of truth wearing one struct, where a derived-and-frozen half cannot
+	// go stale. Replace a vocabulary by building a new one (SetActiveRoleVocab), never by reaching in.
 	rail, ground, feedback, switching, control, gateDrive, supplyPin []*regexp.Regexp
 	// Transistor TERMINAL pin names (WS3-117), each its own vocabulary because the three are
 	// independent conventions a house can spell differently (a gate is "G", "GATE", sometimes "DRV"
@@ -86,51 +101,71 @@ func mustCompileRole(pats ...string) []*regexp.Regexp {
 
 // DefaultRoleVocab is the built-in lexicon: the rail/ground/feedback conventions the engine ships,
 // the historical Go literals re-expressed as RE2. A project's config merges onto (or replaces) these.
-func DefaultRoleVocab() *RoleVocab {
-	return &RoleVocab{
-		// rail: a "+" prefix, the supply-name prefixes, or a "12V"/"3V3"/"5V0" digits-then-V form.
-		rail: mustCompileRole(`^\+`, `^(VCC|VDD|VEE|VBUS|VIN|VOUT|VBAT|VSUP|PWR)`, `^[0-9]+V`),
-		// ground: GND or EARTH anywhere, or a VSS prefix.
-		ground: mustCompileRole(`GND`, `EARTH`, `^VSS`),
-		// feedback: a regulator sense node named with an _FB / feedback / sense suffix.
-		feedback: mustCompileRole(`_FB$`, `_VFB$`, `_FEEDBACK$`, `_VSENSE$`, `_SENSE$`, `_SNS$`, `^V?FB$`),
-		// switching: a regulator's power-stage node, which inherits a rail's name because it is named
-		// after the rail it produces. _SW and _PHASE are the switch node, _BOOT the bootstrap cap node
-		// riding above it, _LX the same node in the vendor spelling most common outside the US.
-		//
-		// A LOAD SWITCH OUTPUT COLLIDES WITH THIS and the name alone cannot separate them: "3V3_SW"
-		// is a switch node on a buck and a switched rail on a load switch, and both are real house
-		// conventions. Reading it as a regulator internal is the safe direction, because the cost of
-		// being wrong is one rail going unprobed while the other way round asks a factory test to put
-		// a probe on a node swinging to the input rail at the switching frequency. A project whose
-		// convention is the other one narrows this vocabulary in conventions.yaml (WS3-069).
-		switching: mustCompileRole(`_SW$`, `_BOOT$`, `_PHASE$`, `_LX$`),
-		// control: a regulator's configuration and enable inputs, named after the rail whose converter
-		// they configure. "20V_EN" enables the 20V converter and is driven by whatever logic the
-		// sequencer runs at, never by 20V; "12V_MODE1" selects the 12V converter's operating mode.
-		//
-		// These differ from feedback and switching in WHY they are not rails. Those two are the
-		// regulator's power plumbing and must not be probed. These are ordinary control signals that a
-		// test point is welcome on. What they share, and the only thing this vocabulary claims, is that
-		// the voltage token in the name identifies the CONVERTER rather than the net.
-		control: mustCompileRole(`_EN$`, `_MODE\d*$`, `_SEL\d*$`),
-		// gateDrive: the supply a regulator's gate driver runs from, again named after the rail the
-		// converter produces. Its own right to the word "rail" is arguable, since it genuinely is a
-		// supply, which is why it is its own role rather than lumped in with control. What is not
-		// arguable is the number: "12V_VDRV" is a gate-drive supply on the 12V converter and sits at
-		// whatever that part's driver rail is, commonly 5V.
-		gateDrive: mustCompileRole(`_VDRV$`, `_VDRIVE$`, `_VGATE$`),
-		// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
-		// VCCIO). Stricter than rail on purpose: no bare "+", no digit-then-V net form, and VOUT (a
-		// supply output) is excluded.
-		supplyPin: mustCompileRole(`^(VCC|VDD|VIN|VBAT|VBUS|VSUP|VPP|AVDD|DVDD|VAUX|VCORE|VEE)`),
-		// Transistor terminals, whole-name anchored. Anchoring is what keeps them safe even inside
-		// the class gate: an unanchored "S" would match SDA, SCLK, SENSE and every other S-name on
-		// the part.
-		gate:   mustCompileRole(`^G$`, `^GATE$`),
-		source: mustCompileRole(`^S$`, `^SOURCE$`, `^SRC$`),
-		drain:  mustCompileRole(`^D$`, `^DRAIN$`, `^DRN$`),
+// defaultLexicon is the built-in naming policy, expressed in the SAME schema a project's
+// conventions.yaml carries. It is a proto rather than Go literals so there is exactly one answer to
+// "which vocabularies exist and what do they hold", readable by the engine, the wire and the viewer
+// alike (C2). A hand-written Go twin of this shape is what let three vocabularies go missing twice:
+// gate/source/drain in WS3-117, and switching/control/gate_drive in agni 680.
+func defaultLexicon() *configpb.NamingLexicon {
+	vp := func(pats ...string) *configpb.VocabPatterns { return &configpb.VocabPatterns{Patterns: pats} }
+	return &configpb.NamingLexicon{
+		Net: &configpb.NetNameVocab{
+			// rail: a "+" prefix, the supply-name prefixes, or a "12V"/"3V3"/"5V0" digits-then-V form.
+			Rail: vp(`^\+`, `^(VCC|VDD|VEE|VBUS|VIN|VOUT|VBAT|VSUP|PWR)`, `^[0-9]+V`),
+			// ground: GND or EARTH anywhere, or a VSS prefix.
+			Ground: vp(`GND`, `EARTH`, `^VSS`),
+			// feedback: a regulator sense node named with an _FB / feedback / sense suffix.
+			Feedback: vp(`_FB$`, `_VFB$`, `_FEEDBACK$`, `_VSENSE$`, `_SENSE$`, `_SNS$`, `^V?FB$`),
+			// switching: a regulator's power-stage node, which inherits a rail's name because it is named
+			// after the rail it produces. _SW and _PHASE are the switch node, _BOOT the bootstrap cap node
+			// riding above it, _LX the same node in the vendor spelling most common outside the US.
+			//
+			// A LOAD SWITCH OUTPUT COLLIDES WITH THIS and the name alone cannot separate them: "3V3_SW"
+			// is a switch node on a buck and a switched rail on a load switch, and both are real house
+			// conventions. Reading it as a regulator internal is the safe direction, because the cost of
+			// being wrong is one rail going unprobed while the other way round asks a factory test to put
+			// a probe on a node swinging to the input rail at the switching frequency. A project whose
+			// convention is the other one narrows this vocabulary in conventions.yaml (WS3-069).
+			Switching: vp(`_SW$`, `_BOOT$`, `_PHASE$`, `_LX$`),
+			// control: a regulator's configuration and enable inputs, named after the rail whose converter
+			// they configure. "20V_EN" enables the 20V converter and is driven by whatever logic the
+			// sequencer runs at, never by 20V; "12V_MODE1" selects the 12V converter's operating mode.
+			//
+			// These differ from feedback and switching in WHY they are not rails. Those two are the
+			// regulator's power plumbing and must not be probed. These are ordinary control signals that a
+			// test point is welcome on. What they share, and the only thing this vocabulary claims, is that
+			// the voltage token in the name identifies the CONVERTER rather than the net.
+			Control: vp(`_EN$`, `_MODE\d*$`, `_SEL\d*$`),
+			// gateDrive: the supply a regulator's gate driver runs from, again named after the rail the
+			// converter produces. Its own right to the word "rail" is arguable, since it genuinely is a
+			// supply, which is why it is its own role rather than lumped in with control. What is not
+			// arguable is the number: "12V_VDRV" is a gate-drive supply on the 12V converter and sits at
+			// whatever that part's driver rail is, commonly 5V.
+			GateDrive: vp(`_VDRV$`, `_VDRIVE$`, `_VGATE$`),
+		},
+		Pin: &configpb.PinNameVocab{
+			// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
+			// VCCIO). Stricter than rail on purpose: no bare "+", no digit-then-V net form, and VOUT (a
+			// supply output) is excluded.
+			Supply: vp(`^(VCC|VDD|VIN|VBAT|VBUS|VSUP|VPP|AVDD|DVDD|VAUX|VCORE|VEE)`),
+			// Transistor terminals, whole-name anchored. Anchoring is what keeps them safe even inside
+			// the class gate: an unanchored "S" would match SDA, SCLK, SENSE and every other S-name on
+			// the part.
+			Gate:   vp(`^G$`, `^GATE$`),
+			Source: vp(`^S$`, `^SOURCE$`, `^SRC$`),
+			Drain:  vp(`^D$`, `^DRAIN$`, `^DRN$`),
+		},
 	}
+}
+
+// DefaultRoleVocab is the built-in lexicon, compiled. A project's config merges onto (or replaces)
+// these; see BuildRoleVocab.
+func DefaultRoleVocab() *RoleVocab {
+	v, err := BuildRoleVocab(nil)
+	if err != nil {
+		panic("classify: the built-in naming lexicon does not compile: " + err.Error())
+	}
+	return v
 }
 
 func roleLeaf(name string) string {
@@ -187,69 +222,103 @@ func SetActiveRoleVocab(v *RoleVocab) {
 // config replaced it). Exposed so a caller can inspect what a --conventions lexicon installed.
 func ActiveRoleVocab() *RoleVocab { return activeRoleVocab }
 
-// RoleVocabConfig is the per-vocabulary override set BuildRoleVocab applies. Named fields rather
-// than positional arguments (WS3-117): every vocabulary has the same type, so a positional signature
-// makes a transposition compile cleanly and silently cross two vocabularies — the kind of bug that
-// surfaces as a rule quietly matching the wrong pin names. An omitted field leaves that vocabulary
-// at its default.
-type RoleVocabConfig struct {
-	Rail      VocabPatterns
-	Ground    VocabPatterns
-	Feedback  VocabPatterns
-	Switching VocabPatterns
-	Control   VocabPatterns
-	GateDrive VocabPatterns
-	SupplyPin VocabPatterns
-	Gate      VocabPatterns
-	Source    VocabPatterns
-	Drain     VocabPatterns
-}
-
-// BuildRoleVocab applies per-vocabulary overrides onto DefaultRoleVocab, compiling and VALIDATING every
-// pattern — config is operator input, so a bad regex is a returned error, not a bind-time panic. An
-// empty override leaves that vocabulary at its default. Patterns are RE2, matched case-insensitively on
-// the hierarchy leaf (write ^/$ for whole-leaf anchoring).
-func BuildRoleVocab(cfg RoleVocabConfig) (*RoleVocab, error) {
-	def := DefaultRoleVocab()
-	build := func(base []*regexp.Regexp, o VocabPatterns) ([]*regexp.Regexp, error) {
-		var out []*regexp.Regexp
-		if !o.Replace {
-			out = append(out, base...)
-		}
-		for _, p := range o.Patterns {
-			re, err := regexp.Compile("(?i)" + p)
-			if err != nil {
-				return nil, fmt.Errorf("pattern %q: %w", p, err)
-			}
-			out = append(out, re)
-		}
-		return out, nil
-	}
-	var v RoleVocab
+// BuildRoleVocab merges a project's overrides onto the built-in lexicon and compiles the result,
+// VALIDATING every pattern — config is operator input, so a bad regex is a returned error rather than
+// a bind-time panic. A nil override yields the built-ins. Patterns are RE2, matched case-insensitively
+// on the hierarchy leaf (write ^/$ for whole-leaf anchoring).
+//
+// It takes the generated config message rather than a Go mirror of it. The mirror it replaced had one
+// production caller whose only job was to copy ten fields across by hand, and that copy silently lost
+// a vocabulary twice.
+func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
+	merged := mergeLexicon(defaultLexicon(), over)
+	v := &RoleVocab{NamingLexicon: merged}
+	net, pin := merged.GetNet(), merged.GetPin()
 	for _, d := range []struct {
 		name string
-		base []*regexp.Regexp
-		over VocabPatterns
+		src  *configpb.VocabPatterns
 		dst  *[]*regexp.Regexp
 	}{
-		{"rail", def.rail, cfg.Rail, &v.rail},
-		{"ground", def.ground, cfg.Ground, &v.ground},
-		{"feedback", def.feedback, cfg.Feedback, &v.feedback},
-		{"switching", def.switching, cfg.Switching, &v.switching},
-		{"control", def.control, cfg.Control, &v.control},
-		{"gate_drive", def.gateDrive, cfg.GateDrive, &v.gateDrive},
-		{"supply_pin", def.supplyPin, cfg.SupplyPin, &v.supplyPin},
-		{"gate", def.gate, cfg.Gate, &v.gate},
-		{"source", def.source, cfg.Source, &v.source},
-		{"drain", def.drain, cfg.Drain, &v.drain},
+		{"rail", net.GetRail(), &v.rail},
+		{"ground", net.GetGround(), &v.ground},
+		{"feedback", net.GetFeedback(), &v.feedback},
+		{"switching", net.GetSwitching(), &v.switching},
+		{"control", net.GetControl(), &v.control},
+		{"gate_drive", net.GetGateDrive(), &v.gateDrive},
+		{"supply_pin", pin.GetSupply(), &v.supplyPin},
+		{"gate", pin.GetGate(), &v.gate},
+		{"source", pin.GetSource(), &v.source},
+		{"drain", pin.GetDrain(), &v.drain},
 	} {
-		out, err := build(d.base, d.over)
+		out, err := compilePatterns(d.src)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", d.name, err)
 		}
 		*d.dst = out
 	}
-	return &v, nil
+	return v, nil
+}
+
+// mergeLexicon resolves a project's overrides against the built-ins, vocabulary by vocabulary, and
+// returns the EFFECTIVE lexicon. That value is what RoleVocab embeds, so reading the patterns back off
+// a vocabulary answers what it actually matches rather than what was shipped.
+func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
+	if over == nil {
+		return base
+	}
+	bn, bp := base.GetNet(), base.GetPin()
+	on, op := over.GetNet(), over.GetPin()
+	out := &configpb.NamingLexicon{
+		Net: &configpb.NetNameVocab{
+			Rail:      mergeVocab(bn.GetRail(), on.GetRail()),
+			Ground:    mergeVocab(bn.GetGround(), on.GetGround()),
+			Feedback:  mergeVocab(bn.GetFeedback(), on.GetFeedback()),
+			Switching: mergeVocab(bn.GetSwitching(), on.GetSwitching()),
+			Control:   mergeVocab(bn.GetControl(), on.GetControl()),
+			GateDrive: mergeVocab(bn.GetGateDrive(), on.GetGateDrive()),
+		},
+		Pin: &configpb.PinNameVocab{
+			Supply: mergeVocab(bp.GetSupply(), op.GetSupply()),
+			Gate:   mergeVocab(bp.GetGate(), op.GetGate()),
+			Source: mergeVocab(bp.GetSource(), op.GetSource()),
+			Drain:  mergeVocab(bp.GetDrain(), op.GetDrain()),
+		},
+	}
+	// The class block is a project's alone; there is no built-in set to merge it against.
+	if cls := over.GetClass(); len(cls) > 0 {
+		out.Class = cls
+	}
+	return out
+}
+
+// mergeVocab applies one vocabulary's override: patterns are ADDED to the built-ins unless replace is
+// set, in which case they become the whole set. Replace with no patterns is a deliberate empty
+// vocabulary, which is how a project turns a built-in role off.
+func mergeVocab(base, over *configpb.VocabPatterns) *configpb.VocabPatterns {
+	if over == nil || (len(over.GetPatterns()) == 0 && !over.GetReplace()) {
+		return base
+	}
+	if over.GetReplace() {
+		return &configpb.VocabPatterns{Patterns: over.GetPatterns(), Replace: true}
+	}
+	return &configpb.VocabPatterns{Patterns: append(append([]string{}, base.GetPatterns()...), over.GetPatterns()...)}
+}
+
+// compilePatterns compiles one vocabulary, case-insensitively.
+func compilePatterns(v *configpb.VocabPatterns) ([]*regexp.Regexp, error) {
+	pats := v.GetPatterns()
+	if len(pats) == 0 {
+		return nil, nil
+	}
+	out := make([]*regexp.Regexp, 0, len(pats))
+	for _, p := range pats {
+		re, err := regexp.Compile("(?i)" + p)
+		if err != nil {
+			return nil, fmt.Errorf("pattern %q: %w", p, err)
+		}
+		out = append(out, re)
+	}
+	return out, nil
 }
 
 // StampNetRoles fills each net's roles SET from the active naming lexicon, once at ingestion (WS3-072),

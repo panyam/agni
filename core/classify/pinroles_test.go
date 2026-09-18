@@ -1,6 +1,7 @@
 package classify
 
 import (
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -51,7 +52,7 @@ func TestStampPowerInPins(t *testing.T) {
 // prefix ("PWR_") extends it and the stamp promotes those pins — no engine change, no frozen literal.
 func TestStampPowerInPinsHonorsSupplyPinVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
-	v, err := BuildRoleVocab(RoleVocabConfig{SupplyPin: VocabPatterns{Patterns: []string{`^PWR_`}}})
+	v, err := BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{Supply: &configpb.VocabPatterns{Patterns: []string{`^PWR_`}}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

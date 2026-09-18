@@ -3,6 +3,7 @@ package check
 import (
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/model"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 )
 
 // The design read-surface CONTRACT lives in package model (WS1-043) so consumers depend on the
@@ -26,10 +27,11 @@ type (
 	// The classification lexicon (WS3-070) lives in package classify (WS3-071) so the loader can run
 	// the ingestion pass without importing check. These aliases keep the historical check.* names for
 	// the --conventions loader (check/naming) and external overlays.
-	ClassVocab    = classify.ClassVocab
-	VocabPatterns = classify.VocabPatterns
-	// RoleVocabConfig is the named-field override set for BuildRoleVocab (WS3-117).
-	RoleVocabConfig = classify.RoleVocabConfig
+	ClassVocab = classify.ClassVocab
+	// VocabPatterns is the GENERATED config type, re-exported rather than mirrored. The Go mirror it
+	// replaced, and the RoleVocabConfig beside it, existed only to be copied field by field out of this
+	// same message, and that copy lost a vocabulary twice (WS3-117, agni 680).
+	VocabPatterns = configpb.VocabPatterns
 
 	// The naming (role) lexicon moved to classify in WS3-072 for the same reason (the net.role stamp
 	// runs at ingestion). RoleVocab keeps its check.* name here.

@@ -46,6 +46,15 @@ message NetNameVocab {
   VocabPatterns rail = 1;
   VocabPatterns ground = 2;
   VocabPatterns feedback = 3;
+  // feedback, switching, control and gate_drive are the four ways a net can be NAMED after a rail
+  // without being one, because a regulator's pins are conventionally named for the supply they serve.
+  // Model.IsRailNet subtracts all four. They are separate vocabularies rather than one because they
+  // differ in what they are: the first two are the regulator's power plumbing and must never be
+  // probed, a control input is an ordinary signal that a test point is welcome on, and a gate drive
+  // is a real supply sitting at a voltage its name does not state.
+  VocabPatterns switching = 4;
+  VocabPatterns control = 5;
+  VocabPatterns gate_drive = 6;
 }
 
 // PinNameVocab is the vocabulary for a component's PIN names.

@@ -5,15 +5,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-)
 
-// VocabPatterns overrides one vocabulary: extra Patterns merged onto the built-in set, or the full set
-// when Replace is true. It is the config shape a project supplies (via the --conventions lexicon block).
-// It is the shared shape for both the class lexicon (here) and check's role lexicon (which aliases it).
-type VocabPatterns struct {
-	Patterns []string
-	Replace  bool
-}
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+)
 
 // ClassVocab is the component-classification lexicon: per-class regex patterns matched against a part's
 // text TOKENS to hint its ComponentClass. Like the RoleVocab naming lexicon (WS3-069), it exists so the
@@ -176,7 +170,7 @@ func ActiveClassVocab() *ClassVocab { return activeClassVocab }
 // each pattern (config is operator input, so a bad regex is a returned error). An empty override leaves
 // that class at its default; Replace drops the built-in patterns for that class. Overrides are keyed by
 // the class's string value (e.g. "tvs"); an unknown class name is an error.
-func BuildClassVocab(overrides map[ComponentClass]VocabPatterns) (*ClassVocab, error) {
+func BuildClassVocab(overrides map[ComponentClass]*configpb.VocabPatterns) (*ClassVocab, error) {
 	def := DefaultClassVocab()
 	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}}
 	for cl, pats := range def.patterns {
@@ -184,10 +178,10 @@ func BuildClassVocab(overrides map[ComponentClass]VocabPatterns) (*ClassVocab, e
 	}
 	for cl, o := range overrides {
 		var base []*regexp.Regexp
-		if !o.Replace {
+		if !o.GetReplace() {
 			base = v.patterns[cl]
 		}
-		for _, p := range o.Patterns {
+		for _, p := range o.GetPatterns() {
 			re, err := regexp.Compile("(?i)" + p)
 			if err != nil {
 				return nil, fmt.Errorf("class %q pattern %q: %w", cl, p, err)

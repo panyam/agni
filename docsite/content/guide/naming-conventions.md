@@ -102,6 +102,56 @@ running. The bar is what lets you tell the two apart.
 Switching discards the findings already on screen rather than keeping them, since they were computed
 by asking a different question.
 
+## Teach it your vocabulary
+
+The `rules` block above checks names against your policy. The `lexicon` block is the other half: it
+tells the engine what a name *means*, so the built-in rules reason about your board in your words.
+
+A net can carry several roles at once, and six of them are configurable:
+
+```yaml
+lexicon:
+  net:
+    rail:      { patterns: ["^HV_"] }        # added to the built-ins
+    ground:    { patterns: ["^CHASSIS_"] }
+    feedback:  { patterns: ["_FBK$"] }
+    switching: { patterns: ["_HSD$"] }
+    control:   { patterns: ["_SHDN$"] }
+    gate_drive: { patterns: ["_VBOOST$"] }
+  pin:
+    supply: { patterns: ["^PWR_"] }
+    gate:   { patterns: ["^DRV$"] }
+    source: { patterns: ["^SRC_"] }
+    drain:  { patterns: ["^DRN_"] }
+```
+
+Patterns are RE2, matched case-insensitively against the **leaf** of a hierarchical name, so
+`/DCDC/12V_SW` is tested as `12V_SW`. They are ADDED to the built-in set unless you say
+`replace: true`, which makes yours the whole vocabulary. `replace: true` with no patterns is how you
+turn a built-in role off entirely.
+
+### The four roles that mean "named after a rail, but not a rail"
+
+A regulator's pins are conventionally named for the supply they produce, so a 12V converter's nodes
+are `12V_FB`, `12V_SW`, `12V_MODE1`, `12V_VDRV`. Every one of those matches the `rail` vocabulary on
+its prefix and none of them carries 12V. `feedback`, `switching`, `control` and `gate_drive` are how
+the engine tells them apart, and a net carrying any of them is not treated as a rail:
+
+| role | typical suffixes | what it is | safe to probe? |
+|---|---|---|---|
+| `feedback` | `_FB`, `_VSENSE` | the divider tap setting the output | no, probing shifts regulation |
+| `switching` | `_SW`, `_BOOT`, `_PHASE`, `_LX` | the power-stage node | no, highest dV/dt net on the board |
+| `control` | `_EN`, `_MODE1`, `_SEL` | enable and configuration inputs | yes |
+| `gate_drive` | `_VDRV`, `_VGATE` | the gate driver's own supply | yes |
+
+The first two are excluded from probe-point rules because probing them is harmful. The last two are
+excluded because they are not rails, so a rule quantifying over rails would be naming the wrong
+subject. If your house convention spells a switched output `3V3_SW` rather than a switch node, narrow
+the `switching` vocabulary with `replace` and the rest keeps working.
+
+These are the same six vocabularies the engine ships with defaults for, in the same schema. There is
+no separate list of built-ins to consult.
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/): conventions findings read like any other,

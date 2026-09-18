@@ -150,3 +150,97 @@ lexicon:
 		t.Error("an unknown component class in a lexicon must error")
 	}
 }
+
+// TestEveryNetVocabularyReachesTheEngineFromYAML walks the WHOLE path a project's config takes:
+// YAML text, protojson, the generated message, BuildRoleVocab, the compiled vocabulary. It covers
+// every net role rather than a sample, because the defect this guards is one vocabulary being absent
+// from the copy that fills the engine, and a test naming three of six would have passed throughout.
+//
+// That defect shipped twice. WS3-117 added gate/source/drain to the Go override struct and not to the
+// wire form, so a project declaring them had them silently dropped. Agni 680 did the same to
+// switching, control and gate_drive, and the test written alongside it called BuildRoleVocab directly
+// and so proved nothing about the path a project actually uses.
+func TestEveryNetVocabularyReachesTheEngineFromYAML(t *testing.T) {
+	defer check.SetActiveRoleVocab(nil)
+	cfg, err := Parse([]byte(`
+name: acme
+lexicon:
+  net:
+    rail:       { patterns: ["^HV_"] }
+    ground:     { patterns: ["^CHASSIS_"] }
+    feedback:   { patterns: ["_FBK$"] }
+    switching:  { patterns: ["_HSD$"] }
+    control:    { patterns: ["_SHDN$"] }
+    gate_drive: { patterns: ["_VBOOST$"] }
+  pin:
+    supply: { patterns: ["^PWR_"] }
+    gate:   { patterns: ["^DRV$"] }
+    source: { patterns: ["^SRC_"] }
+    drain:  { patterns: ["^DRN_"] }
+`))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	lex, err := BuildLexicon(cfg)
+	if err != nil {
+		t.Fatalf("BuildLexicon: %v", err)
+	}
+	v := lex.RoleVocab()
+
+	for _, c := range []struct {
+		vocab string
+		name  string
+		got   func(string) bool
+	}{
+		{"rail", "HV_BUS", v.IsRail},
+		{"ground", "CHASSIS_0", v.IsGround},
+		{"feedback", "12V_FBK", v.IsFeedback},
+		{"switching", "12V_HSD", v.IsSwitching},
+		{"control", "12V_SHDN", v.IsControl},
+		{"gate_drive", "12V_VBOOST", v.IsGateDrive},
+		{"supply_pin", "PWR_IN", v.IsSupplyPin},
+		{"gate", "DRV", v.IsGate},
+		{"source", "SRC_A", v.IsSource},
+		{"drain", "DRN_A", v.IsDrain},
+	} {
+		if !c.got(c.name) {
+			t.Errorf("%s: %q declared in conventions.yaml never reached the engine", c.vocab, c.name)
+		}
+	}
+
+	// The override EXTENDS rather than replaces, so the built-ins still answer. Without this the
+	// assertions above would also pass for a build that threw the defaults away.
+	if !v.IsSwitching("12V_SW") {
+		t.Error("switching: an added pattern displaced the built-in _SW")
+	}
+	if !v.IsRail("+3V3") {
+		t.Error("rail: an added pattern displaced the built-ins")
+	}
+}
+
+// TestLexiconReadsBackItsPatterns: RoleVocab embeds the lexicon it compiled, so a caller can see the
+// EFFECTIVE patterns rather than only ask yes/no. ActiveRoleVocab's doc has promised that since
+// WS3-069 and could not deliver while the patterns were discarded at compile time.
+func TestLexiconReadsBackItsPatterns(t *testing.T) {
+	cfg, err := Parse([]byte("name: acme\nlexicon:\n  net:\n    switching: { patterns: [\"_HSD$\"] }\n"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	lex, err := BuildLexicon(cfg)
+	if err != nil {
+		t.Fatalf("BuildLexicon: %v", err)
+	}
+	got := lex.RoleVocab().GetNet().GetSwitching().GetPatterns()
+	var found bool
+	for _, p := range got {
+		if p == "_HSD$" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("the project's own pattern is not readable off the vocabulary: %v", got)
+	}
+	if len(got) < 2 {
+		t.Errorf("the effective set should carry the built-ins too, got %v", got)
+	}
+}
