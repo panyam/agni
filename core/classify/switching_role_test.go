@@ -34,13 +34,13 @@ func TestStampNetRolesStampsSwitching(t *testing.T) {
 		{Name: "12V_SW"}, {Name: "AMP_PHASE"}, {Name: "+5V"},
 	}}
 	StampNetRoles(d)
-	want := map[string][]string{
-		"12V_SW":    {NetRoleRail, NetRoleSwitching}, // a rail-NAMED switch node carries both
-		"AMP_PHASE": {NetRoleSwitching},              // no rail prefix, only the _PHASE suffix
-		"+5V":       {NetRoleRail},
+	want := map[string][]ir.Role{
+		"12V_SW":    {ir.Role_ROLE_RAIL, ir.Role_ROLE_SWITCHING}, // a rail-NAMED switch node carries both
+		"AMP_PHASE": {ir.Role_ROLE_SWITCHING},                    // no rail prefix, only the _PHASE suffix
+		"+5V":       {ir.Role_ROLE_RAIL},
 	}
 	for _, n := range d.Nets {
-		if got := RoleTokens(n); !reflect.DeepEqual(got, want[n.Name]) {
+		if got := NetRoles(n); !reflect.DeepEqual(got, want[n.Name]) {
 			t.Errorf("roles(%q) = %v, want %v", n.Name, got, want[n.Name])
 		}
 	}

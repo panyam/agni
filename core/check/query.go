@@ -172,7 +172,7 @@ func (m *irModel) IsGateDriveName(name string) bool { return m.lexicon().RoleVoc
 // carries one (authoritative, filled at ingestion), else this model's lexicon over the name. Taking
 // the net rather than its name matters because net names are not unique.
 func (m *irModel) IsGroundNet(n *ir.Net) bool {
-	return NetHasRole(n, NetRoleGround, m.IsGroundName)
+	return NetHasRole(n, ir.Role_ROLE_GROUND, m.IsGroundName)
 }
 
 // A REGULATOR INTERNAL IS NOT A RAIL, and this is the one place that decides it (agni 679, 680).
@@ -194,7 +194,7 @@ func (m *irModel) IsGroundNet(n *ir.Net) bool {
 // exclude feedback for itself. On one real board that left 48 of 77 "rails" as regulator internals.
 // A consumer that genuinely wants every rail-NAMED net still has IsPowerRailName.
 func (m *irModel) IsRailNet(n *ir.Net) bool {
-	if !NetHasRole(n, NetRoleRail, m.IsPowerRailName) {
+	if !NetHasRole(n, ir.Role_ROLE_RAIL, m.IsPowerRailName) {
 		return false
 	}
 	return !m.IsRegulatorInternalNet(n)
@@ -212,7 +212,7 @@ func (m *irModel) IsRailNet(n *ir.Net) bool {
 // private method plus a copy in stdlib/relations, which is the shape that agreed by luck until
 // someone added a role to one of them.
 func (m *irModel) IsRegulatorInternalNet(n *ir.Net) bool {
-	return m.HasAnyRole(n, NetRoleFeedback, NetRoleSwitching, NetRoleControl, NetRoleGateDrive)
+	return m.HasAnyRole(n, ir.Role_ROLE_FEEDBACK, ir.Role_ROLE_SWITCHING, ir.Role_ROLE_CONTROL, ir.Role_ROLE_GATE_DRIVE)
 }
 
 // HasAnyRole reports whether a net carries any of the named roles, each resolved the way NetHasRole
@@ -221,7 +221,7 @@ func (m *irModel) IsRegulatorInternalNet(n *ir.Net) bool {
 // It exists so a question about SEVERAL roles reads as a list rather than as a boolean expression
 // somebody has to extend correctly. IsRegulatorInternalNet was four hand-written disjuncts that grew
 // one at a time, and each addition had to remember the matching name fallback.
-func (m *irModel) HasAnyRole(n *ir.Net, roles ...string) bool {
+func (m *irModel) HasAnyRole(n *ir.Net, roles ...ir.Role) bool {
 	for _, r := range roles {
 		if NetHasRole(n, r, m.nameMatcherFor(r)) {
 			return true
@@ -233,19 +233,19 @@ func (m *irModel) HasAnyRole(n *ir.Net, roles ...string) bool {
 // nameMatcherFor returns the lexicon projection that answers for a role when a net carries no stamped
 // role set, which is the hand-authored-IR path NetHasRole falls back to. A role with no matcher here
 // answers on the stamp alone, which is correct for anything the lexicon does not name.
-func (m *irModel) nameMatcherFor(role string) func(string) bool {
+func (m *irModel) nameMatcherFor(role ir.Role) func(string) bool {
 	switch role {
-	case NetRoleRail:
+	case ir.Role_ROLE_RAIL:
 		return m.IsPowerRailName
-	case NetRoleGround:
+	case ir.Role_ROLE_GROUND:
 		return m.IsGroundName
-	case NetRoleFeedback:
+	case ir.Role_ROLE_FEEDBACK:
 		return m.IsFeedbackName
-	case NetRoleSwitching:
+	case ir.Role_ROLE_SWITCHING:
 		return m.IsSwitchingName
-	case NetRoleControl:
+	case ir.Role_ROLE_CONTROL:
 		return m.IsControlName
-	case NetRoleGateDrive:
+	case ir.Role_ROLE_GATE_DRIVE:
 		return m.IsGateDriveName
 	}
 	return func(string) bool { return false }

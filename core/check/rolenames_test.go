@@ -93,15 +93,15 @@ func TestSetActiveRoleVocab(t *testing.T) {
 // hook a consumer needs to weigh a role rather than just read it.
 func TestNetRoleSourceReportsTheEvidence(t *testing.T) {
 	declared := &ir.Net{Name: "N$17", Roles: []*ir.NetRole{
-		{Role: NetRoleGround, Source: ir.RoleSource_ROLE_SOURCE_DECLARED},
+		{RoleKind: ir.Role_ROLE_GROUND, Source: ir.RoleSource_ROLE_SOURCE_DECLARED},
 	}}
-	src, ok := NetRoleSource(declared, NetRoleGround, func(string) bool { return false })
+	src, ok := NetRoleSource(declared, ir.Role_ROLE_GROUND, func(string) bool { return false })
 	if !ok || src != ir.RoleSource_ROLE_SOURCE_DECLARED {
 		t.Errorf("declared ground: got (%v, %v), want (DECLARED, true)", src, ok)
 	}
 
 	// A role the net does not carry reports absent, not a weak source.
-	if src, ok := NetRoleSource(declared, NetRoleRail, func(string) bool { return false }); ok {
+	if src, ok := NetRoleSource(declared, ir.Role_ROLE_RAIL, func(string) bool { return false }); ok {
 		t.Errorf("a role the net lacks must report absent, got (%v, %v)", src, ok)
 	}
 }
@@ -111,7 +111,7 @@ func TestNetRoleSourceReportsTheEvidence(t *testing.T) {
 // ingestion. Reporting UNSPECIFIED there would hide that the answer rests on a name.
 func TestNetRoleSourceOnTheNameFallbackIsConvention(t *testing.T) {
 	unstamped := &ir.Net{Name: "GND"}
-	src, ok := NetRoleSource(unstamped, NetRoleGround, func(n string) bool { return n == "GND" })
+	src, ok := NetRoleSource(unstamped, ir.Role_ROLE_GROUND, func(n string) bool { return n == "GND" })
 	if !ok || src != ir.RoleSource_ROLE_SOURCE_CONVENTION {
 		t.Errorf("name fallback: got (%v, %v), want (CONVENTION, true)", src, ok)
 	}

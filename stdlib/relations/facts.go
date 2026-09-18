@@ -1003,7 +1003,7 @@ func railFacts(m check.Model) []facts.Row {
 func feedbackFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		if check.NetHasRole(n, check.NetRoleFeedback, m.IsFeedbackName) {
+		if check.NetHasRole(n, ir.Role_ROLE_FEEDBACK, m.IsFeedbackName) {
 			out = append(out, facts.Row{Relation: RelFeedback, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
@@ -1018,7 +1018,7 @@ func feedbackFacts(m check.Model) []facts.Row {
 func switchingFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		if check.NetHasRole(n, check.NetRoleSwitching, m.IsSwitchingName) {
+		if check.NetHasRole(n, ir.Role_ROLE_SWITCHING, m.IsSwitchingName) {
 			out = append(out, facts.Row{Relation: RelSwitching, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
@@ -1045,7 +1045,7 @@ func netRoleFacts(m check.Model) []facts.Row {
 	for _, n := range m.Nets() {
 		for _, role := range classify.AllNetRoles() {
 			if m.HasAnyRole(n, role) {
-				out = append(out, facts.Row{Relation: RelNetRole, Subject: n.Name, Value: role, Cites: cite(irCite(n.Prov))})
+				out = append(out, facts.Row{Relation: RelNetRole, Subject: n.Name, Value: classify.RoleToken(role), Cites: cite(irCite(n.Prov))})
 			}
 		}
 	}

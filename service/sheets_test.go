@@ -60,7 +60,7 @@ func TestAnnotateExplainsEveryUnlocatableSubject(t *testing.T) {
 	// sheet is labelled with it. This is the shape a decoupling-present finding lands on.
 	d := &ir.Design{
 		Nets: []*ir.Net{
-			{Name: "VDD_3V3", Roles: classify.ConventionRoles(check.NetRoleRail)},
+			{Name: "VDD_3V3", Roles: classify.ConventionRoles(ir.Role_ROLE_RAIL)},
 			{Name: "SDA"},
 		},
 		Components: []*ir.Component{{RefDes: "U1"}},

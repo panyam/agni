@@ -288,9 +288,9 @@ func (f *ipcFile) units() string {
 func declaredRole(netClass string) string {
 	switch netClass {
 	case "GROUND":
-		return classify.NetRoleGround
+		return classify.RoleToken(ir.Role_ROLE_GROUND)
 	case "POWER":
-		return classify.NetRoleRail
+		return classify.RoleToken(ir.Role_ROLE_RAIL)
 	}
 	return ""
 }

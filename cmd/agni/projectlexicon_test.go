@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,7 +45,7 @@ func TestReadDesignResolvesProjectConfig(t *testing.T) {
 	var rails int
 	for _, n := range d.GetNets() {
 		for _, r := range n.GetRoles() {
-			if r.GetRole() == "rail" {
+			if r.GetRoleKind() == ir.Role_ROLE_RAIL {
 				rails++
 			}
 		}
