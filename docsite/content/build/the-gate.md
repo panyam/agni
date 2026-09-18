@@ -164,6 +164,15 @@ agni issue 357, where the tutorial's own `make report` output meant everyone who
 tutorial rewrote the committed stamp on every gate run. `--exclude-standard` is the line between
 generated output nobody commits and a fixture somebody forgot to.
 
+**A fixture under `tools/samples/` is the one that is meant to be ignored**, because `make samples`
+fetches it and the boards carry their own licences. A directory holding no tracked file at all is
+refused, so a fetched board needs a different stand-in, and it is `hack/samples.pin`: the stamp hashes
+the pin and the fixture's path in place of the content (agni issue 682). A pin bump therefore
+regenerates every capture that reads a fetched board, including the ones whose board did not change,
+since the pin names artifacts rather than boards. The stamp needs no corpus on disk, so the docs
+workflow, which never fetches one, can still tell a current capture from a stale one. Only
+regenerating needs the board, and a run without it says to `make samples`.
+
 A spec that cannot render does NOT fail the docsite build, by design: `AgniRun` puts the error in the
 page, on the theory that a tutorial showing an error is a tutorial someone fixes. It also writes to
 stderr now, because an operator running the build otherwise sees nothing at all, and
