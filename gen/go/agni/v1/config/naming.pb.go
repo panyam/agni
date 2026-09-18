@@ -107,9 +107,10 @@ type NamingLexicon struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Net   *NetNameVocab          `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"`
 	Pin   *PinNameVocab          `protobuf:"bytes,2,opt,name=pin,proto3" json:"pin,omitempty"`
-	// Component-class name (e.g. "tvs") -> the patterns that mark a part as that class. Its own name
-	// space again: this matches a PART, not a net or a pin.
-	Class         map[string]*VocabPatterns `protobuf:"bytes,3,rep,name=class,proto3" json:"class,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Component-class name (e.g. "tvs") -> what marks a part as that class. Its own name space again:
+	// this matches a PART, not a net or a pin. The key must name a class the engine ships; an unknown
+	// one is a load error, because a class the resolver has no place for would classify nothing.
+	Class         map[string]*ClassVocab `protobuf:"bytes,3,rep,name=class,proto3" json:"class,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -158,7 +159,7 @@ func (x *NamingLexicon) GetPin() *PinNameVocab {
 	return nil
 }
 
-func (x *NamingLexicon) GetClass() map[string]*VocabPatterns {
+func (x *NamingLexicon) GetClass() map[string]*ClassVocab {
 	if x != nil {
 		return x.Class
 	}
@@ -386,6 +387,75 @@ func (x *VocabPatterns) GetReplace() bool {
 	return false
 }
 
+// ClassVocab is one component class's override. patterns and replace mean what they mean on
+// VocabPatterns, matched against a part's text TOKENS, and field numbers are shared with it so a
+// block written before prefixes existed reads the same.
+//
+// prefixes are ref-des letter prefixes (TH, Z) that mark a part as this class, matched against the
+// leading run of letters of a ref-des or a part's declared designator prefix, case-insensitively. They
+// are ADDED to the built-in prefix table and win over it, so a house that writes F for a ferrite
+// re-points F. replace does not touch them. A prefix holding anything but letters, or one listed under
+// two classes, is a load error: the first could never match and the second has no defensible answer.
+type ClassVocab struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Patterns      []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
+	Replace       bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
+	Prefixes      []string               `protobuf:"bytes,3,rep,name=prefixes,proto3" json:"prefixes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClassVocab) Reset() {
+	*x = ClassVocab{}
+	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClassVocab) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClassVocab) ProtoMessage() {}
+
+func (x *ClassVocab) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClassVocab.ProtoReflect.Descriptor instead.
+func (*ClassVocab) Descriptor() ([]byte, []int) {
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ClassVocab) GetPatterns() []string {
+	if x != nil {
+		return x.Patterns
+	}
+	return nil
+}
+
+func (x *ClassVocab) GetReplace() bool {
+	if x != nil {
+		return x.Replace
+	}
+	return false
+}
+
+func (x *ClassVocab) GetPrefixes() []string {
+	if x != nil {
+		return x.Prefixes
+	}
+	return nil
+}
+
 // NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
 // any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
 // they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
@@ -404,7 +474,7 @@ type NamingRule struct {
 
 func (x *NamingRule) Reset() {
 	*x = NamingRule{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -416,7 +486,7 @@ func (x *NamingRule) String() string {
 func (*NamingRule) ProtoMessage() {}
 
 func (x *NamingRule) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +499,7 @@ func (x *NamingRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamingRule.ProtoReflect.Descriptor instead.
 func (*NamingRule) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *NamingRule) GetName() string {
@@ -482,15 +552,15 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\x10NamingConvention\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\alexicon\x18\x02 \x01(\v2\x1d.agni.v1.config.NamingLexiconR\alexicon\x120\n" +
-	"\x05rules\x18\x03 \x03(\v2\x1a.agni.v1.config.NamingRuleR\x05rules\"\x88\x02\n" +
+	"\x05rules\x18\x03 \x03(\v2\x1a.agni.v1.config.NamingRuleR\x05rules\"\x85\x02\n" +
 	"\rNamingLexicon\x12.\n" +
 	"\x03net\x18\x01 \x01(\v2\x1c.agni.v1.config.NetNameVocabR\x03net\x12.\n" +
 	"\x03pin\x18\x02 \x01(\v2\x1c.agni.v1.config.PinNameVocabR\x03pin\x12>\n" +
-	"\x05class\x18\x03 \x03(\v2(.agni.v1.config.NamingLexicon.ClassEntryR\x05class\x1aW\n" +
+	"\x05class\x18\x03 \x03(\v2(.agni.v1.config.NamingLexicon.ClassEntryR\x05class\x1aT\n" +
 	"\n" +
 	"ClassEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
-	"\x05value\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x05value:\x028\x01\"\xe7\x02\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.config.ClassVocabR\x05value:\x028\x01\"\xe7\x02\n" +
 	"\fNetNameVocab\x121\n" +
 	"\x04rail\x18\x01 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x04rail\x125\n" +
 	"\x06ground\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06ground\x129\n" +
@@ -506,7 +576,12 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\x05drain\x18\x04 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x05drain\"E\n" +
 	"\rVocabPatterns\x12\x1a\n" +
 	"\bpatterns\x18\x01 \x03(\tR\bpatterns\x12\x18\n" +
-	"\areplace\x18\x02 \x01(\bR\areplace\"\x9b\x01\n" +
+	"\areplace\x18\x02 \x01(\bR\areplace\"^\n" +
+	"\n" +
+	"ClassVocab\x12\x1a\n" +
+	"\bpatterns\x18\x01 \x03(\tR\bpatterns\x12\x18\n" +
+	"\areplace\x18\x02 \x01(\bR\areplace\x12\x1a\n" +
+	"\bprefixes\x18\x03 \x03(\tR\bprefixes\"\x9b\x01\n" +
 	"\n" +
 	"NamingRule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
@@ -529,22 +604,23 @@ func file_agni_v1_config_naming_proto_rawDescGZIP() []byte {
 	return file_agni_v1_config_naming_proto_rawDescData
 }
 
-var file_agni_v1_config_naming_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_agni_v1_config_naming_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_agni_v1_config_naming_proto_goTypes = []any{
 	(*NamingConvention)(nil), // 0: agni.v1.config.NamingConvention
 	(*NamingLexicon)(nil),    // 1: agni.v1.config.NamingLexicon
 	(*NetNameVocab)(nil),     // 2: agni.v1.config.NetNameVocab
 	(*PinNameVocab)(nil),     // 3: agni.v1.config.PinNameVocab
 	(*VocabPatterns)(nil),    // 4: agni.v1.config.VocabPatterns
-	(*NamingRule)(nil),       // 5: agni.v1.config.NamingRule
-	nil,                      // 6: agni.v1.config.NamingLexicon.ClassEntry
+	(*ClassVocab)(nil),       // 5: agni.v1.config.ClassVocab
+	(*NamingRule)(nil),       // 6: agni.v1.config.NamingRule
+	nil,                      // 7: agni.v1.config.NamingLexicon.ClassEntry
 }
 var file_agni_v1_config_naming_proto_depIdxs = []int32{
 	1,  // 0: agni.v1.config.NamingConvention.lexicon:type_name -> agni.v1.config.NamingLexicon
-	5,  // 1: agni.v1.config.NamingConvention.rules:type_name -> agni.v1.config.NamingRule
+	6,  // 1: agni.v1.config.NamingConvention.rules:type_name -> agni.v1.config.NamingRule
 	2,  // 2: agni.v1.config.NamingLexicon.net:type_name -> agni.v1.config.NetNameVocab
 	3,  // 3: agni.v1.config.NamingLexicon.pin:type_name -> agni.v1.config.PinNameVocab
-	6,  // 4: agni.v1.config.NamingLexicon.class:type_name -> agni.v1.config.NamingLexicon.ClassEntry
+	7,  // 4: agni.v1.config.NamingLexicon.class:type_name -> agni.v1.config.NamingLexicon.ClassEntry
 	4,  // 5: agni.v1.config.NetNameVocab.rail:type_name -> agni.v1.config.VocabPatterns
 	4,  // 6: agni.v1.config.NetNameVocab.ground:type_name -> agni.v1.config.VocabPatterns
 	4,  // 7: agni.v1.config.NetNameVocab.feedback:type_name -> agni.v1.config.VocabPatterns
@@ -555,7 +631,7 @@ var file_agni_v1_config_naming_proto_depIdxs = []int32{
 	4,  // 12: agni.v1.config.PinNameVocab.gate:type_name -> agni.v1.config.VocabPatterns
 	4,  // 13: agni.v1.config.PinNameVocab.source:type_name -> agni.v1.config.VocabPatterns
 	4,  // 14: agni.v1.config.PinNameVocab.drain:type_name -> agni.v1.config.VocabPatterns
-	4,  // 15: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.VocabPatterns
+	5,  // 15: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.ClassVocab
 	16, // [16:16] is the sub-list for method output_type
 	16, // [16:16] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
@@ -574,7 +650,7 @@ func file_agni_v1_config_naming_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_config_naming_proto_rawDesc), len(file_agni_v1_config_naming_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -445,11 +445,13 @@ evidence. On the ESD requirement the evidence is a SECOND head (`esd_by`) rather
 
 **A thermistor is a `thermistor` AND a `resistor`**, the family shape `ferrite`/`inductor` already
 uses (agni 627). It classified UNKNOWN before, which emits no `component.class` row at all, so it fell
-out of every class-scoped rule and query silently. **A project cannot yet name a class of its own**:
-`conventions.yaml` accepts a `lexicon.class` block keyed by any name, and a name the engine does not
-know resolves nowhere, because `resolveHint` walks a fixed `hintPriority` and `classFamily` is a fixed
-map. Ref-des prefixes are not configurable at all. So the config surface reads as yes and behaves as
-no, with no error (agni 677).
+out of every class-scoped rule and query silently. **A project can EXTEND a class the engine ships
+and cannot declare a new one.** `lexicon.class` takes `patterns` and ref-des `prefixes` keyed by a
+shipped class, and a name the engine does not know is a load error. Which names a config may use is
+derived from `model.ComponentClasses`, and a test reading the const block holds that list to it: the
+hand-kept copy it replaced lacked `thermistor`, `zener` and `ideal_diode_controller`, so a project
+could not extend the class 627 had just added (agni 677). Declaring a new class opens the vocabulary,
+and DECISIONS.md says that happens as a registry, once a project asks.
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
 so `12V_FB`, `12V_SW`, `12V_MODE1` and `12V_VDRV` all match the rail vocabulary and none carries 12V.

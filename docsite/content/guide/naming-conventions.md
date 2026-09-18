@@ -152,6 +152,39 @@ the `switching` vocabulary with `replace` and the rest keeps working.
 These are the same six vocabularies the engine ships with defaults for, in the same schema. There is
 no separate list of built-ins to consult.
 
+### Component classes
+
+A part's class comes from two signals: its ref-des prefix (`R`, `TP`, `RT`) and the words in its
+part name and attributes (`ferrite`, `tvs`, `crystal`). The `class` block extends both, keyed by the
+class it teaches:
+
+```yaml
+lexicon:
+  class:
+    thermistor: { prefixes: ["TH"] }         # your house writes TH12, not RT12
+    zener:      { prefixes: ["Z"] }
+    tvs:        { patterns: ["^pesd"] }      # a part-number family with no "tvs" in its name
+```
+
+A prefix is the leading run of letters of a ref-des, so `TH` matches `TH12` and a part whose
+library symbol declares `TH?`. Prefixes are matched case-insensitively and are ADDED to the built-in
+table, and a prefix you list wins over a built-in one: a house that writes `F` for its ferrites
+re-points `F` away from fuse. `replace: true` applies to `patterns` only and leaves prefixes alone.
+
+The family tag follows the class, so a `TH12` answers both `component.class(TH12, "thermistor")`
+and `component.class(TH12, "resistor")`, exactly as an `RT12` does.
+
+Three things fail at load rather than reading as a convention that matched nothing:
+
+- a class the engine does not ship (`unknown component class "esd_array"`),
+- a prefix holding anything but letters (`T1` can never match, because `T1` is a ref-des),
+- one prefix listed under two classes.
+
+The class must be one the engine already has. A project cannot yet declare a class of its own, such
+as a house `esd_array` refining `diode`: that opens a vocabulary the engine keeps closed, and
+DECISIONS.md records what would change that. The class names are the ones `component.class`
+answers with, listed in the [relation catalog](../../reference/relations/).
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/): conventions findings read like any other,
