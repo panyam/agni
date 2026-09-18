@@ -1,6 +1,9 @@
 package check
 
-import "github.com/panyam/agni/internal/netgraph"
+import (
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/netgraph"
+)
 
 // LocateReason codes (WS9-039): why the entity named by (kind, subject) may not be highlightable
 // in a faithful view. The empty string is "a normal entity, expected to highlight". These are
@@ -75,4 +78,16 @@ func (m *irModel) IsPowerRail(name string) bool {
 	a := n.GetAttributes()
 	return a[netgraph.AttrPowerDriven] == "true" || a[netgraph.AttrGlobal] == "true" ||
 		m.IsGroundNet(n) || m.IsRailNet(n)
+}
+
+// ComponentProv locates a component in its source file, or nil when the design carries no provenance
+// for it. A rule that builds a finding on a component subject passes it through, so the finding
+// stays locatable in the viewer.
+func ComponentProv(m Model, refDes string) *ir.Provenance {
+	for _, c := range m.Components() {
+		if c.GetRefDes() == refDes {
+			return c.GetProv()
+		}
+	}
+	return nil
 }

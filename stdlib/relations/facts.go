@@ -3,7 +3,6 @@ package relations
 import (
 	"fmt"
 	"math"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1467,31 +1466,9 @@ func netDeclaredFacts(m check.Model) []facts.Row {
 	if len(defs) == 0 {
 		return nil
 	}
-	byName := make(map[string]*ir.Constraint, len(defs))
-	for _, c := range defs {
-		byName[c.GetName()] = c
-	}
-	// The default class is not merely the lowest-priority one: it applies to EVERY net, filling
-	// whatever that net's own classes left unstated, and a net in no class takes its values
-	// outright. A cascade over memberships alone would under-report on both counts.
-	var defaultClass string
-	for _, c := range defs {
-		if c.GetParams()["is_default"] == "true" {
-			defaultClass = c.GetName()
-			break
-		}
-	}
-
+	cascade := check.NewNetClassCascade(defs)
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		classes := append([]string(nil), n.GetNetClasses()...)
-		// Cascade order is the project's priority, NOT the net's (alphabetical) membership order.
-		sort.SliceStable(classes, func(i, j int) bool {
-			return defPriority(byName[classes[i]]) < defPriority(byName[classes[j]])
-		})
-		if defaultClass != "" && !slices.Contains(classes, defaultClass) {
-			classes = append(classes, defaultClass) // always last, always present
-		}
 		for _, q := range []struct {
 			param string
 			rel   string
@@ -1499,35 +1476,17 @@ func netDeclaredFacts(m check.Model) []facts.Row {
 			{"track_width", RelNetDeclaredTrackWidth},
 			{"via_drill", RelNetDeclaredViaDrill},
 		} {
-			for _, cls := range classes {
-				mm, ok := parseMM(byName[cls].GetParams()[q.param])
-				if !ok {
-					continue // this class does not state it; fall through to the next
-				}
-				v := mm
-				out = append(out, facts.Row{
-					Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre,
-					Cites: cite("net_settings:" + cls),
-				})
-				break // first stating class wins for THIS field only
+			v, cls, ok := cascade.Declared(n.GetNetClasses(), q.param)
+			if !ok {
+				continue
 			}
+			out = append(out, facts.Row{
+				Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre,
+				Cites: cite("net_settings:" + cls),
+			})
 		}
 	}
 	return out
-}
-
-// defPriority reads a class's cascade rank. An unknown class (a net assigned to a class the project
-// never defined, which net_settings permits) sorts last rather than first: it states nothing, so it
-// must never outrank a class that does.
-func defPriority(c *ir.Constraint) int {
-	if c == nil {
-		return math.MaxInt32
-	}
-	p, err := strconv.Atoi(c.GetParams()["priority"])
-	if err != nil {
-		return math.MaxInt32
-	}
-	return p
 }
 
 // parseMM reads a declared millimetre scalar. Absent and unparseable both read as "not stated",

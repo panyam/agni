@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // loadSwitchTripAboveFetRating flags a controller-based load switch whose current limit is set above
@@ -116,7 +115,7 @@ func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 			Subject: check.Entity{Kind: check.KindComponent, Ref: sw.Fet},
 			Message: msg,
 			Context: v.Context,
-			Prov:    componentProv(m, sw.Fet),
+			Prov:    check.ComponentProv(m, sw.Fet),
 			// The endangered part first (the FET carries the rating being exceeded), then the
 			// controller's threshold the trip current came from. Both are values the conclusion
 			// rests on (WS3-028).
@@ -128,15 +127,4 @@ func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 		out = append(out, v)
 	}
 	return out
-}
-
-// componentProv locates a component in its source file, or nil when the design carries no provenance
-// for it. Findings on a component subject stay locatable in the viewer that way.
-func componentProv(m check.Model, refDes string) *ir.Provenance {
-	for _, c := range m.Components() {
-		if c.GetRefDes() == refDes {
-			return c.GetProv()
-		}
-	}
-	return nil
 }
