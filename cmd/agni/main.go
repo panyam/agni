@@ -982,6 +982,7 @@ func reviewCmd() *cobra.Command {
 					// rules scored it.
 					Parent:   parent,
 					Manifest: service.ManifestProto(man), DesignUri: designURI, BoardUri: boardURI, RatifiedFloor: ratifiedFloor,
+					AsNamed: readAsNamed,
 					// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
 					// and the web reach one composition path, and its lexicon half travels with the design
 					// read instead of being installed in a process global.

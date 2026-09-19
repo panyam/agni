@@ -112,9 +112,10 @@ type CreateReviewRequest struct {
 	// A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
 	// a host path. Nothing above the Loader may treat it as one.
 	DesignUri string `protobuf:"bytes,1,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
-	// board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
-	// items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
-	// a netlist entry then reads its board items not-applicable, as before.
+	// board_uri attaches a board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC items
+	// resolve pass/fail rather than not-applicable (WS3-089). It WINS over a board the design declares.
+	// Empty means the declared board when there is one, and otherwise none, in which case a netlist
+	// entry reads its board items not-applicable (agni issue 646).
 	BoardUri string `protobuf:"bytes,2,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	// ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
 	// (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
@@ -126,7 +127,14 @@ type CreateReviewRequest struct {
 	// that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
 	// held to exactly the same rules as one read from a file. It is also stored with the run, so the
 	// archived document scores against the checklist it actually saw.
-	Manifest      *checks.ReviewManifest `protobuf:"bytes,5,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	Manifest *checks.ReviewManifest `protobuf:"bytes,5,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	// as_named reads exactly the artifact design_uri names, even when the enclosing design declares it a
+	// companion view of a different entry. Without it, the design's tiers are resolved the way every
+	// other analysis request resolves them: analysis from the entry, copper from a declared board.
+	//
+	// It exists because the CLI's `review` is a client of this service and carries the same flag, so
+	// resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
+	AsNamed       bool `protobuf:"varint,7,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -201,6 +209,13 @@ func (x *CreateReviewRequest) GetManifest() *checks.ReviewManifest {
 		return x.Manifest
 	}
 	return nil
+}
+
+func (x *CreateReviewRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 type GetReviewRequest struct {
@@ -520,7 +535,7 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"T\n" +
 	"\x06Review\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
-	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\x85\x02\n" +
+	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\xa0\x02\n" +
 	"\x13CreateReviewRequest\x12\x16\n" +
 	"\x06parent\x18\x06 \x01(\tR\x06parent\x12\x1d\n" +
 	"\n" +
@@ -528,7 +543,8 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\tboard_uri\x18\x02 \x01(\tR\bboardUri\x12%\n" +
 	"\x0eratified_floor\x18\x03 \x01(\x01R\rratifiedFloor\x127\n" +
 	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12:\n" +
-	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\"&\n" +
+	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\x12\x19\n" +
+	"\bas_named\x18\a \x01(\bR\aasNamed\"&\n" +
 	"\x10GetReviewRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n" +
 	"\x12ListReviewsRequest\x12\x16\n" +
