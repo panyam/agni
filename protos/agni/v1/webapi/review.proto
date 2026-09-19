@@ -107,9 +107,10 @@ message CreateReviewRequest {
   // A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
   // a host path. Nothing above the Loader may treat it as one.
   string design_uri = 1;
-  // board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
-  // items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
-  // a netlist entry then reads its board items not-applicable, as before.
+  // board_uri attaches a board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC items
+  // resolve pass/fail rather than not-applicable (WS3-089). It WINS over a board the design declares.
+  // Empty means the declared board when there is one, and otherwise none, in which case a netlist
+  // entry reads its board items not-applicable (agni issue 646).
   string board_uri = 2;
   // ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
   // (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
@@ -122,6 +123,13 @@ message CreateReviewRequest {
   // held to exactly the same rules as one read from a file. It is also stored with the run, so the
   // archived document scores against the checklist it actually saw.
   agni.v1.checks.ReviewManifest manifest = 5;
+  // as_named reads exactly the artifact design_uri names, even when the enclosing design declares it a
+  // companion view of a different entry. Without it, the design's tiers are resolved the way every
+  // other analysis request resolves them: analysis from the entry, copper from a declared board.
+  //
+  // It exists because the CLI's `review` is a client of this service and carries the same flag, so
+  // resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
+  bool as_named = 7;
 }
 
 message GetReviewRequest {

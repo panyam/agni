@@ -79,8 +79,9 @@ areas:
         title: no track is below the fab's minimum width
         description: >-
           A board-tier question. This project's design.yaml entry is a netlist, which carries no
-          copper, so the item reads n/a until a board file is attached with --board-path. n/a here
-          means the question does not apply to what was loaded, which is not the same as a pass.
+          copper, so the item is answered from the board its design.yaml declares as a companion. A
+          design declaring no board reads n/a here, which means the question does not apply to what
+          was loaded, not that it passed.
         rule: track-width
 
   - name: Architecture

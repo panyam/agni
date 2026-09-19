@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMixgEKE0NyZWF0ZVJldmlld1JlcXVlc3QSDgoGcGFyZW50GAYgASgJEhIKCmRlc2lnbl91cmkYASABKAkSEQoJYm9hcmRfdXJpGAIgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAMgASgBEi4KB292ZXJsYXkYBCABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAUgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiIAoQR2V0UmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIlsKEkxpc3RSZXZpZXdzUmVxdWVzdBIOCgZwYXJlbnQYBCABKAkSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIlcKE0xpc3RSZXZpZXdzUmVzcG9uc2USJwoHcmV2aWV3cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJldmlldxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIicKGEdldFJldmlld01hbmlmZXN0UmVxdWVzdBILCgN1cmkYASABKAkiTQoZR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZRIwCghtYW5pZmVzdBgBIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0MrIDCg1SZXZpZXdTZXJ2aWNlEksKDENyZWF0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZVJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSRQoJR2V0UmV2aWV3EiAuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJWCgtMaXN0UmV2aWV3cxIiLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVzcG9uc2USSwoMRGVsZXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuRGVsZXRlUmV2aWV3UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJoChFHZXRSZXZpZXdNYW5pZmVzdBIoLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVxdWVzdBopLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMi2AEKE0NyZWF0ZVJldmlld1JlcXVlc3QSDgoGcGFyZW50GAYgASgJEhIKCmRlc2lnbl91cmkYASABKAkSEQoJYm9hcmRfdXJpGAIgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAMgASgBEi4KB292ZXJsYXkYBCABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAUgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QSEAoIYXNfbmFtZWQYByABKAgiIAoQR2V0UmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIlsKEkxpc3RSZXZpZXdzUmVxdWVzdBIOCgZwYXJlbnQYBCABKAkSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIlcKE0xpc3RSZXZpZXdzUmVzcG9uc2USJwoHcmV2aWV3cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJldmlldxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIicKGEdldFJldmlld01hbmlmZXN0UmVxdWVzdBILCgN1cmkYASABKAkiTQoZR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZRIwCghtYW5pZmVzdBgBIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0MrIDCg1SZXZpZXdTZXJ2aWNlEksKDENyZWF0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZVJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSRQoJR2V0UmV2aWV3EiAuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJWCgtMaXN0UmV2aWV3cxIiLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVzcG9uc2USSwoMRGVsZXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuRGVsZXRlUmV2aWV3UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJoChFHZXRSZXZpZXdNYW5pZmVzdBIoLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVxdWVzdBopLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
 
 /**
  * Review is one stored review run.
@@ -93,9 +93,10 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
   designUri: string;
 
   /**
-   * board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
-   * items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
-   * a netlist entry then reads its board items not-applicable, as before.
+   * board_uri attaches a board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC items
+   * resolve pass/fail rather than not-applicable (WS3-089). It WINS over a board the design declares.
+   * Empty means the declared board when there is one, and otherwise none, in which case a netlist
+   * entry reads its board items not-applicable (agni issue 646).
    *
    * @generated from field: string board_uri = 2;
    */
@@ -126,6 +127,18 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
    * @generated from field: agni.v1.checks.ReviewManifest manifest = 5;
    */
   manifest?: ReviewManifest | undefined;
+
+  /**
+   * as_named reads exactly the artifact design_uri names, even when the enclosing design declares it a
+   * companion view of a different entry. Without it, the design's tiers are resolved the way every
+   * other analysis request resolves them: analysis from the entry, copper from a declared board.
+   *
+   * It exists because the CLI's `review` is a client of this service and carries the same flag, so
+   * resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
+   *
+   * @generated from field: bool as_named = 7;
+   */
+  asNamed: boolean;
 };
 
 /**

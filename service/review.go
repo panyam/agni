@@ -166,7 +166,13 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err != nil {
 		return nil, err
 	}
-	rep, cat, err := s.runOne(ctx, designURI, boardURI, man, req.GetRatifiedFloor(), ov)
+	// Tiers from the design's declaration, the same call CheckDesign makes, so a review in the browser
+	// scores against the board the design declares, as the CLI's does (agni issues 646, 656; C32).
+	netlistURI, boardURI, _, err := s.projects.TierURIs(ctx, designURI, boardURI, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	rep, cat, err := s.runOne(ctx, netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
 	if err != nil {
 		return nil, err
 	}
