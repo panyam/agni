@@ -1051,6 +1051,12 @@ The KIND clause gained its own tests with agni 654 (`TestColumnKindsFollowDerive
 `service`). Still open: the LINK clause is asserted only through the two surfaces agreeing on tiers,
 rather than on what a minted link opens, which needs a served viewer rather than a resolver.
 
+Per-rpc coverage is the other half, and it was missing where it mattered: 656 fixed check, query,
+report and trace and left `CreateReview` resolving nothing, so a browser review read no board for
+another two weeks (agni 646). `TestCreateReviewReadsTheDeclaredBoard` (`service`) pins that rpc.
+A resolver test cannot catch this shape, because the resolver was right and one caller never asked
+it, so an rpc that reads a design owes a test that it resolved tiers first.
+
 ## C33: A function body is not copied into a second package
 **Rule:** When code in one package needs logic another package already has, the logic moves to a
 package both can import, named for what it does. It is not copied. There is no `utils` package, and

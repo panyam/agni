@@ -253,6 +253,15 @@ This cuts both ways. In the same session an issue filed that morning (684) claim
 disagreed; one query against a real board showed they already agreed, and the fix it proposed would
 have been a regression. Ranking a backlog off issue bodies alone produces a confident wrong plan.
 
+**A ticket's own MEASUREMENT can be the wrong half.** 677 said a conventions file naming an unknown
+component class "parses, loads, and does nothing"; the loader had refused it since before the ticket
+was written, and the real defect ran the other way, with three shipped classes missing from the list
+a config may name. 682 printed a table of stamps proving a fetched fixture hashed as if it had no
+fixture; the table came from a re-implementation of the hash that left out the guard the real one
+has. Re-run the measurement through the SHIPPED code path, not a replica of it, and probe the
+command a user would type. Both tickets still had a real defect underneath, so this is a reason to
+re-measure rather than to close.
+
 ## PR prose conventions
 
 The shape of a PR body is defined by the **`start_pr` skill**, distributed separately from this

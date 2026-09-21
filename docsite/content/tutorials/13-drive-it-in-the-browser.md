@@ -155,15 +155,11 @@ item that could not be evaluated is styled differently from one that passed, bec
 opposite things. The headline leads with coverage rather than pass/fail, for the reason rung 9 gave
 about what a bare pass count hides.
 
-One item does disagree with the command line today, and it is the exception to this page's opening
-claim rather than a refinement of it. `B1`, the fab's minimum track width, is a board question.
-`agni review` reads it `fail`, because naming the design attaches the `gateway.kicad_pcb` the
-descriptor declares as a companion. The panel reads it `not-applicable`, because the viewer scores
-the entry netlist alone and never attaches that board. Same design, same checklist, two outcomes.
-
-Read a `not-applicable` board item in the panel as "not measured here", and confirm it at the
-command line. The rule is not in dispute, and any board-tier item reads the same way. It is tracked
-in [agni issue 646](https://github.com/panyam/agni/issues/646).
+`B1`, the fab's minimum track width, is worth a look because it is a board question and the entry is
+a netlist, which carries no copper. It reads `fail` in the panel exactly as it does in the terminal,
+because both attach the `gateway.kicad_pcb` the descriptor declares as a companion. Until
+[agni issue 646](https://github.com/panyam/agni/issues/646) the panel scored the netlist alone and
+read `B1` as `not-applicable`, so if you have an older run in the history, that is why it disagrees.
 
 A failing item lists the findings that failed it, and clicking one highlights it on the canvas, which
 is the same move Findings offers one level down.

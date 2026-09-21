@@ -181,7 +181,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   render depends on the engine build and nothing checks its output for staleness (agni issue 453).
   `make tutorial-runs` is no longer in that company: `tutorial-runs-check` regenerates every capture
   and fails on any difference, and it is in `testall`. A capture's stamp hashes the spec and the
-  fixture but NOT the engine, so regenerating is the only way to see engine drift.
+  fixture but NOT the engine, so regenerating is the only way to see engine drift. **Editing any
+  tracked file inside a fixture restamps every capture over it**, 61 of them for
+  `examples/tutorial-project`: commit the fixture edit, then `make tutorial-runs`, then check the
+  diff is stamp lines alone. A fixture under `tools/samples/` has nothing tracked and hashes
+  `hack/samples.pin` instead (agni 682).
 - CLI: `agni stats|check|diff|render|query|trace|review|serve|open <file>`, plus `agni params <mpn>`.
   `open` serves ONE design and
   prints its URL, minting the mount itself; `serve` takes `--mount` per folder and `--web-dir`. The reader is chosen by extension
@@ -426,6 +430,16 @@ route crossed, and every minted link opening on an auto-layout. C32 is the rule,
 `as_named` rides the wire because the CLI is itself a client of these services, and resolving
 unconditionally overrode its own flag.
 
+**656 left one call site and it took another ticket to find.** `CreateReview` never resolved tiers,
+so a review scored in the browser read no board while the CLI read the declared one, and board-tier
+checklist items answered `not-applicable` against the CLI's `fail` (agni 646). The MECHANISM is worth
+knowing, because it is how two surfaces disagree with no resolver involved: given no board,
+`BuildModel` asks the loader for one at the DESIGN's own URI, and the CLI's `localLoader` resolves a
+descriptor inside `Board` while the served `osLoader` reads exactly what it is handed. So a loader
+can attach a companion the service never resolved, which makes "the CLI reads it" evidence about the
+loader rather than about the request. Every analysis rpc now calls `TierURIs` first, and a new one
+that reads a design owes that call.
+
 **A trace answer carries where each net and endpoint is DRAWN**, per net rather than one sheet for the
 answer, because a route crossing three sheets is when a reader most wants to choose (agni 657). An
 ENDPOINT resolves by its PLACEMENT and not by its net: it is a pin on a part, and resolving by net
@@ -535,10 +549,15 @@ not copy it back into this repo.
 - **A stray `agni serve` answers instead of yours.** Two measurements were taken against a server on a
   port a newer binary had failed to bind, and the "address already in use" line scrolled past.
   `pkill -f "agni serve"` before believing anything served, and re-check the version the answer came
-  from.
+  from. **That `pkill` also matches the shell running it**, so typed ahead of `make testall` on one
+  command line it kills the gate (exit 144, no output). `pgrep -af` first, and remember :8080 may be
+  held by something that is not agni at all, such as a code-server, which is not yours to kill.
 - **`go test` prints FAIL for a BUILD failure too.** A red-check greping for `^ok` read a package that
   would not compile as a pass, so a test that never ran looked like a test that could not fail.
-  Confirm a red-check names the assertion it failed on.
+  Confirm a red-check names the assertion it failed on. A red-check that reverts a DECLARATION rather
+  than the behaviour fails the same way: reverting the source file a new test refers to leaves the
+  test undefined, which compiles to nothing and proves nothing. Disable the behaviour, keep the
+  symbol.
 - **An unquoted heredoc runs the backticks in your markdown.** `gh pr edit` then returns 0 having
   posted a body with a block silently triplicated and a flag eaten out of the prose. Quote the
   delimiter, and READ A PR BODY BACK after editing it.
