@@ -7,10 +7,16 @@ import type { FindingItem } from "./findings.js";
 
 // SheetTile is one row of the overview: a sheet and how many current findings live on it.
 // A zero count is a rendered "clean" tile, not an omission (the ticket's explicit ask).
+//
+// `count` is DEFECTS and `unresolved` is the inconclusive results, kept apart because the tile's
+// count is read as "problems on this sheet" and an inconclusive result is one the rule could not
+// decide (agni issue 350). Two tiles that used to read the same now do not: a sheet with three
+// failures and a sheet with three missing datasheets are different work.
 export interface SheetTile {
   id: string;
   name: string;
   count: number;
+  unresolved: number;
 }
 
 // OverviewState is the whole panel: the tiles in design order, the sheet currently shown,
@@ -36,11 +42,19 @@ export interface OverviewView {
 // with findings.
 export function sheetTiles(sheets: SheetRef[], findings: FindingItem[]): SheetTile[] {
   if (sheets.length === 1) {
-    return [{ id: sheets[0].id, name: sheets[0].name || sheets[0].id, count: findings.length }];
+    const defects = findings.filter((f) => !f.inconclusive).length;
+    return [{ id: sheets[0].id, name: sheets[0].name || sheets[0].id, count: defects, unresolved: findings.length - defects }];
   }
   const counts = new Map<string, number>();
+  const open = new Map<string, number>();
   for (const f of findings) {
-    for (const b of f.sheets) counts.set(b.id, (counts.get(b.id) ?? 0) + 1);
+    const into = f.inconclusive ? open : counts;
+    for (const b of f.sheets) into.set(b.id, (into.get(b.id) ?? 0) + 1);
   }
-  return sheets.map((s) => ({ id: s.id, name: s.name || s.id, count: counts.get(s.id) ?? 0 }));
+  return sheets.map((s) => ({
+    id: s.id,
+    name: s.name || s.id,
+    count: counts.get(s.id) ?? 0,
+    unresolved: open.get(s.id) ?? 0,
+  }));
 }

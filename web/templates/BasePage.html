@@ -210,6 +210,13 @@
     .check-context { font: inherit; font-size: 10px; margin-left: 6px; padding: 0 5px; border: 1px solid #d7dbe0; border-radius: 9px; background: #f6f7f9; color: #2563eb; cursor: pointer; }
     .check-context:hover { border-color: #2563eb; text-decoration: underline; }
     .check-context-role { color: #8b93a0; margin-right: 4px; }
+    /* An inconclusive result is not a defect (agni issue 350). It takes a "?" in the severity column
+       rather than a dot, and the violet the query panel already spends on "unresolved", so the two
+       surfaces name the same thing the same way. Ahead of .check-row.selected, which must still win. */
+    .sev-unresolved { color: #6d28d9; font-weight: 700; font-size: 11px; align-self: center; }
+    .check-row.inconclusive td { background: #fbfaff; }
+    .check-row.inconclusive .check-msg { font-style: italic; }
+    .finding-group-unresolved { color: #6d28d9; font-size: 11px; font-weight: 600; }
     .check-row.selected td { background: #fde6f5; }
     .check-inst td { background: #fafbfc; }
     .check-inst-label { color: #999; font-size: 10px; margin-right: 6px; }
@@ -292,6 +299,11 @@
     .sheet-tile-count.firing { background: #d21f3c; color: #fff; }
     .sheet-tile-count.clean { background: #e6f4ea; color: #1a7e3f; border: 1px solid #bce3c8; }
     .sheet-tile-count.norules { color: #999; }
+    /* The tile's two counts: defects, then the inconclusive results beside them. `open` is the zero
+       that is not clean, on a sheet whose only findings are undecided. */
+    .sheet-tile-counts { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+    .sheet-tile-count.open { color: #6d28d9; border: 1px solid #ddd0f2; }
+    .sheet-tile-count.unresolved { background: #f3e8ff; color: #6d28d9; border: 1px solid #ddd0f2; }
     /* WS9-006 changes panel: rows reuse the findings grid; the swatch replaces the severity dot */
     .finding.chg { grid-template-columns: auto auto 1fr; }
     .finding.chg .diff-swatch { align-self: center; }

@@ -3,6 +3,7 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { SheetBadges } from "./sheetbadges.jsx";
 import {
+  type FindingItem,
   type FindingsState,
   type FindingsView,
   type FindingGroupAxis,
@@ -12,6 +13,7 @@ import {
   findingKey,
   groupFindings,
   sortFindings,
+  tallySeverities,
   verdictSubjectLabel, type VerdictItem } from "./findings.js";
 
 // GroupAxis extends the finding group axes with "none" — a flat sorted table with no group headers.
@@ -110,14 +112,18 @@ function ChecksPanel(props: {
   // selected row still restyles, because Row reads props.state().selected itself and that is a
   // fine-grained read rather than a reason to re-create anything.
   const findings = createMemo(() => props.state().findings);
-  const sections = createMemo((): { value: string | null; rows: CollapsedFinding[]; count: number }[] => {
+  // A section's badge is the DEFECT count, with the inconclusive results beside it rather than
+  // inside it (agni issue 350). `count: items.length` said "12 findings" over a group holding four
+  // failures and eight results the rule could not decide, which is the number a reader acts on and
+  // the one that was wrong.
+  const section = (value: string | null, items: FindingItem[]) => {
+    const t = tallySeverities(items);
+    return { value, rows: collapseSorted(items), count: t.total, unresolved: t.inconclusive };
+  };
+  const sections = createMemo((): { value: string | null; rows: CollapsedFinding[]; count: number; unresolved: number }[] => {
     const fs = findings();
-    if (axis() === "none") return [{ value: null, rows: collapseSorted(fs), count: fs.length }];
-    return groupFindings(fs, axis() as FindingGroupAxis).map(([value, items]) => ({
-      value,
-      rows: collapseSorted(items),
-      count: items.length,
-    }));
+    if (axis() === "none") return [section(null, fs)];
+    return groupFindings(fs, axis() as FindingGroupAxis).map(([value, items]) => section(value, items));
   });
 
   const runLabel = () => {
@@ -225,7 +231,14 @@ function ChecksPanel(props: {
                           <button type="button" class="check-group-head" onClick={() => toggleGroup(sec.value!)}>
                             <span class="check-group-twist">{collapsed().has(sec.value!) ? "▸" : "▾"}</span>
                             <span class="check-group-name">{sec.value || "(none)"}</span>
-                            <span class="finding-group-badge">{sec.count}</span>
+                            <Show when={sec.count > 0 || sec.unresolved === 0}>
+                              <span class="finding-group-badge">{sec.count}</span>
+                            </Show>
+                            <Show when={sec.unresolved > 0}>
+                              <span class="finding-group-unresolved" title={`${sec.unresolved} inconclusive: the rule could not decide`}>
+                                {sec.unresolved}?
+                              </span>
+                            </Show>
                           </button>
                         </td>
                       </tr>
@@ -272,7 +285,7 @@ function Row(props: {
 
   return (
     <>
-      <tr class={`check-row sev-${f().severity}${selected() ? " selected" : ""}`}>
+      <tr class={`check-row sev-${f().severity}${f().inconclusive ? " inconclusive" : ""}${selected() ? " selected" : ""}`}>
         <td class="check-exp">
           <Show when={multi()}>
             <button type="button" class={`check-exp-btn${open() ? " open" : ""}`} title="instances of this finding" onClick={() => props.toggleRow(key())}>
@@ -281,8 +294,19 @@ function Row(props: {
             </button>
           </Show>
         </td>
+        {/*
+          An inconclusive result takes a mark of its own rather than a severity dot. It carries the
+          severity the rule WOULD have reported, so the dot painted an undecided result in the red a
+          reader reads as a defect, three inches from the query panel calling the same finding
+          "unresolved" (agni issue 350).
+        */}
         <td class="check-sev">
-          <span class={`sev-dot sev-${f().severity}`} title={f().severity} />
+          <Show
+            when={f().inconclusive}
+            fallback={<span class={`sev-dot sev-${f().severity}`} title={f().severity} />}
+          >
+            <span class="sev-unresolved" title={`inconclusive: the rule could not decide (would have been ${f().severity})`}>?</span>
+          </Show>
         </td>
         <td class="check-subject">
           <button type="button" class="check-locate" title={`locate ${f().kind} ${f().subject}`} onClick={() => props.onSelect(f().subject, undefined, headNetId())}>

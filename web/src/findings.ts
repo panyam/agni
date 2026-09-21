@@ -232,13 +232,30 @@ export interface FindingsView {
 // (net/component/pin), exact via FindingItem.kind.
 export type FindingGroupAxis = "rule" | "category" | "severity" | "kind" | "profile";
 
+// UNRESOLVED_GROUP is where an inconclusive finding lands on the severity axis. It is not the
+// severity it carries: the rule declined to decide, so filing it under "error" groups it with the
+// defects it is explicitly not one of (agni issue 350). Every other axis is unaffected, because an
+// inconclusive result still has a rule, a category, an entity kind and a profile.
+export const UNRESOLVED_GROUP = "unresolved";
+
 // groupFindings buckets findings by the chosen axis, preserving first-appearance order of values,
 // as [value, items][].
 export function groupFindings(findings: FindingItem[], axis: FindingGroupAxis): [string, FindingItem[]][] {
   const order: string[] = [];
   const by = new Map<string, FindingItem[]>();
   for (const f of findings) {
-    const v = axis === "kind" ? f.kind : axis === "severity" ? f.severity : axis === "category" ? f.category : axis === "profile" ? f.profile : f.rule;
+    const v =
+      axis === "kind"
+        ? f.kind
+        : axis === "severity"
+          ? f.inconclusive
+            ? UNRESOLVED_GROUP
+            : f.severity
+          : axis === "category"
+            ? f.category
+            : axis === "profile"
+              ? f.profile
+              : f.rule;
     if (!by.has(v)) {
       by.set(v, []);
       order.push(v);
@@ -299,6 +316,15 @@ export function severityRank(sev: string): number {
   return SEV_RANK[sev] ?? 3;
 }
 
+// findingRank orders one finding for the severity column, and it is severityRank plus the one thing
+// a severity string cannot say. An inconclusive result carries the severity the rule WOULD have
+// reported, so ranking it by that string sorts it among real defects of that severity, which is the
+// claim the panel exists to stop making (agni issue 350). It ranks after every severity instead,
+// including an unrecognized one, so the defects a reader is working through stay together at the top.
+export function findingRank(f: FindingItem): number {
+  return f.inconclusive ? 4 : severityRank(f.severity);
+}
+
 const cmpStr = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 // sortFindings returns a new array ordered by key then the rule/subject fallback chain; dir 1 is
@@ -307,7 +333,7 @@ export function sortFindings(items: FindingItem[], key: FindingSortKey, dir: 1 |
   const cmp = (a: FindingItem, b: FindingItem): number => {
     const base =
       key === "severity"
-        ? severityRank(a.severity) - severityRank(b.severity) || cmpStr(a.rule, b.rule) || cmpStr(a.subject, b.subject)
+        ? findingRank(a) - findingRank(b) || cmpStr(a.rule, b.rule) || cmpStr(a.subject, b.subject)
         : key === "rule"
           ? cmpStr(a.rule, b.rule) || cmpStr(a.subject, b.subject)
           : cmpStr(a.subject, b.subject) || cmpStr(a.rule, b.rule);

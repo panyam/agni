@@ -24,7 +24,20 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
                   when={props.state().ruleCount > 0}
                   fallback={<span class="sheet-tile-count norules" title="no rules selected">—</span>}
                 >
-                  <span class={`sheet-tile-count${t.count > 0 ? " firing" : " clean"}`}>{t.count}</span>
+                  {/*
+                    Two counts, because an inconclusive result is not a defect (agni issue 350). The
+                    zero only goes green when there is nothing unresolved either: a sheet whose three
+                    findings are all undecided is not clean, it is unexamined, and the green badge
+                    was the tile saying otherwise.
+                  */}
+                  <span class="sheet-tile-counts">
+                    <span class={`sheet-tile-count${t.count > 0 ? " firing" : t.unresolved > 0 ? " open" : " clean"}`}>{t.count}</span>
+                    <Show when={t.unresolved > 0}>
+                      <span class="sheet-tile-count unresolved" title={`${t.unresolved} inconclusive: the rule could not decide`}>
+                        {t.unresolved}?
+                      </span>
+                    </Show>
+                  </span>
                 </Show>
               </button>
             </li>

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   type FindingItem,
+  findingRank,
   groupFindings,
   subjectsToSpecs,
   findingSpec,
@@ -383,5 +384,32 @@ describe("checkedState", () => {
 
   it("reports running before anything else, since a count mid-flight is a moving target", () => {
     expect(checkedState({ ruleCount: 4, pending: 0, running: true })).toBe("running");
+  });
+});
+
+// An inconclusive result is a result the rule could not DECIDE, never a defect it found. The
+// severity it carries is the one it WOULD have reported, which is why every projection keyed on
+// that string quietly filed it with the failures (agni issue 350).
+describe("an inconclusive finding is not a defect", () => {
+  const undecided = f({ rule: "esd-protection", severity: "error", subject: "U3", inconclusive: true });
+
+  it("leaves the severity axis for its own group, and stays put on every other axis", () => {
+    const mixed = [f({ severity: "error", subject: "U7" }), undecided];
+    expect(groupFindings(mixed, "severity").map(([v]) => v)).toEqual(["error", "unresolved"]);
+    // The rule, category, kind and profile of an inconclusive result are all still true of it, so
+    // only the severity axis moves it.
+    expect(groupFindings(mixed, "rule").map(([v]) => v)).toEqual(["r", "esd-protection"]);
+  });
+
+  it("sorts after every defect rather than among the errors it is not one of", () => {
+    const mixed = [undecided, f({ severity: "info", subject: "R1" }), f({ severity: "error", subject: "U7" })];
+    expect(sortFindings(mixed, "severity", 1).map((x) => x.subject)).toEqual(["U7", "R1", "U3"]);
+    expect(findingRank(undecided)).toBeGreaterThan(findingRank(f({ severity: "catastrophe" })));
+  });
+
+  // severitySections is the server-report parity oracle (WS3-022) and deliberately unchanged: it
+  // mirrors what GetCheckReport emits, and the client cannot fix that shape by disagreeing with it.
+  it("still reaches severitySections under its own severity, where the server puts it", () => {
+    expect(severitySections([undecided])).toEqual([{ severity: "error", count: 1 }]);
   });
 });

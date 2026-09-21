@@ -15,8 +15,8 @@ function mountPanel() {
 function state(over: Partial<OverviewState>): OverviewState {
   return {
     tiles: [
-      { id: "s1", name: "Root", count: 3 },
-      { id: "s2", name: "Power", count: 0 },
+      { id: "s1", name: "Root", count: 3, unresolved: 0 },
+      { id: "s2", name: "Power", count: 0, unresolved: 0 },
     ],
     activeId: "s1",
     ruleCount: 2,
@@ -51,5 +51,26 @@ describe("sheetOverviewPanelIsland", () => {
     view.setState(state({}));
     (el.querySelectorAll(".sheet-tile")[1] as HTMLButtonElement).click();
     expect(onSelect).toHaveBeenCalledWith("s2");
+  });
+});
+
+// agni issue 350: the tile used to badge an inconclusive result red beside the defects, and a sheet
+// whose findings were all undecided badged a green 0.
+describe("sheet tiles and inconclusive results", () => {
+  it("counts them beside the defects rather than in them", () => {
+    const { el, view } = mountPanel();
+    view.setState(state({ tiles: [{ id: "s1", name: "Root", count: 2, unresolved: 3 }] }));
+    const tile = el.querySelector(".sheet-tile")!;
+    expect(tile.querySelector(".sheet-tile-count.firing")?.textContent).toBe("2");
+    expect(tile.querySelector(".sheet-tile-count.unresolved")?.textContent).toBe("3?");
+  });
+
+  it("does not call a sheet clean when its only findings are undecided", () => {
+    const { el, view } = mountPanel();
+    view.setState(state({ tiles: [{ id: "s1", name: "Root", count: 0, unresolved: 4 }] }));
+    const tile = el.querySelector(".sheet-tile")!;
+    expect(tile.querySelector(".sheet-tile-count.clean")).toBeNull();
+    expect(tile.querySelector(".sheet-tile-count.open")?.textContent).toBe("0");
+    expect(tile.querySelector(".sheet-tile-count.unresolved")?.textContent).toBe("4?");
   });
 });
