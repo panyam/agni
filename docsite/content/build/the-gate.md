@@ -227,10 +227,14 @@ edit as untidiness, which is the regenerate → commit → gate ordering this sh
 
 ## The three traps
 
-**Never judge it through a pipe.** `make testall | tail` reports *tail's* exit code, so a red gate
-reads green and an `&&` chain sails on. Twice now. Run it redirected and read the tail from the file:
+**Never judge it by a wrapper's status.** `make testall | tail` reports *tail's* exit code, so a red
+gate reads green and an `&&` chain sails on. Twice now. The pipe is the common instance and not the
+only one: anything that runs the gate on your behalf and then reports its own completion, a task
+runner or a CI step or an agent harness, is reporting on ITSELF. One such wrapper announced success
+for a run whose `browser-test` had failed, and the run's own status was sitting in the log. Write
+the status into the log and read it from there, so the number you read came from make:
 
-    make testall > /tmp/t.log 2>&1; echo $?
+    make testall > /tmp/t.log 2>&1; echo "EXIT=$?" >> /tmp/t.log
 
 **`catalog-docs-check` is git-status-based**, so a regenerated docsite file that is not yet COMMITTED
 reads as stale. Anything touching the shipped rule or relation catalog regenerates
@@ -320,6 +324,17 @@ flowchart LR
 The browser suite runs inside `testall`. It needs a Chromium installed per machine (`cd web && pnpm
 exec playwright-core install chromium`; CI installs and caches one) and starts its own server on a
 kernel-picked port, so it will not fight a dev server you already have.
+
+**A Chromium that is present can still be the wrong one, and the message blames the wrong thing.**
+Playwright pins a browser BUILD per release, so `playwright-core` 1.62.1 wants chromium 1234 and a
+cache holding only 1243 fails with `Looks like Playwright was just installed or updated`. That reads
+as a change in your checkout, which may not have changed at all. The asymmetry is the cause: the
+browser cache is per MACHINE (`~/.cache/ms-playwright`) while `node_modules` is per clone, so a
+second checkout on a newer `playwright-core` installs its own revision and prunes the one this
+checkout wants. Read the wanted revision out of `web/node_modules/playwright-core/browsers.json`
+rather than guessing, and re-run the install: it fetches the missing revision and leaves any other
+in place, so the other checkout keeps its browser. The system libraries are version-independent and
+do not need `install-deps` again.
 
 It was outside the gate until PR 629, on the argument that a machine without a browser should not go
 red for a reason unrelated to the change under test. What overturned that was v0.2.0 shipping a
