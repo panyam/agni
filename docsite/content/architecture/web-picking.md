@@ -164,6 +164,19 @@ conclude (agni issue 74). The client dropped that field for its whole life, so e
 it apart and excludes it from the defect total, including from its own severity bucket, since an
 inconclusive error is not an error.
 
+Every surface says so the same way (agni issue 350). In the checks panel the severity dot gives way
+to a violet `?`, because the severity a finding carries is the one the rule WOULD have reported and
+painting it red states the conclusion the rule declined to reach. A group badge shows the defects and
+then the unresolved count beside it, never one number over both. A sheet tile carries the same two
+numbers, and its zero only goes green when nothing is unresolved either: a sheet whose findings are
+all undecided is unexamined rather than clean. On the severity axis an inconclusive finding groups
+under `unresolved` rather than under its severity, and it sorts after every defect, so the rows a
+reader is working through stay together.
+
+`severitySections` is the deliberate exception. It is the parity oracle for the server report
+(`GetCheckReport`), so it mirrors what that report emits rather than what this client believes, and a
+client that quietly disagreed with it would hide the drift the oracle exists to catch.
+
 It is also the per-SUBJECT axis, which is worth holding against the skip vocabulary. The needs-*
 outcomes are PRECONDITIONS, decided around the rule and always design-wide; this sits on the other
 side of the rule and is about one subject. So an entity view already answers "what could not be

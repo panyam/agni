@@ -340,3 +340,53 @@ describe("arriving on a verdict link", () => {
     expect(el.querySelector(".verdicts-table")).toBeNull();
   });
 });
+
+// agni issue 350: the same finding read "unresolved" beside a selection in the query panel and
+// "error" in this panel three inches away.
+describe("an inconclusive row in the checks panel", () => {
+  const undecided = f({ rule: "esd-protection", severity: "error", subject: "U3", inconclusive: true, message: "no datasheet for U3" });
+  const defect = f({ rule: "rail-short", severity: "error", subject: "VBUS" });
+
+  it("takes a mark of its own instead of a severity dot", () => {
+    const { el } = mountPanel({ findings: [undecided] });
+    const row = el.querySelector(".check-row")!;
+    expect(row.classList.contains("inconclusive")).toBe(true);
+    expect(row.querySelector(".sev-dot")).toBeNull();
+    expect(row.querySelector(".sev-unresolved")?.textContent).toBe("?");
+    expect(row.querySelector(".sev-unresolved")?.getAttribute("title")).toContain("could not decide");
+  });
+
+  it("keeps the severity dot on a real defect", () => {
+    const { el } = mountPanel({ findings: [defect] });
+    expect(el.querySelector(".check-row .sev-dot.sev-error")).not.toBeNull();
+    expect(el.querySelector(".sev-unresolved")).toBeNull();
+  });
+
+  // The group badge is what a reader counts, and "2" over one failure and one undecided result is
+  // the wrong number however the rows are marked.
+  it("is counted beside the group's defects, never inside the badge", () => {
+    const { el } = mountPanel({ findings: [defect, undecided] });
+    const sel = el.querySelector(".checks-groupby select") as HTMLSelectElement;
+    sel.value = "rule";
+    sel.dispatchEvent(new Event("change"));
+
+    const heads = [...el.querySelectorAll(".check-group-head")];
+    const badges = heads.map((h) => [
+      h.querySelector(".check-group-name")?.textContent,
+      h.querySelector(".finding-group-badge")?.textContent ?? null,
+      h.querySelector(".finding-group-unresolved")?.textContent ?? null,
+    ]);
+    expect(badges).toEqual([
+      ["rail-short", "1", null],
+      ["esd-protection", null, "1?"],
+    ]);
+  });
+
+  it("gets its own section on the severity axis rather than joining the errors", () => {
+    const { el } = mountPanel({ findings: [defect, undecided] });
+    const sel = el.querySelector(".checks-groupby select") as HTMLSelectElement;
+    sel.value = "severity";
+    sel.dispatchEvent(new Event("change"));
+    expect([...el.querySelectorAll(".check-group-name")].map((n) => n.textContent)).toEqual(["error", "unresolved"]);
+  });
+});

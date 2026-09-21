@@ -1023,7 +1023,7 @@ describe("sheet overview push (WS9-025)", () => {
     const calls = h.onOverview.mock.calls;
     const afterOpen = calls[calls.length - 1][0];
     // Single-sheet design: the one tile carries the total findings count (none by default).
-    expect(afterOpen.tiles).toEqual([{ id: "s1", name: "S1", count: 0 }]);
+    expect(afterOpen.tiles).toEqual([{ id: "s1", name: "S1", count: 0, unresolved: 0 }]);
     expect(afterOpen.activeId).toBe("s1");
     expect(afterOpen.ruleCount).toBe(2); // the default catalog selects both rules
     await h.presenter.setRuleSelection([]);
