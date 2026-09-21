@@ -51,6 +51,16 @@ The habit is cheap: re-run the check as the LAST thing before you believe it, an
 and a gate failure disagree, suspect the ordering before you theorise about the tools. The theory is
 the expensive answer and it is almost never the right one.
 
+**1c. A REPLICA OF THE ALGORITHM MEASURES THE REPLICA.** Agni issue 682 reported that a capture's
+freshness stamp treated a fetched board as no fixture at all, with a table of three stamps showing two
+of them identical. The table was produced by re-implementing the hash rather than calling it, and the
+re-implementation left out the guard the shipped one has, which refuses a fixture with no tracked
+files outright. The ticket's conclusion survived in spirit, because the fetched corpus genuinely could
+not be used as a fixture, and every stated fact about the mechanism was wrong. Re-implementing is
+tempting whenever the real function is unexported or wants a whole harness, and that is exactly when
+it is worth writing the throwaway test that calls it. The one here took four lines and would have
+printed the refusal.
+
 **2. A detector that FIRES is a claim about the instrument too.** A sweep for "does this document print a
 document number" reported 86% coverage on a regex that accepted `TPS22918` and `TCAN1145`, both PART
 numbers, while missing `SLVSAG5`, a real one. Wrong in both directions, and the headline would have
