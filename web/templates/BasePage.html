@@ -123,7 +123,10 @@
     .finding-subject { font-weight: 600; }
     .finding-rule { color: #888; font-size: 11px; }
     .finding-msg { grid-column: 1 / -1; color: #555; font-size: 11px; }
-    .sev-dot { width: 8px; height: 8px; border-radius: 50%; background: #999; align-self: center; }
+    /* inline-block, because an inline span ignores width and height: the dot measured 0x0 in the
+       checks table from the day WS9 moved it out of the old grid row into a <td> and nothing said so
+       (agni issue 350). It stays correct in the grid and flex rows, which blockify a child anyway. */
+    .sev-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #999; align-self: center; }
     .sev-dot.sev-error { background: #d21f3c; }
     .sev-dot.sev-warning { background: #e39a1b; }
     .sev-dot.sev-info { background: #2563eb; }

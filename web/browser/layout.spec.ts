@@ -333,3 +333,42 @@ describe("the incomplete-drawing notice", () => {
     });
   }, 120_000);
 });
+
+// agni issue 350. A severity mark is an empty span styled into a dot, and an INLINE span ignores
+// width and height, so the dot measured 0x0 from the day WS9 moved it out of the old grid row into a
+// table cell. Every unit test passed throughout: the class was on the element, the element was in
+// the DOM, and nothing was painted. That is this file's whole reason to exist, and it is why the two
+// marks are asserted by their PAINTED SIZE rather than by their class.
+describe("the checks table's severity marks", () => {
+  it("paints a defect's dot and an undecided row's mark, and does not paint them the same", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "conformance", "reverse-blocking.undecided.kicad_sch");
+      await page.getByText("Checks", { exact: true }).first().click();
+      await page.click(".checks-run");
+      await page.waitForSelector(".check-row", { timeout: 60_000 });
+
+      const boxes = async (sel: string) =>
+        page.$$eval(sel, (els) =>
+          els.map((e) => {
+            const r = e.getBoundingClientRect();
+            return { w: r.width, h: r.height, color: getComputedStyle(e).backgroundColor };
+          }),
+        );
+
+      const dots = await boxes(".check-sev .sev-dot");
+      expect(dots.length).toBeGreaterThan(0);
+      for (const d of dots) {
+        expect(d.w).toBeGreaterThan(0);
+        expect(d.h).toBeGreaterThan(0);
+      }
+
+      // The undecided row takes a "?" instead, and it is the only one: this fixture reports three
+      // defects and one inconclusive result.
+      const marks = await boxes(".check-sev .sev-unresolved");
+      expect(marks.length).toBe(1);
+      expect(marks[0].w).toBeGreaterThan(0);
+      expect(marks[0].h).toBeGreaterThan(0);
+      expect(await page.$$eval(".check-row.inconclusive .sev-dot", (e) => e.length)).toBe(0);
+    });
+  }, 90_000);
+});
