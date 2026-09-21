@@ -46,6 +46,10 @@
   .terms { color: var(--muted); font-size: 12px; }
   .findings-only { border-left: 3px solid var(--warn); padding-left: 8px; color: var(--muted);
                    font-size: 12px; margin: 10px 0; }
+  /* Shared by both reports: why this artifact promises no links. Same treatment as .findings-only
+     because it is the same kind of statement, the document declaring a limit on itself. */
+  .links-withheld { border-left: 3px solid var(--warn); padding-left: 8px; color: var(--muted);
+                    font-size: 12px; margin: 10px 0; }
 
   /* Checklist report. The page shape differs from the check report (items grouped by area, one
      row per question) but the vocabulary is shared, so an outcome is the same colour on both. */

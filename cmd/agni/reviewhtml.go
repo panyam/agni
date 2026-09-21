@@ -95,8 +95,10 @@ func checklistMeta(cmd *cobra.Command, ll *localLoader, designArg string, spec s
 	ws, _ := workspace()
 	urlBase := spec.base()
 	mountPath, contentHash, why := verdictLinkTarget(cmd.Context(), ws, ll, designURI, spec.self)
+	withheld := ""
 	if urlBase != "" && why != "" {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: --server is set but no findings were linked: %s\n", why)
+		withheld = why
 	}
 	if urlBase != "" && mountPath != "" {
 		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
@@ -106,14 +108,16 @@ func checklistMeta(cmd *cobra.Command, ll *localLoader, designArg string, spec s
 			}
 			if !keep {
 				mountPath = ""
+				withheld = note
 			}
 		}
 	}
 	return rpt.Checklist{
-		Design:      designURI,
-		Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
-		ContentHash: contentHash,
-		URLBase:     urlBase,
-		MountPath:   mountPath,
+		Design:        designURI,
+		Generated:     time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
+		ContentHash:   contentHash,
+		URLBase:       urlBase,
+		MountPath:     mountPath,
+		LinksWithheld: withheld,
 	}, nil
 }

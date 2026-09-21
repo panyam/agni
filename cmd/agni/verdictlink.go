@@ -169,8 +169,10 @@ func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, de
 	ws, _ := workspace()
 	urlBase := spec.base()
 	mountPath, contentHash, why := verdictLinkTarget(ctx, ws, ll, designURI, spec.self)
+	withheld := ""
 	if urlBase != "" && why != "" {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: --server is set but no links were emitted: %s\n", why)
+		withheld = why
 	}
 	// A remote server is asked whether it agrees about the mount. `self` is not asked, because there is
 	// nobody to disagree: the table the links name is the table this process is about to serve.
@@ -182,13 +184,18 @@ func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, de
 			}
 			if !keep {
 				mountPath = ""
+				// This is the SECOND way links get withheld, and its reason was stderr-only too. A
+				// server that serves the mount name from another root is the case a reader is least
+				// able to guess from the page, so it is the one most worth carrying.
+				withheld = note
 			}
 		}
 	}
 	return rpt.Report{
-		Design:      designURI,
-		ContentHash: contentHash,
-		URLBase:     urlBase,
-		MountPath:   mountPath,
+		Design:        designURI,
+		ContentHash:   contentHash,
+		URLBase:       urlBase,
+		MountPath:     mountPath,
+		LinksWithheld: withheld,
 	}
 }

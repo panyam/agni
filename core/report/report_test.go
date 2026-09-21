@@ -216,3 +216,45 @@ func TestVerdictURLCarriesTheRule(t *testing.T) {
 		t.Errorf("the rule must not displace the revision hash: %q", got)
 	}
 }
+
+// A report read a week later is read by someone wondering why its subjects are plain text, and until
+// issue 626 the only answer was on a terminal that had long since closed. Both surfaces carry the
+// reason now, because a link means the same thing on both and so does its absence.
+func TestWithheldLinkReasonReachesBothReports(t *testing.T) {
+	// No quotes in the fixture reason on purpose: html/template escapes them, correctly, and a test
+	// asserting the raw sentence would fail against a page that carries it perfectly well.
+	const why = `the mount was minted for this run rather than declared`
+
+	t.Run("check report", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := HTML(&buf, Report{Design: "d", LinksWithheld: why}); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(buf.String(), why) {
+			t.Errorf("the reason links were withheld never reached the report")
+		}
+	})
+
+	t.Run("review checklist", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := ChecklistHTML(&buf, Checklist{Design: "d", Name: "n", LinksWithheld: why}); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(buf.String(), why) {
+			t.Errorf("the reason findings were unlinked never reached the checklist")
+		}
+	})
+
+	// A run that emitted links, or was never asked for any, must say nothing. The note is an
+	// explanation for a missing thing, and a page that explains an absence it does not have is
+	// worse than one that stays quiet.
+	t.Run("silent when nothing was withheld", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := HTML(&buf, Report{Design: "d"}); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(buf.String(), "not linked to the viewer") {
+			t.Errorf("a report that withheld nothing must not explain a withholding")
+		}
+	})
+}

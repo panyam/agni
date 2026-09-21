@@ -19,11 +19,15 @@ type Checklist struct {
 	ContentHash string // the bytes this run saw
 	URLBase     string // empty means emit no links at all
 	MountPath   string // empty means emit no links at all
-	Summary     string // the one-line tally, rendered by the caller so both surfaces read alike
-	Covered     int
-	Answered    int
-	Total       int
-	Areas       []ChecklistArea
+	// LinksWithheld is why this run promised no links, when it was asked for them and refused.
+	// Same field and same reason as Report.LinksWithheld; a link means the same thing on both
+	// surfaces, so an absent link owes the same explanation on both (issue 626).
+	LinksWithheld string
+	Summary       string // the one-line tally, rendered by the caller so both surfaces read alike
+	Covered       int
+	Answered      int
+	Total         int
+	Areas         []ChecklistArea
 }
 
 // ChecklistArea is one group of items, in manifest order. Areas are NOT sorted by how bad they are,

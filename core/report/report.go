@@ -31,8 +31,16 @@ type Report struct {
 	ContentHash string // the bytes this run saw, so a stale link can be detected (issue 392)
 	URLBase     string // e.g. "http://localhost:8080"; empty means emit no links at all
 	MountPath   string // e.g. "demo/board.kicad_sch"; empty means emit no links at all
-	Totals      Totals
-	Rules       []RuleReport
+	// LinksWithheld is why this run promised no links, when it was asked for them and refused.
+	// Empty when links were emitted, and empty when none were asked for.
+	//
+	// The refusal was always said out loud on stderr, which is the wrong place for it: a report is
+	// read long after the terminal that produced it is gone, and its reader is exactly the person
+	// wondering why the subjects are plain text (issue 626). The reason travels with the artifact
+	// so the artifact can explain its own limits, the way a findings-only rule already does.
+	LinksWithheld string
+	Totals        Totals
+	Rules         []RuleReport
 }
 
 // Totals are the run's headline numbers.
