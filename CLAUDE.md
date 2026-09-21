@@ -484,8 +484,9 @@ wrapping `entity(?name, ?kind)` stays scalar, since that kind is per-row and a h
 per-row identity to carry it. And a recursive clause ABSTAINS rather than vetoing, so a transitive
 closure is typed by its base case instead of collapsing to a scalar.
 
-**Three ways to read a design and get a confident WRONG answer, all silent, all hit in one sitting.**
-Each returns an empty answer rather than an error, which reads as "the design does not have that".
+**Four ways to read a design and get a confident WRONG answer, all silent.** The first three were
+hit in one sitting. Each returns an empty or partial answer rather than an error, which reads as
+"the design does not have that".
 
 - **A bare reader instead of `formats.Loader`.** The Loader is where the format-neutral passes run, so
   `classify.StampMPN` never fires and every component's `mpn` is empty, which empties the whole
@@ -498,6 +499,14 @@ Each returns an empty answer rather than an error, which reads as "the design do
 - **A missing registration blank-import.** `check.BuiltinRules()` returns nothing without
   `_ "github.com/panyam/agni/stdlib/rules/builtin"`, and a verdict sweep then reports "0 pass, 0 fail,
   across 0 rules". Three of the four seams fail this way; see the composition facade note above.
+- **A HIERARCHICAL `.edn`, which reads as a flat design missing most of its netlist.** The EDIF
+  reader scopes instance extraction to the design's root cell, correctly (WS1-004), and records
+  `edif_hierarchical` when more than one cell carries instances. Nothing outside `readers/edif` ever
+  reads that attribute: no command prints it, no check reads it, the viewer has never heard of it.
+  So the read succeeds, exits zero, `agni stats` shows a plausible count, and every rule evaluates
+  cleanly over a design that is mostly absent. This is the one of the four the ENGINE already knows
+  about and declines to mention (agni issue 707). Unlike the other three it is not fixed by calling
+  something else, so until 707 lands, confirm a multi-cell `.edn` before trusting its counts.
 
 **Before believing a measurement or a green test, read `docsite/content/build/evidence.md`.** A
 negative result needs a positive control, a positive rate needs a precision check, and every new test

@@ -322,12 +322,20 @@ would have meant discarding the design's name.
 | `prototext` | an unstable extra space after a colon, inserted ON PURPOSE to discourage byte-comparison | `: +`, or parse the proto |
 | `protojson` | one or two spaces after a colon, so two runs over one message differ | parsed values, or `strings.Fields` joined by a single space |
 | symbol text out of a doc-IR | flattened subscripts, so `VCCA` arrives as `V CCA` (~850 occurrences in one corpus) | a pattern tolerating the injected space |
+| `html/template` output | quotes, angle brackets and ampersands become entities, so `"gateway"` renders as `&#34;gateway&#34;` | a fragment carrying none of them, or unescape before comparing |
 
 A before/after table built with a one-space `prototext` pattern read ZERO for every "before" and was
 nearly shipped. The tell was an internal contradiction, a file showing 0 typed pins and 2 supply pins at
 once, rather than the number itself. Distrust any count whose parts do not add up. The injected space
 has bitten three times in unrelated places: a prose sweep, the derive pin path where it would have
 produced pin ids no symbol library could match, and in-document search.
+
+The escaping row is the one whose failure points the wrong way. A test asserting that a rendered page
+carries a sentence will fail when the sentence contains a quote, and it fails by reporting the sentence
+absent, which reads as the feature not working rather than as the assertion being unmatchable. The cost
+is a debugging pass aimed at the renderer, which is correct, instead of at the test. Assert on a
+fragment with no quotes in it, or unescape first. This is the same family as `go test` printing FAIL for
+a build failure: the mechanism reports the wrong thing as broken.
 
 One consequence of `EmitUnpopulated`: a newly added field appears as its zero value in every existing
 consumer's output. Adding one to a response message is additive on the wire and visible in the JSON, so
