@@ -1597,7 +1597,7 @@ type ComponentReport struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
 	Symbol        string                 `protobuf:"bytes,2,opt,name=symbol,proto3" json:"symbol,omitempty"`                              // source part/symbol name, empty if none
-	DeviceClass   string                 `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"` // device class (empty for the box or a provided symbol)
+	DeviceClass   string                 `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"` // device class (empty for a provided symbol or a component with no class)
 	Cell          string                 `protobuf:"bytes,4,opt,name=cell,proto3" json:"cell,omitempty"`                                  // drawn symbol cell_ref
 	Kind          string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`                                  // provided | glyph | box | unresolved
 	unknownFields protoimpl.UnknownFields

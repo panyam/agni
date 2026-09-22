@@ -12,7 +12,7 @@ import (
 // the design's own (Provided) or a fallback because a provided one was requested but missing.
 type Choice struct {
 	Cell     string // the drawn symbol's cell_ref
-	Class    string // device class id when a classified glyph was chosen (empty for the box or a provided symbol)
+	Class    string // device class id, empty for a provided symbol or a component with no class
 	Provided bool   // a provided (the design's own) symbol was drawn
 	Fallback bool   // a provided symbol was requested but unavailable for this ref, so it fell back
 }
@@ -25,13 +25,12 @@ type Explainer interface {
 	Explain(ref string, c *ir.Component, parts map[string]*ir.PartType) Choice
 }
 
-// Explain implements Explainer for the Registry: the component's class and its glyph cell.
+// Explain implements Explainer for the Registry: the component's class and the cell it was drawn
+// with. The two can name different things and the report says both: a thermistor is drawn with the
+// resistor glyph and is still reported as a thermistor.
 func (r *Registry) Explain(_ string, c *ir.Component, parts map[string]*ir.PartType) Choice {
-	class := ClassOther
-	if c != nil {
-		class = r.Classify(c, parts)
-	}
-	return Choice{Cell: r.cellFor(class), Class: class}
+	class, g := r.choose(c, parts)
+	return Choice{Cell: g.GetCellRef(), Class: class}
 }
 
 // Explain implements Explainer for the FaithfulSource: a provided symbol when the sidecar covers
@@ -73,7 +72,7 @@ const (
 type ComponentReport struct {
 	RefDes string `json:"ref_des"`
 	Symbol string `json:"symbol,omitempty"` // source part/symbol name (PartType.Name)
-	Class  string `json:"class,omitempty"`  // assigned device class (empty for box/provided)
+	Class  string `json:"class,omitempty"`  // assigned device class (empty for a provided symbol or no class)
 	Cell   string `json:"cell"`             // drawn symbol cell_ref
 	Kind   string `json:"kind"`             // provided | glyph | box | unresolved
 }
@@ -133,13 +132,18 @@ func (r *ConversionReport) RefsByKind(kind string) []string {
 
 // kindOf maps a Choice to a report kind: a provided symbol wins, then a fallback is unresolved
 // (the actionable "no provided symbol" case), then the box (no device glyph), else a glyph.
+//
+// The box is decided on the drawn CELL and not on the class, because the two stopped agreeing when
+// the glyph started coming from the stamped class (agni issue 701): a component can now carry a
+// class the registry has no glyph for, which is a box that knows what it is. Reading the class
+// would have reported that as a glyph.
 func kindOf(ch Choice) string {
 	switch {
 	case ch.Provided:
 		return KindProvided
 	case ch.Fallback:
 		return KindUnresolved
-	case ch.Class == ClassOther:
+	case ch.Cell == nodeCell:
 		return KindBox
 	default:
 		return KindGlyph

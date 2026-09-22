@@ -3,6 +3,8 @@ package graph
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/model"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -135,4 +137,104 @@ func pinCount(s *geom.SymbolDef) int {
 		return -1
 	}
 	return len(s.Pins)
+}
+
+// TestStampedClassChoosesTheGlyph is agni issue 701: the glyph comes from the class the ingestion
+// pass stamped, so the picture and the facts cannot disagree about what a part is. Each case is a
+// row of the issue's measured table, and the third field is what the built-in rules alone answered
+// before the stamp was read — the wrong picture this closes.
+func TestStampedClassChoosesTheGlyph(t *testing.T) {
+	reg := DefaultRegistry()
+	cases := []struct {
+		refDes    string
+		stamped   []string
+		wantClass string
+		wantGlyph string
+		wasDrawn  string // the rule table's answer, for the record
+	}{
+		{"D1", []string{"tvs", "diode"}, "tvs", ClassTVS, ClassDiode},
+		{"TH1", []string{"thermistor", "resistor"}, "thermistor", ClassResistor, ClassOther},
+		{"LX1", []string{"ferrite", "inductor"}, "ferrite", ClassFerrite, ClassOther},
+		{"Y1", []string{"clock"}, "clock", ClassCrystal, ClassCrystal},
+		{"RT1", []string{"thermistor", "resistor"}, "thermistor", ClassResistor, ClassResistor},
+		{"D2", []string{"zener", "diode"}, "zener", ClassDiode, ClassDiode},
+		{"J9", []string{"test_connector"}, "test_connector", ClassConnector, ClassConnector},
+	}
+	for _, tc := range cases {
+		c := &ir.Component{RefDes: tc.refDes, DeviceClasses: tc.stamped}
+		if got := reg.Classify(c, nil); got != tc.wantClass {
+			t.Errorf("%s: Classify = %q, want the stamped %q", tc.refDes, got, tc.wantClass)
+		}
+		if got := reg.Symbol(tc.refDes, c, nil).GetCellRef(); got != reg.cellFor(tc.wantGlyph) {
+			t.Errorf("%s: glyph cell = %q, want the %s glyph %q (the rules alone drew %q)",
+				tc.refDes, got, tc.wantGlyph, reg.cellFor(tc.wantGlyph), tc.wasDrawn)
+		}
+	}
+}
+
+// TestUserClassRuleBeatsTheStamp keeps the CLI's --class explicit: a user naming a glyph for a
+// symbol is saying what to draw, so it wins over the stamped class as it always won over the rules.
+func TestUserClassRuleBeatsTheStamp(t *testing.T) {
+	reg := DefaultRegistry().With(ClassRule{Class: ClassCapacitor, Symbol: "res*"})
+	parts := map[string]*ir.PartType{"res": {Name: "res"}}
+	c := &ir.Component{
+		RefDes:        "R1",
+		Sections:      []*ir.ComponentSection{{PartRef: "res"}},
+		DeviceClasses: []string{"resistor"},
+	}
+	if got := reg.Classify(c, parts); got != ClassCapacitor {
+		t.Errorf("user rule = %q, want it to beat the stamped resistor with %q", got, ClassCapacitor)
+	}
+	// The stamp still wins over the BUILT-IN rules, which is the other half of the ordering.
+	plain := DefaultRegistry()
+	d1 := &ir.Component{RefDes: "D1", DeviceClasses: []string{"tvs", "diode"}}
+	if got := plain.Classify(d1, nil); got != ClassTVS {
+		t.Errorf("built-in rule won over the stamp: got %q, want %q", got, ClassTVS)
+	}
+}
+
+// TestUnstampedComponentUsesTheRules pins the fallback: a design read by something that never ran
+// the classify pass (a hand-built ir.Design, a test fixture) still classifies by symbol and ref-des.
+func TestUnstampedComponentUsesTheRules(t *testing.T) {
+	reg := DefaultRegistry()
+	if got := reg.Classify(&ir.Component{RefDes: "R1"}, nil); got != ClassResistor {
+		t.Errorf("unstamped R1 = %q, want %q", got, ClassResistor)
+	}
+	// "unknown" is the absence of a class, not a class: it must not shadow the rules.
+	c := &ir.Component{RefDes: "R1", DeviceClasses: []string{"unknown"}}
+	if got := reg.Classify(c, nil); got != ClassResistor {
+		t.Errorf("unknown-stamped R1 = %q, want the rules' %q", got, ClassResistor)
+	}
+}
+
+// TestEveryStampedClassDraws is the ratchet the issue asks for. A class the engine ships but the
+// registry cannot draw is a part the viewer shows as a box while every rule and query knows what it
+// is, and nothing else would report it. The set is built with classify.ClassesOf so the test reads
+// what ingestion actually stamps, family tag and all, rather than a hand-kept list.
+func TestEveryStampedClassDraws(t *testing.T) {
+	reg := DefaultRegistry()
+	for _, cl := range model.ComponentClasses() {
+		c := &ir.Component{RefDes: "X1", DeviceClasses: classify.ClassesOf(cl)}
+		class, glyph := reg.choose(c, nil)
+		if class != string(cl) {
+			t.Errorf("%s: classified as %q", cl, class)
+		}
+		if glyph.GetCellRef() == nodeCell {
+			t.Errorf("%s draws the generic box: give it a glyph or a glyphAliases entry", cl)
+		}
+	}
+}
+
+// TestDrawableClassesAcceptAStampedName covers the CLI's --class validation: a class that draws
+// through an alias is a class a user may name, because the registry can draw it.
+func TestDrawableClassesAcceptAStampedName(t *testing.T) {
+	have := map[string]bool{}
+	for _, c := range DefaultRegistry().GlyphClasses() {
+		have[c] = true
+	}
+	for _, c := range []string{"thermistor", "zener", "clock", "test_connector", "ideal_diode_controller"} {
+		if !have[c] {
+			t.Errorf("GlyphClasses omits %q, so --class %q is rejected for a class that draws", c, c)
+		}
+	}
 }

@@ -347,7 +347,7 @@ message ConversionReport {
 message ComponentReport {
   string ref_des = 1;
   string symbol = 2;       // source part/symbol name, empty if none
-  string device_class = 3; // device class (empty for the box or a provided symbol)
+  string device_class = 3; // device class (empty for a provided symbol or a component with no class)
   string cell = 4;         // drawn symbol cell_ref
   string kind = 5;         // provided | glyph | box | unresolved
 }

@@ -277,7 +277,27 @@ Cadence Allegro writes `clockwise="TRUE"/"FALSE"` in uppercase, and a case-sensi
 
 The netlist-graph fallback (`agni render --layout=grid|layered`) has no source geometry, so it synthesizes a `SchematicGeometry` from the IR. The assembly step decides what to draw at each component node through a pluggable **`SymbolSource`**, so the layout stays fixed while node artwork varies.
 
-- **`Registry`**: classified synthetic glyphs. Classification is data-driven and user-extensible. An ordered list of class rules matches the resolved part or symbol name first, then the ref-des letter prefix on a startswith match (so `RE1` and `Cout` still classify), mapping to open string class ids each with a hand-authored glyph (resistor, capacitor, inductor, ferrite, diode, led, tvs, fuse, connector, test point, crystal, ic, transistor, ground), the same vocabulary as the check model's component-class fact used by the [rules and checks](../rules-and-checks/) layer. Only unrecognized parts draw the generic box. Multi-pin bodies (ic, connector) carry no per-pin terminals, so their edges attach at the node center like the box does. Callers layer their own rules on the defaults (`--class sym=class`, `--class-file`).
+- **`Registry`**: classified synthetic glyphs, keyed on open string class ids each with a hand-authored glyph (resistor, capacitor, inductor, ferrite, diode, led, tvs, fuse, connector, test point, crystal, ic, transistor, ground). Multi-pin bodies (ic, connector) carry no per-pin terminals, so their edges attach at the node center like the box does.
+
+  **The glyph follows the class the ingestion pass stamped.** `classify.Stamp` fills
+  `ir.Component.device_classes` on every read, from part text, the project's own `lexicon.class`
+  patterns and the refinements a glob cannot express, so the drawing reads that rather than deciding
+  again: a part the engine calls a `tvs` is drawn as a TVS, and a query answer and a picture of the
+  same board cannot disagree about what a component is (agni issue 701). Three ends around it. A
+  user rule wins outright (`--class sym=class`, `--class-file`), because naming a glyph for a symbol
+  is saying what to draw. A component carrying no stamp falls back to the built-in rule table, which
+  matches the resolved part or symbol name first and then the ref-des letter prefix on a startswith
+  match (so `RE1` and `Cout` still classify) — that is the path a hand-built `ir.Design` and any
+  host that skipped the loader take. And only a class that reaches no glyph draws the generic box.
+
+  A class with no glyph of its own draws through its family, which is already in the stamped set:
+  a zener carries `["zener", "diode"]` and draws as a diode. `glyphAliases` covers the rest, where
+  the set holds no drawable tag (`clock`, `test_connector`, `ideal_diode_controller`) or the class
+  arrives outside a set from a user rule. These are drawing conventions and not classification
+  claims, which is why they are not in `classify`'s family table: a test connector is deliberately
+  NOT a connector for the protection rules, and is still drawn as one. `TestEveryStampedClassDraws`
+  holds every shipped class to reaching a glyph, so a new class cannot quietly draw as a box while
+  every rule and query knows what it is.
 - **`FaithfulSource`**: the design's own symbols (from a geometry sidecar) re-laid-out, falling back per ref to the Registry and then the box. `--symbols=faithful` selects it. A symbol that failed to load counts as unresolved, not provided.
 
 Two layout properties keep the output legible, both applied in assembly (no per-strategy change, because grid and layered both place on integer pitch multiples):
@@ -285,7 +305,11 @@ Two layout properties keep the output legible, both applied in assembly (no per-
 - **Size-aware packing**: group nodes by distinct X (columns) and Y (rows), and size each cell to `max(pitch, symbolSize + gutter)`. A uniform glyph grid stays at `pitch`, and only a large (faithful) symbol expands its own column or row, so mixed sizes pack tightly without overlap.
 - **Pin-accurate edges**: a net's hyperedge star runs from each connection's *pin* (the placed node origin plus the symbol's pin point whose `port_ref` matches the connection's pin), with a node-center fallback when the symbol has no such pin. A net where three or more pins meet gets a junction dot at the centroid. Auto-layout placements carry no rotation, so `origin + pin.Loc` is the world point.
 
-A conversion report (behind `agni render --report` and the `GetReport` web API) explains how each component mapped: its device class and whether it drew a glyph, the generic box (unmapped class), a provided symbol, or an unresolved fallback, with call-outs for the box list and the unresolved list (which points at the symbol libraries a run searched: the design's project descriptor and `--symbol-path`, the latter needed for xschem and gEDA whose symbol artwork lives in external `.sym` files).
+A conversion report (behind `agni render --report` and the `GetReport` web API) explains how each component mapped: its device class and whether it drew a glyph, the generic box (a class with no glyph, or no class at all), a provided symbol, or an unresolved fallback, with call-outs for the box list and the unresolved list (which points at the symbol libraries a run searched: the design's project descriptor and `--symbol-path`, the latter needed for xschem and gEDA whose symbol artwork lives in external `.sym` files).
+The report names the class and the cell separately, because they answer different questions and can
+legitimately differ: a thermistor is reported as a thermistor and drawn with the resistor glyph. The
+kind is decided on the CELL for that reason. Reading the class instead would call a box a glyph the
+moment a stamped class had no artwork.
 
 **A render that came up short says so.** A placement whose symbol did not resolve contributes no
 shapes, so it drops out of the document along with the entity keys that make it pickable, while the
