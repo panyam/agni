@@ -411,9 +411,10 @@ building until some later change needs a requirement it never recorded. `make ti
 
 **`make testall` is the full gate, and CI runs exactly it.** Read
 `docsite/content/build/the-gate.md` before trusting a run: it has three traps that make a red gate
-read green (a pipe swallowing the exit code, a commit-first ordering rule, and a per-clone
-`pnpm install`), one that makes a green tree read RED (a stray `agni serve` on :8080 fails three
-verdict-link tests, so reproduce against unmodified `main` before reporting a regression), plus what
+read green (a wrapper reporting its own status rather than make's, a commit-first ordering rule, and
+a per-clone `pnpm install`), one that makes a green tree read RED (a stray `agni serve` on :8080
+fails three verdict-link tests, so reproduce against unmodified `main` before reporting a
+regression), plus what
 a run leaves behind and the generated-code rules. **`tutorial-runs-check` regenerates captures and
 does not read the prose quoting them**, so a tutorial can cite numbers a change moved and the gate
 stays green.
@@ -506,15 +507,16 @@ have falsified.
 
 ## Wiring, per subsystem
 
-Each of these has a fixed edit-list where missing one edit is silent, and a test that catches it. The
-note strip is the one exception, and it is listed so the gap is visible rather than discovered.
+Each of these has a fixed edit-list where missing one edit is silent. Most have a test that catches
+it, and where the last column says NOTHING the gap is listed so it is visible rather than
+discovered.
 
 | Adding | Edits | Read | Enforced by |
 |---|---|---|---|
 | A docsite page | 4 (5 for a new section) | `docsite/README.md` | `docsite/nav_test.go` |
 | A `learn/` chapter | 4, plus the level-index entries | `docsite/README.md` | `docsite/learn_levels_test.go` |
 | A web viewer panel | 4, plus 2 more if it docks | `docsite/content/architecture/web-client.md` | `web/src/composition.test.ts`, `dock.test.ts` |
-| A canvas note strip (undrawn, stale-link) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples | the compiler, for the `ViewSink` channel; NOTHING for the template hole |
+| A canvas note strip (undrawn, stale-link) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples | the compiler for the `ViewSink` channel, `composition.test.ts` for the template hole |
 | A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
 | A format reader | — | `docsite/content/build/format-reader.md` | — |
 | A check rule | — | `docsite/content/build/check-rule.md` | — |

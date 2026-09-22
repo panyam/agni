@@ -158,6 +158,26 @@ describe("every island hole the page declares is mounted", () => {
   });
 });
 
+// The hole test above walks `data-component` islands, and a note strip is not one. `undrawnStrip`
+// and `staleLinkStrip` take `document.getElementById(...)` and no-op on null, so deleting
+// `<div id="undrawn-note">` from the page leaves every test in this file green while the strip is
+// silently dead (OUT_OF_SCOPE, PR 490, issue 392 acceptance 3). The same is true of every other id
+// the root resolves: the lookup is the contract, and a missing hole is a no-op rather than an error.
+//
+// So read the ids off main.ts the way the port test reads ViewSink, and resolve each one against the
+// booted page. Every id the root looks up today is declared in ViewerPage.html's Body block. An id
+// the root means to resolve somewhere else, or on an element built at runtime, would fail here and
+// should: it is a second contract and wants saying out loud rather than passing by accident.
+describe("every id the composition root looks up is declared by the page", () => {
+  it("resolves each getElementById in main.ts against the real template", () => {
+    const ids = [...new Set([...readSrc("main.ts").matchAll(/getElementById\("([^"]+)"\)/g)].map((m) => m[1]))];
+    expect(ids.length).toBeGreaterThan(20); // main.ts really was parsed, not an empty match
+
+    const absent = ids.filter((id) => !document.getElementById(id));
+    expect(absent, "ids main.ts resolves that the page never declares").toEqual([]);
+  });
+});
+
 // The hole test catches a panel whose island was never wired. It cannot catch a presenter VIEW PORT
 // that was never wired, because an unwired port puts nothing on the page to notice the absence of.
 // That is precisely how the project bar shipped invisible.
