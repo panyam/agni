@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/panyam/agni/core/model"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -12,23 +13,49 @@ import (
 // Built-in device class ids. Class ids are open strings, not a closed enum: a new class is just
 // a rule plus a glyph (WS7-030), so users can extend classification without a code change. The
 // empty id is the "no class" fallback that draws the generic node box.
+//
+// Every id that names a class the engine stamps is BOUND to model's constant rather than spelled
+// again, because a glyph is chosen from the stamped set and an id that drifted by one character
+// would silently draw the box (agni issue 701). ClassGround and ClassOther have no model
+// counterpart: a power symbol is drawn as a component and classified as none.
 const (
-	ClassResistor   = "resistor"
-	ClassCapacitor  = "capacitor"
-	ClassInductor   = "inductor"
-	ClassFerrite    = "ferrite"
-	ClassDiode      = "diode"
-	ClassLED        = "led"
-	ClassTVS        = "tvs"
-	ClassFuse       = "fuse"
-	ClassConnector  = "connector"
-	ClassTestPoint  = "test_point"
-	ClassCrystal    = "crystal"
-	ClassIC         = "ic"
-	ClassTransistor = "transistor"
+	ClassResistor   = string(model.ClassResistor)
+	ClassCapacitor  = string(model.ClassCapacitor)
+	ClassInductor   = string(model.ClassInductor)
+	ClassFerrite    = string(model.ClassFerrite)
+	ClassDiode      = string(model.ClassDiode)
+	ClassLED        = string(model.ClassLED)
+	ClassTVS        = string(model.ClassTVS)
+	ClassFuse       = string(model.ClassFuse)
+	ClassConnector  = string(model.ClassConnector)
+	ClassTestPoint  = string(model.ClassTestPoint)
+	ClassCrystal    = string(model.ClassCrystal)
+	ClassIC         = string(model.ClassIC)
+	ClassTransistor = string(model.ClassTransistor)
 	ClassGround     = "ground"
 	ClassOther      = "" // generic box
+	classUnknown    = string(model.ClassUnknown)
 )
+
+// glyphAliases maps a stamped class with no glyph of its own to the class whose glyph draws it.
+// Each entry is a drawing convention a schematic already follows: a thermistor IS drawn as a
+// resistor, a zener as a diode, an oscillator as a crystal. They are not classification claims,
+// which is why they live here and not in classify's family table (a test connector is deliberately
+// NOT a connector for protection rules, and is still drawn as one).
+//
+// Most stamped classes need no entry, because the device_classes set already carries the family
+// tag and choose walks it. An entry is needed when the set holds no drawable tag (clock,
+// test_connector, ideal_diode_controller) or when the class arrives OUTSIDE a set, from a user
+// --class rule, where there is no family to walk.
+var glyphAliases = map[string]string{
+	string(model.ClassThermistor):           ClassResistor,
+	string(model.ClassZener):                ClassDiode,
+	string(model.ClassTestConnector):        ClassConnector,
+	string(model.ClassClock):                ClassCrystal,
+	string(model.ClassOscillator):           ClassCrystal,
+	string(model.ClassCeramicResonator):     ClassCrystal,
+	string(model.ClassIdealDiodeController): ClassIC,
+}
 
 // ClassRule maps a component to a device class when it matches. A rule matches when every one
 // of its non-empty conditions matches (AND); an all-empty rule never matches. Rules are tried in
@@ -67,11 +94,20 @@ func (r ClassRule) matches(symbol, prefix string) bool {
 	return true
 }
 
-// Registry is the data behind auto-layout node drawing: an ordered rule list that classifies a
-// component, and a class-id -> glyph map that supplies the artwork. It is injected into the
+// Registry is the data behind auto-layout node drawing: the rules that classify a component when
+// nothing else has, and a class-id -> glyph map that supplies the artwork. It is injected into the
 // layout (WithRegistry) rather than hardcoded, so callers can extend classification and glyphs.
 // The zero value is not usable; build one with DefaultRegistry (optionally .With user rules).
+//
+// A component the ingestion pass already stamped (ir.Component.device_classes) is drawn from that
+// stamp, so the picture and the facts cannot disagree about what a part is (agni issue 701). Rules
+// are the two ends around it: UserRules are explicit and win outright, Rules is the fallback for a
+// component carrying no stamp.
 type Registry struct {
+	// UserRules are caller-supplied rules (the CLI's --class), tried FIRST and ahead of the
+	// stamped class, because a user naming a glyph for a symbol is saying what to draw.
+	UserRules []ClassRule
+	// Rules is the built-in fallback table, tried only when a component carries no stamped class.
 	Rules  []ClassRule
 	Glyphs map[string]*geom.SymbolDef // class id -> glyph; a class with no entry draws the box
 }
@@ -147,34 +183,59 @@ func DefaultRegistry() *Registry {
 	}
 }
 
-// With returns a copy of the registry with the given rules prepended, so they take precedence
-// over the built-in defaults (first match wins). The glyph map is shared: user rules map to the
-// existing glyphs unless the caller also adds a glyph for a new class id.
+// With returns a copy of the registry with the given rules prepended to UserRules, so they take
+// precedence over both the stamped class and the built-in defaults (first match wins). The glyph
+// map is shared: user rules map to the existing glyphs unless the caller also adds a glyph for a
+// new class id.
 func (r *Registry) With(rules ...ClassRule) *Registry {
 	if len(rules) == 0 {
 		return r
 	}
-	merged := make([]ClassRule, 0, len(rules)+len(r.Rules))
+	merged := make([]ClassRule, 0, len(rules)+len(r.UserRules))
 	merged = append(merged, rules...)
-	merged = append(merged, r.Rules...)
-	return &Registry{Rules: merged, Glyphs: r.Glyphs}
+	merged = append(merged, r.UserRules...)
+	return &Registry{UserRules: merged, Rules: r.Rules, Glyphs: r.Glyphs}
 }
 
-// GlyphClasses returns the class ids that have a glyph, sorted, for validating user input and
-// for error messages.
+// GlyphClasses returns the class ids the registry can DRAW, sorted, for validating user input and
+// for error messages. That is the classes with a glyph of their own plus the ones that reach a
+// glyph through glyphAliases, so a user rule may name "thermistor" for the same reason the stamped
+// class may: it draws, as a resistor.
 func (r *Registry) GlyphClasses() []string {
-	out := make([]string, 0, len(r.Glyphs))
+	out := make([]string, 0, len(r.Glyphs)+len(glyphAliases))
 	for c := range r.Glyphs {
 		out = append(out, c)
+	}
+	for c := range glyphAliases {
+		if r.Glyphs[c] == nil && r.drawable(c) != nil {
+			out = append(out, c)
+		}
 	}
 	sort.Strings(out)
 	return out
 }
 
-// Classify returns the device class id for a component: the first rule that matches its source
+// Classify returns the device class id for a component: a matching user rule, else the class the
+// ingestion pass stamped on it, else the first built-in rule that matches its source
 // symbol/part-type name (preferred) or ref-des prefix, else ClassOther (the box). A resolved
 // PartType's designator_prefix, when present, overrides the ref-des guess.
+//
+// The stamp is the whole reason this is not the rule table alone. classify.Stamp reads part text,
+// the project's own lexicon.class patterns, and refinements no glob can express, and it runs on
+// every read. A second classifier here would answer "diode" for a part the engine already calls a
+// tvs, so the class in a query answer and the class in the drawing would differ with nothing saying
+// which is right (agni issue 701).
 func (r *Registry) Classify(c *ir.Component, parts map[string]*ir.PartType) string {
+	class, _ := r.choose(c, parts)
+	return class
+}
+
+// choose resolves a component to its class id and the glyph to draw it with. The two are not the
+// same answer: a thermistor is drawn as a resistor and stays a thermistor in the report.
+func (r *Registry) choose(c *ir.Component, parts map[string]*ir.PartType) (string, *geom.SymbolDef) {
+	if c == nil {
+		return ClassOther, nodeSymbol()
+	}
 	prefix := refDesPrefix(c.GetRefDes())
 	symbol := ""
 	if pt := resolvePart(c, parts); pt != nil {
@@ -183,30 +244,72 @@ func (r *Registry) Classify(c *ir.Component, parts map[string]*ir.PartType) stri
 			prefix = p
 		}
 	}
-	for _, rule := range r.Rules {
+	for _, rule := range r.UserRules {
 		if rule.matches(symbol, prefix) {
-			return rule.Class
+			return rule.Class, r.glyphFor(rule.Class)
 		}
 	}
-	return ClassOther
-}
-
-// Symbol implements SymbolSource: it classifies the component and returns the class's glyph (the
-// box for an unknown class), so the Registry is the synthetic-glyph symbol source for a layout.
-func (r *Registry) Symbol(_ string, c *ir.Component, parts map[string]*ir.PartType) *geom.SymbolDef {
-	class := ClassOther
-	if c != nil {
-		class = r.Classify(c, parts)
+	if class, g := r.stamped(c); class != "" {
+		return class, g
 	}
-	return r.glyphFor(class)
+	for _, rule := range r.Rules {
+		if rule.matches(symbol, prefix) {
+			return rule.Class, r.glyphFor(rule.Class)
+		}
+	}
+	return ClassOther, nodeSymbol()
 }
 
-// glyphFor returns the glyph for a class, or the generic box when the class has no glyph.
+// Symbol implements SymbolSource: the glyph for the component's class (the box when its class
+// reaches none), so the Registry is the synthetic-glyph symbol source for a layout.
+func (r *Registry) Symbol(_ string, c *ir.Component, parts map[string]*ir.PartType) *geom.SymbolDef {
+	_, g := r.choose(c, parts)
+	return g
+}
+
+// stamped reads the class the ingestion pass put on the component: the identity is the SET's first
+// entry (classify.ClassesOf orders it most-specific first), and the glyph is the first entry of the
+// set that this registry can draw. Walking the set is what makes the family tag do the work — a
+// zener carries ["zener", "diode"], so it draws as a diode without zener needing an alias — and
+// glyphAliases covers the classes whose set holds no drawable tag. An empty or unknown-only set
+// returns "", meaning nothing was stamped and the caller should fall back to its rules.
+func (r *Registry) stamped(c *ir.Component) (string, *geom.SymbolDef) {
+	class := ""
+	for _, id := range c.GetDeviceClasses() {
+		if id == "" || id == classUnknown {
+			continue
+		}
+		if class == "" {
+			class = id
+		}
+		if g := r.drawable(id); g != nil {
+			return class, g
+		}
+	}
+	if class == "" {
+		return "", nil
+	}
+	return class, nodeSymbol()
+}
+
+// glyphFor returns the glyph for a class, or the generic box when the class reaches none.
 func (r *Registry) glyphFor(class string) *geom.SymbolDef {
-	if g := r.Glyphs[class]; g != nil {
+	if g := r.drawable(class); g != nil {
 		return g
 	}
 	return nodeSymbol()
+}
+
+// drawable returns the glyph a class id reaches, directly or through one alias hop, or nil when it
+// reaches none. One hop only: an alias names a class that has a glyph, never another alias.
+func (r *Registry) drawable(class string) *geom.SymbolDef {
+	if g := r.Glyphs[class]; g != nil {
+		return g
+	}
+	if alias, ok := glyphAliases[class]; ok {
+		return r.Glyphs[alias]
+	}
+	return nil
 }
 
 // cellFor returns the placement cell_ref for a class: its glyph's cell, or the box cell.

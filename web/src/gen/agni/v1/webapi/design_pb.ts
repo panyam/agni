@@ -802,7 +802,7 @@ export type ComponentReport = Message<"agni.v1.webapi.ComponentReport"> & {
   symbol: string;
 
   /**
-   * device class (empty for the box or a provided symbol)
+   * device class (empty for a provided symbol or a component with no class)
    *
    * @generated from field: string device_class = 3;
    */
