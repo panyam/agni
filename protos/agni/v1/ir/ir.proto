@@ -356,14 +356,38 @@ message Component {
   string ref_des = 1;
   repeated ComponentSection sections = 2;
   string footprint_ref = 3;  // PROVISIONAL: joins to Footprint.name (no reader yet)
-  // device_classes is the normalized device-class SET, derived ONCE at ingestion by the
-  // format-neutral classify pass (WS3-071), not read from any one format. It is the first
-  // DERIVED-NORMALIZATION field (C9): every format populates it via the same shared pass, so
-  // it is format-neutral by construction rather than by the two-reader promotion test. The set
-  // carries the specific class plus its family tags (a TVS is {tvs, diode}); consumers do
-  // membership, not equality. Empty when the design was built without the ingestion pass (a
-  // hand-authored test IR); check.Model then re-derives as a fallback.
-  repeated string device_classes = 4;
+  // device_classes is the normalized device-class SET, EACH TAG CARRYING THE EVIDENCE THAT
+  // ESTABLISHED IT. Derived by format-neutral passes, not read from any one format. It is the first
+  // DERIVED-NORMALIZATION field (C9): every format populates it via the same shared passes, so it is
+  // format-neutral by construction rather than by the two-reader promotion test. The set carries the
+  // specific class plus its family tags (a TVS is {tvs, diode}); consumers do membership, not
+  // equality. Empty when the design was built without the ingestion pass (a hand-authored test IR);
+  // check.Model then re-derives as a fallback.
+  //
+  // TWO EVIDENCE TIERS FILL IT, which is C9's evidence-tier variant rather than its original "ONE
+  // shared pass". classify.Stamp runs at ingestion and reads the ref-des prefix, the part text and
+  // the project's lexicon. classify.StampClassesFromSpecs runs wherever a datasheet corpus is
+  // attached and reads the seeded device_class, which is the only evidence that can tell a crystal
+  // from a ceramic resonator or name an ideal-diode controller at all: the structural path cannot
+  // resolve either, and the vendor's own part text is unreliable for the first (see tokenClasses).
+  //
+  // WHY THE SOURCE TRAVELS WITH THE TAG. Same reason as Net.roles, which learned it the expensive
+  // way: a set that unions several kinds of evidence and throws away which one won cannot answer
+  // "how do we know this" at the point of use, and cannot be extended safely afterwards. Before the
+  // source existed the datasheet tier had nowhere to write, so it enriched check.Model privately and
+  // the IR never carried it. A query then answered component.class(Y1, "crystal") while a drawing of
+  // the same design said "clock", because the two read different sets (agni issue 710).
+  //
+  // ADDITIVE ONLY, WHICHEVER SOURCE SPEAKS. A source may only ever ADD a tag, never remove or
+  // downgrade one another source established, so admitting a new kind of evidence can never cost a
+  // class an earlier tier would have found. When two sources establish the SAME class the stronger
+  // one is recorded, which is a note about provenance and never a change to membership.
+  //
+  // Field 4 held this set before it carried provenance (`repeated string`). The IR is never persisted
+  // as a proto -- it is rebuilt from source on every read -- so nothing stored has to be migrated,
+  // and the number is reserved only to keep the wire history honest.
+  reserved 4;
+  repeated ComponentClassTag device_classes = 7;
   // value is the component's VALUE as a machine-comparable quantity, derived ONCE at ingestion by the
   // format-neutral value pass (WS3-118) from whatever attribute the source spelled it in. It is the
   // third DERIVED-NORMALIZATION field (C9), after device_classes and Net.roles, and exists for the
@@ -397,6 +421,40 @@ message Component {
   string mpn = 6;
   map<string, string> attributes = 14;  // component-level properties (aggregated across sections)
   Provenance prov = 16;
+}
+
+// ClassSource is the evidence that established a device-class membership. It orders by strength, and
+// the order is read numerically (a later tier records itself only where it outranks what is already
+// there), so a new source slots in by number rather than by a table somebody has to keep.
+enum ClassSource {
+  // Unknown. A tag stamped by a pass that did not say where it came from, or a hand-authored IR.
+  // Treated as no weaker than CONVENTION by consumers, since that is what it historically was.
+  CLASS_SOURCE_UNSPECIFIED = 0;
+  // A CONVENTION matched: a ref-des prefix, a whole-token hint in the part's text, or a pattern the
+  // project's own lexicon.class declared. It is a claim by whoever drew the schematic and named the
+  // parts, not evidence about the device, which is why it is the weakest source here.
+  CLASS_SOURCE_CONVENTION = 1;
+  // Reserved for a SOURCE FORMAT stating a part's class, the counterpart of RoleSource's DECLARED.
+  // No format this engine reads types a component today, so the value is held rather than shipped
+  // unused; it sits between convention and datasheet for the same reason it does there.
+  reserved 2;
+  // A DATASHEET said so. The vendor's own device_class, seeded into the param corpus and joined on
+  // MPN. It ranks highest because it is evidence about the PART rather than about the design's
+  // spelling, and because it is the only source that can reach the classes the structural path is
+  // documented as unable to resolve: crystal versus ceramic resonator, and ideal_diode_controller.
+  CLASS_SOURCE_DATASHEET = 3;
+}
+
+// ComponentClassTag is one device-class membership, with the evidence that established it. The class
+// is a STRING rather than an enum, unlike Role: the class vocabulary is meant to open (a project
+// declaring its own class is agni issue 677, gated on a class registry), where the role vocabulary
+// was closed for the opposite reason (agni 692 found nothing could ever extend it).
+message ComponentClassTag {
+  // The canonical lowercase class name (tvs, thermistor, ceramic_resonator). The vocabulary the
+  // engine ships is model.ComponentClasses; a datasheet may carry a value outside it, which is kept
+  // as written rather than dropped, since an unrecognised class is still a fact about the part.
+  string class = 1;
+  ClassSource source = 2;
 }
 
 // Quantity is a physical quantity read off a design: a number, its unit, and the source text it came

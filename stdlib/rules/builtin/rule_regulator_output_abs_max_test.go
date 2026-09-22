@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"github.com/panyam/agni/core/classify"
 	"strings"
 	"testing"
 
@@ -127,7 +128,7 @@ func TestRegulatorOutputWithinRating(t *testing.T) {
 func TestRegulatorOutputAcrossSeriesElement(t *testing.T) {
 	d := railDesign("FB1")
 	d.Components[2].Sections = []*ir.ComponentSection{{Attributes: map[string]string{"kind": "ferrite"}}}
-	d.Components[2].DeviceClasses = []string{"ferrite"}
+	d.Components[2].DeviceClasses = classify.Tags("ferrite")
 	m := regModel(t, d, 5.0, 3.6)
 	if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 1 {
 		t.Errorf("want the finding to survive one series crossing, got %d: %+v", len(fs), fs)

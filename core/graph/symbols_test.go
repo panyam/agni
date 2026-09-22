@@ -161,7 +161,7 @@ func TestStampedClassChoosesTheGlyph(t *testing.T) {
 		{"J9", []string{"test_connector"}, "test_connector", ClassConnector, ClassConnector},
 	}
 	for _, tc := range cases {
-		c := &ir.Component{RefDes: tc.refDes, DeviceClasses: tc.stamped}
+		c := &ir.Component{RefDes: tc.refDes, DeviceClasses: classify.Tags(tc.stamped...)}
 		if got := reg.Classify(c, nil); got != tc.wantClass {
 			t.Errorf("%s: Classify = %q, want the stamped %q", tc.refDes, got, tc.wantClass)
 		}
@@ -180,14 +180,14 @@ func TestUserClassRuleBeatsTheStamp(t *testing.T) {
 	c := &ir.Component{
 		RefDes:        "R1",
 		Sections:      []*ir.ComponentSection{{PartRef: "res"}},
-		DeviceClasses: []string{"resistor"},
+		DeviceClasses: classify.Tags("resistor"),
 	}
 	if got := reg.Classify(c, parts); got != ClassCapacitor {
 		t.Errorf("user rule = %q, want it to beat the stamped resistor with %q", got, ClassCapacitor)
 	}
 	// The stamp still wins over the BUILT-IN rules, which is the other half of the ordering.
 	plain := DefaultRegistry()
-	d1 := &ir.Component{RefDes: "D1", DeviceClasses: []string{"tvs", "diode"}}
+	d1 := &ir.Component{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")}
 	if got := plain.Classify(d1, nil); got != ClassTVS {
 		t.Errorf("built-in rule won over the stamp: got %q, want %q", got, ClassTVS)
 	}
@@ -201,7 +201,7 @@ func TestUnstampedComponentUsesTheRules(t *testing.T) {
 		t.Errorf("unstamped R1 = %q, want %q", got, ClassResistor)
 	}
 	// "unknown" is the absence of a class, not a class: it must not shadow the rules.
-	c := &ir.Component{RefDes: "R1", DeviceClasses: []string{"unknown"}}
+	c := &ir.Component{RefDes: "R1", DeviceClasses: classify.Tags("unknown")}
 	if got := reg.Classify(c, nil); got != ClassResistor {
 		t.Errorf("unknown-stamped R1 = %q, want the rules' %q", got, ClassResistor)
 	}
@@ -214,7 +214,7 @@ func TestUnstampedComponentUsesTheRules(t *testing.T) {
 func TestEveryStampedClassDraws(t *testing.T) {
 	reg := DefaultRegistry()
 	for _, cl := range model.ComponentClasses() {
-		c := &ir.Component{RefDes: "X1", DeviceClasses: classify.ClassesOf(cl)}
+		c := &ir.Component{RefDes: "X1", DeviceClasses: classify.TagsOf(cl, ir.ClassSource_CLASS_SOURCE_CONVENTION)}
 		class, glyph := reg.choose(c, nil)
 		if class != string(cl) {
 			t.Errorf("%s: classified as %q", cl, class)
@@ -237,4 +237,39 @@ func TestDrawableClassesAcceptAStampedName(t *testing.T) {
 			t.Errorf("GlyphClasses omits %q, so --class %q is rejected for a class that draws", c, c)
 		}
 	}
+}
+
+// TestDatasheetClassChoosesTheGlyph is agni issue 710 at the drawing. The classes a datasheet
+// establishes now reach the IR, so the glyph follows them for the same reason it follows the
+// keyword-derived ones. D1 is the case where the PICTURE moves and not only the label: nothing in a
+// netlist says a part is a suppressor, so it drew as an ordinary rectifier while every rule and query
+// already called it a tvs.
+func TestDatasheetClassChoosesTheGlyph(t *testing.T) {
+	reg := DefaultRegistry()
+	cases := []struct {
+		refDes    string
+		tags      []*ir.ComponentClassTag
+		wantClass string
+		wantGlyph string
+	}{
+		{"D1", append(classify.Tags("diode"), datasheetTag("tvs")), "tvs", ClassTVS},
+		{"Y1", append(classify.Tags("clock"), datasheetTag("crystal")), "crystal", ClassCrystal},
+		{"Y2", append(classify.Tags("clock"), datasheetTag("ceramic_resonator")), "ceramic_resonator", ClassCrystal},
+		// An unranked vendor class must not take the headline from the keyword class, which is what
+		// keeps a corpus saying "regulator" from turning every regulator into a box.
+		{"U1", append(classify.Tags("ic"), datasheetTag("regulator")), "ic", ClassIC},
+	}
+	for _, tc := range cases {
+		c := &ir.Component{RefDes: tc.refDes, DeviceClasses: tc.tags}
+		if got := reg.Classify(c, nil); got != tc.wantClass {
+			t.Errorf("%s: Classify = %q, want %q", tc.refDes, got, tc.wantClass)
+		}
+		if got := reg.Symbol(tc.refDes, c, nil).GetCellRef(); got != reg.cellFor(tc.wantGlyph) {
+			t.Errorf("%s: glyph = %q, want the %s glyph %q", tc.refDes, got, tc.wantGlyph, reg.cellFor(tc.wantGlyph))
+		}
+	}
+}
+
+func datasheetTag(class string) *ir.ComponentClassTag {
+	return &ir.ComponentClassTag{Class: class, Source: ir.ClassSource_CLASS_SOURCE_DATASHEET}
 }

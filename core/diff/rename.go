@@ -129,7 +129,7 @@ func insignificantEndpoint(endpoint string, insignificant map[string]bool, comps
 		return false
 	}
 	for _, cls := range c.DeviceClasses {
-		if insignificant[cls] {
+		if insignificant[cls.GetClass()] {
 			return true
 		}
 	}

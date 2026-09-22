@@ -8,6 +8,8 @@ core/classify:StampNetRoles
 core/classify:StampPowerInPins
 core/classify:StampValues
 core/classify:StampMPN
+core/classify:StampClassesFromSpecs
+core/classify:HasClassTags
 cmd/agni:compareLayouts
 cmd/agni:Design
 cmd/agni:readDesign

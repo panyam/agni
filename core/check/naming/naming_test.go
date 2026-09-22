@@ -189,7 +189,7 @@ lexicon:
 	lex.Stamp(d)
 	want := map[string]string{"TH3": "thermistor,resistor", "Z1": "zener,diode", "R1": "resistor"}
 	for _, c := range d.GetComponents() {
-		if got := strings.Join(c.GetDeviceClasses(), ","); got != want[c.GetRefDes()] {
+		if got := strings.Join(classify.ClassNames(c), ","); got != want[c.GetRefDes()] {
 			t.Errorf("%s: classes %q, want %q", c.GetRefDes(), got, want[c.GetRefDes()])
 		}
 	}

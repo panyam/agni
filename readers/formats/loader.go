@@ -67,6 +67,19 @@ type Loader struct {
 	// nothing in this package can. `CheckReport.source` already promises a mount-relative path, so a
 	// locator naming a file inside that design follows the same convention.
 	SourceName func(string) string
+	// DeviceClassFor answers the vendor device_class a datasheet states for an MPN, or "" for a part
+	// with no seeded spec. Nil means this read has no datasheet corpus, which is the ordinary case and
+	// leaves every component classified by convention alone.
+	//
+	// It is the DATASHEET evidence tier of the class stamp (agni issue 710). It rides here beside
+	// Lexicon because it is the same kind of thing: read configuration that a pass turns into design
+	// DATA once, after which consumers read the data. Carrying it per-loader is what lets one process
+	// read two designs against two projects' corpora, the property a served request needs.
+	//
+	// A FUNCTION rather than the param provider itself, so this package does not take on the datasheet
+	// layer (C1): what the pass needs is one string per part, and a narrow signature keeps the corpus,
+	// its loading and its staleness rules on the caller's side of the seam.
+	DeviceClassFor func(mpn string) string
 }
 
 // Open reads one file in this loader's name space: from FS when it carries one, else from the host
@@ -151,6 +164,15 @@ func (l *Loader) lexicon() *classify.Lexicon {
 	return l.Lexicon
 }
 
+// deviceClassFor is DeviceClassFor with this package's nil-loader tolerance, matching lexicon()
+// above. A nil loader means no corpus, which is what a caller reading with the package defaults has.
+func (l *Loader) deviceClassFor() func(string) string {
+	if l == nil {
+		return nil
+	}
+	return l.DeviceClassFor
+}
+
 // sourceName is SourceName with this package's nil-loader tolerance, matching lexicon() above.
 func (l *Loader) sourceName() func(string) string {
 	if l == nil {
@@ -200,6 +222,12 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	// 519). Not a lexicon pass: a part number is an identifier the source states, not a name this
 	// engine interprets, so no naming vocabulary is involved.
 	classify.StampMPN(d)
+	// Add the classes only a DATASHEET can establish (agni issue 710), which is C9's evidence-tier
+	// variant: one shared pass per tier rather than one pass for everything. It runs LAST of the class
+	// passes for two reasons. It joins on the MPN StampMPN has just filled, and Stamp REPLACES the set
+	// it writes, so a datasheet tag written before it would be discarded. A read with no corpus skips
+	// it entirely and is byte-identical to one taken before this existed.
+	classify.StampClassesFromSpecs(d, l.deviceClassFor())
 	return d, nil
 }
 

@@ -115,7 +115,7 @@ func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	// crystal or ceramic resonator has only signal terminals). Clock TOKENS are family-only (they are
 	// unusable for subtyping on real vendor data, see tokenClasses), so a candidate with no supply pin
 	// stays at the family; its crystal / ceramic_resonator / oscillator subtype resolves from a seeded
-	// datasheet device_class (enrichClassesFromParams).
+	// datasheet device_class (classify.StampClassesFromSpecs).
 	if base == ClassClock || hints[ClassClock] {
 		if l.hasSupplyPin(pt) {
 			return ClassOscillator

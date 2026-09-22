@@ -149,7 +149,7 @@ func TestReadDesignStampsDeviceClasses(t *testing.T) {
 	want := map[string]string{"R1": "resistor", "R2": "resistor", "U1": "ic"}
 	got := map[string][]string{}
 	for _, c := range d.Components {
-		got[c.RefDes] = c.DeviceClasses
+		got[c.RefDes] = classify.ClassNames(c)
 	}
 	for ref, cls := range want {
 		if len(got[ref]) != 1 || got[ref][0] != cls {

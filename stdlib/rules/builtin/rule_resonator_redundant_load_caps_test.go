@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"github.com/panyam/agni/core/classify"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -19,7 +20,7 @@ import (
 //     resonator terminal carrying only C5 is not flagged.
 func resonatorFixture() *ir.Design {
 	comp := func(ref string, classes ...string) *ir.Component {
-		return &ir.Component{RefDes: ref, DeviceClasses: classes, Prov: &ir.Provenance{SourceFile: "t"}}
+		return &ir.Component{RefDes: ref, DeviceClasses: classify.Tags(classes...), Prov: &ir.Provenance{SourceFile: "t"}}
 	}
 	reso := func(ref string) *ir.Component { return comp(ref, "ceramic_resonator", "clock") }
 	xext := tnet("XEXT", "Y4.1", "C4.1")

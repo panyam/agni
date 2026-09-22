@@ -1140,7 +1140,7 @@ func esdRatedFacts(m check.Model) []facts.Row {
 // and passes an unrecognized-but-meaningful value through unchanged, so nothing is lost.
 //
 // It used to project verbatim, which made this relation disagree with the OTHER consumer of the same
-// field: check.enrichClassesFromParams already normalizes before merging device_class into a
+// field: classify.StampClassesFromSpecs already normalizes before merging device_class into a
 // component's class set, so `component.class` answered on the canonical key while
 // `component.device_class` answered on the raw one. Anything matching an exact string across the two —
 // a profile binding its host by class, WS3-044 — would have had to know which of the two it was

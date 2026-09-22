@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"github.com/panyam/agni/core/classify"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -9,7 +10,7 @@ import (
 // classed builds an ir.Component carrying normalized device classes, which is how the near-match
 // pass decides an endpoint is insignificant.
 func classed(refDes string, classes ...string) *ir.Component {
-	return &ir.Component{RefDes: refDes, DeviceClasses: classes}
+	return &ir.Component{RefDes: refDes, DeviceClasses: classify.Tags(classes...)}
 }
 
 // probes is the component set the near-rename tests share: three device parts and two test points,

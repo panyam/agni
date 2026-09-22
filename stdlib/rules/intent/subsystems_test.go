@@ -3,6 +3,7 @@ package intent
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -14,7 +15,7 @@ subsystems:
   - {name: main clock, source: {class: crystal}, nets: [XTAL_IN, XTAL_OUT]}
 `)
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "X1", DeviceClasses: []string{"crystal"}}},
+		Components: []*ir.Component{{RefDes: "X1", DeviceClasses: classify.Tags("crystal")}},
 		Nets:       []*ir.Net{{Name: "XTAL_IN"}, {Name: "XTAL_OUT"}},
 	}
 	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
@@ -30,7 +31,7 @@ subsystems:
 `)
 	// The design has PORZ but no supervisor and no SYS_RESET_N: two findings, one per missing piece.
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "U1", DeviceClasses: []string{"ic"}}},
+		Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("ic")}},
 		Nets:       []*ir.Net{{Name: "PORZ"}},
 	}
 	fs := check.Run(check.NewModel(d), Compile(decl))

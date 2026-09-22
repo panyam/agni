@@ -3,6 +3,7 @@ package builtin
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -24,7 +25,7 @@ func decouplingDesign(extra ...*ir.Connection) *ir.Design {
 		Components: []*ir.Component{
 			{RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "LOAD", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "Q1", Sections: []*ir.ComponentSection{{PartRef: "FET", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
-			{RefDes: "L1", Sections: []*ir.ComponentSection{{PartRef: "COIL", LibraryRef: "lib"}}, DeviceClasses: []string{"inductor"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "L1", Sections: []*ir.ComponentSection{{PartRef: "COIL", LibraryRef: "lib"}}, DeviceClasses: classify.Tags("inductor"), Prov: &ir.Provenance{SourceFile: "t"}},
 		},
 		Nets: []*ir.Net{{Name: "NODE", Prov: &ir.Provenance{SourceFile: "t"}, Connections: conns}},
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 func compWithValue(ref, val string, classes ...string) *ir.Component {
-	c := &ir.Component{RefDes: ref, DeviceClasses: classes, Prov: &ir.Provenance{SourceFile: "t"}}
+	c := &ir.Component{RefDes: ref, DeviceClasses: Tags(classes...), Prov: &ir.Provenance{SourceFile: "t"}}
 	if val != "" {
 		c.Attributes = map[string]string{"Value": val}
 	}

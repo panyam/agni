@@ -1,0 +1,13 @@
+# An ORing controller: a chip that drives an external FET to behave as a diode. Nothing in a netlist
+# says so, and its U prefix types it as a plain IC, so the datasheet is the only evidence that this
+# part is an ideal-diode controller at all. The vendor's spelling is folded by deviceClassAliases.
+mpn: "ACME-ORING-1"
+manufacturer: "Agni Tutorial Works"
+device_class: "ORing Controller"
+
+docs {
+  id: "acme-oring-1-rev-a"
+  title: "ACME-ORING-1 Datasheet Rev A"
+  vendor: "Agni Tutorial Works"
+  locator: "synthetic"
+}

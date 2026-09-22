@@ -1,6 +1,7 @@
 package classify
 
 import (
+	"sort"
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -69,22 +70,84 @@ func Stamp(d *ir.Design) { ActiveLexicon().Stamp(d) }
 // specificity order (a refined subtype like tvs beats its diode family tag), so a Model exposing a
 // single component.class stays stable as the set widens with family tags (WS3-071). An empty set is
 // ClassUnknown, and a class outside the token-hint priority (ClassIC) still resolves.
+//
+// It is the head of BySpecificity rather than its own walk, so nothing can rank a set one way for a
+// consumer that wants one answer and another way for a consumer that wants the list. The drawing and
+// the model each want one of those, and they used to disagree (agni issue 710).
 func MostSpecific(classes []string) ComponentClass {
-	set := map[ComponentClass]bool{}
-	for _, c := range classes {
-		set[ComponentClass(c)] = true
+	ranked := BySpecificity(classes)
+	if len(ranked) == 0 {
+		return ClassUnknown
 	}
-	for _, cl := range hintPriority {
-		if set[cl] {
-			return cl
+	return ComponentClass(ranked[0])
+}
+
+// BySpecificity orders a device_classes set most-specific first, dropping the unknown marker and the
+// empty string. A class the specificity table ranks comes before one it does not, and two unranked
+// classes keep the order the set had, which is the order the evidence tiers wrote them in: the
+// convention tier stamps first, so a datasheet class the table does not know stays behind the
+// keyword-derived one rather than displacing it.
+//
+// The set the ingestion pass alone produces is already in this order (ClassesOf writes the specific
+// class then its family), so this reorders nothing until a second evidence tier contributes.
+func BySpecificity(classes []string) []string {
+	rank := func(c string) int {
+		for i, cl := range hintPriority {
+			if ComponentClass(c) == cl {
+				return i
+			}
+		}
+		return len(hintPriority)
+	}
+	out := make([]string, 0, len(classes))
+	for _, c := range classes {
+		if c != "" && ComponentClass(c) != ClassUnknown {
+			out = append(out, c)
 		}
 	}
-	for _, c := range classes {
-		if ComponentClass(c) != ClassUnknown {
-			return ComponentClass(c)
+	sort.SliceStable(out, func(i, j int) bool { return rank(out[i]) < rank(out[j]) })
+	return out
+}
+
+// ClassNames returns a component's device-class names, dropping the evidence each tag carries. It is
+// for a consumer that asks only what a component IS; a consumer weighing how well it is known reads
+// the tags.
+func ClassNames(c *ir.Component) []string {
+	out := make([]string, 0, len(c.GetDeviceClasses()))
+	for _, t := range c.GetDeviceClasses() {
+		out = append(out, t.GetClass())
+	}
+	return out
+}
+
+// TagsOf expands a single derived class into device_classes TAGS attributed to one source: the
+// specific class plus its family tag, the ClassesOf set with its evidence attached.
+func TagsOf(cl ComponentClass, src ir.ClassSource) []*ir.ComponentClassTag {
+	names := ClassesOf(cl)
+	out := make([]*ir.ComponentClassTag, 0, len(names))
+	for _, n := range names {
+		out = append(out, &ir.ComponentClassTag{Class: n, Source: src})
+	}
+	return out
+}
+
+// AddClassTag adds one class to a component's device_classes set, attributed to src. A class already
+// present is not duplicated; its recorded source is UPGRADED when src is stronger, which is a note
+// about provenance and never a change to membership. The empty and unknown classes are not facts and
+// are dropped. It is the component twin of AddNetRole, with the same additive-only contract.
+func AddClassTag(c *ir.Component, class string, src ir.ClassSource) {
+	if class == "" || ComponentClass(class) == ClassUnknown {
+		return
+	}
+	for _, t := range c.GetDeviceClasses() {
+		if t.GetClass() == class {
+			if src > t.GetSource() {
+				t.Source = src
+			}
+			return
 		}
 	}
-	return ClassUnknown
+	c.DeviceClasses = append(c.DeviceClasses, &ir.ComponentClassTag{Class: class, Source: src})
 }
 
 // classFamily maps a specific class to its SUBTYPE family parent, the tag a consumer checks for
@@ -123,4 +186,28 @@ func ClassesOf(cl ComponentClass) []string {
 		out = append(out, string(fam))
 	}
 	return out
+}
+
+// Tags builds CONVENTION-tier tags from class names verbatim, for a caller writing a device_classes
+// set by hand: a test IR, or a host that classifies a component itself. TagsOf is the derived form,
+// which expands one class into its family; this is the literal one, and it adds no family tag.
+func Tags(names ...string) []*ir.ComponentClassTag {
+	out := make([]*ir.ComponentClassTag, 0, len(names))
+	for _, n := range names {
+		out = append(out, &ir.ComponentClassTag{Class: n, Source: ir.ClassSource_CLASS_SOURCE_CONVENTION})
+	}
+	return out
+}
+
+// HasClassTags reports whether any component in the design carries a device-class tag, which is how
+// a consumer tells a design the classify pass has seen from a hand-authored IR that never went
+// through it. It is a DESIGN-level question on purpose: a single component with no tags is an
+// ordinary unclassified part, and only the absence across the whole design says the pass never ran.
+func HasClassTags(d *ir.Design) bool {
+	for _, c := range d.GetComponents() {
+		if len(c.GetDeviceClasses()) > 0 {
+			return true
+		}
+	}
+	return false
 }

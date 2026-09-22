@@ -3,6 +3,7 @@ package intent
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -10,7 +11,7 @@ import (
 // ovpDesign builds a design where net `rail` carries the component D1 of class `d1class`, plus a GND net.
 func protDesign(rail, d1class string) *ir.Design {
 	return &ir.Design{
-		Components: []*ir.Component{{RefDes: "D1", DeviceClasses: []string{d1class}}},
+		Components: []*ir.Component{{RefDes: "D1", DeviceClasses: classify.Tags(d1class)}},
 		Nets: []*ir.Net{
 			{Name: rail, Connections: []*ir.Connection{{ComponentRef: "D1", PinRef: "1"}}},
 			{Name: "GND", Connections: []*ir.Connection{{ComponentRef: "D1", PinRef: "2"}}},
@@ -52,7 +53,7 @@ func TestDischargePassesWithBleeder(t *testing.T) {
 	// A resistor with one pin on the rail and one on GND is a bleeder.
 	decl := declOf(t, "name: I\nprotections:\n  - {rail: 5V0, kind: discharge}")
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: []string{"resistor"}}},
+		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: classify.Tags("resistor")}},
 		Nets: []*ir.Net{
 			{Name: "5V0", Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "1"}}},
 			{Name: "GND", Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "2"}}},
@@ -67,7 +68,7 @@ func TestDischargeFiresWithoutBleeder(t *testing.T) {
 	decl := declOf(t, "name: I\nprotections:\n  - {rail: 5V0, kind: discharge}")
 	// R1 is on the rail but its other pin is a signal, not ground -> not a bleeder.
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: []string{"resistor"}}},
+		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: classify.Tags("resistor")}},
 		Nets: []*ir.Net{
 			{Name: "5V0", Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "1"}}},
 			{Name: "SIG", Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "2"}}},

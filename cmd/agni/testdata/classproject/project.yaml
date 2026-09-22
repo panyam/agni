@@ -1,0 +1,5 @@
+# A project whose only interesting tier is its params corpus, for the datasheet class evidence
+# (agni issue 710). It is deliberately minimal: no conventions, no profiles, no review manifest, so
+# a difference in how its design classifies can only have come from the datasheet.
+name: classdemo
+title: Datasheet-classified parts

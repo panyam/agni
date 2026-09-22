@@ -143,7 +143,7 @@ func (l *Lexicon) StampValues(d *ir.Design) {
 			if unit == "" {
 				// The notation gave a number but no unit, so the class decides. Still possibly empty
 				// (a bare value on an ambiguous class), and that stays empty rather than a guess.
-				unit = vocab.UnitFor(MostSpecific(c.GetDeviceClasses()), prefixed)
+				unit = vocab.UnitFor(MostSpecific(ClassNames(c)), prefixed)
 			}
 			q.Unit = unit
 		}
