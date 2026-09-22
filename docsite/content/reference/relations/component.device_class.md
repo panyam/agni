@@ -38,7 +38,7 @@ unchanged, **including its case**, so `LDO` stays `LDO` and would not match a qu
 an exact-match query returns nothing, that is the first thing to check.
 
 It previously projected verbatim, which made this relation disagree with the other consumer of the
-same field: `check.enrichClassesFromParams` already normalized before merging device_class into a
+same field: `classify.StampClassesFromSpecs` already normalizes before merging device_class into a
 component's class set, so `component.class` answered on the canonical key while this one answered on
 the raw string. Anything matching an exact string across both had to know which it was talking to. A
 fully canonical taxonomy is still WS10-004's job; this only removes the disagreement.

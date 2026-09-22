@@ -167,7 +167,11 @@ construction rather than by the two-reader test — every format populates it vi
 field MUST: (a) be derived by one shared pass, not by any reader; (b) carry a doc comment marking it
 DERIVED-NORMALIZATION and naming the pass; (c) degrade safely when absent (a design built without the
 pass — a hand-authored test IR — leaves it empty and the consumer re-derives as a fallback, never
-treats empty as a fact). First instance: `Component.device_classes` (the classify pass); second:
+treats empty as a fact). Note what (c) asks of a SECOND tier writing the same field: EMPTY is the
+signal to re-derive, so a tier writing its own answer into a set no earlier tier has filled leaves a
+partial set, and the fallback is defeated rather than triggered. `check.NewModelWithParams` runs the
+convention pass first for exactly that reason (agni issue 710).
+First instance: `Component.device_classes` (the classify pass); second:
 `ir.Net.roles` (the WS3-072 naming pass, `classify.StampNetRoles`); third: `Component.value` (the
 WS3-118 value pass, `classify.StampValues`). This is the **left-shift** rule:
 interpret conventions at the edge, carry normalized facts in the core.
@@ -202,6 +206,11 @@ TIER**, under two conditions that preserve everything it was protecting:
 - **The field records WHICH tier established each value.** `ir.Net.roles` is the first instance: each
   role carries a `RoleSource` (convention / declared, with more to come), so a consumer can weigh a
   value instead of only reading it, and "how do we know this" is answerable at the point of use.
+  `ir.Component.device_classes` is the second, each tag carrying a `ClassSource` (agni issue 710),
+  and it shows what the condition is FOR rather than what it costs. With nowhere to record its
+  evidence the datasheet tier had nowhere to write at all, so it enriched `check.Model` privately and
+  the IR never carried its answer. A query then said a part was a `tvs` while a drawing of the same
+  design called it a diode, and neither was wrong about what it had read.
 - **A later tier may only ADD, never remove or downgrade what an earlier one established.** This is
   the property that makes extension safe: admitting a new kind of evidence can never cost a value an
   earlier tier would have found, so no tier's absence can silently narrow an answer. It generalizes

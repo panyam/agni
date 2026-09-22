@@ -279,11 +279,15 @@ The netlist-graph fallback (`agni render --layout=grid|layered`) has no source g
 
 - **`Registry`**: classified synthetic glyphs, keyed on open string class ids each with a hand-authored glyph (resistor, capacitor, inductor, ferrite, diode, led, tvs, fuse, connector, test point, crystal, ic, transistor, ground). Multi-pin bodies (ic, connector) carry no per-pin terminals, so their edges attach at the node center like the box does.
 
-  **The glyph follows the class the ingestion pass stamped.** `classify.Stamp` fills
+  **The glyph follows the class the ingestion passes stamped.** `classify.Stamp` fills
   `ir.Component.device_classes` on every read, from part text, the project's own `lexicon.class`
-  patterns and the refinements a glob cannot express, so the drawing reads that rather than deciding
-  again: a part the engine calls a `tvs` is drawn as a TVS, and a query answer and a picture of the
-  same board cannot disagree about what a component is (agni issue 701). Three ends around it. A
+  patterns and the refinements a glob cannot express, and `classify.StampClassesFromSpecs` adds what
+  only a datasheet can establish where the read carries a params corpus. The drawing reads that
+  rather than deciding again: a part the engine calls a `tvs` is drawn as a TVS, and a query answer
+  and a picture of the same board cannot disagree about what a component is (agni issues 701 and
+  710). Where the set holds more than one class the drawing takes the head of
+  `classify.BySpecificity`, which is the ordering `check.Model` resolves `component.class` with, so
+  the two are one answer rather than two that happen to agree. Three ends around it. A
   user rule wins outright (`--class sym=class`, `--class-file`), because naming a glyph for a symbol
   is saying what to draw. A component carrying no stamp falls back to the built-in rule table, which
   matches the resolved part or symbol name first and then the ref-des letter prefix on a startswith
