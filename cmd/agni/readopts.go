@@ -14,7 +14,7 @@ import (
 // than being dereferenced; the copy then starts from a zero loader carrying only the lexicon.
 func readerFor(base *formats.Loader, opts ...service.ReadOption) *formats.Loader {
 	o := service.ReadOpts(opts...)
-	if o.Lexicon == nil && len(o.SymbolPaths) == 0 {
+	if o.Lexicon == nil && len(o.SymbolPaths) == 0 && o.DeviceClassFor == nil {
 		return base
 	}
 	cp := formats.Loader{}
@@ -29,6 +29,12 @@ func readerFor(base *formats.Loader, opts ...service.ReadOption) *formats.Loader
 	// a library the project does not know about.
 	if len(o.SymbolPaths) > 0 {
 		cp.SymbolPaths = append(append([]string{}, cp.SymbolPaths...), o.SymbolPaths...)
+	}
+	// The read's datasheet corpus, so the classes only a spec can establish are stamped into the IR
+	// the DRAWING is built from and not only into a check model (agni issue 710). It replaces rather
+	// than composing: two corpora for one read would be two answers to one question.
+	if o.DeviceClassFor != nil {
+		cp.DeviceClassFor = o.DeviceClassFor
 	}
 	return &cp
 }

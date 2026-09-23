@@ -1,0 +1,16 @@
+# A bare quartz crystal. Synthetic part, synthetic datasheet.
+#
+# device_class is the whole point of this corpus. The keyword path can reach the clock FAMILY from
+# the Y prefix and is documented as unable to go further, because a vendor's own part text is
+# unreliable for the crystal / resonator / oscillator split. So "crystal" here is evidence no netlist
+# and no naming convention can supply (agni issue 710).
+mpn: "ACME-XTAL-25M"
+manufacturer: "Agni Tutorial Works"
+device_class: "crystal"
+
+docs {
+  id: "acme-xtal-25m-rev-a"
+  title: "ACME-XTAL-25M Datasheet Rev A"
+  vendor: "Agni Tutorial Works"
+  locator: "synthetic"
+}

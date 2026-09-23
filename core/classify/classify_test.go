@@ -38,7 +38,7 @@ func TestStampFillsDeviceClasses(t *testing.T) {
 	Stamp(d)
 	got := map[string][]string{}
 	for _, c := range d.Components {
-		got[c.RefDes] = c.DeviceClasses
+		got[c.RefDes] = ClassNames(c)
 	}
 	if want := []string{string(ClassResistor)}; !equal(got["R1"], want) {
 		t.Errorf("R1 device_classes = %v, want %v", got["R1"], want)

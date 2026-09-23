@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -130,7 +131,7 @@ func TestReverseBlockingSilentOnIdentifiedController(t *testing.T) {
 	d := revDesign("transistor", false)
 	d.Components = append(d.Components, &ir.Component{
 		RefDes:        "U9",
-		DeviceClasses: []string{string(check.ClassIdealDiodeController)},
+		DeviceClasses: classify.Tags(string(check.ClassIdealDiodeController)),
 		Prov:          &ir.Provenance{SourceFile: "t"},
 	})
 	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "U9", PinRef: "1"})

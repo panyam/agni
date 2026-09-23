@@ -17,6 +17,12 @@ type ReadOptions struct {
 	// whatever the loader was built with. They ride the read rather than the catalog because an
 	// unresolved symbol changes what the design CONTAINS, not what is checked about it.
 	SymbolPaths []string
+	// DeviceClassFor answers a datasheet's device_class for an MPN, nil when this run has no corpus.
+	// It rides the read for the same reason the lexicon does: the class it establishes is stamped into
+	// the IR once at ingestion, so it has to arrive before the design is parsed. A model built later
+	// re-runs the same pass, which is additive and idempotent, so a run whose corpus arrives after the
+	// read still gets the class; what it gains here is that the DRAWING sees it too (agni issue 710).
+	DeviceClassFor func(mpn string) string
 }
 
 // ReadOption configures one read.
@@ -32,6 +38,12 @@ func WithLexicon(lex *classify.Lexicon) ReadOption {
 // declares its libraries resolves them without the caller passing a flag.
 func WithSymbolPaths(dirs []string) ReadOption {
 	return func(o *ReadOptions) { o.SymbolPaths = append(o.SymbolPaths, dirs...) }
+}
+
+// WithDeviceClasses supplies the datasheet device-class lookup for one read, so a design read inside
+// a project that declares a params tier carries the classes only its corpus can establish.
+func WithDeviceClasses(f func(mpn string) string) ReadOption {
+	return func(o *ReadOptions) { o.DeviceClassFor = f }
 }
 
 // ReadOpts resolves options to a value, for a loader implementation to read. Exported because the

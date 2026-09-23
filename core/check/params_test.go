@@ -157,7 +157,7 @@ func TestUnseededSymbols(t *testing.T) {
 func TestUnseededSymbolsRespectsClassGate(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", Mpn: "ACME-1"},
-		{RefDes: "U2", Mpn: "ACME-2", DeviceClasses: []string{"crystal"}},
+		{RefDes: "U2", Mpn: "ACME-2", DeviceClasses: classify.Tags("crystal")},
 	}}
 	provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
 		return &parampb.PartSpec{Mpn: mpn, DeviceClass: map[string]string{"ACME-1": "ldo"}[mpn]}

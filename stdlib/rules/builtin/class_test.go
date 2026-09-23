@@ -3,6 +3,7 @@ package builtin
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -107,7 +108,7 @@ func TestComponentClass(t *testing.T) {
 // data fact is authoritative; an un-stamped part still falls back to the ref-des derivation.
 func TestModelReadsStampedDeviceClasses(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "R1", DeviceClasses: []string{string(check.ClassTVS)}}, // contradicts the R prefix on purpose
+		{RefDes: "R1", DeviceClasses: classify.Tags(string(check.ClassTVS))}, // contradicts the R prefix on purpose
 		{RefDes: "R2"}, // un-stamped -> fallback derivation
 	}}
 	m := check.NewModel(d)
@@ -124,8 +125,8 @@ func TestModelReadsStampedDeviceClasses(t *testing.T) {
 // class. A test_connector does NOT satisfy HasClass(connector) — the WS3-066 split holds.
 func TestHasClassFamilyMembership(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "D1", DeviceClasses: []string{string(check.ClassTVS), string(check.ClassDiode)}},
-		{RefDes: "J1", DeviceClasses: []string{string(check.ClassTestConnector)}},
+		{RefDes: "D1", DeviceClasses: classify.Tags(string(check.ClassTVS), string(check.ClassDiode))},
+		{RefDes: "J1", DeviceClasses: classify.Tags(string(check.ClassTestConnector))},
 		{RefDes: "R1"}, // fallback -> {resistor}
 	}}
 	m := check.NewModel(d)

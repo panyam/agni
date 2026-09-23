@@ -1,0 +1,13 @@
+# A ceramic resonator with its load capacitors integrated, which is why it must not read as a bare
+# crystal: crystal-load-caps branches on exactly this subtype. The vendor spells it "Ceramic
+# Resonator" and NormalizeDeviceClass folds the spelling.
+mpn: "ACME-RESO-16M"
+manufacturer: "Agni Tutorial Works"
+device_class: "Ceramic Resonator"
+
+docs {
+  id: "acme-reso-16m-rev-a"
+  title: "ACME-RESO-16M Datasheet Rev A"
+  vendor: "Agni Tutorial Works"
+  locator: "synthetic"
+}

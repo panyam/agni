@@ -1,0 +1,14 @@
+# A unidirectional ESD clamp on the 5V output. Its cell carries no "tvs" or "esd" token, so the
+# keyword path can only reach `diode` from the D prefix, and a schematic then draws it as an ordinary
+# rectifier. The datasheet is what says it is a suppressor, and unlike the clock subtypes this one
+# changes the PICTURE: a TVS is drawn back to back because it clamps in both directions.
+mpn: "ACME-PROT-5V"
+manufacturer: "Agni Tutorial Works"
+device_class: "tvs"
+
+docs {
+  id: "acme-prot-5v-rev-a"
+  title: "ACME-PROT-5V Datasheet Rev A"
+  vendor: "Agni Tutorial Works"
+  locator: "synthetic"
+}

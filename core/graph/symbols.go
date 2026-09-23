@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/model"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -34,7 +35,6 @@ const (
 	ClassTransistor = string(model.ClassTransistor)
 	ClassGround     = "ground"
 	ClassOther      = "" // generic box
-	classUnknown    = string(model.ClassUnknown)
 )
 
 // glyphAliases maps a stamped class with no glyph of its own to the class whose glyph draws it.
@@ -267,29 +267,27 @@ func (r *Registry) Symbol(_ string, c *ir.Component, parts map[string]*ir.PartTy
 	return g
 }
 
-// stamped reads the class the ingestion pass put on the component: the identity is the SET's first
-// entry (classify.ClassesOf orders it most-specific first), and the glyph is the first entry of the
-// set that this registry can draw. Walking the set is what makes the family tag do the work — a
-// zener carries ["zener", "diode"], so it draws as a diode without zener needing an alias — and
-// glyphAliases covers the classes whose set holds no drawable tag. An empty or unknown-only set
-// returns "", meaning nothing was stamped and the caller should fall back to its rules.
+// stamped reads the classes the ingestion passes put on the component. The identity is the most
+// specific of them and the glyph is the most specific one this registry can draw, both taken off ONE
+// ordering, classify.BySpecificity, which is the same order check.Model resolves component.class
+// with. Sharing the order is the point rather than a convenience: the drawing and the model used to
+// rank a set independently and agreed only while the set had one author (agni issue 710).
+//
+// Walking the ordered set is what makes the family tag do the work. A zener carries
+// ["zener", "diode"], so it draws as a diode without zener needing an alias, and glyphAliases covers
+// only the classes whose set holds no drawable tag. An empty or unknown-only set returns "", meaning
+// nothing was stamped and the caller should fall back to its rules.
 func (r *Registry) stamped(c *ir.Component) (string, *geom.SymbolDef) {
-	class := ""
-	for _, id := range c.GetDeviceClasses() {
-		if id == "" || id == classUnknown {
-			continue
-		}
-		if class == "" {
-			class = id
-		}
-		if g := r.drawable(id); g != nil {
-			return class, g
-		}
-	}
-	if class == "" {
+	ranked := classify.BySpecificity(classify.ClassNames(c))
+	if len(ranked) == 0 {
 		return "", nil
 	}
-	return class, nodeSymbol()
+	for _, id := range ranked {
+		if g := r.drawable(id); g != nil {
+			return ranked[0], g
+		}
+	}
+	return ranked[0], nodeSymbol()
 }
 
 // glyphFor returns the glyph for a class, or the generic box when the class reaches none.

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -281,15 +282,15 @@ func TestPresentBinding(t *testing.T) {
 // TestPresentBindingHasClass (WS10-016) pins that present: matches via HasClass, not the most-specific
 // keyword class: a family tag (an LED is a diode) and a datasheet-enriched class (a smart high-side
 // switch keyword-classes `ic` but its datasheet declares `efuse`, WS10-013) both satisfy the item. The
-// `ic`+`efuse` set is exactly what enrichClassesFromParams produces — ComponentClass stays `ic` (never
+// `ic`+`efuse` set is exactly what the datasheet class pass produces — ComponentClass stays `ic` (never
 // promoted), so a ComponentClass== test would miss it and the datasheet-seeded efuse would be invisible.
 func TestPresentBindingHasClass(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{
 			// keyword class ic, datasheet-enriched with efuse (efuse is not a most-specific keyword class).
-			{RefDes: "U1", DeviceClasses: []string{"ic", "efuse"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", DeviceClasses: classify.Tags("ic", "efuse"), Prov: &ir.Provenance{SourceFile: "t"}},
 			// most-specific led, family tag diode.
-			{RefDes: "D1", DeviceClasses: []string{"led", "diode"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "D1", DeviceClasses: classify.Tags("led", "diode"), Prov: &ir.Provenance{SourceFile: "t"}},
 		},
 		Nets: []*ir.Net{{Name: "SIG", Prov: &ir.Provenance{SourceFile: "t"},
 			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}},

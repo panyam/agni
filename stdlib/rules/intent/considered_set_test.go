@@ -3,6 +3,7 @@ package intent
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -30,8 +31,8 @@ modules:
   - {name: CAN transceiver, class: can_transceiver}
 `)
 	present := check.NewModel(&ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", DeviceClasses: []string{"soc"}},
-		{RefDes: "U2", DeviceClasses: []string{"can_transceiver"}},
+		{RefDes: "U1", DeviceClasses: classify.Tags("soc")},
+		{RefDes: "U2", DeviceClasses: classify.Tags("can_transceiver")},
 	}})
 	vs := verdictsFor(t, decl, present, RuleModuleMissing)
 	if len(vs) != 2 {
@@ -46,7 +47,7 @@ modules:
 		}
 	}
 	// And the findings do not move: the failing half is what `check` has always reported.
-	absent := check.NewModel(&ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: []string{"soc"}}}})
+	absent := check.NewModel(&ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}})
 	if fs := check.Run(absent, Compile(decl)); len(fs) != 1 {
 		t.Errorf("want the one absent-module finding, got %d: %+v", len(fs), fs)
 	}
@@ -63,9 +64,9 @@ modules:
   - {name: CAN transceiver, class: can_transceiver, count: 2}
 `)
 	m := check.NewModel(&ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", DeviceClasses: []string{"soc"}},
-		{RefDes: "U2", DeviceClasses: []string{"can_transceiver"}},
-		{RefDes: "U3", DeviceClasses: []string{"can_transceiver"}},
+		{RefDes: "U1", DeviceClasses: classify.Tags("soc")},
+		{RefDes: "U2", DeviceClasses: classify.Tags("can_transceiver")},
+		{RefDes: "U3", DeviceClasses: classify.Tags("can_transceiver")},
 	}})
 	vs := verdictsFor(t, decl, m, RuleModuleCount)
 	if len(vs) != 1 {

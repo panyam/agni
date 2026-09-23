@@ -3,6 +3,7 @@ package review
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
@@ -151,7 +152,7 @@ func TestComputedNAByDeviceClass(t *testing.T) {
 	// A crystal is present -> the gate passes and the rule runs (a bare crystal with no caps fails,
 	// proving the item is live, not n/a).
 	withCrystal := &ir.Design{
-		Components: []*ir.Component{{RefDes: "Y1", DeviceClasses: []string{"crystal", "clock"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		Components: []*ir.Component{{RefDes: "Y1", DeviceClasses: classify.Tags("crystal", "clock"), Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets: []*ir.Net{
 			{Name: "XIN", Connections: []*ir.Connection{{ComponentRef: "Y1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}},
 			{Name: "XOUT", Connections: []*ir.Connection{{ComponentRef: "Y1", PinRef: "2"}}, Prov: &ir.Provenance{SourceFile: "t"}},

@@ -76,10 +76,14 @@ func (l *Lexicon) ClassVocab() *ClassVocab { return l.class() }
 
 // Stamp runs the classification pass with this lexicon, filling each component's device_classes SET.
 // See the package-level Stamp for the pass's contract; this is the per-read form.
+//
+// It REPLACES the set rather than adding to it, which is what keeps a re-stamp after a re-read
+// idempotent. A datasheet tag any earlier StampClassesFromSpecs added is therefore dropped, so the
+// two passes run in that order and never the reverse.
 func (l *Lexicon) Stamp(d *ir.Design) {
 	index := PartIndex(d)
 	for _, c := range d.GetComponents() {
-		c.DeviceClasses = ClassesOf(l.Classify(c, FirstPart(index, c)))
+		c.DeviceClasses = TagsOf(l.Classify(c, FirstPart(index, c)), ir.ClassSource_CLASS_SOURCE_CONVENTION)
 	}
 }
 

@@ -313,6 +313,10 @@ role carries a `RoleSource`, so a role read off a naming convention is distingui
 source format declared and from one a datasheet's pin function established. Without that the tiers
 union into a flat set and "how do we know this" stops being answerable at the point of use, which is
 what made a naming convention and a vendor fact look identical for as long as they did.
+`ir.Component.device_classes` followed, each tag carrying a `ClassSource`. It had to, because without
+somewhere to write its evidence the datasheet tier had nowhere to write at all: it enriched the check
+model privately and the IR never carried its answer, so a query said a part was a `tvs` while a
+drawing of the same design called it a diode.
 
 **A later tier may only add, never remove or downgrade.** This is what makes admitting a tier safe:
 switching one on can reveal more, and can never cost a value an earlier tier would have found. So a
@@ -321,10 +325,23 @@ tier's absence can silently narrow an answer.
 
 {{ includeFile "figures/derived-role-tiers.svg" }}
 
-The two instances today are `enrichClassesFromParams` (a datasheet's declared device class) and
-`enrichRolesFromParams` (a datasheet's pin functions establishing rail and ground). Both live where
-the params tier does, at model construction. The rule they share, including what a duplicate means,
-has one home in `classify.AddNetRole`.
+The two instances today are `classify.StampClassesFromSpecs` (a datasheet's declared device class)
+and `enrichRolesFromParams` (a datasheet's pin functions establishing rail and ground). The rule they
+share, including what a duplicate means, has one home each in `classify.AddClassTag` and
+`classify.AddNetRole`.
+
+The class pass runs wherever a corpus is present rather than only at model construction: the Loader
+runs it when the read carries one, and `check.Model` runs the same pass again when it is handed a
+corpus the read did not have. Running it twice is free, since it adds and never replaces. What that
+buys is that the design itself carries the answer, so a drawing, a query and a rule are reading one
+set rather than three derivations of it. The classes at stake are the ones nothing else can reach: a
+bare crystal against a ceramic resonator, which the keyword path refuses to guess because vendor part
+text is unreliable for exactly that split, and an ideal-diode controller, which is a FET plus a bias
+network that no netlist labels.
+
+There is a constraint on the order, and it is the kind that fails silently. The convention pass
+REPLACES the set it writes, so it has to run first; the datasheet pass joins on the MPN another pass
+fills, so it has to run after that one. `Loader.ReadDesign` is where that order lives.
 
 Why it is worth the machinery: a net was a rail because of its NAME, and the built-in vocabulary is
 start-anchored, so a project naming rails function-first had to declare its own lexicon or the engine

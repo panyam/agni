@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -68,7 +69,7 @@ sequences:
 // the one-part test credits it with no separate series walk.
 func TestSequenceChainThroughSeriesResistorIsSilent(t *testing.T) {
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: []string{"resistor"}}},
+		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: classify.Tags("resistor")}},
 		Nets: []*ir.Net{
 			net("VDD_CORE"), net("VDD_IO"),
 			net("CORE_PG", "R1"), net("IO_EN", "R1"),
@@ -172,7 +173,7 @@ sequences:
 `)
 	// IO_PG and CORE_EN are not on the design. CORE_PG and IO_EN are, wired through R1.
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: []string{"resistor"}}},
+		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: classify.Tags("resistor")}},
 		Nets: []*ir.Net{
 			net("VDD_CORE"), net("VDD_IO"),
 			net("CORE_PG", "R1"), net("IO_EN", "R1"),
@@ -195,7 +196,7 @@ func TestSequenceLinkThroughSmallPartIsCredited(t *testing.T) {
 	// literal, not gatingFanLimit-derived, so raising the limit cannot quietly make this test agree
 	// with itself.
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "U3", DeviceClasses: []string{"ic"}}},
+		Components: []*ir.Component{{RefDes: "U3", DeviceClasses: classify.Tags("ic")}},
 		Nets: []*ir.Net{
 			net("VDD_CORE"), net("VDD_IO"),
 			net("CORE_PG", "U3"), net("IO_EN", "U3"),
@@ -219,7 +220,7 @@ func TestSequenceLinkThroughControllerIsNotCredited(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		nets = append(nets, net("GPIO"+string(rune('A'+i)), "U9"))
 	}
-	d := &ir.Design{Components: []*ir.Component{{RefDes: "U9", DeviceClasses: []string{"soc"}}}, Nets: nets}
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "U9", DeviceClasses: classify.Tags("soc")}}, Nets: nets}
 	fs := runSeq(t, declOf(t, twoStage), d)
 	if len(fs) != 1 {
 		t.Fatalf("a firmware path is not netlist evidence of an order, want 1 finding, got %d: %+v", len(fs), fs)

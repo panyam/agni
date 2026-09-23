@@ -45,7 +45,7 @@ func summarize(d *ir.Design) string {
 
 	comps := make([]string, 0, len(d.Components))
 	for _, c := range d.Components {
-		comps = append(comps, c.RefDes+" ["+strings.Join(c.DeviceClasses, ",")+"]")
+		comps = append(comps, c.RefDes+" ["+strings.Join(classify.ClassNames(c), ",")+"]")
 	}
 	sort.Strings(comps)
 	fmt.Fprintf(&b, "components(%d):\n  %s\n", len(comps), strings.Join(comps, "\n  "))

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -28,8 +29,8 @@ modules:
 	// The design has an SoC but NO CAN transceiver: the declared expectation set comes from the
 	// declaration, not the netlist, so the absent module must fail.
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", DeviceClasses: []string{"soc"}},
-		{RefDes: "R1", DeviceClasses: []string{"resistor"}},
+		{RefDes: "U1", DeviceClasses: classify.Tags("soc")},
+		{RefDes: "R1", DeviceClasses: classify.Tags("resistor")},
 	}}
 	fs := check.Run(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 {
@@ -47,7 +48,7 @@ func TestModulePresentPasses(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: SoC, class: soc}")
 	// The classifier tags a TVS as both tvs and diode; HasClass matches a family parent, so a module
 	// declared as "diode" would match a tvs. Here the exact class matches directly.
-	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: []string{"soc"}}}}
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}}
 	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a present module must not fire, got %+v", fs)
 	}
@@ -56,7 +57,7 @@ func TestModulePresentPasses(t *testing.T) {
 func TestModuleMatchesByFamilyTag(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: any diode, class: diode}")
 	// A component classed tvs carries the diode family tag, so a diode-declared module matches it.
-	d := &ir.Design{Components: []*ir.Component{{RefDes: "D1", DeviceClasses: []string{"tvs", "diode"}}}}
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")}}}
 	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("family-tag match should pass, got %+v", fs)
 	}
@@ -66,8 +67,8 @@ func TestModuleCountFiresOnTooFew(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: CAN, class: can, count: 2}")
 	// One CAN present, two declared: module-missing passes (>=1 present), module-count fires.
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", DeviceClasses: []string{"can"}},
-		{RefDes: "R1", DeviceClasses: []string{"resistor"}},
+		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
+		{RefDes: "R1", DeviceClasses: classify.Tags("resistor")},
 	}}
 	fs := check.Run(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 {
@@ -84,8 +85,8 @@ func TestModuleCountFiresOnTooFew(t *testing.T) {
 func TestModuleCountFiresOnTooMany(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: CAN, class: can, count: 1}")
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", DeviceClasses: []string{"can"}},
-		{RefDes: "U2", DeviceClasses: []string{"can"}},
+		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
+		{RefDes: "U2", DeviceClasses: classify.Tags("can")},
 	}}
 	fs := check.Run(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 || fs[0].Rule != RuleModuleCount {
@@ -99,8 +100,8 @@ func TestModuleCountFiresOnTooMany(t *testing.T) {
 func TestModuleCountPassesOnExact(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: CAN, class: can, count: 2}")
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", DeviceClasses: []string{"can"}},
-		{RefDes: "U2", DeviceClasses: []string{"can"}},
+		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
+		{RefDes: "U2", DeviceClasses: classify.Tags("can")},
 	}}
 	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("exact count must not fire, got %+v", fs)

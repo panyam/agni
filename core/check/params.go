@@ -51,13 +51,13 @@ func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamP
 			m.mpn[c.RefDes] = v
 		}
 	}
-	m.enrichClassesFromParams()
+	m.stampClassesFromParams()
 	m.enrichRolesFromParams()
 	return m
 }
 
 // enrichRolesFromParams adds net roles the DATASHEET establishes, the second evidence tier C9's
-// evidence-tier variant admits (agni issue 280). It is the sibling of enrichClassesFromParams and
+// evidence-tier variant admits (agni issue 280). It is the sibling of stampClassesFromParams and
 // runs for the same reason: the mpn map and the seeded specs only exist once a params tier is
 // attached, so this cannot happen in the ingestion pass that stamps the name-derived roles. The
 // built-in name vocabulary is start-anchored (VCC, VDD, +3V3), so a datasheet pin function is
@@ -134,30 +134,44 @@ func (m *irModel) datasheetPinFunctions() map[string]parampb.PinFunction {
 	return out
 }
 
-// enrichClassesFromParams merges each component's datasheet-declared device class into its
-// device_classes SET (WS10-013 Phase 2). The datasheet is the authoritative class evidence (a smart
-// high-side switch IS an eFuse because its spec says so), but the mpn/classSet maps only exist once a
-// params tier is attached, so this runs at model-build time, AFTER the ingestion classify pass
-// stamped the keyword-derived set. The merge is ADDITIVE: the datasheet class and its family tags
-// (classify.ClassesOf) become membership tags that HasClass and component.class answer from, while
-// the most-specific ComponentClass stays keyword-derived, which keeps the existing ComponentClass
-// equality sites unperturbed. Degrade-safe (C9): a component with no seeded spec, or a spec with no
-// device_class, keeps exactly its keyword-derived set.
-func (m *irModel) enrichClassesFromParams() {
-	for _, c := range m.d.Components {
-		spec := m.PartSpec(c.RefDes)
-		if spec == nil || spec.GetDeviceClass() == "" {
-			continue
-		}
-		// Normalize the free-form vendor device_class ("ceramic resonator", "SPXO") to a canonical class
-		// FIRST (WS10-015), so a spelling variant reaches the same family tag the keyword path produces
-		// instead of landing bare; an unknown-but-meaningful value still passes through (identity).
-		for _, tag := range classify.ClassesOf(classify.NormalizeDeviceClass(spec.GetDeviceClass())) {
-			cl := ComponentClass(tag)
-			if !slices.Contains(m.classSet[c.RefDes], cl) {
-				m.classSet[c.RefDes] = append(m.classSet[c.RefDes], cl)
-			}
-		}
+// stampClassesFromParams adds the classes a DATASHEET establishes, the second evidence tier C9's
+// evidence-tier variant admits. The datasheet is the authoritative class evidence (a smart high-side
+// switch IS an eFuse because its spec says so), but the mpn map and the seeded specs only exist once
+// a params tier is attached, so this runs at model-build time, after the ingestion classify pass
+// stamped the keyword-derived set.
+//
+// It is the SAME pass the Loader runs when a read carries a corpus, called a second time here rather
+// than reimplemented. That is the whole of agni issue 710: while this logic lived privately in the
+// model, the enriched set existed only inside check, so a query answered component.class(Y1,
+// "crystal") while a drawing of the same design said "clock". The pass writes the IR now, so every
+// consumer of the design sees one set. Calling it twice is free, since it is additive and idempotent,
+// and calling it here is what covers a model given a corpus the READ did not have (a --params flag
+// against a design read outside the project).
+//
+// ADDITIVE ONLY. A datasheet fact can never remove or downgrade a class the name or the format
+// established, so a design read WITHOUT params classifies exactly as it did before; a class both
+// tiers establish records the datasheet as its source and changes no membership.
+func (m *irModel) stampClassesFromParams() {
+	if m.specs == nil {
+		return
+	}
+	// A hand-authored IR reaches the model unstamped, and the datasheet tier must not be the only one
+	// in the set: EMPTY is the signal that tells a consumer to re-derive, and a set holding one tier's
+	// answer says nothing about the other. So the convention pass runs first here, exactly as it would
+	// have at ingestion, against this model's own lexicon. A design read through the Loader is already
+	// stamped and this is a no-op.
+	if !classify.HasClassTags(m.d) {
+		m.lexicon().Stamp(m.d)
+	}
+	classify.StampClassesFromSpecs(m.d, func(mpn string) string {
+		return m.specs.Lookup(mpn).GetDeviceClass()
+	})
+	// The class set was built during newModel, before this tier existed, so every component is re-read
+	// from the IR. Rebuilding rather than appending is what keeps the model's answer and the design's
+	// tags one answer: anything that reads the design after this sees what the model sees.
+	index := classify.PartIndex(m.d)
+	for _, c := range m.d.GetComponents() {
+		m.classSet[c.RefDes] = m.componentClassesOf(c, classify.FirstPart(index, c))
 	}
 }
 

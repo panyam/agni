@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/datasheet/param"
@@ -749,8 +750,8 @@ func TestEvalErrors(t *testing.T) {
 // ask membership. The design carries a stamped device_classes set (as a loader-read design would).
 func TestComponentClassRelation(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "D1", DeviceClasses: []string{"tvs", "diode"}},
-		{RefDes: "R1", DeviceClasses: []string{"resistor"}},
+		{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")},
+		{RefDes: "R1", DeviceClasses: classify.Tags("resistor")},
 	}}
 	m := check.NewModel(d)
 
@@ -992,7 +993,7 @@ func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
 func aggFixture() *ir.Design {
 	prov := func() *ir.Provenance { return &ir.Provenance{SourceFile: "d"} }
 	comp := func(ref, class string) *ir.Component {
-		return &ir.Component{RefDes: ref, DeviceClasses: []string{class}, Prov: prov()}
+		return &ir.Component{RefDes: ref, DeviceClasses: classify.Tags(class), Prov: prov()}
 	}
 	net := func(name string, refs ...string) *ir.Net {
 		n := &ir.Net{Name: name, Prov: prov()}

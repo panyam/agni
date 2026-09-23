@@ -256,13 +256,13 @@ func (m *irModel) nameMatcherFor(role ir.Role) func(string) bool {
 // ingestion pass (a hand-authored test IR). Because Stamp writes the same derivation, a never-stamped
 // component re-derives to the same set. Returns nil for an unclassified component.
 func (m *irModel) componentClassesOf(c *ir.Component, pt *ir.PartType) []ComponentClass {
-	tags := c.GetDeviceClasses()
-	if len(tags) == 0 {
-		tags = classify.ClassesOf(m.lexicon().Classify(c, pt))
+	names := classify.ClassNames(c)
+	if len(names) == 0 {
+		names = classify.ClassesOf(m.lexicon().Classify(c, pt))
 	}
-	out := make([]ComponentClass, len(tags))
-	for i, t := range tags {
-		out[i] = ComponentClass(t)
+	out := make([]ComponentClass, len(names))
+	for i, n := range names {
+		out[i] = ComponentClass(n)
 	}
 	return out
 }

@@ -149,7 +149,29 @@ func (o Overlay) ReadOptions() []ReadOption {
 	if len(o.SymbolPaths) > 0 {
 		opts = append(opts, WithSymbolPaths(o.SymbolPaths))
 	}
+	if o.Specs != nil {
+		opts = append(opts, WithDeviceClasses(DeviceClassLookup(o.Specs)))
+	}
 	return opts
+}
+
+// DeviceClassLookup adapts a param provider to the one question the ingestion class pass asks of it:
+// the device_class a seeded spec states for an MPN. It is the adapter that keeps the datasheet layer
+// on this side of the read seam, since readers/formats takes a function and never the provider.
+//
+// A nil provider answers nothing rather than panicking, which matters because specs is an interface:
+// a caller that composed no corpus holds a nil interface, and the difference between that and an
+// empty corpus is invisible at the call site.
+func DeviceClassLookup(specs param.ParamProvider) func(string) string {
+	if specs == nil {
+		return nil
+	}
+	return func(mpn string) string {
+		if mpn == "" {
+			return ""
+		}
+		return specs.Lookup(mpn).GetDeviceClass()
+	}
 }
 
 // ConfigResolver turns the ref-shaped tiers of an AnalysisConfig into the engine inputs a run needs.
