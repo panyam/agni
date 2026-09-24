@@ -10,16 +10,19 @@ on:
     paths:
       - docsite/**
       - .github/workflows/docs.yml
+  # The BUILD half runs on a pull request too, because until it did, a docsite change could only be
+  # validated by merging it: this workflow had no pull_request trigger and Pages serves its artifact,
+  # so the first execution of any change to it was against the live site. Deploying stays on main.
+  pull_request:
+    paths:
+      - docsite/**
+      - .github/workflows/docs.yml
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -67,6 +70,13 @@ jobs:
 
   deploy:
     needs: build
+    # A pull request builds to prove the build works and publishes nothing.
+    if: github.event_name != 'pull_request'
+    # One publish at a time, which is what the workflow-level group used to give. It belongs here
+    # rather than over the whole workflow, so a PR build never queues behind a deploy.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment:
       name: github-pages
