@@ -22,9 +22,9 @@ import (
 //   - HIERARCHY. extract scopes instances and nets to the design's top cell and drops every
 //     sub-cell's contents (WS1-004, TestHierarchyDetected). A sub-cell survives as a part type with
 //     its pins and no contents, so writing a hierarchical design emits a FLAT one. The
-//     edif_hierarchical attribute, which extract sets from the count of cells carrying instances,
-//     is therefore absent on the re-read. That difference is the round trip reporting the reader's
-//     own loss, not a writer bug, and writer_test.go excludes the attribute for exactly that reason.
+//     InputDiagnostics.unexpanded_hierarchy list that extract records for the dropped cells is
+//     therefore empty on the re-read. That difference is the round trip reporting the reader's own
+//     loss, not a writer bug, and writer_test.go excludes the list for exactly that reason.
 //   - ARRAY BUS DECLARATIONS. A (port (array DATA 8) ...) reaches the IR as a BusNotModeled
 //     diagnostic that records the label and the member set but not the cell or port it was declared
 //     on, so there is nowhere to put it back. Array ports are not emitted.

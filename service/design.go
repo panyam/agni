@@ -285,6 +285,7 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 			resp.SourceFormat = d.GetSourceFormat()
 			resp.ComponentCount = int32(len(d.GetComponents()))
 			resp.NetCount = int32(len(d.GetNets()))
+			resp.UnexpandedHierarchy = d.GetInputDiagnostics().GetUnexpandedHierarchy()
 		}
 	}
 	return resp, nil

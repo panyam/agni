@@ -78,10 +78,10 @@ func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 // see it. They are listed here rather than quietly normalized away, because the next person to hit
 // one needs to know it is the reader's loss being reported and not a writer bug to go and fix:
 //
-//   - edif_hierarchical. extract scopes to the design's top cell and drops every sub-cell's
-//     contents, so writing a hierarchical design emits a flat one and the flag, which is computed
-//     from the count of cells carrying instances, is absent on the re-read. Making this pass would
-//     mean emitting a sub-cell whose contents no longer exist, which is fabricating structure.
+//   - InputDiagnostics.UnexpandedHierarchy. extract scopes to the design's top cell and drops every
+//     sub-cell's contents, so writing a hierarchical design emits a flat one and the re-read lists no
+//     unexpanded cell. Making this pass would mean emitting a sub-cell whose contents no longer
+//     exist, which is fabricating structure.
 //   - Provenance.SourceFile. Different by construction; the writer takes a design, not a path.
 //   - InputDiagnostics.UnmodeledBuses, and with them the NAMELESS PINS an array port leaves behind.
 //     A BusNotModeled records the bus label and its members but not the cell or port it was declared
@@ -165,7 +165,6 @@ func diffIR(t *testing.T, want, got *ir.Design) {
 func normalize(d, src *ir.Design) *ir.Design {
 	c := proto.Clone(d).(*ir.Design)
 	clearSourceFiles(c.ProtoReflect())
-	delete(c.Attributes, "edif_hierarchical")
 	synthesized := portsTheNetlistAdds(src)
 	mintedParts := partsTheNetlistAdds(src)
 	for _, lib := range c.GetLibraries() {
@@ -190,11 +189,7 @@ func normalize(d, src *ir.Design) *ir.Design {
 	}
 	if id := c.GetInputDiagnostics(); id != nil {
 		id.UnmodeledBuses = nil
-		// A diagnostics message holding nothing but the excluded buses must compare equal to the
-		// absent one the re-read produces, not to an empty struct.
-		if len(id.GetUnannotatedComponents()) == 0 {
-			c.InputDiagnostics = nil
-		}
+		id.UnexpandedHierarchy = nil
 	}
 	return c
 }

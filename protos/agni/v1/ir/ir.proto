@@ -186,6 +186,21 @@ message InputDiagnostics {
   // symbol, nothing was lost in the read. The design genuinely has parts nobody has named, and on
   // one export that was 369 of them across live sheets.
   repeated UnannotatedComponent unannotated_components = 6;
+  // The hierarchical blocks whose CONTENTS this read did not extract (agni issue 707): a sub-cell, a
+  // sub-sheet, a subcircuit, anything the design instantiates as a box while the source also holds
+  // what is inside it. One entry per block, so a consumer can say what was dropped and how much.
+  //
+  // Recorded because the alternative is a design that reads as smaller than it is. The EDIF reader
+  // scopes extraction to the top cell on purpose (WS1-004), and a hierarchical `.edn` therefore
+  // yields the top cell's instances alone: the read succeeds, the counts look plausible, and every
+  // rule evaluates cleanly over a design that is mostly absent. The reader already counted the cells
+  // carrying instances and kept only whether there was more than one, as an attribute nothing read.
+  //
+  // A reader that DESCENDS into a block does not list it, so a list that empties out is the
+  // hierarchy walk landing rather than the signal going away. EDIF populates it today; the xschem
+  // and gEDA readers skip `type=subcircuit` and `source=` in the same way (agni issue 134) and are
+  // the intended second and third. Named in `supplied` by every reader that looked.
+  repeated UnexpandedHierarchy unexpanded_hierarchy = 10;
   // The diagnostics this reader COMPUTED, named by their field name here ("ref_des_collisions",
   // "dangling_endpoints", ...), whether or not it found any.
   //
@@ -206,6 +221,20 @@ message InputDiagnostics {
   // implementation and not of the file: a reader that learns to detect a construct starts
   // supplying it, and an out-of-module reader (the C18 extension seam) declares its own.
   repeated string supplied = 7;
+}
+
+// UnexpandedHierarchy is one hierarchical block whose contents the read left out.
+//
+// name is the block as the source names it (an EDIF cell name). kind names the construct
+// ("edif_cell"), so a reader-neutral consumer can say what sort of thing was skipped. instance_count
+// is how many instances the block's own contents hold, counted once however many times the block is
+// placed and not following the blocks it places in turn. It is the useful half of the message: "SUB holds 212 instances and none were read" says how much of the design is
+// missing, where "this design is hierarchical" does not. prov locates the block's declaration.
+message UnexpandedHierarchy {
+  string name = 1;
+  string kind = 2;
+  int32 instance_count = 3;
+  Provenance prov = 4;
 }
 
 // UnannotatedComponent is one placeholder designator and every placement wearing it. Keyed per

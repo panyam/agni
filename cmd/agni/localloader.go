@@ -56,32 +56,45 @@ func (l *localLoader) resolve(ctx context.Context, path string) (designSource, e
 	if err != nil {
 		return designSource{}, err
 	}
-	if src.Note == "" {
-		return src, nil
+	l.note(path, src.Note)
+	return src, nil
+}
+
+// note writes text to the notes writer the first time key is seen, and never when text is empty.
+func (l *localLoader) note(key, text string) {
+	if text == "" {
+		return
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.noted[path] {
-		return src, nil
+	if l.noted[key] {
+		return
 	}
 	if l.noted == nil {
 		l.noted = map[string]bool{}
 	}
-	l.noted[path] = true
+	l.noted[key] = true
 	w := l.notes
 	if w == nil {
 		w = os.Stderr
 	}
-	fmt.Fprint(w, src.Note)
-	return src, nil
+	fmt.Fprint(w, text)
 }
 
+// Design reads the netlist tier and says, once per file, when the read left out hierarchical blocks,
+// so check, query, review and trace warn the way readDesign's commands do (agni issue 707).
 func (l *localLoader) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return readerFor(l.loader, opts...).ReadDesign(localOf(src.NetlistURI))
+	netlist := localOf(src.NetlistURI)
+	d, err := readerFor(l.loader, opts...).ReadDesign(netlist)
+	if err != nil {
+		return nil, err
+	}
+	l.note("hierarchy:"+netlist, hierarchyNote(netlist, d.GetInputDiagnostics().GetUnexpandedHierarchy()))
+	return d, nil
 }
 
 func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {

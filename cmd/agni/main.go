@@ -281,8 +281,13 @@ func readDesignWithConfig(path string) (*ir.Design, service.Overlay, error) {
 	if err != nil {
 		return nil, service.Overlay{}, err
 	}
-	d, err := readerFor(newLoader(), ov.ReadOptions()...).ReadDesign(localOf(src.NetlistURI))
-	return d, ov, err
+	netlist := localOf(src.NetlistURI)
+	d, err := readerFor(newLoader(), ov.ReadOptions()...).ReadDesign(netlist)
+	if err != nil {
+		return nil, service.Overlay{}, err
+	}
+	fmt.Fprint(os.Stderr, hierarchyNote(netlist, d.GetInputDiagnostics().GetUnexpandedHierarchy()))
+	return d, ov, nil
 }
 
 // designReadOptions composes the per-read config a design's project supplies: its naming vocabulary,
@@ -418,6 +423,13 @@ func statsCmd() *cobra.Command {
 			fmt.Fprintf(w, "sections:            %d (source instances)\n", sectionsTotal)
 			fmt.Fprintf(w, "multi-section:       %d (one ref_des, several sections)\n", multi)
 			fmt.Fprintf(w, "nets:                %d\n", len(d.Nets))
+			// The counts above cover what the read EXTRACTED, which on a hierarchical design is the top
+			// level alone. stats is what someone runs when a count looks wrong, so it says so here as
+			// well as in the stderr note (agni issue 707).
+			if blocks := d.GetInputDiagnostics().GetUnexpandedHierarchy(); len(blocks) > 0 {
+				fmt.Fprintf(w, "not extracted:       %s (counts above are the top %s only)\n",
+					hierarchySummary(blocks), hierarchyNoun(blocks))
+			}
 			// Physical tier — shown only when a reader populated it (e.g. IPC-2581, KiCad PCB).
 			if len(d.Footprints) > 0 {
 				fmt.Fprintf(w, "footprints:          %d\n", len(d.Footprints))
