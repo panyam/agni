@@ -35,7 +35,11 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          # The version is the project's, not this workflow's: it comes from `packageManager` in
+          # docsite/package.json, so a developer's pnpm and CI's cannot drift apart silently. The path is
+          # relative to the repository root, which is what this input requires, and there is no
+          # package.json at that root to fall back on.
+          package_json_file: docsite/package.json
 
       - uses: actions/setup-node@v4
         with:
