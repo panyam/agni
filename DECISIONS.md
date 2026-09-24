@@ -1710,6 +1710,40 @@ before it.
 
 ---
 
+## A device class stays a STRING where a net role became an enum
+
+**Question.** `ir.Component.device_classes` gained a per-tag source (agni 710), which meant writing a
+new message for the tag. The entry above had just closed the role vocabulary into a proto enum for
+what look like the same reasons: one definition for two languages, no drift between tokens and
+constants, a parse that refuses an unknown value. Should the class go the same way?
+
+**Answer. No. The class stays a string inside `ComponentClassTag`, and the two decisions differ
+because the vocabularies are heading in opposite directions.**
+
+The role vocabulary closed because nothing could ever extend it: the lexicon has one field per role,
+so only the engine could add one, and the openness cost two languages' worth of duplication for a
+capability nobody had. The class vocabulary is the mirror image. `lexicon.class` already lets a
+project EXTEND a shipped class with its own patterns and prefixes, agni 677 is a project asking to
+declare a class the engine does not ship, and the answer recorded for that is a registry. An enum
+would be in the way of the thing already on the roadmap, and would have to be unwound to get there.
+
+**What we give up.** The class tokens stay Go constants plus `model.ComponentClasses`, so the viewer
+cannot enumerate them from a generated list, and `TestComponentClassesListsEveryConstant` is what
+holds the hand-kept list to the const block. That is the cost the role entry above measured and
+refused. It is the right trade here only because the registry is the destination: when it lands, the
+class names become registry keys and the string is already the right representation.
+
+**A datasheet may also state a class the engine does not know** ("regulator" is in the tutorial
+project's own corpus today). It is kept as written rather than dropped, since an unrecognised class is
+still a fact about the part, and it sorts behind the keyword-derived class so it can never take the
+headline. An enum would have had to drop it or carry an `UNKNOWN` plus a side string, which is the
+two-representations shape the entry above warns about.
+
+**Reopen if** the registry lands and the class names become keys in it. The string is then already
+what it should be, and this entry is the reason nothing had to be unwound.
+
+---
+
 ## Two relations, when one side is derived and the other is declared
 
 **Question.** A net's roles and a net's attributes are both "things true of a net". Should they be one

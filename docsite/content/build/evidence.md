@@ -187,6 +187,21 @@ untouched tree. A red-check that does not confirm its own edit landed is a green
 hat. Assert the substitution (`assert old in s`, `grep -c` the new text) before believing what the
 suite then says.
 
+**Perturb one SEAM at a time when a change spans several.** A feature wired through four places
+(a pass, a loader field, a config plumbing hop, an ordering) invites one big neutralisation and a
+suite that goes red for reasons nobody separates. Four separate perturbations cost four runs and tell
+you something the one run cannot: neutering the datasheet class pass failed the pass, loader and CLI
+tests; cutting the read option out of `Overlay.ReadOptions` failed ONLY the CLI test; replacing the
+shared ordering with set order failed ONLY the glyph tests. That pattern is the map of which test
+guards which seam, and a seam whose perturbation fails nothing is a seam with no test at all.
+
+**A comparison of two files that do not exist reads as a difference.** `cmp -s a b` on two missing
+paths exits non-zero, and a script that prints "MOVED" on non-zero then reports a change nobody made.
+It happens when the command that was supposed to write them wrote nothing, which is its own quiet
+failure: `agni render --report -o f.svg` prints the report and ignores `-o`, so both sides of the
+comparison were absent and the run still exited 0. Stat the inputs before trusting a comparison, or
+compare content you have actually read.
+
 **Count WHICH tests flip, not merely that the suite went red.** Neutering `reviewGate.trip()` failed 6
 of 8 gate tests, and the two survivors were the opt-in guard and the flag-parse guard, neither of which
 has any business depending on `trip`. "The suite went red" would have been equally true if the wrong six
