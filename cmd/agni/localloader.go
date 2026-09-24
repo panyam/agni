@@ -93,7 +93,7 @@ func (l *localLoader) Design(ctx context.Context, uri artifact.URI, opts ...serv
 	if err != nil {
 		return nil, err
 	}
-	l.note("hierarchy:"+netlist, hierarchyNote(netlist, d))
+	l.note("hierarchy:"+netlist, hierarchyNote(netlist, d.GetInputDiagnostics().GetUnexpandedHierarchy()))
 	return d, nil
 }
 

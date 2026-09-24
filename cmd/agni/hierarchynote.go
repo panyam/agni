@@ -15,13 +15,12 @@ import (
 const hierarchyNoteListed = 5
 
 // hierarchyNote is the stderr line saying a read left out hierarchical blocks, or "" when it left out
-// none (agni issue 707).
+// none (agni issue 707). It takes the diagnostic rather than the design, so it reads nothing else.
 //
 // It is in the register of resolutionNote because it is the same kind of statement, about what the
 // READ covered rather than about the design. A hierarchical design is not a defect, so this is never a
 // finding. The largest blocks are named first, because that is where most of the missing design is.
-func hierarchyNote(file string, d *ir.Design) string {
-	blocks := d.GetInputDiagnostics().GetUnexpandedHierarchy()
+func hierarchyNote(file string, blocks []*ir.UnexpandedHierarchy) string {
 	if len(blocks) == 0 {
 		return ""
 	}

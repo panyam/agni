@@ -64,13 +64,12 @@ func TestHierarchyNoteNamesTheLargestFirst(t *testing.T) {
 	for i, n := range []int32{3, 40, 1, 7, 12, 2, 9} {
 		blocks = append(blocks, &ir.UnexpandedHierarchy{Name: string(rune('A' + i)), Kind: "edif_cell", InstanceCount: n})
 	}
-	d := &ir.Design{InputDiagnostics: &ir.InputDiagnostics{UnexpandedHierarchy: blocks}}
-	got := hierarchyNote("board.edn", d)
+	got := hierarchyNote("board.edn", blocks)
 	want := "note: board.edn is hierarchical and only its top cell was read. 7 sub-cells holding 74 instances were not extracted (B: 40, E: 12, G: 9, D: 7, A: 3, 2 more). Counts and checks cover the top cell alone.\n"
 	if got != want {
 		t.Errorf("note:\n got %q\nwant %q", got, want)
 	}
-	if got := hierarchyNote("flat.edn", &ir.Design{}); got != "" {
-		t.Errorf("a design with no diagnostics got a note: %q", got)
+	if got := hierarchyNote("flat.edn", nil); got != "" {
+		t.Errorf("a read that left nothing out got a note: %q", got)
 	}
 }

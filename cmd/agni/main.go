@@ -286,7 +286,7 @@ func readDesignWithConfig(path string) (*ir.Design, service.Overlay, error) {
 	if err != nil {
 		return nil, service.Overlay{}, err
 	}
-	fmt.Fprint(os.Stderr, hierarchyNote(netlist, d))
+	fmt.Fprint(os.Stderr, hierarchyNote(netlist, d.GetInputDiagnostics().GetUnexpandedHierarchy()))
 	return d, ov, nil
 }
 
