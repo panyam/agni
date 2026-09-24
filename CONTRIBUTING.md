@@ -176,6 +176,14 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 
 ### Shell traps
 
+- **`git checkout -b <branch> origin/main` can FAIL and still move your working tree.** This repo has
+  two remotes whose fetch refspecs both map to `refs/remotes/origin/main` (`origin` and `panyam`), so
+  the branch creation dies at the tracking step with "ambiguous information for ref" AFTER the
+  checkout has updated the index. You are left on the old branch with the new tree STAGED against it,
+  which reads like a large accidental change. Recovery is `git branch --no-track <branch> origin/main`
+  then `git checkout <branch>`, which needs no destructive command. Reach for `git reset --hard` only
+  after confirming nothing uncommitted is yours, and remember another session's uncommitted edits can
+  be sitting in the same checkout.
 - **A `cd` persists across calls, and the repo root is where a stray file lands.** A scratch file
   written to a relative path goes wherever the last `cd` left you, so a heredoc meant for a temp
   directory can drop a `.md` or a `.png` into the tree, and a directory `add` then rides it into a
@@ -264,7 +272,7 @@ re-measure rather than to close.
 
 ## PR prose conventions
 
-The shape of a PR body is defined by the **`start_pr` skill**, distributed separately from this
+The shape of a PR body is defined by the **`start-pr` skill**, distributed separately from this
 repo: what changes, prerequisite knowledge, a reviewer's guide that opens with a one-paragraph ELI
 and carries it through the reading order, a decision log, and a before/after artifact. Follow the
 skill rather than a copy kept here, because a copy drifts and this one already had.

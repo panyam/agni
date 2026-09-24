@@ -339,6 +339,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `make samples` and `make samples-oracle` compose instead of deleting each other's work.
 - **After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** `make proto-check`
   fails the gate on either half being stale.
+- **`render --report` prints to stdout and IGNORES `-o`**, which is the same axis confusion as
+  `review --coverage`: the report replaces the drawing rather than being a format of it, so the flag
+  that names the drawing's file has nothing to write. It exits 0 having written nothing.
 - **`-o/--out` writes the `--format` output to a file** on `check`, `review`, `trace` and `query`,
   `-` meaning stdout and being the default, so nothing that omits it changed. Distinct from
   `--results-out`, which writes the check-result DOCUMENT `agni results` re-renders. The written-file
@@ -468,6 +471,25 @@ hand-kept copy it replaced lacked `thermistor`, `zener` and `ideal_diode_control
 could not extend the class 627 had just added (agni 677). Declaring a new class opens the vocabulary,
 and DECISIONS.md says that happens as a registry, once a project asks.
 
+**A device class has TWO evidence tiers and one ordering, and both halves fail silently.**
+`ir.Component.device_classes` is a set of TAGS, each carrying a `ClassSource` (agni 710, the second
+instance of C9's evidence-tier variant after `ir.Net.roles`). `classify.Stamp` is the convention
+tier; `classify.StampClassesFromSpecs` is the datasheet tier, and it is the only evidence that
+separates a crystal from a ceramic resonator or names an `ideal_diode_controller`, both of which the
+structural path is documented as unable to resolve. **Two orderings inside `Loader.ReadDesign` are
+load-bearing and silent when wrong**: the convention pass REPLACES the set, so anything writing
+before it is erased, and the datasheet pass joins on the MPN `StampMPN` fills, so it must run after
+that. **The datasheet tier runs in TWO places on purpose** — the Loader when the read carries a
+corpus, `check.Model` when it is handed one the read did not have — which is safe only because the
+pass is additive and idempotent. Adding a THIRD producer is the bug shape, not the pattern.
+**Which of several true classes is the headline one is `classify.BySpecificity`, and
+`MostSpecific` is its head rather than a second walk**: the drawing and the model ranked one set
+independently for as long as the set had one author, and 710 is what that cost. An unranked vendor
+class (`regulator`, which the tutorial corpus really states) sorts BEHIND the keyword class rather
+than displacing it. **A second tier must never be the ONLY tier in the set**, because EMPTY is the
+signal that tells a consumer to re-derive, which is why `NewModelWithParams` runs the convention pass
+first on a design that reaches it unstamped.
+
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
 so `12V_FB`, `12V_SW`, `12V_MODE1` and `12V_VDRV` all match the rail vocabulary and none carries 12V.
 Four roles say so and `Model.IsRailNet` subtracts them ONCE rather than per consumer, which is what
@@ -527,6 +549,7 @@ discovered.
 | A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
 | A file added to a capture's fixture directory | 1, plus `make tutorial-runs` AFTER committing it | `build/the-gate.md` | `tutorial-runs-check`, but only once the file is committed |
 | A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
+| A new EVIDENCE TIER for a derived IR field | 7 (the pass, the source enum value, the `Loader` field, the `Loader.ReadDesign` call, `service.ReadOptions` + `Overlay.ReadOptions`, the `check.Model` call, `hack/ir_model_baseline.txt`) | C9's evidence-tier variant, `architecture/ingestion-and-ir.md` | the C19 ratchet catches the pass; NOTHING catches a tier that reaches one surface and not the other, which is what agni 710 was |
 | A host that reads designs | 1 (go through `formats.Loader`, never a bare reader) | `build/evidence.md` | `TestReadCarriesTheIngestionPasses` in `examples/common`; nothing guards a NEW host |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
 | An architectural constraint | 3 (the rule in `CONSTRAINTS.md`, a test in one of three homes, a `Verify` naming that test) | `build/the-gate.md`, and `CONSTRAINTS.md`'s own header | the test you wrote, and NOTHING checks that a rule has one |
@@ -541,7 +564,7 @@ the diff: a new relation is purely added lines, and anything else means an exist
 `CONTRIBUTING.md` holds the workflow rules: running several checkouts in parallel (use
 `git -C <abs-path>`, never `git add -A`), the PR workflow (verify a push by its exit code, verify
 `merged: true` via the API, never `gofmt -w` a directory), the shell traps that have burned
-real work, and what agni ADDS to the PR body shape defined by the `start_pr` skill (the circuit and
+real work, and what agni ADDS to the PR body shape defined by the `start-pr` skill (the circuit and
 a hardware primer ahead of the reviewer's guide, which docsite pages the prerequisite block names,
 and the fixture-only rule for rendering captures). The general skeleton lives in the skill, so do
 not copy it back into this repo.
