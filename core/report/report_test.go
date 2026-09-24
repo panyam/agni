@@ -233,6 +233,9 @@ func TestWithheldLinkReasonReachesBothReports(t *testing.T) {
 		if !strings.Contains(buf.String(), why) {
 			t.Errorf("the reason links were withheld never reached the report")
 		}
+		if !strings.Contains(buf.String(), "not linked to the viewer") {
+			t.Errorf("the report carries the reason without saying what it is the reason for")
+		}
 	})
 
 	t.Run("review checklist", func(t *testing.T) {
@@ -242,6 +245,9 @@ func TestWithheldLinkReasonReachesBothReports(t *testing.T) {
 		}
 		if !strings.Contains(buf.String(), why) {
 			t.Errorf("the reason findings were unlinked never reached the checklist")
+		}
+		if !strings.Contains(buf.String(), "not linked to the viewer") {
+			t.Errorf("the checklist carries the reason without saying what it is the reason for")
 		}
 	})
 
