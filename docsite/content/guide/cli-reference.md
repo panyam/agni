@@ -24,6 +24,17 @@ The commands fall into four groups by what each one takes as its argument.
 Print component, section, and net counts for one design. Run it first to confirm the tool
 read your design the way you expect before trusting anything downstream.
 
+The counts cover what the read extracted. On a hierarchical EDIF netlist that is the top cell
+alone, because the reader does not descend into sub-cells yet, and `stats` then adds a line
+saying how much it left out. Every command that reads the design prints the same fact to stderr,
+naming the largest cells:
+
+```text
+note: board.edn is hierarchical and only its top cell was read. 7 sub-cells holding 74 instances were not extracted (B: 40, E: 12, G: 9, D: 7, A: 3, 2 more). Counts and checks cover the top cell alone.
+...
+not extracted:       7 sub-cells holding 74 instances (counts above are the top cell only)
+```
+
 ### `check <file>`
 
 Run the rule catalog and report findings. The workhorse. See

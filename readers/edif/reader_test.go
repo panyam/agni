@@ -3,6 +3,7 @@ package edif
 import (
 	"bytes"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -241,18 +242,38 @@ func TestMemberPort(t *testing.T) {
 	}
 }
 
-// TestHierarchyDetected: a design whose top cell instantiates a sub-cell with its own
-// contents is flagged, and extraction is scoped to the top cell (no sub-cell instances merged).
+// TestHierarchyDetected: a design whose top cell instantiates a sub-cell with its own contents
+// records that sub-cell as unexpanded, with its instance count, and extraction is scoped to the top
+// cell (no sub-cell instances merged).
 func TestHierarchyDetected(t *testing.T) {
 	d := readEDN(t, "hier.edn")
-	if d.Attributes["edif_hierarchical"] != "true" {
-		t.Errorf("edif_hierarchical = %q, want true", d.Attributes["edif_hierarchical"])
+	got := d.GetInputDiagnostics().GetUnexpandedHierarchy()
+	if len(got) != 1 {
+		t.Fatalf("unexpanded_hierarchy = %v, want exactly the sub-cell SUB", got)
+	}
+	if h := got[0]; h.GetName() != "SUB" || h.GetKind() != "edif_cell" || h.GetInstanceCount() != 1 {
+		t.Errorf("unexpanded_hierarchy[0] = %v, want SUB, edif_cell, 1 instance", h)
+	}
+	if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "unexpanded_hierarchy") {
+		t.Errorf("supplied = %v, want it to name unexpanded_hierarchy", d.GetInputDiagnostics().GetSupplied())
 	}
 	if compByRef(d, "X1") != nil {
 		t.Error("sub-cell instance X1 must not be merged into the top netlist")
 	}
 	if compByRef(d, "U1") == nil {
 		t.Error("top-cell instance U1 missing")
+	}
+}
+
+// TestFlatDesignListsNoHierarchy is the control for TestHierarchyDetected: a flat design still says
+// the reader looked, and lists nothing, so an empty list means flat rather than unexamined.
+func TestFlatDesignListsNoHierarchy(t *testing.T) {
+	d := readEDN(t, "basic.edn")
+	if got := d.GetInputDiagnostics().GetUnexpandedHierarchy(); len(got) != 0 {
+		t.Errorf("unexpanded_hierarchy = %v, want none on a flat design", got)
+	}
+	if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "unexpanded_hierarchy") {
+		t.Errorf("supplied = %v, want it to name unexpanded_hierarchy", d.GetInputDiagnostics().GetSupplied())
 	}
 }
 

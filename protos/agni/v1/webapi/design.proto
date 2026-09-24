@@ -6,6 +6,7 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/geom/geom.proto";
 import "agni/v1/geom/geom_packed.proto";
+import "agni/v1/ir/ir.proto";
 
 // This file: DesignService, loading and rendering one design. Rule checks are the separate
 // CheckService (checks.proto); the structural diff is DiffService (diff.proto).
@@ -144,6 +145,13 @@ message GetDesignResponse {
   // the third state: an unverifiable link is not a verified one, and collapsing the two reproduces
   // exactly the false confidence the hash exists to remove.
   string content_hash = 10;
+  // unexpanded_hierarchy lists the hierarchical blocks whose contents the netlist read left out, the
+  // reader's InputDiagnostics field carried as is (agni issue 707). Non-empty means component_count
+  // and net_count cover the top level alone, which a viewer should say before anyone trusts them.
+  //
+  // It is on the DESIGN response for the reason `undrawn` is: it is a property of this read. Empty
+  // whenever the counts are, since both come from the same netlist read.
+  repeated agni.v1.ir.UnexpandedHierarchy unexpanded_hierarchy = 11;
 }
 
 message GetSheetRequest {

@@ -87,6 +87,26 @@ func TestGetDesignAutoLayoutCountsFromIR(t *testing.T) {
 	}
 }
 
+// TestGetDesignCarriesUnexpandedHierarchy: the counts beside it cover the top level alone when a read
+// left blocks out, so the wire says so rather than the CLI alone (agni issue 707).
+func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1"}},
+		InputDiagnostics: &ir.InputDiagnostics{
+			UnexpandedHierarchy: []*ir.UnexpandedHierarchy{{Name: "SUB", Kind: "edif_cell", InstanceCount: 12}},
+		},
+	}
+	svc := NewDesignService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.edn"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := resp.GetUnexpandedHierarchy()
+	if len(got) != 1 || got[0].GetName() != "SUB" || got[0].GetInstanceCount() != 12 {
+		t.Errorf("unexpanded_hierarchy = %v, want SUB with 12 instances", got)
+	}
+}
+
 func TestGetSheetSelectorAndFormats(t *testing.T) {
 	svc := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
 	get := func(sel string, format webapi.SheetFormat) (*webapi.GetSheetResponse, error) {

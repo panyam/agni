@@ -113,15 +113,12 @@ func extract(root *node, src string) *ir.Design {
 	// id so they are not merged together.
 	// Scope extraction to the design's root cell so a hierarchical design's sub-cell
 	// contents are not merged into the top netlist (WS1-004). Falls back to the whole
-	// document when the root cell cannot be resolved.
+	// document when the root cell cannot be resolved. The cells this leaves out are recorded as
+	// InputDiagnostics.unexpanded_hierarchy below, so the scoping is never silent (agni issue 707).
 	scope := root
 	if tc := topCell(root); tc != nil {
 		scope = tc
 	}
-	if cellsWithInstances(root) > 1 {
-		d.Attributes["edif_hierarchical"] = "true"
-	}
-
 	var insts []*node
 	collect(scope, "instance", &insts)
 	refByID := make(map[string]string, len(insts))
@@ -184,12 +181,14 @@ func extract(root *node, src string) *ir.Design {
 	}
 	// One struct for every diagnostic, built once. Assigning a fresh InputDiagnostics per signal
 	// (as the bus collection alone used to) means the next signal added silently drops the previous.
-	diag := &ir.InputDiagnostics{
+	//
+	// Always set, because "unexpanded_hierarchy" is SUPPLIED on every read: this reader looks at
+	// every cell, so an empty list is a flat design rather than a question nobody asked.
+	d.InputDiagnostics = &ir.InputDiagnostics{
 		UnmodeledBuses:        collectArrayBuses(root, src),
 		UnannotatedComponents: refdes.Unannotated(d.Components),
-	}
-	if len(diag.UnmodeledBuses) > 0 || len(diag.UnannotatedComponents) > 0 {
-		d.InputDiagnostics = diag
+		UnexpandedHierarchy:   unexpandedCells(root, scope, src),
+		Supplied:              []string{"unexpanded_hierarchy"},
 	}
 	return d
 }
@@ -554,20 +553,35 @@ func topCell(root *node) *node {
 	return nil
 }
 
-// cellsWithInstances counts cells whose subtree contains at least one instance. More than
-// one means the design is hierarchical (several levels carry contents).
-func cellsWithInstances(root *node) int {
+// unexpandedCells lists every cell outside scope whose contents hold instances, which extract
+// therefore never read (WS1-004 scopes it to the top cell, agni issue 707). A cell with no instances
+// is a leaf part and loses nothing. When the top cell cannot be resolved, scope is the whole document
+// and extract read everything, so nothing is listed.
+func unexpandedCells(root, scope *node, src string) []*ir.UnexpandedHierarchy {
+	if scope == root {
+		return nil
+	}
 	var cells []*node
 	collect(root, "cell", &cells)
-	n := 0
+	var out []*ir.UnexpandedHierarchy
 	for _, c := range cells {
+		if c == scope {
+			continue
+		}
 		var ci []*node
 		collect(c, "instance", &ci)
-		if len(ci) > 0 {
-			n++
+		if len(ci) == 0 {
+			continue
 		}
+		nm := parseName(c.Arg(1))
+		out = append(out, &ir.UnexpandedHierarchy{
+			Name:          nm.best(),
+			Kind:          "edif_cell",
+			InstanceCount: int32(len(ci)),
+			Prov:          &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind},
+		})
 	}
-	return n
+	return out
 }
 
 // stringDisplayText returns the scalar text held by a value node (a designator or a property

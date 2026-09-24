@@ -203,6 +203,7 @@ A read can succeed and still be worth complaining about. `InputDiagnostics` is w
 | `unresolved_symbols` | a symbol file that failed to open, so its placements carry no pins |
 | `resolved_symbols` | a symbol reference that DID open, with the pin count it supplied |
 | `unannotated_components` | parts whose designator is still a placeholder |
+| `unexpanded_hierarchy` | a hierarchical block (an EDIF sub-cell) whose contents the read did not extract, with its instance count |
 
 They exist for one reason: **silence must not read as coverage.** Every one of these makes the design report *less* rather than reporting an error. An unresolved symbol yields a smaller netlist, and connectivity rules then pass cleanly over the gap. An unexpanded bus leaves members merged or off-net. Un-annotated parts are fully drawn and connected, so nothing looks wrong at all. In each case a clean run is indistinguishable from a design that genuinely had none of the problem, and the reader is the only layer that ever knew the difference.
 
@@ -220,6 +221,12 @@ InputDiagnostics{ RefDesCollisions: nil }                                       
 A rule whose whole subject is a diagnostic gates on the declaration (`check.CapRefDesCollisions`), so the second case reports **not-applicable with a reason** instead of a pass. Declaring is unconditional on purpose: a reader that only recorded it when it found something would be back to the same ambiguity on the clean read, and the clean read is the common case.
 
 The rule for a new reader is therefore: detect what your format can express, declare what you detected, and leave out what your format cannot tell apart. EDIF leaves this one out and the report says so, which is a better answer than a green check nobody earned.
+
+### A diagnostic that is not a finding
+
+`unexpanded_hierarchy` is the one field no rule turns into a finding (agni issue 707). A design being hierarchical is not a defect, so a verdict would be the wrong shape. What the field records is a limit of the READ: the EDIF reader scopes extraction to the top cell (WS1-004), so every count and every rule covers the top level alone. The CLI states it as a note on stderr, `agni stats` adds a line for it, and `GetDesignResponse` carries it for the viewer, in the same register as the note naming a companion a read pulled in.
+
+The instance count is the part that makes it actionable. "This design is hierarchical" says nothing about how much is missing; "SUB holds 212 instances and none were read" does. A reader that learns to descend into a block stops listing it, so the list shrinking is the hierarchy walk landing. The xschem and gEDA readers skip `type=subcircuit` and `source=` in the same way (agni issue 134), and the field is shaped so they can populate it too.
 
 ### Record what went right, not only what went wrong
 
