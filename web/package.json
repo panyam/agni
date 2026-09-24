@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.5.1",
   "description": "WebGL2 browser renderer for a packed schematic sheet (tier-2 PackedSheet)",
   "scripts": {
     "gen": "buf generate ../protos --template buf.gen.web.yaml",

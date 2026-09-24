@@ -1,0 +1,12 @@
+# esbuild ships its platform binary as an optional dependency and its postinstall links and verifies
+# it. pnpm refuses to run a dependency's build script until the repo declares a decision about it, so
+# an undeclared esbuild leaves the binary unlinked and pnpm 12 writes this file for you with a
+# placeholder asking which it should be. The two spellings are the same decision for two versions:
+# pnpm 12 reads allowBuilds and ignores onlyBuiltDependencies, pnpm 10 reads onlyBuiltDependencies
+# and tolerates allowBuilds. `packageManager` now pins the version both CI workflows install, so the
+# second spelling is for a developer whose own pnpm predates that pin. web/pnpm-workspace.yaml is the
+# same file for the same reason (PR 686); this one was missing until the pin made it necessary.
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild

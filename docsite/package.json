@@ -1,6 +1,7 @@
 {
   "name": "agni-docsite",
   "private": true,
+  "packageManager": "pnpm@12.5.1",
   "description": "Build tooling for the Agni docs' interactive playground components (esbuild).",
   "scripts": {
     "build": "node build.mjs",
