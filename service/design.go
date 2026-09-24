@@ -73,6 +73,12 @@ type Loader interface {
 	// port declares and the same one `agni check --url-base` mints its links from, so the two sides
 	// of the hop compare values computed by one implementation rather than by two.
 	//
+	// THE CALLER PASSES A RESOLVED TIER, never the request. A design is spelled three ways (the
+	// folder, the entry, a declared companion) and all three analyse the same bytes, so the identity
+	// is the NETLIST tier `TierURIs` returned (C32). Hashing the request instead is not a hash of
+	// nothing, which would be caught: a companion hashes to the companion and a folder hashes to
+	// nothing at all, so one spelling reports a confident wrong revision and another reports none.
+	//
 	// An error means this server could not hash the file, which GetDesign reports as an empty
 	// content_hash. That is a THIRD state, distinct from a match and a mismatch, and the response's
 	// doc comment binds the consumer to keep it so.
@@ -254,7 +260,12 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	// thing lost is the viewer's ability to VERIFY a link that points here, so the field goes empty
 	// and the response stands, exactly as DesignRef.content_hash documents for a producer that did
 	// not hash. Failing the open over a provenance field would cost the reader the design too.
-	if h, err := s.loader.DesignHash(ctx, u); err == nil {
+	//
+	// The NETLIST tier, not the request. A revision identity names the bytes a read of this design
+	// actually opens, and every spelling of one design opens the same ones (C32). Hashing the request
+	// gave a companion ref the companion's digest, which the viewer then reported as a stale link
+	// against a design that was in sync.
+	if h, err := s.loader.DesignHash(ctx, nu); err == nil {
 		resp.ContentHash = h
 	}
 	for _, sh := range g.GetSheets() {
