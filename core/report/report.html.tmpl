@@ -32,6 +32,12 @@
   {{end}}
 </p>
 
+{{if .LinksWithheld}}
+<div class="links-withheld">
+  Subjects on this page are not linked to the viewer. {{.LinksWithheld}}
+</div>
+{{end}}
+
 {{range .Rules}}
 <details {{if .Failed}}open{{end}}>
   <summary>

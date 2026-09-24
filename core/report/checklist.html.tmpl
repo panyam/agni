@@ -30,6 +30,12 @@
   covered and unanswered. Neither is a pass rate.
 </div>
 
+{{if .LinksWithheld}}
+<div class="links-withheld">
+  Findings on this page are not linked to the viewer. {{.LinksWithheld}}
+</div>
+{{end}}
+
 {{range .Areas}}
 <div class="area">
   <h2>{{.Name}}</h2>

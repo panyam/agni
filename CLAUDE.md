@@ -211,7 +211,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `core/report/style.css`. **Against a REMOTE server a link is only emitted for a mount you DECLARED**,
   because a mount minted for one run means nothing on a server not started with it, and that server is
   then asked through `ListMounts` whether it serves the name from the same root; a withheld link always
-  prints its reason. **`--server self` removes the question instead of answering it**: one process
+  states its reason, on stderr AND in the report itself, because the reader who needs it is the one
+  opening the saved page later, by which time the terminal is gone (issue 626).
+  **`--server self` removes the question instead of answering it**: one process
   reads the design and serves it, so a minted mount is as linkable as a declared one, and it blocks
   until Ctrl-C because the links live exactly as long as the server does. `self:PORT` fails on a taken
   port rather than moving. **A link names
