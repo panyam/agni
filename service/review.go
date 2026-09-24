@@ -178,7 +178,11 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	}
 	// The hash is provenance, not a precondition: a design that ran but cannot be re-read still
 	// produced real outcomes, so an unreadable source records no hash rather than failing the create.
-	hash, err := s.loader.DesignHash(ctx, designURI)
+	//
+	// Taken from the NETLIST tier the run actually scored, not from the request. This provenance is
+	// STORED, so a review created by naming the design folder recorded the folder, which does not
+	// hash, and the document then claimed no revision for a run that read perfectly good bytes.
+	hash, err := s.loader.DesignHash(ctx, netlistURI)
 	if err != nil {
 		hash = ""
 	}
