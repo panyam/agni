@@ -41,11 +41,16 @@ type osProjectConfig struct {
 // here as an error: the loops below run zero times.
 func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
 	var out service.ResolvedConfig
+	// read records every host path this resolution opened, so the digest below covers exactly what
+	// was read rather than what the config named. A URI that resolves to a different directory on
+	// two servers is the same config and different bytes, and it is the bytes that decide the run.
+	var read []string
 	for _, uri := range cfg.GetProfileUris() {
 		dir, err := c.dir(uri)
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
+		read = append(read, dir)
 		ps, err := profiles.LoadDir(dir)
 		if err != nil {
 			return service.ResolvedConfig{}, fmt.Errorf("%s profiles %s: %w", namespace, uri, err)
@@ -58,6 +63,7 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
+		read = append(read, dir)
 		set, err := param.LoadSet(os.DirFS(dir))
 		if err != nil {
 			return service.ResolvedConfig{}, fmt.Errorf("%s params %s: %w", namespace, uri, err)
@@ -79,6 +85,7 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
+		read = append(read, abs)
 		decl, err := intent.LoadFile(abs)
 		if err != nil {
 			return service.ResolvedConfig{}, fmt.Errorf("%s intent %s: %w", namespace, uri, err)
@@ -86,6 +93,14 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 		out.Sources = append(out.Sources, intent.Source("intent", decl))
 		out.Intent = true
 	}
+	// A resolution that read nothing is identifiable as having read nothing, which is a real answer
+	// and not an absent one. Symbol paths go in as NAMES: this call never opens them, and they are
+	// URIs rather than host paths, so statting one would fail rather than digest.
+	digest, err := digestConfig(read, cfg.GetSymbolPathUris())
+	if err != nil {
+		return service.ResolvedConfig{}, fmt.Errorf("%s config digest: %w", namespace, err)
+	}
+	out.Digest = digest
 	return out, nil
 }
 

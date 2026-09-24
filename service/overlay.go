@@ -40,6 +40,9 @@ type Overlay struct {
 	// came from a project or from the deployment default. A request-supplied convention replaces it
 	// (WS3-124), and replacement is by name, so the name has to travel with the value.
 	conventionName string
+	// id accumulates the inputs this overlay was composed FROM, which is what Identity hashes. See
+	// overlayidentity.go for why it is the inputs rather than the composed value.
+	id *overlayID
 	// baseConvention is the catalog source name of the SERVER's startup convention (`--conventions`),
 	// empty when the caller composed no such default. Catalog drops it before splicing this request's
 	// own, which is what makes a request-supplied convention override rather than stack (WS3-124).
@@ -211,6 +214,11 @@ type ResolvedConfig struct {
 	// a tier its config supplied.
 	Profiles bool
 	Intent   bool
+	// Digest identifies the BYTES this resolution read, so an overlay composed from it can say
+	// whether two runs saw the same config. Empty means this resolver does not report one, which is
+	// legal and costs the overlay its identity rather than producing one that quietly covers less
+	// than it claims: see Overlay.Identity.
+	Digest string
 }
 
 // configNeedsResolver reports whether cfg names anything only an adapter can read.
@@ -245,8 +253,16 @@ func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 // A REQUEST's own overlay still wins over both. A caller that named its conventions is answering for
 // itself, and the project is the default it is overriding.
 func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
+	// Seeded with every input this call can see. What a resolver reads is folded in where it is read,
+	// below, because only the resolver knows what it opened.
+	id := &overlayID{}
+	id.add("base-convention", []byte(baseConvention))
+	id.addProto("request", req)
+	id.addProto("project", p)
+	id.addProto("design", d)
+	id.inherit("fallback", fallback)
 	if p == nil {
-		return overlayWithRequest(ctx, resolver, req, fallback, baseConvention)
+		return overlayWithRequest(ctx, resolver, req, fallback, baseConvention, id)
 	}
 	// The project's config and the design's are resolved TOGETHER, as one AnalysisConfig. Intent is
 	// the design's where the rest is the project's, and loading them in one call is what keeps a run
@@ -259,6 +275,9 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		return Overlay{}, err
 	}
 	merged := mergeConfig(inherited, d.GetConfig())
+	// The INHERITED config is an input the request and project protos do not carry: it came from
+	// whatever `extends` names, which is another project's descriptor.
+	id.addProto("inherited-config", merged)
 	var o Overlay
 	if resolver != nil {
 		cfg, err := resolver.ResolveConfig(ctx, merged, projectNamespace(p))
@@ -267,6 +286,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		}
 		o.Sources, o.Specs, o.Profiles, o.Intent = cfg.Sources, cfg.Specs, cfg.Profiles, cfg.Intent
 		o.SymbolPaths = cfg.SymbolPaths
+		id.addDigest("project-config", cfg.Digest)
 	} else if configNeedsResolver(merged) {
 		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, p.GetName())
 	}
@@ -281,7 +301,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		o.conventionName = conv.GetName()
 	}
 	o.baseConvention = baseConvention
-	return overlayWithRequest(ctx, resolver, req, o, baseConvention)
+	return overlayWithRequest(ctx, resolver, req, o, baseConvention, id)
 }
 
 // projectNamespace is the catalog source name a project's profiles are registered under.
@@ -323,7 +343,7 @@ func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 }
 
 // overlayWithRequest lets a request's own config override whatever it was layered on.
-func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webapi.OverlayConfig, base Overlay, baseConvention string) (Overlay, error) {
+func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webapi.OverlayConfig, base Overlay, baseConvention string, id *overlayID) (Overlay, error) {
 	reqOv, err := ComposeOverlay(req, baseConvention)
 	if err != nil {
 		return Overlay{}, err
@@ -342,12 +362,14 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 		if err != nil {
 			return Overlay{}, err
 		}
+		id.addDigest("request-config", reqResolved.Digest)
 	}
 	// Every tier the request could have contributed has to appear in this guard. A tier missing from it
 	// is silently dropped for a request that carries ONLY that tier, which is the shape symbol paths
 	// arrive in and the shape a reader would never suspect.
 	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 &&
 		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 {
+		base.id = id
 		return base, nil
 	}
 	// A request convention REPLACES rather than stacks (WS3-124), which is what the serve flag help
@@ -386,5 +408,6 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	// the fallback happened to hold would leave the server's convention running alongside the
 	// request's, which is the stacking WS3-124 removed.
 	out.baseConvention = baseConvention
+	out.id = id
 	return out, nil
 }
