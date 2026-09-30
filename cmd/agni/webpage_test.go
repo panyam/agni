@@ -12,7 +12,7 @@ func TestViewerPageRendersShell(t *testing.T) {
 	// newPageApp joins dir + "/templates"; "../../web" resolves to the repo's web/templates
 	// relative to this package (cmd/agni), the go-test working directory.
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	// A work-page URL, not "/": since WS9-049 phase 2 the root serves the browse page, so the
 	// viewer shell is reached by addressing a design.
@@ -62,7 +62,7 @@ func TestViewerPageRendersShell(t *testing.T) {
 // wildcard segment before a literal one).
 func TestWorkPageServesDesignsSpace(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, path := range []string{
 		"/designs/",        // the space root
@@ -91,7 +91,7 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 // tree. The browser did not move, so the same test asserts /designs/ still serves it.
 func TestRootServesLandingPage(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, path := range []string{"/", "/not-a-page"} {
 		rec := httptest.NewRecorder()
@@ -124,7 +124,7 @@ func TestRootServesLandingPage(t *testing.T) {
 // icon reference would satisfy.
 func TestEveryPageOffersAWayHome(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, path := range []string{
 		"/designs/",                          // the folder browser
@@ -144,7 +144,7 @@ func TestEveryPageOffersAWayHome(t *testing.T) {
 
 func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	// browse markers / work markers. The bundle reference is the sharpest discriminator: a page
 	// loading app.js IS the viewer, whatever else it renders.
@@ -187,7 +187,7 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 // ever mounting (the islands resolve their holes by id at boot and bail when they are missing).
 func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/", nil))
@@ -212,7 +212,7 @@ func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 // the split still resolves, landing on the same design and sheet in the new space.
 func TestLegacyFilesRedirect(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, tc := range []struct{ from, want string }{
 		{"/files/corpus/boards/b.kicad_sch", "/designs/corpus/boards/b.kicad_sch/view"},
@@ -239,7 +239,7 @@ func TestLegacyFilesRedirect(t *testing.T) {
 // shell at /datasheets/: the tree and region-viewer holes, its own bundle, and its title.
 func TestDatasheetsPageRendersShell(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/datasheets/", nil))

@@ -55,8 +55,8 @@ the design again, which is the cost on a large board. `run_queries` asks many qu
 so over either transport a whole audit costs one read.
 
 **The Connect transport** posts JSON to `/agni.v1.webapi.<Service>/<Method>`. The server reads a
-design once and answers many questions about it. `agni serve` still needs a built viewer bundle
-(`--web-dir`) to start even though the API never uses it, which agni issue 735 tracks.
+design once and answers many questions about it. `agni serve` with no web dir serves the API alone,
+so an installed binary needs no viewer assets for this.
 
 The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py` is the table:
 
