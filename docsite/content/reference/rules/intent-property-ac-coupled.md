@@ -28,19 +28,19 @@ lose in a respin.
 
 Both are "a capacitor on the net", and the difference is what the far side connects to.
 
-- **Decoupling**: the far side is ground (or a rail). The cap shunts noise; the signal does not pass
+- A **decoupling** cap's far side is ground (or a rail). It shunts noise, and the signal does not pass
   through it.
-- **Coupling**: the far side is another signal net. The signal passes through it.
+- A **coupling** cap's far side is another signal net, and the signal passes through it.
 
 So the rule looks for a capacitor on the declared net whose *other* net is neither ground nor a power
-rail. That is the structural difference between the two uses of the same component.
+rail.
 
 ### What a pass means here
 
-This property is **decidable** from the netlist: a series capacitor is either present or it is not. So
-a pass means the declaration is met, not merely "no contradiction found".
+This property is **decidable** from the netlist, since a series capacitor is either present or it is
+not. So a pass means the declaration is met, not merely "no contradiction found".
 
-That is worth stating because its sibling `property-reset-polarity` is different, so read that card
+Its sibling `property-reset-polarity` is different, so read that card
 before assuming the two behave alike.
 
 ### Declaring it
@@ -56,4 +56,5 @@ iterates the declaration, never the design, so it has no opinion about nets your
 ### Fixing a finding
 
 Either the coupling capacitor is missing from the schematic, or the declaration names the wrong net.
-Check which before adding a part: on a differential pair it is easy to declare `_P` and wire `_N`.
+Check which before adding a part, since on a differential pair it is easy to declare `_P` and wire
+`_N`.

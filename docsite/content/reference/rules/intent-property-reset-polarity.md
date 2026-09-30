@@ -15,9 +15,9 @@ contradiction between what the design says it wants and what it actually does.
 
 ### What it does when it cannot tell
 
-**A netlist states polarity nowhere.** The only structural evidence is a bias resistor, and plenty of
-correct designs carry none: a supervisor or PMIC with an internal pull-up drives the reset line by
-itself and the schematic shows a bare net.
+**A netlist states polarity nowhere.** The only structural evidence is a bias resistor, and plenty
+of correct designs carry none, because a supervisor or PMIC with an internal pull-up drives the
+reset line by itself and the schematic shows a bare net.
 
 The rule now **says so** rather than staying quiet. A declared reset with no bias reports an
 INCONCLUSIVE finding, and a review item bound to it reads `inconclusive`, never `pass`. The message
@@ -28,10 +28,10 @@ This used to be silence, and a passing item then meant only "no contradiction fo
 and in a test name, and that anyone reading a green report would never see. It is now in the report
 itself.
 
-A **divider** reports inconclusive too, with a different message: two resistors hold the line at an
-intermediate level rather than at either rail, so which level the receiver reads depends on the
-ratio against its input thresholds. Telling you "no bias" on a board that visibly has two resistors
-would send you looking for the wrong thing.
+A **divider** reports inconclusive too, with a different message, because two resistors hold the
+line at an intermediate level rather than at either rail, so which level the receiver reads depends
+on the ratio against its input thresholds. Telling you "no bias" on a board that visibly has two
+resistors would send you looking for the wrong thing.
 
 Its sibling `property-ac-coupled` is decidable by looking and carries no inconclusive case.
 
@@ -45,15 +45,16 @@ Put a pull-down on that line instead and the part is held in reset from the mome
 The board looks dead, and the cause is one resistor to the wrong net, a bring-up failure that reads
 as a broken part or bad firmware for as long as it takes someone to meter the reset pin.
 
-Active-high is the mirror image: it should rest low, so a pull-up holds it permanently asserted.
+Active-high is the mirror image, resting low, so a pull-up holds it permanently asserted.
 
 ### What counts as bias
 
 A resistor on the declared net whose other end reaches a power rail (pull-up) or a ground net
 (pull-down).
 
-A net with **both**, a divider, reports neither. A divider sets an intermediate level, so it does
-not hold the line at either rail, and calling it a contradiction would be wrong.
+A net with **both**, a divider, counts as neither direction and reports inconclusive, as above. A
+divider sets an intermediate level, so it does not hold the line at either rail, and calling it a
+contradiction would be wrong.
 
 ### Declaring it
 
@@ -63,8 +64,9 @@ net_properties:
   - {net: PHY_ENABLE,  property: reset-polarity, value: high}
 ```
 
-The `value` is the assertion, and it is required: without it the rule has nothing to contradict, so an
-omitted or misspelled level is rejected at load rather than becoming a rule that silently never fires.
+The `value` is the assertion, and it is required, because without it the rule has nothing to
+contradict, so an omitted or misspelled level is rejected at load rather than becoming a rule that
+silently never fires.
 
 ### Fixing a finding
 

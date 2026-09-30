@@ -20,13 +20,13 @@ invisible until someone meters the pin.
 Query this to see what every line rests at, or join it against a declared intent to find lines that
 rest at the wrong level.
 
-### Two clauses, and the second is the one that gets forgotten
+### Direct and indirect bias
 
 The bias resistor commonly sits directly between the net and its rail. It does not have to. It can
 reach the rail through further passives, a filter or a second resistor, and a check that only looked
 for the direct arrangement would silently report those nets as unbiased.
 
-Both forms count here. `profiles.pullupRule` learned this the hard way (WS3-108): its walk-based form
+Both forms count here. `profiles.pullupRule` hit this in WS3-108, when its walk-based form
 could not enter a wide rail at all, so a direct clause had to be added beside it. Keeping both in one
 predicate is what stops the next consumer reimplementing half of it.
 
@@ -34,7 +34,7 @@ predicate is what stops the next consumer reimplementing half of it.
 
 A net with both a pull-up and a pull-down sits at an intermediate level. It is not held at either
 rail, so it yields no row rather than an arbitrary one. A caller asking "is this held asserted" gets
-the honest answer instead of a coin flip.
+the answer "neither" instead of a coin flip.
 
 ### Go projector
 

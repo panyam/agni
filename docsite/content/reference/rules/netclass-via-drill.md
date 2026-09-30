@@ -21,7 +21,7 @@ There is no number in this rule. The limit comes entirely from the design.
 
 ## How it differs from `hole-size`
 
-`hole-size` asks **can this be drilled**: it compares via drills against a universal mechanical-drill
+`hole-size` asks **can this be drilled**, comparing via drills against a universal mechanical-drill
 floor (0.2mm). A finding there means the fab cannot make the hole, or will silently upsize it.
 
 This rule asks **is this what you asked for**. A class's declared drill is usually sized for the
@@ -42,12 +42,15 @@ Comparing a net's vias against every class it belongs to would fail nets that co
 class that won. The rule resolves the cascade first, then compares once, and the finding names the
 class the limit came from.
 
+A net whose classes, `Default` included, state no drill has no limit to meet, and the rule reports
+that rather than a pass.
+
 ## Hardware context (for software readers)
 
-- **Via**: a plated hole connecting copper on different layers. The **drill** is the hole diameter
-  before plating.
-- **Why the declared drill matters**: a bigger drill carries more current and plates more reliably.
-  A class that declares one has usually done that sizing deliberately.
+- A **via** is a plated hole connecting copper on different layers. The **drill** is the hole
+  diameter before plating.
+- The declared drill matters because a bigger drill carries more current and plates more reliably.
+  A class that declares one has usually been sized with both in mind.
 
 ## Absence is not a pass
 
@@ -55,4 +58,4 @@ The rule declares `CapNetClassDefs`. A design that declares no net-class definit
 compare against, so the rule reports not-applicable rather than running over zero comparisons and
 reading clean. Only a KiCad project read supplies definitions.
 
-The rule is also silent on a net with no vias, since there is nothing to measure.
+The rule reports a net with no vias as not-considered, since there is nothing to measure.

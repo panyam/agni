@@ -7,14 +7,14 @@ designator, every net by its name, every unmodeled bus by its label. `kind` is `
 `bus`, the same vocabulary a finding's subject and a picked entity on the canvas carry.
 
 It is the only relation whose range is EXISTENCE rather than a relationship. Every other one ranges
-over an association: a component on a net, a pin's role, a rail's declared voltage. That difference is
-the whole point. Before this relation, a question like "what is in this design" or "what is called
+over an association: a component on a net, a pin's role, a rail's declared voltage.
+Before this relation, a question like "what is in this design" or "what is called
 something like this" had to borrow another relation's range, and quietly inherited that relation's
 blind spots.
 
 An unnamed net and an anonymous bus wire emit nothing. A row with an empty name could never match a
 name search and would answer "" to a question about what things are called, so its absence is the
-honest report rather than a gap.
+correct answer (the thing has no name) rather than a gap.
 
 Pins are absent by design. A pin's identity is two fields, so it cannot be one `name` without
 inventing a composite string nothing else in the fact base would join against. `pin(ref_des, pin)`
@@ -29,12 +29,12 @@ mind when a design is read sheet by sheet.
 
 ### For hardware engineers
 
-This is the index at the front of the drawing set. Not "what is connected to what", just "here is
-everything this design names, and what sort of thing each one is". You reach for it when you know
+This is the index at the front of the drawing set, listing everything this design names and
+what sort of thing each one is rather than what is connected to what. You reach for it when you know
 part of a name and want to find the thing: every net with `CAN` in it, every reference designator
 starting with `U`, every bus label the reader saw.
 
-The reason it exists as its own relation is a practical one. Searching through `component-on-net`
+It exists as its own relation because searching through `component-on-net`
 looks equivalent and is not. A part with no connections, a net with nothing on it, a bus that was
 detected but never expanded: none of them appear in a connection relation, and those are exactly the
 things worth finding during a review, since an unconnected part is usually either a mounting hole or
@@ -42,7 +42,7 @@ a mistake.
 
 ### For software engineers
 
-An enumeration over the design graph's nodes, where every other netlist relation is an enumeration
+It is an enumeration over the design graph's nodes, where every other netlist relation is an enumeration
 over its edges or its node attributes. Searching for a node by walking edges misses every isolated
 node, which is the bug this closes.
 

@@ -22,9 +22,10 @@ conservative to stay quiet on legitimate nets.
 ### Scope note (conservative on purpose)
 
 Fires only when every pin on the net is an input (or an
-explicit no-connect): the moment a driver, a passive (a pull), or a power pin is present the net is
-considered set and the rule stays quiet. A net with any un-typed (UNSPECIFIED) pin is skipped too,
-since the reader could not classify it. This trades recall for near-zero false positives.
+explicit no-connect), so the moment a driver, a passive (a pull), or a power pin is present the net
+is considered set and the rule stays quiet. A net with any un-typed (UNSPECIFIED) pin counts as not
+input-only and passes, although the reader could not classify that pin. This trades recall for
+near-zero false positives.
 
 ### A passive member exempts the net
 
@@ -37,14 +38,14 @@ made cap-plus-input nets read as all-input the moment pin keys joined correctly,
 
 ### A diode terminal is not a logic input
 
-Some libraries type a diode/LED/TVS terminal (an anode or cathode) INPUT, the same way they
-type passive pins. But a diode-only node's level is set by the diode network (a clamp, a
-steering pair, a diode-OR), it is not an undriven logic input. So a diode-family pin is
-excluded from the "is there a logic input" count. The exclusion is PER-PIN, not per-net:
-a real IC input that merely carries a clamp diode still fires (the input is genuinely
-floating), only a net whose input pins are all diode terminals goes quiet. (Without this, a
-pair of steering-diode cathodes tied together read as an all-input net and false-fired; on
-one real industrial netlist that was 36 findings, every one a diode network.)
+Some libraries type a diode/LED/TVS terminal (an anode or cathode) INPUT, the same way they type
+passive pins. But a diode-only node's level is set by the diode network (a clamp, a steering pair, a
+diode-OR), so the node is not an undriven logic input. A diode-family pin is therefore excluded from
+the "is there a logic input" count. The exclusion is PER-PIN, not per-net, so a real IC input that
+merely carries a clamp diode still fires (the input is genuinely floating), while only a net whose
+input pins are all diode terminals goes quiet. (Without this, a pair of steering-diode cathodes tied
+together read as an all-input net and false-fired; on one real industrial netlist that was 36
+findings, every one a diode network.)
 
 ### Query structure
 

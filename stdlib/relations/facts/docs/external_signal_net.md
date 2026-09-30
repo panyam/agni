@@ -16,16 +16,17 @@ This is the set of lines an ESD review is actually about. A signal that leaves t
 for a discharge to travel into whatever drives it, and the parts on the far end of a connector are
 the ones a person touches.
 
-The exclusions are what keep the question honest. A power rail arriving on the same connector is a
-different review with different rules (input protection: fuses, reverse blocking, inrush), so it is
-subtracted here rather than lumped in. A ground pin needs no clamp. A pad wired to nothing on purpose
-is not an exposure. Querying this relation on a real board is the fastest way to check that the engine
-agrees with you about which lines are exposed, before trusting any ESD verdict built on top of it.
+Each exclusion removes a net an ESD verdict would otherwise misjudge. A power rail arriving on the
+same connector is a different review with different rules (input protection: fuses, reverse
+blocking, inrush), so it is subtracted here rather than lumped in. A ground pin needs no clamp. A
+pad wired to nothing on purpose is not an exposure. Querying this relation on a real board is a
+quick way to check that the engine agrees with you about which lines are exposed, before trusting
+any ESD verdict built on top of it.
 
 ### For software engineers
 
-A filtered projection over `Nets()`, 1:1 with in-scope nets. Empty on a design with no connectors,
-which is a genuine answer rather than a permissive one: a board that exposes nothing has no ESD
+It is a filtered projection over `Nets()`, 1:1 with in-scope nets. Empty on a design with no connectors,
+which is a genuine answer rather than a permissive one, because a board that exposes nothing has no ESD
 question to fail.
 
 It is the one part of the ESD guard stack that could not be composed from other relations. The
@@ -37,7 +38,8 @@ reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "t
 ```
 
 The scope could not, because its guards read net ATTRIBUTES (`global`, `power_driven`) and the
-no-connect channel, none of which have a relation of their own. Reassembling it clause by clause in
+no-connect channel. `net.attr` now exposes the attributes (agni 691), but reassembling it clause by
+clause in
 datalog would eventually drop one, and a dropped guard here is a false FAIL on a rail or an
 unconnected pad rather than a missed defect.
 

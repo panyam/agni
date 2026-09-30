@@ -10,19 +10,21 @@ width of the loosest mainstream fabrication capability (the corpus JLCPCB rule s
 ### Why engineers want it
 
 Track width is the first constraint every fab publishes and
-every DRC ships. A sub-minimum trace is not a style choice: the fab rejects the board or
+every DRC ships. Below the floor the fab rejects the board or
 etches it unreliably.
 
 ### Impact
 
-Order-time rejection at best; intermittent opens and current failures at worst.
+At best the fab rejects the board at order time. At worst the trace etches into intermittent opens
+and fails under current.
 
 ### Scope note
 
 The 0.127mm default is deliberately the loosest published floor, so the
 rule fires on defects rather than on deliberate tight routing under a capable fab's own
-rules; per-design thresholds arrive with rule parameterization (WS3-006). Available gates
-the rule behind the board-geometry tier (a netlist-only design reports "unavailable", not
+rules; per-design thresholds arrive with rule parameterization (WS3-006), and
+`netclass-track-width` checks the width a project's own net classes declare. `check.Available` gates
+the rule behind the board-geometry tier (a netlist-only design reports not-applicable, not
 a silent pass).
 
 ### Query structure

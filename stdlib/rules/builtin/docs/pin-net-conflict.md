@@ -11,10 +11,10 @@ corrupt export rather than a design error a person drew.
 
 They should rarely see it. It exists as the integrity tripwire
 behind every per-pin net question the engine answers (pin.role consumers, diff keys,
-viewer highlights): when the invariant breaks, this fires instead of every downstream
+viewer highlights), and when the invariant breaks it fires instead of every downstream
 answer silently becoming arbitrary. PinNetName documents that it reports the first net in
 design order; this rule is why that arbitrary pick is safe. A firing points at the READ,
-not the design: its first corpus run surfaced two reader gaps (unannotated placeholder
+not the design, and its first corpus run surfaced two reader gaps (unannotated placeholder
 refs merged, WS1-024; duplicate port designators collapsed, WS1-025).
 
 ### Impact
@@ -26,27 +26,26 @@ quietly. With it, the file is flagged at check time with the claiming nets named
 
 ### Severity is info, deliberately
 
-Both known producers of this state are reader gaps
-(WS1-024, WS1-025), so today a firing points at the tool's read of the file, not at the
-design, and flagging it louder would blame the engineer for our keying. Revisit via severity
-configuration (WS3-006) once the reader fixes land and a firing is anomalous again.
+Both known producers of this state were reader gaps
+(WS1-024, WS1-025), and both are fixed. The KiCad board reader now skips placeholder footprints,
+and the EDIF reader resolves port instances. A firing still points at the tool's read of the file
+rather than at the design, and flagging it louder would blame the engineer for our keying.
+Raising it is a job for severity configuration (WS3-006).
 
 ### Two deliberate suppressions
 
 A duplicated ref-des produces this state mechanically, since
 each colliding placement brings its own copper, so their shared (ref, pin) key lands in
 several nets. That root cause is duplicate-ref-des's finding; pins of collided ref-des
-are skipped here so one authoring slip yields one finding, not two. (Found on the
-sheetnav conformance fixture the moment this rule first ran: the tripwire works, it just
-caught prey that already had an owner.)
+are skipped here so one authoring slip yields one finding, not two. (The
+sheetnav conformance fixture showed this the first time the rule ran.)
 
 The second is an UNANNOTATED ref-des: `R?`, `C?`, `REF**`, or a partly-assigned
-`C?1845`. This rule asserts something about a PIN, and `(R?, 1)` does not name one: on one
+`C?1845`. This rule asserts something about a PIN, and `(R?, 1)` does not name one, and on one
 export 176 distinct un-annotated resistors shared that key, so the index saw a single pin
 sitting on 129 nets and 77% of this rule's findings on that design described a netlist that
-was fine. The design is not malformed; the key is not a key. Declining to assert uniqueness
-over a non-identity is not the same as hiding a defect, and the un-annotated parts are a
-finding in their own right rather than a silence.
+was fine. The design is not malformed, because a placeholder is not a key. The un-annotated
+parts are reported by `unannotated-components` instead, so nothing is hidden.
 
 ### Query structure
 

@@ -15,13 +15,13 @@ supplies, and prints one outcome per item. `make help` lists the rest.
 
 Note what the command does **not** carry: no `--conventions`, no `--profile-path`, no `--params`, no
 `--intent-path`. The board resolves to this project, and the project's config is read from beside
-`project.yaml`. That is also what keeps it from reaching anywhere else — a design in another project,
+`project.yaml`. That is also what keeps it from reaching anywhere else. A design in another project,
 or in none, cannot be checked against these rules, because config travels along the design-to-project
 edge rather than along the command line.
 
 ## Layout
 
-This is the shape a real review project takes. Two kinds of file live here, and the split matters.
+This is the shape a real review project takes. Two kinds of file live here.
 
 **Per-project**, shared by every design:
 
@@ -32,6 +32,7 @@ This is the shape a real review project takes. Two kinds of file live here, and 
 | `conventions.yaml` | house naming: which net names are rails, and what a legal name looks like |
 | `profiles/` | interface declarations, one per bus this team designs with |
 | `params/` | datasheet parameter sets, one per part worth checking against its limits |
+| `reports/<design>/` | the outcome of a run on one design, written by `make report` |
 
 **Per-design**, one set per folder under `designs/`:
 
@@ -42,7 +43,6 @@ This is the shape a real review project takes. Two kinds of file live here, and 
 | `gateway.kicad_sch` | the same board as a KiCad schematic, with `symbols/` as an external library |
 | `gateway.kicad_pcb` | the same board's copper, for the board-tier checks |
 | `intent.yaml` | what this board is supposed to be: declared domains, modules, subsystems |
-| `reports/<design>/` | the outcome of a run, written by `make report` |
 
 Intent is per-design because each board has its own intended architecture. Conventions, profiles,
 and parameters are per-project because they describe the team, not the board.
@@ -74,35 +74,33 @@ to report rather than a contrived one.
   has checked. `params/acme-buck-3v3.textproto` is the seeded-and-trusted contrast.
 - **One intent declaration is deliberately wrong.** The core domain is declared at 3.3 V while its
   rail is an actual 1.8 V rail, so the intent check has a real deviation to find.
-- **The entry file is a netlist, which carries no copper.** The board-tier item reads `n/a`, which
-  means the question does not apply to what was loaded. That is not the same as a pass.
+- **The entry file is a netlist, which carries no copper.** The board-tier item is answered from
+  the `.kicad_pcb` that `design.yaml` declares as a companion. A design declaring no board reads
+  `n/a` there, which means the question does not apply to what was loaded, and that is not a pass.
 
 ## A note on the netlist
 
-One thing about the EDIF is load-bearing, and it is easy to get wrong when writing one by hand.
+One rule about the EDIF decides whether pins connect at all, and it is easy to get wrong when
+writing one by hand.
 
 A `portRef` names a port by its **designator**, not by the port's name. Use the name and the
 connection never joins to the pin, so pin-level rules see an unconnected part while `stats` looks
 perfectly healthy.
 
 Each part cell here also declares its own `(designator "<prefix>")`, which is how a cell states the
-reference-designator prefix its instances use. That is good practice rather than a requirement: a
-cell that omits it falls back to the prefix on each instance's own ref-des. It used to be required
-here for a different reason, because the reader would take a *port's* designator when a cell
+reference-designator prefix its instances use. That is good practice rather than a requirement,
+since a cell that omits it falls back to the prefix on each instance's own ref-des. It used to be
+required here for a different reason, because the reader would take a *port's* designator when a cell
 declared none, and every component of that cell then classified as unknown. That was agni issue 109
 and it is fixed.
 
-## What this fixture is, and how it stays honest
+## What this fixture is, and how its views stay in step
 
-`examples/tutorial-project/` is the shareable review-project fixture the docsite tutorial runs on: a
+`examples/tutorial-project/` is the shareable review-project fixture the docsite tutorial runs on, a
 synthetic sample board in three views (`.edn` plus a rev-b, a `.kicad_sch` with an external symbol
 library, a `.kicad_pcb`) with `review.yaml`, `conventions.yaml`, `profiles/`, `params/`, and a
-per-design `intent.yaml`. Deliberately imperfect, one flaw per thing a tutorial rung has to show.
-The KiCad views are GENERATED from the netlist by `tools/`. From inside `examples/tutorial-project/`,
-`make check-views` fails if the three stop describing the same design, and `make regen-views`
-rebuilds them after any netlist edit (both targets live in that folder's own Makefile, not the root
-one). It is not a Go module, so `make testall`'s `examples/*/go.mod` glob skips it.
-
-**When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`).
-Each example is its own Go module so the demo kit stays out of the engine `go.mod`, and narration
-lives in a sidecar `walkthrough.md` rather than in Go strings.
+per-design `intent.yaml`. The KiCad views are GENERATED from the netlist by `tools/`. From
+inside `examples/tutorial-project/`, `make check-views` fails if the three stop describing the same
+design, and `make regen-views` rebuilds them after any netlist edit (both targets live in this
+folder's own Makefile, not the root one). It is not a Go module, so `make testall`'s
+`examples/*/go.mod` glob skips it.

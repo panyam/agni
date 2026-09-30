@@ -9,8 +9,8 @@ nets is malformed input, a reader bug or a corrupt export, not a design a person
 multi-row shape (one row per claiming net) lets a query name every net the conflicted pin touches
 and join to those nets.
 
-This is the query-relation face of the `pin-net-conflict` integrity rule: the rule fires a
-finding, the relation lets you interrogate the same condition ad hoc.
+This is the query-relation face of the `pin-net-conflict` integrity rule, which fires a
+finding where the relation lets you interrogate the same condition ad hoc.
 
 ### For hardware engineers
 
@@ -22,7 +22,7 @@ board."
 
 ### For software engineers
 
-A net is an **equivalence class** over pins, so membership should be a function: each pin maps to
+A net is an **equivalence class** over pins, so membership should be a function mapping each pin to
 one net. This relation reports the keys where that function became one-to-many, the invariant
 break behind every per-pin answer downstream (`pin.net`, diff keys, viewer highlights). Rows are
 1:many with the offending pin (one per claiming net); an empty result means the read is clean and
@@ -30,7 +30,7 @@ every pin resolved to a single net.
 
 ### Go projector
 
-`pinNetConflictFacts` in `check/facts.go` iterates `Model.PinNetConflicts()` and, for each
+`pinNetConflictFacts` in `stdlib/relations/facts.go` iterates `Model.PinNetConflicts()` and, for each
 conflicted pin, emits one row per net in its `Nets` list. Empty when the read is clean. A pin of a
 collided ref-des is *not* reported here, since that root cause belongs to the `duplicate-ref-des`
 finding, so one authoring slip yields one finding, not two.

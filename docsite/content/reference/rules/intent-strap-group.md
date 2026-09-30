@@ -9,12 +9,13 @@ Re-bias the straps in the group until they encode the declared value, working th
 
 ### What it checks
 
-Several strap nets read together as one binary number, MSB-first, compared against the value the
-design intent declares. A device's address on a shared bus, its boot source, its bus width.
+It reads several strap nets together as one binary number, MSB-first, and compares it against the
+value the design intent declares, such as a device's address on a shared bus, its boot source or its
+bus width.
 
 `property-strap` asks whether one pin latches the intended level. This asks whether the pins
-*together* encode the intended number, which a per-net declaration has no vocabulary for: nothing ties
-`PHYAD2/1/0` together as one value, and nothing says which device they belong to.
+*together* encode the intended number, which a per-net declaration has no vocabulary for, since
+nothing ties `PHYAD2/1/0` together as one value, and nothing says which device they belong to.
 
 ### For hardware engineers
 
@@ -53,9 +54,9 @@ strap_groups:
   - {name: boot mode, device: U1, nets: [BOOT1, BOOT0], value: 2}
 ```
 
-`nets` is **MSB-first**, and the order is the declaration's job: nothing in a netlist states which pin
-is the high bit. A rule that inferred bit order from names would be a naming heuristic, which is
-exactly what this codebase moved out of rule literals.
+`nets` is **MSB-first**, and the order is the declaration's job, because nothing in a netlist states
+which pin is the high bit. A rule that inferred bit order from names would be a naming heuristic,
+the kind this codebase moved out of rule literals.
 
 `value` must fit in the declared bits. A value the group could never encode is rejected at load, since
 it would fail on every design including a correct one.
@@ -64,5 +65,6 @@ it would fail on every design including a correct one.
 
 ### Absence is not a pass
 
-A declared net missing from the design is left to the presence forms, not reported here. A group whose
+A declared net missing from the design is left to the presence forms, and the group reads
+`not-considered` here, naming the net. A group whose
 value cannot be read reads inconclusive, which counts as covered and never as passing.

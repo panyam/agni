@@ -23,9 +23,9 @@ nets to a class it never defines, and can define classes it assigns to nothing. 
 rule needs the DEFINITIONS. Gating it on the membership marker would let a project with assignments
 and no definitions report a clean pass over zero comparisons.
 
-Same shape and purpose as `has_netclass`, `has_nc_channel`, and `types_power_out`: a design-level
-presence row that lets an ad-hoc query ask whether a question is answerable on this design before
-trusting the answer.
+It has the same shape and purpose as `has_netclass`, `has_nc_channel`, and `types_power_out`, a
+design-level presence row that lets an ad-hoc query ask whether a question is answerable on this
+design before trusting the answer.
 
 ### Go projector
 
@@ -34,7 +34,7 @@ trusting the answer.
 
 ### Absence is not a pass
 
-That is what this relation is for. It is the queryable half of the gate; the rule half is the
+It is the queryable half of the gate; the rule half is the
 capability a declared-vs-actual rule declares, so `check.Available` reports not-applicable with a
 reason instead of letting the rule find nothing and read clean.
 

@@ -209,8 +209,8 @@ const gatingFanLimit = 16
 // false credit it credits a strict SUBSET of what the one-part test credits.
 //
 // Where the evidence is ambiguous this errs toward crediting the link, because every FAIL has to be a
-// genuine defect. The cost is a missed finding on a board whose chain runs through two parts in
-// series.
+// genuine defect. A chain that runs through two parts in series is not credited, so it reports as a
+// FAIL.
 func linked(fan map[string]int, from, to *ir.Net) bool {
 	if from == nil || to == nil {
 		return false

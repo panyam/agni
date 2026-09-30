@@ -14,7 +14,7 @@ with absolute maxima to match. Asked as a question about the PART, that has no s
 
 `supply-exceeds-abs-max` answers it by taking the most restrictive row and applying it to every
 supply pin. That is conservative, and on a part whose terminals genuinely differ it is wrong in the
-direction that costs a reviewer the most: it reports a violation where there is none, because it
+direction that costs a reviewer the most, reporting a violation where there is none, because it
 checks the 6.5 V terminal against the 4.6 V one. This rule compares each terminal against the limit
 its own datasheet row states, so a correct design stops being flagged and a real breach names the
 pin it is on.
@@ -25,7 +25,7 @@ They never both fire. This rule acts only on a part whose spec carries pin bindi
 `supply-exceeds-abs-max` defers on exactly those parts. Everything else, including every spec
 seeded before pin binding existed, is answered by the alias path exactly as before.
 
-### Evidence honesty
+### What it skips rather than guesses
 
 Every input that cannot be trusted is a skip, never a guess:
 - no MPN, unseeded MPN, no seeded set, or a spec with no pin bindings -> this rule is silent and
@@ -34,6 +34,7 @@ Every input that cannot be trusted is a skip, never a guess:
   pin NAME, uses the designator only to break a tie inside an identified package, and REFUSES when
   the two disagree or when a shared name cannot be separated. A guessed terminal would produce a
   confident finding about the wrong thing;
+- a supply pin on no net, or one the datasheet binds no comparable row to -> skipped;
 - limit rows that are under-specified or carry text-only conditions are not compared
   (param.MachineComparable);
 - a rail name with no parseable nominal, or with conflicting nominals, is not compared.

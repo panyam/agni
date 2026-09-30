@@ -27,7 +27,7 @@ The other two values are worth a look during a review:
 ### For software engineers
 
 This is the degree of each component node in the design graph, counting distinct neighbouring
-nets rather than edges. It is a derived count of `component-on-net`: for every ref it equals the
+nets rather than edges. It is a derived count of `component-on-net`, and for every ref it equals the
 number of distinct `?n` in `component-on-net(ref, ?n)`, and a test holds the two to that. It is
 total over components, so an absent row means the ref is not in the design, never that it has no
 connections.

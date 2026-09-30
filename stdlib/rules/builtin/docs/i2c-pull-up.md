@@ -10,7 +10,7 @@ to its rail. Open-drain pins can only pull low; the pull-up returns the line hig
 Open-drain is a shared-bus trick: many parts can pull the line low,
 and a single pull-up returns it high. The pull-up is external and easy to forget, especially
 when every chip on the bus has a weak internal pull-up that a designer wrongly assumes is
-enough. TI and others publish app notes on it precisely because it is a recurring field failure.
+enough. TI and others publish app notes on it, and it recurs as a field failure.
 
 ### Impact
 
@@ -20,10 +20,10 @@ A missing pull-up means the bus is stuck low and no device on it communicates.
 
 ### Scope note
 
-This is the presence check, which needs no datasheet. The
-pull-up value being in range is a datasheet-joined rule (a separate, Tier-X check). Resistor
-identity is the shared component.class fact: the ref-des prefix convention (R, RN) refined by
-part-type data when the source carries it.
+This is the presence check, which needs no datasheet. The pull-up value being in range is a
+datasheet-joined rule (a separate, Tier-X check). Resistor identity is the shared component.class
+fact, which is the ref-des prefix convention (R, RN) refined by part-type data when the source
+carries it.
 
 **The check follows the resistor's OTHER end.** It is not enough for a resistor to touch the bus,
 because a series termination or bus-isolation resistor does that and holds nothing high. The rule
@@ -37,8 +37,8 @@ topology and the reason a one-hop test would report a false positive on it. Past
 accumulated series resistance is comparable to the pull-up, so the node no longer returns high in
 the time the bus needs and there is nothing worth crediting.
 
-Resistors only, and ground is never crossed: a resistor to ground is a pull-DOWN, and counting it
-would pass exactly the bus this rule exists to catch.
+The walk crosses resistors only and never crosses ground, because a resistor to ground is a
+pull-DOWN, and counting it would pass the bus this rule exists to catch.
 
 The SDA/SCL name match is at a **token boundary**, not a substring (WS3-037): `SDA`, `SCL`,
 `I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK` do NOT, because `SCL`
@@ -47,8 +47,8 @@ arbitrary profile-declared signal set (CS, reset, boot straps) is the remaining 
 
 ### Query structure
 
-select the I2C nets that have no resistor member.
+select the I2C nets whose resistor walk reaches no rail.
 
-    select N in nets where is_i2c(N) and not exists P in N.connections where is_resistor(P)
+    select N in nets where is_i2c(N) and not pullup_reaches_rail(N)
 
 Reads: net name (pattern), on_net, component.class (resistor). Tier R.

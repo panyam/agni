@@ -18,7 +18,7 @@ series part the walk passed through between them. A net reaches itself at distan
 route is its own name.
 
 The engine could answer whether two points were connected long before it could show how, which meant
-a reviewer had no way to check the answer (agni issue 518). This is the query-side half of that: a
+a reviewer had no way to check the answer (agni issue 518). This relation is the query-side half of the fix, a
 connectivity answer that carries its own evidence, so a hundred rows can be read rather than
 re-asked one at a time.
 
@@ -43,12 +43,12 @@ the route, use `agni trace` instead. This relation is net-to-net, because that i
 
 ### For software engineers
 
-A generator over the same filtered graph `reaches` walks: nodes are nets, an edge exists only
-through a two-net pass element, and bus-like nets are excluded so the traversal cannot leak into a
-global singleton. `path` is a projection of the BFS tree, rendered.
+`route` generates over the same filtered graph `reaches` walks, in which nodes are nets, an edge
+exists only through a two-net pass element, and bus-like nets are excluded so the traversal cannot
+leak into a global singleton. `path` is a projection of the BFS tree, rendered.
 
-**One route per pair, not every route.** The walk is a breadth-first search and the path is its tree
-path, so where two resistors bridge the same two nets the answer names one of them and says nothing
+**`route` gives one route per pair, not every route.** The walk is a breadth-first search and the
+path is its tree path, so where two resistors bridge the same two nets the answer names one of them and says nothing
 about the other. It is *a* route and the shortest one, never an enumeration.
 
 `path` is a string, so every query column stays scalar and a route survives into a csv cell, a
@@ -58,7 +58,7 @@ two arguments.
 
 **A query cannot tell "no route" from "no such net."** Both are zero rows, which is ordinary datalog
 and is the right semantics for a rule (a rule asking about `VBUS` on a board that has none should
-stay silent, not fail). When that distinction is the thing you need, `agni trace` keeps the three
+stay silent, not fail). When you need that distinction, `agni trace` keeps the three
 outcomes apart and exits non-zero on an endpoint that names nothing.
 
 ### Go projector
@@ -87,7 +87,7 @@ Where a signal ends up and what stands in the way, as a document to save:
 route("SPI_CS", ?net, ?path) => ?net, ?path
 ```
 
-The route to every net that reaches a regulator's output, joined to the parts sitting there. The
+The route to every net carrying a test point, with the test point named. The
 path column is what makes the answer checkable without opening the schematic:
 
 ```
@@ -101,7 +101,7 @@ from thirteen seconds to not finishing at all.
 
 ### Where this is going
 
-`reaches` and `route` are the same walk asked twice, which is a symptom rather than a design: a path
+`reaches` and `route` are the same walk asked twice because a path
 question still has no way to state its own radius or its own edge class, so each caller hand-codes
 one. Issue 374 designs a topology-pattern surface where the radius is a quantifier and the edge
 class is a character class, and where a match carries the path it found as a matter of course. If

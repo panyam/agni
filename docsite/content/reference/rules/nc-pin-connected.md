@@ -28,10 +28,9 @@ in disguise). Worst case, the net disturbs an internal node the datasheet says t
 
 ### Scope note
 
-Fires only when the net has two or more members: a lone NC pin on its own
-stub net is the intentional case (single-pin-net skips it for the same reason). Cross-sheet
-(external) nets are skipped. The pairing is NC ↔ anything, so one flagged net reports once,
-on the net.
+Fires only when the net has two or more members, because a lone NC pin on its own stub net is the
+intentional case (single-pin-net skips it for the same reason). Cross-sheet (external) nets are
+skipped. The pairing is NC ↔ anything, so one flagged net reports once, on the net.
 
 ### Query structure
 

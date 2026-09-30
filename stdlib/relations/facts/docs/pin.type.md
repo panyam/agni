@@ -18,17 +18,18 @@ untyped.
 
 ### For software engineers
 
-`pin.type` is the **type annotation** on the pin member (ANALOGY.md: pin directions are the type
+`pin.type` is the **type annotation** on the pin member
+([the analogy guide](../../../../docsite/content/reference/analogy.md) calls pin directions the type
 annotations the connectivity rules dispatch on). Rows are 1:1 with pins, one direction each. An
-`unspecified` value is a real annotation, not a missing row: it distinguishes "declared as
+`unspecified` value is a real annotation rather than a missing row, and it distinguishes "declared as
 untyped" from "no such pin," and rules that key on it treat it as "the author annotated nothing."
 An empty result means the design carries no part-pin data.
 
 ### Go projector
 
-`pinFacts` in `check/facts.go` calls `Model.PinDir(ref, des)` for each pin, passes it through
-`dirString`, and emits a `pin.type(ref_des, pin, etype)` row. `PinDir` returns the direction the
-reader recorded for that pin (last section wins for a multi-section part); `dirString` maps the
+`pinFacts` in `stdlib/relations/facts.go` calls `Model.PinDir(ref, des)` for each pin, passes it
+through `check.DirString`, and emits a `pin.type(ref_des, pin, etype)` row. `PinDir` returns the direction the
+reader recorded for that pin (last section wins for a multi-section part); `check.DirString` maps the
 `ir.PinDirection` enum to its string, defaulting to `unspecified` for any direction it has no
 explicit case for. One row per pin; empty when no component declares pins.
 

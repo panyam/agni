@@ -16,7 +16,7 @@ There is no number in this rule. The limit comes entirely from the design.
 
 They look similar and answer different questions.
 
-`track-width` asks **can this be built**: it compares copper against a universal fabrication floor
+`track-width` asks **can this be built**, comparing copper against a universal fabrication floor
 (0.127mm) that no mainstream process goes below. A finding there means the board may be rejected at
 order time.
 
@@ -41,13 +41,16 @@ Comparing a net's copper against every class it belongs to would fail nets that 
 class that won. The rule resolves the cascade first, then compares once, and the finding names the
 class the limit came from.
 
+A net whose classes, `Default` included, state no width has no limit to meet, and the rule reports
+that rather than a pass.
+
 ## Hardware context (for software readers)
 
-- **Net class**: a named group of nets sharing routing constraints. Structurally a tag set used as a
-  policy scope.
-- **Track width**: how wide the copper trace is. Wider carries more current and runs cooler; on a
+- A **net class** is a named group of nets sharing routing constraints. Structurally it is a tag set
+  used as a policy scope.
+- **Track width** is how wide the copper trace is. Wider carries more current and runs cooler; on a
   controlled-impedance net the width is part of what sets the impedance.
-- **Why the declared width matters**: it encodes a decision someone made about current, heat, or
+- The declared width matters because it encodes a decision someone made about current, heat, or
   impedance. Routing narrower silently discards that decision.
 
 ## Absence is not a pass
@@ -57,4 +60,4 @@ compare against, so the rule reports not-applicable rather than running over zer
 reading clean. Only a KiCad project read supplies definitions; an EDIF netlist, an IPC-2581 board and
 a bare `.kicad_sch` all leave them empty.
 
-The rule is also silent on a net with no routed copper, since there is nothing to measure.
+The rule reports a net with no routed copper as not-considered, since there is nothing to measure.

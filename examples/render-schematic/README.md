@@ -7,15 +7,16 @@ tier-2 packer that feeds the WebGL2 viewer in `web/`. It is the walkthrough form
 
 ## What it shows
 
-- `common.ReadSchematicFixture` → `geom.SchematicGeometry`: a symbol library plus sheets of
-  placements, wires, and labels, keyed to the netlist IR but separate from it (CONSTRAINTS C1).
-- `render.SheetSVG` — the offline backend; writes `render.svg` you can open in any viewer.
-- `render.PackSheet` — the tier-2 columnar projection (int32 vertices + primitive records)
-  the browser uploads once; the `web/` viewer loads it via `?src=`.
+- `common.LoadSchematic` → `geom.SchematicGeometry`, which holds a symbol library plus sheets
+  of placements, wires, and labels, keyed to the netlist IR but separate from it (CONSTRAINTS C21).
+- `render.SheetSVG`, the offline backend, which writes a `render.svg` you can open in any viewer.
+- `render.PackSheet`, the tier-2 columnar projection (int32 vertices + primitive records)
+  the browser uploads once.
 - One geometry, two backends over the same render layer.
 
-EDIF `.eds` only for now: it is the only reader that emits the geometry sidecar. KiCad and
-IPC-2581 produce the netlist IR (see `read-and-stats`), not schematic geometry.
+This example reads EDIF `.eds` only, because `common.LoadSchematic` does. KiCad, xschem and
+gEDA schematics also carry the geometry sidecar, and `agni render` draws any of them
+(`render-highlight` uses a KiCad one).
 
 ## Run it
 
@@ -25,3 +26,10 @@ make demo       # TUI boxes
 make runquiet   # non-interactive defaults (CI-safe)
 make doc        # render the walkthrough to markdown
 ```
+
+## How it is built
+
+The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's
+`FromMarkdown`. `main.go` binds the four steps that run engine code (`pick`, `read`, `svg`,
+`pack`) and wires the renderer. See [`../CONVENTIONS.md`](../CONVENTIONS.md) for the layout
+every example follows.

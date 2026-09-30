@@ -7,14 +7,14 @@ walkthrough form of `agni render --highlight`.
 
 ## What it shows
 
-- `check.RunDesign` → `[]check.Finding`: the built-in rules over the netlist model; each finding
-  names a subject (net, ref-des, or pin).
-- `specsForFindings` maps each finding subject to a `geom.HighlightSpec` — the same net/component/pin
+- `check.RunDesign` → `[]check.Finding`, which runs the built-in rules over the netlist model.
+  Each finding names a subject (net, ref-des, or pin).
+- `specsForFindings` maps each finding subject to a `geom.HighlightSpec` in the same net/component/pin
   vocabulary the web click-to-locate builds. Findings computed on the netlist locate on the geometry
   by name/ref-des, never merged as a second component source (CONSTRAINTS C21).
-- `render.SheetSVGHighlighted` — draws the base sheet and composites the highlights onto ONE canvas,
-  the same projection the server serves as a separate overlay. One code path for the CLI static
-  picture and the live viewer.
+- `render.SheetSVGHighlighted` draws the base sheet and composites the highlights onto ONE canvas,
+  the same projection the server serves as a separate overlay, so the CLI static picture and the
+  live viewer share one code path.
 - The bundled default (`duplicate-refdes.kicad_sch`) flags U1 as a duplicate ref-des, so both
   offending symbols are framed on the faithful KiCad render.
 
@@ -30,3 +30,10 @@ make demo       # TUI boxes
 make runquiet   # non-interactive defaults (CI-safe)
 make doc        # render the walkthrough to markdown
 ```
+
+## How it is built
+
+The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's
+`FromMarkdown`. `main.go` binds the three steps that run engine code (`pick`, `check`,
+`render`) and wires the renderer. See [`../CONVENTIONS.md`](../CONVENTIONS.md) for the layout
+every example follows.

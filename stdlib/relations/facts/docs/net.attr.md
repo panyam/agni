@@ -12,7 +12,7 @@ power symbol or global label distributes it), and `power_driven` (a pin asserts 
 ### For hardware engineers
 
 These are statements the design file makes about a net, rather than conclusions the engine draws from
-its name. `external` is the honest one to know about: it marks a net whose full connectivity was not
+its name. `external` is the one to know about, because it marks a net whose full connectivity was not
 read, so a rule that would otherwise report a one-pin net stays quiet rather than reporting a defect
 that is an artefact of what was opened.
 

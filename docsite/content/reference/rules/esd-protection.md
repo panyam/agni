@@ -31,30 +31,31 @@ after winter, latent damage that surfaces weeks later.
 A signal is treated as protected two ways: a discrete TVS clamps it (within a 2-hop series reach),
 OR an IC on the net carries a datasheet ESD rating at or above the credit floor (IC-integrated ESD,
 WS3-073, the common industrial posture). The IC path needs a seeded PartSpec (`--params`), so on a
-design read with no datasheets it is silent and the rule behaves as before. The IC path credits ONLY a
-SYSTEM-level rating (IEC 61000-4-2), NOT a handling model (HBM/CDM): the rating's test model is a
-declared `esd_test_model` attribute (WS3-077), and an unstated or handling rating never credits.
-Crediting an HBM handling rating on a harness input would hide a real ESD gap, since handling ratings
-are for assembly, not field strikes. One refinement remains a follow-up: matching the rating to the
-connector-facing PIN, not the whole part (deferred with WS3-077, since the PartSpec carries no structured
-pin applicability, and the residue it would address is largely correct findings anyway).
+design read with no datasheets it credits nothing. A net whose only protection in reach is a Zener
+clamp is reported by `esd-clamp-not-tvs` and gets a not-considered verdict here. The IC path credits
+ONLY a SYSTEM-level rating (IEC 61000-4-2), NOT a handling model (HBM/CDM), and it reads the
+rating's test model from a declared `esd_test_model` attribute (WS3-077), so an unstated or handling
+rating never credits. Crediting an HBM handling rating on a harness input would hide a real ESD gap,
+since handling ratings are for assembly, not field strikes. Matching the rating to the
+connector-facing PIN rather than the whole part remains a follow-up (deferred with WS3-077, since
+the PartSpec carries no structured pin applicability, and the residue it would address is largely
+correct findings anyway).
 
 ![an IC with no ESD rating is still flagged; an IC carrying a datasheet ESD rating credits the net as fine]({{.Site.PathPrefix}}/static/images/catalog/rules/esd-protection-ic-rated.svg)
 
-"External" is approximated as: the net has a connector-class member, no
-power pins, no rail facts (global / power_driven), no ground name, and no power-rail NAME
-(VCC/VDD/VBUS/12V-style); rails have their own rules (input-protection, bulk-cap), and the
-name check is the only rail evidence a directionless netlist (EDIF) carries. A DEBUG / TEST /
-edge-card / programming connector is excluded: it classifies as `test_connector` (WS3-066), a
-distinct class from `connector`, so a bench interface (a JTAG header, a SAMTEC edge card) is not
-treated as harness exposure; the debug-connector patterns are lexicon defaults a project can
-extend. Severity is info because the approximation still cannot know
-whether a plain header is a real external interface or an unlabeled internal one; the corpus results
-are documented in the shipping PR. Since WS3-011 the clamp may sit one series
-hop away (connector -> series R -> clamped node, the classic ESD topology): the TVS
-existence check runs over the net's 2-hop reach. True ordering ("the clamp is
-connector-side of the IC") remains unmodeled; reach makes the existence check
-topology-tolerant, not directional.
+"External" is approximated by a net that has a connector-class member, no power pin within the
+power-path reach, no cross-sheet continuation, no intentional no-connect, no rail facts (global /
+power_driven), no ground name, and no power-rail NAME (VCC/VDD/VBUS/12V-style); rails have their own
+rules (input-protection, bulk-cap), and the name check is the only rail evidence a directionless
+netlist (EDIF) carries. A DEBUG / TEST / edge-card / programming connector is excluded because it
+classifies as `test_connector` (WS3-066), a distinct class from `connector`, so a bench interface (a
+JTAG header, a SAMTEC edge card) is not treated as harness exposure; the debug-connector patterns
+are lexicon defaults a project can extend. Severity is info because the approximation still cannot
+know whether a plain header is a real external interface or an unlabeled internal one. Since WS3-011
+the clamp may sit one series hop away (connector -> series R -> clamped node, the classic ESD
+topology), so the TVS existence check runs over the net's 2-hop reach. True ordering ("the clamp is
+connector-side of the IC") remains unmodeled; reach makes the existence check topology-tolerant, not
+directional.
 
 ### Query structure
 

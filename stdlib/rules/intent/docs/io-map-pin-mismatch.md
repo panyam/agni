@@ -6,8 +6,8 @@ Every row of the declared IO map names a net, a device and a pin. This rule look
 netlist and reports the rows where the pin carries something other than the net the map assigns to
 it.
 
-The map is the declaration; the netlist is the design. Neither is derived from the other, which is
-what makes the comparison worth anything.
+The map is the declaration; the netlist is the design. Neither is derived from the other, so a
+disagreement between them means something.
 
 ### For hardware engineers
 
@@ -66,9 +66,9 @@ the row is answered next door.
 ### A net name is compared more strictly than a pin name
 
 A pin name is compared loosely on purpose, because vendor tables are inconsistent with themselves. A
-NET name is not: it is the design's own identifier, so `DDR_CK_P` and `DDR_CK_T_P` are two nets
-rather than two spellings of one. Net comparison accepts an exact or a normalized match and refuses a
-fuzzy one.
+NET name is not, because it is the design's own identifier, so `DDR_CK_P` and `DDR_CK_T_P` are two
+nets rather than two spellings of one. Net comparison accepts an exact or a normalized match and
+refuses a fuzzy one.
 
 ### Declaring it
 

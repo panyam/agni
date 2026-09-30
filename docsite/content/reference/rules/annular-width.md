@@ -17,7 +17,7 @@ A via whose copper ring, (pad diameter minus drill) / 2, is below
 ### Why engineers want it
 
 Drills wander within tolerance; the annular ring is the margin
-that keeps a wandered drill inside its pad. Too little ring means breakout: the barrel
+that keeps a wandered drill inside its pad. Too little ring means breakout, where the barrel sits
 tangent to (or outside) the pad edge.
 
 ### Impact

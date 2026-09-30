@@ -10,7 +10,7 @@ terminal that carries no capacitor.
 
 A crystal is specified for a nominal LOAD CAPACITANCE (`C_L`), and the two load caps plus
 the board stray capacitance are what present that load. With a load cap missing the
-oscillator sees the wrong load: it may fail to start, start only sometimes across
+oscillator sees the wrong load and may fail to start, start only sometimes across
 temperature, or run off its rated frequency. Everything clocked from it drifts with it, so
 the defect surfaces as flaky UART/USB/CAN timing rather than an obvious "no clock".
 
@@ -27,12 +27,15 @@ The rule quantifies over crystal COMPONENTS, not nets, because "which terminals"
 this an active oscillator" are both cross-net facts about the one part. A crystal that
 connects to a non-ground POWER RAIL is treated as an ACTIVE oscillator (a packaged XO with
 a Vdd pin, which supplies its own load internally and takes no external caps) and is
-skipped entirely, so the rule never demands load caps of the wrong device. Ground-named
+skipped entirely, so the rule never demands load caps of the wrong device. A part classed as an
+oscillator or a ceramic resonator is excluded the same way, and a part left with anything other than
+exactly two non-ground signal terminals reports not-considered, since the count cannot tell it from
+an active oscillator whose supply net was not recognized as a rail. Ground-named
 terminals (the grounded case pins of a 3- or 4-pin crystal) are not signal terminals and
 are excluded. An unresolved external net is skipped (the cap may live on an unread sheet),
 matching the decoupling-present / bulk-cap external-skip convention. The load-cap VALUE
 (does `2*(C_L - C_stray)` match the crystal's spec) is a datasheet-joined refinement
-(WS10), out of scope here: this rule checks PRESENCE, not value.
+(WS10) and out of scope here, because this rule checks PRESENCE and not value.
 
 ### For software readers
 
@@ -47,14 +50,18 @@ name.
 ### Query structure
 
 select crystals; for each, gather non-ground terminal nets and whether it has a power pin;
-skip if powered; require a capacitor on each terminal net.
+skip if powered, decline unless there are exactly two terminals, then require a capacitor on
+each terminal net.
 
-    for Y in components where class(Y) == crystal:
-      terms   = nets(Y) where not ground(net)
+    for Y in components where class(Y) == clock
+                          and class(Y) not in {oscillator, ceramic_resonator}:
+      terms   = nets(Y) where not ground(net) and not power_rail(net)
       powered = any net(Y) is a non-ground power rail
       if powered: continue
-      for N in terms where not external(N):
-        if not exists P in N.connections where class(P) == capacitor: FIRE(Y, N)
+      if count(terms) != 2: NOT_CONSIDERED(Y); continue
+      for N in terms:
+        if external(N): NOT_CONSIDERED(Y.pin on N)
+        elif not exists P in N.connections where class(P) == capacitor: FIRE(Y, N)
 
 Reads: component.class, net.attributes (external), net.names (the ground / power-rail
 skip), on_net. Tier R.

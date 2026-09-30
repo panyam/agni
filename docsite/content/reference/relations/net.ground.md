@@ -5,9 +5,9 @@ description: "the net is a ground rail (name-derived)"
 
 ### What it is
 
-`net.ground(net)` yields one row per net whose name reads as a ground node: `GND` or `EARTH`
-anywhere in the leaf name, or a `VSS` prefix. It is name-derived, since a directionless netlist
-carries the name as the only evidence that a net is ground.
+`net.ground(net)` yields one row per ground net, by name or by declaration. By name that means `GND`
+or `EARTH` anywhere in the leaf name, or a `VSS` prefix. It is usually name-derived, since most
+netlists carry the name as the only evidence that a net is ground.
 
 `net.ground` is the ground-only subset of `rail`. `rail` covers both power and ground, because
 `Model.IsPowerRail` ORs the ground test into the rail test. So every `net.ground` net is also a

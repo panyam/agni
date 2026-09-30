@@ -25,7 +25,7 @@ This walks a checklist and reports every item's outcome, including the ones noth
 ## How much of the list can be answered {#coverage}
 
 > Covered counts the items a mechanism exists for. Answered counts the ones this run actually
-> decided, which is the stricter number: an item whose rule exists but whose inputs are missing is
+> decided, which is the stricter number, since an item whose rule exists but whose inputs are missing is
 > covered and unanswered. Neither is a pass rate.
 
 ## What a failing item rests on {#drill}
@@ -40,6 +40,5 @@ This walks a checklist and reports every item's outcome, including the ones noth
 
 ## The items nothing answers {#gap}
 
-> This is the step the walkthrough exists for. Three items are not answered, for three different
-> reasons, and only one of them is a gap in the tool. Deleting the unbound item would raise the
+> Three items are not answered, for three different reasons, and only one of them is a gap in the tool. Deleting the unbound item would raise the
 > coverage number and lower its truthfulness.

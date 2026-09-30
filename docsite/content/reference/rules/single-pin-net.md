@@ -16,12 +16,12 @@ thing, or to nothing, is almost always a mistake.
 
 Schematic capture is manual wiring. It is trivial to leave one end
 of a wire floating, misspell a net label so two wires that should join do not, or delete a
-part and orphan the stub that fed it. Every ERC tool ships this check because it is the single
-most frequent capture slip.
+part and orphan the stub that fed it. Every ERC tool ships this check because it is a very
+common capture slip.
 
 ### Impact
 
-High frequency, near-zero false positives once no-connect is handled. A dangling
+It fires often, and rarely falsely once no-connect is handled. A dangling
 net is a signal that silently does nothing.
 
 ![single-pin-net: a one-pin stub is flagged, a two-pin net is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/single-pin-net.svg)
@@ -31,7 +31,7 @@ net is a signal that silently does nothing.
 A pin deliberately marked "not connected" is a single-member net on
 purpose, so the rule excludes intentional no-connects: a tool-generated "unconnected-..." net
 name, an "nc_"/"no_connect" tag, or a connected pin whose electrical type is NO_CONNECT. This
-no-connect awareness removes the demo's biggest false positive (WS3-002).
+no-connect awareness removes the largest source of false positives (WS3-002).
 
 ### Query structure
 
