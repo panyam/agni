@@ -277,7 +277,8 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--conventions <file>` | apply a naming convention's LEXICON to the read, so `rail`/`feedback`/`pin.type` answer under your project's vocabulary (see [Naming conventions](../naming-conventions/)). The rules half is unused here: a query runs no rules |
 | `--board-path <file>` | attach a separate board export so the `board.*` relations have facts; without it they are empty |
 | `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (protojson of the `RunQueryResponse` the `RunQuery` rpc returns, so a script and a client parse one shape; it carries the column kinds, and echoes the query and the design so an answer names its own question), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
-| `--title <name>` | name the view, used as the heading in `--format markdown` and `html` |
+| `--set <file>` | answer a query set instead of one query: named queries sharing a `preamble` of rules, all over ONE read of the design (see [Ask many questions at once](../querying/#ask-many-questions-at-once-query-sets)). Takes the design alone, no query argument; `-` reads the set from stdin. `json` is the `RunQueriesResponse`, `markdown`/`html`/`text` one document with a section per query, and `csv` is refused. Every answer is written, then the command exits non-zero if any query could not be answered |
+| `--title <name>` | name the view (or replace a set's title), used as the heading in `--format markdown` and `html` |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default). A view is a thing to hand to someone, so it wants a filename rather than a redirect. The written-file note goes to stderr |
 
 ### `trace <file>`

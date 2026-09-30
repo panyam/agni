@@ -269,6 +269,14 @@ func (a *Query) RunQuery(ctx context.Context, req *connect.Request[webapi.RunQue
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Query) RunQueries(ctx context.Context, req *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error) {
+	resp, err := a.svc.RunQueries(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Query) ListRelations(ctx context.Context, req *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error) {
 	resp, err := a.svc.ListRelations(ctx, req.Msg)
 	if err != nil {

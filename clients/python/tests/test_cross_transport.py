@@ -14,6 +14,7 @@ import pytest
 from google.protobuf.message import Message
 
 from agni import CLI_COMMANDS, Client
+from agni.v1.webapi import query_pb2
 from agni.v1.webapi import design_pb2
 
 from conftest import DESIGN
@@ -47,6 +48,22 @@ VERDICTS = (
 DIFF_GEOMETRY = "agni issue 737: the CLI skips the service's sheet and placement annotation"
 LAYOUT_TIERS = "agni issue 736: GetLayoutReport does not resolve tiers, so the folder reads as nothing"
 
+# A set whose preamble every query reads, and the same set with one query the design cannot answer:
+# over the CLI that exits 1 with the full answer printed, and the two transports must still agree.
+_SET = query_pb2.QuerySet(
+    title="audit",
+    preamble='res(?r) :- component.class(?r, "resistor");',
+    queries=[
+        query_pb2.NamedQuery(name="resistors", query="res(?r) => ?r"),
+        query_pb2.NamedQuery(name="nets", query="pin.net(?c, ?p, ?n) => count(distinct ?n)"),
+    ],
+)
+_SET_WITH_TYPO = query_pb2.QuerySet(
+    title="audit",
+    queries=list(_SET.queries) + [query_pb2.NamedQuery(name="typo", query="compnent.class(?c, ?k)")],
+    preamble=_SET.preamble,
+)
+
 CASES: List[Case] = [
     Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN), {"verdicts": VERDICTS}),
     Case(
@@ -58,6 +75,8 @@ CASES: List[Case] = [
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c')),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?c, ?p, ?n) => ?n, count(distinct ?c)")),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='pin.net(?c, ?p, "NO_SUCH_NET") => ?c')),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET)),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET_WITH_TYPO)),
     Case(
         "DiffService/DiffDesigns",
         lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn"),

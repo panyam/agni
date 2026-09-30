@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/query"
@@ -61,6 +62,95 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
+	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	resp, err := s.answer(ctx, d, q, req.GetQuery())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	return resp, nil
+}
+
+// RunQueries answers every query of a set over one read of the design (agni issue 729). Each
+// result is what RunQuery would return for that query alone; a query that does not parse or names
+// something the design's relations lack is reported against its name, and the others still answer.
+// A set that is unusable as a whole is an invalid argument, and a design that cannot be read fails
+// the call as it would fail RunQuery.
+func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesRequest) (*webapi.RunQueriesResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	boardURI, err := optionalArtifactURI(req.GetBoardUri())
+	if err != nil {
+		return nil, err
+	}
+	set := QuerySetFromProto(req.GetSet())
+	if err := set.Validate(); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	out := &webapi.RunQueriesResponse{Title: set.Title, Preamble: set.Preamble, Source: req.GetUri()}
+	for i, nq := range set.Queries {
+		res := &webapi.NamedQueryResult{Name: nq.Name, Description: nq.Description}
+		out.Results = append(out.Results, res)
+		q, err := set.Compile(i)
+		if err != nil {
+			res.Error = err.Error()
+			continue
+		}
+		resp, err := s.answer(ctx, d, q, nq.Query)
+		if err != nil {
+			res.Error = err.Error()
+			continue
+		}
+		res.Result = resp
+	}
+	return out, nil
+}
+
+// QuerySetFromProto converts the wire form of a query set to the engine's.
+func QuerySetFromProto(p *webapi.QuerySet) query.QuerySet {
+	s := query.QuerySet{Title: p.GetTitle(), Preamble: p.GetPreamble()}
+	for _, q := range p.GetQueries() {
+		s.Queries = append(s.Queries, query.NamedQuery{Name: q.GetName(), Query: q.GetQuery(), Description: q.GetDescription()})
+	}
+	return s
+}
+
+// QuerySetProto converts a query set to its wire form, for a caller that read one from a file.
+func QuerySetProto(s query.QuerySet) *webapi.QuerySet {
+	p := &webapi.QuerySet{Title: s.Title, Preamble: s.Preamble}
+	for _, q := range s.Queries {
+		p.Queries = append(p.Queries, &webapi.NamedQuery{Name: q.Name, Query: q.Query, Description: q.Description})
+	}
+	return p
+}
+
+// designRead is one read of a design, shared by every query asked of it: the model, one fact base
+// over it, and the schematic geometry, loaded only when some answer has a cell to place on a sheet
+// and then only once.
+type designRead struct {
+	u      artifact.URI
+	source string
+	model  check.Model
+	base   *query.Base
+	ov     Overlay
+	gu     artifact.URI
+
+	geomLoaded bool
+	ix         sheetIndex
+	drawnComps map[string]bool
+	drawnNets  map[string]bool
+}
+
+// read resolves the design's tiers, composes its overlay, and builds the model and fact base once.
+func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, source string, overlay *webapi.OverlayConfig, asNamed bool) (*designRead, error) {
 	// The request's overlay is composed BEFORE the read, because only its lexicon half matters here and
 	// that half has to reach the READ: net roles are resolved once at ingestion, so the vocabulary
 	// decides what `rail`, `feedback`, and everything derived from them answer (WS3-113).
@@ -69,7 +159,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// keeps one conventions file carrying both halves, so refusing it over rules this call will never
 	// run would reject a config that is perfectly valid for the question being asked. There is no base
 	// convention to replace for the same reason: nothing here holds a catalog.
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, "")
+	ov, err := s.projects.Overlay(ctx, u, overlay, s.fallback, "")
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +169,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// Which artifact each tier reads comes from the design's declaration, so a query addressed at a
 	// schematic companion counts the NETLIST's 1617 nets rather than the drawing's 4572 per-sheet
 	// segments (agni issue 656).
-	nu, bu, gu, err := s.projects.TierURIs(ctx, u, boardURI, req.GetAsNamed())
+	nu, bu, gu, err := s.projects.TierURIs(ctx, u, boardURI, asNamed)
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +177,31 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.eval.Eval(q, query.NewBase(model))
+	return &designRead{u: u, source: source, model: model, base: query.NewBase(model), ov: ov, gu: gu}, nil
+}
+
+// geometry loads the schematic geometry on first use and returns the sheet index and the entities it
+// draws. Empty maps mean no geometry, in which case no locate reasons are emitted (the design renders
+// on an auto-layout that draws every entity).
+func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, map[string]bool, map[string]bool) {
+	if !d.geomLoaded {
+		d.geomLoaded = true
+		g := BuildGeometry(ctx, loader, d.gu, d.ov.ReadOptions()...)
+		d.ix = indexSheets(g, d.model)
+		if g != nil {
+			d.drawnComps, d.drawnNets = drawnEntities(g)
+		}
+	}
+	return d.ix, d.drawnComps, d.drawnNets
+}
+
+// answer evaluates one query over a read and assembles its response. queryText is echoed as the
+// response's query, so an answer states the question it answers. An error is the evaluator's, a
+// malformed or unanswerable query, and the caller decides what it means for the call.
+func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string) (*webapi.RunQueryResponse, error) {
+	rows, err := s.eval.Eval(q, d.base)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+		return nil, err
 	}
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKinds(q)
@@ -99,7 +211,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// produced these rows.
 	resp := &webapi.RunQueryResponse{
 		Columns: make([]string, len(cols)), ColumnKinds: kinds,
-		Query: req.GetQuery(), Source: req.GetUri(),
+		Query: queryText, Source: d.source,
 	}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
@@ -123,18 +235,14 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// emitted (the design renders via an auto-layout that draws every entity).
 	var drawnComps, drawnNets map[string]bool
 	if navigable {
-		g := BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...)
-		ix = indexSheets(g, model)
-		if g != nil {
-			drawnComps, drawnNets = drawnEntities(g)
-		}
+		ix, drawnComps, drawnNets = d.geometry(ctx, s.loader)
 	}
 	for _, r := range rows {
 		cells := make([]string, len(cols))
 		for i, c := range cols {
 			cells[i] = r.Bind[c].S
 		}
-		row := &webapi.QueryRow{Cells: cells, Cites: portableCites(r.Cites, u.Path)}
+		row := &webapi.QueryRow{Cells: cells, Cites: portableCites(r.Cites, d.u.Path)}
 		if navigable {
 			row.CellSheets = make([]*webapi.CellSheets, len(cols))
 			row.CellReasons = make([]checkspb.LocateReason, len(cols))
@@ -171,7 +279,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 				cs := &webapi.CellSheets{}
 				if kind != "" {
 					cs.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kind, Ref: ref, Pin: cells[i]})
-					row.CellReasons[i] = cellReason(model, kind, ref, drawnComps, drawnNets, len(cs.SheetIds) > 0)
+					row.CellReasons[i] = cellReason(d.model, kind, ref, drawnComps, drawnNets, len(cs.SheetIds) > 0)
 				}
 				row.CellSheets[i] = cs
 			}
