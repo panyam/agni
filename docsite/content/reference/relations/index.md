@@ -14,6 +14,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`component.attr(ref_des, key, value)`](component.attr/) | a component-level attribute (e.g. interface, MPN) |
 | [`component.class(ref_des, class)`](component.class/) | a device class the part is in (a family tag too, e.g. a TVS is both tvs and diode) |
 | [`component.mpn(ref_des, mpn)`](component.mpn/) | the design-side part identity (manufacturer part number) |
+| [`component.net_count(ref_des, count)`](component.net_count/) | the number of distinct nets a component touches (0 for a part wired to nothing) |
 | [`entity(name, kind)`](entity/) | a thing exists in the design under this name, with kind one of component/net/bus. The relation to start a name search from, since every other one ranges over an association and so misses whatever it does not reach (a part with no connections, a net with nothing on it) |
 | [`external_signal_net(net)`](external_signal_net/) | a connector-facing signal net (not a rail, ground, no-connect, or power path), the scope the ESD rules share |
 | [`feedback(net)`](feedback/) | the net is a regulator feedback / sense node (must not be probed) |

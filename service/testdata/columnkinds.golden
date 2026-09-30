@@ -19,6 +19,8 @@ component.device_class	arg1=class	kind=""	kindVar=""	ref=-
 component.esd_rated	arg0=ref_des	kind="component"	kindVar=""	ref=-
 component.mpn	arg0=ref_des	kind="component"	kindVar=""	ref=-
 component.mpn	arg1=mpn	kind=""	kindVar=""	ref=-
+component.net_count	arg0=ref_des	kind="component"	kindVar=""	ref=-
+component.net_count	arg1=count	kind=""	kindVar=""	ref=-
 contains	arg0=string	kind=""	kindVar=""	ref=-
 contains	arg1=substring	kind=""	kindVar=""	ref=-
 entity	arg0=name	kind=""	kindVar="a1"	ref=-

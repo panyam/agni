@@ -998,7 +998,8 @@ func TestParamProvPageIsNotAQuantity(t *testing.T) {
 // for when a guard complains: an unlabelled number compares against any bare literal and unifies
 // with a voltage, since unification is identity rather than physics (C24's stated limitation).
 var dimensionlessNumericRelations = map[string]bool{
-	RelNetPinCount: true, // a count of connections
+	RelNetPinCount:       true, // a count of connections
+	RelComponentNetCount: true, // a count of distinct nets
 }
 
 // numericRelationControl is the positive control for the sweep below. A projector that emits no rows
