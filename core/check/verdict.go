@@ -137,7 +137,7 @@ const (
 //
 // The Terms list is ordered and open rather than a fixed measured/limit pair, because the next
 // witness-producing family is not a comparison at all. The protection and pull-up rules resolve
-// through `reaches`, and their proof is a PATH ("SCL -> R7 -> +3V3"), which is this same list with
+// through `net.reaches`, and their proof is a PATH ("SCL -> R7 -> +3V3"), which is this same list with
 // the hops as terms. Fixing the shape to a comparison now would mean rewriting it at stage 2.
 type Witness struct {
 	// Statement is the human rendering, always set. It is the whole witness for a text consumer.

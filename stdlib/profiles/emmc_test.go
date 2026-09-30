@@ -150,7 +150,7 @@ func TestEMMCHostWhollyAbsent(t *testing.T) {
 // the two in emmcGood. Everything else is identical, and CMD is still pulled up to it through R1.
 //
 // That one difference is the whole bug (WS3-108). The generated pull-up check asked
-// `reaches(n, rail)`, and the WS3-011 series walk deliberately refuses to cross INTO a net whose
+// `net.reaches(n, rail)`, and the WS3-011 series walk deliberately refuses to cross INTO a net whose
 // fan-out exceeds maxWalkFan (16) — a guard that is right for its own purpose, since it stops a walk
 // wandering across a plane as though it were a series path. But a pull-up TERMINATES on a rail, and a
 // rail is wide almost by definition, so the one destination the rule needs was the one kind of net the

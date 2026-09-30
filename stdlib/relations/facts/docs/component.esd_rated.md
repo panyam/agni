@@ -21,7 +21,7 @@ conservative (2 kV), so a row means a genuinely rated part, not a marginal one.
 This is a boolean predicate over the datasheet join (see ANALOGY.md): resolve the component to
 its part-number stub, read the ESD rating rows, and admit the ref-des only if a comparable row
 clears the floor. It is keyed by ref-des precisely so a rule joins it against structural
-relations (`component-on-net`, `component.class`, `pin.net`) to ask "an ESD-rated part sitting on
+relations (`component.net`, `component.class`, `pin.net`) to ask "an ESD-rated part sitting on
 this signal". Rows are 1:1 with qualifying components; absence is the normal case, not an error.
 
 ### Go projector

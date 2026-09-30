@@ -1,19 +1,19 @@
-## reaches
+## net.reaches
 
 ### What it is
 
-`reaches(from, net)` is true when `net` is reachable from `from` by walking THROUGH series pass
+`net.reaches(from, net)` is true when `net` is reachable from `from` by walking THROUGH series pass
 elements: resistors, inductors, ferrite beads, and fuses. It is the transitive-closure predicate
 the protection rules use to answer "is there a component of class X somewhere on the path between
 these two nets?" without hard-coding a topology.
 
-`reaches(from, net, hops)` is the same walk with the distance exposed, so a rule states the radius
+`net.reaches(from, net, hops)` is the same walk with the distance exposed, so a rule states the radius
 its own question needs. Read the next section before using it: `hops` is an exact count, not a
 budget.
 
-Unlike the fact relations, `reaches` is computed on demand from the design graph rather than stored, so it is a datalog *predicate* (kind `predicate` in the catalog), the recursive
+Unlike the fact relations, `net.reaches` is computed on demand from the design graph rather than stored, so it is a datalog *predicate* (kind `predicate` in the catalog), the recursive
 counterpart to `net.bus_like`: `net.bus_like` names the nets the walk refuses to enter, and
-`reaches` is the walk itself.
+`net.reaches` is the walk itself.
 
 ### Distance, and the trap in it
 
@@ -21,8 +21,8 @@ counterpart to `net.bus_like`: `net.bus_like` names the nets the walk refuses to
 datalog argument binds by equality, putting a bare number in that slot means *exactly* that distance:
 
 ```
-reaches(?n, ?rn, 2)           # exactly 2 crossings — SKIPS a part sitting 1 away
-reaches(?n, ?rn, ?h), ?h <= 2 # within 2 crossings — what a protection question means
+net.reaches(?n, ?rn, 2)           # exactly 2 crossings — SKIPS a part sitting 1 away
+net.reaches(?n, ?rn, ?h), ?h <= 2 # within 2 crossings — what a protection question means
 ```
 
 The first line is the spelling most people reach for and it is almost never what they want. Use the
@@ -50,14 +50,14 @@ device pin?" while a resistor or bead in the middle of the path does not break t
 
 ### For software engineers
 
-`reaches` is transitive reachability over a filtered graph: the nodes are nets, an edge exists only
+`net.reaches` is transitive reachability over a filtered graph: the nodes are nets, an edge exists only
 through a two-net pass element, and `net.bus_like` nets are excluded so the traversal cannot leak
 into a global singleton and mark the whole design reachable. It is a bounded BFS (a hop cap guards
 pathological depth; fan-out and finiteness bound it anyway), so a query over it terminates.
 
 ### Go projector
 
-`reaches` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The query
+`net.reaches` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The query
 engine evaluates it as a built-in in `core/query/preds.go` (bounded by `topologyReachHops`),
 delegating to `check.Model.Reach` in `core/check/reach.go` and the same `IsBusLike` stop predicate
 that `net.bus_like` exposes. It is the same walk the protection rules run, at a wider radius (see
@@ -72,37 +72,37 @@ the walk.
 Every net reachable from a starting net, through series parts:
 
 ```
-reaches("VBUS_IN", ?net) => ?net
+net.reaches("VBUS_IN", ?net) => ?net
 ```
 
 The components that sit on those reachable nets (what a protection walk would find):
 
 ```
-reaches("VBUS_IN", ?net), component-on-net(?r, ?net) => ?r
+net.reaches("VBUS_IN", ?net), component.net(?r, ?net) => ?r
 ```
 
 The same question at a protection radius, the way a rule scoped like `esd-protection` asks it,
 over a TVS within two series crossings of the net:
 
 ```
-reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs") => ?n, ?t
+net.reaches(?n, ?rn, ?h), ?h <= 2, component.net(?t, ?rn), component.class(?t, "tvs") => ?n, ?t
 ```
 
 How far away each reachable net is, the query to run when a radius is not behaving as
 expected:
 
 ```
-reaches("VBUS_IN", ?net, ?hops) => ?net, ?hops
+net.reaches("VBUS_IN", ?net, ?hops) => ?net, ?hops
 ```
 
 ### Schematic
 
-![The walk crosses two-pin series parts (R, ferrite, fuse) and stops at a DC-blocking cap or a bus-like net](images/reaches.svg)
+![The walk crosses two-pin series parts (R, ferrite, fuse) and stops at a DC-blocking cap or a bus-like net](images/net.reaches.svg)
 
 ### Where this is going
 
 The hop-radius trap above, the per-caller radius constants, and the baked-in edge class are all
 symptoms of the same thing: a path question has no way to state itself, so each caller hand-codes a
 walk. Issue 374 designs a topology-pattern surface where the radius is a quantifier, the edge class
-is a character class, and a match carries the path it found. If that lands, `reaches` becomes one
+is a character class, and a match carries the path it found. If that lands, `net.reaches` becomes one
 canned pattern and this page becomes the migration note.

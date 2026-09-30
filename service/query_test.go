@@ -23,7 +23,7 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// queryDesign has two parts on one net, so component-on-net(?r,?n) yields two answer rows.
+// queryDesign has two parts on one net, so component.net(?r,?n) yields two answer rows.
 func queryDesign() *ir.Design {
 	return &ir.Design{
 		Nets: []*ir.Net{{
@@ -38,7 +38,7 @@ func TestRunQueryReturnsRowsAndProvenance(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri:   "mount://m/x.edn",
-		Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +76,7 @@ func TestRunQueryColumnKinds(t *testing.T) {
 		query string
 		want  []string
 	}{
-		{`component-on-net(?r,?n) => ?r, ?n`, []string{"component", "net"}},
+		{`component.net(?r,?n) => ?r, ?n`, []string{"component", "net"}},
 		{`component.mpn(?r,?m) => ?r, ?m`, []string{"component", ""}}, // mpn is a scalar label
 	}
 	for _, tc := range cases {
@@ -194,7 +194,7 @@ func TestRunQueryConstantKindTypesTheColumn(t *testing.T) {
 func TestRunQueryOrdinaryQueryCarriesNoCellKinds(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Uri: "mount://m/x.edn", Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -416,7 +416,7 @@ func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
 	}}
 	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Uri: "mount://m/x.kicad_sch", Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -439,7 +439,7 @@ func TestRunQueryNetCellSheetsFromNetlist(t *testing.T) {
 	d.Nets[0].Attributes = map[string]string{netgraph.AttrSheets: netgraph.EncodeSheets([]string{"s1", "s2"})}
 	svc := NewQueryService(fakeLoader{design: d}, nil, nil) // no geometry
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Uri: "mount://m/x.edn", Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -471,7 +471,7 @@ func TestRunQueryCellReasons(t *testing.T) {
 	}}}
 	svc := NewQueryService(fakeLoader{design: d, geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Uri: "mount://m/x.kicad_sch", Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -505,12 +505,12 @@ func TestRunQueryCellReasons(t *testing.T) {
 func TestRunQueryUnknownRelationSuggests(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: "compnent-on-net(?r,?n) => ?r",
+		Uri: "mount://m/x.edn", Query: "compnent.net(?r,?n) => ?r",
 	})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument", err)
 	}
-	if !strings.Contains(err.Error(), "did you mean") || !strings.Contains(err.Error(), "component-on-net") {
+	if !strings.Contains(err.Error(), "did you mean") || !strings.Contains(err.Error(), "component.net") {
 		t.Errorf("error should suggest the relation, got: %v", err)
 	}
 }
@@ -518,7 +518,7 @@ func TestRunQueryUnknownRelationSuggests(t *testing.T) {
 func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n =>`,
+		Uri: "mount://m/x.edn", Query: `component.net(?r,?n =>`,
 	})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument for a parse failure", err)
@@ -529,7 +529,7 @@ func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri:   "mount://m/x.edn",
-		Query: `component-on-net(?r,?n), ?n = "NOSUCHNET" => ?r`,
+		Query: `component.net(?r,?n), ?n = "NOSUCHNET" => ?r`,
 	})
 	if err != nil {
 		t.Fatalf("a well-formed no-match query should not error: %v", err)
@@ -541,7 +541,7 @@ func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
 
 func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{err: errors.New("no netlist")}, nil, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.eds", Query: `component-on-net(?r,?n) => ?r`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.eds", Query: `component.net(?r,?n) => ?r`})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument for an unloadable design", err)
 	}
@@ -549,7 +549,7 @@ func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
 
 func TestRunQueryNotFoundPropagates(t *testing.T) {
 	svc := NewQueryService(fakeLoader{err: ErrNotFound}, nil, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://bad/x.edn", Query: `component-on-net(?r,?n) => ?r`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://bad/x.edn", Query: `component.net(?r,?n) => ?r`})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound to pass through", err)
 	}
@@ -565,27 +565,27 @@ func TestListRelationsReturnsCatalog(t *testing.T) {
 	for _, r := range resp.GetRelations() {
 		byName[r.GetName()] = r
 	}
-	con := byName["component-on-net"]
+	con := byName["component.net"]
 	if con == nil {
-		t.Fatalf("component-on-net missing from catalog; got %d relations", len(resp.GetRelations()))
+		t.Fatalf("component.net missing from catalog; got %d relations", len(resp.GetRelations()))
 	}
 	if got := con.GetArgs(); len(got) != 2 || got[0] != "ref_des" || got[1] != "net" {
-		t.Errorf("component-on-net args = %v, want [ref_des net]", con.GetArgs())
+		t.Errorf("component.net args = %v, want [ref_des net]", con.GetArgs())
 	}
 	if con.GetKind() != "netlist" {
-		t.Errorf("component-on-net kind = %q, want netlist", con.GetKind())
+		t.Errorf("component.net kind = %q, want netlist", con.GetKind())
 	}
-	if byName["reaches"] == nil || byName["reaches"].GetKind() != "predicate" {
+	if byName["net.reaches"] == nil || byName["net.reaches"].GetKind() != "predicate" {
 		t.Errorf("reaches should be catalogued as a predicate")
 	}
 	// route rides the same generic path and needs no proto of its own: RelationInfo is populated by
 	// iterating query.Catalog(), and column_kinds is a repeated string rather than an enum, so a new
 	// predicate reaches a client without a schema change. This is the assertion that says so.
-	if rt := byName["route"]; rt == nil || rt.GetKind() != "predicate" {
+	if rt := byName["net.route"]; rt == nil || rt.GetKind() != "predicate" {
 		t.Errorf("route should be catalogued as a predicate")
 	} else if got := rt.GetArgs(); len(got) != 3 || got[0] != "from" || got[2] != "path" {
 		t.Errorf("route args = %v, want [from net path]", got)
-	} else if !strings.HasPrefix(rt.GetDetail(), "## route") {
+	} else if !strings.HasPrefix(rt.GetDetail(), "## net.route") {
 		t.Errorf("route Detail should be its reference doc, got %.40q", rt.GetDetail())
 	}
 	// Detail (WS14-005) rides the catalog: a documented relation carries its reference markdown, an
@@ -702,7 +702,7 @@ func queryColumn(t *testing.T, resp *webapi.RunQueryResponse) []string {
 
 // TestRunQueryHonorsTheRequestLexicon is the gap this feature closes, using the issue's own example.
 //
-// `rail(?n)` is not a relation a convention ADDS. It is a relation whose ANSWER a convention changes,
+// `net.rail(?n)` is not a relation a convention ADDS. It is a relation whose ANSWER a convention changes,
 // because net roles are resolved once at the design read and the lexicon decides which names carry
 // which role. Without the project's vocabulary the engine reports one rail on a board with more,
 // which is a correct answer to a question the project did not ask, and there was previously no way to
@@ -716,7 +716,7 @@ func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 	ask := func(ov *webapi.OverlayConfig) []string {
 		t.Helper()
 		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Uri: "mount://m/review/conv-demo.edn", Query: "rail(?n) => ?n", Overlay: ov,
+			Uri: "mount://m/review/conv-demo.edn", Query: "net.rail(?n) => ?n", Overlay: ov,
 		})
 		if err != nil {
 			t.Fatalf("RunQuery: %v", err)
@@ -731,7 +731,7 @@ func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 
 	house := ask(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: houseConvention(t)}})
 	if !slices.Contains(house, "PMIC_VDD_LPM_1V8") {
-		t.Errorf("rail(?n) under the project's own vocabulary = %v, want it to include PMIC_VDD_LPM_1V8", house)
+		t.Errorf("net.rail(?n) under the project's own vocabulary = %v, want it to include PMIC_VDD_LPM_1V8", house)
 	}
 	if len(house) <= len(builtin) {
 		t.Errorf("the project's vocabulary found no more rails than the built-ins: %v vs %v", house, builtin)
@@ -748,7 +748,7 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
 	conv.Rules = append(conv.Rules, &configpb.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/review/conv-demo.edn", Query: "rail(?n) => ?n",
+		Uri: "mount://m/review/conv-demo.edn", Query: "net.rail(?n) => ?n",
 		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}},
 	})
 	if err != nil {
@@ -849,7 +849,7 @@ func TestColumnKindsFollowDerivedRelations(t *testing.T) {
 		{
 			// The shape this matters for: a bucket built with negation, which needs a unary helper.
 			"a bucket through negation",
-			`p(?c) :- component.class(?c,"capacitor"); cov(?c) :- p(?c), component-on-net(?c,?n); ` +
+			`p(?c) :- component.class(?c,"capacitor"); cov(?c) :- p(?c), component.net(?c,?n); ` +
 				`nocov(?c) :- p(?c), not cov(?c); nocov(?c) => ?c`, "component",
 		},
 		{
@@ -882,7 +882,7 @@ func TestColumnKindsFollowDerivedRelations(t *testing.T) {
 func TestColumnKindsSurvivesARecursiveRule(t *testing.T) {
 	done := make(chan []string, 1)
 	go func() {
-		done <- kindsOf(t, `r(?a,?b) :- component-on-net(?a,?b); r(?a,?b) :- r(?a,?c), r(?c,?b); r(?a,?b) => ?a`)
+		done <- kindsOf(t, `r(?a,?b) :- component.net(?a,?b); r(?a,?b) :- r(?a,?c), r(?c,?b); r(?a,?b) => ?a`)
 	}()
 	select {
 	case got := <-done:

@@ -14,7 +14,7 @@ func comp(ref, part string) *ir.Component {
 
 // mistypedFixture: U1's "VDD" pin is named like a supply but typed PASSIVE and left alone on a net
 // (fires). Its "GND" pin is correctly typed power_in (left to power-input-not-driven, not this
-// rule). Pin "3" is NO_CONNECT, enabling the has_nc_channel gate.
+// rule). Pin "3" is NO_CONNECT, enabling the design.has_nc_channel gate.
 //
 // Pin "4" is a SIGNAL pin alone on its own net, and it is here for the considered-set test rather
 // than the finding tests. Without it the fixture cannot tell a domain scoped to supply-named pins
@@ -122,7 +122,7 @@ func TestPowerPinMistyped_StatesConsideredSet(t *testing.T) {
 // false-pass shape the capability gate exists to prevent, arriving through the coverage half.
 func TestPowerPinMistyped_FormatGateKeepsItOutOfTheSet(t *testing.T) {
 	d := mistypedFixture()
-	// Drop the NO_CONNECT pin: has_nc_channel goes false and the rule can conclude nothing.
+	// Drop the NO_CONNECT pin: design.has_nc_channel goes false and the rule can conclude nothing.
 	pins := d.Libraries[0].Parts[0].Pins
 	d.Libraries[0].Parts[0].Pins = append(pins[:2:2], pins[3])
 	if vs := powerPinMistyped.Eval(check.NewModel(d)); len(vs) != 0 {

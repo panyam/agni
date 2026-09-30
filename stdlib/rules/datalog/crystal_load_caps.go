@@ -20,10 +20,10 @@ import (
 //
 //   - a clock part is the CLOCK FAMILY minus the subtypes that take no external caps (WS10-015):
 //     component.class(?y,"clock") and not "oscillator" and not "ceramic_resonator"; a cap is
-//     component.class(?c,"capacitor"). component-on-net (net connections), NOT pin.net (part-type
+//     component.class(?c,"capacitor"). component.net (net connections), NOT pin.net (part-type
 //     pins), is the right membership relation: it is the same data the Go rule reads and needs no
 //     resolved part types.
-//   - term = a crystal's non-rail terminal net. rail() covers power AND ground, so a grounded case
+//   - term = a crystal's non-rail terminal net. net.rail() covers power AND ground, so a grounded case
 //     pin drops out here (it is not a signal terminal).
 //   - powered = the crystal has a pin on a SUPPLY rail (rail but not ground) -> an active oscillator
 //     with a Vdd pin, which uses no external load caps; exclude it entirely.
@@ -45,10 +45,10 @@ var crystalLoadCapsQ = query.FindingQuery{
 		},
 	},
 	Query: query.MustParse(`
-		cap_on(?net)   :- component-on-net(?c, ?net), component.class(?c, "capacitor");
+		cap_on(?net)   :- component.net(?c, ?net), component.class(?c, "capacitor");
 		clockpart(?y)  :- component.class(?y, "clock"), not component.class(?y, "oscillator"), not component.class(?y, "ceramic_resonator");
-		term(?y, ?net) :- clockpart(?y), component-on-net(?y, ?net), not rail(?net);
-		powered(?y)    :- clockpart(?y), component-on-net(?y, ?r), rail(?r), not net.ground(?r);
+		term(?y, ?net) :- clockpart(?y), component.net(?y, ?net), not net.rail(?net);
+		powered(?y)    :- clockpart(?y), component.net(?y, ?r), net.rail(?r), not net.ground(?r);
 		two(?y)        :- term(?y, ?a), term(?y, ?b), ?a != ?b;
 		three(?y)      :- term(?y, ?a), term(?y, ?b), term(?y, ?c), ?a != ?b, ?a != ?c, ?b != ?c;
 		bad(?y, ?net)  :- term(?y, ?net), two(?y), not three(?y), not powered(?y), not cap_on(?net), not net.external(?net);

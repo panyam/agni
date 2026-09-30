@@ -1,10 +1,10 @@
-## switching
+## net.switching
 
 ### What it is
 
-`switching(net)` yields one row per net whose name reads as a regulator's power-stage node: a leaf
+`net.switching(net)` yields one row per net whose name reads as a regulator's power-stage node: a leaf
 name ending in `_SW`, `_BOOT`, `_PHASE`, or `_LX`. It is name-derived, and it is the twin of
-`feedback`: both relations name a net that matches the rail vocabulary and is not a rail.
+`net.feedback`: both relations name a net that matches the rail vocabulary and is not a rail.
 
 ### For hardware engineers
 
@@ -21,14 +21,14 @@ worse than useless: a test point there loads the fastest edge in the design and 
 whatever the probe is attached to. And any rule that reasons about a rail's voltage will be wrong
 about this net by the whole input-to-output ratio.
 
-During a review you query `switching` to list the power-stage nodes, and you subtract it from `rail`
-alongside `feedback` so a probe-point or decoupling rule does not treat a switch node as ordinary
+During a review you query `net.switching` to list the power-stage nodes, and you subtract it from `net.rail`
+alongside `net.feedback` so a probe-point or decoupling rule does not treat a switch node as ordinary
 distribution.
 
 ### For software engineers
 
 A switch node is a name that looks like it belongs to an object and does not: `12V_SW` reads as the
-12V rail's member and is a separate net with a different value. `switching` is a filtered projection
+12V rail's member and is a separate net with a different value. `net.switching` is a filtered projection
 over `Nets()` with the naming predicate, so rows are 1:1 with switching-named nets, and an empty
 result means no net name matched the power-stage lexicon.
 
@@ -45,16 +45,16 @@ switching-named net; empty when no net matches.
 List every power-stage node:
 
 ```
-switching(?n) => ?n
+net.switching(?n) => ?n
 ```
 
 A supply rail that is neither a sense node nor a power-stage node, which is the set a probe-point or
 pull-up rule may treat as ordinary distribution:
 
 ```
-rail(?n), not feedback(?n), not switching(?n) => ?n
+net.rail(?n), not net.feedback(?n), not net.switching(?n) => ?n
 ```
 
-Note that `rail` already excludes both, because `Model.IsRailNet` subtracts them before the rail role
+Note that `net.rail` already excludes both, because `Model.IsRailNet` subtracts them before the rail role
 is granted. The form above is worth writing anyway when a query reads alongside one that does not go
 through the rail relation, such as a rule built from the name FFIs.

@@ -35,7 +35,7 @@ func TestSearchQueryPlaceholderIsQuoted(t *testing.T) {
 
 // A search that ranged over an association would silently miss a part with no connections, which is
 // the blind spot entity() was added to close. Pin the relation so a well-meaning rewrite to
-// component-on-net goes red here rather than in a review nobody runs.
+// component.net goes red here rather than in a review nobody runs.
 func TestSearchQueryRangesOverEntity(t *testing.T) {
 	q, err := Parse(strings.ReplaceAll(Search().Query, "{term}", "CAN"))
 	if err != nil {

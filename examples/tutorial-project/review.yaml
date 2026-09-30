@@ -65,7 +65,7 @@ areas:
           healthy case. A query binding reports what it matches as findings, so matching the
           healthy case inverts the item and a good board scores a fail.
         query:
-          match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), not rail(?n) => ?r, ?n'
+          match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), not net.rail(?n) => ?r, ?n'
           subject: r
           message: '{r} probes {n}, which is not a recognized rail'
       - id: "H3"

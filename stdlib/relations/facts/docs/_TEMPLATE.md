@@ -2,7 +2,7 @@
 
 <!--
 WS14-005 per-relation fact doc template. Copy this file to facts/docs/<relation>.md, where
-<relation> is the EXACT catalog name (e.g. net.bus_like, pin_net_conflict). The harness
+<relation> is the EXACT catalog name (e.g. net.bus_like, reader.pin_net_conflict). The harness
 (facts_docs_test.go) requires:
   - the file opens with "## <relation>" (its own name, matching the catalog),
   - <relation> is a registered relation (in query.Catalog / a Rel* const),

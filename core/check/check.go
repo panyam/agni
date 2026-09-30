@@ -227,7 +227,7 @@ const (
 	// Subject is the reference as the source spelled it (`res.sym`, `Library:Symbol`), which names
 	// a file that is absent rather than anything in the design. Distinct from KindComponent
 	// because the affected ref-des set is a PROPERTY of the finding (Message and the
-	// unresolved_symbol relation), not its subject — one missing file is one finding however many
+	// reader.unresolved_symbol relation), not its subject — one missing file is one finding however many
 	// parts it cost pins, and a consumer that joined Subject to a component would find nothing.
 	KindSymbol = "symbol"
 	// KindSignal is a REQUIREMENT SLOT rather than anything in the design: the role a profile asks
@@ -287,7 +287,7 @@ type Rule struct {
 	Remedy     string
 	Detail     string   // long-form markdown: meaning, rationale, diagram, query structure
 	Primitives []string // query primitives Eval composes (docs/19)
-	Reads      []string // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param(...))
+	Reads      []string // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param.max(...))
 	// OptionalReads is the subset of Reads a rule consults opportunistically: their absence
 	// does not make the rule inapplicable. Available's tier-gate skips them, so a netlist rule
 	// that only EXEMPTS findings using a datasheet fact (esd-protection crediting an IC's ESD
@@ -407,11 +407,11 @@ const (
 	// CapTypesPowerOut: the source format classifies power-OUTPUT pins. EDIF (INPUT/OUTPUT/INOUT
 	// only) and IPC-2581 (a board format with no pin electrical types) do not, so a rail's driver
 	// reads as a plain input and a driver-absence rule (power-input-not-driven) cannot conclude
-	// "unpowered". The queryable twin is types_power_out / the design.types_power_out fact.
-	CapTypesPowerOut Capability = "types_power_out"
+	// "unpowered". The queryable twin is design.types_power_out / the design.types_power_out fact.
+	CapTypesPowerOut Capability = "design.types_power_out"
 	// CapNoConnectChannel: the design can express intentional no-connect (a NO_CONNECT-typed pin or
 	// an nc-marker net name). Without it a per-pin absence rule (unconnected-pin) cannot tell a
-	// deliberate open pin from a forgotten one. The queryable twin is has_nc_channel / design.nc_channel.
+	// deliberate open pin from a forgotten one. The queryable twin is design.has_nc_channel / design.nc_channel.
 	CapNoConnectChannel Capability = "nc_channel"
 	// CapNetClass: the design carries tool-assigned net-class membership (WS3-105). A rule SCOPED
 	// by net class ("every HV net must ...") selects nothing where the field is empty, and a rule
@@ -419,7 +419,7 @@ const (
 	// project supplies the field, so an EDIF or IPC-2581 read, a bare .kicad_sch, and a project
 	// that declares no classes all need this gate. Unlike the two above it is a property of the
 	// design's CONTENT rather than its format grammar, which is the honest reading: a scoped rule
-	// has nothing to say either way. The queryable twin is has_netclass / the design.has_netclass fact.
+	// has nothing to say either way. The queryable twin is design.has_netclass / the design.has_netclass fact.
 	CapNetClass Capability = "netclass"
 
 	// CapRefDesCollisions: the READER detects ref-des collisions for this design's format. Unlike
@@ -436,7 +436,7 @@ const (
 	// net_settings carries membership and definitions in independent blocks: a project can assign nets
 	// to a class it never defines. A declared-vs-actual rule needs the LIMIT, so gating it on the
 	// membership capability would let a project with assignments and no definitions run the rule over
-	// zero comparisons and report a clean pass. The queryable twin is has_netclass_defs.
+	// zero comparisons and report a clean pass. The queryable twin is design.has_netclass_defs.
 	CapNetClassDefs Capability = "netclass_defs"
 
 	// CapJunctionTaps: the READER examines wire-end-on-wire-body taps and records BOTH halves, the

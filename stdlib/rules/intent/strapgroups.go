@@ -101,7 +101,7 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 		Detail:   intentDoc(docKeyStrapGroup),
 		Impact:   "a multi-pin strap encodes a number the part reads at reset — its address on a shared bus, its boot source, its bus width. Encoding the wrong number does not look like a wiring fault: the board powers up and the part runs, configured as something else, and on a shared bus it may answer to an address another device already owns.",
 		Remedy:   intentRemedy(docKeyStrapGroup),
-		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
+		Reads:    []string{"component.net", "component.class", "net.ground", "net.rail"},
 		Tags:     intentTags(),
 		// The device and every net the group straps. A strap group IS an N-tuple: the value it encodes
 		// is a property of all the bits together, and no single net carries it. This rule used to name
@@ -228,7 +228,7 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 		Detail:   intentDoc(RuleStrapAddressCollision),
 		Impact:   "two parts answering to one address on a shared bus both drive it when either is addressed. The bus goes unreliable in a way that reads as noise or marginal timing rather than as a wiring fault, and it is invisible in a schematic review because each strap is individually correct.",
 		Remedy:   intentRemedy(RuleStrapAddressCollision),
-		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
+		Reads:    []string{"component.net", "component.class", "net.ground", "net.rail"},
 		Tags:     intentTags(),
 		// The subject is a PAIR of devices, which is what let this rule state a considered set after
 		// being the one intent rule that could not (agni issue 391).

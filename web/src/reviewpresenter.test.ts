@@ -399,7 +399,7 @@ describe("naming convention", () => {
     const h = convHarness();
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.setConvention("proj/house.yaml");
-    await h.presenter.runQuery("rail(?n) => ?n");
+    await h.presenter.runQuery("net.rail(?n) => ?n");
     const calls = h.runQuery.mock.calls;
     const sent = calls[calls.length - 1][0] as Record<string, unknown>;
     expect(sent.overlay, "the query panel would otherwise answer under a different vocabulary than the bar names").toBeDefined();
@@ -408,7 +408,7 @@ describe("naming convention", () => {
   it("sends no overlay on a query while the server's vocabulary applies", async () => {
     const h = convHarness();
     await h.presenter.openFile("m", "proj/board.edn");
-    await h.presenter.runQuery("rail(?n) => ?n");
+    await h.presenter.runQuery("net.rail(?n) => ?n");
     const qcalls = h.runQuery.mock.calls;
     expect((qcalls[qcalls.length - 1][0] as Record<string, unknown>).overlay).toBeUndefined();
   });

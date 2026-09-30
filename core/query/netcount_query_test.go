@@ -11,7 +11,7 @@ import (
 )
 
 // TestNetCountReplacesTheSelfJoin is agni issue 727's acceptance. "Capacitors on exactly two nets"
-// used to need three copies of component-on-net and a negation; component.net_count says it in one
+// used to need three copies of component.net and a negation; component.net_count says it in one
 // clause, and the two must name the same parts. C1 is two-terminal, C2 has both pins on one net, C3
 // spans three.
 func TestNetCountReplacesTheSelfJoin(t *testing.T) {
@@ -43,8 +43,8 @@ func TestNetCountReplacesTheSelfJoin(t *testing.T) {
 		sort.Strings(out)
 		return strings.Join(out, ",")
 	}
-	selfJoin := refs(`three(?r) :- component-on-net(?r,?a), component-on-net(?r,?b), component-on-net(?r,?c), ?a < ?b, ?b < ?c;
-		two(?r) :- component.class(?r,"capacitor"), component-on-net(?r,?a), component-on-net(?r,?b), ?a < ?b, not three(?r);
+	selfJoin := refs(`three(?r) :- component.net(?r,?a), component.net(?r,?b), component.net(?r,?c), ?a < ?b, ?b < ?c;
+		two(?r) :- component.class(?r,"capacitor"), component.net(?r,?a), component.net(?r,?b), ?a < ?b, not three(?r);
 		two(?r) => ?r`)
 	oneClause := refs(`component.class(?r,"capacitor"), component.net_count(?r, 2) => ?r`)
 	if selfJoin != "C1" {

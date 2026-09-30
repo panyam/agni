@@ -3,4 +3,4 @@
 fixture: examples/tutorial-project
 from_root: true
 script: |
-  agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "regulator"), component-on-net(?r, ?n) => ?r, ?n'
+  agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "regulator"), component.net(?r, ?n) => ?r, ?n'

@@ -31,18 +31,18 @@ func TestSwitchingRelationProjectsThePowerStageNodes(t *testing.T) {
 	}
 	for _, want := range []string{"12V_SW", "12V_BOOT", "12V_PHASE", "VCC_LX"} {
 		if !got[want] {
-			t.Errorf("switching(%s) missing: %+v", want, byRel[RelSwitching])
+			t.Errorf("net.switching(%s) missing: %+v", want, byRel[RelSwitching])
 		}
 	}
 	// The negative half. A relation matching every net would satisfy the positive half alone.
 	for _, never := range []string{"12V_OUT", "12V_FB", "SDA"} {
 		if got[never] {
-			t.Errorf("switching(%s) present, want absent", never)
+			t.Errorf("net.switching(%s) present, want absent", never)
 		}
 	}
 }
 
-// TestRailExcludesBothRegulatorInternalRoles: `rail` and the two "not a rail" relations cannot
+// TestRailExcludesBothRegulatorInternalRoles: `net.rail` and the two "not a rail" relations cannot
 // overlap. This is the cross-relation assertion agni 684 was filed on the belief that it would FAIL,
 // because railFacts asks Model.IsPowerRail (a name function) while net.nominal_voltage asks
 // IsRailNet. It passes, because IsPowerRail delegates to IsRailNet for the name path and so inherits
@@ -64,6 +64,6 @@ func TestRailExcludesBothRegulatorInternalRoles(t *testing.T) {
 	}
 	// The positive control: rail is not simply empty.
 	if !rails["12V_OUT"] {
-		t.Errorf("rail(12V_OUT) missing, so the assertion above proves nothing: %+v", byRel[RelRail])
+		t.Errorf("net.rail(12V_OUT) missing, so the assertion above proves nothing: %+v", byRel[RelRail])
 	}
 }

@@ -19,7 +19,7 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 		Detail:              intentDoc("property-" + kind),
 		Impact:              propertyImpact(kind),
 		Remedy:              intentRemedy("property-" + kind),
-		Reads:               []string{"component-on-net", "component.class", "net.ground", "rail"},
+		Reads:               []string{"component.net", "component.class", "net.ground", "net.rail"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return propertyVerdicts(m, ps, kind) },
 		StatesConsideredSet: true,

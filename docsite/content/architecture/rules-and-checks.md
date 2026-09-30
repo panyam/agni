@@ -362,7 +362,7 @@ with provenance:
 
 ```
 $ agni query regulator.fires.kicad_sch --params seed/ \
-    'component.mpn(?r,?m), param(?m,"VIN",?vmax), component-on-net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?m, ?vmax, ?n, ?rail'
+    'component.mpn(?r,?m), param.max(?m,"VIN",?vmax), component.net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?m, ?vmax, ?n, ?rail'
 r   m       vmax  n     rail  provenance
 U1  LM1117  20    +24V  24    …/regulator.fires.kicad_sch ; datasheet "SNOS412Q …" page 4, "7.1 Absolute Maximum Ratings"
 ```
@@ -385,14 +385,14 @@ argued.
 
 Plain datalog gives unbounded transitive closure through recursion, but says nothing about distance.
 That is the one hole a circuit question keeps falling into, because protection questions are all
-bounded: a clamp near the pin, a series element within two hops. The fix is shipped. `reaches` takes
+bounded: a clamp near the pin, a series element within two hops. The fix is shipped. `net.reaches` takes
 an optional third argument binding the exact number of crossings, so a radius is written
 
 ```
-reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs")
+net.reaches(?n, ?rn, ?h), ?h <= 2, component.net(?t, ?rn), component.class(?t, "tvs")
 ```
 
-and not `reaches(?n, ?rn, 2)`, which means exactly two crossings and silently skips a part sitting one
+and not `net.reaches(?n, ?rn, 2)`, which means exactly two crossings and silently skips a part sitting one
 away.
 
 **The consequence is that several Go escape hatches are now redundant rather than necessary**, which

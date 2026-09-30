@@ -59,5 +59,5 @@ net.bias(?n, "low") => ?n
 Unbiased nets that a part still drives, which is where an undeclared internal pull is doing the work:
 
 ```
-component-on-net(?r, ?n), not net.bias(?n, ?_) => ?n, ?r
+component.net(?r, ?n), not net.bias(?n, ?_) => ?n, ?r
 ```

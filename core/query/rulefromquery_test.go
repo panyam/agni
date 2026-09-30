@@ -58,7 +58,7 @@ func TestPinRelationsQuery(t *testing.T) {
 }
 
 // TestEsdRatedQuery (WS3-076): the IC-ESD credit expressed as datalog — component.esd_rated joins
-// with component-on-net to name the signals a rated transceiver protects. The relation is empty
+// with component.net to name the signals a rated transceiver protects. The relation is empty
 // without --params, so the query is authored against a params-seeded Base.
 func TestEsdRatedQuery(t *testing.T) {
 	esd := func(mpn string, volts float64) *parampb.PartSpec {
@@ -84,7 +84,7 @@ func TestEsdRatedQuery(t *testing.T) {
 	}
 	set := param.ParamSet{"XCVR": esd("XCVR", 8000), "PLAIN": esd("PLAIN", 500)} // only XCVR clears the floor
 	b := NewBase(check.NewModelWithParams(d, nil, set))
-	q, err := Parse(`component.esd_rated(?r), component-on-net(?r, ?n) => ?n`)
+	q, err := Parse(`component.esd_rated(?r), component.net(?r, ?n) => ?n`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestEsdRatedQuery(t *testing.T) {
 
 // TestDiagnosticRelationsQuery (WS3-081): the entity-keyed reader diagnostics are queryable and join.
 // A ref-des collision on U1, and U1 pin 1 claimed by two nets (a pin-net conflict) -> both relations
-// answer, and pin_net_conflict returns one row per net the conflicted pin touches.
+// answer, and reader.pin_net_conflict returns one row per net the conflicted pin touches.
 func TestDiagnosticRelationsQuery(t *testing.T) {
 	d := &ir.Design{
 		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{
@@ -119,15 +119,15 @@ func TestDiagnosticRelationsQuery(t *testing.T) {
 	}
 	b := NewBase(check.NewModel(d))
 
-	rc, err := Naive{}.Eval(MustParse(`ref_des_collision(?r) => ?r`), b)
+	rc, err := Naive{}.Eval(MustParse(`reader.ref_des_collision(?r) => ?r`), b)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(rc) != 1 || rc[0].Bind[Var("r")].S != "U1" {
-		t.Fatalf("ref_des_collision = %+v, want one (U1)", rc)
+		t.Fatalf("reader.ref_des_collision = %+v, want one (U1)", rc)
 	}
 
-	pc, err := Naive{}.Eval(MustParse(`pin_net_conflict(?r, ?p, ?net) => ?net`), b)
+	pc, err := Naive{}.Eval(MustParse(`reader.pin_net_conflict(?r, ?p, ?net) => ?net`), b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestDiagnosticRelationsQuery(t *testing.T) {
 		nets[r.Bind[Var("net")].S] = true
 	}
 	if !nets["NETA"] || !nets["NETB"] {
-		t.Fatalf("pin_net_conflict nets = %v, want NETA and NETB (a pin on two nets)", nets)
+		t.Fatalf("reader.pin_net_conflict nets = %v, want NETA and NETB (a pin on two nets)", nets)
 	}
 }
 
@@ -186,7 +186,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	// the report leans on to flag a value that should be verified before it is trusted.
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:        check.Rule{Name: "iout-check", Severity: "warning"},
-		Query:       MustParse(`component.mpn(?r, ?m), param(?m, "IOUT", ?v), ?v < 6 => ?r`),
+		Query:       MustParse(`component.mpn(?r, ?m), param.max(?m, "IOUT", ?v), ?v < 6 => ?r`),
 		Kind:        check.KindComponent,
 		SubjectVar:  "r",
 		Message:     "{r}: IOUT below requirement",
@@ -208,7 +208,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	// (3) without ParamSymbol, no citation is attached (the opt-in gates it).
 	plain := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "iout-plain", Severity: "warning"},
-		Query:      MustParse(`component.mpn(?r, ?m), param(?m, "IOUT", ?v), ?v < 6 => ?r`),
+		Query:      MustParse(`component.mpn(?r, ?m), param.max(?m, "IOUT", ?v), ?v < 6 => ?r`),
 		Kind:       check.KindComponent,
 		SubjectVar: "r",
 		Message:    "{r}",

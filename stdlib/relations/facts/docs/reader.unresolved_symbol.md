@@ -1,8 +1,8 @@
-## unresolved_symbol
+## reader.unresolved_symbol
 
 ### What it is
 
-`unresolved_symbol(ref_des, symref)` yields one row per PLACEMENT whose symbol the reader could not
+`reader.unresolved_symbol(ref_des, symref)` yields one row per PLACEMENT whose symbol the reader could not
 open or parse (WS1-052). `ref_des` is the affected component's reference designator; `symref` is the
 reference exactly as the source spelled it (an xschem or gEDA `res.sym`, a KiCad `Library:Symbol`
 lib_id). One missing file usually produces several rows, one per part drawn with it.
@@ -49,18 +49,18 @@ reader populates the same channel, so the relation is format-neutral.
 List every part that lost its pins, and to what:
 
 ```
-unresolved_symbol(?ref, ?sym) => ?ref, ?sym
+reader.unresolved_symbol(?ref, ?sym) => ?ref, ?sym
 ```
 
 The blast-radius query, and the reason this relation is keyed by ref-des: did anything that MATTERS
 lose its pins?
 
 ```
-unresolved_symbol(?ref, ?sym), component.class(?ref, "fpga") => ?ref, ?sym
+reader.unresolved_symbol(?ref, ?sym), component.class(?ref, "fpga") => ?ref, ?sym
 ```
 
 Everything affected by one specific missing library:
 
 ```
-unresolved_symbol(?ref, "Device:R") => ?ref
+reader.unresolved_symbol(?ref, "Device:R") => ?ref
 ```

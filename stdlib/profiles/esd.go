@@ -13,7 +13,7 @@ import (
 // filtering a design-wide rule's findings down to an interface (the WS3-058 stopgap this supersedes).
 //
 // SCOPE COMES FROM THE DESIGN, NOT THE PROTOCOL. The requirement applies to whichever of the
-// profile's nets external_signal_net selects, rather than to a per-signal `esd:` flag the way pull-up
+// profile's nets net.connector_signal selects, rather than to a per-signal `esd:` flag the way pull-up
 // works. On CAN that matters: _TXD and _RXD run to the MCU and never leave the board, while _CANH and
 // _CANL do, so a blanket per-signal application would fail the two lines that were never exposed.
 // Whether a line is connector-facing is a property of the board in hand. A profile whose bus is
@@ -28,7 +28,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	rules := p.presenceRules()
 	signals := 0
 	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("external_signal_net", query.V("n")))},
+		body := append([]query.Literal{query.Pos(query.Rel("net.connector_signal", query.V("n")))},
 			netMatch(query.V("n"), s)...)
 		if len(body) == 1 {
 			continue // a signal with no matcher would select every exposed net
@@ -47,7 +47,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	// rules partition these nets between them. Crediting it here is what keeps this requirement from
 	// double-reporting a net the catalog already speaks about.
 	// Every clause opens with needs_esd(?n), which BINDS the head variable before anything scans.
-	// Without it the body starts at reaches(?n, ?rn, ?h) with all three unbound, so the evaluator
+	// Without it the body starts at net.reaches(?n, ?rn, ?h) with all three unbound, so the evaluator
 	// walks the series neighborhood from every net on the board and only then filters — quadratic,
 	// and it made `agni check` non-terminating on a real design (WS3-114). The guard is not a new
 	// restriction: unprotected already conjoins needs_esd, so esd_ok facts outside it were computed
@@ -55,16 +55,16 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
 		rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
 			query.Pos(query.Rel("needs_esd", query.V("n"))),
-			query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
+			query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
-			query.Pos(query.Rel("component-on-net", query.V(c.v), query.V("rn"))),
+			query.Pos(query.Rel("component.net", query.V(c.v), query.V("rn"))),
 			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class)))))
 	}
 	rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
 		query.Pos(query.Rel("needs_esd", query.V("n"))),
-		query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
+		query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
-		query.Pos(query.Rel("component-on-net", query.V("u"), query.V("rn"))),
+		query.Pos(query.Rel("component.net", query.V("u"), query.V("rn"))),
 		query.Pos(query.Rel("component.esd_rated", query.V("u")))))
 
 	rules = append(rules, query.Def(query.Rel("unprotected", query.V("n")),
@@ -95,16 +95,16 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
 		rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V(c.v)),
 			query.Pos(query.Rel("needs_esd", query.V("n"))),
-			query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
+			query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
-			query.Pos(query.Rel("component-on-net", query.V(c.v), query.V("rn"))),
+			query.Pos(query.Rel("component.net", query.V(c.v), query.V("rn"))),
 			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class)))))
 	}
 	rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V("u")),
 		query.Pos(query.Rel("needs_esd", query.V("n"))),
-		query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
+		query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
-		query.Pos(query.Rel("component-on-net", query.V("u"), query.V("rn"))),
+		query.Pos(query.Rel("component.net", query.V("u"), query.V("rn"))),
 		query.Pos(query.Rel("component.esd_rated", query.V("u")))))
 
 	q := query.Build(rules,

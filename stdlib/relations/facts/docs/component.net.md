@@ -1,8 +1,8 @@
-## component-on-net
+## component.net
 
 ### What it is
 
-`component-on-net(ref_des, net)` yields one row for each place a component connects to a net: the
+`component.net(ref_des, net)` yields one row for each place a component connects to a net: the
 reference designator and the net name. A component with three pins on three different nets
 produces three rows; a net with eight parts on it produces eight. This is the netlist's core
 adjacency, the link between the two entities every other netlist relation is keyed on.
@@ -40,12 +40,12 @@ once per part on it. Empty only when no net carries any connection.
 Every component-to-net link:
 
 ```
-component-on-net(?r, ?n) => ?r, ?n
+component.net(?r, ?n) => ?r, ?n
 ```
 
 Join to `component.class` to find every diode and the nets it sits on (the shape most rules build
 on, a property on one entity pulled through the edge to the other):
 
 ```
-component-on-net(?r, ?n), component.class(?r, "diode") => ?r, ?n
+component.net(?r, ?n), component.class(?r, "diode") => ?r, ?n
 ```

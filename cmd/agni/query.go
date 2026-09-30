@@ -18,7 +18,7 @@ import (
 )
 
 // queryCmd runs an ad-hoc datalog query over the design's fact base (WS3-029). The fact relations
-// are the same ones rules assert over (net.max_voltage, component.mpn, param, component-on-net,
+// are the same ones rules assert over (net.max_voltage, component.mpn, param, component.net,
 // plus the built-in reaches), so search and rules share one vocabulary; every answer row prints the
 // provenance of the facts that produced it.
 func queryCmd() *cobra.Command {
@@ -39,15 +39,15 @@ func queryCmd() *cobra.Command {
 its provenance. Relations:
 
   net.max_voltage(net, volts)        component.mpn(ref_des, mpn)
-  net.nominal_voltage(net, volts)    component-on-net(ref_des, net)
-  param(mpn, symbol, max)            param.range(mpn, symbol, kind, min, max)  [--params]
-  reaches(from, net)                 (transitive: through series pass elements)
+  net.nominal_voltage(net, volts)    component.net(ref_des, net)
+  param.max(mpn, symbol, max)            param.range(mpn, symbol, kind, min, max)  [--params]
+  net.reaches(from, net)                 (transitive: through series pass elements)
 
 A term is a ?variable, a "string", or a number; relations join on shared variables; => projects.
 --examples prints a set of starter queries (the same set the web panel shows).
 
   agni query board.kicad_sch --params seed/ \
-    'component.mpn(?r,?m), param(?m,"VIN",?vmax), component-on-net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?vmax, ?n, ?rail'`,
+    'component.mpn(?r,?m), param.max(?m,"VIN",?vmax), component.net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?vmax, ?n, ?rail'`,
 		// --examples / --relations need no file/query; --speclib queries the corpus (--params) with no
 		// <file>, so just the <query>; otherwise both <file> and <query> are required.
 		Args: func(cmd *cobra.Command, args []string) error {

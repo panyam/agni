@@ -59,7 +59,7 @@ func TestComponentNetCountCountsDistinctNets(t *testing.T) {
 }
 
 // TestComponentNetCountAgreesWithComponentOnNet: for every ref, the count equals the number of
-// distinct nets component-on-net places it on. The relation is a derived count of that one, and a
+// distinct nets component.net places it on. The relation is a derived count of that one, and a
 // second opinion about connectivity is how two relations start to disagree.
 func TestComponentNetCountAgreesWithComponentOnNet(t *testing.T) {
 	m := check.NewModel(netCountDesign())
@@ -71,12 +71,12 @@ func TestComponentNetCountAgreesWithComponentOnNet(t *testing.T) {
 		nets[f.Subject][f.Object] = true
 	}
 	counts := netCounts(t, m)
-	if len(counts) != len(nets)+1 { // +1 for U9, which component-on-net never mentions
-		t.Fatalf("net_count has %d rows, want one per ref component-on-net names plus U9: %v", len(counts), counts)
+	if len(counts) != len(nets)+1 { // +1 for U9, which component.net never mentions
+		t.Fatalf("net_count has %d rows, want one per ref component.net names plus U9: %v", len(counts), counts)
 	}
 	for ref, c := range counts {
 		if int(c) != len(nets[ref]) {
-			t.Errorf("%s: net_count %v, component-on-net places it on %d nets", ref, c, len(nets[ref]))
+			t.Errorf("%s: net_count %v, component.net places it on %d nets", ref, c, len(nets[ref]))
 		}
 	}
 }

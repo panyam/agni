@@ -8,7 +8,7 @@ import (
 )
 
 // aggFixture has no resistor at all, so every query below that asks about one matches nothing.
-const noResistor = `component.class(?r,"resistor"), component-on-net(?r,?n)`
+const noResistor = `component.class(?r,"resistor"), component.net(?r,?n)`
 
 // TestAggregateOverNothingIsOneRow: with no group-by column the whole answer is one group, and it
 // exists when nothing matched, so a count answers 0 rather than no rows (agni issue 726). The
@@ -44,7 +44,7 @@ func TestAggregateOverNothingIsOneRow(t *testing.T) {
 // over a class the fixture does carry answers its real count, so the zero is not a constant.
 func TestAggregateOverSomethingStillCounts(t *testing.T) {
 	rows := runQuery(t, check.NewModel(aggFixture()),
-		`component.class(?c,"capacitor"), component-on-net(?c,?n) => count(distinct ?c)`)
+		`component.class(?c,"capacitor"), component.net(?c,?n) => count(distinct ?c)`)
 	if len(rows) != 1 || rows[0].Bind["count(distinct c)"].S != "3" {
 		t.Errorf("rows = %+v, want one row counting C1, C2 and C3", rows)
 	}

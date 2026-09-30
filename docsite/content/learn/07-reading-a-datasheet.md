@@ -58,7 +58,7 @@ Ask for it the way you would ask for a limit and you can see the layer refusing 
 
 {{ agniRun "content/learn/runs/typical-not-a-limit.yaml" }}
 
-Two rows, and no number in either. `param` reports ceilings, a typical is not one, and the row stays
+Two rows, and no number in either. `param.max` reports ceilings, a typical is not one, and the row stays
 with its number missing rather than quietly reporting zero. That absence is deliberate and it is
 load-bearing: a threshold written against a missing number cannot silently pass, because ordering
 refuses to compare an absent value against a present one.

@@ -47,7 +47,7 @@ Match the whole diode family by its family tag (catches plain diodes, LEDs, and 
 report which nets they sit on:
 
 ```
-component.class(?r, "diode"), component-on-net(?r, ?n) => ?n
+component.class(?r, "diode"), component.net(?r, ?n) => ?n
 ```
 
 ### Schematic

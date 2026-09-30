@@ -21,9 +21,9 @@ import (
 // an arbitrary one, and both share the `query` evaluator. It knows no transport.
 //
 // The evaluator is pluggable behind query.Evaluator; this service holds the default naive
-// interpreter. v1 evaluates the netlist fact base only — the datasheet `param` relation is empty
+// interpreter. v1 evaluates the netlist fact base only — the datasheet `param.max` relation is empty
 // because serve wires no params dir and datasheet data stays deployment-bound (C16), so a query
-// over `param` yields no rows rather than an error.
+// over `param.max` yields no rows rather than an error.
 type QueryService struct {
 	// projects resolves a design to its project and loads that project's config; nil when this
 	// deployment declares none. fallback is the deployment default used for a design with no project.
@@ -153,7 +153,7 @@ type designRead struct {
 func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, source string, overlay *webapi.OverlayConfig, asNamed bool) (*designRead, error) {
 	// The request's overlay is composed BEFORE the read, because only its lexicon half matters here and
 	// that half has to reach the READ: net roles are resolved once at ingestion, so the vocabulary
-	// decides what `rail`, `feedback`, and everything derived from them answer (WS3-113).
+	// decides what `net.rail`, `net.feedback`, and everything derived from them answer (WS3-113).
 	//
 	// The convention's RULES half is ignored, deliberately. A query composes no catalog, and a project
 	// keeps one conventions file carrying both halves, so refusing it over rules this call will never

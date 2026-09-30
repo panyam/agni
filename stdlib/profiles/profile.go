@@ -3,7 +3,7 @@
 // datalog program per requirement and wraps each with query.RuleFromQuery (WS3-038), so adding an
 // interface is a data value, not new code — the lever that collapses ~130 near-identical "verify
 // signal X connected" review items into one mechanism (docs/19 §3). The generated datalog uses only
-// the merged pin/net relations (component-on-net, the string/pattern predicates, reaches, rail,
+// the merged pin/net relations (component.net, the string/pattern predicates, reaches, rail,
 // net.pin_count).
 //
 // A signal is matched by NET NAME, through one of the matcher forms in matcher.go (affix, glob, or
@@ -366,7 +366,7 @@ func (p Profile) lname() string { return strings.ToLower(strings.ReplaceAll(p.Na
 func (p Profile) presenceRules() []query.Rule {
 	var rules []query.Rule
 	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n")))},
+		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("n")))},
 			netMatch(query.V("n"), s)...)
 		rules = append(rules, query.Def(query.Rel("has_signal", query.Str(s.Name)), body...))
 	}
@@ -414,7 +414,7 @@ func (p Profile) signalMissingRule() *check.Rule {
 		n++
 		// The anchor net is matched by the anchor signal's FULL convention (suffix + optional prefix),
 		// so a prefix-named interface anchors only on its own nets — not a foreign same-suffix serdes.
-		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("a")))},
+		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("a")))},
 			netMatch(query.V("a"), *anchorSig)...)
 		scope := append(append([]query.Literal{}, body...), query.Pos(query.Rel("in_use", query.V("iu"))))
 		scope = append(scope, guard...)
@@ -467,7 +467,7 @@ func (p Profile) hostIncompleteRule() *check.Rule {
 		present := "present_" + s.Name
 		presentBody := append([]query.Literal{
 			query.Pos(query.Rel("host", query.V("h"))),
-			query.Pos(query.Rel("component-on-net", query.V("h"), query.V("n"))),
+			query.Pos(query.Rel("component.net", query.V("h"), query.V("n"))),
 		}, netMatch(query.V("n"), s)...)
 		rules = append(rules,
 			query.Def(query.Rel(present, query.V("h")), presentBody...),
@@ -581,7 +581,7 @@ func (p Profile) pullupVerdicts(pullups []Signal) func(check.Model) []check.Verd
 		var out []check.Verdict
 		for _, n := range m.Nets() {
 			// A net with NO connections is not a subject, which mirrors the datalog form's
-			// `component-on-net(?r, ?n)` in needs_pullup and is not a detail. On a read whose symbols
+			// `component.net(?r, ?n)` in needs_pullup and is not a detail. On a read whose symbols
 			// did not resolve, the net NAMES survive and the connections do not, so matching by name
 			// alone turned an incomplete read into four confident findings about buses whose pins the
 			// reader never saw. matchSignalNet applies the same condition for the coverage panel.
@@ -621,7 +621,7 @@ func anySignalMatches(net string, signals []Signal) bool {
 func (p Profile) danglingRule() *check.Rule {
 	rules := p.presenceRules()
 	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n")))},
+		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("n")))},
 			netMatch(query.V("n"), s)...)
 		rules = append(rules, query.Def(query.Rel("sig_net", query.V("n")), body...))
 	}
@@ -664,7 +664,7 @@ func (p Profile) danglingRule() *check.Rule {
 }
 
 // mustBindHeadFirst is the WS3-114 guard on every query a requirement compiler generates: no derived
-// rule may OPEN with an unbound `reaches`, which walks from every net on the board before any filter
+// rule may OPEN with an unbound `net.reaches`, which walks from every net on the board before any filter
 // applies.
 //
 // It panics rather than returning an error because a violation is an authoring mistake in engine

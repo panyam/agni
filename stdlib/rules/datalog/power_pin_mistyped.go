@@ -17,7 +17,7 @@ import (
 // power-pin-unconnected (PR 217), and does not overlap power-input-not-driven, which needs the
 // power_in type and so misses exactly this case. Keyed on net fan-out (net.pin_count < 2), NOT net
 // membership, because KiCad stub-synthesizes a net for every bare pin, so "not on a net" is never
-// true there but "alone on its net" is. Gated by has_nc_channel so it stays silent on formats that
+// true there but "alone on its net" is. Gated by design.has_nc_channel so it stays silent on formats that
 // cannot express intentional no-connect.
 var powerPinMistypedQ = query.FindingQuery{
 	Rule: check.Rule{
@@ -35,22 +35,22 @@ var powerPinMistypedQ = query.FindingQuery{
 		Detail: ruleDoc("power-pin-mistyped"),
 	},
 	Query: query.MustParse(`
-		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
-		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
+		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
+		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
 		bad(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
 	// The considered set: every pin the NAME says is a supply or a ground, on a format that can
 	// express intentional no-connect. Both of the rule's tests drop out, the type test and the
 	// fan-out comparison alike, because a pin that is correctly typed and a pin that is wired are
 	// both pins this rule looked at and cleared.
 	//
-	// has_nc_channel stays. It is not a test the pin passes, it is whether the FORMAT can answer the
+	// design.has_nc_channel stays. It is not a test the pin passes, it is whether the FORMAT can answer the
 	// question at all, and a pin read from a format that cannot express no-connect was never judged.
 	// Leaving it out would report every pin on an EDIF netlist as verified by a rule that is
 	// structurally silent there, which is the false-pass shape the capability gate exists to prevent.
 	Domain: &query.Domain{
 		Query: query.MustParse(`
-		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  pin.net(?ref, ?pin, ?net), has_nc_channel(?nc);
-		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), pin.net(?ref, ?pin, ?net), has_nc_channel(?nc);
+		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  pin.net(?ref, ?pin, ?net), design.has_nc_channel(?nc);
+		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), pin.net(?ref, ?pin, ?net), design.has_nc_channel(?nc);
 		scope(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
 		Witness: "pin {pin} is named like a power/ground pin and is either typed power_in or wired to a shared net",
 	},

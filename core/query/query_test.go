@@ -42,7 +42,7 @@ func TestCrossTierJoin(t *testing.T) {
 		Nets:       []*ir.Net{{Name: "SIG", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "x"}}},
 	}
 	m := check.NewModelWithParams(d, boardGeom(), param.ParamSet{"REG-24": regSpec("REG-24", 20)})
-	rows := runQuery(t, m, `board.track_width(?net,?w), component-on-net(?ref,?net), component.mpn(?ref,?mpn), ?w < 0.1 => ?net, ?ref, ?mpn`)
+	rows := runQuery(t, m, `board.track_width(?net,?w), component.net(?ref,?net), component.mpn(?ref,?mpn), ?w < 0.1 => ?net, ?ref, ?mpn`)
 	if len(rows) != 1 || rows[0].Bind["ref"].S != "U1" || rows[0].Bind["mpn"].S != "REG-24" || rows[0].Bind["net"].S != "SIG" {
 		t.Fatalf("cross-tier rows = %+v, want SIG/U1/REG-24", rows)
 	}
@@ -108,12 +108,12 @@ func runQueryOn(t *testing.T, reg *facts.Registry, m check.Model, text string) [
 }
 
 // TestShowcaseJoin (WS3-029): the flagship datasheet query — a part whose abs-max VIN is below the
-// rail it sits on — joins param ⋈ component.mpn ⋈ component-on-net ⋈ net.max_voltage and the answer
+// rail it sits on — joins param ⋈ component.mpn ⋈ component.net ⋈ net.max_voltage and the answer
 // carries provenance. This is "search your design incl. datasheets, with verifiability" made real.
 func TestShowcaseJoin(t *testing.T) {
 	m := check.NewModelWithParams(regDesign("+24V"), nil, param.ParamSet{"REG-24": regSpec("REG-24", 20)})
 	rows := runQuery(t, m,
-		`component.mpn(?ref,?mpn), param(?mpn,"VIN",?vmax), component-on-net(?ref,?net), net.max_voltage(?net,?rail), ?vmax < ?rail => ?ref, ?vmax, ?net, ?rail`)
+		`component.mpn(?ref,?mpn), param.max(?mpn,"VIN",?vmax), component.net(?ref,?net), net.max_voltage(?net,?rail), ?vmax < ?rail => ?ref, ?vmax, ?net, ?rail`)
 
 	if len(rows) != 1 {
 		t.Fatalf("rows = %d, want 1 (U1 over-stressed on +24V)", len(rows))
@@ -139,15 +139,15 @@ func TestShowcaseJoin(t *testing.T) {
 func TestShowcasePasses(t *testing.T) {
 	m := check.NewModelWithParams(regDesign("+12V"), nil, param.ParamSet{"REG-24": regSpec("REG-24", 20)})
 	rows := runQuery(t, m,
-		`component.mpn(?ref,?mpn), param(?mpn,"VIN",?vmax), component-on-net(?ref,?net), net.max_voltage(?net,?rail), ?vmax < ?rail => ?ref`)
+		`component.mpn(?ref,?mpn), param.max(?mpn,"VIN",?vmax), component.net(?ref,?net), net.max_voltage(?net,?rail), ?vmax < ?rail => ?ref`)
 	if len(rows) != 0 {
 		t.Errorf("rows = %v, want none (20V abs-max, 12V rail)", rows)
 	}
 }
 
 // vddSpec is REG-24 with TWO rows on the ONE symbol VDD: a recommended-operating window (3.0..3.6)
-// and an absolute-maximum ceiling (4.6). This is exactly the case the thin param(mpn,symbol,max)
-// relation cannot tell apart — both surface as param(REG-24,"VDD",...) — and that param.range
+// and an absolute-maximum ceiling (4.6). This is exactly the case the thin param.max(mpn,symbol,max)
+// relation cannot tell apart — both surface as param.max(REG-24,"VDD",...) — and that param.range
 // separates by its kind argument.
 func vddSpec(mpn string) *parampb.PartSpec {
 	return &parampb.PartSpec{
@@ -172,7 +172,7 @@ func vddSpec(mpn string) *parampb.PartSpec {
 
 // TestParamRangeTwoSidedJoin (WS3-082) demonstrates that a two-sided, limit-kind-discriminated
 // range check IS authorable in datalog with param.range + net.nominal_voltage — the join the thin
-// param(mpn,symbol,max) relation could not express (no lower bound, no way to tell an absolute-max
+// param.max(mpn,symbol,max) relation could not express (no lower bound, no way to tell an absolute-max
 // row from a recommended-operating one on the same symbol). This is the ticket's "demonstrated
 // datalog program" proof that the enriched vocabulary is sufficient for the datasheet-range rule
 // family.
@@ -182,7 +182,7 @@ func TestParamRangeTwoSidedJoin(t *testing.T) {
 	// Over the recommended maximum: +5V > 3.6. The "recommended_operating" kind filter keeps the
 	// abs-max row (4.6) out of this check, so exactly one answer.
 	over := runQuery(t, m,
-		`component.mpn(?ref,?mpn), param.range(?mpn,?sym,"recommended_operating",?min,?max), component-on-net(?ref,?net), net.nominal_voltage(?net,?v), ?v > ?max => ?ref, ?net, ?v, ?max`)
+		`component.mpn(?ref,?mpn), param.range(?mpn,?sym,"recommended_operating",?min,?max), component.net(?ref,?net), net.nominal_voltage(?net,?v), ?v > ?max => ?ref, ?net, ?v, ?max`)
 	if len(over) != 1 {
 		t.Fatalf("recommended over-max: rows = %d, want 1", len(over))
 	}
@@ -197,13 +197,13 @@ func TestParamRangeTwoSidedJoin(t *testing.T) {
 	// Under the recommended MINIMUM — the side the thin param relation carries no bound for. A +2V5
 	// rail on the same part is below the 3.0 floor.
 	under := runQuery(t, check.NewModelWithParams(regDesign("+2V5"), nil, param.ParamSet{"REG-24": vddSpec("REG-24")}),
-		`component.mpn(?ref,?mpn), param.range(?mpn,?sym,"recommended_operating",?min,?max), component-on-net(?ref,?net), net.nominal_voltage(?net,?v), ?v < ?min => ?ref, ?v, ?min`)
+		`component.mpn(?ref,?mpn), param.range(?mpn,?sym,"recommended_operating",?min,?max), component.net(?ref,?net), net.nominal_voltage(?net,?v), ?v < ?min => ?ref, ?v, ?min`)
 	if len(under) != 1 || under[0].Bind["min"].Num == nil || *under[0].Bind["min"].Num != 3.0 {
 		t.Fatalf("recommended under-min: rows = %v, want one with min 3.0", under)
 	}
 
 	// Kind discrimination: filtering the SAME symbol by kind picks the abs-max ceiling (4.6), which
-	// param(mpn,"VDD",max) could never separate from the recommended 3.6.
+	// param.max(mpn,"VDD",max) could never separate from the recommended 3.6.
 	abs := runQuery(t, m, `param.range("REG-24","VDD","absolute_max",?min,?max) => ?max`)
 	if len(abs) != 1 || abs[0].Bind["max"].Num == nil || *abs[0].Bind["max"].Num != 4.6 {
 		t.Fatalf("abs-max row: rows = %v, want one with max 4.6", abs)
@@ -233,13 +233,13 @@ func reachDesign() *ir.Design {
 // TestReachesRecursion (WS3-029): the built-in reaches relation (bridged to check.Model.Reach)
 // makes recursion real — reaches from A crosses the series resistor to B (reflexive, so A too).
 func TestReachesRecursion(t *testing.T) {
-	rows := runQuery(t, check.NewModel(reachDesign()), `reaches("A",?n) => ?n`)
+	rows := runQuery(t, check.NewModel(reachDesign()), `net.reaches("A",?n) => ?n`)
 	got := map[string]bool{}
 	for _, r := range rows {
 		got[r.Bind["n"].S] = true
 	}
 	if !got["A"] || !got["B"] {
-		t.Errorf("reaches(A) = %v, want A and B (through the series resistor)", got)
+		t.Errorf("net.reaches(A) = %v, want A and B (through the series resistor)", got)
 	}
 }
 
@@ -272,7 +272,7 @@ func reachChainDesign() *ir.Design {
 // TestReachesBindsDistance (WS3-112): the optional third argument binds the number of series
 // crossings, reflexive at 0, so a rule states its own radius instead of inheriting the engine's.
 func TestReachesBindsDistance(t *testing.T) {
-	rows := runQuery(t, check.NewModel(reachChainDesign()), `reaches("N0", ?n, ?h) => ?n, ?h`)
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.reaches("N0", ?n, ?h) => ?n, ?h`)
 	got := map[string]string{}
 	for _, r := range rows {
 		got[r.Bind["n"].S] = r.Bind["h"].S
@@ -280,7 +280,7 @@ func TestReachesBindsDistance(t *testing.T) {
 	want := map[string]string{"N0": "0", "N1": "1", "N2": "2", "N3": "3"}
 	for n, w := range want {
 		if got[n] != w {
-			t.Errorf("reaches(N0, %s, ?h) bound %q, want %q (full: %v)", n, got[n], w, got)
+			t.Errorf("net.reaches(N0, %s, ?h) bound %q, want %q (full: %v)", n, got[n], w, got)
 		}
 	}
 }
@@ -289,7 +289,7 @@ func TestReachesBindsDistance(t *testing.T) {
 // predicate out of the 100-hop reaches built-in: a clamp three series elements away must NOT satisfy
 // a "within two hops" question, and reporting that it does is a false PASS on a real defect.
 func TestReachesRadiusFilter(t *testing.T) {
-	rows := runQuery(t, check.NewModel(reachChainDesign()), `reaches("N0", ?n, ?h), ?h <= 2 => ?n`)
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.reaches("N0", ?n, ?h), ?h <= 2 => ?n`)
 	got := map[string]bool{}
 	for _, r := range rows {
 		got[r.Bind["n"].S] = true
@@ -307,29 +307,29 @@ func TestReachesRadiusFilter(t *testing.T) {
 // writes it expecting "within" gets a silently narrower answer, which is why the radius idiom is a
 // comparison.
 func TestReachesConstantHopsIsExact(t *testing.T) {
-	rows := runQuery(t, check.NewModel(reachChainDesign()), `reaches("N0", ?n, 2) => ?n`)
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.reaches("N0", ?n, 2) => ?n`)
 	got := map[string]bool{}
 	for _, r := range rows {
 		got[r.Bind["n"].S] = true
 	}
 	if len(got) != 1 || !got["N2"] {
-		t.Errorf("reaches(N0, ?n, 2) = %v, want exactly {N2} (equality, not a bound)", got)
+		t.Errorf("net.reaches(N0, ?n, 2) = %v, want exactly {N2} (equality, not a bound)", got)
 	}
 }
 
 // TestReachesArityBothPathsAgree (WS3-112): the optional argument is admitted by the POSITIVE path
-// and the NEGATION path through one predicate. A divergence here would accept reaches(?a,?b,?h) while
-// rejecting `not reaches(?a,?b,?h)`, and negation is validated up front so it would fail the whole
+// and the NEGATION path through one predicate. A divergence here would accept net.reaches(?a,?b,?h) while
+// rejecting `not net.reaches(?a,?b,?h)`, and negation is validated up front so it would fail the whole
 // query rather than degrade.
 func TestReachesArityBothPathsAgree(t *testing.T) {
 	m := check.NewModel(reachChainDesign())
-	rows := runQuery(t, m, `component-on-net(?r, ?n), not reaches("N0", ?n, ?h) => ?n`)
+	rows := runQuery(t, m, `component.net(?r, ?n), not net.reaches("N0", ?n, ?h) => ?n`)
 	for _, r := range rows {
 		if n := r.Bind["n"].S; n == "N1" {
-			t.Errorf("not reaches(N0, N1, ?h) should not hold: %v", rows)
+			t.Errorf("not net.reaches(N0, N1, ?h) should not hold: %v", rows)
 		}
 	}
-	q, err := Parse(`reaches(?a, ?b, ?c, ?d) => ?a`)
+	q, err := Parse(`net.reaches(?a, ?b, ?c, ?d) => ?a`)
 	if err == nil {
 		if _, err = (Naive{}).Eval(q, NewBase(m)); err == nil {
 			t.Error("reaches at arity 4: want an error naming the accepted arity")
@@ -353,13 +353,13 @@ func twoPartDesign() (*ir.Design, param.ParamSet) {
 	return d, param.ParamSet{"REG-24": regSpec("REG-24", 20)}
 }
 
-// TestNegation (WS3-029 fast-follow): `not param(?m,"VIN",?v)` keeps the mpns with NO VIN param.
+// TestNegation (WS3-029 fast-follow): `not param.max(?m,"VIN",?v)` keeps the mpns with NO VIN param.
 // The negated ?v appears only under negation, so it is an existential wildcard ("no VIN param for
 // any value"); ?m is bound by the positive literal and must match.
 func TestNegation(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModelWithParams(d, nil, set)
-	rows := runQuery(t, m, `component.mpn(?r,?m), not param(?m,"VIN",?v) => ?m`)
+	rows := runQuery(t, m, `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?m`)
 	if len(rows) != 1 || rows[0].Bind["m"].S != "PLAIN" {
 		t.Errorf("rows = %+v, want only PLAIN (REG-24 has a VIN param, so it is excluded)", rows)
 	}
@@ -378,7 +378,7 @@ func TestAggregationCount(t *testing.T) {
 			{Name: "LONE", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}}, Prov: &ir.Provenance{SourceFile: "d"}},
 		},
 	}
-	rows := runQuery(t, check.NewModel(d), `component-on-net(?r,?n) => ?n, count(?r)`)
+	rows := runQuery(t, check.NewModel(d), `component.net(?r,?n) => ?n, count(?r)`)
 	got := map[string]string{}
 	for _, r := range rows {
 		got[r.Bind["n"].S] = r.Bind["count(r)"].S
@@ -405,7 +405,7 @@ func TestAggregationMax(t *testing.T) {
 		Prov: &parampb.ParamProvenance{DocRef: "ds", Page: 4, Method: "hand", Confidence: 1},
 	})
 	m := check.NewModelWithParams(regDesign("+24V"), nil, param.ParamSet{"REG-24": spec})
-	rows := runQuery(t, m, `param(?mpn,?sym,?max) => ?mpn, max(?max)`)
+	rows := runQuery(t, m, `param.max(?mpn,?sym,?max) => ?mpn, max(?max)`)
 	if len(rows) != 1 || rows[0].Bind["max(max)"].S != "800" {
 		t.Errorf("rows = %+v, want one with max=800", rows)
 	}
@@ -471,7 +471,7 @@ func chainDesign() *ir.Design {
 // derives the pairs of distinct components on a common net, and the goal queries that IDB relation.
 func TestUserRuleView(t *testing.T) {
 	rows := runQuery(t, check.NewModel(chainDesign()),
-		`sharesnet(?a,?b) :- component-on-net(?a,?n), component-on-net(?b,?n), ?a != ?b; sharesnet("U1",?x) => ?x`)
+		`sharesnet(?a,?b) :- component.net(?a,?n), component.net(?b,?n), ?a != ?b; sharesnet("U1",?x) => ?x`)
 	got := map[string]bool{}
 	for _, r := range rows {
 		got[r.Bind["x"].S] = true
@@ -485,7 +485,7 @@ func TestUserRuleView(t *testing.T) {
 // `connected` is its own body atom, so it runs to fixpoint and reaches U3 from U1 through U2, which
 // no single join can. The derived answer still carries the base nets' provenance.
 func TestUserRuleRecursion(t *testing.T) {
-	q := `link(?a,?b) :- component-on-net(?a,?n), component-on-net(?b,?n), ?a != ?b;
+	q := `link(?a,?b) :- component.net(?a,?n), component.net(?b,?n), ?a != ?b;
 	      connected(?a,?b) :- link(?a,?b);
 	      connected(?a,?c) :- connected(?a,?b), link(?b,?c);
 	      connected("U1",?x) => ?x`
@@ -510,8 +510,8 @@ func TestStratifiedNegationInRule(t *testing.T) {
 	d := chainDesign()
 	d.Components = append(d.Components, &ir.Component{RefDes: "U_LONE", Prov: &ir.Provenance{SourceFile: "c"}})
 	d.Nets = append(d.Nets, &ir.Net{Name: "N3", Connections: []*ir.Connection{{ComponentRef: "U_LONE", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "c"}})
-	q := `linked(?a) :- component-on-net(?a,?n), component-on-net(?b,?n), ?a != ?b;
-	      isolated(?r) :- component-on-net(?r,?n), not linked(?r);
+	q := `linked(?a) :- component.net(?a,?n), component.net(?b,?n), ?a != ?b;
+	      isolated(?r) :- component.net(?r,?n), not linked(?r);
 	      isolated(?r) => ?r`
 	rows := runQuery(t, check.NewModel(d), q)
 	if len(rows) != 1 || rows[0].Bind["r"].S != "U_LONE" {
@@ -523,8 +523,8 @@ func TestStratifiedNegationInRule(t *testing.T) {
 // and `q` needs `not p` in the same cycle, which has no stratification — the evaluator must say so
 // rather than loop or give an order-dependent answer.
 func TestUnstratifiable(t *testing.T) {
-	q := `p(?r) :- component-on-net(?r,?n), not q(?r);
-	      q(?r) :- component-on-net(?r,?n), not p(?r);
+	q := `p(?r) :- component.net(?r,?n), not q(?r);
+	      q(?r) :- component.net(?r,?n), not p(?r);
 	      p(?r) => ?r`
 	if _, err := (Naive{}).Eval(mustParse(t, q), NewBase(check.NewModel(chainDesign()))); err == nil {
 		t.Error("recursion through negation was accepted; want an unstratifiable error")
@@ -536,12 +536,12 @@ func TestUnstratifiable(t *testing.T) {
 func TestRuleErrors(t *testing.T) {
 	m := check.NewModel(chainDesign())
 	cases := map[string]string{
-		"redefine EDB":        `component-on-net(?a,?b) :- component-on-net(?a,?b); component-on-net(?a,?b) => ?a`,
-		"redefine builtin":    `reaches(?a,?b) :- component-on-net(?a,?b); reaches(?a,?b) => ?a`,
-		"unsafe head var":     `bad(?x,?y) :- component-on-net(?x,?n); bad(?x,?y) => ?x`,
+		"redefine EDB":        `component.net(?a,?b) :- component.net(?a,?b); component.net(?a,?b) => ?a`,
+		"redefine builtin":    `net.reaches(?a,?b) :- component.net(?a,?b); net.reaches(?a,?b) => ?a`,
+		"unsafe head var":     `bad(?x,?y) :- component.net(?x,?n); bad(?x,?y) => ?x`,
 		"unknown body rel":    `bad(?x) :- nope(?x); bad(?x) => ?x`,
-		"inconsistent arity":  `r(?a) :- component-on-net(?a,?n); r(?a,?b) :- component-on-net(?a,?b); r(?a) => ?a`,
-		"no goal (all rules)": `r(?a) :- component-on-net(?a,?n)`,
+		"inconsistent arity":  `r(?a) :- component.net(?a,?n); r(?a,?b) :- component.net(?a,?b); r(?a) => ?a`,
+		"no goal (all rules)": `r(?a) :- component.net(?a,?n)`,
 	}
 	for name, text := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -560,7 +560,7 @@ func TestRuleErrors(t *testing.T) {
 // a Base reused for a second query that defines no rules sees none of the first query's IDB.
 func TestRulesDoNotLeakAcrossQueries(t *testing.T) {
 	b := NewBase(check.NewModel(chainDesign()))
-	if _, err := (Naive{}).Eval(mustParse(t, `v(?a) :- component-on-net(?a,?n); v(?a) => ?a`), b); err != nil {
+	if _, err := (Naive{}).Eval(mustParse(t, `v(?a) :- component.net(?a,?n); v(?a) => ?a`), b); err != nil {
 		t.Fatalf("first query: %v", err)
 	}
 	// The second query references the same IDB name; it must now be unknown (the rule did not persist).
@@ -595,11 +595,11 @@ func TestRegisterPredicate(t *testing.T) {
 		Nets:       []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "R22", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "d"}}},
 	}
 	m := check.NewModel(d)
-	pos := runQuery(t, m, `component-on-net(?r,?n), odd_len(?r) => ?r`) // R22 (len 3), not U1 (len 2)
+	pos := runQuery(t, m, `component.net(?r,?n), odd_len(?r) => ?r`) // R22 (len 3), not U1 (len 2)
 	if len(pos) != 1 || pos[0].Bind["r"].S != "R22" {
 		t.Errorf("odd_len filter = %+v, want only R22", pos)
 	}
-	neg := runQuery(t, m, `component-on-net(?r,?n), not odd_len(?r) => ?r`) // U1
+	neg := runQuery(t, m, `component.net(?r,?n), not odd_len(?r) => ?r`) // U1
 	if len(neg) != 1 || neg[0].Bind["r"].S != "U1" {
 		t.Errorf("not odd_len = %+v, want only U1", neg)
 	}
@@ -613,9 +613,9 @@ func TestRegisterPredicateRejects(t *testing.T) {
 		"nil predicate":    func() { RegisterPredicate("p", 1, nil) },
 		"collide built-in": func() { RegisterPredicate("contains", 2, func([]Value) (bool, error) { return true, nil }) },
 		"collide EDB": func() {
-			RegisterPredicate("component-on-net", 2, func([]Value) (bool, error) { return true, nil })
+			RegisterPredicate("component.net", 2, func([]Value) (bool, error) { return true, nil })
 		},
-		"collide reaches": func() { RegisterPredicate("reaches", 2, func([]Value) (bool, error) { return true, nil }) },
+		"collide reaches": func() { RegisterPredicate("net.reaches", 2, func([]Value) (bool, error) { return true, nil }) },
 	}
 	for name, register := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -634,13 +634,13 @@ func TestRegisterPredicateRejects(t *testing.T) {
 // failure over the same extendAtom the positive solve uses) — previously a negated reaches errored.
 func TestNegatedReaches(t *testing.T) {
 	m := check.NewModel(reachDesign()) // A reaches B through the series resistor
-	// A does reach B, so `not reaches("A","B")` drops every row.
-	if rows := runQuery(t, m, `reaches("A",?x), not reaches("A","B") => ?x`); len(rows) != 0 {
-		t.Errorf("not reaches(A,B) kept %+v, want none (A does reach B)", rows)
+	// A does reach B, so `not net.reaches("A","B")` drops every row.
+	if rows := runQuery(t, m, `net.reaches("A",?x), not net.reaches("A","B") => ?x`); len(rows) != 0 {
+		t.Errorf("not net.reaches(A,B) kept %+v, want none (A does reach B)", rows)
 	}
-	// A does not reach a nonexistent net, so `not reaches("A","ZZZ")` keeps the rows.
-	if rows := runQuery(t, m, `reaches("A",?x), not reaches("A","ZZZ") => ?x`); len(rows) == 0 {
-		t.Error("not reaches(A,ZZZ) dropped everything, want the reachable nets kept")
+	// A does not reach a nonexistent net, so `not net.reaches("A","ZZZ")` keeps the rows.
+	if rows := runQuery(t, m, `net.reaches("A",?x), not net.reaches("A","ZZZ") => ?x`); len(rows) == 0 {
+		t.Error("not net.reaches(A,ZZZ) dropped everything, want the reachable nets kept")
 	}
 }
 
@@ -661,8 +661,8 @@ func TestRegisterRelation(t *testing.T) {
 	}))
 	m := check.NewModel(chainDesign()) // U1, U2, U3 on shared nets
 
-	// Join the overlay relation against the built-in component-on-net, and carry its provenance.
-	rows := runQueryOn(t, reg, m, `house.approved(?r), component-on-net(?r,?n) => ?r, ?n`)
+	// Join the overlay relation against the built-in component.net, and carry its provenance.
+	rows := runQueryOn(t, reg, m, `house.approved(?r), component.net(?r,?n) => ?r, ?n`)
 	if len(rows) == 0 {
 		t.Fatal("overlay relation join produced no rows")
 	}
@@ -676,7 +676,7 @@ func TestRegisterRelation(t *testing.T) {
 	}
 
 	// A rule reads the overlay relation, and negation ranges over it: unapproved parts.
-	un := runQueryOn(t, reg, m, `unapproved(?r) :- component-on-net(?r,?n), not house.approved(?r); unapproved(?r) => ?r`)
+	un := runQueryOn(t, reg, m, `unapproved(?r) :- component.net(?r,?n), not house.approved(?r); unapproved(?r) => ?r`)
 	got := map[string]bool{}
 	for _, r := range un {
 		got[r.Bind["r"].S] = true
@@ -697,7 +697,7 @@ func TestRegisterRelationRejects(t *testing.T) {
 		"no fields":        facts.WithRelation("x.y", nil, nilProj),
 		"nil projector":    facts.WithRelation("x.y", []facts.Field{facts.FieldSubject}, nil),
 		"collide built-in": facts.WithRelation("component.mpn", []facts.Field{facts.FieldSubject}, nilProj),
-		"collide reaches":  facts.WithRelation("reaches", []facts.Field{facts.FieldSubject, facts.FieldObject}, nilProj),
+		"collide reaches":  facts.WithRelation("net.reaches", []facts.Field{facts.FieldSubject, facts.FieldObject}, nilProj),
 	}
 	for name, opt := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -724,7 +724,7 @@ func TestEvalErrors(t *testing.T) {
 		"unknown relation":   `not_a_relation(?x) => ?x`,
 		"arity mismatch":     `component.mpn(?a,?b,?c) => ?a`,
 		"unbound compare":    `?x < ?y => ?x`,
-		"select existential": `component.mpn(?r,?m), not param(?m,"VIN",?v) => ?v`,
+		"select existential": `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?v`,
 		"unknown aggregate":  `component.mpn(?r,?m) => ?r, avg(?m)`,
 		"negate unknown rel": `component.mpn(?r,?m), not nope(?m) => ?m`,
 	}
@@ -793,7 +793,7 @@ func TestBusRelation(t *testing.T) {
 func TestUnanchoredNegationErrors(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModelWithParams(d, nil, set)
-	_, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param(?x,"VIN",?v) => ?m`), NewBase(m))
+	_, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max(?x,"VIN",?v) => ?m`), NewBase(m))
 	if err == nil {
 		t.Fatal("an unanchored negation was accepted; it silently answers nothing")
 	}
@@ -806,7 +806,7 @@ func TestUnanchoredNegationErrors(t *testing.T) {
 
 // TestAnchoredNegationWithFreeValueStillWorks is the guard on the guard. Classic datalog safety says
 // every variable in a negated literal must occur positively, and applying that rule here would break
-// the shape this language documents and people rely on: `not param(?m,"VIN",?v)` leaves ?v free ON
+// the shape this language documents and people rely on: `not param.max(?m,"VIN",?v)` leaves ?v free ON
 // PURPOSE and means "no VIN param for any value". It is well defined because ?m anchors it.
 //
 // So the rule implemented is ANCHORING, not full safety, and this test is what stops someone
@@ -815,7 +815,7 @@ func TestUnanchoredNegationErrors(t *testing.T) {
 func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModelWithParams(d, nil, set)
-	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param(?m,"VIN",?v) => ?m`), NewBase(m)); err != nil {
+	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?m`), NewBase(m)); err != nil {
 		t.Fatalf("an anchored negation with a free value variable must be accepted: %v", err)
 	}
 }
@@ -825,7 +825,7 @@ func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 func TestGroundNegationNeedsNoAnchor(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModelWithParams(d, nil, set)
-	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param("REG-24","VIN",20) => ?m`), NewBase(m)); err != nil {
+	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max("REG-24","VIN",20) => ?m`), NewBase(m)); err != nil {
 		t.Fatalf("a ground negation carries no variables to anchor and must be accepted: %v", err)
 	}
 }
@@ -841,7 +841,7 @@ func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
 		Head: Atom{Relation: "bad", Args: []Term{{Var: "m"}}},
 		Body: Body{Literals: []Literal{
 			{Pos: &Atom{Relation: "component.mpn", Args: []Term{{Var: "r"}, {Var: "m"}}}},
-			{Neg: &Atom{Relation: "param", Args: []Term{{Var: "x"}, {Const: &Value{S: "VIN"}}, {Var: "v"}}}},
+			{Neg: &Atom{Relation: "param.max", Args: []Term{{Var: "x"}, {Const: &Value{S: "VIN"}}, {Var: "v"}}}},
 		}},
 	}}
 	if _, err := (Naive{}).Eval(q, NewBase(m)); err == nil {
@@ -901,7 +901,7 @@ func aggRows(t *testing.T, q string) map[string]string {
 // TestHavingFiltersGroups: a having filters after the reduce, which is the thing a goal comparison
 // cannot do — before grouping there is no count to compare.
 func TestHavingFiltersGroups(t *testing.T) {
-	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net) => ?net, count(?tp) having count(?tp) > 1`)
+	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net) => ?net, count(?tp) having count(?tp) > 1`)
 	if len(got) != 1 || got["BOTH"] != "count(tp)=2" {
 		t.Errorf("rows = %v, want only BOTH with count 2", got)
 	}
@@ -910,7 +910,7 @@ func TestHavingFiltersGroups(t *testing.T) {
 // TestHavingWithoutSelectingTheAggregate: an aggregate may be filtered on without being projected, so
 // the answer is the subjects rather than the tally. Its column must not reach the output.
 func TestHavingWithoutSelectingTheAggregate(t *testing.T) {
-	q := `component.class(?tp,"test_point"), component-on-net(?tp,?net) => ?net having count(?tp) = 1`
+	q := `component.class(?tp,"test_point"), component.net(?tp,?net) => ?net having count(?tp) = 1`
 	rows := runQuery(t, check.NewModel(aggFixture()), q)
 	names := []string{}
 	for _, r := range rows {
@@ -937,7 +937,7 @@ func TestHavingWithoutSelectingTheAggregate(t *testing.T) {
 // BOTH and DOUBLE each carry three pins and fewer test points.
 func TestHavingComparedAgainstAGroupKey(t *testing.T) {
 	rows := runQuery(t, check.NewModel(aggFixture()),
-		`component.class(?tp,"test_point"), component-on-net(?tp,?net), net.pin_count(?net,?pc) => ?net, ?pc having count(?tp) = ?pc`)
+		`component.class(?tp,"test_point"), component.net(?tp,?net), net.pin_count(?net,?pc) => ?net, ?pc having count(?tp) = ?pc`)
 	if len(rows) != 1 || rows[0].Bind["net"].S != "TPONLY" {
 		t.Errorf("rows = %+v, want only TPONLY", rows)
 	}
@@ -946,7 +946,7 @@ func TestHavingComparedAgainstAGroupKey(t *testing.T) {
 // TestHavingRejectsANonGroupKeyOnTheRight: caught at validation, so the query fails on the query
 // rather than on whichever design happens to produce the first group.
 func TestHavingRejectsANonGroupKeyOnTheRight(t *testing.T) {
-	q, perr := Parse(`component.class(?tp,"test_point"), component-on-net(?tp,?net) => ?net having count(?tp) = ?tp`)
+	q, perr := Parse(`component.class(?tp,"test_point"), component.net(?tp,?net) => ?net having count(?tp) = ?tp`)
 	if perr != nil {
 		t.Fatalf("Parse: %v", perr)
 	}
@@ -959,8 +959,8 @@ func TestHavingRejectsANonGroupKeyOnTheRight(t *testing.T) {
 // TestDistinctReducesValuesNotBindings is the trap this feature exists to make spellable. DOUBLE
 // carries one test point and two capacitors, so the flat goal yields two bindings for one value.
 func TestDistinctReducesValuesNotBindings(t *testing.T) {
-	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
-		component.class(?c,"capacitor"), component-on-net(?c,?net) => ?net, count(?tp), count(distinct ?tp)`)
+	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net),
+		component.class(?c,"capacitor"), component.net(?c,?net) => ?net, count(?tp), count(distinct ?tp)`)
 	if got["DOUBLE"] != "count(distinct tp)=1 count(tp)=2" {
 		t.Errorf("DOUBLE = %q, want 2 bindings reduced to 1 distinct value", got["DOUBLE"])
 	}
@@ -972,8 +972,8 @@ func TestDistinctReducesValuesNotBindings(t *testing.T) {
 // TestListNamesTheGroupMembers: list joins the members sorted, and is binding-wise until asked
 // otherwise — the same rule count follows, so the two columns describe the same set.
 func TestListNamesTheGroupMembers(t *testing.T) {
-	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
-		component.class(?c,"capacitor"), component-on-net(?c,?net) => ?net, list(?tp), list(distinct ?tp)`)
+	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net),
+		component.class(?c,"capacitor"), component.net(?c,?net) => ?net, list(?tp), list(distinct ?tp)`)
 	if got["DOUBLE"] != "list(distinct tp)=TP4 list(tp)=TP4 TP4" {
 		t.Errorf("DOUBLE = %q, want the bare list to repeat per binding and distinct to collapse it", got["DOUBLE"])
 	}
@@ -985,7 +985,7 @@ func TestListNamesTheGroupMembers(t *testing.T) {
 // TestSumDistinctReducesDistinctValues: distinct is uniform across the aggregates, not a count
 // special case. Two bindings carrying the same number contribute once.
 func TestSumDistinctReducesDistinctValues(t *testing.T) {
-	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
+	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net),
 		net.pin_count(?net,?pc) => ?net, sum(?pc), sum(distinct ?pc)`)
 	if got["BOTH"] != "sum(distinct pc)=3 sum(pc)=6" {
 		t.Errorf("BOTH = %q, want the repeated pin count summed once when distinct", got["BOTH"])

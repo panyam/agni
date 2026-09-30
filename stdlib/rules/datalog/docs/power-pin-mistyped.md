@@ -30,7 +30,7 @@ formulation was a no-op on KiCad.
 It is a datalog rule (`query.RuleFromQuery`, WS3-038), not Go or Spec:
 
     bad(?ref,?pin,?net) :- pin.role(?ref,?pin,"power"),  not pin.type(?ref,?pin,"power_in"),
-                           pin.net(?ref,?pin,?net), net.pin_count(?net,?c), ?c < 2, has_nc_channel(?_);
+                           pin.net(?ref,?pin,?net), net.pin_count(?net,?c), ?c < 2, design.has_nc_channel(?_);
     bad(?ref,?pin,?net) :- pin.role(?ref,?pin,"ground"), ... ;
     bad(?ref,?pin,?net) => ?ref, ?pin, ?net
 
@@ -38,7 +38,7 @@ Two rules (power, ground) share one head; each answer row is one finding.
 
 ### Where it stays silent (conservative on purpose)
 
-- **`has_nc_channel` gate**, silent on a format that cannot express intentional no-connect, so a
+- **`design.has_nc_channel` gate**, silent on a format that cannot express intentional no-connect, so a
   legitimately single-connection supply pin on such a format is not a false positive.
 - **No power/ground role**, since a bare netlist with numeric pin names (some EDIF exports) derives no
   role, so no pin qualifies. Silent, not guessed.
