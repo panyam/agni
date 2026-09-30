@@ -932,8 +932,11 @@ Rationale in [Decisions](DECISIONS.md), "A recorded locator is renamed once at r
 the fact layer, never the reverse. `stdlib/relations` — the shipped netlist/board/datasheet relation
 catalog — imports `core/facts` only. A RELATION is data derived from the Model and registers with
 `facts.RegisterRelation`; a PREDICATE, a join strategy, and a query language belong to whichever
-engine computes them (`core/query` holds the datalog one, and `query.RegisterPredicate` is its seam).
-An engine claims its predicate vocabulary with `facts.Reserve`. **No package under `core/` outside
+engine computes them (`core/query` is agni's adapter over the Datalog engine in
+`github.com/panyam/jaala/datalog`, and `query.RegisterPredicate` is its seam). A DERIVED relation,
+defined in a query language over other relations, belongs to its engine the same way; one that a Go
+rule or a Spec needs is promoted to a base relation rather than read across engines (DECISIONS,
+"The Datalog engine lives in jaala"). An engine claims its predicate vocabulary with `facts.Reserve`. **No package under `core/` outside
 `core/query` may name a query syntax at all**: `core/review` compiles a manifest's inline query
 through a registered `QueryCompiler` returning a `*check.Rule`, which is the same neutral currency
 `check.RegisterSource` trades in.
@@ -944,8 +947,9 @@ for per-entity questions and Go for the rest — and a shape that owns the fact 
 other shapes second-class and the tuple's limits everyone's limits. Authoring a relation must not
 require picking an engine. This is the query-side twin of C17's downward-only layering and of the
 `check.RegisterSource` posture that already keeps the rule catalog engine-neutral (C14, C18).
-**Verify:** `go test ./core/facts/ -run NamesNoQueryEngine`, which sweeps every package under
-`core/...` and the relation catalog. It is a TEST rather than a command in this document because the
+**Verify:** `go test ./core/facts/ -run 'NoQueryEngine|ReachesTheDatalogEngine'`, which sweeps every
+package under `core/...` and the relation catalog for either engine path, with a positive control
+that the adapter really does reach the engine. It is a TEST rather than a command in this document because the
 first draft of this constraint was a command, and it went stale within three PRs of being written:
 both halves of a violation compile and pass, so nothing surfaces one until someone re-reads the rule.
 The shape is `core/model/deps_test.go`'s, for the same reason.

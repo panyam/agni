@@ -33,7 +33,7 @@ func TestCatalogMatchesSchema(t *testing.T) {
 		}
 	}
 	// Every built-in predicate is catalogued.
-	for name := range builtins {
+	for _, name := range predicates.Names() {
 		if _, ok := byName[name]; !ok {
 			t.Errorf("built-in predicate %q has no catalog entry", name)
 		}
@@ -41,7 +41,7 @@ func TestCatalogMatchesSchema(t *testing.T) {
 	// No catalog row names a nonexistent built-in construct.
 	for name, info := range byName {
 		isEDB := facts.DefaultRegistry().IsRelation(name)
-		_, isPred := builtins[name]
+		isPred := predicates.Has(name)
 		if !isEDB && !isPred {
 			t.Errorf("catalog entry %q (kind %s) is neither an EDB relation nor a predicate", name, info.Kind)
 		}

@@ -6,7 +6,14 @@ import (
 	"testing"
 )
 
-const queryEngine = "github.com/panyam/agni/core/query"
+// queryEngine is agni's adapter over the Datalog engine, and datalogEngine the engine itself, which
+// lives in its own module since agni issue 731. A core package importing either has picked an engine.
+const (
+	queryEngine   = "github.com/panyam/agni/core/query"
+	datalogEngine = "github.com/panyam/jaala/datalog"
+)
+
+func isEngine(dep string) bool { return dep == queryEngine || dep == datalogEngine }
 
 // TestCoreNamesNoQueryEngine is C29 as a test rather than a command in a document.
 //
@@ -24,11 +31,23 @@ func TestCoreNamesNoQueryEngine(t *testing.T) {
 			continue // the engine is allowed to be itself
 		}
 		for _, dep := range deps(t, pkg) {
-			if dep == queryEngine {
-				t.Errorf("%s depends on the query engine; C29 keeps core free of one", pkg)
+			if isEngine(dep) {
+				t.Errorf("%s depends on the query engine (%s); C29 keeps core free of one", pkg, dep)
 			}
 		}
 	}
+}
+
+// TestQueryEngineReachesTheDatalogEngine is the positive control for the two sweeps here. They pass
+// by finding nothing, so a stale engine path would make them pass forever. The adapter does depend
+// on the engine, so if this fails the paths above no longer name it.
+func TestQueryEngineReachesTheDatalogEngine(t *testing.T) {
+	for _, dep := range deps(t, queryEngine) {
+		if dep == datalogEngine {
+			return
+		}
+	}
+	t.Errorf("%s does not depend on %s; the engine paths these sweeps look for are stale", queryEngine, datalogEngine)
 }
 
 // TestRelationCatalogNamesNoQueryEngine is the other half: the shipped relation catalog is DATA
@@ -36,8 +55,8 @@ func TestCoreNamesNoQueryEngine(t *testing.T) {
 // imported core/query until #536 purely to declare its tuple type.
 func TestRelationCatalogNamesNoQueryEngine(t *testing.T) {
 	for _, dep := range deps(t, "github.com/panyam/agni/stdlib/relations") {
-		if dep == queryEngine {
-			t.Errorf("stdlib/relations depends on the query engine; a relation is data, not a query")
+		if isEngine(dep) {
+			t.Errorf("stdlib/relations depends on the query engine (%s); a relation is data, not a query", dep)
 		}
 	}
 }

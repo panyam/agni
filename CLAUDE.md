@@ -84,10 +84,16 @@ ports) and **`artifact/`** (the `mount://` URI those ports speak). Plus `cmd/agn
 Notes written before this layout landed name the old directories. **Grep the SYMBOL or filename,
 not the directory.**
 
+**The Datalog engine is a separate module, `github.com/panyam/jaala/datalog`** (agni issue 731), and
+`core/query` is agni's adapter over it: the `Source` projecting a Model through the fact registry,
+`reaches`/`route` as generators, `RuleFromQuery`, the wire form and the catalog. A language change
+(parser, evaluator, index, aggregation) is a jaala PR and a tag first, then a `go get` here. Its
+issues live on panyam/jaala.
+
 `core/facts` deserves a callout: it is the fact/relation layer, and it depends on NO query engine
 (C29). A relation projects a `check.Model` into tuples and registers with `facts.RegisterRelation`;
 an engine that answers questions over those tuples imports `core/facts`, never the reverse. That is
-what keeps datalog (`core/query`) one query shape among several rather than the primitive: `check.Spec`
+what keeps datalog (`core/query`, over jaala) one query shape among several rather than the primitive: `check.Spec`
 answers per-entity questions with no fact base at all, and a path question is a shape datalog cannot
 express (issues 374, 518). A relation vocabulary is a composed VALUE (`facts.DefaultRegistry`, the
 twin of `check.DefaultCatalog`): the package globals are an append-only registration buffer and every
