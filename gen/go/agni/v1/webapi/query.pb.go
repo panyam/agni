@@ -909,7 +909,7 @@ func (x *NamedQuery) GetDescription() string {
 	return ""
 }
 
-type RunQuerySetRequest struct {
+type RunQueriesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Set   *QuerySet              `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
 	// uri, overlay, board_uri and as_named mean what they mean on RunQueryRequest, and apply to the one
@@ -922,20 +922,20 @@ type RunQuerySetRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunQuerySetRequest) Reset() {
-	*x = RunQuerySetRequest{}
+func (x *RunQueriesRequest) Reset() {
+	*x = RunQueriesRequest{}
 	mi := &file_agni_v1_webapi_query_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunQuerySetRequest) String() string {
+func (x *RunQueriesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunQuerySetRequest) ProtoMessage() {}
+func (*RunQueriesRequest) ProtoMessage() {}
 
-func (x *RunQuerySetRequest) ProtoReflect() protoreflect.Message {
+func (x *RunQueriesRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_agni_v1_webapi_query_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -947,47 +947,47 @@ func (x *RunQuerySetRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunQuerySetRequest.ProtoReflect.Descriptor instead.
-func (*RunQuerySetRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunQueriesRequest.ProtoReflect.Descriptor instead.
+func (*RunQueriesRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *RunQuerySetRequest) GetSet() *QuerySet {
+func (x *RunQueriesRequest) GetSet() *QuerySet {
 	if x != nil {
 		return x.Set
 	}
 	return nil
 }
 
-func (x *RunQuerySetRequest) GetUri() string {
+func (x *RunQueriesRequest) GetUri() string {
 	if x != nil {
 		return x.Uri
 	}
 	return ""
 }
 
-func (x *RunQuerySetRequest) GetOverlay() *OverlayConfig {
+func (x *RunQueriesRequest) GetOverlay() *OverlayConfig {
 	if x != nil {
 		return x.Overlay
 	}
 	return nil
 }
 
-func (x *RunQuerySetRequest) GetBoardUri() string {
+func (x *RunQueriesRequest) GetBoardUri() string {
 	if x != nil {
 		return x.BoardUri
 	}
 	return ""
 }
 
-func (x *RunQuerySetRequest) GetAsNamed() bool {
+func (x *RunQueriesRequest) GetAsNamed() bool {
 	if x != nil {
 		return x.AsNamed
 	}
 	return false
 }
 
-type RunQuerySetResponse struct {
+type RunQueriesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// title and preamble echo the request, so a saved response states the questions it answers.
 	Title    string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
@@ -1000,20 +1000,20 @@ type RunQuerySetResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunQuerySetResponse) Reset() {
-	*x = RunQuerySetResponse{}
+func (x *RunQueriesResponse) Reset() {
+	*x = RunQueriesResponse{}
 	mi := &file_agni_v1_webapi_query_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunQuerySetResponse) String() string {
+func (x *RunQueriesResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunQuerySetResponse) ProtoMessage() {}
+func (*RunQueriesResponse) ProtoMessage() {}
 
-func (x *RunQuerySetResponse) ProtoReflect() protoreflect.Message {
+func (x *RunQueriesResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agni_v1_webapi_query_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1025,33 +1025,33 @@ func (x *RunQuerySetResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunQuerySetResponse.ProtoReflect.Descriptor instead.
-func (*RunQuerySetResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RunQueriesResponse.ProtoReflect.Descriptor instead.
+func (*RunQueriesResponse) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *RunQuerySetResponse) GetTitle() string {
+func (x *RunQueriesResponse) GetTitle() string {
 	if x != nil {
 		return x.Title
 	}
 	return ""
 }
 
-func (x *RunQuerySetResponse) GetPreamble() string {
+func (x *RunQueriesResponse) GetPreamble() string {
 	if x != nil {
 		return x.Preamble
 	}
 	return ""
 }
 
-func (x *RunQuerySetResponse) GetSource() string {
+func (x *RunQueriesResponse) GetSource() string {
 	if x != nil {
 		return x.Source
 	}
 	return ""
 }
 
-func (x *RunQuerySetResponse) GetResults() []*NamedQueryResult {
+func (x *RunQueriesResponse) GetResults() []*NamedQueryResult {
 	if x != nil {
 		return x.Results
 	}
@@ -1189,14 +1189,14 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"NamedQuery\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\"\xc3\x01\n" +
-	"\x12RunQuerySetRequest\x12*\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\"\xc2\x01\n" +
+	"\x11RunQueriesRequest\x12*\n" +
 	"\x03set\x18\x01 \x01(\v2\x18.agni.v1.webapi.QuerySetR\x03set\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\x127\n" +
 	"\aoverlay\x18\x03 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
 	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
-	"\bas_named\x18\x05 \x01(\bR\aasNamed\"\x9b\x01\n" +
-	"\x13RunQuerySetResponse\x12\x14\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\"\x9a\x01\n" +
+	"\x12RunQueriesResponse\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n" +
 	"\bpreamble\x18\x02 \x01(\tR\bpreamble\x12\x16\n" +
 	"\x06source\x18\x03 \x01(\tR\x06source\x12:\n" +
@@ -1205,10 +1205,11 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x128\n" +
 	"\x06result\x18\x03 \x01(\v2 .agni.v1.webapi.RunQueryResponseR\x06result\x12\x14\n" +
-	"\x05error\x18\x04 \x01(\tR\x05error2\x93\x02\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error2\x90\x02\n" +
 	"\fQueryService\x12M\n" +
-	"\bRunQuery\x12\x1f.agni.v1.webapi.RunQueryRequest\x1a .agni.v1.webapi.RunQueryResponse\x12V\n" +
-	"\vRunQuerySet\x12\".agni.v1.webapi.RunQuerySetRequest\x1a#.agni.v1.webapi.RunQuerySetResponse\x12\\\n" +
+	"\bRunQuery\x12\x1f.agni.v1.webapi.RunQueryRequest\x1a .agni.v1.webapi.RunQueryResponse\x12S\n" +
+	"\n" +
+	"RunQueries\x12!.agni.v1.webapi.RunQueriesRequest\x1a\".agni.v1.webapi.RunQueriesResponse\x12\\\n" +
 	"\rListRelations\x12$.agni.v1.webapi.ListRelationsRequest\x1a%.agni.v1.webapi.ListRelationsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
@@ -1237,8 +1238,8 @@ var file_agni_v1_webapi_query_proto_goTypes = []any{
 	(*ListRelationsResponse)(nil), // 9: agni.v1.webapi.ListRelationsResponse
 	(*QuerySet)(nil),              // 10: agni.v1.webapi.QuerySet
 	(*NamedQuery)(nil),            // 11: agni.v1.webapi.NamedQuery
-	(*RunQuerySetRequest)(nil),    // 12: agni.v1.webapi.RunQuerySetRequest
-	(*RunQuerySetResponse)(nil),   // 13: agni.v1.webapi.RunQuerySetResponse
+	(*RunQueriesRequest)(nil),     // 12: agni.v1.webapi.RunQueriesRequest
+	(*RunQueriesResponse)(nil),    // 13: agni.v1.webapi.RunQueriesResponse
 	(*NamedQueryResult)(nil),      // 14: agni.v1.webapi.NamedQueryResult
 	(*OverlayConfig)(nil),         // 15: agni.v1.webapi.OverlayConfig
 	(checks.LocateReason)(0),      // 16: agni.v1.checks.LocateReason
@@ -1253,15 +1254,15 @@ var file_agni_v1_webapi_query_proto_depIdxs = []int32{
 	7,  // 6: agni.v1.webapi.ListRelationsResponse.entity_queries:type_name -> agni.v1.webapi.EntityQuery
 	8,  // 7: agni.v1.webapi.ListRelationsResponse.search_query:type_name -> agni.v1.webapi.SearchQuery
 	11, // 8: agni.v1.webapi.QuerySet.queries:type_name -> agni.v1.webapi.NamedQuery
-	10, // 9: agni.v1.webapi.RunQuerySetRequest.set:type_name -> agni.v1.webapi.QuerySet
-	15, // 10: agni.v1.webapi.RunQuerySetRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	14, // 11: agni.v1.webapi.RunQuerySetResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
+	10, // 9: agni.v1.webapi.RunQueriesRequest.set:type_name -> agni.v1.webapi.QuerySet
+	15, // 10: agni.v1.webapi.RunQueriesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	14, // 11: agni.v1.webapi.RunQueriesResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
 	3,  // 12: agni.v1.webapi.NamedQueryResult.result:type_name -> agni.v1.webapi.RunQueryResponse
 	0,  // 13: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
-	12, // 14: agni.v1.webapi.QueryService.RunQuerySet:input_type -> agni.v1.webapi.RunQuerySetRequest
+	12, // 14: agni.v1.webapi.QueryService.RunQueries:input_type -> agni.v1.webapi.RunQueriesRequest
 	4,  // 15: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
 	3,  // 16: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
-	13, // 17: agni.v1.webapi.QueryService.RunQuerySet:output_type -> agni.v1.webapi.RunQuerySetResponse
+	13, // 17: agni.v1.webapi.QueryService.RunQueries:output_type -> agni.v1.webapi.RunQueriesResponse
 	9,  // 18: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
 	16, // [16:19] is the sub-list for method output_type
 	13, // [13:16] is the sub-list for method input_type

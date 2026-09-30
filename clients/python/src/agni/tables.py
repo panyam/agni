@@ -51,7 +51,7 @@ def to_rows(table: Table) -> Rows:
     raise TypeError(f"cannot tabulate a {type(table).__name__}")
 
 
-def set_sheets(resp: query_pb2.RunQuerySetResponse, allow_missing: bool = False) -> List[Tuple[str, Table]]:
+def set_sheets(resp: query_pb2.RunQueriesResponse, allow_missing: bool = False) -> List[Tuple[str, Table]]:
     """One ``(name, answer)`` per query of a set, in the set's order, ready for ``tables_to_xlsx``.
 
     A query the set could not answer has no table, and a workbook that silently lacks its tab reads

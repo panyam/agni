@@ -254,7 +254,7 @@ func runQuerySet(cmd *cobra.Command, svc *service.QueryService, path, designURI,
 	if title != "" {
 		set.Title = title
 	}
-	resp, err := svc.RunQuerySet(cmd.Context(), &webapi.RunQuerySetRequest{
+	resp, err := svc.RunQueries(cmd.Context(), &webapi.RunQueriesRequest{
 		Set: service.QuerySetProto(set), Uri: designURI, BoardUri: boardURI, Overlay: overlay, AsNamed: readAsNamed,
 	})
 	if err != nil {
@@ -277,7 +277,7 @@ func runQuerySet(cmd *cobra.Command, svc *service.QueryService, path, designURI,
 
 // renderQuerySet writes a set's answers in the requested format. json is the wire message, as for a
 // single query (C31); the others are one document with a section per query.
-func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi.RunQuerySetResponse) error {
+func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi.RunQueriesResponse) error {
 	if format == "json" {
 		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
 		if err != nil {

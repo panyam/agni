@@ -194,8 +194,8 @@ CLI_COMMANDS: Dict[str, CliCommand] = {
     "CheckService/GetCheckReport": CliCommand(_check_argv("report"), checks_pb2.GetCheckReportResponse),
     "QueryService/RunQuery": CliCommand(_query_argv, query_pb2.RunQueryResponse),
     # A set with an unanswerable query prints every answer and exits 1, so the answer is still read.
-    "QueryService/RunQuerySet": CliCommand(
-        _query_set_argv, query_pb2.RunQuerySetResponse, stdin=_query_set_stdin, answers_on_failure=True
+    "QueryService/RunQueries": CliCommand(
+        _query_set_argv, query_pb2.RunQueriesResponse, stdin=_query_set_stdin, answers_on_failure=True
     ),
     "DiffService/DiffDesigns": CliCommand(_diff_argv, diff_pb2.DiffDesignsResponse),
     "DesignService/TraceDesign": CliCommand(

@@ -73,12 +73,12 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	return resp, nil
 }
 
-// RunQuerySet answers every query of a set over one read of the design (agni issue 729). Each
+// RunQueries answers every query of a set over one read of the design (agni issue 729). Each
 // result is what RunQuery would return for that query alone; a query that does not parse or names
 // something the design's relations lack is reported against its name, and the others still answer.
 // A set that is unusable as a whole is an invalid argument, and a design that cannot be read fails
 // the call as it would fail RunQuery.
-func (s *QueryService) RunQuerySet(ctx context.Context, req *webapi.RunQuerySetRequest) (*webapi.RunQuerySetResponse, error) {
+func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesRequest) (*webapi.RunQueriesResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (s *QueryService) RunQuerySet(ctx context.Context, req *webapi.RunQuerySetR
 	if err != nil {
 		return nil, err
 	}
-	out := &webapi.RunQuerySetResponse{Title: set.Title, Preamble: set.Preamble, Source: req.GetUri()}
+	out := &webapi.RunQueriesResponse{Title: set.Title, Preamble: set.Preamble, Source: req.GetUri()}
 	for i, nq := range set.Queries {
 		res := &webapi.NamedQueryResult{Name: nq.Name, Description: nq.Description}
 		out.Results = append(out.Results, res)

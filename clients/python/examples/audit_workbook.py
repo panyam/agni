@@ -40,7 +40,7 @@ def build(client: Client, design: str, out: str) -> List[str]:
         title="Netlist audit",
         queries=[query_pb2.NamedQuery(name=name, query=q) for name, q in TABLES],
     )
-    sheets = set_sheets(client.run_query_set(uri=design, set=audit))
+    sheets = set_sheets(client.run_queries(uri=design, set=audit))
     sheets.append(("Findings", client.check_design(uri=design)))
     tables_to_xlsx(out, sheets)
     return [name for name, _ in sheets]

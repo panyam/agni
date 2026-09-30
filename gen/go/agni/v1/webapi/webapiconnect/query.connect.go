@@ -35,9 +35,8 @@ const (
 const (
 	// QueryServiceRunQueryProcedure is the fully-qualified name of the QueryService's RunQuery RPC.
 	QueryServiceRunQueryProcedure = "/agni.v1.webapi.QueryService/RunQuery"
-	// QueryServiceRunQuerySetProcedure is the fully-qualified name of the QueryService's RunQuerySet
-	// RPC.
-	QueryServiceRunQuerySetProcedure = "/agni.v1.webapi.QueryService/RunQuerySet"
+	// QueryServiceRunQueriesProcedure is the fully-qualified name of the QueryService's RunQueries RPC.
+	QueryServiceRunQueriesProcedure = "/agni.v1.webapi.QueryService/RunQueries"
 	// QueryServiceListRelationsProcedure is the fully-qualified name of the QueryService's
 	// ListRelations RPC.
 	QueryServiceListRelationsProcedure = "/agni.v1.webapi.QueryService/ListRelations"
@@ -52,13 +51,13 @@ type QueryServiceClient interface {
 	// relation is empty because the server wires no params dir and datasheet data is deployment-bound
 	// (C16), so a query over `param` returns no rows rather than an error.
 	RunQuery(context.Context, *connect.Request[webapi.RunQueryRequest]) (*connect.Response[webapi.RunQueryResponse], error)
-	// RunQuerySet answers a named list of queries over ONE read of the design (agni issue 729). An
+	// RunQueries answers a named list of queries over ONE read of the design (agni issue 729). An
 	// audit is usually a workbook rather than a question, and asking each table through RunQuery would
 	// read and project the design once per table. Every result has exactly the shape RunQuery returns
 	// for that query alone. A query that fails is reported against its name and the others still
 	// answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
 	// goal) and a design that cannot be read are errors for the call.
-	RunQuerySet(context.Context, *connect.Request[webapi.RunQuerySetRequest]) (*connect.Response[webapi.RunQuerySetResponse], error)
+	RunQueries(context.Context, *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error)
 	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
 	// predicates plus any overlay-registered relations, each with its argument labels, a one-line
 	// summary, and a kind for grouping. The catalog is static per service build (it does not depend
@@ -83,10 +82,10 @@ func NewQueryServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(queryServiceMethods.ByName("RunQuery")),
 			connect.WithClientOptions(opts...),
 		),
-		runQuerySet: connect.NewClient[webapi.RunQuerySetRequest, webapi.RunQuerySetResponse](
+		runQueries: connect.NewClient[webapi.RunQueriesRequest, webapi.RunQueriesResponse](
 			httpClient,
-			baseURL+QueryServiceRunQuerySetProcedure,
-			connect.WithSchema(queryServiceMethods.ByName("RunQuerySet")),
+			baseURL+QueryServiceRunQueriesProcedure,
+			connect.WithSchema(queryServiceMethods.ByName("RunQueries")),
 			connect.WithClientOptions(opts...),
 		),
 		listRelations: connect.NewClient[webapi.ListRelationsRequest, webapi.ListRelationsResponse](
@@ -101,7 +100,7 @@ func NewQueryServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 // queryServiceClient implements QueryServiceClient.
 type queryServiceClient struct {
 	runQuery      *connect.Client[webapi.RunQueryRequest, webapi.RunQueryResponse]
-	runQuerySet   *connect.Client[webapi.RunQuerySetRequest, webapi.RunQuerySetResponse]
+	runQueries    *connect.Client[webapi.RunQueriesRequest, webapi.RunQueriesResponse]
 	listRelations *connect.Client[webapi.ListRelationsRequest, webapi.ListRelationsResponse]
 }
 
@@ -110,9 +109,9 @@ func (c *queryServiceClient) RunQuery(ctx context.Context, req *connect.Request[
 	return c.runQuery.CallUnary(ctx, req)
 }
 
-// RunQuerySet calls agni.v1.webapi.QueryService.RunQuerySet.
-func (c *queryServiceClient) RunQuerySet(ctx context.Context, req *connect.Request[webapi.RunQuerySetRequest]) (*connect.Response[webapi.RunQuerySetResponse], error) {
-	return c.runQuerySet.CallUnary(ctx, req)
+// RunQueries calls agni.v1.webapi.QueryService.RunQueries.
+func (c *queryServiceClient) RunQueries(ctx context.Context, req *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error) {
+	return c.runQueries.CallUnary(ctx, req)
 }
 
 // ListRelations calls agni.v1.webapi.QueryService.ListRelations.
@@ -129,13 +128,13 @@ type QueryServiceHandler interface {
 	// relation is empty because the server wires no params dir and datasheet data is deployment-bound
 	// (C16), so a query over `param` returns no rows rather than an error.
 	RunQuery(context.Context, *connect.Request[webapi.RunQueryRequest]) (*connect.Response[webapi.RunQueryResponse], error)
-	// RunQuerySet answers a named list of queries over ONE read of the design (agni issue 729). An
+	// RunQueries answers a named list of queries over ONE read of the design (agni issue 729). An
 	// audit is usually a workbook rather than a question, and asking each table through RunQuery would
 	// read and project the design once per table. Every result has exactly the shape RunQuery returns
 	// for that query alone. A query that fails is reported against its name and the others still
 	// answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
 	// goal) and a design that cannot be read are errors for the call.
-	RunQuerySet(context.Context, *connect.Request[webapi.RunQuerySetRequest]) (*connect.Response[webapi.RunQuerySetResponse], error)
+	RunQueries(context.Context, *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error)
 	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
 	// predicates plus any overlay-registered relations, each with its argument labels, a one-line
 	// summary, and a kind for grouping. The catalog is static per service build (it does not depend
@@ -156,10 +155,10 @@ func NewQueryServiceHandler(svc QueryServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(queryServiceMethods.ByName("RunQuery")),
 		connect.WithHandlerOptions(opts...),
 	)
-	queryServiceRunQuerySetHandler := connect.NewUnaryHandler(
-		QueryServiceRunQuerySetProcedure,
-		svc.RunQuerySet,
-		connect.WithSchema(queryServiceMethods.ByName("RunQuerySet")),
+	queryServiceRunQueriesHandler := connect.NewUnaryHandler(
+		QueryServiceRunQueriesProcedure,
+		svc.RunQueries,
+		connect.WithSchema(queryServiceMethods.ByName("RunQueries")),
 		connect.WithHandlerOptions(opts...),
 	)
 	queryServiceListRelationsHandler := connect.NewUnaryHandler(
@@ -172,8 +171,8 @@ func NewQueryServiceHandler(svc QueryServiceHandler, opts ...connect.HandlerOpti
 		switch r.URL.Path {
 		case QueryServiceRunQueryProcedure:
 			queryServiceRunQueryHandler.ServeHTTP(w, r)
-		case QueryServiceRunQuerySetProcedure:
-			queryServiceRunQuerySetHandler.ServeHTTP(w, r)
+		case QueryServiceRunQueriesProcedure:
+			queryServiceRunQueriesHandler.ServeHTTP(w, r)
 		case QueryServiceListRelationsProcedure:
 			queryServiceListRelationsHandler.ServeHTTP(w, r)
 		default:
@@ -189,8 +188,8 @@ func (UnimplementedQueryServiceHandler) RunQuery(context.Context, *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.QueryService.RunQuery is not implemented"))
 }
 
-func (UnimplementedQueryServiceHandler) RunQuerySet(context.Context, *connect.Request[webapi.RunQuerySetRequest]) (*connect.Response[webapi.RunQuerySetResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.QueryService.RunQuerySet is not implemented"))
+func (UnimplementedQueryServiceHandler) RunQueries(context.Context, *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.QueryService.RunQueries is not implemented"))
 }
 
 func (UnimplementedQueryServiceHandler) ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error) {

@@ -57,14 +57,14 @@ def test_xlsx_refuses_a_name_used_twice(tmp_path):
         tables_to_xlsx(str(tmp_path / "x.xlsx"), [("Nets", _answer()), ("nets", _answer())])
 
 
-def _set_answer(with_error: bool) -> query_pb2.RunQuerySetResponse:
+def _set_answer(with_error: bool) -> query_pb2.RunQueriesResponse:
     res = [
         query_pb2.NamedQueryResult(name="first", result=_answer()),
         query_pb2.NamedQueryResult(name="second", result=_answer()),
     ]
     if with_error:
         res.insert(1, query_pb2.NamedQueryResult(name="broken", error="unknown relation"))
-    return query_pb2.RunQuerySetResponse(title="t", results=res)
+    return query_pb2.RunQueriesResponse(title="t", results=res)
 
 
 def test_set_sheets_keeps_the_set_order():

@@ -367,7 +367,7 @@ queries:
 
 The preamble holds rules only; each query brings its own goal, and each may also carry a
 `description` the rendered report shows. `--format markdown` and `--format html` write the whole set
-as one document with a section per query, and `--format json` writes the `RunQuerySetResponse` wire
+as one document with a section per query, and `--format json` writes the `RunQueriesResponse` wire
 message. csv is refused, because one csv file holds one table.
 
 A query that cannot be answered, a misspelled relation for instance, is reported under its own name

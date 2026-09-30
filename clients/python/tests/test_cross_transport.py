@@ -75,8 +75,8 @@ CASES: List[Case] = [
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c')),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?c, ?p, ?n) => ?n, count(distinct ?c)")),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='pin.net(?c, ?p, "NO_SUCH_NET") => ?c')),
-    Case("QueryService/RunQuerySet", lambda c: c.run_query_set(uri=DESIGN, set=_SET)),
-    Case("QueryService/RunQuerySet", lambda c: c.run_query_set(uri=DESIGN, set=_SET_WITH_TYPO)),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET)),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET_WITH_TYPO)),
     Case(
         "DiffService/DiffDesigns",
         lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn"),

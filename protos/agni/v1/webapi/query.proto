@@ -27,13 +27,13 @@ service QueryService {
   // (C16), so a query over `param` returns no rows rather than an error.
   rpc RunQuery(RunQueryRequest) returns (RunQueryResponse);
 
-  // RunQuerySet answers a named list of queries over ONE read of the design (agni issue 729). An
+  // RunQueries answers a named list of queries over ONE read of the design (agni issue 729). An
   // audit is usually a workbook rather than a question, and asking each table through RunQuery would
   // read and project the design once per table. Every result has exactly the shape RunQuery returns
   // for that query alone. A query that fails is reported against its name and the others still
   // answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
   // goal) and a design that cannot be read are errors for the call.
-  rpc RunQuerySet(RunQuerySetRequest) returns (RunQuerySetResponse);
+  rpc RunQueries(RunQueriesRequest) returns (RunQueriesResponse);
 
   // ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
   // predicates plus any overlay-registered relations, each with its argument labels, a one-line
@@ -251,7 +251,7 @@ message NamedQuery {
   string description = 3;
 }
 
-message RunQuerySetRequest {
+message RunQueriesRequest {
   QuerySet set = 1;
   // uri, overlay, board_uri and as_named mean what they mean on RunQueryRequest, and apply to the one
   // read every query in the set shares.
@@ -261,7 +261,7 @@ message RunQuerySetRequest {
   bool as_named = 5;
 }
 
-message RunQuerySetResponse {
+message RunQueriesResponse {
   // title and preamble echo the request, so a saved response states the questions it answers.
   string title = 1;
   string preamble = 2;

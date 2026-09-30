@@ -136,7 +136,7 @@ class NamedQuery(_message.Message):
     description: str
     def __init__(self, name: _Optional[str] = ..., query: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
 
-class RunQuerySetRequest(_message.Message):
+class RunQueriesRequest(_message.Message):
     __slots__ = ("set", "uri", "overlay", "board_uri", "as_named")
     SET_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
@@ -150,7 +150,7 @@ class RunQuerySetRequest(_message.Message):
     as_named: bool
     def __init__(self, set: _Optional[_Union[QuerySet, _Mapping]] = ..., uri: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
 
-class RunQuerySetResponse(_message.Message):
+class RunQueriesResponse(_message.Message):
     __slots__ = ("title", "preamble", "source", "results")
     TITLE_FIELD_NUMBER: _ClassVar[int]
     PREAMBLE_FIELD_NUMBER: _ClassVar[int]

@@ -49,9 +49,9 @@ func TestQuerySetJSONIsTheWireMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query --set: %v\n%s", err, out)
 	}
-	var resp webapi.RunQuerySetResponse
+	var resp webapi.RunQueriesResponse
 	if err := protojson.Unmarshal([]byte(out), &resp); err != nil {
-		t.Fatalf("not protojson of webapi.RunQuerySetResponse: %v\n%s", err, out)
+		t.Fatalf("not protojson of webapi.RunQueriesResponse: %v\n%s", err, out)
 	}
 	res := resp.GetResults()
 	if len(res) != 2 || res[0].GetName() != "Resistors" || res[1].GetName() != "Resistor count" {
@@ -131,7 +131,7 @@ func TestQuerySetReadsStdin(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("query --set -: %v", err)
 	}
-	var resp webapi.RunQuerySetResponse
+	var resp webapi.RunQueriesResponse
 	if err := protojson.Unmarshal(out.Bytes(), &resp); err != nil || resp.GetTitle() != "piped" || len(resp.GetResults()[0].GetResult().GetRows()) == 0 {
 		t.Errorf("stdin set answered %v (err %v)", &resp, err)
 	}

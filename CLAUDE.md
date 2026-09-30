@@ -273,7 +273,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   it moved down out of `cmd/` rather than being copied a third time (agni issue 380).
   **`--set <file>` asks a named SET of queries over one read** (agni 729): one document with a
   section per query, csv refused, and a non-zero exit AFTER writing when any query failed.
-  `RunQuerySet` answers each query exactly as `RunQuery` would, because both call the same `answer`
+  `RunQueries` answers each query exactly as `RunQuery` would, because both call the same `answer`
   helper in `service/query.go`.
 - **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/list`
   group by the projection's plain columns; `count(distinct ?x)` reduces the SET of values instead.

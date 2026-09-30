@@ -35,28 +35,28 @@ func newCounting(g *geom.SchematicGeometry) (countingLoader, *int, *int) {
 	return countingLoader{fakeLoader: fakeLoader{design: queryDesign(), geom: g}, designs: &d, geoms: &gm}, &d, &gm
 }
 
-func setReq(queries ...string) *webapi.RunQuerySetRequest {
+func setReq(queries ...string) *webapi.RunQueriesRequest {
 	s := &webapi.QuerySet{Title: "t"}
 	for i, q := range queries {
 		s.Queries = append(s.Queries, &webapi.NamedQuery{Name: string(rune('a' + i)), Query: q})
 	}
-	return &webapi.RunQuerySetRequest{Uri: "mount://m/x.kicad_sch", Set: s}
+	return &webapi.RunQueriesRequest{Uri: "mount://m/x.kicad_sch", Set: s}
 }
 
 var setGeometry = &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "s1", Placements: []*geom.SymbolPlacement{{RefDes: "R1"}}}}}
 
 // Each result is exactly what RunQuery answers for that query alone, down to sheet badges and locate
 // reasons, so a set is a batch of RunQuery calls and not a second, drifting implementation.
-func TestRunQuerySetMatchesRunQueryPerQuery(t *testing.T) {
+func TestRunQueriesMatchesRunQueryPerQuery(t *testing.T) {
 	queries := []string{
 		`component-on-net(?r,?n) => ?r, ?n`,
 		`component-on-net(?r,?n) => ?n, count(distinct ?r)`,
 		`component-on-net(?r,"nope") => count(?r)`,
 	}
 	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: setGeometry}, nil, nil)
-	got, err := svc.RunQuerySet(context.Background(), setReq(queries...))
+	got, err := svc.RunQueries(context.Background(), setReq(queries...))
 	if err != nil {
-		t.Fatalf("RunQuerySet: %v", err)
+		t.Fatalf("RunQueries: %v", err)
 	}
 	if len(got.GetResults()) != len(queries) {
 		t.Fatalf("results = %d, want %d", len(got.GetResults()), len(queries))
@@ -73,13 +73,13 @@ func TestRunQuerySetMatchesRunQueryPerQuery(t *testing.T) {
 	}
 }
 
-func TestRunQuerySetReadsTheDesignOnce(t *testing.T) {
+func TestRunQueriesReadsTheDesignOnce(t *testing.T) {
 	one, d1, _ := newCounting(setGeometry)
 	if _, err := NewQueryService(one, nil, nil).RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.kicad_sch", Query: `component-on-net(?r,?n) => ?r`}); err != nil {
 		t.Fatal(err)
 	}
 	set, dN, gN := newCounting(setGeometry)
-	_, err := NewQueryService(set, nil, nil).RunQuerySet(context.Background(), setReq(
+	_, err := NewQueryService(set, nil, nil).RunQueries(context.Background(), setReq(
 		`component-on-net(?r,?n) => ?r`, `component-on-net(?r,?n) => ?n`, `component-on-net(?r,?n) => ?r, ?n`))
 	if err != nil {
 		t.Fatal(err)
@@ -92,9 +92,9 @@ func TestRunQuerySetReadsTheDesignOnce(t *testing.T) {
 	}
 }
 
-func TestRunQuerySetOfScalarsLoadsNoGeometry(t *testing.T) {
+func TestRunQueriesOfScalarsLoadsNoGeometry(t *testing.T) {
 	l, _, g := newCounting(setGeometry)
-	if _, err := NewQueryService(l, nil, nil).RunQuerySet(context.Background(), setReq(`component-on-net(?r,?n) => count(?r)`)); err != nil {
+	if _, err := NewQueryService(l, nil, nil).RunQueries(context.Background(), setReq(`component-on-net(?r,?n) => count(?r)`)); err != nil {
 		t.Fatal(err)
 	}
 	if *g != 0 {
@@ -102,9 +102,9 @@ func TestRunQuerySetOfScalarsLoadsNoGeometry(t *testing.T) {
 	}
 }
 
-func TestRunQuerySetReportsABadQueryByName(t *testing.T) {
+func TestRunQueriesReportsABadQueryByName(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
-	got, err := svc.RunQuerySet(context.Background(), setReq(`component-on-net(?r,?n) => ?r`, `compnent-on-net(?r,?n)`, `component-on-net(?r`))
+	got, err := svc.RunQueries(context.Background(), setReq(`component-on-net(?r,?n) => ?r`, `compnent-on-net(?r,?n)`, `component-on-net(?r`))
 	if err != nil {
 		t.Fatalf("a bad query failed the whole set: %v", err)
 	}
@@ -123,10 +123,10 @@ func TestRunQuerySetReportsABadQueryByName(t *testing.T) {
 	}
 }
 
-func TestRunQuerySetPreambleReachesEveryQuery(t *testing.T) {
+func TestRunQueriesPreambleReachesEveryQuery(t *testing.T) {
 	req := setReq(`on(?r) => ?r`, `on(?r) => count(?r)`)
 	req.Set.Preamble = `on(?r) :- component-on-net(?r, ?_);`
-	got, err := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil).RunQuerySet(context.Background(), req)
+	got, err := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil).RunQueries(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,14 +140,14 @@ func TestRunQuerySetPreambleReachesEveryQuery(t *testing.T) {
 	}
 }
 
-func TestRunQuerySetUnusableSetIsInvalidArgument(t *testing.T) {
+func TestRunQueriesUnusableSetIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	req := setReq(`component-on-net(?r,?n)`, `component-on-net(?r,?n)`)
 	req.Set.Queries[1].Name = "a"
-	if _, err := svc.RunQuerySet(context.Background(), req); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := svc.RunQueries(context.Background(), req); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("repeated name: err = %v, want invalid argument", err)
 	}
-	if _, err := svc.RunQuerySet(context.Background(), &webapi.RunQuerySetRequest{Uri: "mount://m/x.kicad_sch"}); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Uri: "mount://m/x.kicad_sch"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("empty set: err = %v, want invalid argument", err)
 	}
 }
