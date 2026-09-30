@@ -3,8 +3,8 @@ title: "CLI reference"
 description: "The commands and flags a user reaches for, with a pointer to per-command help."
 ---
 
-The commands and flags a user reaches for. `agni <command> --help` always prints the
-authoritative, up-to-date detail. This page is the map. The reader for a file is chosen by
+This page lists the commands and flags a user reaches for. `agni <command> --help` always
+prints the authoritative, up-to-date detail. The reader for a file is chosen by
 its extension, so you pass the design file directly and never name a format.
 
 Where a `<file>` is expected you may also name a **design folder**, one holding a `design.yaml`
@@ -37,7 +37,7 @@ not extracted:       7 sub-cells holding 74 instances (counts above are the top 
 
 ### `check <file>`
 
-Run the rule catalog and report findings. The workhorse. See
+Run the rule catalog and report findings. See
 [Checks and reports](../checks-and-reports/).
 
 | flag | what it does |
@@ -81,8 +81,8 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 
 #### Gating a pipeline on a review
 
-`check --fail-on` and the two flags above gate on different axes, and the difference is not a matter
-of taste. `--fail-on` pivots on finding **severity**, which states how bad an answer was.
+`check --fail-on` and the two flags above gate on different axes.
+`--fail-on` pivots on finding **severity**, which states how bad an answer was.
 `--fail-on-outcome` and `--min-answered` pivot on item **outcome**, which states whether the question
 was answered at all. A checklist can stop answering four of its items with its failure count unchanged
 at zero, and no severity predicate can see that.
@@ -113,10 +113,10 @@ run. Exit codes:
 | `2` | a gate tripped |
 | `1` | the run itself failed: an unreadable design, an invalid manifest, an unknown outcome name |
 
-`check --fail-on` uses the same codes, so one CI script can treat every gate in this CLI alike: `2`
-means the design has problems, `1` means the tool could not do its job.
+`check --fail-on` uses the same codes, so one CI script can treat every gate in this CLI alike, reading
+`2` as problems in the design and `1` as the tool failing to do its job.
 
-### Machine configuration: `agni.yaml`
+### Machine configuration in `agni.yaml`
 
 The flags that say *where bytes are* can live in a file instead of on every command. `agni.yaml` is
 searched for beside the working directory, upward a few levels, then in `$XDG_CONFIG_HOME/agni/`
@@ -138,21 +138,20 @@ Paths are resolved against the directory you ran from, and a mount naming a dire
 there is an error, so a file meant to serve every working directory wants absolute paths.
 
 A run says which file it took config from, on stderr. An explicit `--mount`, `--symbol-path`,
-`--web-dir` or `--enable-native` wins outright rather than merging: naming a mount table is answering
-for the whole table.
+`--web-dir` or `--enable-native` wins outright rather than merging, because naming a mount table
+answers for the whole table.
 
 `web_dir` is where the viewer's own assets are. It belongs to this tier because it locates bytes and
 cannot change what a run concludes, and a wrong value fails at startup rather than quietly. A repo
 checkout needs nothing here, since the default `web` already resolves per-directory; an installed
-binary run from a design folder has no relative answer, and that is what this and `AGNI_WEB_DIR` are
-for.
+binary run from a design folder has no relative answer and needs this key or `AGNI_WEB_DIR`.
 
-`native_tools` is the file form of `serve --enable-native`, and belongs here on the same test: it
-says which golden renderers EXIST, and naming one that is not installed fails at the point of use
+`native_tools` is the file form of `serve --enable-native`, and belongs here on the same test, because
+it says which golden renderers EXIST, and naming one that is not installed fails at the point of use
 with the tool's own name in the error. Only `serve` consumes it, though every command reports having
 read it, because the note says what the file supplied rather than what the command went on to use.
 
-**It carries only tier-1 config, and that is a boundary rather than a to-do.** Naming conventions,
+**It carries only tier-1 config, deliberately.** Naming conventions,
 interface profiles, seeded parameters, design intent and a review checklist belong to a project
 instead. See [Projects and designs](../../architecture/projects-and-designs/).
 
@@ -161,8 +160,8 @@ instead. See [Projects and designs](../../architecture/projects-and-designs/).
 
 Those five decide *what a design is checked against*, so they belong where they are scoped to the
 designs that declared them. A machine-wide conventions file applying to every design a CLI opened is
-the bug per-design config fixed. Unknown keys are rejected, so reaching for `conventions:` here is
-told no rather than quietly becoming a global analysis tier.
+the bug per-design config fixed. Unknown keys are rejected, so a `conventions:` key here is an
+error rather than a silent global analysis tier.
 
 </details>
 
@@ -198,12 +197,12 @@ configuration from the descriptors.
 reach the project. The command prints what it copied and from where, and the generated `design.yaml`
 records the origin in a comment.
 
-**Companions are detected, not guessed at.** A sibling is declared a companion only when it shares
+**Companions are detected by a narrow rule.** A sibling is declared a companion only when it shares
 the design's stem *and* carries schematic geometry or a board. That excludes a later revision
 (`gateway-rev-b.edn`, a different stem and a legitimate analysis source of its own) and a second
 netlist encoding (`gateway.edf`, same stem but no view to contribute). Check the generated
-`design.yaml` and edit it: membership is declared per file precisely because it cannot be inferred
-reliably.
+`design.yaml` and edit it, because membership cannot be inferred reliably and is declared per file
+instead.
 
 **Nothing is overwritten.** An existing file stops the command and is named, and every planned write
 is checked before any write happens, so a refusal leaves nothing half-created. Pointing at a folder
@@ -213,7 +212,7 @@ one.
 ### `intake <file>`
 
 Extract a sanitized summary of a design: counts, class census, rail voltages, anomalies, and the
-parts list. It carries the shape of the design and structurally cannot carry a net name or a
+parts list. It structurally cannot carry a net name or a
 connection, so it is safe to hand to someone who should not see the design itself.
 
 | flag | what it does |
@@ -235,9 +234,9 @@ bindings, the full provenance and the verification state live here.
 It needs no design, because a spec library is not a design. Name a corpus with `--params`, or name a
 design with `--design` so the project that design belongs to supplies its own `params/`.
 
-A parameter someone has verified reports whether that still means anything. When the corpus has moved
+A parameter someone has verified reports whether that verification still holds. When the corpus has moved
 to a later revision of the document, the row reads `stale` and names BOTH revisions: the one that was
-checked, and the one held now. That pair is the re-confirm task; a pair of content hashes is not.
+checked, and the one held now. Those two revisions tell you what to re-confirm, which a pair of content hashes would not.
 
 | flag | what it does |
 |---|---|
@@ -356,8 +355,8 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 ### `healthcheck`
 
 GET `/healthz` on a running server and exit 0 only on a 200. It is what the container image's
-`HEALTHCHECK` runs, so the image needs no `curl` or `wget`: the runtime is debian-slim, which ships
-neither, and pulling one in to make a single HTTP request adds surface area to every deployment for
+`HEALTHCHECK` runs, so the image needs no `curl` or `wget`, neither of which the debian-slim runtime
+ships. Pulling one in to make a single HTTP request would add a package to every deployment for
 the sake of a probe the binary can make itself. [Running the server](../running-the-server/) covers
 where it fits in a container.
 
@@ -366,8 +365,8 @@ where it fits in a container.
 | `--addr <host:port>` | the server to probe (default `localhost:8080`). `serve`'s own default is `:8080`, which binds every interface and is not a dialable host, so the probe names loopback explicitly |
 | `--timeout <duration>` | how long to wait for a response (default `3s`) |
 
-It asks one question and interprets nothing: whether the server answers 200 on `/healthz`, which is
-the whole question a restart policy acts on. It reads no other route and does not look at the body.
+A restart policy acts on the status code alone, so the probe reads no other route and does not
+look at the body.
 
 ### `emit <in> [out]`
 
@@ -392,15 +391,15 @@ the diagnostic they reach the IR as does not record which port declared them.
 An EDIF instance needs a name, because a net anchors each of its pins with an `instanceRef` naming
 one. The writer prefers the id the source used, falls back to the ref-des (with the section index
 appended for a multi-gate part), and breaks a collision by suffixing, so the names are unique across
-the file and stable between two exports of the same design. Neither seed is unique by itself: two of
+the file and stable between two exports of the same design. Neither seed is unique by itself, because two of
 the readers record no instance id at all, and a KiCad symbol placed on two sheets of one hierarchy
 carries the same id under two ref-des.
 
 One connection shape has no instance to name. A KiCad power symbol or `PWR_FLAG` reaches the IR as a
 connection on `#PWR01` while the component list stays physical, so there is nothing in the contents
 to anchor it to and minting one would invent a component the source never had. Those are written as
-bare `portRef`s and read back as connections with no component, which is what an EDIF no-ref
-connection has always been. Every other connection is anchored.
+bare `portRef`s and read back as connections with no component, as an EDIF no-ref
+connection always has. Every other connection is anchored.
 
 The output is written to be read by tools other than this one, which is a stricter target than
 round-tripping through agni's own reader and was not always met. Three things follow from it. The
@@ -423,7 +422,7 @@ EDIF's own library scoping already carries the qualification and a reader that t
 form as one name rejects the colon in it. The prefix stays in the IR, where it selects the symbol
 file an external reference resolves from, so this is an encoding choice in the writer and not a
 rename. A design taken out through EDIF and read back therefore names that part `CONN4` in library
-`gateway`, which is the same fact with the redundancy gone.
+`gateway`.
 
 `.eds` is refused rather than treated as EDIF. It is a dual-capability format, a netlist plus the
 faithful schematic geometry beside it, and there is no schematic writer yet, so emitting one from
@@ -446,7 +445,7 @@ agni v0.1.1
 ```
 
 A build from a source clone reports the commit rather than a release (`b020fea02643`, suffixed
-`+dirty` when the tree had uncommitted changes), because that is what it honestly is.
+`+dirty` when the tree had uncommitted changes).
 
 ## Global flags
 
@@ -461,7 +460,7 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
 (reader-health smoke over many files), `census`, and `derive` (datasheet extraction). `validate` is
-worth knowing as a user: point it at a folder of exports and it reports which of them this tool can
+worth knowing as a user, because pointed at a folder of exports it reports which of them this tool can
 actually read. The rest sit closer to the engine and are covered in the developer docs.
 
 ## Which formats are read
@@ -474,5 +473,5 @@ header).
 A schematic that references external symbols resolves them by one of three routes, in the order they
 are searched: its own `sym-lib-table` for a KiCad project, the `symbols` library its design descriptor
 declares (defaulting to `symbols` beside the descriptor), and any `--symbol-path` directory. A design
-that belongs to a project needs no flag, and the flag stays the escape hatch for a library the
+that belongs to a project needs no flag, and the flag remains for a library the
 project does not know about.

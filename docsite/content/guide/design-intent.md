@@ -8,7 +8,7 @@ regulators" is a fact you can read off the file; "the board should have two regu
 somebody made in a meeting, and nothing in the export records it.
 
 A design-intent declaration writes that decision down as YAML beside the design, and `check` compares
-the board against it. It is the tier that catches a rail quietly moved to the wrong domain, a module
+the board against it. This tier catches a rail quietly moved to the wrong domain, a module
 dropped during a cost reduction, or a power-up order that got reversed when the {{ explainable "power-tree" "power tree" }}
 was redrawn. None of those look wrong in the schematic. They look wrong against what you said you
 were building.
@@ -30,7 +30,7 @@ subsystems:
   - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
 ```
 
-That last voltage domain is wrong on purpose, and it is the whole point of the file. `core` is
+That last voltage domain is wrong on purpose, so the run below has something to catch. `core` is
 declared at 3.3 V while the rail it names is `PMIC_IO_1V8`, an actual 1.8 V rail. Nothing about the
 schematic is malformed. The board simply stopped matching the architecture, and only a declaration
 can notice.
@@ -70,7 +70,7 @@ signing them off separately gets separate verdicts.
 `io_map` is the largest of them in practice and the one most boards already have, usually as a
 spreadsheet. On any board carrying a big MCU or SoC, someone decides which peripheral lands on which
 pin long before the schematic exists, firmware is written against that decision, and the schematic is
-drawn from it. What goes wrong is ordinary: an assignment moves late, the map is updated, and one net
+drawn from it. Usually an assignment moves late, the map is updated, and one net
 does not get redrawn. Nothing about the resulting board is electrically wrong, so every other rule
 passes, and it surfaces at bring-up as a peripheral that does not respond.
 
@@ -91,20 +91,20 @@ name carrying a zero-width space pasted out of a spreadsheet all reach the same 
 needed any of that says so in the verdict, so a note always means something was inferred.
 
 It compiles to four rules rather than one. Three of them ask whether the design kept the promises the
-map made, and the fourth asks the opposite question: which nets the map never mentioned. That number
+map made, and the fourth inverts the question to ask which nets the map never mentioned. That number
 is usually the important one. A design with sixteen hundred nets and a map declaring two hundred has
 two hundred checked and fourteen hundred unexamined, which is not the same as clean, and nothing else
 in a run tells those apart. Nets it does not name report as `not-considered` rather than as failures,
 because an undeclared net is a question nobody asked and not a fault in the board.
 
 The three that check the promises are separated because a reviewer acts on them differently, and
-because two of them are opposite defects: a net the map declares and the netlist does not have is
+because two of them catch opposite defects (a net the map declares and the netlist does not have is
 usually a real disconnection, where a net the netlist has and the map does not declare is an
-incomplete map. `function` is accepted and NOT yet evaluated, since deciding whether a function is
+incomplete map). `function` is accepted and NOT yet evaluated, since deciding whether a function is
 legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so
 outright.
 
-`rail_budgets` is the one that joins two tiers. The declaration supplies the demand, which no design
+`rail_budgets` joins two tiers. The declaration supplies the demand, which no design
 artifact carries, and a seeded {{ explainable "absolute-maximum-rating" "datasheet parameter" }}
 supplies the regulator's capacity. Both halves have to be present or the rule stays quiet rather than
 guessing.
@@ -116,7 +116,7 @@ should contain says nothing, and a rule that enumerated its expectations *from t
 always agree with the design. So every intent rule iterates the declaration and probes the netlist,
 never the reverse.
 
-The consequence is worth knowing before you read a report. A design run with no declaration leaves
+A design run with no declaration leaves
 its intent-bound review items reading **needs-design-intent**, never **pass**. The mechanism exists
 and is blocked on an input you have not supplied yet, which is a different thing from a board that
 was checked and found clean. [Checks and reports](../checks-and-reports/) covers the full outcome
@@ -134,10 +134,10 @@ make explicit rather than accidental.
 
 ## Where to go next
 
-- [Checks and reports](../checks-and-reports/): what `needs-design-intent` means beside the other
-  outcomes, and how `--fail-on` treats them.
-- [Interface profiles](../interface-profiles/): the other declarative tier, per-project rather than
-  per-design, for the shape of a bus rather than the shape of a board.
-- [How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written): where an
-  intent declaration sits among the four ways to author a rule, and why the engine ships none of its
-  own.
+- [Checks and reports](../checks-and-reports/) explains what `needs-design-intent` means beside the
+  other outcomes, and how `--fail-on` treats them.
+- [Interface profiles](../interface-profiles/) is the other declarative tier, per-project rather
+  than per-design, for how a bus is wired rather than what a board contains.
+- [How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written) shows
+  where an intent declaration sits among the four ways to author a rule, and why the engine ships
+  none of its own.

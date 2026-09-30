@@ -4,7 +4,7 @@ description: "Confirm the tool read your board the way you expect, before trusti
 playground: viewer
 ---
 
-Every finding in every later rung rests on one thing: that the tool read your board correctly. A
+Every finding in every later rung assumes the tool read your board correctly. A
 schematic that half-loaded still produces a report, and that report looks exactly like a real one.
 So the first thing to do with a new design is confirm what was read, not check it.
 
@@ -21,9 +21,7 @@ A small industrial gateway. Power comes in from a connector at 12 V, a buck regu
 3.3 V and an LDO drops that to 1.8 V. An MCU sits on both rails and talks to a CAN {{ explainable "transceiver" }}, an
 I2C EEPROM, and a crystal.
 
-It is deliberately imperfect. Each flaw is a real defect a reviewer would flag, and each one is
-there so some part of the tool has something true to report rather than a contrived one. You will
-meet them as you go.
+It has flaws on purpose, and you will meet them as you go.
 
 This drawing is rendered by Agni from the same file the commands below read. It is not a screenshot
 of another tool.
@@ -62,7 +60,7 @@ the most common bad read there is.
 
 This project ships that library, in `designs/gateway/symbols/`, and a schematic's own directory
 subtree is always searched. So the runs below move it aside first, the way rungs 4 to 6 move a tier
-aside: without that the symbols resolve whatever you pass and the failure cannot be shown at all.
+aside, because otherwise the symbols resolve whatever you pass and the failure cannot be shown at all.
 `--as-named` is there because `gateway.kicad_sch` is a declared companion, so naming it would
 otherwise read the entry instead, which is the correct read and not the one this rung is about.
 
@@ -77,7 +75,7 @@ file reads correctly:
 The flag takes a directory and searches its whole subtree, so pointing it at a library root is
 enough. A KiCad project's `sym-lib-table` is picked up automatically.
 
-Now the part worth sitting with. Run the checks on the broken read and it does not error, it does
+Now run the checks on the broken read. It does not error, it does
 not warn you that it read nothing, and it does not stay quiet:
 
 {{ agniRun "content/tutorials/runs/01-check-kicad-sch-broken.yaml" }}
@@ -102,7 +100,8 @@ recognized as something. A large unclassified count is the same warning as a low
 arriving from a different direction.
 
 The rails section prints nominal voltages and withholds the net names, following the pattern of
-the whole command: the shape of the design crosses the boundary, the design does not.
+the whole command, which lets the structure of the design cross the boundary and keeps the design
+itself back.
 
 The MPN column and the datasheet-gap list need a parameter set. This project declares one, so the
 command above carries no flag and picks up `params/` the same way `check` and `review` do. A design
@@ -122,10 +121,10 @@ The tail of the intake names every part on the board with no seeded datasheet:
 ...
 ```
 
-That list is the work queue for [rung 6](../). Every part on it is one whose real limits nothing can
+That list is the work queue for [rung 6](../06-part-limits/). Every part on it is one whose real limits nothing can
 currently check against.
 
-It lists distinct PART NUMBERS rather than placements, because seeding is per part number: one file
+It lists distinct PART NUMBERS rather than placements, because seeding is per part number and one file
 covers every component carrying that MPN. A board with forty of one capacitor contributes one line.
 
 When the corpus is attached and nothing is missing, the section still prints and says so. An empty

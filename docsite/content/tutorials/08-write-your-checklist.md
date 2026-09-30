@@ -4,13 +4,13 @@ description: "The questions your team asks of every board, bound to the engine s
 ---
 
 Most teams already have a review checklist. It is usually a spreadsheet, and going through it is
-usually somebody's afternoon. Much of it is mechanical: questions with a definite answer that is
+usually somebody's afternoon. Much of it is mechanical, asking questions whose definite answer is
 already sitting in the design file.
 
 `review.yaml` is that checklist, written so the mechanical items answer themselves and the rest stay
 visible as work for a human.
 
-The shift from `check` is worth naming. `agni check` answers "what is wrong with this board".
+`agni check` answers "what is wrong with this board".
 `agni review` answers "which of our questions did we actually answer", which is a different question
 and a more useful one when you are deciding whether a board is ready.
 
@@ -32,8 +32,8 @@ item that has been "P1" in your process for years stays P1 here and nobody has t
 
 ## Four ways to bind an item
 
-**`rule:`** hands the item to a catalog rule. Any rule, from any tier: built-in, one your
-conventions file added, a profile rule, or an intent rule.
+**`rule:`** hands the item to a catalog rule. It can be any rule from any tier, whether
+built in, added by your conventions file, contributed by a profile, or declared as intent.
 
 ```yaml
 - {id: "P2", title: every rail carries decoupling, rule: decoupling-present}
@@ -60,14 +60,14 @@ requires, and reads as unevaluated rather than passed when the interface is abse
 ```
 
 **`note:`** is for a question nothing automated can answer. The item stays on the checklist and
-reports honestly.
+reports that no automated check answered it.
 
 ```yaml
 - {id: "H3", title: the assembly drawing lists a torque spec for every fastener,
    note: manual review against the mechanical drawing package}
 ```
 
-That last one matters more than it looks. The temptation with an unautomatable item is to drop it,
+The temptation with an unautomatable item is to drop it,
 and then it is not on the checklist at all. A `note:` keeps the question visible and says who owns
 it.
 
@@ -82,7 +82,7 @@ bad one.
 
 {{ includeFile "figures/query-binding-polarity.svg" }}
 
-This is the most common authoring mistake, and it is quiet, because on a healthy board an inverted
+This authoring mistake is easy to make, and it is quiet, because on a healthy board an inverted
 item just looks like a finding you have not got round to.
 
 ## Running it
@@ -102,8 +102,8 @@ It says which checklist it picked, on stderr:
 note: running the checklist projects/gateway declares (mount://gateway/review.yaml); pass --checklist to run a different one.
 ```
 
-That note matters more than it looks. Which checklist scored a run is not recoverable from the
-outcomes it produced, so a checklist you did not type has to announce itself.
+Which checklist scored a run is not recoverable from the outcomes it produced, so a checklist you
+did not type has to announce itself.
 
 ```
 # Review: Sample Board design review
@@ -137,9 +137,9 @@ same checklist as a self-contained page instead:
 agni review designs/gateway --format html --server self > review.html
 ```
 
-Two differences from the markdown. Every finding is listed per item, where the Detail cell above caps
-at three, so a rule that fired on forty nets shows forty. And each finding links to its proof: click
-the net and the board opens with the checks run and that subject in focus.
+The page differs from the markdown in two ways. Every finding is listed per item, where the Detail cell above caps
+at three, so a rule that fired on forty nets shows forty. And each finding links to its proof, so
+clicking the net opens the board with the checks run and that subject in focus.
 
 `--server self` starts the viewer over this run's own mount table and blocks until Ctrl-C, so the
 links cannot point somewhere the report was not read from. Naming a server someone else is running
@@ -172,14 +172,14 @@ agni review --as-named designs/gateway/gateway.edn --checklist review.yaml
 | B1 | no track is below the fab's minimum width | not-applicable | design carries no board geometry (WS1-006 sidecar) |
 ```
 
-Nothing about the item changed. What changed is what it had to work with, and a question that could
+Nothing about the item changed. Only its input changed, and a question that could
 not be asked became a defect with a named net.
 
 `--board-path` does the same job for a board that is *not* a declared companion: a fab's returned
 file, or a layout under review that has not landed in the design yet.
 
-Worth being precise about what that proves. The `n/a` was not hiding a failure and it was not
-standing in for a pass. It was the honest report of a question with nothing to evaluate, and the
+The `n/a` was not hiding a failure and it was not
+standing in for a pass. The question had nothing to evaluate, and the
 only way to find out which it would have been was to supply the copper. An item that had scored
 `pass` on the netlist alone would have been wrong, and nobody would ever have checked it again.
 

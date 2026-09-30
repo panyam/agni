@@ -3,8 +3,8 @@ title: "6. Part limits"
 description: "Compare the design against what a part's datasheet actually allows, and read the verdict for data nobody has checked."
 ---
 
-Every rule so far reasoned about structure: what is connected to what. A whole class of real defects
-is not structural at all. A part sitting on a rail above its absolute maximum is wired perfectly
+Every rule so far reasoned about structure, about what is connected to what. A whole class of real defects
+is not structural at all. A part sitting on a rail above its absolute maximum is wired
 correctly and will still fail. Deciding that needs a number that exists only on the part's
 datasheet.
 
@@ -20,9 +20,9 @@ compare against:
 
 {{ agniRun "content/tutorials/runs/06-check-designs-gateway-gateway-edn-rule-suppl.yaml" }}
 
-The rule ran. It had no datasheet limits, so it decided nothing. Note that a bare "no findings" reads
-the same here as it would on a board where the rule ran and everything was fine, reproducing exactly
-the ambiguity rung 9 exists to resolve.
+The rule ran. It had no datasheet limits, so it decided nothing. A bare "no findings" reads
+the same here as it would on a board where the rule ran and everything was fine, and rung 9 exists
+to resolve that ambiguity.
 
 ## With the parameter set
 
@@ -31,8 +31,8 @@ Put the corpus back and the same command decides:
 {{ agniRun "content/tutorials/runs/06-check-abs-max-params.yaml" }}
 
 U2's input sits on a 3.3 V rail and its datasheet says 3.0 V is the absolute maximum. The finding
-carries where that limit came from, which matters more than it looks: a claim about a part is only
-as good as the document behind it, and "which page of which revision" is the first question anyone
+carries where that limit came from, because a claim about a part is only as good as the document
+behind it, and "which page of which revision" is the first question anyone
 asks.
 
 ## What a seeded part looks like
@@ -68,8 +68,8 @@ conflating them produces either false alarms or missed defects.
 
 `condition_coverage` is a gate rather than documentation. A limit that holds only under conditions
 nobody recorded cannot be compared automatically, and a row marked anything other than complete or
-unconditional is skipped rather than guessed at. This trips people writing their first spec by hand:
-omit it and the row is silently ignored.
+unconditional is skipped rather than guessed at. This trips people writing their first spec by hand,
+because a row that omits it is silently ignored.
 
 ## Data nobody has checked
 
@@ -80,8 +80,8 @@ prov { doc_ref: "acme-ldo-1v8-placeholder" method: "mock" confidence: 0.3 }
 ```
 
 It is a placeholder. Somebody typed a plausible number to get the pipeline working and never went to
-the datasheet. That is the honest state of most parameter corpora early on, and pretending otherwise
-is how a review loses credibility.
+the datasheet. Most parameter corpora look like this early on, and pretending otherwise is how a
+review loses credibility.
 
 Run the checklist and the verdict says so:
 
@@ -105,7 +105,7 @@ And with the corpus moved aside again, so the rule has no seeded spec for U2 at 
 The remedy names the flag because that is the route for a design read on its own. Inside a project
 that declares `params/`, the fix is to seed the part rather than to pass anything.
 
-Three distinct states for one item: decided on trusted data, decided on untrusted data, and not
+One item can land in three distinct states: decided on trusted data, decided on untrusted data, and not
 decidable at all. None of them is a pass.
 
 ## Where to start

@@ -45,14 +45,14 @@ deliberately trips several rules:
 
 Read a finding as three parts: the **severity** (`error` / `warning` / `info`), the
 **rule** that fired (`i2c-pull-up`), and the **subject** it fired on (the net `SCL`), with a
-plain-language reason in parentheses. Each finding also carries its provenance: run
-`--format json` (below) to see exactly which net or pin, and for datasheet rules which page
+plain-language reason in parentheses. Each finding also carries its provenance, and
+`--format json` (below) shows exactly which net or pin, and for datasheet rules which page
 and table, the finding came from.
 
 Severity is a policy signal, not a measure of certainty. An `error` is something you almost
 certainly must fix (an I2C bus with no {{ explainable "pull-up" }} will not communicate). A `warning`
-sits between them. A rail with no {{ explainable "decoupling-capacitor" }} often works on the bench
-and fails intermittently in the field. `info` is a note worth a look.
+sits between `error` and `info`, as with a rail with no {{ explainable "decoupling-capacitor" }}
+that often works on the bench and fails intermittently in the field. `info` is a note worth a look.
 
 ## A clean run, and why "no findings" has a number in it
 
@@ -60,9 +60,9 @@ Run the passing twin of that board:
 
 {{ agniRun "content/guide/runs/clean-run.yaml" }}
 
-The `81 rule(s) run` is the important half. It tells you the check actually *exercised* 81
+Read the `81 rule(s) run` first. It tells you the check actually *exercised* 81
 rules and none fired, rather than staying quiet because it had nothing to work with. This is
-the "silence is not a pass" idea from [Concepts](../concepts/): a real all-clear names how
+the "silence is not a pass" idea from [Concepts](../concepts/), which says a real all-clear names how
 many rules ran. If you load only a schematic and no board file, the copper rules simply do
 not appear in that count, because their tier is empty.
 
@@ -110,19 +110,19 @@ checking:
 
 {{ agniRun "content/guide/runs/start-project.yaml" }}
 
-From then on the commands take a design and nothing else, because the project answers the rest, which
-is what the two lines under `Next:` are.
+From then on the commands take a design and nothing else, as the two lines under `Next:` show,
+because the project answers the rest.
 
-The design is **copied** into the project, which now owns its copy, so edits to the original do not
-reach it, and a companion view the design declares is copied beside it. The generated `review.yaml`
+The design is **copied** into the project with any companion view it declares, and the project owns
+the copy, so edits to the original do not reach it. The generated `review.yaml`
 is a starting point seeded from the shipped catalog rather than a finished checklist;
 [Write your checklist](../../tutorials/08-write-your-checklist/) is about turning it into your
 team's.
 
 ## Where to go next
 
-- [Checks and reports](../checks-and-reports/): narrow to one rule or category, read the
-  full report, and follow a finding's provenance.
-- [Datasheets](../datasheets/): add a parameter set so checks can compare your design
+- [Checks and reports](../checks-and-reports/) shows how to narrow to one rule or category,
+  read the full report, and follow a finding's provenance.
+- [Datasheets](../datasheets/) adds a parameter set so checks can compare your design
   against a part's real limits.
-- [CLI reference](../cli-reference/): the full command and flag surface.
+- [CLI reference](../cli-reference/) lists every command and flag.

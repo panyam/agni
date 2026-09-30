@@ -3,11 +3,11 @@ title: "Interface profiles"
 description: "Declare an interface's signals and what must be true of them, and check enforces that reading wherever the interface appears."
 ---
 
-A {{ explainable "bus" }} has a shape. CAN is a CANH/CANL {{ explainable "differential-pair" "pair" }} with a
+A {{ explainable "bus" }} has a fixed structure. CAN is a CANH/CANL {{ explainable "differential-pair" "pair" }} with a
 {{ explainable "termination" }} resistor across it, driven by a {{ explainable "transceiver" }} with
 TXD and RXD. I2C is SCL and SDA, both pulled up.
 
-An interface profile writes that shape down as YAML, and the engine compiles it into check rules.
+An interface profile writes that structure down as YAML, and the engine compiles it into check rules.
 Agni ships profiles for SPI-NOR, eMMC, CAN, LIN, A2B, PCIe, SGMII and MDIO. Your own interfaces, and your
 own reading of a standard one, go in a directory you hand to `--profile-path`. No Go.
 
@@ -143,13 +143,13 @@ requirements:
 matching by name, and not on a host part. So this profile evaluates on any board whose nets are named
 conventionally, with nothing asked of the design.
 
-The asymmetry is the more important half. **MDIO carries `pullup` and MDC does not**, because they
+**MDIO carries `pullup` and MDC does not**, because they
 are not the same kind of line. MDIO is bidirectional and open-drain, undriven between frames and
 through every turnaround cycle, so a resistor is what holds it high and IEEE 802.3 clause 22 calls
 for one. MDC is a clock sourced by the station side, push-pull, driven whenever it matters. Requiring
 a pull-up on it would report a failure on every correctly-built board that omits one.
 
-That is the general point rather than a fact about Ethernet. `pullup` belongs on the signals that
+The same holds beyond Ethernet. `pullup` belongs on the signals that
 float when nobody is driving, not on every signal of a bus that has a pull-up somewhere. Marking a
 whole bus is how a profile starts producing failures a reviewer has to learn to ignore, and a
 checklist whose failures are routinely ignored is worse than no checklist.
@@ -261,17 +261,17 @@ they never change the exit code, and they stay out of `--format json`.
 ## What a profile cannot do
 
 A suffix-named profile only fires on designs that follow that naming. Rename the nets and the
-interface goes invisible, silently. `host` binding exists to stop that: a component that
+interface goes invisible, silently. `host` binding exists to stop that, because a component that
 declares `interface=CAN` anchors the check no matter what the nets are called. When the
 naming is merely different rather than absent, a naming map is the cheaper fix.
 
 ## Where to go next
 
-- [Checks and reports](../checks-and-reports/): profile findings read like any other, and
-  `--fail-on` can gate on them.
-- [Extending and embedding the engine](../../build/extending/): shipping profiles alongside private readers
-  and rules in your own module.
-- [CLI reference](../cli-reference/): the `--profile-path` flag.
-- [How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written): where a
+- [Checks and reports](../checks-and-reports/) shows that profile findings read like any other,
+  and `--fail-on` can gate on them.
+- [Extending and embedding the engine](../../build/extending/) covers shipping profiles alongside
+  private readers and rules in your own module.
+- [CLI reference](../cli-reference/) documents the `--profile-path` flag.
+- [How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written) explains where a
   profile sits among the four ways to author a rule, and why the YAML here is the same format the
   shipped profiles are written in rather than a layer over something else.
