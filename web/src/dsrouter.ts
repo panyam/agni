@@ -1,10 +1,9 @@
 // The datasheets workbench's URL <-> state codec (WS13-006), the analogue of router.ts for the
-// viewer. It is a pure functions module with no page imports, so it stays testable and the viewer
-// router never has to know about the datasheets space. A datasheet lives at
-// /datasheets/files/<mount>/<path...>, mirroring the viewer's /files/<mount>/<path...> so the two
-// pages address resources the same way. parseDsUrl returns the empty location for any path outside
-// the datasheets space (including the viewer's /files/), so the two codecs never mis-parse each
-// other's URLs.
+// viewer. Pure functions with no page imports, so it stays testable and the viewer router never has
+// to know about the datasheets space. A datasheet lives at /datasheets/files/<mount>/<path...>,
+// mirroring the viewer's /files/<mount>/<path...>. parseDsUrl returns the empty location for any
+// path outside the datasheets space (including the viewer's /files/), so the two codecs never
+// mis-parse each other's URLs.
 
 // DsLocation is the URL-addressable state of the workbench: which datasheet is open. Empty
 // mount+path is the bare /datasheets landing (no datasheet selected).
@@ -25,9 +24,8 @@ export function hasDatasheet(loc: DsLocation): boolean {
   return loc.mount !== "" && loc.path !== "";
 }
 
-// dsToUrl renders a location as a root-relative URL. A datasheet lives at
-// /datasheets/files/<mount>/<path...>, each segment percent-encoded so paths with spaces or other
-// unsafe characters round-trip. The empty location is the /datasheets landing.
+// dsToUrl renders a location as a root-relative URL, each segment percent-encoded so paths with
+// spaces or other unsafe characters round-trip. The empty location is the /datasheets landing.
 export function dsToUrl(loc: DsLocation): string {
   if (!hasDatasheet(loc)) return "/datasheets/";
   const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);

@@ -1,8 +1,7 @@
-// The user-tunable focus-highlighter style (WS9-044): the color, opacity, and width-scale
-// applied to a focused net's PATH marker (WS9-040/043). It is dock chrome, persisted per-browser
-// in localStorage, NOT presenter state. The presenter takes a style and stamps it onto the focus
-// specs; an unset style (no saved value) leaves the built-in look untouched, so an untouched
-// viewer renders exactly as before.
+// The user-tunable focus-highlighter style (WS9-044), the color, opacity and width scale of a
+// focused net's PATH marker (WS9-040/043). It is dock chrome, persisted per-browser in
+// localStorage, NOT presenter state. The presenter stamps a style onto the focus specs, and an
+// unset style (nothing saved) leaves the built-in look untouched.
 import { DEFAULT_HIGHLIGHT_COLOR } from "./highlights.js";
 
 // HighlightStyle carries the three tunable properties of the focus highlighter. alpha is the
@@ -13,8 +12,8 @@ export interface HighlightStyle {
   scale: number; // width multiplier, > 0
 }
 
-// DEFAULT_HIGHLIGHT_STYLE reproduces the built-in focus highlighter: the default magenta at the
-// PATH translucent alpha and unit width. Passing it is equivalent to passing no style.
+// DEFAULT_HIGHLIGHT_STYLE reproduces the built-in focus highlighter, the default magenta at the
+// PATH marker's translucent alpha and unit width. Passing it is equivalent to passing no style.
 export const DEFAULT_HIGHLIGHT_STYLE: HighlightStyle = { color: DEFAULT_HIGHLIGHT_COLOR, alpha: 0.4, scale: 1 };
 
 export const HIGHLIGHT_STYLE_KEY = "agni-highlight-style";
@@ -50,11 +49,10 @@ export function saveHighlightStyle(storage: StyleStorage, style: HighlightStyle)
   }
 }
 
-// highlightMenu renders the "Highlight" dropdown in the top bar (WS9-044): a color picker plus
-// opacity and width sliders for the focus marker. Editing a control persists the style and calls
-// onChange with it; Reset clears the saved style and calls onChange(undefined) so the presenter
-// restores the built-in look. Like the Panels menu, this is dock chrome (a plain DOM widget), not
-// presenter state.
+// highlightMenu renders the top bar's "Highlight" dropdown (WS9-044), a color picker plus opacity
+// and width sliders for the focus marker. Editing a control persists the style and calls onChange
+// with it. Reset clears the saved style and calls onChange(undefined), so the presenter restores
+// the built-in look.
 export function highlightMenu(host: HTMLElement, storage: MenuStorage, onChange: (style: HighlightStyle | undefined) => void): void {
   const doc = host.ownerDocument;
   const style = loadHighlightStyle(storage) ?? { ...DEFAULT_HIGHLIGHT_STYLE };

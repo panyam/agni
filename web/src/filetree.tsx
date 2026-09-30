@@ -11,10 +11,10 @@ import type { SheetsState, SheetsView } from "./sheets.js";
 
 type WsClient = Client<typeof WorkspaceService>;
 
-// TreeHandlers are the tree's intents: the user chose a file, a folder, or a sheet within the
-// open file. All carry semantic ids, never DOM events. A folder selection changes nothing on
-// screen (whatever was rendered stays); it only makes the folder the current URL, so a refresh
-// reopens the tree expanded to it.
+// TreeHandlers are the tree's intents, fired when the user chooses a file, a folder, or a sheet
+// within the open file. All carry semantic ids, never DOM events. A folder selection changes
+// nothing on screen and only makes the folder the current URL, so a refresh reopens the tree
+// expanded to it.
 export interface TreeHandlers {
   onFileSelect: (mount: string, path: string) => void;
   onDirSelect: (mount: string, path: string) => void;
@@ -39,9 +39,9 @@ interface SheetNodeData {
   children: SheetNodeData[];
 }
 
-// sheetForest groups a flat sheet list into a parent/child forest by parent_id: sheets with an
+// sheetForest groups a flat sheet list into a parent/child forest by parent_id. Sheets with an
 // empty (or unknown) parent are top-level roots, and there may be several (EDIF pages are all
-// top-level; a KiCad design has one root with descendants).
+// top-level, while a KiCad design has one root with descendants).
 function sheetForest(sheets: SheetRef[]): SheetNodeData[] {
   const nodes = sheets.map((s) => ({ sheet: s, children: [] as SheetNodeData[] }));
   const byId = new Map(nodes.map((n) => [n.sheet.id, n]));
@@ -111,11 +111,10 @@ function subtreeHasActive(mount: string, dirPath: string, s: SheetsState): boole
   return dirPath === "" || s.path.startsWith(dirPath + "/");
 }
 
-// revealsTarget reports whether this directory should open to reveal the reveal target: true when
-// the target folder is this directory itself or one of its descendants, so every ancestor down to
-// the target expands. Unlike subtreeHasActive (a file, whose path never equals a dir path), the
-// target is a folder, so an exact path match counts — the target folder opens to show its own
-// contents.
+// revealsTarget reports whether this directory should open to reveal the reveal target, which is
+// when the target folder is this directory or one of its descendants, so every ancestor down to the
+// target expands. Unlike subtreeHasActive (a file, whose path never equals a dir path), an exact
+// path match counts, so the target folder opens to show its own contents.
 function revealsTarget(mount: string, dirPath: string, t: RevealTarget): boolean {
   if (!t || t.mount !== mount) return false;
   return dirPath === "" || t.path === dirPath || t.path.startsWith(dirPath + "/");
@@ -132,10 +131,9 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   const loadEntries = async (): Promise<void> => {
     if (entries() !== null) return;
     try {
-      // `opens` tells the server what this tree can open, which is what lets it leave out
-      // subdirectories with no design under them. It has to be answered server-side: a client sees
-      // one level per call, so it cannot tell a folder of designs from a folder of folders of
-      // nothing without walking the tree.
+      // `opens` tells the server what this tree can open, so it can leave out subdirectories with
+      // no design under them. That has to happen server-side, because a client sees one level per
+      // call and cannot tell a folder of designs from a folder of empty folders without walking.
       const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path), opens: DESIGN_OPENS });
       setEntries(resp.entries);
     } catch (e) {
@@ -171,11 +169,10 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
       <Show when={open()}>
         <ul class="children">
           <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
-          {/* Files this page cannot open are hidden: library files, lock files, and sidecars were
-              drowning real designs (2026-07-14 feedback; reversal of the earlier show-greyed
-              choice). The filter reads the server's kind label rather than the format string, so
-              the datasheets tree can apply the same rule with the other kind. The server still
-              lists them all, so this stays a view filter. */}
+          {/* Files this page cannot open (library files, lock files, sidecars) are hidden rather
+              than greyed, because they drowned real designs. The filter reads the server's kind
+              label rather than the format string, so the datasheets tree applies the same rule
+              with the other kind. The server still lists them all, so this is a view filter. */}
           <For each={(entries() ?? []).filter((e) => e.isDir || e.kind === FileKind.DESIGN)}>
             {(e) =>
               e.isDir ? (
@@ -195,9 +192,9 @@ function FileTree(props: { ctx: Ctx }) {
   const [mounts, setMounts] = createSignal<Mount[]>([]);
   const [pruned, setPruned] = createSignal(0);
   const [error, setError] = createSignal<string | null>(null);
-  // The same declaration applied to the roots: a mount serving only datasheets or only library
-  // files is one this tree can never show anything in. The datasheets tree roots on the same
-  // mounts and declares the other kind, so it keeps exactly the ones this drops.
+  // The same declaration applies to the roots, since a mount serving only datasheets or only
+  // library files is one this tree can never show anything in. The datasheets tree roots on the
+  // same mounts and declares the other kind, so it keeps exactly the ones this drops.
   props.ctx.client
     .listMounts({ opens: DESIGN_OPENS })
     .then((r) => {
@@ -219,9 +216,8 @@ function FileTree(props: { ctx: Ctx }) {
 
 // fileTreeIsland mounts the file+sheet tree and returns its SheetsView (which the presenter pushes
 // the open file's sheets to, so they render nested under that file's node) plus a revealDir hook.
-// revealDir asks the tree to expand to a folder that has no design under it — used when a folder
-// URL is restored on load or back/forward. Framework reactivity stays in this leaf (CONSTRAINTS
-// C11).
+// revealDir asks the tree to expand to a folder that has no design under it, for a folder URL
+// restored on load or back/forward. Framework reactivity stays in this leaf (CONSTRAINTS C11).
 export function fileTreeIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

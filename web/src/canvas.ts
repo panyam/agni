@@ -19,9 +19,9 @@ import {
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
 // CanvasComponent owns the WebGL2 schematic canvas as a tsappkit lifecycle component. It
-// mounts into the shell's center region (#view) and renders whatever sheet it is handed:
-// the file tree drives it via showSheet (WS9-003). Switching sheets just swaps the
-// renderer/camera; the input handlers and the animation loop are set up once.
+// mounts on the #view canvas and renders whatever sheet the presenter hands it through
+// showSheet (WS9-003). Switching sheets swaps the renderer and camera, while the input
+// handlers and the animation loop are set up once.
 export class CanvasComponent extends BaseComponent {
   private gl?: WebGL2RenderingContext;
   private renderer?: Renderer;
@@ -88,17 +88,17 @@ export class CanvasComponent extends BaseComponent {
 
   // setHighlights tints the elements each spec selects (components, nets, pins) in the spec's
   // color/alpha; an empty array clears every highlight. Safe to call before or after a sheet is
-  // drawn — the specs are remembered and reapplied on the next draw.
+  // drawn, since the specs are remembered and reapplied on the next draw.
   setHighlights(specs: HighlightSpec[]): void {
     this.highlights = specs;
     this.applyHighlights();
   }
 
   // applyHighlights resolves the current specs to primitive-index groups via the sheet's keys
-  // (the local mirror of render.HighlightPacked) and pushes them to the renderer: outline
-  // groups recolor their primitives in place, bounding-shape groups (WS9-017) tessellate one
-  // framing rect/circle per matched entity from the vertices already held — no round-trip —
-  // and go to the renderer's overlay path. A no-op without a sheet or renderer yet.
+  // (the local mirror of render.HighlightPacked) and pushes them to the renderer. Outline groups
+  // recolor their primitives in place. Bounding-shape groups (WS9-017) tessellate one framing
+  // rect/circle per matched entity from the vertices already held, with no round-trip, and go to
+  // the renderer's overlay path. A no-op without a sheet or renderer yet.
   private applyHighlights(): void {
     if (!this.renderer || !this.sheet) return;
     const sheet = this.sheet;
@@ -111,11 +111,10 @@ export class CanvasComponent extends BaseComponent {
     const pathHalfWidth = PATH_WIDTH_FRACTION * Math.min(sb.maxX - sb.minX, sb.maxY - sb.minY);
     for (const g of resolveHighlights(sheet.keys, this.highlights)) {
       const color = hexToRgba(g.color, fallback, g.alpha);
-      // OUTLINE recolors the entity's primitives in place. PATH (WS9-043) draws a wider
-      // translucent marker: GL lines are always 1px, so its width comes from filled quads
-      // tessellated along each wire segment (as the board copper tracks do), sent to the
-      // overlay path — no recolor, so the wire shows through the translucent quad like the SVG
-      // stroke does. The bounding shapes tessellate a per-entity frame instead.
+      // PATH (WS9-043) draws a wider translucent marker. GL lines are always 1px, so its width
+      // comes from filled quads tessellated along each wire segment (as the board copper tracks
+      // do) and sent to the overlay path. It skips the recolor, so the wire shows through the
+      // quad like the SVG stroke does.
       if (g.shape === HighlightShape.OUTLINE) {
         draws.push({ color, primitives: g.primitives });
         continue;
@@ -145,7 +144,7 @@ export class CanvasComponent extends BaseComponent {
     return host ? new TextOverlay(host) : undefined;
   }
 
-  // showText / hideText follow the active render mode: the text layer belongs to the WebGL
+  // showText / hideText follow the active render mode. The text layer belongs to the WebGL
   // view, so the composition root shows it in WebGL mode and hides it for SVG/Native.
   showText(): void {
     this.overlay?.show();
@@ -182,7 +181,8 @@ export class CanvasComponent extends BaseComponent {
 
     window.addEventListener("resize", () => this.resize());
     // The window listener misses dock-panel resizes (dragging a dockview splitter fires no
-    // window resize), so observe the canvas element itself. Guarded: jsdom has no ResizeObserver.
+    // window resize), so observe the canvas element itself. Guarded because jsdom has no
+    // ResizeObserver.
     if (typeof ResizeObserver !== "undefined") {
       new ResizeObserver(() => this.resize()).observe(canvas);
     }

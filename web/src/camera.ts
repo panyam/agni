@@ -10,9 +10,9 @@
 //   [ 0       scaleY  0 ]
 //   [ tx      ty      1 ]
 //
-// geom is Y-up (EDIF; see transform.go) and WebGL NDC is Y-up too, so the matrix does not
-// flip Y: a higher world-Y is higher on screen. This keeps the WebGL view oriented the same
-// as the SVG oracle (which flips once only because SVG pixel space is Y-down).
+// geom is Y-up (internal/geomath/transform.go) and WebGL NDC is Y-up too, so the matrix does
+// not flip Y and a higher world-Y is higher on screen. The SVG oracle flips once only because
+// SVG pixel space is Y-down, so both views come out the same way up.
 
 export interface Bounds {
   minX: number;
@@ -52,7 +52,7 @@ export class Camera {
   // World-space center that maps to the middle of the viewport.
   private centerX = 0;
   private centerY = 0;
-  // World units per half-viewport-height (isotropic zoom; aspect handled per-frame).
+  // World units per screen pixel, the same on both axes.
   private worldPerPixel = 1;
   private viewportW = 1;
   private viewportH = 1;
@@ -80,9 +80,8 @@ export class Camera {
     this.viewportH = Math.max(1, viewportH);
   }
 
-  // getView / setView snapshot and restore the pan/zoom (center + scale), so a caller can
-  // remember a view and reapply it later. The viewport is not part of the view — it tracks the
-  // canvas size and is set independently by resize.
+  // getView / setView snapshot and restore the pan/zoom (center + scale). The viewport is not
+  // part of the view, since it tracks the canvas size and resize sets it separately.
   getView(): CameraView {
     return { centerX: this.centerX, centerY: this.centerY, worldPerPixel: this.worldPerPixel };
   }
@@ -96,8 +95,8 @@ export class Camera {
   // Pan by a pixel delta (mouse drag). dyPx is screen-down positive.
   panPixels(dxPx: number, dyPx: number): void {
     this.centerX -= dxPx * this.worldPerPixel;
-    // World Y is up while screen Y is down, so dragging down (dyPx > 0) shows a higher-Y
-    // region: add in world Y. This keeps the grabbed point under the cursor.
+    // Screen Y is down and world Y is up, so dragging down adds in world Y, which keeps the
+    // grabbed point under the cursor.
     this.centerY += dyPx * this.worldPerPixel;
   }
 
@@ -113,7 +112,7 @@ export class Camera {
 
   private pixelToWorld(px: number, py: number): { x: number; y: number } {
     const x = this.centerX + (px - this.viewportW / 2) * this.worldPerPixel;
-    // Screen Y is down, world Y is up: the top of the viewport (py small) is higher world Y.
+    // Screen Y is down and world Y is up, so a small py is a higher world Y.
     const y = this.centerY - (py - this.viewportH / 2) * this.worldPerPixel;
     return { x, y };
   }
@@ -135,9 +134,7 @@ export class Camera {
     const halfW = (this.viewportW / 2) * this.worldPerPixel;
     const halfH = (this.viewportH / 2) * this.worldPerPixel;
     const scaleX = 1 / halfW;
-    // geom is Y-up (EDIF; see transform.go) and WebGL NDC is Y-up too (clip y=+1 is the top
-    // of the canvas), so no flip: a higher world-Y maps to a higher clip-Y. This matches the
-    // SVG oracle, which flips once only because SVG pixel space is Y-down.
+    // No Y flip (clip y=+1 is the top of the canvas); see the file header.
     const scaleY = 1 / halfH;
     const tx = -this.centerX * scaleX;
     const ty = -this.centerY * scaleY;

@@ -1,5 +1,5 @@
 // Connect clients for the WS9 web API. The service contracts are generated from proto
-// (CONSTRAINTS C2); this module only wires a browser transport onto them. The view layer
+// (CONSTRAINTS C2), and this module only wires a browser transport onto them. The view layer
 // calls these clients instead of hand-rolling fetch/JSON.
 import { createClient, type Client } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
@@ -29,7 +29,7 @@ export function designClient(baseUrl?: string): Client<typeof DesignService> {
 }
 
 // checksClient returns a typed client for CheckService (rule catalog, check runs, the
-// severity report, and expectation sidecars — extracted from DesignService in WS9-026).
+// severity report, and expectation sidecars; WS9-026).
 export function checksClient(baseUrl?: string): Client<typeof CheckService> {
   return createClient(CheckService, newTransport(baseUrl));
 }
@@ -53,13 +53,13 @@ export function datasheetClient(baseUrl?: string): Client<typeof DatasheetServic
 }
 
 // queryClient returns a typed client for QueryService (ad-hoc datalog queries over a design's
-// fact base — the web front-end to the same engine `agni query` runs, WS9-036 / WS3-029).
+// fact base, the same engine `agni query` runs; WS9-036, WS3-029).
 export function queryClient(baseUrl?: string): Client<typeof QueryService> {
   return createClient(QueryService, newTransport(baseUrl));
 }
 
-// reviewClient returns a typed client for ReviewService (WS9-052): review runs as resources, plus
-// GetReviewManifest to resolve a stored checklist into the value a create takes.
+// reviewClient returns a typed client for ReviewService (review runs as resources, plus
+// GetReviewManifest to resolve a stored checklist into the value a create takes; WS9-052).
 export function reviewClient(baseUrl?: string): Client<typeof ReviewService> {
   return createClient(ReviewService, newTransport(baseUrl));
 }

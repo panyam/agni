@@ -1,12 +1,10 @@
-// Entry point for the design browse page (/designs, WS9-049 phase 2), the third page beside the
-// viewer's main.ts and the workbench's datasheets.ts. The page is server-rendered by
-// goapplib/templar (a file-list sidebar and a preview stage). This boots the tsappkit lifecycle
-// over that shell: the file-tree island initializes, choosing a design previews it read-only, and
-// Open leaves for that design's work page.
+// Entry point for the design browse page (/designs, WS9-049 phase 2). Choosing a design previews
+// it read-only, and Open leaves for that design's work page. The page shapes are in
+// docsite/content/architecture/web-app.md#the-pages.
 //
-// What this page deliberately does NOT build is the point of it: no ViewerPresenter, no WebGL
-// canvas, no checks / query / diff clients, no render-mode or layout controls. Browsing is the
-// moment before you have chosen, so it costs one design summary and one SVG.
+// This page builds no ViewerPresenter, no WebGL canvas, no checks / query / diff clients and no
+// render-mode or layout controls. Browsing happens before you have chosen, so it costs one design
+// summary and one SVG.
 
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";
 import { fileTreeIsland } from "./filetree.js";
@@ -16,9 +14,8 @@ import { browseStage, type StageElements } from "./browsestage.js";
 import { designClient } from "./api.js";
 import { currentLocation, emptyLocation, hasDir, locationToUrl, type ViewerLocation } from "./router.js";
 
-// syncUrl reflects the browsed folder into the address bar. Only folders are addressable here: a
-// previewed design does not own the URL, because the URL that names a design is its work page, and
-// pushing that from the browse page would make Back walk through previews.
+// syncUrl reflects the browsed folder into the address bar. Only folders are addressable here. A
+// design's URL is its work page, so pushing one per preview would make Back walk through previews.
 function syncUrl(loc: ViewerLocation): void {
   document.title = hasDir(loc) ? `${loc.path || loc.mount} — Agni designs` : "Agni designs";
   const url = locationToUrl(loc);
@@ -46,18 +43,16 @@ class BrowseRoot extends BaseComponent {
     const stage = browseStage(els as StageElements, new SvgView(previewEl), (url) => window.location.assign(url));
     const preview = new DesignPreview(designClient(), stage);
 
-    // The viewer's own file tree, reused whole. The presenter is what normally feeds it sheets; here
-    // nothing ever does, so its sheet state stays empty and no sheets nest under a file — the tree
-    // degrades to the flat file list this page wants, with its lazy directory listing, auto-reveal,
-    // and no-reader filter intact.
+    // The viewer's own file tree, reused whole. No presenter feeds it sheets here, so it shows a flat
+    // file list and keeps its lazy directory listing, auto-reveal and no-reader filter.
     const tree = fileTreeIsland(treeEl, this._eventBus, {
       onFileSelect: (mount, path) => {
         stage.setTarget({ mount, path });
         tree.view.setState({ mount, path, sheets: [], activeId: "" }); // highlight it in the list
         void preview.show(mount, path);
       },
-      // A folder is a place to look, not a thing to open: it re-addresses the URL and empties the
-      // stage rather than leaving the previously previewed design on screen under a new location.
+      // A folder re-addresses the URL and empties the stage, so the previous preview does not stay on
+      // screen under a new location.
       onDirSelect: (mount, path) => {
         stage.setTarget(null);
         tree.view.setState({ mount: "", path: "", sheets: [], activeId: "" });
@@ -69,9 +64,8 @@ class BrowseRoot extends BaseComponent {
     });
     this.revealDir = tree.revealDir;
 
-    // The same open action on the two gestures a file list is expected to answer to. Both are
-    // bound on the tree container rather than inside the island: they act on the CURRENT selection,
-    // which a plain click has already set, so the island needs no new handler and no new prop.
+    // Double-click and Enter open the CURRENT selection, which a plain click has already set, so
+    // they bind on the tree container and the island needs no new handler or prop.
     treeEl.addEventListener("dblclick", () => stage.open());
     treeEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter") stage.open();
@@ -88,9 +82,8 @@ const root = new BrowseRoot("app", document.body, bus);
 void controller
   .initializeFromRoot(root)
   .then(() => {
-    // applyUrl expands the tree to whatever folder the URL addresses, once at boot (deep link) and
-    // on every popstate (back/forward). Revealing pushes no URL, so unlike the viewer's restore
-    // this needs no re-entrancy guard.
+    // applyUrl expands the tree to the folder the URL addresses, at boot and on every popstate.
+    // Revealing pushes no URL, so unlike the viewer's restore this needs no re-entrancy guard.
     const applyUrl = (): void => {
       const loc = currentLocation();
       if (hasDir(loc)) root.revealDir(loc.mount, loc.path);

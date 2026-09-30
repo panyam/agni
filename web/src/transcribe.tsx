@@ -7,9 +7,8 @@ import {
 } from "./bank.js";
 import { ValidationProblem_Kind, type ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 
-// The pin functions the editor offers. UNSPECIFIED IS INCLUDED here, unlike the limit kinds above,
-// because a pin table may genuinely have no type column and a pin whose name and number are known is
-// still worth recording; refusing it would lose the numbering.
+// The pin functions the editor offers. UNSPECIFIED IS INCLUDED here, unlike LIMIT_LABELS below,
+// because a pin table may have no type column, and refusing such a pin would lose its numbering.
 const PIN_FUNCTIONS: [PinFunction, string][] = [
   [PinFunction.POWER_INPUT, "Power input"],
   [PinFunction.POWER_OUTPUT, "Power output"],
@@ -22,8 +21,8 @@ const PIN_FUNCTIONS: [PinFunction, string][] = [
   [PinFunction.UNSPECIFIED, "Not stated"],
 ];
 
-// The limit kinds the editor offers, with human labels (UNSPECIFIED is excluded: a manual row must
-// classify, since a rule cannot dispatch on an unknown kind).
+// The limit kinds the editor offers, with human labels. UNSPECIFIED is excluded because a rule cannot
+// dispatch on an unknown kind, so a manual row must classify.
 const LIMIT_LABELS: [LimitKind, string][] = [
   [LimitKind.ABSOLUTE_MAX, "Absolute max"],
   [LimitKind.RECOMMENDED_OPERATING, "Recommended operating"],
@@ -31,9 +30,8 @@ const LIMIT_LABELS: [LimitKind, string][] = [
 ];
 
 // Modality is taken from the vendor's own modal verb, so the labels quote the words an author is
-// looking at on the page rather than naming the enum. UNSPECIFIED is excluded for the same reason
-// LimitKind's is: a hand-transcribed relation has a sentence in front of it and can always say
-// which of the two it is.
+// looking at on the page rather than naming the enum. UNSPECIFIED is excluded as in LIMIT_LABELS,
+// since a hand-transcribed relation has a sentence in front of it that says which of the two it is.
 const MODALITY_LABELS: [Modality, string][] = [
   [Modality.REQUIRED, "must / shall / never"],
   [Modality.RECOMMENDED, "should / recommended"],
@@ -152,8 +150,7 @@ function PinEditor(props: { onAdd: (f: NewPinFields) => void; taken: () => strin
       <label class="tx-field">Id
         {/* Read the typed value BEFORE touching either signal. Setting idTouched first flips
             effectiveId from the derived name to id(), which is still empty, and Solid writes that
-            empty string back into this input synchronously — so the read that followed returned ""
-            and the first character typed here was swallowed. */}
+            empty string back into this input synchronously, so the first character typed is lost. */}
         <input
           placeholder="vcca"
           value={effectiveId()}
@@ -179,10 +176,9 @@ function PinEditor(props: { onAdd: (f: NewPinFields) => void; taken: () => strin
 // packages because its source text is the pin table's own description column, which is also where
 // its provenance comes from.
 //
-// The bound is entered as a min and a max ON THE DIFFERENCE, subject minus reference, and the
-// placeholders say so. Offering a comparison picker instead would have to translate to a difference
-// somewhere, and that translation is where a sign error would live. The list below reads each stored
-// relation back as a comparison, so the author still checks their work against the printed sentence.
+// The bound is a min and a max ON THE DIFFERENCE, subject minus reference (see NewRelationFields in
+// bank.ts for why). The list below reads each stored relation back as a comparison, so the author can
+// check it against the printed sentence.
 function RelationEditor(props: { pins: () => Pin[]; onAdd: (f: NewRelationFields) => void }) {
   const [subject, setSubject] = createSignal("");
   const [reference, setReference] = createSignal("");
@@ -192,9 +188,8 @@ function RelationEditor(props: { pins: () => Pin[]; onAdd: (f: NewRelationFields
   const [modality, setModality] = createSignal<Modality>(Modality.REQUIRED);
   const [raw, setRaw] = createSignal("");
 
-  // A pin cannot track itself, which param.Validate rejects structurally. Refusing it here means the
-  // author never authors the one thing the contract calls incoherent, rather than being told after
-  // a round trip.
+  // A pin cannot track itself, which param.Validate rejects structurally. Refusing it here saves the
+  // author a round trip to learn that.
   const usable = (): boolean => !!subject() && !!reference() && subject() !== reference();
 
   const add = (): void => {
@@ -250,9 +245,9 @@ function PackageList(props: { spec: () => PartSpec; onAdd: (id: string, name: st
   const [name, setName] = createSignal("");
   const [suffix, setSuffix] = createSignal("");
   // Deleting a package takes every designator recorded against it, so it asks first. The confirm is
-  // INLINE rather than window.confirm: a native dialog blocks the page, which breaks browser
-  // automation outright, and it has to name the count anyway — "delete" and "delete and lose 14 pin
-  // numbers" are different decisions.
+  // INLINE rather than window.confirm, because a native dialog blocks the page and breaks browser
+  // automation. It names the count, since "delete" and "delete and lose 14 pin numbers" are different
+  // decisions.
   const [confirming, setConfirming] = createSignal("");
   const numbersIn = (pkgId: string): number =>
     props.spec().pins.reduce((n, pin) => n + pin.numbers.filter((x) => x.packageRef === pkgId).length, 0);
@@ -308,10 +303,9 @@ export function TranscribePanel(props: TranscribeHandlers) {
         <h3>Datasheet</h3>
         {/* The document's own identity, as the vendor prints it. It is seeded from the doc-IR title,
             which producers fill with a PART number ("LM1117") rather than a document number and
-            revision, so it usually needs correcting from the cover page. It matters beyond tidiness:
-            a verification snapshots this string, and "verified against LM1117" reads identically
-            before and after a reissue, which is worse than saying nothing. Read through the accessor
-            so the field tracks bank edits. */}
+            revision, so it usually needs correcting from the cover page. A verification snapshots
+            this string, and "verified against LM1117" reads the same before and after a reissue.
+            Read through the accessor so the field tracks bank edits. */}
         <label class="tx-field" title="the vendor's document number and revision, as printed on the cover page">
           Document
           <input
@@ -326,9 +320,9 @@ export function TranscribePanel(props: TranscribeHandlers) {
         <label class="tx-field">Device class<input placeholder="ldo" value={props.spec().deviceClass} onInput={(e) => props.setMeta({ deviceClass: e.currentTarget.value })} /></label>
         <PackageList spec={props.spec} onAdd={props.addPackage} onDelete={props.deletePackage} />
       </div>
-      {/* The server's verdict on the last save, split by kind. Structural problems are things to
-          fix; completeness ones are what still stands between this draft and a corpus, so they read
-          as a checklist rather than as errors. Neither blocks anything. */}
+      {/* problems() split by kind. Structural ones need fixing. Completeness ones list what this
+          draft still lacks before it can join a corpus, so they render as a checklist rather than
+          as errors. Neither blocks anything. */}
       <Show when={props.problems().some((p) => p.kind === ValidationProblem_Kind.STRUCTURAL)}>
         <ul class="tx-problems">
           <For each={props.problems().filter((p) => p.kind === ValidationProblem_Kind.STRUCTURAL)}>
@@ -382,8 +376,8 @@ export function TranscribePanel(props: TranscribeHandlers) {
                               {(pin) => {
                                 // Reads through props.spec() rather than the captured p, so the
                                 // chip TRACKS. A plain p.pinRefs read is not a signal, so Solid
-                                // would wrap this in an effect with no dependencies: the binding
-                                // would change in the data and never on screen.
+                                // would wrap this in an effect with no dependencies, and the
+                                // binding would change in the data and never on screen.
                                 const bound = (): boolean =>
                                   props.spec().parameters.some((x) => x === p && x.pinRefs.includes(pin.id));
                                 return (
@@ -434,8 +428,8 @@ export function TranscribePanel(props: TranscribeHandlers) {
                   )}
                 </For>
               </ul>
-              {/* Relating two pins needs two pins, and the hint says which is missing rather than
-                  offering an editor whose selects are both empty. */}
+              {/* Relating pins needs at least two, so show a hint rather than an editor whose
+                  selects are empty. */}
               <h4 class="tx-rel-head">Pin relations</h4>
               <Show
                 when={props.spec().pins.length >= 2}
@@ -446,8 +440,8 @@ export function TranscribePanel(props: TranscribeHandlers) {
                   <For each={relationsForRegion(props.spec(), r().id)}>
                     {(rel) => {
                       // Resolved through props.spec() on every read, so renaming a pin updates the
-                      // sentence. Capturing the names once would freeze them at author time, the
-                      // same non-tracking mistake the binding chips above call out.
+                      // sentence. Capturing the names once would freeze them, the same trap as
+                      // the binding chips above.
                       const nameOf = (id: string): string =>
                         props.spec().pins.find((p) => p.id === id)?.name || id;
                       return (

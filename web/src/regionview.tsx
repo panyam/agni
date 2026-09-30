@@ -74,8 +74,8 @@ export interface RegionViewState {
   path: string;
 }
 
-// RegionView is the presenter-facing handle the boot code wires the tree and the params panel to:
-// open a datasheet, or jump to a parameter's page and select its region (click-to-locate).
+// RegionView is the presenter-facing handle the boot code wires the tree and the params panel to.
+// It opens a datasheet, or jumps to a parameter's page and selects its region (click-to-locate).
 export interface RegionView {
   load(mount: string, path: string): void;
   locate(page: number, regionId: string): void;
@@ -86,18 +86,16 @@ export interface RegionView {
 const BASE_SCALE = 1.3;
 const MIN_SCALE = BASE_SCALE * 0.25;
 const MAX_SCALE = BASE_SCALE * 6;
-// RENDER_SETTLE_MS is how long the zoom has to hold still before pdf.js re-rasterizes. Between the
-// gesture and the settle the already-rendered bitmap is stretched by a CSS transform, so zooming
-// stays at pointer speed; rasterizing per wheel event instead would blank the page on every notch,
-// because each render is async and there is nothing to show while it runs.
+// RENDER_SETTLE_MS is how long the zoom has to hold still before pdf.js re-rasterizes. Until then a
+// CSS transform stretches the current bitmap. Rendering per wheel event would blank the page on every
+// notch, because each render is async and there is nothing to show while it runs.
 const RENDER_SETTLE_MS = 140;
 const PLACEHOLDER_SPEC = emptySpec("", "", "");
 const r1 = (n: number): number => Math.round(n * 10) / 10;
 
-// Drag is the in-flight pointer interaction over the page: pan the view, rubber-band a new region,
-// move the selected user region, or resize one by a corner handle. px0/py0 are overlay pixels at
-// grab time; pan tracks client pixels instead, because it moves the overlay rather than moving
-// within it.
+// Drag is the in-flight pointer interaction over the page (pan, draw a new region, move the selected
+// user region, or resize it by a corner handle). px0/py0 are overlay pixels at grab time. pan tracks
+// client pixels instead, because it moves the overlay rather than moving within it.
 type Drag =
   | { mode: "pan"; lastX: number; lastY: number }
   | { mode: "draw"; x0: number; y0: number }
@@ -136,14 +134,13 @@ function Workbench(props: {
   const [note, setNote] = createSignal("");
   const [status, setStatus] = createSignal("");
   const [pageNum, setPageNum] = createSignal(1);
-  // view is the live pan/zoom of the page within the viewport (see panzoom.ts): scale is device
-  // pixels per PDF point, tx/ty place the page's top-left corner. renderScale is the scale pdf.js
+  // view is the live pan/zoom of the page within the viewport (see panzoom.ts). scale is device
+  // pixels per PDF point and tx/ty place the page's top-left corner. renderScale is the scale pdf.js
   // last rasterized at, which trails the live scale by RENDER_SETTLE_MS.
   const [view, setView] = createSignal<PanZoom>({ tx: 0, ty: 0, scale: BASE_SCALE });
   const [renderScale, setRenderScale] = createSignal(BASE_SCALE);
-  // drawMode is the sticky alternative to holding Shift: on, a drag draws regions instead of
-  // panning. Transcribing a datasheet is mostly drawing, and holding a modifier for every box in a
-  // long session is the kind of friction that makes people stop using the tool.
+  // drawMode is the sticky alternative to holding Shift. When on, a drag draws regions instead of
+  // panning, since transcribing a datasheet is mostly drawing.
   const [drawMode, setDrawMode] = createSignal(false);
   const [panning, setPanning] = createSignal(false);
   const [pdfDoc, setPdfDoc] = createSignal<PDFDocumentProxy | null>(null);
@@ -171,8 +168,7 @@ function Workbench(props: {
   let viewportEl: HTMLDivElement | undefined;
   let renderTimer: ReturnType<typeof setTimeout> | undefined;
   // needsFit makes the first rendered page of a NEWLY opened datasheet fit the viewport. A page
-  // change does not refit: staying at the same pan/zoom is what lets you follow one table's columns
-  // across a page break.
+  // change does not refit, so the same pan/zoom follows one table's columns across a page break.
   let needsFit = true;
 
   // reload bumps to re-run the outer load after an extraction (so the new doc-IR + regions appear);
@@ -180,9 +176,9 @@ function Workbench(props: {
   const [reload, setReload] = createSignal(0);
   const [extracting, setExtracting] = createSignal(false);
 
-  // Outer load: the PDF document, its doc-IR, the saved PartSpec (shared, server), and the per-user
-  // UI state (localStorage). The pages themselves render on demand (pageImg, below). `reload` is part
-  // of the source so bumping it (post-extract) re-fetches.
+  // The outer load fetches the PDF document, its doc-IR, the saved PartSpec (shared, server) and the
+  // per-user UI state (localStorage). Pages render on demand in pageImg below. `reload` is part of
+  // the source so bumping it after an extract re-fetches.
   const [data] = createResource(
     () => {
       const s = props.state();
@@ -199,9 +195,8 @@ function Workbench(props: {
       const docIR = docResp.document as Document | undefined;
       const docHash = docIR?.contentHash ?? "";
       spec = part.found && part.spec ? part.spec : emptySpec(s.path, docIR?.title || s.path, docHash);
-      // A spec saved before the workbench recorded a revision has none, and a verification written
-      // onto it would be uninvalidatable. Backfill on load so the first transcription in an old
-      // spec is anchored like any other; adoptDocRevision leaves a recorded hash alone.
+      // Backfill the revision on an older spec that has none, so a new verification can be
+      // invalidated. See adoptDocRevision in bank.ts.
       adoptDocRevision(spec, docHash);
       version = part.version;
       // The server overlay is the source of truth for MY set; the localStorage buffer is the
@@ -266,9 +261,9 @@ function Workbench(props: {
     return s && s.pageNumber === pageNum() ? s : null;
   };
   // cssScale is the transform that carries the on-screen size from whatever scale the visible
-  // bitmap was rasterized at to the live scale. It is keyed off the SHOWN render rather than the
-  // renderScale signal: the signal moves when the re-render is requested, and using it would resize
-  // the page the moment a render started rather than when it finished.
+  // bitmap was rasterized at to the live scale. It keys off the SHOWN render, not the renderScale
+  // signal, because the signal moves when a re-render is requested and would resize the page before
+  // that render finished.
   const shownScale = (): number => visible()?.scale ?? renderScale();
   const cssScale = (): number => view().scale / shownScale();
 
@@ -308,14 +303,14 @@ function Workbench(props: {
     if (spec) props.onParamsChange([...spec.parameters]);
   });
 
-  // Expose click-to-locate: jump to a parameter's page and select its region.
+  // Expose click-to-locate, which jumps to a parameter's page and selects its region.
   props.bridge.locate = (page: number, regionId: string): void => {
     setPageNum(clampPage(page, numPages()));
     setSelected(regionId);
   };
 
-  // problems is the server's verdict on the last save. It starts empty, which reads as "nothing
-  // known yet" rather than "nothing wrong" — correct, because no save has happened.
+  // problems is the server's verdict on the last save. Empty means "nothing known yet" until the
+  // first save, not "nothing wrong".
   const [problems, setProblems] = createSignal<ValidationProblem[]>([]);
 
   const serverSave = async (): Promise<void> => {
@@ -325,8 +320,8 @@ function Workbench(props: {
     try {
       const resp = await client.savePartSpec({ uri: artifactUri(s.mount, s.path), spec, baseVersion: version });
       version = resp.version;
-      // The judgement rides the save. The client does NOT recompute these: one implementation lives
-      // in Go (param.Problems) and this renders what it said, so the two cannot drift.
+      // The client does NOT recompute these. param.Problems in Go is the one implementation, and
+      // this renders its answer.
       setProblems(resp.problems);
       setRev((v) => v + 1);
     } catch (e) {
@@ -345,8 +340,8 @@ function Workbench(props: {
     }
   };
   // annSave persists THIS author's overlay (drawn boxes + type tags) to the server, best-effort and
-  // debounced alongside the PartSpec save. No optimistic concurrency: each author owns their own
-  // file, so a save never conflicts (WS13-011). localStorage stays the immediate live buffer.
+  // debounced alongside the PartSpec save. It skips optimistic concurrency because each author owns
+  // their own file (WS13-011). localStorage stays the immediate live buffer.
   const annSave = async (): Promise<void> => {
     const s = props.state();
     if (!s) return;
@@ -374,8 +369,8 @@ function Workbench(props: {
     setRev((r) => r + 1);
   };
 
-  // Regions on the current page: doc-IR regions (stamped with the page) plus user regions drawn on
-  // it. The page stamp flows into a transcribed parameter's provenance.
+  // pageRegions is the current page's doc-IR regions, stamped with the page, plus the user regions
+  // drawn on it. The page stamp flows into a transcribed parameter's provenance.
   const pageRegions = (): Region[] => {
     rev();
     const pn = pageNum();
@@ -403,7 +398,7 @@ function Workbench(props: {
     rev();
     return (types[r.id] as RegionType) ?? defaultType(r.kind);
   };
-  // coverage is over ALL regions (every page), so it reflects the whole datasheet, not just this page.
+  // coverage counts ALL regions on every page, not just this one.
   const allRegions = (): Region[] => {
     rev();
     const d = data();
@@ -445,8 +440,8 @@ function Workbench(props: {
     applyView(zoomAboutClamped(view(), host.clientWidth / 2, host.clientHeight / 2, factor, MIN_SCALE, MAX_SCALE));
   };
 
-  // Keyboard: page navigation, zoom, region delete, and the Draw-mode toggle. The bindings
-  // themselves live in pagegestures.classifyKey; this only carries them out.
+  // onKey carries out page navigation, zoom, region delete and the Draw-mode toggle. The bindings
+  // live in pagegestures.classifyKey.
   const onKey = (e: KeyboardEvent): void => {
     const a = classifyKey(e, isFormField(document.activeElement));
     if (!a) return;
@@ -482,9 +477,9 @@ function Workbench(props: {
   document.addEventListener("keydown", onKey);
   onCleanup(() => document.removeEventListener("keydown", onKey));
 
-  // scale is the RENDER scale of the visible bitmap: overlay-local pixels per PDF point. Region
+  // scale is the RENDER scale of the visible bitmap, in overlay-local pixels per PDF point. Region
   // boxes are laid out in that space and the CSS transform carries them to the live zoom, so
-  // nothing below has to know what the zoom currently is.
+  // nothing below needs the current zoom.
   const scale = (): number => visible()?.scale ?? renderScale();
   // relPx is the pointer in overlay-local pixels. getBoundingClientRect reports the TRANSFORMED
   // box, so the client offset is in screen pixels and has to be divided back out by the transform
@@ -511,8 +506,7 @@ function Workbench(props: {
   const onDown = (e: PointerEvent): void => {
     if (!visible()) return;
     const hit = hitUnder(e.target as HTMLElement);
-    // Shift and the sticky Draw mode are two ways to say the same thing, and only one of them
-    // reaches the router.
+    // Shift and sticky Draw mode mean the same thing, so the router sees one drawIntent flag.
     const intent = classifyPointerDown(hit, { selectedId: selected(), drawIntent: e.shiftKey || drawMode() });
     const sel = selectionAfterPointerDown(hit, intent);
     if (sel !== null) setSelected(sel);
@@ -544,8 +538,8 @@ function Workbench(props: {
   const onMove = (e: PointerEvent): void => {
     if (!visible()) return;
     if (drag?.mode === "pan") {
-      // Pan works in client pixels: it moves the page under a still pointer, so an overlay-local
-      // delta would be measured against a box that is itself moving.
+      // Pan uses client pixels because it moves the page under a still pointer, and an
+      // overlay-local delta would be measured against a box that is itself moving.
       applyView(panBy(view(), e.clientX - drag.lastX, e.clientY - drag.lastY));
       drag.lastX = e.clientX;
       drag.lastY = e.clientY;
@@ -640,10 +634,9 @@ function Workbench(props: {
       if (patch.mpn !== undefined) spec.mpn = patch.mpn;
       if (patch.manufacturer !== undefined) spec.manufacturer = patch.manufacturer;
       if (patch.deviceClass !== undefined) spec.deviceClass = patch.deviceClass;
-      // The document's own identity, which the contract wants stated as the vendor prints it
-      // (number + revision) rather than as a part name. Editing it does NOT re-date existing
-      // verifications: each snapshotted the title as it stood when it was performed, which is the
-      // whole reason the snapshot lives on the verification and not here.
+      // docTitle is the document's identity as the vendor prints it (number + revision), not a
+      // part name. Editing it does NOT re-date existing verifications, because each one snapshotted
+      // the title as it stood when it was performed.
       if (patch.docTitle !== undefined && spec.docs[0]) spec.docs[0].title = patch.docTitle;
       commit();
     },
@@ -671,12 +664,11 @@ function Workbench(props: {
     },
     deletePin: (p: Pin): void => {
       if (!spec) return;
-      // Unbind before removing, or every parameter that named this pin is left dangling — which
-      // ValidatePins rejects on the next save, turning a delete into a stuck document.
+      // Unbind before removing. ValidatePins rejects a parameter naming a missing pin on the next
+      // save, which would leave the document unsavable.
       for (const param of spec.parameters) unbindParam(param, p.id);
-      // A relation naming this pin is dangling for the same reason, and unlike a parameter it
-      // cannot be repaired by dropping one ref: a relation with one end gone says nothing, so the
-      // whole relation goes.
+      // A relation naming this pin dangles the same way. A relation with one end gone says nothing,
+      // so the whole relation goes rather than one ref.
       spec.relations = spec.relations.filter(
         (r) => r.subjectPinRef !== p.id && r.referencePinRef !== p.id,
       );
@@ -694,8 +686,8 @@ function Workbench(props: {
     },
     deletePackage: (id: string): void => {
       if (!spec) return;
-      // Drop the package's numbers with it, for deletePin's reason: a PinNumber pointing at a
-      // package that no longer exists fails the save.
+      // Drop the package's numbers too, since a PinNumber pointing at a missing package fails the
+      // save.
       for (const pin of spec.pins) pin.numbers = pin.numbers.filter((n) => n.packageRef !== id);
       spec.packages = spec.packages.filter((p) => p.id !== id);
       commit();
@@ -876,11 +868,10 @@ function Workbench(props: {
 // onParamsChange pushes the current parameter list to the params panel; the returned view lets the
 // tree open a datasheet and the params panel locate one. Framework reactivity stays in this leaf (C11).
 //
-// pdf is passed in rather than imported, and is not optional. A default would put an import of
-// pdfrender.js in this file, and importing that module runs pdf.js's canvas setup, which needs a
-// DOMMatrix jsdom does not have — so the default would make this component unrenderable by a test
-// even when the test supplies its own source. It is the only injected dependency: the datasheet
-// client is reached through api.js, which a test mocks at the module boundary like every other page.
+// pdf is injected and required. A default would import pdfrender.js here and make this component
+// unrenderable under jsdom even when a test supplies its own source
+// (docsite/content/architecture/web-client.md#a-library-that-cannot-load-is-a-component-that-cannot-be-tested).
+// The datasheet client comes through api.js, which a test mocks at the module boundary.
 export function workbenchIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

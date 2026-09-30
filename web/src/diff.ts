@@ -1,22 +1,21 @@
-// The visual diff's pure logic (WS9-005): turning a DiffDesignsResponse into the per-side
+// Pure logic for the visual diff (WS9-005). It turns a DiffDesignsResponse into the per-side
 // highlight layers each canvas draws, the legend the panel shows, and the sheet pairing the
-// selector offers. Everything here is data-in data-out — the DiffPresenter orchestrates the
-// RPCs and the views render — so the side-filtering and coloring rules are unit-testable
-// without a transport or a DOM.
+// selector offers. DiffPresenter makes the RPCs and the views render, so the side-filtering and
+// coloring rules test without a transport or a DOM.
 
 import type { HighlightSpec } from "./highlights.js";
 import type { DiffDesignsResponse, DiffReport } from "./gen/agni/v1/webapi/diff_pb.js";
 import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
 
-// DiffSide names one side of the comparison using the wire's vocabulary (DiffDesignsRequest
-// a_mount/b_mount): "a" is the old revision, "b" the new.
+// DiffSide names one side of the comparison in the wire's vocabulary (DiffDesignsRequest
+// a_mount/b_mount). "a" is the old revision, "b" the new.
 export type DiffSide = "a" | "b";
 
-// DIFF_COLORS is the one source of the change-class palette (the C12 discipline applied to
-// view-side policy: the classes' colors live here and travel to the renderers inside the
-// HighlightSpec, never as literals at the draw sites). Existence changes share a hue across
-// the component and net vocabularies (added/new green, removed/deleted red); modifications
-// are amber (changed/hard) and renames blue, so the two sides read as one color language.
+// DIFF_COLORS is the one source of the change-class palette (C12 applied to view-side policy).
+// The colors travel to the renderers inside the HighlightSpec, never as literals at the draw
+// sites. Existence changes share a hue across the component and net vocabularies (added/new
+// green, removed/deleted red), modifications are amber (changed/hard), renames blue and soft
+// net changes purple.
 export const DIFF_COLORS: Record<string, string> = {
   added: "#1a9850",
   new: "#1a9850",
@@ -29,10 +28,10 @@ export const DIFF_COLORS: Record<string, string> = {
 };
 
 // Which change classes each side draws (the filtering rule documented on
-// DiffDesignsResponse): the old side shows what is gone or different, the new side what
+// DiffDesignsResponse). The old side shows what is gone or different, the new side what
 // arrived or is different. "changed" components and renamed/hard/soft nets exist on both
-// sides, so both draw them; a renamed net's status map carries the old AND new name, and
-// each side's geometry only matches its own, so no name filtering is needed here.
+// sides, so both draw them. A renamed net's status map carries the old AND new name and each
+// side's geometry matches only its own, so no name filtering is needed here.
 const SIDE_COMPONENT: Record<DiffSide, ReadonlySet<string>> = {
   a: new Set(["removed", "changed"]),
   b: new Set(["added", "changed"]),
@@ -42,9 +41,9 @@ const SIDE_NET: Record<DiffSide, ReadonlySet<string>> = {
   b: new Set(["new", "renamed", "hard", "soft"]),
 };
 
-// CLASS_ORDER fixes the spec order (a later spec wins where primitives overlap, per the
-// highlight layer contract): attribute-level changes first, then structural ones, with
-// existence changes (added/removed) last so they always show through.
+// CLASS_ORDER fixes the spec order. A later spec wins where primitives overlap (the highlight
+// layer contract), so attribute-level changes go first, then structural ones, and existence
+// changes (added/removed) last so they always show through.
 const CLASS_ORDER = ["soft", "renamed", "changed", "hard", "new", "added", "deleted", "removed"] as const;
 
 // sideSpecs turns the response's highlight maps into one HighlightSpec per change class
@@ -78,8 +77,7 @@ export function sideSpecs(
 }
 
 // LegendEntry is one row of the diff legend: the change class, its display label, its
-// swatch color, and how many entities carry it (design-wide, per the ticket — the legend
-// counts the whole diff, not the visible sheet).
+// swatch color, and how many entities carry it across the whole diff, not the visible sheet.
 export interface LegendEntry {
   cls: string;
   label: string;
@@ -88,7 +86,7 @@ export interface LegendEntry {
 }
 
 // CLASS_LABELS is the display name of each change class, shared by the legend chips and the
-// changes panel's group headers so the two surfaces speak one vocabulary.
+// changes panel's group headers.
 export const CLASS_LABELS: Record<string, string> = {
   added: "added",
   removed: "removed",
@@ -100,7 +98,7 @@ export const CLASS_LABELS: Record<string, string> = {
   soft: "soft net change",
 };
 
-// legendEntries derives the legend from the report: one row per change class with a nonzero
+// legendEntries derives the legend from the report, one row per change class with a nonzero
 // count, in a fixed narrative order (component classes, then net classes). A component with
 // several changed fields appears once per field in the report, so "changed" counts distinct
 // ref_des.
@@ -133,10 +131,10 @@ export function itemPairs(item: ChangedItem, pairs: SheetPair[]): number[] {
 }
 
 // ChangedItem is one row of the changes panel (WS9-006): a changed entity with its class,
-// its human detail line, and the sheets it lives on per side (from the response's sheet
-// maps; empty when that side has no geometry or, for KiCad nets, until WS1-022). key is the
-// entity's current name (a renamed net's NEW name; oldName carries the other), which is also
-// the highlight join key on the b side.
+// its human detail line, and the sheets it lives on per side, from the response's sheet maps.
+// A side's list is empty when that side has no geometry or draws the entity on no sheet. key is
+// the entity's current name (a renamed net's NEW name, with oldName carrying the other), which
+// is also the highlight join key on the b side.
 export interface ChangedItem {
   kind: "component" | "net";
   cls: string;
@@ -147,14 +145,14 @@ export interface ChangedItem {
   bSheets: string[];
 }
 
-// itemId is the selection identity of an item (kinds and names can collide across the two
-// vocabularies — a net and a component may share a name).
+// itemId is the selection identity of an item. It carries the kind because a net and a
+// component may share a name.
 export function itemId(it: Pick<ChangedItem, "kind" | "key">): string {
   return `${it.kind}:${it.key}`;
 }
 
-// ITEM_CLASS_ORDER is the panel's group order: components first, then nets, existence
-// changes before modifications within each — the order a reviewer triages in.
+// ITEM_CLASS_ORDER is the panel's group order, the order a reviewer triages in: components
+// first, then nets, with existence changes before modifications within each.
 export const ITEM_CLASS_ORDER = ["added", "removed", "changed", "new", "deleted", "renamed", "hard", "soft"] as const;
 
 type SheetIdsMap = DiffDesignsResponse["componentSheetsA"];
@@ -163,10 +161,10 @@ function sheetIds(m: SheetIdsMap, key: string): string[] {
   return m?.[key]?.ids ?? [];
 }
 
-// changedItems flattens the response into the panel's rows, grouped in ITEM_CLASS_ORDER
-// (report order within a class — the diff sorts components by ref_des and groups nets by
-// classification). A component's several changed fields fold into one row; a renamed net's
-// a-side sheets come from its OLD name (the name a's geometry carries).
+// changedItems flattens the response into the panel's rows, grouped in ITEM_CLASS_ORDER and
+// in report order within a class (the diff sorts components by ref_des and groups nets by
+// classification). A component's several changed fields fold into one row. A renamed net's
+// a-side sheets come from its OLD name, the name a's geometry carries.
 export function changedItems(resp: DiffDesignsResponse): ChangedItem[] {
   const r = resp.report;
   if (!r) return [];
@@ -208,10 +206,9 @@ export function changedItems(resp: DiffDesignsResponse): ChangedItem[] {
   return [...items, ...netItems].sort((a, b) => rank(a.cls) - rank(b.cls) || 0);
 }
 
-// focusSpecs is the emphasis highlight for one selected item: sideSpecs over a singleton
-// status map, so the side-filtering rule is inherited (a removed component emphasizes only
-// on a, an added one only on b) and a renamed net carries both names so each side joins by
-// its own.
+// focusSpecs is the emphasis highlight for one selected item. It is sideSpecs over a singleton
+// status map, so it inherits the side-filtering rule (a removed component emphasizes only on a,
+// an added one only on b), and a renamed net carries both names so each side joins by its own.
 export function focusSpecs(item: ChangedItem, side: DiffSide): HighlightSpec[] {
   const comps: Record<string, string> = {};
   const nets: Record<string, string> = {};
@@ -224,10 +221,10 @@ export function focusSpecs(item: ChangedItem, side: DiffSide): HighlightSpec[] {
   return sideSpecs(comps, nets, side);
 }
 
-// ghostSpecs is the old side's contribution to the union canvas (WS9-007): ONLY what exists
-// nowhere in b — removed components and deleted nets. Everything else on the union canvas is
-// b's geometry (neutral) plus b's own highlight classes; drawing a's changed/renamed/hard
-// entities too would double-paint them.
+// ghostSpecs is the old side's contribution to the union canvas (WS9-007), and holds ONLY what
+// exists nowhere in b, which is removed components and deleted nets. The rest of the union
+// canvas is b's geometry (neutral) plus b's own highlight classes, so drawing a's
+// changed/renamed/hard entities too would double-paint them.
 export function ghostSpecs(componentStatus: Record<string, string>, netStatus: Record<string, string>): HighlightSpec[] {
   const comps = Object.fromEntries(Object.entries(componentStatus).filter(([, c]) => c === "removed"));
   const nets = Object.fromEntries(Object.entries(netStatus).filter(([, c]) => c === "deleted"));
@@ -265,13 +262,13 @@ const PLACEMENT_TOLERANCE = 0.01;
 
 type PlacementMap = DiffDesignsResponse["sharedPlacementsA"];
 
-// checkAlignment is the WS9-007 overlay gate for one sheet pair: both sides must exist,
-// their frames must match within FRAME_TOLERANCE, and the shared components placed on this
-// pair must sit within PLACEMENT_TOLERANCE of each other (normalized by the shared
-// placements' own spread — placement coordinates are geometry units, not frame px). Sparse
-// evidence degrades gracefully: no shared placements on this pair (netlist-only sides, tiny
-// sheets, a spread too small to normalize by) falls back to the frame verdict alone, so a
-// same-tool re-export is not refused just because the sample is thin.
+// checkAlignment is the WS9-007 overlay gate for one sheet pair. Both sides must exist, their
+// frames must match within FRAME_TOLERANCE, and the shared components placed on this pair must
+// sit within PLACEMENT_TOLERANCE of each other, normalized by the shared placements' own spread
+// because placement coordinates are geometry units, not frame px. With too few shared
+// placements on this pair (netlist-only sides, tiny sheets, a spread too small to normalize by)
+// it falls back to the frame verdict alone, so a same-tool re-export is not refused for a thin
+// sample.
 export function checkAlignment(
   pair: SheetPair,
   placementsA: PlacementMap,
@@ -316,10 +313,10 @@ export interface SheetPair {
 
 // pairSheets matches the two designs' sheet lists by name (each B sheet consumed at most
 // once), in A's order, then appends B-only sheets in B's order. A sheet with an empty name
-// pairs by nothing and displays as its id. When NO name matches at all, it falls back to
-// pairing positionally — successive revisions routinely rename their pages (a title block
-// carrying the revision), and a strict by-name pairing would then offer only one-sided
-// views; index order is the best structural guess and the selector still shows both names.
+// pairs by nothing and displays as its id. When NO name matches at all, it pairs by position
+// instead, because successive revisions often rename their pages (a title block carrying the
+// revision) and by-name pairing would then offer only one-sided views. A positional pair's
+// name shows both sides' names.
 export function pairSheets(a: SheetRef[], b: SheetRef[]): SheetPair[] {
   const used = new Set<string>();
   const out: SheetPair[] = a.map((s) => {

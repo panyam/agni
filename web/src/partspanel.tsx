@@ -36,17 +36,16 @@ function fmtConditions(p: Parameter): string {
 // not resolve falls back to the id itself rather than vanishing, so a malformed spec is visible
 // rather than silently rendering as part-wide.
 //
-// Empty for an unbound row. On a spec that declares pins that means the row is a fact about the
-// whole part, which the caller labels explicitly, because on such a spec an unlabelled row would
-// otherwise be indistinguishable from one the panel failed to render.
+// Empty for an unbound row. On a spec that declares pins, the caller labels such a row part-wide,
+// since unlabelled it would look like a row the panel failed to render.
 function fmtPins(p: Parameter, spec: PartSpec | undefined): string {
   if (!p.pinRefs.length) return "";
   const names = new Map((spec?.pins ?? []).map((pin) => [pin.id, pin.name]));
   return p.pinRefs.map((r) => names.get(r) || r).join(", ");
 }
 
-// fmtCitation renders the provenance back to the datasheet: doc ref + page + table/figure. WS9-034
-// will turn this into a deep-link to the extraction page; for now it is the citation text.
+// fmtCitation renders the provenance back to the datasheet as doc ref + page + table/figure. It is
+// plain text; the deep-link to the extraction page is WS9-034.
 function fmtCitation(p: Parameter): string {
   const pr = p.prov;
   if (!pr) return "";

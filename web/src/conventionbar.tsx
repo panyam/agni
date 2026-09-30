@@ -14,11 +14,10 @@ import {
 // ConventionBar is the top-bar control that chooses the naming vocabulary a run is answered under,
 // and says which one is in effect.
 //
-// The saying-which-one half is not decoration. A request convention REPLACES the server's rather than
-// adding to it, so choosing one can make the deployment's rules stop running, and a rule that stops
-// running produces no findings — indistinguishable, in a findings list, from a design that got
-// better. The bar carries a distinct style while a request convention is applied so that state is
-// visible on screen, not just remembered from a dropdown someone touched ten minutes ago.
+// A request convention REPLACES the server's rather than adding to it, so choosing one can stop the
+// deployment's rules running. A rule that stops running produces no findings, which in a findings
+// list looks the same as a design that got better. The bar takes a distinct style while a request
+// convention is applied so that state stays visible on screen.
 function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: string) => void }) {
   return (
     <div class={`convbar${isOverridden(props.state()) ? " convbar-overridden" : ""}`}>
@@ -44,8 +43,8 @@ function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: st
   );
 }
 
-// conventionBarIsland mounts the bar and returns its command-down view. onSelect is the intent up:
-// the user chose a convention ref, or "" to go back to the server's.
+// conventionBarIsland mounts the bar and returns its command-down view. onSelect carries the intent
+// up, with the convention ref the user chose or "" to go back to the server's.
 export function conventionBarIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

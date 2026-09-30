@@ -1,16 +1,13 @@
-// The Compare affordance (WS9-005, reshaped by WS9-049 phase 3): a top-bar button that opens the
-// compare picker. It used to ARM a mode — the next file clicked in the Files tree became side B —
-// which made the interaction depend on invisible state and on a dock panel being open. Now the
-// button just asks for the picker; choosing there is the whole interaction, so there is no armed
-// state to enter, echo, cancel with Escape, or leak when the open design changes.
+// The Compare affordance (WS9-005) is a top-bar button that opens the compare picker. It arms no
+// mode, so there is no hidden state to echo, cancel with Escape, or leak when the open design
+// changes (WS9-049 phase 3).
 //
 // Like the panels menu, this is shell chrome rather than presenter state, so it stays a plain DOM
 // widget.
 
 export interface CompareControl {
-  // setEnabled reflects whether a design is open to compare AGAINST. With none open there is
-  // nothing to be the other side of a comparison, so the button is disabled rather than opening a
-  // picker whose choice could not be acted on.
+  // setEnabled reflects whether a design is open to compare AGAINST. With none open the button is
+  // disabled, since a choice in the picker would have nothing to compare to.
   setEnabled(on: boolean): void;
 }
 
