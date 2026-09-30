@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/encoding/prototext"
-	"google.golang.org/protobuf/proto"
 
+	"github.com/panyam/agni/datasheet/param"
 	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
@@ -105,7 +105,7 @@ func MarshalManifest(m *derivepb.RunManifest) ([]byte, error) {
 }
 
 // MarshalSpec renders a derived PartSpec as textproto, the same hand-diffable form
-// the fixture corpus uses.
+// the fixture corpus uses, through the one writer promotion uses too (param.MarshalSpecText).
 func MarshalSpec(s *parampb.PartSpec) ([]byte, error) {
-	return prototext.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(proto.Message(s))
+	return param.MarshalSpecText(s)
 }

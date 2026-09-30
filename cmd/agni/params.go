@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -78,6 +79,69 @@ parameters the way it owns its profiles).
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet corpus). A project's own params/ wins over this when --design names a design in one")
 	c.Flags().StringVar(&designPath, "design", "", "a design whose PROJECT supplies the corpus, for a part seeded in a project rather than a loose directory")
 	c.Flags().StringVar(&format, "format", "text", "output format: text or json (json emits the PartSpec itself, the contract type)")
+	c.AddCommand(paramsPromoteCmd())
+	return c
+}
+
+// paramsPromoteCmd moves a workbench DRAFT into a seeded corpus (agni issue 747).
+//
+// The workbench saves an unvalidated <stem>.partspec.json on purpose, and LoadSet never reads one, so
+// until a draft is promoted no check sees it. This is the step that validates. param.Promote decides
+// and this writes, then re-loads the corpus and restores what was there if the corpus no longer loads,
+// so a promotion cannot leave a corpus that fails every check.
+func paramsPromoteCmd() *cobra.Command {
+	var to string
+	c := &cobra.Command{
+		Use:   "promote <draft.partspec.json>",
+		Short: "Validate a workbench draft and write it into a params corpus as <mpn>.textproto",
+		Long: `Promote a PartSpec draft the datasheets workbench saved into a seeded corpus, where checks
+and queries read it.
+
+A draft is saved without validation so work is never lost, and no check reads one. Promotion runs
+param.Validate and refuses a draft that fails it, listing every problem. It also refuses when another
+file in the corpus already seeds the same MPN, since one MPN in two files fails every load. A draft
+promoted before is written over its own earlier file.
+
+  agni params promote datasheets/ti/LM1117.partspec.json --to params/`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if to == "" {
+				return fmt.Errorf("--to <params dir> is required: promotion writes into a corpus")
+			}
+			draft, err := os.ReadFile(args[0])
+			if err != nil {
+				return err
+			}
+			if fi, err := os.Stat(to); err != nil || !fi.IsDir() {
+				return fmt.Errorf("--to %q is not a directory", to)
+			}
+			p, err := param.Promote(draft, os.DirFS(to))
+			if err != nil {
+				cmd.SilenceUsage = true
+				return err
+			}
+			dst := filepath.Join(to, filepath.FromSlash(p.File))
+			prev, prevErr := os.ReadFile(dst) // a replaced file is restored, a new one removed
+			if err := os.WriteFile(dst, p.Text, 0o644); err != nil {
+				return err
+			}
+			if _, err := param.LoadSet(os.DirFS(to)); err != nil {
+				if prevErr == nil {
+					_ = os.WriteFile(dst, prev, 0o644)
+				} else {
+					_ = os.Remove(dst)
+				}
+				return fmt.Errorf("the corpus stopped loading after writing %s, so it was put back: %w", dst, err)
+			}
+			verb := "promoted"
+			if p.Replaces {
+				verb = "updated"
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s %s to %s (%d parameters, %d pins)\n", verb, p.Spec.GetMpn(), dst, len(p.Spec.GetParameters()), len(p.Spec.GetPins()))
+			return nil
+		},
+	}
+	c.Flags().StringVar(&to, "to", "", "the params corpus directory to write into (required)")
 	return c
 }
 

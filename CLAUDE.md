@@ -245,7 +245,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   parameter someone verified reports `stale` when the corpus moved to a later revision, naming BOTH
   revisions: staleness is decided on the content hash and NEVER on the printed one, so the two strings
   are for the reader (`DECISIONS.md`, "A document revision is recorded for the reader, and never
-  compared").
+  compared"). **A workbench `.partspec.json` is a DRAFT that no check reads**, saved unvalidated on
+  purpose; `agni params promote <draft> --to <params>` validates it into `<mpn>.textproto` (agni 747).
+  Reading drafts in `LoadSet` looks like the fix and is the bug: the workbench seeds an empty one for
+  every document browsed, and one invalid file fails the whole all-or-nothing load.
 - **`emit --format edif` writes for a reader that is NOT ours, and that is a stricter target than the
   round trip.** Our reader resolves references after parsing the whole file, accepts any atom as an
   identifier, and reads a port reference as a pin designator when nothing maps it, so a writer leaning
