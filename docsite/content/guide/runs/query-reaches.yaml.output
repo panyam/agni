@@ -1,6 +1,6 @@
-#agni-run 7b18f0a140f3634c
+#agni-run 587d9938d39eaffc
 n    provenance
-GND  reaches from GND
-SIG  reaches from GND
+GND  net.reaches from GND
+SIG  net.reaches from GND
 
 2 result(s)
