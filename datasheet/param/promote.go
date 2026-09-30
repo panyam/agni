@@ -61,7 +61,11 @@ func Promote(draft []byte, corpus fs.FS) (*Promoted, error) {
 		return nil, &PromoteError{Reason: fmt.Sprintf("the draft is not a PartSpec: %v", err)}
 	}
 	if probs := Problems(spec); len(probs) > 0 {
-		return nil, &PromoteError{Reason: fmt.Sprintf("the draft for %q is not ready for the corpus:", spec.GetMpn()), Problems: probs}
+		what := "the draft (it names no mpn)"
+		if spec.GetMpn() != "" {
+			what = fmt.Sprintf("the draft for %q", spec.GetMpn())
+		}
+		return nil, &PromoteError{Reason: what + " is not ready for the corpus:", Problems: probs}
 	}
 	_, from, err := loadSet(corpus)
 	if err != nil {
