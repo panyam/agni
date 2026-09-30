@@ -655,8 +655,8 @@ whether to proceed and whether the constraint should change. The point of constr
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a
 constraint, and if the direction was wrong, suggest capturing it as one.
 
-**A new rule owes a TEST, never a command typed into the document.** Eighteen are enforced by the gate
-and fourteen are review questions that say so (`CONSTRAINTS.md`'s header keeps the count). Which of
+**A new rule owes a TEST, never a command typed into the document.** Nineteen are enforced by the gate
+and thirteen are review questions that say so (`CONSTRAINTS.md`'s header keeps the count). Which of
 the three homes a test goes in follows from what it reads: the package graph or the module in the
 root `deps_test.go`, one package's own rule beside that package (`service/transport_guard_test.go`,
 `core/facts`), a sweep over source in `internal/constraints`. The September 2026 audit is why, and

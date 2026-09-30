@@ -85,7 +85,7 @@ It reads new unstaged files as well as committed ones, so it has no commit-first
 
 ## The architectural constraints are tests, not a checklist
 
-`CONSTRAINTS.md` holds C1 to C33 and eighteen of them fail the gate. They ride in under `go test ./...`
+`CONSTRAINTS.md` holds C1 to C33 and nineteen of them fail the gate. They ride in under `go test ./...`
 rather than a target of their own, so nothing in the diagram above names them, which is easy to read
 as the document being advisory. It is not.
 
@@ -97,7 +97,7 @@ Where a constraint's test lives follows from what it READS, and there are three 
 | one package's own rule | a test beside that package | C13's transport clause in `service/transport_guard_test.go`, C29 in `core/facts`, C19 as `hack/ir_model_check.sh` |
 | a line of source somewhere nobody would think to guard | `internal/constraints` | C6, C12, C20, C22, C24, C25, C28, C33 |
 
-The other fourteen are REVIEW questions and say so, and C15 is a tombstone merged into C17. C5 turns
+The other thirteen are REVIEW questions and say so, and C15 is a tombstone merged into C17. C5 turns
 on whether an ingestion path was approved, which is a fact about a conversation. C21 forbids
 sourcing component identity from a geometry model, and a rule that did would compile and pass. A
 proxy test for those would pass and read as the rule holding, which is worse than prose. The
