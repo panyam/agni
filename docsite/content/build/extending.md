@@ -12,6 +12,9 @@ program: composing it with `agni.New`, and serving your own catalog through the 
 
 This page walks from an empty directory to a working extension that does both.
 
+Both are Go. A program in another language calls agni rather than embedding it, through the CLI or
+a running server; [Calling agni from another language](../other-languages/) covers that.
+
 Two artifacts back this guide, both in the engine repo under `examples/`:
 
 - `extension-template` is a bare scaffold to copy.

@@ -1,0 +1,18 @@
+version: v2
+# Python message classes and .pyi stubs for the Python client (agni issue 728), the third codegen
+# target beside protos/buf.gen.yaml (Go) and web/buf.gen.web.yaml (TS).
+#
+# REMOTE plugins pinned by version, so the version is data here rather than whatever protoc is on
+# PATH, which is the same argument protos/buf.gen.yaml makes for `go tool`. The cost is network at
+# generation time; proto-check already runs where `make samples` has fetched over the network.
+# The plugin version fixes the runtime floor: generated code refuses to import under a protobuf
+# older than the version stamped into it, so pyproject.toml pins `protobuf>=` the same number.
+#
+# clean is OFF because the output root is the package's own src/, which holds hand-written code.
+# `make proto-py` removes src/agni/v1 first instead, so a deleted proto still loses its module.
+clean: false
+plugins:
+  - remote: buf.build/protocolbuffers/python:v36.2
+    out: src
+  - remote: buf.build/protocolbuffers/pyi:v36.2
+    out: src

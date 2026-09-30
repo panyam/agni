@@ -63,3 +63,9 @@ tools/samples/
 /view.html
 /verdicts.csv
 
+
+# The Python client's own venv (`make python-venv`), its build output, and bytecode.
+/clients/python/.venv/
+/clients/python/build/
+/clients/python/src/*.egg-info/
+__pycache__/

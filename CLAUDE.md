@@ -30,6 +30,7 @@ expensive to rediscover.
 | Semantic diff | `architecture/semantic-diff.md` |
 | The datasheet param/doc/derive layer | `architecture/datasheet-layer.md` |
 | Extending the engine from outside | `build/extending.md` |
+| Calling agni from Python or another language | `build/other-languages.md`, `clients/python` |
 | xschem / Lepton native tools | `build/native-verification.md` |
 | Running the gate, and how it reads green when it is not | `build/the-gate.md` |
 | Measuring something, or trusting a green test | `build/evidence.md` |
@@ -79,7 +80,8 @@ The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`
 `stdlib/relations`, `stdlib/profiles`). The datasheet stack under **`datasheet/`** (`param`, `doc`,
 `derive`). The embedding surface under **`service/`** (the transport-neutral service impls and their
 ports) and **`artifact/`** (the `mount://` URI those ports speak). Plus `cmd/agni/`, `internal/`,
-`intake/`, `census/`, `protos/` + `gen/`, `docsite/`, `web/`, `hack/`, `tools/`.
+`intake/`, `census/`, `protos/` + `gen/`, `docsite/`, `web/`, `hack/`, `tools/`, and `clients/python`
+(the typed Python client, its generated messages committed under `src/agni/v1`).
 
 Notes written before this layout landed name the old directories. **Grep the SYMBOL or filename,
 not the directory.**
@@ -339,8 +341,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   set. The gate takes `samples-oracle`, the 19MB both-views corpus, because the cross-view tests read
   a board file and a test whose fixture is absent skips rather than fails. One stamp PER ARTIFACT, so
   `make samples` and `make samples-oracle` compose instead of deleting each other's work.
-- **After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** `make proto-check`
-  fails the gate on either half being stale.
+- **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
+  `make proto-check` fails the gate on any of the three being stale. The Python half uses buf's REMOTE
+  plugins pinned by version, so it needs network, and `pyproject.toml`'s `protobuf>=` floor moves with
+  the plugin version.
 - **`render --report` prints to stdout and IGNORES `-o`**, which is the same axis confusion as
   `review --coverage`: the report replaces the drawing rather than being a format of it, so the flag
   that names the drawing's file has nothing to write. It exits 0 having written nothing.

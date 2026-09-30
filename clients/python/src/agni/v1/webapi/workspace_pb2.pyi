@@ -1,0 +1,69 @@
+from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+
+DESCRIPTOR: _descriptor.FileDescriptor
+
+class FileKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    FILE_KIND_UNSPECIFIED: _ClassVar[FileKind]
+    FILE_KIND_DESIGN: _ClassVar[FileKind]
+    FILE_KIND_DATASHEET: _ClassVar[FileKind]
+FILE_KIND_UNSPECIFIED: FileKind
+FILE_KIND_DESIGN: FileKind
+FILE_KIND_DATASHEET: FileKind
+
+class Mount(_message.Message):
+    __slots__ = ("name", "root", "uri")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    ROOT_FIELD_NUMBER: _ClassVar[int]
+    URI_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    root: str
+    uri: str
+    def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ...) -> None: ...
+
+class ListMountsRequest(_message.Message):
+    __slots__ = ("opens",)
+    OPENS_FIELD_NUMBER: _ClassVar[int]
+    opens: _containers.RepeatedScalarFieldContainer[FileKind]
+    def __init__(self, opens: _Optional[_Iterable[_Union[FileKind, str]]] = ...) -> None: ...
+
+class ListMountsResponse(_message.Message):
+    __slots__ = ("mounts", "pruned_mounts")
+    MOUNTS_FIELD_NUMBER: _ClassVar[int]
+    PRUNED_MOUNTS_FIELD_NUMBER: _ClassVar[int]
+    mounts: _containers.RepeatedCompositeFieldContainer[Mount]
+    pruned_mounts: int
+    def __init__(self, mounts: _Optional[_Iterable[_Union[Mount, _Mapping]]] = ..., pruned_mounts: _Optional[int] = ...) -> None: ...
+
+class DirEntry(_message.Message):
+    __slots__ = ("name", "is_dir", "format", "uri", "kind")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    IS_DIR_FIELD_NUMBER: _ClassVar[int]
+    FORMAT_FIELD_NUMBER: _ClassVar[int]
+    URI_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    is_dir: bool
+    format: str
+    uri: str
+    kind: FileKind
+    def __init__(self, name: _Optional[str] = ..., is_dir: _Optional[bool] = ..., format: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[FileKind, str]] = ...) -> None: ...
+
+class ListDirRequest(_message.Message):
+    __slots__ = ("uri", "opens")
+    URI_FIELD_NUMBER: _ClassVar[int]
+    OPENS_FIELD_NUMBER: _ClassVar[int]
+    uri: str
+    opens: _containers.RepeatedScalarFieldContainer[FileKind]
+    def __init__(self, uri: _Optional[str] = ..., opens: _Optional[_Iterable[_Union[FileKind, str]]] = ...) -> None: ...
+
+class ListDirResponse(_message.Message):
+    __slots__ = ("entries",)
+    ENTRIES_FIELD_NUMBER: _ClassVar[int]
+    entries: _containers.RepeatedCompositeFieldContainer[DirEntry]
+    def __init__(self, entries: _Optional[_Iterable[_Union[DirEntry, _Mapping]]] = ...) -> None: ...

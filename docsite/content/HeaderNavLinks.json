@@ -51,6 +51,7 @@
       { "name": "Adding a format reader", "url": "build/format-reader/" },
       { "name": "Authoring a check rule", "url": "build/check-rule/" },
       { "name": "Extending and embedding the engine", "url": "build/extending/" },
+      { "name": "Calling agni from another language", "url": "build/other-languages/" },
       { "name": "Native verification", "url": "build/native-verification/" },
       { "name": "Running the gate", "url": "build/the-gate/" },
       { "name": "Evidence", "url": "build/evidence/" }

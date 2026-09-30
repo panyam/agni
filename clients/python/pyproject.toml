@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agni"
+version = "0.0.0"
+description = "Typed Python client for the agni EDA engine, over its CLI or its Connect API"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+# The floor is the version buf.gen.py.yaml's plugins stamp into the generated modules, which refuse
+# to import under an older runtime. Bump the two together.
+dependencies = ["protobuf>=7.36.2,<8"]
+
+[project.optional-dependencies]
+xlsx = ["openpyxl>=3.1"]
+test = ["pytest>=8", "openpyxl>=3.1"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+# The generated agni.v1.* directories carry no __init__.py, so they are namespace packages.
+namespaces = true
+
+[tool.setuptools.package-data]
+"*" = ["*.pyi", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
