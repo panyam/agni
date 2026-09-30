@@ -1304,7 +1304,7 @@ profiles exist to make.
 
 **What datalog genuinely cannot do is the sharper finding, and it is structural.** It answers
 set-of-tuples questions. It cannot return a path, a subgraph, a tour, or a shortest route, and this
-evaluator makes both reasons concrete: `aggregate` runs only at final projection (`core/query/eval.go`),
+evaluator makes both reasons concrete: `aggregate` runs only at final projection (`eval.go`, now in `jaala/datalog`),
 never inside `materialize`'s fixpoint, so no recursive rule can carry `min` or `count`; and `Term` is
 Var/Str/Num with no function symbols, so a path cannot be a value at all.
 
@@ -1329,6 +1329,47 @@ takes `query.Query` and a concrete `*Base`, so it swaps a datalog STRATEGY, not 
 "query IR" is not the answer either: one supporting join, negation and recursion essentially IS
 datalog, so building it in core would mean core owning a query language while pretending not to. The
 engines meet at `*check.Rule` and `facts.Row`, and that is enough.
+
+---
+
+## The Datalog engine lives in jaala, and a derived relation belongs to its engine
+
+The evaluator moved out of `core/query` into its own module, `github.com/panyam/jaala/datalog`
+(agni issue 731), so a second graph tool (Declaire) can use it and the language can grow in one
+place. The engine knows nothing about circuits. A host hands it base relations through a `Source`
+and computed predicates through a `Predicates` value. `core/query` stayed at its path as agni's
+adapter: it projects a `check.Model` through a `facts.Registry` into the engine's positional
+tuples, registers `reaches` and `route` as generators over `check.Model.Reach`, and keeps
+`RuleFromQuery`, the wire form, the catalog and the teaching examples. The IR types are aliases,
+so nothing converts at the boundary and no importer changed.
+
+**The split this settles is between base and derived relations.** C29 says authoring a relation
+must not require picking an engine. That still holds for a BASE relation, one projected from the
+Model in Go and registered with `facts.RegisterRelation`: every query shape (Go, `check.Spec`,
+Datalog, the future path shape) can read it. A DERIVED relation, one defined in Datalog over other
+relations, is different in kind. It belongs to the engine that defines it the way a predicate
+does, and only that engine can read it. Two consequences follow.
+
+- A derived relation that a Go rule or a Spec needs on every run is promoted to a Go base relation
+  rather than read across engines. `component.net_count` is the example: derivable in Datalog once
+  rules can aggregate (jaala#4), and a base relation anyway because Go rules want it.
+- Reading a derived relation from Go, when it is worth doing, goes through an engine-neutral
+  interface in `core/facts` that the Datalog adapter implements (agni issue 739), so `core` still
+  names no engine.
+
+This is also the sense in which Datalog is a helper rather than a primitive here. Go extends it
+(relations and predicates), and Go can consume what it derives. The primitive is still the Model
+and the fact tuple over it.
+
+**What the extraction measured.** agni's whole suite and every tutorial capture ran unchanged
+against the extracted engine before it was tagged, and the `core/query` benchmarks matched `main`
+within noise. The one regression the first cut showed, 25% more allocation on `reaches`, came from
+the generator interface building fresh slices per solution. The interface now lets a generator
+reuse its buffers.
+
+**Reopen if** Declaire or another host needs the engine to know something only a circuit tool
+knows. That would mean the boundary is in the wrong place, and the fix is to widen the `Source` or
+`Predicates` contract rather than to import agni.
 
 ---
 
@@ -1426,7 +1467,7 @@ Failing the bind test and made into an argument anyway, which is what consumed t
   trap issue 541 names, already live.
 
 Fixing the second pair is what makes the first affordable inside today's tuple, because only
-`FieldNum` and `FieldMin` yield a numeric, dimension-carrying `Value` (`core/query/schema.go`), and
+`FieldNum` and `FieldMin` yield a numeric, dimension-carrying `Value` (`fieldValue`, `core/query/source.go`), and
 both are spent on `param.range`'s two bounds:
 
 - `param.typ(mpn, symbol, typ)` at arity 3, rather than a sixth column on `param.range`. Separating it

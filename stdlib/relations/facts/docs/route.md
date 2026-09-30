@@ -62,10 +62,10 @@ outcomes apart and exits non-zero on an endpoint that names nothing.
 
 None. Like `reaches`, this is computed on demand from the design graph rather than stored, so it is
 a datalog *predicate* (kind `predicate` in the catalog) rather than an EDB relation with a projector
-in `stdlib/relations/facts.go`. The evaluator's `extendRoute` (`core/query/preds.go`) drives
+in `stdlib/relations/facts.go`. Its generator `genRoute` (`core/query/preds.go`) drives
 `check.Model.Reach` and renders each answer with `Reach.RouteLine`, which is the fourth reading of
-one walk beside `PathTo`, `ThroughOnPath` and `StepsTo`. `extendReaches` and `extendRoute` share
-`extendWalk`, so the two cannot drift about what is connected.
+one walk beside `PathTo`, `ThroughOnPath` and `StepsTo`. `genReaches` and `genRoute` share `walk`,
+so the two cannot drift about what is connected.
 
 An empty result means no series path within the walk's radius, or a `from` this design does not
 have. See the note above about which.

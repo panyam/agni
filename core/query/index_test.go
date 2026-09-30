@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"github.com/panyam/jaala/datalog"
 	"sort"
 	"testing"
 
@@ -17,7 +18,7 @@ func numDesign() *ir.Design {
 	for _, n := range []string{"10", "10.0", "N10"} {
 		d.Nets = append(d.Nets, &ir.Net{Name: n, Prov: &ir.Provenance{SourceFile: "n"}})
 	}
-	for i := 0; i < 40; i++ { // over indexMinFacts, so the indexed path is the one under test
+	for i := 0; i < 40; i++ { // over datalog.IndexMinTuples, so the indexed path is the one under test
 		ref := fmt.Sprintf("R%d", i)
 		d.Components = append(d.Components, &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "n"}})
 		d.Nets[i%len(d.Nets)].Connections = append(d.Nets[i%len(d.Nets)].Connections,
@@ -67,9 +68,7 @@ func TestIndexedResultsMatchUnindexed(t *testing.T) {
 // every probe down the original full-scan path. Comparing against it is what makes "indexing changed
 // nothing" an assertion rather than a hope.
 func newUnindexedBase(m check.Model) *Base {
-	b := NewBase(m)
-	b.edbIdx = nil // extendEDB falls back to the full scan when there is no cache to consult
-	return b
+	return NewBase(m).Unindexed()
 }
 
 // rowValueKey renders a row by VALUE. Value carries *float64, so printing the struct compares pointer
@@ -103,13 +102,13 @@ func rowValueKey(r Row) string {
 // rather than defensive decoration.
 func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 	// param facts project per PLACED part, so the design needs enough seeded components to push the
-	// relation past indexMinFacts. Below it the probe takes the full-scan path and the test proves
+	// relation past datalog.IndexMinTuples. Below it the probe takes the full-scan path and the test proves
 	// nothing about the index. Only REG-24 carries VIN 20.
 	d := &ir.Design{}
 	specs := param.ParamSet{"REG-24": regSpec("REG-24", 20)}
 	d.Components = append(d.Components, &ir.Component{
 		RefDes: "U1", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "reg"}})
-	for i := 0; i < indexMinFacts+4; i++ {
+	for i := 0; i < datalog.IndexMinTuples+4; i++ {
 		mpn := fmt.Sprintf("OTHER-%d", i)
 		specs[mpn] = regSpec(mpn, float64(100+i))
 		d.Components = append(d.Components, &ir.Component{

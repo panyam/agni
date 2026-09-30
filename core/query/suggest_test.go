@@ -31,3 +31,14 @@ func TestDidYouMeanFormatsOrEmpty(t *testing.T) {
 		t.Errorf("hint for an unrelated token = %q, want empty", h)
 	}
 }
+
+// suggestRelation is the name didYouMean suggests, or "" when it suggests none. The ranking moved into
+// the engine with agni issue 731; this reads its answer back out of the hint it formats.
+func suggestRelation(reg *facts.Registry, name string) string {
+	const pre = `; did you mean "`
+	h := didYouMean(reg, name)
+	if !strings.HasPrefix(h, pre) {
+		return ""
+	}
+	return strings.TrimSuffix(strings.TrimPrefix(h, pre), `"?`)
+}

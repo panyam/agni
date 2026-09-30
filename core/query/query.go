@@ -1,180 +1,91 @@
-// Package query is the design query surface (WS3-029): a small declarative datalog over the
-// WS3-004 fact base (check.Facts), so an engineer runs ad-hoc queries — "search your whole design
-// as relations, including datasheets" — and every answer carries the provenance of the facts that
-// produced it. Rules and search share one vocabulary: a rule asserts a property over these
-// relations; a search is an arbitrary query over the same ones.
+// Package query is the design query surface (WS3-029): Datalog over the design's fact base, so an
+// engineer runs ad-hoc queries ("search your whole design as relations, including datasheets") and
+// every answer carries the provenance of the facts that produced it. Rules and search share one
+// vocabulary: a rule asserts a property over these relations; a search is an arbitrary query over the
+// same ones.
 //
-// The IR is datalog, not relational algebra: circuits are graph-structured (the core queries are
-// transitive closures), and a declarative logical query says WHAT not HOW, so the Evaluator behind
-// this IR is swappable (our naïve interpreter here; a SQL or external-engine backend later, if
-// scale ever demands). The IR admits the full bounded primitive set — join, union, comparison,
-// stratified negation, bounded recursion, aggregation — even where the evaluator fills them in
-// incrementally, because the IR is the expensive-to-change layer.
+// The engine itself lives in github.com/panyam/jaala/datalog (agni issue 731), which knows nothing
+// about circuits. This package is agni's adapter over it:
 //
-// The package stays WASM-clean (imports only check + the generated IR, never os/net/cgo), so the
-// whole chain read → Model → Facts → query runs client-side in the browser.
+//   - a Source projecting a check.Model through a facts.Registry, so every relation the fact layer
+//     registers is queryable (source.go);
+//   - the circuit predicates reaches and route, generators over check.Model.Reach (preds.go);
+//   - the registration seam for an overlay's filter predicates (RegisterPredicate);
+//   - agni's own uses of queries: RuleFromQuery, the wire form, the catalog, and the teaching
+//     examples.
+//
+// The types are aliases for the engine's, so a Query built here is the engine's Query and nothing
+// converts at the boundary.
+//
+// The package stays WASM-clean (the engine imports only the standard library, and this adapter only
+// check, facts and the generated IR), so the whole chain read → Model → facts → query runs
+// client-side in the browser.
 package query
 
-// A Query is a datalog program answered over a fact base: Rules define derived (IDB) relations and
-// Goal is the conjunction to solve. Goal's free variables — narrowed by Select — are the answer
-// columns. EDB relations come from the fact base (relations.Facts) via the edb schema; IDB relations
-// come from Rules; a handful of built-in relations (reaches) are computed from the Model.
-//
-// The whole IR is what Parse produces. For the query text
-//
-//	component.mpn(?r,?m), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
-//
-// the Query is: no Rules; Goal.Literals = [ Atom component.mpn(?r,?m), Atom net.max_voltage(?n,?v),
-// Compare(?v < 30) ]; Select = [?r, ?n].
-type Query struct {
-	Rules []Rule
-	Goal  Body
-	// Select is the answer columns: each item is a variable (a group key) or an aggregate over the
-	// group formed by the variable columns (count/min/max/sum/list). Empty selects Goal's variables
-	// in first-seen order. When any item is an aggregate, the result is grouped-and-reduced.
-	Select []Term
-	// Having filters the GROUPS a Select's aggregates form, after the reduce. Each item is a Compare
-	// whose left term is an aggregate, so `=> ?p, count(?n) having count(?n) < 2` keeps the groups of
-	// size one. A Goal comparison cannot express this: it is applied per binding, before there is a
-	// group to count.
-	//
-	// An aggregate may appear here without being selected, which is how you ask for the subjects
-	// rather than the tally. That still groups: a Having aggregate makes the query grouped-and-reduced
-	// exactly as a Select one does, and its column is computed, filtered on, and then not printed
-	// (Columns is keyed off Select alone).
-	Having []Compare
-}
+import "github.com/panyam/jaala/datalog"
 
-// A Rule derives its Head for every binding satisfying Body. A rule is recursive when its Head
-// relation is reachable from a Body atom in the rule dependency graph; recursion terminates by
-// finiteness of the fact base (no function symbols). Rules materialize by stratified fixpoint
-// (query.materialize): a program that reads a relation under negation from inside that relation's own
-// recursive cycle is rejected, which is what keeps `not` well-defined.
-//
-// Example (transitive closure over a derived edge): connected(?a,?c) :- connected(?a,?b), link(?b,?c)
-// is Rule{Head: Atom connected(?a,?c), Body: [Atom connected(?a,?b), Atom link(?b,?c)]}.
-type Rule struct {
-	Head Atom
-	Body Body
-	Hops int // 0 = run to fixpoint; >0 = bound recursion depth (reserved; the fixpoint is finite regardless)
-}
+// The query IR. See the engine's documentation for each; they are aliases, not copies.
+type (
+	Query     = datalog.Query
+	Rule      = datalog.Rule
+	Body      = datalog.Body
+	Literal   = datalog.Literal
+	Atom      = datalog.Atom
+	Compare   = datalog.Compare
+	Term      = datalog.Term
+	Var       = datalog.Var
+	Value     = datalog.Value
+	Aggregate = datalog.Aggregate
+	Row       = datalog.Row
+	// Base is a design's queryable fact base. Build one with NewBase.
+	Base = datalog.Base
+	// Evaluator answers a Query over a Base.
+	Evaluator = datalog.Evaluator
+	// Naive is the default backtracking-join evaluator.
+	Naive = datalog.Naive
+)
 
-// A Body is an implicit conjunction (AND) of Literals. Disjunction (OR) is several Rules sharing
-// one Head relation — never an OR node — so the program stays stratifiable. Example: the body of
-// `a(?x), b(?x,?y), ?y < 5` is Body{Literals: [Atom a, Atom b, Compare]}.
-type Body struct{ Literals []Literal }
+// V builds a variable term (?name in the text syntax).
+func V(name string) Term { return datalog.V(name) }
 
-// A Literal is exactly one of: a positive atom, a negated atom (stratified negation), or a
-// comparison built-in. Exactly one field is non-nil. Examples: `param(?m,"VIN",?v)` is
-// Literal{Pos: &Atom{...}}; `not param(?m,"VIN",?v)` is Literal{Neg: ...}; `?v < 30` is
-// Literal{Compare: ...}.
-type Literal struct {
-	Pos     *Atom
-	Neg     *Atom
-	Compare *Compare
-}
+// Str builds a string-constant term.
+func Str(s string) Term { return datalog.Str(s) }
 
-// An Atom applies a relation to argument terms: Relation(Args...). Relation is an EDB name
-// (check.Rel*), a built-in (reaches), or an IDB name a Rule defines. Example: `component.mpn(?r,?m)`
-// is Atom{Relation: "component.mpn", Args: [Var("r"), Var("m")]}.
-type Atom struct {
-	Relation string
-	Args     []Term
-}
+// Num builds a numeric-constant term.
+func Num(f float64) Term { return datalog.Num(f) }
 
-// A Compare is a built-in predicate over two terms, evaluated once both are bound: Left Op Right,
-// Op in {<, <=, =, !=, >, >=}. Numeric when both bound values carry a number, string otherwise.
-type Compare struct {
-	Left  Term
-	Op    string
-	Right Term
-}
+// Rel builds an atom Relation(args...).
+func Rel(name string, args ...Term) Atom { return datalog.Rel(name, args...) }
 
-// A Term is a variable, a constant, or an aggregate over the group formed by the projection's plain
-// variables. Exactly one of Var/Const/Agg is set (Var == "" means not a variable). An Agg is legal in
-// a Select column and on the left of a Having; anywhere else there is no group for it to reduce.
-type Term struct {
-	Var   Var
-	Const *Value
-	Agg   *Aggregate
-}
+// Pos wraps an atom as a positive body literal.
+func Pos(a Atom) Literal { return datalog.Pos(a) }
 
-// Var is a logic variable name (the leading "?" is stripped at parse time).
-type Var string
+// Neg wraps an atom as a negated body literal.
+func Neg(a Atom) Literal { return datalog.Neg(a) }
 
-// A Value is a scalar fact value. A fact carries a string and, when numeric, a number, so a bound
-// term keeps both: string equality and numeric comparison both work with no re-parse.
-type Value struct {
-	S   string
-	Num *float64
-	// Absent marks a field the source did not state AT ALL, which is different from an empty string
-	// and different from zero. A datasheet row stating only a maximum leaves its minimum absent.
-	//
-	// It is a field rather than something inferred from a nil Num because the two are not the same
-	// question: a non-numeric string also has a nil Num, and conflating them means the engine
-	// RECONSTRUCTS absence from a coincidence instead of representing it. Before it was
-	// representable, an absent field bound to the empty string and ordering fell through to string
-	// order, where "" precedes everything and so "passed" every upper-bound test, including against a
-	// negative threshold.
-	Absent bool
-	// BaseUnit is the SI BASE symbol this value's number is expressed in ("V", "A", UnitOhm), or ""
-	// for a dimensionless value or a non-numeric one.
-	//
-	// NEVER A PREFIXED SPELLING. Scale normalization happens once and far upstream (param.InBaseUnit,
-	// CONSTRAINTS C24), so a millivolt datasheet row is already volts by the time it reaches a query.
-	// This layer checks DIMENSION (is this volts or amps) and never converts SCALE. Naming the field
-	// for that invariant is deliberate: a projector that set "mV" here would make a
-	// volts-against-millivolts comparison REFUSE rather than convert, which is a fresh silent wrong
-	// answer wearing the fix's clothes. TestRelationBaseUnitsAreCanonical enforces it.
-	//
-	// Distinct from the `param.unit` RELATION, which reports what the vendor PRINTED ("mV") for a
-	// human checking a citation. This says what the number IS in, for a machine comparing it.
-	BaseUnit string
-}
+// Cmp builds a comparison literal, Op in {<, <=, =, !=, >, >=}.
+func Cmp(l Term, op string, r Term) Literal { return datalog.Cmp(l, op, r) }
 
-// An Aggregate reduces Var over each group of the projection's plain-variable columns. Example:
-// `component-on-net(?ref,?net) => ?net, count(?ref)` groups by ?net and counts the ?ref bindings
-// per group (parts per net); Aggregate{Func: "count", Var: "ref"}. min/max/sum reduce Var's numeric
-// value over the group, and list joins its values.
-//
-// EVERY AGGREGATE REDUCES BINDINGS, NOT VALUES, unless Distinct is set. A binding is the unit the
-// whole evaluator deals in, so a group holds one row per solution and a goal that binds anything Var
-// does not determine repeats Var once per combination. On a net carrying 7 test points and 20
-// capacitors, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
-// component.class(?c,"capacitor"), component-on-net(?c,?net) => ?net, count(?tp)` reports 140.
-//
-// Distinct reduces the SET of Var's values instead: count(distinct ?tp) is 7 on that net, and
-// list(distinct ?tp) names those 7 once each. It is uniform across every function rather than
-// special-cased on count, deliberately. Making list implicitly distinct would put count(?tp) and
-// list(?tp) in one projection disagreeing about what the group holds, 140 against 7, with nothing in
-// the query saying why — which is this same trap one function over, and harder to see because both
-// columns look right on a group of size one.
-//
-// A derived relation is the other way to get a distinct reduce, by projecting the extra variable away
-// before the group forms:
-//
-//	has_tp(?n) :- component-on-net(?x,?n), component.class(?x,"test_point");
-//	component.class(?p,"capacitor"), component-on-net(?p,?n), has_tp(?n) => ?p, count(?n)
-//
-// The rule makes has_tp a SET of nets, so count(?n) counts nets whether or not Distinct is set.
-type Aggregate struct {
-	Func string // count | min | max | sum | list
-	Var  Var
-	// Distinct reduces Var's distinct values rather than one entry per binding. Spelled
-	// `count(distinct ?x)`. Bare aggregates keep their binding-wise meaning, so no existing query
-	// moves.
-	Distinct bool
-}
+// Def builds a rule Head :- body. Disjunction is several Defs sharing a Head relation.
+func Def(head Atom, body ...Literal) Rule { return datalog.Def(head, body...) }
 
-// Row is one answer: the projected variables bound to values, plus the provenance of the base
-// facts that produced it — so an answer stays verifiable.
-type Row struct {
-	Bind  map[Var]Value
-	Cites []string
-}
+// Build assembles a Query from its rules, the goal literals to solve, and the projected answer terms.
+func Build(rules []Rule, goal []Literal, sel ...Term) Query { return datalog.Build(rules, goal, sel...) }
 
-// v builds a variable term; k builds a constant string term. Kept unexported helpers for tests and
-// the parser to construct queries without the struct noise.
-func v(name string) Term { return Term{Var: Var(name)} }
-func k(s string) Term    { return Term{Const: &Value{S: s}} }
-func num(f float64) Term { return Term{Const: &Value{S: ftoa(f), Num: &f}} }
+// Parse parses the query text syntax.
+func Parse(s string) (Query, error) { return datalog.Parse(s) }
+
+// MustParse parses a query string and panics on error, for hand-authored rules constructed at package
+// init, where a malformed built-in query is a programming error surfaced at startup.
+func MustParse(s string) Query { return datalog.MustParse(s) }
+
+// NonInjectiveRules reports rules whose body lets two variables in the same position of the same
+// relation bind the same value with nothing separating them. See the engine's documentation.
+func NonInjectiveRules(q Query) []string { return datalog.NonInjectiveRules(q) }
+
+// CompileGlob compiles a shell-style glob the way the glob predicate does, for a Go caller that must
+// match the same pattern the same way.
+var CompileGlob = datalog.CompileGlob
+
+// CompilePattern compiles a regular expression the way the match predicate does.
+var CompilePattern = datalog.CompilePattern
