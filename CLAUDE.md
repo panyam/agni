@@ -154,7 +154,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   back to a relative `./web`, so a run from a design folder fails with `--web-dir "web" is not a
   directory`, and since agni 637 it fails BEFORE writing the artifact rather than after. The four keys
   are `mounts`, `symbol_paths`, `web_dir`, `native_tools`, and `web_dir` must name a BUILT bundle:
-  `checkWebAssets` stats three templates and three `static/*.js` before the listener opens.
+  `checkWebAssets` stats the viewer's templates and `static/*.js` before the listener opens.
+- **`agni serve` with NOTHING naming a web dir and no `./web` serves the API alone** (agni 735),
+  which is what a `go install` binary has, since the built JS is not in the Go module. Absent is a
+  choice and broken is a mistake: a NAMED dir that is wrong, or a `./web` without its bundle, still
+  fails. `open` and `--server self` always need the viewer. The datasheets workbench
+  (`DatasheetsPage`, `datasheets.js`, `pdf.worker.js`) is a separate optional group, and
+  `/datasheets/` answers a note naming the missing file when it is absent.
 - **An unknown key in `agni.yaml` is a hard ERROR, and the file is shared by every lane, every
   released binary and the container image.** So a new key goes in only after every reader on the
   machine understands it, and the probe has a trap: `agni <cmd> --help` short-circuits before the

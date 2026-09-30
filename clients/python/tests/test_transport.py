@@ -53,6 +53,15 @@ def test_connect_reaches_an_rpc_with_no_named_method(connect: Client):
     assert "tut" in [m.name for m in got.mounts]
 
 
+def test_a_server_with_no_viewer_says_so(server):
+    import urllib.request
+
+    with urllib.request.urlopen(server + "/", timeout=5) as r:
+        body = r.read().decode()
+    assert "WITHOUT the viewer" in body
+    assert "agni.v1.webapi.QueryService" in body
+
+
 def test_call_rejects_a_request_of_the_wrong_type(connect: Client):
     with pytest.raises(TypeError, match="agni.v1.webapi.RunQueryRequest"):
         connect.call("QueryService", "RunQuery", checks_pb2.CheckDesignRequest())

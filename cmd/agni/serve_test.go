@@ -28,20 +28,8 @@ func TestCheckWebAssets(t *testing.T) {
 		t.Errorf("missing bundle should hint pnpm build, got %v", err)
 	}
 
-	// Viewer template + bundle present, but the datasheets workbench page is missing (WS13-006).
+	// Viewer template + bundle present, but the browse page is missing (WS9-049 phase 2).
 	touch(t, filepath.Join(dir, "static", "app.js"))
-	if err := checkWebAssets(dir); err == nil || !strings.Contains(err.Error(), "DatasheetsPage.html") {
-		t.Errorf("missing datasheets page should name DatasheetsPage.html, got %v", err)
-	}
-
-	// Datasheets template present but its bundle missing: hint to build.
-	touch(t, filepath.Join(dir, "templates", "DatasheetsPage.html"))
-	if err := checkWebAssets(dir); err == nil || !strings.Contains(err.Error(), "datasheets.js") {
-		t.Errorf("missing datasheets bundle should name datasheets.js, got %v", err)
-	}
-
-	// Datasheets complete, but the browse page is missing (WS9-049 phase 2).
-	touch(t, filepath.Join(dir, "static", "datasheets.js"))
 	if err := checkWebAssets(dir); err == nil || !strings.Contains(err.Error(), "BrowsePage.html") {
 		t.Errorf("missing browse page should name BrowsePage.html, got %v", err)
 	}
@@ -52,15 +40,39 @@ func TestCheckWebAssets(t *testing.T) {
 		t.Errorf("missing browse bundle should name browse.js, got %v", err)
 	}
 
-	// All three templates and all three bundles present: valid.
+	// Both viewer templates and bundles present: valid, with no datasheets workbench at all (agni 735).
 	touch(t, filepath.Join(dir, "static", "browse.js"))
 	if err := checkWebAssets(dir); err != nil {
-		t.Errorf("a dir with every template and bundle should pass, got %v", err)
+		t.Errorf("a dir with the viewer's templates and bundles should pass, got %v", err)
 	}
 
 	// The repo's web/ dir passes (asserts the marker paths match the real layout).
 	if err := checkWebAssets("../../web"); err != nil {
 		t.Errorf("repo web/ should pass checkWebAssets, got %v", err)
+	}
+}
+
+// TestCheckDatasheetAssets: the workbench (WS13-006) is its own group, so each missing file is named
+// and a build is suggested, and the viewer's check no longer depends on any of it (agni issue 735).
+func TestCheckDatasheetAssets(t *testing.T) {
+	dir := t.TempDir()
+	if err := checkDatasheetAssets(dir); err == nil || !strings.Contains(err.Error(), "DatasheetsPage.html") {
+		t.Errorf("missing datasheets page should name DatasheetsPage.html, got %v", err)
+	}
+	touch(t, filepath.Join(dir, "templates", "DatasheetsPage.html"))
+	if err := checkDatasheetAssets(dir); err == nil || !strings.Contains(err.Error(), "datasheets.js") || !strings.Contains(err.Error(), "pnpm build") {
+		t.Errorf("missing datasheets bundle should name datasheets.js and hint pnpm build, got %v", err)
+	}
+	touch(t, filepath.Join(dir, "static", "datasheets.js"))
+	if err := checkDatasheetAssets(dir); err == nil || !strings.Contains(err.Error(), "pdf.worker.js") {
+		t.Errorf("missing pdf.js worker should name pdf.worker.js, got %v", err)
+	}
+	touch(t, filepath.Join(dir, "static", "pdf.worker.js"))
+	if err := checkDatasheetAssets(dir); err != nil {
+		t.Errorf("a complete workbench should pass, got %v", err)
+	}
+	if err := checkDatasheetAssets("../../web"); err != nil {
+		t.Errorf("repo web/ should carry the workbench, got %v", err)
 	}
 }
 

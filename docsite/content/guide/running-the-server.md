@@ -61,8 +61,22 @@ agni serve --addr :8080 --mount boards=~/boards --web-dir /path/to/agni/web
 
 `--web-dir` is the directory holding the viewer's own `templates/` and its built `static/*.js`, not a
 folder of designs. It defaults to `web`, which is where a repo checkout keeps them, so from a checkout
-you can leave it off. From anywhere else there is no relative answer, and the run stops with
-`--web-dir "web" is not a directory` rather than serving a broken page.
+you can leave it off.
+
+With no web dir at all, `agni serve` serves the API alone. That is what a binary from `go install`
+does outside a checkout, since the built JavaScript is not part of the Go module. The run says so on
+stderr, and `/` answers with a short text page listing the services and how to get the viewer. The
+Connect API, `/healthz`, and the rule and relation doc images all work, which is everything a script
+or the [Python client](../../build/other-languages/) needs.
+
+That only happens when NOTHING named a web dir and there is no `./web`. A directory you did name
+through the flag, an `agni.yaml` or the environment still has to exist and hold a built viewer, and a
+`./web` holding templates without its bundle (a checkout that has not run `make ui`) still stops the
+run, because either one is a mistake you want to hear about.
+
+The datasheets workbench is optional within a web dir. Its page, its bundle and the pdf.js worker
+are about two thirds of the built assets, and a web dir without them serves the rest of the viewer,
+with `/datasheets/` answering a note naming the missing file.
 
 Two ways to avoid typing it every time:
 
@@ -74,9 +88,9 @@ Two ways to avoid typing it every time:
 A run says on stderr when the value came from the environment, because an `AGNI_WEB_DIR` exported
 months ago outlives the memory of exporting it.
 
-**For one design, reach for [`agni open`](../cli-reference/#open-design) instead.** It works the
-assets out for itself, picks a free port, and prints the URL of the board rather than of a file
-browser. `agni serve` is for several designs at once, or for a server other people reach.
+**For one design, reach for [`agni open`](../cli-reference/#open-design) instead.** It picks a free
+port and prints the URL of the board rather than of a file browser. It finds the viewer the same way
+`serve` does, and unlike `serve` it needs one, since showing a page is its whole job. `agni serve` is for several designs at once, or for a server other people reach.
 
 ## Symbol libraries are already there
 

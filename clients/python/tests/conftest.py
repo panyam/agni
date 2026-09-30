@@ -1,7 +1,10 @@
 """A real binary and a real server over the tutorial fixture.
 
-Nothing here skips. A missing binary or an unbuilt viewer bundle fails the run, because a suite that
-skips when its inputs are absent passes over an empty set (build/evidence.md).
+The server runs with no web dir, from an empty working directory, which is how an installed binary
+serves the API (agni issue 735), so the suite needs no viewer bundle.
+
+Nothing here skips. A missing binary fails the run, because a suite that skips when its inputs are
+absent passes over an empty set (build/evidence.md).
 """
 
 from __future__ import annotations
@@ -20,7 +23,6 @@ from agni import Client, CliTransport, ConnectTransport
 REPO = Path(__file__).resolve().parents[3]
 FIXTURE = REPO / "examples" / "tutorial-project"
 AGNI = os.environ.get("AGNI_BIN", str(REPO / "bin" / "agni"))
-WEB_DIR = os.environ.get("AGNI_TEST_WEB_DIR", str(REPO / "web"))
 MOUNTS = {"tut": str(FIXTURE)}
 
 DESIGN = "mount://tut/designs/gateway"
@@ -64,7 +66,7 @@ def _free_port() -> int:
 def server(agni_bin, isolated):
     env, cwd = isolated
     port = _free_port()
-    argv = [agni_bin, "serve", "--addr", f"127.0.0.1:{port}", "--web-dir", WEB_DIR]
+    argv = [agni_bin, "serve", "--addr", f"127.0.0.1:{port}"]
     for name, path in MOUNTS.items():
         argv += ["--mount", f"{name}={path}"]
     proc = subprocess.Popen(argv, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

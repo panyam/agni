@@ -93,7 +93,9 @@ agni open designs/gateway/gateway.edn --web-dir /path/to/web
 ```
 
 `AGNI_WEB_DIR` and a `web_dir:` line in `agni.yaml` do the same thing without repeating the flag, and
-the error names all three if you get it wrong.
+the error names all three if you get it wrong. A binary from `go install` has no assets to point at,
+because the built JavaScript is not part of the Go module, so from there use a checkout's `web/`
+after `make ui`, or the container image.
 
 The viewer pans and zooms, and its panels run the same checks the CLI runs, over the same catalog, so
 the findings you saw in rung 2 appear against the drawing rather than as a list. Later rungs add tiers

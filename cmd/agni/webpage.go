@@ -147,7 +147,10 @@ func designsRouter(browse, work http.Handler) http.Handler {
 // page offering the destinations rather than on an empty file tree. It served the design browser
 // until the datasheets workbench made designs one surface among several rather than the whole app;
 // the browser did not move, it is still at /designs/.
-func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
+//
+// datasheetsErr is non-nil when the workbench's assets are absent, and /datasheets/ then answers with
+// it instead of a page that would fail to load its bundle (agni issue 735).
+func registerPages(app *goal.App[*serveApp], mux *http.ServeMux, datasheetsErr error) {
 	browse := pageHandler[*BrowsePage](app)
 	mux.Handle("/", pageHandler[*LandingPage](app))
 	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app)))
@@ -157,5 +160,9 @@ func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	// The extraction workbench (WS13-006) is its own page space. Like the viewer, the shell is
 	// identical for every path and per-datasheet state lives in the URL (/datasheets/files/<mount>/
 	// <path>), so a refresh or shared link reopens the datasheet.
+	if datasheetsErr != nil {
+		mux.Handle("/datasheets/", unavailableHandler(datasheetsErr))
+		return
+	}
 	goal.Register[*DatasheetsPage](app, mux, "/datasheets/")
 }

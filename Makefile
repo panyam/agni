@@ -150,9 +150,9 @@ test:
 
 # The Python client (agni issue 728) against a real binary and a real server. Its venv is its own and
 # small (protobuf, openpyxl, pytest), separate from the docling one `make setup` builds, and is rebuilt
-# when pyproject.toml changes. It depends on `ui` because `agni serve` refuses to start without the
-# viewer bundle even though the API never uses it (agni issue 735). PYTHONDONTWRITEBYTECODE keeps
-# __pycache__ out of the generated tree that proto-check diffs.
+# when pyproject.toml changes. Its server runs with no web dir, the API-only path an installed binary
+# takes (agni issue 735), so it needs no viewer bundle. PYTHONDONTWRITEBYTECODE keeps __pycache__ out
+# of the generated tree that proto-check diffs.
 PY_CLIENT := clients/python
 PY_VENV := $(PY_CLIENT)/.venv
 
@@ -163,8 +163,8 @@ $(PY_VENV)/.installed: $(PY_CLIENT)/pyproject.toml
 
 python-venv: $(PY_VENV)/.installed
 
-python-test: agni ui python-venv
-	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni AGNI_TEST_WEB_DIR=$(CURDIR)/web PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
+python-test: agni python-venv
+	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
 
 # Web unit tests: TypeScript typecheck + the vitest suite. No browser, no server.
 web-test:

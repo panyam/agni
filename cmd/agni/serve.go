@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"net"
 	"net/http"
@@ -57,7 +59,8 @@ func serveCmd() *cobra.Command {
 		Long: "serve hosts the server-rendered viewer shell, the esbuild bundle under /static/,\n" +
 			"and the Connect web API on one listener. Build the bundle first (pnpm build in web/).\n" +
 			"Pass --mount name=path (repeatable) to expose design folders to the file browser.\n" +
-			"The viewer's own assets come from --web-dir, defaulting to ./web.",
+			"The viewer's own assets come from --web-dir, defaulting to ./web. With no web dir named\n" +
+			"anywhere and no ./web, it serves the API alone, which is what an installed binary has.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runViewer(cmd, viewerOpts{
@@ -118,6 +121,10 @@ type viewerOpts struct {
 	// banner replaces the default "serving ... at ..." line when non-nil. `open` prints the design's
 	// own URL instead, because landing on a browse tree is the thing it exists to skip.
 	banner func(urls []string, mountCount int)
+
+	// requireViewer refuses to start without the viewer's assets, for `open`, which exists to show a
+	// page. `serve` leaves it false and may run the API alone (resolveServeAssets).
+	requireViewer bool
 }
 
 // runViewer builds and runs the viewer server. The body is `serve`'s, unchanged.
@@ -138,10 +145,20 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// which is the default anyway, so it never once carried information. What it did carry was a
 	// standing invitation to pass a DESIGN folder, which is why checkWebAssets still has to say
 	// what it is not.
-	dir, source, err := resolveWebAssets(webDir, os.Getenv)
-	if err != nil {
-		return err
+	var assets webAssets
+	if o.requireViewer {
+		dir, source, err := resolveWebAssets(webDir, os.Getenv)
+		if err != nil {
+			return err
+		}
+		assets = webAssets{dir: dir, source: source, viewer: true, datasheetsErr: checkDatasheetAssets(dir)}
+	} else {
+		var err error
+		if assets, err = resolveServeAssets(webDir, os.Getenv); err != nil {
+			return err
+		}
 	}
+	dir, source := assets.dir, assets.source
 	// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read, and
 	// the serving line below already prints the resolved directory, so announcing that case here
 	// says nothing a reader does not have twice over. The environment is the one provenance
@@ -265,7 +282,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// CheckService above from the one composed catalog.
 	rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc))
 	mux.Handle(rvPath, rvHandler)
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
+	if assets.viewer {
+		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
+	}
 	// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
 	// served read-only so the rules/expectations panels resolve their relative image refs
 	// (WS9-030). Images only, from the embed FS only — no filesystem access. The built-in and
@@ -282,14 +301,27 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// so ServeMux routes /datasheets/raw/... here and the page space elsewhere.
 	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(mounts)))
 	mux.Handle("GET /healthz", healthHandler())
-	registerPages(newPageApp(dir, &serveApp{mounts: mounts}), mux)
+	switch {
+	case !assets.viewer:
+		mux.Handle("/", apiOnlyHandler([]string{wsPath, prPath, dsPath, ckPath, diffPath, dtPath, qPath, rvPath}))
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
+	default:
+		if assets.datasheetsErr != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "note: %v\n", assets.datasheetsErr)
+		}
+		registerPages(newPageApp(dir, &serveApp{mounts: mounts}), mux, assets.datasheetsErr)
+	}
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 	urls := serveURLs(addr, lanIPs)
 	if o.banner != nil {
 		o.banner(urls, len(mounts))
 	} else {
-		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", dir, urls[0], len(mounts))
+		what := dir
+		if !assets.viewer {
+			what = "the API"
+		}
+		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", what, urls[0], len(mounts))
 		for _, u := range urls[1:] {
 			fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
 		}
@@ -476,13 +508,22 @@ func healthHandler() http.Handler {
 	})
 }
 
-// checkWebAssets verifies dir is the web-assets directory (the viewer template plus the built
-// esbuild bundle) before the server starts, so a misdirected `serve <design-folder>` fails upfront
-// with guidance instead of a cryptic template-not-found on the first request. The positional arg
-// is the assets dir (defaults to "web"); design folders are exposed with --mount, not this arg.
-// resolveWebAssets resolves --web-dir through its fallback chain and reports whether the viewer can
-// actually be served from what it found. It returns the directory and where the value came from, so a
-// caller can narrate the provenance.
+// webAssets is what a resolved --web-dir can serve. The viewer group (landing, browse and design
+// pages) and the datasheets workbench are separate because the workbench carries the pdf.js bundle,
+// about two thirds of the compressed assets, and is a tool for building a parameter corpus rather
+// than for looking at a board (agni issue 735).
+type webAssets struct {
+	dir    string
+	source string // where dir came from, as resolveWebDir reports it
+	// viewer is false only for API-only serving: nothing named a web dir and the default is absent.
+	viewer bool
+	// datasheetsErr says why the workbench is not served, and is nil when it is.
+	datasheetsErr error
+}
+
+// resolveWebAssets resolves --web-dir through its fallback chain and requires the VIEWER to be
+// servable from what it found. It returns the directory and where the value came from, so a caller
+// can narrate the provenance. The datasheets workbench is not required here; see resolveServeAssets.
 //
 // Split out of runViewer so `--server self` can ask the same question BEFORE the command it wraps
 // does its work (agni issue 637). That ordering is the whole point: self mints links into an artifact
@@ -499,6 +540,33 @@ func resolveWebAssets(flag string, getenv func(string) string) (dir, source stri
 	return dir, source, nil
 }
 
+// resolveServeAssets is `serve`'s version of the question, which admits one more answer: no viewer
+// at all. Absent is a choice and broken is a mistake, so the rule is narrow. When NOTHING named a web
+// dir (no flag, no agni.yaml, no environment) and the default ./web does not exist, serve runs the
+// API alone, which is what an installed binary run outside a checkout has. Every other failure still
+// fails: a named directory that is wrong is a typo the operator wants to hear about, and a ./web that
+// exists without its bundle is a checkout that forgot `make ui`.
+//
+// `open` and `--server self` keep calling resolveWebAssets, because their whole job is minting
+// viewer links, so for them no viewer is an error.
+func resolveServeAssets(flag string, getenv func(string) string) (webAssets, error) {
+	dir, source := resolveWebDir(flag, getenv)
+	if flag == "" && source == "" {
+		if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+			return webAssets{dir: dir}, nil
+		}
+	}
+	dir, source, err := resolveWebAssets(flag, getenv)
+	if err != nil {
+		return webAssets{}, err
+	}
+	return webAssets{dir: dir, source: source, viewer: true, datasheetsErr: checkDatasheetAssets(dir)}, nil
+}
+
+// checkWebAssets verifies dir holds the viewer (its templates plus the built esbuild bundle) before
+// the server starts, so a misdirected `serve --web-dir <design-folder>` fails upfront with guidance
+// instead of a cryptic template-not-found on the first request. Design folders are exposed with
+// --mount, not this flag.
 func checkWebAssets(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "templates", "ViewerPage.html")); err != nil {
 		return fmt.Errorf("%q has no templates/ViewerPage.html: --web-dir is the viewer's own assets dir (defaults to %q), not a folder to browse; mount design folders with --mount name=path", dir, defaultWebDir)
@@ -506,15 +574,7 @@ func checkWebAssets(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "static", "app.js")); err != nil {
 		return fmt.Errorf("%q has no static/app.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
 	}
-	// The extraction workbench (WS13-006) is a second server-rendered page with its own bundle;
-	// both must be present or /datasheets 500s/404s on the first request.
-	if _, err := os.Stat(filepath.Join(dir, "templates", "DatasheetsPage.html")); err != nil {
-		return fmt.Errorf("%q has no templates/DatasheetsPage.html (the datasheets workbench page)", dir)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "static", "datasheets.js")); err != nil {
-		return fmt.Errorf("%q has no static/datasheets.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
-	}
-	// The design browser (WS9-049) is the third server-rendered page with its own bundle. It is
+	// The design browser (WS9-049) is the second server-rendered page with its own bundle. It is
 	// also what "/" serves, so a missing browse asset breaks the landing page, not a side route.
 	if _, err := os.Stat(filepath.Join(dir, "templates", "BrowsePage.html")); err != nil {
 		return fmt.Errorf("%q has no templates/BrowsePage.html (the design browse page)", dir)
@@ -523,6 +583,50 @@ func checkWebAssets(dir string) error {
 		return fmt.Errorf("%q has no static/browse.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
 	}
 	return nil
+}
+
+// checkDatasheetAssets reports whether the extraction workbench (WS13-006) can be served: its page,
+// its bundle, and the standalone pdf.js worker the page loads. A missing one leaves the rest of the
+// viewer serving, and /datasheets/ answers with this error rather than a broken page.
+func checkDatasheetAssets(dir string) error {
+	for _, f := range []string{"templates/DatasheetsPage.html", "static/datasheets.js", "static/pdf.worker.js"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(f))); err != nil {
+			return fmt.Errorf("%q has no %s, so the datasheets workbench is off: build it with `cd %s && pnpm build`", dir, f, dir)
+		}
+	}
+	return nil
+}
+
+// apiOnlyHandler answers every page URL when serve runs without a viewer. "/" gets a 200 so a probe or
+// a person checking the server sees it is up; any other page path is a 404. Both bodies say what the
+// server does serve and how to get the viewer, since the person reading it is the one who expected a
+// page.
+func apiOnlyHandler(services []string) http.Handler {
+	var b strings.Builder
+	b.WriteString("agni serve is running WITHOUT the viewer: no web dir was named and there is no ./web here.\n\n")
+	b.WriteString("The Connect API answers POST /<service>/<method> with Content-Type: application/json. Services:\n")
+	for _, s := range services {
+		fmt.Fprintf(&b, "  %s\n", strings.TrimSuffix(s, "/"))
+	}
+	fmt.Fprintf(&b, "\nTo serve the viewer, point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory\n"+
+		"(from a checkout: make ui), or run the container image, which carries one.\n", envWebDir)
+	body := b.String()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if r.URL.Path == "/" {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+		io.WriteString(w, body)
+	})
+}
+
+// unavailableHandler answers a page space whose assets are absent, naming what is missing.
+func unavailableHandler(err error) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, err.Error(), http.StatusNotFound)
+	})
 }
 
 // firstImageHandler composes several rule-source image handlers into one, serving the response of the
