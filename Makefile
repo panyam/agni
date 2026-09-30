@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-check tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -14,6 +14,13 @@ proto:
 proto-web:
 	cd web && pnpm run gen
 
+# Regenerate the Python half (agni issue 728) into the client package. Its template writes into the
+# package's own src/, which also holds hand-written code, so it cannot use buf's `clean` and removes
+# the generated subtree itself instead.
+proto-py:
+	rm -rf clients/python/src/agni/v1
+	cd clients/python && buf generate ../../protos --template buf.gen.py.yaml
+
 # Freshness gate: fail when the committed generated code does not match the protos it came from.
 #
 # WHY THIS IS NOT GIT-STATUS-BASED like catalog-docs-check. That target regenerates IN PLACE and
@@ -23,18 +30,21 @@ proto-web:
 # ordering would make the gate a tax. Generating into a throwaway tree and diffing has no such
 # constraint, and it cannot leave the working tree dirty on failure.
 #
-# THE TEMP TREE MIRRORS THE REPO LAYOUT ON PURPOSE. Both buf templates write to RELATIVE paths that
+# THE TEMP TREE MIRRORS THE REPO LAYOUT ON PURPOSE. The buf templates write to RELATIVE paths that
 # climb out of their config directory (`out: ../gen/go` from protos/, `out: src/gen` from web/), and
 # `-o` resolves those relative to whatever it is given. Pointing `-o` straight at a bare temp dir
-# makes `../gen/go` escape it and land beside the temp dir instead. So `-o $$tmp/protos` and
-# `-o $$tmp/web` reproduce the two config directories' positions and the outputs land inside.
-# Both templates also set `clean: true`, which is another reason never to aim this at the real tree.
+# makes `../gen/go` escape it and land beside the temp dir instead. So `-o $$tmp/protos`,
+# `-o $$tmp/web` and `-o $$tmp/py` reproduce the config directories' positions and the outputs land
+# inside. The Go and TS templates also set `clean: true`, which is another reason never to aim this at
+# the real tree. The Python diff skips __pycache__, which importing the package writes beside the
+# generated modules.
 proto-check:
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	mkdir -p "$$tmp/protos" "$$tmp/web"; \
+	mkdir -p "$$tmp/protos" "$$tmp/web" "$$tmp/py"; \
 	(cd protos && buf generate -o "$$tmp/protos") || exit 1; \
 	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
+	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
 	fail=0; \
 	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
 		echo "generated Go is stale — run 'make proto' and commit the result:"; \
@@ -44,6 +54,11 @@ proto-check:
 	if ! diff -r web/src/gen "$$tmp/web/src/gen" >/dev/null 2>&1; then \
 		echo "generated TypeScript is stale — run 'make proto-web' and commit the result:"; \
 		diff -rq web/src/gen "$$tmp/web/src/gen" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" >/dev/null 2>&1; then \
+		echo "generated Python is stale — run 'make proto-py' and commit the result:"; \
+		diff -rq -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" 2>&1 | sed 's/^/  /'; \
 		fail=1; \
 	fi; \
 	exit $$fail
@@ -133,6 +148,24 @@ oracle: samples-oracle
 test:
 	$(GO) test ./...
 
+# The Python client (agni issue 728) against a real binary and a real server. Its venv is its own and
+# small (protobuf, openpyxl, pytest), separate from the docling one `make setup` builds, and is rebuilt
+# when pyproject.toml changes. It depends on `ui` because `agni serve` refuses to start without the
+# viewer bundle even though the API never uses it (agni issue 735). PYTHONDONTWRITEBYTECODE keeps
+# __pycache__ out of the generated tree that proto-check diffs.
+PY_CLIENT := clients/python
+PY_VENV := $(PY_CLIENT)/.venv
+
+$(PY_VENV)/.installed: $(PY_CLIENT)/pyproject.toml
+	python3 -m venv $(PY_VENV)
+	$(PY_VENV)/bin/pip install -q -e '$(PY_CLIENT)[test]'
+	touch $@
+
+python-venv: $(PY_VENV)/.installed
+
+python-test: agni ui python-venv
+	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni AGNI_TEST_WEB_DIR=$(CURDIR)/web PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
+
 # Web unit tests: TypeScript typecheck + the vitest suite. No browser, no server.
 web-test:
 	cd web && pnpm run typecheck && pnpm test
@@ -185,7 +218,7 @@ catalog-docs-check: catalog-docs
 # browser-test came back in on 2026-09-08 once the demo work was done, which is what the note that
 # took it out said to do. It was worth re-timing rather than trusting that note: the reason given was
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
-testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test examples-test web-test browser-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own

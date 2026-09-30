@@ -11,15 +11,17 @@ flowchart LR
     T --> V["vet<br/>ir-model-check<br/>fixture-copies-check"]
     T --> E["test<br/>examples-test<br/>docsite-test"]
     T --> W["ui<br/>web-test<br/>browser-test"]
+    T --> P["python-test"]
     T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check<br/>tidyall-check"]
     V --- Vn["Go hygiene, C19 ratchet,<br/>duplicated fixtures"]
     E --- En["engine, example modules, docsite wiring"]
     W --- Wn["bundle, typecheck, vitest,<br/>layout in a real Chromium"]
     G --- Gn["generated trees and module manifests<br/>still match their source"]
+    P --- Pn["the Python client, CLI and<br/>server asked the same question"]
     O(["make oracle"]) --- On["KiCad against real boards.<br/>NOT in the gate."]
     classDef note fill:none,stroke:none;
     classDef out stroke-dasharray: 4 3;
-    class Vn,En,Wn,Gn,On note;
+    class Vn,En,Wn,Gn,Pn,On note;
     class O,On out;
 ```
 
