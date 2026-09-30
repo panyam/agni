@@ -15,8 +15,9 @@ Last pruned 2026-09-30, at `e04a731d` (PR 741).
 
 1. **The datasheet workstream: #747, then #748, then #744, then #749.** The order and the storage
    design (blob store for raw files, an indexed metadata store derived from it and rebuildable) are the
-   latest comment on #744. Start with #747: `LoadSet` reads only `.textproto`, so every PartSpec the
-   workbench saves as `.partspec.json` is invisible to checks. #748 deletes `NewModelWithBoard` and
+   latest comments on #744. Start with #747, the missing promotion step: a workbench `.partspec.json`
+   is a deliberately unvalidated DRAFT that `LoadSet` never reads, and nothing turns a finished draft
+   into a seeded `.textproto` (read `SavePartSpec`'s comment first). #748 deletes `NewModelWithBoard` and
    `NewModelWithParams` outright, with no compatibility window. #744 builds on PR 743's asset groups.
 2. **#729: named query sets answered over one read.** Unblocked by #731, which moved the engine to
    `panyam/jaala`. Its engine half (N queries over one fact base) belongs in jaala, the file format,
