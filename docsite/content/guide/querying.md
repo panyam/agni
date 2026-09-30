@@ -288,6 +288,18 @@ the rest:
 
 {{ agniRun "content/guide/runs/query-aggregation.yaml" }}
 
+**With no plain column, the answer is always one row.** The whole result is then a single group,
+and it exists even when nothing matched, so a count of something the design lacks answers `0`
+rather than "no results":
+
+```
+net.ground(?n), component-on-net(?tp,?n), component.class(?tp,"test_point") => count(distinct ?tp)
+```
+
+`count` over nothing is `0`, `list` is empty, and `min`, `max` and `sum` have no value, as in SQL.
+A projection that does group, such as `=> ?n, count(?r)`, still answers nothing when nothing
+matched, because there is no net to name a group after.
+
 ### Keep only some groups (having)
 
 A comparison in the question filters facts, one at a time, before there is any group. To ask about

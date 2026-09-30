@@ -142,7 +142,39 @@ func RuleFromQuery(fq FindingQuery) (*check.Rule, error) {
 	if err := Validate(fq.Query, facts.DefaultRegistry()); err != nil {
 		return nil, err
 	}
+	if err := fq.checkProjects(fq.Query, "query"); err != nil {
+		return nil, err
+	}
+	if fq.Domain != nil {
+		if err := fq.checkProjects(fq.Domain.Query, "domain"); err != nil {
+			return nil, err
+		}
+	}
 	return buildRule(fq), nil
+}
+
+// checkProjects rejects a goal whose rows cannot name the finding's subject. Each row is read by
+// column name, so a subject the goal does not project as a plain column comes back as the empty
+// string and becomes a finding about nothing. An aggregate does not count: count(?r) is labelled
+// count(r), and over an empty design it is still one row (agni issue 726).
+func (fq FindingQuery) checkProjects(q Query, which string) error {
+	cols := map[Var]bool{}
+	for _, c := range q.Columns() {
+		cols[c] = true
+	}
+	need := []string{fq.SubjectVar}
+	if fq.PinVar != "" {
+		need = append(need, fq.PinVar)
+	}
+	for _, tv := range fq.TupleVars {
+		need = append(need, tv.Var)
+	}
+	for _, v := range need {
+		if !cols[Var(v)] {
+			return fmt.Errorf("query: %s: the %s does not project ?%s as a plain column, so its rows cannot name the finding's subject", fq.Rule.Name, which, v)
+		}
+	}
+	return nil
 }
 
 // MustRuleFromQuery is RuleFromQuery for a query that ships as CODE, panicking if it does not
