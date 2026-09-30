@@ -100,14 +100,35 @@ because an undeclared net is a question nobody asked and not a fault in the boar
 The three that check the promises are separated because a reviewer acts on them differently, and
 because two of them catch opposite defects (a net the map declares and the netlist does not have is
 usually a real disconnection, where a net the netlist has and the map does not declare is an
-incomplete map). `function` is accepted and NOT yet evaluated, since deciding whether a function is
-legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so
+incomplete map). The far-end columns are the sparse ones. In the one real map we measured, roughly a
+third of rows declared a far end, so `io-map-far-end` gives EVERY row a verdict and a row with no far
+end reads `not-considered`. A rule that reported only the rows carrying one would show a clean result
+over a third of the map and say nothing about the rest. `function` is accepted and NOT yet
+evaluated, since deciding whether a function is legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so
 outright.
 
 `rail_budgets` joins two tiers. The declaration supplies the demand, which no design
 artifact carries, and a seeded {{ explainable "absolute-maximum-rating" "datasheet parameter" }}
 supplies the regulator's capacity. Both halves have to be present or the rule stays quiet rather than
 guessing.
+
+### One rule per declared thing
+
+Two review items bound to one rule name share its verdict. So anything a reviewer signs off
+separately gets its own rule (WS3-058), and the naming follows what the sign-off is about.
+
+| Form | Rules it compiles to | Why that grain |
+|---|---|---|
+| `subsystems`, `sequences`, `strap_groups` | one per declared entry, named from a slug of it (`subsystem-<name>`, `sequence-<name>`, `strap-group-<name>`) | each entry is its own checklist item |
+| `protections`, `net_properties` | one per KIND (`protection-<kind>`, `property-<kind>`) | a reviewer signs off "every rail has its OVP clamp", not each rail |
+| `modules`, `voltage_domains`, `rail_budgets` | fixed names (`module-missing`, `module-count`, `voltage-domain-mismatch`, `rail-current-capacity`, `rail-current-margin`, `load-switch-trip-below-budget`) | the review item is the mechanism rather than any one entry |
+| `io_map` | four fixed names, whatever the map's length | the exception, since nobody signs off "net 137 is on the right pin" as its own item |
+
+`strap_groups` also compiles one `strap-address-collision` rule across all groups, because a
+collision is between two groups and belongs to neither. It compiles only when two groups share a bus,
+since over fewer it could only pass. `rail-current-margin` compiles only when the
+declaration states a `margin_factor`, so an item bound to it reads needs-design-intent rather than
+passing against a number nobody declared.
 
 ## With no declaration, nothing passes
 

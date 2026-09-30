@@ -199,18 +199,39 @@ field on `Rule`, a new case in the catalog, or a second thing a catalog can hold
   spec data source. Both are additive, and the evaluation model does not change to accommodate
   them.
 
-The same gate covers a third axis besides the board and parameter tiers, source-format capability.
-A rule that infers a defect from the absence of a construct the format cannot express declares the
-capability it needs, and a review over a design whose format lacks it reads that item as
-not-applicable with a reason rather than as a silent pass. A driver-absence check needs a format that
-types power-output pins, and a per-pin no-connect check needs a format that can mark a pin
-intentionally unconnected, and an EDIF netlist supplies neither. Without the gate the rule still
-produces no findings on that format, which a report cannot tell from a clean pass, so the requirement
-is declared rather than inferred and the report stays honest.
+### Source-format capabilities
 
-A capability is usually a property of the format's grammar, decided here from the source format. One
-is not: whether the READER detected a construct is a property of the reader's implementation, so it
-is declared per read in `InputDiagnostics.supplied` and the gate consults that.
+The same gate covers a third axis besides the board and parameter tiers, source-format capability
+(WS3-096). A rule that infers a defect from the absence of a construct the source cannot express
+declares the capability it needs in `Rule.RequiresCapability`, and a review over a design that lacks
+it reads that item as not-applicable with a reason rather than as a silent pass. Without the gate
+the rule still produces no findings there, and a report cannot tell that from a clean pass, so the
+requirement is declared rather than inferred.
+
+| Capability | Present when | Missing on | Rule that needs it | Queryable twin |
+|---|---|---|---|---|
+| `types_power_out` | the format types power-OUTPUT pins, so a rail's driver is visible | EDIF (INPUT, OUTPUT and INOUT only) and IPC-2581 (no pin electrical types) | `power-input-not-driven` | `types_power_out`, spec fact `design.types_power_out` |
+| `nc_channel` | the design can mark a pin intentionally open, by a NO_CONNECT pin type or an nc-marker net name | EDIF netlists | `unconnected-pin`, `power-pin-mistyped` | `has_nc_channel`, spec fact `design.nc_channel` |
+| `netclass` | nets carry tool-assigned net-class membership (WS3-105) | EDIF, IPC-2581, a bare `.kicad_sch`, and a KiCad project that declares no classes | any rule scoped by net class | `has_netclass`, spec fact `design.has_netclass` |
+| `netclass_defs` | the design declares what a class routes at, its clearance, track width and via sizes (WS3-111) | everything `netclass` is missing on, plus a project that assigns classes and defines none | `netclass-track-width`, `netclass-via-drill` | `has_netclass_defs` |
+| `ref_des_collisions` | the READER looked for duplicate reference designators | EDIF, gEDA, xschem | `duplicate-ref-des` | none, the gate reads `InputDiagnostics.supplied` |
+| `junction_taps` | the READER examined wire ends landing on wire bodies and recorded both halves | every format except KiCad | `wire-no-junction` | none, the gate reads `InputDiagnostics.supplied` |
+
+The six fall into three kinds, and the kind decides where the gate looks. `types_power_out` is a
+property of the format's grammar and is decided from the source format alone. `nc_channel`,
+`netclass` and `netclass_defs` are properties of the design's CONTENT, so a KiCad project with no
+classes lacks `netclass` as surely as an EDIF netlist does. `ref_des_collisions` and
+`junction_taps` are properties of the reader's implementation, so they are declared per read in
+`InputDiagnostics.supplied`, because only the reader knows whether it looked.
+
+`netclass_defs` is separate from `netclass` on purpose. A KiCad project's `net_settings` carries
+membership and definitions in independent blocks, so a project can assign nets to a class it never
+defines. A declared-versus-actual rule needs the LIMIT, and gating it on membership would let such a
+project run the rule over zero comparisons and report a clean pass.
+
+`junction_taps` gates on the JOINED half of the diagnostic rather than on the diagnostic as a
+whole. A reader could record the silent taps without the joined ones, which is what the KiCad reader
+did until agni issue 420, and the considered set must not claim coverage the reader did not have.
 
 <details>
 <summary>The rule that forced that second kind of capability</summary>

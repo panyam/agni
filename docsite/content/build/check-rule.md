@@ -251,6 +251,31 @@ flowchart TB
 | **An enumerator that drops a subject must say so** | a pin that will not resolve, a net with no voltage in its name, a datasheet binding no row of the kind. Those used to skip silently, reporting the same nothing as a rule that never looked, and are now `NOT_CONSIDERED` verdicts carrying the step that stopped them. Distinguish from OUT OF SCOPE, where a pin that is not a supply terminal yields no event at all |
 | **`StatesConsideredSet` is a declaration, not an inference** | a failures-only rule returns Fail verdicts structurally identical to a considered set whose every subject failed, so only the author can say which. Forgetting it under-reports a converted rule and can never over-report one |
 
+### Five outcomes, and the three that are not a pass
+
+A verdict's outcome is one of five. Three of them say why no pass was possible, and keeping those
+three apart is what lets a report say what the design lacks rather than guess.
+
+| Outcome | Wire form | Meaning |
+|---|---|---|
+| `Pass` | `pass` | the subject reached the comparison and cleared it |
+| `Fail` | `fail` | the subject reached the comparison and did not clear it |
+| `Inconclusive` | `inconclusive` | every input was present and the rule reached its decision, but the design cannot discriminate between the cases. A transistor in a power path may be an ideal-diode controller giving reverse protection or a plain switch giving none, and a netlist cannot tell them apart |
+| `NotConsidered` | `not-considered` | the rule applied to the subject and never reached a comparison. `Reason` names the step that stopped it |
+| `NoLimit` | `no-limit` | the subject DID reach the comparison and the datasheet row stated no bound, so nothing was checked |
+
+**A consumer must not count `Inconclusive` as a failure.** It is the outcome form of
+`Finding.Inconclusive` and carries that field's contract, which is why it cannot simply be `Fail`.
+Mapping it to `NotConsidered` would be worse, because a `NotConsidered` verdict produces no finding
+and the mapping would delete one the check path reports. `reverse-blocking-absent`, the
+`strap-group-*` rules, the io-map rules and the `property-*` rules produce it today.
+
+`NoLimit` and `NotConsidered` differ in where the rule stopped. `NotConsidered` never reached a
+comparison. `NoLimit` reached it and found nothing to compare against. Before `NoLimit` existed, a
+datasheet row stating no maximum and a design sitting comfortably under a stated maximum took the
+same silent `return` out of a rule. `check.CompareToBound` returns `NoLimit` for a `Bound` with
+neither side stated, so a rule that compares through it gets the distinction without asking.
+
 ### The two rules that still decline
 
 | Rule | How it declines | Why |

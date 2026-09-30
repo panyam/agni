@@ -147,6 +147,26 @@ tier depends on nothing in `core` (C17). Vendor symbols never appear in rule tex
 parameter prints as "VDC", "WV", or "Rated Voltage" depending on vendor, so `symbol` is the
 per-vendor match key and the lookup lives behind the join as a per-corpus alias map.
 
+**An alias set names one limit on one pair of terminals, and each extractor in `core/check`
+constrains the limit KIND only where the datasheet does.** The alias set, the unit, a stated max and
+the two trust gates above apply to every extractor. The rest differs per limit.
+
+| Extractor | Kind constrained | Why |
+|---|---|---|
+| `SupplyAbsMaxLimits` | `ABSOLUTE_MAX` | it reads what a supply pin can WITHSTAND |
+| `FetBreakdownLimits` | `ABSOLUTE_MAX` | drain-source breakdown is the voltage past which the part stops being a switch, and a datasheet always prints it as an absolute maximum |
+| `EsdRatingLimits` | `ABSOLUTE_MAX` | an ESD rating is a maximum survivable stress |
+| `OutputVoltageLimits`, `OutputCurrentLimits` | no | a regulator states its output as a recommended-operating or characteristic row, so filtering to one kind would find nothing on a real spec. The max is what a downstream part is exposed to |
+
+The FET breakdown set holds `VDSS`, `VDS`, `BVDSS` and `V(BR)DSS` and deliberately excludes `VGSS`.
+That is the gate-source rating, a different limit on a different pair of terminals and usually much
+lower, so comparing a rail against it would misreport which rating a design violates.
+
+An ESD rating is matched to the PART and not to the connector-facing PIN. A connector-facing net
+counts as IC-protected when any part within the protection radius declares a rating of 2 kV or more
+(`icEsdFloorVolts`), whichever of that part's pins the net lands on. Matching the rating to the pin
+is a deliberate follow-up.
+
 <details>
 <summary>The refusal that unit conversion replaced, and the five rule families it was silently breaking</summary>
 

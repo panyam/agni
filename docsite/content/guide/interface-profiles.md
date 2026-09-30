@@ -158,6 +158,20 @@ The pattern also shows why a signal's match is bounded. `MDCLK` opens with the l
 an unrelated clock, so both patterns require a non-letter on each side of the match. RE2 has no
 lookaround, so the boundary is written as explicit character classes.
 
+### Why MDIO is a profile and not a wider built-in
+
+The engine had one pull-up rule, and it answered one bus family by name. Its pattern matched SDA and
+SCL at a token boundary and nothing else looked at a management-interface name, so a board whose PHY
+bus had no pull-up on either line reported nothing, from a rule whose entire subject is that failure
+(agni issue 516). MDIO asks the same electrical question as I2C. Both lines idle high only because a
+resistor returns them there, and both sit undriven between transactions.
+
+Widening the built-in rule's pattern as well would report the same net from two rules, so the
+coverage lives in this profile as data instead. That leaves one gap, and it is the unresolved half
+of issue 516. The built-in I2C rule proves a pass with the resistor and rail it walked through, while
+a profile requirement's finding names only the net. A reviewer asking "show me the pull-up" gets a
+path on I2C and a bare net name on MDIO.
+
 ## The anchor, and when a profile decides it is looking at your board
 
 A profile that finds none of its signals has to stay silent. A board with no CAN on it is not

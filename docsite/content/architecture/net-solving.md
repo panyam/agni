@@ -128,3 +128,37 @@ Names cannot match. An unnamed net is auto-named by each tool in its own vocabul
 This method, not the unit tests, is what caught the mid-span label rule, the pins-are-endpoint-only rule, the `{slash}` escapes, the bus rules above, and the mirrored-placement pin swap.
 
 **Ask `kicad-cli` rather than reasoning about the format.** Sign conventions, a Y-flip, and two composition orders are in play, and a plausible derivation has been wrong more often than not here. Build the smallest schematic that distinguishes the cases, export a netlist from each variant, and read the answer off it. A fixture with labelled wire stubs at the compass points reports where a pin landed; one with a tap per bus member reports which members crossed.
+
+## How far a walk crosses series parts
+
+Several rules ask whether one net reaches another through series parts. Examples are a clamp near
+a connector pin, a regulator feeding a load, and a pull-up returning a bus to its rail. The walk crosses a part
+terminal to terminal only when the part is a series pass element (resistor, inductor, ferrite,
+fuse). A capacitor is a DC block, a diode has polarity, and anything active is not a wire, so none of
+them is crossed. Each crossing is one hop, and the radius a rule asks at is an electrical claim
+rather than a search budget.
+
+| Constant | Hops | Asked by | Why that number |
+|---|---|---|---|
+| `ProtectionReachHops` | 2 | every protection guard (clamp, fuse, power pin near a net) | a discharge arrives at a connector pin as a fast transient, and every series element before the clamp is impedance the surge pushes through before the clamp conducts. A TVS six resistors away protects what is downstream of itself, not the pin |
+| `SupplyPathReachHops` | 1 | supply-compatibility rules (WS3-028) | a bead or series resistor between a regulator and its load is ordinary. Voltage does not degrade along the path, so a wider radius makes every part look fed by every regulator |
+| `PowerPathReachHops` | 3 | the power-entry walk | a power entry legitimately crosses connector, fuse and bead before the regulator's input node, and asking at 2 stops short of the regulator |
+| `PullUpReachHops` | 3 | the I2C pull-up requirement | a pull-up directly on the bus is 1, behind a series isolation resistor is 2, and past 3 the series resistance is comparable to the pull-up, so the bus no longer returns high in time |
+
+The radii differ in opposite directions for opposite reasons. A protection question tolerates
+distance badly because the surge's effect grows with every element. A supply question tolerates it
+badly because voltage does NOT degrade, so distance stops meaning anything. **Widening any of them is
+the silent direction.** A wider protection radius credits distant clamps and turns an unprotected
+pin into a clean pass.
+
+The walk also refuses to cross INTO a net that looks like distribution rather than a series path.
+Such a net is a ground, a net marked global, or a net with more than 16 connections (`maxWalkFan`). A series node
+carries a handful of members, a fuse, a bead, a clamp, a cap or two and the load, where a rail or bus
+carries dozens. Without that guard a name-only rail, such as an EDIF `+5V` with no attributes, turns
+a pull-up into a doorway to the whole design. `net.bus_like` is the query relation reading the same
+definition. The start net is never treated as a stop.
+
+Two radii elsewhere are search budgets and are wide on purpose. `agni trace` searches 6 hops by
+default and prints the radius with its answer, since a route eight crossings long is still the
+route. The `reaches` relation searches the whole series neighbourhood (100 hops), because "what is
+connected to what through passives" is a topology question and not a claim about protection.
