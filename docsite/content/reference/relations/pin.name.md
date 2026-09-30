@@ -35,7 +35,7 @@ How far apart the two spellings are depends on the format:
 **On EDIF the two can be the same string, and a query should not assume otherwise.** When an EDIF
 file declares no pin designator the reader falls back to the port name (`readers/edif/reader.go`,
 issue 71), because the Model indexes pins by designator while a `portRef` names the port, so without
-the fallback nothing resolved. A design read that way answers `pin.name` and `pin` with identical
+the fallback nothing resolved. A design read that way answers `pin.name` and `component.pin` with identical
 values, which is correct rather than a defect: the format supplied one spelling and both fields
 carry it. Where the file does declare designators, they differ as everywhere else.
 
@@ -62,7 +62,7 @@ run of false warnings in a shipped in-house checker.
 row only when the result is non-empty and is not `~`. `PinName` reads the part type's pin list
 resolved at ingestion, so a design whose read supplied no part-type pin data yields no rows at all,
 which is the same nothing a design of entirely unnamed pins yields. Those two are not distinguished
-here; `pin` (the bare relation) is what says whether the read produced pins in the first place.
+here; `component.pin` (the relation listing a component's pins) is what says whether the read produced pins in the first place.
 
 ### Datalog
 

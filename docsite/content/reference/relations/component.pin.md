@@ -22,7 +22,7 @@ appear once, deduplicated by designator.
 ### For software engineers
 
 A pin is a **member of a class instance** (see ANALOGY.md: `PartType` is the class, `Component`
-the instance, the pin is one declared field). `pin` is the projection that lists those members
+the instance, the pin is one declared field). `component.pin` is the projection that lists those members
 for every instance. Rows are 1:1 with the `PinInst` entities the pin-level rules quantify over.
 It joins to `pin.role` / `pin.type` / `pin.net` on `(ref_des, pin)`, each adding one attribute of
 the same member. An empty result means the design carries no part-pin data (a netlist-only

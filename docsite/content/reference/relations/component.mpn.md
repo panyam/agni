@@ -20,7 +20,7 @@ list what a design actually orders, or to find the components a datasheet-backed
 
 ### For software engineers
 
-The part number is the lockfile entry (see ANALOGY.md): `component.net` and `pin` describe
+The part number is the lockfile entry (see ANALOGY.md): `component.net` and `component.pin` describe
 the graph structure, `component.mpn` binds a node to a concrete pinned artifact
 (`lodash@4.17.21`). Rows are 1:1 with components that carry a resolved part number, so it is a
 partial projection over `Components()` (unresolved components are simply absent). It is the

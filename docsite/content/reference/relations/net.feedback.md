@@ -15,13 +15,13 @@ A feedback net is the divider tap that feeds a switching or linear regulator's c
 high-impedance sense node, so anything you hang on it changes the voltage the regulator reads and
 shifts regulation. That is why a scope probe or a test point on a feedback node is a review finding:
 the probe's capacitance and loading disturb the loop it is measuring. During a review you query
-`feedback` to list the sense nodes, and you subtract it from `rail` so a probe-point or pull-up rule
+`net.feedback` to list the sense nodes, and you subtract it from `net.rail` so a probe-point or pull-up rule
 does not treat a sense tap as an ordinary rail.
 
 ### For software engineers
 
 Think of a feedback net as a node you may read but must not tap: observing it changes its value, so
-it is off-limits to the instrumentation a normal rail allows. `feedback` is a filtered projection
+it is off-limits to the instrumentation a normal rail allows. `net.feedback` is a filtered projection
 over `Nets()` with the naming predicate, so rows are 1:1 with feedback-named nets, and an empty
 result means no net name matched the sense-node lexicon.
 

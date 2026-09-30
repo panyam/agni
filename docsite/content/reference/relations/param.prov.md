@@ -7,7 +7,7 @@ description: "the citation of a datasheet parameter: the SourceDoc title, page, 
 
 `param.prov(mpn, symbol, doc, page, section)` yields one row per parameter of a datasheet spec that
 joined to a part in the design, keyed by manufacturer part number (`mpn`) and the parameter's
-datasheet symbol. Where `param` and `param.range` carry the parameter's VALUE, `param.prov` carries
+datasheet symbol. Where `param.max` and `param.range` carry the parameter's VALUE, `param.prov` carries
 its CITATION: `doc` is the source document's title (vendor document number and revision), `page` is
 the page the value was read from, and `section` is the table or figure on that page. It answers "where
 did this number come from", so a value and its provenance are both queryable from the same seeded
@@ -26,7 +26,7 @@ citation is required for a fact to exist: a value with no provenance is not a ve
 
 ### For software engineers
 
-`param.prov` is the provenance projection of the same seeded parameters `param`/`param.range` expose,
+`param.prov` is the provenance projection of the same seeded parameters `param.max`/`param.range` expose,
 split off so a query can ask for the citation without the value (or join both). The design-side
 identity is still `component.mpn(ref_des, mpn)`, so the join is unchanged. The tuple has room for the
 readable `doc` title, the `page`, and the `section`; the extraction `method` and `confidence` are not

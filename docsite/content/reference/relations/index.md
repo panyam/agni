@@ -84,7 +84,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | `glob(string, pattern)` | the whole string matches a shell-style glob (* any run, ? one char) |
 | `match(string, regex)` | the string matches an (unanchored) regular expression |
 | [`net.reaches(from, net, hops?)`](net.reaches/) | transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two |
-| [`net.route(from, net, path)`](net.route/) | the same walk as `reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one |
+| [`net.route(from, net, path)`](net.route/) | the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one |
 | `prefix(string, prefix)` | the string starts with the prefix |
 | `suffix(string, suffix)` | the string ends with the suffix |
 

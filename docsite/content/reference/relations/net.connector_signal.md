@@ -32,7 +32,7 @@ which is a genuine answer rather than a permissive one: a board that exposes not
 question to fail.
 
 It is the one part of the ESD guard stack that could not be composed from other relations. The
-protection predicates are reachability questions, and they became plain datalog once `reaches` carried
+protection predicates are reachability questions, and they became plain datalog once `net.reaches` carried
 distance (WS3-112):
 
 ```

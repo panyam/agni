@@ -59,7 +59,7 @@ The nets that are named after a rail without being one:
 net.role(?n, ?r), ?r != "rail", ?r != "ground" => ?n, ?r
 ```
 
-### Not the same as `rail`
+### Not the same as `net.rail`
 
 `net.rail(?n)` is `Model.IsPowerRail`, which holds for a net that is asserted-driven OR global OR a ground
 OR carries the rail role. So `net.rail(?n)` is a CONCLUSION and `net.role(?n, "rail")` is what the lexicon

@@ -27,7 +27,7 @@ A row is one line off a part's datasheet: an absolute-maximum, a recommended-ope
 rated value, under the test conditions the datasheet stated. The `max` value is presented, not
 silently compared. A parameter whose conditions survive only as free text (not structured as
 `eq`/`min`/`max`) is not machine-comparable, so the tool shows it to you beside its citation
-rather than auto-checking a design value against it. You query `param` during a review to see
+rather than auto-checking a design value against it. You query `param.max` during a review to see
 what the datasheet actually claims for a part before trusting a rule that leans on it, or to spot
 which parts have no extracted spec at all (they simply do not appear).
 
@@ -35,8 +35,8 @@ which parts have no extracted spec at all (they simply do not appear).
 
 A `PartSpec` is the `.d.ts` type stub for a closed-source dependency: machine-readable claims
 about a part you cannot see inside, each written against one pinned doc revision and linking back
-to the prose it came from. `param` projects those claims into query rows. The design-side
-identity is `component.mpn(ref_des, mpn)`; `param` is keyed by the same `mpn`, so the two relations
+to the prose it came from. `param.max` projects those claims into query rows. The design-side
+identity is `component.mpn(ref_des, mpn)`; `param.max` is keyed by the same `mpn`, so the two relations
 join on it. That join is the whole point of the tier: it is how a rule crosses from "this net in
 the design drives R1's VIN" to "R1's MPN has an absolute-maximum VIN of 20 V". Rows are 1:many
 with a part (one per parameter). Absent means the datasheet corpus was not loaded, or the part

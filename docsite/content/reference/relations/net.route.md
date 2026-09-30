@@ -1,11 +1,11 @@
 ---
 title: "net.route"
-description: "the same walk as `reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one"
+description: "the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one"
 ---
 
 ### What it is
 
-`net.route(from, net, path)` is the walk `reaches` makes, with the route it found bound as a value
+`net.route(from, net, path)` is the walk `net.reaches` makes, with the route it found bound as a value
 instead of discarded. It holds for the same pairs `net.reaches(from, net)` holds for, and `path` binds a
 readable rendering of what the walk crossed to get there:
 
@@ -26,7 +26,7 @@ re-asked one at a time.
 
 A resistor, ferrite or fuse in the middle of a signal splits the net without breaking the
 connection, so "is this pin joined to that one" is a question about a path across whatever parts sit
-in the way. `reaches` answers it. This says which parts those were.
+in the way. `net.reaches` answers it. This says which parts those were.
 
 That is usually the part you actually wanted. "VDD_3V3 is reachable from VBUS" is a fact you then go
 and look up in the schematic; "VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3" is the same fact with the series
@@ -43,7 +43,7 @@ the route, use `agni trace` instead. This relation is net-to-net, because that i
 
 ### For software engineers
 
-A generator over the same filtered graph `reaches` walks: nodes are nets, an edge exists only
+A generator over the same filtered graph `net.reaches` walks: nodes are nets, an edge exists only
 through a two-net pass element, and bus-like nets are excluded so the traversal cannot leak into a
 global singleton. `path` is a projection of the BFS tree, rendered.
 
@@ -63,7 +63,7 @@ outcomes apart and exits non-zero on an endpoint that names nothing.
 
 ### Go projector
 
-None. Like `reaches`, this is computed on demand from the design graph rather than stored, so it is
+None. Like `net.reaches`, this is computed on demand from the design graph rather than stored, so it is
 a datalog *predicate* (kind `predicate` in the catalog) rather than an EDB relation with a projector
 in `stdlib/relations/facts.go`. Its generator `genRoute` (`core/query/preds.go`) drives
 `check.Model.Reach` and renders each answer with `Reach.RouteLine`, which is the fourth reading of
@@ -101,7 +101,7 @@ from thirteen seconds to not finishing at all.
 
 ### Where this is going
 
-`reaches` and `route` are the same walk asked twice, which is a symptom rather than a design: a path
+`net.reaches` and `net.route` are the same walk asked twice, which is a symptom rather than a design: a path
 question still has no way to state its own radius or its own edge class, so each caller hand-codes
 one. Issue 374 designs a topology-pattern surface where the radius is a quantifier and the edge
 class is a character class, and where a match carries the path it found as a matter of course. If
