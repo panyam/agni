@@ -57,20 +57,21 @@ var builtinSchema = map[string][]facts.Field{
 	RelPartAudience:     {facts.FieldSubject, facts.FieldObject},                                                                         // part.audience(mpn, who)
 	RelComponentOnNet:   {facts.FieldSubject, facts.FieldObject},                                                                         // component-on-net(ref, net)
 	// Pin tier (WS3-038) — pin-granular relations, queryable with no evaluator change.
-	RelPin:           {facts.FieldSubject, facts.FieldObject},                   // pin(ref, pin)
-	RelPinRole:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.role(ref, pin, role)
-	RelPinType:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.type(ref, pin, etype)
-	RelPinNet:        {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.net(ref, pin, net)
-	RelPinName:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.name(ref, pin, name)
-	RelNetPinCount:   {facts.FieldSubject, facts.FieldNum},                      // net.pin_count(net, count)
-	RelHasNCChannel:  {facts.FieldSubject},                                      // has_nc_channel(present)
-	RelTypesPowerOut: {facts.FieldSubject},                                      // types_power_out(present)
-	RelRail:          {facts.FieldSubject},                                      // rail(net)
-	RelFeedback:      {facts.FieldSubject},
-	RelSwitching:     {facts.FieldSubject},
-	RelNetRole:       {facts.FieldSubject, facts.FieldValue},
-	RelNetAttr:       {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // feedback(net)
-	RelComponentAttr: {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // component.attr(ref, key, value)
+	RelPin:               {facts.FieldSubject, facts.FieldObject},                   // pin(ref, pin)
+	RelPinRole:           {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.role(ref, pin, role)
+	RelPinType:           {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.type(ref, pin, etype)
+	RelPinNet:            {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.net(ref, pin, net)
+	RelPinName:           {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.name(ref, pin, name)
+	RelNetPinCount:       {facts.FieldSubject, facts.FieldNum},                      // net.pin_count(net, count)
+	RelComponentNetCount: {facts.FieldSubject, facts.FieldNum},                      // component.net_count(ref, count)
+	RelHasNCChannel:      {facts.FieldSubject},                                      // has_nc_channel(present)
+	RelTypesPowerOut:     {facts.FieldSubject},                                      // types_power_out(present)
+	RelRail:              {facts.FieldSubject},                                      // rail(net)
+	RelFeedback:          {facts.FieldSubject},
+	RelSwitching:         {facts.FieldSubject},
+	RelNetRole:           {facts.FieldSubject, facts.FieldValue},
+	RelNetAttr:           {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // feedback(net)
+	RelComponentAttr:     {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // component.attr(ref, key, value)
 	// Device-class and net-attribute relations (WS3-074). component.class emits one row per class
 	// tag in the device_classes SET (WS3-071), so a family tag answers too.
 	RelComponentClass:        {facts.FieldSubject, facts.FieldValue},                    // component.class(ref, class)
@@ -123,6 +124,7 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "pin.name", Args: []string{"ref_des", "pin", "name"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "the part type's functional name for a pin (\"SDA\", \"PTC11\"), the spelling a datasheet and a firmware header use, against the package designator every other pin relation is keyed on; absent when the part type declares none", Kind: facts.KindNetlist},
 	{Name: "pin.net", Args: []string{"ref_des", "pin", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "net": {Entity: check.KindNet}}, Summary: "the net a pin is on (absent if unconnected)", Kind: facts.KindNetlist},
 	{Name: "net.pin_count", Args: []string{"net", "count"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the number of connections on a net", Kind: facts.KindNetlist},
+	{Name: "component.net_count", Args: []string{"ref_des", "count"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the number of distinct nets a component touches (0 for a part wired to nothing)", Kind: facts.KindNetlist},
 	{Name: "has_nc_channel", Args: []string{"present"}, Summary: "one row when the design can express intentional no-connect", Kind: facts.KindNetlist},
 	{Name: "types_power_out", Args: []string{"present"}, Summary: "one row when the source format classifies power-output pins (EDIF/IPC do not, so a driver-absence check is unsound there)", Kind: facts.KindNetlist},
 	{Name: "rail", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a power or ground rail", Kind: facts.KindNetlist},

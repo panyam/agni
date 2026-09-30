@@ -119,20 +119,21 @@ const (
 	// are derived (a name-based role, an electrical-type string); pin.net is absent for an
 	// unconnected pin (so `not pin.net(?r,?p,?_)` reads as "unconnected"); net.pin_count exposes the
 	// net fan-out a stub-vs-real check needs; has_nc_channel is the design-level no-connect gate.
-	RelPin           = "pin"             // pin(ref_des, pin): a part-type pin of a placed component. doc: facts/docs/pin.md
-	RelPinRole       = "pin.role"        // pin.role(ref_des, pin, role): derived power/ground/anode/cathode. doc: facts/docs/pin.role.md
-	RelPinType       = "pin.type"        // pin.type(ref_des, pin, etype): electrical type (power_in, input, ...). doc: facts/docs/pin.type.md
-	RelPinNet        = "pin.net"         // pin.net(ref_des, pin, net): the net a pin is on (absent if none). doc: facts/docs/pin.net.md
-	RelPinName       = "pin.name"        // pin.name(ref_des, pin, name): the part type's functional name for the pin (absent if unnamed). doc: facts/docs/pin.name.md
-	RelNetPinCount   = "net.pin_count"   // net.pin_count(net, count): connections on a net. doc: facts/docs/net.pin_count.md
-	RelHasNCChannel  = "has_nc_channel"  // has_nc_channel(present): one row when the design can express no-connect. doc: facts/docs/has_nc_channel.md
-	RelTypesPowerOut = "types_power_out" // types_power_out(present): one row when the source format types power-output pins (WS3-072). doc: facts/docs/types_power_out.md
-	RelRail          = "rail"            // rail(net): the net is a power/ground rail (Model.IsPowerRail). doc: facts/docs/rail.md
-	RelFeedback      = "feedback"        // feedback(net): the net is a regulator feedback/sense node (naming lexicon). doc: facts/docs/feedback.md
-	RelSwitching     = "switching"       // switching(net): the net is a regulator power-stage node (naming lexicon). doc: facts/docs/switching.md
-	RelNetRole       = "net.role"        // net.role(net, role): a role the net carries, one row per role. doc: facts/docs/net.role.md
-	RelNetAttr       = "net.attr"        // net.attr(net, key, value): a net-level attribute. doc: facts/docs/net.attr.md
-	RelComponentAttr = "component.attr"  // component.attr(ref_des, key, value): a component-level attribute. doc: facts/docs/component.attr.md
+	RelPin               = "pin"                 // pin(ref_des, pin): a part-type pin of a placed component. doc: facts/docs/pin.md
+	RelPinRole           = "pin.role"            // pin.role(ref_des, pin, role): derived power/ground/anode/cathode. doc: facts/docs/pin.role.md
+	RelPinType           = "pin.type"            // pin.type(ref_des, pin, etype): electrical type (power_in, input, ...). doc: facts/docs/pin.type.md
+	RelPinNet            = "pin.net"             // pin.net(ref_des, pin, net): the net a pin is on (absent if none). doc: facts/docs/pin.net.md
+	RelPinName           = "pin.name"            // pin.name(ref_des, pin, name): the part type's functional name for the pin (absent if unnamed). doc: facts/docs/pin.name.md
+	RelNetPinCount       = "net.pin_count"       // net.pin_count(net, count): connections on a net. doc: facts/docs/net.pin_count.md
+	RelComponentNetCount = "component.net_count" // component.net_count(ref_des, count): distinct nets a component touches. doc: facts/docs/component.net_count.md
+	RelHasNCChannel      = "has_nc_channel"      // has_nc_channel(present): one row when the design can express no-connect. doc: facts/docs/has_nc_channel.md
+	RelTypesPowerOut     = "types_power_out"     // types_power_out(present): one row when the source format types power-output pins (WS3-072). doc: facts/docs/types_power_out.md
+	RelRail              = "rail"                // rail(net): the net is a power/ground rail (Model.IsPowerRail). doc: facts/docs/rail.md
+	RelFeedback          = "feedback"            // feedback(net): the net is a regulator feedback/sense node (naming lexicon). doc: facts/docs/feedback.md
+	RelSwitching         = "switching"           // switching(net): the net is a regulator power-stage node (naming lexicon). doc: facts/docs/switching.md
+	RelNetRole           = "net.role"            // net.role(net, role): a role the net carries, one row per role. doc: facts/docs/net.role.md
+	RelNetAttr           = "net.attr"            // net.attr(net, key, value): a net-level attribute. doc: facts/docs/net.attr.md
+	RelComponentAttr     = "component.attr"      // component.attr(ref_des, key, value): a component-level attribute. doc: facts/docs/component.attr.md
 
 	// Device-class and net-attribute relations (WS3-074): the projections a class-quantified rule
 	// needs to be authored in datalog. component.class selects a device family (one row per class tag
@@ -281,6 +282,7 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, componentOnNetFacts(m)...)
 	out = append(out, pinFacts(m)...)
 	out = append(out, netPinCountFacts(m)...)
+	out = append(out, componentNetCountFacts(m)...)
 	out = append(out, ncChannelFacts(m)...)
 	out = append(out, typesPowerOutFacts(m)...)
 	out = append(out, railFacts(m)...)
@@ -957,6 +959,40 @@ func netPinCountFacts(m check.Model) []facts.Row {
 	for _, n := range m.Nets() {
 		c := float64(len(n.Connections))
 		out = append(out, facts.Row{Relation: RelNetPinCount, Subject: n.Name, Num: &c, Cites: cite(irCite(n.Prov))})
+	}
+	return out
+}
+
+// componentNetCountFacts emits how many DISTINCT nets each component touches, the twin of
+// net.pin_count from the part's side. It reads connections, as component-on-net does, rather than
+// part-type pins, so it answers on a bare netlist that carries no pin data, and it always agrees
+// with component-on-net. Every component gets a row, 0 for a part wired to nothing, and a ref seen
+// only in a connection gets one too, citing nothing since there is no placement to cite (agni
+// issue 727).
+func componentNetCountFacts(m check.Model) []facts.Row {
+	nets := map[string]map[string]bool{}
+	var order []string
+	touch := func(ref string) {
+		if nets[ref] == nil {
+			nets[ref] = map[string]bool{}
+			order = append(order, ref)
+		}
+	}
+	prov := map[string]*ir.Provenance{}
+	for _, c := range m.Components() {
+		touch(c.RefDes)
+		prov[c.RefDes] = c.Prov
+	}
+	for _, n := range m.Nets() {
+		for _, conn := range n.Connections {
+			touch(conn.ComponentRef)
+			nets[conn.ComponentRef][n.Name] = true
+		}
+	}
+	out := make([]facts.Row, 0, len(order))
+	for _, ref := range order {
+		c := float64(len(nets[ref]))
+		out = append(out, facts.Row{Relation: RelComponentNetCount, Subject: ref, Num: &c, Cites: cite(irCite(prov[ref]))})
 	}
 	return out
 }
