@@ -1,12 +1,11 @@
 // Package ipc2581 reads IPC-2581 (revision A/B/C) interchange XML into the neutral IR
-// (agni.v1.ir). It is core, runtime-agnostic Go (CONSTRAINTS C1): Read takes an io.Reader
+// (agni.v1.ir). It is core, runtime-agnostic Go (CONSTRAINTS C1), so Read takes an io.Reader
 // and records only provenance.
 //
-// IPC-2581 is PCB-fabrication-first, so this is the first reader to populate the physical
-// tier (Footprint, Layer, Stackup, BomLine) as well as the netlist (Component, Net,
-// Connection). Like a KiCad board, components are section-less (there is no logical unit
-// concept). Copper/pad geometry is dropped here (it belongs in a board-geometry sidecar,
-// C7/C8, not the netlist IR).
+// IPC-2581 is PCB-fabrication-first, so this reader populates the physical tier (Footprint,
+// Layer, Stackup, BomLine) as well as the netlist (Component, Net, Connection). Like a KiCad
+// board, components are section-less (there is no logical unit concept). Copper and pad
+// geometry go to the board-geometry sidecar (ReadBoardGeometry, C7/C8), not the netlist IR.
 package ipc2581
 
 import (
@@ -64,8 +63,8 @@ type layerEl struct {
 	Span     *spanEl `xml:"Span"`
 }
 
-// spanEl is a drill layer's <Span fromLayer= toLayer=>: the copper layers a via on that layer
-// bridges. A through via spans TOP..BOTTOM; blind/buried vias narrow the pair.
+// spanEl is a drill layer's <Span fromLayer= toLayer=>, naming the copper layers a via on that
+// layer bridges. A through via spans TOP..BOTTOM; blind/buried vias narrow the pair.
 type spanEl struct {
 	From string `xml:"fromLayer,attr"`
 	To   string `xml:"toLayer,attr"`
@@ -97,7 +96,7 @@ type compEl struct {
 	NonstdAttrs []nonstdAttrEl `xml:"NonstandardAttribute"`
 }
 
-// nonstdAttrEl is an IPC-2581 <NonstandardAttribute name= value= type=>: the vendor slot that
+// nonstdAttrEl is an IPC-2581 <NonstandardAttribute name= value= type=>, the vendor slot that
 // carries a component's VALUE (e.g. "4.7UF") and other per-part properties IPC has no first-class
 // element for.
 type nonstdAttrEl struct {
@@ -107,10 +106,10 @@ type nonstdAttrEl struct {
 
 type netEl struct {
 	Name string `xml:"name,attr"`
-	// NetClass is IPC-2581's LogicalNet/@netClass: a CLOSED enum (CLK/FIXED/GROUND/SIGNAL/POWER/
+	// NetClass is IPC-2581's LogicalNet/@netClass, a CLOSED enum (CLK/FIXED/GROUND/SIGNAL/POWER/
 	// UNUSED) saying what the net IS. Despite the name it is NOT KiCad's net class, which is
 	// user-named constraint-group membership and lives in ir.Net.net_classes (WS1-050). This one
-	// belongs to the role space, so it feeds ir.Net.roles via the shared ingestion pass.
+	// feeds ir.Net.roles through the shared ingestion pass.
 	NetClass string     `xml:"netClass,attr,omitempty"`
 	Pins     []pinRefEl `xml:"PinRef"`
 }
@@ -124,7 +123,7 @@ type pinRefEl struct {
 //
 // Fidelity: lossy-bounded. We extract the netlist (components, nets, connections) and the
 // physical tier (footprints, layers, stackup, BOM); copper/pad geometry, specs, and styles
-// are dropped. sourceFile is recorded in provenance only (CONSTRAINTS C1).
+// are dropped. sourceFile is provenance only.
 func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	var f ipcFile
 	if err := xml.NewDecoder(r).Decode(&f); err != nil {
@@ -136,11 +135,10 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	return f.toDesign(sourceFile), nil
 }
 
-// skipRefDes reports whether a component designator names no part this reader should carry: an
-// absent one, or a placeholder the source has not annotated yet. It is one function rather than a
-// condition written at each of the four sites (the netlist components, their connections, and the
-// two geometry passes) because those four disagreeing is the whole failure mode — the netlist and
-// the board geometry are joined by ref_des, so a component one tier keeps and the other drops is a
+// skipRefDes reports whether a component designator is absent or a placeholder the source has not
+// annotated yet, so it names no part this reader should carry. All four sites (the netlist
+// components, their connections, and the two geometry passes) call it because the netlist and the
+// board geometry join on ref_des, and a component one tier keeps and the other drops becomes a
 // placement with no component or a component with no placement.
 func skipRefDes(ref string) bool { return ref == "" || refdes.IsPlaceholder(ref) }
 
@@ -163,13 +161,10 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 	}
 
 	for _, c := range f.Comps {
-		// A component with no designator, or a placeholder one ("REF**", "C?1845"), is skipped the
-		// way the KiCad board reader skips it (readers/kicad/pcb.go): on a fabrication artifact
-		// that is usually a fiducial or a mechanical part rather than something to buy, and a
-		// placeholder is annotation state rather than an identity, so keying it merges parts that
-		// have nothing to do with each other. Both tiers of THIS reader have to agree too — the
-		// geometry side already dropped the designator-less ones, so before this guard the netlist
-		// carried components the board geometry had no placement for.
+		// Skip a component with no designator or a placeholder one ("REF**", "C?1845"), as the
+		// KiCad board reader does; see
+		// docsite/content/architecture/ingestion-and-ir.md#placeholder-designators. Both tiers of
+		// THIS reader have to agree, so the geometry passes skip through skipRefDes too.
 		if skipRefDes(c.RefDes) {
 			continue
 		}
@@ -177,9 +172,8 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		putAttr(comp.Attributes, "part", c.Part)
 		putAttr(comp.Attributes, "mount_type", c.MountType)
 		putAttr(comp.Attributes, "layer_ref", c.LayerRef)
-		// NonstandardAttribute carries the component VALUE (and other per-part properties); map the
-		// conventional "VALUE" onto the "Value" key checks/BOM/diff read (the KiCad convention), and
-		// keep any others verbatim.
+		// Map the conventional "VALUE" NonstandardAttribute onto the "Value" key that checks, BOM
+		// and diff read (the KiCad convention), and keep any others verbatim.
 		for _, na := range c.NonstdAttrs {
 			if na.Name == "" {
 				continue
@@ -200,28 +194,23 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		}}
 		d.Components = append(d.Components, comp)
 	}
-	// A board states one placement per physical part, and IPC-2581 has no gate or slot construct to
-	// group several under one designator, so a repeated refDes here is unambiguously the flat-netlist
-	// case the IR contract names: two placements claiming one name. Declared even when empty, which
-	// is what tells `duplicate-ref-des` this reader looked (agni issue 309).
-	// This reader records no other input diagnostic today. If it gains one, MERGE rather than
-	// assign: a fresh struct per signal silently drops the previous, which is the bug both the EDIF
-	// and gEDA readers hit the moment they had a second one.
+	// IPC-2581 has no gate or slot construct, so a repeated refDes is two placements claiming one
+	// name. Declared even when empty so `duplicate-ref-des` knows this reader looked (agni issue
+	// 309). A second diagnostic must MERGE into this struct, since assigning a fresh one drops this
+	// one; see docsite/content/architecture/ingestion-and-ir.md#input-diagnostics.
 	d.InputDiagnostics = refDesCollisions(f.Comps, src)
 
 	for _, n := range f.Nets {
 		net := &ir.Net{Name: n.Name, Attributes: map[string]string{}, Prov: prov()}
-		// The enum is a lossy normalization, so keep the source term beside the mapped one — the
-		// same discipline layer_function_raw follows below. declared_role is the NEUTRAL seam the
-		// ingestion pass reads (classify.StampNetRoles); the format-specific translation happens
-		// here, in the reader that knows the format (C1).
+		// The enum is a lossy normalization, so keep the source term beside the mapped one, as
+		// layer_function_raw does below. declared_role is the NEUTRAL key classify.StampNetRoles
+		// reads, and the format-specific translation happens here in the reader (C20's left-shift).
 		putAttr(net.Attributes, "netclass_raw", n.NetClass)
 		putAttr(net.Attributes, classify.AttrDeclaredRole, declaredRole(n.NetClass))
 		for _, pr := range n.Pins {
-			// A connection to a component the loop above skipped would claim a pin on a part that
-			// is not in the design. The KiCad board reader gets this for free (a skipped footprint
-			// takes its pads with it); here the net table is authored separately, so the same
-			// predicate has to run twice.
+			// Drop a connection to a component the loop above skipped. The net table is authored
+			// separately from the components, so the predicate runs twice (in KiCad a skipped
+			// footprint takes its pads with it).
 			if skipRefDes(pr.ComponentRef) {
 				continue
 			}
@@ -278,13 +267,11 @@ func (f *ipcFile) units() string {
 	return ""
 }
 
-// putAttr sets m[k]=v only when v is non-empty, keeping attribute maps free of empty noise.
 // declaredRole translates IPC-2581's LogicalNet/@netClass enum into the engine's net-role
-// vocabulary, or "" when the term states no role. Only GROUND and POWER carry one: SIGNAL is the
-// unremarkable default, FIXED is a routing directive (do not re-route) rather than a purpose, and
-// UNUSED is a lifecycle status. CLK genuinely IS a role, but the engine has no clock role yet, and
-// inventing one here would put a vocabulary decision in a reader; the source term stays in
-// netclass_raw either way, so nothing is lost and the mapping can grow later.
+// vocabulary, or "" when the term states no role. Only GROUND and POWER carry one. SIGNAL is the
+// default, FIXED is a routing directive (do not re-route), and UNUSED is a lifecycle status. CLK is
+// a role, but the engine has no clock role and a reader should not invent vocabulary. The source
+// term stays in netclass_raw either way.
 func declaredRole(netClass string) string {
 	switch netClass {
 	case "GROUND":
@@ -295,6 +282,7 @@ func declaredRole(netClass string) string {
 	return ""
 }
 
+// putAttr sets m[k]=v only when v is non-empty, keeping attribute maps free of empty noise.
 func putAttr(m map[string]string, k, v string) {
 	if v != "" {
 		m[k] = v
@@ -352,9 +340,8 @@ func mapLayerFunction(f string) ir.LayerFunction {
 }
 
 // refDesCollisions reports designators claimed by more than one placement, and declares that the
-// question was asked. It reads the PARSED components rather than d.Components so a duplicate is
-// still visible after the skip above: a skipped designator is one this reader deliberately does not
-// model, not one it failed to check.
+// question was asked. It applies the same skipRefDes filter as toDesign, so a placeholder is
+// excluded as unmodeled rather than reported.
 func refDesCollisions(comps []compEl, src string) *ir.InputDiagnostics {
 	order := []string{}
 	count := map[string]int{}

@@ -3,33 +3,27 @@ package classify
 import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
 // MPNAliases are the attribute keys a source spells a manufacturer part number with, in preference
-// order. Sources disagree on separator and case, and this is the whole of that variance.
+// order. Sources disagree on separator and case, and this list covers that variance.
 //
-// Exported because a reader needs the same vocabulary to find the fact in its own grammar (EDIF
-// scans cell `property` nodes by name). Extracting the fact from a format is reader work; deciding
-// where it lands is this pass's. They must agree on the SPELLINGS, so there is one list.
+// Exported because a reader needs the same spellings to find the fact in its own grammar (EDIF scans
+// cell `property` nodes by name), while deciding where the fact lands is this pass's job.
 //
-// Note these are read-only: nothing writes a canonical MPN attribute any more. The answer is the
-// typed ir.Component.mpn field, and these are the raw keys it is derived FROM.
+// These are read-only. Nothing writes a canonical MPN attribute; the answer is the typed
+// ir.Component.mpn field, and these are the raw keys it is derived FROM.
 var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn"}
 
 // StampMPN fills ir.Component.mpn once at ingestion, for every format. It is a
-// DERIVED-NORMALIZATION pass under C9: no reader populates the field, one shared pass does, and a
-// design built without the pass leaves it empty, which consumers read as "no part number stated"
-// rather than as a fact about the design.
+// DERIVED-NORMALIZATION pass under C9: no reader populates the field, and a design built without the
+// pass leaves it empty, which consumers read as "no part number stated".
 //
-// WHY THIS IS A SHARED PASS AND NOT A READER'S JOB, which is the whole point of agni issue 519.
-// The EDIF reader used to carry both halves of this privately, so EDIF designs resolved part numbers
-// and nothing else did. Telesis records its part number on the PART TYPE, every consumer read the
-// component, and the two never met: `component.mpn` came back empty for every component of every
-// .tel design. Since the datasheet join is component.mpn -> param, that silently disabled the entire
-// parameter tier on that format. Nothing reported an error, because a parameter rule that finds no
-// part number cannot tell "no datasheet seeded" from "this format never delivers one".
+// It is a shared pass rather than reader work (agni issue 519), because a reader promoting the
+// number privately leaves every other format with an empty component.mpn and a silently disabled
+// parameter tier. See docsite/content/build/format-reader.md#the-part-number-is-the-one-to-get-wrong-quietly.
 //
 // Three sources, most specific first, and it stops at the first that answers:
 //
-//  1. THE COMPONENT'S OWN ATTRIBUTES, under any alias. The usual case: a part number is stated per
-//     placement, because a library symbol is coarser than an orderable product.
+//  1. THE COMPONENT'S OWN ATTRIBUTES, under any alias. The usual case, since a part number is stated per
+//     placement and a library symbol is coarser than an orderable product.
 //  2. ITS PART TYPE's typed mpn, for the sources that model the type AS an orderable part.
 //  3. ITS PART TYPE's attributes, under any alias, for a reader that has not been converted to the
 //     typed field.
@@ -37,7 +31,7 @@ var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn"}
 // It resolves the part through PartIndex/FirstPart, the same resolution Stamp and check.NewModel use,
 // so a component's class and its part number cannot disagree about which part type it has.
 //
-// Idempotent: a component that already has one is skipped, so re-running is a no-op.
+// Idempotent, since a component that already has one is skipped.
 func StampMPN(d *ir.Design) {
 	index := PartIndex(d)
 	for _, c := range d.GetComponents() {

@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/internal/symread"
 )
 
-// Faithful schematic geometry: the drawing (symbol artwork + wires + labels), for the WebGL/SVG
+// Faithful schematic geometry is the drawing (symbol artwork + wires + labels) for the WebGL/SVG
 // renderers, as opposed to the netlist (read.go). gEDA is Y-up like geom, so coordinates pass
 // through unscaled; the placement transform maps directly (an angle is a geom CCW rotation, a
 // mirror is a y-axis mirror). A .sym's L/B/V/A drawing objects become geom Shapes; an embedded G
@@ -67,20 +67,20 @@ func extractGeometry(lines []string, src string, open SymbolOpener) *geom.Schema
 			attrs, fields, next := attrBlockFields(lines, i+1)
 			i = next
 			if annotationSymbols[base] && !geomRenderAnnotation[base] {
-				continue // clutter annotation: not drawn in geometry (WS7-037)
+				continue // clutter annotation, not drawn in geometry (WS7-037)
 			}
 			resolveSym(symref)
 			// A power/ground symbol names the net at its pin rather than being a part (read.go keeps
 			// it out of Components), and it spells that name in its instance net= attribute. Carrying
-			// it as net_anchor is what makes the glyph addressable; carrying a refdes would offer a
-			// component that does not exist.
+			// it as net_anchor makes the glyph addressable, where a refdes would offer a component
+			// that does not exist.
 			ref, anchor := attrs["refdes"], ""
 			if isPowerSymbol(base) {
 				// The same fallback the netlist side resolves an anchor by (resolveAnchors): the
 				// instance's net= names it, else the symbol's own, else the conventional supply for
-				// that symbol family. Sharing the ladder is what keeps the glyph's key and the net
-				// it actually joins from disagreeing — a ground symbol that keyed one name while the
-				// solver used another would be worse than one that keyed nothing.
+				// that symbol family. Sharing the ladder keeps the glyph's key and the net it joins in
+				// agreement. A ground symbol keyed to one name while the solver used another would be
+				// worse than one keyed to nothing.
 				anchor = netFromNetAttr(attrs["net"])
 				if anchor == "" {
 					if open != nil {
@@ -112,7 +112,7 @@ func extractGeometry(lines []string, src string, open SymbolOpener) *geom.Schema
 			i = next
 			pts := []*geom.Point{gedaPt(x1, y1), gedaPt(x2, y2)}
 			if field(f, 0) == "U" {
-				// A gEDA `U` is a bus segment (WS7-042): draw it as a KIND_BUS wire named by its inline
+				// A gEDA `U` is a bus segment (WS7-042), drawn as a KIND_BUS wire named by its inline
 				// netname (the same name the netlist reader flags on ir.BusNotModeled.Label), so it
 				// styles as a bus and a bus-not-modeled finding highlights it by name (WS7-042b). Not
 				// routed through findWire, so it never merges into the plain-net pool.
@@ -236,7 +236,7 @@ func symbolShapes(lines []string) []*geom.Shape {
 			shapes = append(shapes, geomath.ArcShape(cx, cy, rad, a, b, gedaPt))
 			i++
 		case "P", "H", "T":
-			// pin (captured as PinPoint), path, or text: consume any attached block / body.
+			// A pin (captured as PinPoint), path, or text may own an attached block or body; skip it.
 			_, next := gedaConsume(lines, i)
 			i = next
 		default:

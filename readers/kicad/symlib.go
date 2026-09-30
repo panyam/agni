@@ -7,16 +7,16 @@ import (
 
 // This file is the external symbol-library side of the reader (WS1-016): resolving
 // `lib_id "Library:Symbol"` references that the schematic does NOT embed in lib_symbols,
-// from `.kicad_sym` files — KiCad's own installed libraries or a vendored copy. v6+
+// from `.kicad_sym` files, either KiCad's own installed libraries or a vendored copy. v6+
 // schematics are self-contained, so the embedded index always wins and this path serves
 // stripped/minimal files and fixtures that want authentic artwork without pasting it in.
-// The reader owns no file I/O (C1): the caller supplies openSym, built by
+// The reader owns no file I/O (C1). The caller supplies openSym, built by
 // formats from the project's sym-lib-table and the --symbol-path dirs, the same
 // opener pattern the xschem/gEDA readers use for `.sym` files.
 
-// ParseSymLibTable parses a KiCad sym-lib-table: the project's nickname -> library-file
-// mapping. ${KIPRJMOD} expands to projDir (the table's own directory, per KiCad); other
-// ${VAR} references are left verbatim — the caller falls back to searching its symbol
+// ParseSymLibTable parses a KiCad sym-lib-table, the project's nickname -> library-file
+// mapping. ${KIPRJMOD} expands to projDir (the table's own directory, per KiCad). Other
+// ${VAR} references are left verbatim, and the caller falls back to searching its symbol
 // dirs by nickname, which is how installed-lib names (${KICAD9_SYMBOL_DIR}/Device.kicad_sym)
 // resolve without environment knowledge. Pure function on bytes; no file I/O.
 func ParseSymLibTable(data []byte, projDir string) map[string]string {
@@ -38,8 +38,8 @@ func ParseSymLibTable(data []byte, projDir string) map[string]string {
 
 // symLibCache resolves lib_id references against external libraries, one parse per
 // library per read. A library that fails to open or parse is remembered as absent, so a
-// missing lib costs one lookup, not one per placement. nil receiver (no opener supplied)
-// resolves nothing — every call site degrades to today's placeholder behavior.
+// missing lib costs one lookup, not one per placement. A nil receiver (no opener supplied)
+// resolves nothing, so every call site degrades to the placeholder behavior.
 type symLibCache struct {
 	open func(lib string) ([]byte, error)
 	libs map[string]map[string]*node
@@ -53,9 +53,10 @@ func newSymLibCache(open func(lib string) ([]byte, error)) *symLibCache {
 }
 
 // symbol resolves "Library:Name" to its lib-symbol node, with same-library `extends`
-// chains flattened (official libs derive symbols heavily: a child that declares no unit
-// sub-symbols of its own inherits the parent's pins and artwork; child properties win).
-// Cross-library extends is out of scope (OUT_OF_SCOPE.md). Returns nil when unresolved.
+// chains flattened. Official libs derive symbols heavily, and a child that declares no
+// unit sub-symbols of its own inherits the parent's pins and artwork while its own
+// properties win. Cross-library extends is not resolved (readers/kicad/GRAMMAR.md).
+// Returns nil when unresolved.
 func (c *symLibCache) symbol(libID string) *node {
 	if c == nil {
 		return nil
@@ -94,7 +95,7 @@ func (c *symLibCache) load(lib string) map[string]*node {
 	return syms
 }
 
-// flattenExtends resolves a derived symbol against its same-library parent chain: when
+// flattenExtends resolves a derived symbol against its same-library parent chain. When
 // the child has no unit sub-symbols, a synthetic node is built carrying the child's own
 // entries (properties, the name) plus the parent's sub-symbols and pin display flags.
 // Depth-capped against cyclic extends.

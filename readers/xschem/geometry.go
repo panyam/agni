@@ -16,7 +16,7 @@ import (
 	"github.com/panyam/agni/internal/symread"
 )
 
-// Faithful schematic geometry: the drawing itself (symbol artwork + wires + labels), for the
+// Faithful schematic geometry is the drawing itself (symbol artwork + wires + labels) for the
 // WebGL/SVG renderers, as opposed to the netlist (read.go). A .sym's drawing primitives
 // (L/B/A/P) become geom.Shapes; component instances become placements carrying the transform
 // the renderer applies to the symbol-local shapes. Resolving symbols needs the .sym library,
@@ -25,9 +25,9 @@ import (
 //
 // Coordinates: xschem is Y-down (a smaller/more-negative y is higher on the page), while geom
 // is Y-up, so every xschem coordinate is negated in Y (and scaled) on the way in. The placement
-// transform is mapped onto geom's contract accordingly: an xschem flip is a y-axis mirror, and
-// an xschem rotation r (CCW in xschem's frame) becomes a (360-90*r)-degree geom rotation because
-// negating Y reverses the sense of rotation. Verified against a real schematic (see transform).
+// transform follows from that. An xschem flip is a y-axis mirror, and an xschem rotation r (CCW
+// in xschem's frame) becomes a (360-90*r)-degree geom rotation because negating Y reverses the
+// sense of rotation. See xschemTransform.
 
 // geomScale converts xschem source units to geom units. xschem uses a half-integer grid, so a
 // factor of 10 keeps that (and arc sampling) integer-precise; the renderer fits to the viewport,
@@ -109,7 +109,7 @@ func extractGeometry(objs []object, src string, open SymbolOpener) *geom.Schemat
 			symref := o.braceAt(0)
 			base := symread.SymbolBase(symref)
 			if annotationSymbols[base] && !geomRenderAnnotation[base] {
-				continue // clutter annotation (probes/launchers/...): not drawn (WS7-037)
+				continue // clutter annotation (probes/launchers/...), not drawn (WS7-037)
 			}
 			x, _ := atoi(o.word(1))
 			y, _ := atoi(o.word(2))
@@ -119,8 +119,8 @@ func extractGeometry(objs []object, src string, open SymbolOpener) *geom.Schemat
 			ls := resolveSym(symref)
 			// A label symbol (gnd/vdd/ipin/opin/lab_pin) names the net at its origin rather than
 			// being a part, and read.go keeps it out of Components for that reason. Its instance
-			// name therefore joins to nothing, so carrying it as a ref_des made the glyph selectable
-			// as a component that does not exist; the net it names goes in net_anchor instead.
+			// name therefore joins to nothing, and as a ref_des it would make the glyph selectable
+			// as a component that does not exist, so the net it names goes in net_anchor instead.
 			ref, anchor := p["name"], ""
 			if labelSymbols[base] {
 				ref, anchor = "", p["lab"]
@@ -170,8 +170,8 @@ func extractGeometry(objs []object, src string, open SymbolOpener) *geom.Schemat
 // xschemTransform maps an xschem instance (origin x,y; rotation rot 0-3; flip 0/1) onto the geom
 // Transform contract (scale, mirror, rotate-CCW, translate, in Y-up coordinates). Because Y is
 // negated for Y-up, an xschem flip becomes a y-axis mirror and an xschem CCW rotation r becomes a
-// (360-90*r)-degree geom rotation. Verified: res.sym pin (0,-30) under "150 -460 rot=3 flip=1"
-// lands at geom (1200,4600) = xschem (120,-460), on its wire.
+// (360-90*r)-degree geom rotation. On transform's verified res.sym example the pin lands at geom
+// (1200,4600) = xschem (120,-460), on its wire.
 func xschemTransform(x, y float64, rot, flip int) *geom.Transform {
 	return &geom.Transform{
 		Origin:      gpt(x, y),
@@ -188,15 +188,15 @@ type loadedSym struct {
 	annotTexts []annotText // every text object, for the annotation symbols we render (WS7-037)
 }
 
-// annotText is a raw text object of a rendered annotation symbol (title/code/code_shown): its
-// template string (which may embed @attr references and span lines) at a symbol-local point.
+// annotText is a raw text object of a rendered annotation symbol (title/code/code_shown), holding
+// its template string (which may embed @attr references and span lines) at a symbol-local point.
 type annotText struct {
 	text   string
 	x, y   float64
 	height float64
 }
 
-// fieldTemplate is a .sym "T {@key} x y ..." placeholder: an instance attribute drawn at a
+// fieldTemplate is a .sym "T {@key} x y ..." placeholder, an instance attribute drawn at a
 // symbol-local position. key is the attribute name (e.g. "name", "value").
 type fieldTemplate struct {
 	key    string
@@ -237,8 +237,8 @@ func loadSymbol(symref, base, src string, open SymbolOpener) *loadedSym {
 }
 
 // symbolAnnotTexts collects every text object of a .sym verbatim, for the annotation symbols the
-// geometry reader renders (WS7-037): their drawn fields are @author/@path/... and static labels,
-// not just the @name/@value that symbolTemplates handles.
+// geometry reader renders (WS7-037). Their drawn fields include @author/@path/... and static
+// labels, beyond the @name/@value that symbolTemplates handles.
 func symbolAnnotTexts(objs []object) []annotText {
 	var out []annotText
 	for _, o := range objs {
@@ -256,7 +256,7 @@ func symbolAnnotTexts(objs []object) []annotText {
 // atToken matches an @attr reference inside an annotation template.
 var atToken = regexp.MustCompile(`@[A-Za-z_][A-Za-z0-9_.]*`)
 
-// annotationFields renders a rendered-annotation symbol's text: each template's @attr references
+// annotationFields renders a rendered-annotation symbol's text. Each template's @attr references
 // are substituted from the instance props (or a derived value), and the result is emitted as one
 // or more stacked geom.Fields at the transformed position. Static text passes through; global/
 // derived @attrs not resolved here (e.g. @time_last_modified) become empty. Multi-line values
@@ -285,8 +285,9 @@ func annotationFields(texts []annotText, p map[string]string, src string, x, y f
 	return fields
 }
 
-// annotAttr resolves an @attr reference in an annotation template: instance attributes by name,
-// the schematic filename for @schname_ext, and empty for global/derived fields left out of scope.
+// annotAttr resolves an @attr reference in an annotation template to an instance attribute by
+// name, the schematic filename for @schname_ext, or empty for global/derived fields left out of
+// scope.
 func annotAttr(key, src string, p map[string]string) string {
 	switch key {
 	case "schname_ext":
@@ -298,7 +299,7 @@ func annotAttr(key, src string, p map[string]string) string {
 	}
 }
 
-// symbolTemplates extracts the drawn field placeholders from a .sym: text objects whose text is
+// symbolTemplates extracts the drawn field placeholders from a .sym, the text objects whose text is
 // exactly "@name" or "@value" (the reference designator and value that xschem draws by default),
 // with their symbol-local position and size. Other "@..." templates (pin numbers, spice
 // annotations) are not treated as fields.
@@ -325,8 +326,8 @@ func symbolTemplates(objs []object) []fieldTemplate {
 	return out
 }
 
-// templateFields positions an instance's drawn fields: for each symbol template, transform its
-// symbol-local point by the placement (the same flip/rotate/translate as a pin) and emit a
+// templateFields positions an instance's drawn fields. It transforms each symbol template's
+// symbol-local point by the placement (the same flip/rotate/translate as a pin) and emits a
 // geom.Field carrying the instance's attribute value at that sheet position.
 func templateFields(templates []fieldTemplate, p map[string]string, x, y float64, rot, flip int) []*geom.Field {
 	var fields []*geom.Field
@@ -341,7 +342,7 @@ func templateFields(templates []fieldTemplate, p map[string]string, x, y float64
 		lines := strings.Split(strings.TrimRight(val, "\n"), "\n")
 		for i, line := range lines {
 			if line == "" {
-				continue // blank line: keep its vertical slot (i), draw nothing
+				continue // a blank line keeps its vertical slot (i) and draws nothing
 			}
 			ty := t.y + float64(i)*t.height*textLineStep
 			ax, ay := transform(t.x, ty, x, y, rot, flip)
@@ -379,7 +380,7 @@ func fieldName(key string) string {
 	}
 }
 
-// symbolShapes turns a .sym's drawing objects into geom Shapes: L (line) and P (polygon) become
+// symbolShapes turns a .sym's drawing objects into geom Shapes. L (line) and P (polygon) become
 // polylines, B (box) becomes a rect unless it is a pin box (a pin's connection marker, captured
 // as a PinPoint instead), and A (arc) becomes a 3-point arc.
 func symbolShapes(objs []object) []*geom.Shape {

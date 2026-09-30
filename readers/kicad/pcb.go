@@ -10,16 +10,16 @@ import (
 )
 
 // kicadNativeIDKind tags a KiCad uuid in Provenance. Unlike the EDIF rename &id, a KiCad
-// uuid is stable across exports, so it is a sound native id (though the semantic keys --
-// ref_des, net name, pad -- remain the cross-revision join key).
+// uuid is stable across exports, so it is a sound native id. The semantic keys (ref_des,
+// net name, pad) remain the cross-revision join key.
 const kicadNativeIDKind = "kicad-uuid"
 
 // Read parses a KiCad .kicad_pcb board into an ir.Design.
 //
 // Fidelity: lossy-bounded (netlist subset). We extract physical components (from
 // footprints), the footprints they place (the provisional physical tier), and net
-// connectivity (from pad net assignments). The logical structure -- part types, pins, and
-// multi-unit sections -- lives in the .kicad_sch schematic and is a separate reader; a PCB
+// connectivity (from pad net assignments). The logical structure (part types, pins, and
+// multi-unit sections) lives in the .kicad_sch schematic and is a separate reader; a PCB
 // component therefore has no ComponentSections. sourceFile is recorded in provenance only;
 // the caller owns file I/O so the core stays runtime-agnostic (CONSTRAINTS C1).
 func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
@@ -52,9 +52,9 @@ func extractPCB(root *node, src string) *ir.Design {
 		d.Name = atomOf(tb.Child("title").Arg(1))
 	}
 
-	// Nets are keyed by name, built from the pads that reference them. This is robust to
-	// both KiCad formats: the older (net <number> "<name>") pad form and the KiCad 10
-	// (net "<name>") name-only form. The top-level (net ...) table is not needed. An empty
+	// Nets are keyed by name, built from the pads that reference them. This handles both
+	// the older (net <number> "<name>") pad form and the KiCad 10 (net "<name>")
+	// name-only form. The top-level (net ...) table is not needed. An empty
 	// name is the "no net" sentinel and is skipped.
 	netByName := map[string]*ir.Net{}
 	// Dedup connections per net so a pad number that appears twice on the same net (e.g. a
@@ -91,7 +91,7 @@ func extractPCB(root *node, src string) *ir.Design {
 		comp.Sections = []*ir.ComponentSection{{
 			Index: 0,
 			// The same properties ride the SECTION as well as the component. A placed footprint is one
-			// section, so the two carry the same values, and consumers read different halves: the
+			// section, so the two carry the same values, and consumers read different halves. The
 			// datasheet join reads the component, and the EDIF writer emits a section's attributes as
 			// the instance's properties (agni issue 584).
 			Attributes: props,
