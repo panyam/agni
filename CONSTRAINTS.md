@@ -562,7 +562,7 @@ injected port, and a host that cannot resolve one refuses.** The value rule abov
 that is small enough to inline — a naming convention is a message, never a `conventions_path`, and
 that is what lets a filesystem-free host honour one. It never held for interface profiles, seeded
 parameters, or a design's intent, which are DIRECTORIES of many files: a project has always named
-those as URIs that `ProjectConfigLoader` read, so "the service composes with no file I/O" described
+those as URIs that `ConfigResolver` reads, so "the service composes with no file I/O" described
 the request tier only, and the schema froze that asymmetry into a request being able to carry one
 config tier out of five.
 

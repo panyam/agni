@@ -5,7 +5,10 @@ welcome, especially readers for new formats and check rules.
 
 ## Getting set up
 
-Requires Go 1.26 and pnpm (for the web viewer bundle).
+`make build` requires Go 1.26.4 and pnpm (for the web viewer bundle). `make testall` also needs
+`buf` 1.61 on your PATH, `python3` for the Python client tests, a Chromium for the browser tests
+(`cd web && pnpm exec playwright-core install chromium`), and network access to fetch the pinned
+sample corpus.
 
 ```
 cd web && pnpm install && cd ..   # once
@@ -14,12 +17,14 @@ make testall                      # the full gate CI runs
 ```
 
 `make testall` is the gate and CI runs exactly it, so run it locally before opening a pull request.
-Green means vet passed, the engine tests passed, the example modules built, the web bundle built,
-and the web unit tests passed.
+Green means vet passed, the generated code and every module's `go.mod` are current, the engine,
+example, web, browser and Python tests passed, and the generated docs and tutorial captures match
+what the engine produces now. The full list and the ways a run misreads are on
+[the gate page](https://panyam.github.io/agni/build/the-gate/).
 
 ## Read this first
 
-- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C29). They keep
+- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C33). They keep
   the engine format-neutral and the layering clean. Read them before proposing a change. A PR that
   violates one will be asked to change, or to justify amending the constraint.
 - The [docs site](https://panyam.github.io/agni/overview/) is the engineering source of truth, and
@@ -27,20 +32,22 @@ and the web unit tests passed.
 
 ## Common contributions
 
-- **A new format reader.** Each reader is its own package exposing
+- A **new format reader** is its own package exposing
   `Read(io.Reader, sourceFile) (*ir.Design, error)`, wired in with one entry in
-  `readers/formats/registry.go`. See the reader notes in
-  [Ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/) and reconcile new
+  `readers/formats/registry.go`. See
+  [Adding a format reader](https://panyam.github.io/agni/build/format-reader/), the reader notes in
+  [Ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/), and reconcile new
   concepts against the cross-format map (C9). Ship a runnable example with it (C10).
-- **A new check rule.** One `stdlib/rules/builtin/rule_<name>.go`, one line in
+- A **new check rule** is one `stdlib/rules/builtin/rule_<name>.go`, one line in
   `stdlib/rules/builtin/register.go`, and one `stdlib/rules/builtin/docs/<name>.md`, which is the
   source of the rule's prose and is enforced 1:1 by `stdlib/rules/builtin/docs_test.go`. The
   practical walkthrough is
   [Authoring a check rule](https://panyam.github.io/agni/build/check-rule/).
-- **A datalog query relation or example.** See
-  [Querying](https://panyam.github.io/agni/guide/querying/).
-- **An interface profile.** A profile is a data value rather than code: a YAML declaration of an
-  interface's signals and the checks it requires, compiled into datalog rules. Built-ins live in
+- For a **datalog query relation or example**, see
+  [Querying](https://panyam.github.io/agni/guide/querying/), and for a relation the edit list in
+  `stdlib/relations/facts/docs/_TEMPLATE.md`.
+- An **interface profile** is data rather than code, a YAML declaration of an interface's
+  signals and the checks it requires, compiled into datalog rules. Built-ins live in
   `stdlib/profiles/builtins/*.yaml`, and an out-of-tree one loads through
   `agni check --profile-path <dir>`. A signal declares exactly one net-name matcher, documented in
   `stdlib/profiles/matcher.go`. Reach for `suffix` first (optionally narrowed by a conjunctive
@@ -54,8 +61,9 @@ and the web unit tests passed.
   `testdata/`, and a user-facing change updates the relevant page under `docsite/content/`.
 - Keep it format-neutral. Analyses read the IR, not source files. Do not add an IR field only one
   format would populate (C9).
-- Prose in docs, commit messages, and PR text: plain declarative sentences, no marketing cadence, no
-  em-dashes. PR bodies additionally follow the prose conventions at the end of this file.
+- Write prose in docs, commit messages, and PR text as plain declarative sentences, with no
+  marketing cadence and no em-dashes. PR bodies additionally follow the prose conventions at the
+  end of this file.
 
 ## Reporting bugs and requesting formats
 
@@ -86,17 +94,17 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   another session staged. Use an explicit pathspec (`git commit -m "..." -- <paths>`), or check
   `git status` for foreign staged entries first.
 - **A pathspec commit then has two failure modes of its own.** It silently drops your OWN late edits
-  and any directory you forgot to list: a commit naming `protos/ gen/ internal/ docsite/` dropped a
+  and any directory you forgot to list. A commit naming `protos/ gen/ internal/ docsite/` dropped a
   one-line `cmd/` call-site fix, `make testall` passed locally because the WORKING TREE had it, and
   CI failed to compile on the pushed branch. Local green proves nothing about a pathspec commit. It
   also takes WORKING-TREE content over the index, so a staged `git rm --cached` named in the
   pathspec gets recommitted instead of deleted. After every pathspec commit, run `git status` and
   account for each remaining dirty file. When the change spans more than two directories, or
   involves a deletion or an untracking, stage exactly your slice and commit WITHOUT a pathspec.
-- **`make proto` regenerates every proto**, dirtying files a parallel session may own. Stage only
-  your proto's generated file. If a regen dirties a file whose proto you did not touch, another
-  checkout committed stale generated output. `git checkout` it and tell that session rather than
-  adopting it.
+- **`make proto` regenerates every proto**, and so do `make proto-web` and `make proto-py`,
+  dirtying files a parallel session may own. Stage only your proto's generated files. If a regen
+  dirties a file whose proto you did not touch, another checkout committed stale generated output.
+  `git checkout` it and tell that session rather than adopting it.
 - **Pull after a push.** Shared schema files (`protos/`) are coordination points.
 - **Never `git pull` a branch that is mid-rebase, and be careful pulling one at all.** With
   `pull.rebase` set, a pull on a feature branch rebases the INCOMING commits onto yours, which is
@@ -112,16 +120,16 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 ## PR workflow
 
 - **Check the branch again immediately before you COMMIT, not only before you branch.** A long
-  session's branch can move underneath it: running the `/checkpoint` skill mid-feature switches the
+  session's branch can move underneath it. Running the `/checkpoint` skill mid-feature switches the
   checkout back to `main`, so the next `git commit` lands the feature there instead. The push then
   sends the feature branch at its OLD position and succeeds, and the failure surfaces much later as
   `gh pr create` reporting "No commits between main and <branch>". Recovery is cheap when the tree is
-  clean (`git branch -f <branch> <sha>`, `git branch -f main origin/main`), so the cost is entirely in
-  not noticing. `git branch --show-current` before the commit is the whole fix.
+  clean (`git branch -f <branch> <sha>`, `git branch -f main origin/main`), so the only cost is
+  failing to notice. Run `git branch --show-current` before the commit.
 - **Verify ANY command by its EXIT CODE, never by grepping or truncating its output.** `git push | tail -1` swallows a
   failure, and `git push 2>&1 | grep <branch>` reports success on a FAILED push, because the branch
-  name appears inside the failure message. Run `git push; echo "EXIT=$?"`. The same shape bites every
-  piped command, not just push: `gh pr create ... | tail -3` reported `EXIT=0` on a run that had
+  name appears inside the failure message. Run `git push; echo "EXIT=$?"`. The same failure hits every
+  piped command, not just push. `gh pr create ... | tail -3` reported `EXIT=0` on a run that had
   FAILED with an auth error, because the pipeline's status is `tail`'s. Redirect to a file and echo
   `$?` on its own line, then read the file.
 - **`Closes #A and #B` closes only A.** GitHub parses the keyword PER ISSUE, so a PR fixing two
@@ -133,12 +141,12 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   ref rather than main.
 - **RETARGET A STACKED PR BEFORE MERGING ITS PARENT.** This repo deletes a branch on merge, and
   GitHub auto-CLOSES any PR still pointing at the deleted branch, so merging the parent silently
-  closes the child. Recovering it is worse than it sounds, because the two obvious moves refuse each
-  other: you cannot reopen a PR whose base branch is gone, and you cannot change the base of a closed
-  PR. The way out is to recreate the base ref at the exact commit the parent merged from
+  closes the child. Recovering it takes four steps, because you cannot reopen a PR whose base
+  branch is gone, and you cannot change the base of a closed PR. The way out is to recreate the
+  base ref at the exact commit the parent merged from
   (`gh api repos/OWNER/REPO/git/refs -f ref='refs/heads/<base>' -f sha=<FULL 40-char sha>`), reopen,
   retarget to `main`, then delete the ref again, which does not re-close it because it is no longer
-  the base. `gh pr reopen` needs the FULL sha; an abbreviated one fails with a 422 that does not say
+  the base. Creating the ref needs the FULL sha; an abbreviated one fails with a 422 that does not say
   so. Nothing is lost either way, since the branch itself survives, but check the tip against the PR
   head before assuming that.
 - **Level the two branches before opening a stacked PR, parent first.** Merging `main` into the child
@@ -147,7 +155,7 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   `mergeable: false`). Merge `main` into the parent, push, then merge the parent forward into the
   child.
 - **A merged PR does not mean the BRANCH is merged. Check the tip against what the PR merged.**
-  A commit pushed to the branch after the merge is stranded: the PR reads merged, GitHub offers to
+  A commit pushed to the branch after the merge is stranded. The PR reads merged, GitHub offers to
   delete the branch, `git branch -d` accepts it, and the work is gone with nothing anywhere saying
   so. Two of roughly twenty branches audited had done this, costing 135 lines of documentation that
   were recovered only because someone asked whether a branch was stale. Compare
@@ -206,7 +214,7 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   identical. A refactor was reported behaviour-preserving on four commands that had never run. Write
   a function taking `"$@"`, and sanity-check the captured line COUNT before believing a diff.
 - **`wait "$PID"` returns IMMEDIATELY when a trap is installed.** A script that starts a server, sets
-  `trap cleanup EXIT INT TERM`, and then blocks on `wait` does not block: it falls straight through to
+  `trap cleanup EXIT INT TERM`, and then blocks on `wait` does not block, and falls straight through to
   whatever follows. A demo driver meant to hold a server open ran its whole script instead, twice, and
   the symptom looked like the guard clause not firing rather than like `wait` returning. Poll the child
   instead: `while kill -0 "$PID" 2>/dev/null; do sleep 1; done`.
@@ -226,17 +234,16 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   failing and the cause looks like the change rather than the undo.
 - **A capture restamp belongs in its OWN commit, after the fixture that moved it.** A capture's stamp
   hashes every TRACKED file in its fixture directory, so adding one file there restamps every capture
-  rooted at it: one change put 25 `.output` files in the diff, each a single `#agni-run` line, none of
+  rooted at it. One change put 25 `.output` files in the diff, each a single `#agni-run` line, none of
   them a change in output. Committing the fixture, regenerating, then committing the restamps
   separately keeps a reviewer from reading two dozen one-line stamp diffs interleaved with the work.
   The commit-first half is not optional either, since the stamp is computed from what git tracks.
 - **A two-tree comparison needs each side in its OWN subshell.** `( cd $before && cmd ); ( cd $after && cmd )`,
   never `cd $before && cmd_a; cmd_b`, because the `cd` persists and BOTH commands run in the worktree.
-  That reports the two sides identical, which is the same false-identical trap as the zsh loop above
-  wearing different clothes. Check that the two outputs differ somewhere you expect them to before
-  believing a diff of zero.
+  That reports the two sides identical, the same false result as the zsh loop above. Check that the
+  two outputs differ somewhere you expect them to before believing a diff of zero.
 - **`--format json` output is protojson, whose whitespace VARIES BETWEEN BUILDS on purpose**, so two
-  binaries produce byte-different json for identical data (measured: a 1478-line diff that was
+  binaries produce byte-different json for identical data (one measured diff of 1478 lines was
   entirely `"k":  v` against `"k": v`). Never byte-compare it. Parse both sides and compare the
   decoded values, or compare `check --verdicts` instead, which is stable.
 - **Use `git worktree add <tmp> main`, never `git stash`, to reconstruct a whole BEFORE state** such
@@ -255,7 +262,8 @@ commits, none naming it in the subject) and 578 (a duplicate of two later ticket
 Grepping for the issue number finds none of them, because a fix lands under its own name. What does
 find them is running the ticket's own reproduction, or one line of prose in an adjacent artifact:
 `readers/kicad/oracle_corpus.baseline` opens with "Known families still open, as of the agni issue 561
-fix", and `checkNegationAnchored`'s doc comment cites 522.
+fix", and `checkNegationAnchored`'s doc comment in jaala's `datalog/eval.go` cites
+522.
 
 This cuts both ways. In the same session an issue filed that morning (684) claimed two relations
 disagreed; one query against a real board showed they already agreed, and the fix it proposed would
@@ -282,46 +290,47 @@ meets software and most reviewers are strong in one and cold in the other. Two e
 into the skill's skeleton ahead of the reviewer's guide, so the local ramp reads: what changes, the
 circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
 
-- **The circuit, for software readers.** When semantics depend on hardware behavior (a rule's
-  electrical meaning, derating, rail/pin conventions, why a limit matters physically), add this
-  section right after "What changes", plus a link to `docsite/content/reference/analogy.md`. A
+- When semantics depend on hardware behavior (a rule's electrical meaning, derating, rail/pin
+  conventions, why a limit matters physically), add a section titled "The circuit, for software
+  readers" right after "What changes", plus a link to `docsite/content/reference/analogy.md`. A
   pseudocode walkthrough alone leaves the hardware nouns opaque.
-- **Hardware primer.** Every PR whose logic touches hardware concepts gets a `## Hardware context
+- Every PR whose logic touches hardware concepts gets a hardware primer, a `## Hardware context
   (for software readers)` section, mapping each EE term the diff leans on to a STRUCTURAL software
   analogy (series element = inline middleware that splits a net; rail = global singleton the walk
   must not follow an import into; junction dot = explicit join marker in whitespace-significant
   syntax; TVS = pressure-relief valve beside the path, not inline). Define only what the PR actually
   uses. It does not replace the ELI paragraph that follows, since the primer supplies the nouns and
   the ELI supplies the idea.
-- **Which pages the prerequisite block names.** Pull from `learn/` for domain knowledge,
+- The prerequisite block pulls from `learn/` for domain knowledge,
   `tutorials/` for tool usage, `architecture/` for design rationale, `build/` for extending the
-  engine. When the PR is about a rule, prefer the LEARN chapter over the rule's catalog entry: the
-  entry explains the check, the chapter explains the instinct. Saying that no page covers the change
-  is a real entry rather than an empty one, and several chapters exist because someone wrote it.
+  engine. When the PR is about a rule, prefer the LEARN chapter over the rule's catalog entry,
+  because the entry explains the check and the chapter explains the instinct. Saying that no page
+  covers the change is a real entry rather than an empty one, and several chapters exist because
+  someone wrote it.
 - **Link a prerequisite page to the PUBLISHED site**, not to a repo path, since a relative path does
   not resolve in a PR body. The site is `https://panyam.github.io/agni/`, one URL per page at
   `/<section>/<page-basename-without-.md>/`, and a heading anchor is the slugified heading. When the
-  PR CHANGES a page it names, link both: the published page reads better, and it serves `main`, so
+  PR CHANGES a page it names, link both. The published page reads better but serves `main`, so
   the reviewer needs the PR-diff link to see the new text. Saying which is which takes a clause and
   saves a reviewer reading the version the PR exists to replace.
 - **Run the prose checks over the PR BODY FILE, not over `git diff`.** A body is written to a scratch
   file and never appears in a diff, so a check that greps the diff passes while the body carries
-  exactly what it was meant to catch. Measured the slow way: five merged PR bodies shipped em-dashes
+  exactly what it was meant to catch. Five merged PR bodies shipped em-dashes
   in their reading-order lines while every one of their diffs was clean.
-- **ELI analogies that have carried a PR here.** Fire extinguishers for a protection radius, a
-  wiring diagram vs a floor plan for connections vs pin declarations, game mods for the registration
-  vs authoring seam.
+- ELI analogies that have carried a PR here include fire extinguishers for a protection radius, a
+  wiring diagram vs a floor plan for connections vs pin declarations, and game mods for registering
+  an extension vs authoring one.
 - **A mermaid label must contain no quote characters, escaped or otherwise.** `&quot;` inside a
   `["..."]` node label decodes to a bare `"`, closes the string early, and GitHub renders a parse
   error instead of the diagram (`got 'STR'`). Write labels as plain text with `<br/>` for line
-  breaks and keep the literal strings in the prose above the diagram, which reads better anyway.
-  Parse-check before you post rather than after: extract each ` ```mermaid ` block to a file,
-  DECODE its HTML entities, and run `mmdc -i block.mmd -o block.svg`. Two things about that command
-  are load-bearing, and the version of this note that shipped first got both wrong. **`-o /dev/null`
-  does not work**, because mmdc rejects any output path not ending `.md`, `.markdown`, `.svg`, `.png`
-  or `.pdf`, so it exits non-zero on every diagram and reports a failure that says nothing about the
-  syntax. And **the decode is what makes the check reproduce GitHub**: mmdc reads `&quot;` as literal
-  text and parses it happily, so checking the raw block PASSES the exact diagram this rule exists to
+  breaks and keep the literal strings in the prose above the diagram.
+  To parse-check before you post rather than after, extract each ` ```mermaid ` block to a file,
+  DECODE its HTML entities, and run `mmdc -i block.mmd -o block.svg`. Two details of that command
+  decide whether the check works, and the version of this note that shipped first got both wrong.
+  **`-o /dev/null` does not work**, because mmdc rejects any output path not ending `.md`,
+  `.markdown`, `.svg`, `.png` or `.pdf`, so it exits non-zero on every diagram and reports a
+  failure that says nothing about the syntax. And **the check reproduces GitHub only after the
+  decode**, because mmdc reads `&quot;` as literal text and parses it happily, so checking the raw block PASSES the exact diagram this rule exists to
   catch, while GitHub decodes it to a bare `"` before mermaid sees it. Decoded, the same label fails
   with the `got 'STR'` above. Looking at the rendered PR is still the only way to catch a diagram
   that parses and reads badly.

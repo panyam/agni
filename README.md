@@ -142,7 +142,9 @@ growing. Issues and readers for new formats are welcome.
 
 ## Building
 
-Requires Go 1.26 and pnpm (for the web viewer bundle).
+`make build` requires Go 1.26.4 and pnpm (for the web viewer bundle). `make testall` also needs
+`buf` 1.61 on your PATH, `python3`, a Chromium for the browser tests, and network access to fetch
+the pinned sample corpus. `CONTRIBUTING.md` has the details.
 
 ```
 cd web && pnpm install && cd ..   # once

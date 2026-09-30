@@ -287,7 +287,7 @@ from a catalog is indistinguishable from a rule that ran and found nothing.
 
 Two ports are worth knowing by name. `service.ProjectStore` answers what projects and designs exist
 and which design an artifact belongs to, so a deployment backed by a PLM system or an index
-implements it instead of walking directories. `service.ProjectConfigLoader` resolves what a project's
+implements it instead of walking directories. `service.ConfigResolver` resolves what a project's
 analysis config points at, returning a `service.ResolvedConfig` carrying rule sources, a parameter
 provider, and symbol paths. Both speak `artifact.URI`, the `mount://` name for a file, which is why
 that package is public too.

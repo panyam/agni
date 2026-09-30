@@ -16,7 +16,7 @@ import (
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
-// osProjectConfig is the OS-backed service.ProjectConfigLoader: it reads the interface profiles and
+// osProjectConfig is the OS-backed service.ConfigResolver. It reads the interface profiles and
 // seeded parameters a project names, from the mounts. All filesystem access stays at the cmd edge
 // (C1/C13).
 //

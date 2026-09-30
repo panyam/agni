@@ -86,7 +86,7 @@ It reads new unstaged files as well as committed ones, so it has no commit-first
 
 ## The architectural constraints are tests, not a checklist
 
-`CONSTRAINTS.md` holds C1 to C30 and sixteen of them fail the gate. They ride in under `go test ./...`
+`CONSTRAINTS.md` holds C1 to C33 and eighteen of them fail the gate. They ride in under `go test ./...`
 rather than a target of their own, so nothing in the diagram above names them, which is easy to read
 as the document being advisory. It is not.
 
