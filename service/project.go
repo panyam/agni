@@ -11,24 +11,21 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// ProjectStore resolves the projects and designs a deployment declares (agni issue 170). It is the
-// fourth injected port in this package, after PartSpecStore, AnnotationStore, and ReviewStore, and
-// follows their shape: the interface lives here, an implementation lives behind it.
+// ProjectStore resolves the projects and designs a deployment declares (agni issue 170). Like
+// PartSpecStore, AnnotationStore and ReviewStore, the interface lives here and an implementation
+// lives behind it.
 //
-// The port is deliberately free of any notion of a filesystem. The implementation that ships
-// (`internal/projects`) walks a directory tree for descriptor files, but a store backed by a
-// database, with design files on object storage, answers all five of these without a tree, a
-// descriptor, or a parent directory to walk up from. Nothing in these signatures names a file, a
-// path, or a walk, which is what makes that substitution a wiring change rather than a redesign.
+// Nothing in these signatures names a file, a path or a walk. The shipped implementation
+// (`internal/projects`) walks a directory tree for descriptors, and a database-backed store with
+// designs on object storage should be a wiring change rather than a redesign.
 //
-// It is READ-ONLY, and deliberately so. Creating a project means authoring design intent from a
-// design, which is a judgment step with a confidentiality boundary rather than a server operation.
+// It is READ-ONLY. Creating a project means authoring design intent from a design, which is a
+// judgment step with a confidentiality boundary rather than a server operation.
 //
-// Every method deals in the WIRE types. There is no parallel value type for a project here, and
-// that is a decision rather than an omission: a `Project` is a resource whose whole content is the
-// message, so a runtime-neutral twin would be a field-for-field copy and one more place for the two
-// to disagree (CONSTRAINTS C2, C8). This differs from `MountInfo` / `DirEntry` above, which project
-// a raw filesystem listing into something the service still has to interpret.
+// Every method deals in the WIRE types, with no parallel value type. A `Project` is a resource whose
+// content is the message, so a twin would be a field-for-field copy that can disagree with it
+// (CONSTRAINTS C2, C8). `MountInfo` and `DirEntry` in workspace.go differ because they project a raw
+// filesystem listing the service still has to interpret.
 type ProjectStore interface {
 	// Project returns one project by resource name. A name naming nothing is ErrNotFound.
 	Project(ctx context.Context, name string) (*webapi.Project, error)
@@ -42,14 +39,12 @@ type ProjectStore interface {
 	// ResolveDesign maps an artifact ref to the design containing it and that design's project.
 	//
 	// A MISS is (nil, nil, nil), never ErrNotFound. A ref that belongs to no declared design is the
-	// ORDINARY case on a mounted folder, and a store that raised an error for it would make callers
-	// treat the common path as exceptional.
+	// ORDINARY case on a mounted folder.
 	ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error)
 }
 
 // Resource-name prefixes and separators, written once so a store dealing in ids and an API dealing
-// in names cannot each spell the boundary by hand — which is how one of them ends up storing a name
-// as an id.
+// in names do not each spell the boundary by hand and end up storing a name as an id.
 const (
 	projectNamePrefix = "projects/"
 	designNameInfix   = "/designs/"
@@ -59,9 +54,8 @@ const (
 func ProjectName(id string) string { return projectNamePrefix + id }
 
 // ProjectID extracts the declared id from a project resource name, reporting whether the name was
-// well formed. A missing prefix, an empty id, or a separator inside the id is rejected: an id
-// reaches a store that may resolve it against a filesystem, so a caller must not be able to steer it
-// out of the tree it was meant to address.
+// well formed. A missing prefix, an empty id, or a separator inside the id is rejected, because the id
+// reaches a store that may resolve it against a filesystem and must not be steerable out of its tree.
 func ProjectID(name string) (string, bool) {
 	id, ok := strings.CutPrefix(name, projectNamePrefix)
 	if !ok {
@@ -88,8 +82,8 @@ func SplitDesignName(name string) (parent, id string, ok bool) {
 }
 
 // validResourceID rejects an id that could escape a store's tree or split one resource name into
-// two. It is a containment check rather than a full syntax check: the descriptor loader already
-// validated the id's shape when it parsed the file, and this guards the id arriving from the wire.
+// two. It checks containment only. The descriptor loader validated the id's shape when it parsed the
+// file, and this guards the id arriving from the wire.
 func validResourceID(id string) bool {
 	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\")
 }
@@ -98,7 +92,7 @@ func validResourceID(id string) bool {
 // had its say. They are URIs the injected Loader resolves, and no caller above the Loader may treat
 // one as a host path (CONSTRAINTS C22).
 type DesignSources struct {
-	// NetlistURI is the artifact component and connectivity ANALYSIS reads: the netlist the design
+	// NetlistURI is the artifact component and connectivity ANALYSIS reads, the netlist the design
 	// team produces (C21).
 	NetlistURI string
 	// BoardURI is where the board tier's copper comes from. Often the same artifact, and different
@@ -106,20 +100,19 @@ type DesignSources struct {
 	BoardURI string
 	// GeometryURI is where schematic sheets are rendered and findings located from. A netlist entry
 	// carries none of its own, so a design declaring a schematic companion locates on that
-	// companion's sheets, which is what C21 means by a companion being a canvas rather than a source.
+	// companion's sheets (C21, a companion is a canvas and not a source).
 	GeometryURI string
 }
 
 // SourcesFor resolves a design's declaration into the artifact each tier reads.
 //
-// It lives here, above the store and below every client, because CLI and web must not each decide
-// which companion supplies the board. Two implementations of "pick the companion with copper" is one
-// more than the number of answers that can be right, and the failure mode is silent: a tier resolved
-// differently in two places produces two findings lists with nothing to say why they differ.
+// It lives here, above the store and below every client, so CLI and web do not each decide which
+// companion supplies the board. A tier resolved differently in two places gives two findings lists
+// with nothing to say why they differ.
 //
 // `named` is the ref the caller actually asked for, "" when they named the design itself. A named
-// companion KEEPS whatever tier it alone can supply — a board file's copper, a schematic's sheets —
-// because that is why the caller pointed at it; only the netlist tier ever moves.
+// companion KEEPS whatever tier it alone can supply (a board file's copper, a schematic's sheets),
+// and only the netlist tier ever moves.
 func SourcesFor(d *webapi.Design, named string) DesignSources {
 	entry := d.GetEntryUri()
 	s := DesignSources{NetlistURI: entry, BoardURI: entry, GeometryURI: entry}
@@ -143,32 +136,24 @@ func SourcesFor(d *webapi.Design, named string) DesignSources {
 }
 
 // ResolveSources decides which artifact each tier reads, for a ref that has already been resolved to
-// a design. It is the DECISION half of resolution and does no I/O: the caller finds the design (the
+// a design. It is the DECISION half of resolution and does no I/O. The caller finds the design (the
 // CLI over a store rooted at its argument's mount, a server over the store it was built with) and
-// this says what to open.
+// this says what to open. CLI and server both call it, so one design cannot read two ways (agni
+// issue 656, constraint C32).
 //
-// It exists because the rule was written twice. `SourcesFor` was already shared for the "which
-// companion supplies the board" half, and the half ABOVE it, deciding whether the caller named the
-// design, its entry, a declared companion or an unrelated file, lived only in `cmd/agni`. So the CLI
-// composed a design and the served path did not, and one design read two ways gave two different
-// drawings with nothing to say why (agni issue 656, constraint C32).
+// The four cases:
 //
-// The four cases, and the reasoning for each:
+//   - `d` is nil, so the ref belongs to no declared design. Read exactly what was named, which is
+//     the ordinary case for any mounted folder without descriptors.
+//   - The ref names the design itself (a folder) or its ENTRY. It gets the design's declared
+//     companions, because naming the entry IS naming the design.
+//   - The ref names a declared COMPANION. Analysis moves to the entry and the named artifact keeps
+//     whatever tier it alone supplies.
+//   - The ref names an UNDECLARED sibling. Read exactly what was named, since redirection is
+//     confined to files an operator listed (docsite/content/architecture/projects-and-designs.md#the-netlist-is-the-source-the-rest-are-views).
 //
-//   - `d` is nil: the ref belongs to no declared design. Read exactly what was named, which is the
-//     ordinary case for any mounted folder without descriptors.
-//   - The ref names the design itself (a folder) or its ENTRY: it gets the design's declared
-//     companions. Naming the entry IS naming the design, and treating it otherwise is what made one
-//     design render two ways.
-//   - The ref names a declared COMPANION: analysis moves to the entry and the named artifact keeps
-//     whatever tier it alone supplies, which is why the caller pointed at it.
-//   - The ref names an UNDECLARED sibling: read exactly what was named. Redirection is confined to
-//     files an operator listed, because a later revision of the netlist sits in the same folder and
-//     is a legitimate analysis source; inferring would turn a diff of two revisions into a diff of
-//     one against itself.
-//
-// asNamed disables redirection entirely: read the artifact named, whatever the descriptor says.
-// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake.
+// asNamed disables redirection, so the artifact named is read whatever the descriptor says. Reading
+// a companion AS a netlist is a legitimate diagnostic.
 func ResolveSources(d *webapi.Design, ref string, isDir, asNamed bool) Resolution {
 	plain := Resolution{DesignSources: DesignSources{NetlistURI: ref, BoardURI: ref, GeometryURI: ref}}
 	if d == nil {
@@ -194,23 +179,22 @@ func ResolveSources(d *webapi.Design, ref string, isDir, asNamed bool) Resolutio
 	return r
 }
 
-// Resolution is what a ref resolved to: the artifact each tier reads, and how that was arrived at.
+// Resolution is what a ref resolved to, meaning the artifact each tier reads and how that was
+// arrived at.
 //
-// The two flags are carried rather than left for the caller to recompute, because a caller that
-// re-derives "was this the entry" against a path it typed instead of the ref it resolved compares
-// unlike with unlike, silently, and then narrates the wrong thing. The CLI's stderr note is written
-// from these.
+// The flags are carried so a caller does not recompute them. Re-deriving "was this the entry" against
+// the path it typed instead of the ref it resolved compares unlike with unlike and narrates the wrong
+// thing. The CLI's stderr note is written from these.
 type Resolution struct {
 	DesignSources
 	// NamedIsTheDesign is set when the ref named the design itself, which is a folder.
 	NamedIsTheDesign bool
-	// NamedIsTheEntry is set when the ref named the design's declared entry file. Naming the entry IS
-	// naming the design, and treating it otherwise is what made one design render two ways.
+	// NamedIsTheEntry is set when the ref named the design's declared entry file.
 	NamedIsTheEntry bool
 	// FromDeclaration is set when the tiers came from the design's declaration rather than from the
-	// ref alone. It is not the same as "a tier moved": naming the entry of a design that declares no
-	// companion applies the declaration and changes nothing, and a caller narrating what it read
-	// wants to distinguish those two from a ref that was never resolved at all.
+	// ref alone. It does not mean a tier moved. Naming the entry of a design that declares no
+	// companion applies the declaration and changes nothing, which a caller narrating what it read
+	// distinguishes from a ref that was never resolved.
 	FromDeclaration bool
 }
 
@@ -225,33 +209,30 @@ func IsCompanion(d *webapi.Design, ref string) bool {
 }
 
 // defaultProjectPageSize and maxProjectPageSize bound a listing. Projects and designs are counted in
-// tens on a deployment, not thousands, so the default is generous enough that a client normally
-// paginates once and never again.
+// tens on a deployment, so a client normally gets everything in one page.
 const (
 	defaultProjectPageSize = 50
 	maxProjectPageSize     = 200
 )
 
 // ProjectService serves the project and design resources over an injected ProjectStore (C13). It
-// does no I/O itself: it applies AIP-158 pagination and the one supported AIP-160 filter, and
+// does no I/O itself. It applies AIP-158 pagination and the one supported AIP-160 filter, and
 // classifies errors for the transport.
 //
-// It is AIP-shaped with GET and LIST only, no mutators — the read-only-resource case in CONSTRAINTS
-// C23. What earns it a resource name rather than an artifact URI is that a project's identity is
-// DECLARED by an operator rather than derived from its path, so the name survives the folder being
-// renamed or moved between mounts, and so reviews can later be parented by it.
+// It is AIP-shaped with GET and LIST only, the read-only-resource case in CONSTRAINTS C23. A project
+// gets a resource name rather than an artifact URI because an operator DECLARES its identity, so the
+// name survives the folder being renamed or moved between mounts and reviews can be parented by it.
 //
-// Every caller goes through here, including the CLI. That is not ceremony: the alternative is a
-// second access path reaching the store directly, and the two then drift on exactly the questions
-// that are invisible from the outside — which companion supplies the board, whether an unresolved
-// ref is an error, what a malformed descriptor does.
+// Every caller goes through here, including the CLI. A second path reaching the store directly would
+// drift on questions invisible from outside, such as whether an unresolved ref is an error or what a
+// malformed descriptor does.
 type ProjectService struct {
 	store ProjectStore
 }
 
 // NewProjectService returns a ProjectService backed by store. A nil store is legal and means this
-// deployment declares no projects: every method then answers as though nothing resolved, rather than
-// failing, because "no descriptors here" is a configuration a server is expected to run in.
+// deployment declares no projects, so every method answers as though nothing resolved rather than
+// failing.
 func NewProjectService(store ProjectStore) *ProjectService {
 	return &ProjectService{store: store}
 }
@@ -309,9 +290,8 @@ func (s *ProjectService) GetDesign(ctx context.Context, req *webapi.GetProjectDe
 }
 
 // ListDesigns returns one project's designs, ordered by resource name. A parent naming a project
-// that does not exist is ErrNotFound rather than an empty list, because "this project has no
-// designs" and "there is no such project" are different answers and only one of them means the
-// client's parent was wrong.
+// that does not exist is ErrNotFound rather than an empty list, so a client can tell a wrong parent
+// from a project with no designs.
 func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjectDesignsRequest) (*webapi.ListProjectDesignsResponse, error) {
 	if _, ok := ProjectID(req.GetParent()); !ok {
 		return nil, fmt.Errorf("%w: parent %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, req.GetParent())
@@ -344,11 +324,10 @@ func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjec
 
 // ResolveDesign answers whether an artifact ref belongs to a declared design, and if so which.
 //
-// A ref that resolves to nothing yields an EMPTY response, not an error. That is the load-bearing
-// part of the contract: most files on a mount belong to no declared design, and a client reading an
-// empty response falls back to the plain built-in catalog rather than another project's config.
-// Turning the ordinary case into an error would push every caller into treating a failure path as
-// normal, which is how a real failure stops being noticed.
+// A ref that resolves to nothing yields an EMPTY response, not an error. Most files on a mount belong
+// to no declared design, and a client reading an empty response falls back to the plain built-in
+// catalog rather than another project's config. Making that ordinary case an error would teach
+// callers to ignore the failure path.
 func (s *ProjectService) ResolveDesign(ctx context.Context, req *webapi.ResolveDesignRequest) (*webapi.ResolveDesignResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -370,9 +349,9 @@ func (s *ProjectService) ResolveDesign(ctx context.Context, req *webapi.ResolveD
 // parseProjectFilter reads the one supported AIP-160 filter, `mount="..."`, returning the mount or
 // "" for an empty filter.
 //
-// An unsupported filter is an ERROR rather than an ignored argument, for the same reason
-// parseReviewFilter refuses one: a client that believed it had narrowed to one mount and silently
-// got every mount would read another team's projects as its own.
+// An unsupported filter is an ERROR rather than an ignored argument, as in parseReviewFilter. A
+// client that believed it had narrowed to one mount and silently got every mount would read another
+// team's projects as its own.
 func parseProjectFilter(filter string) (string, error) {
 	f := strings.TrimSpace(filter)
 	if f == "" {
@@ -393,10 +372,8 @@ func parseProjectFilter(filter string) (string, error) {
 // indexes on this page and the token for the next.
 //
 // The token is the resource name of the FIRST item on the next page rather than an offset, so a
-// listing stays correct when a project is added or removed between calls: an offset would silently
-// skip or repeat a neighbour, where a name resumes at the right place or, if that item is gone, at
-// the next one after it. Ordering is by name and names are unique, which is what makes that
-// resumable.
+// project added or removed between calls does not skip or repeat a neighbour. If that item is gone,
+// the page resumes at the next name after it. Callers must sort by name, and names are unique.
 func paginate(n int, pageSize int32, pageToken string, nameAt func(int) string) (indexes []int, nextToken string) {
 	size := int(pageSize)
 	switch {
@@ -420,8 +397,8 @@ func paginate(n int, pageSize int32, pageToken string, nameAt func(int) string) 
 }
 
 // uriMount reads the authority out of a resource's artifact URI, for the one filter that narrows by
-// mount. A URI that will not parse yields "", which simply never matches: a listing is not the place
-// to fail on a stored value, and the resource itself carries the malformed URI for a client to see.
+// mount. A URI that will not parse yields "", which never matches. A listing does not fail on a
+// stored value, and the resource itself carries the malformed URI for a client to see.
 func uriMount(s string) string {
 	u, err := artifact.Parse(s)
 	if err != nil {

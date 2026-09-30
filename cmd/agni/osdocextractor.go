@@ -13,25 +13,24 @@ import (
 	"github.com/panyam/agni/internal/mounts"
 )
 
-// osDocExtractor is the OS-backed service.DocExtractor: it shells out to the operator-configured
-// doc-IR producer (pdf2doc/docling) to derive a datasheet's <stem>.doc.textproto sibling. The
-// command is set with --pdf2doc; an empty command means extraction is disabled. All I/O and the
-// sibling convention live here at the cmd edge (CONSTRAINTS C1/C13). Docling is external and
-// CI-excluded: the engine never bundles it, it runs the configured argv with the resolved PDF and
-// output paths appended, and it runs in-boundary (the datasheet bytes never leave, C16).
+// osDocExtractor is the OS-backed service.DocExtractor. It shells out to the doc-IR producer named
+// by --pdf2doc (pdf2doc/docling) to write a datasheet's <stem>.doc.textproto sibling, and an empty
+// command disables extraction. Docling is external and CI-excluded, so the engine never bundles it.
+// It runs the configured argv with the resolved PDF and output paths appended, in-boundary, so the
+// datasheet bytes never leave (C16).
 type osDocExtractor struct {
 	mounts []mounts.Mount
 	cmd    []string // producer argv (cmd[0] is the executable); empty = extraction disabled
 }
 
-// Available reports whether a producer command is configured (so the service can offer the
-// "Extract (first pass)" action only when a server was started with --pdf2doc).
+// Available reports whether a producer command is configured, so the service offers the
+// "Extract (first pass)" action only on a server started with --pdf2doc.
 func (e *osDocExtractor) Available() bool { return len(e.cmd) > 0 }
 
-// Extract runs the producer over the datasheet at (mount, path), writing the sibling doc-IR and
-// returning the parsed + validated Document. Both the source PDF and the output sibling resolve
-// inside the mount (containment via mounts.Resolve, the write path). A non-zero exit, an unreadable
-// output, or an invalid doc-IR is an error the service maps to Internal.
+// Extract runs the producer over the datasheet at uri, writing the sibling doc-IR and returning
+// the parsed and validated Document. The source PDF and the output sibling both resolve inside the
+// mount through mounts.Resolve. A non-zero exit, an unreadable output, or an invalid doc-IR is an
+// error the service maps to Internal.
 func (e *osDocExtractor) Extract(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
 	pdfAbs, err := mounts.Resolve(e.mounts, uri)
 	if err != nil {

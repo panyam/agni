@@ -12,37 +12,28 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// sharedPlacementCap bounds the alignment sample (WS9-007): enough shared components to
-// judge whether two revisions share a coordinate frame, without shipping a whole placement
-// table for a large board. The sample is deterministic (sorted ref_des, first placement per
-// side), so the same pair always yields the same evidence.
+// sharedPlacementCap bounds the alignment sample (WS9-007) to enough shared components to judge
+// whether two revisions share a coordinate frame, without shipping a large board's full placement
+// table. The sample is deterministic (sorted ref_des, first placement per side).
 const sharedPlacementCap = 50
 
-// DesignLoader is the slice of Loader the diff tier needs: the netlist IR for both sides,
-// plus each side's default-layout geometry for the sheet-membership annotation (WS9-006 —
-// geometry is best-effort there, see annotateDiffSheets). Declared separately so DiffService
-// states its dependencies; the server's osLoader (and any Loader) satisfies it.
+// DesignLoader is the slice of Loader the diff tier needs, the netlist IR for both sides plus each
+// side's default-layout geometry for the sheet-membership annotation (WS9-006). Geometry is
+// best-effort there, see annotateDiffSheets. Any Loader satisfies it.
 type DesignLoader interface {
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
 }
 
-// DiffService computes the semantic diff between two designs over an injected loader (C13): it
-// reads the two sides' netlist IR through the port, runs the pure diff.Designs, and converts
-// to the wire form. The diff core stays presentation-free (docs/18); this service owns the
-// wire shape, shared with the CLI's `diff --format json` via DiffResponseProto. It knows no
-// transport.
+// DiffService computes the semantic diff between two designs over an injected loader (C13). It
+// reads both sides' netlist IR, runs the pure diff.Designs, and owns the wire shape, which the
+// CLI's `diff --format json` shares through DiffResponseProto. See
+// docsite/content/architecture/semantic-diff.md.
 type DiffService struct {
 	loader DesignLoader
-	// projects resolves each side to its project and loads that project's config; nil when this
-	// deployment resolves no projects.
-	//
-	// A diff needs it on the NETLIST reads, not just the geometry ones. Both sides were read with no
-	// options at all, so a project whose symbol library did not resolve was compared from two reads
-	// that each lose every connection through the affected parts, and a revision that changed such a
-	// connection showed no change. `agni diff` reads through readDesign and IS configured, so the two
-	// surfaces answered the same question differently (agni issue 347, the service-side survivor of
-	// agni issue 228).
+	// projects resolves each side's project config (see ProjectResolver); nil resolves none. It
+	// applies to the NETLIST reads too, since without the project's symbol libraries a changed
+	// connection through an unresolved part shows no change (agni issue 347).
 	projects *ProjectResolver
 }
 
@@ -75,8 +66,7 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	if err != nil {
 		return nil, err
 	}
-	// Each side resolves its OWN config, because a diff may span two projects and the comparison is
-	// only meaningful when each revision is read the way its own project declares.
+	// Each side resolves its OWN config, because a diff may span two projects.
 	aOpts, err := s.readOptions(ctx, aURI)
 	if err != nil {
 		return nil, err
@@ -96,27 +86,22 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	resp := DiffResponseProto(diff.Designs(a, b))
 	gA := BuildGeometry(ctx, s.loader, aURI, aOpts...)
 	gB := BuildGeometry(ctx, s.loader, bURI, bOpts...)
-	// Plain netlist models on purpose (NOT BuildModel): diff runs no rules — the model is used only
-	// for per-sheet net annotation (annotateDiffSheets reads Nets()), so the board/params tiers would
-	// be dead weight. This is the intentional exception to the WS9-048 full-model rule, not drift.
+	// Plain netlist models, NOT BuildModel. Diff runs no rules and annotateDiffSheets reads only
+	// Nets(), so the board and params tiers would be dead weight. This is the one intended
+	// exception to the WS9-048 full-model rule.
 	annotateDiffSheets(resp, check.NewModel(a), gA, check.NewModel(b), gB)
 	annotateSharedPlacements(resp, gA, gB)
 	return resp, nil
 }
 
-// annotateDiffSheets fills the response's per-side sheet maps (WS9-006) for exactly the keys
-// of the status maps, from each side's geometry via the same sheetIndex findings use
-// (WS9-024). It is a post-pass over DiffResponseProto's output — the one canonical
-// report-to-wire conversion (shared with `agni diff --format json`) stays geometry-free,
-// and a caller without geometry (the CLI, a nil side) just gets empty maps. A renamed net is
-// keyed under both names in the status map, but each side's geometry only knows its own
-// name, so the old name lands in a's map and the new name in b's with no special casing.
+// annotateDiffSheets fills the response's per-side sheet maps (WS9-006) for exactly the keys of
+// the status maps, using the same sheetIndex findings use (WS9-024). It runs after
+// DiffResponseProto so that conversion stays geometry-free, and a nil geometry side gets empty
+// maps. A renamed net is keyed under both names, and each side's geometry knows only its own name,
+// so the old name lands in a's map and the new name in b's with no special casing.
 //
-// Each side also supplies its design as the NetSource so the net channel uses the
-// AUTHORITATIVE hierarchy membership (AttrSheets, WS9-028), matching the findings path
-// (AnnotateSheets): a sub-sheet's wireless single-pin net has no wire geometry to join, so
-// without it that net gets no diff badge or navigation (WS9-027). Components stay
-// geometry-only — placements always exist, so that join never had the gap.
+// Each side passes its design as the NetSource so wireless sub-sheet nets get a sheet too
+// (WS9-027, WS9-028); see indexSheets.
 func annotateDiffSheets(resp *webapi.DiffDesignsResponse, mA NetSource, gA *geom.SchematicGeometry, mB NetSource, gB *geom.SchematicGeometry) {
 	side := func(m NetSource, g *geom.SchematicGeometry) (comps, nets map[string]*webapi.DiffDesignsResponse_SheetIds) {
 		if g == nil {
@@ -141,13 +126,11 @@ func annotateDiffSheets(resp *webapi.DiffDesignsResponse, mA NetSource, gA *geom
 	resp.ComponentSheetsB, resp.NetSheetsB = side(mB, gB)
 }
 
-// annotateSharedPlacements fills the overlay-alignment sample (WS9-007): components placed
-// in BOTH sides' geometry — unchanged ones included, they are the evidence — with each
-// side's own sheet id and placement origin. Alignment needs both frames, so a missing
-// geometry on either side leaves the sample empty rather than half-filled; the viewer then
-// falls back to frame-size evidence alone. The verdict itself is computed client-side: the
-// viewer owns sheet pairing (including its positional fallback), so it must own which
-// placements are comparable.
+// annotateSharedPlacements fills the overlay-alignment sample (WS9-007) with the components placed
+// in BOTH sides' geometry, unchanged ones included, each with its side's sheet id and origin. A
+// missing geometry on either side leaves the sample empty rather than half-filled, and the viewer
+// falls back to frame-size evidence. The viewer computes the verdict, because it owns sheet
+// pairing and so owns which placements are comparable.
 func annotateSharedPlacements(resp *webapi.DiffDesignsResponse, gA, gB *geom.SchematicGeometry) {
 	if gA == nil || gB == nil {
 		return
@@ -191,12 +174,10 @@ func annotateSharedPlacements(resp *webapi.DiffDesignsResponse, gA, gB *geom.Sch
 	}
 }
 
-// DiffResponseProto is the one place a diff.Report becomes its webapi wire form, so the RPC
-// and the CLI's `diff --format json` share a single shape instead of two that can drift (the
-// FindingProto pattern). Alongside the report it derives the highlight maps: ref_des ->
-// added|removed|changed and net name -> new|deleted|renamed|hard|soft, with a renamed net
-// keyed under BOTH its old and new name so each side of a visual diff joins by the name its
-// own geometry carries.
+// DiffResponseProto is the one place a diff.Report becomes its webapi wire form, shared by the RPC
+// and the CLI's `diff --format json` (C31). It also derives the highlight maps, ref_des ->
+// added|removed|changed and net name -> new|deleted|renamed|hard|soft, with a renamed net keyed
+// under BOTH names so each side of a visual diff joins by the name its own geometry carries.
 func DiffResponseProto(r *diff.Report) *webapi.DiffDesignsResponse {
 	rep := &webapi.DiffReport{
 		ComponentsAdded:   r.ComponentsAdded,
@@ -228,9 +209,8 @@ func DiffResponseProto(r *diff.Report) *webapi.DiffDesignsResponse {
 			Approx:  renameEvidenceProto(nc.Approx),
 		})
 		nets[nc.Name] = string(nc.Kind)
-		// BOTH rename kinds carry an old name, and the status map is what a viewer joins to the OLD
-		// design's geometry. Registering only the exact kind here left an approximate rename invisible
-		// on the old side, which is the side a reader checks when deciding whether to believe it.
+		// BOTH rename kinds carry an old name, which the viewer joins to the OLD design's geometry.
+		// Skipping the approximate kind would hide it on the side a reader checks to judge it.
 		if nc.Kind == diff.NetRenamed || nc.Kind == diff.NetRenamedApprox {
 			nets[nc.OldName] = string(nc.Kind)
 		}

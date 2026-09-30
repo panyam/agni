@@ -38,46 +38,39 @@ var (
 	ErrInternal        = errors.New("internal error")
 )
 
-// Loader materializes a design's read model from a (mount, path). The server adapter (fsLoader)
-// is os-backed; a future WASM adapter is a seededLoader singleton over one already-materialized
-// Design. All file I/O lives in the adapter, never here (CONSTRAINTS C13).
+// Loader materializes a design's read model from an artifact.URI. The server adapter (osLoader in
+// cmd/agni) is os-backed. All file I/O lives in the adapter, never here (CONSTRAINTS C13).
 type Loader interface {
 	// Design returns the netlist IR (for counts and checks). A geometry-only file has none and
 	// returns an error the caller treats as "no netlist".
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 	// Geometry resolves drawable geometry for the layout and symbol source (the design's own
-	// symbols when faithfulSymbols, else synthetic glyphs).
-	//
-	// It takes ReadOptions for the same reason Design does, and the omission was a real bug (agni
-	// issue 347). A symbol library is config that changes what the read CONTAINS: an unresolved
-	// symbol contributes no shapes, so the placement is dropped from the document along with the
-	// entity keys that make it pickable, while its ref-des annotation still draws. The sheet then
-	// looks complete and every component and pin on it is silently unclickable. A signature with no
-	// options channel made that unfixable from the call site and the assertion unwritable.
+	// symbols when faithfulSymbols, else synthetic glyphs). It takes ReadOptions because a symbol
+	// library changes what the read CONTAINS (agni issue 347). An unresolved symbol contributes no
+	// shapes, so its placement and pickable entity keys drop out while its ref-des still draws, and
+	// the sheet looks complete with every component and pin on it silently unclickable.
 	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
-	// Report classifies how an auto-layout draws each component (the conversion report).
-	// Report explains how each component was drawn. It takes ReadOptions for the same reason
-	// Geometry does, and more sharply: this is the surface that would REPORT an unresolved symbol,
-	// so a read that could not see the project's library would diagnose a problem it caused itself.
+	// Report classifies how an auto-layout draws each component (the conversion report). It takes
+	// ReadOptions for the same reason Geometry does. This is the surface that would REPORT an
+	// unresolved symbol, so a read blind to the project's library would diagnose a problem it caused.
 	Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...ReadOption) (*graph.ConversionReport, error)
 	// Expectations loads a design's `<path>.expect.yaml` sidecar (WS6-006). A design with no sidecar
 	// returns a nil map and a nil error (absence is normal), so the caller renders an empty panel
 	// rather than an error.
 	Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error)
 	// Board returns the physical board sidecar (WS1-006) for formats that carry one
-	// (.kicad_pcb today). nil with a nil error means the format has none — absence is
-	// normal, mirroring Expectations — and the design then simply lists no board sheet.
+	// (.kicad_pcb, IPC-2581 .xml/.cvg). nil with a nil error means the format has none, which is
+	// normal as with Expectations, and the design then lists no board sheet.
 	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
 	// DesignHash returns "sha256:<hex>" over the design's entry file, the revision identity a
-	// verdict link is checked against (agni issue 392). It is the same method the review service's
-	// port declares and the same one `agni check --url-base` mints its links from, so the two sides
-	// of the hop compare values computed by one implementation rather than by two.
+	// verdict link is checked against (agni issue 392). The review service's port and `agni check
+	// --url-base` use this same method, so both sides of the link compare values from one
+	// implementation.
 	//
-	// THE CALLER PASSES A RESOLVED TIER, never the request. A design is spelled three ways (the
-	// folder, the entry, a declared companion) and all three analyse the same bytes, so the identity
-	// is the NETLIST tier `TierURIs` returned (C32). Hashing the request instead is not a hash of
-	// nothing, which would be caught: a companion hashes to the companion and a folder hashes to
-	// nothing at all, so one spelling reports a confident wrong revision and another reports none.
+	// THE CALLER PASSES A RESOLVED TIER, never the request. All three spellings of a design (the
+	// folder, the entry, a declared companion) analyse the same bytes, so the identity is the NETLIST
+	// tier `TierURIs` returned (C32). Hashing the request gives a companion the companion's digest and
+	// a folder no hash at all, so one spelling reports a wrong revision and another reports none.
 	//
 	// An error means this server could not hash the file, which GetDesign reports as an empty
 	// content_hash. That is a THIRD state, distinct from a match and a mismatch, and the response's
@@ -86,8 +79,8 @@ type Loader interface {
 }
 
 // boardSheetID is the synthetic sheet id the board renders under (WS7-034). It is a sheet
-// so navigation, deep links, the sheet overview, and the highlight RPCs apply unchanged;
-// the id is non-numeric on purpose (a numeric selector reads as a positional index).
+// so navigation, deep links, the sheet overview, and the highlight RPCs apply unchanged. The id
+// is non-numeric because a numeric selector reads as a positional index.
 const boardSheetID = "board"
 
 // boardFor loads the board sidecar for a sheet request, classifying "this file has no
@@ -128,7 +121,7 @@ type NativeRenderer interface {
 	Render(ctx context.Context, uri artifact.URI, page int) (string, error)
 }
 
-// DesignService loads and renders one design over injected ports (CONSTRAINTS C13): it
+// DesignService loads and renders one design over injected ports (CONSTRAINTS C13). It
 // resolves a design's IR/geometry via a Loader, renders golden pages via a NativeRenderer,
 // and does the pure select/pack/label itself. It performs no file I/O and knows no transport;
 // rule checks are the separate CheckService (checks.go).
@@ -138,13 +131,10 @@ type DesignService struct {
 	// style is the render palette/font applied to both the SVG and packed (WebGL) output. The zero
 	// value renders with render.DefaultStyle.
 	style render.Style
-	// projects resolves a design to its project and loads that project's config; nil when this
-	// deployment resolves no projects, and then every design reads under the engine defaults.
-	//
-	// A RENDER tier needs this for the same reason the rule-running tiers do. A project's declared
-	// symbol library decides whether a placement resolves to a body, and an unresolved symbol keeps
-	// its reference designator while losing its pins, so the read is missing connections rather than
-	// just artwork (agni issue 347).
+	// projects resolves a design to its project (see ProjectResolver); nil means every design reads
+	// under the engine defaults. A render needs it because a project's symbol library decides whether
+	// a placement resolves, and an unresolved symbol keeps its ref-des while losing its pins, so the
+	// read is missing connections rather than just artwork (agni issue 347).
 	projects *ProjectResolver
 }
 
@@ -156,11 +146,10 @@ func NewDesignService(loader Loader, native NativeRenderer, style render.Style, 
 
 // readOptions composes the per-read config this design's project supplies: its naming vocabulary and
 // the symbol libraries it declares. A design belonging to no project yields no options, which is the
-// ordinary loose-file case; a descriptor that exists and does not parse is returned, because reading
-// under the defaults instead would answer a different question without saying so.
+// ordinary loose-file case. A descriptor that exists and does not parse returns its error rather than
+// reading under the defaults.
 //
-// It passes no request overlay: the four design surfaces carry no OverlayConfig on the wire, so the
-// project's own config is the whole of what applies.
+// It passes no request overlay, since the four design surfaces carry no OverlayConfig on the wire.
 func (s *DesignService) readOptions(ctx context.Context, uri artifact.URI) ([]ReadOption, error) {
 	ov, err := s.projects.Overlay(ctx, uri, nil, Overlay{}, "")
 	if err != nil {
@@ -170,8 +159,7 @@ func (s *DesignService) readOptions(ctx context.Context, uri artifact.URI) ([]Re
 }
 
 // classifyLoadErr keeps an already-classified loader error (unknown mount, containment) and
-// wraps anything else — a resolve/parse failure — as an invalid argument, preserving the
-// pre-split transport mapping.
+// wraps anything else, such as a resolve or parse failure, as an invalid argument.
 func classifyLoadErr(err error) error {
 	if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
 		return err
@@ -221,7 +209,7 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	// The design's declaration decides which artifact each tier reads, so a netlist entry whose
 	// schematic lives in a declared companion renders that companion's sheets rather than falling
 	// back to an auto-layout (agni issue 656). Every layout question below asks the GEOMETRY tier and
-	// every netlist question asks the netlist tier; before this they both asked the ref as handed in.
+	// every netlist question asks the netlist tier.
 	src, err := s.projects.Sources(ctx, u, req.GetAsNamed())
 	if err != nil {
 		return nil, err
@@ -256,15 +244,13 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 		// viewer has no way to tell a complete sheet from a bodyless one (agni issue 354).
 		Undrawn: g.GetUndrawn(),
 	}
-	// A hash failure is not a read failure. The design loaded, its sheets are drawable, and the only
-	// thing lost is the viewer's ability to VERIFY a link that points here, so the field goes empty
-	// and the response stands, exactly as DesignRef.content_hash documents for a producer that did
-	// not hash. Failing the open over a provenance field would cost the reader the design too.
+	// A hash failure is not a read failure. ContentHash goes empty and the response stands, as
+	// DesignRef.content_hash documents for a producer that did not hash, so only link verification
+	// is lost rather than the design.
 	//
-	// The NETLIST tier, not the request. A revision identity names the bytes a read of this design
-	// actually opens, and every spelling of one design opens the same ones (C32). Hashing the request
-	// gave a companion ref the companion's digest, which the viewer then reported as a stale link
-	// against a design that was in sync.
+	// Hash the NETLIST tier, not the request, since every spelling of one design opens the same bytes
+	// (C32). Hashing the request would give a companion ref its own digest, and the viewer would report
+	// a stale link against a design that is in sync.
 	if h, err := s.loader.DesignHash(ctx, nu); err == nil {
 		resp.ContentHash = h
 	}
@@ -280,14 +266,12 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 		resp.Name = g.GetDesignRef()
 	}
 	// The netlist tier is read for the counts WHENEVER it is a different artifact from the geometry
-	// tier, which is the case a declared companion creates: sheets from the schematic export, and
-	// 3980 components from the netlist beside it. Both halves of one design, where the branch this
-	// replaces could only ever report one.
+	// tier, which is what a declared companion creates. Sheets then come from the schematic export
+	// and counts (3980 components on one board) from the netlist beside it.
 	//
-	// The guard is the other half of that. A faithful file that IS its own netlist tier is a drawing
-	// being read as itself, and netlisting one counts per-sheet segments nothing joins: the same board
-	// reads 5219 components and 4572 nets off its schematic export against 3980 and 1617 off its
-	// netlist. So a LOOSE geometry file still reports no counts rather than inflated ones.
+	// A faithful file that IS its own netlist tier reports no counts, because netlisting a drawing
+	// counts per-sheet segments nothing joins. The same board reads 5219 components and 4572 nets off
+	// its schematic export against 3980 and 1617 off its netlist.
 	if layout != faithfulLayout || src.NetlistURI != src.GeometryURI {
 		if d, err := s.loader.Design(ctx, nu, opts...); err == nil {
 			if resp.Name == "" {
@@ -341,13 +325,9 @@ func reportToProto(r *graph.ConversionReport) *webapi.ConversionReport {
 	return out
 }
 
-// ReportFromProto is reportToProto's inverse.
-//
-// It exists so the pair carries the deep-equality round-trip guard C26 asks of a hand-written twin,
-// and so `agni render --report --report-format json` can emit the same message GetLayoutReport
-// returns rather than a second hand-rolled shape of the same report. Before that the CLI encoded the
-// Go struct directly, so the two publishers of one report disagreed by construction and nothing could
-// detect it.
+// ReportFromProto is reportToProto's inverse. It gives the pair the deep-equality round-trip guard
+// C26 asks of a hand-written twin, and lets `agni render --report --report-format json` emit the
+// same message GetLayoutReport returns (#632).
 func ReportFromProto(p *webapi.ConversionReport) *graph.ConversionReport {
 	out := &graph.ConversionReport{}
 	for _, c := range p.GetComponents() {
@@ -376,10 +356,10 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	if err != nil {
 		return nil, err
 	}
-	// The synthetic board sheet renders from the board sidecar, not the schematic geometry:
-	// SVG from BoardSVG, PACKED (and UNSPECIFIED) from PackBoard — the WS7-035 tier, same
-	// envelope as the schematic pack so the canvas draws it with one extra draw mode.
-	// NATIVE has no board pages; it answers with the SVG document.
+	// The synthetic board sheet renders from the board sidecar, not the schematic geometry. SVG
+	// comes from BoardSVG, and PACKED (and UNSPECIFIED) from PackBoard, the WS7-035 tier, whose
+	// envelope matches the schematic pack so the canvas draws it with one extra draw mode.
+	// NATIVE has no board pages and answers with the SVG document.
 	if req.GetSheet() == boardSheetID {
 		b, err := s.boardFor(ctx, u)
 		if err != nil {
@@ -435,10 +415,10 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	resp := &webapi.GetSheetResponse{}
 	switch req.GetFormat() {
 	case webapi.SheetFormat_SHEET_FORMAT_SVG:
-		// The served viewer is the one consumer that PICKS, so it is the one that asks for the
-		// per-pin pick targets. `agni render` writing a file does not, and neither does a report
-		// embedding a sheet: they would carry an invisible element per pin for an interaction that
-		// never happens there (render.Style.PickTargets).
+		// The served viewer is the one consumer that PICKS, so only it asks for per-pin pick targets.
+		// `agni render` writing a file and a report embedding a sheet skip them, since each would carry
+		// an invisible element per pin for an interaction that never happens there
+		// (render.Style.PickTargets).
 		resp.Content = &webapi.GetSheetResponse_Svg{Svg: render.SheetSVG(g, sheet, render.WithStyle(style), render.WithPickTargets())}
 	case webapi.SheetFormat_SHEET_FORMAT_NATIVE:
 		svg, err := s.native.Render(ctx, u, render.SheetIndex(g, sheet)+1)
@@ -469,9 +449,9 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_NATIVE {
 		return nil, fmt.Errorf("%w: no highlight overlay for the NATIVE format", ErrInvalidArgument)
 	}
-	// The board sheet's overlay comes from the board join (net -> copper, ref_des -> pads):
-	// a transparent SVG framed exactly like the BoardSVG base, or primitive-index groups
-	// over the SAME PackBoard primitive table the PACKED GetSheet returned.
+	// The board sheet's overlay comes from the board join (net -> copper, ref_des -> pads), as a
+	// transparent SVG framed exactly like the BoardSVG base or as primitive-index groups over the
+	// SAME PackBoard primitive table the PACKED GetSheet returned.
 	if req.GetSheet() == boardSheetID {
 		b, err := s.boardFor(ctx, u)
 		if err != nil {
@@ -513,9 +493,7 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, err)
 	}
 
-	// On a NAME-ONLY canvas (a faithful .eds / WS1-047 companion schematic: wires named by net but
-	// carrying no per-instance net_id), a net spec that targets a net by id alone cannot match, so
-	// resolve those ids to their net NAMES via the netlist and add them for a name-join.
+	// A NAME-ONLY canvas needs id-only net specs resolved to net names (nameJoinSpecs).
 	specs := s.nameJoinSpecs(ctx, u, g, req.GetSpecs(), opts...)
 
 	resp := &webapi.HighlightSheetResponse{}
@@ -531,22 +509,21 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 }
 
 // nameJoinSpecs adapts highlight specs for a NAME-ONLY geometry canvas (a faithful .eds / WS1-047
-// companion schematic). Such a canvas names its wires by net but carries no per-instance net_id —
-// the net_id hashes ref-des, which the schematic under-annotates, so it can never match the
-// netlist's id. A spec that targets a net by id alone therefore matches nothing there. This resolves
-// each spec's net_id to its net NAME (from the netlist at path) and adds it, so the match lands by
-// name. It is a NO-OP on an id-capable canvas (nameOnlyCanvas is false) and when no spec carries a
-// bare net_id, so the primary-canvas per-instance precision and the goldens are untouched.
+// companion schematic). Such a canvas names its wires by net but carries no per-instance net_id,
+// because the net_id hashes ref-des and the schematic under-annotates them, so a spec targeting a
+// net by id alone matches nothing there. This resolves each spec's net_id to its net NAME from the
+// netlist at uri and adds it. It is a NO-OP on an id-capable canvas (nameOnlyCanvas is false) and
+// when no spec carries a bare net_id, so the primary-canvas per-instance precision and the goldens
+// are untouched.
 func (s *DesignService) nameJoinSpecs(ctx context.Context, uri artifact.URI, g *geom.SchematicGeometry, specs []*geom.HighlightSpec, opts ...ReadOption) []*geom.HighlightSpec {
 	if !nameOnlyCanvas(g) || !anyNetIDSpec(specs) {
 		return specs
 	}
-	// The caller's already-resolved options rather than a second resolution: this read must see the
-	// same config as the geometry it is joining against, or an id would resolve to a name the drawing
-	// does not carry.
+	// The caller's resolved options, not a second resolution. This read must see the same config as
+	// the geometry it joins against, or an id could resolve to a name the drawing does not carry.
 	d, err := s.loader.Design(ctx, uri, opts...)
 	if err != nil {
-		return specs // cannot resolve the netlist: leave specs as-is, no worse than before
+		return specs // netlist unreadable, so leave specs as-is
 	}
 	idToName := map[string]string{}
 	for _, n := range d.GetNets() {
@@ -577,13 +554,13 @@ func (s *DesignService) nameJoinSpecs(ctx context.Context, uri artifact.URI, g *
 }
 
 // nameOnlyCanvas reports whether a geometry names its wires by net but carries no per-instance
-// net_id — the faithful .eds / companion case where a net highlight must join by name, not id.
+// net_id, the faithful .eds / companion case where a net highlight must join by name, not id.
 func nameOnlyCanvas(g *geom.SchematicGeometry) bool {
 	named := false
 	for _, sh := range g.GetSheets() {
 		for _, w := range sh.GetWires() {
 			if w.GetNetId() != "" {
-				return false // an id-capable canvas: id-join works, leave it alone
+				return false // an id-capable canvas, where id-join works
 			}
 			if w.GetNet() != "" {
 				named = true
@@ -604,11 +581,9 @@ func anyNetIDSpec(specs []*geom.HighlightSpec) bool {
 }
 
 // artifactURI parses a request's artifact URI, classifying a malformed one for the transport.
-//
-// Every rpc that names an artifact funnels through here, which is what makes containment a property
-// of the type rather than a step somebody remembers: a parsed URI cannot name a location outside the
-// mount it claims, so the adapters below the ports stopped re-checking it. Before this there were 26
-// separate containment checks and any new adapter had to know to add a 27th.
+// Every rpc naming an artifact goes through here, and a parsed URI cannot name a location outside
+// its mount, so containment is a property of the type and the adapters below the ports do not
+// re-check it (#179 replaced 26 separate containment checks).
 func artifactURI(s string) (artifact.URI, error) {
 	u, err := artifact.Parse(s)
 	if err != nil {

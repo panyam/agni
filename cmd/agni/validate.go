@@ -18,11 +18,10 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// validateCmd is the reader-health smoke over real design files (WS6-007): for every file,
-// run the netlist and/or faithful-geometry reader the registry claims for its extension and
-// assert the structural invariants in the validate package. This is how "a reader is ready
-// when verified against real files" runs over a private corpus the committed tests can
-// never see.
+// validateCmd is the reader-health smoke over real design files (WS6-007). For every file it
+// runs the netlist and/or faithful-geometry reader the registry claims for its extension and
+// asserts the structural invariants in the validate package. It is how a reader gets checked
+// against a private corpus the committed tests never see.
 func validateCmd() *cobra.Command {
 	var format string
 	cmd := &cobra.Command{
@@ -64,9 +63,9 @@ func validateCmd() *cobra.Command {
 }
 
 // buildValidateReport expands args (files as named, directories walked recursively in
-// sorted order) and validates each. A walk skips extensions no reader claims — the same
-// semantics as the file tree greying them out — while an explicitly named file with no
-// reader is a failure, since the user asserted it should validate.
+// sorted order) and validates each. A walk skips extensions no reader claims, as the file
+// tree greys them out, while an explicitly named file with no reader fails, since the user
+// asserted it should validate.
 func buildValidateReport(l *formats.Loader, args []string) (*webapi.ValidateReport, error) {
 	rep := &webapi.ValidateReport{}
 	for _, arg := range args {
@@ -186,7 +185,7 @@ func writeValidateText(w io.Writer, rep *webapi.ValidateReport) {
 	fmt.Fprintf(w, "\n%d passed, %d failed, %d skipped (no reader)\n", rep.Passed, rep.Failed, rep.Skipped)
 }
 
-// countsLine is the passing row's detail: whatever tiers the format produced.
+// countsLine is the passing row's detail, the counts for whatever tiers the format produced.
 func countsLine(fv *webapi.FileValidation) string {
 	var parts []string
 	if n := fv.GetNetlist(); n != nil {

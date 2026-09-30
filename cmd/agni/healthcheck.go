@@ -8,14 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// healthcheckCmd probes a running server's /healthz and exits non-zero if it is not serving. It
-// exists so the container image can declare a HEALTHCHECK without installing curl or wget: the
-// runtime is debian-slim, which ships neither, and pulling one in to make a single HTTP request
-// adds surface area to every deployment for the sake of a probe the binary can make itself.
-//
-// It is intentionally the dumbest possible client. It asks whether the server answers 200 on
-// /healthz, which is the whole question a restart policy acts on, and it does not attempt to
-// interpret the body or check any other route.
+// healthcheckCmd probes a running server's /healthz and exits non-zero unless it answers 200. The
+// container image's HEALTHCHECK runs it because the debian-slim runtime ships neither curl nor wget,
+// and installing one would add a package to every deployment for a single request. It reads only
+// the status code and checks no other route.
 func healthcheckCmd() *cobra.Command {
 	var addr string
 	var timeout time.Duration

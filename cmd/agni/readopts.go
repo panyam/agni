@@ -5,13 +5,13 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// readerFor picks the formats.Loader one read should use: the shared one when the read carries no
-// options, else a COPY carrying that read's naming lexicon. Copying is what keeps a per-request
-// project convention from leaking — the shared loader is never mutated, so two concurrent reads with
-// different conventions cannot see each other's (WS3-102, on the WS3-106 value).
+// readerFor picks the formats.Loader one read should use. A read with no options gets the shared
+// loader, and any other read gets a COPY carrying its options. The shared loader is never mutated, so
+// two concurrent reads with different project conventions cannot see each other's (WS3-102, on the
+// WS3-106 value).
 //
-// A nil base is a supported caller (see formats.Loader's own nil handling), so it stays nil rather
-// than being dereferenced; the copy then starts from a zero loader carrying only the lexicon.
+// A nil base is supported (see formats.Loader's own nil handling) and is never dereferenced. The copy
+// then starts from a zero loader carrying only the read's options.
 func readerFor(base *formats.Loader, opts ...service.ReadOption) *formats.Loader {
 	o := service.ReadOpts(opts...)
 	if o.Lexicon == nil && len(o.SymbolPaths) == 0 && o.DeviceClassFor == nil {
@@ -32,7 +32,7 @@ func readerFor(base *formats.Loader, opts ...service.ReadOption) *formats.Loader
 	}
 	// The read's datasheet corpus, so the classes only a spec can establish are stamped into the IR
 	// the DRAWING is built from and not only into a check model (agni issue 710). It replaces rather
-	// than composing: two corpora for one read would be two answers to one question.
+	// than composes, since two corpora for one read would give two answers to one question.
 	if o.DeviceClassFor != nil {
 		cp.DeviceClassFor = o.DeviceClassFor
 	}

@@ -9,25 +9,20 @@ import (
 	"github.com/panyam/agni/core/review"
 )
 
-// This file is `agni review`'s CI gate: the predicate that turns a run's outcomes into an exit code.
+// This file is `agni review`'s CI gate, the predicate that turns a run's outcomes into an exit code
+// (agni issue 199).
 //
-// It is a SECOND gate rather than a reuse of `check --fail-on`, and the reason is the axis. --fail-on
-// pivots on finding SEVERITY, which is a statement about consequence; this pivots on item OUTCOME,
-// which is a statement about whether the question was answered at all. A checklist can go from
-// answering 14 of its items to answering 13 with its failure count unchanged at zero, and no severity
-// predicate can see that. Reusing one flag name for two vocabularies would make `--fail-on error` and
-// `--fail-on fail` differ by a word nobody would read carefully.
+// It is a SECOND gate beside `check --fail-on` because the axis differs. --fail-on pivots on finding
+// SEVERITY; this pivots on item OUTCOME, whether the question was answered at all. A checklist can go
+// from answering 14 of its items to 13 with its failure count still zero, and no severity predicate
+// sees that. Sharing one flag name would make `--fail-on error` and `--fail-on fail` differ by a word.
 //
 // The gate lives at the CLI edge, not in the service. A browser has no exit code, and the numbers it
-// reads are the same ones review.Tally already exposes, so there is nothing here for a served surface
-// to call.
+// reads are already on review.Tally.
 
-// gateExitCode is the process exit status for a tripped gate, distinct from 1 (the run itself failed).
-//
-// The distinction is the point: a pipeline that cannot tell a red board from a broken tool retries the
-// wrong one. `check --fail-on` and `review`'s two gates now share it, so one script can treat every
-// gate in this CLI alike. `check` kept a single code for one release, so that the review gate landed
-// without changing a documented CI contract underneath it in the same PR.
+// gateExitCode is the process exit status for a tripped gate, distinct from 1 (the run itself failed),
+// so a pipeline can tell a red board from a broken tool. `check --fail-on` and `review`'s two gates
+// share it, so one script can treat every gate in this CLI alike (agni issue 216).
 const gateExitCode = 2
 
 // gateError is a gate trip. It carries an exit code so main can distinguish it from an ordinary
@@ -39,9 +34,8 @@ func (e *gateError) Error() string { return e.msg }
 // exitCode maps a command error to a process exit status: 0 for success, gateExitCode for a tripped
 // gate, 1 for everything else.
 //
-// It is a function rather than inline logic in main so it can be tested directly. Asserting an exit
-// code the other way means spawning a subprocess, which is a slow test of an os.Exit call rather than
-// a fast test of the decision behind it.
+// It is a function rather than inline in main so a test can assert the decision without spawning a
+// subprocess.
 func exitCode(err error) int {
 	if err == nil {
 		return 0
@@ -57,26 +51,22 @@ func exitCode(err error) int {
 // which is what an invocation that passed neither flag gets.
 //
 // Both gates are OPT-IN, matching `check --fail-on`'s empty default. `agni review` has always exited
-// 0, so gating by default would turn every existing pipeline, both tutorial rungs that run it, and the
-// three targets in examples/tutorial-project/Makefile red on a tool upgrade, with no flag anyone could
-// have set in advance to opt out.
+// 0, so gating by default would turn every existing pipeline (including the tutorial rungs and
+// examples/tutorial-project/Makefile) red on a tool upgrade.
 type reviewGate struct {
 	// outcomes are the item outcomes that trip the gate, empty when --fail-on-outcome was not passed.
 	outcomes map[review.Outcome]bool
 	// minAnswered is the floor over Tally.Answered(), 0 when --min-answered was not passed. A floor of
-	// 0 is indistinguishable from "no floor" and that is correct: every run answers at least 0 items,
-	// so a zero floor could never trip.
+	// 0 means "no floor", since every run answers at least 0 items.
 	minAnswered int
 }
 
 // gatableOutcomes are the outcomes --fail-on-outcome accepts, and the set an unknown value is reported
 // against.
 //
-// It is deliberately the WHOLE vocabulary rather than the two or three a team is likely to gate on.
-// Each of these exists because a check that did not evaluate had been scoring as a pass, and a team
-// that decides `needs-data` should block their release is making exactly the judgment the vocabulary
-// was built to let them make. Restricting the set here would be this file having an opinion about
-// another team's release policy.
+// It is the WHOLE vocabulary rather than the two or three a team is likely to gate on. Each outcome
+// exists because a check that did not evaluate had been scoring as a pass, so a team may reasonably
+// decide `needs-data` blocks their release. Which outcomes block is the team's policy, not this file's.
 var gatableOutcomes = []review.Outcome{
 	review.Fail,
 	review.Provisional,
@@ -89,9 +79,8 @@ var gatableOutcomes = []review.Outcome{
 }
 
 // parseReviewGate builds the gate from the two flag values. An unknown outcome is an ERROR naming the
-// valid set, never a silently ignored argument: a typo in a CI config that quietly disabled the gate
-// would report a clean pipeline for as long as nobody looked, which is the same silence-reads-as-
-// coverage failure the outcome vocabulary exists to remove.
+// valid set, never silently ignored, because a typo in a CI config would otherwise disable the gate
+// and report a clean pipeline.
 func parseReviewGate(failOnOutcome string, minAnswered int) (reviewGate, error) {
 	g := reviewGate{minAnswered: minAnswered}
 	if minAnswered < 0 {
@@ -131,24 +120,19 @@ func outcomeNames() []string {
 
 // trip returns a gateError when any report violates the gate, nil otherwise.
 //
-// It takes every report rather than one, so the rollup gates on the same terms as the single-design
-// run. A gate that only worked on one design would be a trap for the case most likely to want it: a
-// team running a checklist across a family of boards in CI is exactly who reaches for a gate, and a
-// silently-passing rollup is worse than no gate at all.
+// It takes every report rather than one, so a rollup across a family of boards gates on the same terms
+// as a single-design run.
 //
-// A design trips independently of the others and the FIRST violation is reported, because a gate's job
-// is to stop the pipeline rather than to be a second report. The full per-item detail was already
-// rendered to stdout by the time this runs.
+// A design trips independently of the others and only the FIRST violation is reported, since the full
+// per-item detail was already rendered to stdout by the time this runs.
 func (g reviewGate) trip(reports []review.Report) error {
 	if len(g.outcomes) == 0 && g.minAnswered == 0 {
 		return nil
 	}
 	for _, r := range reports {
 		t := r.Tally()
-		// The answered floor is checked FIRST because it is the one a severity gate cannot express, and
-		// because a run that stopped answering its checklist explains a suspiciously low failure count.
-		// Reporting "3 fails" on a run that answered 4 of 15 items would be the less useful of the two
-		// true things.
+		// The answered floor is checked FIRST, because a run that stopped answering its checklist
+		// explains a low failure count. "Answered 4 of 15" is more useful than "3 fails".
 		if g.minAnswered > 0 && t.Answered() < g.minAnswered {
 			return &gateError{msg: fmt.Sprintf(
 				"%s answered %d of %d checklist items, below --min-answered %d (%d covered; an item whose rule is present but whose inputs are absent reads not-applicable, which counts as covered and not as answered)",

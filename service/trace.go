@@ -10,11 +10,10 @@ import (
 
 // TraceProto and TraceFromProto convert a trace between its Go form and its wire form.
 //
-// A hand-written twin exists here because check.Trace is a domain value the engine computes and
-// returns from one call with its evidence attached, and it carries a Go string type for its outcome
-// that the wire spells as an enum. C26 asks such a pair for a deep-equality round-trip guard, which
-// is TestTraceProtoRoundTrip, plus a field census so the next person to grow check.Trace has to say
-// whether the new field belongs on the wire.
+// The twin is hand-written because check.Trace is a domain value the engine returns with its
+// evidence attached, and its outcome is a Go string type the wire spells as an enum. Per C26 the pair
+// has a round-trip guard (TestTraceProtoRoundTrip) and a field census, so a field added to
+// check.Trace has to be placed on the wire or excluded explicitly.
 func TraceProto(t check.Trace) *webapi.Trace {
 	p := &webapi.Trace{
 		From:    traceEndProto(t.From),
@@ -81,8 +80,8 @@ func traceEndFromProto(p *webapi.TraceEnd) check.TraceEnd {
 }
 
 // traceOutcomeProto maps the Go outcome onto the wire enum. An unknown value maps to UNSPECIFIED
-// rather than to ROUTED, deliberately: a mapping bug then reads as "we cannot say" rather than as a
-// connection the engine never found, which is the same direction VerdictProto's default arm takes.
+// rather than ROUTED, so a mapping bug reads as "we cannot say" rather than as a connection the engine
+// never found. VerdictProto's default arm leans the same way.
 func traceOutcomeProto(o check.TraceOutcome) webapi.TraceOutcome {
 	switch o {
 	case check.TraceRouted:
@@ -109,11 +108,9 @@ func traceOutcomeFromProto(o webapi.TraceOutcome) check.TraceOutcome {
 
 // TraceDesign walks from one pin to another over the design's netlist and returns the route.
 //
-// It reads the same Model the checks path builds and calls the same check.TracePins the CLI calls,
-// so a route read in a terminal and a route drawn on the canvas cannot disagree. A design with no
-// netlist has nothing to walk, and that is an ERROR here rather than an empty trace: an empty answer
-// is indistinguishable from "these two pins are not connected", which is the confusion the three
-// outcomes exist to prevent.
+// It calls the same check.TracePins the CLI calls, so a route in a terminal and a route on the canvas
+// cannot disagree. A design with no netlist is an ERROR rather than an empty trace, because an empty
+// answer is indistinguishable from "these two pins are not connected".
 func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -123,9 +120,9 @@ func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesign
 	if err != nil {
 		return nil, err
 	}
-	// Tiers from the design's declaration, like every other read here: the walk is over the NETLIST
-	// and the sheets come from the geometry companion, which for a netlist entry is a different
-	// artifact (C32). This call was reading whatever ref it was handed.
+	// Tiers come from the design's declaration, like every other read here. The walk is over the
+	// NETLIST and the sheets come from the geometry companion, a different artifact for a netlist
+	// entry (C32).
 	nu, _, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, req.GetAsNamed())
 	if err != nil {
 		return nil, err

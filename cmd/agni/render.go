@@ -30,16 +30,10 @@ const (
 	symbolsFaithful = formats.SymbolsFaithful
 )
 
-// renderLoader is the reader for a render, carrying the design's PROJECT config.
-//
-// `agni render` built its loader with no options at all, so a project's declared symbol library
-// never reached the drawing however that project was configured, and --symbol-path was the only
-// route to one. An unresolved symbol keeps its placement's reference designator and loses its pins,
-// so the sheet draws every ref des and no body, and every component on it is unpickable.
-//
-// This is the same bypass agni issue 228 closed for the six netlist commands, surviving here because
-// readDesign is a netlist function and nothing was the equivalent choke point for geometry
-// (agni issue 347).
+// renderLoader is the reader for a render, carrying the design's PROJECT config so a project's
+// declared symbol library reaches the drawing (agni issue 347). Without it an unresolved symbol keeps
+// its reference designator and loses its pins, so the sheet draws every ref des, no bodies, and
+// nothing on it is pickable. It is the geometry counterpart of readDesign (agni issue 228).
 func renderLoader(file string) (*formats.Loader, error) {
 	opts, err := designReadOptions(context.Background(), file)
 	if err != nil {
@@ -48,18 +42,12 @@ func renderLoader(file string) (*formats.Loader, error) {
 	return readerFor(newLoader(), opts...), nil
 }
 
-// renderSource resolves the artifact a render should DRAW, and the note to say so.
-//
-// A design already declares where its sheets live. `service.DesignSources.GeometryURI` exists for
-// exactly this ("where schematic sheets are rendered and findings located from"), and `render` was
-// the one command that never asked for it: it passed the user's path straight to the loader. So
-// `agni stats designs/gateway` read the folder and reported "sheets from gateway.kicad_sch", while
-// `agni render designs/gateway` failed with `no reader for "" files`, having tried to open a
-// directory as a design file. The descriptor had said where to look the whole time.
+// renderSource resolves the artifact a render should DRAW, and the note to say so. It asks the
+// design's `service.DesignSources.GeometryURI`, so rendering a design folder draws the schematic
+// companion its descriptor declares instead of trying to open the directory as a file (#433).
 //
 // Falls back to the path as named whenever nothing resolves, which is the ordinary loose-file case,
-// and whenever the resolver errors, because a render is not the place to fail on somebody else's
-// descriptor when the named file may be perfectly drawable.
+// and whenever the resolver errors, since the named file may still be drawable.
 func renderSource(path string) (string, string) {
 	ws, err := workspace()
 	if err != nil {
@@ -82,7 +70,7 @@ func renderSource(path string) (string, string) {
 	return geom, src.Note
 }
 
-// renderCmd renders a design to a schematic view. Two orthogonal axes: --layout is the source
+// renderCmd renders a design to a schematic view along two orthogonal axes. --layout is the source
 // of node positions (faithful ingested geometry, or an auto-layout computed from the netlist
 // IR) and --format is the output encoding (svg or the WebGL pack). Both feed the same
 // backend-neutral render layer. The two accept different file types: faithful needs ingested
@@ -112,7 +100,7 @@ func renderCmd() *cobra.Command {
 				fmt.Fprint(cmd.ErrOrStderr(), note) // already prefixed and terminated by the resolver
 			}
 			// --compare benchmarks every auto-layout on this design and prints their quality
-			// scores side by side, so choosing a layout is a comparison, not a guess. No render.
+			// scores side by side. No render.
 			if compare {
 				d, err := readDesign(named)
 				if err != nil {
@@ -174,9 +162,8 @@ func renderCmd() *cobra.Command {
 				return fmt.Errorf("no sheets in %s", file)
 			}
 			// Say what this render could not draw, BEFORE writing it. A render that lost its symbols
-			// still produces a complete-looking sheet: every ref des, every wire and the title block
-			// draw, and only the component bodies are missing, so nothing on the page says the drawing
-			// is short (agni issue 354).
+			// still draws every ref des, every wire and the title block, with only the component
+			// bodies missing, so nothing on the page says the drawing is short (agni issue 354).
 			noteUndrawn(cmd.ErrOrStderr(), g)
 			if stats {
 				return writeGeometryStats(os.Stdout, g)
@@ -221,9 +208,8 @@ func renderCmd() *cobra.Command {
 
 // parseHighlightSpecs turns each --highlight value into one geom.HighlightSpec. A value is a
 // comma-separated list of key=value pairs naming exactly one subject (net / ref / pin) plus
-// optional style keys (shape, color, alpha). The subject shape defaults sensibly per kind — a net
-// draws as a PATH marker along its wire, a component/pin as an OUTLINE — matching the web
-// click-to-locate defaults, so the CLI static picture reads like the interactive one.
+// optional style keys (shape, color, alpha). A net defaults to a PATH marker along its wire and a
+// component or pin to an OUTLINE, matching the web viewer's click-to-locate defaults.
 func parseHighlightSpecs(flags []string) ([]*geom.HighlightSpec, error) {
 	var specs []*geom.HighlightSpec
 	for _, raw := range flags {
@@ -310,11 +296,10 @@ func parseHighlightShape(v string) (geom.HighlightShape, error) {
 // `--format json` document on stdout stays clean.
 //
 // It names the missing LIBRARIES rather than listing every placement, because one missing file
-// commonly costs every part drawn from it and forty identical lines bury that single cause. The ref
-// des count is the blast radius, which is the number a reader needs to judge whether the drawing is
-// worth reading at all.
+// commonly costs every part drawn from it and forty identical lines bury that single cause. The
+// placement count per library tells a reader whether the drawing is worth reading at all.
 //
-// Silent when nothing is undrawn. A note on every complete render is a note nobody reads.
+// Silent when nothing is undrawn.
 func noteUndrawn(w io.Writer, g *geom.SchematicGeometry) {
 	u := g.GetUndrawn()
 	if len(u) == 0 {
@@ -358,10 +343,8 @@ func writeReport(w io.Writer, file, symbols string, reg *graph.Registry, format 
 	name := filepath.Base(file)
 	switch format {
 	case "json":
-		// protojson of the WIRE message, the same ConversionReport GetLayoutReport returns, so a
-		// script reading this CLI and a client reading the rpc parse one shape. It used to encode the
-		// Go struct, so the two publishers of one report disagreed by construction: `class` here and
-		// `deviceClass` over the wire, for the same field.
+		// protojson of the WIRE message, the same ConversionReport GetLayoutReport returns (C31,
+		// agni issue 603).
 		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.
 			Marshal(service.ReportProto(rep))
 		if err != nil {
@@ -446,8 +429,6 @@ func buildRegistry(classFlags []string, classFile string) (*graph.Registry, erro
 	return reg.With(rules...), nil
 }
 
-// writeRender renders one sheet in the requested format to out (- or empty is stdout),
-// printing a status note to stderr on a file write.
 // writeBoard writes the board SVG (WS7-034) to out (or stdout), the board face of
 // writeRender.
 func writeBoard(out string, b *geom.BoardGeometry) error {
@@ -470,6 +451,8 @@ func writeBoard(out string, b *geom.BoardGeometry) error {
 	return nil
 }
 
+// writeRender renders one sheet in the requested format to out (- or empty is stdout),
+// printing a status note to stderr on a file write.
 func writeRender(out string, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, format string, specs []*geom.HighlightSpec, opts ...render.Option) error {
 	w := os.Stdout
 	if out != "" && out != "-" {

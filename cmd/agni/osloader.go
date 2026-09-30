@@ -20,10 +20,8 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// osLoader is the OS-backed service.Loader adapter: it resolves a (mount, path) to an absolute host
-// path under the mount root and reuses the engine's readers/auto-layout (readDesign,
-// resolveGeometry, buildConversionReport). All file I/O stays at the cmd edge (CONSTRAINTS C1/C13);
-// the service package is os-free. A future WASM build would inject a seededLoader instead.
+// osLoader is the OS-backed service.Loader adapter. It resolves an artifact.URI to a host path under
+// its mount root and reads it through the engine's formats.Loader (via readerFor).
 type osLoader struct {
 	mounts []mounts.Mount
 	loader *formats.Loader
@@ -42,16 +40,13 @@ func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, 
 	if err != nil {
 		return nil, err
 	}
-	// Through readerFor for the same reason Design is: a project's declared symbol library is config
-	// that changes what the geometry read CONTAINS, and it reaches this call as a read option rather
-	// than through the loader the process was built with (agni issue 347).
+	// Through readerFor, as in Design, because a project's declared symbol library changes what the
+	// geometry read CONTAINS and arrives as a read option (agni issue 347).
 	reader := readerFor(l.loader, opts...)
-	// Companion (WS1-047): a netlist opened alongside a sibling <stem>.eds draws on that schematic
-	// instead of the auto-layout graph, so the viewer shows the design's OWN drawing. The netlist
-	// stays analysis truth (checks/query read it via Design); only the picture comes from the .eds,
-	// joined to findings by net name (C21). All three geometry RPCs funnel through here, so
-	// GetDesign / GetSheet / HighlightSheet stay consistent. The sibling sits in the SAME mount dir
-	// as the already-contained abs, so no extra containment check is needed (mirrors Expectations).
+	// Companion (WS1-047). A netlist with a sibling <stem>.eds draws that schematic instead of the
+	// auto-layout, while checks and queries still read the netlist via Design, joined by net name
+	// (C21). GetDesign, GetSheet and HighlightSheet all funnel through here. The sibling sits in the
+	// SAME mount dir as the already-contained abs, so it needs no extra containment check.
 	if comp := companionEds(abs); comp != "" {
 		return reader.FaithfulGeometry(comp)
 	}
@@ -59,11 +54,11 @@ func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, 
 }
 
 // companionEds returns a sibling <stem>.eds schematic for a NETLIST design, or "" when the design
-// already carries its own geometry (an .eds/.kicad_sch draws itself) or no sibling exists. Filename
-// only — it never reads a file's contents.
+// already carries its own geometry (an .eds/.kicad_sch draws itself) or no sibling exists. It checks
+// filenames only and never reads a file's contents.
 func companionEds(abs string) string {
 	if formats.HasFaithful(abs) {
-		return "" // the design already draws itself; no companion needed
+		return ""
 	}
 	sib := strings.TrimSuffix(abs, filepath.Ext(abs)) + ".eds"
 	if sib == abs {
@@ -84,8 +79,7 @@ func (l *osLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols b
 }
 
 // Expectations loads the design's `<path>.expect.yaml` sidecar. No sidecar is the normal case, so a
-// missing file returns (nil, nil) rather than an error; only a bad mount/path or a malformed sidecar
-// is an error.
+// missing file returns (nil, nil). Only a bad URI or a malformed sidecar is an error.
 func (l *osLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
@@ -106,8 +100,8 @@ func symbolsFor(faithful bool) string {
 	return symbolsGlyph
 }
 
-// Board resolves the physical board sidecar (WS1-006) through the formats registry; formats
-// without one yield (nil, nil) — absence is normal, and the service lists no board sheet.
+// Board resolves the physical board sidecar (WS1-006) through the formats registry. A format
+// without one yields (nil, nil), and the service then lists no board sheet.
 func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
@@ -117,8 +111,8 @@ func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeom
 }
 
 // Manifest resolves and parses a review checklist manifest (YAML) under the mount (WS9-047). Unlike
-// Expectations, a manifest is a required input, so an absent or malformed file is an error — the
-// review would otherwise run against no items and report a hollow pass.
+// Expectations, a manifest is a required input, so an absent or malformed file is an error rather
+// than a review over no items reporting a hollow pass.
 func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
@@ -133,9 +127,8 @@ func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manif
 }
 
 // Convention resolves and parses a naming-convention config (YAML) under the mount (WS9-128). Like a
-// review manifest it is a required input once named, so an absent or malformed file is an error: a
-// caller that asked for its own vocabulary and silently got the server's would read the resulting
-// findings as being about their naming when they are about somebody else's.
+// review manifest it is a required input once named, so an absent or malformed file is an error
+// rather than silently falling back to the server's vocabulary.
 func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
@@ -144,9 +137,9 @@ func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.Na
 	return naming.Load(abs)
 }
 
-// DesignHash hashes a mounted design's entry file for a stored run's provenance (WS9-053). A ref that
-// escapes its mount is still an error, because containment is a security boundary and not a
-// provenance nicety; an unreadable file inside the mount yields "" the way hashSource documents.
+// DesignHash hashes a mounted design's entry file for a stored run's provenance (WS9-053). A URI
+// escaping its mount is an error, since containment is a security boundary. An unreadable file
+// inside the mount yields "", as hashSource documents.
 func (l *osLoader) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {

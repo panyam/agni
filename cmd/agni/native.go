@@ -16,7 +16,7 @@ import (
 // nativeCmd groups commands that hand a design file to its own EDA tool: `render` produces the
 // tool's reference SVG (an independent oracle for agni's render), and `open` launches the
 // tool's GUI. Both dispatch by file extension via internal/native; formats with no native tool
-// (EDIF, IPC-2581, ODB++) report that plainly. See docs/NATIVE_VERIFICATION.md.
+// (EDIF, IPC-2581, ODB++) report that. See docsite/content/build/native-verification.md.
 func nativeCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "native",

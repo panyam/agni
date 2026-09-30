@@ -10,16 +10,9 @@ import (
 	"github.com/panyam/agni/internal/version"
 )
 
-// versionCmd prints what this build is.
-//
-// The identity itself comes from internal/version, which already resolves it for the provenance
-// stamp a results document carries (WS3-103). This command deliberately adds no second opinion:
-// a build that reported one version to a human and a different one into an archived report would
-// be worse than having no command at all, so the human-facing surface reads the same function the
-// document does.
-//
-// What it adds is the surrounding detail worth pasting into a bug report, which provenance has no
-// field for: the toolchain and the platform.
+// versionCmd prints what this build is. The version comes from internal/version, the same function
+// that stamps a results document's provenance (WS3-103), so a human and an archived report never
+// see different versions. It adds the toolchain and platform, which provenance has no field for.
 func versionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",

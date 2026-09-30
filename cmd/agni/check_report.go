@@ -10,9 +10,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// failsAtProto reports whether any finding sits at or above the --fail-on threshold, the CI-gate
-// predicate over the wire findings a service call returns. Ranking is service.SeverityRank, so a
-// custom severity (rank above error) always trips an "error" gate rather than sliding under it.
+// failsAtProto reports whether any finding sits at or above the --fail-on threshold. Ranking is
+// service.SeverityRank, so a custom severity (rank above error) always trips an "error" gate.
 func failsAtProto(fs []*checkspb.Finding, threshold string) bool {
 	t := service.SeverityRank(threshold)
 	for _, f := range fs {
@@ -23,8 +22,8 @@ func failsAtProto(fs []*checkspb.Finding, threshold string) bool {
 	return false
 }
 
-// reportFindings flattens every finding out of a CheckReport's severity sections, so --fail-on gates
-// on the same run the markdown/report output renders (no second check pass).
+// reportFindings flattens a CheckReport's severity sections, so --fail-on gates on the same run the
+// report renders rather than a second check pass.
 func reportFindings(rep *checkspb.CheckReport) []*checkspb.Finding {
 	var out []*checkspb.Finding
 	for _, s := range rep.GetSections() {
@@ -35,11 +34,10 @@ func reportFindings(rep *checkspb.CheckReport) []*checkspb.Finding {
 	return out
 }
 
-// writeCheckMarkdown renders the CheckReport proto as the shareable markdown report
-// (WS3-022): a severity summary table, then a section per severity (the proto's order, worst
-// first), findings grouped by rule under a heading that carries the catalog Summary so the
-// report reads without the tool. Rendering from the proto — not from raw findings — keeps
-// this and the web report panel showing one canonical pivot.
+// writeCheckMarkdown renders the CheckReport proto as the markdown report (WS3-022). It writes a
+// severity summary table, then a section per severity in the proto's order (worst first), with
+// findings grouped under a rule heading carrying the catalog Summary. It renders from the proto
+// rather than raw findings so it matches the web report panel.
 func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	rep = forDisplay(rep)
 	fmt.Fprintf(w, "# agni check — %s\n\n", rep.GetSource())
@@ -78,9 +76,8 @@ func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	return nil
 }
 
-// writeCheckReportJSON emits the report as a GetCheckReportResponse in protojson form, the
-// same wire shape the RPC returns (mirroring writeCheckJSON's contract for the findings
-// array), so CI tooling parses one shape whether it shells out or calls the API.
+// writeCheckReportJSON emits the report as protojson of GetCheckReportResponse, the shape the RPC
+// returns (C31), as writeCheckDesignJSON does for the findings.
 func writeCheckReportJSON(w io.Writer, rep *checkspb.CheckReport) error {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(&webapi.GetCheckReportResponse{Report: rep})
 	if err != nil {

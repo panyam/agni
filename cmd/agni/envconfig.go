@@ -12,71 +12,53 @@ import (
 // This file is TIER-1 configuration: where bytes are and what tools exist, as opposed to what a
 // design is checked against.
 //
-// The two tiers are kept apart deliberately, and the boundary is one question: does this change WHAT
-// is checked, or only WHERE bytes are found? Naming conventions, interface profiles, seeded
-// parameters, design intent and a review checklist all change the answer, so they belong to a PROJECT
-// (agni.v1.webapi.AnalysisConfig) where they are scoped to the designs that declared them. Mounts and
-// symbol search paths only locate input, and they are properties of a machine rather than of a team,
-// so a plain file is the right home and there is no isolation to get wrong.
-//
-// Putting an analysis tier in here would undo that. A machine-wide conventions file applying to every
-// design a CLI opened is precisely the bug per-design config fixed — one team's vocabulary reaching
-// another team's board, correct in isolation and aimed at the wrong design. This file must stay
-// boring.
+// The boundary is one question: does this change WHAT is checked, or only WHERE bytes are found?
+// Conventions, profiles, parameters, intent and a review checklist change the answer, so they belong
+// to a PROJECT (agni.v1.webapi.AnalysisConfig), scoped to the designs that declared them. Mounts and
+// symbol paths only locate input and belong to a machine, so a plain file holds them. An analysis
+// tier added here would apply to every design the CLI opened; see
+// docsite/content/architecture/projects-and-designs.md#three-tiers-of-configuration.
 
-// envConfigName is the file, looked for beside the work rather than only in a home directory: a repo
-// checked out on two machines wants the same mounts on both, and that makes it a repo artifact.
+// envConfigName is the file, looked for beside the work as well as in a home directory, because a
+// repo checked out on two machines wants the same mounts on both.
 const envConfigName = "agni.yaml"
 
-// maxEnvConfigWalk bounds the upward search from the working directory, on the same reasoning as the
-// project walk: a stray agni.yaml far up someone's home directory should never silently become the
-// mount table a command ran against.
+// maxEnvConfigWalk bounds the upward search from the working directory, as the project walk does, so
+// a stray agni.yaml far up a home directory never becomes the mount table a command ran against.
 const maxEnvConfigWalk = 4
 
 // envConfig is the tier-1 file's shape.
 //
-// It carries only what it can carry safely. A field here reaches every command in the process with no
-// design to scope it to, so anything whose wrong value produces a QUIET wrong answer rather than a
-// loud failure does not belong.
+// A field here reaches every command in the process with no design to scope it to, so anything whose
+// wrong value produces a QUIET wrong answer rather than a loud failure does not belong.
 type envConfig struct {
 	// Mounts expose folders as `name: path`, the file form of --mount.
 	Mounts map[string]string `yaml:"mounts"`
 	// SymbolPaths are default symbol-library search directories, the file form of --symbol-path.
-	//
-	// A machine-wide default is the honest scope for a vendor library installed system-wide. A
-	// PROJECT's own libraries belong in its descriptor instead (AnalysisConfig.symbol_path_uris),
-	// where they travel with the design and reach a served surface too.
+	// This scope suits a vendor library installed system-wide. A PROJECT's own libraries go in its
+	// descriptor (AnalysisConfig.symbol_path_uris), where they travel with the design and reach a
+	// served surface too.
 	SymbolPaths []string `yaml:"symbol_paths"`
-	// WebDir is where the viewer's own assets live, the file form of --web-dir.
-	//
-	// It passes this tier's test cleanly: it locates BYTES and cannot change what a run concludes. A
-	// wrong value fails loudly at startup, because checkWebAssets stats four named files before the
-	// listener opens, which is the property that lets this tier hold a value at all.
+	// WebDir is where the viewer's own assets live, the file form of --web-dir. A wrong value fails
+	// at startup, because checkWebAssets stats four named files before the listener opens.
 	WebDir string `yaml:"web_dir"`
 	// NativeTools names the native golden renderers a served deployment may shell out to, the file
-	// form of serve's --enable-native.
+	// form of serve's --enable-native. A tool missing from PATH fails at the point of use with its
+	// own name in the error.
 	//
-	// It passes the test at the top of this file on both halves. It says which TOOLS EXIST rather
-	// than what a design is checked against, and which renderers are installed is a property of a
-	// machine rather than of a team. And its wrongness is LOUD: naming a tool that is not on PATH
-	// fails at the point of use with the tool's own name in the error, where a wrong symbol path
-	// reads short and reports fewer findings with nothing to explain them.
-	//
-	// Only serve consumes it, and it does so where nativeTools is used rather than in the pre-run
-	// hook, which has no serve-shaped place to put it. The pre-run note still names the file, the
-	// same as WebDir above: the note reports what was LOADED, not what this command went on to use.
+	// Only serve consumes it, at the point nativeTools is used rather than in the pre-run hook. The
+	// pre-run note still names it, as it does WebDir, because the note reports what was LOADED.
 	NativeTools []string `yaml:"native_tools"`
 }
 
 // loadEnvConfig finds and parses the nearest agni.yaml, returning the zero value when there is none.
 //
 // The search is nearest-first from the working directory and then the user config directory, and the
-// FIRST hit wins outright rather than merging. Merging two mount tables would make the effective set
-// depend on which directory a command was run from, which is exactly the ambient-config problem this
-// tier is allowed to have only because it cannot change an answer.
+// FIRST hit wins outright rather than merging, so the effective mount table never depends on which
+// directory a command ran from.
 //
-// A malformed file is an ERROR rather than a skip. An operator who wrote a mount table and silently
-// got none would see every path resolve through a minted mount instead, which reads as working.
+// A malformed file, including one with an unknown key, is an ERROR rather than a skip. A skipped
+// mount table would send every path through a minted mount instead, which reads as working.
 func loadEnvConfig(cwd string, getenv func(string) string) (envConfig, string, error) {
 	for _, dir := range envConfigSearch(cwd, getenv) {
 		path := filepath.Join(dir, envConfigName)
