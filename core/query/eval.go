@@ -704,6 +704,12 @@ func aggregate(sel []Term, having []Compare, raw []*binding) ([]Row, error) {
 		}
 		g.rows = append(g.rows, bnd)
 	}
+	// With no group-by column the whole answer is one group, and it exists even when nothing matched,
+	// so count over nothing answers 0 rather than no rows, as SQL's COUNT(*) does (agni issue 726).
+	// A grouped projection gets no such row: over nothing there is no key to name a group by.
+	if len(keyVars) == 0 && len(groups) == 0 {
+		groups[""] = &group{keyVals: map[Var]Value{}}
+	}
 	var out []Row
 	for _, g := range groups {
 		row := Row{Bind: map[Var]Value{}}
