@@ -165,7 +165,7 @@ KiCad uses two coordinate frames, and conflating them is the trap.
 - **The schematic sheet is Y-down.** Flip Y only for sheet-level coordinates: placement origins, wires, labels, junctions.
 - **Rotation is negated** (`geom = 360 − kicad`). Converting the sheet frame to Y-up is a reflection, which inverts rotation direction. Mirror axes and origin translation are unchanged by the flip. Flipping lib points too, or not negating rotation, mirrors or overlaps every rotated symbol (an upside-down {{ explainable "ground" "GND" }} is the tell).
 - Units convert from KiCad mm to nm (times 1e6, exact at KiCad's 0.0001mm grid), and `unit_nm = 1`.
-- `#`-prefixed references (`#PWR`, `#FLG` power and flag virtuals) are hidden by KiCad and dropped for display, but the {{ explainable "reference-designator" "ref-des" }} stays the picking key.
+- `#`-prefixed references (`#PWR`, `#FLG` power and flag virtuals) are hidden by KiCad and are not parts, so the reader leaves the placement's {{ explainable "reference-designator" "ref-des" }} empty and a power symbol carries its net in `net_anchor` instead (see [Symbols that name a net](#symbols-that-name-a-net)).
 
 The pin-on-wire coincidence rate (the fraction of placed pin connect-points landing on wire endpoints) is the cheap correctness signal for the transform math. It is not sensitive to rotation *direction* on symmetric 2-pin parts (the pins just swap), so the asymmetric symbol bodies need an eyeball check too.
 
@@ -177,6 +177,48 @@ These were added to the contract so a reader-produced sheet renders like the sou
 - `Shape.fill` (`UNSPECIFIED` / `OUTLINE` / `BACKGROUND` / `COLOR`, plus `fill_color`) makes solid symbol bodies render filled. It is not a bool, because KiCad distinguishes fill types. The placement transform must propagate it.
 - **`justify` has one canonical form**, `"<h> <v>"` (h left/center/right, v top/middle/bottom). Each reader maps its native codes (EDIF `LOWERLEFT` to `"left bottom"`, while KiCad tokens are already canonical). The SVG backend applies `text-anchor` (horizontal) and `dominant-baseline` (vertical).
 - `SymbolPlacement.fields` (`Field{name, value, origin, justify, visible, ...}`) plus `PinPoint.name` structure instance text (Reference, Value, custom) on the placement rather than leaving it as loose sheet labels, so a consumer knows which text is which field (useful for the visual diff). Sheet labels are then only genuine free text (net labels, notes).
+
+## Symbols that name a net
+
+A ground glyph, a rail symbol or a hierarchy port is drawn like a part and is not one. Its job is to
+give the net at its pin a name. `SymbolPlacement.net_anchor` carries that name, and a placement that
+sets it leaves `ref_des` empty. A ref-des on such a glyph would join to no `ir.Component`, so a
+viewer could select it and then ask about a part that does not exist. An ordinary component
+placement leaves `net_anchor` empty. Every schematic format has the construct and spells it
+differently, so the contract holds one neutral field and each reader translates its own spelling
+into it (CONSTRAINTS C1). No consumer needs to know how any format writes a power symbol.
+
+| Reader | Anchored placements, and where the name comes from | Left unanchored |
+|---|---|---|
+| KiCad | a `#`-prefixed reference (`#PWR`), named by its `Value` field | `PWR_FLAG`, which asserts a net is driven and names nothing |
+| xschem | a label symbol (`gnd`, `vdd`, `vss`, `lab_pin`, `lab_wire`, `ipin`, `opin`, `iopin`), named by its `lab` property | every other symbol |
+| gEDA | a power symbol (`gnd`, `vcc`, `vdd`, `vss` and the `<rail>-plus-N` and `<rail>-minus-N` rails), named by the instance `net=`, else the symbol's own `net=`, else the conventional supply for the family (`GND`, `VCC`, `VDD`, `VSS`) | every other symbol |
+| EDIF `.eds` | a placement with no designator whose cell name, or one of whose field values, is a net on the same sheet | a no-connect, a sheet port, and every placement that has a designator |
+
+The anchor is a net name and joins the netlist by name, the way `WireGeometry.net` does. Each
+reader takes it from the same fact its netlist side uses, so the glyph's key and the net it joins
+cannot disagree. KiCad's netlist read turns the same `Value` into a rank-0 name anchor (see
+[KiCad connection-point semantics](../net-solving/#kicad-connection-point-semantics)). gEDA's
+geometry resolves the name through the same three-step fallback as `resolveAnchors` in the netlist
+read, and the two must change together. xschem's `lab` is the name `read.go` anchors at the symbol
+origin.
+
+EDIF works by matching rather than by a table, because the spellings are inconsistent even within
+one export. On one measured `.eds`, 3329 of 6102 placements carry no designator. Across five real
+schematics, `GND` and `DGND` glyphs carry no fields and are named by their cell (5772 placements,
+every one matching a net on its sheet), while `PWR` and `PWR_2` carry the name in a "Global Signal
+Name" field (1666 placements). A table of cell names would have caught the first group and missed
+the second. The match also classifies. A no-connect (1653 on the first export) asserts a pin is
+open and names nothing, so neither its cell nor its fields match a net and it gets no anchor. Sheet
+ports (`in_flat` and `out_flat`, 4752 of them) carry no name anywhere, since the wire they touch
+names them, so they stay anonymous rather than guessed at. A placement with a designator is never
+anchored, so a part whose value happens to equal a net name stays a part.
+
+The SVG backend keys an anchored placement's graphics as its net (`data-kind="net"` and
+`data-net`), the key a wire carries, so clicking a ground symbol selects its net. It emits no pin
+pick target for an anchor, because that target would carry an empty ref-des and resolve to nothing.
+The tier-2 packer does not read the field yet. It keys symbol primitives by `ref_des` alone, so an
+anchored placement packs with no `PrimitiveKey` and cannot be picked in WebGL mode.
 
 ## Text stays readable and inside its box
 

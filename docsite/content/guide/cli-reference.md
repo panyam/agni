@@ -407,7 +407,7 @@ libraries come first and the design node last, so a reader that resolves a refer
 meets one is never asked to follow a forward reference. A `portRef` names the cell's PORT rather than
 the pin's physical designator, with the mapping between them carried per instance in a `portInstance`
 table, which is the construct EDIF has for it. And an identifier holds no character a reader rejects,
-with anything richer moved into the quoted display half of a `(rename ...)`.
+with anything richer moved into the quoted display half of a `(rename ...)`. Raw KiCad UUIDs open with a digit and carry hyphens, and a third-party reader skipped all 1123 instances named by them before the writer renamed them (agni issue 582).
 
 Anything the file references, it also declares. Where a part type declares fewer pins than the
 netlist connects, the cell's interface is completed from the connections; where no part type exists
