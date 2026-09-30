@@ -8,7 +8,10 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-//go:embed report.html.tmpl checklist.html.tmpl table.html.tmpl
+// tmplFS holds every page template. The folder is embedded whole, so a new template is picked up by
+// adding the file; a list of names here compiled fine and failed at render time when one was missed.
+//
+//go:embed templates/*.tmpl
 var tmplFS embed.FS
 
 // CSS is the stylesheet both report pages share, so a pass is the same green on the check report
@@ -43,7 +46,7 @@ func HTML(w io.Writer, r Report) error {
 // parse builds one page template by name. Both pages go through it so neither can end up with a
 // different func map than the other, which is how the shared stylesheet stays shared.
 func parse(name string) (*template.Template, error) {
-	return template.New(name).Funcs(funcs()).ParseFS(tmplFS, name)
+	return template.New(name).Funcs(funcs()).ParseFS(tmplFS, "templates/"+name)
 }
 
 func funcs() template.FuncMap {
