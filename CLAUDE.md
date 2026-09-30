@@ -378,6 +378,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   cleared in a package's `TestMain`**, because they replace the defaults the tests assert against, so
   a developer who exports either to drive a walk over their own board cannot run the gate and the
   failure prints their path into the log. That was green in CI and red on the machine that had them.
+- **The same is true of a personal `~/.config/agni/agni.yaml`.** A test that runs `rootCmd()` or the
+  binary reads it, and its mounts or `web_dir` become part of the run. A valid `web_dir` there turned an
+  `agni open` refusal test into a real server that hung the suite, and the Python client's tests saw
+  its mounts. Point `HOME` and `XDG_CONFIG_HOME` at a temp dir and run from an empty working directory
+  (`TestOpenStillRequiresTheViewer`, `clients/python/tests/conftest.py`). CI has no such file, so this
+  is also green in CI and red on a developer's machine.
 
 **A declared pin map is the ninth intent form, and it compiles to FOUR rules.** `io_map` on a design's
 `intent.yaml` says which net lands on which pin of which device. Three rules ask whether the design
