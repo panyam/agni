@@ -285,7 +285,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   before grouping there is nothing to count: `... => ?p having count(distinct ?n) = 1`. An aggregate
   may be filtered on without being projected, which answers with the subjects rather than the tally
   (agni issue 613). A derived relation is the other route to a distinct reduce, by projecting the
-  extra variable away before the group forms.
+  extra variable away before the group forms. **An aggregate-only projection always answers ONE row**, as SQL's `COUNT(*)`
+  does: a count over nothing is `0` rather than "no results", while a grouped projection over nothing
+  stays empty (agni 726). That is why `RuleFromQuery` refuses a finding query whose subject is not a
+  plain projected column, since every row it returns becomes a finding.
 - **`diff --rename-approx` is OFF by default**, so a net that was renamed AND changed reports as New
   plus Deleted unless you ask for it. Deliberate, because the pass ASSIGNS a best match rather than
   recovering a fact. It is also a false-finding shape: a run without the flag reads as "we detect no
@@ -551,7 +554,8 @@ sitting and are silent. Each returns an empty or partial answer rather than an e
 **Before believing a measurement or a green test, read `docsite/content/build/evidence.md`.** A
 negative result needs a positive control, a positive rate needs a precision check, and every new test
 needs a red-check. Most of the expensive mistakes here have been correct-looking results nobody could
-have falsified.
+have falsified. **A test that loops over rows passes over ZERO rows**, so give it a count guard; the
+agni 727 red-check found two such tests still green with the projector turned off.
 
 ## Wiring, per subsystem
 
@@ -568,7 +572,7 @@ discovered.
 | A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
 | A format reader | — | `docsite/content/build/format-reader.md` | — |
 | A check rule | — | `docsite/content/build/check-rule.md` | — |
-| A query relation | 6, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check`, `TestColumnKindsMatchGolden` |
+| A query relation | 7, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check`, `TestColumnKindsMatchGolden` |
 | A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
 | A hand-written `agni …` fence | 1, plus `docCommandCount` | `docsite/README.md` | `cmd/agni/doccommands_test.go` |
 | A multi-command `agniRun` block | 1 (`steps:` in the spec, one per command) | `docsite/README.md` | `tutorial-runs-check` |
@@ -583,7 +587,9 @@ discovered.
 **The relation row's sixth edit is `service/testdata/columnkinds.golden`**, which snapshots how every
 query column types. The table said five for a year and CI caught the miss twice in one week (agni 687,
 693). Regenerate with `UPDATE_GOLDEN=1 go test ./service/ -run TestColumnKindsMatchGolden`, and READ
-the diff: a new relation is purely added lines, and anything else means an existing column retyped.
+the diff: a new relation is purely added lines, and anything else means an existing column retyped. **The seventh is `dimensionlessNumericRelations` in `stdlib/relations/facts_test.go`**, for a
+relation whose number is a bare count: `TestNoRelationPublishesAnUnlabelledNumber` fails until the
+count is listed there on purpose (agni 727).
 
 ## Working in this repo
 
