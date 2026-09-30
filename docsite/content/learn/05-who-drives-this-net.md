@@ -3,11 +3,11 @@ title: "5. Who drives this net?"
 description: "Every net needs exactly one thing deciding its voltage. What happens when two do, when none does, and why a pass on one rule proves nothing about the others."
 ---
 
-[Chapter 4](../04-pull-ups-and-undefined-states/) was about a net with nothing driving it. This one is about the other end of the same question, a net with two things driving it, and it ends somewhere more useful than either.
+[Chapter 4](../04-pull-ups-and-undefined-states/) was about a net with nothing driving it. This one is about the other end of the same question, a net with two things driving it, and it ends on what a passing rule does and does not tell you.
 
-**Prerequisites:** [Chapter 4](../04-pull-ups-and-undefined-states/), particularly the open-drain section.
+Read [chapter 4](../04-pull-ups-and-undefined-states/) first, particularly the open-drain section.
 
-**Levels on this page:** [EE3](../levels/#roles-ee3), [EE4](../levels/#failure-modes-ee4). Each links to [what that level means](../levels/).
+This page teaches at [EE3](../levels/#roles-ee3) and [EE4](../levels/#failure-modes-ee4), and the [levels page](../levels/) says what each level means.
 
 ## One net, one decider (EE3)
 
@@ -29,15 +29,15 @@ Here is a fixture with one of each, run through three rules at once:
 
 `FIGHT` has two drivers and fails contention, exactly the case described above.
 
-`FLOAT` has none. Look at what the rules say about it, because this is the most useful thing in the chapter.
+`FLOAT` has none. Look at what the rules say about it.
 
-**`output-output-conflict` passes `FLOAT`, and that pass is correct.** The rule asks whether more than one thing is driving, and nothing is driving, so there is no contention. Nothing about that answer is wrong.
+**`output-output-conflict` passes `FLOAT`, and that pass is correct.** The rule asks whether more than one thing is driving, and nothing is driving, so there is no contention.
 
 **`FLOAT` is still broken.** `floating-input` fails it, because every pin on it is an input and chapter 4 explained what that costs.
 
 **`single-pin-net` passes both**, because both nets reach two pins and neither is a stub.
 
-So one net collects a pass, a pass, and a fail from three rules, and every one of those is the honest answer to the question that rule asks. A pass means "this specific thing is fine here". It does not mean the net is fine, and no rule in the catalog claims otherwise.
+So one net collects a pass, a pass, and a fail from three rules, and every one of those correctly answers the question that rule asks. A pass means "this specific thing is fine here". It does not mean the net is fine, and no rule in the catalog claims otherwise.
 
 That is worth internalising early, because it is how the whole tool behaves and it separates reading a report from trusting one. A green run tells you the questions that were asked came back clean. Which questions those were is the [considered set](../../tutorials/09-read-the-verdicts/), and the number of rules that had nothing to say about your board is usually larger than the number that did.
 
@@ -49,17 +49,17 @@ Signals are not the only place this happens. Two supplies feeding one rail is th
 
 Note that it is an `error` here for the same reason [chapter 4's](../04-pull-ups-and-undefined-states/) I2C rule was. Two regulators with slightly different output voltages on one net do not average out. The higher one supplies the rail and pushes current backwards into the lower one, which is not a thing regulators are built to accept.
 
-Worth knowing that this arrangement is sometimes deliberate, and the deliberate version looks different: supplies are combined through diodes or a dedicated OR-ing controller, so the higher one wins and nothing flows backwards. A design doing that on purpose has the parts to show for it. A design that simply wired two outputs together does not, and this rule is what tells them apart.
+This arrangement is sometimes deliberate, and the deliberate version combines the supplies through diodes or a dedicated OR-ing controller, so the higher one wins and nothing flows backwards. A design doing that on purpose has the parts to show for it. A design that simply wired two outputs together does not, and this rule is what tells them apart.
 
 ## Pins the designer said to leave alone (EE3)
 
 One more way a net can be wrong, and it is the only one in this chapter the tool could not possibly work out for itself.
 
-A pin marked **no-connect** is one the designer explicitly annotated as intentionally unused. That annotation is not a comment. It changes what other checks mean, since an unconnected pin is normally worth flagging and a no-connect one is not, and the annotation exists to remove that ambiguity.
+A pin marked **no-connect** is one the designer annotated as intentionally unused. The annotation changes what other checks mean, since an unconnected pin is normally worth flagging and a no-connect one is not, and the annotation exists to remove that ambiguity.
 
 Wiring something to a pin marked no-connect is therefore an error, and a slightly unusual one, because the design is contradicting itself. Somebody wrote down that the pin should be left alone and somebody wired it up. Whichever is right, both statements are in the file and they disagree.
 
-The tool can only see this because a human annotated it, which is the pattern from [chapter 1](../01-what-a-board-is-made-of/): what a netlist cannot infer gets declared instead. The same goes for pin direction itself. Whether a pin is an input, an output or a supply comes from the symbol, and a symbol that never says leaves the whole of this chapter unanswerable for that pin, which `unspecified-pin-with-driver` reports rather than guessing.
+The tool can only see this because a human annotated it, which is [chapter 1's](../01-what-a-board-is-made-of/) pattern of declaring what a netlist cannot infer. The same goes for pin direction itself. Whether a pin is an input, an output or a supply comes from the symbol, and a symbol that never says leaves the whole of this chapter unanswerable for that pin, which `unspecified-pin-with-driver` reports rather than guessing. `dl/power-pin-mistyped` catches a related slip, a pin named like a supply that the symbol never typed as one, sitting on a net of its own.
 
 ## What you can now answer
 
@@ -79,4 +79,4 @@ The tool can only see this because a human annotated it, which is the pattern fr
 | [`unconnected-pin`](../../reference/rules/unconnected-pin/) | warning | a pin on no net, without the no-connect annotation that would explain it |
 | [`dl/power-pin-mistyped`](../../reference/rules/dl-power-pin-mistyped/) | warning | a pin named like a supply but not typed as one, sitting alone |
 
-Next: [parts that care which way round](../06-parts-that-care-which-way-round/), the shortest chapter in the course and the one with the most visible failure mode.
+The next chapter, [parts that care which way round](../06-parts-that-care-which-way-round/), is about parts with an orientation.

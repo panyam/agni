@@ -3,17 +3,17 @@ title: "7. Reading a datasheet like a type signature"
 description: "A datasheet is a contract with two very different kinds of number in it. Which one you are reading changes what a violation means."
 ---
 
-Everything so far has been answerable from the netlist. Whether a wire connects, what a part is for, which pin drives. This chapter crosses a line: the questions here cannot be answered from the design at all, because the answers live in a document the design does not contain.
+Everything so far has been answerable from the netlist. Whether a wire connects, what a part is for, which pin drives. This chapter crosses a line, into questions the design cannot answer at all because the answers live in a document it does not contain.
 
-**Prerequisites:** [Chapter 1](../01-what-a-board-is-made-of/), and [chapter 3](../03-why-every-chip-needs-capacitors/#the-numbers-ee5) for a first look at a rating.
+Read [chapter 1](../01-what-a-board-is-made-of/) first, and [chapter 3](../03-why-every-chip-needs-capacitors/#the-numbers-ee5) for a first look at a rating.
 
-**Levels on this page:** [EE5](../levels/#numbers-ee5). It links to [what that level means](../levels/).
+This page teaches at [EE5](../levels/#numbers-ee5), and the [levels page](../levels/) says what each level means.
 
 ## A part is a contract (EE5)
 
-If you write software, you already have the right model. A datasheet is a **type signature** for a part: it states what the part promises, and what it requires of you in return. Feed it what it requires and the promises hold. Go outside, and the vendor makes no claim at all about what happens.
+If you write software, you already have the right model. A datasheet is a **type signature** for a part, stating what the part promises and what it requires of you in return. Feed it what it requires and the promises hold. Go outside, and the vendor makes no claim at all about what happens.
 
-Where the analogy pays off is in what a violation *means*. A type error is a compile-time refusal. A datasheet violation is nothing so tidy: the board gets built, and the part behaves in some way the vendor never characterised, which may be "fine on this unit today".
+Where the analogy pays off is in what a violation *means*. A type error is a compile-time refusal. A datasheet violation refuses nothing. The board gets built, and the part behaves in some way the vendor never characterised, which may be "fine on this unit today".
 
 ## Two numbers that look alike (EE5)
 
@@ -31,7 +31,7 @@ The gap between them is deliberate margin, and treating the bigger number as the
 
 {{ includeFile "figures/absolute-maximum-rating.svg" }}
 
-There is a third thing on each row worth noticing: **conditions**. The seeded rows here carry `TA = 25C`. A number is only true under the conditions it was measured at, and a part characterised at 25°C tells you comparatively little about the same part at 85°C in a sealed enclosure.
+The seeded rows also carry **conditions**, `TA = 25C` here, though the query above does not print them. A number is only true under the conditions it was measured at, and a part characterised at 25°C tells you comparatively little about the same part at 85°C in a sealed enclosure.
 
 ## A third number, which promises nothing (EE5)
 
@@ -49,8 +49,8 @@ part from the middle of the production run does at room temperature with a modes
 your bench is a sample from that distribution, and it is within spec anywhere the datasheet's
 tolerance allows, which this row does not even state.
 
-So a typical is useful for the things averages are useful for. Estimating what the board draws,
-sizing a heatsink, sanity-checking a rail label. It is the wrong number to design a threshold
+So a typical is useful for the things averages are useful for, such as estimating what the board draws,
+sizing a heatsink, or sanity-checking a rail label. It is the wrong number to design a threshold
 against, because the part that trips your comparator will be the one at the edge of the distribution,
 and it was in spec the whole time.
 
@@ -59,17 +59,17 @@ Ask for it the way you would ask for a limit and you can see the layer refusing 
 {{ agniRun "content/learn/runs/typical-not-a-limit.yaml" }}
 
 Two rows, and no number in either. `param` reports ceilings, a typical is not one, and the row stays
-with its number missing rather than quietly reporting zero. That absence is deliberate and it is
-load-bearing: a threshold written against a missing number cannot silently pass, because ordering
+with its number missing rather than quietly reporting zero. That absence is deliberate, because
+a threshold written against a missing number then cannot silently pass, since ordering
 refuses to compare an absent value against a present one.
 
 Note the second row's citation while you are here. `U2`'s 1.8 V comes from a placeholder at
 confidence 0.3, so it is a typical value that nobody has even transcribed from a real document. Two
-different reasons to distrust one number, which the next section is about.
+different reasons to distrust one number, and the section on provenance below takes up the second.
 
 ## The comparison (EE5)
 
-With ratings available, the rule can do what it could not before:
+With ratings available, `supply-exceeds-abs-max` can compare them against the rails:
 
 {{ agniRun "content/learn/runs/abs-max-verdicts.yaml" }}
 
@@ -83,7 +83,7 @@ Now the part that separates this layer from a spreadsheet of limits.
 
 Every parameter carries **provenance**: which document, which page, which table, how it got there, and how much anyone should trust it. The query above printed it. `U1`'s rows say *page 3, "Absolute Maximum Ratings" (hand, confidence 1)*. `U2`'s say *page 0, "" (mock, confidence 0.3)*.
 
-That difference is not cosmetic. `U2`'s rating is a placeholder somebody typed to stand in for a datasheet nobody has transcribed yet. It might be right. Nothing has checked it.
+`U2`'s rating is a placeholder somebody typed to stand in for a datasheet nobody has transcribed yet. It might be right. Nothing has checked it.
 
 So the same finding reads differently depending on what is asking:
 
@@ -91,17 +91,17 @@ So the same finding reads differently depending on what is asking:
 
 `agni check` reported that as an `error`. A **review** reports it as `provisional`, because the evidence sits below the trust floor. The engine is declining to call a defect on a number nobody has verified, while still refusing to hide it.
 
-This matters more than it first appears. A parameter corpus starts empty and fills up over months, mostly with rows somebody typed in a hurry. A tool that treated every seeded number as gospel would produce confident accusations from placeholder data, and the first time that happens to an engineer they stop believing the tool. A tool that ignored unverified rows would go quiet instead. Provisional is the third answer, and it is the honest one.
+A parameter corpus starts empty and fills up over months, mostly with rows somebody typed in a hurry. A tool that treated every seeded number as gospel would produce confident accusations from placeholder data, and the first time that happens to an engineer they stop believing the tool. A tool that ignored unverified rows would go quiet instead. Provisional is the third answer, which reports the finding and says its evidence is unverified.
 
 ## What this layer does not cover (EE5)
 
 Count the verdicts above: **two**, on a board with nineteen parts.
 
-That is not a bug and the rule says so where it happens: a part with no seeded datasheet is *not a subject*, because there is no stated rating to compare anything against. Only the two regulators have parameter files, so only their supply pins were judged. Every other part on the board went unexamined by this rule, and no output claims otherwise.
+That is not a bug, and the rule states why where it happens. A part with no seeded datasheet is *not a subject*, because there is no stated rating to compare anything against. Only the two regulators have parameter files, so only their supply pins were judged. Every other part on the board went unexamined by this rule, and no output claims otherwise.
 
 Coverage at EE5 is therefore bounded by your parameter corpus rather than by your design, which is a different shape from every earlier chapter. A connectivity rule sees the whole netlist for free. A datasheet rule sees exactly as much as somebody has typed in, and the work of extending it is transcription rather than cleverness.
 
-Worth remembering [chapter 3's](../03-why-every-chip-needs-capacitors/#the-numbers-ee5) closing point here too, because it is the limit beyond this one. A number can be correctly transcribed, correctly compared, and still not be the number in your circuit: a ceramic capacitor's marked value falls with applied voltage, so a part that satisfies every check on paper can be short of capacitance on the bench.
+Remember [chapter 3's](../03-why-every-chip-needs-capacitors/#the-numbers-ee5) closing point here too, because it is the limit beyond this one. A number can be correctly transcribed, correctly compared, and still not be the number in your circuit, because a ceramic capacitor's marked value falls with applied voltage, so a part that satisfies every check on paper can be short of capacitance on the bench.
 
 ## What you can now answer
 
@@ -109,7 +109,7 @@ Worth remembering [chapter 3's](../03-why-every-chip-needs-capacitors/#the-numbe
 - Why a rating is meaningless without its conditions. *(EE5)*
 - Why a typical value is not a promise, and what it is still good for. *(EE5)*
 - Why the same defect reads as an error to one command and as provisional to another. *(EE5)*
-- Why a datasheet rule judged two subjects on a nineteen-part board, and why that is honest. *(EE5)*
+- Why a datasheet rule judged two subjects on a nineteen-part board, and why that is the correct count. *(EE5)*
 
 ## The rules this page explains
 
@@ -121,4 +121,4 @@ Worth remembering [chapter 3's](../03-why-every-chip-needs-capacitors/#the-numbe
 | [`regulator-output-exceeds-abs-max`](../../reference/rules/regulator-output-exceeds-abs-max/) | error | a regulator driving a rail above what a part it feeds can survive |
 | [`load-switch-trip-above-fet-rating`](../../reference/rules/load-switch-trip-above-fet-rating/) | error | a load switch that trips above its pass FET's continuous rating |
 
-Next: [the power tree](../08-the-power-tree/), where the question stops being about one part and becomes about how the whole board is fed.
+In the next chapter, [the power tree](../08-the-power-tree/), the question stops being about one part and becomes about how the whole board is fed.

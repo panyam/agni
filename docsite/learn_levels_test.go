@@ -89,7 +89,7 @@ func TestLevelIndexPointsAtRealSections(t *testing.T) {
 func TestEveryChapterDeclaresItsLevels(t *testing.T) {
 	for _, s := range chapterSections(t) {
 		body := read(t, filepath.Join(learnDir(), s[0]+".md"))
-		if !strings.Contains(body, "**Levels on this page:**") {
+		if !strings.Contains(body, "](../levels/)") {
 			t.Errorf("content/learn/%s.md tags sections with levels but carries no pointer to their definitions", s[0])
 			break
 		}
