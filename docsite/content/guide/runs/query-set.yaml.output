@@ -1,0 +1,22 @@
+#agni-run 1c5f64177e49b59c
+Test point audit
+mount://local/netlist-audit.tel
+
+== Net count ==
+count(net)  provenance
+5           netlist-audit.tel
+
+1 result(s)
+
+== Nets with no test point ==
+net       provenance
+I2C_SCL   netlist-audit.tel
+MCU_NRST  netlist-audit.tel
+
+2 result(s)
+
+== Ground test points ==
+count(distinct tp)  provenance
+1                   netlist-audit.tel
+
+1 result(s)
