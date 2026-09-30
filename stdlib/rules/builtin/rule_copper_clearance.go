@@ -12,7 +12,7 @@ import (
 
 // copperClearance flags cross-net track segments on the same layer whose copper edges
 // sit closer than the fabrication clearance floor. It is the one rule of the WS3-008
-// batch written as a Go Eval: the check is a pairwise join across entities (every
+// batch written as a Go Eval, because the check is a pairwise join across entities (every
 // segment of net A against every segment of net B), which the Spec AST cannot express.
 // A cross-entity/spatial vocabulary needs more rules than this one behind it before it
 // earns AST nodes (the WS3-003 earn-it guard;
@@ -34,9 +34,9 @@ var copperClearance = &check.Rule{
 	},
 	Detail: ruleDoc("copper-clearance"),
 	// The two nets, ordered by name. This relation is SYMMETRIC, so the rule canonicalises the pair
-	// itself rather than leaving it to a consumer: (GND, VBUS) and (VBUS, GND) are one violation and
-	// must be one id. A framework that sorted every tuple would break the directional rules next door,
-	// which is why ordering belongs to the rule.
+	// itself rather than leaving it to a consumer, and (GND, VBUS) and (VBUS, GND) are one violation
+	// with one id. Ordering belongs to the rule because a framework that sorted every tuple would
+	// break the directional rules.
 	SubjectShape:        []string{check.KindNet, check.KindNet},
 	Eval:                copperClearanceVerdicts,
 	StatesConsideredSet: true,
@@ -45,19 +45,18 @@ var copperClearance = &check.Rule{
 // copperClearanceVerdicts decides every PAIR of nets whose copper shares a layer and comes close
 // enough to be worth measuring, one verdict per pair.
 //
-// THE PAIR IS THE SUBJECT because a distance belongs to neither net. Filing under one of them was
-// always a reporting compromise: a net running between two others is the filed subject of two
-// findings, and under a single-entity id those two answers shared one name and one report link.
+// THE PAIR IS THE SUBJECT because a distance belongs to neither net (#404). A net running between
+// two others is party to two findings, and under a single-entity id those would share one name and
+// one report link.
 //
-// THE CONSIDERED SET IS THE PAIRS THE WALK MEASURED, not every pair of nets on the board. That is a
-// deliberate narrowing and the reason is cost: the bounding-box reject is what keeps this O(S²) walk
-// affordable, and a pair it rejects has no computed distance at all. Claiming a pass over every
-// possible pair would be claiming a measurement the walk never made. What the rule can honestly say
-// is which pairs came near enough to measure and how they came out, which is also the set a reviewer
-// cares about.
+// THE CONSIDERED SET IS THE PAIRS THE WALK MEASURED, not every pair of nets on the board. The
+// bounding-box reject is what keeps this O(S²) walk affordable, and a pair it rejects has no computed
+// distance at all, so a pass over every possible pair would claim a measurement the walk never made.
+// The rule reports which pairs came near enough to measure and how they came out, which is also the
+// set a reviewer cares about.
 //
-// A net with no track segments therefore appears in no pair, and that is correct rather than a gap:
-// this rule compares SEGMENTS, so a net present only as vias and pads was never measured.
+// A net with no track segments therefore appears in no pair. This rule compares SEGMENTS, so a net
+// present only as vias and pads was never measured.
 func copperClearanceVerdicts(m check.Model) []check.Verdict {
 	type flatSeg struct {
 		net string
@@ -118,10 +117,9 @@ func copperClearanceVerdicts(m check.Model) []check.Verdict {
 	out := make([]check.Verdict, 0, len(order))
 	for _, k := range order {
 		w := pairs[k]
-		// NAME-ONLY entities, deliberately. Board copper joins the netlist by name (CONSTRAINTS C21),
-		// so this rule genuinely holds its nets by name and has no per-instance id to carry. Resolving
-		// one by name lookup would pick arbitrarily between two same-named nets and state an instance
-		// the walk never distinguished.
+		// NAME-ONLY entities. Board copper joins the netlist by name (CONSTRAINTS C21), so this rule
+		// holds its nets by name and has no per-instance id to carry. Resolving one by name lookup would
+		// pick arbitrarily between two same-named nets and state an instance the walk never distinguished.
 		subjects := []check.Entity{check.NetNameEntity(k.a), check.NetNameEntity(k.b)}
 		v := check.Verdict{Subjects: subjects}
 		if w.count == 0 {
@@ -148,8 +146,8 @@ func copperClearanceVerdicts(m check.Model) []check.Verdict {
 			Subject: subjects[0],
 			Message: msg,
 			// The other net in the pair. The FINDING's subject is one of the two, since a reader is
-			// told one place to go and look, so the other end had no way back into the drawing
-			// (agni issue 349). The verdict names both, which is what the violation is about.
+			// told one place to go and look, and this context gives the other end its way back into
+			// the drawing (agni issue 349). The verdict names both.
 			Context: []check.ContextSubject{check.Ctx(subjects[1], "neighbour")},
 		}
 		out = append(out, v)
@@ -157,8 +155,8 @@ func copperClearanceVerdicts(m check.Model) []check.Verdict {
 	return out
 }
 
-// bboxNear is the cheap reject: whether two segments' bounding boxes, inflated by the
-// clearance plus both half-widths, overlap. Everything that could violate passes this.
+// bboxNear is the cheap reject. It reports whether two segments' bounding boxes, inflated
+// by the clearance plus both half-widths, overlap. Everything that could violate passes this.
 func bboxNear(a, b check.BoardSeg, clearance int64) bool {
 	pad := clearance + (a.Width+b.Width)/2
 	return min64(a.A.X, a.B.X)-pad <= max64(b.A.X, b.B.X) &&
@@ -181,7 +179,7 @@ func max64(a, b int64) int64 {
 	return b
 }
 
-// segDistNm is the minimum centerline distance between two 2D segments: zero when they
+// segDistNm is the minimum centerline distance between two 2D segments. It is zero when they
 // intersect, otherwise the smallest of the four endpoint-to-segment distances.
 func segDistNm(a1, a2, b1, b2 *geom.Point) int64 {
 	if segsIntersect(a1, a2, b1, b2) {
@@ -221,7 +219,7 @@ func segsIntersect(a1, a2, b1, b2 *geom.Point) bool {
 		}
 		return 0
 	}
-	on := func(p, q, r *geom.Point) bool { // r collinear with pq: does r sit on pq?
+	on := func(p, q, r *geom.Point) bool { // for r collinear with pq, whether r sits on pq
 		return min64(p.X, q.X) <= r.X && r.X <= max64(p.X, q.X) &&
 			min64(p.Y, q.Y) <= r.Y && r.Y <= max64(p.Y, q.Y)
 	}

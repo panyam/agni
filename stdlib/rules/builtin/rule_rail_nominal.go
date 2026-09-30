@@ -9,18 +9,14 @@ import (
 
 // railNominalOutOfRecommended flags a power-input pin fed by a rail whose nominal
 // voltage falls outside the part's recommended operating supply range from its seeded
-// datasheet spec. The recommended-operating sibling of supply-exceeds-abs-max
-// (WS3-036): same datasheet join, but the vendor's functional envelope (min..max)
-// rather than the destroy-it ceiling. A rail outside the recommended range is not the
-// guaranteed damage an abs-max breach is; the part may still run, but it is operating
-// outside the conditions its datasheet specs are guaranteed under, so margin, accuracy,
-// and lifetime are no longer assured.
+// datasheet spec. It is the recommended-operating sibling of supply-exceeds-abs-max
+// (WS3-036), with the same datasheet join but the vendor's functional envelope (min..max)
+// in place of the destroy-it ceiling. The part may still run outside the recommended
+// range, but its datasheet specs are no longer guaranteed there, so margin, accuracy,
+// and lifetime are not assured.
 //
-// It acts only on a part that declares a SINGLE recommended supply row: a netlist does
-// not label which power-in pin is which supply, and the range is two-sided, so a
-// multi-supply part can't be checked without risking a false over/under finding
-// (per-pin supply mapping is a follow-up). supply-exceeds-abs-max carries no such
-// restriction because its one-sided ceiling is conservative to apply across pins.
+// It acts only on a part that declares a SINGLE recommended supply row. singleRecommendedRow
+// says why, and pin-out-of-recommended (rule_pin_rating.go) checks the other parts per pin.
 // Silent by construction without a seeded params set (Model.PartSpec is nil).
 var railNominalOutOfRecommended = &check.Rule{
 	Name:       "rail-nominal-out-of-recommended",
@@ -53,8 +49,8 @@ var railNominalOutOfRecommended = &check.Rule{
 					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV %s for %s — %s",
 						ev.pin, ev.net, ev.nominal, rel, binding.Symbol, check.Citation(ev.spec, binding)),
 					Prov: ev.comp.Prov,
-					// The pin and the rail, as in supply-exceeds-abs-max: a part with several supply
-					// pins is not located by its ref des alone.
+					// The pin and the rail, as in supply-exceeds-abs-max, since a part with several
+					// supply pins is not located by its ref des alone.
 					Context: aliasSupplyContext(ev),
 				}
 			})
@@ -63,11 +59,11 @@ var railNominalOutOfRecommended = &check.Rule{
 }
 
 // singleRecommendedRow picks the binding row for the two-sided range, and refuses where a part states
-// more than one. That refusal is the rule's documented restriction and now has somewhere to go: a
-// netlist does not label which power-in pin is which supply, so applying one part's range to the wrong
-// terminal invents an over- or under-voltage. supply-exceeds-abs-max carries no such restriction
-// because its one-sided ceiling is conservative to apply across pins. pin-out-of-recommended is the
-// per-pin mapping that answers these parts properly, and it owns any part whose spec binds pins.
+// more than one. A netlist does not label which power-in pin is which supply, so applying one part's
+// range to the wrong terminal invents an over- or under-voltage. supply-exceeds-abs-max carries no such
+// restriction because its one-sided ceiling is conservative to apply across pins.
+// pin-out-of-recommended is the per-pin mapping that answers these parts properly, and it owns any
+// part whose spec binds pins.
 func singleRecommendedRow(rows []*parampb.Parameter) (*parampb.Parameter, string) {
 	if len(rows) > 1 {
 		return nil, fmt.Sprintf("the datasheet states %d recommended supply ranges and a netlist does not say "+

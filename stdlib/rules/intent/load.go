@@ -96,16 +96,18 @@ type netPropertyDoc struct {
 	Value    string  `yaml:"value"`
 }
 
-// Parse reads a YAML intent declaration into a Declaration and validates its structure: a name is
-// present, and the declaration is not empty (at least one module, voltage domain, subsystem, or
-// protection). Each module needs a class or an mpn (matching nothing otherwise), each voltage domain
+// Parse reads a YAML intent declaration into a Declaration and validates its structure. A name is
+// present, and the declaration is not empty (at least one entry in any of the nine forms, from modules
+// to io_map). Each module needs a class or an mpn (matching nothing otherwise), each voltage domain
 // needs a name, a positive nominal, and at least one rail, each subsystem needs a name (slugifying
-// uniquely) plus a source or at least one net, and each protection needs a rail and a known kind (ovp
-// or discharge), each rail_budget needs a rail and a positive peak with no rail budgeted twice, a
-// declared margin_factor must exceed 1 and have budgets to apply to, and each sequence needs a
-// uniquely-slugifying name, a known relation, and an order the netlist can be checked against
-// (parseSequence).
-// A malformed declaration is a teaching error at load, not a surprise at run. Parse is
+// uniquely) plus a source or at least one net, each strap_group needs a uniquely-slugifying name and
+// distinct nets that can encode its value, each protection needs a rail and a known kind (ovp or
+// discharge), each net_property needs a net and a value its kind accepts, each rail_budget needs a
+// rail and a positive peak with no rail budgeted twice, a declared margin_factor must exceed 1 and
+// have budgets to apply to, each sequence needs a uniquely-slugifying name, a known relation, and an
+// order the netlist can be checked against (parseSequence), and each io_map row needs a net, a device
+// and a pin (parseIOAssignment).
+// A malformed declaration fails at load, where the error can teach, rather than at run. Parse is
 // WASM-clean (yaml only, no os); LoadFile adds the file read.
 func Parse(b []byte) (Declaration, error) {
 	var doc declarationDoc
@@ -272,7 +274,7 @@ func Parse(b []byte) (Declaration, error) {
 		d.Sequences = append(d.Sequences, seq)
 	}
 	// margin_factor is optional and has no default (see Declaration.MarginFactor). Omitted, the margin
-	// rule is never compiled. Declared, it must ask for headroom: a factor of 1 restates the capacity
+	// rule is never compiled. Declared, it must ask for headroom. A factor of 1 restates the capacity
 	// rule and anything below 1 asks for a supply SMALLER than the budget, so both are author errors
 	// caught here rather than a second rule that duplicates or inverts the first.
 	if doc.MarginFactor != 0 && doc.MarginFactor <= 1 {
@@ -294,8 +296,8 @@ func Parse(b []byte) (Declaration, error) {
 
 // parseIOAssignment validates one declared pin-map row.
 //
-// The three required fields are required because a row missing any of them states nothing checkable:
-// without a net there is no assignment, without a device there is nothing to look the pin up on, and
+// The three required fields are required because a row missing any of them states nothing checkable.
+// Without a net there is no assignment, without a device there is nothing to look the pin up on, and
 // without a pin the row is a net-presence claim that io-map-net-absent already makes for every row.
 //
 // A far end must be COMPLETE or absent. A `to` naming a device and no pin is the shape that would
@@ -339,14 +341,14 @@ func missingHalf(e *ioEndpointDoc) string {
 }
 
 // parseSequence validates one declared sequence and converts it. It is split out of Parse because it
-// carries the one validation in this file that is about EVALUABILITY rather than shape: a sequence
+// carries the one validation in this file that is about EVALUABILITY rather than shape. A sequence
 // with no adjacent good/enable pair compiles to a rule with nothing to judge, and a rule that can only
-// ever pass is author error. WS3-099 settled where that gets caught: at load, where the message can
-// teach, rather than at run as a verdict nobody can trace back to the declaration.
+// ever pass is author error. It is caught at load (WS3-099), where the message can teach, rather than
+// at run as a verdict nobody can trace back to the declaration.
 //
-// The teaching matters here more than elsewhere, because the case it rejects is a real and correct
-// board: one whose rail order lives in a PMIC's configuration or in firmware. Saying so in the error
-// is what stops an author from inventing net names to satisfy the schema.
+// The teaching matters more here than elsewhere, because the case it rejects is a real and correct
+// board, one whose rail order lives in a PMIC's configuration or in firmware. Saying so in the error
+// stops an author from inventing net names to satisfy the schema.
 func parseSequence(declName string, i int, s sequenceDoc, slugs map[string]string) (Sequence, error) {
 	if strings.TrimSpace(s.Name) == "" {
 		return Sequence{}, fmt.Errorf("intent %q: sequence #%d is missing its \"name\"", declName, i+1)

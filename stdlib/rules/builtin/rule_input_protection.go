@@ -28,17 +28,17 @@ var inputProtection = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// inputProtectionVerdicts decides every connector net that actually feeds a power input, and the
-// second half of that sentence is the part a bool could not express. `UnprotectedPowerReach` is false
+// inputProtectionVerdicts decides every connector net that actually feeds a power input, which is
+// the half a bool could not express. `UnprotectedPowerReach` is false
 // for a fused 12 V entry and equally false for a USB data pair, because in neither case did it find
 // something to complain about. Passing both would put every signal pin on a connector into the list
 // of things somebody checked for a fuse. `PowerPathProtection` reports the load COUNT for exactly
 // this reason, and a connector net reaching no supply pin yields no verdict at all.
 //
 // The pass names the fuse or TVS it credits, so the evidence points at a part rather than asserting
-// that one exists. The failure names the rail that is exposed, which is more useful than naming the
-// connector again: on a board with a protected 5 V path and a bare 3V3 path off one connector, the
-// finding is about the 3V3 path and the walk already knows which one it is.
+// that one exists. The failure names the exposed rail rather than the connector again. On a board
+// with a protected 5 V path and a bare 3V3 path off one connector, the finding is about the 3V3 path,
+// and the walk already knows which one it is.
 func inputProtectionVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
@@ -90,8 +90,8 @@ func inputProtectionVerdicts(m check.Model) []check.Verdict {
 
 // inputProtectionSpec is the rule's declarative twin (WS3-003). The guard clauses stay
 // AST; the reach walk is one declared FFI shared with the Go Eval. The WS3-011
-// vocabulary is new, so the Go side stays canonical (twin discipline:
-// docsite/content/build/check-rule.md).
+// vocabulary is new, so the Go side stays canonical (see docsite/content/build/check-rule.md for
+// the twin discipline).
 var inputProtectionSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{

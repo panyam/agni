@@ -27,21 +27,16 @@ var diffPairNaming = &check.Rule{
 }
 
 // diffPairNamingVerdicts decides every net whose NAME claims to be the positive half of a pair, and
-// that set is the considered set. A net carrying no such suffix is not a subject of a naming rule
-// about pairs, so it yields no verdict at all: reporting it as a pass would claim the rule checked
-// something it never asked about.
+// that set is the considered set. A net with no such suffix yields no verdict, because a pass would
+// claim the rule checked something it never asked about.
 //
-// THE POPULATION GATE BECOMES NotConsidered, which is the part worth having. `DiffConventionPresent`
-// asks whether the design uses the convention anywhere, and it exists because a netlist where
-// nothing is differential can still end nets in `_P` by coincidence (the LGSynth benchmarks do).
-// Under the old shape a coincidental `_P` on such a design took the same silent path as a net whose
-// complement was found, so the two were indistinguishable. They are not the same answer: one is
-// "the pair is complete", the other is "this design states no pair anywhere, so its suffixes are not
-// evidence of one". The second is the rule declining to judge, and saying so is what stops a reader
-// from reading the silence as a clean bill.
+// THE POPULATION GATE BECOMES NotConsidered. `DiffConventionPresent` asks whether the design uses the
+// convention anywhere, since a netlist where nothing is differential can still end nets in `_P` by
+// coincidence (the LGSynth benchmarks do). On such a design the suffix is not evidence of a pair, so
+// the net reports not-considered rather than a silent pass (#400).
 //
-// The witness names the complement it looked for, so it tracks the fact rather than restating the
-// outcome. Rename the negative half and a pass becomes a failure naming the name it could not find.
+// The witness names the complement it looked for, so renaming the negative half turns a pass into a
+// failure naming the missing net.
 func diffPairNamingVerdicts(m check.Model) []check.Verdict {
 	uses := check.DiffConventionPresent(m)
 
@@ -75,10 +70,9 @@ func diffPairNamingVerdicts(m check.Model) []check.Verdict {
 	return out
 }
 
-// diffPairNamingSpec is the rule's declarative twin (WS3-003): the complement name is a Let
-// binding shared by the Where clause and the message, computed once per net. The leading
-// diff_convention_present gate mirrors the Go Eval's pair-population guard (design-level, so
-// the same value for every net); the interpreter evaluates it per net, which is harmless.
+// diffPairNamingSpec is the rule's declarative twin (see `specs` in register.go). The complement
+// name is a Let binding shared by the Where clause and the message. The diff_convention_present gate
+// mirrors the Eval's design-level guard, so evaluating it per net is redundant but harmless.
 var diffPairNamingSpec = &check.Spec{
 	Over: "nets",
 	Let:  map[string]check.Term{"neg": check.Call{Fn: "diff_negative", Args: []check.Term{check.Fact{Name: "net.names"}}}},

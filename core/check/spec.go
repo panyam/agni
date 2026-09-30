@@ -12,29 +12,24 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// This file is the rule-as-value layer (WS3-003, docs/19 "A rule is a value"): a Spec is a
-// rule body expressed as plain data — a small AST of named primitives over declared facts —
-// evaluated by the tiny interpreter below. Nothing downstream changes: a Spec binds into the
-// same *Rule shape (Eval closure) every consumer already takes, and the typed core of Rule
-// stays exactly C14's. The payoff over a Go closure is threefold: the body is inspectable
-// data (diffable, serializable, the Phase-2 DSL's compile target — WS3-007 becomes a parser
-// that produces a Spec value), the Reads and Primitives metadata are DERIVED from the body
-// instead of hand-maintained (so they cannot drift from what the rule actually does), and
-// every fact access goes through Model by construction (so a future indexed fact base,
-// WS3-004, lands in one place). Go remains the escape hatch: a Call node invokes a
-// registered SpecFunc by name for logic the AST cannot or should not express.
+// This file is the rule-as-value layer (WS3-003). A Spec is a rule body as plain data, a small
+// AST of named primitives over declared facts, evaluated by the interpreter below. It binds into
+// the same *Rule shape a Go closure does (the typed core stays C14's), its Reads and Primitives
+// are DERIVED from the body, and every fact access goes through Model. A Call node invokes a
+// registered SpecFunc for logic the AST should not express. The design is in
+// docsite/content/architecture/rules-and-checks.md#a-rule-is-a-value.
 
 // Term is a Spec expression that produces a value (string, int, or bool) for one entity.
-// The Term set is deliberately closed (unexported marker): the bounded vocabulary is what
-// keeps the rule layer Datalog-class rather than Turing-complete (docs/19), and what makes
+// The Term set is closed by an unexported marker, which keeps the rule layer Datalog-class
+// rather than Turing-complete (docsite/content/architecture/rules-and-checks.md) and keeps
 // LLM-generated rules cheap to validate.
 type Term interface{ isTerm() }
 
 // Lit is a literal value: a string, an int, or a bool.
 type Lit struct{ V any }
 
-// Fact reads a named fact of the entity in scope. Names use the docs/15 read vocabulary
-// directly ("net.pin_count", "pin.electrical_type", "component.class", ...) so a Spec's
+// Fact reads a named fact of the entity in scope. Names use the read vocabulary of
+// docsite/content/architecture/web-app.md directly ("net.pin_count", "pin.electrical_type", "component.class", ...) so a Spec's
 // derived Reads are its fact names verbatim; see specFacts for the full vocabulary and
 // which entity scope each fact resolves against.
 type Fact struct{ Name string }
@@ -51,8 +46,8 @@ type Call struct {
 	Args []Term
 }
 
-// CountOf counts the members of a collection ("net.connections") matching Where — the
-// count/aggregate primitive. A nil Where counts every member.
+// CountOf counts the members of a collection ("net.connections") matching Where. It is the
+// count primitive, and a nil Where counts every member.
 type CountOf struct {
 	Over  string
 	Where Expr
@@ -76,9 +71,8 @@ type Or struct{ Xs []Expr }
 // Not negates its operand.
 type Not struct{ X Expr }
 
-// Cmp compares two terms: "==" and "!=" on any value, "<", "<=", ">", ">=" on ints — the
-// arithmetic-compare primitive. Ordering a non-int is false, never a panic, matching the
-// absent-tolerant posture of the rest of check.
+// Cmp compares two terms, with "==" and "!=" on any value and "<", "<=", ">", ">=" on ints.
+// Ordering a non-int is false, never a panic.
 type Cmp struct {
 	L  Term
 	Op string
@@ -91,14 +85,14 @@ type In struct {
 	Set []string
 }
 
-// Match is true when the term's string value matches Pattern (unanchored RE2, compiled
-// once at Validate time) — the pattern primitive.
+// Match is true when the term's string value matches Pattern, an unanchored RE2 compiled
+// once at Validate time.
 type Match struct {
 	T       Term
 	Pattern string
 }
 
-// ExistsIn is true when any member of a collection matches Where — the exists quantifier.
+// ExistsIn is true when any member of a collection matches Where.
 type ExistsIn struct {
 	Over  string
 	Where Expr
@@ -121,26 +115,22 @@ func (IsTrue) isExpr()   {}
 // Where, and report one finding per survivor. Let names intermediate terms usable in both
 // Where (via Var) and Message. Message is a template; "{name}" interpolates a Let binding
 // or a Fact by name, and "{name:q}" quotes the value like %q. Kind, the finding subject,
-// and the provenance derive from the Over entity set (see specOvers); Name, Severity, the
-// prose, and Tags stay on the Rule a Spec binds into — the Spec is only the body.
+// and the provenance derive from the Over entity set (see specOvers). Name, Severity, the
+// prose, and Tags stay on the Rule a Spec binds into, since the Spec is only the body.
 type Spec struct {
 	Over string
 	Let  map[string]Term
-	// Scope is which elements of Over this rule actually JUDGES. Nil means all of them.
+	// Scope is which elements of Over this rule JUDGES. Nil means all of them (#397).
 	//
-	// It exists because Where alone cannot answer "what did you look at". Where is the VIOLATION
-	// condition, so a subject the rule was never about fails it for the same reason a healthy subject
-	// does, and the two are indistinguishable. That was harmless while a spec only reported
-	// violations. It stops being harmless the moment the interpreter states a considered set, because
-	// then "Where is false" is read as a positive claim that the subject is fine.
+	// Where is the VIOLATION condition, so an element the rule was never about fails it just as a
+	// healthy one does. Once the interpreter states a considered set, "Where is false" reads as a
+	// claim that the subject is fine, so Scope has to drop the others first. test-point-coverage
+	// declares Over "nets" and is about RAILS. On the tutorial gateway design that is 4 rails among
+	// 15 nets, and without Scope the rule would assert that 11 signal nets carry a test point.
 	//
-	// Concretely: test-point-coverage declares Over "nets" and is about RAILS. On the tutorial gateway
-	// design that is 15 nets and 4 rails, so without this the rule would assert that 11 signal nets
-	// carry a test point. On a real board the ratio is far worse.
-	//
-	// It is a per-element predicate in the same environment as Where, so it may quantify into a member
-	// collection (ExistsIn over net.connections) to decide one element. It does NOT widen what a
-	// subject is: a spec still ranges over one entity set, which is agni issue 370's separate concern.
+	// Scope is a per-element predicate in Where's environment, so it may quantify into a member
+	// collection (ExistsIn over net.connections). It does NOT widen what a subject is. A spec still
+	// ranges over one entity set (agni issue 370).
 	Scope Expr
 	// Where is the violation condition, meaningful only for elements inside Scope. Nil matches every
 	// in-scope element.
@@ -148,11 +138,10 @@ type Spec struct {
 	Message string
 }
 
-// SpecFunc is a Go function registered for Spec Call nodes — the FFI escape hatch for
-// logic the AST should not express (multi-clause heuristics like
-// intentionally_unconnected). Reads and Primitives declare what the function consumes in
-// the same vocabulary rules use, so derivation stays honest through the FFI boundary: a
-// Spec's derived metadata includes what its called functions declare.
+// SpecFunc is a Go function registered for Spec Call nodes, the FFI escape hatch for logic
+// the AST should not express (multi-clause heuristics like intentionally_unconnected).
+// Reads and Primitives declare what the function consumes in the rules' vocabulary, and a
+// Spec's derived metadata includes them.
 //
 // Fn receives the Model, the entities in scope keyed by scope name ("net", "conn",
 // "component", ...), and the evaluated Args. It returns a string, int, or bool.
@@ -171,24 +160,20 @@ var specFuncs = map[string]*SpecFunc{}
 // helpers before building rules); it is not synchronized for concurrent use.
 func RegisterSpecFunc(name string, fn *SpecFunc) { specFuncs[name] = fn }
 
-// --- entity sets, collections, facts: the interpreter's vocabulary ---
+// --- the interpreter's vocabulary (entity sets, collections, facts) ---
 //
-// These tables are the spec language's LEXICON: a closed set of names whose meaning is
-// defined here, so the AST needs no set-comprehension machinery and Validate/derivation
-// stay decidable. They are deliberately private, and the two pressures to open them have
-// different answers. An OPTIMIZED implementation of a name is NOT a vocabulary change:
-// every resolver is a thin delegate to a Model method, so a faster bnet.vias is a faster
-// Model.BoardNets behind the same name (one name = one meaning; WS3-004's indexed fact
-// base swaps in there). EXTERNAL vocabulary (an embedder's or the param layer's own
-// facts/sets) is real future work but rides the provider story: registration mirroring
-// RegisterSpecFunc (declared reads/primitives, a namespace prefix Available can gate on),
-// designed with WS3-004/006 when the first consumer arrives (OUT_OF_SCOPE.md).
+// These tables are the spec language's LEXICON, a closed set of names defined here, so the
+// AST needs no set-comprehension machinery and Validate and derivation stay decidable. They
+// are private. An OPTIMIZED implementation of a name is NOT a vocabulary change, because
+// every resolver delegates to a Model method, so a faster bnet.vias is a faster
+// Model.BoardNets behind the same name. EXTERNAL vocabulary from an embedder or the param
+// layer is future work, and would register the way RegisterSpecFunc does (OUT_OF_SCOPE.md).
 
 // overDef describes an Over entity set: how to enumerate it, the finding shape its
-// survivors report, and the reads its enumeration implies. bind and pin are optional:
-// bind adds extra scope entries beyond the primary (the pins set binds the owning
-// component too, so component facts resolve), and pin supplies Finding.Pin for sets
-// whose subject is a (component, pin) pair.
+// survivors report, and the reads its enumeration implies. bind and pin are optional.
+// bind adds scope entries beyond the primary (the pins set binds the owning component too,
+// so component facts resolve), and pin supplies Finding.Pin for sets whose subject is a
+// (component, pin) pair.
 type overDef struct {
 	scope   string // the scope name entities bind under ("net", "component", ...)
 	kind    string // Finding.Kind for this set
@@ -199,7 +184,7 @@ type overDef struct {
 	bind    func(e any, ents map[string]any)
 	pin     func(e any) string
 	// netID supplies Finding.NetID for a net-subject set, so two survivors on same-named nets are
-	// distinguishable (the duplicate-net-name case). Optional: nil for non-net sets.
+	// distinguishable. Nil for non-net sets.
 	netID func(e any) string
 }
 
@@ -251,9 +236,9 @@ var specOvers = map[string]overDef{
 			return nil
 		},
 	},
-	// Malformed-input diagnostics: pins claimed by more than one net (the pins-to-net
-	// invariant is many-to-one). Same shape as ref_des_collisions: a Model-collected
-	// list a thin rule reports.
+	// Malformed-input diagnostic for pins claimed by more than one net, since a pin belongs
+	// to at most one. Same shape as ref_des_collisions, a Model-collected list a thin rule
+	// reports.
 	"pin_net_conflicts": {
 		scope: "pin_conflict", kind: KindPin,
 		reads: []string{"pin.on_net", "ref_des_collision"}, // collision is the suppression input
@@ -263,9 +248,9 @@ var specOvers = map[string]overDef{
 		prov:    func(e any) *ir.Provenance { return e.(PinNetConflict).Prov },
 		pin:     func(e any) string { return e.(PinNetConflict).Pin },
 	},
-	// Board-tier set (WS3-008): one entity per net's routed copper, so geometric
-	// findings aggregate per net — copper primitives have no stable identity of their
-	// own, and the net name is the join key a consumer can highlight.
+	// Board-tier set (WS3-008), one entity per net's routed copper. Copper primitives have
+	// no stable identity of their own, so geometric findings aggregate per net, keyed by
+	// the net name a consumer can highlight.
 	"board.nets": {
 		scope: "bnet", kind: KindNet,
 		reads:   []string{"board.copper"},
@@ -290,9 +275,9 @@ var specColls = map[string]collDef{
 		scope: "conn", reads: []string{"on_net"}, primitives: []string{"traverse"},
 		elems: func(ev *evalEnv) []any { return anySlice(ev.ents["net"].(*ir.Net).Connections) },
 	},
-	// Board-tier collections (WS3-008): a board net's copper, quantified within the
-	// board.nets scope. No traverse primitive — the copper is the entity's own body,
-	// not a walk to another entity.
+	// Board-tier collections (WS3-008) over a board net's copper, quantified within the
+	// board.nets scope. They carry no traverse primitive, because the copper is the
+	// entity's own body rather than a walk to another entity.
 	"bnet.segments": {
 		scope: "segment", reads: []string{"board.copper"},
 		elems: func(ev *evalEnv) []any { return anySlice(ev.ents["bnet"].(BoardNet).Segments) },
@@ -318,8 +303,9 @@ var specFacts = map[string]factDef{
 		get:   func(ev *evalEnv) any { return ev.ents["net"].(*ir.Net).Name },
 	},
 	"net.name_leaf": { // the name's leaf segment: "/amp1/SIG" -> "SIG", bare names unchanged.
-		// Naming-convention patterns match the leaf by default: hierarchy qualification
-		// (docs/22) is the reader's scoping, not the author's spelling.
+		// Naming-convention patterns match the leaf by default, because hierarchy qualification
+		// is the reader's scoping and not the author's spelling
+		// (docsite/content/architecture/net-solving.md).
 		reads: []string{"net.names"},
 		get: func(ev *evalEnv) any {
 			_, leaf := ScopeOf(ev.ents["net"].(*ir.Net).Name)
@@ -337,7 +323,7 @@ var specFacts = map[string]factDef{
 		reads: []string{"pin.electrical_type"}, primitives: []string{"pin-role"},
 		get: func(ev *evalEnv) any {
 			if c, ok := ev.ents["conn"].(*ir.Connection); ok {
-				return DirString(ConnDir(ev.m, c)) // connection attr first: virtual power pins (WS1-014)
+				return DirString(ConnDir(ev.m, c)) // connection attr first, for virtual power pins (WS1-014)
 			}
 			p := ev.ents["pin"].(PinInst)
 			return DirString(ev.m.PinDir(p.Component.RefDes, p.Designator))
@@ -437,8 +423,8 @@ func netAttrFact(key string) factDef {
 
 // DirString maps a pin direction to the string vocabulary Specs compare against. Unmapped
 // directions (tristate, ...) read as "unspecified" until a rule needs them. PASSIVE is
-// mapped: unspecified-pin-with-driver keys on "unspecified" meaning "the author declared
-// nothing", and a passive pin declares something (any two-terminal part would fire otherwise).
+// mapped because unspecified-pin-with-driver reads "unspecified" as "the author declared
+// nothing", and a passive pin declares something (otherwise every two-terminal part fires).
 func DirString(d ir.PinDirection) string {
 	switch d {
 	case ir.PinDirection_PIN_DIRECTION_INPUT:
@@ -487,17 +473,15 @@ func (s *Spec) Eval(m Model) []Finding {
 	return VerdictsToFindings(s.Verdicts(m))
 }
 
-// Verdicts is the interpreter as a MAPPER: one verdict per element of Over that the rule actually
-// judges, passes included. It is what a spec-authored rule binds to Rule.Eval.
+// Verdicts is the interpreter as a MAPPER, emitting one verdict per element of Over that the
+// rule judges, passes included. It is what a spec-authored rule binds to Rule.Eval.
 //
-// Scope decides membership of the considered set and Where decides the outcome inside it. Splitting
-// them is the whole point: an out-of-scope element is not a pass, it is not this rule's business, and
-// a rule that reported it as a pass would be claiming to have checked something it never looked at.
+// Scope decides membership of the considered set and Where decides the outcome inside it. An
+// out-of-scope element is not a pass, so it gets no verdict at all.
 //
-// A PASS NAMES THE CLAUSE THAT DECIDED IT. A witness reading "the condition did not hold" would be
-// identical on every passing subject in the catalog and would track no fact, which build/evidence.md
-// calls decoration rather than evidence. Where is a violation condition, so a pass is a refutation of
-// it, and the honest statement is which conjunct did the refuting.
+// A PASS NAMES THE CLAUSE THAT DECIDED IT. Where is a violation condition, so a pass refutes it
+// and the witness names the conjunct that did. "The condition did not hold" would read the same
+// on every passing subject, which docsite/content/build/evidence.md calls decoration.
 func (s *Spec) Verdicts(m Model) []Verdict {
 	over := specOvers[s.Over]
 	out := []Verdict{}
@@ -508,11 +492,10 @@ func (s *Spec) Verdicts(m Model) []Verdict {
 		}
 		ev := &evalEnv{m: m, spec: s, ents: ents}
 		if s.Scope != nil && !ev.expr(s.Scope) {
-			continue // not this rule's subject; saying nothing is the honest answer
+			continue // out of scope, so no verdict
 		}
-		// A spec quantifies over ONE entity set, so its subject tuple is always a 1-tuple. That is the
-		// declared shape for every spec-authored rule, and it is why the interpreter needs no notion
-		// of arity: a relation between two entities is not expressible in the AST today.
+		// A spec quantifies over ONE entity set, so its subject tuple is always a 1-tuple. The AST
+		// cannot express a relation between two entities, so the interpreter needs no notion of arity.
 		subj := Entity{Kind: over.kind, Ref: over.subject(e)}
 		if over.pin != nil {
 			subj.Pin = over.pin(e)
@@ -537,10 +520,9 @@ func (s *Spec) Verdicts(m Model) []Verdict {
 
 // why names the clause that made a violation condition false, in the reader's terms.
 //
-// For an And it is the FIRST false conjunct, which is the one that refutes the whole condition; for
-// an Or every branch is false, so all of them are named. Anything else is described directly. The
-// rendering is deliberately structural rather than a stored English string, so a change to a rule's
-// body cannot leave a stale explanation behind.
+// For an And it is the FIRST false conjunct, which refutes the whole condition. For an Or every
+// branch is false, so all of them are named. Like renderExpr, it renders from the body rather than
+// a stored sentence, so it cannot go stale.
 func (ev *evalEnv) why(e Expr) string {
 	switch x := e.(type) {
 	case And:
@@ -556,14 +538,12 @@ func (ev *evalEnv) why(e Expr) string {
 		}
 		return strings.Join(parts, ", and ")
 	case Not:
-		// A false Not means its operand HOLDS, so the honest explanation is why THAT is true, with the
-		// value behind it. Rendering the operand's syntax instead reads identically on every passing
-		// subject, which is the defect this family of statements exists to remove (agni issue 412).
+		// A false Not means its operand HOLDS, so explain why THAT is true, with the value behind it.
+		// The operand's syntax would read identically on every passing subject (agni issue 412).
 		return ev.holds(x.X)
 	case ExistsIn:
-		// Read an absent match as an absence, not as a failed test: "no connection is a no-connect"
-		// rather than "some connection is a no-connect does not hold". The COUNT is what makes it
-		// about this subject: wire a fifth pin and the sentence changes with the design.
+		// An absent match reads as an absence ("no connection is a no-connect") rather than a failed
+		// test. The COUNT ties the sentence to this subject, so wiring a fifth pin changes it.
 		return fmt.Sprintf("no %s where %s (%d examined)", x.Over, renderExpr(x.Where), ev.countMembers(x.Over))
 	case Cmp:
 		return ev.whyCmp(x)
@@ -572,8 +552,8 @@ func (ev *evalEnv) why(e Expr) string {
 	case In:
 		return ev.whyLeaf(x.T, "is not one of ["+strings.Join(x.Set, ", ")+"]")
 	case IsTrue:
-		// The same trick holdsTrue uses, on the false side. A Call hands back a bare bool, but its
-		// ARGUMENTS are terms this interpreter can read, so a refusal can name what was refused.
+		// Mirrors holdsTrue. A Call returns a bare bool, but its ARGUMENTS are terms this
+		// interpreter can read, so a refusal names what was refused.
 		if c, ok := x.T.(Call); ok {
 			if len(c.Args) > 0 {
 				return ev.argValues(c) + ", which " + c.Fn + " does not accept"
@@ -585,18 +565,16 @@ func (ev *evalEnv) why(e Expr) string {
 	return renderExpr(e) + " does not hold"
 }
 
-// holds is why's mirror: it explains a TRUE expression, and it exists because a false Not is a true
-// operand. Everything it renders comes from the same value machinery why uses, so the two sides of a
-// negation read the same way rather than one of them falling back to the rule's syntax.
+// holds is why's mirror. It explains a TRUE expression, which a false Not needs because its operand
+// is true. It uses the same value machinery as why, so both sides of a negation read the same way.
 //
-// The cases are the ones the catalog actually nests under a Not. A shape that turns up here without a
-// case falls through to the syntax, which is the old behaviour and honest about being a gap rather
-// than pretending to a value it never read.
+// The cases are the shapes the catalog nests under a Not. Any other shape falls through to the
+// rule's syntax, which states no value.
 func (ev *evalEnv) holds(e Expr) string {
 	switch x := e.(type) {
 	case Or:
-		// The FIRST true disjunct is the reason. This is the naming-rule case: an allow-list is an Or
-		// of patterns, and the one that matched is what a reader wants named.
+		// The FIRST true disjunct is the reason. A naming rule's allow-list is an Or of patterns,
+		// and the reader wants the one that matched.
 		for _, sub := range x.Xs {
 			if ev.expr(sub) {
 				return ev.holds(sub)
@@ -631,15 +609,13 @@ func (ev *evalEnv) holds(e Expr) string {
 
 // holdsTrue explains a true term used as a predicate.
 //
-// A FACT reads as its value. A CALL is the interesting one: the FFI hands back a bare bool and has
-// thrown away whatever it looked at, but its ARGUMENTS are terms this interpreter can evaluate, so
-// `ground_name(net.names)` names the value it accepted without the SpecFunc contract changing at all.
-// That covers every argument-carrying call in the catalog.
+// A FACT reads as its value. A CALL's FFI returns a bare bool, but its ARGUMENTS are terms this
+// interpreter can evaluate, so `ground_name(net.names)` names the value it accepted with no change
+// to the SpecFunc contract. That covers every argument-carrying call in the catalog.
 //
-// An argument-LESS call is the residue and says so plainly. `intentionally_unconnected`, `tvs_reach`
-// and their kin take the whole scope and return a verdict, so there is nothing here to read and
-// nothing honest to print beyond the fact that the function accepted. Closing that needs a SpecFunc
-// able to hand back what it observed, which cap-voltage needs for the same reason (OUT_OF_SCOPE.md).
+// An argument-LESS call (`intentionally_unconnected`, `tvs_reach`) takes the whole scope, so there
+// is no value to print and the statement says so. Closing that needs a SpecFunc that returns what
+// it observed, which cap-voltage needs too (OUT_OF_SCOPE.md).
 func (ev *evalEnv) holdsTrue(t Term) string {
 	c, ok := t.(Call)
 	if !ok {
@@ -670,8 +646,7 @@ func (ev *evalEnv) countMembers(coll string) int {
 }
 
 // firstMember names the first member satisfying where, or "" when the collection gives no label to
-// name one by. Naming WHICH member matched is the useful half of a true ExistsIn; "some member did" is
-// the same non-answer the syntax rendering was.
+// name one by. A true ExistsIn is explained by WHICH member matched.
 func (ev *evalEnv) firstMember(coll string, where Expr) string {
 	label := ""
 	ev.eachMember(coll, func() bool {
@@ -684,8 +659,8 @@ func (ev *evalEnv) firstMember(coll string, where Expr) string {
 	return label
 }
 
-// memberLabel names the in-scope member of a collection, per collection, because a member's identity
-// is its own kind's business: a connection is a ref-des and a pin, a via is a location. Empty for a
+// memberLabel names the in-scope member of a collection. It is per collection because identity
+// depends on the kind (a connection is a ref-des and a pin, a via is a location). Empty for a
 // collection with no label defined, which the caller reads as "cannot name one".
 func (ev *evalEnv) memberLabel(coll string) string {
 	if coll != "net.connections" {
@@ -701,18 +676,13 @@ func (ev *evalEnv) memberLabel(coll string) string {
 	return c.GetComponentRef()
 }
 
-// whyCmp states a false comparison as the subject's ACTUAL value rather than as the test applied to
-// it. renderExpr can only print the rule's own syntax ("claims >= 2"), because it takes an Expr and
-// never the evalEnv, so the number that decided the pass is dropped at exactly the point a reader
-// needs it. The failing branch already interpolates values into Message; this is the passing branch
-// doing the same. A statement carrying no value reads identically on every passing subject a rule
-// sees, which build/evidence.md calls decoration rather than evidence.
-//
-// An ordering also names the threshold it did not reach, so a reader can see what would have made
-// the rule fire.
+// whyCmp states a false comparison as the subject's ACTUAL value rather than the test applied to it
+// (agni issue 391). renderExpr takes no evalEnv, so it can only print the rule's syntax
+// ("claims >= 2") and drops the number that decided the pass. An ordering also names the
+// threshold it did not reach, so a reader can see what would have made the rule fire.
 func (ev *evalEnv) whyCmp(x Cmp) string {
-	// "!=" came out false, so the two sides are EQUAL. The value IS the whole reason and there is
-	// no unmet threshold to report; appending one would contradict the value just stated.
+	// "!=" came out false, so the two sides are EQUAL. The value is the whole reason and there is
+	// no unmet threshold to report.
 	if x.Op == "!=" {
 		return ev.valueOf(x.L)
 	}
@@ -748,16 +718,16 @@ func renderComparand(op string, r Term) string {
 
 // Rule binds the spec into a *Rule: meta supplies the identity, severity, prose, and tags;
 // the spec supplies Eval and the derived Reads and Primitives. It panics on an invalid
-// spec — binding happens at package init / registry-build time, where a bad spec is a
-// programming error, not an input error.
+// spec, because binding happens at package init or registry-build time, where a bad spec
+// is a programming error rather than an input error.
 func (s *Spec) Rule(meta Rule) *Rule {
 	if err := s.Validate(); err != nil {
 		panic(fmt.Sprintf("check: invalid spec for rule %q: %v", meta.Name, err))
 	}
 	meta.Eval = s.Verdicts
-	// A spec states its considered set: Verdicts emits one per in-scope element of Over, passes
-	// included. A spec whose Scope is nil judges every element, which is a claim the author makes by
-	// leaving it out, so it is on the author to narrow it where the rule is really about a subset.
+	// Verdicts emits one per in-scope element of Over, passes included, so a spec states its
+	// considered set. A nil Scope claims every element, so the author must narrow it when the rule
+	// is about a subset.
 	meta.StatesConsideredSet = true
 	meta.Reads = s.DerivedReads()
 	meta.Primitives = s.DerivedPrimitives()
@@ -887,8 +857,8 @@ func compare(l any, op string, r any) bool {
 // placeholderRe matches message-template placeholders: {name} or {name:q}.
 var placeholderRe = regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_.]*)(:q)?\}`)
 
-// interpolate renders the message template for the current entity: a placeholder resolves
-// as a Let binding first, then as a Fact; ":q" quotes the value like %q.
+// interpolate renders the message template for the current entity. A placeholder resolves
+// as a Let binding first, then as a Fact, and ":q" quotes the value like %q.
 func (ev *evalEnv) interpolate(msg string) string {
 	return placeholderRe.ReplaceAllStringFunc(msg, func(ph string) string {
 		parts := placeholderRe.FindStringSubmatch(ph)
@@ -920,9 +890,9 @@ func formatValue(v any) string {
 }
 
 // patternCache memoizes compiled Match regexps. It is a sync.Map because rule evaluation
-// runs concurrently (the serve API checks designs in parallel requests); compilation is
-// on-demand so an unvalidated-but-well-formed spec still evaluates, while a malformed
-// pattern panics — Validate is the error-returning path for specs from untrusted sources.
+// runs concurrently (the serve API checks designs in parallel requests). Compilation is on
+// demand, so an unvalidated but well-formed spec still evaluates and a malformed pattern
+// panics. Validate is the error-returning path for specs from untrusted sources.
 var patternCache sync.Map
 
 func compiledPattern(p string) *regexp.Regexp {
@@ -936,10 +906,10 @@ func compiledPattern(p string) *regexp.Regexp {
 
 // --- validation and metadata derivation ---
 
-// Validate checks the spec is closed over the interpreter's vocabulary: the Over set, every
-// Fact, collection, Call target, Var binding, Cmp operator, Match pattern, and message
-// placeholder must resolve. A valid spec cannot fail at Eval time, which is what lets Eval
-// return findings instead of errors (the same contract as a Go Eval closure).
+// Validate checks that the Over set and every Fact, collection, Call target, Var binding,
+// Cmp operator, Match pattern, and message placeholder resolve in the interpreter's
+// vocabulary. A valid spec cannot fail at Eval time, which lets Eval return findings
+// instead of errors, the same contract as a Go Eval closure.
 func (s *Spec) Validate() error {
 	if _, ok := specOvers[s.Over]; !ok {
 		return fmt.Errorf("unknown entity set %q", s.Over)
@@ -1000,10 +970,10 @@ func (s *Spec) Validate() error {
 	return nil
 }
 
-// DerivedReads returns the facts the spec reads (docs/15 vocabulary), sorted: the union of
-// its Over set's, facts', collections', and called functions' declared reads. This is what
-// keeps a spec-built rule's Reads honest — it is computed from the body, so it cannot say
-// less (or more) than the rule does.
+// DerivedReads returns the facts the spec reads (the vocabulary of
+// docsite/content/architecture/web-app.md), sorted. It is the union of the declared reads of
+// its Over set, facts, collections, and called functions. Being computed from the body, a
+// spec-built rule's Reads cannot say less or more than the rule does.
 func (s *Spec) DerivedReads() []string {
 	set := map[string]bool{}
 	add := func(rs []string) {
@@ -1031,7 +1001,7 @@ func (s *Spec) DerivedReads() []string {
 }
 
 // messageFacts returns the facts the message template interpolates directly (placeholders
-// that are not Let bindings) — they are reads too, even when the Where clause never touches
+// that are not Let bindings). They are reads too, even when the Where clause never touches
 // them.
 func (s *Spec) messageFacts() []string {
 	var out []string
@@ -1045,8 +1015,8 @@ func (s *Spec) messageFacts() []string {
 	return out
 }
 
-// DerivedPrimitives returns the query primitives the spec composes (docs/19 vocabulary),
-// sorted. Every spec is a selection, so "select" is always present; quantifiers add
+// DerivedPrimitives returns the query primitives the spec composes (the vocabulary of
+// docsite/content/architecture/rules-and-checks.md), sorted. Every spec is a selection, so "select" is always present; quantifiers add
 // exists/count plus their collection's traversal, Match adds pattern, facts and called
 // functions add what they declare.
 func (s *Spec) DerivedPrimitives() []string {
@@ -1078,8 +1048,8 @@ func (s *Spec) DerivedPrimitives() []string {
 	return sortedKeys(set)
 }
 
-// walk visits every Expr and Term in the spec (Where, every Let binding, and all nested
-// operands), calling f on each node. Message placeholders are resolved separately by
+// walk visits every Expr and Term in the spec (every Let binding, Where, Scope, and all
+// nested operands), calling f on each node. Message placeholders are resolved separately by
 // Validate/interpolate since they are strings, not nodes.
 func (s *Spec) walk(f func(n any)) {
 	var expr func(Expr)
@@ -1131,9 +1101,9 @@ func (s *Spec) walk(f func(n any)) {
 		term(t)
 	}
 	expr(s.Where)
-	// Scope is walked too, and it has to be: DerivedReads feeds Available, so a fact consulted only in
-	// Scope would leave the rule claiming not to read it and running against a tier it needs. Moving a
-	// clause from Where to Scope must not change what a rule declares, only what its falsehood means.
+	// DerivedReads feeds Available, so a fact consulted only in Scope must be walked or the rule
+	// would run against a tier it needs. Moving a clause from Where to Scope changes what its
+	// falsehood means, never what the rule declares.
 	expr(s.Scope)
 }
 
@@ -1148,9 +1118,8 @@ func sortedKeys(set map[string]bool) []string {
 
 // renderExpr describes a spec expression the way a reader of the rule would say it, for a witness.
 //
-// Deliberately structural rather than a stored English sentence per rule: an explanation derived from
-// the body cannot go stale when the body changes, which a hand-written one silently would. It is
-// terse on purpose, because it appears inside a one-line statement beside the subject.
+// It is structural rather than a stored sentence per rule, so it cannot go stale when the body
+// changes. It is terse because it appears inside a one-line statement beside the subject.
 func renderExpr(e Expr) string {
 	switch x := e.(type) {
 	case And:

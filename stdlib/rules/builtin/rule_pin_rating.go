@@ -15,25 +15,24 @@ import (
 // WHAT THEY FIX. The alias-path rules reach a terminal through a vendor symbol table meeting a
 // pin-type inference, which cannot tell two pins of one part apart. supply-exceeds-abs-max resolves
 // that by applying the MOST RESTRICTIVE row across every power-in pin, which is conservative and,
-// on a part whose terminals genuinely differ, wrong: a translator rated 4.6 V on one supply and
+// on a part whose terminals genuinely differ, wrong. A translator rated 4.6 V on one supply and
 // 6.5 V on the other reports a 5 V rail on the 6.5 V terminal as a violation. And
 // rail-nominal-out-of-recommended declines multi-supply parts outright, because a two-sided range
-// applied to the wrong terminal produces a false over- or under-voltage. Its doc comment named
-// per-pin supply mapping as the follow-up; this is it.
+// applied to the wrong terminal produces a false over- or under-voltage.
 //
 // THE ALIAS PATH STAYS. These act only on a part whose spec carries pin bindings, and the alias
 // rules defer only on such a part, so exactly one rule speaks per part and a design read against a
 // corpus seeded before pin binding behaves exactly as it did (CONSTRAINTS C9).
 //
-// WHY GO AND NOT DATALOG, now that the pin relations exist. Mapping a design pin onto a spec pin
-// can REFUSE — an ambiguous name with no package identified, or a name and number that disagree —
-// and a datalog join has no way to express refusal; it would silently drop or, worse, cross-join.
+// WHY GO AND NOT DATALOG, although the pin relations exist. Mapping a design pin onto a spec pin
+// can REFUSE, on an ambiguous name with no package identified or a name and number that disagree.
+// A datalog join cannot express refusal, so it would silently drop the pin or cross-join.
 // param.ResolvePin owns that decision, so the rules call it and declare the relations they consume
 // for the availability gate.
 
 // pinBoundSpec returns the seeded spec for a component when it carries pin bindings, else nil. It
-// is the switch between the two paths: nil means the alias rules own this part, non-nil means these
-// do. Both sides read it, so the two cannot drift into overlapping or into a gap.
+// is the switch between the two paths. A nil result means the alias rules own this part and non-nil
+// means these do. Both sides read it, so the two cannot overlap or leave a gap.
 func pinBoundSpec(m check.Model, refDes string) *parampb.PartSpec {
 	spec := m.PartSpec(refDes)
 	if spec == nil || len(spec.GetPins()) == 0 {
@@ -44,27 +43,25 @@ func pinBoundSpec(m check.Model, refDes string) *parampb.PartSpec {
 			return spec
 		}
 	}
-	// Pins declared but nothing bound to them: there is no per-pin limit to check, so the alias
-	// path is still the better answer rather than silence.
+	// Pins declared but nothing bound to them leaves no per-pin limit to check, so the alias path
+	// answers instead.
 	return nil
 }
 
 // pinEvent is one supply terminal the rule was applied to, and it is the unit of the CONSIDERED
-// SET: every terminal in scope produces exactly one, whether or not it could be judged.
+// SET. Every terminal in scope produces exactly one, whether or not it could be judged.
 //
-// PIN-SHAPED rather than row-shaped, which is the change. The row-shaped enumerator this replaces
-// could only speak about terminals the datasheet had a usable row for, so a resolved pin the
-// datasheet ignored was absent from the output for the same reason a clean pin was. It also emitted
-// one event per ROW, so a terminal carrying two rows of one kind produced two verdicts about one
-// pin. That is harmless while a verdict is only projected down to findings and is a duplicate
-// identity the moment verdicts are addressable.
+// It is PIN-SHAPED rather than row-shaped. A row-shaped event could only speak about terminals the
+// datasheet has a usable row for, so a resolved pin the datasheet ignored would be absent for the
+// same reason a clean pin is. It would also give a terminal carrying two rows of one kind two
+// verdicts, a duplicate identity once verdicts are addressable.
 type pinEvent struct {
 	component  *ir.Component
 	designator string
 	pinName    string
 
 	// drop is why this terminal cannot be judged, in the author's words, and empty when it can.
-	// Set means every field below is unset and the rule emits NotConsidered rather than silence.
+	// When set, every field below is unset and the rule emits NotConsidered.
 	drop string
 
 	net   string
@@ -78,13 +75,12 @@ type pinEvent struct {
 //
 // The two `continue`s before the event is built are NOT drops and yield nothing. A part with no pin
 // bindings belongs to the alias rules, and a pin that is not a supply input is not a subject of
-// these rules at all. A drop is a terminal the rule DOES claim and cannot answer for, which is a
-// different statement and the only one worth reporting.
+// these rules at all. A drop is a terminal the rule DOES claim and cannot answer for.
 func eachSupplyPin(m check.Model, kind parampb.LimitKind, kindName string, yield func(pinEvent)) {
 	for _, c := range m.Components() {
 		spec := pinBoundSpec(m, c.RefDes)
 		if spec == nil {
-			continue // not pin-bound: the alias rules own this part
+			continue // not pin-bound, so the alias rules own this part
 		}
 		// The design's MPN may carry the package suffix; when it does not, PackageForMPN returns nil
 		// and ResolvePin falls back to requiring cross-package agreement rather than assuming a body.
@@ -94,7 +90,7 @@ func eachSupplyPin(m check.Model, kind parampb.LimitKind, kindName string, yield
 		}
 		for _, pin := range m.Pins() {
 			if pin.Component.RefDes != c.RefDes || !check.SupplyInputPin(m, c.RefDes, pin.Designator) {
-				continue // not a supply terminal: not a subject of this rule
+				continue // not a supply terminal, so not a subject of this rule
 			}
 			ev := pinEvent{component: c, designator: pin.Designator}
 			specPin, err := param.ResolvePin(spec, m.PinName(c.RefDes, pin.Designator), pin.Designator, pkg)
@@ -133,13 +129,12 @@ func eachSupplyPin(m check.Model, kind parampb.LimitKind, kindName string, yield
 	}
 }
 
-// bindingRow reduces a terminal's rows to the one that governs: the row the design has least margin
+// bindingRow reduces a terminal's rows to the one that governs, the row the design has least margin
 // against. It is only called with a non-empty list, since an empty one is a drop.
 //
-// Most-restrictive-wins is what the alias rule supply-exceeds-abs-max already does across a part's
-// supply pins, and the per-pin path lost it when it gained per-terminal resolution. Reporting the
-// first row enumerated would be true and misleading at once: a terminal that clears a 6.5 V row
-// while sitting against a 5.0 V one is not fine, and nothing in the output would say which was read.
+// Most-restrictive-wins matches what supply-exceeds-abs-max does across a part's supply pins.
+// Reporting the first row enumerated would mislead, since a terminal that clears a 6.5 V row while
+// sitting against a 5.0 V one is not fine and nothing in the output would say which row was read.
 //
 // check.Bound.Margin makes the choice one comparison for every bound shape. A violated row has a
 // negative margin so it beats any passing row, and a row stating no bound has none so it loses to
@@ -156,25 +151,17 @@ func bindingRow(rows []*parampb.Parameter, volts float64, boundOf func(*parampb.
 	return best, bestBound
 }
 
-// PROOF ON PASS. The two rules below decide through check.CompareToBound and produce one
-// check.Verdict per supply TERMINAL, with Eval projecting the failures back out so the `check` path
-// reports exactly what it always has. Three things come out of that.
+// PROOF ON PASS (#387). The two rules below decide through check.CompareToBound and produce one
+// check.Verdict per supply TERMINAL, with Eval projecting the failures back out as findings.
 //
-// A pass acquires evidence. "3.3 V is within the absolute maximum of 3.6 V" plus the citation is a
-// statement a reviewer can check, where before a pass was a bare `return` that discarded every fact
-// it rested on at the moment it had them all in hand.
+// A pass carries evidence a reviewer can check, such as "3.3 V is within the absolute maximum of
+// 3.6 V" plus the citation.
 //
-// "No maximum stated" stops reading as a pass. `row.Value.Max == nil || volts <= max` sent both down
-// one silent path, so a row that constrained nothing was indistinguishable from a design sitting
-// comfortably under a real limit. That is the false-pass shape the rule-level gates (Reads,
-// RequiresCapability, ParamSymbols) each exist to prevent, reappearing per datasheet ROW where none
-// of them can see it. It is now check.NoLimit.
+// A row stating no maximum is check.NoLimit, not a pass. The rule-level gates (Reads,
+// RequiresCapability, ParamSymbols) cannot see that false pass per datasheet ROW.
 //
-// And a terminal the rule could not judge now SAYS SO. Every step that cannot be taken safely used
-// to drop the pin silently, which reports the same nothing as a rule that never looked at it, so a
-// report built from the survivors claimed coverage it did not have. Those are now NotConsidered
-// verdicts carrying the step that stopped them, which is what makes the verdict list a considered
-// set rather than a list of answers with the questions missing.
+// A terminal the rule cannot judge is a NotConsidered verdict carrying the step that stopped it
+// (pinEvent.drop), so the verdict list is the considered set.
 
 // pinVerdict builds the Verdict common to both rules. The verdict is PIN-scoped because the question
 // it answers is "why is this terminal fine", while the Finding it may carry stays COMPONENT-scoped,
@@ -186,9 +173,8 @@ func pinVerdict(rule string, ev pinEvent, outcome check.Outcome, w *check.Witnes
 		w.Datasheet = []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, row)}
 	}
 	// The rail only. This verdict's SUBJECT is the terminal, so listing the pin as context too would
-	// name it twice and make a consumer draw the figure over its own ground. The Finding below does
-	// list it, and legitimately: a finding's subject is the whole component, so without the pin a
-	// reader cannot tell which terminal of a many-pin part is over its limit (agni issue 349).
+	// name it twice. The Finding does list it, because a finding's subject is the whole component
+	// (see pinContext).
 	var ctx []check.ContextSubject
 	if ev.net != "" {
 		ctx = []check.ContextSubject{{Entity: check.Entity{Kind: check.KindNet, Ref: ev.net}, Role: "rail"}}
@@ -196,9 +182,9 @@ func pinVerdict(rule string, ev pinEvent, outcome check.Outcome, w *check.Witnes
 	return check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: ev.component.RefDes, Pin: ev.designator}}, Rule: rule, Outcome: outcome, Witness: w, Context: ctx}
 }
 
-// pinLimitVerdicts is the body both per-pin rules share: enumerate the terminals, reduce each one's
-// rows to the row that binds, judge it, and let the caller phrase the failing case. The caller
-// supplies only what actually differs, which is the bound's shape and the sentence.
+// pinLimitVerdicts is the body both per-pin rules share. It enumerates the terminals, reduces each
+// one's rows to the row that binds, judges it, and lets the caller phrase the failing case. The caller
+// supplies the bound's shape and the sentence.
 func pinLimitVerdicts(
 	m check.Model,
 	rule string,
@@ -291,7 +277,7 @@ var pinExceedsAbsMax = &check.Rule{
 
 // pinOutOfRecommended flags a supply pin sitting on a rail outside THAT TERMINAL's recommended
 // operating range. The per-pin counterpart of rail-nominal-out-of-recommended, and the rule that
-// lets a multi-supply part be range-checked at all: that rule declines one, because applying a
+// lets a multi-supply part be range-checked at all. That rule declines one, because applying a
 // two-sided range to the wrong terminal invents an over- or under-voltage.
 var pinOutOfRecommended = &check.Rule{
 	Name:       "pin-out-of-recommended",

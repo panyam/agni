@@ -16,14 +16,13 @@ import (
 // block, or fail SHORT. The short is the direction that matters. A high-side switch that fails short
 // hands the full rail to whatever it was protecting, so the FET's failure becomes the load's failure.
 //
-// PRECISION LIMIT, stated because it shapes what the rule can claim. VDSS is a DRAIN-SOURCE rating,
-// but the pin-role vocabulary has no drain or source (anode/cathode/power/ground only), so the rule
-// cannot tell which of the FET's nets sits across those two terminals. It therefore compares against
-// every RAIL the part touches and reports the highest. Rails are the right filter rather than every
-// net: a gate-drive net is not a rail, so the common false pairing is structurally excluded rather
-// than avoided by luck. A gate deliberately tied to a rail is the residual case, and there the
-// binding limit is VGSS rather than VDSS — the finding would name the wrong parameter for a condition
-// that is usually still a defect. WS3-117 (FET pin roles) is what makes this exact.
+// PRECISION LIMIT. VDSS is a DRAIN-SOURCE rating, but the pin-role vocabulary has no drain or source
+// (anode/cathode/power/ground only), so the rule cannot tell which of the FET's nets sits across those
+// two terminals. It therefore compares against every RAIL the part touches. Rails rather than every
+// net, because a gate-drive net is not a rail, so the common false pairing is excluded structurally. A
+// gate intentionally tied to a rail is the residual case. There the binding limit is VGSS rather than
+// VDSS, so the finding names the wrong parameter for a condition that is usually still a defect.
+// WS3-117 (FET pin roles) is what makes this exact.
 var fetVdssBelowRail = &check.Rule{
 	Name:       "fet-vdss-below-switched-rail",
 	Severity:   "error",
@@ -49,36 +48,29 @@ var fetVdssBelowRail = &check.Rule{
 
 // fetVdssVerdicts decides every (FET, rail) pair in the design, one verdict each.
 //
-// THE PAIR IS THE SUBJECT and the reason is the precision limit in this rule's header. VDSS bounds
-// the DRAIN-SOURCE voltage, and the pin-role vocabulary has no drain or source, so the rule cannot
-// tell which of the FET's nets sits across those terminals. It therefore asks the question once per
-// rail the part touches. Those are separate answers about separate rails, and keying them by the FET
-// alone gave the ordinary high-side topology one id for two of them.
+// THE PAIR IS THE SUBJECT, because of the precision limit in this rule's header, so the rule asks
+// its question once per rail the part touches. Those are separate answers about separate rails, and
+// keying them by the FET alone gives the ordinary high-side topology one id for two of them.
 //
-// SCOPE IS THE UNION OF TWO SIGNALS, and getting this wrong is the mistake this rule made first. A
-// part is a subject when the design CLASSIFIES it as a transistor, or when its datasheet states a
-// breakdown row. Either alone is insufficient in a way that shows up immediately:
+// SCOPE IS THE UNION OF TWO SIGNALS. A part is a subject when the design CLASSIFIES it as a
+// transistor, or when its datasheet states a breakdown row. Either alone is insufficient.
 //
 //   - Class alone would drop a seeded FET the classifier could not subtype, losing a finding.
-//   - A seeded row alone reads as "no subjects" on any design read without --params, and the first
-//     version of this conversion scoped on neither, which claimed every capacitor, diode and
-//     connector that touches a rail as a subject it could not judge. On the tutorial board that was
-//     17 verdicts about parts on a design with no transistor in it, which is a coverage claim in the
-//     opposite direction: it says the rule looked at C1 for drain-source breakdown, and it never did.
+//   - A seeded row alone reads as "no subjects" on any design read without --params. Scoping on
+//     neither claims every capacitor, diode and connector that touches a rail as a subject it cannot
+//     judge, which was 17 verdicts on the tutorial board, a design with no transistor in it.
 //
-// THREE SILENCES BECOME ANSWERS, now that the subjects are the right ones. A transistor with no
-// seeded datasheet, one whose datasheet states no breakdown row, and a rail whose voltage nothing
-// establishes all left through the same `continue` a safely-rated pair took. Only the third is
-// NoLimit; the first two are NotConsidered, because a missing document is a gap in the corpus rather
-// than a bound nobody stated.
+// THREE SILENCES ARE ANSWERS. A transistor with no seeded datasheet, one whose datasheet states no
+// breakdown row, and a rail whose voltage nothing establishes each get a verdict rather than a skip.
+// Only the third is NoLimit; the first two are NotConsidered, because a missing document is a gap in
+// the corpus rather than a bound nobody stated.
 //
-// Rails are the scope rather than every net the part touches: a gate-drive net is not a rail, so the
-// common false pairing is excluded structurally instead of by luck. A ground is not a subject either.
+// Only rails are in scope (see the header), and a ground is not a subject.
 func fetVdssVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.RefDes)
-		// The LOWEST breakdown row binds: a part is endangered at its weakest rating. Guarded on the
+		// The LOWEST breakdown row binds, since a part is endangered at its weakest rating. Guarded on the
 		// spec rather than left to the helper, which reads spec.Parameters directly.
 		var vdss *parampb.Parameter
 		if spec != nil {
@@ -110,9 +102,9 @@ func fetVdssVerdicts(m check.Model) []check.Verdict {
 					v.Reason = "neither a driving part's datasheet nor the net's name establishes what this rail runs at"
 					break
 				}
-				// Deliberately NOT check.CompareToBound: this rule fails at or ABOVE the rating, where
-				// that helper fails strictly above. A FET run exactly at its breakdown voltage has no
-				// margin at all, which is the case the rule exists for.
+				// Deliberately NOT check.CompareToBound, because this rule fails at or ABOVE the rating
+				// and that helper fails strictly above. A FET run exactly at its breakdown voltage has no
+				// margin at all.
 				w := &check.Witness{
 					Terms: []check.WitnessTerm{
 						{Label: "rail", Value: fmt.Sprintf("%gV (%s)", volts, src.how)},
@@ -147,9 +139,9 @@ func fetVdssVerdicts(m check.Model) []check.Verdict {
 				}
 				// A rail voltage read off a DRIVING PART's datasheet is a second vendor value the
 				// conclusion rests on, so it earns a citation and the data-trust gate weighs it.
-				// A name-derived rail is a design convention, not a document, so it gets none — and
-				// the message says which, because "5V" from a datasheet and "5V" from a net name are
-				// not equally trustworthy and the report should not flatten them.
+				// A name-derived rail is a design convention, not a document, so it gets none. The
+				// message says which, because "5V" from a datasheet and "5V" from a net name are not
+				// equally trustworthy.
 				if src.cite != nil {
 					f.DatasheetProv = append(f.DatasheetProv, src.cite)
 				}
@@ -161,8 +153,8 @@ func fetVdssVerdicts(m check.Model) []check.Verdict {
 	return out
 }
 
-// railEvidence records where a rail's voltage came from: the human-readable provenance for the
-// message, and a citation when the number was a datasheet value rather than a naming convention.
+// railEvidence records where a rail's voltage came from, as human-readable provenance for the
+// message plus a citation when the number was a datasheet value rather than a naming convention.
 type railEvidence struct {
 	how  string
 	cite *check.DatasheetCitation

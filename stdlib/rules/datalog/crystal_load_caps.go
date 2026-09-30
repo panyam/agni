@@ -5,32 +5,25 @@ import (
 	"github.com/panyam/agni/core/query"
 )
 
-// crystalLoadCapsDL is the datalog expression of the built-in crystal-load-caps rule (WS3-074): a
-// passive two-terminal crystal whose oscillator terminal carries no load capacitor. It is the
-// PARITY TWIN of check.crystalLoadCaps, proven finding-for-finding equal by TestCrystalDatalogParity,
-// and it is DELIBERATELY NOT registered (absent from dlRules, so it never enters DefaultCatalog).
+// crystalLoadCapsQ is the datalog form of the built-in crystal-load-caps rule (WS3-074), compiled
+// into crystalLoadCapsDL below. It is the PARITY TWIN of builtin.crystalLoadCaps, held
+// finding-for-finding equal by TestCrystalDatalogParity, and it is NOT registered (absent from
+// dlRules) because the conformance harness runs the Go rules only and would lose this rule's
+// coverage (twin discipline in docsite/content/build/check-rule.md).
 //
-// Two reasons it stays a twin rather than replacing the Go rule now (twin discipline:
-// docsite/content/build/check-rule.md): the conformance harness runs check.Rules only, so a
-// registered datalog rule would lose that coverage; and the Go rule is freshly soaked (PR 265).
-// It extends the datalog surface with component.class, net.ground, and net.external (the Go rule's
-// external-net read-gap skip).
+// The program mirrors the Go rule over component.class, net.ground and net.external (the Go rule's
+// external-net read-gap skip):
 //
-// The program mirrors the Go rule's structure over those relations:
-//
-//   - a clock part is the CLOCK FAMILY minus the subtypes that take no external caps (WS10-015):
-//     component.class(?y,"clock") and not "oscillator" and not "ceramic_resonator"; a cap is
-//     component.class(?c,"capacitor"). component-on-net (net connections), NOT pin.net (part-type
-//     pins), is the right membership relation: it is the same data the Go rule reads and needs no
-//     resolved part types.
-//   - term = a crystal's non-rail terminal net. rail() covers power AND ground, so a grounded case
-//     pin drops out here (it is not a signal terminal).
-//   - powered = the crystal has a pin on a SUPPLY rail (rail but not ground) -> an active oscillator
-//     with a Vdd pin, which uses no external load caps; exclude it entirely.
-//   - the "exactly two terminals" gate is expressed WITHOUT aggregation (the evaluator aggregates
-//     only in the goal, not an IDB head): two = has >=2 distinct terminal nets, three = has >=3, so
-//     "exactly two" is two AND not three. This also structurally excludes a 3+-pin active oscillator
-//     whose Vcc net is not name-recognizable as a rail (the real-corpus false-positive PR 265 fixed).
+//   - a clock part is the CLOCK FAMILY minus the subtypes that take no external caps (WS10-015). Net
+//     membership reads component-on-net rather than pin.net, the same data the Go rule reads, so it
+//     needs no resolved part types.
+//   - term is a crystal's non-rail terminal net. rail() covers power AND ground, so a grounded case
+//     pin drops out here.
+//   - powered is a crystal with a pin on a SUPPLY rail (rail but not ground), i.e. an active
+//     oscillator with a Vdd pin, which takes no external load caps.
+//   - "exactly two terminals" is two AND not three, since the evaluator aggregates only in the goal
+//     and not in an IDB head. It also excludes a 3+-pin active oscillator whose Vcc net is not
+//     recognizable as a rail by name (the real-corpus false positive PR 265 fixed).
 var crystalLoadCapsQ = query.FindingQuery{
 	Rule: check.Rule{
 		Name:     "crystal-load-caps",
@@ -56,13 +49,8 @@ var crystalLoadCapsQ = query.FindingQuery{
 	Kind:       check.KindComponent,
 	SubjectVar: "y",
 	Message:    "crystal terminal net {net} has no load capacitor",
-	// The offending terminal net, which the query already binds and the message already names.
-	//
-	// This is the rule agni issue 349 was filed about. The subject is the CRYSTAL, because the crystal
-	// is the part a reader has to change, but the sentence is about a NET, so clicking the finding
-	// sent the reader to a part the sentence never mentioned. A crystal has two terminals and both sit
-	// inside the highlighted symbol, so the drawing could not even say which one was at fault: the
-	// reader was told a net was wrong and shown a part.
+	// The terminal net the message names. The subject is the crystal, the part a reader changes, but
+	// both terminals sit inside its symbol, so only the net says which one is at fault (agni issue 349).
 	ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "terminal"}},
 }
 

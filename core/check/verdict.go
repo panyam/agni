@@ -6,86 +6,62 @@ import (
 	"strings"
 )
 
-// PROTOTYPE (stage 1 of the proof-on-pass work). Nothing serializes this yet and no proto mirrors
-// it, deliberately: the shape is being discovered against two real rules before it is committed to
-// a wire form. The `ruledef.proto` header records what happens otherwise, a schema validated only by
-// round-tripping its own producer, which proves it is faithful and cannot tell us it is convenient.
-//
-// WHAT THIS IS FOR. `Eval func(Model) []Finding` returns violations, so a pass is the ABSENCE of a
-// finding and there is nowhere to record what the rule looked at. That is fine for "what is wrong
-// with this board" and useless for "prove this pin is fine", which is the question a reviewer asks
-// of a design they are being asked to sign off.
-//
-// The engine already defends a pass at the RULE level: Reads and OptionalReads gate on fact tiers,
-// RequiresCapability on what a source format can express, ParamSymbols on whether a symbol was
-// seeded at all. Each exists because its absence produced a silent false pass. A Verdict is the same
-// argument one level down, at the individual subject and the individual datasheet row.
+// Verdict is what one rule concluded about one subject, passes included, with the evidence the
+// conclusion rests on. A finding records only a violation, so a pass is the absence of one; a
+// Verdict is how a rule proves a pin is fine rather than merely not reporting it (#387). Its wire
+// form is checks.Verdict in checks.proto. See
+// docsite/content/build/check-rule.md#say-what-you-looked-at-not-only-what-failed.
 type Verdict struct {
 	Rule    string
 	Outcome Outcome
 	// Subjects is the tuple of entities this verdict is ABOUT, in the rule's own order, and it is the
 	// verdict's IDENTITY. Never empty.
 	//
-	// A TUPLE BECAUSE SOME RULES ASK ABOUT A RELATION, and a relation belongs to no single entity.
-	// copper-clearance measures a distance between two nets. regulator-output-exceeds-abs-max compares
-	// a regulator against a part it feeds ACROSS a named rail, so only all three pin the answer down:
-	// one source feeding one load over two supplied rails is two different answers. A strap group is a
-	// device and the N nets encoding its value. Keying those by one entity issues one id for several
-	// answers, which was invisible while verdicts only projected down to findings and is wrong now
-	// that they are addressable: the report links every row by VerdictID.
-	//
-	// ORDER IS THE RULE'S AND IS SIGNIFICANT. Some relations are directional and the direction is the
-	// claim: pin-tracking bounds subject-pin minus reference-pin, so swapping them inverts the sign,
-	// and regulator-output reads source then load. A symmetric relation canonicalises INSIDE the rule
-	// (copper-clearance orders its pair by name) rather than leaving it to the framework, because a
-	// framework that sorted would destroy the directional ones.
-	//
-	// ARITY IS FIXED PER RULE, declared as Rule.SubjectShape, so a consumer can index a rule's
-	// verdicts and a person can construct an id without running the check first. A rule emitting a
-	// 2-tuple on one design and a 3-tuple on another is a bug, and TestSubjectShapeHolds says so.
+	// A tuple because a rule about a RELATION (copper-clearance between two nets, a regulator feeding
+	// a load across a rail) needs every entity in it to give each answer its own VerdictID (#404).
+	// ORDER IS SIGNIFICANT (pin-tracking bounds subject-pin minus reference-pin), so the framework
+	// never sorts and a symmetric relation canonicalises INSIDE the rule. ARITY IS FIXED PER RULE,
+	// declared as Rule.SubjectShape and held by TestSubjectShapeHolds. See
+	// docsite/content/build/check-rule.md#subjects-a-tuple-in-the-verdict-one-entity-in-the-finding.
 	Subjects []Entity
 
-	// Witness is what the outcome rests on. It is REQUIRED on Pass and Fail and is what makes a
-	// pass evidence rather than silence. Nil is legitimate only on NoLimit and NotConsidered, where
-	// the point of the verdict is that there was nothing to rest on.
+	// Witness is what the outcome rests on. REQUIRED on Pass and Fail, since without it a pass is
+	// silence. Nil only on NoLimit and NotConsidered, where there was nothing to rest on.
 	Witness *Witness
 
 	// Reason says why a NotConsidered verdict could not be decided, in the rule author's words
 	// ("pin could not be resolved to a datasheet terminal"). Empty for every other outcome.
 	//
-	// An open string rather than an enum, for the reason Rule.Tags and ContextSubject.Role are open:
-	// the useful vocabulary is rule-specific, and a closed set defined in this package would either
-	// collapse distinctions the rule depends on or grow a member per rule family. What the engine
-	// requires is that the reason EXISTS, not that it comes from a list this package knows.
+	// An open string, like Rule.Tags and ContextSubject.Role, because the useful vocabulary is
+	// rule-specific. The engine requires only that the reason EXISTS.
 	Reason string
 
 	// Context are the design entities this verdict's proof NAMES but is not ABOUT, typed so a
 	// consumer can highlight them: the resistor and rail a pull-up passes through, the rail a pin
 	// sits on. Ordered, and Role is the author's word for the part each plays.
 	//
-	// THIS IS THE HIGHLIGHTABLE HALF, and the division from Witness.Terms is exactly that. A Term is
-	// a Label and a bare string, so "pull-up=R1" cannot be resolved to anything: nothing says whether
-	// R1 is a component, a net or a pin. A ContextSubject carries Kind, which is what HighlightSpec
-	// joins on. The test is whether clicking it should light something up.
+	// The split from Witness.Terms is whether clicking it should light something up. A Term's value
+	// is a bare string ("R1" could be a component, net or pin), where a ContextSubject carries the
+	// Kind a highlight joins on (#388).
 	//
-	// Excludes the subject, which is already named by Kind/Subject/Pin above, so a consumer draws
-	// subject-as-figure and Context-as-ground. That is the split focusStack already implements.
+	// Excludes the entities in Subjects, so a consumer draws subject-as-figure and Context-as-ground,
+	// the split focusStack implements in the web viewer.
 	//
-	// Finding.Context is the projection of this for a failing verdict, and differs legitimately: a
-	// Finding about a COMPONENT lists the pin in its context, where a pin-subject verdict does not,
-	// because for the verdict the pin is the subject.
+	// Finding.Context is the projection of this for a failing verdict, and can differ. A Finding
+	// about a COMPONENT lists the pin in its context, where a pin-subject verdict does not, because
+	// for the verdict the pin is the subject.
 	Context []ContextSubject
 
-	// Finding is the existing violation form, set only when Outcome is Fail. It is carried rather
-	// than replaced so the `check` path keeps its exact current output while the two rules below
-	// grow a second projection (see VerdictsToFindings).
+	// Finding is the violation form, set on Fail and Inconclusive. VerdictsToFindings projects it
+	// out so the `check` path keeps its existing output.
 	Finding *Finding
 }
 
-// Outcome is what a rule concluded about ONE subject, which is a narrower question than the review
-// layer's per-ITEM outcome vocabulary and deliberately does not reuse its spellings. A review
-// outcome answers "did we get an answer to this question", mostly from preconditions decided around
-// the rule. This answers "what did the rule conclude about this thing", decided inside it.
+// Outcome is what a rule concluded about ONE subject. It is narrower than the review layer's
+// per-ITEM outcome and does not reuse its spellings. A review outcome answers "did we get an answer
+// to this question", mostly from preconditions around the rule, and this answers "what did the rule
+// conclude about this thing", decided inside it. The five outcomes are tabled in
+// docsite/content/build/check-rule.md#five-outcomes-and-the-three-that-are-not-a-pass.
 type Outcome string
 
 const (
@@ -93,62 +69,40 @@ const (
 	Pass Outcome = "pass"
 	// Fail: the comparison was made and the design is on the wrong side of it.
 	Fail Outcome = "fail"
-	// Inconclusive: the rule had everything it needed, REACHED its decision, and could not decide.
+	// Inconclusive: the rule had every input and reached its decision, but the design cannot
+	// discriminate between the cases (a power-path transistor may be an ideal-diode controller or a
+	// plain switch, and a netlist cannot tell which).
 	//
-	// Distinct from NotConsidered, where there was no decision to reach, and from NoLimit, where a
-	// specific input was absent. Here the inputs are present and the DISCRIMINATION is impossible: a
-	// transistor in a power path is either an ideal-diode controller providing reverse protection or
-	// an ordinary switch providing none, and a netlist cannot tell them apart.
-	//
-	// It is the outcome form of Finding.Inconclusive, which already ships, and carries that field's
-	// contract: a consumer must NOT count it as a failure. That is why it cannot simply be Fail, and
-	// why mapping it to NotConsidered would be worse still, since NotConsidered reaches no output and
-	// the mapping would silently delete a finding the check path reports today.
-	//
-	// NO RULE PRODUCES THIS YET. It is here before the wire form rather than after, because
-	// reverse-blocking-absent is the rule that needs it and adding an enum member now is free where
-	// adding one to a shipped schema is not.
+	// The outcome form of Finding.Inconclusive, so a consumer must NOT count it as a failure. Never
+	// map it to NotConsidered, which produces no finding and would delete one the check path reports.
 	Inconclusive Outcome = "inconclusive"
 	// NotConsidered: the rule applied to this subject and never reached a comparison, with Reason
 	// naming the step that stopped it.
 	//
-	// This is what makes a considered set honest, and it is why the verdict list IS the considered
-	// set rather than something computed beside it. An enumerator that drops a subject silently
-	// reports the same nothing as a rule that never looked, so a report built from the survivors
-	// claims coverage it does not have. Under an addressable model it is worse: a dropped subject
-	// answers 404, which reads as "no such pin" when the truth is "this pin exists and the rule
-	// could not judge it".
-	//
-	// Distinct from NoLimit, which is a subject that DID reach the comparison and found the row
-	// stating no bound. Here there was no comparison to reach.
+	// The verdict list IS the considered set, so an enumerator must emit this rather than drop a
+	// subject. A dropped subject reports the same nothing as a rule that never looked, and under an
+	// addressable id it answers 404, which reads as "no such pin" rather than "this rule could not
+	// judge it".
 	NotConsidered Outcome = "not-considered"
-	// NoLimit: there was no bound to compare against, so nothing was checked.
-	//
-	// THIS IS THE ONE THAT DID NOT EXIST. Before this type, a datasheet row stating no maximum and
-	// a design sitting comfortably under a stated maximum took the same silent `return` out of a
-	// rule, which is the false-pass shape the rule-level gates spend four separate mechanisms
-	// preventing. It is distinct from Finding.Inconclusive, which is reserved for a rule that had
-	// everything it needed and still could not conclude. Here a specific input is simply absent.
+	// NoLimit: the subject reached the comparison and the datasheet row stated no bound, so nothing
+	// was checked. Without it, a row stating no maximum and a design under a stated maximum take the
+	// same silent return out of a rule (#387). CompareToBound returns it for an unstated Bound.
 	NoLimit Outcome = "no-limit"
 )
 
 // Witness is why a verdict holds: a one-line statement a person can read, the facts that statement
 // rests on, and the datasheet provenance behind them.
 //
-// The Terms list is ordered and open rather than a fixed measured/limit pair, because the next
-// witness-producing family is not a comparison at all. The protection and pull-up rules resolve
-// through `reaches`, and their proof is a PATH ("SCL -> R7 -> +3V3"), which is this same list with
-// the hops as terms. Fixing the shape to a comparison now would mean rewriting it at stage 2.
+// Terms is an ordered open list rather than a measured/limit pair because a path proof from
+// `reaches` ("SCL -> R7 -> +3V3") uses the same list with the hops as terms.
 type Witness struct {
 	// Statement is the human rendering, always set. It is the whole witness for a text consumer.
 	Statement string
 	// Terms are the VALUES Statement rests on, kept separately so a UI can lay them out and a test
 	// can assert on one without parsing prose: a measured voltage, a stated limit, a hop bound.
 	//
-	// Values only, never entities. An entity belongs in Verdict.Context, which carries the Kind a
-	// highlight needs; a Term's Value is a bare string that no consumer can resolve. A witness whose
-	// proof is entirely a path therefore has NO terms, and that is correct rather than a gap: the
-	// facts it rests on are all things you can point at.
+	// Values only, never entities, which go in Verdict.Context with a Kind. So a witness whose proof
+	// is entirely a path has NO terms, and that is correct.
 	Terms []WitnessTerm
 	// Datasheet is the provenance of any seeded value the verdict used, the same citation form a
 	// Finding carries. Empty for a witness resting on nothing seeded.
@@ -175,12 +129,10 @@ func (b Bound) Stated() bool { return b.Min != nil || b.Max != nil }
 // unit. Negative means the bound is already violated and the magnitude says by how much. An unstated
 // bound returns +Inf, since nothing constrains the value.
 //
-// It exists to pick the BINDING row when one terminal carries several of the same kind. A datasheet
-// can state more than one limit of a kind for one pin (different conditions), and the constraint
-// that governs is the one the design is closest to violating, never the first one enumerated.
-// Selecting by smallest margin does that in a single comparison for every bound shape: a violated
-// row has a negative margin so it beats any passing row, and an unstated bound has no margin at all
-// so it loses to any real limit.
+// Use it to pick the BINDING row when a datasheet states several limits of one kind for a pin (under
+// different conditions). The smallest margin governs, not the first row enumerated. That holds for
+// every bound shape, since a violated row goes negative and beats any passing row, and an unstated
+// bound loses to any real limit.
 func (b Bound) Margin(measured float64) float64 {
 	m := math.Inf(1)
 	if b.Max != nil {
@@ -193,12 +145,8 @@ func (b Bound) Margin(measured float64) float64 {
 }
 
 // CompareToBound is the single comparison a limit rule makes, returning the outcome AND the witness
-// from one call.
-//
-// The one-call shape is the point rather than a convenience. If a rule decided the outcome and then
-// separately assembled a witness, nothing would fail when the second step was forgotten, and a pass
-// with no evidence is exactly what this work exists to remove. Producing both together makes the
-// evidence structural: there is no way to reach a Pass without the statement that justifies it.
+// from one call so a rule cannot reach a Pass without the statement that justifies it. An unstated
+// bound returns NoLimit and a nil witness.
 //
 // quantity names what is being measured for the human statement ("nominal"), limitName names the
 // bound as the datasheet spells it ("absolute maximum", "recommended range").
@@ -243,35 +191,22 @@ func CompareToBound(measured float64, unit string, b Bound, quantity, limitName 
 	return Pass, w
 }
 
-// VerdictID is a verdict's stable name, `<rule>:(<kind>:<ref>,...)`, DERIVED from the verdict rather
-// than assigned to it. Nothing persists a verdict, so a CLI run and a server run have to compute the same
-// name for the same verdict without talking to each other, which is the argument mount:// already won
-// one level up restated one level down.
+// VerdictID is a verdict's stable name, `<rule>:(<kind>:<ref>,...)`, DERIVED from the verdict so a
+// CLI run and a server run compute the same name without persisting anything.
 //
-// WHAT IT IS BUILT FROM, and what it deliberately is not. Rule, Kind and the kind's own reference,
-// and nothing else. Not run order, not the message text, and NOT the outcome. Leaving the outcome out
-// is the valuable part: the same URL then addresses the same check on the same pin across revisions,
-// so a link filed last month still resolves after the answer flips, and can say that it flipped.
-// Include it and every flip breaks every link, exactly when the link matters most.
+// Built from Rule, Kind and the kind's own reference, and NOT the outcome, so a link filed last month
+// still resolves after the answer flips. Each kind owns its REF grammar (EntityRef) rather than the
+// id being a positional tuple of checks.Subject's fields, so adding a kind leaves existing ids
+// untouched.
 //
-// The REF's grammar belongs to the kind rather than being a positional tuple of every kind's fields.
-// checks.Subject is already a widening union (ref, pin, net_id, bus_id, and counting), and a
-// positional key over those changes format every time a kind is added, invalidating every id ever
-// issued. Here a seventh kind adds a grammar and leaves existing ids untouched.
+// Readable, not hashed, so a person can construct `pin-exceeds-abs-max:(pin:U12.7)` and ask about a
+// terminal without running check first.
 //
-// Readable, not hashed, because under recompute-on-demand an id is a QUESTION YOU CAN POSE and not
-// merely a label you receive: someone worried about a terminal can construct
-// `pin-exceeds-abs-max:pin:U12.7` without running check first to discover the name of the thing they
-// wanted to ask about. A hash makes that impossible.
+// GENERATED, NEVER PARSED. The structure travels typed in Subjects, which is why a ref may keep its
+// own colons (`symbol:Library:Symbol`) and commas (an endpoint's `0,0`) behind encodeRef alone.
 //
-// GENERATED, NEVER PARSED. One function builds it and nothing splits it back apart, because the
-// structure travels in Subjects where a consumer reads it typed. That is what lets a ref keep its own
-// colons (`symbol:Library:Symbol`) and its own commas (an endpoint's `0,0`) behind one escape rule
-// rather than an encoding designed around a parser nobody needs.
-//
-// KNOWN LIMIT: two nets sharing a name share an id, because using NetID instead would make the id
-// unconstructible (nobody can type a net id). That matches how Subject already behaves on the wire,
-// where a consumer joins by name, and duplicate net names are themselves a reported defect.
+// KNOWN LIMIT: two nets sharing a name share an id, because a NetID would make the id impossible to
+// type. The wire Subject joins by name too, and duplicate net names are themselves a reported defect.
 func VerdictID(v Verdict) string {
 	parts := make([]string, 0, len(v.Subjects))
 	for _, e := range v.Subjects {
@@ -290,18 +225,12 @@ func EntityRef(e Entity) string {
 	return e.Ref
 }
 
-// encodeRef percent-escapes the four characters the tuple syntax uses, so two distinct tuples can
-// never produce the same id.
+// encodeRef percent-escapes the four characters the tuple syntax uses (% , ( )), so two distinct
+// tuples never produce the same id. KindEndpoint's ref is literally "0,0", and a net name can hold
+// anything, so without it ("A,B") and ("A", "B") collide.
 //
-// THIS IS NOT AN ACADEMIC CASE. KindEndpoint's ref is literally "0,0", a comma sitting in the
-// delimiter position, and a net name is passed through from a source file that may contain anything.
-// Without the escape ("A,B") and ("A", "B") are one string, and two different verdicts answer to one
-// name.
-//
-// The colon is deliberately NOT escaped. Kind is a closed vocabulary containing none of these
-// characters, so a "kind:ref" element stays unambiguous even where the ref carries colons of its own,
-// and KindSymbol's real spelling (Library:Symbol) stays readable instead of becoming
-// Library%3ASymbol in every id a person might type.
+// The colon is NOT escaped. Kind is a closed vocabulary with no colons, so "kind:ref" stays
+// unambiguous and KindSymbol's Library:Symbol stays readable in an id a person might type.
 func encodeRef(s string) string {
 	if !strings.ContainsAny(s, "%,()") {
 		return s
@@ -335,22 +264,16 @@ func SubjectRefs(v Verdict) string {
 	return strings.Join(parts, ",")
 }
 
-// VerdictsToFindings projects a verdict list down to the findings the `check` path already reports,
-// so a rule can produce verdicts as its single source of truth and still return exactly what
-// Eval has always returned. Only Fail carries a finding, which is the definition of the current
-// contract: a pass and an unchecked row are both silence to `check`.
+// VerdictsToFindings projects a verdict list down to the findings the `check` path reports, which is
+// how Rule.Findings and a spec derive findings from verdicts. Fail and Inconclusive carry a finding;
+// Pass, NotConsidered and NoLimit are silence to `check`.
 func VerdictsToFindings(vs []Verdict) []Finding {
-	// NON-NIL on empty, matching Report, which is the constructor every hand-written Eval already
-	// returns through. TestSpecParity compares a rule's Eval against its declarative twin with
-	// reflect.DeepEqual, and a nil slice is not DeepEqual to an empty one, so a rule converted to
-	// verdicts would diverge from its twin on any design with nothing wrong. That is the parity
-	// break that reads as "the twin disagrees" when the two agree about every finding.
+	// NON-NIL on empty, matching Report. TestSpecParity compares with reflect.DeepEqual, where nil is
+	// not equal to an empty slice, so a nil here breaks parity with a spec twin on every clean design.
 	out := []Finding{}
 	for _, v := range vs {
-		// Fail AND Inconclusive, because both reach the check path today. An inconclusive result is
-		// not a defect and must not be counted as one, which the Finding carries in its own
-		// Inconclusive flag; what it must not be is silent, since a bound review item reading silence
-		// as a pass is the failure reverse-blocking-absent's doc describes.
+		// Inconclusive is not a defect (its Finding says so in its own Inconclusive flag), but it must
+		// not be silent, or a review item bound to the rule reads the silence as a pass.
 		if (v.Outcome == Fail || v.Outcome == Inconclusive) && v.Finding != nil {
 			out = append(out, *v.Finding)
 		}
@@ -358,8 +281,8 @@ func VerdictsToFindings(vs []Verdict) []Finding {
 	return out
 }
 
-// Render writes a witness the way a terminal shows it: the statement, then its terms, then any
-// citation. It exists so the text form is defined in one place rather than per consumer.
+// Render writes a witness the way a terminal shows it, the statement and then one line per
+// datasheet citation. A nil witness renders as "".
 func (w *Witness) Render() string {
 	if w == nil {
 		return ""
@@ -391,8 +314,7 @@ func citationLine(c *DatasheetCitation) string {
 	return s
 }
 
-// fmtQty renders a value with its unit, trimming the trailing zeros %g already handles so a limit
-// reads as "3.6 V" rather than "3.600000 V".
+// fmtQty renders a value with its unit via %g, so a limit reads as "3.6 V" rather than "3.600000 V".
 func fmtQty(v float64, unit string) string {
 	if unit == "" {
 		return fmt.Sprintf("%g", v)

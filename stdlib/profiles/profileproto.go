@@ -5,13 +5,13 @@ import (
 )
 
 // This file is the interface-profile half of the rule-definition contract (WS3-103). A Profile is
-// already a pure declaration — name, signals, an optional declared host, and a list of requirement
-// references — so this is a field mapping.
+// already a pure declaration (name, signals, an optional declared host, and a list of requirement
+// references), so this is a field mapping.
 //
-// Validation is not duplicated here: a decoded profile goes through the same exported Validate a YAML
-// one does. A second authoring route with its own idea of validity is how an unsound profile
-// eventually gets in, and the two things Validate catches — an over-broad matcher and a completeness
-// requirement with no anchor — both produce a rule that cannot fire rather than one that errors.
+// Validation is not duplicated here, since a decoded profile goes through the same exported Validate a
+// YAML one does. A second authoring route with its own idea of validity is how an unsound profile
+// eventually gets in. Both things Validate catches, an over-broad matcher and a completeness
+// requirement with no anchor, produce a rule that cannot fire rather than one that errors.
 
 // ProfileProto encodes an interface profile as its wire form.
 func ProfileProto(p Profile) *checkspb.ProfileDef {
@@ -39,7 +39,7 @@ func ProfileProto(p Profile) *checkspb.ProfileDef {
 }
 
 // ProfileFromProto decodes an interface profile. Callers that took it from outside this build should
-// run Validate before compiling; the deck reader does.
+// run Validate before compiling, as the deck reader does.
 func ProfileFromProto(p *checkspb.ProfileDef) Profile {
 	out := Profile{
 		Name:        p.GetName(),

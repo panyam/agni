@@ -11,25 +11,24 @@ import (
 // evaluates, so a rule's declared Reads can be checked against its behaviour instead of trusted
 // (WS3-122).
 //
-// It exists because only 15 of the shipped rules have a Spec twin holding their declaration to
-// their body. For the rest the declaration is prose, and three gates trust it: a rule that reads
-// datasheet params without declaring them RUNS where it should have been gated to not-applicable,
-// and reports over a tier that was never attached. Nothing about that fails loudly, which is the
-// same silence-reads-as-pass shape this catalog treats as the expensive failure.
+// A rule without a Spec twin has nothing holding its declaration to its body, so the declaration
+// is prose, and three gates trust it. A rule that reads datasheet params without declaring them
+// RUNS where it should have been gated to not-applicable, and reports over a tier that was never
+// attached. Nothing about that fails loudly.
 //
 // It records TIERS, not fact names, because that is the granularity the gates key on. See FactTier.
 //
 // # What an observation proves, and what it does not
 //
-// A recorded read is EVIDENCE: the rule called that accessor, so it depends on that tier. An
+// A recorded read is EVIDENCE that the rule called that accessor and so depends on that tier. An
 // ABSENT read is not evidence of anything, because a rule that early-returns on the fixture it was
 // given never reaches its accessors. So a caller may soundly assert "everything read is declared"
 // and may NOT assert "everything declared is read". The second reads as an over-declaration report
 // to a human, never as a gate.
 //
 // It embeds Model, so accessors it does not override delegate unchanged and a Model method added
-// later keeps compiling. Adding a method that reaches a gated tier means overriding it here too;
-// that is the maintenance cost, and it is why the override set is annotated with its tier.
+// later keeps compiling. Adding a method that reaches a gated tier means overriding it here too,
+// which is why each override is annotated with its tier.
 //
 // Not safe for concurrent use. Rules run sequentially within one Run.
 type RecordingModel struct {
@@ -37,10 +36,9 @@ type RecordingModel struct {
 	read map[FactTier]bool
 }
 
-// NewRecordingModel wraps m. A nil inner Model is allowed and behaves as the zero Model would:
-// callers get whatever the embedded nil interface does, which is a panic on use. That is
-// deliberate, since a recorder over no design records nothing and would silently report every rule
-// as reading no tier.
+// NewRecordingModel wraps m. A nil inner Model is allowed, and any accessor then panics through
+// the embedded nil interface. That is intended, since a recorder over no design records nothing
+// and would silently report every rule as reading no tier.
 func NewRecordingModel(m Model) *RecordingModel {
 	return &RecordingModel{Model: m, read: map[FactTier]bool{}}
 }
@@ -61,7 +59,7 @@ func (r *RecordingModel) Reset() { clear(r.read) }
 
 func (r *RecordingModel) note(t FactTier) { r.read[t] = true }
 
-// param tier: the seeded datasheet join. ComponentMPN is deliberately NOT here — it is the
+// param tier: the seeded datasheet join. ComponentMPN is NOT here, because it is the
 // design-side part identity (a BomLine or an attribute), declared as component.mpn, and present
 // with or without a seeded set.
 func (r *RecordingModel) PartSpec(refDes string) *parampb.PartSpec {

@@ -10,8 +10,8 @@ import (
 
 // supplyExceedsAbsMax flags a power-input pin fed by a rail whose nominal voltage
 // exceeds the part's absolute-maximum supply rating from its seeded datasheet spec.
-// The first datasheet-backed rule (WS10-003): purpose-built Go (the join is not spec
-// vocabulary yet, the pairwise-geometry precedent), silent without a seeded set.
+// The first datasheet-backed rule (WS10-003). It is Go rather than a spec because the join
+// is not spec vocabulary yet, and it is silent without a seeded set.
 var supplyExceedsAbsMax = &check.Rule{
 	Name:       "supply-exceeds-abs-max",
 	Severity:   "error",
@@ -38,10 +38,8 @@ var supplyExceedsAbsMax = &check.Rule{
 						ev.pin, ev.net, ev.nominal, binding.Symbol, binding.Value.GetMax(), check.Citation(ev.spec, binding)),
 					Prov:          ev.comp.Prov,
 					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, binding)},
-					// The pin and the rail, in the order the message names them. The PIN matters as
-					// much as the net here: the subject is the whole part, and a part can have several
-					// supply pins, so highlighting the part alone cannot say which one is over its
-					// limit (agni issue 349). No NetID: this rule has the rail by name only.
+					// The pin, then the rail, in message order (see aliasSupplyContext). No NetID,
+					// since this rule knows the rail by name only.
 					Context: aliasSupplyContext(ev),
 				}
 			})
@@ -49,10 +47,9 @@ var supplyExceedsAbsMax = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// aliasSupplyEvent is one supply terminal of one alias-path part: what the shared body needs to
-// phrase a verdict about it. "Alias path" is the join that reaches a rating through the vendor symbol
-// table rather than through pin bindings, which is what makes these two rules part-scoped where
-// pin-exceeds-abs-max is terminal-scoped.
+// aliasSupplyEvent is one supply terminal of one alias-path part. The alias path reaches a rating
+// through the vendor symbol table rather than through pin bindings, so these two rules are
+// part-scoped where pin-exceeds-abs-max is terminal-scoped.
 type aliasSupplyEvent struct {
 	comp    *ir.Component
 	pin     string
@@ -70,9 +67,9 @@ func aliasSupplyContext(ev aliasSupplyEvent) []check.ContextSubject {
 	}
 }
 
-// mostRestrictiveMax picks the binding row for the one-sided ceiling: the lowest stated maximum.
-// Applying the tightest row across a part's supply pins is conservative, which is what makes the
-// alias path safe for a ceiling and unsafe for a two-sided range.
+// mostRestrictiveMax picks the lowest stated maximum as the binding row for a one-sided ceiling.
+// Applying the tightest row across all of a part's supply pins is conservative, so the alias path is
+// safe for a ceiling and unsafe for a two-sided range.
 func mostRestrictiveMax(rows []*parampb.Parameter) (*parampb.Parameter, string) {
 	binding := rows[0]
 	for _, p := range rows[1:] {
@@ -83,22 +80,17 @@ func mostRestrictiveMax(rows []*parampb.Parameter) (*parampb.Parameter, string) 
 	return binding, ""
 }
 
-// aliasSupplyVerdicts is the body both alias-path datasheet rules share: walk every supply terminal
-// of every seeded part the per-pin rules do not own, and decide it against the part-level row.
+// aliasSupplyVerdicts is the body both alias-path datasheet rules share. It walks every supply
+// terminal of every seeded part the per-pin rules do not own and decides it against the part-level row.
 //
-// THE SUBJECT IS THE TERMINAL, the Finding stays part-scoped, and those are different granularities
-// on purpose. The question "why is this supply pin fine" is asked of a pin; the sentence a reviewer
-// reads names the part, because that is what they change and what the viewer highlights. It is the
-// same split pin-exceeds-abs-max already draws, and it is why a part with three VDD pins on one rail
-// produces three verdicts and the one finding it always produced. The extra terminals fail on the
-// same evidence and carry no Finding, since the contract reports one sentence per (part, rail) rather
-// than one per pin that shares the rail.
+// THE SUBJECT IS THE TERMINAL and the Finding stays part-scoped, the split pin-exceeds-abs-max also
+// draws, because a reviewer changes the part and the viewer highlights it. A part with three VDD pins
+// on one rail gives three verdicts and one finding, one per (part, rail). The extra terminals fail on
+// the same evidence and carry no Finding (#400).
 //
-// WHAT USED TO BE SILENT AND NOW IS NOT. A part whose datasheet binds no comparable row of this kind,
-// a pin on no net, and a rail whose name states no voltage all took the same `continue` a passing pin
-// took. Those are NotConsidered with the step that stopped them, matching the vocabulary the per-pin
-// rules already use. A row that states no bound at all is NoLimit, which check.CompareToBound returns
-// without the rule having to remember to ask.
+// A part with no comparable row of this kind, a pin on no net, and a rail whose name states no
+// voltage are each NotConsidered with the step that stopped them. A row stating no bound is NoLimit,
+// which check.CompareToBound returns itself.
 func aliasSupplyVerdicts(
 	m check.Model,
 	limitsOf func(*parampb.PartSpec) []*parampb.Parameter,
@@ -112,10 +104,10 @@ func aliasSupplyVerdicts(
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.RefDes)
 		if spec == nil {
-			continue // no seeded datasheet: there is no rating to compare against, so not a subject
+			continue // no seeded datasheet, so no rating to compare against and not a subject
 		}
-		// A spec with pin bindings belongs to the per-pin rules, which answer it per terminal. They
-		// emit their own verdicts over the same pins, so deferring here is not silence.
+		// A spec with pin bindings belongs to the per-pin rules, which emit their own verdicts over
+		// the same pins.
 		if pinBoundSpec(m, c.RefDes) != nil {
 			continue
 		}
@@ -124,7 +116,7 @@ func aliasSupplyVerdicts(
 		seen := map[string]bool{} // rails this part has already filed a finding about
 		for _, pin := range m.Pins() {
 			if pin.Component.RefDes != c.RefDes || !check.SupplyInputPin(m, c.RefDes, pin.Designator) {
-				continue // not a supply terminal: not a subject of these rules
+				continue // not a supply terminal, so not a subject of these rules
 			}
 			ev := aliasSupplyEvent{comp: c, pin: pin.Designator, spec: spec}
 			v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: c.RefDes, Pin: pin.Designator}}}
@@ -166,10 +158,9 @@ func aliasSupplyVerdicts(
 }
 
 // pickBinding reduces a part's rows of one kind to the row that governs, or returns the reason no row
-// can be chosen. Both refusals are stated rather than swallowed: "the datasheet has no row of this
-// kind" and "it has several and nothing says which pin each belongs to" are different answers, and
-// the second is the documented restriction that keeps rail-nominal-out-of-recommended off multi-supply
-// parts rather than inventing an over- or under-voltage on one.
+// can be chosen. "No row of this kind" and "several rows and nothing says which pin each belongs to"
+// are separate reasons. The second keeps rail-nominal-out-of-recommended off multi-supply parts
+// rather than inventing an over- or under-voltage on one.
 func pickBinding(rows []*parampb.Parameter, bindingOf func([]*parampb.Parameter) (*parampb.Parameter, string), kindName string) (*parampb.Parameter, string) {
 	if len(rows) == 0 {
 		return nil, "the datasheet states no comparable " + kindName + " row for this part"

@@ -17,9 +17,8 @@ var duplicateRefDes = &check.Rule{
 	Primitives: []string{"select"},
 	Reads:      []string{"ref_des_collision"},
 	// The rule IS the reader's diagnostic, so a reader that does not compute it leaves this rule
-	// with nothing to report — which is exactly what a clean design looks like. Gating on the
-	// capability makes the difference visible: not-applicable, with a reason, instead of a pass
-	// nobody earned (agni issue 309).
+	// with nothing to report, the same output as a clean design. Gating on the capability makes the
+	// rule not-applicable, with a reason, instead of a pass nobody earned (agni issue 309).
 	RequiresCapability: []check.Capability{check.CapRefDesCollisions},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
@@ -32,22 +31,21 @@ var duplicateRefDes = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// duplicateRefDesVerdicts decides every designator the design carries, which is a wider set than the
-// reader's collision list and is the whole reason for stating it. A collision list alone answers
+// duplicateRefDesVerdicts decides every designator the design carries, a wider set than the reader's
+// collision list. A collision list alone answers
 // "which designators are claimed twice"; the considered set answers "which designators were checked
 // for that", and those differ by every part on the board.
 //
-// THE CAPABILITY GATE IS RESTATED HERE, and it is restated over the PASSES ONLY. `Run` does not
-// consult RequiresCapability — that is the review layer's call — so on a format whose reader never
-// looks for collisions this Eval still runs and still finds none, which is what a clean design looks
-// like. That was agni issue 309, and the rule-level gate fixed it only for callers that ask
-// Available first. What a caller that skipped Available must not be told is "R7 has no collision",
-// so those subjects come back NotConsidered instead. A reported collision needs no such hedge: the
-// reader cannot report one without having looked.
+// THE CAPABILITY GATE IS RESTATED HERE, over the PASSES ONLY. `Run` does not consult
+// RequiresCapability (the review layer does), so on a format whose reader never looks for collisions
+// this Eval still runs and finds none, which reads as a clean design. The rule-level gate from agni
+// issue 309 covers only callers that ask Available first. A caller that skipped Available must not be
+// told "R7 has no collision", so those subjects come back NotConsidered instead. A reported collision
+// needs no such hedge, since the reader cannot report one without having looked.
 //
 // The fails come first and in the reader's own order so the findings projection is byte-identical to
 // what this rule has always reported. Passes follow in design order, deduplicated by designator,
-// because the subject is the DESIGNATOR rather than the placement: a verdict is keyed by
+// because the subject is the DESIGNATOR rather than the placement. A verdict is keyed by
 // (rule, kind, ref), so a second verdict about the same ref-des would be a duplicate identity.
 func duplicateRefDesVerdicts(m check.Model) []check.Verdict {
 	collided := map[string]bool{}

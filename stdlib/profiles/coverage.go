@@ -6,9 +6,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Coverage states (WS9-041). They match the conditions the profile rules fire on, so a coverage
-// cell and a finding never disagree: missing == signal-missing, dangling == signal-dangling,
-// pullup_missing == missing-pullup.
+// Coverage states (WS9-041). Each matches the condition a profile rule fires on, so a coverage cell
+// and a finding never disagree. missing is signal-missing, dangling is signal-dangling, and
+// pullup_missing is missing-pullup.
 const (
 	StatePresent       = "present"
 	StateMissing       = "missing"
@@ -24,8 +24,8 @@ type SignalCoverage struct {
 	State string
 }
 
-// InterfaceCoverage is one DETECTED interface profile's coverage: the profile name, the net it is
-// anchored at (for context/locate), and every required signal in profile order.
+// InterfaceCoverage is one DETECTED interface profile's coverage. Anchor is the net the profile is
+// anchored at, for context and locate, and Signals holds every required signal in profile order.
 type InterfaceCoverage struct {
 	Profile string
 	Anchor  string
@@ -33,12 +33,10 @@ type InterfaceCoverage struct {
 }
 
 // Coverage projects a profile onto a design's per-signal coverage matrix, or nil when the interface
-// is not DETECTED — silent by construction, matching the rules. Detection is the profile's in-use
-// confidence gate: two of its signals present, or a component declares the interface via its host
-// attribute. It reuses the same signal matcher (matcher.go) and reaches-rail pull-up walk the profile
-// rules compile to, so the panel and the findings cannot drift. The pull-up half calls
-// check.PullUpReachesRail, which is the SAME function the missing-pullup rule decides on, so "cannot
-// drift" is now true by construction rather than by two implementations agreeing.
+// is not DETECTED, matching the rules. DETECTED means two of its signals are present or a component
+// declares the interface via its host attribute. It uses the same signal matcher (matcher.go) and the
+// same check.PullUpReachesRail the profile rules decide on, so the panel and the findings cannot
+// drift; see InUse in present.go for why they must agree.
 func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 	base := query.NewBase(m)
 	nets := make([]*ir.Net, len(p.Signals))
@@ -76,8 +74,8 @@ func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 }
 
 // matchSignalNet returns the first net satisfying the signal's matcher that carries at least one
-// component connection — the same net component-on-net(?r,?n) plus netMatch(?n, s) selects, so the
-// coverage panel binds the net a finding would name and not a foreign one that merely shares a suffix.
+// component connection. That is the net component-on-net(?r,?n) plus netMatch(?n, s) selects, so the
+// panel binds the net a finding would name and not a foreign one that merely shares a suffix.
 func matchSignalNet(m check.Model, s Signal) *ir.Net {
 	for _, n := range m.Nets() {
 		if netMatchesSignal(n.GetName(), s) && len(n.GetConnections()) > 0 {
@@ -88,21 +86,13 @@ func matchSignalNet(m check.Model, s Signal) *ir.Net {
 }
 
 // reachesRail reports whether the net reaches a power rail through a pull-up, by calling the same
-// check.PullUpReachesRail the missing-pullup rule decides on.
+// check.PullUpReachesRail the missing-pullup rule decides on (agni issue 516).
 //
-// IT USED TO ASK ITS OWN QUESTION, and the two disagreed on the common case. This built a
-// `reaches(?n, ?rail), rail(?rail)` query and claimed in a comment that it was what the rule negated;
-// the rule had a second clause the comment did not mention, and that clause existed because the reach
-// walk refuses to enter a net whose fan-out exceeds maxWalkFan (WS3-108). A rail is wide almost by
-// definition, so a DIRECT pull-up onto a real rail was invisible to the reaches form. Measured on a
-// resistor sitting on a signal and on a 21-connection rail: this returned false while
-// PullUpReachesRail returned true, so the coverage panel scored a correctly pulled signal
-// `pullup_missing` and the rule, correctly, said nothing.
-//
-// The panel and the rule agreeing is not a nicety. InUse's own contract says the gate must agree with
-// the rules or an interface the rules will not fire on gets scored as a clean pass, and this was the
-// same failure pointing the other way: a clean bus scored as a defect, in the one surface a reviewer
-// reads before the findings.
+// Do not replace it with a `reaches(?n, ?rail), rail(?rail)` query. The reach walk refuses a net whose
+// fan-out exceeds maxWalkFan (WS3-108), and a rail is nearly always that wide, so a DIRECT pull-up
+// onto a real rail is invisible to it. Measured with a resistor between a signal and a 21-connection
+// rail, that query said false where PullUpReachesRail said true, and the panel scored a clean bus
+// `pullup_missing` while the rule stayed silent.
 func reachesRail(m check.Model, net string) bool {
 	for _, n := range m.Nets() {
 		if n.GetName() == net {
@@ -113,7 +103,8 @@ func reachesRail(m check.Model, net string) bool {
 }
 
 // hostDeclares reports whether a component declares this interface via its host attribute
-// (interface=<name>), the WS3-042 host binding — an alternative detection signal to the in-use gate.
+// (interface=<name>), the WS3-042 host binding, which detects an interface independently of the
+// in-use gate.
 func hostDeclares(base *query.Base, p Profile) bool {
 	if !p.HasHost() {
 		return false

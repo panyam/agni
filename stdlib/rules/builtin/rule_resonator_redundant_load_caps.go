@@ -10,11 +10,11 @@ import (
 // resonatorRedundantLoadCaps flags a ceramic resonator (which integrates its load capacitors) that
 // ALSO carries an external load capacitor to ground on an oscillator terminal. See Detail.
 //
-// This is the inverse of crystal-load-caps: a passive crystal NEEDS external load caps, so their
-// absence is the defect; a ceramic resonator of the built-in-cap family (Murata CERALOCK and kin)
-// already contains them, so an external load cap to ground is the "double load" mistake. The
-// ceramic_resonator class is datasheet-seeded (WS10-015), so this rule is silent until a resonator
-// is classified — never firing on a crystal or an un-subtyped clock candidate.
+// It is the inverse of crystal-load-caps. A passive crystal NEEDS external load caps, while a ceramic
+// resonator of the built-in-cap family (Murata CERALOCK and kin) already contains them, so an
+// external cap to ground doubles the load. The ceramic_resonator class is datasheet-seeded
+// (WS10-015), so the rule stays silent until a resonator is classified and never fires on a crystal
+// or an un-subtyped clock candidate.
 var resonatorRedundantLoadCaps = &check.Rule{
 	Name:       "resonator-redundant-load-caps",
 	Severity:   "warning",
@@ -34,24 +34,17 @@ var resonatorRedundantLoadCaps = &check.Rule{
 }
 
 // resonatorRedundantLoadCapsVerdicts decides every signal terminal of every ceramic resonator, one
-// verdict each, the same terminal-scoped subject crystal-load-caps uses and for the same reason: a
-// resonator with a stray cap on one leg is not the same design as one with caps on both, and a
-// part-level verdict cannot say which leg.
+// verdict each, the same terminal-scoped subject crystal-load-caps uses, because a part-level verdict
+// cannot say which leg carries the stray cap (#400).
 //
-// SCOPE IS DATASHEET-GATED, and that is why an un-subtyped clock part gets no verdict here. The
-// ceramic_resonator class is seeded (WS10-015), so until a datasheet says a part integrates its load
-// caps, an external cap on its terminal may be exactly what the part needs. Declining by silence is
-// right here because the part is not a subject: crystal-load-caps owns the un-subtyped case and asks
-// the opposite question of it.
+// An un-subtyped clock part gets no verdict, not even NotConsidered. Until a datasheet says a part
+// integrates its load caps, an external cap on its terminal may be exactly what it needs, and
+// crystal-load-caps owns that case.
 //
-// THE EXTERNAL TERMINAL BECOMES NotConsidered rather than vanishing during the walk. The old
-// enumeration dropped an external net before the terminal set was built, so such a terminal was not
-// merely uncleared, it was invisible: nothing downstream could tell it from a resonator that has no
-// such terminal at all.
+// A terminal whose net continues onto a sheet the read did not open is NotConsidered rather than
+// dropped, so it stays distinguishable from a resonator with no such terminal (#400).
 func resonatorRedundantLoadCapsVerdicts(m check.Model) []check.Verdict {
-	// Collect ceramic resonators (the built-in-cap clock subtype). A bare un-subtyped clock
-	// candidate is NOT one (it may be a crystal that genuinely needs caps), so this rule stays
-	// silent until the datasheet class seeds ceramic_resonator.
+	// Ceramic resonators only. A bare un-subtyped clock candidate may be a crystal that needs caps.
 	resos := map[string]*clockPart{}
 	var order []string
 	for _, c := range m.Components() {
@@ -63,8 +56,8 @@ func resonatorRedundantLoadCapsVerdicts(m check.Model) []check.Verdict {
 	if len(resos) == 0 {
 		return nil
 	}
-	// A component touches ground if any of its pins sits on a ground net: this marks the far leg
-	// of a load capacitor (terminal -> cap -> ground), the shape we are looking for.
+	// A component touches ground if any of its pins sits on a ground net, which marks the far leg
+	// of a load capacitor (terminal -> cap -> ground).
 	groundRef := map[string]bool{}
 	for _, n := range m.Nets() {
 		if m.IsGroundNet(n) {
@@ -106,9 +99,8 @@ func resonatorRedundantLoadCapsVerdicts(m check.Model) []check.Verdict {
 				out = append(out, v)
 				continue
 			}
-			// A redundant external load cap = a capacitor on this terminal net whose other leg
-			// reaches ground. A coupling/series cap between two signals (not touching ground) is
-			// not a load cap, so it is not flagged.
+			// A redundant load cap is a capacitor on this terminal net whose other leg reaches
+			// ground. A coupling or series cap between two signals is not a load cap.
 			var capRef string
 			for _, conn := range t.net.Connections {
 				if conn.ComponentRef != ref && m.HasClass(conn.ComponentRef, check.ClassCapacitor) && groundRef[conn.ComponentRef] {

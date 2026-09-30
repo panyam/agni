@@ -3,22 +3,20 @@ package builtin
 import "github.com/panyam/agni/core/check"
 
 // The first geometric DRC rules (WS3-008, the .kicad_dru class), over the board-geometry
-// tier (Model.BoardNets). Three are spec-first — per-net threshold checks the AST
-// expresses directly, the first rules quantifying the board.nets entity set; the fourth
-// (copper-clearance, rule_copper_clearance.go) is a pairwise spatial join the AST
-// deliberately does not express yet: per the WS3-008 overfitting guard, a geometry-query
-// primitive must be evidenced by more than one rule before it earns an AST node, and
-// this batch is that evidence.
+// tier (Model.BoardNets). The three here are spec-first per-net threshold checks the AST
+// expresses directly, and the first rules quantifying the board.nets entity set. The fourth
+// (copper-clearance, rule_copper_clearance.go) is a pairwise spatial join the AST does not
+// express yet. Per the WS3-008 overfitting guard, a geometry-query primitive must be evidenced
+// by more than one rule before it earns an AST node, and this batch is that evidence.
 //
 // Thresholds are the loosest common fabrication floors from the corpus JLCPCB capability
-// rules (corpus/rules/kicad-dru/cimos-jlcpcb, MIT): a board violating them cannot be
-// manufactured by a mainstream fab at all, so the defaults fire on real defects, not on
-// tight-but-deliberate routing. Per-design thresholds (a .kicad_dru's own values) are
-// rule parameterization — the WS3-006 registry's job; a re-thresholded rule is the same
-// Spec with different Lits.
+// rules (corpus/rules/kicad-dru/cimos-jlcpcb, MIT). A mainstream fab cannot manufacture a
+// board violating them at all, so the defaults fire on real defects and not on tight
+// routing. Per-design thresholds (a .kicad_dru's own values) are rule parameterization, the
+// WS3-006 registry's job, and a re-thresholded rule is the same Spec with different Lits.
 //
 // Subjects are the owning net (KindNet), one finding per net per rule with the violation
-// count in the message: copper primitives have no stable identity. Per-violation
+// count in the message, because copper primitives have no stable identity. Per-violation
 // locations need multi-location findings (OUT_OF_SCOPE.md).
 
 // Fabrication-floor thresholds, nanometers.
