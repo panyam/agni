@@ -1,11 +1,11 @@
 ---
-title: "switching"
+title: "net.switching"
 description: "the net is a regulator power-stage node, the switch node or its bootstrap (must not be probed); the twin of feedback"
 ---
 
 ### What it is
 
-`switching(net)` yields one row per net whose name reads as a regulator's power-stage node: a leaf
+`net.switching(net)` yields one row per net whose name reads as a regulator's power-stage node: a leaf
 name ending in `_SW`, `_BOOT`, `_PHASE`, or `_LX`. It is name-derived, and it is the twin of
 `feedback`: both relations name a net that matches the rail vocabulary and is not a rail.
 
@@ -48,14 +48,14 @@ switching-named net; empty when no net matches.
 List every power-stage node:
 
 ```
-switching(?n) => ?n
+net.switching(?n) => ?n
 ```
 
 A supply rail that is neither a sense node nor a power-stage node, which is the set a probe-point or
 pull-up rule may treat as ordinary distribution:
 
 ```
-rail(?n), not feedback(?n), not switching(?n) => ?n
+net.rail(?n), not net.feedback(?n), not net.switching(?n) => ?n
 ```
 
 Note that `rail` already excludes both, because `Model.IsRailNet` subtracts them before the rail role

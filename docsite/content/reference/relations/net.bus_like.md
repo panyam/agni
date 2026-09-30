@@ -57,7 +57,7 @@ net.bus_like(?n) => ?n
 Find components sitting on a bus-like net (the loads on rails and ground):
 
 ```
-net.bus_like(?n), component-on-net(?r, ?n) => ?r
+net.bus_like(?n), component.net(?r, ?n) => ?r
 ```
 
 ### Schematic

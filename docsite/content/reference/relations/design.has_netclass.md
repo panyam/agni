@@ -1,12 +1,12 @@
 ---
-title: "has_netclass"
+title: "design.has_netclass"
 description: "one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean)"
 ---
 
 ### What it is
 
-`has_netclass(present)` yields exactly one row, with the value `true`, when the design assigns net
-classes at all, and zero rows otherwise. Like `has_nc_channel` and `types_power_out` it is a
+`design.has_netclass(present)` yields exactly one row, with the value `true`, when the design assigns net
+classes at all, and zero rows otherwise. Like `design.has_nc_channel` and `design.types_power_out` it is a
 design-level flag rather than a per-entity relation: there is never more than one row, and its presence
 or absence is the whole signal. A KiCad project whose `net_settings` declares classes makes the row
 appear; an EDIF netlist, an IPC-2581 board, a bare `.kicad_sch` read without its project, and a project
@@ -23,7 +23,7 @@ pass you did not earn.
 ### For software engineers
 
 A capability probe over the whole design, closer to a feature flag than a row set. Because a rule reads
-it as `has_netclass(?_)`, an absent row makes the enclosing conjunction yield nothing, so a guarded
+it as `design.has_netclass(?_)`, an absent row makes the enclosing conjunction yield nothing, so a guarded
 query fails closed rather than returning a confident empty result.
 
 The distinction it draws is between two empty results that look identical in the tuples: "no net is in
@@ -40,7 +40,7 @@ once in the model's nets walk, alongside the no-connect channel, so the read is 
 It is the queryable twin of `check.CapNetClass`: a Go or Spec rule declares that capability and
 `check.Available` gates it to not-applicable, while a datalog query reads this relation for the same
 signal. The Spec-rule fact `design.has_netclass` is the third face of it. Deliberately content-derived
-rather than format-derived, unlike `types_power_out`: for a class-scoped rule, a KiCad project that
+rather than format-derived, unlike `design.types_power_out`: for a class-scoped rule, a KiCad project that
 declares no classes is in exactly the same position as an EDIF netlist that cannot declare any.
 
 ### Datalog
@@ -48,12 +48,12 @@ declares no classes is in exactly the same position as an EDIF netlist that cann
 Probe the flag directly (one row `true`, or empty):
 
 ```
-has_netclass(?present) => ?present
+design.has_netclass(?present) => ?present
 ```
 
 Guard a class-scoped question with it, so the query returns nothing on a design that cannot answer it
 rather than an empty result that reads like a clean bill of health:
 
 ```
-has_netclass(?_), net.netclass(?net, "HV"), component-on-net(?ref, ?net) => ?ref, ?net
+design.has_netclass(?_), net.netclass(?net, "HV"), component.net(?ref, ?net) => ?ref, ?net
 ```

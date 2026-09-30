@@ -1,11 +1,11 @@
 ---
-title: "param"
+title: "param.max"
 description: "a datasheet parameter's max value for a part, in its SI base unit (needs --params)"
 ---
 
 ### What it is
 
-`param(mpn, symbol, max)` yields one row per parameter of a datasheet spec that joined to a
+`param.max(mpn, symbol, max)` yields one row per parameter of a datasheet spec that joined to a
 part in the design, keyed by manufacturer part number (`mpn`) and the parameter's datasheet
 symbol (e.g. `VDD`, `VIN`, `RDS(on)`). The third argument is the parameter's numeric maximum, **in
 that parameter's SI base unit** (volts, amps, ohms) whatever the vendor printed, so a threshold
@@ -69,7 +69,7 @@ is built only when a param set is loaded, so a design with no matching specs yie
 Both queries need `--params`. List every extracted parameter for each part, as MPN and symbol:
 
 ```
-param(?mpn, ?sym, ?max) => ?mpn
+param.max(?mpn, ?sym, ?max) => ?mpn
 ```
 
 Join to the design-side part identity to name the components a datasheet parameter applies to
@@ -77,5 +77,5 @@ Join to the design-side part identity to name the components a datasheet paramet
 datasheet absolute-maximum):
 
 ```
-component.mpn(?ref, ?mpn), param(?mpn, ?sym, ?max) => ?ref
+component.mpn(?ref, ?mpn), param.max(?mpn, ?sym, ?max) => ?ref
 ```

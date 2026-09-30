@@ -1,17 +1,17 @@
 ---
-title: "rail"
+title: "net.rail"
 description: "the net is a power or ground rail"
 ---
 
 ### What it is
 
-`rail(net)` yields one row per net the engine treats as a power or ground rail. It covers both
+`net.rail(net)` yields one row per net the engine treats as a power or ground rail. It covers both
 polarities: a supply net (`+5V`, `VCC`, `3V3`) and a ground net (`GND`, `VSS`) both answer `rail`.
 A net qualifies when it is asserted-driven (a `PWR_FLAG` or equivalent directive), carries the
 design-wide `global` attribute, or its name reads as a rail or ground name.
 
 `net.ground` is the ground-only subset of this relation: every `net.ground` row is also a `rail`
-row, but a supply rail answers `rail` and not `net.ground`. So `rail(?n), not net.ground(?n)`
+row, but a supply rail answers `rail` and not `net.ground`. So `net.rail(?n), not net.ground(?n)`
 isolates the supply rails.
 
 ### For hardware engineers
@@ -43,11 +43,11 @@ rail-named, global, or asserted-driven net.
 List every power or ground rail:
 
 ```
-rail(?n) => ?n
+net.rail(?n) => ?n
 ```
 
 Find the components sitting on a rail (the loads and sources on power distribution):
 
 ```
-rail(?n), component-on-net(?r, ?n) => ?r
+net.rail(?n), component.net(?r, ?n) => ?r
 ```

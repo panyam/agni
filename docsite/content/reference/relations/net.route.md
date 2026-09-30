@@ -1,12 +1,12 @@
 ---
-title: "route"
+title: "net.route"
 description: "the same walk as `reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one"
 ---
 
 ### What it is
 
-`route(from, net, path)` is the walk `reaches` makes, with the route it found bound as a value
-instead of discarded. It holds for the same pairs `reaches(from, net)` holds for, and `path` binds a
+`net.route(from, net, path)` is the walk `reaches` makes, with the route it found bound as a value
+instead of discarded. It holds for the same pairs `net.reaches(from, net)` holds for, and `path` binds a
 readable rendering of what the walk crossed to get there:
 
 ```
@@ -78,20 +78,20 @@ have. See the note above about which.
 Everything a rail reaches, with the route to each:
 
 ```
-route("VBUS", ?net, ?path) => ?net, ?path
+net.route("VBUS", ?net, ?path) => ?net, ?path
 ```
 
 Where a signal ends up and what stands in the way, as a document to save:
 
 ```
-route("SPI_CS", ?net, ?path) => ?net, ?path
+net.route("SPI_CS", ?net, ?path) => ?net, ?path
 ```
 
 The route to every net that reaches a regulator's output, joined to the parts sitting there. The
 path column is what makes the answer checkable without opening the schematic:
 
 ```
-route(?from, ?net, ?path), component-on-net(?ref, ?net), component.class(?ref, "test_point")
+net.route(?from, ?net, ?path), component.net(?ref, ?net), component.class(?ref, "test_point")
   => ?from, ?net, ?ref, ?path
 ```
 

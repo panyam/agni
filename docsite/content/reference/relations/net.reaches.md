@@ -1,16 +1,16 @@
 ---
-title: "reaches"
-description: "transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `reaches(?a,?b,?h), ?h <= 2` and not `reaches(?a,?b,2)`, which means exactly two"
+title: "net.reaches"
+description: "transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two"
 ---
 
 ### What it is
 
-`reaches(from, net)` is true when `net` is reachable from `from` by walking THROUGH series pass
+`net.reaches(from, net)` is true when `net` is reachable from `from` by walking THROUGH series pass
 elements: resistors, inductors, ferrite beads, and fuses. It is the transitive-closure predicate
 the protection rules use to answer "is there a component of class X somewhere on the path between
 these two nets?" without hard-coding a topology.
 
-`reaches(from, net, hops)` is the same walk with the distance exposed, so a rule states the radius
+`net.reaches(from, net, hops)` is the same walk with the distance exposed, so a rule states the radius
 its own question needs. Read the next section before using it: `hops` is an exact count, not a
 budget.
 
@@ -24,8 +24,8 @@ counterpart to `net.bus_like`: `net.bus_like` names the nets the walk refuses to
 datalog argument binds by equality, putting a bare number in that slot means *exactly* that distance:
 
 ```
-reaches(?n, ?rn, 2)           # exactly 2 crossings — SKIPS a part sitting 1 away
-reaches(?n, ?rn, ?h), ?h <= 2 # within 2 crossings — what a protection question means
+net.reaches(?n, ?rn, 2)           # exactly 2 crossings — SKIPS a part sitting 1 away
+net.reaches(?n, ?rn, ?h), ?h <= 2 # within 2 crossings — what a protection question means
 ```
 
 The first line is the spelling most people reach for and it is almost never what they want. Use the
@@ -75,32 +75,32 @@ the walk.
 Every net reachable from a starting net, through series parts:
 
 ```
-reaches("VBUS_IN", ?net) => ?net
+net.reaches("VBUS_IN", ?net) => ?net
 ```
 
 The components that sit on those reachable nets (what a protection walk would find):
 
 ```
-reaches("VBUS_IN", ?net), component-on-net(?r, ?net) => ?r
+net.reaches("VBUS_IN", ?net), component.net(?r, ?net) => ?r
 ```
 
 The same question at a protection radius, the way a rule scoped like `esd-protection` asks it,
 over a TVS within two series crossings of the net:
 
 ```
-reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs") => ?n, ?t
+net.reaches(?n, ?rn, ?h), ?h <= 2, component.net(?t, ?rn), component.class(?t, "tvs") => ?n, ?t
 ```
 
 How far away each reachable net is, the query to run when a radius is not behaving as
 expected:
 
 ```
-reaches("VBUS_IN", ?net, ?hops) => ?net, ?hops
+net.reaches("VBUS_IN", ?net, ?hops) => ?net, ?hops
 ```
 
 ### Schematic
 
-![The walk crosses two-pin series parts (R, ferrite, fuse) and stops at a DC-blocking cap or a bus-like net]({{.Site.PathPrefix}}/static/images/catalog/relations/reaches.svg)
+![The walk crosses two-pin series parts (R, ferrite, fuse) and stops at a DC-blocking cap or a bus-like net]({{.Site.PathPrefix}}/static/images/catalog/relations/net.reaches.svg)
 
 ### Where this is going
 

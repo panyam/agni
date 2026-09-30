@@ -62,5 +62,5 @@ param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?mpn, ?sym, ?doc, ?page, ?secti
 Join a value to its citation, the max ceiling and the page it came from, together:
 
 ```
-param(?mpn, ?sym, ?max), param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?mpn, ?sym, ?max, ?doc, ?page
+param.max(?mpn, ?sym, ?max), param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?mpn, ?sym, ?max, ?doc, ?page
 ```

@@ -1,11 +1,11 @@
 ---
-title: "external_signal_net"
+title: "net.connector_signal"
 description: "a connector-facing signal net (not a rail, ground, no-connect, or power path), the scope the ESD rules share"
 ---
 
 ### What it is
 
-`external_signal_net(net)` yields one row per net that leaves the board through a connector and is a
+`net.connector_signal(net)` yields one row per net that leaves the board through a connector and is a
 SIGNAL, not power. It is the scope both ESD rules share, projected so a datalog-authored check can
 select the same nets the Go rules do.
 
@@ -36,7 +36,7 @@ protection predicates are reachability questions, and they became plain datalog 
 distance (WS3-112):
 
 ```
-reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs")
+net.reaches(?n, ?rn, ?h), ?h <= 2, component.net(?t, ?rn), component.class(?t, "tvs")
 ```
 
 The scope could not, because its guards read net ATTRIBUTES (`global`, `power_driven`) and the
@@ -57,14 +57,14 @@ design has no connector-facing signals.
 Every net an ESD review is about:
 
 ```
-external_signal_net(?n) => ?n
+net.connector_signal(?n) => ?n
 ```
 
 The unprotected ones, matching the shape the `esd` profile requirement compiles to. Nothing clamping
 within two series crossings:
 
 ```
-external_signal_net(?n),
+net.connector_signal(?n),
 not_clamped(?n)
 => ?n
 ```
@@ -72,13 +72,13 @@ not_clamped(?n)
 written out, since `not_clamped` is not built in:
 
 ```
-clamped(?n) :- reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs");
-exposed(?n) :- external_signal_net(?n), not clamped(?n);
+clamped(?n) :- net.reaches(?n, ?rn, ?h), ?h <= 2, component.net(?t, ?rn), component.class(?t, "tvs");
+exposed(?n) :- net.connector_signal(?n), not clamped(?n);
 exposed(?n) => ?n
 ```
 
 Which parts sit on the exposed lines, for a quick read of what is at risk:
 
 ```
-external_signal_net(?n), component-on-net(?r, ?n) => ?n, ?r
+net.connector_signal(?n), component.net(?r, ?n) => ?n, ?r
 ```

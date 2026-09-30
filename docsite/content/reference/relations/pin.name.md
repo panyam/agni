@@ -43,7 +43,7 @@ carry it. Where the file does declare designators, they differ as everywhere els
 
 A **field's declared name against its offset** (see the analogy guide): `pin` is the position in the
 package and `name` is the identifier the header file gives it. Rows are 1:1 with named pins and
-absent for the rest, so `pin(?r,?p), not pin.name(?r,?p,?_)` reads as "the read gave this pin no
+absent for the rest, so `component.pin(?r,?p), not pin.name(?r,?p,?_)` reads as "the read gave this pin no
 name", which is a statement about the SOURCE rather than about the board.
 
 Do not treat `name` as unique within a component. Nothing stops a part type from declaring the same

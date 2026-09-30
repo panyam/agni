@@ -61,7 +61,7 @@ net.role(?n, ?r), ?r != "rail", ?r != "ground" => ?n, ?r
 
 ### Not the same as `rail`
 
-`rail(?n)` is `Model.IsPowerRail`, which holds for a net that is asserted-driven OR global OR a ground
-OR carries the rail role. So `rail(?n)` is a CONCLUSION and `net.role(?n, "rail")` is what the lexicon
-STAMPED, and the two are different sets on any real board. `feedback(?n)` and `switching(?n)` are
+`net.rail(?n)` is `Model.IsPowerRail`, which holds for a net that is asserted-driven OR global OR a ground
+OR carries the rail role. So `net.rail(?n)` is a CONCLUSION and `net.role(?n, "rail")` is what the lexicon
+STAMPED, and the two are different sets on any real board. `net.feedback(?n)` and `net.switching(?n)` are
 exact shorthands for their `net.role` rows and may be used interchangeably with them.

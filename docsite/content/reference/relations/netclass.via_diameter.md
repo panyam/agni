@@ -33,8 +33,8 @@ by `kicad.AnnotateNetClassDefs` from the sibling `.kicad_pro` `net_settings.clas
 ### Absence is not a pass
 
 Only a KiCad project read populates this. An EDIF netlist, an IPC-2581 board, a bare `.kicad_sch`,
-and a KiCad project that defines no classes all leave it empty. `has_netclass_defs` is the marker
-that separates those cases, and it is deliberately distinct from `has_netclass`: membership and
+and a KiCad project that defines no classes all leave it empty. `design.has_netclass_defs` is the marker
+that separates those cases, and it is deliberately distinct from `design.has_netclass`: membership and
 definitions are independent blocks of `net_settings`, so a project can assign nets to a class it
 never defined.
 

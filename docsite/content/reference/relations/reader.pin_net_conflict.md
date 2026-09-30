@@ -1,11 +1,11 @@
 ---
-title: "pin_net_conflict"
+title: "reader.pin_net_conflict"
 description: "a pin the read placed on more than one net; one row per net (reader integrity diagnostic)"
 ---
 
 ### What it is
 
-`pin_net_conflict(ref_des, pin, net)` yields one row per net that a single `(ref_des, pin)` was
+`reader.pin_net_conflict(ref_des, pin, net)` yields one row per net that a single `(ref_des, pin)` was
 placed on when the read put that pin on more than one net. Because a pin belongs to exactly one
 net by definition (a net is the equivalence class of joined pins), any pin that appears in two
 nets is malformed input, a reader bug or a corrupt export, not a design a person drew. The
@@ -43,15 +43,15 @@ finding, so one authoring slip yields one finding, not two.
 Every conflicted pin and the nets claiming it:
 
 ```
-pin_net_conflict(?r, ?p, ?n) => ?r
+reader.pin_net_conflict(?r, ?p, ?n) => ?r
 ```
 
 Join to the components on each claiming net (what else the malformed read tangled together):
 
 ```
-pin_net_conflict(?r, ?p, ?n), component-on-net(?other, ?n) => ?other
+reader.pin_net_conflict(?r, ?p, ?n), component.net(?other, ?n) => ?other
 ```
 
 ### Schematic
 
-![One pin claimed by two nets is a conflict; the same pin on one net is clean]({{.Site.PathPrefix}}/static/images/catalog/relations/pin_net_conflict.svg)
+![One pin claimed by two nets is a conflict; the same pin on one net is clean]({{.Site.PathPrefix}}/static/images/catalog/relations/reader.pin_net_conflict.svg)

@@ -53,7 +53,7 @@ datasheet row.
 Select them with the `absent` predicate, which asks whether a field carried a value at all:
 
 ```
-param.unit(?mpn, ?sym, ?unit), param(?mpn, ?sym, ?max), absent(?max) => ?mpn, ?sym, ?unit
+param.unit(?mpn, ?sym, ?unit), param.max(?mpn, ?sym, ?max), absent(?max) => ?mpn, ?sym, ?unit
 ```
 
 `not param.range(...)` does NOT find them, and the distinction is the useful one: the row exists, so
@@ -79,5 +79,5 @@ Show a value next to the unit it was printed in, remembering that `?max` is in t
 `?unit` is what the vendor wrote (so an 800 mA row reads as `0.8` next to `mA`):
 
 ```
-param(?mpn, ?sym, ?max), param.unit(?mpn, ?sym, ?unit) => ?mpn, ?sym, ?max, ?unit
+param.max(?mpn, ?sym, ?max), param.unit(?mpn, ?sym, ?unit) => ?mpn, ?sym, ?max, ?unit
 ```

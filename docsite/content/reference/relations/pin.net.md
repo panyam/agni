@@ -25,7 +25,7 @@ connected pins. The "absent if unconnected" semantics matter: an unconnected pin
 an empty net, it is no row at all, so a query that wants unconnected pins asks for a `pin` with no
 matching `pin.net` rather than testing a net string for emptiness. Because a pin belongs to exactly
 one net by definition, a well-formed read gives at most one `pin.net` row per pin (two would be the
-`pin_net_conflict` integrity break).
+`reader.pin_net_conflict` integrity break).
 
 ### Go projector
 
@@ -47,5 +47,5 @@ pin.net(?r, ?p, ?n) => ?n
 Join to `rail` to find the pins that connect directly to a power or ground rail:
 
 ```
-pin.net(?r, ?p, ?n), rail(?n) => ?r
+pin.net(?r, ?p, ?n), net.rail(?n) => ?r
 ```

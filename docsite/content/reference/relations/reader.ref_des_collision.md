@@ -1,11 +1,11 @@
 ---
-title: "ref_des_collision"
+title: "reader.ref_des_collision"
 description: "a reference designator used by more than one part (reader integrity diagnostic)"
 ---
 
 ### What it is
 
-`ref_des_collision(ref_des)` yields one row per reference designator that more than one distinct
+`reader.ref_des_collision(ref_des)` yields one row per reference designator that more than one distinct
 part claimed. A designator names exactly one physical part (`R1` is one resistor on the board), so a
 designator shared by two placements is malformed input, a reader gap or a duplicate in the source,
 not a design a person drew. The relation is keyed by `ref_des` so a query joins the collision to the
@@ -36,7 +36,7 @@ state.
 
 `refDesCollisionFacts` in `check/facts.go` iterates `Model.RefDesCollisions()` (the reader-emitted
 `ir.RefDesCollision` list off `InputDiagnostics`, where each reader decides duplicate-versus-legitimate
-by its own format's rule) and emits one `ref_des_collision(ref_des)` row per collided designator. The
+by its own format's rule) and emits one `reader.ref_des_collision(ref_des)` row per collided designator. The
 citation is the first colliding instance. One row per shared designator; empty when the read is clean.
 
 ### Datalog
@@ -44,15 +44,15 @@ citation is the first colliding instance. One row per shared designator; empty w
 Every colliding designator:
 
 ```
-ref_des_collision(?r) => ?r
+reader.ref_des_collision(?r) => ?r
 ```
 
 Join to the nets each colliding designator sits on (which nets the tangled read connected together):
 
 ```
-ref_des_collision(?r), component-on-net(?r, ?n) => ?n
+reader.ref_des_collision(?r), component.net(?r, ?n) => ?n
 ```
 
 ### Schematic
 
-![Two parts sharing R1 is a collision; two parts with unique designators R1 and R2 are clean]({{.Site.PathPrefix}}/static/images/catalog/relations/ref_des_collision.svg)
+![Two parts sharing R1 is a collision; two parts with unique designators R1 and R2 are clean]({{.Site.PathPrefix}}/static/images/catalog/relations/reader.ref_des_collision.svg)

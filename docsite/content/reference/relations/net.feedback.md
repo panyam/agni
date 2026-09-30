@@ -1,11 +1,11 @@
 ---
-title: "feedback"
+title: "net.feedback"
 description: "the net is a regulator feedback / sense node (must not be probed)"
 ---
 
 ### What it is
 
-`feedback(net)` yields one row per net whose name reads as a regulator feedback or sense node: a
+`net.feedback(net)` yields one row per net whose name reads as a regulator feedback or sense node: a
 leaf name ending in `_FB`, `_VFB`, `_FEEDBACK`, `_VSENSE`, `_SENSE`, `_SNS`, or a bare `FB` / `VFB`.
 It is name-derived, the datalog face of the feedback exclusion the test-point rule applies.
 
@@ -37,16 +37,16 @@ case-insensitive. One row per feedback-named net; empty when no net matches.
 List every feedback / sense node:
 
 ```
-feedback(?n) => ?n
+net.feedback(?n) => ?n
 ```
 
 A supply rail that is not a sense node (the rails a probe or pull-up rule may treat as ordinary
 distribution):
 
 ```
-rail(?n), not feedback(?n) => ?n
+net.rail(?n), not net.feedback(?n) => ?n
 ```
 
 ### Schematic
 
-![A divider tap into a regulator FB pin is a sense node a probe would disturb; a plain output rail is probe-safe]({{.Site.PathPrefix}}/static/images/catalog/relations/feedback.svg)
+![A divider tap into a regulator FB pin is a sense node a probe would disturb; a plain output rail is probe-safe]({{.Site.PathPrefix}}/static/images/catalog/relations/net.feedback.svg)

@@ -1,12 +1,12 @@
 ---
-title: "types_power_out"
+title: "design.types_power_out"
 description: "one row when the source format classifies power-output pins (EDIF/IPC do not, so a driver-absence check is unsound there)"
 ---
 
 ### What it is
 
-`types_power_out(present)` yields exactly one row, with the value `true`, when the design's source
-format classifies power-OUTPUT pins, and zero rows otherwise. Like `has_nc_channel`, it is a
+`design.types_power_out(present)` yields exactly one row, with the value `true`, when the design's source
+format classifies power-OUTPUT pins, and zero rows otherwise. Like `design.has_nc_channel`, it is a
 design-capability flag, not a per-entity relation: there is never more than one row, and its presence
 or absence is the whole signal. A KiCad or gEDA design (whose readers type a regulator output
 `POWER_OUT` and a power flag) makes the row appear; an EDIF netlist or an IPC-2581 board (whose grammars
@@ -24,7 +24,7 @@ is a false alarm, not a defect.
 ### For software engineers
 
 This is a capability probe over the whole design, closer to a feature flag than a row set. Because a
-rule reads it as `types_power_out(?_)`, an absent row makes the enclosing conjunction yield nothing, so
+rule reads it as `design.types_power_out(?_)`, an absent row makes the enclosing conjunction yield nothing, so
 the guard fails closed: on a format that cannot type power outputs, a driver-absence rule produces no
 findings by construction. That is exactly why `power-input-not-driven` gates on it (WS3-072): the
 POWER_IN pin stamp makes supply *inputs* visible on EDIF, but the source side stays under-typed, so
@@ -46,12 +46,12 @@ closed on.
 Probe the flag directly (one row `true`, or empty):
 
 ```
-types_power_out(?present) => ?present
+design.types_power_out(?present) => ?present
 ```
 
 Use it as a guard so a driver-absence check runs only where power outputs are typed (a power-input pin
 with no source reported only when the format could have named the source):
 
 ```
-pin.type(?r, ?p, "power_in"), types_power_out(?present) => ?r, ?p
+pin.type(?r, ?p, "power_in"), design.types_power_out(?present) => ?r, ?p
 ```

@@ -11,7 +11,7 @@ carries the name as the only evidence that a net is ground.
 
 `net.ground` is the ground-only subset of `rail`. `rail` covers both power and ground, because
 `Model.IsPowerRail` ORs the ground test into the rail test. So every `net.ground` net is also a
-`rail` net, and a rule reads `rail(?r), not net.ground(?r)` when it means "a supply rail, not
+`rail` net, and a rule reads `net.rail(?r), not net.ground(?r)` when it means "a supply rail, not
 ground."
 
 ### For hardware engineers
@@ -53,5 +53,5 @@ net.ground(?n) => ?n
 Isolate the supply rails by subtracting ground from the rail set:
 
 ```
-rail(?n), not net.ground(?n) => ?n
+net.rail(?n), not net.ground(?n) => ?n
 ```

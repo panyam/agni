@@ -26,7 +26,7 @@ type RunQueryRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// query is the datalog text, the same surface `agni query` accepts:
 	//
-	//	component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
+	//	component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
 	// only its LEXICON half does anything here — and it does a great deal.
@@ -429,8 +429,8 @@ func (*ListRelationsRequest) Descriptor() ([]byte, []int) {
 }
 
 // RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
-// `args` the labels a template inserts as `?arg` (so `component-on-net` inserts
-// `component-on-net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
+// `args` the labels a template inserts as `?arg` (so `component.net` inserts
+// `component.net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
 // ("netlist" | "board" | "datasheet" | "predicate" | "overlay").
 type RelationInfo struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`

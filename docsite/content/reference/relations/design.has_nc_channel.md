@@ -1,11 +1,11 @@
 ---
-title: "has_nc_channel"
+title: "design.has_nc_channel"
 description: "one row when the design can express intentional no-connect"
 ---
 
 ### What it is
 
-`has_nc_channel(present)` yields exactly one row, with the value `true`, when the design's source
+`design.has_nc_channel(present)` yields exactly one row, with the value `true`, when the design's source
 format can express an intentional no-connect, and zero rows otherwise. It is a design-capability
 flag, not a per-entity relation: there is never more than one row, and its presence or absence is
 the whole signal. A KiCad no-connect flag (a pin typed NO_CONNECT, or a net named
@@ -24,7 +24,7 @@ no-connect vocabulary a per-pin absence check depends on.
 ### For software engineers
 
 This is a capability probe over the whole design, closer to a feature flag than to a row set.
-Because a rule reads it as `has_nc_channel(?_)`, an absent row makes the enclosing conjunction
+Because a rule reads it as `design.has_nc_channel(?_)`, an absent row makes the enclosing conjunction
 yield nothing, so the guard fails closed: on a format that cannot express intentional no-connect,
 the gated rule produces no findings by construction. That is the point. Per-pin absence rules
 must not fire where the format cannot distinguish an intentional open from a mistake (the naive
@@ -45,12 +45,12 @@ vocabulary. Zero rows is the meaningful state, and it is what a gated rule fails
 Probe the flag directly (one row `true`, or empty):
 
 ```
-has_nc_channel(?present) => ?present
+design.has_nc_channel(?present) => ?present
 ```
 
 Use it as a guard so a per-pin absence check runs only where intentional no-connect is
 expressible (unconnected pins reported only when the format can say a pin is deliberately open):
 
 ```
-pin(?r, ?p), not pin.net(?r, ?p, ?_), has_nc_channel(?present) => ?r, ?p
+component.pin(?r, ?p), not pin.net(?r, ?p, ?_), design.has_nc_channel(?present) => ?r, ?p
 ```
