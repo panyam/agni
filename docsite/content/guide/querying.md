@@ -414,7 +414,7 @@ It answers with *a* route and not every route. The walk is breadth-first, so whe
 bridge the same two nets you get the shorter one and no mention of the other. And a route never ends
 on a rail or a plane, because the walk refuses to enter one at all. For the pin-to-pin form, which
 does end on a rail and reports the test points sitting on each net along the way, use
-[`agni trace`](../cli-reference/#trace).
+[`agni trace`](../cli-reference/#trace-file).
 
 ## Asking under your own vocabulary
 

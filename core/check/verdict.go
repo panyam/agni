@@ -22,7 +22,7 @@ type Verdict struct {
 	// ORDER IS SIGNIFICANT (pin-tracking bounds subject-pin minus reference-pin), so the framework
 	// never sorts and a symmetric relation canonicalises INSIDE the rule. ARITY IS FIXED PER RULE,
 	// declared as Rule.SubjectShape and held by TestSubjectShapeHolds. See
-	// docsite/content/build/check-rule.md#subjects-a-tuple-in-the-verdict-one-entity-in-the-finding.
+	// docsite/content/build/check-rule.md#a-tuple-in-the-verdict-one-entity-in-the-finding.
 	Subjects []Entity
 
 	// Witness is what the outcome rests on. REQUIRED on Pass and Fail, since without it a pass is

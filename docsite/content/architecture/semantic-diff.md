@@ -11,7 +11,7 @@ designs and classifies what changed. Because it runs on the neutral IR, the same
 works over any format that reads into it, whether EDIF, KiCad, or IPC-2581. The output says
 what changed and how much it matters, not merely that the files differ.
 
-Three passes produce that answer, and the rest of this page is what each one does.
+Three passes produce that answer.
 
 ```mermaid
 flowchart TB
@@ -52,9 +52,8 @@ already uses.
 | **New** / **Deleted** | present on only one side, and not a rename | structural |
 
 Components report Added, Removed, or Changed, where Changed covers the part-reference set and
-the `Value` attribute. On the axis of cosmetic versus electrical, Soft is cosmetic and Hard is
-electrical. Deciding whether a given change is acceptable is a separate step. That decision is a
-[rule](../rules-and-checks/) evaluating the diff, not the diff itself.
+the `Value`, `dnp` and `Footprint` attributes. A [rule](../rules-and-checks/) evaluating the
+diff decides whether a given change is acceptable, and the diff itself never does.
 
 ## Rename detection
 
@@ -69,7 +68,7 @@ for each signature in delBySig that also appears in addBySig:
 leftover deleted -> Deleted ;  leftover added -> New
 ```
 
-Uniqueness and non-emptiness are the safety rails. They stop two unrelated nets that happen to
+Requiring a signature to be unique and non-empty stops two unrelated nets that happen to
 share a connection set, or two empty nets, from being mispaired as a rename. When a signature is
 ambiguous this pass declines to guess and leaves the nets for the pass below.
 
@@ -83,7 +82,7 @@ the rename you
 most needed to survive is the one reported as an unrelated deletion beside an unrelated addition.
 
 `--rename-approx` adds a third pass over what the exact pass could not place. It is a separate
-ranked assignment rather than a loosened version of the exact pass, and the ordering is what keeps
+ranked assignment rather than a loosened version of the exact pass, and running it second keeps
 a rename with no connectivity change reporting as an exact `renamed` rather than as a guess.
 
 ```
@@ -122,10 +121,10 @@ on a revision pair that matters before trusting the pass on it, per
 [evidence](../../build/evidence/).
 
 <details>
-<summary>Where the numbers came from, and the one seam that behaves unlike the rest</summary>
+<summary>Where the numbers came from, and the one threshold that behaves unlike the rest</summary>
 
 They are the settled values of a netlist comparison tool that has run against real revision pairs
-for years, and both failure directions were observed while arriving at them: looser values
+for years, and both failure directions were observed while arriving at them, as looser values
 mis-paired unrelated {{ explainable "rail" "power rails" }}, and tighter values missed obvious
 renames where one decoupling capacitor had been added or removed.
 
@@ -139,9 +138,9 @@ does not.
 ## Provenance-annotated findings
 
 Every net finding carries the net's source locator in each revision, the `source_file` and
-`native_id` on each side, nil on the side where the net does not exist. That is what makes a
-finding traceable back to a place in each file: this net changed, here in the old file and here
-in the new. The annotation is keyed by the semantic match, not by the native id.
+`native_id` on each side, nil on the side where the net does not exist. A reader can then trace a
+finding to the place the net sits in the old file and the place it sits in the new one. The
+annotation is keyed by the semantic match, not by the native id.
 
 ## Hard cases
 
@@ -150,8 +149,7 @@ in the new. The annotation is keyed by the semantic match, not by the native id.
 - Reference-designator renumbering, a component renamed from `R1` to `R5` with the same part and
   connections, is the component analogue of a net rename. It is not yet detected.
 - An electrically identical reroute, the same endpoints wired through different copper, is
-  invisible to a netlist diff by design. Routing is geometry, not connectivity, so it does not
-  appear.
+  invisible to a netlist diff by design, because routing is geometry rather than connectivity.
 - Nets with no reference designator, such as power and ground, and {{ explainable "bus" }} or member pins, are
   stable only if the reader emits stable keys for them. Unstable keys would surface as false Hard
   changes.
@@ -161,8 +159,8 @@ in the new. The annotation is keyed by the semantic match, not by the native id.
 
 ## How it is checked
 
-A hand-built revision pair in the unit tests exercises every class, Hard, Soft, Renamed, New,
-Deleted, Equal, and the provenance annotation. Beyond that, `agni diff` is run on a real corpus
+A hand-built revision pair in the unit tests exercises every class (Hard, Soft, Renamed, New,
+Deleted, Equal) and the provenance annotation. Beyond that, `agni diff` is run on a real corpus
 pair with genuine rewires to confirm the classification holds on files a tool actually produced.
 
 ## Not handled yet
@@ -171,5 +169,6 @@ pair with genuine rewires to confirm the classification holds on files a tool ac
 - Component rename detection, the reference-designator renumbering case above. It is the same
   scoring problem with a different key, so the near-match pass is worth generalising over "entity
   with a signature" when a second caller appears rather than reimplementing.
-- Near-match thresholds are a value passed to the engine and reachable from the CLI, but no project
-  config tier carries them yet, so a house cannot declare its own and have every run pick them up.
+- Near-match thresholds are a `diff.RenameOptions` value passed to the engine. The CLI sets only
+  whether the pass runs, and no project config tier carries the thresholds yet, so a house cannot
+  declare its own and have every run pick them up.

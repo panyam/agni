@@ -454,9 +454,9 @@ failure). Eleven example modules had drifted before anything looked, because an 
 building until some later change needs a requirement it never recorded. `make tidyall` fixes it.
 
 **`make testall` is the full gate, and CI runs exactly it.** Read
-`docsite/content/build/the-gate.md` before trusting a run, since the gate has three traps that make
-a red gate read green (a wrapper reporting its own status rather than make's, a commit-first
-ordering rule, and a per-clone `pnpm install`), one that makes a green tree read RED (a stray
+`docsite/content/build/the-gate.md` before trusting a run, since the gate has three ways to be
+misread (a wrapper reporting its own status rather than make's, which turns red green, a
+commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fine tree read RED (a stray
 `agni serve` on :8080 fails three verdict-link tests, so reproduce against unmodified `main` before
 reporting a regression), plus what a run leaves behind and the generated-code rules.
 **`tutorial-runs-check` regenerates captures and does not read the prose quoting them**, so a

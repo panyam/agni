@@ -33,7 +33,7 @@ type Finding struct {
 	// Subject is the ONE entity a reader has to change to fix this. A Verdict's subject tuple names
 	// everything the rule quantified over; a Finding picks the one to edit and puts the rest in
 	// Context. Its Ref must be one of the verdict's subject refs, and that is checked. See
-	// docsite/content/build/check-rule.md#subjects-a-tuple-in-the-verdict-one-entity-in-the-finding.
+	// docsite/content/build/check-rule.md#a-tuple-in-the-verdict-one-entity-in-the-finding.
 	Subject Entity
 	Message string
 	Prov    *ir.Provenance
@@ -175,7 +175,7 @@ const (
 // availability by fact tier (TierOf matches on the name), so spell each fact as the fact vocabulary
 // does. Everything classificatory lives in Tags, an open key -> value bag the catalog groups and
 // filters on (TreeBy, Filter), so an operator's or embedder's rule can add its own axes. See
-// docsite/content/architecture/rules-and-checks.md#phase-1-a-rules-library-in-go.
+// docsite/content/architecture/rules-and-checks.md#a-rules-library-in-go.
 //
 // Run stamps Rule and Severity from the rule's metadata, so a rule body never sets them.
 type Rule struct {

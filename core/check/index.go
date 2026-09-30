@@ -14,7 +14,7 @@ const (
 // over the netlist IR. SiteDiagnostic means the reader detects the problem at ingestion and records
 // it in InputDiagnostics, and the rule only reports what the reader found, because the signal cannot
 // be reconstructed from the normalized IR. See
-// docsite/content/architecture/rules-and-checks.md#where-a-rule-runs-input-diagnostics-versus-analysis-checks.
+// docsite/content/architecture/rules-and-checks.md#where-a-rule-runs.
 const (
 	SiteCheck      = "check"
 	SiteDiagnostic = "diagnostic"

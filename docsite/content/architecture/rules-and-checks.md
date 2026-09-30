@@ -18,27 +18,28 @@ a quantity. A rule states that a quantity must satisfy a bound and reports where
 Analysis produces the quantity.
 
 The two cooperate without blurring the line. Some rules assert over a quantity that analysis
-computes. An inductor's saturation-current margin needs the peak current through it. A
-capacitor's {{ explainable "derating" }} needs a {{ explainable "rail" }}'s worst-case maximum
-voltage. The rule references that quantity by name through an interface the analysis engine fills. The rule still only asserts and
-reports, it never simulates, so the boundary holds even where a rule and an analysis compose.
+computes. An inductor's saturation-current margin needs the peak current through it. A capacitor's
+{{ explainable "derating" }} needs a {{ explainable "rail" }}'s worst-case maximum voltage. The rule
+references that quantity by name through an interface the analysis engine fills. The rule still only
+asserts and reports and never simulates, so the boundary holds even where a rule and an analysis
+compose.
 
-A third surface sits beside rules and analysis: queries that report. Some questions are not
-pass or fail. Group the bill of materials by sub-circuit and roll cost up against an external
-supply feed, for instance. A query reuses the same select, traverse, aggregate, and join
-primitives a rule uses, but it emits a table instead of findings. Keeping queries a separate
-surface preserves the rule layer as a clean pass-or-fail contract. A report is not a rule.
+Queries that report are a third surface beside rules and analysis. Some questions are not pass or
+fail. Group the bill of materials by sub-circuit and roll cost up against an external supply feed,
+for instance. A query reuses the same select, traverse, aggregate, and join primitives a rule uses,
+but it emits a table instead of findings. Keeping queries a separate surface preserves the rule
+layer as a clean pass-or-fail contract.
 
-## Where a rule runs: input diagnostics versus analysis checks
+## Where a rule runs
 
-A rule is the thing a user cares about, a named check that should fire on a design. Rules do not
-all run in the same place, though, and conflating that would leak one format's structure into
-the shared engine. The split follows a compiler's stages. Parsing catches malformed input. Name
-resolution catches duplicate declarations while building the symbol table. Type checking and
-dataflow run over the built program. The rules layer maps onto the same stages.
+A rule is a named check a user wants to fire on a design. Rules do not all run in the same place,
+though, and conflating that would leak one format's structure into the shared engine. The split
+follows a compiler's stages. Parsing catches malformed input. Name resolution catches duplicate
+declarations while building the symbol table. Type checking and dataflow run over the built program.
+The rules layer maps onto the same stages.
 
-The test that decides where a rule runs: can the rule be computed from the final
-{{ explainable "netlist" }} IR alone?
+Where a rule runs depends on whether it can be computed from the final
+{{ explainable "netlist" }} IR alone.
 
 ```mermaid
 flowchart TB
@@ -67,11 +68,11 @@ flowchart TB
 
 The reader emits two kinds of derived output that are easy to confuse. Input diagnostics are
 problems, statements that something is wrong: duplicate reference designator, dangling endpoint,
-conflicting net name. They are reportable as findings. Input facts are annotations, statements
-that something is so: a net is driven by a power flag, a net crosses sheets, a net has a class.
-They are data a later check reads rather than findings. This is already load-bearing. The
-power-input rule consumes the reader's power-driven and external net facts to avoid false
-positives, so the front end hands an attributed netlist to the analyzer.
+conflicting net name. They are reportable as findings. Input facts are annotations, statements that
+something is so: a net is driven by a power flag, a net crosses sheets, a net has a class. They are
+data a later check reads rather than findings. The power-input rule already consumes the reader's
+power-driven and external net facts to avoid false positives, so the front end hands an attributed
+netlist to the analyzer.
 
 The vocabulary settles as follows. A **rule** is the umbrella term, the thing the catalog and
 the viewer track. A **check** is a rule computed by the analysis engine over the IR. A
@@ -79,12 +80,12 @@ the viewer track. A **check** is a rule computed by the analysis engine over the
 **fact** is reader-derived data a check reads, not itself a rule. A rule's implementation site is
 a tag on it, not a separate catalog.
 
-One consequence for design: a check that cannot be computed from the netlist IR does not belong
-in the analysis engine. Pushing its format-specific judgment up into a rule, a KiCad unit-index
-heuristic for example, is exactly the smell this split prevents. Detection goes to the reader,
-the neutral result goes into the design's input diagnostics, and the reporting rule stays thin
-and format-agnostic. Input diagnostics therefore run at read time. They exist before any rule is
-selected, so a viewer or a stats command can surface them without invoking the analysis engine.
+It follows that a check that cannot be computed from the netlist IR does not belong in the analysis
+engine. Pushing its format-specific judgment up into a rule, a KiCad unit-index heuristic for
+example, is what this split prevents. Detection goes to the reader, the neutral result goes into the
+design's input diagnostics, and the reporting rule stays thin and format-agnostic. Input diagnostics
+therefore run at read time. They exist before any rule is selected, so a viewer or a stats command
+can surface them without invoking the analysis engine.
 
 A reader may legitimately contribute nothing. A diagnostic is only producible by a reader whose
 format carries the needed structure. A dangling endpoint needs wire geometry, which only
@@ -92,13 +93,12 @@ schematic readers have. A reference-designator collision needs capture-unit sema
 KiCad schematic has and a flat EDIF netlist does not. An empty contribution there is correct, not
 a gap, the same way a board or netlist source yields no dangling endpoints.
 
-This creates a blind spot worth naming. Because "no diagnostics" is indistinguishable from
-"diagnostics this reader cannot observe," coverage cannot be inferred from a clean run. It is
-pinned two ways. A labeled corpus fixture, a known-bad design staged as pending in the
-expectation sidecar until the reader can catch it, makes the gap a visible row in the test
-harness rather than tribal memory. And a source-tool oracle cross-check diffs the findings
-against the originating tool's own electrical-rule check. Without both, a missed diagnostic is
-invisible.
+This creates a blind spot. Because "no diagnostics" is indistinguishable from "diagnostics this
+reader cannot observe," coverage cannot be inferred from a clean run. It is pinned two ways. A
+labeled corpus fixture, a known-bad design staged as pending in the expectation sidecar until the
+reader can catch it, makes the gap a visible row in the test harness rather than tribal memory. And
+a source-tool oracle cross-check diffs the findings against the originating tool's own
+electrical-rule check. Without both, a missed diagnostic is invisible.
 
 ## Expressiveness tiers
 
@@ -106,44 +106,43 @@ The set of hardware rules is effectively unbounded, since the design-intent tail
 but the machinery the rules need is bounded. Classifying rules by the expressive power they
 require is the useful axis, because it decides the evaluation model.
 
-- **Tier P, parametric.** A fixed, standardized catalog with per-process parameters: geometric
+- **Tier P** is parametric, a fixed, standardized catalog with per-process parameters: geometric
   design-rule checks (clearance, track width, {{ explainable "via" }} and annular ring, courtyard)
-  and electrical rule checks (pin-type conflicts, unconnected pins, single-pin nets). The rule types are finite,
-  only the values vary. This is config-shaped, not language-shaped.
-- **Tier R, relational or graph query.** Select and traverse the netlist, then quantify. "For
-  every I2C net there exists a pull-up to VCC." "Is this net reachable from
+  and electrical rule checks (pin-type conflicts, unconnected pins, single-pin nets). The rule types
+  are finite, only the values vary. This is config-shaped, not language-shaped.
+- **Tier R** is a relational or graph query that selects and traverses the netlist, then quantifies.
+  "For every I2C net there exists a pull-up to VCC." "Is this net reachable from
   {{ explainable "ground" }} through only passives," which is a transitive closure. This is the bulk
   of the design-intent tail.
-- **Tier A, aggregate.** Counts and ratios over the selections.
+- **Tier A** aggregates, taking counts and ratios over the selections.
   "{{ explainable "test-point" "Test-point" }} coverage of at least 95 percent." "At least one
   decoupling cap per power pin."
-- **Tier X, external join.** Bring in data that lives outside the design, such as an approved-MPN
-  list or part parametrics from a spec database. "Every passive has an MPN from the approved
-  vendor list."
+- **Tier X** is an external join, bringing in data that lives outside the design, such as an
+  approved-MPN list or part parametrics from a spec database. "Every passive has an MPN from the
+  approved vendor list."
 
-Tiers R, A, and X together are a Datalog and relational-algebra class with aggregation and
-external relations: pattern-match, traverse, quantify, aggregate, join. That is not
-Turing-complete and not a general programming language. That bounded ceiling is what makes a
-declarative rules layer feasible. Anything that needs real computation is analysis, by the
-boundary above.
+Tiers R, A, and X together are a Datalog and relational-algebra class with aggregation and external
+relations: pattern-match, traverse, quantify, aggregate, join. That is not Turing-complete and not a
+general programming language. That bounded ceiling makes a declarative rules layer feasible.
+Anything that needs real computation is analysis, by the boundary above.
 
 {{ includeFile "figures/expressiveness-tiers.svg" }}
 
-For orientation on the mechanisms that fit each tier: a fixed parametric catalog covers Tier P,
-KiCad's `.kicad_dru` text rules cover Tier P and some of Tier R, Datalog with transitive closure
-is a natural fit for Tier R and its aggregate variants, and policy languages such as Rego or a
-constraint-unification language such as CUE cover parts of the same space. The design does not
-adopt an external engine for these, for reasons in the evaluation model below.
+As orientation on the mechanisms that fit each tier, a fixed parametric catalog covers Tier P,
+KiCad's `.kicad_dru` text rules cover Tier P and some of Tier R, Datalog with transitive closure is
+a natural fit for Tier R and its aggregate variants, and policy languages such as Rego or a
+constraint-unification language such as CUE cover parts of the same space. The design does not adopt
+an external engine for these, for reasons in the evaluation model below.
 
 ## How a rule gets written
 
 The tiers above classify a rule by the machinery it needs, which decides the evaluation model. A
-second axis is independent of that one and decides who can write a rule at all: the FORM it is
-authored in. A Tier R rule can arrive as Go, as datalog, or as a line of YAML, and the catalog cannot
-tell which once it has run.
+second axis, independent of that one, is the FORM a rule is authored in, and it decides who can
+write a rule at all. A Tier R rule can arrive as Go, as datalog, or as a line of YAML, and the
+catalog cannot tell which once it has run.
 
 `check.Rule` is the primitive. Everything below compiles to one and reaches the catalog as a
-`check.RuleSource`, which is the only currency the catalog trades in.
+`check.RuleSource`, the only thing the catalog accepts.
 
 | Shape | Who writes it | Changes | Compiles via |
 |---|---|---|---|
@@ -152,17 +151,16 @@ tell which once it has run.
 | Interface profile | an architect, shared across boards | rarely | `profiles.Compile` |
 | Design-intent declaration | a hardware engineer, per board | every board | `intent.Compile` |
 
-The last two are why the engine can be extended without a Go toolchain, and the reason each of them
-exists as a file is the person holding the knowledge. An EE describing CAN should not have to open a
-Go file, and a rail's declared current draw comes off a power budget, so requiring a rebuild to state
-one would put the whole design-intent tier out of reach of the people
-who own the number.
+The last two let the engine be extended without a Go toolchain, and each exists as a file because of
+who holds the knowledge. An EE describing CAN should not have to open a Go file, and a rail's
+declared current draw comes off a power budget, so requiring a rebuild to state one would put the
+whole design-intent tier out of reach of the people who own the number.
 
-Two consequences worth stating, because both look like accidents until you see the axis:
+Two consequences look like accidents until you see the axis.
 
-**The shipped profiles are authored in the same YAML you would write.** They are embedded files under
-`stdlib/profiles/builtins/`, parsed at init. Nothing about a built-in is privileged, which is what
-makes an overriding profile a supported act rather than a hack: yours replaces one written the same
+**The shipped profiles are authored in the same YAML you would write.** They are embedded files
+under `stdlib/profiles/builtins/`, parsed at init. Nothing about a built-in is privileged, so an
+overriding profile is a supported act rather than a hack, since yours replaces one written the same
 way.
 
 **There is no built-in intent, and that absence is deliberate.** A generic statement of what a board
@@ -170,43 +168,60 @@ should contain says nothing, and a rule that enumerated its expectations FROM th
 pass. So every intent rule iterates the declaration and probes the netlist, never the reverse, and a
 design run with no declaration leaves those items not-automated rather than silently clean.
 
-This is [C29](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md) one layer up, and the argument
-transfers whole. There, the fact tuple is the primitive and no query engine owns it, because a shape
-that owned the tuple would make its limits everyone's limits. Here, the rule is the primitive and no
-authoring shape owns it, for the same reason: datalog cannot express a path question at all, and
-`check.Spec` answers per-entity questions with no fact base, so a catalog built around either would
-foreclose the rules that need the other. [C30](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md)
-states it, and `deps_test.go` watches the arrow in both directions.
+This is [C29](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md) one layer up, and the
+argument transfers whole. There, the fact tuple is the primitive and no query engine owns it,
+because a shape that owned the tuple would make its limits everyone's limits. Here, the rule is the
+primitive and no authoring shape owns it, for the same reason, since datalog cannot express a path
+question at all and `check.Spec` answers per-entity questions with no fact base, so a catalog built
+around either would foreclose the rules that need the other.
+[C30](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md) states it, and `deps_test.go` watches
+the arrow in both directions.
 
 A new shape is therefore a package that compiles to rules and registers a source. It is never a new
 field on `Rule`, a new case in the catalog, or a second thing a catalog can hold.
 
 ## What runs now, what waits
 
-- On the netlist IR today: electrical rule checks and the connectivity, attribute, quantified,
-  and aggregate rules of Tiers R and A. This is where the value is and where the data exists.
-- On the board tier today: the first geometric design-rule class, track width, hole size,
-  annular width, and copper clearance, over the board geometry, gated so a netlist-only design
-  reports the copper rules as unavailable rather than silently passing. Thresholds are
-  fabrication-capability floors, and per-design values are rule parameterization. Two structural
-  notes came out of this. Per-net threshold rules are ordinary rules over the set of board nets.
-  Clearance is a pairwise cross-entity join that the rule language deliberately does not express,
-  so it stays the catalog's one purpose-built Go rule until more rules of that shape justify
-  adding the vocabulary. Its cost is a tripwire worth watching, roughly 0.7 ms at corpus scale of
-  400 segments, 16 ms at 2000, and 380 ms at 10000.
+- On the netlist IR today: electrical rule checks and the connectivity, attribute, quantified, and
+  aggregate rules of Tiers R and A.
+- On the board tier today: the first geometric design-rule class, track width, hole size, annular
+  width, and copper clearance, over the board geometry, gated so a netlist-only design reports the
+  copper rules as unavailable rather than silently passing. Thresholds are fabrication-capability
+  floors, and per-design values are rule parameterization. Two structural notes came out of this.
+  Per-net threshold rules are ordinary rules over the set of board nets. Clearance is a pairwise
+  cross-entity join that the rule language deliberately does not express, so it stays the catalog's
+  one purpose-built Go rule until more rules of that shape justify adding the vocabulary. Its cost
+  is a tripwire, roughly 0.7 ms at corpus scale of 400 segments, 16 ms at 2000, and 380 ms at 10000.
 - Later: the remaining design-rule classes (pad and zone clearance, edge and silk, hole-to-hole,
-  courtyard) need pad-shape and zone-fill facts, and external joins (Tier X) need the parts and
-  spec data source. Both are additive, and the evaluation model does not change to accommodate
-  them.
+  courtyard) need pad-shape and zone-fill facts, and external joins (Tier X) beyond the datasheet
+  layer, such as an approved-vendor list, need a parts data source. Both are additive, and the
+  evaluation model does not change to accommodate them.
+
+Several rules this list once waited on have shipped: `test-point-coverage` on the pure netlist,
+`led-polarity` for diode orientation once pin polarity roles landed, `cap-voltage` for capacitor
+voltage derating from the [parameter layer](../datasheet-layer/), and `io-map-pin-mismatch` with its
+three siblings for IC pin-mapping against a declared map. The rest, by what each waits on:
+
+- Buildable now on the pure netlist: signal-net naming conventions beyond `diff-pair-naming`,
+  transmit and receive connection-role compatibility, and the ordering variants of the ESD and
+  protection rules, now that `reaches` binds a hop count.
+- With the parameter layer: logic-level input versus output margin, and passive value versus
+  recommendation. These are the Tier-X category, a rule that proves a margin from datasheet data.
+- Touching analysis for an input only: inductor saturation current versus peak current, cap voltage
+  versus a computed rail maximum. The assertion stays a rule and the analysis engine supplies the
+  number through a named fact.
+- Not rules at all: BOM-cost-by-application and similar partition, aggregate, and join reports are
+  queries, the same primitives with tabular output and no pass or fail.
 
 ### Source-format capabilities
 
-The same gate covers a third axis besides the board and parameter tiers, source-format capability
-(WS3-096). A rule that infers a defect from the absence of a construct the source cannot express
-declares the capability it needs in `Rule.RequiresCapability`, and a review over a design that lacks
-it reads that item as not-applicable with a reason rather than as a silent pass. Without the gate
-the rule still produces no findings there, and a report cannot tell that from a clean pass, so the
-requirement is declared rather than inferred.
+The gate that keeps the copper rules unavailable on a netlist-only design also covers a third axis
+besides the board and parameter tiers, source-format capability (WS3-096). A rule that infers a
+defect from the absence of a construct the source cannot express declares the capability it needs in
+`Rule.RequiresCapability`, and a review over a design that lacks it reads that item as
+not-applicable with a reason rather than as a silent pass. Without the gate the rule still produces
+no findings there, and a report cannot tell that from a clean pass, so the requirement is declared
+rather than inferred.
 
 | Capability | Present when | Missing on | Rule that needs it | Queryable twin |
 |---|---|---|---|---|
@@ -236,29 +251,12 @@ did until agni issue 420, and the considered set must not claim coverage the rea
 <details>
 <summary>The rule that forced that second kind of capability</summary>
 
-`duplicate-ref-des` is the case, and it is why the axis exists at all. The rule IS a reader
-diagnostic, so on a reader that never computed it the rule finds nothing, and a clean design looks
-exactly the same. It read as passing on four of five formats until the declaration existed (agni
-issue 309). A rule whose entire subject is a reader diagnostic should declare the matching
-capability.
+The axis exists because of `duplicate-ref-des`. That rule IS a reader diagnostic, so on a reader
+that never computed it the rule finds nothing, and a clean design looks exactly the same. It read as
+passing on four of five formats until the declaration existed (agni issue 309). A rule whose entire
+subject is a reader diagnostic should declare the matching capability.
 
 </details>
-
-Sequencing the not-yet-built rules by what each waits on:
-
-- Buildable now on the pure netlist: signal-net naming conventions, transmit and receive
-  connection-role compatibility, test-point coverage, diode orientation once pin polarity roles
-  land, and the ordering variants of the ESD and protection rules once the reachability primitive
-  lands.
-- With the [parameter layer](../datasheet-layer/): cap voltage derating, logic-level input
-  versus output margin, passive value versus recommendation, IC pin-mapping against a reference
-  map. These are the Tier-X category, a rule that proves a margin from datasheet
-  data.
-- Touching analysis for an input only: inductor saturation current versus peak current, cap
-  voltage versus a computed rail maximum. The assertion stays a rule and the analysis engine
-  supplies the number through a named fact.
-- Not rules at all: BOM-cost-by-application and similar partition, aggregate, and join reports
-  are queries, the same primitives with tabular output and no pass or fail.
 
 ## The evaluation model
 
@@ -266,14 +264,16 @@ Rules evaluate over the neutral IR, producing findings tied to provenance so eac
 points back to a place in every affected revision, the same posture as the [semantic
 diff](../semantic-diff/). That makes rules format-agnostic and review-integrable.
 
-The layer is built library-first, in two phases.
+The layer was built library-first, in two phases. Phase 1 is the rules library in Go below. Phase 2
+was planned as a rule DSL, and it arrived as the datalog, interface-profile and design-intent shapes
+in [How a rule gets written](#how-a-rule-gets-written), each compiling to a `check.Rule`.
 
-### Phase 1: a rules library in Go
+### A rules library in Go
 
-Phase 1 is an embedded rules library. Rules are Go predicates over the IR that emit
-provenance-tied findings, built on a small set of query primitives: `select`, `traverse`,
-`forEach` and `exists`, `count`. The point of Phase 1 is to validate the primitives and the
-starter rule set against real designs before committing to any syntax.
+Phase 1 is an embedded rules library. Rules are Go predicates over the IR that emit provenance-tied
+findings, built on a small set of query primitives: `select`, `traverse`, `forEach` and `exists`,
+`count`. Phase 1 exists to validate the primitives and the starter rule set against real designs
+before committing to any syntax.
 
 The rule shape carries a deliberate split. Only the fields the engine acts on are typed: the
 rule's name, severity, the facts it reads, its evaluation function, and the prose that describes
@@ -288,12 +288,12 @@ instance, reports as unavailable. That keeps a green "no findings" distinguishab
 ran." When the missing layer arrives, the same rule becomes available with no change to its code.
 
 The catalog is composed from sources rather than being a global. A rule source yields rules, the
-built-ins are one source, an embedder's Go suite is another, and a later DSL compiler is a third.
-The built-ins keep bare names and every other source is namespaced, with the source stamped as a
-tag so a suite can be selected as an ordinary facet. A name collision after composition is
-rejected at wiring time rather than shadowing silently. An overlay in a separate module registers
-its own suite through a process-global registry, so the engine's CLI and server pick it up with
-no rewiring.
+built-ins are one source, an embedder's Go suite is another, and the datalog, profile and intent
+compilers are others. The built-ins keep bare names and every other source is namespaced, with the
+source stamped as a tag so a suite can be selected as an ordinary facet. A name collision after
+composition is rejected at wiring time rather than shadowing silently. An overlay in a separate
+module registers its own suite through a process-global registry, so the engine's CLI and server
+pick it up with no rewiring.
 
 Findings carry their subject kind, whether the subject is a net, a component, or a pin, so a
 consumer can group and highlight by entity instead of guessing from a string.
@@ -311,16 +311,16 @@ rule is unchanged. The value form supplies the evaluation function. What the val
 - Go stays a primitive, not the whole rule. A call node invokes a registered Go function by name,
   so a multi-clause heuristic can stay in Go without making the whole rule opaque. This is the
   escape hatch a datasheet-joined rule or an integrator uses for the awkward ten percent.
-- There is one optimization seam. The interpreter resolves every fact through a `Model`
-  interface, never the raw IR. Storage and indexing questions therefore have one answer. The
-  naive implementation uses precomputed maps and linear scans, and an indexed fact base is a
-  drop-in replacement no rule would notice.
+- Optimization has one entry point. The interpreter resolves every fact through a `Model` interface,
+  never the raw IR. Storage and indexing questions therefore have one answer. The naive
+  implementation uses precomputed maps and linear scans, and an indexed fact base is a drop-in
+  replacement no rule would notice.
 
 The original rules carry both forms. The Go evaluation stays canonical and a declarative twin is
-held to it by a parity test, identical findings over every fixture, plus a metadata check that
-the hand-written reads and primitives equal the derived ones. Writing those twins was the
-acceptance test that fixed the primitive set: every rule fit the tree plus a handful of Go
-helpers, and none needed a new primitive.
+held to it by a parity test, identical findings over every fixture, plus a metadata check that the
+hand-written reads and primitives equal the derived ones. Writing those twins was the acceptance
+test that fixed the primitive set, since every rule fit the tree plus a handful of Go helpers and
+none needed a new primitive.
 
 <details>
 <summary>Which rules get both forms, and what the second form costs</summary>
@@ -348,17 +348,18 @@ channel that records whether a source can even express "intentionally unconnecte
 is the gate that keeps per-pin absence rules quiet on bare netlist exports, where absence of a
 connection does not mean the pin was left unconnected on purpose.
 
-Two derived facts are worth calling out because they encode judgment a raw netlist does not
-carry. `component.class` classifies each placed part into a stable device class, resistor,
-capacitor, inductor, ferrite, diode, LED, TVS, fuse, connector, test point, crystal, IC,
-transistor, or unknown. It is derived from the reference-designator prefix, refined by part-type
-text and value, not stored as an IR field, because no format states it as source data. `pin.role`
-classifies a pin as anode, cathode, power, or ground from its name within the component's device
-class, so an IC's "K" pin never reads as a diode cathode. Pin electrical direction, by contrast,
-comes from the source library and is unreliable across formats. Some libraries type a passive's
-pins as inputs, and diode terminals arrive typed as inputs too. A direction-based rule therefore
-gates on class and role rather than trusting direction alone, which removes a whole family of
-false positives.
+Two derived facts encode judgment a raw netlist does not carry. `component.class` classifies each
+placed part into a stable device class such as resistor, capacitor, diode, TVS, connector, crystal,
+IC or transistor, or unknown when nothing establishes one (`model.ComponentClasses` holds the full
+vocabulary). No format states it as source data, so it is derived at ingestion from the
+reference-designator prefix, refined by part-type text and value and, when a datasheet corpus is
+loaded, by the part's spec, and stored as `ir.Component.device_classes` with each tag's evidence
+tier. `pin.role` classifies a pin as anode, cathode, gate, source, drain, power, or ground from its
+name within the component's device class, so an IC's "K" pin never reads as a diode cathode. Pin
+electrical direction, by contrast, comes from the source library and is unreliable across formats.
+Some libraries type a passive's pins as inputs, and diode terminals arrive typed as inputs too. A
+direction-based rule therefore gates on class and role rather than trusting direction alone, which
+removes a whole family of false positives.
 
 The declared reads are materialized as named, typed, provenanced relation tuples, the substrate a
 rule asserts over and an engineer's ad-hoc search queries over, so rules and search unify on one
@@ -367,19 +368,19 @@ and compare, and a citation that is never empty, since a fact you cannot cite is
 The projection is derived and regenerated on demand, never a second authoritative store, and a
 design read without a seeded datasheet set simply yields no parameter facts.
 
-A `query` package runs ad-hoc queries over these relations, every answer carrying the provenance
-of the facts that produced it. The query language is a small declarative Datalog rather than
-relational algebra, because circuits are graph-structured and the core queries are transitive
-closures, and because a declarative query says what, not how, so the evaluator behind it is
-swappable. The shipped fragment is conjunction and comparison, a built-in bounded transitive
-closure, stratified negation, aggregation (count, min, max, sum), string predicates (contains,
-prefix, suffix), and user-defined recursive rules evaluated to a stratified fixpoint. An overlay
-can register its own relations and pure filter predicates, so a private house database becomes a
-first-class query relation with no change to the evaluator.
+The `core/query` package, agni's adapter over the `jaala` datalog engine, runs ad-hoc queries over
+these relations, every answer carrying the provenance of the facts that produced it. The query
+language is a small declarative Datalog rather than relational algebra, because circuits are
+graph-structured and the core queries are transitive closures, and because a declarative query says
+what, not how, so the evaluator behind it is swappable. The shipped fragment is conjunction and
+comparison, a built-in bounded transitive closure, stratified negation, aggregation (count, min,
+max, sum, list, each optionally `distinct`, with `having` filtering the groups), string predicates
+(contains, prefix, suffix), and user-defined recursive rules evaluated to a stratified fixpoint. An
+overlay can register its own relations and pure filter predicates, so a private house database
+becomes a first-class query relation with no change to the evaluator.
 
-Because the datalog engine is written in plain Go with no external dependency, it runs
-client-side under a WebAssembly build as well as on the server. The command form prints answers
-with provenance:
+The datalog engine imports only the Go standard library, so it builds for WebAssembly as well as
+running on the server. The command form prints answers with provenance:
 
 ```
 $ agni query regulator.fires.kicad_sch --params seed/ \
@@ -397,12 +398,11 @@ current.
 ## What the kernel cannot do, and what is actually slow
 
 A rule body is already subgraph matching: a conjunctive query over a labelled graph is graph pattern
-matching, and the pull-up check is a three-node, two-edge pattern. So the interesting question is not
-whether shapes can be expressed but which specific things are missing, and whether the evaluator can
-carry the load if more rules move out of Go and into queries. Both halves were measured rather than
-argued.
+matching, and the pull-up check is a three-node, two-edge pattern. So the question is which specific
+things are missing, and whether the evaluator can carry the load if more rules move out of Go and
+into queries. Both halves were measured rather than argued.
 
-### Bounded repetition: already solved, and the remaining work is migration
+### Bounded repetition is solved, and what remains is migration
 
 Plain datalog gives unbounded transitive closure through recursion, but says nothing about distance.
 That is the one hole a circuit question keeps falling into, because protection questions are all
@@ -421,25 +421,26 @@ is a migration backlog and not an expressiveness gap. No new syntax makes those 
 because the syntax already exists.
 
 <details>
-<summary>Which escape hatches are redundant, and which are not shape problems at all</summary>
+<summary>Which Go functions are redundant, and which are not shape problems at all</summary>
 
-The catalog reaches into Go through a small function seam for things the query language could not
-say. Five of those functions are one shape repeated with a different payload: is there a TVS, a
-Zener, a power pin, or a datasheet-rated part within the two-hop series reach of this net. All of
-them are expressible in the form above, and the equivalent is already written down in the fact
-documentation. The rules that use them have simply not moved.
+The catalog reaches into Go through a small set of registered functions for things the query
+language could not say. Five of those functions are one shape repeated with a different payload: is
+there a TVS, a Zener, a power pin, or a datasheet-rated part within the two-hop series reach of this
+net. All of them are expressible in the form above, and the equivalent is already written down in
+the fact documentation. The rules that use them have simply not moved.
 
 The remaining Go functions are mostly not shape problems at all. They consult the naming lexicon,
 transform strings, or fold over entities. A path operator does not remove them, and a survey that
-counts every escape hatch as evidence for new kernel features will overstate the case.
+counts every Go function as evidence for new kernel features will overstate the case.
 
 </details>
 
-### The evaluator is the real constraint
+### What the evaluator cost, and what fixed it
 
-The interpreter's own documentation says a naive join is sufficient because one design's fact base is
-small. That assumption does not survive a real board. Measured against synthetic designs bracketing
-the size of a production industrial netlist (roughly 4,000 components and 1,600 nets):
+The interpreter's own documentation says a naive join is sufficient because one design's fact base
+is small. That assumption did not survive a real board. Measured, before jaala indexed its joins,
+against synthetic designs bracketing the size of a production industrial netlist (roughly 4,000
+components and 1,600 nets):
 
 | query shape | 100 components | 4,000 components | scaling |
 |---|---|---|---|
@@ -447,40 +448,46 @@ the size of a production industrial netlist (roughly 4,000 components and 1,600 
 | bounded reach (`?h <= 2`) | 18 ms | **1.4 s** | roughly linear |
 | recursive transitive closure | 22 ms | **28.3 s** | quadratic |
 
-Two results are worth reading carefully because they invert the obvious expectation.
+Two of those results inverted the obvious expectation.
 
-**The simplest shape is the slowest.** A two-atom conjunction with no recursion and no traversal costs
-15.7 seconds at board scale. Once the shared variable is bound by the first atom, the second atom is
-satisfied by scanning every fact of that relation, so the join is an unindexed nested loop. Nothing
-exotic is required to hit this: it is the shape of nearly every rule.
+**The simplest shape was the slowest.** A two-atom conjunction with no recursion and no traversal
+cost 15.7 seconds at board scale. Once the first atom bound the shared variable, the evaluator
+satisfied the second by scanning every fact of that relation, so the join was an unindexed nested
+loop. Nothing exotic was required to hit this, since nearly every rule is written this way.
 
-**The traversal everyone worries about is fine.** The bounded reach walk is the only shape that stays
-near-linear, because the walk is fan-bounded by construction. The feature that looks expensive is not
-the problem.
+**The traversal everyone worried about was fine.** The bounded reach walk was the only shape that
+stayed near-linear, because the walk is fan-bounded by construction.
 
-This reorders the work. Indexing facts by bound argument position addresses the common case and is
-the cheapest thing on the list. Replacing the derived-tuple set's linear-scan deduplication addresses
-recursion, which is a separate cost with a separate fix. Worst-case-optimal join algorithms are
-genuinely the right answer for cyclic patterns, and they are also not the first problem, because the
-query measured above is acyclic and already quadratic. Ordering them by sophistication rather than by
-measurement would fix the rarest case first.
+That ordered the work by measurement rather than by sophistication, and both fixes have since landed
+in jaala. The evaluator now indexes facts by bound argument position (`datalog/index.go`), which
+addressed the common case and was the cheapest thing on the list. Deduplicating a derived tuple is a
+bucket lookup in `addTuple` rather than a linear scan, which addressed recursion as a separate cost
+with a separate fix. Worst-case-optimal join algorithms are the right answer for cyclic patterns and
+were not the first problem, because the query measured above is acyclic and was already quadratic.
 
-The migration described in the previous section runs through this evaluator. Moving rules out of Go
-without addressing the join makes the catalog slower in exchange for making it more declarative,
-which is a trade nobody asked for. Sequence accordingly.
+Rerun with `go test ./core/query/ -bench BenchmarkEval` on one arm64 machine in September 2026, the
+same three shapes at 4,000 components took about 0.28 s (flat), 1.25 s (bounded reach) and 0.32 s
+(closure). The machine differs from the original measurement, so read those as the new order of
+magnitude rather than a precise ratio. The bounded reach walk is now the slowest of the three.
+
+The migration described in the previous section runs through this evaluator, which is why the join
+had to come first. Moving rules out of Go over an unindexed join would have made the catalog slower
+in exchange for making it more declarative.
 
 ### Matching is by homomorphism, and circuits usually mean the opposite
 
 Datalog matches patterns by homomorphism, so two variables in a body may bind the same node. Circuit
 intent is nearly always injective: a divider's two resistors must be two distinct parts, and a
 pull-up's rail must not be the signal net it pulls up. The language has no way to say that, so every
-author writes a disequality by hand, and the shipped rules already carry two of them.
+author writes a disequality by hand, and several shipped rules already carry them.
 
-Forgetting one produces no syntax error and no crash, just a silently wrong answer. Drop the
-disequality from the interface-presence rule and a single matching signal satisfies "two distinct
-signals are present", so an interface reports itself in use on half the evidence, and every
-completeness check downstream inherits that. This is the cheapest of the three problems to address
-and the only one whose failure mode is a wrong verdict rather than a slow one.
+Forgetting one produces no syntax error and no crash, just a silently wrong answer. The profile
+compiler now refuses a generated rule in that shape at init (`query.NonInjectiveRules`, WS3-127),
+but a hand-written query or rule gets no such check. Drop the disequality from the
+interface-presence rule and a single matching signal satisfies "two distinct signals are present",
+so an interface reports itself in use on half the evidence, and every completeness check downstream
+inherits that. This is the cheapest of the three problems to address and the only one whose failure
+mode is a wrong verdict rather than a slow one.
 
 ## LLM-assisted authoring
 
@@ -491,8 +498,8 @@ draft rule.
 
 The safety comes from the division of labor. The model authors the rule, the engine evaluates the
 design. The model is used only for structured translation, natural language into a formal rule,
-never as the judge. Its output is a verifiable artifact: the draft must parse, run, and produce
-the expected findings on a labeled fixture before a human accepts it. The verdict stays
+never as the judge. Its output is a verifiable artifact, since the draft must parse, run, and
+produce the expected findings on a labeled fixture before a human accepts it. The verdict stays
 deterministic and the model never enters the evaluation path. This is the opposite of a model
 judging the design directly, where the result cannot be proven.
 
@@ -505,8 +512,9 @@ plain-language explanation during review.
 
 ## A grammar sketch
 
-The syntax the library grows into is illustrative. Rules select over the IR, quantify, and
-report, with severity and message driving the finding.
+This sketch is historical. It predates the datalog, profile and intent shapes that shipped, and
+nothing parses it. It shows the syntax the library was expected to grow into, where rules select
+over the IR, quantify, and report, with severity and message driving the finding.
 
 ```
 rule single-pin-net (warning):

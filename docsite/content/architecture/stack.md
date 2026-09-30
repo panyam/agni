@@ -30,16 +30,16 @@ Ingestion has none of those requirements.
 
 ## Package layout
 
-The top-level tree separates the engine from the content it evaluates, and that split
-makes the open-core boundary real: the engine ships as a library and the rule content is one of
-several sources that register into it.
+The top-level tree separates the engine from the content it evaluates, so the engine ships
+as a library and the rule content is one of several sources that register into it. That split is
+the open-core boundary.
 
 {{ includeFile "figures/engine-layers.svg" }}
 
 - `core/` is the pure engine, and it owns the evaluation machinery and no rules: the IR model, the
-  net solver, `check` (the rule runtime and the spec interpreter), `query` (the Datalog evaluator),
+  net solver, `check` (the rule runtime and the spec interpreter), `query` (the adapter over the jaala Datalog engine),
   `diff`, `render`, and `svg`.
-- `stdlib/` is the standard content that registers into the engine through public seams. Each rule
+- `stdlib/` is the standard content that registers into the engine through public registration points. Each rule
   and relation keeps its reference markdown beside its code, embedded and served as the runtime
   `Detail`.
 - `readers/` holds the format readers plus `readers/formats`, the registry and loader that own all
@@ -48,8 +48,11 @@ several sources that register into it.
   `datasheet/derive`.
 - `cmd/` is the CLI, `protos/` and `gen/` are the schema and its generated code, `internal/`
   holds engine-private helpers, and `docsite/` is this documentation site, a separate module.
+- `service/` and `artifact/` are what an embedder composes against, the transport-neutral services
+  and the `mount://` URI their ports speak. `intake/`, `web/` and `clients/python` hold the
+  sanitized design summary, the browser viewer, and the typed Python client.
 
-The `core` and `stdlib` boundary is load-bearing: no `core` package depends on `stdlib` in its
+No `core` package depends on `stdlib` in its
 production build, so the engine has no built-in rules baked in, and a program composes the catalog
 it wants by importing the sources it wants. An extension adds its own rules the same way the standard
 library does.
@@ -57,8 +60,8 @@ library does.
 ## The IR is protobuf
 
 One `.proto` schema is the source of truth. Code generation produces Go structs, TypeScript
-types, and WebAssembly bindings from it, so Go and TypeScript consume the same schema and cannot
-drift. Protobuf's built-in retention of unknown fields also gives lossless round-tripping and
+types, and the Python client's messages from it, so every language consumes the same schema and
+none can drift. Protobuf's built-in retention of unknown fields also gives lossless round-tripping and
 forward compatibility for free, which matters when a reader meets a construct a later schema will
 name but the current one does not. The [ingestion and IR](../ingestion-and-ir/) page covers how
 readers populate it.
@@ -67,8 +70,8 @@ readers populate it.
 
 The UI follows a Model-View-Presenter split, with the view a pure function of a view-model. The
 view captures input, forwards semantic intents, executes canvas and WebGL draw calls, owns the
-GPU buffers and the DOM, and measures text. It holds no domain logic. Data flows one way, in the
-shape of an Elm or Redux app. The [web app and presenter](../web-app/) page covers the contract
+GPU buffers and the DOM, and measures text. It holds no domain logic. Data flows one way, as in
+an Elm or Redux app. The [web app and presenter](../web-app/) page covers the contract
 in full.
 
 Text metrics are the one measurement that has to travel the other way, because only the browser
@@ -77,7 +80,7 @@ measurement callback.
 
 ## WebAssembly is optional
 
-WebAssembly is a code-reuse mechanism, not a speed trick and not a requirement. The shipped
+WebAssembly is a code-reuse mechanism rather than a speed optimization, and nothing requires it. The shipped
 viewer runs entirely without it, keeping the engine server-side behind the Connect API and a thin
 TypeScript presenter in the browser. WebAssembly enters only if a surface wants to reuse the Go
 diff and IR logic in the browser directly, for an offline or zero-server viewer. A
@@ -85,8 +88,7 @@ high-frequency surface such as an editor would use a TypeScript presenter instea
 per-event boundary crossing.
 
 The order of work is build the viewer, profile it, and push work into WebAssembly only if
-TypeScript cannot keep up. There is no reason to pre-optimize a boundary before a real surface
-demands it.
+TypeScript cannot keep up. We do not optimize the boundary until a real surface demands it.
 
 <details>
 <summary>How the boundary would be kept cheap, if a surface ever needs it</summary>

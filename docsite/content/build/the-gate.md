@@ -32,7 +32,7 @@ flowchart LR
 gitignored. `testall` depends on it, so the gate always has the corpus.
 
 Those boards are real designs published by other people, each under its own licence (Apache-2.0,
-CERN-OHL-P). Keeping them out of this tree is what lets this repo stay uniformly Apache-2.0. They are
+CERN-OHL-P). Keeping them out of this tree lets this repo stay uniformly Apache-2.0. They are
 worth having because every fixture we authored was built to the reader's own assumptions, so none of
 them can catch an assumption that is wrong. The first one added found three reader bugs.
 
@@ -40,24 +40,23 @@ them can catch an assumption that is wrong. The first one added found three read
 version, replace the checksums with the ones from the release's `SHA256SUMS`, and run `make samples`.
 The stamp is a hash of the pin file, so editing it re-fetches without anyone remembering to clean.
 
-**There is no offline escape hatch, and that is deliberate.** Every failure path in
+**The fetch has no offline mode, and that is deliberate.** Every failure path in
 `hack/fetch_samples.sh` exits non-zero: a download that fails, a checksum that does not match, a
-tarball that extracts to no schematics. A test whose corpus quietly failed to arrive does not fail, it
-passes over an empty set, which is the third trap below wearing different clothes. For the same reason
-a test that reads the corpus calls `t.Fatalf` when it is absent rather than `t.Skip`.
+tarball that extracts to no schematics. A test whose corpus quietly failed to arrive passes over an
+empty set rather than failing, so a missing corpus would read as a green gate.
 
 A checksum mismatch means the published artifact changed or the download was corrupted. Do not update
 the pin to match without establishing which, because a released artifact is meant to be immutable.
 
-Two tarballs, and one stamp per artifact so the targets compose. `tutorial-board` is one board's
-schematics, about 3MB. `oracle-corpus` adds every board's copper for the reader cross-checks, about
-19MB, and the gate takes that one.
+There are two tarballs, each with its own stamp so the targets compose. `tutorial-board` is one
+board's schematics, about 3MB. `oracle-corpus` adds every board's copper for the reader
+cross-checks, about 19MB, and the gate takes that one.
 
-The per-artifact stamp is worth knowing about, because a single stamp over the requested SET made the
-two targets alternate: each wiped what the other had fetched. So `make testall` deleted the corpus a
-cross-view test needed, that test skipped, and it ran on nobody's machine for as long as it existed.
-A skipped test reports the same green as a passing one, which is why the tests that read the corpus
-now call `t.Fatalf` when it is absent rather than `t.Skip`.
+The stamp is per artifact because a single stamp over the requested SET made the two targets
+alternate: each wiped what the other had fetched. So `make testall` deleted the corpus a cross-view
+test needed, that test skipped, and it ran on nobody's machine for as long as it existed. A skipped
+test reports the same green as a passing one, which is why the tests that read the corpus now call
+`t.Fatalf` when it is absent rather than `t.Skip`.
 
 ## A fixture that exists twice is checked against its twin
 
@@ -65,11 +64,11 @@ now call `t.Fatalf` when it is absent rather than `t.Skip`.
 be byte-identical, and fails on two things: a declared group that has drifted, and a copy in the tree
 that the manifest does not declare.
 
-The second half is the one that keeps working. Twenty-four groups are declared, so duplication here
-is a habit rather than an accident, and the failure it guards against is a false green rather than a
-missing check. `demo/showcase.passes.kicad_pro` was a snapshot that lost three commits of net-class
-work while the conformance copy kept them, and every check in the repo passed from either file
-because none of them compared the two (agni issue 509).
+The second half is what keeps the manifest complete. Twenty-four groups are declared, so duplication
+here is a habit rather than an accident, and the failure it guards against is a false green rather
+than a missing check. `demo/showcase.passes.kicad_pro` was a snapshot that lost three commits of
+net-class work while the conformance copy kept them, and every check in the repo passed from either
+file because none of them compared the two (agni issue 509).
 
 It cannot infer which files are MEANT to match, and that is settled rather than pending. The tree is
 full of near-twins that must differ: `tjunc.fires` against `tjunc_labeled` and `tjunc_dotted`,
@@ -96,30 +95,30 @@ Where a constraint's test lives follows from what it READS, and there are three 
 |---|---|---|
 | the package graph, or the module | `deps_test.go` at the repo root | C13's embedding surface, C17's reader tier, C18's `go.mod`, C30's rule primitive |
 | one package's own rule | a test beside that package | C13's transport clause in `service/transport_guard_test.go`, C29 in `core/facts`, C19 as `hack/ir_model_check.sh` |
-| a line of source somewhere nobody would think to guard | `internal/constraints` | C6, C12, C20, C22, C24, C25, C28 |
+| a line of source somewhere nobody would think to guard | `internal/constraints` | C6, C12, C20, C22, C24, C25, C28, C33 |
 
-The other thirteen are REVIEW questions and say so. C5 turns on whether an ingestion path was
-approved, which is a fact about a conversation. C21 forbids sourcing component identity from a
-geometry model, and a rule that did would compile and pass. A proxy test for those would pass and
-read as the rule holding, which is worse than prose. The reasoning is in `DECISIONS.md`, under "A
-constraint's Verify is a test, or it says why it cannot be".
+The other fourteen are REVIEW questions and say so, and C15 is a tombstone merged into C17. C5 turns
+on whether an ingestion path was approved, which is a fact about a conversation. C21 forbids
+sourcing component identity from a geometry model, and a rule that did would compile and pass. A
+proxy test for those would pass and read as the rule holding, which is worse than prose. The
+reasoning is in `DECISIONS.md`, under "A constraint's Verify is a test, or it says why it cannot
+be".
 
 **A new rule owes a test, never a command typed into the document.** The September 2026 audit read
 every constraint against the tree and found that a Verify written as a `grep` rots in four distinct
 ways. Two returned hits on clean code, because the tree beneath them had grown legitimate new call
-sites. Two deferred themselves to work that had since landed. One could not fail at all, because what
-it grepped lives in a separate Go module. And two rules had no Verify while the tree already violated
-them, both found by reading rather than by anything failing. That last part is the whole argument:
-both halves of a structural violation compile and pass, so nothing surfaces one until somebody
-re-reads the rule.
+sites. Two deferred themselves to work that had since landed. One could not fail at all, because
+what it grepped lives in a separate Go module. And two rules had no Verify while the tree already
+violated them, both found by reading rather than by anything failing. Both halves of a structural
+violation compile and pass, so nothing surfaces one until somebody re-reads the rule.
 
 Two shapes are worth copying when you write one. A graph or single-writer check needs a POSITIVE
-CONTROL, so a pattern that matched nothing fails instead of reading as clean; that is what keeps a
-check alive through the rename that would otherwise make it vacuous. And when the invariant is
+CONTROL, so a pattern that matched nothing fails instead of reading as clean, and that keeps a
+check alive through a rename that would otherwise make it vacuous. And when the invariant is
 narrower than anything a sweep can express, use a RATCHET with an allowlist rather than weakening it.
-C24 wants "the raw unit is never COMPARED outside `datasheet/param`", no sweep can tell a comparison
+C24 wants "the raw unit is never COMPARED outside `datasheet/param`", but no sweep can tell a comparison
 from a display, so the two display sites are listed in the test and a new one is a deliberate
-addition. That addition is the review moment the constraint is asking for.
+addition. That addition is where a reviewer sees it.
 
 Red-check every one of them, per [evidence](evidence.md): break the thing it guards, watch it fail,
 put it back.
@@ -129,17 +128,17 @@ put it back.
 `tutorial-runs-check` deletes every `docsite/content/**/runs/*.output`, rebuilds them, and fails on
 any difference. It costs about 15 seconds.
 
-Regenerating is the only thing that works, because a capture's freshness stamp hashes its SPEC and its
-FIXTURE and never the engine. An engine change that alters output leaves every stamp valid, so an
-ordinary docsite build rewrites nothing. Measured: after changing the coverage line's wording, a plain
+Regenerating is the only thing that works, because a capture's freshness stamp hashes its SPEC and
+its FIXTURE and never the engine. An engine change that alters output leaves every stamp valid, so
+an ordinary docsite build rewrites nothing. When we changed the coverage line's wording, a plain
 build rewrote 0 captures and a forced regeneration rewrote 12. A capture edited BY HAND keeps its
 stamp too, and used to pass the entire gate.
 
 One capture is exempt, listed with its reason in `hack/tutorial_runs_check.ignore`. The force layout is
 not bit-identical across architectures (agni issue 472), so `agni render --compare` legitimately
 answers differently on arm64 and amd64 and no amount of regenerating makes it agree. That file is the
-gate's only exemption, a capture belongs in it only when its command is not a function of this repo,
-and a capture that merely went stale is stale.
+gate's only exemption. A capture belongs in it only when its command is not a function of this repo,
+and never because it went stale.
 
 **It checks the capture and not the prose around it.** A page that quotes a run's last line in a
 hand-written fence keeps whatever numbers it was written with, because the check regenerates
@@ -161,47 +160,47 @@ and the gate then goes red after the commit lands. Commit the fixtures first, re
 fixture holding files git neither tracks nor ignores, naming them and saying to commit first, so the
 local run fails the way CI would instead of passing and failing one push later. It cost three
 branches in one session before the check existed, twice right after the person had described the
-trap. Files git IGNORES stay invisible, and that distinction is the whole of it: counting them is
-agni issue 357, where the tutorial's own `make report` output meant everyone who had followed the
-tutorial rewrote the committed stamp on every gate run. `--exclude-standard` is the line between
-generated output nobody commits and a fixture somebody forgot to.
+trap. Files git IGNORES stay invisible, because counting them was agni issue 357, where the
+tutorial's own `make report` output meant everyone who had followed the tutorial rewrote the
+committed stamp on every gate run. `--exclude-standard` is the line between generated output nobody
+commits and a fixture somebody forgot to.
 
 **A fixture under `tools/samples/` is the one that is meant to be ignored**, because `make samples`
 fetches it and the boards carry their own licences. A directory holding no tracked file at all is
-refused, so a fetched board needs a different stand-in, and it is `hack/samples.pin`: the stamp hashes
-the pin and the fixture's path in place of the content (agni issue 682). A pin bump therefore
-regenerates every capture that reads a fetched board, including the ones whose board did not change,
-since the pin names artifacts rather than boards. The stamp needs no corpus on disk, so the docs
-workflow, which never fetches one, can still tell a current capture from a stale one. Only
-regenerating needs the board, and a run without it says to `make samples`.
+refused, so for a fetched board the stamp hashes `hack/samples.pin` and the fixture's path in place
+of the content (agni issue 682). A pin bump therefore regenerates every capture that reads a fetched
+board, including the ones whose board did not change, since the pin names artifacts rather than
+boards. The stamp needs no corpus on disk, so the docs workflow, which never fetches one, can still
+tell a current capture from a stale one. Only regenerating needs the board, and a run without it
+says to `make samples`.
 
-A spec that cannot render does NOT fail the docsite build, by design: `AgniRun` puts the error in the
-page, on the theory that a tutorial showing an error is a tutorial someone fixes. It also writes to
-stderr now, because an operator running the build otherwise sees nothing at all, and
+A spec that cannot render does NOT fail the docsite build, because `AgniRun` deliberately puts the
+error in the page, on the theory that a tutorial showing an error is a tutorial someone fixes. It
+also writes to stderr now, because an operator running the build otherwise sees nothing at all, and
 `tutorial_runs_check.sh` keeps that output and prints it when a capture did not regenerate rather
 than merely changing. A MISSING capture and a stale one look identical in a `diff -rq` and want
 opposite responses.
 
-That has a consequence worth knowing before it surprises you: **a file added to a fixture directory
-restamps every capture reading that directory, whatever the file is for.** The directories are shared
-test-data trees, not per-capture folders, so an addition made for an unrelated reason moves captures
-that have nothing to do with it. Adding bus fixtures to `readers/kicad/testdata/` restamped five
-captures across `guide/` and `learn/`.
+Because a stamp hashes every tracked file in its fixture directory, **a file added to a fixture
+directory restamps every capture reading that directory, whatever the file is for.** The directories
+are shared test-data trees, not per-capture folders, so an addition made for an unrelated reason
+moves captures that have nothing to do with it. Adding bus fixtures to `readers/kicad/testdata/`
+restamped five captures across `guide/` and `learn/`.
 
 | fixture directory | captures riding on it |
 |---|---:|
-| `examples/tutorial-project` | 58 |
-| `cmd/agni/testdata/conformance` | 23 |
+| `examples/tutorial-project` | 61 |
+| `cmd/agni/testdata/conformance` | 25 |
 | `demo` | 8 |
-| `readers/kicad/testdata` | 5 |
+| `readers/kicad/testdata` | 6 |
 | `cmd/agni/testdata/intent` | 4 |
-| `examples/common/designs` | 2 |
+| `examples/common/designs` | 3 |
 
 `readers/kicad/oracle_corpus.baseline` used to sit in `readers/kicad/testdata/`, so regenerating it
 churned those five captures for no reason anyone could act on. It was moved out to break that. The
-coupling is gone in both directions now, which is the point and also the catch: a reader fix that
-shrinks the baseline no longer moves the captures, and a change touching the fixtures still needs its
-own `make tutorial-runs` after the commit.
+coupling is gone in both directions now, so a reader fix that shrinks the baseline no longer moves
+the captures, while a change touching the fixtures still needs its own `make tutorial-runs` after
+the commit.
 
 ## Building a module is not the same as the module being tidy
 
@@ -212,14 +211,14 @@ diagnosed there rather than surfacing later as a confusing `examples-test` failu
 It exists because the gate built every module and never asked whether one was tidy, and those are
 different questions. An untidy module keeps building until some later change happens to need a
 requirement it never recorded, so the drift is invisible for exactly as long as nobody adds a
-dependency. **Eleven of the example modules had drifted this way before anyone looked.** What
-surfaced them was unrelated: promoting one root dependency to direct made `examples-test` fail with
+dependency. **Eleven of the example modules had drifted this way before anyone looked.** They
+surfaced by accident, when promoting one root dependency to direct made `examples-test` fail with
 "updates to go.mod needed", and the tidy that fixed it swept up years of accumulated drift in the
 same commit.
 
 The examples are separate modules on purpose (C10, so demokit and its terminal-UI dependencies stay
-out of the engine's `go.mod`), and that is exactly what makes this possible: each carries its own
-resolved graph and nothing recomputed them together.
+out of the engine's `go.mod`), so each carries its own resolved graph and nothing recomputed them
+together.
 
 **It snapshots and restores rather than reading `git status`**, the shape `tutorial-runs-check` uses
 and for the same reason. Reaching for `git diff` here is wrong twice over, and both ways were found
@@ -231,16 +230,16 @@ edit as untidiness, which is the regenerate → commit → gate ordering this sh
 
 **Never judge it by a wrapper's status.** `make testall | tail` reports *tail's* exit code, so a red
 gate reads green and an `&&` chain sails on. Twice now. The pipe is the common instance and not the
-only one: anything that runs the gate on your behalf and then reports its own completion, a task
-runner or a CI step or an agent harness, is reporting on ITSELF. One such wrapper announced success
-for a run whose `browser-test` had failed, and the run's own status was sitting in the log. Write
-the status into the log and read it from there, so the number you read came from make:
+only one, since anything that runs the gate on your behalf and then reports its own completion, a
+task runner or a CI step or an agent harness, is reporting on ITSELF. One such wrapper announced
+success for a run whose `browser-test` had failed, and the run's own status was sitting in the log.
+Write the status into the log and read it from there, so the number you read came from make:
 
     make testall > /tmp/t.log 2>&1; echo "EXIT=$?" >> /tmp/t.log
 
 **`catalog-docs-check` is git-status-based**, so a regenerated docsite file that is not yet COMMITTED
 reads as stale. Anything touching the shipped rule or relation catalog regenerates
-`docsite/content/reference/`, which makes the order load-bearing:
+`docsite/content/reference/`, so the commit has to land before the gate runs:
 
 ```mermaid
 flowchart TB
@@ -253,7 +252,7 @@ flowchart TB
 ```
 
 **`pnpm install` is per clone**, and this has bitten four times. After merging main, `cd web && pnpm
-install` if web deps changed. A plain re-install can be INSUFFICIENT: a partially-populated
+install` if web deps changed. A plain re-install can be INSUFFICIENT, because a partially-populated
 `node_modules` survives it and the bundle dies deep inside a transitive dep, which reads as a code bug
 rather than a toolchain one. **When the second error differs from the first**, stop re-installing and
 go to `rm -rf web/node_modules && pnpm install`. Match on the SHAPE, a failure inside a dep you did
@@ -261,8 +260,8 @@ not touch right after a checkout switch or a fresh clone, not on the message.
 
 ## A red gate that is none of your business
 
-The three above make a red gate read green. This one is the other direction, and it wasted an
-afternoon being mistaken for a regression on `main`.
+The three above are ways to misread the gate's colour. This one is a red on a tree that is fine, and
+it wasted an afternoon being mistaken for a regression on `main`.
 
 **A server already listening on :8080 fails three verdict-link tests.** `--server <url>` asks the server
 at that address whether it serves the mount a link would name, and withholds the link when the answer
@@ -276,41 +275,36 @@ the probe, does not serve the tests' `demo` mount, and every link is withheld:
 failure in that trio, check the port.
 
 **The server does not have to be one you started.** A gate run that dies partway can leave its own
-`agni serve` behind, and the next run then fails this trio for a reason the previous run created. Its
-command line names a binary under `~/Library/Caches/go-build` and the tests' own `--mount demo=demo`,
-which is how you tell a leaked one from a development server worth keeping. `lsof -nP -iTCP:8080
--sTCP:LISTEN` is the whole diagnosis. The general rule is worth more than the instance: this suite
-reaches out of the process, so **reproduce a suspected regression against unmodified `main` before
-reporting it**, which is what turned this one from a bug report into a `pkill`.
+`agni serve` behind, and the next run then fails this trio for a reason the previous run created.
+Its command line names a binary under `~/Library/Caches/go-build` and the tests' own `--mount
+demo=demo`, which is how you tell a leaked one from a development server worth keeping. `lsof -nP
+-iTCP:8080 -sTCP:LISTEN` is the whole diagnosis. More generally, this suite reaches out of the
+process, so **reproduce a suspected regression against unmodified `main` before reporting it**,
+which is what turned this one from a bug report into a `pkill`.
 
-**A gate that greps the tree sees a nested checkout too.** An agent that finishes inside this repo can
-leave a git worktree under `.claude/worktrees/`, a second full copy of the source, and
-`ir_model_check.sh` then found every reader's producer twice and failed. It skips that directory now.
-Same shape as the stamp trap from the other end: a check reading the working directory rather than
-the commit.
+**A gate that greps the tree sees a nested checkout too.** An agent that finishes inside this repo
+can leave a git worktree under `.claude/worktrees/`, a second full copy of the source, and
+`ir_model_check.sh` then found every reader's producer twice and failed. It skips that directory
+now. Like the stamp trap, it came from a check reading the working directory rather than the commit.
 
 ## What the gate does NOT run
 
-`make oracle` cross-checks the KiCad reader against real boards, and is outside `testall` for a
-different reason: cost. It reads a design's schematic our way, reads the same design's `.kicad_pcb`
-for the netlist KiCad itself resolved, and requires the two to agree on which pins share a net. That
-needs the 19MB both-views corpus rather than the 3MB the gate already fetches, so the target pulls it
+`make oracle` cross-checks the KiCad reader against real boards, and is outside `testall` because of
+what it costs. It reads a design's schematic our way, reads the same design's `.kicad_pcb` for the
+netlist KiCad itself resolved, and requires the two to agree on which pins share a net. That needs
+the 19MB both-views corpus rather than the 3MB the gate already fetches, so the target pulls it
 first.
 
-It compares the PARTITION, never net names and never counts, and both halves of that cost time to
-learn. Names cannot match, because an unnamed net is auto-named by each tool in its own vocabulary
-(`N$37` against `Net-(C104-Pad1)`) and KiCad writes a root-sheet label as `/AN0` where we write `AN0`.
-Counts hide compensating errors: on one demo board we read 47 nets against KiCad's 47 while
-disagreeing about 19 of them, because a swapped pin pair moves one connection out of a net and
-another in. See `build/evidence.md` on why a matching total is not agreement.
+It compares the PARTITION, never net names and never counts, for the reasons [net
+solving](../../architecture/net-solving/#verification-method) gives.
 
 It asserts a COMMITTED BASELINE of the disagreements rather than demanding zero, because several
 reader defects are still open and a test that has never passed teaches nothing.
-`readers/kicad/oracle_corpus.baseline` names the nets we still get wrong, so a fix shrinks
-the file and a regression grows it; `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Two boards is not
-a survey, and the file says what it does not cover: neither crosses a sheet boundary with a bus
-vector, so it does not move when that fix is reverted. The in-gate fixture pair
-(`hier_busvec_root.kicad_sch` against kicad-cli's own netlist) is that guard.
+`readers/kicad/oracle_corpus.baseline` names the nets we still get wrong, so a fix shrinks the file
+and a regression grows it; `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Two boards is not a
+survey, and the file records that neither crosses a sheet boundary with a bus vector, so it does not
+move when that fix is reverted. The in-gate fixture pair (`hier_busvec_root.kicad_sch` against
+kicad-cli's own netlist) is that guard.
 
 `make -C docsite figures` and `make -C docsite designs` re-render the images the docs embed, and
 nothing checks those for staleness at all (agni issue 453). The captures got a check; the pictures
@@ -330,13 +324,13 @@ kernel-picked port, so it will not fight a dev server you already have.
 **A Chromium that is present can still be the wrong one, and the message blames the wrong thing.**
 Playwright pins a browser BUILD per release, so `playwright-core` 1.62.1 wants chromium 1234 and a
 cache holding only 1243 fails with `Looks like Playwright was just installed or updated`. That reads
-as a change in your checkout, which may not have changed at all. The asymmetry is the cause: the
-browser cache is per MACHINE (`~/.cache/ms-playwright`) while `node_modules` is per clone, so a
-second checkout on a newer `playwright-core` installs its own revision and prunes the one this
-checkout wants. Read the wanted revision out of `web/node_modules/playwright-core/browsers.json`
-rather than guessing, and re-run the install: it fetches the missing revision and leaves any other
-in place, so the other checkout keeps its browser. The system libraries are version-independent and
-do not need `install-deps` again.
+as a change in your checkout, which may not have changed at all. The cause is that the browser cache
+is per MACHINE (`~/.cache/ms-playwright`) while `node_modules` is per clone, so a second checkout on
+a newer `playwright-core` installs its own revision and prunes the one this checkout wants. Read the
+wanted revision out of `web/node_modules/playwright-core/browsers.json` rather than guessing, and
+re-run the install, which fetches the missing revision and leaves any other in place, so the other
+checkout keeps its browser. The system libraries are version-independent and do not need
+`install-deps` again.
 
 It was outside the gate until PR 629, on the argument that a machine without a browser should not go
 red for a reason unrelated to the change under test. What overturned that was v0.2.0 shipping a
@@ -347,9 +341,9 @@ runs after the release. The specs take about 16 seconds; the real cost was alway
 download, which is now a cached CI step and a one-time cost for a developer.
 
 **Add to it sparingly.** Anything assertable in jsdom belongs in `src/*.test.ts`, which runs in a
-fraction of the time and on any machine. Pixels are the claim. Read the layout traps in
-`build/evidence.md` first: two versions of the first test there went green with the CSS under test
-deleted.
+fraction of the time and on any machine. A test belongs here only when its claim is about pixels.
+Read the layout traps in `build/evidence.md` first: two versions of the first test there went green
+with the CSS under test deleted.
 
 ## What a run leaves behind
 
@@ -359,30 +353,24 @@ deleted.
 | `readers/kicad/testdata/*.kicad_prl` | `kicad-cli` writes one beside ANY board it reads | ignored there; never part of a change |
 | golden SVGs | fail by design on any render-affecting change | `go test ./core/render/ -run Golden -update`, then read the diff |
 
-**A tutorial run's committed output should no longer go stale on you.** It carries an `#agni-run`
-stamp that is a hash of its inputs, and that hash used to cover every file in the fixture DIRECTORY.
-The tutorial's own `make report` target writes into `examples/tutorial-project/`, gitignored, so
-anyone who had followed the tutorial hashed two files nobody else had and every gate run rewrote a
-committed output they had not touched. `git checkout --` on it became part of the routine.
+If you add another generated artifact like a tutorial run's `#agni-run` stamp, a value written INTO a
+committed file has to be a function of committed content, or no single value can be correct for two
+people at once. Regenerating and committing is the fix that looks right and only moves the staleness
+to whoever has not run the thing yet.
 
-It now hashes the fixture's git-TRACKED files, so a committed stamp is valid in every checkout (agni
-issue 357). If you add another generated artifact of this kind, a value written INTO a committed file
-has to be a function of committed content, or no single value can be correct for two people at once.
-Regenerating and committing is the fix that looks right and only moves the staleness to whoever has
-not run the thing yet.
-
-That ignore rule is SCOPED to `readers/kicad/testdata/` rather than a blanket `*.kicad_prl`, because
-the two under `cmd/agni/testdata/conformance/` are tracked on purpose so a project read sees the full
-sibling set. Do not "clean them up". Point kicad-cli at a new folder and you add an ignore rule there,
-and stage by explicit path, since a directory-wide `git add` sweeps them all up.
+The `.kicad_prl` ignore rule is SCOPED to `readers/kicad/testdata/` rather than a blanket
+`*.kicad_prl`, because the two under `cmd/agni/testdata/conformance/` are tracked on purpose so a
+project read sees the full sibling set. Do not "clean them up". Point kicad-cli at a new folder and
+you add an ignore rule there, and stage by explicit path, since a directory-wide `git add` sweeps
+them all up.
 
 ## Generated code
 
-**After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** Additive fields build
-green, so a skipped TS regen used to go unnoticed until the next regen churned. `make proto-check` now
-fails the gate on either half being stale, and names which half drifted and the command that fixes it.
-Unlike `catalog-docs-check` it carries no commit-first trap, because it generates into a throwaway
-tree and diffs.
+**After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py`
+(Python).** Additive fields build green, so a skipped TS regen used to go unnoticed until the next
+regen churned. `make proto-check` now fails the gate on any of the three being stale, and names
+which one drifted and the command that fixes it. Unlike `catalog-docs-check` it carries no
+commit-first trap, because it generates into a throwaway tree and diffs.
 
 **Never hand-edit a generated file, and that includes reformatting it.** A commit that regrouped the
 imports in `gen/go/agni/v1/param/param.pb.go` turned main red, because `proto-check` compares the

@@ -3,7 +3,7 @@ title: "Checks contract"
 description: "The check-result document: what a run produced, in a form that outlives the run."
 ---
 
-A check run produces evidence about a design. Until now that evidence only existed as terminal
+A check run produces evidence about a design. Before this contract, that evidence only existed as terminal
 output or as an RPC response, which means it could not be archived, mailed, diffed against last
 week's run, or read by anyone who did not have the design and this build of the engine. The checks
 contract is the schema that makes it an artifact.
@@ -21,7 +21,7 @@ It is the engine's fourth contract, and it has the same shape as the other three
 
 `Finding`, `Subject`, `DatasheetCitation`, `CheckReport`, and the per-item review outcomes used to
 be declared in the web API package, next to request messages carrying a mount and a path. They were
-already the canonical shapes: the CLI's `check --format json` emits the same `Finding` the browser
+already the canonical shapes, since the CLI's `check --format json` emits the same `Finding` the browser
 receives. But "canonical" was a convention held up by one conversion function, and a document meant
 to be written to disk had nowhere to be defined except a package full of transport types.
 
@@ -34,21 +34,21 @@ to any one caller.
 
 `CheckResults` is deliberately self-contained. It carries:
 
-- **`meta`**: what produced it, at what build, when. A results document is only comparable to
+- **`meta`** records what produced it, at what build, and when. A results document is only comparable to
   another once you know which tool and which build made each.
-- **`design`**: the source it was about and a content hash of that source. The hash is the revision
-  identity. It makes a findings diff between two revisions meaningful, and it stops a stale document
-  from being silently read against a design that has since changed.
-- **`run`**: which overlay tiers were attached. Without this a reader cannot tell a design with no
+- **`design`** names the source it was about and carries a content hash of that source. The hash
+  is the revision identity. It makes a findings diff between two revisions meaningful, and it stops a
+  stale document from being silently read against a design that has since changed.
+- **`run`** records which overlay tiers were attached. Without it a reader cannot tell a design with no
   datasheet violations from a run that had no datasheet corpus. It is derived from the RESOLVED
   overlay, never from the caller's flags, because those are two different questions once a design
   belongs to a project: the run composes the project's config whether or not anyone passed
   `--params`. Building it from the caller's own flags is a bug this document already shipped, and it
   failed in the reassuring direction (see [Provenance is read off the resolved
   overlay](#provenance-is-read-off-the-resolved-overlay)).
-- **`catalog`**: the rules that actually ran. This is what distinguishes a clean design from a run
+- **`catalog`** lists the rules that actually ran, which distinguishes a clean design from a run
   that checked nothing.
-- **`findings`**, and for a review run **`areas`** of per-item outcomes.
+- **`findings`** holds the findings, and for a review run **`areas`** holds the per-item outcomes.
 
 Self-containment is an acceptance test rather than an aspiration. Writing a run and re-rendering it
 from the document alone reproduces the original output byte for byte, and the test proves it by
@@ -60,13 +60,13 @@ rm design.kicad_sch
 agni results run.results.json --format markdown   # identical
 ```
 
-The parity is structural, not asserted: `agni results` renders through the same writers `agni check`
+Parity holds by construction, since `agni results` renders through the same writers `agni check`
 and `agni review` use, and the severity pivot lives in one function both a live run and a reloaded
 document call. Two writers held equal by a test drift the first time someone edits one of them.
 
 ## A flat findings list says which rules could not run
 
-`CheckDesignResponse` carries `skipped`: the selected rules `check.Available` gated on this design,
+`CheckDesignResponse` carries `skipped`, listing the selected rules `check.Available` gated on this design,
 each with the reason the rule itself gave.
 
 It exists because silence reads as coverage, one tier below where the outcome vocabulary fixes it. A
@@ -77,16 +77,16 @@ and the last thing they would think to doubt.
 
 It is deliberately NOT the outcome vocabulary below. A flat rule sweep has no checklist item to
 score, so it reports which rules were gated and why, and nothing more. `check.Available` is asked here
-with the MODEL, where `ListRules` asks it with a nil one: "can this rule ever run" and "did it run on
-this design" are different questions, and only the second can tell a reader their result is narrower
+with the MODEL, where `ListRules` asks it with a nil one, because "can this rule ever run" and
+"did it run on this design" are different questions, and only the second can tell a reader their result is narrower
 than their selection.
 
 The results document carries it too, beside `catalog`, so `agni check --format json` and an
 `agni results` re-render both show it and self-containment holds. An IMPORTED vendor report leaves it
-empty, on the same terms `meta.coverage_axis` is false for one: a foreign checker has no notion of a
+empty, on the same terms `meta.coverage_axis` is false for one, since a foreign checker has no notion of a
 rule it declined to run, and manufacturing the field would give an import a property it does not have.
 
-## The outcome vocabulary is the interesting part
+## The outcome vocabulary names every way a question went unanswered
 
 `pass` and `fail` are the two verdicts a flat violation list can express, and that is all any
 incumbent DRC or ERC report carries. The review layer adds verdicts for every distinct way a
@@ -94,20 +94,20 @@ question went unanswered: `not-applicable`, `not-automated`, `needs-data`, `need
 `computed-n/a`, and `provisional` for an answer resting on data not yet trustworthy. Each of those
 exists because a check that did not evaluate had been scoring as a pass.
 
-That asymmetry is a feature of the schema, not a gap in it. When a foreign tool's results are
+The schema keeps that asymmetry on purpose. When a foreign tool's results are
 imported, they must arrive visibly weaker than a native run rather than having a coverage axis
 manufactured for them. `outcome` is a string rather than an enum for the same reason `severity` is:
-a new honest verdict should be a review-layer change, not a schema migration.
+a verdict naming a new way to go unanswered should be a review-layer change, not a schema migration.
 
-### Covered and answered are two numbers, and the gap between them is the point
+### Covered and answered are two numbers
 
 `Tally` derives two counts over those outcomes, and a reader who treats them as one will draw a wrong
 conclusion from a real report.
 
-`Covered()` is `Total - NotAutomated`: how many items a MECHANISM exists for. It moves when a rule
+`Covered()` is `Total - NotAutomated`, the count of items a MECHANISM exists for. It moves when a rule
 leaves the catalog, as a moved profiles directory or a renamed conventions file makes it do.
 
-`Answered()` is `Pass + Fail + Provisional + ComputedNA`: how many items the run actually DECIDED. It
+`Answered()` is `Pass + Fail + Provisional + ComputedNA`, the count of items the run actually DECIDED. It
 moves for a second reason, and that reason is invisible to the first count. A rule can be present,
 selected, and unable to run, because `check.Available` gates it on a fact tier the model does not
 carry. That item reads `not-applicable`, which `Covered()` counts as covered.
@@ -153,16 +153,16 @@ was in place by then, so the deployment's name is only the fallback.
 
 Which tier a rule source came from is not recoverable after composition, since a compiled interface
 profile and a compiled intent declaration are both just rules in a catalog. That is why the flags
-travel on `ProjectConfig` rather than being derived from `Overlay.Sources`.
+travel as `Overlay.Profiles` and `Overlay.Intent` rather than being derived from `Overlay.Sources`.
 
 </details>
 
-The failure direction is why this is worth stating. Recording `false` for a corpus that WAS attached
+Recording `false` for a corpus that WAS attached
 makes a clean report read as better founded than it is, and nothing in the document contradicts it
 except the `catalog` snapshot, which nobody cross-reads. It is the same silence-reads-as-coverage
 shape the outcome vocabulary exists to remove, one layer up.
 
-## The considered set: what a rule looked at, not only what failed
+## The considered set records what a rule looked at, not only what failed
 
 A `Finding` is a violation, so a pass emits nothing and the set of subjects a rule EXAMINED is
 recorded nowhere. That answers "what is wrong with this board" and cannot answer "prove this pin is
@@ -196,7 +196,7 @@ reported the same nothing as a rule that never looked at it.
 
 `NO_LIMIT` is not a datasheet-only outcome, even though the datasheet rules are where it started. The
 question it answers is "was there a bound at all", and a project's own net-class definitions raise it
-in the same shape: `netclass-track-width` reaches its comparison over a net whose classes declare no
+too, as when `netclass-track-width` reaches its comparison over a net whose classes declare no
 width and has nothing to compare against, which is not a pass and is not a subject it failed to reach.
 Anywhere a rule compares a measurement against a limit somebody else stated, the limit can be absent.
 
@@ -207,11 +207,11 @@ field's contract: **a consumer must not count it as a failure.**
 
 A rule authored as a datalog query (`query.RuleFromQuery`) has a problem the hand-written rules do
 not. A goal yields the rows that MATCHED, so the subjects it passed over are not in the answer at
-all: `unterminated(?h)` produces {{ explainable "termination" "unterminated" }}
-{{ explainable "bus" "buses" }} and nothing produces the terminated ones. For a long time every rule
+all (`unterminated(?h)` produces {{ explainable "termination" "unterminated" }}
+{{ explainable "bus" "buses" }} and nothing produces the terminated ones). For a long time every rule
 this bridge compiled reported failures only, which covered the whole `profile/` and `dl/` families.
 
-A `FindingQuery` now carries an optional `Domain`: a second goal over the same program whose rows are
+A `FindingQuery` now carries an optional `Domain`, a second goal over the same program whose rows are
 the subjects the rule EXAMINED. The bridge evaluates both, reports the difference as passes, and sets
 `StatesConsideredSet`. Leaving it unset keeps the old shape, so a rule that declares nothing claims
 nothing.
@@ -223,7 +223,7 @@ property anything downstream can act on. A declaration fails safe.
 <details>
 <summary>The three rules that defeat the obvious inference</summary>
 
-The inference looks easy: for the ESD requirement the domain is exactly the goal's body minus its
+The inference looks easy, since for the ESD requirement the domain is exactly the goal's body minus its
 negated literal. Then:
 
 - `signal-dangling` ends in a COMPARISON with no negation, so "the body minus its negation" is the
@@ -238,14 +238,14 @@ negated literal. Then:
 </details>
 
 The same rule applies to a capability gate. `power-pin-mistyped` keeps `has_nc_channel` in its
-domain, because that predicate is not a test a pin passes: it is whether the FORMAT can answer the
-question. A pin read from EDIF was never judged, and putting it in the considered set would report
+domain, because that predicate asks whether the FORMAT can answer the question rather than testing
+the pin. A pin read from EDIF was never judged, and putting it in the considered set would report
 every supply pin as verified by a rule that is structurally silent there.
 
 ### A witness is what makes a pass evidence
 
-`Witness.statement` is the line a person reads. What it rests on splits in two, and the split is
-load-bearing rather than bookkeeping:
+`Witness.statement` is the line a person reads. What it rests on splits in two, and only one
+half can be drawn:
 
 - **`Witness.terms`** are labelled VALUES ("absolute maximum" = "3.6 V"). A term's value is a bare
   string, so nothing can resolve it to something drawable.
@@ -277,7 +277,7 @@ the N nets encoding its value. Naming fewer would give several answers one id.
 Order is the rule's and is significant, since a tracking bound reads subject-pin minus reference-pin.
 A symmetric relation is canonicalised by the rule before it reaches the wire, never by a consumer.
 
-A `Finding.subject` stays SINGULAR and is one of these. The two answer different questions: the tuple
+A `Finding.subject` stays SINGULAR and is one of these. The two answer different questions, since the tuple
 is the verdict's identity, and a finding's subject is the one entity a reader has to change. Everything
 else the finding names is in its `context`, which is where a consumer that wants equal standing across
 all of them looks.
@@ -288,26 +288,26 @@ all of them looks.
 server run name the same verdict without talking to each other. It is the `mount://` parity argument
 one level down.
 
-Built from the rule, the kind and the kind's own reference, and from nothing else: not run order, not
-the message text, and **not the outcome**. Leaving the outcome out is what lets a link filed against a
+The id is built from the rule, the kind and the kind's own reference, and never from run order,
+the message text, or **the outcome**. Leaving the outcome out is what lets a link filed against a
 passing check survive the answer flipping, which is when someone most wants to follow it. The ref's
 grammar belongs to the kind rather than being a positional tuple of every kind's fields, because
 `Subject` is already a widening union and a positional key would change format every time a kind is
 added.
 
-The id is GENERATED and never parsed: one function builds it and nothing splits it back, because the
-structure travels in `subjects` where a consumer reads it typed.
+The id is GENERATED and never parsed, with one function building it and nothing splitting it back,
+because the structure travels in `subjects` where a consumer reads it typed.
 
 <details>
 <summary>What that buys, and the one limit it accepts</summary>
 
 Never parsing it is what lets a ref keep its own colons (`symbol:Library:Symbol`) and its own commas
 (an endpoint's `0,0`). The four characters the tuple syntax uses are percent-escaped inside a ref,
-which is not academic: an endpoint's ref has a comma in the delimiter position, and without the
+because an endpoint's ref has a comma in the delimiter position, and without the
 escape `("A,net:B")` and `("A", "B")` are one string.
 
-Known limit: two nets sharing a name share an id, because using the net id instead would make the id
-unconstructible. That matches how `Subject` already behaves on the wire.
+The known limit is that two nets sharing a name share an id, because using the net id instead
+would make the id unconstructible. That matches how `Subject` already behaves on the wire.
 
 </details>
 
@@ -315,8 +315,8 @@ unconstructible. That matches how `Subject` already behaves on the wire.
 
 `findings` carries exactly what it always did. A verdict list is a different answer to a different
 question, and folding passes into the violations list would make every consumer that counts rows
-start counting passes as defects. The CLI keeps them apart the same way: `check --verdicts` is a
-separate table, not extra rows.
+start counting passes as defects. The CLI keeps them apart the same way, printing `check --verdicts` as a
+separate table rather than as extra rows.
 
 Only rules that STATE a considered set contribute. A rule absent from `verdicts` is declining to say,
 not reporting that it considered nothing, and a consumer must not read those the same way. That is
@@ -348,7 +348,7 @@ agni results ours.json --compare theirs.json
 Three things about it are deliberate.
 
 **It is not a `formats` reader.** Every capability on that registry answers a question about a design
-file: give me its netlist, its geometry, its board. A results file describes a design it does not
+file, such as its netlist, its geometry or its board. A results file describes a design it does not
 contain and cannot answer any of them. Registering it would make the capability set mean two
 different things, so the import is a separate path. The Loader's job is producing a model, and this
 produces evidence *about* one.
@@ -361,8 +361,8 @@ since an import and a clean native run both look like "few findings", so it has 
 rather than inferred.
 
 **The residue is reported, not dropped.** A foreign checker names entities in free text ("Pad 1
-[VCC] of R1 on B.Cu"), so attaching a violation to our model is a parse, and a parse has a residue: a
-schematic wire's description carries only its orientation and length. Unattached findings are kept
+[VCC] of R1 on B.Cu"), so attaching a violation to our model is a parse, and a parse has a residue (a
+schematic wire's description carries only its orientation and length). Unattached findings are kept
 and counted by class in `import_summary`, because a consumer seeing 40 imported findings has to be
 able to tell "the tool found 40 things" from "the tool found 60 and we understood 40". A parsed
 {{ explainable "reference-designator" "ref-des" }} that names no component in the loaded design
@@ -371,16 +371,16 @@ than no join.
 
 ### The oracle becomes a harness
 
-Verifying rule semantics against kicad-cli was already standing practice, and it has repeatedly paid:
-it is what caught mid-span labels, endpoint-only pin connections, and the brace escapes when unit
+Verifying rule semantics against kicad-cli was already standing practice, and it has repeatedly paid
+off by catching mid-span labels, endpoint-only pin connections, and the brace escapes when unit
 tests did not. Every one of those was a person reading two outputs side by side. `--compare` makes it
 a gate.
 
 The split is keyed on the **entity** each tool flagged, not on rule names. Two tools have two rule
 vocabularies, and a table asserting "our `track-width` means their `track_width`" would be an
 unverified mapping that rots, the same objection that killed identifying an interface host by an MPN
-prefix list. What can be said without asserting anything is: here is the set of entities we flagged,
-here is theirs, here is the overlap. Rule co-occurrence is then reported as an *observation*, so an
+prefix list. What can be said without asserting anything is which entities we flagged, which they
+flagged, and where the two overlap. Rule co-occurrence is then reported as an *observation*, so an
 equivalence can be discovered from evidence instead of declared up front.
 
 A pin finding keys to its component, because one tool flagging "R1 pin 2" and another flagging "R1"
@@ -391,8 +391,8 @@ is a difference in reporting granularity, not a disagreement.
 A results document says what a run found. The rule-definition half says what a rule *is*, in a form
 that is data rather than code.
 
-`check.Rule` is not that form and must not become it: a Rule carries an `Eval` closure, and a Go func
-has no wire form. Reaching for one would mean shipping code as data or amputating the escape hatch
+`check.Rule` is not that form and must not become it, because a Rule carries an `Eval` closure and a Go func
+has no wire form. Reaching for one would mean shipping code as data or dropping the hand-written `Eval`
 that makes the catalog practical. The serializable artifact is the rule's **source**, and compiling is
 exactly the step that produces the non-serializable part. The engine already made that split in three
 places, and `ruledef.proto` is the union of their inputs.
@@ -413,43 +413,43 @@ standing in for a family of near-identical checks, so the signature admits it ra
 every caller pretend otherwise.
 
 Each of those rules records which requirement produced it, in a `requirement` tag alongside the
-`profile` tag naming the interface. The pair is what lets a consumer address one ask of an interface
-rather than all of them: a review item binding `profile: CAN` selects the union of everything CAN
-compiles, while `profile: CAN` plus `requirement: esd` selects the one rule that answers that ask.
+`profile` tag naming the interface. The pair lets a consumer address one ask of an interface
+rather than all of them. Where a review item binding `profile: CAN` selects the union of everything CAN
+compiles, `profile: CAN` plus `requirement: esd` selects the one rule that answers that ask.
 
-The reason to record it as a tag rather than read it off the rule name is that a profile has to be
+It is recorded as a tag rather than read off the rule name because a profile has to be
 able to GROW. Under union semantics alone, adding a requirement re-scores every item already bound to
-that profile: they all start reporting a defect none of them describes, so an interface's checks
+that profile, and they all start reporting a defect none of them describes, so an interface's checks
 become effectively frozen once more than one item shares it. Selecting narrows the item to its own
 requirement without giving up the profile's presence gate. A bare rule binding gives that gate up,
 and an absent interface then reads as a hollow pass instead of not-applicable. A requirement the
 profile does not declare resolves to no rule and reads not-automated, on the same discipline as
 everything else here.
 
-### The FFI boundary is what keeps this honest
+### The FFI boundary keeps a rule definition serializable
 
 A spec needing behavior the vocabulary cannot express calls a registered function **by name**. The
 name is data; the Go function behind it is not. So a rule definition serializes to a closed vocabulary
 plus named references into a registry, the same posture the vendor-rule survey takes on arbitrary
-scripted checks. The escape hatch exists, it is bounded, and covering general code verbatim is a
+scripted checks. The registered-function path exists, it is bounded, and covering general code verbatim is a
 non-goal, because a scripted check is exactly as reviewable as the code inside it.
 
 ### Everything that cannot run is rejected when it is read
 
-An unknown entity set, an unknown fact, an unbound variable, an unregistered function, an unknown
-relation, an unknown requirement type, a requirement whose params cannot produce the check its type
+Loading rejects an unknown entity set, an unknown fact, an unbound variable, an unregistered
+function, an unknown relation, an unknown requirement type, a requirement whose params cannot produce the check its type
 promises, an over-broad signal matcher, a completeness requirement with no anchor. Each of those
 would otherwise compile to a rule that never fires, and a rule that never fires is indistinguishable
 from a design with nothing wrong with it. A deck stops at the first bad
-definition rather than loading partially, for the same reason: a catalog missing one rule looks
+definition rather than loading partially, because a catalog missing one rule looks
 exactly like a catalog that ran it and found nothing.
 
 Where the check can teach, it does. An unknown relation names the closest one in the catalog.
 
-## Reading a foreign rule deck: `.kicad_dru` on paper
+## Reading a `.kicad_dru` rule deck on paper
 
-The point of a neutral definition form is that a vendor's rule file becomes a front-end rather than a
-parallel path. `.kicad_dru` is the honest test case: it is the one incumbent rule language that is
+A neutral definition form lets a vendor's rule file become a front-end rather than a
+parallel path. `.kicad_dru` is the test case because it is the one incumbent rule language that is
 open, documented, and licensed for study. Mapping it is worth doing on paper *before* building the
 front-end, because the interesting result is which layer has to change.
 
@@ -466,8 +466,8 @@ Measured against the licensed 31-rule JLCPCB deck in the private rule corpus:
 
 Of the 31 rules, **17 are single-item** and **14 are pairwise** (they reference a second item `B`:
 6 `clearance`, 4 `hole_to_hole`, 3 `hole_clearance`, 1 `silk_clearance`). The pairwise half does not
-map at all, and that is not an oversight. A `Spec` binds exactly one entity, so `copper-clearance`
-ended up the one board rule with a hand-written Go `Eval`. A pairwise spatial join has
+map at all, because a `Spec` binds exactly one entity, which is why `copper-clearance`
+has a hand-written Go `Eval` rather than a spec. A pairwise spatial join has
 not yet earned AST nodes.
 
 <details>
@@ -481,14 +481,14 @@ blind/buried/micro-via predicates for the one `assertion`.
 
 </details>
 
-**The conclusion is the useful part: the definition schema does not need to change.** The shape of a
+**The definition schema does not need to change.** The shape of a
 `.kicad_dru` rule, which names a rule, states a condition, and makes a parametric comparison, is
 already `RuleMeta` plus `SpecBody.where` plus a `SpecCmp`. What is missing is the **fact vocabulary** (pad, layer, text, and
 board-edge facts) and **a two-entity scope**. Both are additions to the spec language rather than to
-this contract, and both have to clear the same bar every fact does: model the concept, not one
-vendor's spelling of it, and promote only when more than one source needs it.
+this contract, and both have to clear the bar every fact does, which is to model the concept rather
+than one vendor's spelling of it and to promote only when more than one source needs it.
 
-The corollary is a warning. A deck whose constraint kinds have no shipped counterpart must not
+A deck whose constraint kinds have no shipped counterpart must not
 evaluate clean. Loading 31 rules and silently running 6 of them would report a fab-capability pass
 that was never checked, the same false-pass failure the review outcomes exist to prevent. So
 load-time rejection is total rather than best-effort.
