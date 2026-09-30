@@ -343,6 +343,40 @@ The defined relation keeps `?r` and drops `?other`, so its tuples are already on
 and a plain `count` matches `count(distinct ?r)`. Drop `?r` from the head too and you are counting
 nets, not parts, which is the mistake this idiom is easiest to make.
 
+### Ask many questions at once (query sets)
+
+An audit is usually a workbook rather than a single question: which nets have no test point, how
+many ground test points there are, which passives a tester can measure. A **query set** keeps those
+questions in one YAML file, with the derived relations they share written once as a `preamble`,
+and `agni query --set` answers all of them over ONE read of the design:
+
+```yaml
+title: Test point audit
+preamble: |
+  has_tp(?n) :- component-on-net(?tp, ?n), component.class(?tp, "test_point");
+queries:
+  - name: Net count
+    query: entity(?net, "net") => count(?net)
+  - name: Nets with no test point
+    query: entity(?net, "net"), not has_tp(?net) => ?net
+  - name: Ground test points
+    query: net.ground(?net), component-on-net(?tp, ?net), component.class(?tp, "test_point") => count(distinct ?tp)
+```
+
+{{ agniRun "content/guide/runs/query-set.yaml" }}
+
+The preamble holds rules only; each query brings its own goal, and each may also carry a
+`description` the rendered report shows. `--format markdown` and `--format html` write the whole set
+as one document with a section per query, and `--format json` writes the `RunQuerySetResponse` wire
+message. csv is refused, because one csv file holds one table.
+
+A query that cannot be answered, a misspelled relation for instance, is reported under its own name
+and the rest still answer. The command then exits non-zero, after writing everything, so a script
+sees both the answers and the gap. `examples/netlist-audit` is a full audit written this way.
+
+A set holds TABLES. A question with a pass or fail answer belongs in a check or a review checklist,
+whose verdicts also say what passed and why.
+
 ### Search the board (any tier, one language)
 
 Board facts query the same way. "Nets routed thinner than 0.3 mm":

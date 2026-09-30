@@ -51,6 +51,20 @@ def to_rows(table: Table) -> Rows:
     raise TypeError(f"cannot tabulate a {type(table).__name__}")
 
 
+def set_sheets(resp: query_pb2.RunQuerySetResponse, allow_missing: bool = False) -> List[Tuple[str, Table]]:
+    """One ``(name, answer)`` per query of a set, in the set's order, ready for ``tables_to_xlsx``.
+
+    A query the set could not answer has no table, and a workbook that silently lacks its tab reads
+    as a question that matched nothing. So an unanswered query raises ``ValueError`` naming it and its
+    error, unless ``allow_missing`` asks for the answered ones alone. Names are used as sheet names,
+    so keep them within Excel's 31 characters or rename the pairs before writing.
+    """
+    missing = [f"{r.name}: {r.error}" for r in resp.results if r.error]
+    if missing and not allow_missing:
+        raise ValueError("unanswered queries: " + "; ".join(missing))
+    return [(r.name, r.result) for r in resp.results if not r.error]
+
+
 # Excel refuses these in a sheet name and caps the name at 31 characters.
 _BAD_SHEET = re.compile(r"[\[\]:*?/\\]")
 

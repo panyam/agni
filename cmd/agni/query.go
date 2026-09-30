@@ -31,8 +31,9 @@ func queryCmd() *cobra.Command {
 	var verbose bool
 	var specLib bool
 	var format, title string
+	var setPath string
 	c := &cobra.Command{
-		Use:   "query <file> <query>",
+		Use:   "query <file> <query> | query <file> --set <queries.yaml>",
 		Short: "Search the design fact base with a datalog query",
 		Long: `Run an ad-hoc datalog query over the design's fact relations and print each answer with
 its provenance. Relations:
@@ -59,6 +60,15 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			}
 			if showExamples || showRelations {
 				return nil
+			}
+			if setPath != "" {
+				if specLib {
+					return fmt.Errorf("--set cannot be combined with --speclib: a query set is asked of a design")
+				}
+				if format == "csv" {
+					return fmt.Errorf("--set cannot write csv: a csv holds one table, and a set is several. Use --format json, or ask one query at a time")
+				}
+				return cobra.ExactArgs(1)(cmd, args)
 			}
 			if specLib {
 				if paramsDir == "" {
@@ -130,6 +140,9 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			if err != nil {
 				return err
 			}
+			if setPath != "" {
+				return runQuerySet(cmd, svc, setPath, designURI, boardURI, overlay, format, title)
+			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
 				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
 			})
@@ -147,6 +160,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().BoolVar(&showRelations, "relations", false, "print the queryable relation catalog (grouped by kind) and exit")
 	c.Flags().StringVar(&format, "format", "text", "output format: text (the aligned terminal table), csv (spreadsheet-safe, header row, table only), json (rows with their citations kept apart), markdown or html (a VIEW: the question above its answer, ready to hand to someone). markdown and html carry the query; csv deliberately does not, because its first row has to be the header")
 	outFileFlag(c, &outPath)
+	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
 	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations, also print each relation's full reference doc")
 	return c
@@ -212,6 +226,83 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 		return rpt.TableHTML(w, t)
 	default:
 		return rpt.TableText(w, t)
+	}
+}
+
+// runQuerySet answers a query set over one read of the design (agni issue 729) and renders every
+// answer. Reading the file is the CLI's job; the service takes the set as a value (C22). The whole
+// document is written before any failure is reported, so a script gets the answers that exist and a
+// non-zero exit that says some are missing, rather than either alone.
+func runQuerySet(cmd *cobra.Command, svc *service.QueryService, path, designURI, boardURI string, overlay *webapi.OverlayConfig, format, title string) error {
+	var b []byte
+	var err error
+	if path == "-" {
+		// A set on stdin lets a caller that builds one in code pipe it in rather than write a file,
+		// which is how the Python client's CLI transport sends it.
+		path = "stdin"
+		b, err = io.ReadAll(cmd.InOrStdin())
+	} else {
+		b, err = os.ReadFile(path)
+	}
+	if err != nil {
+		return err
+	}
+	set, err := query.ParseQuerySet(b)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	if title != "" {
+		set.Title = title
+	}
+	resp, err := svc.RunQuerySet(cmd.Context(), &webapi.RunQuerySetRequest{
+		Set: service.QuerySetProto(set), Uri: designURI, BoardUri: boardURI, Overlay: overlay, AsNamed: readAsNamed,
+	})
+	if err != nil {
+		return err
+	}
+	if err := renderQuerySet(cmd.OutOrStdout(), format, set, resp); err != nil {
+		return err
+	}
+	failed := 0
+	for _, r := range resp.GetResults() {
+		if r.GetError() != "" {
+			failed++
+		}
+	}
+	if failed > 0 {
+		return fmt.Errorf("%d of %d queries in %s could not be answered", failed, len(resp.GetResults()), path)
+	}
+	return nil
+}
+
+// renderQuerySet writes a set's answers in the requested format. json is the wire message, as for a
+// single query (C31); the others are one document with a section per query.
+func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi.RunQuerySetResponse) error {
+	if format == "json" {
+		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(w, string(b))
+		return err
+	}
+	ts := rpt.TableSet{Title: resp.GetTitle(), Source: resp.GetSource(), Preamble: resp.GetPreamble()}
+	for i, r := range resp.GetResults() {
+		sec := rpt.TableSection{Name: r.GetName(), Description: r.GetDescription(), Error: r.GetError()}
+		if r.GetResult() != nil {
+			sec.Table = tableFromProto(r.GetResult(), "", r.GetResult().GetQuery(), "")
+		} else {
+			sec.Table = rpt.Table{Query: set.Queries[i].Query}
+		}
+		ts.Sections = append(ts.Sections, sec)
+	}
+	switch format {
+	case "markdown":
+		return rpt.TableSetMarkdown(w, ts)
+	case "html":
+		return rpt.TableSetHTML(w, ts)
+	default:
+		return rpt.TableSetText(w, ts)
 	}
 }
 

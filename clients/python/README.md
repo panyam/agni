@@ -18,6 +18,7 @@ resp = c.run_query(uri="mount://tut/designs/gateway", query='component.class(?c,
 The guide is `docsite/content/build/other-languages.md`: choosing a transport, which rpcs the CLI
 covers, where the two differ today, and writing tables to xlsx.
 
-- `examples/audit_workbook.py` writes a five-sheet audit workbook of the tutorial board.
+- `examples/audit_workbook.py` writes a five-sheet audit workbook of the tutorial board, asking its
+  four tables as one query set (`run_query_set`) so the design is read once.
 - `make proto-py` regenerates `src/agni/v1`. Never edit it by hand; `make proto-check` fails on drift.
 - `make python-test` runs the suite against a built binary and a real server.

@@ -109,13 +109,15 @@ class CliCommand:
     ``emits`` is the message the command prints, and ``wrap`` lifts it into the rpc's response where
     the command prints an inner message rather than the response itself. ``answers_on_failure`` marks
     a command that prints a complete answer and then exits non-zero, which ``trace`` does for an
-    endpoint naming nothing in the design.
+    endpoint naming nothing in the design. ``stdin``, when set, supplies text the command reads from
+    standard input, for a request too structured for flags.
     """
 
     argv: Callable[[Message], List[str]]
     emits: Type[Message]
     wrap: Optional[Callable[[Message], Message]] = None
     answers_on_failure: bool = False
+    stdin: Optional[Callable[[Message], str]] = None
 
 
 def _only(req: Message, allowed: Sequence[str]) -> None:
@@ -153,6 +155,16 @@ def _query_argv(req: Message) -> List[str]:
     return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req)
 
 
+def _query_set_argv(req: Message) -> List[str]:
+    _only(req, ("uri", "set", "board_uri", "as_named"))
+    return ["query", req.uri, "--set", "-", "--format", "json"] + _read_flags(req)
+
+
+def _query_set_stdin(req: Message) -> str:
+    # JSON is YAML, so the set goes to `--set -` as JSON and needs no YAML library here.
+    return json.dumps(json_format.MessageToDict(req.set, preserving_proto_field_name=True))
+
+
 def _diff_argv(req: Message) -> List[str]:
     _only(req, ("a_uri", "b_uri"))
     return ["diff", req.a_uri, req.b_uri, "--format", "json"]
@@ -181,6 +193,10 @@ CLI_COMMANDS: Dict[str, CliCommand] = {
     "CheckService/CheckDesign": CliCommand(_check_argv("json"), checks_pb2.CheckDesignResponse),
     "CheckService/GetCheckReport": CliCommand(_check_argv("report"), checks_pb2.GetCheckReportResponse),
     "QueryService/RunQuery": CliCommand(_query_argv, query_pb2.RunQueryResponse),
+    # A set with an unanswerable query prints every answer and exits 1, so the answer is still read.
+    "QueryService/RunQuerySet": CliCommand(
+        _query_set_argv, query_pb2.RunQuerySetResponse, stdin=_query_set_stdin, answers_on_failure=True
+    ),
     "DiffService/DiffDesigns": CliCommand(_diff_argv, diff_pb2.DiffDesignsResponse),
     "DesignService/TraceDesign": CliCommand(
         _trace_argv,
@@ -235,7 +251,8 @@ class CliTransport:
         cmd = CLI_COMMANDS.get(f"{rpc.service}/{rpc.method}")
         if cmd is None:
             raise CliUnsupported(f"{rpc.service}/{rpc.method} has no CLI command; use ConnectTransport")
-        out = self._run_text(cmd.argv(request), allow_failure=cmd.answers_on_failure)
+        stdin = cmd.stdin(request) if cmd.stdin else None
+        out = self._run_text(cmd.argv(request), allow_failure=cmd.answers_on_failure, stdin=stdin)
         msg = parse(out, cmd.emits, strict=self.strict)
         return cmd.wrap(msg) if cmd.wrap else msg
 
@@ -247,7 +264,7 @@ class CliTransport:
         """
         return parse(self._run_text(list(args)), message_type, strict=self.strict)
 
-    def _run_text(self, args: List[str], allow_failure: bool = False) -> str:
+    def _run_text(self, args: List[str], allow_failure: bool = False, stdin: Optional[str] = None) -> str:
         argv = [self.agni] + args
         for name, path in sorted(self.mounts.items()):
             argv += ["--mount", f"{name}={os.fspath(path)}"]
@@ -258,6 +275,7 @@ class CliTransport:
                 env=self.env,
                 capture_output=True,
                 text=True,
+                input=stdin,
                 timeout=self.timeout,
             )
         except FileNotFoundError as e:

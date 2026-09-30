@@ -51,7 +51,8 @@ read off the generated descriptors. The named methods (`check_design`, `run_quer
 ## Choosing a transport
 
 **The CLI transport** needs no server and ships as one binary. Every call starts a process and reads
-the design again, which is the cost on a large board.
+the design again, which is the cost on a large board. `run_query_set` asks many queries in one call,
+so over either transport a whole audit costs one read.
 
 **The Connect transport** posts JSON to `/agni.v1.webapi.<Service>/<Method>`. The server reads a
 design once and answers many questions about it. `agni serve` still needs a built viewer bundle
@@ -64,6 +65,7 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 | `CheckService/CheckDesign` | `check --format json` |
 | `CheckService/GetCheckReport` | `check --format report` |
 | `QueryService/RunQuery` | `query --format json` |
+| `QueryService/RunQuerySet` | `query --set - --format json`, the set sent on stdin |
 | `DiffService/DiffDesigns` | `diff --format json` |
 | `DesignService/TraceDesign` | `trace --format json` |
 | `DesignService/GetLayoutReport` | `render --report --report-format json` |
@@ -96,8 +98,11 @@ wrong.
 `tables_to_xlsx(path, [(sheet, table), ...])` writes one sheet per table with a bold header row, a
 frozen top row and an autofilter. A table is a `RunQueryResponse`, a `CheckDesignResponse` (one
 finding per row), or a `(header, rows)` pair. It needs the `xlsx` extra. Tab names, colours and
-highlighted rows stay in the caller, which can reopen the file with openpyxl.
-`clients/python/examples/audit_workbook.py` writes a five-sheet audit of the tutorial board this way.
+highlighted rows stay in the caller, which can reopen the file with openpyxl. `set_sheets(response)`
+turns a `RunQuerySetResponse` into those pairs, one per query in the set's order, and refuses a set
+with an unanswered query unless asked to drop it, because a workbook missing a tab reads as a table
+that matched nothing. `clients/python/examples/audit_workbook.py` writes a five-sheet audit of the
+tutorial board this way.
 
 The engine has no xlsx writer, on purpose. C1 keeps the engine's dependencies lean, and a workbook is
 a zip of cross-referencing XML parts whose layout belongs to whoever reads it.

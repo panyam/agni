@@ -27,6 +27,14 @@ service QueryService {
   // (C16), so a query over `param` returns no rows rather than an error.
   rpc RunQuery(RunQueryRequest) returns (RunQueryResponse);
 
+  // RunQuerySet answers a named list of queries over ONE read of the design (agni issue 729). An
+  // audit is usually a workbook rather than a question, and asking each table through RunQuery would
+  // read and project the design once per table. Every result has exactly the shape RunQuery returns
+  // for that query alone. A query that fails is reported against its name and the others still
+  // answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
+  // goal) and a design that cannot be read are errors for the call.
+  rpc RunQuerySet(RunQuerySetRequest) returns (RunQuerySetResponse);
+
   // ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
   // predicates plus any overlay-registered relations, each with its argument labels, a one-line
   // summary, and a kind for grouping. The catalog is static per service build (it does not depend
@@ -220,4 +228,55 @@ message ListRelationsResponse {
   repeated EntityQuery entity_queries = 3;
   // search_query is the find-by-name template the panel's search mode fills (agni issue 338).
   SearchQuery search_query = 4;
+}
+
+// QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values
+// rather than as YAML (C22); `agni query --set` reads the YAML file and sends this.
+message QuerySet {
+  // title names the set for a rendered report.
+  string title = 1;
+  // preamble holds rules (clauses with `:-`) every query may use. Rules only: each query brings its
+  // own goal.
+  string preamble = 2;
+  repeated NamedQuery queries = 3;
+}
+
+// NamedQuery is one entry of a QuerySet. name is unique within the set and identifies the entry's
+// answer.
+message NamedQuery {
+  string name = 1;
+  // query is the datalog text, the same surface RunQueryRequest.query accepts.
+  string query = 2;
+  // description is carried into a rendered report for the reader.
+  string description = 3;
+}
+
+message RunQuerySetRequest {
+  QuerySet set = 1;
+  // uri, overlay, board_uri and as_named mean what they mean on RunQueryRequest, and apply to the one
+  // read every query in the set shares.
+  string uri = 2;
+  OverlayConfig overlay = 3;
+  string board_uri = 4;
+  bool as_named = 5;
+}
+
+message RunQuerySetResponse {
+  // title and preamble echo the request, so a saved response states the questions it answers.
+  string title = 1;
+  string preamble = 2;
+  // source is the design the set was asked of, as RunQueryResponse.source.
+  string source = 3;
+  // results align with the request's queries, in the same order.
+  repeated NamedQueryResult results = 4;
+}
+
+// NamedQueryResult is one query's answer, or why it has none. Exactly one of result and error is set.
+message NamedQueryResult {
+  string name = 1;
+  string description = 2;
+  RunQueryResponse result = 3;
+  // error says why this query could not be answered: it would not parse, or it named something the
+  // design's relations do not have. The query's text is in the request.
+  string error = 4;
 }
