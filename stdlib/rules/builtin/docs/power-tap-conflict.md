@@ -3,14 +3,15 @@
 ### What it means
 
 One net's collapsed alias list holds two or more distinct DESIGN-WIDE
-names: power-symbol rails or global labels (rank 0 in the docs/22 scoping model).
+names, meaning power-symbol rails or global labels (rank 0 in the name-scoping model of
+`architecture/net-solving.md`).
 
 ### Why engineers want it
 
 Design-wide names unify by name across every sheet. Two of them
 on one net means every tap of EITHER name anywhere in the design lands on this net, so a
-wire joining a +3V3 symbol to a +3.3V symbol does not just alias two spellings, it merges
-two design-wide rails. That is either a real short drawn with symbols or a naming split
+wire joining a +3V3 symbol to a +3.3V symbol merges two design-wide rails rather than aliasing
+two spellings. That is either a real short drawn with symbols or a naming split
 that scatters one rail's story across two names.
 
 ### Impact
@@ -22,11 +23,11 @@ power-integrity defect; split naming corrupts rail-level review and any per-rail
 
 ### Scope note
 
-Design-wide names only: a rail's local nickname (a sheet label on the VCC
-net) is normal aliasing and stays quiet. Netclass consistency (one net, two netclasses) is
-NOT covered: netclasses live in the KiCad project file, which the reader deliberately
-stubs (OUT_OF_SCOPE.md). Formats whose readers emit every label at rank 0 (xschem, gEDA
-inline names) get the strict interpretation: any two names on one net are rivals there.
+Only design-wide names count, so a rail's local nickname (a sheet label on the VCC
+net) is normal aliasing and stays quiet. Net classes are NOT covered here. A KiCad net may belong
+to several classes, and `netclass-track-width` and `netclass-via-drill` check the constraints those
+classes declare. Formats whose readers emit every label at rank 0 (xschem, gEDA
+inline names) get the strict interpretation, where any two names on one net are rivals.
 
 ### Query structure
 

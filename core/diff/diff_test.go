@@ -81,10 +81,10 @@ func TestNetTaxonomy(t *testing.T) {
 	}
 }
 
-// TestNetClassSetDiff (WS1-050): net-class membership is a set, so ADDING a class to a net whose
-// existing class is unchanged is a Soft change. Under the old singular field this was invisible —
-// the second membership had nowhere to live, so the meta key never moved. Reordering the same set
-// is not a change, because the key is canonical.
+// TestNetClassSetDiff (WS1-050) relies on net-class membership being a set, so ADDING a class to a
+// net whose existing class is unchanged is a Soft change. Under the old singular field this was
+// invisible, because the second membership had nowhere to live, so the meta key never moved.
+// Reordering the same set is not a change, because the key is canonical.
 func TestNetClassSetDiff(t *testing.T) {
 	mk := func(classes ...string) *ir.Design {
 		d := &ir.Design{Nets: []*ir.Net{net("CLK", "rev", "U1.5")}}

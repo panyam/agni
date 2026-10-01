@@ -9,15 +9,15 @@ parts, as opposed to the legitimate case of one multi-unit part whose gates shar
 
 A duplicated ref-des is a common annotation slip. The two parts merge
 into one BOM line (one gets built, the other silently omitted) and their connections collide on the
-same net-join key, so the netlist is quietly wrong. Every capture tool's ERC flags it.
+same net-join key, so the netlist is quietly wrong. KiCad's ERC flags it, as do most.
 
 ### Why this is a reader diagnostic, not an IR check
 
-The IR keys components by ref-des and folds a
-multi-unit part into one component with sections (WS1-001), so by the time the netlist exists the
-collision is gone and a duplicate is indistinguishable from a multi-unit part. Only the reader, at
-ingestion, can tell them apart using its format's own rule (KiCad: the same unit claimed twice). It
-records the verdict in InputDiagnostics.RefDesCollisions; this rule only reports it (docs/19,
+The IR keys components by ref-des and folds a multi-unit part into one component with sections
+(WS1-001), so by the time the netlist exists the collision is gone and a duplicate is
+indistinguishable from a multi-unit part. Only the reader, at ingestion, can tell them apart using
+its format's own rule (in KiCad, the same unit claimed twice). It records the verdict in
+InputDiagnostics.RefDesCollisions; this rule only reports it (architecture/rules-and-checks.md,
 "Where a rule runs").
 
 ### What it means when this rule does not run
@@ -35,9 +35,9 @@ not, rather than reporting a pass nobody earned (agni issue 309).
 | IPC-2581 | a repeated refDes, with no gate construct to group placements | a real result |
 | EDIF | nothing: a multi-gate part is instances sharing a designator with no unit to tell them apart | not applicable, with that reason |
 
-An EDIF design is the case worth understanding. The gap is the format's, not the reader's: detecting
+On an EDIF design the gap is the format's, not the reader's, because detecting
 a collision there would mean reporting every multi-gate part as a duplicate. Not-applicable is the
-honest answer, and it is now the answer a report shows.
+accurate answer there, because the reader never looked, and a report now shows it.
 
 ![One ref-des on two distinct parts is flagged; units of one multi-unit part sharing a ref-des is fine](images/duplicate-ref-des.svg)
 

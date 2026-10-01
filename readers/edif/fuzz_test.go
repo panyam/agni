@@ -23,7 +23,7 @@ func seedCorpus(f *testing.F, glob string) {
 	}
 }
 
-// FuzzRead throws arbitrary bytes at the EDIF netlist parser: it must error, never panic,
+// FuzzRead throws arbitrary bytes at the EDIF netlist parser, which must error, never panic,
 // and never return a nil design without an error.
 func FuzzRead(f *testing.F) {
 	seedCorpus(f, "*.edn")

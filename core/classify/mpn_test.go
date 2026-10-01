@@ -41,8 +41,9 @@ func TestStampMPNNeverOverwrites(t *testing.T) {
 	}
 }
 
-// TestStampMPNFallsBackToThePartType is the Telesis shape and the reason agni issue 519 existed: the
-// number is on the type, the consumer reads the component, and before this pass the two never met.
+// TestStampMPNFallsBackToThePartType is the Telesis shape and the reason agni issue 519 existed.
+// The number is on the type, the consumer reads the component, and before this pass the two never
+// met.
 func TestStampMPNFallsBackToThePartType(t *testing.T) {
 	d := mpnDesign(nil, map[string]string{"mpn": "FROM-THE-TYPE"})
 	StampMPN(d)
@@ -51,9 +52,9 @@ func TestStampMPNFallsBackToThePartType(t *testing.T) {
 	}
 }
 
-// TestStampMPNInventsNothing. A design that states no part number anywhere must come back with none.
-// An invented value is worse than an absent one: it joins to a real datasheet and produces confident
-// findings about a part that is not on the board.
+// TestStampMPNInventsNothing. A design that states no part number anywhere must come back with
+// none. An invented value is worse than an absent one, because it joins to a real datasheet and
+// produces confident findings about a part that is not on the board.
 func TestStampMPNInventsNothing(t *testing.T) {
 	d := mpnDesign(map[string]string{"Description": "a resistor"}, map[string]string{"Package": "0603"})
 	StampMPN(d)

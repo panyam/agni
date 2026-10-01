@@ -9,9 +9,10 @@ import (
 // wantMembers is the DATA[0..7] member set an (array DATA 8) port expands to (WS1-034 Phase 2).
 var wantMembers = []string{"DATA[0]", "DATA[1]", "DATA[2]", "DATA[3]", "DATA[4]", "DATA[5]", "DATA[6]", "DATA[7]"}
 
-// TestEDIFArrayBusDetected: an EDIF `array` bus port is recorded as an unmodeled-bus diagnostic with
-// the array name as the label and its member set expanded (WS1-034). bus.edn declares the bus but joins
-// no member nets, so the members are named but unresolved — the bus-not-modeled rule fires there.
+// TestEDIFArrayBusDetected checks that an EDIF `array` bus port is recorded as an unmodeled-bus
+// diagnostic with the array name as the label and its member set expanded (WS1-034). bus.edn
+// declares the bus but joins no member nets, so the members are named but unresolved and the
+// bus-not-modeled rule fires there.
 func TestEDIFArrayBusDetected(t *testing.T) {
 	d, err := Read(bytes.NewReader(readBusFixture(t, "bus.edn")), "bus.edn")
 	if err != nil {
@@ -29,10 +30,10 @@ func TestEDIFArrayBusDetected(t *testing.T) {
 	}
 }
 
-// TestEDIFArrayBusResolved: bus_resolved.edn joins each of the 8 array members into a per-member net
-// named DATA[i], so the reader produces a design where every expanded member is a net. Combined with the
-// resolution gate (rule_bus_not_modeled_test.go), the bus-not-modeled finding is silent there — the
-// resolution-aware behavior PR 286 gave KiCad, now for EDIF.
+// TestEDIFArrayBusResolved reads bus_resolved.edn, which joins each of the 8 array members into a
+// per-member net named DATA[i], so the reader produces a design where every expanded member is a
+// net. Combined with the resolution gate (rule_bus_not_modeled_test.go), the bus-not-modeled
+// finding is silent there. That is the resolution-aware behavior PR 286 gave KiCad, now for EDIF.
 func TestEDIFArrayBusResolved(t *testing.T) {
 	d, err := Read(bytes.NewReader(readBusFixture(t, "bus_resolved.edn")), "bus_resolved.edn")
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 )
 
 // An overlay profile carrying a built-in's name supersedes that built-in's rules rather than running
-// beside them (WS3-056). Augmenting is what produced the false failures this replaced: see the partial
+// beside them (WS3-056). Augmenting is what produced the false failures this replaced; see the partial
 // naming-overlap case in cmd/agni's TestCheckNamingMapSupersedesCoreProfile.
 func TestOverlaySourceSupersedesBuiltinProfile(t *testing.T) {
 	p, err := Load(strings.NewReader("override: SPI_NOR\nsuffixes: {IO0: _DQ0}\n"))
@@ -33,7 +33,7 @@ func TestOverlaySourceSupersedesBuiltinProfile(t *testing.T) {
 	}
 }
 
-// A profile whose name matches no built-in is additive: it declares nothing, so the catalog composes
+// A profile whose name matches no built-in is additive. It declares nothing, so the catalog composes
 // it exactly as before. This is what keeps a customer's own proprietary interface from silently
 // suppressing anything.
 func TestOverlaySourceWithoutBuiltinNameDoesNotSupersede(t *testing.T) {
@@ -74,7 +74,8 @@ func TestSupersededCatalogRunsOverlayRulesOnly(t *testing.T) {
 	if overlay != len(SPINOR.Requirements) {
 		t.Errorf("overlay contributed %d SPI_NOR rules, want %d", overlay, len(SPINOR.Requirements))
 	}
-	// Another interface's rules are untouched: supersession is scoped to the interface, not the source.
+	// Another interface's rules are untouched, since supersession is scoped to the interface, not
+	// the source.
 	var can int
 	for _, r := range c.Rules() {
 		if r.Tags[TagProfile] == "CAN" {

@@ -46,7 +46,7 @@ func TestBuildValidateReport(t *testing.T) {
 
 func TestValidateExplicitVsWalkedUnknownExtension(t *testing.T) {
 	l := &formats.Loader{}
-	// Explicitly named: a failure.
+	// An explicitly named file fails.
 	rep, err := buildValidateReport(l, []string{"../../go.mod"})
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +54,8 @@ func TestValidateExplicitVsWalkedUnknownExtension(t *testing.T) {
 	if rep.Failed != 1 || !strings.Contains(rep.Files[0].Problems[0], "no reader") {
 		t.Fatalf("explicit unknown ext = %+v, want a no-reader failure", rep.Files[0])
 	}
-	// Walked: skipped, not failed (conformance dir mixes .edn/.kicad_sch with .yaml sidecars).
+	// A walked file is skipped, not failed (the conformance dir mixes .edn/.kicad_sch with .yaml
+	// sidecars).
 	rep, err = buildValidateReport(l, []string{"testdata/conformance"})
 	if err != nil {
 		t.Fatal(err)

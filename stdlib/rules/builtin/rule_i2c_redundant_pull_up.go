@@ -35,10 +35,9 @@ var i2cRedundantPullUp = &check.Rule{
 
 // i2cPullUpSplitRail flags an I2C net pulled to MORE THAN ONE rail. See Detail.
 //
-// A separate rule rather than a clause, because a rule carries one severity and one remedy and this
-// is a different defect from the one above: the fix is not "remove a resistor" but "decide which
-// supply this bus belongs to". The two are mutually exclusive by construction, so a bus is never
-// reported twice.
+// A separate rule rather than a clause, because its remedy is deciding which supply this bus belongs
+// to rather than removing a resistor. The two rules are mutually exclusive by construction, so a bus
+// is never reported twice (see pullUpCountVerdicts).
 var i2cPullUpSplitRail = &check.Rule{
 	Name:       "i2c-pull-up-split-rail",
 	Severity:   "warning",
@@ -57,11 +56,12 @@ var i2cPullUpSplitRail = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// i2cRedundantPullUpVerdicts decides every I2C net: more than one resistor, all landing on ONE rail.
+// i2cRedundantPullUpVerdicts decides every I2C net, failing one with more than one resistor, all
+// landing on ONE rail.
 //
-// Its considered set is every I2C net, including the ones pulled correctly, which is the point of a
-// count rule: "this bus has exactly one pull-up" is a fact worth stating, and a rule reporting only
-// the doubled ones could not distinguish a clean board from an unexamined one.
+// Its considered set is every I2C net, including the ones pulled correctly. "This bus has exactly one
+// pull-up" is a fact worth stating, and a rule reporting only the doubled ones could not distinguish a
+// clean board from an unexamined one.
 func i2cRedundantPullUpVerdicts(m check.Model) []check.Verdict {
 	return pullUpCountVerdicts(m, "i2c-redundant-pull-up", func(rails []string) bool {
 		return len(rails) == 1
@@ -70,8 +70,8 @@ func i2cRedundantPullUpVerdicts(m check.Model) []check.Verdict {
 	})
 }
 
-// i2cPullUpSplitRailVerdicts decides every I2C net: more than one resistor, landing on DIFFERENT
-// rails.
+// i2cPullUpSplitRailVerdicts decides every I2C net, failing one with more than one resistor, landing
+// on DIFFERENT rails.
 func i2cPullUpSplitRailVerdicts(m check.Model) []check.Verdict {
 	return pullUpCountVerdicts(m, "i2c-pull-up-split-rail", func(rails []string) bool {
 		return len(rails) > 1
@@ -80,12 +80,12 @@ func i2cPullUpSplitRailVerdicts(m check.Model) []check.Verdict {
 	})
 }
 
-// pullUpCountVerdicts is the shared body: enumerate the I2C nets, count their distinct terminating
-// resistors, and let the caller decide which rail arrangement is its defect.
+// pullUpCountVerdicts enumerates the I2C nets, counts their distinct terminating resistors, and lets
+// the caller decide which rail arrangement is its defect.
 //
 // One walk, two rules, and the two fire on disjoint conditions (one rail versus several), so a bus
 // with a genuine problem is named once by the rule whose remedy applies to it. A rule carries one
-// severity and one remedy (see docsite build/check-rule.md), which is why this is two rules over one
+// severity and one remedy (see docsite/content/build/check-rule.md), which is why this is two rules over one
 // walker rather than one rule with a clause.
 //
 // A net with ZERO pull-ups is NOT considered here. It is i2c-pull-up's subject, that rule is an

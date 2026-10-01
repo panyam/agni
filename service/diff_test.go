@@ -15,7 +15,7 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// pairLoader serves a distinct design (and optionally geometry) per path — the shape
+// pairLoader serves a distinct design (and optionally geometry) per path, the shape
 // DiffDesigns needs, where the single-design fakeLoader cannot distinguish the two sides.
 // A path with no geometry entry errors, exercising the annotation's nil tolerance.
 type pairLoader struct {
@@ -146,10 +146,10 @@ func TestDiffDesigns(t *testing.T) {
 	}
 }
 
-// TestDiffDesignsSheetMaps: the response's per-side sheet maps cover exactly the changed
-// entities that each side's geometry locates — a removed component only in a's map, an added
-// one only in b's, a changed one in both (on that side's own sheets), and a renamed net
-// under its OLD name in a and its NEW name in b. Unchanged entities are absent even when
+// TestDiffDesignsSheetMaps checks that the response's per-side sheet maps cover exactly the
+// changed entities that each side's geometry locates. A removed component is only in a's map,
+// an added one only in b's, a changed one in both (on that side's own sheets), and a renamed
+// net is under its OLD name in a and its NEW name in b. Unchanged entities are absent even when
 // the geometry knows them.
 func TestDiffDesignsSheetMaps(t *testing.T) {
 	old := &ir.Design{
@@ -226,9 +226,9 @@ func TestDiffDesignsSheetMaps(t *testing.T) {
 	}
 }
 
-// TestDiffDesignsSharedPlacements: the alignment sample covers components placed in BOTH
-// sides' geometry — including unchanged ones (they are the alignment evidence) — with each
-// side's own sheet and position; one-sided components are excluded, and a missing geometry
+// TestDiffDesignsSharedPlacements checks that the alignment sample covers components placed in
+// BOTH sides' geometry, including unchanged ones (they are the alignment evidence), with each
+// side's own sheet and position. One-sided components are excluded, and a missing geometry
 // on either side yields no sample at all (frame evidence alone must then decide).
 func TestDiffDesignsSharedPlacements(t *testing.T) {
 	place := func(ref string, x, y int64) *geom.SymbolPlacement {
@@ -277,9 +277,9 @@ func TestDiffDesignsSharedPlacements(t *testing.T) {
 	}
 }
 
-// TestDiffDesignsNoGeometry: a side without geometry (netlist-only format, load failure)
-// yields empty sheet maps for that side, never an error — the maps are an annotation, not a
-// requirement (mirrors the findings' nil-geometry tolerance).
+// TestDiffDesignsNoGeometry checks that a side without geometry (netlist-only format, load
+// failure) yields empty sheet maps for that side, never an error, because the maps are an
+// annotation and not a requirement (mirrors the findings' nil-geometry tolerance).
 func TestDiffDesignsNoGeometry(t *testing.T) {
 	old := &ir.Design{Components: []*ir.Component{{RefDes: "R2"}}}
 	newer := &ir.Design{}
@@ -296,8 +296,8 @@ func TestDiffDesignsNoGeometry(t *testing.T) {
 	}
 }
 
-// TestDiffDesignsLoadErrors: either side failing to load fails the whole call with the
-// loader's mapped code — there is no partial diff.
+// TestDiffDesignsLoadErrors checks that either side failing to load fails the whole call with
+// the loader's mapped code. There is no partial diff.
 func TestDiffDesignsLoadErrors(t *testing.T) {
 	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": {}}}, nil)
 	_, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
@@ -318,8 +318,8 @@ func TestDiffDesignsLoadErrors(t *testing.T) {
 // real two-sheet KiCad diff pair (web/testdata/diffdemo/msheet_rev_{a,b}): a sub-sheet
 // component changes value and a sub-sheet net renames, both on sheet "/sub". It proves the
 // diff panel can resolve a sub-sheet subject to its sheet id for navigation, and pins the
-// fix: the sub-sheet net's wires carry no uuid, so the geometry-only channel yields no net
-// badge — only the authoritative AttrSheets membership (each side's design as NetSource)
+// fix. The sub-sheet net's wires carry no uuid, so the geometry-only channel yields no net
+// badge and only the authoritative AttrSheets membership (each side's design as NetSource)
 // reaches it. Components locate through placements on either channel.
 func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	l := &formats.Loader{}
@@ -338,10 +338,11 @@ func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	dA, gA := load("a")
 	dB, gB := load("b")
 
-	// The join gap this ticket closes, shown directly: the sub-sheet net's wires carry no
-	// uuid, so the geometry-only index (the old nil-NetSource path) has no entry for it, while
-	// the design's AttrSheets membership does. Components never had the gap — placements exist.
-	// The index keys nets by per-instance id (WS9), so resolve /sub/SIG's id to look it up.
+	// The join gap this ticket closes, shown directly. The sub-sheet net's wires carry no uuid,
+	// so the geometry-only index (the old nil-NetSource path) has no entry for it, while the
+	// design's AttrSheets membership does. Components never had the gap, since placements
+	// exist. The index keys nets by per-instance id (WS9), so resolve /sub/SIG's id to look it
+	// up.
 	var sigKey string
 	for _, n := range check.NewModel(dA).Nets() {
 		if n.GetName() == "/sub/SIG" {
@@ -383,7 +384,7 @@ func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	if got := ids(resp.GetComponentSheetsB(), "R101"); !slicesEqual(got, []string{"/sub"}) {
 		t.Errorf("component_sheets_b[R101] = %v, want [/sub]", got)
 	}
-	// Renamed net: the old name locates on a's side, the new name on b's — the case that only
+	// Renamed net: the old name locates on a's side and the new name on b's, the case that only
 	// resolves through AttrSheets (its wires are uuid-less, so the geometry channel is empty).
 	if got := ids(resp.GetNetSheetsA(), "/sub/SIG"); !slicesEqual(got, []string{"/sub"}) {
 		t.Errorf("net_sheets_a[/sub/SIG] = %v, want [/sub] (requires the AttrSheets channel)", got)

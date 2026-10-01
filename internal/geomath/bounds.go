@@ -4,10 +4,9 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// Bounds accumulates a bounding box over geom points. The zero value is an empty box:
-// Valid reports whether any point was added, and BBox on an empty box is the origin. It
-// replaces three per-package copies (xschem, geda, render), so producers and consumers
-// compute extents with the same arithmetic.
+// Bounds accumulates a bounding box over geom points. The zero value is an empty box, Valid
+// reports whether any point was added, and BBox on an empty box is the origin. Readers and
+// core/render share it so producers and consumers compute extents with the same arithmetic.
 type Bounds struct {
 	set                    bool
 	minX, minY, maxX, maxY int64

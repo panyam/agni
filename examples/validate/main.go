@@ -1,7 +1,7 @@
-// Command validate is the reader-health rung of the Agni examples ladder: run the
-// validate package's structural invariants over a design and read the problem lists. It is
-// the walkthrough form of `agni validate`. The narration lives in the sidecar
-// walkthrough.md (demokit FromMarkdown); this file only binds the steps that run engine code.
+// Command validate is the reader-health rung of the Agni examples ladder. It runs the validate
+// package's structural invariants over a design and prints the problem lists. It is the
+// walkthrough form of `agni validate`. The narration lives in the sidecar walkthrough.md (demokit
+// FromMarkdown), and this file only binds the steps that run engine code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -22,7 +22,7 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// problemsLine renders a problem list the way the CLI's table does: ok, or the reasons.
+// problemsLine renders a problem list the way the CLI's table does, as ok or as the reasons.
 func problemsLine(problems []string) string {
 	if len(problems) == 0 {
 		return "ok: all invariants hold"

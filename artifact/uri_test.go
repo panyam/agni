@@ -57,7 +57,7 @@ func TestParseRejects(t *testing.T) {
 	}
 }
 
-// TestNewAndParseAgree: code holding the two halves must not be able to assemble a string that
+// TestNewAndParseAgree asserts that code holding the two halves cannot assemble a string that
 // Parse would reject, or containment would depend on which constructor a caller happened to use.
 func TestNewAndParseAgree(t *testing.T) {
 	if _, err := New("boards", "../escape"); err == nil {
@@ -95,7 +95,7 @@ func TestResolve(t *testing.T) {
 		// A full URI reference replaces everything, mount included.
 		{"mount://other/x.edn", "mount://other/x.edn"},
 		// A leading slash is AUTHORITY-relative, per RFC 3986, so it names the mount root rather
-		// than the current directory. Still contained: the authority is the mount.
+		// than the current directory. It stays contained, because the authority is the mount.
 		{"/shared/lib.kicad_sym", "mount://boards/shared/lib.kicad_sym"},
 	}
 	for _, c := range cases {
@@ -109,8 +109,8 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-// TestResolveCannotEscape: being inside a design is not authority to leave the mount. A file that
-// names its way out is a file reading past the boundary its own mount established.
+// TestResolveCannotEscape holds that being inside a design is not authority to leave the mount. A
+// file that names its way out is a file reading past the boundary its own mount established.
 func TestResolveCannotEscape(t *testing.T) {
 	base, _ := Parse("mount://boards/designs/gateway/gateway.kicad_sch")
 	for _, rel := range []string{"../../../etc/passwd", "../../..", "/../etc/passwd", "mount://boards/../x"} {
@@ -138,7 +138,6 @@ func TestDirBaseJoin(t *testing.T) {
 
 	// A mount root is its own parent and has no base, so walking up terminates instead of looping.
 	root, _ := Parse("mount://boards")
-	// A mount root is its own parent, so walking up terminates instead of looping.
 	if root.Dir() != root || root.Base() != "" {
 		t.Errorf("mount root: Dir = %+v, Base = %q", root.Dir(), root.Base())
 	}

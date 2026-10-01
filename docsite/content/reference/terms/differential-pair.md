@@ -26,5 +26,5 @@ an ordinary signal, which is what [`diff-pair-naming`](../../rules/diff-pair-nam
 A pair almost always needs [termination](../termination/) at each end, for a reason that has nothing
 to do with noise.
 
-**Where the course teaches it:** [chapter 1](../../../learn/01-what-a-board-is-made-of/), reading a
+The course teaches it in [chapter 1](../../../learn/01-what-a-board-is-made-of/), which reads a
 resistor's job from the nets it touches.

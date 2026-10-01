@@ -8,7 +8,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// pullupCountFixture: SDA doubly pulled to one rail, SCL0 pulled to two DIFFERENT rails, SCL1 pulled
+// pullupCountFixture has SDA doubly pulled to one rail, SCL0 pulled to two DIFFERENT rails, SCL1 pulled
 // once (the clean case), and SDA2 with no pull-up at all (i2c-pull-up's subject, not these rules').
 func pullupCountFixture() *ir.Design {
 	comp := func(ref string) *ir.Component {
@@ -107,7 +107,7 @@ func TestSplitRailMessageNamesBothRails(t *testing.T) {
 }
 
 // A count rule's considered set has to include the buses that are fine, or a clean board cannot be
-// told from one nobody looked at. A net with NO pull-up is deliberately absent: that is
+// told from one nobody looked at. A net with NO pull-up is deliberately absent, because that is
 // i2c-pull-up's subject, and reporting one absence in three places would treble a single defect.
 func TestBothRulesStateWhatTheyLookedAt(t *testing.T) {
 	for _, r := range []*check.Rule{i2cRedundantPullUp, i2cPullUpSplitRail} {
@@ -172,7 +172,7 @@ func TestNeitherRuleFiresWhenTheSupplyIsNotRecognisedAsARail(t *testing.T) {
 	if got := findingsFor(t, i2cRedundantPullUp, d); len(got) != 0 {
 		t.Errorf("findings = %+v; expected none, since the supply is not classified as a rail", got)
 	}
-	// And the control on the control: with the rail recognised, the same topology DOES report.
+	// And the control on the control. With the rail recognised, the same topology DOES report.
 	if got := findingsFor(t, i2cRedundantPullUp, pullupCountFixture()); len(got) == 0 {
 		t.Error("the recognised-rail case reports nothing either, so the test above proves nothing")
 	}

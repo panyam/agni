@@ -27,7 +27,7 @@ func numDesign() *ir.Design {
 	return d
 }
 
-// The index buckets by value, and valueEq is NOT transitive: {S:"10.0",Num:10} equals
+// The index buckets by value, and valueEq is NOT transitive. {S:"10.0",Num:10} equals
 // {S:"10",Num:10} numerically, which equals {S:"10",Num:nil} by string, while the first and last are
 // unequal. A keying scheme that canonicalised numbers would merge all three and change what the
 // query means; one that keyed on the string alone would lose the numeric match.
@@ -64,7 +64,7 @@ func TestIndexedResultsMatchUnindexed(t *testing.T) {
 	}
 }
 
-// newUnindexedBase is the equivalence oracle: the same fact base with no index cache, which sends
+// newUnindexedBase is the equivalence oracle, the same fact base with no index cache, which sends
 // every probe down the original full-scan path. Comparing against it is what makes "indexing changed
 // nothing" an assertion rather than a hope.
 func newUnindexedBase(m check.Model) *Base {
@@ -98,7 +98,7 @@ func rowValueKey(r Row) string {
 // query produces {S:"20.0", Num:20}. valueEq calls those equal (both numeric); a bucket keyed on the
 // string alone would not, and the row would vanish with no error anywhere.
 //
-// Asserting both spellings return the same row is what makes the second key in valueKeys load-bearing
+// Asserting both spellings return the same row shows the second key in valueKeys is needed
 // rather than defensive decoration.
 func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 	// param facts project per PLACED part, so the design needs enough seeded components to push the
@@ -128,7 +128,7 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 
 // A derived tuple that is valsEqual to one already stored must still deduplicate once the dedup set
 // is a hash bucket. The three spellings of ten are the case that would slip through a keying scheme
-// where insert and probe disagree, and a duplicate here is not cosmetic: the fixpoint's "did
+// where insert and probe disagree, and a duplicate here is not cosmetic, because the fixpoint's "did
 // anything change" flag drives termination.
 func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 	m := check.NewModel(numDesign())
@@ -144,7 +144,7 @@ func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 }
 
 // One Base serving several rule-bearing queries in turn is a real pattern (the profile coverage pass
-// does it), and both index caches have to behave under it: the EDB index is shared on purpose
+// does it), and both index caches have to behave under it. The EDB index is shared
 // because facts are immutable, while a derived relation belongs to one query and its index must not
 // outlive it. A stale IDB index would hold positions into a previous query's tuple slice.
 func TestBaseReuseAcrossRuleBearingQueries(t *testing.T) {
@@ -172,10 +172,10 @@ func evalOn(t *testing.T, b *Base, text string) []Row {
 
 // Work counts candidate comparisons, so a shape that is linear in the fact base must not grow
 // quadratically in it. Asserting the RATIO rather than a duration is what makes this a complexity
-// test: it is deterministic, identical on every machine, and it fails the moment a scan returns.
+// test. It is deterministic, identical on every machine, and it fails the moment a scan returns.
 //
-// The evaluator's own doc comment used to assert this property in prose ("naïve join is sufficient
-// because one design's fact base is small") with nothing enforcing it, which is exactly how a
+// The evaluator's own doc comment asserts this property in prose ("naïve join is sufficient
+// because one design's fact base is small"), and with nothing enforcing it a
 // two-atom join came to take 15.7 seconds on a real board.
 func TestWorkScalesSubQuadratically(t *testing.T) {
 	shapes := []struct {

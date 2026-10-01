@@ -33,7 +33,7 @@ itself your consent. The tool still has to be registered for the format and inst
 | KiCad board (`.kicad_pcb`) | `kicad-cli` | (same) | yes (F.Cu/B.Cu/Edge.Cuts overview) | yes |
 | xschem (`.sch`) | `xschem` | Linux/X11, on macOS via Docker + XQuartz | yes | yes (X11) |
 | gEDA / Lepton (`.sch`) | `lepton-cli` (render), `lepton-schematic` (GUI) | Linux, on macOS via Docker | yes | yes (X11) |
-| EDIF (`.edn`, `.eds`) | none open | | no | no |
+| EDIF (`.edn`, `.edf`, `.edif`, `.eds`) | none open | | no | no |
 | IPC-2581 (`.xml`, `.cvg`) | none free on macOS | web visualizer (below) | no | no |
 | ODB++ (directory / `.tgz`) | none free on macOS | web visualizer / VM | no | no |
 
@@ -46,14 +46,14 @@ renderer.
 
 ## What the tools are run as
 
-The exact invocations, for reference. Agni runs these into a temp dir under a timeout.
+Agni runs these exact invocations into a temp dir under a timeout.
 
 - KiCad schematic: `kicad-cli sch export svg --pages N --output DIR file`
 - KiCad board: `kicad-cli pcb export svg --mode-single --layers F.Cu,B.Cu,Edge.Cuts --output OUT.svg file`
 - xschem: `xschem --no_x --quit --svg file` (writes `plot.svg` in the working directory)
 - Lepton: `lepton-cli export -o OUT.svg file`
 
-## Docker plus SSH: the X11 tools without a local install
+## The X11 tools over Docker and SSH
 
 {{ includeFile "figures/native-tool-container.svg" }}
 
@@ -63,21 +63,20 @@ still runs on the host. This container only supplies the tools. `agni native ren
 it and writes the SVG back to the bind-mounted workspace, and `ssh -X` carries an
 `agni native open` GUI to the host's XQuartz.
 
-The engine repo's Makefile runs the container lifecycle (`natup`, `natdown`, `natlogs`). A
-workspace Makefile can add file-driven `natrender` and `natopen` wrappers that bind-mount your
-design tree at `/hw` and pick an output dir. The raw `ssh` forms below do the same and work
-anywhere.
+The engine repo's Makefile runs the container lifecycle (`natup`, `natdown`, `natlogs`) and
+drives the tools through it with `natrender` and `natopen`. `natup` bind-mounts the folders named
+in `NATIVE_DOCKER_MOUNTS`, and the other two take paths inside the container, so a design must sit
+under one of those mounts. The raw `ssh` forms below do the same and work anywhere.
 
 ```
-make natup                                                   # sshd container up (this repo)
-# render/open, as a workspace wrapper would run them against a mounted design tree:
-#   make natrender FILE=path/to/design.sch OUT=design.svg    # -> <mounted-dir>/design.svg
-#   make natopen  FILE=path/to/design.sch                    # GUI via XQuartz
+make natup NATIVE_DOCKER_MOUNTS="-v $HOME/boards:/boards"   # sshd container up
+make natrender FILE=/boards/amp/amp.sch OUT=/boards/amp.svg  # paths inside the container
+make natopen  FILE=/boards/amp/amp.sch                       # GUI via XQuartz
 make natdown
 ```
 
-Under the hood these are `ssh -p 2222 agni@localhost agni native render /hw/... -o /hw/...` and
-`ssh -X ... agni native open /hw/...`. Notes:
+Under the hood these are `ssh -p 2222 agni@localhost agni native render /boards/... -o /boards/...`
+and `ssh -X ... agni native open /boards/...`.
 
 - `natopen` needs XQuartz running (`brew install --cask xquartz`, then launch it) and a `DISPLAY`
   set in the shell. Smoke test the forwarding with
@@ -88,7 +87,7 @@ Under the hood these are `ssh -p 2222 agni@localhost agni native render /hw/... 
 
 Both `xschem` (2.8.x) and `lepton-eda` (`lepton-cli`, `lepton-schematic`) come from Debian
 bookworm apt, so no source build is needed. Building the image was the first real exercise of the
-xschem render path. Version 2.8.x has no `--plotfile`. It writes `plot.svg` into the working
+xschem render path. Version 2.8.x has no `--plotfile` and writes `plot.svg` into the working
 directory, which agni sets to a temp dir.
 
 ## Verifying formats with no native renderer
@@ -96,13 +95,13 @@ directory, which agni sets to a temp dir.
 EDIF, IPC-2581, and ODB++ have no free macOS-native tool, so board and netlist correctness is
 established without one.
 
-1. In-file oracle. IPC-2581 authors component placements and copper pad lands on independent
-   channels. A correct placement puts every pin on its copper. Measuring that distance is a ground
+1. IPC-2581 authors component placements and copper pad lands on independent channels. A correct
+   placement puts every pin on its copper, so the distance from each pin to its pad is a ground
    truth the file carries itself, stronger than a third-party render, which re-derives from the
    same placement data. This is how the placement geometry was pinned.
-2. kicad-cli cross-check. Where a KiCad equivalent exists, `kicad-cli pcb drc` gives a numeric
+2. Where a KiCad equivalent exists, `kicad-cli pcb drc` gives a numeric
    oracle. The board DRC counts were cross-checked this way.
-3. Web visualizer. For a visual sanity pass, a browser IPC-2581/ODB++ viewer (Eurocircuits PCB
+3. For a visual sanity pass, a browser IPC-2581/ODB++ viewer (Eurocircuits PCB
    Visualizer, or the BoardUI parser run locally) renders the same file.
-4. Vendor viewer in a VM. For pixel truth, the Siemens ODB++ Viewer or an IPC-2581 viewer on
+4. For pixel truth, run the Siemens ODB++ Viewer or an IPC-2581 viewer in a VM on
    Linux or Windows.

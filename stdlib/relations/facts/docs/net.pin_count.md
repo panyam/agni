@@ -23,18 +23,19 @@ point-to-point has not quietly grown a large fan-out.
 
 ### For software engineers
 
-This is the degree of each net node in the design graph: the number of edges incident on the net.
+This is the degree of each net node in the design graph, meaning the number of edges incident on the
+net.
 It is a projection over `Nets()` that reads `len(net.Connections)`, so rows are 1:1 with nets and
-the count carries as a number for direct comparison. It is the fan-out primitive the higher-level
-relations build on: `net.bus_like` treats a count above 16 as one of the conditions that make a
+the count carries as a number for direct comparison. Higher-level relations use the same count.
+`net.bus_like` treats a count above 16 as one of the conditions that make a
 net a shared-distribution node the reachability walk must stop at, so `net.pin_count` is the
 measured input behind that threshold.
 
 ### Go projector
 
-`netPinCountFacts` in `check/facts.go` walks `Model.Nets()` and emits one row per net with the
-numeric count set to `len(n.Connections)`. One row per net, always. An empty result means the
-design has no nets at all (not that counts were unavailable), since every net yields a count.
+`netPinCountFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits one row per net
+with the numeric count set to `len(n.Connections)`. One row per net, always. An empty result means
+the design has no nets at all (not that counts were unavailable), since every net yields a count.
 
 ### Datalog
 

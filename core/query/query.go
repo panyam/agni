@@ -1,8 +1,8 @@
 // Package query is the design query surface (WS3-029): Datalog over the design's fact base, so an
 // engineer runs ad-hoc queries ("search your whole design as relations, including datasheets") and
 // every answer carries the provenance of the facts that produced it. Rules and search share one
-// vocabulary: a rule asserts a property over these relations; a search is an arbitrary query over the
-// same ones.
+// vocabulary, since a rule asserts a property over these relations and a search is an arbitrary query
+// over the same ones.
 //
 // The engine itself lives in github.com/panyam/jaala/datalog (agni issue 731), which knows nothing
 // about circuits. This package is agni's adapter over it:
@@ -10,7 +10,7 @@
 //   - a Source projecting a check.Model through a facts.Registry, so every relation the fact layer
 //     registers is queryable (source.go);
 //   - the circuit predicates reaches and route, generators over check.Model.Reach (preds.go);
-//   - the registration seam for an overlay's filter predicates (RegisterPredicate);
+//   - the registration hook for an overlay's filter predicates (RegisterPredicate);
 //   - agni's own uses of queries: RuleFromQuery, the wire form, the catalog, and the teaching
 //     examples.
 //

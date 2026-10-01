@@ -1,9 +1,9 @@
-// Command render-highlight is the explainability rung of the Agni examples ladder: run the
-// rule catalog over a design, then BAKE each finding's subject as a highlight into a single
-// rendered SVG, so a report finding becomes a picture of the actual design. It is the offline,
-// static twin of the web viewer's click-to-locate — one render.SheetSVGHighlighted call over the
-// same HighlightSpec vocabulary the server projects as a live overlay. Narration lives in the
-// sidecar walkthrough.md; this file only binds the steps that run engine code.
+// Command render-highlight is the explainability rung of the Agni examples ladder. It runs the
+// rule catalog over a design, then BAKES each finding's subject as a highlight into one rendered
+// SVG, so a report finding becomes a picture of the design. It is the offline twin of the web
+// viewer's click-to-locate, one render.SheetSVGHighlighted call over the same HighlightSpec
+// vocabulary the server projects as a live overlay. Narration lives in the sidecar
+// walkthrough.md, and this file only binds the steps that run engine code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -28,8 +28,8 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	// Default to a bundled KiCad schematic with faithful geometry AND a clear finding (two symbols
-	// share ref-des U1): a component finding that draws a box on each real placement.
+	// Default to a bundled KiCad schematic with faithful geometry AND a clear finding: two symbols
+	// share ref-des U1, so the component finding draws a box on each real placement.
 	design := common.AskPath("design", "../common/designs/duplicate-refdes.kicad_sch")
 
 	demo := demokit.New("render-highlight").
@@ -57,9 +57,9 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
-		// FaithfulGeometry dispatches by extension (KiCad, EDIF .eds, ...), the same format-aware
-		// geometry the CLI renders — so the highlight lands on the design's own drawing, not an
-		// EDIF-only path. common.Load already read the netlist above; this reads the render canvas.
+		// FaithfulGeometry dispatches by extension (KiCad, EDIF .eds, ...), as the CLI does, so the
+		// highlight lands on the design's own drawing. common.Load read the netlist; this reads the
+		// render canvas.
 		g, err := (&formats.Loader{}).FaithfulGeometry(design.Path())
 		if err != nil {
 			return demokit.Errf("load geometry %s: %v", design.Path(), err)
@@ -84,11 +84,10 @@ func main() {
 }
 
 // specsForFindings maps each finding's subject to one HighlightSpec, the same net/component/pin
-// vocabulary the web click-to-locate builds. A net draws as a PATH marker along its wire (and
-// carries its per-instance net id so two same-named nets stay distinct); a component or pin draws
-// as a translucent bounding box, one per matched placement. Severity picks the color so an error
-// reads hotter than a warning. This is the CLI/report side of the finding->picture join: findings
-// are computed on the netlist, located on the geometry by name/id (CONSTRAINTS C21).
+// vocabulary the web click-to-locate builds. A net draws as a PATH marker along its wire and
+// carries its per-instance net id, so two same-named nets stay distinct. A component or pin draws
+// as a translucent bounding box, one per matched placement. Findings are computed on the netlist
+// and located on the geometry by name/id (CONSTRAINTS C21).
 func specsForFindings(findings []check.Finding) []*geom.HighlightSpec {
 	var specs []*geom.HighlightSpec
 	for _, f := range findings {
@@ -112,8 +111,8 @@ func specsForFindings(findings []check.Finding) []*geom.HighlightSpec {
 	return specs
 }
 
-// colorFor maps a finding severity to a highlight color: error hot red, warning amber, else the
-// renderer default. Empty ("") lets render pick DefaultHighlightColor.
+// colorFor maps a finding severity to a highlight color, error hot red and warning amber. Anything
+// else returns "", which lets render pick DefaultHighlightColor.
 func colorFor(severity string) string {
 	switch severity {
 	case "error":

@@ -37,11 +37,11 @@ func TestSymbolForResolvesThroughEachFallback(t *testing.T) {
 	}
 }
 
-// The property the whole shortfall report rests on: "does it draw" has ONE answer.
+// The shortfall report rests on one property, that "does it draw" has ONE answer.
 //
 // A consumer computing its own join is free to be stricter than the renderer, and a stricter join
-// reports a shortfall for placements that draw perfectly well. That report is worse than none: it
-// teaches a reader to distrust a banner that is usually wrong.
+// reports a shortfall for placements that draw perfectly well. That report is worse than none, because
+// it teaches a reader to distrust a banner that is usually wrong.
 func TestSymbolForIsTheOnlyJoin(t *testing.T) {
 	ix := IndexSymbols(oneSymbol())
 	// A cell-only match is exactly the case a naive (cell, library) join gets wrong.

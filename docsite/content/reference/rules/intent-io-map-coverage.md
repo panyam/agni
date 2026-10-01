@@ -9,10 +9,11 @@ Declare the nets the map does not cover, or accept the coverage and read the oth
 
 ### What it checks
 
-Which nets in the design the IO map declares, and which it says nothing about. One verdict per net.
+It reports which nets in the design the IO map declares, and which it says nothing about, with one
+verdict per net.
 
 **Nothing here is a defect.** A net the map does not name is a question nobody asked, not a fault in
-the board. The rule exists so that number is visible rather than absent.
+the board. The rule exists so the count of such nets is visible rather than absent.
 
 ### Why coverage is the number that matters here
 
@@ -34,8 +35,8 @@ opposite defects:
 A pin map does not usually name `GND` or a supply rail, and on a real board those are a large share
 of the nets. They are still counted in the denominator, and their verdict says which they are.
 
-Carving them out would be the tool deciding which absences are acceptable, and that is the judgment
-that lets a real gap hide. A map that forgot an entire peripheral bank would read as well-covered if
+Carving them out would be the tool deciding which absences are acceptable, and that judgment
+lets a real gap hide. A map that forgot an entire peripheral bank would read as well-covered if
 the arithmetic quietly excused a third of the board. Naming them in the reason gives a reader the
 discrimination without the tool making the call.
 

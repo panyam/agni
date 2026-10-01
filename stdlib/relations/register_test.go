@@ -10,7 +10,7 @@ import (
 	_ "github.com/panyam/agni/stdlib/relations" // registers the built-in relations via init
 )
 
-// TestBuiltinRelationsRegisteredWithQuery is the seam guard (issue 10): blank-importing
+// TestBuiltinRelationsRegisteredWithQuery is the registration-hook guard (issue 10): blank-importing
 // stdlib/relations must install the built-in EDB relations into the query engine through
 // facts.RegisterBuiltinFacts, so query.Catalog lists them and query.NewBase projects them. Before
 // this package existed the query engine held these relations directly; if the init or the
@@ -34,7 +34,7 @@ func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 		}
 	}
 
-	// NewBase projects the built-in relations from a Model: a component on a net yields a
+	// NewBase projects the built-in relations from a Model, so a component on a net yields a
 	// component.net fact, which is empty when the built-ins are not registered.
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},

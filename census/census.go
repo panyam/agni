@@ -1,16 +1,10 @@
 // Package census is the element-coverage guard (WS6-011). For each source format it holds a
-// reviewed MANIFEST classifying every construct the format's files carry as either consumed by
-// the reader or a known drop (with a reason and, where tracked, a roadmap ticket). A test walks
-// the committed fixtures and fails if a construct appears that the manifest does not classify, so
-// a newly-added fixture construct forces a human decision instead of being dropped silently; the
-// `agni census` CLI runs the same audit over the private corpus (report-only) to surface
-// real-world constructs the fixtures lack.
+// reviewed MANIFEST classifying every construct the format's files carry as consumed by the reader
+// or a known drop. A test walks the committed fixtures and fails on a construct the manifest does
+// not classify, and `agni census` runs the same audit over a local corpus, report-only.
 //
-// The census asserts CLASSIFICATION coverage, not behavioral consumption: it catches "a construct
-// we never decided about appeared" and (via the corpus report) "the real world has one our
-// fixtures do not". Behavioral correctness stays the conformance harness's job (WS6-004); the two
-// are complementary. Motivation and the seed classifications are in the private research repo's
-// reader-coverage audit (docs/18).
+// The census asserts CLASSIFICATION coverage, not behavioral consumption; behavioral correctness
+// is the conformance harness's job (WS6-004). The two tiers and the workflow are in census/README.md.
 package census
 
 import (
@@ -22,8 +16,8 @@ import (
 
 // Lookup resolves a design file to the manifest that classifies its constructs, by extension
 // (and, for the ambiguous `.sch`/`.sym`, a light header sniff of data to tell xschem from gEDA
-// from legacy KiCad). ok is false for a file no manifest covers. This is what `agni census`
-// uses to walk a mixed corpus directory.
+// from legacy KiCad). ok is false for a file no manifest covers. `agni census` uses it to walk a
+// mixed corpus directory.
 func Lookup(path string, data []byte) (Manifest, bool) {
 	var format string
 	switch strings.ToLower(filepath.Ext(path)) {
@@ -71,16 +65,16 @@ func sniffSch(data []byte) string {
 type Status string
 
 const (
-	// Consumed: the reader transforms this construct into the IR.
+	// Consumed means the reader transforms this construct into the IR.
 	Consumed Status = "consumed"
-	// DroppedCosmetic: not read, and the only loss is render fidelity.
+	// DroppedCosmetic is not read, and the only loss is render fidelity.
 	DroppedCosmetic Status = "dropped-cosmetic"
-	// DroppedAnalysis: not read, and its absence blocks a check or diff (a rule can't be written).
+	// DroppedAnalysis is not read, and its absence blocks a check or diff (a rule can't be written).
 	DroppedAnalysis Status = "dropped-analysis"
-	// DroppedLatent: not read, and its absence produces WRONG data when the construct is present
+	// DroppedLatent is not read, and its absence produces WRONG data when the construct is present
 	// (a correctness hole), even if no current corpus/fixture exercises it.
 	DroppedLatent Status = "dropped-latent"
-	// DroppedByDesign: deliberately not read and never will be (editor/tool metadata, 3D models).
+	// DroppedByDesign is not read and never will be (editor/tool metadata, 3D models).
 	DroppedByDesign Status = "dropped-by-design"
 )
 
@@ -92,8 +86,8 @@ type Entry struct {
 	Ticket string
 }
 
-// Manifest classifies a format's constructs. Keys are the tokens Enumerate emits: s-expr head
-// atoms, XML element names, line-type chars, or "@key" for a line-format attribute key; the
+// Manifest classifies a format's constructs. Keys are the tokens Enumerate emits (s-expr head
+// atoms, XML element names, line-type chars, or "@key" for a line-format attribute key), and the
 // numeric-head sentinel is NumberToken.
 type Manifest struct {
 	Format  string // display name, e.g. "kicad-pcb"

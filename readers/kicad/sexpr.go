@@ -1,10 +1,8 @@
 // Package kicad reads KiCad s-expression files (.kicad_pcb, .kicad_sch) into the neutral IR
-// (agni.v1.ir). It is core, runtime-agnostic Go (CONSTRAINTS C1): readers take io.Reader and
-// record only provenance, never opening files themselves.
+// (agni.v1.ir). Readers take an io.Reader and record the file name only as provenance, never opening
+// files themselves (CONSTRAINTS C1).
 //
-// S-expression parsing is the shared internal/sexpr package (one parser for KiCad + EDIF,
-// parameterized on the string dialect); KiCad uses the escape-and-keep-newlines mode. node is a
-// local alias so the reader's many `*node` signatures and the `atomOf` accessor read unchanged.
+// Parsing goes through internal/sexpr in its KiCad string dialect (backslash escapes, newlines kept).
 package kicad
 
 import (
@@ -13,7 +11,7 @@ import (
 	"github.com/panyam/agni/internal/sexpr"
 )
 
-// node is the shared s-expression node; the reader walks it via Head/Arg/Child/Children.
+// node is a local alias for sexpr.Node, walked via Head/Arg/Child/Children.
 type node = sexpr.Node
 
 // parse reads one top-level s-expression from r in the KiCad string dialect (backslash escapes,

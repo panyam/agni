@@ -10,7 +10,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// xlatSpec hand-builds the part the pin tier exists for: two supply terminals with DIFFERENT
+// xlatSpec hand-builds the part the pin tier exists for, with two supply terminals with DIFFERENT
 // limits, so the most-restrictive-row shortcut the alias-path rules take is wrong on it. Values
 // mirror the seeded TXB0104 (VCCA 1.2..3.6 recommended, 4.6 abs-max; VCCB 1.65..5.5 recommended,
 // 6.5 abs-max) without depending on that fixture.
@@ -74,8 +74,8 @@ func xlatModel(t *testing.T, netA, netB string) check.Model {
 		param.ParamSet{"ACME-XLAT": xlatSpec("ACME-XLAT")})
 }
 
-// The rule's reason for existing: 5V on VCCB is WITHIN that terminal's 6.5V absolute maximum, and
-// must not fire. The alias path applies the most restrictive row across every power-in pin, so it
+// The rule's reason for existing is that 5V on VCCB is WITHIN that terminal's 6.5V absolute maximum
+// and must not fire. The alias path applies the most restrictive row across every power-in pin, so it
 // checks VCCB against VCCA's 4.6V and reports a violation that is not there.
 func TestPinAbsMaxDoesNotFireOnAPinRatedForTheRail(t *testing.T) {
 	m := xlatModel(t, "+3V3", "+5V")
@@ -86,10 +86,10 @@ func TestPinAbsMaxDoesNotFireOnAPinRatedForTheRail(t *testing.T) {
 	}
 }
 
-// The other half: the SAME rail on the OTHER terminal is a genuine breach, and the finding has to
+// In the other half, the SAME rail on the OTHER terminal is a genuine breach, and the finding has to
 // name that terminal rather than the part.
 func TestPinAbsMaxFiresOnTheTerminalThatIsActuallyOver(t *testing.T) {
-	m := xlatModel(t, "+5V", "+5V") // both rails 5V: over VCCA's 4.6, within VCCB's 6.5
+	m := xlatModel(t, "+5V", "+5V") // both rails 5V, over VCCA's 4.6 and within VCCB's 6.5
 	fs := pinExceedsAbsMax.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (VCCA only), got %d: %+v", len(fs), fs)
@@ -146,7 +146,7 @@ func TestAliasPathDefersOnlyWhenPinDataExists(t *testing.T) {
 		t.Error("the pin rule must cover what the alias rule stopped reporting")
 	}
 
-	// The pre-pin-binding shape: same rules, unchanged behaviour.
+	// The pre-pin-binding shape, with the same rules and unchanged behaviour.
 	noPins := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil,
 		param.ParamSet{"ACME-33": ldoSpec("ACME-33", 3.6)})
 	if n := len(supplyExceedsAbsMax.Findings(noPins)); n != 1 {
@@ -179,7 +179,7 @@ func TestPinRatingRulesSilentWithoutTheirInputs(t *testing.T) {
 }
 
 // A design pin the spec cannot resolve unambiguously must produce nothing. Two spec pins share the
-// name the design uses and no package is identified, so ResolvePin refuses; refusing is the whole
+// name the design uses and no package is identified, so ResolvePin refuses. That refusal is the
 // safety property, and a rule that fell back to the first match would report on a guessed terminal.
 func TestPinRatingSkipsAnUnresolvablePin(t *testing.T) {
 	spec := xlatSpec("ACME-XLAT")

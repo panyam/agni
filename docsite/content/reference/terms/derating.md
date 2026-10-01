@@ -25,7 +25,7 @@ The factor also depends on what is being derated. Around 20% is the common conve
 capacitor's voltage. Sizing that same capacitor for stable capacitance under DC bias usually wants 2x
 or more, which is a different concern with the same shape, and one no rule in this catalog checks yet.
 
-Rules that read it. [`cap-voltage`](../../rules/cap-voltage/) compares a capacitor's rated voltage
+Four rules read it. [`cap-voltage`](../../rules/cap-voltage/) compares a capacitor's rated voltage
 against its worst rail times a fixed 1.25, and states the arithmetic in the finding so the factor is
 visible rather than assumed. [`intent-rail-current-margin`](../../rules/intent-rail-current-margin/)
 does the same for current with a factor you declare, and leaves the harder failure to
@@ -37,7 +37,7 @@ where inductive kick and hot-plug push a drain well above the nominal rail.
 Derating only makes sense against a limit the vendor actually stated, so a rule derates from a
 transcribed parameter with its citation attached, never from a number somebody remembered.
 
-**Where the course teaches it:**
-[The numbers](../../../learn/03-why-every-chip-needs-capacitors/#the-numbers-ee5) in chapter 3
-introduces the derate factor on a capacitor's voltage rating, and
-[chapter 7](../../../learn/07-reading-a-datasheet/) is the datasheet contract a factor is applied to.
+The course teaches it in
+[The numbers](../../../learn/03-why-every-chip-needs-capacitors/#the-numbers-ee5) in chapter 3, which
+introduces the derate factor on a capacitor's voltage rating, and in
+[chapter 7](../../../learn/07-reading-a-datasheet/), the datasheet contract a factor is applied to.

@@ -6,11 +6,10 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
-// reportsFromDocs maps stored review documents back to the Go view-model the renderers consume — the
-// CLI analogue of the web tier's reportFromWire, so both surfaces start from the one shape a review
-// run produces. The document's item note is the already-joined runtime+manifest note
-// (reviewAreaProtos), placed in Item.Note so detail()/JSON reproduce it in every outcome case (they
-// read Item.Note for pass/not-automated and join it for not-applicable — one field satisfies both).
+// reportsFromDocs maps stored review documents back to the Go view-model the renderers consume, the
+// CLI analogue of the web tier's reportFromWire. The document's item note is the already-joined
+// runtime+manifest note (reviewAreaProtos), placed in Item.Note so detail() and JSON reproduce it in
+// every outcome case, since they read Item.Note for pass/not-automated and join it for not-applicable.
 func reportsFromDocs(docs []*checkspb.CheckResults) []review.Report {
 	reports := make([]review.Report, 0, len(docs))
 	for _, doc := range docs {
@@ -70,10 +69,9 @@ func datasheetFromProto(c *checkspb.DatasheetCitation) *check.DatasheetCitation 
 		Section:    c.GetSection(),
 		Method:     c.GetMethod(),
 		Confidence: c.GetConfidence(),
-		// Carried back explicitly. Dropping it here would not lose a display field, it would
-		// re-open the defect on the service path only: the client re-runs the ratified-floor
-		// judgement locally, and an empty verification reads as Unverified, which falls through to
-		// the confidence a stale verification pinned at 1.0.
+		// Dropping these re-opens agni issue 263 on the service path. The client re-runs the
+		// ratified-floor judgement locally, and an empty verification reads as Unverified, which
+		// falls through to the confidence a stale verification pinned at 1.0.
 		Verification:     c.GetVerification(),
 		VerifiedRevision: c.GetVerifiedRevision(),
 	}
@@ -81,9 +79,9 @@ func datasheetFromProto(c *checkspb.DatasheetCitation) *check.DatasheetCitation 
 
 // designSourcesOf returns each document's design URI, positionally matching reportsFromDocs.
 //
-// The reports carry a READING name and the documents carry the address, and a renderer that has to
-// open the file needs the second. Keeping them as parallel slices rather than folding the URI into
-// review.Report keeps `core/review` free of any notion of how an artifact is addressed.
+// The reports carry a READING name and the documents carry the address, which a renderer that opens
+// the file needs. Parallel slices rather than a URI on review.Report keep `core/review` free of any
+// notion of how an artifact is addressed.
 func designSourcesOf(docs []*checkspb.CheckResults) []string {
 	out := make([]string, 0, len(docs))
 	for _, doc := range docs {
@@ -92,9 +90,8 @@ func designSourcesOf(docs []*checkspb.CheckResults) []string {
 	return out
 }
 
-// unmetFromProto reconstructs a needs-data item's unmet dependencies. Present so a results document
-// re-rendered from the wire carries the same work list the run produced; without it the structured
-// form would exist only inside the process that computed it, which is the state this replaced.
+// unmetFromProto reconstructs a needs-data item's unmet dependencies, so a results document
+// re-rendered from the wire carries the same work list the run produced (agni issue 258).
 func unmetFromProto(ps []*checkspb.UnmetDependency) []check.UnmetDependency {
 	if len(ps) == 0 {
 		return nil

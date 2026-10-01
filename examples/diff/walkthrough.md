@@ -12,7 +12,7 @@ actors:
 
 agni diffs two revisions over the neutral IR, not the source text, so it reports what changed electrically rather than which bytes moved. Nets are classified as renamed (same connectivity, new name), hard (connectivity changed), soft (attribute-only), new, or deleted. Components are added, removed, or changed.
 
-Matching is on semantic keys: the net name, and the (ref_des, pin) connection set. A format-native id is never used, so a re-exported file with regenerated ids still diffs cleanly.
+Matching uses semantic keys, the net name and the (ref_des, pin) connection set. A format-native id is never used, so a re-exported file with regenerated ids still diffs cleanly.
 
 ## Pick the old revision {#old}
 
@@ -20,7 +20,7 @@ Matching is on semantic keys: the net name, and the (ref_des, pin) connection se
 
 ## Pick the new revision {#new}
 
-> A path to the later revision. Default: ../common/designs/rev-b.edn. The bundled pair differs by one change of each class.
+> A path to the later revision. Default: ../common/designs/rev-b.edn. The bundled pair carries a rename, a hard rewire, a new net and a deleted net.
 
 ## Run the diff {#run}
 

@@ -11,31 +11,29 @@ import { DesignService, SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 
 type DesignClient = Client<typeof DesignService>;
 
-// PreviewView is the preview's rendering surface: a plain view adapter, no framework and no
+// PreviewView is the preview's rendering surface, a plain view adapter with no framework and no
 // presenter coupling (the same shape SvgView already satisfies for the viewer).
 export interface PreviewView {
   // showSvg reveals a rendered sheet document, replacing whatever the stage held.
   showSvg(markup: string): void;
-  // showNote replaces the stage with a status line. "error" is styled distinctly; the distinction
-  // is real and not cosmetic, because "this file has no drawable sheet" is a fact about the design
-  // while a transport failure is a fact about this attempt.
+  // showNote replaces the stage with a status line. "error" is styled distinctly, because "this
+  // file has no drawable sheet" is a fact about the design while a transport failure is a fact
+  // about this attempt.
   showNote(text: string, kind: "info" | "error"): void;
-  // setCaption sets the preview header: the design's display name and a one-line summary. Both are
+  // setCaption sets the preview header to the design's display name and a one-line summary. Both are
   // "" when nothing is selected, which is also the signal to disable the Open action.
   setCaption(name: string, summary: string): void;
 }
 
-// captionFor builds the preview's one-line summary. It deliberately does NOT reuse the viewer's
-// summaryLine: importing viewer.ts here would pull ViewerPresenter and its whole transitive graph
-// (canvas, webgl, findings, highlights) into the browse bundle, which is exactly the coupling this
-// page exists to avoid. The lines also differ — the browse page has no layout knobs to report, so
-// naming the effective layout would describe a control the reader cannot see.
+// captionFor builds the preview's one-line summary. It does NOT reuse the viewer's summaryLine,
+// because importing viewer.ts would pull ViewerPresenter and its transitive graph (canvas, webgl,
+// findings, highlights) into the browse bundle. The lines also differ, since the browse page has
+// no layout knobs and naming the effective layout would describe a control the reader cannot see.
 //
 // The sheet count leads because it is the only field GetDesign fills for EVERY design. The netlist
-// fields are populated only when the server resolves an AUTO-layout: a design that carries its own
-// geometry takes the faithful branch, which reports the design ref and leaves format and both
-// counts zero. Keying the whole line on those fields left it blank for every KiCad schematic —
-// that is, for the common case.
+// fields are populated only when the server resolves an AUTO-layout. A design that carries its own
+// geometry takes the faithful branch, which leaves format and both counts zero, so a line keyed on
+// those fields alone is blank for every KiCad schematic, the common case.
 export function captionFor(format: string, comps: number, nets: number, sheets: number): string {
   const parts: string[] = [];
   if (format) parts.push(format);
@@ -46,7 +44,7 @@ export function captionFor(format: string, comps: number, nets: number, sheets: 
 }
 
 // BOARD_SHEET_ID is the synthetic sheet a board sidecar contributes, mirroring boardSheetID in
-// internal/service/design.go. It is deliberately non-numeric so it cannot collide with a sheet index.
+// service/design.go. It is non-numeric so it cannot collide with a sheet index.
 const BOARD_SHEET_ID = "board";
 
 // PreviewSheets is the slice of GetDesignResponse pickPreviewSheet reads.
@@ -58,15 +56,14 @@ interface PreviewSheets {
 // pickPreviewSheet chooses which sheet stands for a design in the browse list.
 //
 // It is NOT simply the first sheet. GetDesign appends the synthetic board sheet AFTER the drawable
-// ones, so a board file (.kicad_pcb, IPC-2581) answers with [netlist graph, board]: its first sheet
-// is a synthetic auto-layout of the board's netlist, and previewing that shows a schematic-shaped
-// graph for a file whose whole content is a physical board.
+// ones, so a board file (.kicad_pcb, IPC-2581) answers with [netlist graph, board], and its first
+// sheet is an auto-layout of the board's netlist, a schematic-shaped graph for a file whose content
+// is a physical board.
 //
-// The discriminator is whether "faithful" is an available layout, not the file extension — a
-// question about what the design CARRIES rather than what it is named, so it holds for every board
-// format without a per-format list. A board file offers only auto-layouts, so its board sheet is
-// the only faithful drawing it has. A schematic with a board sidecar offers "faithful" and keeps
-// its schematic, which is what someone browsing a .kicad_sch means by that file.
+// The discriminator is whether "faithful" is an available layout, not the file extension, so it
+// holds for every board format without a per-format list. A board file offers only auto-layouts,
+// so its board sheet is the only faithful drawing it has. A schematic with a board sidecar offers
+// "faithful" and keeps its schematic, which is what someone browsing a .kicad_sch means by that file.
 export function pickPreviewSheet(d: PreviewSheets): { id: string; name?: string } | undefined {
   const hasFaithful = (d.availableLayouts ?? []).includes("faithful");
   if (!hasFaithful) {
@@ -89,14 +86,14 @@ export class DesignPreview {
     private readonly view: PreviewView,
   ) {}
 
-  // show renders the sheet that stands for a design. It is two calls, not one, because the sheet
-  // has to be named explicitly: GetSheet's empty selector means "index 0 of the geometry for this
-  // layout", which reaches neither the synthetic board sheet nor pickPreviewSheet's choice between
-  // them. GetDesign is what knows the sheet list.
+  // show renders the sheet that stands for a design. It takes two calls because the sheet has to
+  // be named explicitly. GetSheet's empty selector means "index 0 of the geometry for this layout",
+  // which reaches neither the synthetic board sheet nor pickPreviewSheet's choice, and GetDesign is
+  // what knows the sheet list.
   //
-  // Both calls request an empty layout, which is what makes the preview faithful-first for free:
-  // the server's layoutForFile resolves "" to the faithful layout whenever the file carries
-  // geometry, and falls back to the default auto-layout when it does not.
+  // Both calls request an empty layout, so the preview is faithful-first. The server's
+  // layoutForFile resolves "" to the faithful layout whenever the file carries geometry, and to the
+  // default auto-layout when it does not.
   async show(mount: string, path: string): Promise<void> {
     const token = ++this.seq;
     this.view.setCaption(baseName(path), "");

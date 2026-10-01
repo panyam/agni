@@ -9,17 +9,17 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// The net-name consistency batch (WS3-016/017): naming is connectivity on schematic
+// The net-name consistency batch (WS3-016/017). Naming is connectivity on schematic
 // formats, where labels join by name, so a naming slip silently merges or splits nets.
-// Three rules over two channels: the per-net alias list (netgraph.AttrAliases: every label
+// Three rules read two channels: the per-net alias list (netgraph.AttrAliases, every label
 // the naming pass collapsed into one net) and the design's name->net-count index
 // (Model.NetNameCount).
 //
 // The alias RANK tells the rules which scoping class a name came from (the FQN model in
-// docsite/content/architecture/net-solving.md): rank 0 is design-wide (a global label or
-// power-symbol rail), anything else is sheet-scoped (a local/hierarchical label, an inline
-// wire label). A design-wide name and a local alias on one net is NORMAL (a rail with a
-// local nickname); rivalry within one class is the hazard.
+// docsite/content/architecture/net-solving.md). Rank 0 is design-wide (a global label or
+// power-symbol rail), and anything else is sheet-scoped (a local/hierarchical label, an
+// inline wire label). A design-wide name and a local alias on one net is NORMAL (a rail
+// with a local nickname); rivalry within one class is the hazard.
 
 // netAliases parses the in-scope net's collapsed label list; nil when the net carried at
 // most one name.

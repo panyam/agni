@@ -1,7 +1,9 @@
 # Working on the docsite
 
-How this site is wired and where a new page has to be registered. This is the build tooling for
-`docsite/`, not published content: `content/` is what the site builder reads.
+How this site is wired and where a new page has to be registered. This file documents the build
+tooling for `docsite/` and is not itself published, since `content/` is what the site builder reads.
+
+## Registering a page
 
 **FOUR edits for a new page in an existing section, FIVE for a new SECTION.** A page needs the file,
 the section's `index.md`, `templates/nav/<Section>Nav.html`, and `content/HeaderNavLinks.json`. A new
@@ -21,32 +23,36 @@ That last one is the content-to-json direction; `TestHeaderNavLinksResolve` is j
 having only that half is what let a page ship reachable from the sidebar and absent from the header.
 
 **The header check exempts a section that has no top-level dropdown of its own**, which today means
-`learn/` and `build/`. It is derived from the file rather than a list in the test: a section is
+`learn/` and `build/`. It is derived from the file rather than a list in the test, so a section is
 required to be complete only when its own top-level entry carries `children`. `learn/` lists two of
 its fifteen pages on purpose, since twelve chapters would swamp the menu. Give it a top-level
 dropdown and every chapter becomes required with no edit to the test. The gap that buys is a section
-itemised only as a group heading inside another dropdown, `build/` being the live case: its six pages
-are all listed today and nothing would notice a seventh going missing. The index check has no
+itemised only as a group heading inside another dropdown, `build/` being the live case, whose seven pages
+are all listed today while nothing would notice an eighth going missing. The index check has no
 exemption, so such a page is still caught there.
+
+## Raw HTML and anchors
 
 **A blank line inside raw HTML SPLITS it, and the render breaks silently.** Content pages may embed
 raw HTML (inline SVG figures, the home page's cards) because the renderer passes it through. But
 CommonMark ends an HTML block at the first blank line, so a `<figure>` broken up for readability
 becomes several blocks and the fragments after the first get parsed as markdown. Keep an embedded
 figure contiguous, no blank lines between the opening and closing tag. Nothing in the gate catches
-this: `nav_test.go` checks wiring, not rendering.
+this, since `nav_test.go` checks wiring and not rendering.
 
-**A `learn/` chapter has a fifth edit: the level index.** `content/learn/levels.md` maps every
+**A `learn/` chapter also needs an entry in the level index.** `content/learn/levels.md` maps every
 `## Title (EEn)` section to the level it operates at, and `learn_levels_test.go` enforces it in both
 directions plus the per-chapter pointer line. It is hand-maintained and would otherwise go short in
-silence the moment a chapter gained a section, which is the same failure the generated captures exist
-to prevent one layer down. It caught a real omission on its first run.
+silence the moment a chapter gained a section. It caught a real omission on its first run.
 
-Two things about anchors, both learned the expensive way. **Do not put a link inside a heading**: the
-link text becomes part of the generated slug, so `## The role ([EE3](../levels/#ee3))` produces
-`the-role-ee3levelsee3` and every inbound link breaks. The level pointer goes on its own line under
-Prerequisites. And **the `{#custom-anchor}` syntax is not supported** by this renderer: it leaks into
-the visible heading text and doubles the slug. Use the natural slug the heading produces.
+Two things about anchors, both learned the expensive way. **Do not put a link inside a heading**,
+because the link text becomes part of the generated slug, so `## The role ([EE3](../levels/#ee3))`
+produces `the-role-ee3levelsee3` and every inbound link breaks. The level pointer goes on its own
+line under Prerequisites. And **the `{#custom-anchor}` syntax is not supported** by this renderer,
+which leaks it into the visible heading text and doubles the slug. Use the natural slug the heading
+produces.
+
+## Generated command output
 
 **A page's command output is GENERATED, not pasted.** A page holds
 `{{ agniRun "content/<section>/runs/<name>.yaml" }}`; the yaml says what to run; a committed
@@ -78,7 +84,7 @@ spec writes none, which is why adding the field regenerated no existing capture.
 **Copy on a rendered block takes the COMMAND, not the transcript.** `codeblocks.js` treats a leading
 `$ ` as the prompt, strips it, and follows a trailing backslash onto the next line, so a block copies
 something you can paste. A fence with no prompt lines copies whole, which is every hand-written one.
-This is why `renderRun` prompts only the line that STARTS a command: a `$` on a continuation line made
+`renderRun` prompts only the line that STARTS a command, because a `$` on a continuation line made
 the block read as two commands and copied a broken one.
 
 **Any section can have a `runs/` directory**, and `guide/` now does. Both the generator and
@@ -89,7 +95,7 @@ existing, with no Makefile edit.
 reported 10 findings where its fixture produces 11 and named 29 rules where it runs 78, with the
 prose beneath quoting the wrong number back. `querying.md` showed the `rail` relation finding one
 rail under the built-in vocabulary when it finds four, so the contrast the section rests on had
-collapsed. `naming-conventions.md` was worse than stale: it reported findings from a convention
+collapsed. `naming-conventions.md` was worse than stale, reporting findings from a convention
 called `strict/sig-only` that the page never defines, under a header claiming two over a list of one.
 Every guide fence that shows output is generated now, apart from the `agni version` block, which is
 build- and host-dependent and therefore uncapturable by construction. The last three to convert were
@@ -100,6 +106,8 @@ machine that ran it, and the runner refused the output (agni issue 501).
 **A fence with no output block is usually better left alone.** A command over a placeholder path
 cannot disagree with the tool, so capturing it buys nothing and costs the page its "your board"
 voice. Convert a fence when it shows a TRANSCRIPT.
+
+## The command parse check
 
 **A hand-written `agni …` command is parse-checked, and the check depends on the fence's SHAPE.**
 `TestDocumentedCommandsParse` in `cmd/agni` walks every markdown file under `content/`, pulls the
@@ -134,20 +142,21 @@ wrap it.
 **Which of the two working-directory modes a section wants depends on how its commands read.**
 `getting-started` names full paths (`agni check cmd/agni/testdata/conformance/...`), so its specs set
 `from_root: true` and run at the scratch root. `checks-and-reports` names bare filenames, which want
-the default instead: the script then runs INSIDE the copied fixture directory and a bare
+the default instead, where the script runs INSIDE the copied fixture directory and a bare
 `showcase.fires.kicad_pro` resolves exactly as displayed. Pick the one that makes the shown command
 the command that ran, and never use `show` to paper over the difference.
 
 `tutorial-runs-check` IS in `testall` (CONSTRAINTS C27). It deletes every capture, regenerates, and
-fails on any difference, which is the only check that works here: a capture's freshness stamp covers
-the spec and the fixture but NOT the engine build, so an engine change that alters the output leaves
-every stamp valid. Measured by rewording one rule's coverage line, a plain docsite build rewrote 0
-captures and a forced regeneration rewrote 12. Before that target existed, a capture edited by hand
-passed the entire gate.
+fails on any difference, which is the only check that works here, because a capture's freshness
+stamp covers the spec and the fixture but NOT the engine build, so an engine change that alters the
+output leaves every stamp valid. Measured by rewording one rule's coverage line, a plain docsite
+build rewrote 0 captures and a forced regeneration rewrote 12. Before that target existed, a capture
+edited by hand passed the entire gate.
 
-Four things about writing one. **Never make the directive rewrite the page**: `content/` is what the
-site builder reads, and a build that wrote back into it would loop. **Use the fields, not shell
-plumbing** — `capture: stdout|stderr|both|none`, `exit: true`, `match: '<re2>'` — because a positional
+Four things about writing one. **Never make the directive rewrite the page**, because `content/` is
+what the site builder reads, and a build that wrote back into it would loop. **Use the fields
+(`capture: stdout|stderr|both|none`, `exit: true`, `match: '<re2>'`) rather than shell plumbing**,
+because a positional
 filter (`sed -n '5p'`) silently shows the wrong line the moment that output gains one; `match` selects
 by shape and matching NOTHING is an error. **Add `show:` only when the script carries plumbing a reader
 should not see**, since it defaults to the script. And **every run gets a scratch copy of the fixture**,
@@ -169,44 +178,40 @@ the command displayed is the command that ran: using `show` to swap in a differe
 untested command in front of the reader. Output is unaffected either way, since provenance and
 resolution notes are reported relative to the design's project rather than to the invocation.
 
+## Figures and branch previews
+
 **A generated capture COUNTS as an illustration, and that is the rule for where a figure goes.** A
 page carrying five `agniRun` blocks is already broken up by five pieces of real output, so adding a
 diagram to it is decoration. The four `tutorials/` rungs that gained a figure are exactly the four
 with no capture at all, which fell out of the rule rather than being chosen, and rung 11 got nothing
-despite being the longest page on the ladder because it carries eight captures. Length is not the
-trigger; unbroken prose is.
+despite being the longest page on the ladder because it carries eight captures. Unbroken prose is the
+trigger, and length is not.
 
 **Figures are generated too.** `make -C docsite figures` re-renders the schematics `learn/` embeds,
-via `figures.sh`. Outside the gate for the same reason `tutorial-runs` is: a render depends on the
-engine build, so a code change would invalidate every figure on every branch.
+via `figures.sh`. It stays outside the gate because a render depends on the
+engine build, so a code change would invalidate every figure on every branch, and nothing checks a
+render for staleness (agni issue 453).
 
 **To review a branch before it merges, use `make -C docsite preview PAGE=<page>`**, which folds one
-built page into a self-contained HTML file that opens anywhere. Do NOT reach for `make gh-pages`: it
+built page into a self-contained HTML file that opens anywhere. Do NOT reach for `make gh-pages`, which
 force-pushes `dist` to a branch that GitHub Pages does not serve. Pages here is configured
 `build_type: workflow`, so the live site is whatever `docs.yml` uploaded on the last push to `main`,
 and the gh-pages branch has not been served since the MkDocs tree was retired. The target is kept, with
 that written above it, because switching Pages back to branch-serving would enable real per-branch
 preview URLs and deleting it would hide that option.
 
-**A guide fence is hand-written and NOTHING reads it, which is the whole reason the tutorial ones are
-generated.** `guide/` carries 37 command fences across nine pages and no `runs/` directory, so a fence
-goes stale silently and stays that way. Four had: `getting-started.md` reported 10 findings where the
-fixture produces 11 and named 29 rules where it runs 78, with its own prose quoting the wrong number
-back. They were found by grepping for a finding count with no coverage line after it, not by any test.
-`hack/tutorial_runs_check.sh` walks `docsite/content/**/runs/` rather than a fixed pair of sections,
-so converting a guide page needs a `runs/` directory and one spec per fence and no change to the
-harness. `OUT_OF_SCOPE.md` carries that as a ledger row. Until someone does it, re-run a guide fence
-before trusting it.
+## Hand-written blocks and tutorial drift
 
-Blocks that cannot be generated stay hand-written and unverified: an `agni serve` that never returns,
-an excerpt of a longer output, a step needing a tool the build cannot assume (rung 12 shells out to
-`kicad-cli`). Generate what can be generated rather than softening the check to cover the rest. Do not
-tag a generated fence `console`: Chroma's console lexer renders the whole body as error tokens.
+Blocks that cannot be generated stay hand-written and are at most parse-checked: an `agni serve`
+that never returns, an excerpt of a longer output, a step needing a tool the build cannot assume
+(rung 12 shells out to `kicad-cli`). Generate what can be generated rather than softening the check
+to cover the rest. Do not tag a generated fence `console`, because Chroma's console lexer renders
+the whole body as error tokens.
 
 **Verifying a tutorial's claims keeps finding bugs in the ENGINE, not the docs.** Three times so far: a
 rung arguing that narrowing a gate makes a board pass (it reveals the next failure instead), `agni
 query` printing an absolute host path in provenance, and two rungs whose numbers had drifted. Treat a
-mismatch as a question, never as "regenerate and move on" — regenerating blesses whatever the code
+mismatch as a question, never as "regenerate and move on", because regenerating blesses whatever the code
 currently does, which is right when the doc drifted and wrong when the code regressed.
 
 **Changing the tutorial FIXTURE can invalidate a rung's lesson, and the fix is a judgement about what
@@ -217,6 +222,8 @@ rung now moves the params corpus aside along with `conventions.yaml` so it isola
 intends, and the page says why. Regenerating instead would have shipped a page contradicting its own
 output. When a fixture edit changes a capture's CONTENT rather than its stamp, find which page reads
 it and decide what that page is for.
+
+## Glossary terms
 
 **A term the docsite explains more than once belongs in the glossary.** `{{ explainable "termination" }}`
 inlines a hoverable link whose popover carries the whole term page, diagram included, so a page can USE
@@ -235,11 +242,11 @@ definition to rot, which is the same argument `agnirun.go` makes for captured ou
 
 Two prose conventions go with it, and they answer different questions.
 
-**Which page keeps the gloss:** a `learn/` chapter still teaches a term in full the first time it
-introduces it, and every later mention anywhere on the site is a tag. Chapter 10's opening paragraph
+**A `learn/` chapter still teaches a term in full the first time it
+introduces it**, and every later mention anywhere on the site is a tag. Chapter 10's opening paragraph
 was four inline glosses of terms chapter 1 had already taught, and it is now four tags.
 
-**How often to tag within one page: ONCE per term, at the first mention.** The tag is a reading
+**Within one page, tag a term ONCE, at its first mention.** The tag is a reading
 affordance and a page that tags every occurrence spends it. `pull-up` appears twenty times in prose
 outside `learn/`, and twenty dotted underlines in one tutorial reads as damage rather than as help.
 One tag is enough, because the popover is reachable from it and the glossary is one click further.
@@ -250,11 +257,13 @@ wrongly on an author costs more than the convention is worth. That half is on yo
 
 `terms_test.go` enforces the rest and fails the gate on a tag naming a term that does not exist, a term
 with no `label` or `summary`, a term missing from the glossary index, and a term nothing references.
-That last one is deliberate: a glossary entry with no caller is a definition someone wrote and the prose
-never adopted.
+That last one is deliberate, because a glossary entry with no caller is a definition someone wrote
+and the prose never adopted.
 
 **The tag works without JavaScript**, rendering an ordinary anchor with the summary in `title` and a
 click that lands on the full page, so `terms.js` is an upgrade rather than a dependency.
+
+## Mermaid diagrams
 
 **A mermaid diagram has to be RENDERED before it is committed, and parsing is not the check.**
 Diagrams go in ` ```mermaid ` fences and `BasePage.html` loads mermaid lazily on pages that contain
@@ -289,6 +298,8 @@ from the chain, so the flip removes it. In `TB` two long labels can land on the 
 width again, which is what `port-protection` and `differential-pair` did until a label also gained a
 `<br/>`. Re-measure after the flip rather than assuming it worked.
 
+## Hand-authored SVG figures
+
 **A hand-authored diagram lives in `figures/` and a page pulls it in with
 `{{ includeFile "figures/<name>.svg" }}`. Do not paste an `<svg>` into a markdown page.** The
 directive reads the file at BUILD time and returns raw HTML, so the SVG still lands inline in the
@@ -299,15 +310,6 @@ Three things about the arrangement. **A bad path fails SILENTLY**, because `Incl
 empty string when the file does not resolve, so a rename drops the figure from the page and the build
 still succeeds. `includefile_test.go` is what turns that into a gate failure, and it also fails on a
 figure nothing includes, for the reason `terms_test.go` rejects a glossary entry with no caller.
-**A count in a lead-in drifts, and a grep finds it.** "Four more need their own room" sat above five
-paragraphs on `build/evidence.md`, and "Two of the questions carry a lesson wider than this rule" sat
-above three on `build/check-rule.md`, where the third had also drifted from a paragraph into a bullet,
-which is probably how it went unnoticed. Sweep for it by grepping the content tree for a number word
-followed by `things|ways|rules|reasons|more|questions|traps`, then counting the bolded leads and list
-items in the lines that follow until the next heading. Most hits are ordinary prose ("two different
-questions") so read the output rather than trusting it, and it is too noisy to be a gate test. The
-durable fix is to number the items and drop the total from the lead-in, so the count lives in one
-place and cannot disagree with itself.
 
 **A blank line inside a figure file is NOT harmless**, and `TestFiguresCarryNoBlankLines` fails the
 gate on one. `IncludeFile` splices the file in before the markdown renderer runs, so the SVG is
@@ -318,10 +320,20 @@ content after the tag (`<text x="8" y="44">your machine</text>`) is parsed as a 
 renderer wraps that chunk in `<p>`, which closes the `<svg>` early, and every element after it lands
 outside the figure and never draws. Four merged figures sat in that state, each missing its closing
 caption on the live site, found by screenshotting one and counting its text runs. And **the file is
-not served**: `figures/` sits outside `static/`, so the only way to reach a diagram is the include,
-and there is no second copy to drift.
+not served**, because `figures/` sits outside `static/`, so the only way to reach a diagram is the
+include, and there is no second copy to drift.
 
-**Copy the nearest existing figure rather than starting from an empty file.** Forty-four in, the
+**A count in a lead-in drifts, and a grep finds it.** "Four more need their own room" sat above five
+paragraphs on `build/evidence.md`, and "Two of the questions carry a lesson wider than this rule" sat
+above three on `build/check-rule.md`, where the third had also drifted from a paragraph into a bullet,
+which is probably how it went unnoticed. Sweep for it by grepping the content tree for a number word
+followed by `things|ways|rules|reasons|more|questions|traps`, then counting the bolded leads and list
+items in the lines that follow until the next heading. Most hits are ordinary prose ("two different
+questions") so read the output rather than trusting it, and it is too noisy to be a gate test. The
+durable fix is to number the items and drop the total from the lead-in, so the count lives in one
+place and cannot disagree with itself.
+
+**Copy the nearest existing figure rather than starting from an empty file.** Forty-nine in, the
 shape that has held is a `viewBox` 640 wide against an 800px column, so a figure never scales up; a
 `<title>` whose `id` ends `-title`, carrying the alt description a screen reader gets; `currentColor`
 between 0.35 and 0.85 opacity for structure; `var(--accent-color)` reserved for the ONE thing the
@@ -333,7 +345,7 @@ sanctioned variant rather than a mistake to copy away.
 
 **Give it a `<title>`, not an `aria-label`, and keep `role="img"`.** Both give a valid accessible
 name, so this is a consistency rule rather than an accessibility one, and it exists because the
-verification sweep has to SELECT the figures. Select on `svg[role="img"]`, which all 44 carry, and
+verification sweep has to SELECT the figures. Select on `svg[role="img"]`, which all 49 carry, and
 never on the title's id: keying on the title is what silently skipped the two figures that used
 `aria-label` for their whole life, and a skipped figure looks exactly like a clean one in the
 results.
@@ -354,24 +366,26 @@ accented roles, `#d98a4a` for a warning or an override, all chosen to read on ei
 hand-authored diagram should go through `figures/` and the include instead, which gets the real
 palette back; the image-referenced sets predate that and are the reason this paragraph stays.
 
+## Checking rendering in a browser
+
 **Check a hand-authored SVG's geometry rather than reading it.** The failure is text or a box that
 sits outside the canvas, which is invisible in the markup and obvious on the page. Parse the file and
 walk every `text` and `rect` against the declared `width`/`height`, estimating a text run at about
 0.55em per character and honouring `text-anchor`. That check caught a caption running 11px past the
 right edge of `datasheet/pin-precedence.svg`. The estimate is a fallback, though. **Playwright against
-a local `go run .` is the real check and it works**: `getBBox()` on every `text`, `rect`, `circle`,
+a local `go run .` is the real check**, because `getBBox()` on every `text`, `rect`, `circle`,
 `line` and `path` against `svg.viewBox.baseVal` reports the true rendered geometry rather than a
 guess, and it can sweep every page in one `page.evaluate` by fetching each into a detached div. That
 is how eleven figures were cleared at once. Playwright still refuses `file:` URLs, so serve the site.
 
 **The sweep is THREE checks, and it lives in `web/browser/figures.spec.ts` under `make browser-test`**,
-not in the Go gate, because it needs a served site and a real Chromium. Bounds is a `getBBox()` against
-the viewBox. **Text on text** compares every pair of `text` boxes, because two runs sitting on each
-other is a different failure from one leaving the canvas: 32 figures came back clean on bounds and one
-of them had two labels printed over each other. **Text on a wire** compares each `text` box against
-every `line` and `path` whose own box is thin on one axis. That third one is the cheapest to get
-wrong, because a label a few pixels off sits exactly on the rail it names and is fully inside the
-viewBox, so the first two both pass it.
+not in the Go gate, because it needs a served site and a real Chromium. **Bounds** is a `getBBox()`
+against the viewBox. **Text on text** compares every pair of `text` boxes, because two runs sitting
+on each other is a different failure from one leaving the canvas: 32 figures came back clean on
+bounds and one of them had two labels printed over each other. **Text on a wire** compares each
+`text` box against every `line` and `path` whose own box is thin on one axis. That third one is the
+cheapest to get wrong, because a label a few pixels off sits exactly on the rail it names and is
+fully inside the viewBox, so the first two both pass it.
 
 **`getBBox()` excludes the STROKE, which made that third check unfireable for its whole first life.**
 A horizontal line's geometric box is zero tall and a vertical one's is zero wide, so a text box can
@@ -386,15 +400,17 @@ The stylesheet is cached HARD, so a CSS change measured straight after an edit r
 and looks like the change did nothing. Bust it by rewriting each `link[rel=stylesheet]` href with a
 cache-busting query before measuring. **A running `go run .` holds an included FIGURE the same way**,
 so editing a file under `figures/` and re-fetching serves the version the server started with, and no
-query string helps because the staleness is server-side: restart it. And a section index is served at
+query string helps because the staleness is server-side, so restart it. And a section index is served at
 `/agni/<section>/`, so `/agni/<section>/index/` correctly 404s and is not evidence of a broken page.
-Worst of the four, **`dist` has to be served UNDER the `/agni/` prefix**: a page links its stylesheet
-as `/agni/static/css/main.css`, so serving `dist` at a server's root 404s every asset and the page
-renders with NO CSS while still returning 200. The nav then lays out as the mobile stacked column at
-any viewport width, and a measurement of it reads as a broken desktop rule rather than as a missing
-stylesheet, which cost two rounds of diagnosis. Symlink the tree in and serve the parent
+Worst of the four, **`dist` has to be served UNDER the `/agni/` prefix**, because a page links its
+stylesheet as `/agni/static/css/main.css`, so serving `dist` at a server's root 404s every asset and
+the page renders with NO CSS while still returning 200. The nav then lays out as the mobile stacked
+column at any viewport width, and a measurement of it reads as a broken desktop rule rather than as
+a missing stylesheet, which cost two rounds of diagnosis. Symlink the tree in and serve the parent
 (`ln -s <abs>/docsite/dist <tmp>/agni`), and confirm
 `getComputedStyle(document.querySelector('.main-nav')).display` reads `flex` before trusting a number.
+
+## Tables and narrow viewports
 
 **Table cells WRAP.** They used to carry `white-space: nowrap`, which laid a prose table out on one
 unwrapped line: 47 of the site's 62 tables overflowed their column and the worst ran 5.34x the content
@@ -404,18 +420,20 @@ identifiers in BOTH columns is the case to avoid; the EDIF construct-to-IR mappi
 800px column that way and became a stacked list, where each identifier gets the full width.
 
 **Below 768px that behaviour holds, and the page itself never scrolls sideways.** Measured at a
-420px viewport across the course, the architecture pages, the CLI reference and the EDIF primer:
+420px viewport across the course, the architecture pages, the CLI reference and the EDIF primer,
 `document.documentElement.scrollWidth` equals the viewport on every one. A table too wide to wrap
 scrolls inside its own box instead (worst seen, the five-column levels table at 2.01x), a `pre`
 scrolls the same way, and an included figure scales down with the column rather than overflowing it.
-So `.main-nav`'s `overflow-x` is not implicated here: nothing at this width is an absolutely
+So `.main-nav`'s `overflow-x` is not implicated here, because nothing at this width is an absolutely
 positioned child of a clipping ancestor.
 
 **Measure layout on the REAL page, never in a detached div.** The detached-div sweep is right for a
 figure, because `getBBox()` reports SVG user-space coordinates that do not depend on where the
-element sits. It is wrong for anything the page grid decides: the same levels table measured 777px
+element sits. It is wrong for anything the page grid decides, and the same levels table measured 777px
 against a 452px container in a detached 800px div and fits its column exactly on the real page. The
 div has no grid to inherit, so the article width it computes is fiction.
+
+## The header nav
 
 **`content/HeaderNavLinks.json` is hand-formatted with one compact object per line.** Read it as text
 before editing. Piping it through a pretty-printer to find the insertion point produces a shape that
@@ -426,10 +444,10 @@ CHILD turns it into a subheading inside the dropdown, and it stays a real link b
 index it points at is where someone clicking a heading wants to land. `"columns": 2` lays that
 dropdown out in columns, with `break-before: column` starting each group in its own, so the break
 means one column per group rather than falling at the halfway point. `Guides` and `Reference` use
-both. Nesting is ONE level: the template renders `children` and nothing deeper.
+both. Nesting is ONE level, since the template renders `children` and nothing deeper.
 
 **Grouping is presentation, so it lives in the presentation layer.** Folding two sections under one
-heading moved no content: `content/guide/` and `content/build/` stay where they are, so every
+heading moved no content, so `content/guide/` and `content/build/` stay where they are and every
 published URL and cross-link still resolves. Renaming a content directory to match a menu label would
 break both for a change whose whole purpose is that the header reads better.
 
@@ -453,12 +471,12 @@ down before a reader saw a word.
 **A hover bridge cannot live on the element that SCROLLS.** The header dropdown sits 0.5rem below its
 nav link, and crossing that gap counts as a mouseout unless something invisible spans it. The bridge
 was a `::before` on `.nav-dropdown` at `top: -0.5rem`, which stopped working the day the panel gained
-`overflow-y: auto` for the menus that ran off the bottom of the screen: an overflow value makes the
-element a scroll container, and a scroll container clips everything outside its padding box, so the
-bridge was neither painted nor hit-tested. It now hangs off `.nav-item`, which does not scroll, with a
-`min-width` matching the panel so a diagonal move toward a wide menu stays over it. Probe it with
-`document.elementFromPoint` in the middle of the gap while hovering: the hit must be inside the
-`.nav-item`, and reading `site-header` there is the bug.
+`overflow-y: auto` for the menus that ran off the bottom of the screen, because an overflow value
+makes the element a scroll container, and a scroll container clips everything outside its padding
+box, so the bridge was neither painted nor hit-tested. It now hangs off `.nav-item`, which does not
+scroll, with a `min-width` matching the panel so a diagonal move toward a wide menu stays over it.
+Probe it with `document.elementFromPoint` in the middle of the gap while hovering. A hit inside the
+`.nav-item` is correct, and reading `site-header` there means the bug is back.
 
 **Two CSS blocks are order-dependent and say so inline.** The column overrides and the toggle base
 rules each tie on specificity with the rules they override, so SOURCE ORDER decides. Both were
@@ -466,24 +484,26 @@ written in the wrong place first, and the second left every toggle invisible whi
 hidden, which is a header with no way to open it. Nothing in the gate catches this, so read the notes
 above those blocks in `static/css/main.css` before moving them.
 
+## Hidden pages and search
+
 **`docsite/_hidden/` hides pages from the SITE BUILD, not from the repo.** Files under it stay
 tracked and world-readable. A parked section sat there for months in exactly that state. Moving
 something to `_hidden/` is a publishing decision and never a confidentiality one. Anything genuinely
 sensitive has to leave the repo and its history.
 
 **Search is a post-build index over `dist/`, not over `content/`.** `make build` ends by running
-`pagefind --site dist`, which writes `dist/pagefind/`. Indexing the BUILT site is deliberate:
+`pagefind --site dist`, which writes `dist/pagefind/`. Indexing the BUILT site is deliberate, because
 `_hidden/` pages never reach `dist`, so they stay out of the index without a second exclusion list
 to keep in sync. The step lives in `build` rather than in `gh-pages` so a local build and the deploy
 produce the same tree.
 
-Three things about it are load-bearing. **`Content.html` carries `data-pagefind-body`** on the
-article: Pagefind drops `<nav>` by itself but NOT `<header>`, so without it every excerpt opened
-with the logo and the GitHub link. **The search overlay in `BasePage.html` carries
-`data-pagefind-ignore`**, because Pagefind indexes hidden text, so the overlay's own copy would
-otherwise be indexed on all 170 pages and "index" or "build" would match the whole site. And **the
-Pagefind bundle is fetched on first open, not on load**, so a visit that never searches pays nothing
-for the ~135KB of JS and CSS.
+Search breaks in a visible way if any of three things goes. **`Content.html` carries
+`data-pagefind-body`** on the article, because Pagefind drops `<nav>` by itself but NOT `<header>`,
+so without it every excerpt opened with the logo and the GitHub link. **The search overlay in
+`BasePage.html` carries `data-pagefind-ignore`**, because Pagefind indexes hidden text, so the
+overlay's own copy would otherwise be indexed on every page and "index" or "build" would match the
+whole site. And **the Pagefind bundle is fetched on first open, not on load**, so a visit that never
+searches pays nothing for the ~135KB of JS and CSS.
 
 `make run` does not build an index, since it serves from `content/` with no `dist`. The overlay
 detects the missing bundle and says so rather than hanging. Use `make build` to exercise search
@@ -492,20 +512,20 @@ locally, and note it must be served under the `/agni/` prefix for the bundle pat
 ## Content is templated BEFORE it is markdown, so a stray `{{` blanks the page
 
 Every content file is run through `text/template` first. That is what makes `{{ agniRun "..." }}`,
-`{{ includeCard "..." }}` and `{{.Site.PathPrefix}}` work, and it applies to the whole file: a code
-fence does not protect you, because there is no markdown yet when the templater runs.
+`{{ includeCard "..." }}` and `{{.Site.PathPrefix}}` work, and it applies to the whole file, code
+fences included, because there is no markdown yet when the templater runs.
 
-The failure is silent and total. An unparseable action does not break the offending line, it fails
-the whole page load, and the page still builds and still exists at its URL with nothing in it but the
+The failure is silent and total. An unparseable action fails the whole page load rather than the offending
+line, and the page still builds and still exists at its URL with nothing in it but the
 title and the footer. `build/check-rule.md` shipped that way for months: two Go samples contained
 `[]check.ContextSubject{{`, an elided composite-literal brace, which the templater read as an action
 calling a function named `Kind`. Twelve sections of the repo's rule-authoring guide were absent from
 the site and nothing reported it.
 
-So: **write a Go composite literal with the element brace on its own line**, and treat any `{{` in a
+So **write a Go composite literal with the element brace on its own line**, and treat any `{{` in a
 sample (Rust macros, Vue, Handlebars, Go templates as subject matter) as needing the same care.
 
-**A TRANSCLUDED file does not get that pass, which is the mirror trap.** `includeCard` is called
+**A TRANSCLUDED file does not get that pass, so the trap runs the other way.** `includeCard` is called
 DURING a host page's template execution and its return value is spliced in afterwards, so nothing
 re-scans it. A generated card writing `{{.Site.PathPrefix}}` in an image path renders correctly on
 its own page and reached the browser verbatim when transcluded, which requested a literal

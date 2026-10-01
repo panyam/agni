@@ -11,10 +11,10 @@ import (
 // The learn course is indexed two ways: by topic (the numbered chapters) and by LEVEL
 // (content/learn/levels.md, which lists every section operating at each level). The second is
 // hand-maintained, so it drifts the moment a chapter adds a section and nobody updates it, and the
-// drift is silent: the levels page still renders, just short.
+// drift is silent, since the levels page still renders, just short.
 //
 // That is the same failure the generated command captures exist to prevent one layer down, so it
-// gets the same treatment. These tests are cheap because both sides are greppable: a section
+// gets the same treatment. These tests are cheap because both sides are greppable. A section
 // declares its level in its heading, and the index links to it by anchor.
 
 var (
@@ -22,8 +22,8 @@ var (
 	levelHeading = regexp.MustCompile(`(?m)^## (.+?) \((EE\d)\)$`)
 )
 
-// slug mirrors the renderer's heading-to-anchor rule closely enough for a link check: lowercase,
-// non-alphanumerics collapsed to hyphens. Verified against the built site when levels.md landed.
+// slug mirrors the renderer's heading-to-anchor rule closely enough for a link check, lowercasing and
+// collapsing non-alphanumerics to hyphens. Verified against the built site when levels.md landed.
 func slug(s string) string {
 	return strings.Trim(regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(strings.ToLower(s), "-"), "-")
 }
@@ -67,7 +67,7 @@ func TestEveryLevelledSectionIsIndexed(t *testing.T) {
 	}
 }
 
-// TestLevelIndexPointsAtRealSections is the other direction: an entry for a section that was renamed
+// TestLevelIndexPointsAtRealSections is the other direction. An entry for a section that was renamed
 // or removed becomes a dead anchor, which renders as a link that silently goes nowhere.
 func TestLevelIndexPointsAtRealSections(t *testing.T) {
 	have := map[string]bool{}
@@ -84,12 +84,13 @@ func TestLevelIndexPointsAtRealSections(t *testing.T) {
 	}
 }
 
-// TestEveryChapterDeclaresItsLevels: a chapter without the pointer line leaves a reader who meets
-// "(EE4)" in a heading with nowhere to find out what EE4 means, which is the gap levels.md closed.
+// TestEveryChapterDeclaresItsLevels exists because a chapter without the pointer line leaves a
+// reader who meets "(EE4)" in a heading with nowhere to find out what EE4 means, which is the gap
+// levels.md closed.
 func TestEveryChapterDeclaresItsLevels(t *testing.T) {
 	for _, s := range chapterSections(t) {
 		body := read(t, filepath.Join(learnDir(), s[0]+".md"))
-		if !strings.Contains(body, "**Levels on this page:**") {
+		if !strings.Contains(body, "](../levels/)") {
 			t.Errorf("content/learn/%s.md tags sections with levels but carries no pointer to their definitions", s[0])
 			break
 		}

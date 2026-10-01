@@ -16,7 +16,7 @@ func comp(ref, lib, part, value string) *ir.Component {
 	return c
 }
 
-// renderPair is the report every Render test reads: one change of every component and net
+// renderPair is the report every Render test reads. It holds one change of every component and net
 // kind, produced through the public Designs path rather than a hand-assembled Report.
 func renderPair() *Report {
 	a := &ir.Design{

@@ -10,9 +10,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// memProjects is an in-memory ProjectStore: enough to drive the service without a filesystem, which
-// is the point of the port. That it needs no tree, no descriptor, and no parent directory is the
-// property the port exists to guarantee.
+// memProjects is an in-memory ProjectStore, enough to drive the service without a filesystem. That it
+// needs no tree, no descriptor, and no parent directory is the property the port exists to guarantee.
 type memProjects struct {
 	projects []*webapi.Project
 	designs  map[string][]*webapi.Design
@@ -101,8 +100,8 @@ func TestGetProjectAndDesign(t *testing.T) {
 	}
 }
 
-// TestGetClassifiesMalformedNameApartFromAbsent: a client has to be able to tell a typo from a
-// project it does not have, so the two map to different codes.
+// TestGetClassifiesMalformedNameApartFromAbsent exists because a client has to be able to tell a typo
+// from a project it does not have, so the two map to different codes.
 func TestGetClassifiesMalformedNameApartFromAbsent(t *testing.T) {
 	svc := NewProjectService(fixtureStore())
 	ctx := context.Background()
@@ -121,7 +120,7 @@ func TestGetClassifiesMalformedNameApartFromAbsent(t *testing.T) {
 	}
 }
 
-// TestListDesignsAbsentParentIsNotFound: "this project has no designs" and "there is no such
+// TestListDesignsAbsentParentIsNotFound pins that "this project has no designs" and "there is no such
 // project" are different answers, and only one means the client's parent was wrong.
 func TestListDesignsAbsentParentIsNotFound(t *testing.T) {
 	svc := NewProjectService(fixtureStore())
@@ -156,7 +155,7 @@ func TestListProjectsFilter(t *testing.T) {
 	if len(one.GetProjects()) != 1 || one.GetProjects()[0].GetName() != "projects/sensor" {
 		t.Fatalf("filtered = %+v", one.GetProjects())
 	}
-	// A filter the service does not implement must be refused, not ignored: a client that believed it
+	// A filter the service does not implement must be refused, not ignored. A client that believed it
 	// had narrowed to its own mount and silently got every mount would read another team's projects
 	// as its own.
 	if _, err := svc.ListProjects(ctx, &webapi.ListProjectsRequest{Filter: `title="x"`}); !errors.Is(err, ErrInvalidArgument) {
@@ -168,7 +167,7 @@ func TestListProjectsFilter(t *testing.T) {
 }
 
 // TestResolveDesignMissIsEmptyNotError pins the contract that makes the project surfaces safe to
-// apply: most files on a mount belong to no declared design, and that answer is a normal empty
+// apply. Most files on a mount belong to no declared design, and that answer is a normal empty
 // response. A client reading it shows the plain viewer rather than some other project's config.
 func TestResolveDesignMissIsEmptyNotError(t *testing.T) {
 	svc := NewProjectService(fixtureStore())
@@ -194,8 +193,8 @@ func TestResolveDesignMissIsEmptyNotError(t *testing.T) {
 	}
 }
 
-// TestNilStoreAnswersAsUnconfigured: a server started with no mounts carrying descriptors must still
-// serve, so resolution reports nothing rather than failing.
+// TestNilStoreAnswersAsUnconfigured pins that a server started with no mounts carrying descriptors
+// must still serve, so resolution reports nothing rather than failing.
 func TestNilStoreAnswersAsUnconfigured(t *testing.T) {
 	svc := NewProjectService(nil)
 	ctx := context.Background()
@@ -242,13 +241,13 @@ func TestSourcesFor(t *testing.T) {
 		CompanionUris: []string{"mount://m/d/board.kicad_sch", "mount://m/d/board.kicad_pcb"},
 	}
 
-	// Naming the design itself: every tier comes from the declaration.
+	// Naming the design itself, every tier comes from the declaration.
 	s := SourcesFor(d, "")
 	if s.NetlistURI != "mount://m/d/board.edn" || s.BoardURI != "mount://m/d/board.kicad_pcb" || s.GeometryURI != "mount://m/d/board.kicad_sch" {
 		t.Fatalf("design-named sources = %+v", s)
 	}
 
-	// Naming a companion: only the NETLIST tier moves. The named artifact keeps whatever it alone
+	// Naming a companion, only the NETLIST tier moves. The named artifact keeps whatever it alone
 	// supplies, because that is why the caller pointed at it.
 	s = SourcesFor(d, "mount://m/d/board.kicad_pcb")
 	if s.NetlistURI != "mount://m/d/board.edn" || s.BoardURI != "mount://m/d/board.kicad_pcb" {
@@ -268,15 +267,16 @@ func TestIsCompanion(t *testing.T) {
 	if !IsCompanion(d, "mount://m/d/a.kicad_pcb") {
 		t.Error("a declared companion should be recognised")
 	}
-	// The reason companions are declared rather than inferred: an undeclared sibling is a legitimate
+	// Companions are declared rather than inferred because an undeclared sibling is a legitimate
 	// analysis source in its own right.
 	if IsCompanion(d, "mount://m/d/a-rev-b.edn") || IsCompanion(d, "mount://m/d/a.edn") {
 		t.Error("only declared companions are companions")
 	}
 }
 
-// TestPaginateResumesByName: the page token is the next item's resource name rather than an offset,
-// so a project added or removed between calls cannot make a listing skip or repeat a neighbour.
+// TestPaginateResumesByName checks that the page token is the next item's resource name rather than
+// an offset, so a project added or removed between calls cannot make a listing skip or repeat a
+// neighbour.
 func TestPaginateResumesByName(t *testing.T) {
 	names := []string{"a", "b", "c", "d"}
 	at := func(i int) string { return names[i] }
@@ -289,7 +289,7 @@ func TestPaginateResumesByName(t *testing.T) {
 	if len(page) != 2 || names[page[0]] != "c" || next != "" {
 		t.Fatalf("second page = %v, next = %q", page, next)
 	}
-	// "c" removed between the two calls: resuming by name lands on "d" rather than skipping it.
+	// With "c" removed between the two calls, resuming by name lands on "d" rather than skipping it.
 	shrunk := []string{"a", "b", "d"}
 	page, _ = paginate(len(shrunk), 2, "c", func(i int) string { return shrunk[i] })
 	if len(page) != 1 || shrunk[page[0]] != "d" {

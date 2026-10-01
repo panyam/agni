@@ -14,7 +14,7 @@ Every reader normalizes its source format into the same neutral IR, and a writer
 
 ## Pick an input design {#pick}
 
-> Three synthetic fixtures, one per reader: a bare EDIF netlist, a KiCad board, and an IPC-2581 board (the two board formats also carry a physical tier). They all read into the same IR shape. That convergence is the point.
+> Three synthetic fixtures, one per reader: a bare EDIF netlist, a KiCad board, and an IPC-2581 board (the two board formats also carry a physical tier). They all read into the same IR shape.
 
 ```inputs
 - name: design
@@ -48,7 +48,7 @@ Agni -->> You: *ir.Design
 
 ## Emit, and prove the round-trip {#emit}
 
-> Write the IR to the chosen format, then read the emitted document straight back. The re-read IR matches the input's on every modeled field, so the netlist and physical tier survive the round-trip. Geometry is not modeled yet (that is WS1-006), so this is a semantic round-trip, not byte-for-byte.
+> Write the IR to the chosen format, then read the emitted document straight back. The re-read IR matches the input's on every modeled field, so the netlist and physical tier survive the round-trip. Geometry lives in a separate sidecar (WS1-006) that this round-trip does not carry, so this is a semantic round-trip, not byte-for-byte.
 
 ```mermaid
 sequenceDiagram

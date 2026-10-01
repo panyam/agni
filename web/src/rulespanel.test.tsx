@@ -80,7 +80,7 @@ describe("rulespanel island bundles", () => {
     key(name, "Enter");
 
     expect(savedInStorage()).toEqual([{ name: "my bundle", rules: ["single-pin-net"] }]);
-    // The saved bundle is now current: it appears in the picker and can be deleted.
+    // The saved bundle is now current, so it appears in the picker and can be deleted.
     expect(q<HTMLSelectElement>(el, ".rules-bundle-pick select").value).toBe("my bundle");
     expect(el.querySelector(".rules-bundle-del")).toBeTruthy();
   });
@@ -147,7 +147,7 @@ describe("rulespanel rule prose (WS9-020)", () => {
     toggle.click();
 
     const detail = q<HTMLElement>(el, ".rule-detail");
-    // The markdown is rendered, not shown as source: the `##` heading becomes an h2 and the
+    // The markdown is rendered, not shown as source. The `##` heading becomes an h2 and the
     // `**bold**` becomes a strong element.
     expect(detail.querySelector("h2")?.textContent).toBe("single-pin-net");
     expect(detail.querySelector("strong")?.textContent).toBe("markdown");
@@ -160,7 +160,7 @@ describe("rulespanel rule prose (WS9-020)", () => {
     expect(el.querySelector(".rule-detail")).toBeNull();
   });
 
-  // Vacuous on its own: a panel that never rendered a remedy at all would also pass it. The test
+  // Vacuous on its own, since a panel that never rendered a remedy at all would also pass it. The test
   // above is its positive control, pinning that the element DOES appear when the prose is there.
   it("omits the remedy element for a rule that states none", () => {
     const noRemedy = { ...rule("single-pin-net", "connectivity"), remedy: "" };

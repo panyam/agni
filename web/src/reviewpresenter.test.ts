@@ -7,7 +7,7 @@ import type { ReviewState } from "./review.js";
 import type { ConventionState } from "./conventions.js";
 import { stubQueryView } from "./testviews.js";
 
-// A run document as the server returns it: a Review resource wrapping a CheckResults.
+// doc builds a run document as the server returns it, a Review resource wrapping a CheckResults.
 function doc(name: string, createdAt: string, outcomes: string[]) {
   return {
     name,
@@ -209,7 +209,7 @@ describe("review presenter — loading", () => {
     expect(h.onReview).not.toHaveBeenCalled();
   });
 
-  // Regression: the panel was wired but the CLIENT was not, and the load path asserted the client
+  // A regression. The panel was wired but the CLIENT was not, and the load path asserted the client
   // was present. Opening a design then threw a TypeError that surfaced as "Cannot read properties of
   // undefined" in the panel's error banner, which tells a user nothing about what is actually wrong.
   // A host that wires a view without its client should degrade to an inert panel, not a crash.
@@ -229,7 +229,7 @@ describe("review presenter — creating", () => {
     await h.presenter.createReview();
     expect(h.getReviewManifest).toHaveBeenCalledWith({ uri: artifactUri("m", "proj/review.yaml") });
     expect(h.createReview).toHaveBeenCalledWith({
-      // No project client in this harness, so the run stores unparented — which is the right answer
+      // No project client in this harness, so the run stores unparented, which is the right answer
       // for a design that resolves to none.
       parent: "",
       designUri: artifactUri("m", "proj/board.edn"),
@@ -242,7 +242,7 @@ describe("review presenter — creating", () => {
     expect(s.running).toBe(false);
   });
 
-  // The manifest travels as a VALUE (C22): the browser holds a ref and no filesystem, so the read is
+  // The manifest travels as a VALUE (C22). The browser holds a ref and no filesystem, so the read is
   // a named rpc rather than something the run does behind its back.
   it("sends the manifest value rather than a path", async () => {
     const h = harness();
@@ -304,7 +304,7 @@ function convHarness() {
 }
 
 describe("naming convention", () => {
-  // The whole point of the feature: what the user picks has to reach the requests that RUN rules.
+  // What the user picks has to reach the requests that RUN rules.
   // Before this, OverlayConfig existed on all three and no client ever populated it.
   it("carries the resolved convention on a review create", async () => {
     const h = convHarness();
@@ -368,10 +368,10 @@ describe("naming convention", () => {
     expect(last.overlay).toBeDefined();
   });
 
-  // Regression, found by driving the real app: switching the vocabulary changes which rules EXIST,
+  // A regression found by driving the real app. Switching the vocabulary changes which rules EXIST,
   // because a request convention replaces the server's. Keeping the old catalog left a selection
-  // naming rules that no longer existed, so none of them ran and none of the new ones did either —
-  // no naming findings at all, which reads as a design with no naming problems.
+  // naming rules that no longer existed, so none of them ran and none of the new ones did either.
+  // That left no naming findings at all, which reads as a design with no naming problems.
   it("re-reads the rule catalog under the new vocabulary, not just the findings", async () => {
     const h = convHarness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -393,7 +393,7 @@ describe("naming convention", () => {
   });
 
   // The Query panel must answer under the SAME vocabulary the bar names. Before this, the bar could
-  // say "acme" while query answered under the server's default — the exact over-claim the bar exists
+  // say "acme" while query answered under the server's default, the over-claim the bar exists
   // to prevent, and the one surface whose entire purpose is asking what the engine believes.
   it("carries the vocabulary on an ad-hoc query", async () => {
     const h = convHarness();

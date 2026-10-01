@@ -2,13 +2,13 @@ package geda
 
 import "strings"
 
-// Symbol (.sym) geometry: the pins of a gEDA symbol, needed to place a component's terminals on
+// Symbol (.sym) geometry is the pins of a gEDA symbol, needed to place a component's terminals on
 // the schematic grid for netlisting. A gEDA pin is a P object:
 //
 //	P x1 y1 x2 y2 color pintype whichend
 //	{ T ... pinnumber=N ... }
 //
-// whichend (the last field, 0 or 1) selects which endpoint connects to nets: 0 -> (x1,y1),
+// whichend (the last field, 0 or 1) selects which endpoint connects to nets, 0 -> (x1,y1) and
 // 1 -> (x2,y2). The pinnumber attribute in the attached block is the pin designator.
 
 type symbolPin struct {
@@ -48,7 +48,7 @@ func symbolPins(lines []string) []symbolPin {
 	return pins
 }
 
-// symbolSlots reads a gEDA symbol's slot table: the slotdef=SLOT:pin,pin,... lines that map,
+// symbolSlots reads a gEDA symbol's slot table, the slotdef=SLOT:pin,pin,... lines that map,
 // for each slot, the symbol's drawn pins (in pinseq order) onto the physical package pins. A
 // multi-gate package (numslots>1) draws one gate and carries a slotdef row per gate, so slot
 // K's pin with pinseq i takes the K-th row's i-th number. Returns slot number -> ordered

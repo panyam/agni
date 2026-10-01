@@ -81,8 +81,8 @@ function ChangesPanel(props: { state: () => DiffState; onSelect: (id: string, pa
   );
 }
 
-// ChangesView is the command-down surface the presenter's onState feeds (the same DiffState
-// the chrome bar renders — one push, two panels).
+// ChangesView is the command-down surface the presenter's onState feeds, with the same DiffState
+// push the chrome bar renders.
 export interface ChangesView {
   setState(s: DiffState): void;
 }

@@ -25,8 +25,8 @@ outcome vocabulary exists to keep them apart.
 | `inconclusive` | the check ran and could not decide |
 | `not-automated` | nothing automated is bound to this item |
 
-Only the first two are verdicts about your board. Everything else is a verdict about the *check*,
-and the distinction is the point. `pass` is a claim, and a claim needs someone to have looked.
+Only the first two are verdicts about your board. Everything else is a verdict about the *check*.
+`pass` is a claim, and a claim needs someone to have looked.
 
 ## Coverage before results
 
@@ -36,10 +36,10 @@ Read the two leading numbers before reading anything else. A board with zero fai
 of 4 of 15 has not been reviewed, and the failure count alone would have told you it was perfect.
 
 **Covered** is how many items a mechanism exists for. **Answered** is how many the run actually
-decided, and it is the stricter of the two. They are equal here, and the case where they separate is
-the one worth knowing about: a rule can be in the catalog, selected, and still unable to run because
-the facts it reads are absent. That item reads `not-applicable` and still counts as covered. Rung 11
-gates a pipeline on the answered number for exactly that reason.
+decided, and it is the stricter of the two. They are equal here. They separate when a rule is in
+the catalog, selected, and still unable to run because the facts it reads are absent. That item
+reads `not-applicable` and still counts as covered. Rung 11 gates a pipeline on the answered number
+for exactly that reason.
 
 {{ includeFile "figures/covered-vs-answered.svg" }}
 
@@ -56,23 +56,23 @@ offer, because every one of them is a real defect with a named subject and a rea
 Compare against the run before the tiers were added, which reported far fewer failures. The board
 was not better then. Fewer questions were being asked.
 
-This is the counterintuitive part of adopting the tool. Failures going **up** as you add tiers is
+Failures going **up** as you add tiers is
 the system working. Failures going up while coverage stays flat is the number to worry about.
 
 ## Auditing a pass
 
-A pass is the outcome that deserves suspicion, because it is the one that ends the conversation. Two
-specific ways a pass can be hollow.
+A pass is the outcome that deserves suspicion, because it is the one that ends the conversation.
+There are two specific ways a pass can be hollow.
 
-**An inverted query.** An item bound to a query that matches the healthy case rather than the
-violation passes exactly when it should fail. Read the `match:` of every query item and confirm it
+An item bound to an **inverted query**, one that matches the healthy case rather than the
+violation, passes exactly when it should fail. Read the `match:` of every query item and confirm it
 describes something being wrong.
 
-**A rule that had no members.** An item bound to a rule that quantifies over a device class passes
-when no component is in that class, which can mean the class was never resolved rather than that
+A rule can also have **no members**. An item bound to a rule that quantifies over a device class
+passes when no component is in that class, which can mean the class was never resolved rather than that
 nothing was in it. Rung 7's false module-absence findings are this shape seen from the other side.
 
-The general form: for every pass, you should be able to name the thing it looked at. If you cannot,
+In general, you should be able to name the thing every pass looked at. If you cannot,
 the pass is a guess.
 
 `agni check --verdicts` is how you make a rule answer that, one row per subject with the evidence
@@ -84,18 +84,18 @@ Rows sit under the rule that produced them, worst first. Read the subject as the
 sentence beside it as the reason to believe it. A pass whose reason you cannot check against the
 design is the one to go and look at.
 
-Two limits worth knowing before you lean on it. A rule that reports violations without stating what it
-examined is labelled "reports violations only" and its rows are what it FOUND rather than what it
+It has two limits worth knowing before you lean on it. A rule that reports violations without
+stating what it examined is labelled "reports violations only" and its rows are what it FOUND rather than what it
 checked, so absence under such a heading is not evidence of correctness. And a pass can only cite a
-value the rule actually measured, so a few rules still pass with the shape of their test rather than
-a number.
+value the rule actually measured, so a few rules still pass with a description of their test rather
+than a number.
 
 ## When a check cannot decide
 
 `inconclusive` is separate from every other non-pass outcome, and it is the subtlest. The check ran,
 had its inputs, and still could not reach a verdict, usually because the design is ambiguous in a
 way the rule cannot resolve. It is a real answer of "I looked and I cannot tell" rather than a gap
-in your data or your checklist, sometimes the honest answer, and it belongs in front of a human
+in your data or your checklist, sometimes the only accurate one, and it belongs in front of a human
 rather than being rounded to a pass.
 
 ## What is not on this list

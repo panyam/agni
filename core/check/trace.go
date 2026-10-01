@@ -12,7 +12,7 @@ import (
 // Unlike ProtectionReachHops and its neighbours this number is a SEARCH BUDGET and not an
 // electrical claim. Those radii encode a physical fact (a clamp six resistors away does not protect
 // the pin), so widening one turns real findings into false passes. Nothing about a trace degrades
-// with distance: a route eight crossings long is still the route. The bound is here so the walk
+// with distance, and a route eight crossings long is still the route. The bound is here so the walk
 // terminates on a large board and so a "no route" answer is a statement someone can check, which is
 // why the radius is printed with the answer and exposed as a flag rather than fixed here.
 const DefaultTraceHops = 6
@@ -22,7 +22,7 @@ const DefaultTraceHops = 6
 // What is dropped is COUNTED and reported (TraceNet.StubsElided), never silently truncated.
 const traceStubLimit = 12
 
-// Endpoint names one pin of one component: the ref-des and the pin designator on it.
+// Endpoint names one pin of one component by its ref-des and pin designator.
 type Endpoint struct {
 	RefDes string `json:"ref_des"`
 	Pin    string `json:"pin"`
@@ -36,14 +36,14 @@ func (e Endpoint) String() string { return e.RefDes + "." + e.Pin }
 type TraceOutcome string
 
 const (
-	// TraceRouted: a route was found within the radius.
+	// TraceRouted means a route was found within the radius.
 	TraceRouted TraceOutcome = "routed"
-	// TraceNoRoute: both endpoints resolved and no route joins them within the radius. A real
-	// answer about the design.
+	// TraceNoRoute means both endpoints resolved and no route joins them within the radius,
+	// which is a real answer about the design.
 	TraceNoRoute TraceOutcome = "no-route"
-	// TraceUnresolved: an endpoint does not name anything the design has, so nothing was walked.
-	// This must never render as "not connected": a pin named in a declaration that the design
-	// spells differently is exactly what a typo produces, and reporting it as a disconnection
+	// TraceUnresolved means an endpoint does not name anything the design has, so nothing was
+	// walked. This must never render as "not connected", because a pin named in a declaration that
+	// the design spells differently is what a typo produces, and reporting it as a disconnection
 	// sends the reader to look at the board instead of at the declaration.
 	TraceUnresolved TraceOutcome = "unresolved"
 )
@@ -70,10 +70,10 @@ type TraceCross struct {
 
 // TraceStub is a part sitting on a net of the route that the route does not pass through.
 //
-// These are reported rather than filtered, and that is deliberate. A test point on a path net is
+// These are reported rather than filtered. A test point on a path net is
 // where a reviewer can put a probe, which is the most actionable thing on the line; a capacitor
 // there is the filter someone is about to ask about. Reducing the output to the series elements
-// removes exactly the parts a person reads a trace to find.
+// removes the parts a person reads a trace to find.
 type TraceStub struct {
 	RefDes string `json:"ref_des"`
 	Pin    string `json:"pin"`
@@ -87,8 +87,8 @@ type TraceNet struct {
 	// StubsElided is how many further parts sit on this net beyond the ones listed, so a capped
 	// list reads as capped rather than as complete.
 	StubsElided int `json:"stubs_elided,omitempty"`
-	// BusLike marks a net the walk would refuse to continue through: a rail, a ground, or any
-	// rail-scale fan-out. A route may END on one, so saying which net it was is what stops a
+	// BusLike marks a net the walk would refuse to continue through (a rail, a ground, or any
+	// rail-scale fan-out). A route may END on one, so saying which net it was is what stops a
 	// reader assuming the trace stopped early for some other reason.
 	BusLike bool `json:"bus_like,omitempty"`
 }
@@ -109,10 +109,8 @@ type Trace struct {
 // TracePins walks from one pin to another through series pass elements and returns the route with
 // its outcome from a single call.
 //
-// Producing the answer and its evidence together is the discipline PullUpVerdict follows, for the
-// same reason: a caller cannot reach a routed outcome without the route that justifies it, so there
-// is no way to report a connection by forgetting the second step. It is also the artifact issue 518
-// asks for, since every walk in the engine already held the route and discarded it on the way out.
+// It produces the answer and its evidence together, as PullUpVerdict does, so a caller cannot reach
+// a routed outcome without the route that justifies it. This is the artifact issue 518 asks for.
 //
 // The walk admits a bus-like net as a destination (ReachToTerminus), because a device pin sitting on
 // a rail is an ordinary endpoint, and still refuses to continue through one.
@@ -134,8 +132,8 @@ func TracePins(m Model, from, to Endpoint, hops int) Trace {
 		return t
 	}
 
-	// One net, no crossing. A routed answer with an empty crossing list, not a special case: the
-	// two pins are the same electrical node, which is the strongest form of "connected" there is.
+	// One net, no crossing. This is a routed answer with an empty crossing list, since the two
+	// pins are the same electrical node.
 	if fromNet.Name == toNet.Name {
 		t.Outcome = TraceRouted
 		t.Nets = []TraceNet{traceNet(m, fromNet, nil, []Endpoint{from, to})}
@@ -150,8 +148,7 @@ func TracePins(m Model, from, to Endpoint, hops int) Trace {
 		return t
 	}
 
-	// The two views of one route, taken from the same walk: the nets in crossing order and the
-	// steps between them. Step i joins nets[i] to nets[i+1], so nothing has to be re-derived by
+	// The nets in crossing order and the steps between them come from the same walk. Step i joins nets[i] to nets[i+1], so nothing has to be re-derived by
 	// searching for the net a step landed on.
 	nets, steps := r.PathTo(toNet), r.StepsTo(toNet)
 	onRoute := map[string][]string{}
@@ -251,8 +248,7 @@ func traceNet(m Model, n *ir.Net, route []string, ends []Endpoint) TraceNet {
 			continue
 		}
 		// A virtual power/flag symbol is connectivity evidence, not a part on the board, and a
-		// stub list answers "what is sitting on this net" — the question IsVirtualRef exists to
-		// keep those two apart. Listing them buries the real parts under a dozen #PWR entries on
+		// stub list answers "what is sitting on this net" (IsVirtualRef keeps the two apart). Listing them buries the real parts under a dozen #PWR entries on
 		// every rail, and what they were evidence FOR is already reported as BusLike.
 		if IsVirtualRef(c.ComponentRef) {
 			continue

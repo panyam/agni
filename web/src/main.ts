@@ -1,9 +1,7 @@
-// Entry point for the web viewer shell. The page is server-rendered by goapplib/templar
-// (the border-layout shell with a file-tree sidebar, canvas region, and detail panel).
-// This boots the tsappkit lifecycle over that shell: AppRoot discovers the interactive
-// regions and returns them as child components, and the LifecycleController initializes
-// each one. Today the only region is the WebGL canvas; the file-tree and detail-panel
-// islands join here in later tickets (WS9-002, WS9-005).
+// Entry point for the viewer page (/designs/<mount>/<path>/view). The page is server-rendered by
+// goapplib/templar. This boots the dockview shell first, then the tsappkit lifecycle. AppRoot builds
+// the canvas, the panel islands and the ViewerPresenter that feeds them, and the LifecycleController
+// initializes each island. The page has no file tree (WS9-049).
 
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";
 import { CanvasComponent } from "./canvas.js";
@@ -41,16 +39,11 @@ import { staleLinkStrip } from "./stalelink.js";
 import { fillEntityQuery } from "./selection.js";
 import { baseName, noteOpen } from "./recents.js";
 
-// restoring guards the URL feedback loop: while we apply a URL to the presenter (initial load or
-// back/forward), the presenter's onLocation still fires, but we must not push a new history entry
-// for state we are merely replaying. It is a module-level flag because both the presenter callback
-// and the restore driver below need it.
+// restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
+// The presenter's location callback still fires then, and must not push a history entry for it.
+// Module-level because both the presenter callback and the restore driver below read it.
 let restoring = false;
 
-// syncUrl reflects a location (a file the presenter opened, or a folder the tree selected) into
-// the address bar. It sets the tab title always, but only pushes history when the URL actually
-// changed and we are not mid-restore, so normal navigation builds a back-stack while a
-// refresh/back-forward replay does not.
 // isTextEntry reports whether an event landed in somewhere the reader is typing, so a page-level key
 // binding can decline it. The query box and the review notes both take free text, and Escape inside
 // them belongs to the field.
@@ -61,6 +54,9 @@ function isTextEntry(target: EventTarget | null): boolean {
   return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable === true;
 }
 
+// syncUrl reflects the open design's location into the address bar. It always sets the tab title,
+// and pushes history only when the URL changed and no restore is running, so navigation builds a
+// back stack and a refresh or back/forward replay does not.
 function syncUrl(loc: ViewerLocation): void {
   document.title = hasFile(loc) ? `${loc.path || loc.mount} — Agni` : "Agni viewer";
   if (restoring) return;
@@ -70,7 +66,7 @@ function syncUrl(loc: ViewerLocation): void {
 
 class AppRoot extends BaseComponent {
   // presenter is exposed so the boot code can drive a deep-link restore once the islands are
-  // initialized (it is created in performLocalInit, below).
+  // initialized. performLocalInit creates it.
   presenter: ViewerPresenter | null = null;
 
   override performLocalInit(): LCMComponent[] {
@@ -107,8 +103,6 @@ class AppRoot extends BaseComponent {
     if (!traceEl) return children;
     if (!projectEl) return children;
 
-    // RenderView reveals whichever renderer drew the sheet: the SVG host overlays the canvas,
-    // so showWebgl just hides it and showSvg fills + shows it.
     const busyEl = document.getElementById("render-busy");
     // One app-level loader overlay drives both the viewer and the diff (they never run at once);
     // the shared delayedBusy keeps a single show-timer for it (WS7-043/044).
@@ -124,6 +118,8 @@ class AppRoot extends BaseComponent {
     // wiring is deferred to the end of this method because it needs the query panel, which is built
     // below; see the assignment after the panels.
     const canvas = new CanvasComponent("canvas", canvasEl, this._eventBus);
+    // RenderView reveals whichever renderer drew the sheet. The SVG host overlays the canvas, so
+    // showWebgl just hides it and showSvg fills and shows it.
     const renderView: RenderView = {
       showWebgl: () => {
         svgView.hide();
@@ -135,8 +131,7 @@ class AppRoot extends BaseComponent {
         canvas.hideText(); // the SVG host renders its own text
         svgView.show();
         svgView.setSvg(markup);
-        // Keep the readout visible in SVG mode too; SVG has no vertex buffer, so it reports the
-        // drawn-element count rather than primitives/vertices.
+        // The readout stays visible in SVG mode, with the element count (see SvgView.stats).
         if (readoutEl) {
           readoutEl.textContent = `SVG — ${svgView.stats().elements} elements`;
           readoutEl.style.display = "";
@@ -150,8 +145,8 @@ class AppRoot extends BaseComponent {
         if (mode === "webgl") canvas.setView(view as ReturnType<typeof canvas.getView> & object);
         else svgView.setView(view as ReturnType<typeof svgView.getView>);
       },
-      // Board layer visibility (WS7-034/035): CSS classes over BoardSVG's classed strata,
-      // and hidden packed groups on the WebGL canvas (the packed board's back/front strata).
+      // Board layer visibility (WS7-034/035) toggles CSS classes over BoardSVG's classed strata
+      // and hides packed groups on the WebGL canvas (the packed board's back/front strata).
       setBoardLayers: (side) => {
         svgEl.classList.remove("board-front", "board-back");
         if (side === "front" || side === "back") svgEl.classList.add(`board-${side}`);
@@ -159,12 +154,10 @@ class AppRoot extends BaseComponent {
         canvas.setHiddenGroups(hidden);
       },
     };
-    // The visual diff (WS9-005): two SvgViews in the diff panel, mutually synced (a user
-    // pan/zoom on one side is mirrored onto the other; setView fires no onViewChange, so the
-    // mirroring cannot feed back). Each side pairs its canvas with a placeholder element for
-    // "no sheet on this side" / render errors. reveal (WS9-006 click-to-locate) centers on
-    // the side's overlay content and mirrors the resulting camera to the sibling, so both
-    // panes land on the focused item.
+    // The visual diff (WS9-005) is two SvgViews that mirror each other's pan and zoom. setView fires
+    // no onViewChange, so the mirroring cannot loop. Each side pairs its view with a placeholder for
+    // "no sheet on this side" and render errors. reveal (WS9-006) centers on the side's overlay and
+    // copies the camera to the sibling, so both panes land on the focused item.
     const diffSvgViewA = new SvgView(diffSvgA);
     const diffSvgViewB = new SvgView(diffSvgB);
     diffSvgViewA.show();
@@ -193,8 +186,8 @@ class AppRoot extends BaseComponent {
       a: diffSide(diffSvgViewA, diffSvgViewB, diffPhA),
       b: diffSide(diffSvgViewB, diffSvgViewA, diffPhB),
       setBusy: (busy) => setBusyOverlay(busy, busy ? "comparing…" : undefined),
-      // Overlay mode (WS9-007): hide the b pane (the a pane flexes full width and hosts the
-      // union) and relabel — arrangement is view chrome, so it lives here, not the presenter.
+      // Overlay mode (WS9-007) hides the b pane, so the a pane flexes to full width and hosts the
+      // union. Arrangement is view chrome, so it lives here and not in the presenter.
       setOverlayMode: (on) => {
         diffSidesEl?.classList.toggle("overlay", on);
         if (diffLabelA) diffLabelA.textContent = on ? "A ∪ B — union" : "A — old";
@@ -218,24 +211,22 @@ class AppRoot extends BaseComponent {
       diffChanges.view.setState(s);
     });
 
-    // Compare chrome (WS9-049 phase 3): the button opens a picker, and the picker reports a design
-    // to compare against. openFile is the currently open design, kept here because it is side A of
-    // whatever comparison the user starts.
+    // Compare chrome (WS9-049 phase 3). The button opens a picker, and the picker reports a design to
+    // compare against. openFile is the open design, side A of any comparison the user starts.
     let openFile: { mount: string; path: string } | null = null;
-    // comparePicker.onPick means "compare against this", not "set side B" — so when the presenter
-    // layer grows to hold several comparisons at once, this callback is what changes, not the picker.
+    // The pick callback means "compare against this", not "set side B".
     const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, (target) => {
       if (!openFile) return;
       if (dockApi) openDiffPanel(dockApi);
       void diffPresenter.open(openFile, target);
     });
     const compare = compareButton(compareEl, () => comparePick.picker.open(openFile));
-    // WS9-049: the visited-sheet tab strip. It is a second SheetsView beside the tree, so it needs
-    // no presenter change; selecting a tab is the same showSheet intent a tree sheet-click emits.
+    // WS9-049: the visited-sheet tab strip, the only SheetsView in sheetNavs. Selecting a tab emits
+    // the same showSheet intent the sheet overview does.
     const sheetTabs = sheetTabsIsland(sheetTabsEl, this._eventBus, {
       onSelect: (id) => void presenter.showSheet(id),
     });
-    // The control bar (render-mode buttons + layout selector) is a Solid island: it renders from
+    // The control bar (render-mode buttons + layout selector) is a Solid island that renders from
     // the ControlsState the presenter pushes and emits mode/layout intents back up.
     const controls = controlBarIsland(controlsEl, this._eventBus, {
       onMode: (mode) => void presenter.setMode(mode),
@@ -244,15 +235,9 @@ class AppRoot extends BaseComponent {
       onBoardLayers: (side) => presenter.setBoardLayers(side),
       onClearHighlights: () => void presenter.clearHighlights(),
     });
-    // Escape clears the highlight, the gesture a reader reaches for first.
-    //
-    // It lives here rather than in pagegestures, which routes the datasheet workbench's keys and is
-    // reached only from regionview. It never sees this canvas, which is why pressing Escape on a
-    // schematic did nothing at all (agni issue 348).
-    //
-    // Guarded twice, and both guards are about not stealing the key from something with a better
-    // claim. An open picker owns Escape, because dismissing it is the more local intent. A reader
-    // typing in the query box means to clear their text, not the drawing.
+    // Escape clears the highlight. It lives here and not in pagegestures, which routes only the
+    // datasheet workbench's keys and never sees this canvas (agni issue 348). An open picker owns
+    // Escape, and so does a text field the reader is typing in.
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if (comparePick.picker.isOpen()) return;
@@ -269,8 +254,8 @@ class AppRoot extends BaseComponent {
       // and would find nothing (agni issue 349).
       onLocateContext: (kind, subject, pin) => void presenter.locateEntity(kind, subject, undefined, LocateReason.UNSPECIFIED, pin),
       onRun: () => void presenter.runChecks(),
-      // A verdict is addressed by its derived id, not by subject: a passing verdict has no finding
-      // for selectFinding to look up, and two rules can hold verdicts about the same subject.
+      // A verdict is addressed by its derived id, not by subject, because a passing verdict has no
+      // finding for selectFinding to look up and two rules can hold verdicts about one subject.
       onSelectVerdict: (id) => void presenter.locateVerdict(id),
     });
     // The rules panel is the catalog of what the engine can assert; ticking rules sets the active
@@ -278,20 +263,20 @@ class AppRoot extends BaseComponent {
     const rules = rulesPanelIsland(rulesEl, this._eventBus, {
       onSelectionChange: (names) => void presenter.setRuleSelection(names),
     });
-    // The sheet overview (WS9-025) is a birds-eye navigation surface: per-sheet violation
-    // tiles, click to show that sheet.
+    // The sheet overview (WS9-025) shows per-sheet violation tiles, and clicking one shows that
+    // sheet.
     const sheetOverview = sheetOverviewPanelIsland(sheetOverviewEl, this._eventBus, {
       onSelect: (sheetId) => void presenter.showSheet(sheetId),
     });
-    // The datalog query panel (WS9-036): the user runs an ad-hoc query, the presenter evaluates
+    // The datalog query panel (WS9-036) runs an ad-hoc query. The presenter evaluates
     // it over the open design and pushes results back through query.view.
     const query = queryPanelIsland(queryEl, this._eventBus, {
       onRun: (text) => void presenter.runQuery(text),
       onLocate: (kind, subject, sheet, reason, pin) => void presenter.locateEntity(kind, subject, sheet, reason, pin ?? ""),
-      // Opening the check results for the selected entity is the EXISTING finding focus reached from
-      // the other end (agni issue 259). Nothing re-evaluates: selectFinding focuses a subject within
-      // the results already computed. The identity argument mirrors selectionFromFinding, since the
-      // two have to agree on which instance of a repeated net name is meant.
+      // onInspect opens the check results for the selected entity through the EXISTING finding focus
+      // (agni issue 259). Nothing re-evaluates, since selectFinding focuses a subject within the
+      // results already computed. The identity argument mirrors selectionFromFinding, since the two
+      // have to agree on which instance of a repeated net name is meant.
       onInspect: (sel) =>
         void presenter.selectFinding(
           sel.kind === "bus" ? (sel.busId ?? "") : sel.kind === "net" ? (sel.net ?? "") : (sel.ref ?? ""),
@@ -299,14 +284,13 @@ class AppRoot extends BaseComponent {
           sel.kind === "bus" ? (sel.busId ?? "") : (sel.netId ?? ""),
         ),
     });
-    // A click on the drawing is a question about what was clicked: highlight it, write the query that
-    // asks what is known about it, and bring the Query panel forward if it is a background tab. The
-    // generated query is left editable on purpose — using the viewer is how a reader learns the
-    // language, rather than the language being a wall in front of the answers.
+    // A click on the drawing highlights what was clicked, writes the query that asks what is known
+    // about it, and brings the Query panel forward if it is a background tab. The generated query
+    // stays editable, so a reader learns the query language by using the viewer.
     svgView.onPick = (sel) => {
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
-      // Naming the pick in the panel is what lets the reader keep going: the same bar carries the
-      // next question, and a click on a result cell replaces the name with whatever it landed on.
+      // The panel names the pick, so the same bar carries the next question. A click on a result
+      // cell replaces the name with whatever it landed on.
       query.view.setSelection(sel);
       // The preset comes from the server (query.EntityQueries), so the query text is checked where
       // the relations it names are defined. Before the catalog arrives there is no preset, and a
@@ -316,34 +300,33 @@ class AppRoot extends BaseComponent {
       if (dockApi) dockApi.getPanel("query")?.api.setActive();
     };
 
-    // The interface-coverage panel (WS9-041): clicking a signal locates its net, the same locate
+    // In the interface-coverage panel (WS9-041), clicking a signal locates its net through the same
     // path the query panel uses.
     const coverage = coveragePanelIsland(coverageEl, this._eventBus, {
       onLocate: (net) => void presenter.locateEntity("net", net),
     });
-    // The trace panel (agni issue 600): the reader names two pins, the presenter walks between them
+    // In the trace panel (agni issue 600) the reader names two pins, and the presenter walks between them
     // and lights the route through the same highlight stack a query cell and a verdict use.
     const trace = tracePanelIsland(traceEl, this._eventBus, {
       onTrace: (from, to) => void presenter.runTrace(from, to),
     });
-    // The datasheet-params panel (WS9-035): clicking a component locates it on the canvas, the same
-    // component-highlight path a finding uses (zero new highlight code).
+    // In the datasheet-params panel (WS9-035), clicking a component locates it on the canvas through
+    // the same component-highlight path a finding uses.
     const parts = partsPanelIsland(partsEl, this._eventBus, {
       onLocate: (refDes) => void presenter.locateEntity("component", refDes),
     });
-    // The naming-vocabulary bar (WS9-128): choosing a convention re-runs everything under it, since
+    // In the naming-vocabulary bar (WS9-128), choosing a convention re-runs everything under it, since
     // a request convention replaces the server's rather than adding to it.
     const conventionBar = conventionBarIsland(conventionEl, this._eventBus, {
       onSelect: (ref) => void presenter.setConvention(ref),
     });
-    // The project bar (agni issue 175): which project's config produced what is on screen, and the
-    // opt-out that re-runs the design under the built-in catalog so the difference is visible.
+    // The project bar (agni issue 175) names the project whose config produced what is on screen, and
+    // offers an opt-out that re-runs the design under the built-in catalog so the difference shows.
     const projectBar = projectBarIsland(projectEl, this._eventBus, {
       onPlain: (plain) => void presenter.setPlainCatalog(plain),
     });
-    // The review panel (WS9-052): the project's checklist verdict over the stored runs. Locating a
-    // finding under an item reuses the same locateEntity path every other panel uses, so a review
-    // finding highlights exactly the way a check finding does.
+    // The review panel (WS9-052) shows the project's checklist verdict over the stored runs. A
+    // finding under an item locates through the same locateEntity path as every other panel.
     const review = reviewPanelIsland(reviewEl, this._eventBus, {
       onSelectRun: (name) => presenter.showReview(name),
       onSelectChecklist: (ref) => presenter.setChecklist(ref),
@@ -360,15 +343,13 @@ class AppRoot extends BaseComponent {
         query.view.setExamples(r.examples); // WS14-002: starter queries beside the relation picker
         query.view.setEntityQueries(r.entityQueries); // the click-to-ask presets
         // The find-by-name template (agni issue 338). A server that sends none leaves the panel
-        // with no search mode, which is the right outcome: the query names relations defined on
-        // that side, so a client guessing at one would be guessing at their names too.
+        // with no search mode, since the template names relations only the server defines.
         query.view.setSearch(r.searchQuery ? { query: r.searchQuery.query, teaches: r.searchQuery.teaches } : null);
       })
       .catch(() => {});
-    // The presenter fans sheet state to every surface in sheetNavs. The file tree used to be one of
-    // them (sheets nested under their file); with the tree gone from this page the fan-out feeds the
-    // top tab strip, and the Sheets overview panel takes its own `overview` channel. The array stays
-    // a fan-out because that is what let the strip join in phase 1 with no presenter change.
+    // The presenter fans sheet state to every surface in sheetNavs, here only the top tab strip
+    // (the file tree left this page in WS9-049). The Sheets overview panel takes its own `overview`
+    // channel.
     const presenter = new ViewerPresenter(
       designClient(),
       checksClient(),
@@ -384,15 +365,14 @@ class AppRoot extends BaseComponent {
         staleLinkNote: setStaleLinkNote,
         rules: rules.view,
         report: setReport,
-        // Every location report also feeds the Compare chrome: the open design is side A of any
-        // comparison the user starts, and until one is open there is nothing to compare against.
+        // Every location report also feeds the Compare chrome, since the open design is side A of any
+        // comparison and Compare stays disabled until one is open.
         location: (loc) => {
           if (hasFile(loc)) {
             openFile = { mount: loc.mount, path: loc.path };
             compare.setEnabled(true);
             // The landing page's Recent list is written HERE rather than at the click that opened
-            // the design, so a deep link and a back/forward restore count as openings too: what the
-            // list is for is "where was I", and arriving by URL is arriving.
+            // the design, so a deep link and a back/forward restore count as openings too.
             noteOpen({ kind: "design", mount: loc.mount, path: loc.path, label: baseName(loc.path) });
           }
           syncUrl(loc);
@@ -494,9 +474,9 @@ function setReport(report: { components: { refDes: string; deviceClass: string; 
   if (un) callout("report-unresolved", `${un.length} unresolved — pass --symbol-path: ${un.join(" ")}`);
 }
 
-// Boot the dock shell before the island lifecycle: the dock adopts the server-rendered
-// holes into its panels first, so islands initialize inside laid-out (measurable) panels.
-// Islands in a closed panel still mount — their hole just stays parked and hidden.
+// Boot the dock shell before the island lifecycle. The dock adopts the server-rendered holes
+// into its panels first, so islands initialize inside laid-out (measurable) panels.
+// Islands in a closed panel still mount, and their hole stays parked and hidden.
 const dockEl = document.getElementById("dock");
 const parkEl = document.getElementById("panel-park");
 const menuEl = document.getElementById("panels-menu");
@@ -516,10 +496,9 @@ void controller
     // again on every popstate (browser back/forward).
     const applyUrl = async (): Promise<void> => {
       const loc = currentLocation();
-      // A folder location cannot reach this page: the server routes a folder URL to the browse page
-      // and only a /view URL here (WS9-049 phase 2), and syncUrl only ever pushes file locations. So
-      // there is no dir branch to handle — the tree that used to expand to one is gone.
-      if (!hasFile(loc)) return; // not a design URL — leave the empty shell as-is
+      // A folder location cannot reach this page. The server routes a folder URL to the browse page
+      // and only a /view URL here (WS9-049 phase 2), and syncUrl only pushes file locations.
+      if (!hasFile(loc)) return; // not a design URL, so leave the empty shell as-is
       restoring = true;
       try {
         await presenter.restore(loc);

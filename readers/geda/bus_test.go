@@ -6,10 +6,11 @@ import (
 	"testing"
 )
 
-// TestGedaBusDetected: a lone gEDA `U` bus is recorded as a resolution-aware unmodeled-bus diagnostic
-// with its netname as the label and the range-expanded member set (WS1-034). Its members are unmodeled
-// (no member nets exist), so the bus-not-modeled rule fires — and, per lepton-netlist, the bus is
-// graphical-only, so it must NOT alias to a phantom net (the pre-Phase-2 bug).
+// TestGedaBusDetected checks that a lone gEDA `U` bus is recorded as a resolution-aware
+// unmodeled-bus diagnostic with its netname as the label and the range-expanded member set
+// (WS1-034). Its members are unmodeled (no member nets exist), so the bus-not-modeled rule fires.
+// Per lepton-netlist the bus is graphical-only, so it must NOT alias to a phantom net (the
+// pre-Phase-2 bug).
 func TestGedaBusDetected(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "bus.sch")), "bus.sch")
 	if err != nil {
@@ -26,7 +27,7 @@ func TestGedaBusDetected(t *testing.T) {
 	if got := bs[0].GetMembers(); !slices.Equal(got, wantMembers) {
 		t.Errorf("members = %v, want %v", got, wantMembers)
 	}
-	// The bus is graphical-only (lepton-netlist): it must not become a net.
+	// The bus is graphical-only (lepton-netlist), so it must not become a net.
 	for _, n := range d.GetNets() {
 		if n.GetName() == "DATA[7:0]" {
 			t.Errorf("bus DATA[7:0] must not alias to a net (lepton-netlist emits no such net)")
@@ -34,10 +35,11 @@ func TestGedaBusDetected(t *testing.T) {
 	}
 }
 
-// TestGedaBusResolved: bus_resolved.sch ripples DATA[1:0]'s two members off to per-member `netname=`
-// nets DATA0/DATA1. Cross-checked against lepton-netlist, which emits exactly DATA0, DATA1, OUT (and no
-// DATA[1:0]): the members resolve, so the reader forms them as nets and does NOT emit a bus net —
-// combined with the resolution gate (rule_bus_not_modeled_test.go) the finding is silent here.
+// TestGedaBusResolved checks that bus_resolved.sch ripples DATA[1:0]'s two members off to
+// per-member `netname=` nets DATA0/DATA1. Cross-checked against lepton-netlist, which emits exactly
+// DATA0, DATA1, OUT (and no DATA[1:0]). The members resolve, so the reader forms them as nets and
+// does NOT emit a bus net, and combined with the resolution gate (rule_bus_not_modeled_test.go) the
+// finding is silent here.
 func TestGedaBusResolved(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "bus_resolved.sch")), "bus_resolved.sch")
 	if err != nil {

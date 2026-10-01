@@ -5,12 +5,12 @@ description: "the via drill a net SHOULD route at, cascaded across its classes b
 
 ### What it is
 
-`net.declared_via_drill(net, mm)` yields the via drill a net SHOULD be routed at according to the project's own
-net-class declarations, in millimetres, one row per net the project actually constrained. It is the
-resolved answer: the cascade across the net's classes has already happened.
+`net.declared_via_drill(net, mm)` yields the via drill a net SHOULD be routed at according to the
+project's own net-class declarations, in millimetres, one row per net the project actually
+constrained. It is the resolved answer, taken after the cascade across the net's classes has run.
 
-Pair it with `board.via_drill(net, mm)`, the ACTUAL routed value in the same units. Declared versus actual, with
-no number the engine invented.
+Pair it with `board.via_drill(net, mm)`, the ACTUAL routed value in the same units. A comparison of the
+two uses no number the engine invented.
 
 ### For hardware engineers
 
@@ -24,10 +24,10 @@ enforce. Ask it when you want to know what a net was supposed to be, not what it
 
 ### For software engineers
 
-**Join THIS, not `netclass.via_drill`.** That is the entire reason this relation exists. Membership is
-1:many (WS1-050), so joining `net.netclass(?net, ?class)` to the per-class relation fans out over
-every class the net belongs to, and a comparison then fires against classes that lost the cascade. A
-net legitimately routed to its winning class's value produces a confident, wrong finding.
+**Join THIS, not `netclass.via_drill`.** Membership is 1:many (WS1-050), so joining
+`net.netclass(?net, ?class)` to the per-class relation fans out over every class the net belongs to,
+and a comparison then fires against classes that lost the cascade. A net legitimately routed to its
+winning class's value produces a confident, wrong finding.
 
 Rows are 1:1 with constrained nets. A net whose classes state this quantity nowhere yields no row, so
 a rule joining it selects only nets the project genuinely constrained, and `not
@@ -44,8 +44,9 @@ states the field, independently per field. The citation records WHICH class supp
 
 Only a KiCad project read populates this, and only when the project declares class definitions. A
 rule comparing declared against actual finds nothing to compare on every other source and reports
-clean, which a review cannot tell from a genuine pass. Such a rule gates on `design.has_netclass_defs` (and
-on the board tier for the actual side), so an absent declaration reads not-applicable.
+clean, which a review cannot tell from a genuine pass. Such a rule gates on `check.CapNetClassDefs`,
+queryable as `design.has_netclass_defs` (and on the board tier for the actual side), so an absent
+declaration reads not-applicable.
 
 ### Datalog
 

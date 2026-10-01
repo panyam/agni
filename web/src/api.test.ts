@@ -4,7 +4,7 @@ import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { workspaceClient, designClient, reviewClient } from "./api.js";
 
-// Guards the generated service contract the frontend depends on: the proto must emit a
+// Guards the generated service contract the frontend depends on. The proto must emit a
 // WorkspaceService with a ListMounts RPC, and the typed client must construct against it.
 describe("web api", () => {
   it("exposes the WorkspaceService contract (ListMounts, ListDir)", () => {
@@ -32,7 +32,7 @@ describe("web api", () => {
   });
 
   // Reviews are the one RESOURCE surface in this API (CONSTRAINTS C23), so the contract check is
-  // that the four standard methods exist alongside the manifest resolver — a review run that could
+  // that the four standard methods exist alongside the manifest resolver. A review run that could
   // be created but not listed would put the panel's history back where it started.
   it("exposes the ReviewService resource contract", () => {
     expect(ReviewService.typeName).toBe("agni.v1.webapi.ReviewService");

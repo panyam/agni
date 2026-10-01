@@ -11,8 +11,7 @@ reference exactly as the source spelled it (an xschem or gEDA `res.sym`, a KiCad
 lib_id). One missing file usually produces several rows, one per part drawn with it.
 
 Keyed by `ref_des` rather than by `symref`, because a ref-des is what every other netlist relation
-joins on. The interesting question is rarely "which file is missing" but "what did it cost me", and
-only a ref-des key can answer that.
+joins on. A ref-des key answers "what did it cost me", which a file key cannot.
 
 An empty result means every symbol resolved. It does not mean the design has no external symbol
 references.
@@ -30,14 +29,14 @@ cause is a library that was not on the search path, not a mistake on the schemat
 
 ### For software engineers
 
-A resolution failure the front end recorded instead of swallowing. The parse succeeded; a
+It is a resolution failure the front end recorded instead of swallowing. The parse succeeded; a
 transitive dependency of the parse did not, and the result is a smaller graph rather than an error.
-That is the dangerous shape: the failure removes edges instead of raising, so every downstream
+The failure removes edges instead of raising, so every downstream
 query returns a confident answer over incomplete input.
 
 It is a projection over `Model.UnresolvedSymbols()`, flattened from one entry per reference to one
-row per affected placement so it joins on `ref_des`. Note the asymmetry with the rule of the same
-name, which reports one finding per REFERENCE (one cause, one finding); the relation is per
+row per affected placement so it joins on `ref_des`. Note the asymmetry with the `symbol-unresolved`
+rule, which reports one finding per REFERENCE (one cause, one finding); the relation is per
 placement (one row per victim) because that is the join granularity.
 
 ### Go projector
@@ -55,8 +54,8 @@ List every part that lost its pins, and to what:
 reader.unresolved_symbol(?ref, ?sym) => ?ref, ?sym
 ```
 
-The blast-radius query, and the reason this relation is keyed by ref-des: did anything that MATTERS
-lose its pins?
+Whether anything that MATTERS lost its pins, which is the question the ref-des key exists to
+answer:
 
 ```
 reader.unresolved_symbol(?ref, ?sym), component.class(?ref, "fpga") => ?ref, ?sym

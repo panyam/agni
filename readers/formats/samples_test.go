@@ -9,7 +9,7 @@ import (
 
 // The pinned sample board, fetched by `make samples` from github.com/panyam/agni-samples. It is a
 // real 17-sheet carrier board (Antmicro's Jetson AGX Thor baseboard, Apache-2.0) rather than a
-// fixture we authored, which is the point: every synthetic fixture in this repo was built to the
+// fixture we authored. Every synthetic fixture in this repo was built to the
 // reader's own assumptions, so none of them can catch an assumption that is wrong.
 const sampleJetson = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch"
 
@@ -21,23 +21,23 @@ const sampleJetson = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetso
 // VISIBLE, so whoever moves it changes the constant deliberately rather than discovering months later
 // that a number drifted.
 //
-// It has moved twice from 1729. Issue 577, the pin swap on mirrored symbols, took it to 1606: this
-// board places a lot of them and each swap moved one connection out of a net and another in. Issue
-// 597 then taught the walk to follow a GROUP bus across a sheet boundary, which is the spelling this
-// board uses, `CAM0{CSI}`, whose members come from a `bus_alias` and are named `CAM0.CSI2_CLK+`.
-// Issue 561's first half, the bus VECTOR (`AN[0..7]`), landed before either and moved this number not
-// at all, which is why the two halves are separate issues.
+// It has moved twice from 1729. Issue 577, the pin swap on mirrored symbols, took it to 1606,
+// because this board places a lot of them and each swap moved one connection out of a net and
+// another in. Issue 597 then taught the walk to follow a GROUP bus across a sheet boundary, which
+// is the spelling this board uses, `CAM0{CSI}`, whose members come from a `bus_alias` and are named
+// `CAM0.CSI2_CLK+`. Issue 561's first half, the bus VECTOR (`AN[0..7]`), landed before either and
+// moved this number not at all, which is why the two halves are separate issues.
 //
 // It is now BELOW KiCad's 1387, so falling further is the WRONG direction and the obvious reading of
 // this constant is backwards. Every remaining disagreement is an over-merge, ten of them, and all ten
-// predate both fixes: KiCad gives each unconnected pin its own `unconnected-(U65-GL-Pad10)` net where
+// predate both fixes. KiCad gives each unconnected pin its own `unconnected-(U65-GL-Pad10)` net where
 // we group a part's unconnected pins into one `N$nnn`. Ten of ours stand in for about thirty of
 // KiCad's, which is the whole of the gap. Closing that pushes this number UP toward 1387.
 //
 // Which nets are still wrong, rather than how many, is in readers/kicad/oracle_corpus.baseline, and
-// that file is the one to read: it separates the two directions, and the split half is now empty.
+// that file is the one to read, since it separates the two directions, and the split half is now empty.
 //
-// The other two are correct today and guard against regression: the component count matches KiCad
+// The other two are correct today and guard against regression. The component count matches KiCad
 // exactly, and the MPN count is what the datasheet tier joins on.
 func TestSampleBoardRead(t *testing.T) {
 	if _, err := os.Stat(sampleJetson); err != nil {
@@ -129,8 +129,8 @@ func TestSampleBoardPartIdentityAgreesAcrossViews(t *testing.T) {
 // column is among the first things such a tool joins on, so an export with correct connectivity and
 // no part numbers hands the recipient a netlist that silently fails a BOM join.
 //
-// It reads the BOARD view on purpose. The schematic view exercised the same path already, and the
-// board view is where the value was lost: the reader recorded the part number on the component and
+// It reads the BOARD view because the schematic view exercised the same path already, and the
+// board view is where the value was lost. The reader recorded the part number on the component and
 // the writer emits a SECTION's attributes, so the value sat in the IR one field away from the half
 // the writer reads (agni issue 584).
 func TestSampleBoardPartIdentitySurvivesEmit(t *testing.T) {

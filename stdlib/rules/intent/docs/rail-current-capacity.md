@@ -12,10 +12,10 @@ seeded datasheet there is no rating to check.
 
 ### For hardware engineers
 
-A regulator states a maximum output current on its datasheet. Past it the part does not deliver more,
-it protects itself: the output droops, or a current limit folds it back, or thermal shutdown cycles it.
-None of that is visible in a schematic, because the schematic shows what is connected and never how
-much any of it draws.
+A regulator states a maximum output current on its datasheet. Past it the part does not deliver more
+but protects itself, as the output droops, or a current limit folds it back, or thermal shutdown
+cycles it. None of that is visible in a schematic, because the schematic shows what is connected and
+never how much any of it draws.
 
 That is why the number has to be declared. A netlist carries connectivity, not current. The
 regulator's own datasheet cannot tell you what the designer hung off it. Adding up every load's rated
@@ -27,11 +27,11 @@ loads draw at once, which is an architecture decision rather than a fact the des
 **This rule is silent on a rail no seeded part supplies.** It has nothing to compare, and firing there
 would report a defect the design may not have.
 
-The honest verdict for that case is the review runner's `needs-data`, which these rules feed by
-declaring the datasheet symbols they join on. That gate is design-wide: if **nothing** on the board
-states an output current, a bound item reads needs-data rather than pass. It does not yet catch the
-narrower case where some regulator is seeded and the one feeding this particular rail is not, which
-still reads pass. Seed the supplying part before treating a pass here as a sized rail.
+The verdict that case should get is the review runner's `needs-data`, which these rules feed by
+declaring the datasheet symbols they join on. That gate is design-wide, so a bound item reads
+needs-data rather than pass only when **nothing** on the board states an output current. It does not
+yet catch the narrower case where some regulator is seeded and the one feeding this particular rail
+is not, which still reads pass. Seed the supplying part before treating a pass here as a sized rail.
 
 **A rating stated in milliamps is reduced to amps and compared.** Seed output currents as the sheet
 prints them. The parameter layer holds one conversion table, next to the comparability predicates, and
@@ -39,13 +39,14 @@ every extractor reads through it, so no rule contains a scale factor. A unit the
 recognize is skipped rather than scaled by a guess, which leaves the narrow residual that the symbol is
 seeded, needs-data does not cover it, and the item reads pass.
 
-Until agni issue 148 a milliamp rating was skipped instead, and milliamps are the ordinary spelling for
-a sub-amp regulator: a spec transcribed as printed left this rule with nothing to compare and scored
-the rail a clean pass while the architecture's own numbers over-subscribed it.
+Until agni issue 148 a milliamp rating was skipped instead, and milliamps are the ordinary spelling
+for a sub-amp regulator, so a spec transcribed as printed left this rule with nothing to compare and
+scored the rail a clean pass while the architecture's own numbers over-subscribed it.
 
-`intent/rail-current-margin` reports the separate question of whether the rail clears the budget with
-headroom. **A pass here means "rated for the declared load", not "adequately sized".** A supply that
-exactly meets the peak passes this rule and fires the margin rule.
+`intent/rail-current-margin` reports the separate question of whether the rail clears the budget
+with headroom. **A pass here means "rated for the declared load", not "adequately sized".** A supply
+that exactly meets the peak passes this rule and, when a `margin_factor` is declared, fires the
+margin rule.
 
 ### What counts as the supply
 
@@ -69,7 +70,7 @@ rail_budgets:
   - {rail: +1V8, peak: 0.35}
 ```
 
-`peak` is in amps and must be positive: a zero budget is met by every supply, so it would be a
+`peak` is in amps and must be positive, because a zero budget is met by every supply, so it would be a
 declaration that can only pass. One budget per rail.
 
 There is deliberately no `typical` field. Neither shipped rule would read one, and a declared number
@@ -79,5 +80,5 @@ verified. Adding it later is additive, and it should arrive with the rule that c
 ### Fixing a finding
 
 Either the supply is too small or the budget is wrong. Both happen, and they are not equally easy to
-tell apart: a budget written early in a design often outlives the loads it was written for. Confirm
-the budget against the current architecture before specifying a bigger part.
+tell apart, because a budget written early in a design often outlives the loads it was written for.
+Confirm the budget against the current architecture before specifying a bigger part.

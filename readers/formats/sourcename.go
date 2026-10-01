@@ -15,13 +15,12 @@ const (
 
 // relocateSources rewrites every Provenance.source_file anywhere in a message tree through name.
 //
-// It walks by REFLECTION rather than by visiting the types that carry a locator today. Nineteen IR
-// messages carry one and the geometry sidecar carries its own, so a hand-written walk would be long,
-// and a twentieth message gaining one is an ordinary schema change nobody would think to come back
-// here for. Such a walk keeps compiling and quietly stops covering the new node, which is the
-// failure this repo spends most of its tests on: the output still looks like an answer.
+// It walks by REFLECTION rather than by visiting the types that carry a locator. Over twenty IR
+// messages carry one and the geometry sidecar carries its own, and a message gaining one is an
+// ordinary schema change nobody would think to come back here for. A hand-written walk would keep
+// compiling and quietly stop covering the new node, while its output still looked complete.
 //
-// A nil name is the identity, so a loader that sets nothing behaves exactly as it did before.
+// A nil name is the identity, so a loader that sets nothing leaves every source_file as read.
 func relocateSources(m proto.Message, name func(string) string) {
 	if m == nil || name == nil {
 		return
@@ -46,7 +45,7 @@ func relocate(m protoreflect.Message, name func(string) string) {
 		switch {
 		case fd.IsMap():
 			// No schema here has a message-valued map that reaches a locator, so nothing exercises this
-			// branch today. It is here because a map is the one field kind a walk silently skips.
+			// branch today. It exists because a map is the one field kind a walk silently skips.
 			if fd.MapValue().Message() != nil {
 				v.Map().Range(func(_ protoreflect.MapKey, mv protoreflect.Value) bool {
 					relocate(mv.Message(), name)

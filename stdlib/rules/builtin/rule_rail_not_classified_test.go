@@ -40,7 +40,7 @@ func houseNamedDesign() *ir.Design {
 	}
 }
 
-// The rule's reason for existing: a house-named rail that the built-in vocabulary misses is
+// The rule's reason for existing is that a house-named rail the built-in vocabulary misses gets
 // reported, so the run says the analysis is short rather than reporting clean.
 func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
 	fs := railNotClassified.Findings(check.NewModel(houseNamedDesign()))
@@ -77,7 +77,7 @@ func TestRailNotClassifiedSilentOnAnAlreadyClassifiedRail(t *testing.T) {
 	}
 }
 
-// The intended end state: once the project declares its rail patterns, the rule goes silent on the
+// In the intended end state, once the project declares its rail patterns, the rule goes silent on the
 // nets it was reporting. A diagnostic that keeps firing after the fix is applied is a nag, and this
 // is also what proves the finding was about the CONFIG rather than the design.
 func TestRailNotClassifiedGoesSilentOnceTheLexiconIsDeclared(t *testing.T) {
@@ -95,14 +95,14 @@ func TestRailNotClassifiedGoesSilentOnceTheLexiconIsDeclared(t *testing.T) {
 
 // Skip-not-false-pass across the inputs the rule cannot evidence.
 func TestRailNotClassifiedSilentWithoutEvidence(t *testing.T) {
-	// A rail-looking name with no supply pin on it: one channel only, so no finding.
+	// A rail-looking name with no supply pin on it is one channel only, so no finding.
 	noSupply := houseNamedDesign()
 	noSupply.Nets[0].Connections = []*ir.Connection{{ComponentRef: "U1", PinRef: "3"}}
 	if fs := railNotClassified.Findings(check.NewModel(noSupply)); len(fs) != 0 {
 		t.Errorf("one channel is not evidence; want 0 findings, got %+v", fs)
 	}
 
-	// A supply pin on a net whose name declares no voltage: nothing to report about.
+	// A supply pin on a net whose name declares no voltage leaves nothing to report about.
 	noVolts := houseNamedDesign()
 	noVolts.Nets[0].Name = "PMIC_CORE"
 	for _, f := range railNotClassified.Findings(check.NewModel(noVolts)) {

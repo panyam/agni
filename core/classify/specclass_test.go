@@ -8,7 +8,7 @@ import (
 )
 
 // tagged reads a component's class tags back as "class:source" pairs, which is what these tests
-// assert on: the membership alone was never the half that went missing.
+// assert on, because the membership alone was never the half that went missing.
 func tagged(c *ir.Component) []string {
 	out := []string{}
 	for _, t := range c.GetDeviceClasses() {
@@ -47,18 +47,19 @@ func specDesign() *ir.Design {
 	}}
 }
 
-// TestStampClassesFromSpecsAddsWhatOnlyADatasheetKnows is the pass doing its job: a seeded
-// device_class resolves a subtype the keyword path refuses to guess, and it lands in the IR carrying
-// the evidence, beside rather than instead of what the convention tier established.
+// TestStampClassesFromSpecsAddsWhatOnlyADatasheetKnows is the pass doing its job. A seeded
+// device_class resolves a subtype the keyword path refuses to guess, and it lands in the IR
+// carrying the evidence, beside rather than instead of what the convention tier established.
 func TestStampClassesFromSpecsAddsWhatOnlyADatasheetKnows(t *testing.T) {
 	d := specDesign()
 	StampClassesFromSpecs(d, func(mpn string) string {
 		return map[string]string{"ACME-XTAL": "crystal", "ACME-ORING": "ORing Controller"}[mpn]
 	})
-	// Y1's family tag reads as datasheet-sourced, not convention-sourced, and that is correct rather
-	// than a side effect: a spec saying "crystal" says this is a clock source, so the stronger source
-	// is recorded for both tags. The convention tier still established the membership first, and
-	// nothing about the set changed; only the evidence recorded against it moved up.
+	// Y1's family tag reads as datasheet-sourced, not convention-sourced, and that is correct
+	// rather than a side effect. A spec saying "crystal" says this is a clock source, so the
+	// stronger source is recorded for both tags. The convention tier still established the
+	// membership first, and nothing about the set changed; only the evidence recorded against it
+	// moved up.
 	want := map[string][]string{
 		"Y1": {"clock:datasheet", "crystal:datasheet"},
 		"U1": {"ic:convention", "ideal_diode_controller:datasheet"},
@@ -78,7 +79,7 @@ func TestStampClassesFromSpecsAddsWhatOnlyADatasheetKnows(t *testing.T) {
 }
 
 // TestStampClassesFromSpecsIsAdditiveAndIdempotent pins both halves of the contract two callers
-// depend on: the Loader runs this pass, and check.Model runs it again over the same design when it
+// depend on. The Loader runs this pass, and check.Model runs it again over the same design when it
 // is given a corpus of its own.
 func TestStampClassesFromSpecsIsAdditiveAndIdempotent(t *testing.T) {
 	lookup := func(string) string { return "crystal" }

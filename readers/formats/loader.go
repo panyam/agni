@@ -17,80 +17,59 @@ import (
 	"github.com/panyam/agni/readers/kicad"
 )
 
-// Loader reads design files through the registry. It carries the configuration the readers
-// need beyond the file itself (today: the --symbol-path search directories); every
-// entrypoint (CLI commands, the serve Loader adapter, a future WASM shim) constructs one
-// and shares the same dispatch.
+// Loader reads design files through the registry. It carries the read configuration the readers
+// need beyond the file itself (symbol paths, naming vocabulary, file system, provenance naming,
+// datasheet classes). Every entrypoint (CLI commands, the serve adapter, a future WASM shim)
+// constructs one and shares the same dispatch.
 type Loader struct {
 	// SymbolPaths are the directories searched for .sym symbol files when netlisting or
 	// drawing xschem/gEDA schematics (the schematic's own directory is always searched).
 	SymbolPaths []string
-	// Lexicon is the naming vocabulary this loader's reads are stamped with: which net names are
-	// rails / grounds / feedback nodes, which pin names are supplies, and the device-class token
-	// hints (WS3-106). Nil means the process defaults, so a loader that declares no project
-	// convention behaves exactly as before.
-	//
-	// It lives here, beside SymbolPaths, because it is read configuration: the stamps below turn it
-	// into design DATA once, and rules then read the data. Carrying it per-loader rather than in a
-	// package global is what lets two designs be read with different project conventions in one
-	// process, which a served request needs and a mutable global cannot give.
+	// Lexicon is the naming vocabulary this loader's reads are stamped with (WS3-106). Nil means the
+	// process defaults. It is per-loader rather than a package global so one process can read two
+	// designs under two projects' conventions; see classify.Lexicon.
 	Lexicon *classify.Lexicon
 	// FS, when non-nil, is what every read in this package resolves against, so a host with no
-	// filesystem — a WASM build, an embedder holding designs in memory, a test — reads through the
-	// same registry, the same extension dispatch, and the same post-read stamps as an on-disk read
-	// (WS1-049). Nil means the host filesystem, so an os-backed caller is unaffected and its paths
-	// keep their host form.
+	// filesystem (a WASM build, an embedder holding designs in memory, a test) gets the same registry,
+	// dispatch and post-read stamps as an on-disk read (WS1-049). Nil means the host filesystem, and
+	// paths keep their host form.
 	//
-	// A non-nil FS makes every path an fs.ValidPath name: slash-separated, unrooted, no "..". That
-	// applies to the SymbolPaths entries and to the sibling references the multi-file formats
-	// resolve (a KiCad sub-sheet's Sheetfile, a .kicad_sym library, an xschem/gEDA .sym), because
-	// those are joined against the design's own directory in this same name space.
-	//
-	// It carries an fs.FS rather than a bytes entry point because bytes cannot express the
-	// multi-file formats at all: a KiCad hierarchy is a root plus its sub-sheets plus its symbol
-	// libraries, and the readers reach them through opener closures this loader supplies. One FS
-	// covers os, in-memory, embedded, and archive hosts with no second dispatch table.
+	// A non-nil FS makes every path an fs.ValidPath name (slash-separated, unrooted, no ".."). That
+	// includes the SymbolPaths entries and the sibling references the multi-file formats resolve
+	// against the design's own directory. It is an fs.FS rather than a bytes entry point because a
+	// multi-file format such as a KiCad root plus its sub-sheets and symbol libraries cannot be one
+	// byte slice. See docsite/content/build/format-reader.md.
 	FS fs.FS
 	// SourceName maps a path this loader opened onto the name provenance should record for it. Nil
-	// records the path verbatim, which is what a host reading through FS wants: an fs.ValidPath is
-	// already unrooted and portable.
+	// records the path verbatim, which suits a host reading through FS, since an fs.ValidPath is
+	// already unrooted.
 	//
-	// It exists for the host that is NOT reading through an FS. The CLI resolves its argument to an
-	// absolute path before opening it, so every locator in the read carried the machine's directory
-	// layout: `--format json` published it, `--results-out` STORED it, and an archived run therefore
-	// embedded the filesystem of whatever produced it. A results document is meant to be mailed and
-	// re-read by someone holding neither the design nor this build (see architecture/checks-contract),
-	// which a host path quietly makes untrue.
-	//
-	// It is a function rather than a base-path string because only the caller knows what a path
-	// should be CALLED: the CLI holds a mount table and can say which mount contains this file, and
-	// nothing in this package can. `CheckReport.source` already promises a mount-relative path, so a
-	// locator naming a file inside that design follows the same convention.
+	// It is for the host that is NOT reading through an FS. The CLI opens absolute paths, so without
+	// it every locator carries the machine's directory layout into `--format json` and into the
+	// stored `--results-out` document, which is meant to be re-read elsewhere (#511,
+	// docsite/content/architecture/checks-contract.md). A function rather than a base path, because
+	// only the caller's mount table knows which mount contains a file, and `CheckReport.source`
+	// already promises a mount-relative path.
 	SourceName func(string) string
 	// DeviceClassFor answers the vendor device_class a datasheet states for an MPN, or "" for a part
-	// with no seeded spec. Nil means this read has no datasheet corpus, which is the ordinary case and
-	// leaves every component classified by convention alone.
+	// with no seeded spec. Nil means the read has no datasheet corpus, the ordinary case, and every
+	// component is classified by convention alone.
 	//
-	// It is the DATASHEET evidence tier of the class stamp (agni issue 710). It rides here beside
-	// Lexicon because it is the same kind of thing: read configuration that a pass turns into design
-	// DATA once, after which consumers read the data. Carrying it per-loader is what lets one process
-	// read two designs against two projects' corpora, the property a served request needs.
-	//
-	// A FUNCTION rather than the param provider itself, so this package does not take on the datasheet
-	// layer (C1): what the pass needs is one string per part, and a narrow signature keeps the corpus,
-	// its loading and its staleness rules on the caller's side of the seam.
+	// It is the DATASHEET evidence tier of the class stamp (agni issue 710), per-loader like Lexicon.
+	// A FUNCTION rather than the param provider itself, so this package does not take on the
+	// datasheet layer (C17). The pass needs one string per part, and the corpus, its loading and its
+	// staleness rules stay with the caller.
 	DeviceClassFor func(mpn string) string
 }
 
-// Open reads one file in this loader's name space: from FS when it carries one, else from the host
-// filesystem. A registered reader MUST reach its bytes through this (or ReadFile) rather than
-// calling os directly, or it works on a server and fails in every host that has no filesystem —
-// that is the whole contract the FS field buys. It is exported for exactly that reason: the
-// registry is a public extension point (see Register), so an out-of-module reader in the extension
-// needs the same door the built-in readers use.
+// Open reads one file in this loader's name space, from FS when it carries one and from the host
+// filesystem otherwise. A registered reader MUST reach its bytes through this (or ReadFile) rather
+// than calling os directly, or it works on a server and fails in every host with no filesystem.
+// Exported because the registry is a public extension point (see Register), so an out-of-module
+// reader needs the same door the built-in readers use.
 //
-// *os.File already satisfies fs.File, so the host branch needs no wrapper and a caller that sniffs
-// a header keeps the io.Reader it peeks at. The returned file is the caller's to Close.
+// *os.File already satisfies fs.File, so a caller that sniffs a header keeps the io.Reader it peeks
+// at. The returned file is the caller's to Close.
 func (l *Loader) Open(name string) (fs.File, error) {
 	if l == nil || l.FS == nil {
 		return os.Open(name)
@@ -109,17 +88,15 @@ func (l *Loader) ReadFile(name string) ([]byte, error) {
 
 // Sibling resolves a reference made RELATIVE to a design file (a sub-sheet's Sheetfile, a symbol
 // library, a companion sidecar) into a name Open and ReadFile accept. Readers must build sibling
-// names with this rather than path/filepath directly, because the separator rules differ by host:
-// an fs.FS name space is always slash-separated, and the host filesystem uses the platform's. The
-// difference is invisible on unix, where the two agree, and breaks every sibling lookup on Windows.
+// names with this rather than path/filepath directly, because an fs.FS name space is always
+// slash-separated and the host filesystem uses the platform's separator. Getting it wrong is
+// invisible on unix, where the two agree, and breaks every sibling lookup on Windows.
 func (l *Loader) Sibling(name, rel string) string {
 	return l.join(l.dir(name), rel)
 }
 
-// dir and join split a path in this loader's name space. Under an FS that is always slash
-// separated (path), and on the host filesystem it is the platform's (filepath) — the same
-// distinction fs.FS itself draws, hoisted to one place so no call site has to remember it. Getting
-// this wrong is invisible on unix, where the two agree, and breaks every sibling lookup on Windows.
+// dir and join split and join a path in this loader's name space, slash-separated (path) under an
+// FS and the platform's (filepath) on the host filesystem. See Sibling.
 func (l *Loader) dir(name string) string {
 	if l == nil || l.FS == nil {
 		return filepath.Dir(name)
@@ -181,7 +158,11 @@ func (l *Loader) sourceName() func(string) string {
 	return l.SourceName
 }
 
-// ReadDesign reads a design file into the netlist IR, picking the reader by extension.
+// ReadDesign reads a design file into the netlist IR, picking the reader by extension, then runs
+// the format-neutral ingestion passes in order. Two of the orderings fail silently when wrong. Stamp
+// REPLACES the device-class set, so the datasheet class pass must run after it, and that pass joins
+// on the MPN StampMPN fills, so it must run after that too. See
+// docsite/content/architecture/ingestion-and-ir.md#derived-fields-and-the-tiers-that-fill-them.
 func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	ext := lowerExt(path)
 	f := byExt[ext]
@@ -192,48 +173,38 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Stamp the format-neutral per-instance net id here, once, for every reader (WS9): netgraph-based
-	// readers already set it (a no-op), and a direct-IR reader like EDIF gets it from its connections.
-	// Every locator recorded during the read is rewritten to the name this loader was told to call
-	// its sources, before any stamp reads one and before the design reaches a caller.
+	// Rename every locator to the name this loader was told to call its sources, before any stamp
+	// reads one and before the design reaches a caller.
 	relocateSources(d, l.sourceName())
+	// The format-neutral per-instance net id (WS9). A no-op for netgraph-based readers, which set it
+	// already; a direct-IR reader like EDIF gets it from its connections.
 	netgraph.StampNetIDs(d)
-	// Classify every component into its device_classes set once at ingestion (WS3-071), so check reads
-	// a normalized data fact instead of re-deriving the class from vendor strings on every model build.
-	// Runs after readers finish, against THIS loader's lexicon (WS3-106) — the vocabulary arrives with
-	// the read, so there is no install-before-this-call ordering to get wrong.
+	// Device classes (WS3-071), against THIS loader's lexicon (WS3-106), so the vocabulary arrives
+	// with the read and there is no install-before-read ordering to get wrong.
 	lex := l.lexicon()
 	lex.Stamp(d)
-	// Stamp each net's role SET (rail / ground / feedback) from the same lexicon once at ingestion
-	// (WS3-072), so the core reads a normalized net.role fact instead of re-running name matching
-	// per-net per-rule.
+	// Each net's role SET from the same lexicon (WS3-072); see Lexicon.StampNetRoles.
 	lex.StampNetRoles(d)
-	// Read each component's VALUE into a machine-comparable Quantity once at ingestion (WS3-118), from
-	// whatever attribute its format spelled it in. It runs AFTER Stamp because the bare-number unit
-	// convention is keyed on the device class this pass has just filled: a bare "100" means ohms only
-	// once the component is known to be a resistor.
+	// Component values into comparable Quantities (WS3-118). AFTER Stamp, because the bare-number
+	// unit is keyed on the device class, so a bare "100" means ohms only once the component is known
+	// to be a resistor.
 	lex.StampValues(d)
-	// Fill POWER_IN on supply pins a reader left under-typed (WS3-072 PR2): EDIF's port grammar carries
-	// only INPUT/OUTPUT/INOUT, so a VDD pin reads as plain INPUT; this promotes it so the power-pin rule
-	// family works format-neutrally on PinDir == POWER_IN. A no-op for KiCad/gEDA (already typed).
+	// POWER_IN on supply pins a reader left under-typed (WS3-072 PR2); see Lexicon.StampPowerInPins.
 	lex.StampPowerInPins(d)
-	// Promote every component's manufacturer part number to the one canonical attribute, from whatever
-	// key its format spelled it in and from its part type when the placement carried none (agni issue
-	// 519). Not a lexicon pass: a part number is an identifier the source states, not a name this
-	// engine interprets, so no naming vocabulary is involved.
+	// Fill ir.Component.mpn from the component's own attributes or its part type (agni issue 519).
+	// Not a lexicon pass, since a part number is an identifier the source states and not a name this
+	// engine interprets.
 	classify.StampMPN(d)
-	// Add the classes only a DATASHEET can establish (agni issue 710), which is C9's evidence-tier
-	// variant: one shared pass per tier rather than one pass for everything. It runs LAST of the class
-	// passes for two reasons. It joins on the MPN StampMPN has just filled, and Stamp REPLACES the set
-	// it writes, so a datasheet tag written before it would be discarded. A read with no corpus skips
-	// it entirely and is byte-identical to one taken before this existed.
+	// The classes only a DATASHEET can establish (agni issue 710, C9's evidence-tier variant). LAST
+	// of the class passes, for the two orderings in the doc comment. A read with no corpus skips it
+	// and is unchanged by it.
 	classify.StampClassesFromSpecs(d, l.deviceClassFor())
 	return d, nil
 }
 
 // BoardGeometry reads a design's board-geometry sidecar (WS1-006), or (nil, nil) when the
-// format carries no board layout — absence is a normal state for a netlist-only source,
-// distinct from a board-bearing file that fails to parse (an error).
+// format carries no board layout. Absence is a normal state for a netlist-only source, distinct
+// from a board-bearing file that fails to parse (an error).
 func (l *Loader) BoardGeometry(path string) (*geom.BoardGeometry, error) {
 	f := byExt[lowerExt(path)]
 	if f == nil || f.Board == nil {
@@ -261,9 +232,9 @@ func (l *Loader) FaithfulGeometry(path string) (*geom.SchematicGeometry, error) 
 	if err != nil {
 		return nil, err
 	}
-	// What this read could not draw, recorded here because this is where the geometry is produced and
-	// where the symbol libraries were (or were not) found. Computing it downstream would mean a second
-	// join that can disagree with the renderer's (agni issue 354).
+	// What this read could not draw, recorded where the geometry is produced and the symbol libraries
+	// were (or were not) found. Computing it downstream would be a second join that can disagree with
+	// the renderer's (agni issue 354).
 	geomath.MarkUndrawn(g)
 	relocateSources(g, l.sourceName())
 	return g, nil
@@ -293,8 +264,8 @@ func (l *Loader) ResolveGeometry(path, layout string, reg *graph.Registry, symbo
 // classification registry (synthetic glyphs) by default, or a FaithfulSource over the
 // design's own geometry when SymbolsFaithful is requested. Faithful needs the design's own
 // geometry; a netlist-only format (.edn, IPC-2581) has none, so faithful GRACEFULLY FALLS
-// BACK to glyphs rather than erroring — a viewer that still has faithful selected from a
-// previous file draws the netlist graph with glyph nodes instead of failing the request.
+// BACK to glyphs rather than erroring. A viewer that still has faithful selected from a
+// previous file then draws the netlist graph with glyph nodes instead of failing the request.
 func (l *Loader) SymbolSource(path, symbols string, reg *graph.Registry) (graph.SymbolSource, error) {
 	if reg == nil {
 		reg = graph.DefaultRegistry()
@@ -325,9 +296,9 @@ func (l *Loader) ConversionReport(path, symbols string, reg *graph.Registry) (*g
 // symbolOpener builds a resolver that finds a symbol reference (e.g. "res.sym" or
 // "devices/res.sym") by searching the schematic's own directory first, then each
 // SymbolPaths entry. It tries the reference as written and by basename directly, then falls
-// back to a recursive search of each dir's subtree by basename — gEDA/Lepton libraries are
+// back to a recursive search of each dir's subtree by basename. gEDA/Lepton libraries are
 // organized in categorized subdirs (analog/, power/, ...) and reference symbols by bare name,
-// so a --symbol-path pointed at a library ROOT resolves them. The subtree index is built once
+// so this lets a --symbol-path pointed at a library ROOT resolve them. The subtree index is built once
 // per opener (lazily) and reused; earlier dirs and shallower matches win. Passed to the
 // xschem/gEDA readers, which own no file I/O themselves (CONSTRAINTS C1).
 func (l *Loader) symbolOpener(schPath string) func(string) ([]byte, error) {
@@ -354,8 +325,8 @@ func (l *Loader) symbolOpener(schPath string) func(string) ([]byte, error) {
 
 // indexSymFiles walks each dir's subtree once and maps every .sym file's basename to its path.
 // Dirs are indexed in order, first write wins, so precedence follows dir order (schematic dir,
-// then each --symbol-path). It only decides among SUBTREE matches: the direct search in
-// symbolOpener runs first, so a top-level file in an earlier dir always wins over any subdir
+// then each --symbol-path). It only decides among SUBTREE matches, since the direct search in
+// symbolOpener runs first and a top-level file in an earlier dir always wins over any subdir
 // match. A missing or unreadable dir is skipped.
 func (l *Loader) indexSymFiles(dirs []string) map[string]string {
 	m := map[string]string{}
@@ -375,10 +346,10 @@ func (l *Loader) indexSymFiles(dirs []string) map[string]string {
 
 // kicadSymOpener builds the external .kicad_sym resolver for a schematic (WS1-016):
 // the project's own sym-lib-table (beside the schematic; ${KIPRJMOD} = that directory)
-// is consulted first — project truth needs no flag, like the sheet opener — then each
-// --symbol-path directory is searched for <Library>.kicad_sym by nickname, which is how
-// table entries naming installed-lib env vars (${KICAD9_SYMBOL_DIR}/...) and tableless
-// projects resolve. The readers own no file I/O (C1).
+// is consulted first and needs no flag, like the sheet opener. Then each --symbol-path
+// directory is searched for <Library>.kicad_sym by nickname, which is how table entries
+// naming installed-lib env vars (${KICAD9_SYMBOL_DIR}/...) and tableless projects resolve.
+// The readers own no file I/O (C1).
 func (l *Loader) kicadSymOpener(schPath string) func(lib string) ([]byte, error) {
 	dir := l.dir(schPath)
 	var table map[string]string

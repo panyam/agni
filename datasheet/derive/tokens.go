@@ -8,11 +8,9 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// normalizeSymbol strips spaces from a printed symbol: document parsers split
-// subscripts ("V GSS" for V_GSS), and the hand-encoded goldens write them joined.
-// Comparison and matching happen on the normalized form; the emitted parameter
-// keeps the normalized spelling too, since the space is a typesetting artifact,
-// not vendor vocabulary.
+// normalizeSymbol strips spaces from a printed symbol. Document parsers split
+// subscripts ("V GSS" for V_GSS) and the hand-encoded goldens write them joined,
+// so matching and the emitted parameter both use the joined form.
 func normalizeSymbol(s string) string { return strings.ReplaceAll(s, " ", "") }
 
 var (
@@ -23,10 +21,10 @@ var (
 	condRange  = regexp.MustCompile(`^([+-]?\d+(?:\.\d+)?)\s*(?:<=|≤)\s*([A-Za-z][A-Za-z0-9 ()_.]*?)\s*(?:<=|≤)\s*([+-]?\d+(?:\.\d+)?)\s*([A-Za-zµΩ%°]*)$`)
 )
 
-// parseRatings parses one absolute-maximum-ratings value cell: a plain number is a
-// max-only bound (a stress ceiling), "±N" / "+/-N" spans -N..N, and "A to B" is a
-// range. Anything else (prose like "Internally Limited", empty) does not parse and
-// the row lands in the gap list rather than guessing.
+// parseRatings parses one absolute-maximum-ratings value cell. A plain number is a
+// max-only bound (a stress ceiling), "±N" or "+/-N" spans -N..N, and "A to B" is a
+// range. Anything else (prose like "Internally Limited", empty) does not parse, and
+// the row lands in the gap list.
 func parseRatings(s string) (min, max *float64, ok bool) {
 	s = strings.TrimSpace(s)
 	if m := plusMinus.FindStringSubmatch(s); m != nil {
@@ -69,11 +67,12 @@ func parseNumberCell(s string) *float64 {
 	return &v
 }
 
-// parseCondition parses one test-condition fragment into a param Condition. Two
-// structured forms are recognized: "SYM = N UNIT" and "A <= SYM <= B UNIT" (ASCII or
-// ≤). Everything else — symbol-to-symbol relations ("VDS = VGS"), prose ranges —
-// keeps only Raw, which is a captured-but-not-machine-comparable condition by the
-// docs/20 semantics. Raw always carries the source text, structured or not.
+// parseCondition parses one test-condition fragment into a param Condition. It
+// recognizes "SYM = N UNIT" and "A <= SYM <= B UNIT" (ASCII or ≤). Anything else,
+// such as a symbol-to-symbol relation ("VDS = VGS") or a prose range, keeps only Raw,
+// which is captured but not machine-comparable
+// (docsite/content/architecture/datasheet-layer.md#comparison-semantics). Raw always
+// carries the source text.
 func parseCondition(s string) *parampb.Condition {
 	s = strings.TrimSpace(s)
 	c := &parampb.Condition{Raw: s}

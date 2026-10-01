@@ -21,7 +21,7 @@ describe("recents", () => {
     expect(got[0].at).toBe(300);
   });
 
-  // The same path under two kinds stays two entries: they reopen on different pages, so collapsing
+  // The same path under two kinds stays two entries. They reopen on different pages, so collapsing
   // them would send one of the two to a page that cannot show it.
   it("keeps a design and a datasheet at the same path apart", () => {
     noteOpen({ kind: "design", mount: "m", path: "x", label: "x" }, 100);

@@ -46,26 +46,20 @@ func (t Tally) Covered() int { return t.Total - t.NotAutomated }
 
 // Answered is the stricter axis: how many items the run actually produced an answer for.
 //
-// It exists because Covered() cannot see a whole class of regression. Covered() subtracts only
-// NotAutomated, which moves when a rule leaves the CATALOG — a profiles directory that moved, a
-// convention file that was renamed. It does not move when a rule is present but its INPUTS are gone:
-// a datasheet-backed item whose corpus vanished resolves to a rule, fails check.Available, and reads
-// not-applicable, which Covered() counts as covered. Removing `params/` from the tutorial project
-// moves Covered() by zero while an item silently stops being answered.
+// Covered() subtracts only NotAutomated, which moves when a rule leaves the CATALOG. It does not move
+// when a rule is present but its INPUTS are gone, as when a datasheet-backed item whose corpus
+// vanished fails check.Available and reads not-applicable, which Covered() counts. Removing `params/` from the
+// tutorial project moves Covered() by zero while an item stops being answered.
 //
-// So the tiers are three, not two. Pass, Fail and Provisional are verdicts: the rule ran and decided.
-// ComputedNA is also an answer, because the DESIGN determined the item does not apply (no crystal on
-// the board), which is the same branch a human takes. Everything else is an item nobody answered:
-// NotApplicable (the mechanism exists, its inputs are absent), NotAutomated, NeedsData,
-// NeedsDesignIntent, and Inconclusive (the rule ran and could not decide).
-//
-// Covered() stays exactly as it was and is still rendered. The two numbers answer different
-// questions, and a checklist where they diverge is telling you something true.
+// Pass, Fail and Provisional are verdicts. ComputedNA is also an answer, because the DESIGN determined
+// the item does not apply (no crystal on the board). Everything else is unanswered: NotApplicable,
+// NotAutomated, NeedsData, NeedsDesignIntent, and Inconclusive. See
+// docsite/content/architecture/checks-contract.md#covered-and-answered-are-two-numbers.
 func (t Tally) Answered() int { return t.Pass + t.Fail + t.Provisional + t.ComputedNA }
 
 func (t Tally) String() string {
 	s := fmt.Sprintf("%d pass, %d fail, %d n/a, %d not-automated", t.Pass, t.Fail, t.NotApplicable, t.NotAutomated)
-	// Show the ratification states only when present, so an unseeded review reads exactly as before.
+	// Show the ratification states only when present, so an unseeded review reads as a plain tally.
 	if t.Provisional > 0 {
 		s += fmt.Sprintf(", %d provisional", t.Provisional)
 	}
@@ -84,8 +78,7 @@ func (t Tally) String() string {
 	return s + fmt.Sprintf(" (of %d)", t.Total)
 }
 
-// Tally sums one area's outcomes. Exported because the markdown rollup and the HTML checklist both
-// need a per-area count, and the loop existed twice before one of them was written down.
+// Tally sums one area's outcomes, for the markdown rollup and the HTML checklist.
 func (a AreaResult) Tally() Tally {
 	var t Tally
 	for _, it := range a.Items {
@@ -106,8 +99,8 @@ func (r Report) Tally() Tally {
 }
 
 // RenderMarkdown renders a per-design review report: an overall tally, then one table per review area
-// (item -> outcome -> the findings that failed it). It is the per-design analogue of the coverage
-// matrix — organized by the project's review areas, not by severity.
+// (item -> outcome -> the findings that failed it). It is organized by the project's review areas,
+// not by severity.
 func RenderMarkdown(r Report) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Review: %s\n\n", r.Manifest)
@@ -131,9 +124,8 @@ func RenderMarkdown(r Report) string {
 }
 
 // RenderCoverageMarkdown renders a compact per-design coverage rollup: one row per review area with
-// its automation coverage (how many items a shipped rule covers) and, among those, the pass/fail/na
-// split — plus a totals row. It is the scannable summary of the same run RenderMarkdown details item
-// by item; "automated" = the item's binding resolved to a rule (pass, fail, or not-applicable), so
+// its automation coverage and the outcome split, plus a totals row. It summarizes the same run
+// RenderMarkdown details item by item. "Automated" means the item's binding resolved to a rule, so
 // not-automated is exactly the checklist still needing a rule.
 func RenderCoverageMarkdown(r Report) string {
 	var b strings.Builder
@@ -142,9 +134,8 @@ func RenderCoverageMarkdown(r Report) string {
 		fmt.Fprintf(&b, "Design: `%s`\n\n", r.Design)
 	}
 	tot := r.Tally()
-	// Two axes (WS10-014): coverage (a mechanism exists) then, among covered items, the ratification
-	// breakdown — provisional (awaiting a datasheet value) and needs-intent (awaiting a declaration) are
-	// the HITL worklists, distinct from a clean pass/fail or a genuine not-automated.
+	// Two axes (WS10-014): coverage, then the ratification breakdown among covered items. Provisional
+	// (awaiting a datasheet value) and needs-intent (awaiting a declaration) are the HITL worklists.
 	fmt.Fprintf(&b, "**%d of %d covered**, **%d answered** — %d pass, %d fail, %d n/a; %d not-automated",
 		tot.Covered(), tot.Total, tot.Answered(), tot.Pass, tot.Fail, tot.NotApplicable, tot.NotAutomated)
 	if tot.Provisional > 0 || tot.NeedsDesignIntent > 0 || tot.NeedsData > 0 || tot.ComputedNA > 0 || tot.Inconclusive > 0 {
@@ -166,10 +157,8 @@ func RenderCoverageMarkdown(r Report) string {
 }
 
 // maxDetailFindings caps how many findings a failing item's Detail cell lists inline. A broad rule
-// (esd, unconnected-pin) can fire on hundreds of nets; dumping them all makes one unreadable markdown
-// cell (a real esd item failed on 250+ nets, a 100KB line). The cap is a MARKDOWN-RENDERING
-// choice only: ItemResult.Findings still carries the full list, which the future JSON/web report
-// surfaces in full — no data is lost here.
+// can fire on hundreds of nets (a real esd item failed on 250+ nets, a 100KB line). The cap is
+// markdown-only, and ItemResult.Findings keeps the full list, which RenderJSON emits.
 const maxDetailFindings = 3
 
 // detail is the last column: the findings for a failed item, the reason (plus any manifest note) for
@@ -178,8 +167,8 @@ const maxDetailFindings = 3
 func detail(it ItemResult) string {
 	switch it.Outcome {
 	case Fail, Provisional:
-		// Provisional carries the same firing findings as a Fail (it IS a fail, on unratified data), so
-		// it renders its findings the same way; the "provisional" outcome word already flags the caveat.
+		// Provisional IS a fail on unratified data, so it renders its findings the same way and the
+		// outcome word flags the caveat.
 		n := len(it.Findings)
 		shown := n
 		if shown > maxDetailFindings {
@@ -195,13 +184,10 @@ func detail(it ItemResult) string {
 		}
 		return s
 	case NotApplicable, ComputedNA, NeedsDesignIntent, NeedsData, Inconclusive, NotAutomated:
-		// NotAutomated may carry a runtime reason too (WS3-090: a host-bound interface declared on no
-		// component), and NeedsData carries the unseeded-symbol reason (WS3-097), so join the runtime
-		// note with any manifest note rather than showing the manifest note alone.
-		//
-		// A needs-data item also names the parts to seed. The sentence says WHICH SYMBOL is missing
-		// and the list says WHICH PARTS need it, which the sentence cannot: it is design-wide by
-		// construction ("on this design").
+		// NotAutomated may carry a runtime reason (WS3-090: a host-bound interface declared on no
+		// component), and NeedsData the unseeded-symbol reason (WS3-097), so join the runtime note with
+		// any manifest note. For needs-data, the note names WHICH SYMBOL is missing design-wide and the
+		// unmet list names WHICH PARTS need it.
 		return JoinNonEmpty(it.Note, unmetSummary(it.Unmet), it.Item.Note)
 	default: // Pass
 		return it.Item.Note
@@ -219,14 +205,13 @@ func JoinNonEmpty(parts ...string) string {
 	return strings.Join(kept, "; ")
 }
 
-// maxUnmetListed caps the parts a needs-data cell names inline, for the reason maxDetailFindings
-// caps findings: a symbol common across a large board can be unseeded on dozens of parts, and one
-// unreadable markdown cell helps nobody. ItemResult.Unmet keeps the full list either way.
+// maxUnmetListed caps the parts a needs-data cell names inline, like maxDetailFindings, since a
+// common symbol can be unseeded on dozens of parts. ItemResult.Unmet keeps the full list.
 const maxUnmetListed = 5
 
 // unmetSummary renders the parts a needs-data item needs seeded, as "seed X on A, B". The
-// spec-absent case is called out separately because the next step differs: a part with no spec at
-// all needs a document extracted before any symbol can be found in it.
+// spec-absent case is called out separately because a part with no spec at all needs a document
+// extracted before any symbol can be found in it.
 func unmetSummary(deps []check.UnmetDependency) string {
 	if len(deps) == 0 {
 		return ""

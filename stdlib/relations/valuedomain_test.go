@@ -22,9 +22,9 @@ func infoFor(t *testing.T, rel string) facts.RelationInfo {
 	return facts.RelationInfo{}
 }
 
-// TestRoleDomainIsTheVocabularyItself: the declared domain must be the engine's role vocabulary, not a
-// copy of it. A literal list here would go stale the way the tokens did before agni 692, and the
-// column would then reject a role the engine had just added.
+// TestRoleDomainIsTheVocabularyItself pins that the declared domain must be the engine's role
+// vocabulary, not a copy of it. A literal list here would go stale the way the tokens did before
+// agni 692, and the column would then reject a role the engine had just added.
 func TestRoleDomainIsTheVocabularyItself(t *testing.T) {
 	got := infoFor(t, RelNetRole).ArgKinds["role"].ValidOptions
 	if len(got) != len(classify.AllNetRoles()) {
@@ -37,8 +37,9 @@ func TestRoleDomainIsTheVocabularyItself(t *testing.T) {
 	}
 }
 
-// TestPinTypeDomainCoversEveryDirection: same property for the other closed column. Every spelling
-// DirString can produce must be askable, or the domain rejects a value the projector emits.
+// TestPinTypeDomainCoversEveryDirection checks the same property for the other closed column. Every
+// spelling DirString can produce must be askable, or the domain rejects a value the projector
+// emits.
 func TestPinTypeDomainCoversEveryDirection(t *testing.T) {
 	got := infoFor(t, RelPinType).ArgKinds["etype"].ValidOptions
 	for i := range ir.PinDirection_name {
@@ -52,7 +53,7 @@ func TestPinTypeDomainCoversEveryDirection(t *testing.T) {
 	}
 }
 
-// TestOpenColumnsDeclareNoDomain: the negative half, and the one that keeps this feature honest. A
+// TestOpenColumnsDeclareNoDomain is the negative half. A
 // domain on a net name, a part number or an attribute key would reject legitimate questions, so the
 // absence is the property worth asserting rather than a thing nobody got round to.
 func TestOpenColumnsDeclareNoDomain(t *testing.T) {

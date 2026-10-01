@@ -27,13 +27,10 @@ func subsystemRule(s Subsystem) *check.Rule {
 }
 
 // subsystemVerdicts decides every part the declaration NAMES: the source component when one is
-// declared, and each required net. The considered set is the declaration itself, which is what makes
-// an intent rule worth converting at all — the rule already knows exactly what it was asked to look
-// for, so "five of the six things this subsystem declares are here, and the sixth is not" is a
-// sentence it can produce with no extra machinery.
-//
-// Before, a subsystem that was entirely present reported nothing, which is what a subsystem whose
-// declaration nobody wrote reports too.
+// declared, and each required net. The considered set is the declaration itself, so the rule can say
+// "five of the six things this subsystem declares are here, and the sixth is not" with no extra
+// machinery. A fully present subsystem reports passes, which separates it from a subsystem whose
+// declaration nobody wrote (#417).
 func subsystemVerdicts(m check.Model, s Subsystem) []check.Verdict {
 	var out []check.Verdict
 	if s.Source != nil {

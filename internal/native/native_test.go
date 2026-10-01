@@ -29,7 +29,7 @@ func TestNativeAvailable(t *testing.T) {
 	}
 }
 
-// TestXschemArgs pins the xschem export invocation: xschem 2.8.x has no --plotfile and writes
+// TestXschemArgs pins the xschem export invocation. xschem 2.8.x has no --plotfile and writes
 // plot.svg into the working directory (runRender sets that to the temp outDir), so the args are
 // just the headless-export flags plus the input. Verified end-to-end via Dockerfile.native-tools.
 func TestXschemArgs(t *testing.T) {

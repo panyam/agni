@@ -1,15 +1,13 @@
-// pagegestures routes the datasheet workbench's pointer and keyboard input, split out of
-// regionview.tsx so the routing is testable without pdf.js or a DOM (regionview.tsx has no test of
-// its own, the way regions.ts was split out for the same reason).
+// pagegestures routes the datasheet workbench's pointer and keyboard input. It lives outside
+// regionview.tsx so it is testable without pdf.js or a DOM, like regions.ts.
 //
-// The workbench navigates like the schematic viewers: wheel zooms, drag pans (see panzoom.ts). That
-// leaves drawing a region, which used to own the plain drag, needing somewhere to go. It gets two
-// entrances: hold Shift, or flip the sticky Draw mode on for a long transcription session. Both
-// arrive here as one `drawIntent` flag, so nothing downstream knows or cares which was used.
+// Wheel zooms and drag pans, as in the schematic viewers (see panzoom.ts, #297). Drawing a region
+// has two entrances, holding Shift or the sticky Draw mode for a long transcription session, and
+// both arrive here as one `drawIntent` flag.
 import type { Handle, Region } from "./regions.js";
 
-// PointerIntent is what a pointerdown starts. Everything except "pan" is a direct manipulation of a
-// region; "pan" is the fallback, which is why a drag anywhere harmless moves the page.
+// PointerIntent is what a pointerdown starts. Everything except "pan" manipulates a region, and
+// "pan" is the fallback, so a drag anywhere else moves the page.
 export type PointerIntent =
   | { kind: "delete" }
   | { kind: "resize"; handle: Handle }
@@ -27,18 +25,15 @@ export interface HitTarget {
   regionKind: Region["kind"] | null;
 }
 
-// classifyPointerDown decides the gesture. The order encodes the priority:
+// classifyPointerDown decides the gesture, in priority order:
 //
 //  1. the on-box × deletes, and never starts a drag
-//  2. a resize handle resizes, even in Draw mode — the handles are small, deliberate targets, so
-//     hitting one is never accidental, and letting Draw mode swallow them would mean toggling the
-//     mode off to adjust the box you just drew
+//  2. a resize handle resizes, even in Draw mode, so adjusting the box you just drew needs no mode
+//     toggle (the handles are small enough that hitting one is never accidental)
 //  3. drawIntent draws, outranking a region body so a new box can be drawn ON TOP of an existing
-//     one (datasheet tables overlap constantly, and a table region covering half the page would
-//     otherwise be un-drawable-over)
-//  4. the SELECTED user region's body moves. Requiring selection first is what keeps panning
-//     predictable: a drag across a page dense with boxes pans instead of scattering them, and
-//     click-then-drag to move is the ordinary direct-manipulation idiom
+//     one (datasheet tables overlap constantly)
+//  4. the SELECTED user region's body moves. Requiring selection first means a drag across a page
+//     dense with boxes pans instead of scattering them
 //  5. everything else pans
 export function classifyPointerDown(
   hit: HitTarget,
@@ -83,9 +78,8 @@ export const ZOOM_KEY_FACTOR = 1.25;
 
 // classifyKey maps a keypress to a viewport command, or null to leave it to the browser.
 //
-// Paging carries two bindings on purpose. PageUp/PageDown/Home/End is what every paged-document
-// reader uses, so it needs no learning; Shift+arrows is the same four commands under one shape,
-// with left/right stepping and up/down jumping to the ends.
+// Paging has two bindings. PageUp/PageDown/Home/End works as in any paged-document reader, and
+// Shift+arrows gives the same four commands, left/right stepping and up/down jumping to the ends.
 //
 // `inField` suppresses everything while a form control has focus, so typing a value into the
 // transcribe panel cannot page the document out from under it. Ctrl/Cmd combinations are left

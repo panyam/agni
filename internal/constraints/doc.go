@@ -8,7 +8,7 @@
 // the model contract in `core/model/deps_test.go`. What lands here is the rest, the rule whose
 // violation is a line of source in a directory nobody would think to guard.
 //
-// These are TESTS rather than commands in the document for the reason C29 records: both halves of a
+// These are TESTS rather than commands in the document for the reason C29 records. Both halves of a
 // structural violation compile and pass, so a command written into prose goes stale without anything
 // surfacing it.
 package constraints

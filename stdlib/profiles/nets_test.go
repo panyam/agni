@@ -26,7 +26,7 @@ func TestNetsHostBeatsSuffix(t *testing.T) {
 		t.Errorf("host-scoped Nets should be the host's nets only, got %v", got)
 	}
 
-	// No host on the design: fall back to suffix, which matches both _TX nets.
+	// With no host on the design, fall back to suffix, which matches both _TX nets.
 	conv := Profile{Name: "S", Signals: []Signal{{Name: "TXD", Suffix: "_TX"}}}
 	got2 := Nets(check.NewModel(d), conv)
 	if !got2["LIN_A_TX"] || !got2["CAN_B_TX"] {

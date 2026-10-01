@@ -4,14 +4,12 @@ import "io"
 
 // Checklist is one review run, aggregated for reading.
 //
-// It is a SECOND page shape over the same machinery rather than a filter of the check report, and
-// the difference is the axis. The check report is rule-major: one section per rule, every subject it
-// considered underneath. A checklist is question-major: the team's own items, in the team's own
-// order, with the evidence for each. A reviewer walking a checklist is answering "did we ask this",
-// and a rule-major document makes them assemble that answer themselves.
+// It is a SECOND page shape over the same machinery, not a filter of the check report. The check
+// report is rule-major (one section per rule); a checklist is question-major, the team's own items in
+// the team's own order with the evidence for each.
 //
-// The two share Design/Generated/ContentHash/URLBase/MountPath and the stylesheet, so they read as
-// one product and a link means the same thing on both.
+// The two share Design/Generated/ContentHash/URLBase/MountPath and the stylesheet, so a link means
+// the same thing on both.
 type Checklist struct {
 	Design      string // the design this run read, as the caller names it
 	Name        string // the checklist's own name, from the manifest
@@ -20,8 +18,7 @@ type Checklist struct {
 	URLBase     string // empty means emit no links at all
 	MountPath   string // empty means emit no links at all
 	// LinksWithheld is why this run promised no links, when it was asked for them and refused.
-	// Same field and same reason as Report.LinksWithheld; a link means the same thing on both
-	// surfaces, so an absent link owes the same explanation on both (issue 626).
+	// Same as Report.LinksWithheld (issue 626).
 	LinksWithheld string
 	Summary       string // the one-line tally, rendered by the caller so both surfaces read alike
 	Covered       int
@@ -30,9 +27,9 @@ type Checklist struct {
 	Areas         []ChecklistArea
 }
 
-// ChecklistArea is one group of items, in manifest order. Areas are NOT sorted by how bad they are,
-// unlike the check report's rules: a checklist's order is the team's, and rearranging it would mean
-// an item that has been third in their process for years moves every time the board changes.
+// ChecklistArea is one group of items, in manifest order. Areas are NOT sorted by severity, unlike
+// the check report's rules, because the order is the team's and sorting would move items every time
+// the board changes.
 type ChecklistArea struct {
 	Name    string
 	Summary string
@@ -57,14 +54,13 @@ type ChecklistEvidence struct {
 }
 
 // Failed reports whether this item is worth opening on arrival. Everything that is not a plain pass
-// qualifies, because the states between pass and fail are the ones a reader most needs to see: an
-// item nobody answered is the whole reason the review layer exists.
+// qualifies, including an item nobody answered.
 func (i ChecklistItem) Failed() bool { return i.Outcome != "pass" }
 
 // ChecklistHTML writes the checklist as one self-contained page.
 //
-// html/template for the reason HTML gives: every title, subject and message came out of a design file
-// the engine did not author, and per-context escaping is the only thing that makes that safe.
+// html/template for the reason HTML gives, since titles, subjects and messages come from design files
+// the engine did not author.
 func ChecklistHTML(w io.Writer, c Checklist) error {
 	t, err := parse("checklist.html.tmpl")
 	if err != nil {

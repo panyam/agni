@@ -56,9 +56,9 @@ describe("layout persistence", () => {
 // The opening tab of every stack the boot layout builds.
 //
 // This asserts the setActive CALL and not the pixels, which is the same limit the resizeGroup
-// comment in dock.ts records: a unit test here cannot see that a tab is actually on top. The
+// comment in dock.ts records, since a unit test here cannot see that a tab is actually on top. The
 // browser suite covers that half. What this catches is the cheap half, and the half that went
-// wrong: a stack gaining a second panel and nobody adding it to the setActive list.
+// wrong, which is a stack gaining a second panel and nobody adding it to the setActive list.
 describe("default layout opening tabs", () => {
   function fakeApi(): { api: any; added: string[]; activated: string[] } {
     const added: string[] = [];
@@ -125,7 +125,7 @@ describe("panel registry", () => {
     expect(VIEWER_PANELS.find((p) => p.id === "overview")?.defaultOpen).toBe(true);
   });
 
-  // The secondary tier is gone: the layout tabs the crowding away rather than hiding panels behind
+  // The secondary tier is gone. The layout tabs the crowding away rather than hiding panels behind
   // a menu, so every registered panel is placed at boot. A future menu-only panel omits the flag,
   // and this assertion is what makes that a deliberate act rather than an oversight.
   it("places every registered panel at boot, with no menu-only tier", () => {
@@ -176,7 +176,7 @@ describe("prunePanels", () => {
   });
 
   it("removes several retired panels in one pass without skipping any", () => {
-    // Guards the snapshot in prunePanels: removePanel mutates the collection being walked, so
+    // Guards the snapshot in prunePanels, since removePanel mutates the collection being walked, so
     // iterating it live would skip the entry that slides into the removed one's index.
     const { api, removed } = fakeApi(["gone-a", "gone-b", "canvas"]);
     prunePanels(api);
@@ -217,7 +217,7 @@ describe("reconcilePanels", () => {
 
   it("never opens on-demand panels, even for a pre-versioning save", () => {
     const { api, added } = fakeApi(openIds);
-    reconcilePanels(api, []); // legacy save: unknown registry
+    reconcilePanels(api, []); // legacy save, unknown registry
     expect(added).toEqual([]); // everything default-open already open; diff/changes stay closed
   });
 
@@ -230,8 +230,8 @@ describe("reconcilePanels", () => {
   });
 
   // The tier this used to cover (a newly-registered SECONDARY, menu-only) no longer has an instance
-  // to test with: every panel is placed at boot. What survives is the rule that matters more — a
-  // panel the user closed stays closed, told apart from a new one by the saved registry.
+  // to test with, since every panel is placed at boot. What survives is the rule that matters more,
+  // that a panel the user closed stays closed, told apart from a new one by the saved registry.
   it("leaves a panel the user closed alone when it was in the saved registry", () => {
     const savedWithQuery = VIEWER_PANELS.map((p) => p.id);
     const { api, added } = fakeApi(openIds.filter((id) => id !== "query"));
@@ -268,7 +268,7 @@ function dockStub(open: string[] = []) {
 }
 
 describe("defaultLayout", () => {
-  // The arrangement is the whole point of this function and nothing asserted it before: the previous
+  // The arrangement is what this function is for, and nothing asserted it before. The previous
   // test checked WHICH panels opened and not WHERE, so any reshuffle was invisible.
   //
   // Ordering carries meaning here. Each position is relative to the reference panel's GROUP, so
@@ -285,7 +285,7 @@ describe("defaultLayout", () => {
     expect(at("details")).toMatchObject({ direction: "below", reference: "overview" });
     expect(at("parts")).toMatchObject({ direction: "within", reference: "details" });
 
-    // The east rail is two stacks of two, not one stack of four: a 15% column clips a four-tab
+    // The east rail is two stacks of two, not one stack of four, because a 15% column clips a four-tab
     // strip, and dockview gives no overflow affordance, so the fourth tab becomes unreachable.
     expect(at("checks")).toMatchObject({ direction: "right", reference: "canvas" });
     expect(at("rules")).toMatchObject({ direction: "within", reference: "checks" });

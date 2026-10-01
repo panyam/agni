@@ -17,8 +17,9 @@ import (
 // somebody's home folder. Not by how many projects there are.
 //
 // It writes to a REAL directory because that is the filesystem the server runs on, and fstest.MapFS
-// actively misleads here: its ReadDir scans the entire map, so a walk over it costs O(all files) per
-// directory and any measurement is dominated by the fake rather than by the code under test.
+// actively misleads here, because its ReadDir scans the entire map, so a walk over it costs O(all
+// files) per directory and any measurement is dominated by the fake rather than by the code under
+// test.
 func benchDir(b *testing.B, projects, designs, noise int) Tree {
 	b.Helper()
 	root := b.TempDir()
@@ -48,8 +49,8 @@ func benchDir(b *testing.B, projects, designs, noise int) Tree {
 	return Tree{Mount: "m", FS: os.DirFS(root)}
 }
 
-// BenchmarkProjectsWalk is the cost this ticket is about: a bounded directory walk plus a parse of
-// every descriptor found, on every ListProjects.
+// BenchmarkProjectsWalk measures the cost this ticket is about, a bounded directory walk plus a
+// parse of every descriptor found, on every ListProjects.
 func BenchmarkProjectsWalk(b *testing.B) {
 	for _, c := range []struct {
 		name                     string
@@ -96,7 +97,7 @@ func BenchmarkDesignsWalk(b *testing.B) {
 }
 
 // BenchmarkResolveDesign is the OTHER hot path, and the one a viewer hits on every file open. It
-// walks UP rather than down, so it should be cheap regardless of how big the mount is — this exists
+// walks UP rather than down, so it should be cheap regardless of how big the mount is. This exists
 // to confirm that rather than to assume it.
 func BenchmarkResolveDesign(b *testing.B) {
 	for _, c := range []struct {

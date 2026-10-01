@@ -37,7 +37,7 @@ func decouplingFires(t *testing.T, d *ir.Design) bool {
 }
 
 // The positive control, and it comes first because every silence assertion below is worthless
-// without it: this fixture has a bare supply pin and no capacitor, and the rule must fire.
+// without it. This fixture has a bare supply pin and no capacitor, and the rule must fire.
 func TestDecouplingFiresOnABareSupplyPin(t *testing.T) {
 	if !decouplingFires(t, decouplingDesign()) {
 		t.Fatal("a supply pin with no capacitor is the defect this rule exists for")

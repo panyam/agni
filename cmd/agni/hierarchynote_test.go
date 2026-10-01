@@ -16,9 +16,9 @@ const (
 	flatEDN = "../../readers/edif/testdata/basic.edn"
 )
 
-// TestStatsSaysWhatAHierarchicalReadLeftOut: stats is what someone runs when a count looks wrong, and
-// on a hierarchical .edn its counts are the top cell's alone (agni issue 707). The flat design is the
-// control, so a line printed unconditionally fails too.
+// TestStatsSaysWhatAHierarchicalReadLeftOut exists because stats is what someone runs when a count
+// looks wrong, and on a hierarchical .edn its counts are the top cell's alone (agni issue 707). The
+// flat design is the control, so a line printed unconditionally fails too.
 func TestStatsSaysWhatAHierarchicalReadLeftOut(t *testing.T) {
 	out := runCLI(t, statsCmd(), hierEDN)
 	if !regexp.MustCompile(`not extracted:\s+1 sub-cell holding 1 instance \(counts above are the top cell only\)`).MatchString(out) {
@@ -57,8 +57,9 @@ func TestLocalLoaderNotesAHierarchicalRead(t *testing.T) {
 	}
 }
 
-// TestHierarchyNoteNamesTheLargestFirst: the largest blocks hold most of what is missing, so they are
-// the ones named when the list is capped, and the totals still count every block.
+// TestHierarchyNoteNamesTheLargestFirst checks the cap order. The largest blocks hold most of what
+// is missing, so they are the ones named when the list is capped, and the totals still count every
+// block.
 func TestHierarchyNoteNamesTheLargestFirst(t *testing.T) {
 	var blocks []*ir.UnexpandedHierarchy
 	for i, n := range []int32{3, 40, 1, 7, 12, 2, 9} {

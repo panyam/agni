@@ -2,16 +2,18 @@
 
 ### What it is
 
-`component.class(ref_des, class)` yields the device classes a part belongs to. It emits ONE ROW
-PER TAG in the part's class set, not a single most-specific class, so a part with a family tag
-answers more than once: a TVS diode answers both `component.class(D1, "tvs")` and
-`component.class(D1, "diode")`, an LED answers both `led` and `diode`, a ferrite bead answers
-both `ferrite` and `inductor`, and a thermistor answers both `thermistor` and `resistor`. The `class` string is the canonical lowercase name (`resistor`,
-`capacitor`, `crystal`, ...). An unclassified component produces no row (no class is guessed).
+`component.class(ref_des, class)` yields the device classes a part belongs to. It emits ONE ROW PER
+TAG in the part's class set, not a single most-specific class, so a part with a family tag answers
+more than once: a TVS diode answers both `component.class(D1, "tvs")` and `component.class(D1,
+"diode")`, an LED answers both `led` and `diode`, a ferrite bead answers both `ferrite` and
+`inductor`, and a thermistor answers both `thermistor` and `resistor`. The `class` string is the
+canonical lowercase name (`resistor`, `capacitor`, `crystal`, ...). An unclassified component
+produces no row (no class is guessed).
 
 ### For hardware engineers
 
-This is the part's kind, decided once at ingestion from its designator and library type. The
+This is the part's kind, decided at ingestion from its designator and library type,
+and widened by the datasheet's own class when one is joined. The
 family tags matter because a review often asks a family question, not a specific one: "every
 diode-family part on this signal" should catch the plain diodes, the LEDs, and the TVS clamps,
 because electrically they are all diodes. Querying the family tag gives you that set without
@@ -19,7 +21,7 @@ having to enumerate every subtype.
 
 ### For software engineers
 
-Think of the class set as an interface hierarchy flattened onto each node: the part carries both
+Think of the class set as an interface hierarchy flattened onto each node, where the part carries both
 its concrete type and every base type it satisfies. That is why the relation is 1:many with a
 component. Joining on the specific tag (`component.class(?r, "tvs")`) is `instanceof TVS`;
 joining on a family tag (`component.class(?r, "diode")`) is `instanceof Diode` and matches every
@@ -29,9 +31,9 @@ evidence, distinct from "classified as none".
 
 ### Go projector
 
-`componentClassFacts` in `check/facts.go` walks `Model.Components()` and, for each, emits one row
-per class in `Model.Classes(ref)` (the full `device_classes` set: the most-specific class plus
-its family tags). `Model.ComponentClass(ref)` returns just the most-specific one; the relation
+`componentClassFacts` in `stdlib/relations/facts.go` walks `Model.Components()` and, for each, emits
+one row per class in `Model.Classes(ref)` (the full `device_classes` set: the most-specific class
+plus its family tags). `Model.ComponentClass(ref)` returns just the most-specific one; the relation
 uses the full set on purpose so family joins work. One row per tag; empty for an unclassified
 component, and empty overall for a design the classifier could not tag.
 

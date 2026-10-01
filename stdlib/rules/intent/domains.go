@@ -7,11 +7,11 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// voltageDomainRule fails when a design deviates from a declared voltage domain: a declared rail net is
-// absent (KindNet finding, no provenance), or present but its NAME declares a different nominal than
-// the domain does (KindNet finding on the rail, with provenance). A present rail whose name carries no
-// parseable voltage token (e.g. "VDD_CORE") is left alone: the name-derived nominal is the only voltage
-// evidence a netlist carries, and refusing to guess is the contract (check.NominalVoltageFromName).
+// voltageDomainRule fails when a declared rail net is absent (KindNet finding, no provenance), or is
+// present but its NAME declares a different nominal than the domain does (KindNet finding on the rail,
+// with provenance). A rail whose name carries no parseable voltage token (e.g. "VDD_CORE") gets no
+// finding, because the name-derived nominal is the only voltage evidence a netlist carries and the rule
+// refuses to guess (check.NominalVoltageFromName).
 func voltageDomainRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:                RuleVoltageDomain,
@@ -27,13 +27,9 @@ func voltageDomainRule(d Declaration) *check.Rule {
 	}
 }
 
-// voltageDomainVerdicts decides every rail every declared domain names, one verdict each.
-//
-// THE THIRD OUTCOME IS THE ONE THE OLD SHAPE COULD NOT REACH. A rail whose name states no voltage at
-// all is neither a match nor a mismatch: the rule compares a NAME-derived nominal against the declared
-// one, and a rail called VBUS or SYS_PWR supplies nothing to compare. It fell through the same silent
-// path a correctly-named rail took, so a domain declared over rails nobody named for their voltage
-// reported total agreement.
+// voltageDomainVerdicts decides every rail every declared domain names, one verdict each. A rail whose
+// name states no voltage (VBUS, SYS_PWR) is NotConsidered, since it has no NAME-derived nominal to
+// compare. Folding that case into Pass makes a domain over such rails report total agreement (#417).
 func voltageDomainVerdicts(m check.Model, d Declaration) []check.Verdict {
 	var out []check.Verdict
 	for _, dom := range d.VoltageDomains {

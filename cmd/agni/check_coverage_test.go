@@ -10,11 +10,11 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
-// The DEFAULT text output states what the run looked at. A findings list cannot: twenty-nine rules
-// finding nothing and twenty-nine rules that each examined the wrong thing print an identical line,
-// and "N rule(s) run" is a proxy for coverage that is not coverage. The considered set rides on the
-// same response, so stating it costs nothing, and it is stated by default because honesty about
-// coverage must not be something a reader has to know to ask for.
+// The DEFAULT text output states what the run looked at. A findings list cannot, because
+// twenty-nine rules finding nothing and twenty-nine rules that each examined the wrong thing print
+// an identical line, and "N rule(s) run" is a proxy for coverage that is not coverage. The
+// considered set rides on the same response, so stating it costs nothing, and it is stated by
+// default because coverage must not be something a reader has to know to ask for.
 func TestDefaultCheckStatesItsCoverage(t *testing.T) {
 	out := runCheck(t, "testdata/conformance/showcase.fires.kicad_sch")
 
@@ -29,7 +29,7 @@ func TestDefaultCheckStatesItsCoverage(t *testing.T) {
 		t.Error("the coverage line must point at the flag that shows the detail")
 	}
 
-	// The rows themselves stay behind the flag: they are several times the volume of the findings
+	// The rows themselves stay behind the flag, since they are several times the volume of the findings
 	// list here and far more on a real board, so the default states the claim and the flag shows the
 	// evidence.
 	if len(strings.Split(runCheck(t, "--verdicts", "testdata/conformance/showcase.fires.kicad_sch"), "\n")) <=
@@ -39,10 +39,10 @@ func TestDefaultCheckStatesItsCoverage(t *testing.T) {
 }
 
 // The coverage claim counts only rules that STATED a considered set and names the rest, so a reader
-// can tell a covered rule from a quiet one. The count of rules it cannot vouch for is over rules that
-// REPORTED SOMETHING without stating a set, never over every rule that ran: most rules that run on a
-// given board simply have no subject in scope, and calling those "violations only" would invent a
-// coverage hole out of rules that correctly had nothing to say.
+// can tell a covered rule from a quiet one. The count of rules it cannot vouch for is over rules
+// that REPORTED SOMETHING without stating a set, never over every rule that ran, because most rules
+// that run on a given board simply have no subject in scope, and calling those "violations only"
+// would invent a coverage hole out of rules that correctly had nothing to say.
 func TestCoverageOnlyBlamesRulesThatActuallyReported(t *testing.T) {
 	verdict := func(rule string, o checkspb.Outcome) *checkspb.Verdict {
 		return &checkspb.Verdict{Rule: rule, Outcome: o}

@@ -29,7 +29,7 @@ func BenchmarkCompareNoMatch(b *testing.B) {
 	}
 }
 
-// The shape a real map hits: a multi-valued cell on both sides, which is where the nested
+// The shape a real map hits is a multi-valued cell on both sides, which is where the nested
 // alternative loops do the most work.
 func BenchmarkCompareMultiValuedNoMatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {

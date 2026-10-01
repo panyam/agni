@@ -3,7 +3,7 @@ title: "10. Compare revisions"
 description: "What actually changed between rev A and rev B, structurally rather than textually."
 ---
 
-After the first review, the question is rarely "is this board good". It is "what changed since the
+After the first review, the question becomes "what changed since the
 one we already reviewed, and do I need to look at all of it again".
 
 A text diff of two schematic files cannot answer that. Export the same unmodified design twice and
@@ -37,8 +37,8 @@ Nets changed (5):
   [renamed] XTAL_OUT -> CLK_OUT
 ```
 
-Two resistors added, three nets gained connections, two nets renamed. That accounts for the whole change, and
-it is five lines rather than a few hundred.
+Two resistors were added, three nets gained connections, and two nets were renamed. That accounts
+for the whole change, and it is five lines rather than a few hundred.
 
 ## Renamed is not deleted plus added
 
@@ -54,7 +54,7 @@ identical in a text diff.
 
 ## Hard and soft
 
-A **hard** change alters what is connected: a pin joined or removed. A **soft** change alters
+A **hard** change alters what is connected, by joining or removing a pin. A **soft** change alters
 something recorded about the net without changing connectivity.
 
 Hard changes are where electrical risk lives. When a diff is large, read the hard changes first and
@@ -87,8 +87,8 @@ Rev B:
 
 Rev A scores one fail fewer here than it did in rung 8, and one `n/a` more. Nothing about the board
 changed. `--as-named` reads the netlist on its own, so the board companion the design declares is not
-in the run and the copper item `B1` has nothing to evaluate. That is the same effect rung 8 used
-deliberately, and it is the reason both sides of a revision comparison have to be read the same way.
+in the run and the copper item `B1` has nothing to evaluate. Rung 8 used the same effect
+deliberately, and it is why both sides of a revision comparison have to be read the same way.
 
 Two failures became passes, and the items say which:
 
@@ -101,7 +101,7 @@ The two added resistors are the I2C {{ explainable "pull-up" "pull-ups" }}. The 
 convention. Every structural change in the diff is accounted for by an item that improved, and
 nothing else moved.
 
-That last clause is the one to check on a real revision. A change that fixes what it intended and
+On a real revision, check that nothing else moved. A change that fixes what it intended and
 also flips something unrelated is the normal way a fix causes a regression, and comparing the two
 summaries is how you notice.
 
@@ -114,5 +114,5 @@ netlist. That is also how you verify a CAD migration did not quietly change the 
 
 ## Next
 
-[Archive and gate](../11-archive-and-gate/), the last rung, which is about keeping a result and
-making it block a merge.
+[Archive and gate](../11-archive-and-gate/), which is about keeping a result and making it
+block a merge.

@@ -2,8 +2,8 @@
 
 ### What it means
 
-A signal the profile marks as needing a pull-up (a chip-select, an open-drain line) whose net
-reaches no power/ground rail, so no pull-up resistor sits in its path.
+It reports a signal the profile marks as needing a pull-up (a chip-select, an open-drain line) whose
+net reaches no power rail through a resistor, so no pull-up sits in its path.
 
 ### Why engineers want it
 
@@ -13,10 +13,11 @@ pull-up is what holds it inactive.
 
 ### How it is checked
 
-The same bounded walk the built-in `i2c-pull-up` uses, called directly rather than approximated: from
-the signal net, out through resistors, up to three crossings, looking for a rail. A rail is a legal
-DESTINATION and never a transit node, and ground is never crossed at all, since a resistor to ground
-is a pull-down and counting it would pass exactly the line this requirement exists to catch.
+It runs the same bounded walk the built-in `i2c-pull-up` uses, called directly rather than
+approximated, from the signal net out through resistors for up to three crossings, looking for a
+rail. A rail is a legal DESTINATION and never a transit node, and ground is never crossed at all,
+since a resistor to ground is a pull-down and counting it would pass exactly the line this
+requirement exists to catch.
 
 **The finding and the pass both carry the path.** A pass says "SPI_CS reaches rail +3V3 through R1"
 and hands the viewer the resistor and the rail as clickable entities; a failure says no rail is
@@ -26,10 +27,10 @@ away" are different situations a bare message cannot tell apart.
 This requirement is the one that compiles to Go rather than to a query, and the reason is visible in
 that paragraph. Datalog could state a reachability question and could not name what the walk crossed,
 so the profile route proved a pass with the net's own name while the built-in proved one with the
-route (agni issue 516). Calling the same function is what makes the two reports identical rather than
+route (agni issue 516). Calling the same function makes the two reports identical rather than
 merely similar.
 
 ### For software readers
 
-A pull-up is a default value: absent it, the line has no defined idle state, the hardware analogue
-of reading an uninitialised variable. The rule checks the default is wired in.
+A pull-up works like a default value, and without it the line has no defined idle state, the
+hardware analogue of reading an uninitialised variable. The rule checks the default is wired in.

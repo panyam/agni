@@ -10,7 +10,7 @@ import (
 )
 
 // canExposed is a CAN bus brought out to a connector: CANH is clamped by a TVS sitting on it, CANL
-// is not, and TXD/RXD run to the MCU with no connector on them. The asymmetry is the point — a
+// is not, and TXD/RXD run to the MCU with no connector on them. The asymmetry matters, because a
 // fixture where every line looks alike cannot tell scoping from luck.
 func canExposed() *ir.Design {
 	return &ir.Design{
@@ -35,8 +35,8 @@ func esdFindings(t *testing.T, d *ir.Design) []check.Finding {
 
 // TestESDRequirementScopedToExposedLines (WS3-061): the requirement reports the connector-facing line
 // with no clamp, and NOT the clamped one, and NOT the two lines that never leave the board. The
-// TXD/RXD half is the whole reason scope is read from the design instead of from a per-signal flag:
-// they are declared CAN signals, so a flag-driven check would fail two lines that carry no exposure.
+// TXD/RXD half is why scope is read from the design instead of from a per-signal flag. They
+// are declared CAN signals, so a flag-driven check would fail two lines that carry no exposure.
 func TestESDRequirementScopedToExposedLines(t *testing.T) {
 	got := map[string]bool{}
 	for _, f := range esdFindings(t, canExposed()) {
@@ -68,7 +68,7 @@ func TestESDRequirementSilentWithoutConnector(t *testing.T) {
 
 // TestESDRequirementMatchesCoreRule is the parity check WS3-061 requires before any binding migrates
 // from `rule: esd-protection + scope` to `profile: CAN`. The requirement is scoped and the catalog
-// rule is design-wide, so they are compared on the nets the profile actually claims: within that
+// rule is design-wide, so they are compared on the nets the profile actually claims, and within that
 // scope the two must agree exactly. They are built to agree by construction (one shared
 // net.connector_signal scope, the same three exemptions at check.ProtectionReachHops), and this pins
 // it so a later edit to either side cannot drift them apart silently.
@@ -114,7 +114,7 @@ func TestESDRequirementMatchesCoreRule(t *testing.T) {
 }
 
 // TestESDRequirementCreditsZener (WS3-061) pins a deliberate exemption that reads like a false pass
-// until you know the partition: a Zener is NOT adequate ESD protection, but esd-clamp-not-tvs
+// until you know the partition. A Zener is NOT adequate ESD protection, but esd-clamp-not-tvs
 // (WS3-078) is the rule that says so, and this requirement stays quiet rather than double-reporting
 // the same net. The core rule exempts it for the same reason, so this is also parity.
 func TestESDRequirementCreditsZener(t *testing.T) {
@@ -130,7 +130,7 @@ func TestESDRequirementCreditsZener(t *testing.T) {
 	if got["BUS_CANH"] {
 		t.Errorf("a Zener-clamped net is esd-clamp-not-tvs's finding, not this one: %v", got)
 	}
-	// Without this the test passes vacuously: a requirement that reported nothing at all would
+	// Without this the test passes vacuously, since a requirement that reported nothing at all would
 	// satisfy the assertion above while saying nothing about the Zener credit.
 	if !got["BUS_CANL"] {
 		t.Errorf("BUS_CANL is still unclamped and must still be reported: %v", got)
@@ -149,7 +149,7 @@ func esdVerdicts(t *testing.T, d *ir.Design) []check.Verdict {
 }
 
 // A query-backed requirement proved a path in prose and discarded the entities, so its PASS said a
-// net "reaches ESD protection within 2 hops" and named no clamp: the one claim a reviewer wanted to
+// net "reaches ESD protection within 2 hops" and named no clamp. The one claim a reviewer wanted to
 // check was the one thing they could not click (agni issue 662). The Go-walk requirements never had
 // this, because check.PullUpVerdict returns its hops as entities.
 //
@@ -175,7 +175,7 @@ func TestESDPassNamesTheClampItFound(t *testing.T) {
 
 // THE CONTROL. A failing subject has no proof to name, and inventing an empty chip for it would be
 // worse than the silence. This also separates "the evidence query bound the right thing" from "the
-// evidence query bound everything": a version that attached every clamp on the board to every net
+// evidence query bound everything". A version that attached every clamp on the board to every net
 // would pass the test above and fail here.
 func TestESDFailNamesNoClamp(t *testing.T) {
 	found := false

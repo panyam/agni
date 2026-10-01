@@ -24,19 +24,19 @@ about a specific net or part, you start here and add relations that qualify one 
 ### For software engineers
 
 This is the many-to-many edge table between components and nets, the adjacency list of the design
-graph (see ANALOGY.md: a net is a shared channel aliasing pins of many instances). A component
-maps to many nets and a net to many components, so neither column is unique. It is the natural
-join key: any query relating a component's properties to a net's properties (or vice versa) joins
-through it, the way you would join two tables through a link table. It is a projection over
-`Nets()` and their connection lists, so rows are 1:1 with connections; it is empty only for a
-design with no connections at all.
+graph (see [the analogy guide](../../../../docsite/content/reference/analogy.md), where a net is a
+shared channel aliasing pins of many instances). A component maps to many nets and a net to many
+components, so neither column is unique. It is the natural join key, since any query relating a
+component's properties to a net's properties (or vice versa) joins through it, the way you would
+join two tables through a link table. It is a projection over `Nets()` and their connection lists,
+so rows are 1:1 with connections; it is empty only for a design with no connections at all.
 
 ### Go projector
 
-`componentOnNetFacts` in `check/facts.go` walks `Model.Nets()` and, for each net, emits one row
-per entry in `net.Connections` (the component ref as subject, the net name as object). Cardinality
-is one row per (component, net) connection, so a part appears once per net it lands on and a net
-once per part on it. Empty only when no net carries any connection.
+`componentOnNetFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and, for each net, emits
+one row per entry in `net.Connections` (the component ref as subject, the net name as object).
+Cardinality is one row per (component, net) connection, so a part appears once per net it lands on
+and a net once per part on it. Empty only when no net carries any connection.
 
 ### Datalog
 

@@ -29,7 +29,7 @@ name: I
 subsystems:
   - {name: reset, source: {class: supervisor}, nets: [PORZ, SYS_RESET_N]}
 `)
-	// The design has PORZ but no supervisor and no SYS_RESET_N: two findings, one per missing piece.
+	// The design has PORZ but no supervisor and no SYS_RESET_N, so two findings, one per missing piece.
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("ic")}},
 		Nets:       []*ir.Net{{Name: "PORZ"}},
@@ -64,7 +64,7 @@ subsystems:
 }
 
 func TestSubsystemNetsOnlyOrSourceOnly(t *testing.T) {
-	// nets-only subsystem (the power-tree shape): every rail must exist.
+	// A nets-only subsystem (the power-tree shape) requires every rail to exist.
 	decl := declOf(t, "name: I\nsubsystems:\n  - {name: power tree, nets: [5V0, 3V3, 1V8]}")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "5V0"}, {Name: "3V3"}}} // 1V8 missing
 	fs := check.Run(check.NewModel(d), Compile(decl))

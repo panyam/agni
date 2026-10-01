@@ -18,13 +18,13 @@ specs. Point `check` at it with `--params`:
 
 {{ agniRun "content/guide/runs/datasheet-abs-max.yaml" }}
 
-Read that finding: the design drives a `+24V` rail into `U1` pin 1, whose datasheet caps
+In that finding, the design drives a `+24V` rail into `U1` pin 1, whose datasheet caps
 VIN at 20V absolute maximum. The message carries a **dual citation**, your design side
 (the rail and pin) and the datasheet side (document, page, and the exact table). You can
 open the datasheet to page 4 and confirm it.
 
-For the tool to match a datasheet to a placed part, the design has to name the part: an MPN
-on the BOM line, or the MPN/Manufacturer properties a schematic symbol carries.
+For the tool to match a datasheet to a placed part, the design has to name the part, either with an
+MPN on the BOM line or with the MPN/Manufacturer properties a schematic symbol carries.
 
 ## What the tool will and will not auto-compare
 
@@ -34,13 +34,12 @@ The tool is deliberately conservative about when it compares a number automatica
   **machine-comparable** and can fire a finding.
 - A limit that only holds under a **text condition** the tool cannot evaluate ("20V at 25°C
   ambient, derate above") is shown to a human rather than auto-compared, because applying that
-  {{ explainable "derating" }} is a judgement rather than a comparison. The tool will not
-  pretend to a certainty the datasheet did not give it.
+  {{ explainable "derating" }} is a judgement rather than a comparison.
 - A part whose spec is missing the fields a rule needs is **under-specified** and is skipped,
   not guessed.
 
 This is why an empty or partial parameter set makes datasheet rules go quiet rather than
-wrong: no data means the rule had nothing to compare, the same tier logic as everywhere else.
+wrong, because with no data the rule has nothing to compare (every other tier works the same way).
 
 The last line of the run above is where that shows up. One subject was considered and one was
 **not considered**, which is the rule declining rather than passing it. A findings report on its own
@@ -58,11 +57,12 @@ differently from a hand-verified one.
 
 You author a parameter set by transcribing the limits you care about (facts from a datasheet
 are not copyrightable, so cite the document revision and page). There is also a pipeline that
-extracts specs from a PDF automatically, which is a separate tool covered in the developer
-docs. Either way the result is the same small per-part files this page loads.
+extracts specs from a PDF automatically, which is a separate tool covered in
+[the datasheet layer](../../architecture/datasheet-layer/). Either way the result is the same
+small per-part files this page loads.
 
 ## Where to go next
 
-- [Checks and reports](../checks-and-reports/): the general report-reading flow these
+- [Checks and reports](../checks-and-reports/) walks the general report-reading flow these
   findings appear in.
-- [CLI reference](../cli-reference/): `--params` and the other flags.
+- [CLI reference](../cli-reference/) lists `--params` and the other flags.

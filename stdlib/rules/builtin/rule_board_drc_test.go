@@ -15,7 +15,7 @@ func mm(x, y float64) *geom.Point {
 	return &geom.Point{X: int64(x * 1e6), Y: int64(y * 1e6)}
 }
 
-// drcBoard: every violation class once, on its own net, plus clean copper that must not
+// drcBoard places every violation class once, on its own net, plus clean copper that must not
 // fire: a sub-floor trace, a cross-net pair 0.04mm apart edge-to-edge, a pair the same
 // distance apart on DIFFERENT layers, a same-net close pair, a sub-floor drill, and a
 // sub-floor annular ring.
@@ -84,8 +84,8 @@ func TestCopperClearanceMessageNamesBothNets(t *testing.T) {
 	}
 }
 
-// TestBoardRulesSilentWithoutBoard: the same rules over a netlist-only model produce
-// nothing — geometric rules never guess.
+// TestBoardRulesSilentWithoutBoard checks that the same rules over a netlist-only model produce
+// nothing, because geometric rules never guess.
 func TestBoardRulesSilentWithoutBoard(t *testing.T) {
 	m := check.NewModel(ruleFixture())
 	for _, r := range []*check.Rule{trackWidth, holeSize, annularWidth, copperClearance} {
@@ -95,8 +95,8 @@ func TestBoardRulesSilentWithoutBoard(t *testing.T) {
 	}
 }
 
-// TestBoardRuleAvailability: the board. read prefix gates like param.max(...): unavailable
-// for a design whose source carries no board geometry, available for a board read and
+// TestBoardRuleAvailability checks that the board. read prefix gates like param.max(...). It is unavailable
+// for a design whose source carries no board geometry, and available for a board read and
 // for the design-less catalog listing.
 func TestBoardRuleAvailability(t *testing.T) {
 	if ok, _ := check.Available(trackWidth, check.NewModel(&ir.Design{SourceFormat: "edif"})); ok {
@@ -112,7 +112,7 @@ func TestBoardRuleAvailability(t *testing.T) {
 		t.Error("board rule unavailable in the catalog listing (nil design)")
 	}
 	// WS3-089: a netlist design (edif) with a SEPARATE board tier attached (the agni review
-	// --board-path path) ungates the geometric rules — the gate follows the attached tier, not
+	// --board-path path) ungates the geometric rules. The gate follows the attached tier, not
 	// the source format, which stays edif on the netlist entry.
 	if ok, reason := check.Available(trackWidth, check.NewModelWithBoard(&ir.Design{SourceFormat: "edif"}, drcBoard())); !ok {
 		t.Errorf("board rule unavailable on a netlist design with a board tier attached: %s", reason)

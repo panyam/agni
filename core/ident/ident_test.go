@@ -53,7 +53,7 @@ func TestObservedFalseWarnings(t *testing.T) {
 // character rather than whitespace, so `\s` walks straight past it, and Go's `\s` is ASCII-only so
 // it is narrower still.
 //
-// This is a test about the standard library rather than about our code, which is the point: it fails
+// This is a test about the standard library rather than about our code. It fails
 // the moment someone simplifies stripFormatRunes back to a whitespace strip.
 func TestWhitespaceStrippingDoesNotCatchFormatCharacters(t *testing.T) {
 	const zwsp = "\u200b"
@@ -80,7 +80,7 @@ func TestCanonicalIsOneFormAndGuessesNoWidth(t *testing.T) {
 		{"TXD[01]", "TXD1"},
 		{"txd1", "TXD1"},
 		{"PTC 11", "PTC11"},
-		{"PTC\u00a011", "PTC11"}, // a NON-BREAKING space: NFKC makes it ordinary, then it is removed
+		{"PTC\u00a011", "PTC11"}, // a NON-BREAKING space, which NFKC makes ordinary before it is removed
 	} {
 		if got := Canonical(c[0]); got != c[1] {
 			t.Errorf("Canonical(%q) = %q, want %q", c[0], got, c[1])
@@ -138,7 +138,7 @@ func TestBothSidesAreSplit(t *testing.T) {
 // genuine subsequences, so the anchor is the only thing rejecting them, which is what makes this a
 // test of the anchor rather than of the subsequence walk.
 //
-// Written that way after a red-check: the obvious cases (a bare suffix, a differing last token)
+// Written that way after a red-check. The obvious cases (a bare suffix, a differing last token)
 // are rejected by the single-token rule and by the subsequence walk before the anchor is ever
 // consulted, so a version with the anchor deleted passed them both.
 func TestFuzzyMatchIsAnchoredAtBothEnds(t *testing.T) {
@@ -152,7 +152,7 @@ func TestFuzzyMatchIsAnchoredAtBothEnds(t *testing.T) {
 	}
 }
 
-// A single token is never fuzzy-matched: there is nothing to anchor, so every short name would be a
+// A single token is never fuzzy-matched. There is nothing to anchor, so every short name would be a
 // subsequence of every longer one that ends the same way.
 func TestFuzzyMatchNeedsMoreThanOneToken(t *testing.T) {
 	if got := Compare("TXD1", "GMAC0_MII_RGMII_TXD1"); got.Match != None {

@@ -48,7 +48,7 @@ func TestParseServerSpecShapes(t *testing.T) {
 	}
 }
 
-// TestSelfHoldsItsPort is what makes "fails on a taken port" exact rather than likely: the port is
+// TestSelfHoldsItsPort makes "fails on a taken port" exact rather than likely. The port is
 // bound while the flag is parsed, so nothing can take it between the check and the serve. A probe
 // that bound and closed would pass this test and still lose the race in the field.
 func TestSelfHoldsItsPort(t *testing.T) {
@@ -113,9 +113,9 @@ func TestSelfLinksAMintedMount(t *testing.T) {
 	}
 }
 
-// The alias is GONE, so a command naming it fails rather than working quietly. That is the whole
-// point of removing it: a working alias made stale instructions indistinguishable from current ones
-// across five docsite pages and `agni open`'s own printed command (agni issue 636).
+// The alias is GONE, so a command naming it fails rather than working quietly. A working alias made
+// stale instructions indistinguishable from current ones across five docsite pages and `agni
+// open`'s own printed command (agni issue 636).
 func TestURLBaseIsNoLongerAFlag(t *testing.T) {
 	root := rootCmd()
 	for _, name := range []string{"check", "review", "trace"} {
@@ -142,7 +142,7 @@ func webAssetsDir(t *testing.T) string {
 	dir := t.TempDir()
 	// Every file checkWebAssets looks for. Kept as the full list rather than the two obvious ones,
 	// because a fixture that satisfies only part of the check makes the positive control below assert
-	// nothing: it would fail for a missing fixture file and read as the guard working.
+	// nothing, since it would fail for a missing fixture file and read as the guard working.
 	for _, f := range []string{
 		"templates/ViewerPage.html", "static/app.js",
 		"templates/DatasheetsPage.html", "static/datasheets.js",
@@ -176,8 +176,9 @@ func TestSelfMissingWebDirFailsBeforeAnyWork(t *testing.T) {
 	}
 }
 
-// TestSelfReleasesItsPortWhenTheAssetCheckFails: parseServerSpec binds before resolveServer validates,
-// so a failed validation must hand the port back or the next attempt fails for the wrong reason.
+// TestSelfReleasesItsPortWhenTheAssetCheckFails exists because parseServerSpec binds before
+// resolveServer validates, so a failed validation must hand the port back or the next attempt fails
+// for the wrong reason.
 func TestSelfReleasesItsPortWhenTheAssetCheckFails(t *testing.T) {
 	t.Chdir(t.TempDir())
 	t.Setenv(envWebDir, "")
@@ -198,8 +199,9 @@ func TestSelfReleasesItsPortWhenTheAssetCheckFails(t *testing.T) {
 	again.Close()
 }
 
-// TestSelfSucceedsWhenTheAssetsAreThere is the positive control: without it the two tests above pass
-// for a spec that can never resolve, and would keep passing if resolveServer simply always failed.
+// TestSelfSucceedsWhenTheAssetsAreThere is the positive control. Without it the two tests above
+// pass for a spec that can never resolve, and would keep passing if resolveServer simply always
+// failed.
 func TestSelfSucceedsWhenTheAssetsAreThere(t *testing.T) {
 	t.Chdir(t.TempDir())
 	t.Setenv(envWebDir, webAssetsDir(t))
@@ -213,8 +215,9 @@ func TestSelfSucceedsWhenTheAssetsAreThere(t *testing.T) {
 	}
 }
 
-// TestResolveWebAssetsStillGuardsTheServePath: serve and open have no --server flag and reach the
-// same check through runViewer, so the extraction must not have moved the guard off their path.
+// TestResolveWebAssetsStillGuardsTheServePath exists because serve and open have no --server flag
+// and reach the same check through runViewer, so the extraction must not have moved the guard off
+// their path.
 func TestResolveWebAssetsStillGuardsTheServePath(t *testing.T) {
 	good := webAssetsDir(t)
 	if _, _, err := resolveWebAssets(good, func(string) string { return "" }); err != nil {

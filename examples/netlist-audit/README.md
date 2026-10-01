@@ -1,7 +1,7 @@
 # netlist-audit
 
-A netlist audit written as a **query set**: the tables a review workbook holds, as named queries in
-one file, answered over one read of the design.
+A netlist audit written as a **query set**, which holds the tables of a review workbook as named
+queries in one file and answers them over one read of the design.
 
 ## What it shows
 

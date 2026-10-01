@@ -19,11 +19,11 @@ func isEngine(dep string) bool { return dep == queryEngine || dep == datalogEngi
 //
 // The fact layer is the primitive and a query engine depends on it, never the reverse (#536), and no
 // core package outside the engine itself names a query syntax (#537). Both are one import away from
-// being untrue and neither failure is loud: adding `core/query` to stdlib/relations or core/review
+// being untrue and neither failure is loud. Adding `core/query` to stdlib/relations or core/review
 // compiles, passes, and silently re-couples the layer. C29 carried a `go list` command for this, which
 // went stale within three PRs of being written because nothing ran it.
 //
-// The shape is core/model/deps_test.go's, for the same reason: a contract that a consumer must be able
+// The shape is core/model/deps_test.go's, for the same reason. A contract that a consumer must be able
 // to depend on without dragging an implementation is only a contract while something checks.
 func TestCoreNamesNoQueryEngine(t *testing.T) {
 	for _, pkg := range corePackages(t) {
@@ -50,7 +50,7 @@ func TestQueryEngineReachesTheDatalogEngine(t *testing.T) {
 	t.Errorf("%s does not depend on %s; the engine paths these sweeps look for are stale", queryEngine, datalogEngine)
 }
 
-// TestRelationCatalogNamesNoQueryEngine is the other half: the shipped relation catalog is DATA
+// TestRelationCatalogNamesNoQueryEngine is the other half. The shipped relation catalog is DATA
 // derived from a Model, so authoring a relation must not require picking an engine. stdlib/relations
 // imported core/query until #536 purely to declare its tuple type.
 func TestRelationCatalogNamesNoQueryEngine(t *testing.T) {

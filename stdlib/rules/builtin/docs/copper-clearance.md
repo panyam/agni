@@ -11,7 +11,7 @@ nets, whose copper edges (centerline distance minus half of each width) come clo
 ### Why engineers want it
 
 Clearance is the other half of every fab capability sheet.
-Below it, etching cannot guarantee separation and solder bridges what etching spared:
+Below it, etching cannot guarantee separation and solder bridges what etching spared, so
 the board acquires connections the schematic never had.
 
 ### Impact
@@ -20,12 +20,12 @@ Order-time rejection at best; intermittent shorts in the field at worst.
 
 ### Scope note
 
-Segment-to-segment on the same layer only: pad and zone clearances wait
+The rule measures segment against segment on one layer only, because pad and zone clearances wait
 on pad-shape geometry facts, and same-net spacing is not a defect. The pairwise walk is
 O(S²) with an early bounding-box reject; fine at corpus scale (hundreds of segments),
-and the benchmark documents where a spatial index (WS3-004) becomes necessary. One
-finding per net PAIR, subject = the alphabetically first net, message naming both and
-the worst gap.
+and BenchmarkCopperClearance documents where a spatial index (WS3-004) becomes necessary. One
+verdict per net PAIR, naming both nets; the finding's subject is the alphabetically first net
+with the other as context, and its message names both and the worst gap.
 
 ### Query structure
 

@@ -3,8 +3,8 @@ title: "2. Run the catalog"
 description: "The built-in rules, how to read a finding, and how to fail a build on one."
 ---
 
-`agni check` runs the shipped rule catalog over one design. These are the general rules, the ones
-that are true of most boards regardless of whose board it is. Your team's own rules come later, in
+`agni check` runs the shipped rule catalog over one design. These are the general rules,
+true of most boards regardless of whose board it is. Your team's own rules come later, in
 rungs 4 through 8.
 
 ## Run it
@@ -20,7 +20,7 @@ naming the specific thing on your board the rule is talking about. The **reason*
 says what is wrong in plain language.
 
 Severity is a policy signal, not a confidence signal. An `error` is something that will almost
-certainly not work: an I2C bus with no {{ explainable "pull-up" }} cannot signal at all, because the parts on it can
+certainly not work, such as an I2C bus with no {{ explainable "pull-up" }}, which cannot signal at all because the parts on it can
 only pull the line down and nothing pulls it back up. A `warning` is something that usually
 indicates a defect. An `info` is worth a look. None of them is a statement about how sure the tool
 is.
@@ -111,10 +111,10 @@ can never tell you which one you are holding.
 
 Read the three numbers separately. **258 considered** is how many subjects were actually judged.
 **36 rules** is how many were willing to say what they looked at, which is not the same as how many
-ran: most of the catalog has no subject in scope on any given board, and a rule with nothing to say is
-not a gap. **7 not considered** is the one worth reading closely, and it gets its own look below.
+ran, because most of the catalog has no subject in scope on any given board, and a rule with nothing
+to say is not a gap. **7 not considered** is the one worth reading closely, and it gets its own look below.
 
-A second line used to sit under that one, and its absence is the thing to notice:
+A second line used to sit under that one, and on this board it no longer prints:
 
 ```
 2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
@@ -126,8 +126,8 @@ and on this board it now reads zero and is omitted entirely. It was 3 before the
 gained a considered set, then 2, now none. The rules you write for your own board were the last ones
 whose silence meant nothing, and they are the ones you most want a considered set from.
 
-You will still see the line on a board of your own, and on any run whose read went wrong: the broken
-schematic from rung 1 reports 30 such rules. Treat it as the honest edge of the coverage claim above
+You will still see the line on a board of your own, and on any run whose read went wrong, where the
+broken schematic from rung 1 reports 30 such rules. Treat it as the limit of the coverage claim above
 it.
 
 That line is the claim. `--verdicts` is the evidence, one row per subject with passes included:
@@ -143,20 +143,20 @@ is the default and the rows are a flag:
 
 {{ agniRun "content/tutorials/runs/02-verdicts-summary.yaml" }}
 
-`not-considered` is the third outcome and the one with no counterpart in a findings list: the rule
-was willing to judge that subject and something stopped it, so it says what stopped it rather than
-passing on incomplete evidence.
+`not-considered` is the third outcome, and a findings list has no counterpart to it. It means the
+rule was willing to judge that subject and something stopped it, so it says what stopped it rather
+than passing on incomplete evidence.
 
 On this board only one of them wants a datasheet value of the kind you seed in
 [rung 6](../06-part-limits/). The rest are the more interesting sort. Four are `floating-input`
 declining a net that carries a passive part, because a resistor on a net might be the pull that fixes
 it, might be a series element with the driver on the far side, or might be a footprint nobody stuffed,
 and a netlist cannot tell those apart. Two are `esd-clamp-not-tvs` handing a bare net to
-`esd-protection`, which is the rule that reports it. Neither is a gap you fill by seeding anything.
-They are the check telling you where its reach ends.
+`esd-protection`, which is the rule that reports it. Seeding fills neither, because they
+mark where the check's reach ends.
 
 That distinction between "checked and fine", "never checked" and "could not tell" runs through the
-whole tool, and [rung 9](../09-read-the-verdicts/) is entirely about reading it.
+whole tool, and [rung 9](../09-read-the-verdicts/) is about reading it.
 
 ## Next
 

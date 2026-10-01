@@ -17,9 +17,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// queryCmd runs an ad-hoc datalog query over the design's fact base (WS3-029). The fact relations
-// are the same ones rules assert over (net.max_voltage, component.mpn, param, component.net,
-// plus the built-in reaches), so search and rules share one vocabulary; every answer row prints the
+// queryCmd runs an ad-hoc datalog query over the design's fact base (WS3-029). The relations are
+// the ones rules assert over, so search and rules share one vocabulary. Every answer row prints the
 // provenance of the facts that produced it.
 func queryCmd() *cobra.Command {
 	var paramsDir string
@@ -48,11 +47,11 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 
   agni query board.kicad_sch --params seed/ \
     'component.mpn(?r,?m), param.max(?m,"VIN",?vmax), component.net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?vmax, ?n, ?rail'`,
-		// --examples / --relations need no file/query; --speclib queries the corpus (--params) with no
-		// <file>, so just the <query>; otherwise both <file> and <query> are required.
+		// --examples and --relations take no arguments, --speclib and --set take one, and a design
+		// query takes <file> and <query>.
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Validated here rather than at render time, so a misspelled format fails before a
-			// nine-megabyte netlist is parsed. `diff` learned this the same way.
+			// nine-megabyte netlist is parsed.
 			switch format {
 			case "text", "csv", "json", "markdown", "html":
 			default:
@@ -108,11 +107,9 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				resp := respFromRows(q, rows, args[0], filepath.Base(paramsDir))
 				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)))
 			}
-			// Thin client of the in-process QueryService (WS9-048): the CLI provides an os-backed
-			// no-containment loader and the datasheet corpus, then renders the proto rows — the same
-			// service (and BuildModel fact base) the web query panel evaluates over, so the two can't
-			// drift. --examples/--relations (static) and --speclib (a corpus query, no design) stay
-			// CLI-direct above; only the design query routes through the service.
+			// A design query goes through the in-process QueryService (WS9-048), the same service and
+			// BuildModel fact base the web query panel uses, so the two cannot drift. The CLI supplies
+			// an os-backed loader and the datasheet corpus.
 			var specs param.ParamProvider
 			if paramsDir != "" {
 				set, err := param.LoadSet(os.DirFS(paramsDir))
@@ -121,8 +118,8 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				}
 				specs = set
 			}
-			// Reading the convention file is the CLI's job; the service takes the value (C22), the same
-			// shape `check` and `review` already use.
+			// The CLI reads the convention file and the service takes the value (C22), as in `check`
+			// and `review`.
 			overlay := &webapi.OverlayConfig{}
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
@@ -166,10 +163,10 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	return c
 }
 
-// printRelations writes the queryable relation catalog (WS14-005), the same set the web panel's
-// picker shows, grouped by kind in the catalog's stable order. Each line is the relation template
-// plus its one-line summary; with verbose, the relation's full reference doc (its Detail markdown)
-// follows, so `--relations --verbose` is the CLI counterpart of the panel's click-to-inspect.
+// printRelations writes the queryable relation catalog (WS14-005), the set the web panel's picker
+// shows, grouped by kind in the catalog's stable order. Each entry is the relation template and its
+// one-line summary. With verbose, the relation's Detail markdown follows, as the panel's
+// click-to-inspect shows it.
 func printRelations(w io.Writer, verbose bool) {
 	var kind string
 	for _, r := range query.Catalog() {
@@ -191,8 +188,8 @@ func printRelations(w io.Writer, verbose bool) {
 	}
 }
 
-// printExamples writes the shared teaching-query catalog (WS14-002) — the same set the web panel
-// renders — in concept-ladder order, each as a runnable line the user can copy.
+// printExamples writes the shared teaching-query catalog (WS14-002), the set the web panel renders,
+// in concept-ladder order, each as a runnable line the user can copy.
 func printExamples(w io.Writer) {
 	for _, e := range query.Examples() {
 		fmt.Fprintf(w, "%s  (%s)\n  %s\n\n", e.Label, e.Teaches, e.Query)
@@ -206,14 +203,8 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 	case "csv":
 		return rpt.TableCSV(w, t)
 	case "json":
-		// protojson of the WIRE message, the same RunQueryResponse RunQuery returns, so a script
-		// reading this CLI and a client reading the rpc parse one shape. It carries column_kinds,
-		// which the hand-rolled shape dropped, and it carries the query and the design because the
-		// response now echoes them: a machine-readable answer that cannot say what it answers is the
-		// wrong one to have made the exception for.
-		//
-		// Both evaluation paths build the message, so json cannot work on one and not the other,
-		// which is the invariant this dispatch exists to hold.
+		// protojson of the WIRE message RunQuery returns (C31, agni issue 603), including
+		// column_kinds and the echoed query and design.
 		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
 		if err != nil {
 			return err
@@ -237,8 +228,7 @@ func runQuerySet(cmd *cobra.Command, svc *service.QueryService, path, designURI,
 	var b []byte
 	var err error
 	if path == "-" {
-		// A set on stdin lets a caller that builds one in code pipe it in rather than write a file,
-		// which is how the Python client's CLI transport sends it.
+		// The Python client's CLI transport pipes a set in on stdin rather than writing a file.
 		path = "stdin"
 		b, err = io.ReadAll(cmd.InOrStdin())
 	} else {
@@ -306,14 +296,13 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 	}
 }
 
-// SOURCE IS THE DESIGN'S URI, NEVER THE HOST PATH. A view is an artifact that gets committed,
-// mailed and pasted into a ticket, so a heading reading "/Users/someone/work/..." publishes the
-// machine that ran it. That is the leak agni issue 501 fixed in provenance.source_file, and a new
-// output format inherits the RULE but not the fix, so it has to be made again here.
+// tableFromProto builds the view from a RunQueryResponse, the shape the QueryService returns and
+// the web panel renders. Per-cell sheet badges and locate reasons are panel navigation and mean
+// nothing in a file, so they stop here.
 //
-// tableFromProto builds the view from a RunQueryResponse, the shape the in-process QueryService
-// returns and the same one the web panel renders. The proto's per-cell sheet badges and locate
-// reasons are the panel's navigation channel and have no meaning in a file, so they stop here.
+// SOURCE IS THE DESIGN'S URI, NEVER THE HOST PATH. A view gets committed and pasted into tickets,
+// so a host path publishes the machine that ran it. agni issue 501 fixed that leak in
+// provenance.source_file, and a new output format has to keep the rule itself.
 func tableFromProto(resp *webapi.RunQueryResponse, title, query, source string) rpt.Table {
 	t := rpt.Table{Title: title, Query: query, Source: source, Columns: resp.GetColumns()}
 	for _, r := range resp.GetRows() {
@@ -322,17 +311,12 @@ func tableFromProto(resp *webapi.RunQueryResponse, title, query, source string) 
 	return t
 }
 
-// respFromRows builds the wire message from Go rows, the --speclib path, which evaluates against the
-// spec library rather than a design and so never goes through the service.
+// respFromRows builds the wire message from the --speclib path's Go rows, which evaluate against the
+// spec library and never go through the service. It exists so BOTH paths render from one shape,
+// and json works on a corpus as well as a design (agni issue 603).
 //
-// It exists so BOTH paths render from one shape. They used to diverge here, with the service path
-// holding a RunQueryResponse and this one holding a Table, which was harmless while every format was
-// derived from the Table and stopped being harmless the moment json became the wire message: the
-// format would have worked on a design and not on a corpus.
-//
-// It carries no column_kinds. A spec-library answer ranges over a corpus and not a design, so no cell
-// names an entity anything could locate, and inventing kinds here would promise a navigation that
-// resolves nowhere.
+// It carries no column_kinds. A spec-library answer ranges over a corpus, so no cell names an
+// entity anything could locate.
 func respFromRows(q query.Query, rows []query.Row, queryText, corpus string) *webapi.RunQueryResponse {
 	cols := q.Columns()
 	resp := &webapi.RunQueryResponse{Query: queryText, Source: corpus, Columns: make([]string, 0, len(cols))}

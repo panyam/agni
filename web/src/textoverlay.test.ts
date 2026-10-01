@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { labelAnchor, labelBaseline, overlayTransform, imageAttrs, bakeDivisor, naturalTextWidth, splitLabelLines, lineHeight } from "./textoverlay.js";
 import type { Image } from "./packed.js";
 
-// The overlay's alignment mapping must mirror render/svg.go's justifyText so text lands the
+// The overlay's alignment mapping must mirror core/render/svg.go's justifyText so text lands the
 // same way the SVG oracle draws it.
 describe("label alignment", () => {
   it("maps horizontal justify to text-anchor", () => {
@@ -19,7 +19,7 @@ describe("label alignment", () => {
 });
 
 // splitLabelLines stacks a multi-line label into one run per line (EDIF %10% decodes to a newline);
-// it mirrors render/svg.go's drawText so the WebGL overlay and the SVG oracle stack the same way.
+// it mirrors core/render/svg.go's drawText so the WebGL overlay and the SVG oracle stack the same way.
 describe("splitLabelLines", () => {
   it("leaves a single-line label at its origin", () => {
     expect(splitLabelLines("hello", 10, 5)).toEqual([{ text: "hello", y: 10 }]);
@@ -54,7 +54,7 @@ describe("splitLabelLines", () => {
 });
 
 // naturalTextWidth decides whether a box-bounded caption is condensed to fit (textLength). It
-// must mirror render/svg.go's naturalTextWidthPx so both backends condense the same captions.
+// must mirror core/render/svg.go's naturalTextWidthPx so both backends condense the same captions.
 describe("naturalTextWidth", () => {
   it("estimates ~0.6 em per code point", () => {
     expect(naturalTextWidth("Net Splitter", 10)).toBeCloseTo(0.6 * 10 * 12);
@@ -94,7 +94,7 @@ describe("overlayTransform", () => {
   });
 });
 
-// imageAttrs bakes the world min corner + span into upright SVG <image> attributes: the top
+// imageAttrs bakes the world min corner + span into upright SVG <image> attributes. The top
 // edge (world max-Y = y+h) becomes the SVG top-left y (-(y+h)), so the image is not upside down.
 describe("imageAttrs", () => {
   const base: Image = { x: 20, y: 30, w: 40, h: 50, href: "data:image/png;base64,AA", rotationDeg: 0, mirror: false };
@@ -124,7 +124,7 @@ describe("imageAttrs", () => {
   });
 });
 
-// bakeDivisor guards the font-size clamp regression: nanometer-scale fonts (~1.27e6 units) must
+// bakeDivisor guards the font-size clamp regression, where nanometer-scale fonts (~1.27e6 units) must
 // be divided down under the browser's SVG font-size cap, while already-small fonts stay untouched.
 describe("bakeDivisor", () => {
   it("shrinks a font-size that would exceed the browser clamp", () => {

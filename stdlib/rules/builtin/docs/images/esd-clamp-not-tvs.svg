@@ -18,7 +18,7 @@
     <line x1="92" y1="130" x2="238" y2="130"/>
   </g>
   <circle cx="165" cy="130" r="4" fill="#d9822b"/>
-  <text x="128" y="118" font-size="12" fill="#d9822b" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">OPH0070</text>
+  <text x="128" y="118" font-size="12" fill="#d9822b" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">EXT_IO</text>
 
   <!-- Zener clamp D3: diode triangle + Z-flag cathode bar, dropping to GND -->
   <g stroke="#394049" stroke-width="2" fill="none">
@@ -58,7 +58,7 @@
     <line x1="430" y1="130" x2="596" y2="130"/>
   </g>
   <circle cx="500" cy="130" r="4" fill="#394049"/>
-  <text x="463" y="118" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">OPH0070</text>
+  <text x="463" y="118" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">EXT_IO</text>
 
   <!-- TVS clamp D3: diode triangle + straight cathode bar, dropping to GND -->
   <g stroke="#394049" stroke-width="2" fill="none">

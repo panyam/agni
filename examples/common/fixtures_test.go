@@ -63,7 +63,7 @@ func TestReadFixtureNotFound(t *testing.T) {
 	}
 }
 
-// TestI2CSensorFindings pins the checks-example fixture: it must trip exactly one finding at
+// TestI2CSensorFindings pins the checks-example fixture, which must trip exactly one finding at
 // each severity, and leave the two deliberately-benign nets unflagged (SDA has a pull-up;
 // NC_SPARE is a no-connect). Compared as findings, not formatted text.
 func TestI2CSensorFindings(t *testing.T) {
@@ -96,7 +96,7 @@ func TestI2CSensorFindings(t *testing.T) {
 	}
 }
 
-// TestRevPairDiff pins the diff-example fixture pair: rev-a -> rev-b must produce one change of
+// TestRevPairDiff pins the diff-example fixture pair, where rev-a -> rev-b must produce one change of
 // each class (renamed, hard, new, deleted) plus one added component, with the unchanged nets
 // staying quiet. Compared as Report fields, not the rendered string.
 func TestRevPairDiff(t *testing.T) {
@@ -148,7 +148,7 @@ func TestRevPairDiff(t *testing.T) {
 
 // TestMixerConvergence pins the multi-format example fixtures: the same board read from EDIF,
 // KiCad, and IPC-2581 must yield the identical netlist. diff.Designs over the pairs is the
-// oracle: zero net changes and the same component set. Component attributes and the physical
+// oracle, expecting zero net changes and the same component set. Component attributes and the physical
 // tier are allowed to differ (each format carries different metadata).
 func TestMixerConvergence(t *testing.T) {
 	edn, err := ReadFixture("mixer.edn")

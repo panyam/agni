@@ -7,16 +7,13 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
-// This file is the datalog half of the rule-definition contract (WS3-103). A Query is already an AST
-// (Parse produces it, the typed builder produces it, RuleFromQuery consumes it), so the wire form is a
-// mapping, not a second grammar. Crucially it is the AST that travels, not the query TEXT: text would
-// make every consumer carry a parser, and it would let a document round-trip through a spelling this
-// build cannot parse while looking intact.
+// This file is the datalog half of the rule-definition contract (WS3-103). The wire form maps the
+// Query AST rather than carrying query TEXT, because text would make every consumer carry a parser and
+// would let a document round-trip through a spelling this build cannot parse while looking intact.
 //
-// Encoding cannot fail. Decoding validates what is statically checkable — that every relation an atom
-// names is either a catalog relation, a built-in, or defined by the program's own rules — because a
-// program naming a relation that does not exist yields nothing, and yielding nothing is exactly what a
-// clean design looks like.
+// Encoding cannot fail. Decoding checks that every relation an atom names is a catalog relation, a
+// built-in, or defined by the program's own rules, because a program naming a relation that does not
+// exist yields nothing, which looks the same as a clean design.
 
 // QueryProto encodes a datalog program as its wire form.
 func QueryProto(q Query) *checkspb.DatalogQuery {
@@ -79,9 +76,8 @@ func QueryFromProto(p *checkspb.DatalogQuery) (Query, error) {
 	return q, nil
 }
 
-// ValidateRelations reports the first relation the program names that resolves to nothing: not a
-// catalog relation (a fact relation or a computed built-in) and not defined by one of the program's
-// own rules. It is the static half of the checks the evaluator makes, hoisted so a definition read
+// ValidateRelations reports the first relation the program names that is neither a catalog relation
+// (a fact relation or a computed built-in) nor defined by one of the program's own rules. It is the static half of the checks the evaluator makes, hoisted so a definition read
 // from a document fails when it is READ rather than running to a silent empty answer.
 //
 // It cannot see relations a not-yet-imported source registers, so it is applied where a program
@@ -172,10 +168,9 @@ func bodyFromProto(p *checkspb.DatalogBody) (Body, error) {
 	return b, nil
 }
 
-// compareProto and compareFromProto carry a two-term comparison. Shared by a body literal and a
-// having filter, which differ in WHEN they are applied and not in what they encode — so a having
-// needs no message of its own, and an aggregate on the left is the only thing that tells them apart
-// on the wire.
+// compareProto and compareFromProto carry a two-term comparison, shared by a body literal and a
+// having filter. The two differ only in WHEN they apply, so a having needs no message of its own; an
+// aggregate on the left is what tells them apart on the wire.
 func compareProto(c Compare) *checkspb.DatalogCompare {
 	return &checkspb.DatalogCompare{Left: qtermProto(c.Left), Op: c.Op, Right: qtermProto(c.Right)}
 }

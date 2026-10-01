@@ -1,8 +1,8 @@
 import type { RenderMode } from "./viewer.js";
 
-// ControlsState is the full state of the viewer's control bar: which renderer is active, whether
-// Native is offered for the current file, and the layout axis (available options + the effective
-// one). The presenter owns this state and pushes it down; the controls island renders from it.
+// ControlsState is the full state of the viewer's control bar. nativeAvailable is whether Native is
+// offered for the current file, and layout is the effective choice among layouts. The presenter owns
+// this state and pushes it down, and the controls island renders from it.
 export interface ControlsState {
   mode: RenderMode;
   nativeAvailable: boolean;
@@ -21,9 +21,8 @@ export interface ControlsState {
   hasHighlights: boolean;
 }
 
-// ControlsView is the command-down surface the presenter pushes ControlsState to. The controls
-// island implements it (like SheetsView for the sheet navigators), so the bar's buttons and
-// layout selector always reflect presenter state without the presenter touching the DOM (C3).
+// ControlsView is what the presenter pushes ControlsState to, implemented by the controls island
+// (C3). ViewSink in viewer.ts describes the pattern.
 export interface ControlsView {
   setState(s: ControlsState): void;
 }

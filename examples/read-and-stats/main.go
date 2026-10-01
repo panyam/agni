@@ -1,5 +1,5 @@
-// Command read-and-stats is the first rung of the Agni examples ladder: read a source
-// file into the neutral IR and look at what came back. The narration lives in the sidecar
+// Command read-and-stats is the first rung of the Agni examples ladder. It reads a source
+// file into the neutral IR and shows what came back. The narration lives in the sidecar
 // walkthrough.md (loaded via demokit's FromMarkdown), so this file only binds the steps that
 // run engine code and wires the renderer.
 //
@@ -19,7 +19,7 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	// The shared path input: default to the bundled fixture, accept any path the user enters.
+	// The shared path input. It defaults to the bundled fixture and accepts any path the user enters.
 	design := common.AskPath("design", "../common/designs/two-resistors.edn")
 
 	demo := demokit.New("read-and-stats").

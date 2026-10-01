@@ -1,16 +1,16 @@
-# Decisions — settled questions and why
+# Settled decisions and why
 
 Questions that were asked, answered, and should not be re-litigated without new evidence. One
 section each.
 
 This file exists because these kept being filed as deferred work. They are not: there is nothing to
 pick up, so they can never be closed, and a to-do list that contains them slowly fills with entries
-nobody can act on. They are also not constraints — `CONSTRAINTS.md` holds *enforceable* rules with a
-Verify, and diluting it with unenforceable prose would weaken the thing that makes it useful.
+nobody can act on. They are also not constraints, because `CONSTRAINTS.md` holds *enforceable* rules
+with a Verify, and diluting it with unenforceable prose would weaken the thing that makes it useful.
 
-What belongs here: a question someone will otherwise ask again, whose answer cost real investigation,
-and where the answer is "no" or "not that way". What does not: anything actionable (a ticket),
-anything enforceable (`CONSTRAINTS.md`), and anything waiting on a trigger (`OUT_OF_SCOPE.md`).
+A question belongs here when someone will otherwise ask it again, its answer cost real
+investigation, and the answer is "no" or "not that way". Anything actionable goes in a ticket,
+anything enforceable in `CONSTRAINTS.md`, and anything waiting on a trigger in `OUT_OF_SCOPE.md`.
 
 Reopening one is fine. Doing it without reading why it was closed is not.
 
@@ -21,13 +21,13 @@ Reopening one is fine. Doing it without reading why it was closed is not.
 **Question.** Should "one net, two netclasses" ship as a default-on catalog rule? It was the second
 half of the netclass work and looks like an obvious defect check.
 
-**Answer. No, and it would be wrong.** Multi-membership is *legitimate* in KiCad: it unions every
-match, then cascades per-class values by priority. It is merely *discouraged* in Altium, whose
+**Answer. No, and it would be wrong.** Multi-membership is *legitimate* in KiCad, which unions every
+match and then cascades per-class values by priority. It is merely *discouraged* in Altium, whose
 clearance matrix errors on it. So two netclasses on one net is a house-style question, not a
 universal defect, and shipping it default-on would fire on correct KiCad projects.
 
 **What this leaves open.** A house or profile that genuinely wants deterministic single-class
-membership can have it — authored as a PROFILE-scoped or overlay rule, never a default-on catalog
+membership can have it, authored as a PROFILE-scoped or overlay rule, never a default-on catalog
 one. The engine half is already done: `net.netclass` is 1:many, so the rule is expressible as a
 self-join today.
 
@@ -43,23 +43,23 @@ there the way it does elsewhere? The gate (`design.types_power_out`) looks like 
 limitation.
 
 **Answer. No. The gate is correct permanent behaviour.** The rule catches a rail that is drawn but
-never sourced. On a real EDIF export — already through layout and native ERC — that is essentially
-never genuine: every firing observed on real hardware was false, with the source present but
+never sourced. On a real EDIF export, which has already been through layout and native ERC, that is
+essentially never genuine: every firing observed on real hardware was false, with the source present but
 under-typed. The one place it could catch something, schematic-stage EDIF, has exactly the same
 under-typing that makes it unreliable.
 
-The underlying reason is not fixable by more stamping: **EDIF genuinely cannot distinguish
+More stamping cannot fix the underlying reason, because **EDIF genuinely cannot distinguish
 "undriven" from "source-under-typed."** A rule that cannot tell those apart should not be the one
 telling you a rail is dead.
 
-**What was gained anyway.** The value of that work landed in the two power-in-only rules
+**The value of that work landed anyway**, in the two power-in-only rules
 (`decoupling-present`, `input-protection`) and the datasheet supply-pin rules, none of which need the
 output side.
 
 **Reopen if** undriven-rail detection on EDIF is genuinely needed. Even then, do not stamp
-`POWER_OUT` by name — `VOUT` is also a signal name. The cheaper and more honest path is device-class
-SOURCE recognition: a regulator, PMIC, or switch output on the rail implies driven. Then the gate can
-drop.
+`POWER_OUT` by name, because `VOUT` is also a signal name. The cheaper path, and the one that cannot
+mistake a signal for a supply, is device-class SOURCE recognition, where a regulator, PMIC, or switch
+output on the rail implies driven. Then the gate can drop.
 
 ---
 
@@ -68,11 +68,11 @@ drop.
 **Question.** A checklist item can be blocked on a person rather than on data. Should the engine
 carry that, so a review can report "waiting on you"?
 
-**Answer. No.** `owner` — who unblocks an item — is customer and overlay workflow metadata. Carrying
-it in the shareable engine crosses the open-core boundary this project keeps against market and
-strategy material. A `review.Item.Owner` was considered specifically and rejected on that basis.
+**Answer. No.** `owner`, meaning who unblocks an item, is customer and overlay workflow metadata.
+Carrying it in the shareable engine crosses the open-core boundary this project keeps against market
+and strategy material. A `review.Item.Owner` was considered specifically and rejected on that basis.
 
-**What the engine can do instead.** It can prove "blocked" only from an engine-visible signal, and
+**Instead, the engine can prove "blocked"** only from an engine-visible signal, and
 each concrete blocker has one:
 
 | blocker | engine-visible signal | outcome |
@@ -83,11 +83,12 @@ each concrete blocker has one:
 
 The pattern generalises to any blocker the engine can see, and to none that it cannot.
 
-**The genuine residue.** A human asserting an item is satisfied, with no design, binding, or config
-evidence at all, should stay overlay metadata and read plain `not-automated` from the engine. The
-overlay's own checklist rollup carries the `owner` nuance, which is where it belongs.
+**One case genuinely stays outside the engine.** A human asserting an item is satisfied, with no
+design, binding, or config evidence at all, should stay overlay metadata and read plain
+`not-automated` from the engine. The overlay's own checklist rollup carries the `owner` nuance,
+which is where it belongs.
 
-**Care when extending this.** `needs-data` and `needs-config` count as COVERED in the tally, so a
+**Extend this with care.** `needs-data` and `needs-config` count as COVERED in the tally, so a
 mis-derived blocker moves the coverage number a team reads. Deriving the next one is real work and is
 tracked as its own issue.
 
@@ -116,7 +117,7 @@ non-lossy and a wrong reading can be audited against what the source actually sa
 parameter has no such field, so normalizing on load would destroy the as-printed property that lets
 a seeded row be checked against its datasheet page by eye, and would silently change what the params
 panel and the `param` relations display. Converting at read time reproduces Quantity's split without
-a schema change: the spec plays `input`, the extractor's return value plays `value`.
+a schema change, with the spec playing `input` and the extractor's return value playing `value`.
 
 **Answer to the third: the two notations disagree on the character that matters most.**
 `core/classify` parses a component's value text off a design, under IEC 60062's RKM code, where `M`
@@ -127,7 +128,7 @@ would also be the first `datasheet/` to `core/` import, which C17's layering doe
 `TestUnitVocabulariesAgree` in `core/check` (the one package importing both) holds them to the same
 canonical base spellings, so the part that could genuinely drift is pinned without an import.
 
-**What this does NOT settle.** The parameter ONTOLOGY is still absent and still wanted:
+**This does NOT settle the parameter ONTOLOGY**, which is still absent and still wanted, since
 `canonical_id` stays empty and `symbol` is still matched through per-corpus alias maps in the model
 layer. Units are separable from that work and were done first because the SI prefixes are specified
 and vendor-independent, where parameter names are neither.
@@ -142,7 +143,8 @@ different things on the two sides.
 
 **Question.** `query.Value` now carries `Absent`, so a field the source never stated is distinguishable
 from one stated as the empty string. SQL's answer to the same problem is `NULL` plus three-valued
-logic: a comparison involving NULL is neither true nor false but UNKNOWN, and UNKNOWN propagates.
+logic, in which a comparison involving NULL is neither true nor false but UNKNOWN, and UNKNOWN
+propagates.
 Should this engine do that? It is the well-trodden answer, and `absent = absent` being TRUE here is a
 visible deviation from it.
 
@@ -158,8 +160,8 @@ would not match two parts that both state no minimum. "Both unstated" is precise
 engineer running that search wants. The SQL reading is correct for a database that must not conflate
 "unknown value" with "no value", and this layer only ever has the second.
 
-**What was taken instead.** The two places where treating absence as a value would give a WRONG answer
-are closed directly: an absent operand never participates in an ORDERING comparison (there is no order
+**Instead, the two places** where treating absence as a value would give a WRONG answer are closed
+directly, since an absent operand never participates in an ORDERING comparison (there is no order
 between "unstated" and 5), and an absent value indexes under its own bucket so it cannot collide with
 a stated empty string. Absence is queryable through `absent(?x)`. Equality is identity, and identity
 is total.
@@ -167,34 +169,39 @@ is total.
 **Reopen if** a case turns up where `not R(...)` or an aggregate genuinely needs to distinguish "no
 row" from "a row whose field is unstated" and cannot express it with `absent`. That would be evidence
 the two-valued reading is losing information, which is the only argument that should move this.
-`TestAbsentEqualsAbsentDeviatesFromSQL` is named for the deviation so it fails loudly rather than
-being quietly "corrected" toward SQL by someone who has not read this.
+`TestAbsentEqualsAbsentDeviatesFromSQL` (now in `jaala/datalog`) is named for the deviation so it
+fails loudly rather than being quietly "corrected" toward SQL by someone who has not read this.
 
 ---
 
 ## The served design loader reads the ref it is given; the viewer resolves and says so
 
 **Question.** The CLI resolves a design's declared entry: point it at a board companion and it reads
-the netlist the descriptor names, printing a line saying it did. `serve`'s loader does not — it reads
+the netlist the descriptor names, printing a line saying it did. `serve`'s loader does not, and reads
 exactly the artifact the request named. Should it resolve too, so the two surfaces behave alike?
 
-**Answer. No, and the asymmetry is the point.** The CLI's redirect is safe BECAUSE it can print a
+**Answer. No, and the asymmetry is deliberate.** The CLI's redirect is safe BECAUSE it can print a
 line. A browser has no equivalent: a user picks a file in a tree, and a loader that quietly swapped in
 a different one would leave them looking at something they did not choose with nothing on screen to
-say so. The same behaviour that is honest at a terminal is invisible in a viewer.
+say so. The same behaviour that a terminal announces is invisible in a viewer.
 
 So the client resolves and SHOWS. `ProjectService.ResolveDesign` gives the viewer the design, its
 project, and its declared entry; the project bar states which project is in effect and, when the open
 file is a companion, says that analysis reads the entry instead. Acting on it stays the user's move.
 
-**What this is not.** It is not a gap waiting to be closed by making the loader smarter, and it is not
-a claim that silent resolution is wrong in general — the CLI does exactly that. It is a claim that
+**This is not a gap** waiting to be closed by making the loader smarter, and it is not
+a claim that silent resolution is wrong in general, since the CLI does exactly that. It is a claim that
 "resolve silently" and "resolve visibly" are different features, and which one is correct depends on
 whether the surface can afford to say what it did.
 
 **Reopen if** a served surface appears that has no way to display a notice and genuinely needs the
-redirect — a headless API consumer, say. Even then the answer is more likely a field on the response
+redirect, such as a headless API consumer. Even then the answer is more likely a field on the response
 saying which artifact was read than a loader that swaps files without telling anyone.
+
+**Superseded in part by agni issue 656 (C32).** The service now resolves tiers through
+`service.ResolveSources`, the function the CLI calls, so a served request naming a declared companion
+is analysed against the entry exactly as the CLI's is. An UNDECLARED sibling is still read exactly as
+named on both surfaces.
 
 ---
 
@@ -207,18 +214,19 @@ It falls back to listing every YAML sitting beside the design. On a mount of loo
 dozens of entries, most of which will not resolve as either kind. Should the fallback be narrowed, or
 dropped in favour of offering nothing?
 
-**Answer. Keep the guess, and keep it wide.** The two failure modes are not symmetric. Offering a file
-that turns out to be the wrong kind costs one clear error, once, naming the file and the field that
-did not parse — the user learns something and picks again. Hiding a file that WAS the right kind costs
-them their own config with no error and nothing to look at, and the only signal is a picker that does
-not list a file they know is there. A silent omission is not discoverable; a loud rejection is.
+**Answer. Keep the guess, and keep it wide.** The two failure modes are not symmetric. Offering a
+file that turns out to be the wrong kind costs one clear error, once, naming the file and the field
+that did not parse, and the user learns something and picks again. Hiding a file that WAS the right
+kind costs them their own config with no error and nothing to look at, and the only signal is a
+picker that does not list a file they know is there. A silent omission is not discoverable; a loud
+rejection is.
 
 Narrowing by filename convention (`*conventions*.yaml` and the like) would trade the loud failure for
 the silent one and buy a shorter list with it, which is the wrong side of that trade. Reading each
 file to classify it would mean duplicating two parsers in the browser, which is why the server owns
 validation (`GetNamingConvention` / `GetReviewManifest`) in the first place.
 
-**What this is not.** It is not an argument that guessing is fine in general. Where a declaration
+**This is not an argument** that guessing is fine in general. Where a declaration
 EXISTS the pickers use it and do not guess at all, and they keep the kinds apart, because a checklist
 offered as a vocabulary fails exactly the way an intent file did (agni issue 175, PR 184). This is
 only about the case where there is nothing to read.
@@ -237,11 +245,11 @@ two ways out: a filesystem watch, or a cache that still stats what it depends on
 A watch is strictly faster, since a warm answer costs nothing at all. Why take the slower one?
 
 **Answer. Because the two fail differently, and only one of them fails loudly.** A watch is correct
-exactly as long as every event is delivered. When one is dropped — an editor writing through a
-temporary file, a network mount, a container bind mount, a platform limit on watched descriptors —
-the cache goes stale and there is no way to notice. The answer is confident, wrong, and identical in
-every observable way to a correct one. Worse, it is unfalsifiable after the fact: nothing in a
-findings list records which version of a descriptor produced it.
+exactly as long as every event is delivered. Events get dropped by an editor writing through a
+temporary file, a network mount, a container bind mount, or a platform limit on watched descriptors,
+and when one is dropped the cache goes stale with no way to notice. The answer is confident, wrong,
+and identical in every observable way to a correct one. It is also unfalsifiable after the fact,
+because nothing in a findings list records which version of a descriptor produced it.
 
 Revalidate-on-read can only ever be as wrong as the filesystem is. It re-stats every dependency
 before returning, so an operator editing a descriptor while the server runs is seen on the very next
@@ -250,11 +258,11 @@ measured rather than assumed: the largest case tested lands at 1.2 ms against ~0
 versus 19 ms for no cache at all. Buying the last millisecond with a silent-staleness risk is the
 wrong trade in a tool whose entire value is that its answers can be trusted.
 
-The stats are cheap for a structural reason worth keeping in mind if this is ever revisited: a stat
-is a fraction of a `ReadDir` and comparing a stat is a fraction of parsing YAML, so the revalidation
-is cheap exactly where the work is expensive. That is what makes the safe option affordable.
+The stats are cheap for a structural reason, because a stat is a fraction of a `ReadDir` and
+comparing a stat is a fraction of parsing YAML, so the revalidation is cheap exactly where the work is
+expensive.
 
-**What this is not.** It is not a claim that watches are wrong in general, and not a rule about
+**This is not a claim** that watches are wrong in general, and not a rule about
 caching elsewhere. `cmd/agni/osprojectconfig.go` holds no cache at all for the same freshness reason
 and would copy this shape, not reopen this trade, if a deployment ever felt its cost.
 
@@ -273,15 +281,15 @@ like the loose one. Why is it the other way round?
 
 **Answer. Because a pin NUMBER is a fact about a PACKAGE, and a parameter is a fact about the DIE.**
 The same silicon ships in several bodies and each body numbers its terminals differently, so a
-number-keyed join is silently wrong for any part seeded from one package and placed in another.
-Silently is the operative word: the wrong terminal is still a real terminal with real limits, so the
-comparison runs, produces a confident answer about the wrong thing, and nothing downstream looks
-broken. The seeded TXB0104 carries the case as data — number 11 is the `B3` data I/O in the TSSOP-14
-and the `VCCB` supply in the UQFN-12.
+number-keyed join is silently wrong for any part seeded from one package and placed in another. It
+is silent because the wrong terminal is still a real terminal with real limits, so the comparison
+runs, produces a confident answer about the wrong thing, and nothing downstream looks broken. The
+seeded TXB0104 carries the case as data, where number 11 is the `B3` data I/O in the TSSOP-14 and
+the `VCCB` supply in the UQFN-12.
 
 A name is copied off the same pin function table by both the vendor and the symbol library, so it
 survives repackaging. Its one weakness is that it is not unique, and the number exists to repair
-exactly that: it is a TIE-BREAKER, not a fallback.
+exactly that, as a TIE-BREAKER rather than a fallback.
 
 **What this leaves open, and what it does not.** The number is still used, in two bounded ways: to
 separate several pins sharing a name inside a package the design is known to place, and, with no
@@ -290,13 +298,14 @@ it. Where the two channels disagree, `param.ResolvePin` refuses rather than pick
 channel alone would have produced a confident wrong answer.
 
 The full precedence, the four refusal sentinels, and the degrade-safe path for a spec with no pin
-data are in [the datasheet layer](https://panyam.github.io/agni/architecture/datasheet-layer/#pin-binding),
-stated once there and implemented once in `param.ResolvePin`. The physical background is
-[pins and packages](https://panyam.github.io/agni/reference/pins-and-packages/).
+data are in [the datasheet
+layer](https://panyam.github.io/agni/architecture/datasheet-layer/#pin-binding), stated once there
+and implemented once in `param.ResolvePin`. The physical background is [pins and
+packages](https://panyam.github.io/agni/reference/pins-and-packages/).
 
 **Reopen if** a design source appears that identifies a placed package with certainty, for every
-component, without going through an orderable-MPN suffix. Even then the answer is not "key by
-number", it is that the tie-breaking channel becomes reliable more often. The name still leads,
+component, without going through an orderable-MPN suffix. Even then the answer is that the
+tie-breaking channel becomes reliable more often, rather than "key by number". The name still leads,
 because it is the one that means the same thing in every body.
 
 ---
@@ -342,35 +351,37 @@ report has printed it since the outcome vocabulary landed. When `agni review` gr
 checklist can go from 40 covered items to 12 because a `--params` directory moved". Measured on
 `examples/tutorial-project/` before writing the flag, removing `params/` moves the covered count by
 **zero**. The affected item's rule is still in the catalog and still selected; it merely has no facts
-to read, so `check.Available` gates it and the item reads `not-applicable` — which `Covered()` counts
+to read, so `check.Available` gates it and the item reads `not-applicable`, which `Covered()` counts
 as covered. `NotAutomated` moves only when a rule leaves the CATALOG, which is what a moved
 `profiles/` or a renamed `conventions.yaml` does, not a moved corpus.
 
 So a floor over `Covered()` would have shipped the flag and not caught the case it was written for,
-in the direction that reads as success. `Tally.Answered()` is the second count: `Pass + Fail +
-Provisional + ComputedNA`, the items the run actually decided.
+in the direction that reads as success. `Tally.Answered()` is the second count, `Pass + Fail +
+Provisional + ComputedNA`, which counts the items the run actually decided.
 
 **What this leaves open.** `Covered()` is unchanged and still rendered. The two answer different
-questions — "do we have a mechanism for this" and "did we get an answer" — and a checklist where they
+questions, "do we have a mechanism for this" and "did we get an answer", and a checklist where they
 diverge is reporting something true. The one assignment worth arguing about is that `ComputedNA`
-counts as answered and `NotApplicable` does not: the first is the DESIGN settling the question, which
+counts as answered and `NotApplicable` does not, because the first is the DESIGN settling the
+question, which
 is a real determination, and the second is the question going unasked.
 
-**Reopen if** a third count is proposed. The bar is the same one this cleared: name the regression the
-existing counts cannot see, and measure it on a real fixture before adding a number a team will gate
-on. The full rationale is in [the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
+**Reopen if** a third count is proposed. The bar is the same one this cleared: name the regression
+the existing counts cannot see, and measure it on a real fixture before adding a number a team will
+gate on. The full rationale is in [the checks
+contract](https://panyam.github.io/agni/architecture/checks-contract/).
 
 ---
 
 ## Both review gates are opt-in, and a provisional does not trip the default one
 
-**Question.** `agni review` has always exited 0. Once it can gate, should it gate by default — and
+**Question.** `agni review` has always exited 0. Once it can gate, should it gate by default, and
 should `provisional` count as a failure?
 
 **Answer. No to both, and the first was measured rather than argued.** Default-on breaks 32 existing
 CLI test invocations (the review fixtures fail on purpose, which is what makes them fixtures), three
 targets in `examples/tutorial-project/Makefile`, and both `agni review` invocations in tutorial rung
-8 — none of which anyone could have opted out of in advance, because the flag did not exist to be set.
+8, none of which anyone could have opted out of in advance, because the flag did not exist to be set.
 It would also have destroyed the red-before-green signal for the gate's own tests, since a suite where
 everything is red cannot show that a new test is red for the right reason. The benefit was one less
 flag to type.
@@ -387,7 +398,7 @@ release is making exactly the judgment the vocabulary was built to allow.
 
 **Reopen the default-on half if** the compatibility cost goes away, which means the fixtures and the
 tutorial rungs no longer depend on a zero exit. That is a real possibility and not close. Do not
-reopen the provisional half on the argument that a real defect can hide behind one: that is true, and
+reopen the provisional half on the argument that a real defect can hide behind one. One can, and
 the answer is a ratified corpus or an explicit `--fail-on-outcome fail,provisional`, not a default
 that trains people to disable the gate.
 
@@ -396,29 +407,29 @@ that trains people to disable the gate.
 ## Saving a workbench draft does not validate it
 
 **Question.** The extraction workbench writes a `PartSpec` that `param.Validate` would reject, over
-and over, all day. Should `SavePartSpec` refuse the ones that are structurally incoherent — two pins
-sharing an id, a parameter bound to a pin that does not exist — to keep bad data off disk?
+and over, all day. Should `SavePartSpec` refuse the ones that are structurally incoherent, such as
+two pins sharing an id or a parameter bound to a pin that does not exist, to keep bad data off disk?
 
 **Answer. No. Saving records what the author has; judging it is separate.** A refused save costs
 work, and it obliges every editing action to preserve the invariant or leave a document its author
-can neither fix nor escape through the UI. That obligation is not hypothetical: `deletePin` and
+can neither fix nor escape through the UI. That obligation is not hypothetical, since `deletePin` and
 `deletePackage` already had to unbind and drop numbers respectively, purely so an ordinary delete did
 not strand the document.
 
-**The argument for refusing rested on a false premise, which is the part worth remembering.** It was
-justified by "an incoherent spec on disk breaks `param.LoadSet` for the whole corpus". It cannot:
-`LoadSet` reads `*.textproto` (`datasheet/param/set.go`) and the workbench writes
+**The argument for refusing rested on a false premise.** It was
+justified by "an incoherent spec on disk breaks `param.LoadSet` for the whole corpus". It cannot,
+because `LoadSet` reads `*.textproto` (`datasheet/param/set.go`) and the workbench writes
 `<stem>.partspec.json`. A draft cannot reach a corpus by sitting on disk, so there was nothing on the
 other side of the trade. Check the premise before designing around it.
 
-**What replaced it.** `SavePartSpecResponse` carries the problems back, classified as STRUCTURAL
+**In its place, `SavePartSpecResponse` carries** the problems back, classified as STRUCTURAL
 (wrong now) or COMPLETENESS (merely unfinished, which every draft is). The write always succeeds. The
 client renders them and computes nothing, which also deleted a TypeScript reimplementation of the
 same rules that the refusing version had needed.
 
 **Reopen if** a draft ever becomes something another consumer loads automatically. Today the only
-route from draft to corpus is manual, and issue #209 is where that step — and full `param.Validate`
-with it — belongs.
+route from draft to corpus is manual, and issue #209 is where that step belongs, along with full
+`param.Validate`.
 
 ---
 
@@ -471,8 +482,8 @@ levels", and the NVT2010 (p1) requires EN LOW through power-up and power-down. I
 safety-relevant, and #191 asks which pin-to-pin forms the contract should carry. Why is this not one
 of them?
 
-**Answer. No, and not because it is unimportant. Nothing can ever evaluate it, and nothing is lost by
-leaving it out.** Two independent reasons, either sufficient:
+**Answer. No. Nothing can ever evaluate it, and nothing is lost by leaving it out.** There are two
+independent reasons, and either is sufficient.
 
 A netlist carries no ordering-in-time evidence whatsoever. There is no rule #192 could write over the
 design IR that would check a sequencing requirement, so admitting the shape would put a constraint in
@@ -510,31 +521,30 @@ correct in isolation and aimed at the wrong design. A machine-wide `conventions:
 with a different file name.
 
 The rule that separates them is not what a knob does but **how it fails**. A wrong mount produces a
-loud immediate error: the file is not there. A wrong naming vocabulary produces a confident wrong
-answer that looks exactly like a right one. Config whose absence or wrongness is SILENT belongs where
-it is scoped — to a project, reaching only the designs that declared it.
+loud immediate error, because the file is not there. A wrong naming vocabulary produces a confident
+wrong answer that looks exactly like a right one. Config whose absence or wrongness is SILENT
+belongs where it is scoped to a project and reaches only the designs that declared it.
 
 That is also why symbol search paths are analysis config rather than environment config even though
 they only locate bytes. A schematic naming a library nothing resolves reads short, the missing parts
 are simply absent, and the run reports fewer findings with no error to explain them. `agni.yaml`
-carries a machine-wide symbol-path DEFAULT for a system-installed vendor library, which is honest at
+carries a machine-wide symbol-path DEFAULT for a system-installed vendor library, which is correct at
 that scope; a project's own libraries belong in its descriptor, where they travel with the design and
 reach a served surface too.
 
 **What this leaves open.** Sharing across projects, which is the real need behind the question, is
-`extends` — declared in a descriptor, scoped to the project that wrote it, reaching no design that did
-not ask. Declared beats inherited. `agni.yaml` rejects unknown keys so the boundary is enforced rather
-than documented.
+`extends`, which is declared in a descriptor, scoped to the project that wrote it, and reaches no
+design that did not ask. Declared beats inherited. `agni.yaml` rejects unknown keys so the boundary
+is enforced rather than documented.
 
-**Reopen if** a tier appears whose wrongness is loud rather than silent. That is the property that
-decides, not how convenient a global would be.
+**Reopen if** a tier appears whose wrongness is loud rather than silent.
 
-**Reopened once, for `native_tools`** (serve's `--enable-native`). It passes the test on both halves:
-it says which golden renderers EXIST rather than what a design is checked against, and naming a tool
-that is not installed fails at the point of use with the tool's own name in the error. Nothing reads
-it but `serve`, which applies it where it consumes the value. The pre-run hook still names the file,
-the same as `web_dir` does: that note reports what the file SUPPLIED, not what this command went on
-to use, which is why `agni check` mentions both keys and uses neither.
+**Reopened once, for `native_tools`** (serve's `--enable-native`). It passes the test on both
+halves, because it says which golden renderers EXIST rather than what a design is checked against,
+and naming a tool that is not installed fails at the point of use with the tool's own name in the
+error. Nothing reads it but `serve`, which applies it where it consumes the value. The pre-run hook
+still names the file, the same as `web_dir` does, because that note reports what the file SUPPLIED,
+not what this command went on to use, which is why `agni check` mentions both keys and uses neither.
 
 That admission has a cost worth writing down, because it applies to every future key. Unknown keys
 are a hard ERROR here, which is what makes reaching for `conventions:` a refusal rather than a silent
@@ -548,39 +558,40 @@ defect in it.
 
 ## `check` stays the primitive; it does not become a rendering of a review run
 
-**Question.** `review.Run` already calls `check.Run`, both surfaces compose config through one seam,
-and both produce a `CheckResults` document. So why are they two execution paths? Issue 198 proposed
-collapsing them: `check` becomes an auto-manifest review with the store as the only difference between
-a dry run and a kept one.
+**Question.** `review.Run` already calls `check.Run`, both surfaces compose config through one
+resolver, and both produce a `CheckResults` document. So why are they two execution paths? Issue 198
+proposed collapsing them, so that `check` becomes an auto-manifest review with the store as the only
+difference between a dry run and a kept one.
 
-**Answer. No, and the reason it looked attractive has been removed.** The pressure behind it was that
-one surface could not say something the other could: tick a rule this design cannot support and the
-Checks panel showed an empty list, indistinguishable from a clean board, while the review layer had a
-whole vocabulary for it. That was fixed in #220 by reporting `check.Available`'s verdict for the rules
-already selected — the same gate `review.Run` consults, asked at the finding tier. No manifest, no
-per-item execution, and the panel now distinguishes "checked and clean" from "never ran".
+**Answer. No, and the reason it looked attractive has been removed.** The pressure behind it was
+that one surface could not say something the other could: tick a rule this design cannot support and
+the Checks panel showed an empty list, indistinguishable from a clean board, while the review layer
+had a whole vocabulary for it. That was fixed in #220 by reporting `check.Available`'s verdict for
+the rules already selected, which is the same gate `review.Run` consults, asked at the finding tier.
+No manifest, no per-item execution, and the panel now distinguishes "checked and clean" from "never
+ran".
 
 What remains after that is two genuinely different questions over one engine. `check` sweeps N rules
 once and reports findings on a SEVERITY axis. `review` scores N checklist items, each bound to rules
 and each scoped to that item, on a COVERAGE axis. Merging them means either handing a flat sweep a
-checklist it does not have, or handing a checklist a design-wide union it never ran — and the second
+checklist it does not have, or handing a checklist a design-wide union it never ran, and the second
 is a claim the review layer explicitly refuses to make (`CheckResults.findings` is empty for a review
 run for exactly this reason).
 
-**The cost argument that blocked it also did not survive, and that is worth recording separately,
-because it was cited in #220's favour as well.** Issue 198's step 5 held that an auto-manifest turns
-one sweep over N rules into N sweeps of one, on the viewer's default-open panel. Measured on
-`examples/tutorial-project` with a generated 44-item manifest, one item per catalog rule, warmed, five
-runs each: `check` 46 ms/run, the auto-manifest review 27 ms/run. The per-item shape is faster. That
-is what the arithmetic predicts — each item binds about one rule, so `items × entities` is the same
-order as `rules × entities`, and both paths gate on `check.Available` before any entity work. So the
-right reason to keep them apart is the vocabulary, not the clock.
+**The cost argument that blocked it also did not survive, and it was cited in #220's favour as
+well.** Issue 198's step 5 held that an auto-manifest turns one sweep over N rules into N sweeps of
+one, on the viewer's default-open panel. Measured on `examples/tutorial-project` with a generated
+44-item manifest, one item per catalog rule, warmed, five runs each: `check` 46 ms/run, the
+auto-manifest review 27 ms/run. The per-item shape is faster. That is what the arithmetic predicts,
+because each item binds about one rule, so `items × entities` is the same order as `rules ×
+entities`, and both paths gate on `check.Available` before any entity work. So the right reason to
+keep them apart is the vocabulary, not the clock.
 
 **What this leaves open.** Two of issue 198's steps survive on their own merits and are tracked
 separately: an ad-hoc manifest a caller can run without authoring a file (issue 256), and grouping
 items that share a binding before sweeping (`OUT_OF_SCOPE.md`, no driver since the measurement).
 
-**Reopen if** a surface appears that needs the coverage vocabulary over a flat rule sweep — an
+**Reopen if** a surface appears that needs the coverage vocabulary over a flat rule sweep, since an
 auto-manifest is then the natural shape and this decision is the thing standing in its way. Do not
 reopen on performance without measuring on a design large enough for the per-sweep fixed cost to
 matter; the tutorial fixture is 19 components and cannot show that.
@@ -593,11 +604,11 @@ matter; the tutorial fixture is 19 components and cannot show that.
 converters, while `param`, `doc`, `ir` and `geom` use the generated types directly. Both patterns are
 live, so which one does a new type follow?
 
-**Answer. Whether it crosses a runtime boundary, and nothing else.** `param.proto`'s own header states
-the rule: it is a cross-runtime contract shared by the Go engine, the TypeScript surfaces and future
-extractors in whatever language suits them, and hand-written parallel types are exactly the drift a
-shared schema prevents. A type that will be rendered in a browser or produced by an external service
-is that class, whatever package it happens to live in.
+**Answer. Whether it crosses a runtime boundary, and nothing else.** `param.proto`'s own header
+states the rule, which is that the file is a cross-runtime contract shared by the Go engine, the
+TypeScript surfaces and future extractors in whatever language suits them, and hand-written parallel
+types are exactly the drift a shared schema prevents. A type that will be rendered in a browser or
+produced by an external service is that class, whatever package it happens to live in.
 
 Two types shipped as Go and were converted for this reason. A **candidate** fact crosses twice by
 design, to a browser where a person accepts it and to an extractor that may be a separate service, so
@@ -610,15 +621,17 @@ thing rather than a second.
 and are deliberately untouched: converting them means changing the CLI and service converters, which
 is a refactor with its own risk rather than a fix. When one is next reworked, this is the rule.
 
-**A separate proto PACKAGE, not always the nearest one.** A candidate went to `agni.v1.candidate`
-rather than into `param`, because a proposal is not a fact: it has no standing until a person accepts
-it, and a lifecycle stage that must never reach a corpus by itself does not belong inside the contract
-a corpus is made of. Proximity of subject matter is not the test; whether the thing is the same KIND
-of claim is.
+**A new type can need a separate proto PACKAGE rather than the nearest one.** A candidate went to
+`agni.v1.candidate` rather than into `param`, because a proposal is not a fact and has no standing
+until a person accepts it, and a lifecycle stage that must never reach a corpus by itself does not
+belong inside the contract a corpus is made of. Proximity of subject matter is not the test; whether
+the thing is the same KIND of claim is.
 
 **Reopen if** a type is genuinely never leaving the process. The cost of proto is real (regeneration
 on both runtimes, presence semantics), and paying it for something that will only ever be a Go
 intermediate is waste.
+
+---
 
 ## A stale verification is untrustworthy data, not trustworthy data
 
@@ -630,22 +643,22 @@ Provisional, which is safe and potentially very noisy.
 
 **Answer. Stale and unknown are both untrustworthy.** A verification is a claim about a specific
 revision. Once the corpus holds a different one, the claim is not evidence about the document in hand,
-and the honest report is "someone checked this, but not this version of it" — which is exactly what
-Provisional means here: a re-confirm task, not a defect and not a clean pass. `unknown` (a
+and the accurate report is "someone checked this, but not this version of it", which is what
+Provisional means here, a re-confirm task rather than a defect or a clean pass. `unknown` (a
 verification exists but no revision is recorded to compare against) goes the same way, because a
 caller that cannot check must not be told the answer is fine.
 
-The noise concern is real and it is the point rather than a side effect. A vendor revision genuinely
-does invalidate the evidence under every value read from that document, and re-confirming a known row
-against a known page is a much smaller job than finding it in the first place. Provisional is already
-the bucket for exactly this: work a human owes the corpus.
+The noise concern is real, and the noise is intended rather than a side effect. A vendor revision
+genuinely does invalidate the evidence under every value read from that document, and re-confirming
+a known row against a known page is a much smaller job than finding it in the first place.
+Provisional is already the bucket for work a human owes the corpus.
 
-**What made it non-optional.** `param.MarkVerified` raises `confidence` to 1.0 to keep the older
+**One fact made it non-optional.** `param.MarkVerified` raises `confidence` to 1.0 to keep the older
 signal in step, and nothing ever lowers it. So a confidence-only test does not merely miss staleness,
-it INVERTS it: a verification of a superseded revision scores as the most trustworthy data in the
+it INVERTS it, so a verification of a superseded revision scores as the most trustworthy data in the
 system precisely because a person once checked it. Leaving the axis alone was not a neutral choice.
 
-**What is deliberately unaffected.** A value with no verification record at all reads `unverified` and
+**A value with no verification record is deliberately unaffected.** It reads `unverified` and
 is judged on method and confidence exactly as before. Anything else would demote every hand-seeded
 fixture in the corpus the moment this landed, and "nobody has verified this" was never a claim that a
 document revision could falsify.
@@ -654,6 +667,8 @@ document revision could falsify.
 invalidation: if the cited table's own content hash did not change across the revision, carry the
 verification forward. `derive.Patch` already keys on a table content hash, so the input exists. That is
 strictly harder and should be driven by a real corpus, not designed against a guess.
+
+---
 
 ## A document revision is recorded for the reader, and never compared
 
@@ -664,11 +679,11 @@ printed ("SCES650K"), and if so where?
 **Answer. Yes, on `Verification`, as display only.** Two parts, and the second is the one that is easy
 to get backwards.
 
-*Why it is needed at all.* Provisional exists to generate a re-confirm task a human picks up. "Verified
+It is needed because Provisional exists to generate a re-confirm task a human picks up. "Verified
 against SCES650K, corpus now holds SCES650L, page 4" is that task. Two hashes is not. The revision is
 the only part of the record a person can act on.
 
-*Why it is NOT on `SourceDoc`.* That was the obvious home and it does not work. A re-seed rewrites
+`SourceDoc` was the obvious home, and it does not work. A re-seed rewrites
 `SourceDoc`, both hash and title, and that rewrite is precisely the event that makes a verification
 stale. A revision recorded there would be destroyed by the one thing that makes it worth having. It has
 to be snapshotted onto the `Verification` at the moment of verification, frozen beside the hash it was
@@ -680,16 +695,18 @@ they cannot disagree. Passing them separately would permit a record that goes st
 names the wrong revision to the person asked to re-confirm it, which is wrong in the only way nothing
 downstream can detect.
 
-**Never a comparison input, and this is load-bearing rather than cautious.** Vendors reissue silently
-without moving the printed revision, and move the printed revision without changing content. Two files
-stamped "Rev K" may differ; two differing strings may describe identical bytes. Deciding staleness on
-the printed name reintroduces exactly the silent decay the hash prevents, with a better cover story.
-The field is also not orderable (K/L/M, 1.0/1.1, A/B, bare dates, "Rev K.1"), so there is no general
-"how many revisions behind". The proto comment says all of this at the field, because the pressure to
-short-circuit on it will arrive from someone who has not read this file.
+**It is never a comparison input, because a printed revision does not track content.** Vendors
+reissue silently without moving the printed revision, and move the printed revision without changing
+content. Two files stamped "Rev K" may differ; two differing strings may describe identical bytes.
+Deciding staleness on the printed name reintroduces exactly the silent decay the hash prevents, with
+a better cover story. The field is also not orderable (K/L/M, 1.0/1.1, A/B, bare dates, "Rev K.1"),
+so there is no general "how many revisions behind". The proto comment says all of this at the field,
+because the pressure to short-circuit on it will arrive from someone who has not read this file.
 
 **Reopen if** a vendor-neutral structured revision ever becomes extractable and someone wants ordering.
 The answer would still not be to compare it; it would be to render it better.
+
+---
 
 ## A text-width estimate stays at 0.6 em per glyph
 
@@ -702,10 +719,12 @@ values, packages, pin names and numbers) the weighted average is **0.6147**, spa
 `6.3V` to 0.736 for `DGND`. So 0.6 under-predicts by 2.4%, and both callers only decide *whether* to
 condense. A 2.4% shift in that threshold is not worth moving the column fit and every golden.
 
-**The trap this records.** An earlier estimate of 0.64 came from eyeballing two uppercase net names
+**This also records a trap.** An earlier estimate of 0.64 came from eyeballing two uppercase net names
 and overstated the error threefold, which was almost enough to justify the change. A per-run figure
 from a couple of samples is not an average; if this is reopened, it needs a measured corpus and a
 reason that needs the precision.
+
+---
 
 ## A format's own text-size convention is converted in the reader, not the renderer
 
@@ -715,15 +734,17 @@ where the file is read. The alternative was a per-format interpretation in the r
 **The reader owns it, because it is a fact about the format.** `geom`'s height field means glyph
 height and the renderer maps it straight to `font-size`, so translating a format's spelling into the
 contract's meaning is exactly what a reader is for. Putting it in the renderer would also have been
-actively wrong: KiCad states a glyph height directly, and a renderer-side conversion would have
+actively wrong, because KiCad states a glyph height directly, and a renderer-side conversion would have
 shrunk every KiCad render by 24% for no reason.
+
+---
 
 ## The residual gap on inherited pin-label sizes is not fitted away
 
 Pin labels that inherit their figureGroup's height still render about 1.37x the size the authoring
 tool prints, where ones stating their own height land at 0.96x.
 
-**Left alone deliberately.** That tool prints pin names in a STROKE font at a different ratio from
+**It is left alone deliberately.** That tool prints pin names in a STROKE font at a different ratio from
 the Arial it uses elsewhere (1/1.8 against 1/1.3148), and 1.8 / 1.3148 = 1.37 accounts for the gap
 exactly. Closing it would mean a per-figureGroup ratio calibrated on one exporter's font choice,
 which is fitting rather than reading, and it would be wrong for the next exporter. We render one
@@ -733,6 +754,8 @@ achievable.
 **Reopen if** a second export from a different toolchain shows the same per-group ratio, which would
 make it a property of the format rather than of one printer.
 
+---
+
 ## A design whose descriptor does not parse is refused, not served with a warning
 
 `ProjectResolver.Overlay` returns an error when the descriptor governing a design fails to parse,
@@ -740,7 +763,7 @@ and the surfaces refuse the run. The alternative considered was to serve the run
 results as computed without the project's configuration.
 
 **Refusing won, and the reason is where the marking would have to live.** A banner on the page is
-not attached to the thing that gets quoted: findings are screenshotted, pasted into tickets, and
+not attached to the thing that gets quoted, because findings are screenshotted, pasted into tickets, and
 exported to reports, and every one of those carries the numbers away from the chrome. On one folder
 the difference between composing with and without the project's config was 40 findings the project's
 own lexicon would not have raised and 95 it would have, so a marked-but-served run is a wrong answer
@@ -750,17 +773,17 @@ It also settles a CLI/server disagreement rather than adding one. `agni check` w
 this input by a different route, so serving it in the viewer meant the same file was an error in one
 surface and a badge in the other.
 
-**Reopen if** a deployment needs to render a half-configured folder — but the marking has to ride on
-the RESULTS, per-finding, not on the page. If it cannot, this answer stands.
+**Reopen if** a deployment needs to render a half-configured folder, provided the marking rides on
+the RESULTS, per-finding, rather than on the page. If it cannot, this answer stands.
 
 ---
 
 ## An empty mount root is hidden from the design tree, not exempted from pruning
 
-When the tree learned to prune folders with no readable design under them, mount roots were exempted:
-a mount is something an operator configured by hand, and one silently missing from the sidebar reads
-as a broken mount rather than an empty one. That exemption is now gone. Mounts are pruned by the same
-rule, and the tree reports how many it hid.
+When the tree learned to prune folders with no readable design under them, mount roots were
+exempted, because a mount is something an operator configured by hand, and one silently missing from
+the sidebar reads as a broken mount rather than an empty one. That exemption is now gone. Mounts are
+pruned by the same rule, and the tree reports how many it hid.
 
 The argument that decided it is that the exemption was optimizing the design page for a tenant that
 is leaving. A mount of datasheets is the case that motivated keeping empty roots visible, and
@@ -768,14 +791,15 @@ datasheets are becoming their own service, at which point that mount stops being
 at all. Shaping the design tree around a temporary neighbour buys a worse tree now and nothing later.
 
 The discoverability objection was real and is answered in the UI rather than in the listing:
-`ListMounts` returns `pruned_mounts`, and the sidebar says how many folders it hid. Both trees do this now, each naming what it opens. So the operator
-sees "1 folder hidden (no designs)" instead of a shorter list with no explanation. A mount whose root
-cannot be read at all is kept and shown, since an unreadable root is a mistake to surface, not
-evidence of emptiness.
+`ListMounts` returns `pruned_mounts`, and the sidebar says how many folders it hid. Both trees do
+this now, each naming what it opens. So the operator sees "1 folder hidden (no designs)" instead of
+a shorter list with no explanation. A mount whose root cannot be read at all is kept and shown,
+since an unreadable root is a mistake to surface, not evidence of emptiness.
 
 **Reopen if** a mount is ever expensive to walk enough that pruning at page load costs more than the
-empty root did. The answer then is a cache, not an exemption. The second half of this, that the rule is "no file this client can open" rather than "no design", was
-settled a week later: the request carries the kinds, and the datasheets tree prunes by the same walk.
+empty root did. The answer then is a cache, not an exemption. The second half of this, that the rule
+is "no file this client can open" rather than "no design", was settled a week later: the request
+carries the kinds, and the datasheets tree prunes by the same walk.
 
 ---
 
@@ -788,25 +812,25 @@ docs, and this repo qualifies), a hand-rolled client-side index, or a static ind
 docsite is 170 pages and about 136k words, which is the size where the answer is not obvious, so it
 was measured rather than argued.
 
-A hand-rolled Lunr-style index is the option to rule out first: a genuine full-text index over this
-corpus runs to megabytes of JSON that must download in full before the first query resolves.
-Trimming it to titles and headings gets it small again, but the value of these pages is in the
-gotchas buried mid-page, so a title-only index answers the wrong question. Pagefind's index is 1.6MB
-on disk, sharded into 11 chunks plus one fragment per page, and a query fetches the WASM, one or two
-shards, and one fragment per result shown.
+A hand-rolled Lunr-style index is the option to rule out first, because a genuine full-text index
+over this corpus runs to megabytes of JSON that must download in full before the first query
+resolves. Trimming it to titles and headings gets it small again, but the value of these pages is in
+the gotchas buried mid-page, so a title-only index answers the wrong question. Pagefind's index is
+1.6MB on disk, sharded into 11 chunks plus one fragment per page, and a query fetches the WASM, one
+or two shards, and one fragment per result shown.
 
 Algolia would give better relevance and real typo tolerance. It was declined because it puts a third
 party and a network round-trip in the path of a core navigation feature, and it needs a crawler
 config kept in sync with the nav. Neither cost buys anything the static index does not already do
 well enough on a corpus this size.
 
-**The identifier question, which is the one worth not re-litigating.** The obvious objection is that
+**The identifier question was measured.** The obvious objection is that
 this docsite is full of `readDesign`, `--symbol-path` and `nav_test.go`, and that a word-based index
-will not find them. Measured: it does. camelCase is indexed as ONE token, so `readDesign`,
+will not find them. It does. camelCase is indexed as ONE token, so `readDesign`,
 `readdesign`, `READDESIGN` and `readDesigns` all return the same single correct page. Hyphens,
 underscores and dots DO split, so `--symbol-path` degrades to `symbol` AND `path` unless quoted;
 quoting restores it because the parts stay adjacent. An alias layer was prototyped and works (five
-mechanisms all index, including `display:none` text), and was NOT shipped: it is per-page
+mechanisms all index, including `display:none` text), and was NOT shipped, because it is per-page
 maintenance for a problem that only affects hyphenated flags, quoting already fixes those, and
 Pagefind indexing hidden text makes an alias block indistinguishable from keyword stuffing on a
 public site.
@@ -819,6 +843,8 @@ built on the client.
 
 **Reopen if** the corpus grows enough that a 1.6MB index stops sharding usefully, or if typo
 tolerance turns out to matter more than the hosted-dependency cost.
+
+---
 
 ## A verdict rides the URL as a query param, not as a path resource
 
@@ -842,7 +868,6 @@ identity separate from `Design.uri`), but adopting it is a URL-space migration r
 **Reopen if** design addressing moves to a fixed-arity identity for other reasons, at which point the
 path form becomes cheap and `?verdict=` can alias to it.
 
-
 ---
 
 ## A rule STATES its considered set; the engine does not infer it
@@ -856,24 +881,25 @@ separates them, so inferring would present ~50 rules' failure lists as coverage.
 false-assurance shape the whole verdict layer exists to remove, and it would be most convincing in a
 report, which is exactly where it would do most damage.
 
-**Carry it in the return value: nil means "declined", empty means "considered nothing".** Go does
-distinguish them, so this is representable. It is still wrong, for two reasons found by looking. The
-distinction is produced BY ACCIDENT: `var out []Verdict` with no appends returns nil, so
-`single-pin-net` announces "I decline to state a considered set" on any design containing no nets. And
-it is a channel this codebase deliberately erases elsewhere: `Spec.Eval` and `VerdictsToFindings` both
-force `[]Finding{}` rather than nil, with a comment recording the parity break that taught them to. A
-field set once at declaration cannot be produced by control flow inside a body; a returned slice can.
+**Carry it in the return value, with nil meaning "declined" and empty meaning "considered
+nothing".** Go does distinguish them, so this is representable. It is still wrong, for two reasons
+found by looking. The distinction is produced BY ACCIDENT, since `var out []Verdict` with no appends
+returns nil, so `single-pin-net` announces "I decline to state a considered set" on any design
+containing no nets. And it is a channel this codebase deliberately erases elsewhere, where
+`Spec.Eval` and `VerdictsToFindings` both force `[]Finding{}` rather than nil, with a comment
+recording the parity break that taught them to. A field set once at declaration cannot be produced
+by control flow inside a body; a returned slice can.
 
-**Have the engine work it out.** It cannot. A rule provided by an overlay, or by a future
-non-Go plugin, is opaque: it receives the `check.Model` and returns verdicts, and nothing about it can
-be decomposed. So the contract has to be a DECLARATION by the author, which is also why it fails in
-the safe direction: forgetting the flag under-reports a rule, and no one can set it and be believed
-while reporting only failures.
+**Have the engine work it out.** It cannot. A rule provided by an overlay, or by a future non-Go
+plugin, is opaque, since it receives the `check.Model` and returns verdicts, and nothing about it
+can be decomposed. So the contract has to be a DECLARATION by the author, which is also why it fails
+in the safe direction, since forgetting the flag under-reports a rule, and no one can set it and be
+believed while reporting only failures.
 
-`Spec.Scope` is not a counter-example. It lives on the spec, not the rule, precisely because the spec
-is declarative and the ENGINE enumerates `Over` on the rule's behalf, so the engine is the party that
-has to be told which elements are the rule's business. A Go rule needs no such field: it enumerates
-its own subjects and does not emit verdicts for things it is not about.
+`Spec.Scope` is not a counter-example. It lives on the spec, not the rule, precisely because the
+spec is declarative and the ENGINE enumerates `Over` on the rule's behalf, so the engine is the
+party that has to be told which elements are the rule's business. A Go rule needs no such field,
+because it enumerates its own subjects and does not emit verdicts for things it is not about.
 
 All of this is migration-only. When the last rule converts, every rule sets the flag, the filter in
 `RunVerdicts` becomes a tautology, and the field and `FailuresOnly` delete themselves, leaving a
@@ -923,13 +949,14 @@ reasonable one.
 
 ## The check report is HTML, and its templates are not a feature
 
-`agni check --verdicts --format html` renders a report; there is no markdown form, and no way to
-supply your own template. Both were asked for and both were declined for reasons that still hold.
+`agni check --verdicts --format html` renders a report; the verdict report has no markdown form
+(`--format markdown` is the findings report), and there is no way to supply your own template. Both
+were asked for and both were declined for reasons that still hold.
 
 **Markdown was the first proposal and HTML won on adoption, not features.** HTML is the shape
 engineers already read from the in-house checker, it collapses natively, and it survives being emailed
 or opened from a `file://` path. Markdown's one real advantage is being diffable across board
-revisions, and the CSV keeps that: it remains the machine substrate, and the report is a view over it
+revisions, and the CSV keeps that by remaining the machine substrate, with the report a view over it
 rather than a replacement.
 
 **`html/template` is used for correctness, not tidiness.** Every subject and message in the page came
@@ -937,7 +964,7 @@ out of a design file the engine did not author, so a net named with an angle bra
 the report if this were string building.
 
 **Caller-supplied templates are a different question and the answer is "not yet".** The hard part of
-a template is not the layout, it is the CONTEXT, and publishing one freezes a data model before anyone
+a template is the CONTEXT rather than the layout, and publishing one freezes a data model before anyone
 knows what the report should look like. Getting the context wrong is worse than getting the layout
 wrong, because the context is the contract. The aggregation therefore lives in a tested Go model
 (`core/report`) with the layout as a template over it, which makes exposing templates later a small
@@ -951,24 +978,25 @@ not before.
 `Verdict.Subjects` is a list and `Finding.Subject` is not, and the asymmetry is deliberate rather than
 a stage of a migration.
 
-**Why a verdict needs a tuple.** Some rules ask about a RELATION, and a relation belongs to none of its
-entities alone. A clearance violation is a distance between two nets. A regulator over-driving a part
-it feeds is only pinned down by the regulator, the rail and the load together, because one source
-feeding one load over two supplied rails is two different answers. A strap group is a device and the N
-nets encoding its value. Naming fewer than all of them gives several answers one id, which was
-invisible while verdicts only projected down to findings and is wrong now that `core/report` links
-every row by `VerdictID`.
+**A verdict needs a tuple because some rules ask about a RELATION**, and a relation belongs to none
+of its entities alone. A clearance violation is a distance between two nets. A regulator
+over-driving a part it feeds is only pinned down by the regulator, the rail and the load together,
+because one source feeding one load over two supplied rails is two different answers. A strap group
+is a device and the N nets encoding its value. Naming fewer than all of them gives several answers
+one id, which was invisible while verdicts only projected down to findings and is wrong now that
+`core/report` links every row by `VerdictID`.
 
 The arity is not two, which is why the fix is a tuple rather than a pair. It was measured before it was
 built: one FET with its drain on `+60V` and its source on `+55V` produces two findings under one
 ref-des, and `stdlib/rules/intent/strapgroups.go` already carried a comment admitting it named
 `Nets[0]` as a stand-in with the rest "named in prose and reachable nowhere".
 
-**Why a finding must not have one.** The two fields answer different questions and only one of them is
-allowed to be incomplete. A verdict's tuple is IDENTITY: incompleteness is the bug. A finding's subject
-is an ACTION TARGET, the one entity a reader has to change, and an answer with three entities in it is
-not one they can act on — they would have to pick, and the rule's author knows which better than they
-do. Everything else the sentence names is already in `Context`, typed and ordered.
+**A finding must not have one, because the two fields answer different questions** and only one of
+them is allowed to be incomplete. A verdict's tuple is IDENTITY, so incompleteness is the bug. A
+finding's subject is an ACTION TARGET, the one entity a reader has to change, and an answer with
+three entities in it is not one they can act on, because they would have to pick, and the rule's
+author knows which better than they do. Everything else the sentence names is already in `Context`,
+typed and ordered.
 
 Going N-ary on findings was considered and costs four things to buy one. It reshapes 44 hand-authored
 `.expect.yaml` sidecars, the one place a person writes findings by hand. It makes every by-kind axis
@@ -980,21 +1008,23 @@ every entity in a consumer that wants it, and `Context` already provides that: t
 comparison in `core/results` joins on subject plus context for exactly that reason, which is a
 three-line change rather than a schema one.
 
-`TestFindingSubjectComesFromTheVerdictsTuple` holds the two together: the entity a reader is told to
-change must be one of the entities the rule looked at. Kind may differ, since a pin-scoped verdict
-legitimately carries a part-scoped finding.
+`TestFindingSubjectComesFromTheVerdictsTuple` holds the two together by requiring that the entity a
+reader is told to change be one of the entities the rule looked at. Kind may differ, since a
+pin-scoped verdict legitimately carries a part-scoped finding.
 
 **The id is generated and never parsed.** `<rule>:(<kind>:<ref>,...)`, with the four characters the
 tuple syntax uses percent-escaped inside a ref. Nothing split it apart before either; the old
 "split on the first two colons" rule existed because there was no structured alternative, and now
 `subjects` carries the structure typed. That is what lets a ref keep its own colons
-(`symbol:Library:Symbol`) and its own commas (an endpoint's ref is literally `0,0`). The escape is not
-decoration: a separator is always followed by `<kind>:`, so an ordinary comma is safe, but a ref
-containing the whole sequence is not — unescaped, `("A,net:B")` and `("A", "B")` are one string.
+(`symbol:Library:Symbol`) and its own commas (an endpoint's ref is literally `0,0`). The escape is
+needed because a separator is always followed by `<kind>:`, so an ordinary comma is safe, but a ref
+containing the whole sequence is not, since unescaped, `("A,net:B")` and `("A", "B")` are one string.
 
-**Order belongs to the rule, never to the framework.** A framework that sorted every tuple would invert
-`pin-tracking`'s claim. A symmetric relation canonicalises inside the rule instead: `copper-clearance`
-orders its pair by name before building the verdict.
+**Order belongs to the rule, never to the framework.** A framework that sorted every tuple would
+invert `pin-tracking`'s claim. A symmetric relation canonicalises inside the rule instead, as
+`copper-clearance` orders its pair by name before building the verdict.
+
+---
 
 ## A finding's context entities are not findings about themselves
 
@@ -1005,7 +1035,7 @@ finding under the context entity too.
 
 It should not. Grouping by subject PARTITIONS the findings, and that partition is what makes "the
 union of what I clicked equals the full pass" a fact rather than a hope. Counting one finding under
-two entities breaks the property the per-entity view rests on, and it would do so silently: the
+two entities breaks the property the per-entity view rests on, and it would do so silently, because the
 per-entity counts would simply stop summing to the run.
 
 Context makes a finding REACHABLE from another entity without making it ABOUT that entity. Those are
@@ -1016,6 +1046,8 @@ Reopening this needs a concrete case where a reader looked for a finding under a
 was right to expect it there. "It would be convenient" is not that case, because the convenience is
 already served by the chip.
 
+---
+
 ## A tripwire for supply nets the naming vocabulary cannot see was measured and dropped
 
 Proposed as a sibling to `rail-not-classified`, which only fires when a net's NAME declares a voltage.
@@ -1023,14 +1055,15 @@ The gap looked real: a net feeding a power-input pin, carrying no rail role, who
 nothing, is invisible to every name-gated rail rule and to that tripwire.
 
 Measured on a real multi-thousand-component board before building it (August 2026, against the
-catalog of the day), and the numbers argued against it. 91 supply nets were unrecognised against 18 recognised, which looks like a strong case until you
-declare the project's conventions lexicon: rail recognition moves to 62 and `rail-not-classified`
-drops from 45 findings to **zero**. The existing tripwire was already saying the right thing, 45
-times, and the remedy was configuration rather than a new rule.
+catalog of the day), and the numbers argued against it. 91 supply nets were unrecognised against 18
+recognised, which looks like a strong case until you declare the project's conventions lexicon, at
+which point rail recognition moves to 62 and `rail-not-classified` drops from 45 findings to
+**zero**. The existing tripwire was already saying the right thing, 45 times, and the remedy was
+configuration rather than a new rule.
 
 What remained afterwards was ~36 auto-named nets (`$…` from the exporter) where no lexicon can help,
-and it is not clear what a reader would DO about them: you cannot name a net the exporter generated
-without changing the source schematic.
+and it is not clear what a reader would DO about them, since you cannot name a net the exporter
+generated without changing the source schematic.
 
 The measurement also found something better. All 14 of that board's `decoupling-present` findings were
 false positives on switching nodes, gate drives and sense lines, which is a defect in a shipped rule
@@ -1049,31 +1082,35 @@ several hundred characters of path data. Should the diagrams move out into files
 
 **Answer. They move out, but they are INCLUDED rather than linked.** The page carries
 `{{ includeFile "figures/<name>.svg" }}`, which reads the file at build time and returns raw HTML, so
-the SVG is still inlined in the rendered page. Linking would break the theming rule: an `<img>`
+the SVG is still inlined in the rendered page. Linking would break the theming rule, because an `<img>`
 renders in its own document and inherits nothing from the host page, so `currentColor` resolves to
-the SVG's own default and `var(--accent-color)` resolves to nothing. That is not a theory, it is
+the SVG's own default and `var(--accent-color)` resolves to nothing. It is
 already why both image-referenced diagram sets under `static/images/` carry hex literals on purpose.
 
-**What this leaves open.** The two modes are not freely interchangeable, and it is worth being clear
-about that before someone assumes the tag makes it a config flip. Going linked also means rewriting
+**What this leaves open.** The two modes are not freely interchangeable, and the tag does not
+make it a config flip. Going linked also means rewriting
 every figure to a theme-neutral palette. What the indirection genuinely buys is that the strategy
-lives in ONE function: minification, caching, or a wrapper element could be added without touching a
+lives in ONE function, so minification, caching, or a wrapper element could be added without touching a
 page. The trigger for wanting the other mode is a figure shared by SEVERAL pages, since an include
 copies its bytes into each one while a link would let the browser cache it once.
 
-**That trigger has since fired, and the answer did not change.** Five of the 44 included figures now
-have two callers each, because the readability pass reused a diagram wherever one already said the
-right thing rather than drawing a near-duplicate: `decoupling-capacitor` and `absolute-maximum-rating`
-and `via` are each on a term page and a `learn/` chapter, `net-rename` is on a guide page and a
-tutorial rung, and `covered-vs-answered` is on an architecture page and a tutorial rung. The median
-figure is about 2.8 KB, so the duplicated bytes come to roughly 12 KB across the whole site, against
-losing `currentColor` and `var(--accent-color)` on every figure. Reuse turned out to be the argument
-FOR the include rather than against it: one file, two pages, and no second copy to drift.
+**That trigger has since fired, and the answer did not change.** As of the readability pass, five of
+the 44 included figures had two callers each, because that pass reused a diagram wherever one
+already said the right thing rather than drawing a near-duplicate: `decoupling-capacitor` and
+`absolute-maximum-rating` and `via` are each on a term page and a `learn/` chapter, `net-rename` is
+on a guide page and a tutorial rung, and `covered-vs-answered` is on an architecture page and a
+tutorial rung. The median figure is about 2.8 KB, so the duplicated bytes come to roughly 12 KB
+across the whole site, against losing `currentColor` and `var(--accent-color)` on every figure.
+Reuse turned out to be the argument FOR the include rather than against it, since one file serves
+two pages with no second copy to drift.
 
-**Measured while deciding.** Pagefind does NOT index SVG text: prose phrases from a term page appear
-in its search fragment and the same page's SVG labels do not. So inlining costs nothing in search
-noise, and diagram labels are unsearchable in either mode. The first attempt at that check returned
-zero for the control as well and would have supported the same conclusion for the wrong reason.
+**Pagefind does NOT index SVG text, which was measured while deciding.** Prose phrases from a term
+page appear in its search fragment and the same page's SVG labels do not. So inlining costs nothing
+in search noise, and diagram labels are unsearchable in either mode. The first attempt at that check
+returned zero for the control as well and would have supported the same conclusion for the wrong
+reason.
+
+---
 
 ## Deep rationale on a docsite page is collapsed, not deleted
 
@@ -1090,15 +1127,15 @@ whether a page can be skimmed, and a `<details>` costs a passing reader nothing 
 click and one `grep` away.
 
 Applied across the nine `architecture/` pages, on-page word count fell between 1% and 31% per page
-while totals moved a few percent either way. `stack.md` is the honest read of the trade: identical
-total, a third less on the page.
+while totals moved a few percent either way. `stack.md` shows the trade most plainly, with an identical
+total and a third less on the page.
 
-**Where it does NOT apply.** A reference page is arrived at with a question, so hiding the reasoning
-costs nothing until the reader wants it. A teaching page is read start to finish, so hiding the
-reasoning is hiding the chapter. The `learn/` pass therefore collapsed nothing at all, and the
-`tutorials/` pass collapsed nothing either. The same reasoning splits the glossary convention: a
-`learn/` chapter teaches a term in full the first time and only later mentions are tagged, which is
-why that section gained figures and almost no tags.
+**It does NOT apply to every page.** A reference page is arrived at with a question, so hiding the
+reasoning costs nothing until the reader wants it. A teaching page is read start to finish, so
+hiding the reasoning is hiding the chapter. The `learn/` pass therefore collapsed nothing at all,
+and the `tutorials/` pass collapsed nothing either. The same reasoning splits the glossary
+convention, where a `learn/` chapter teaches a term in full the first time and only later mentions
+are tagged, which is why that section gained figures and almost no tags.
 
 **What this leaves open.** A closed `<details>` is not reliably reachable by a browser's find-in-page,
 which varies by engine and by whether the content opts into `hidden="until-found"`. Nothing here
@@ -1106,6 +1143,8 @@ depends on it today, since the collapsed material is rationale rather than looku
 a contributor greps for were deliberately left on the page for that reason. If a block someone needs
 to FIND ends up collapsed, that is the signal to reach for `hidden="until-found"` rather than to
 reopen this decision.
+
+---
 
 ## A recorded locator is renamed once at read time, not repaired by each writer
 
@@ -1128,22 +1167,24 @@ as carrying exactly that since it was written.
 
 **The rewrite walks by reflection rather than visiting the types that carry a locator.** Nineteen IR
 messages carry one and the geometry sidecar carries its own. A hand-written visitor is shorter to
-read and fails in the expensive direction: a twentieth message gains a locator, the visitor keeps
+read and fails in the expensive direction, where a twentieth message gains a locator, the visitor keeps
 compiling, coverage silently drops, and the output still looks like an answer. The map branch of the
 walk is unexercised today because no schema has a message-valued map reaching a locator, and it is
 there because a map is the one field kind a walk skips without noticing.
 
-**What it costs.** A file outside every mount is recorded by base name alone, losing its directory.
-That case is a symbol library resolved through `--symbol-path` from outside the design tree, and the
-alternative is publishing the host path, so the trade is not close. Separately, a query's citation
-list is sorted and the source string is one of the sort keys, so this changed the ORDER of two
-committed captures: `/private/var/…` sorted ahead of `datasheet …` and `designs/…` sorts behind it.
-The order in the repo had been an artifact of a path nobody was supposed to see.
+**It has two costs.** A file outside every mount is recorded by base name alone, losing its
+directory. That case is a symbol library resolved through `--symbol-path` from outside the design
+tree, and the alternative is publishing the host path, so the trade is not close. Separately, a
+query's citation list is sorted and the source string is one of the sort keys, so this changed the
+ORDER of two committed captures, since `/private/var/…` sorted ahead of `datasheet …` and
+`designs/…` sorts behind it. The order in the repo had been an artifact of a path nobody was
+supposed to see.
 
 **What this leaves open.** `portableCites` and `forDisplay` are now redundant for both hosts this
 repo ships and are still in the tree, because a host that builds a `formats.Loader` without
 `SourceName` and reads by absolute path would still want them, and no such host exists to test
-against. Removing them is observable through that sort order, so it wants its own change. Ledgered.
+against. Removing them is observable through that sort order, so it wants its own change. It is
+ledgered in `OUT_OF_SCOPE.md`.
 
 ---
 
@@ -1162,16 +1203,16 @@ The stronger reason is that a wire type for a query answer already exists. `weba
 carries the columns, the rows and the cites, plus per-cell sheet badges and locate reasons for the
 viewer's navigation. Making `Table` a proto would be a SECOND wire message for one answer.
 
-`Table` is also deliberately narrower than that response: the sheet badges and locate reasons stop at
-the CLI because they mean nothing in a file. Narrowing is what a rendering type is for. And the three
-fields someone reaches for as evidence it should cross (`Title`, `Query`, `Source`) belong to whoever
-is rendering: `Title` comes from a `--title` flag, so it is the caller's intent rather than a
-property of the result.
+`Table` is also deliberately narrower than that response, because the sheet badges and locate
+reasons stop at the CLI because they mean nothing in a file. Narrowing is what a rendering type is
+for. And the three fields someone reaches for as evidence it should cross (`Title`, `Query`,
+`Source`) belong to whoever is rendering, and `Title`, for one, comes from a `--title` flag, so it
+is the caller's intent rather than a property of the result.
 
 **Today `Table` never crosses anything.** It is built at the CLI from `RunQueryResponse` and rendered
 to stdout. The web client does not use it at all; it renders the response into TSX directly.
 
-**What would reopen this.** A second renderer, and the first thing that would create one is browser
+**A second renderer would reopen this**, and the first thing that would create one is browser
 export (#127). Three routes then exist and only one leaves `Table` alone: the server renders and
 returns bytes; the client reimplements `table.go` in TypeScript; or `Table` becomes a wire type. The
 first is the recommendation, and it is recorded on #127 so the second is not written by reflex, since
@@ -1203,10 +1244,10 @@ processes in one shared scratch directory, which is what lets rung 11 store a re
 step and re-render it in the next without the runner keeping a shell alive and delimiting its output.
 Shell variables do not carry across, and nothing in the corpus uses them.
 
-**What this leaves open.** The multi-line `script:` form stays, and is right whenever the extra lines
-are setup the reader must also type: rungs 4, 5 and 6 open with `mv <tier> <tier>-off` and want it in
-the same block as the command it changes. `steps:` is for when both commands print something the
-reader compares.
+**What this leaves open.** The multi-line `script:` form stays, and is right whenever the extra
+lines are setup the reader must also type, as when rungs 4, 5 and 6 open with `mv <tier> <tier>-off`
+and want it in the same block as the command it changes. `steps:` is for when both commands print
+something the reader compares.
 
 **Reopen if** a spec appears that genuinely needs one shell across steps, which means shell state that
 is not a file. Interleaving markers is still not the answer; passing the state through the filesystem
@@ -1223,17 +1264,17 @@ including the board?
 **Answer. Every one, because the alternative is arbitrary.** The claim the fix rests on is that naming
 the entry IS naming the design, since the descriptor is what says which file the entry is. A design
 that got its sheets from a companion but not its copper would be a third resolution mode nobody asked
-for, and the docsite already states the principle for the companion-named case: a design's declared
+for, and the docsite already states the principle for the companion-named case, that a design's declared
 board is its board whichever view you point at.
 
-The cost is real and was accepted deliberately. Naming the entry now runs the board-tier rules, so on
-the tutorial project one invocation went from 15 findings over 32 rules to 28 over 36. That is not new
-analysis, the folder form reported all of it already, but **a CI gate pinned to an entry filename sees
-more findings than it did before**, and with `--fail-on` it can go red on copper that invocation was
-never checking. `--as-named` restores the previous single-file reading exactly.
+The cost is real and was accepted deliberately. Naming the entry now runs the board-tier rules, so
+on the tutorial project one invocation went from 15 findings over 32 rules to 28 over 36. None of it
+is new analysis, since the folder form reported all of it already, but **a CI gate pinned to an
+entry filename sees more findings than it did before**, and with `--fail-on` it can go red on copper
+that invocation was never checking. `--as-named` restores the previous single-file reading exactly.
 
 **What this leaves open.** Nothing about the entry. The guard that skips companions for an UNDECLARED
-sibling stays and is load-bearing: a later revision of the netlist sits in the same folder and is a
+sibling stays, because a later revision of the netlist sits in the same folder and is a
 legitimate analysis source, so inferring a relationship would turn a diff of two revisions into a diff
 of one against itself. Companions stay declared file by file.
 
@@ -1244,7 +1285,7 @@ That is a descriptor that should not declare the board, not a fourth resolution 
 
 ## A writer is named for its format, not hoisted behind a generic Write
 
-**Question.** The read side dispatches through one registry: `formats.Format` carries a `Design`
+**Question.** The read side dispatches through one registry, where `formats.Format` carries a `Design`
 hook, a `Geometry` hook and a `Board` hook, each nil when the format has no such tier, and every
 derived surface reads that one table. When the EDIF netlist writer landed and a second writer became
 foreseeable, should the write side mirror it with a `Write` hook per format?
@@ -1260,42 +1301,45 @@ one hook per tier because a reader PULLS tiers independently, and `Loader` alrea
 for that reason (`FaithfulGeometry`, `ResolveGeometry`, `BoardGeometry`).
 
 And a writer's output SHAPE varies where a reader's input shape does not. Every reader is handed one
-path. A writer is not: a KiCad schematic hierarchy is a root sheet, its child sheets, a symbol
+path. A writer is not, because a KiCad schematic hierarchy is a root sheet, its child sheets, a symbol
 library and a project file, so its writer needs a directory and a naming policy rather than the
-single `io.Writer` a shared seam would impose. A generic hook would have to grow a filesystem
-abstraction, and decide single-file versus n-file, before it wrote a byte. That cost buys nothing:
-the caller already knows what it is writing to.
+single `io.Writer` a shared hook would impose. A generic hook would have to grow a filesystem
+abstraction, and decide single-file versus n-file, before it wrote a byte. That cost buys nothing,
+because the caller already knows what it is writing to.
 
 **What this leaves open.** Concrete per-format writers named for what they emit, which is the shape
 already in the tree: `edif.WriteNetlist` and `ipc2581.Write` today, `edif.WriteSchematic` taking an
 EDIF-local Document (the netlist plus its schematic geometry) when something needs a drawn EDIF, and
 a `WriteBoard` taking `geom.BoardGeometry` if the deferred IPC-2581 copper tier is ever picked up.
 Each declares its own C6 fidelity contract, as `ipc2581.Write` already does for the copper it omits.
-The caller resolves the output target and picks: `emitFormat` in `cmd/agni` is that seam, and its
+The caller resolves the output target and picks the writer in `emitFormat` in `cmd/agni`, and its
 `.eds` refusal names the distinction where someone will hit it.
 
 **Reopen if** three or more writers exist AND their output shapes have converged on one file each, so
-a shared seam would no longer have to model the filesystem. Two writers is not evidence; the second
+a shared hook would no longer have to model the filesystem. Two writers is not evidence; the second
 one arriving with a different output shape is evidence AGAINST.
 
 ---
 
 ## Datalog is one query shape, and shipping without it was never the goal
 
-Asked directly: agni treats datalog as a first-class citizen, the primitive should be the IR and the
-Model, so can the engine ship without datalog and add it back as an extension?
+The question, asked directly, was whether the engine can ship without datalog and add it back as an
+extension, given that agni treats datalog as a first-class citizen while the primitive should be the
+IR and the Model.
 
 The framing is right and the remedy is not. Removability was measured and rejected; peer status was
 adopted instead, and C29 is what encodes it.
 
 **The core was already clean.** `go list -deps ./core/check` returns no `core/query`, and the same
 holds for `core/model`, the readers, diff and render. C19 already named `check.Model` the primitive.
-The rule catalog was already language-plural: 47 built-in rules are Go or Spec, 15 intent rules are
-Go, and exactly ONE hand-authored datalog rule ships (`dl/power-pin-mistyped`). All of them register
+The rule catalog was already language-plural. As of this decision, 47 built-in rules were Go or
+Spec, 15 intent rules were Go, and exactly ONE hand-authored datalog rule shipped
+(`dl/power-pin-mistyped`). All of them register
 through `check.RegisterSource`, whose currency is a struct with an `Eval func(Model) []Verdict`, so
 nothing downstream can tell where a rule came from.
 
-**Deleting the engine costs 34 of 96 rules and three surfaces.** All 33 interface-profile rules
+**Deleting the engine would have cost 34 of 96 rules and three surfaces**, as of this decision. All
+33 interface-profile rules
 compile through `query.RuleFromQuery`, plus `profiles.Coverage` behind the web coverage panel,
 `agni query`, and review-manifest house rules. Those are multi-way joins over `component-on-net`,
 `pin.net` and `reaches`, with negation and derived relations. That is the work datalog is good at, and
@@ -1304,31 +1348,34 @@ profiles exist to make.
 
 **What datalog genuinely cannot do is the sharper finding, and it is structural.** It answers
 set-of-tuples questions. It cannot return a path, a subgraph, a tour, or a shortest route, and this
-evaluator makes both reasons concrete: `aggregate` runs only at final projection (`eval.go`, now in `jaala/datalog`),
-never inside `materialize`'s fixpoint, so no recursive rule can carry `min` or `count`; and `Term` is
-Var/Str/Num with no function symbols, so a path cannot be a value at all.
+evaluator makes both reasons concrete, since `aggregate` runs only at final projection (`eval.go`,
+now in `jaala/datalog`), never inside `materialize`'s fixpoint, so no recursive rule can carry `min`
+or `count`; and `Term` is Var/Str/Num with no function symbols, so a path cannot be a value at all.
 
 The engine already computes what the tuple then discards. `(*irModel).Reach` (`core/check/reach.go`)
 is a bounded BFS recording `Parent` (the spanning tree) and `Depth` (a shortest distance, since BFS),
 and `Reach.PathTo` / `ThroughOnPath` return ordered routes today. `reaches` projects only
-`(from, to, hops)`, so the route dies at the boundary. `PullUpPathToRail` is a SECOND independent BFS,
+`(from, to, hops)`, so the route died at the boundary until `route` and `agni trace` shipped (agni
+issue 518, see "A path is not a query column" below). `PullUpPathToRail` is a SECOND independent BFS,
 written because the shared walk refuses bus-like nets and a rail is bus-like.
 
 So the target is three peer shapes over one fact layer, none primary: `check.Spec` for per-entity
 questions (no fact base at all), datalog for joins and closure, and a topology shape for routes and
-subgraphs that does not exist yet (issues 374 and 518). `ruledef.proto` already stated this with
-`oneof body { SpecRule; QueryRule; ProfileDef }`; the code had drifted from its own contract.
+subgraphs that does not exist yet as a relation shape (issue 374). `ruledef.proto` already stated
+this with `oneof body { SpecRule; QueryRule; ProfileDef }`; the code had drifted from its own
+contract.
 
-The honesty gap this section used to name on the datalog path, a rule swallowing an eval error into a
+The gap this section used to name on the datalog path, a rule swallowing an eval error into a
 clean pass, closed in issue 540. `RuleFromQuery` validates and returns an error, `MustRuleFromQuery`
 is the form for a query that ships as code, and an eval failure now reports Inconclusive rather than
 nothing.
 
-**Reopen if** a second query engine actually arrives. The `Evaluator` interface is not that seam — it
-takes `query.Query` and a concrete `*Base`, so it swaps a datalog STRATEGY, not a language. A neutral
-"query IR" is not the answer either: one supporting join, negation and recursion essentially IS
-datalog, so building it in core would mean core owning a query language while pretending not to. The
-engines meet at `*check.Rule` and `facts.Row`, and that is enough.
+**Reopen if** a second query engine actually arrives. The `Evaluator` interface (now in
+`jaala/datalog`) is not a place to plug one in, because it takes `query.Query` and a concrete
+`*Base`, so it swaps a datalog STRATEGY, not a language. A neutral "query IR" is not the answer
+either, because one supporting join, negation and recursion essentially IS datalog, so building it
+in core would mean core owning a query language while pretending not to. The engines meet at
+`*check.Rule` and `facts.Row`.
 
 ---
 
@@ -1338,30 +1385,30 @@ The evaluator moved out of `core/query` into its own module, `github.com/panyam/
 (agni issue 731), so a second graph tool (Declaire) can use it and the language can grow in one
 place. The engine knows nothing about circuits. A host hands it base relations through a `Source`
 and computed predicates through a `Predicates` value. `core/query` stayed at its path as agni's
-adapter: it projects a `check.Model` through a `facts.Registry` into the engine's positional
+adapter, which projects a `check.Model` through a `facts.Registry` into the engine's positional
 tuples, registers `reaches` and `route` as generators over `check.Model.Reach`, and keeps
 `RuleFromQuery`, the wire form, the catalog and the teaching examples. The IR types are aliases,
 so nothing converts at the boundary and no importer changed.
 
 **The split this settles is between base and derived relations.** C29 says authoring a relation
 must not require picking an engine. That still holds for a BASE relation, one projected from the
-Model in Go and registered with `facts.RegisterRelation`: every query shape (Go, `check.Spec`,
-Datalog, the future path shape) can read it. A DERIVED relation, one defined in Datalog over other
+Model in Go and registered with `facts.RegisterRelation`, which every query shape (Go, `check.Spec`,
+Datalog, the future path shape) can read. A DERIVED relation, one defined in Datalog over other
 relations, is different in kind. It belongs to the engine that defines it the way a predicate
 does, and only that engine can read it. Two consequences follow.
 
 - A derived relation that a Go rule or a Spec needs on every run is promoted to a Go base relation
-  rather than read across engines. `component.net_count` is the example: derivable in Datalog once
+  rather than read across engines. `component.net_count` is the example, derivable in Datalog once
   rules can aggregate (jaala#4), and a base relation anyway because Go rules want it.
-- Reading a derived relation from Go, when it is worth doing, goes through an engine-neutral
-  interface in `core/facts` that the Datalog adapter implements (agni issue 739), so `core` still
+- Reading a derived relation from Go, when it is worth doing, will go through an engine-neutral
+  interface in `core/facts` that the Datalog adapter implements (agni issue 739, open), so `core` still
   names no engine.
 
 This is also the sense in which Datalog is a helper rather than a primitive here. Go extends it
 (relations and predicates), and Go can consume what it derives. The primitive is still the Model
 and the fact tuple over it.
 
-**What the extraction measured.** agni's whole suite and every tutorial capture ran unchanged
+**The extraction was measured.** agni's whole suite and every tutorial capture ran unchanged
 against the extracted engine before it was tagged, and the `core/query` benchmarks matched `main`
 within noise. The one regression the first cut showed, 25% more allocation on `reaches`, came from
 the generator interface building fresh slices per solution. The interface now lets a generator
@@ -1386,18 +1433,19 @@ struct. The obvious reading is that the tuple is too narrow. The arity histogram
 | 4-6 | 5 | 5 of 5 |
 
 **The graph tier fits the tuple and always will.** 37 of 49 relations are unary or binary, which is
-what a graph IS: node properties and edges. `rail(net)`, `component-on-net(ref,net)` and
+what a graph IS, node properties and edges. `rail(net)`, `component-on-net(ref,net)` and
 `pin.net(ref,pin,net)` are not straining anything.
 
-**The datasheet tier is not a relation, it is a RECORD**: symbol, min/typ/max, limit kind, unit,
-conditions (a repeated message), provenance (doc/page/table/method/confidence), pin binding, regime.
-Every slot addition and every workaround traces to crushing that record flat. `RangeValue.typ` is
-silently dropped because `Min` and `Num` are spent on the two bounds, surviving only inside a rendered
-string, so a typical value is unbindable and uncomparable. `PinRelationKind` is deliberately not
-published to conserve a slot. `param.unit` exists as a whole relation because there is no unit column.
-`param.prov` puts a page number in `Num`, the slot `BaseUnit` and the dimension guard exist to
-protect. `Cite` is one string per row where `Finding.DatasheetProv` is already a slice for the trust
-gate. The params panel declined the query surface outright, needing the nested spec.
+**The datasheet tier is a RECORD rather than a relation**, holding symbol, min/typ/max, limit kind,
+unit, conditions (a repeated message), provenance (doc/page/table/method/confidence), pin binding,
+regime. Every slot addition and every workaround traces to crushing that record flat.
+`RangeValue.typ` is silently dropped because `Min` and `Num` are spent on the two bounds, surviving
+only inside a rendered string, so a typical value is unbindable and uncomparable. `PinRelationKind`
+is deliberately not published to conserve a slot. `param.unit` exists as a whole relation because
+there is no unit column. `param.prov` puts a page number in `Num`, the slot `BaseUnit` and the
+dimension guard exist to protect. `Cite` is one string per row where `Finding.DatasheetProv` is
+already a slice for the trust gate. The params panel declined the query surface outright, needing
+the nested spec.
 
 **The two tiers meet at exactly one hinge.** All eight `param.*` and `part.*` relations key on `mpn`,
 a PART TYPE identity that appears nowhere in the circuit graph; the graph tier keys on `net` or
@@ -1421,12 +1469,13 @@ The previous section settled that widening `facts.Row` for everyone is the wrong
 question open: how much of the datasheet record stays queryable in the fact base. Issue 541 offered
 three shapes, the middle one of which needed declared typed columns and a `patternMask` past arity 8.
 
-**Answer: the part of the record a query can BIND, and nothing else.** An argument earns a positional
-slot only if it is a join key (`mpn`, `pin`, `symbol`), a comparable scalar (`min`, `max`, `typ`), or
-a closed vocabulary a query filters on (`kind`, `modality`, `function`). Everything else is what you
-READ once a query has found the row: the condition list, condition coverage, `applies_to`, the
-`pin_refs` set, the five parts of provenance, verification, attributes, the raw sentence. Those reach
-a consumer through the record, not through an argument, and `facts.Row` grows no bindable field.
+**The answer is the part of the record a query can BIND, and nothing else.** An argument earns a
+positional slot only if it is a join key (`mpn`, `pin`, `symbol`), a comparable scalar (`min`,
+`max`, `typ`), or a closed vocabulary a query filters on (`kind`, `modality`, `function`).
+Everything else is what you READ once a query has found the row: the condition list, condition
+coverage, `applies_to`, the `pin_refs` set, the five parts of provenance, verification, attributes,
+the raw sentence. Those reach a consumer through the record, not through an argument, and
+`facts.Row` grows no bindable field.
 
 **Two premises the write-up rested on did not survive checking, and both point the same way.**
 
@@ -1445,7 +1494,7 @@ surface: `agni query`, `--speclib`, and the web picker. That turns the open ques
 engine-correctness one into a product one about exploration, which is why it is answerable at all.
 
 Second, **`param.unit` is not a workaround for a missing unit column.** C24 states the opposite
-outright: a unit column would be ADVISORY, since a rule could ignore it and compare raw numbers,
+outright, that a unit column would be ADVISORY, since a rule could ignore it and compare raw numbers,
 which is the failure that constraint exists to prevent. Decomposing into narrow relations sharing a
 key is the codebase's own remedy, adopted on safety grounds rather than to conserve a slot.
 
@@ -1467,36 +1516,38 @@ Failing the bind test and made into an argument anyway, which is what consumed t
   trap issue 541 names, already live.
 
 Fixing the second pair is what makes the first affordable inside today's tuple, because only
-`FieldNum` and `FieldMin` yield a numeric, dimension-carrying `Value` (`fieldValue`, `core/query/source.go`), and
-both are spent on `param.range`'s two bounds:
+`FieldNum` and `FieldMin` yield a numeric, dimension-carrying `Value` (`fieldValue`,
+`core/query/source.go`), and both are spent on `param.range`'s two bounds:
 
-- `param.typ(mpn, symbol, typ)` at arity 3, rather than a sixth column on `param.range`. Separating it
-  is the better shape independently: a typ is NOT a bound, and a rule comparing a rail against one as
-  though it were guaranteed is a wrong answer. Sitting it in the same tuple as min and max is what
-  invites that; its own name makes the misuse visible at the call site.
-- `param.prov`'s page moves from `Num` to `Qualifier`, free on that relation today. Arity stays 5, the
-  tuple is untouched, and the dimension hole closes.
+- `param.typ(mpn, symbol, typ)` at arity 3, rather than a sixth column on `param.range`. Separating
+  it is the better shape independently, because a typ is NOT a bound, and a rule comparing a rail
+  against one as though it were guaranteed is a wrong answer. Sitting it in the same tuple as min
+  and max is what invites that; its own name makes the misuse visible at the call site.
+- `param.prov`'s page moves from `Num` to `Qualifier`, free on that relation today. Arity stays 5,
+  the tuple is untouched, and the dimension hole closes.
 - `PinRelationKind` waits for a second enum member. The enum has one today, so a column would say
   nothing.
 - `Cite` becoming a slice is the one real `facts.Row` change, and it is METADATA rather than a
   bindable slot, so it never reaches `patternMask`, the EDB index, or the scaling benchmarks.
 
-**Why not declared typed columns.** They move the ceiling from seven bindable slots to eight.
+**Declared typed columns lose on cost.** They move the ceiling from seven bindable slots to eight.
 `param.Parameter` has thirteen fields and four parts of the record are REPEATED (`conditions`,
 `pin_refs`, `docs`, citations), and no positional arity holds a repeated field at any width. So that
 option pays the whole cost, reworking `patternMask`, re-proving the index's superset-filter argument,
 and re-running `BenchmarkEvalFlat` / `EvalReach` / `EvalClosure`, and still drops the conditions and
 the pin bindings. It does not solve the problem it was proposed for.
 
-**What this leaves open, and it is the piece that makes the answer honest.** A query answer cannot
+**What this leaves open.** A query answer cannot
 reach the record. `GetComponentParams` is web-only and no CLI command prints one part's spec. "The
 record stays a record" is a way of saying "you cannot have it" until that path exists, so it is the
-follow-on that matters most.
+follow-on that matters most. It closed in agni issue 547, and `agni params <mpn>` now prints the
+record.
 
 **Named relation arguments decouple from this.** Normalization lowers arity, which is most of what
 they were going to buy, so they become their own additive change carrying issue 115's sorts problem.
 The `catalogArgLabels` defect, inferring an argument's entity KIND from a catalog label string, is
-real and independent of both.
+real and independent of both. It was fixed separately when `facts.RelationInfo` gained `ArgKinds`,
+so a relation now declares what each argument denotes.
 
 **Reopen if** a rule genuinely needs to join a REPEATED part of the record inside the fact base: a
 condition list, a `pin_refs` set, several citations. That is the shape no arity fixes, and it would
@@ -1513,13 +1564,13 @@ and is a fully-automated `CONSTRAINTS.md` the target?
 **Answer. No, and the count is the wrong thing to optimise.** A Verify falls into one of three
 shapes, and only the first belongs in a test.
 
-Some rules are STRUCTURAL: the violation is a file, an import, a field, or a call site, and a
+Some rules are STRUCTURAL, where the violation is a file, an import, a field, or a call site, and a
 machine can see it. Those are now tests, and there is no reason to leave one as a command in prose,
 because a command in prose rots. The audit found all four ways it rots. Two of the greps returned
 hits on a clean tree, because the code beneath them had grown legitimate new call sites nobody went
 back to re-approve. Two deferred themselves to work that had since landed. One could not fail at all.
 
-Some rules are REVIEW questions, and no test would be honest. C5 turns on whether an ingestion path
+Some rules are REVIEW questions, which no test can check directly. C5 turns on whether an ingestion path
 was approved, which is a fact about a conversation. C9 asks whether a semantic field has earned its
 place across two formats, which is a judgement about a cross-format map. C21 forbids sourcing
 component identity from a geometry model, and a rule that did would compile and pass. C23 asks
@@ -1527,14 +1578,15 @@ whether a message that owns state is shaped as a resource. Writing a test for th
 one that checks a proxy, and a proxy that passes reads as the rule holding.
 
 And some are checkable in principle but the check needs a hand-maintained list, where the list IS the
-judgement and the test only restates it. C10 is the one: which `examples/` directories are
-capabilities owing a narrated walkthrough, and which are the shared harness or an extension-seam
+judgement and the test only restates it. C10 is the one, since which `examples/` directories are
+capabilities owing a narrated walkthrough, and which are the shared harness or an extension
 template, is a call somebody makes per directory.
 
 **What this leaves open.** C10 stays a review question until the capability set is stable enough that
 a list is worth maintaining, which is recorded in `OUT_OF_SCOPE.md`. Nothing else here is deferred
-work: the thirteen are prose because prose is the correct form for them, and converting one to a
-proxy test would make `CONSTRAINTS.md` less trustworthy rather than more.
+work, since prose is the correct form for the other thirteen as of the audit, and converting one to
+a proxy test would make `CONSTRAINTS.md` less trustworthy rather than more. The split has since moved
+to nineteen gate tests and thirteen review questions.
 
 **Reopen if** a review-shaped rule is violated in the tree and review does not catch it. That is
 evidence the proxy is worth its cost, and it is the same evidence C6 and C20 supplied for their side
@@ -1549,14 +1601,14 @@ connectivity question can be asked over a hundred rows rather than one pair at a
 building the trace command (agni issue 518), which names the query form as one of its pieces.
 
 **Answer. Not as a column on `query.Value`, which is a scalar by declaration.** The cheap version is
-to render the path into `Value.S` and move on. It looks free, and it is not: nothing can join on that
-string, sort it, or count its hops, so every consumer that wants any of those parses the rendering
-back out, and the rendering then becomes a format nobody can change. The honest version gives `Value`
-a non-scalar shape, which is a contract change through `report.Table`, all five output formats, the
-web wire and the fact-schema arg kinds, for one column.
+to render the path into `Value.S` and move on. It looks free and is not, because nothing can join on
+that string, sort it, or count its hops, so every consumer that wants any of those parses the
+rendering back out, and the rendering then becomes a format nobody can change. The version that
+avoids this gives `Value` a non-scalar shape, which is a contract change through `report.Table`, all
+five output formats, the web wire and the fact-schema arg kinds, for one column.
 
-**What to do instead.** Project the path as TUPLES rather than as a value: a `hop(?from, ?through,
-?to, ?i)` relation emitting one row per crossing keeps every column scalar, and the aggregates that
+**Instead, project the path as TUPLES rather than as a value**, with a `hop(?from, ?through,
+?to, ?i)` relation emitting one row per crossing to keep every column scalar, and the aggregates that
 already exist (`count`, `min`, `max`) then answer the questions a path column was wanted for. "Which
 nets reach a rail through more than one resistor" is a `count` over that relation, and it is the
 counting datalog is otherwise unable to do (agni issue 374 names it as a motivating gap).
@@ -1574,17 +1626,17 @@ What was accepted with it, since the objections above were right and none of the
 
 - **Nothing joins, sorts or counts on `path`.** Those questions still want the tuple form, which is
   still unbuilt. `route` answers "show me", never "how many".
-- **The rendering IS a format now.** That was the sharpest objection and it bit within the week: the
-  IO-map rules grew a second implementation of the same string (PR 653), agreeing with the first only
-  because one person wrote both. `model.RenderRoute` is now the single owner and
+- **The rendering IS a format now.** That was the sharpest objection and it bit within the week,
+  when the IO-map rules grew a second implementation of the same string (PR 653), agreeing with the
+  first only because one person wrote both. `model.RenderRoute` is now the single owner and
   `TestRenderRouteIsTheOnlyFormat` holds the two callers to one answer. Treat the format as a
   contract, because it is one.
 - **One route per pair**, the BFS tree path, so `route` cannot answer about parallel paths at all.
 - **It crosses the API boundary as an opaque string, in fields that already existed.** No proto
   changed, which is what made the reversal cheap and is also what hides the cost: the rendering
   travels in `QueryRow.cells` and in a `Witness`, so it is a wire contract with no schema, nothing
-  validating it and nothing versioning it. That is the whole reason `model.RenderRoute` has to be the
-  only producer.
+  validating it and nothing versioning it. That is why `model.RenderRoute` has to be the only
+  producer.
 - **A client cannot make the crossed parts clickable.** The column-kind declaration types `from` and
   `net` as net entities and `path` as a plain string, so a viewer can link both endpoints of a route
   and not the resistor between them. The same route arrives fully structured over `TraceDesign`
@@ -1592,27 +1644,29 @@ What was accepted with it, since the objections above were right and none of the
   fidelity depending on which surface asked.
 
 The tuple form would close that last one as a side effect, since `?through` would carry a component
-kind per row, which is worth knowing when 374 is picked up: it is not only about counting.
+kind per row, which is worth knowing when 374 is picked up, because it is not only about counting.
 
 The tuple form is not superseded. A `hop(?from, ?through, ?to, ?i)` relation remains the right answer
 for counting and joining, and issue 374 still names it; this decided the rendering question only.
+
+---
 
 ## A KiCad part's library prefix is stripped by the WRITER, not by the reader
 
 A KiCad part is named `gateway:CONN4` and sits in a library already called `gateway`, so the
 qualification is spelled twice. EDIF's own library scoping carries it, and a reader that treats the
-qualified form as one name refuses the colon: GNU Electric takes a cell rename's DISPLAY string as
-the cell's name where ours takes the identifier, so a clean identifier beside a qualified display was
-not enough and every KiCad design failed to import. The obvious fix is to stop duplicating the prefix
-in `PartType.name`, at the reader, where it would be cleaner and the writer would need no special
-case.
+qualified form as one name refuses the colon, because GNU Electric takes a cell rename's DISPLAY
+string as the cell's name where ours takes the identifier, so a clean identifier beside a qualified
+display was not enough and every KiCad design failed to import. The obvious fix is to stop
+duplicating the prefix in `PartType.name`, at the reader, where it would be cleaner and the writer
+would need no special case.
 
-The answer is no, and it is a measurement rather than a preference. The prefix is load-bearing in the
-reader: `symLibCache.symbol()` looks up an external `.kicad_sym` by the full `lib_id`, so the library
-half is the key that finds the file. Stripping it upstream does not tidy a name, it breaks symbol
-resolution. Made the change and ran the suite: `unresolved_symbol_test` starts reporting parts that
-resolved fine before, and it reaches 7 packages, 13 named tests, one committed capture, four docsite
-pages and the `classify.PartIndex` join.
+The answer is no, and it is a measurement rather than a preference. The reader needs the prefix,
+because `symLibCache.symbol()` looks up an external `.kicad_sym` by the full `lib_id`, so the
+library half is the key that finds the file. Stripping it upstream breaks symbol resolution. With
+the change made, `unresolved_symbol_test` starts reporting parts that resolved fine before, and it
+reaches 7 packages, 13 named tests, one committed capture, four docsite pages and the
+`classify.PartIndex` join.
 
 So `localName` lives in `readers/edif/writer.go` and stops there. The cost is that a KiCad design
 taken out through EDIF and read back names the part `CONN4` in library `gateway` rather than
@@ -1622,6 +1676,8 @@ asserts otherwise.
 Reopen if the reader gains a separate field for the library-qualified `lib_id`, which would let
 `PartType.name` be local without the symbol cache losing its key. That is the shape that makes the
 upstream fix cheap; until then it is a rename that costs a resolver.
+
+---
 
 ## The coverage rollup renders as markdown alone, and refusing beats giving it more formats
 
@@ -1641,7 +1697,7 @@ page carries the same rollup in its header band, above the items it summarises: 
 and the outcome split. Someone who wants a coverage page already has one, with the per-item detail
 underneath it, which is strictly more than the rollup alone would give them.
 
-**What to do instead.** Point the caller at `--format html` without `--coverage`. The refusal message
+**Instead, point the caller at `--format html` without `--coverage`.** The refusal message
 does exactly that, because an error that names the thing you actually wanted costs nothing and a bare
 "unsupported combination" would send someone to file this ticket.
 
@@ -1649,22 +1705,24 @@ does exactly that, because an error that names the thing you actually wanted cos
 the only one with a real gap behind it. That wants a wire message first, and at that point the
 markdown renderer becomes one projection of it rather than the source of truth.
 
+---
+
 ## A component class is a built-in, and letting a project declare one is a different question
 
 **Question.** A thermistor had no device class, so it was invisible to every class-scoped rule and
 query (agni 627). Should the fix be a new built-in class, or should a project be able to declare the
 class it needs without waiting for a release?
 
-**Answer. Built-in for this one, and the configurable form is a separate ticket rather than a
-better version of the same fix.** `RT` sitting beside `RN` in the prefix table is a gap in the
-STOCK vocabulary: a stock read of a stock board should classify a thermistor, whatever any project
+**Answer. Built-in for this one, and the configurable form is a separate ticket rather than a better
+version of the same fix.** `RT` sitting beside `RN` in the prefix table is a gap in the STOCK
+vocabulary, because a stock read of a stock board should classify a thermistor, whatever any project
 does or does not configure. Fixing it by asking every project to write a lexicon block would be
 shipping a hole and a workaround together.
 
-**What the investigation turned up, which is the more interesting half.** A project cannot declare
+**The investigation turned up a second question.** A project cannot declare
 a class of its own. `resolveHint` walks a fixed `hintPriority`, `classFamily` is a fixed map, and
 ref-des prefixes were not configurable at all. That is agni 677, and it is a different question from
-627: one is a missing entry, the other is whether the vocabulary is open.
+627, because one is a missing entry and the other is whether the vocabulary is open.
 
 **Correction, found working 677.** This entry first said a `lexicon.class` block naming an unknown
 class "parses, loads, and does nothing". It never did. `naming.BuildLexicon` refused the name at load
@@ -1688,23 +1746,23 @@ argued about in this repo, 677 is the answer rather than a third entry in the ta
 `/DCDC/12V_FB` answered 12 (agni 679). The relation is gated on the rail role, and the obvious fix is
 to make that gate reject a feedback node. Where does the row go then?
 
-**Answer. Nowhere, and that is the whole decision.** `net.nominal_voltage` and `net.signal_level`
-were deliberately exhaustive and disjoint over the nets whose names parse a voltage token: rail-role
-nets on one side, everything else on the other. That was agni 194's fix and it was right for what it
-addressed, a house convention encoding a signalling level into a signal net's name.
+**Answer. Nowhere.** `net.nominal_voltage` and `net.signal_level` were deliberately exhaustive and
+disjoint over the nets whose names parse a voltage token, with rail-role nets on one side and
+everything else on the other. That was agni 194's fix and it was right for what it addressed, a
+house convention encoding a signalling level into a signal net's name.
 
 A regulator internal fits neither side. `12V_FB` is not a 12V rail, and it is not a 12V signalling
-level either, because the number in its name is a DIFFERENT net's voltage: the tap sits at the
+level either, because the number in its name is a DIFFERENT net's voltage, and the tap sits at the
 regulator's internal reference, typically 0.6V to 0.8V. So flipping the rail gate alone moves eight
 wrong rows from one relation to the other and restates the identical wrong number under a relation
 that claims less. A relation that cannot say what a net carries should say nothing.
 
-The cost is real and worth naming: exhaustiveness was a property a consumer could rely on, and it is
+The cost is real. Exhaustiveness was a property a consumer could rely on, and it is
 gone. What it buys is that neither relation states a number we know to be false.
 
-**The precedence change that came with it.** `classify.rolesFor` used to say outright that when a net
-carries two roles, precedence between them is the consumer's call. That is now false for one pair:
-`feedback` and `switching` both mean "a rail-named net that is not a rail", and `Model.IsRailNet`
+**A precedence change came with it.** `classify.rolesFor` used to say outright that when a net
+carries two roles, precedence between them is the consumer's call. That is now false for one pair,
+`feedback` and `switching`, which both mean "a rail-named net that is not a rail", and `Model.IsRailNet`
 settles it once. The old arrangement is exactly what produced the bug. Seven rail-quantified
 consumers read this model, and exactly one, the test-point rule, had remembered to exclude feedback
 for itself. A consumer that genuinely wants every rail-NAMED net still has `IsPowerRailName`.
@@ -1729,19 +1787,19 @@ extended the vocabulary was the engine itself. Meanwhile the tokens lived only a
 other language could see them, and two roles the engine acts on went a release unprojected because
 adding one was expensive.
 
-**What closing bought, and what it did not.** It bought one definition generated for Go and
-TypeScript, a derived token (`RoleToken` strips the enum prefix, so the strings cannot drift from the
-vocabulary), a derived value list, and `ParseRole` refusing a token the vocabulary does not have. It
-did NOT buy exhaustive switches: Go does not check enum switch exhaustiveness and this repo runs no
-linter, so `nameMatcherFor`'s default still silently returns a never-matches function and
-`TestEveryRoleHasANameMatcher` is what actually holds it.
+**Closing bought some things and not others.** It bought one definition generated for Go and
+TypeScript, a derived token (`RoleToken` strips the enum prefix, so the strings cannot drift from
+the vocabulary), a derived value list, and `ParseRole` refusing a token the vocabulary does not
+have. It did NOT buy exhaustive switches, because Go does not check enum switch exhaustiveness and
+this repo runs no linter, so `nameMatcherFor`'s default still silently returns a never-matches
+function and `TestEveryRoleHasANameMatcher` is what actually holds it.
 
-**If it is ever opened, it opens as a REGISTRY** of declared role types keyed by name, with the enum's
-members as pre-registered entries. The enum then becomes a generated convenience rather than a
-competing model, so no consumer learns two representations. That is the shape `facts.Registry` and
+**If it is ever opened, it opens as a REGISTRY** of declared role types keyed by name, with the
+enum's members as pre-registered entries. The enum then becomes a generated convenience rather than
+a competing model, so no consumer learns two representations. That is the shape `facts.Registry` and
 `check.Catalog` already use, and `Registry.Installed` is the property that makes it better than the
-string: it separates "no such role" from "no roles at all". A class block naming a class that does
-not exist is already refused at load; a registry is what would let it be declared instead.
+string, because it separates "no such role" from "no roles at all". A class block naming a class
+that does not exist is already refused at load; a registry is what would let it be declared instead.
 
 **The thing to avoid** is opening it later WITHOUT that framing, and ending up with an enum for known
 roles and a string for custom ones, with every consumer handling both.
@@ -1761,18 +1819,19 @@ constants, a parse that refuses an unknown value. Should the class go the same w
 **Answer. No. The class stays a string inside `ComponentClassTag`, and the two decisions differ
 because the vocabularies are heading in opposite directions.**
 
-The role vocabulary closed because nothing could ever extend it: the lexicon has one field per role,
-so only the engine could add one, and the openness cost two languages' worth of duplication for a
-capability nobody had. The class vocabulary is the mirror image. `lexicon.class` already lets a
-project EXTEND a shipped class with its own patterns and prefixes, agni 677 is a project asking to
+The role vocabulary closed because nothing could ever extend it, since the lexicon has one field per
+role, so only the engine could add one, and the openness cost two languages' worth of duplication
+for a capability nobody had. The class vocabulary is the mirror image. `lexicon.class` already lets
+a project EXTEND a shipped class with its own patterns and prefixes, agni 677 is a project asking to
 declare a class the engine does not ship, and the answer recorded for that is a registry. An enum
 would be in the way of the thing already on the roadmap, and would have to be unwound to get there.
 
-**What we give up.** The class tokens stay Go constants plus `model.ComponentClasses`, so the viewer
-cannot enumerate them from a generated list, and `TestComponentClassesListsEveryConstant` is what
-holds the hand-kept list to the const block. That is the cost the role entry above measured and
-refused. It is the right trade here only because the registry is the destination: when it lands, the
-class names become registry keys and the string is already the right representation.
+**This gives up a generated list.** The class tokens stay Go constants plus
+`model.ComponentClasses`, so the viewer cannot enumerate them from a generated list, and
+`TestComponentClassesListsEveryConstant` is what holds the hand-kept list to the const block. That
+is the cost the role entry above measured and refused. It is the right trade here only because the
+registry is the destination, and when it lands the class names become registry keys and the string
+is already the right representation.
 
 **A datasheet may also state a class the engine does not know** ("regulator" is in the tutorial
 project's own corpus today). It is kept as written rather than dropped, since an unrecognised class is
@@ -1801,7 +1860,7 @@ or established by a DATASHEET pin function; an attribute is a bare string with n
 Nothing in production reads provenance today, but a third column on `net.role` is a natural home for it
 and a fourth column on a general key/value relation is not.
 
-**Worth knowing:** the two are a pipeline rather than rivals. `AttrDeclaredRole` is
+**The two are a pipeline rather than rivals.** `AttrDeclaredRole` is
 `attributes["declared_role"]`, which a reader writes and `rolesFor` reads out and unions into `roles`
 with source DECLARED. Attributes are the input channel; roles are the normalized output.
 

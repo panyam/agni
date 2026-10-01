@@ -8,13 +8,13 @@ Enforceable architectural rules for this project. Background and rationale in
 ## How these are enforced
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
-that to being true, because a rule with nothing to run is not enforceable and that is exactly how C6
-went unchecked. A Verify is one of two things. Eighteen are TESTS the gate runs, so a violation
-turns CI red. Fourteen are REVIEW questions, and each says what a reviewer should ask instead. That second
-number is the one to watch, and C32 is why: it joined the review column knowing its test was missing
+that to being true, because a rule with nothing to run is not enforceable, and C6 went unchecked
+that way. A Verify is one of two things. Nineteen are TESTS the gate runs, so a violation
+turns CI red. Thirteen are REVIEW questions, and each says what a reviewer should ask instead. That second
+number is the one to watch, because C32 joined the review column knowing its test was missing
 rather than by deciding a machine could not answer it, and left again once the test existed. So a
 review question is either "no test is possible" or "no test yet", and the two read alike from here. C15 carries no Verify at all because it was merged into C17
-and kept as a tombstone. None is a command typed into this document for someone to remember to run, and a new
+and kept as a tombstone. None is a bare command that the gate does not run, and a new
 rule must not add one.
 
 A test goes in one of three places, and what it READS decides which. The package graph and the module
@@ -33,8 +33,8 @@ already violated them: `readers/telesis` declared no fidelity contract (C6) and
 `stdlib/rules/intent/protections.go` re-derived ground from net names in the check path (C20).
 
 Both violations were found by reading, not by anything failing. That is the argument for a test over
-a command: both halves of a structural violation compile and pass, so nothing surfaces one until
-somebody re-reads the rule, and a rule nobody re-reads is not a constraint. C29's Verify was a command
+a command, because both halves of a structural violation compile and pass, so nothing surfaces one
+until somebody re-reads the rule. C29's Verify was a command
 for exactly three PRs before it went stale, and C13's was one for one PR.
 
 ## C1: Engine logic in Go, view in TS, core runtime-agnostic
@@ -114,13 +114,14 @@ the reader's package doc alongside its fidelity declaration (C6), which is the a
 ## C6: Readers declare a fidelity contract
 **Rule:** Each reader declares its fidelity (lossless or lossy-bounded). Lossless
 readers must pass the round-trip oracle (parse then emit is identity) on the corpus.
-**Why:** honest losslessness; automated validation tames the parser treadmill.
+**Why:** a lossless claim is proved by the round-trip oracle rather than asserted, and automated
+validation tames the parser treadmill.
 **Verify:** `TestC6EveryReaderDeclaresFidelity` (`internal/constraints`) requires every package under
 `readers/` other than the registry to carry a `// Fidelity: ...` line in a non-test file. The
-declaration is a doc comment rather than a typed field because what it has to say is prose: WHICH
+declaration is a doc comment rather than a typed field because what it has to say is prose, naming WHICH
 subset survives the read and what is dropped, which a `Fidelity` enum would reduce to the word
 "lossy-bounded" and none of the bound. A machine can hold the line to existing; whether the bound it
-states is honest is a review question. `readers/telesis` shipped in August 2026 with no declaration
+states is accurate is a review question. `readers/telesis` shipped in August 2026 with no declaration
 at all and nothing said so, because this constraint carried no Verify until the audit.
 
 ## C7: Heavy ops server-side; presenter runtime is per-surface
@@ -160,13 +161,13 @@ format's** reader would populate it. Until then it lives in a node's `attributes
 the format-fidelity layer (`FidelityFragment`). Entities with no reader yet are labeled
 **provisional** in the proto and are not relied on until verified against real files.
 
-**Carve-out — DERIVED-NORMALIZATION fields (WS3-071).** A field that no reader populates but a
+**DERIVED-NORMALIZATION fields are a carve-out (WS3-071).** A field that no reader populates but a
 **format-neutral shared pass** derives once at ingestion (over the already-read IR, in
 `formats`/`classify`, never per-reader) is admitted directly, because it is format-neutral by
-construction rather than by the two-reader test — every format populates it via the same pass. Such a
+construction rather than by the two-reader test, since every format populates it via the same pass. Such a
 field MUST: (a) be derived by one shared pass, not by any reader; (b) carry a doc comment marking it
 DERIVED-NORMALIZATION and naming the pass; (c) degrade safely when absent (a design built without the
-pass — a hand-authored test IR — leaves it empty and the consumer re-derives as a fallback, never
+pass (a hand-authored test IR) leaves it empty and the consumer re-derives as a fallback, never
 treats empty as a fact). Note what (c) asks of a SECOND tier writing the same field: EMPTY is the
 signal to re-derive, so a tier writing its own answer into a set no earlier tier has filled leaves a
 partial set, and the fallback is defeated rather than triggered. `check.NewModelWithParams` runs the
@@ -176,28 +177,28 @@ First instance: `Component.device_classes` (the classify pass); second:
 WS3-118 value pass, `classify.StampValues`). This is the **left-shift** rule:
 interpret conventions at the edge, carry normalized facts in the core.
 
-**Attribute variant (agni issue 519).** `classify.StampMPN` normalizes an ATTRIBUTE rather than a
-typed field: it promotes a manufacturer part number to the canonical `MPN` component attribute from
+**The carve-out has an attribute variant (agni issue 519).** `classify.StampMPN` normalizes an
+ATTRIBUTE rather than a typed field, promoting a manufacturer part number to the canonical `MPN` component attribute from
 whatever key the format spelled it in, and from the part type when the placement carried none. It
 obeys (a)-(c) unchanged. It is called out separately because attributes are normally the
 PRE-promotion home under this constraint, so a shared pass writing one is worth noticing rather than
 copying by reflex. The open question it raises is whether `mpn` should become a typed IR field, which
 it would now pass the two-reader test for; until that is answered the pass keeps every format
-consistent without a proto change. What it must NOT become is a per-reader promotion again: that was
-the bug, EDIF carried both halves privately and every other format silently resolved nothing.
+consistent without a proto change. What it must NOT become is a per-reader promotion again, which was
+the bug when EDIF carried both halves privately and every other format silently resolved nothing.
 
-**Fill variant (WS3-072).** The same discipline extends to FILLING an EXISTING reader-populated field to
-a more-specific value where the reader was UNDER-SPECIFIED — not only to ADDING a new field. A shared
+**A fill variant covers an under-specified value (WS3-072).** The same discipline extends to FILLING an EXISTING reader-populated field to
+a more-specific value where the reader was UNDER-SPECIFIED, not only to ADDING a new field. A shared
 ingestion pass may promote an under-specified value under the same (a)–(c) rules (one shared pass; a doc
-comment naming it; degrade-safe — the reader's original value stands if the pass did not run), with one
+comment naming it; degrade-safe, so the reader's original value stands if the pass did not run), with one
 added guard: it promotes ONLY where the reader was under-specified and NEVER overwrites a confident
 value. First instance: `classify.StampPowerInPins` fills `ir.Pin.direction = POWER_IN` on a supply-named
-pin whose direction is input/inout/unspecified (a format that cannot type power pins — EDIF — leaves a
+pin whose direction is input/inout/unspecified (a format that cannot type power pins, such as EDIF, leaves a
 VDD pin plain INPUT), so `PinDir == POWER_IN` works format-neutrally; a confident OUTPUT/POWER_OUT is left
-untouched. The fill variant normalizes; it does not fabricate — the value it writes is the one the format
+untouched. The fill variant normalizes; it does not fabricate, because the value it writes is the one the format
 could not express, not a guess.
 
-**Evidence-tier variant (agni issue 280).** "ONE shared pass" assumed every input a derived field
+**An evidence-tier variant relaxes the one-pass rule (agni issue 280).** "ONE shared pass" assumed every input a derived field
 needs is available at ingestion. That stopped being true when the datasheet tier arrived: params are
 attached at MODEL construction, after the read, so a field derivable from a vendor pin function
 cannot be filled by the ingestion pass at all. The rule softens to **one shared pass PER EVIDENCE
@@ -235,15 +236,16 @@ surface) ships with a runnable example under `examples/`, following
 lives in a sidecar `walkthrough.md`, reading only bundled synthetic fixtures, in its own Go
 module so demokit and its terminal-UI deps stay out of the engine's go.mod.
 **Why:** the examples are executable docs and a second consumer of the public API, which
-keeps that API honest and gives every feature a legible entry point. Per-example modules
+exercises that API from outside the engine and gives every feature a legible entry point. Per-example modules
 preserve the shippable-engine goal (the engine `go.mod` stays lean, C1).
 **Verify:** each capability has an `examples/<name>/` with a `walkthrough.md` and its own
 `go.mod`; examples read fixtures from `examples/common/designs/` only (synthetic and
-redistributable, never a real board, C5). Three directories owe no `walkthrough.md` and are not
-exceptions to the rule so much as not capabilities: `examples/common` is the shared harness the
-walkthroughs run on, and `examples/extension` and `examples/extension-template` demonstrate the
-extension SEAMS (C18) rather than an engine capability, so each carries a `README.md` and a test
-instead of a narrated run.
+redistributable, never a real board, C5). Four directories owe no `walkthrough.md` and are not
+exceptions to the rule so much as not capabilities. `examples/common` is the shared harness the
+walkthroughs run on, `examples/tutorial-project` is the fixture the docsite tutorial runs on, and
+`examples/extension` and `examples/extension-template` demonstrate the extension POINTS (C18) rather
+than an engine capability, so each of those two carries a `README.md` and a test instead of a
+narrated run.
 
 ## C11: Server-rendered shell, framework islands at the leaves
 **Rule:** Web pages are server-rendered (goapplib + templar) and routing is server-owned:
@@ -256,7 +258,7 @@ bespoke WebGL canvas is one such island and stays a semantic-command surface (C3
 one level up in the build system) while still using modern reactivity where it earns its
 place. Server routing plus per-page islands, not an SPA (thesis Principles 3, 5, 7; the
 goapplib presenter-contract reference).
-**Corollary — the composition root is the fourth edit, and it is tested.** An island is only real
+**As a corollary, the composition root is the fourth edit, and it is tested.** An island is only real
 once `main.ts` constructs it and passes its view to the presenter. Because the `ViewSink` ports are
 optional (so an embedding host may leave a panel out, C13 / `build/extending.md`), an unwired port is a
 silent no-op rather than a type error, and no panel-level test can see it: every one of them supplies
@@ -269,7 +271,7 @@ dependencies; each interactive surface is an island mounted into a server-render
 `cd web && pnpm exec vitest run src/composition.test.ts src/browse.test.ts src/datasheets.test.ts`
 boots each page's real entry point against its real template and fails on a hole that nothing mounts,
 a `ViewSink` port nothing wires, or a client the presenter never receives. **Every page has a
-composition root, so every page needs one of these**: the viewer's test was the only one for a while,
+composition root, so every page needs one of these.** The viewer's test was the only one for a while,
 and in that time the browse page's root went untested and the workbench's shipped a deep link that
 recorded nothing (agni issues 136 and 318).
 
@@ -298,12 +300,12 @@ comes from `Style`, which is the rule being obeyed.
 importable package (`service/`), never in `package main` and never under `internal/`, and are
 **transport-neutral**: every method carries a plain protobuf signature
 (`(ctx, *pb.XRequest) (*pb.XResponse, error)`) and classifies its errors with the package's
-sentinels — no `connectrpc`/gRPC/transport imports. Transports are thin adapters over them:
+sentinels, with no `connectrpc`/gRPC/transport imports. Transports are thin adapters over them:
 Connect today (`internal/server`, wrap/unwrap plus one sentinel-to-code table), grpc-gateway
 or a real gRPC server later as siblings. The services take their I/O concerns as **injected
-ports** — a filesystem/opener interface for reading mounted designs and resolving secondary
-files (KiCad sibling schematics, xschem/gEDA `--symbol-path`), and later a persistence port
-for the datasheet/parameter store — never `os`/`syscall/js` directly. `cmd/agni` (and any
+ports** and never touch `os`/`syscall/js` directly. One is a filesystem/opener interface for reading
+mounted designs and resolving secondary files (KiCad sibling schematics, xschem/gEDA
+`--symbol-path`), and a persistence port for the datasheet/parameter store comes later. `cmd/agni` (and any
 other entrypoint: a WASM build, a cloud function) is thin wiring that constructs the platform
 adapter and hands the services to a transport. Protos split **per service concern**
 (`workspace.proto`, `design.proto`, `checks.proto`, `diff.proto`, ...), never a per-transport
@@ -318,47 +320,47 @@ too (the lilbattle services.go shape: gRPC-style impls, transports as translatio
 lived in `internal/service/` until the SDK work, which satisfied every clause of this rule except the
 first one and made the heading false: an extension at `github.com/yourorg/...` could not name the
 package at all, so option 3 (embed the engine as a library) could not reach option 1 (the web
-console) without forking `cmd/agni`. `examples/resolve-design` is the proof it was a real gap and not
-a theoretical one. It reaches the tier only because its own module path is nested under
-`github.com/panyam/agni/`, which is to say we shipped an embedding example no embedder could
-reproduce. `artifact` moved with it, because `artifact.URI` is in the loader ports' signatures and a
-port an embedder cannot name is not a port.
+console) without forking `cmd/agni`. `examples/resolve-design` shows the gap was real. It reaches
+the tier only because its own module path is nested under `github.com/panyam/agni/`, which is to say
+we shipped an embedding example no embedder could reproduce. `artifact` moved with it, because
+`artifact.URI` is in the loader ports' signatures.
 **Verify:** no `os.`, `syscall/js`, or `connectrpc.com` imports in `service/` impl
 files (`service/transport_guard_test.go` runs the transport check in CI); service
 constructors take ports; `cmd/agni` builds the OS-backed adapters and registers
 `internal/server` wrappers via the generated Connect handlers (C2); `protos/agni/v1/webapi/`
 holds one file per service; and `TestEmbeddingSurfaceIsImportable` (`deps_test.go`) fails if any
 package an embedder is documented to import moves back under `internal/`. That was a `go list` line
-here when the tier moved, which is exactly the shape C29's Verify had before #542 replaced it with a
+here when the tier moved, the same shape C29's Verify had before #542 replaced it with a
 test, on the grounds that it went stale within three PRs because nothing ran it.
 
 ## C14: Rule classification is open tags, not typed fields
-**Rule:** A `check.Rule`'s typed fields are only what the engine acts on — `Name`, `Severity`,
+**Rule:** A `check.Rule`'s typed fields are only what the engine acts on: `Name`, `Severity`,
 `Reads` (its fact dependencies), `Eval` (which MAPS every subject to a verdict), and
 `StatesConsideredSet` (whether those verdicts are the full considered set or only the failures),
+and the other behavioural fields the engine reads, such as `OptionalReads` and `SubjectShape`,
 plus the prose (`Summary`/`Impact`/`Remedy`/`Detail`). Every
-classificatory axis — category, tier, distribution, and any provider-defined one — lives in an open
+classificatory axis (category, tier, distribution, and any provider-defined one) lives in an open
 `Tags map[string]string`, never as a typed struct field. Availability derives from `Reads` (a rule
 that reads a fact whose provider layer is absent is unavailable), not a stored track/label field.
-Consumers take the rule catalog as an injected `[]*check.Rule`, not the `check.Rules` global.
-**Why:** the set of classification axes is open and provider-specific — rules will come from a
+Consumers take the rule catalog as an injected value (a composed `*check.Catalog`), never a package global.
+**Why:** the set of classification axes is open and provider-specific, because rules will come from a
 Phase-2 DSL and from integrators embedding Agni (customer suites outside `core/check`), so a closed
 column schema would force a core change per axis and force external authors to populate
 Agni-internal fields. Tags keep the catalog extensible (a browsable UI groups/filters by whatever
-keys are present) and keep the rule model from overfitting to today's axes — the earn-its-place
+keys are present) and keep the rule model from overfitting to today's axes, the earn-its-place
 discipline of C9 applied to the rule catalog. (This reversed a first cut that typed `Track` and
 `Distribution` as fields.)
 **Verify:** the `check.Rule` struct carries a `Tags map[string]string` and no per-axis
 classification fields beyond the behavioral core; `check.Available` reads `r.Reads`, not a track
-field; `NewDesignService` takes a `[]*check.Rule` parameter.
+field; `NewCheckService` and `NewReviewService` take the composed catalog as a `*check.Catalog` parameter.
 
 ## C15: Readers never import the presentation tier (MERGED INTO C17)
 
-**Superseded by [C17](#c17-layered-dependencies--the-contract-and-reader-tiers-depend-downward-only).**
+**Superseded by [C17](#c17-the-contract-and-reader-tiers-depend-downward-only).**
 C17 always said outright that it "subsumes C15 and generalizes it to the whole heavy tail", and its
 check is a strict superset: `core/render` and `core/svg` are two of the seven paths C17 forbids the
 reader tier. Two constraints over one invariant meant two places to update and two Verifies to keep
-honest, so the specific case folded into the general one and C17 absorbed what C15 said about
+current, so the specific case folded into the general one and C17 absorbed what C15 said about
 `internal/geomath` and about pins landing where symbols are drawn.
 
 The number is retired rather than reused, so a comment or commit citing C15 still resolves.
@@ -369,7 +371,7 @@ The number is retired rather than reused, so a comment or commit citing C15 stil
 repo, never redistributed, and never assumed to exist outside one deployment
 (`SourceDoc.locator` is corpus-local by design). The shippable artifacts of the
 datasheet layer are the engine, the schemas (param/doc/derive protos), the rules, and
-recipes — recipes carry vendor LAYOUT knowledge (which table headings mean what), never
+recipes. A recipe carries vendor LAYOUT knowledge (which table headings mean what), never
 extracted values. Stores for the customer-boundary artifacts sit behind injected ports
 (C13). Committed fixtures are hand-authored or synthetic; hand-transcribed real values
 in test fixtures cite their source (facts are not copyrightable; documents are).
@@ -381,45 +383,45 @@ problem and makes the customer's accumulated seed + patches their compounding as
 (fixtures under `*/testdata/` excepted); `param`/`doc`/`derive` packages take `fs.FS`
 or readers, never fetch.
 
-## C17: Layered dependencies — the contract and reader tiers depend downward only
+## C17: The contract and reader tiers depend downward only
 **Rule:** The dependency graph is layered so the low tiers can be consumed (and one day carved
 into their own modules) without dragging the application tail. The generated contract
 (`gen/`: IR + geom + param/doc protos) imports no first-party `agni` package. Format readers
 (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`, `telesis`, and any future reader) and
 the reader registry (`readers/formats`) depend
-only downward — on the contract and shared parse/geom helpers — never on the presentation tier
+only downward, on the contract and shared parse/geom helpers, and never on the presentation tier
 (`core/render`, `core/svg`) or the application tiers
 (`service/`, `internal/server/`, the web transport, `servicekit`, `connectrpc`).
 `readers/formats` is public (not `internal/`) precisely so an out-of-module reader registers through it
-(WS12-003); that is the ONE reader extension seam. This absorbs the retired C15 (readers ⊅
+(WS12-003); that is the ONE extension point for readers. This absorbs the retired C15 (readers ⊅
 `render`/`svg`) and generalizes it to the whole heavy tail. Geometry math a reader and a renderer both
 need (placement transforms, pin world positions) lives in `internal/geomath`, imported by both sides,
 so "pins land where symbols are drawn" holds by shared code rather than by a reader reaching up into
 the renderer for its helper.
 **Why:** the open-core extension, and any future ecosystem reader, depends on the contract plus the
-registry — not on the web/serve tier. Go module-graph pruning already keeps that dependency light
+registry, not on the web/serve tier. Go module-graph pruning already keeps that dependency light
 *because* the layering holds; a stray import from a reader up into `internal/server` would pull
 servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
-the seam clean now so the split stays a rename, not a refactor.
+the reader tier's imports clean now so the split stays a rename, not a refactor.
 **Verify:** `TestReaderTierDependsDownwardOnly` and `TestContractImportsNoFirstPartyPackage`
 (`deps_test.go`), which run `go list -deps` over the two tiers, so the check is over the
 TRANSITIVE graph rather than over anyone's import block. Both carry a positive control: a result
 naming no package under the pattern fails rather than reading as clean, because a mistyped or
-renamed-out-from-under-it pattern is exactly the edit that would make a graph check vacuous.
+renamed-out-from-under-it pattern would otherwise leave a graph check vacuous.
 
 ## C18: The public engine never imports the extension (dependencies point extension → engine)
 **Rule:** The open-core structure is a public Apache-2.0 engine and a private *extension* that
 depends on it (Go `require github.com/panyam/agni`) to add proprietary-format readers,
 house-style/private rules, and private design data. Dependencies point **extension → engine
 only**: no engine package may import an extension, and the engine `go.mod` requires no extension
-module. An extension contributes exclusively through the public extension seams — `formats.Register`
-(readers, WS12-003) and `check.RegisterSource` (rules, WS12-004) — never by the engine reaching
+module. An extension contributes exclusively through the public extension points, `formats.Register`
+(readers, WS12-003) and `check.RegisterSource` (rules, WS12-004), never by the engine reaching
 into it. The reference extension lives at `examples/extension/` (its own module, `replace => ../..`);
 a real extension is a separate private repo (the open-core doc).
 **Why:** the split only holds if the arrow points one way. An engine that imported an extension
-would drag private/customer code into the shareable, open-source repo — the whole reason the
+would drag private/customer code into the shareable, open-source repo, and keeping it out is why the
 extension exists (the C16 datasheet posture generalized to all of readers, rules, and data). It is
-also what lets the engine be published while extensions stay closed. The seams are global registries
+also what lets the engine be published while extensions stay closed. The extension points are global registries
 the extension writes into at init/main, so the engine is composed *by* the extension, never coupled to
 one.
 **Verify:** `TestEngineModuleRequiresNoExtension` (`deps_test.go`), which reads `go.mod`
@@ -437,24 +439,24 @@ where the arrow could actually reverse, so `go.mod` is what the test reads.
 projection with indexes and member-method reads), not by taking a raw `*ir.Design` and scanning its
 slices. The target is a *helper handed the whole design to scan*, not an *analysis that takes designs
 as its input*. A raw `*ir.Design` (or `*ir.Net`/`*ir.Component`) parameter is allowed in three
-categories: (1) **producing** the IR — the readers (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`,
+categories: (1) **producing** the IR, meaning the readers (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `telesis`,
 `geda`), the `readers/formats` loader, `internal/netgraph` (IR emission); (2) **constructing** the Model or
-**loading** the design — `check`'s `NewModel`/`NewModelWithBoard`/`NewModelWithParams`/`RunDesign`,
+**loading** the design, meaning `check`'s `NewModel`/`NewModelWithBoard`/`NewModelWithParams`/`RunDesign`,
 and the `cmd/agni`/`service` loaders that read a file and build the Model; (3) a
-**top-level analysis/transform that takes designs as its input and uses no Model index** — `diff`
+**top-level analysis/transform that takes designs as its input and uses no Model index**, meaning `diff`
 (compares two designs, builds its own by-key match maps), `validate`, and `graph` (netlist→layout).
 These consumer packages (`diff`, `validate`, `graph`) and the producers are excluded from the
-`make ir-model-check` scan wholesale; `examples/` too (demos). Everywhere else — a helper in `check`,
-`service`, `cmd` handed a design to read — goes through `model.Model`; a read the Model lacks
+`make ir-model-check` scan wholesale; `examples/` too (demos). Everywhere else (a helper in `check`,
+`service`, `cmd` handed a design to read) goes through `model.Model`; a read the Model lacks
 is added as an indexed member method (the `HasComponent`/`IsPowerRail`/`SourceFormat` precedent),
 never re-scanned inline.
 **Why:** `ir.Design` is an index-less message, so every helper that scans it re-walks O(n) per call;
 the Model builds the indexes once and hands out O(1) reads, and it is the single place a hot read
-gets optimized without touching call sites. It is also a readability contract — a `Model` parameter
+gets optimized without touching call sites. It is also a readability contract, because a `Model` parameter
 marks processing code, a `*ir.Design` parameter marks the I/O boundary. Enforced **incrementally** (a
 ratchet, `make ir-model-check`): the rule binds new code immediately; the existing raw-`*ir.Design`
 sites are grandfathered in `hack/ir_model_baseline.txt` and migrate opportunistically, each removal
-ratcheting the baseline down — never a big-bang rewrite. The read-surface contract itself lives in
+ratcheting the baseline down, never in a big-bang rewrite. The read-surface contract itself lives in
 package `model` (WS1-043): the `Model` interface and its value types, importing only the generated
 `ir`/`geom`/`param` protos, so a consumer depends on the contract, not the `check` implementation
 (rules + `param` logic + `irModel`); `check` implements it and re-exports the names as aliases. The
@@ -462,13 +464,13 @@ genuine helper smells have been migrated (`LocateReason`, the `service` sheet-an
 helpers, `check.Available`); the baseline that remains is the sanctioned construction/loading sites
 (`NewModel*`, `readDesign`, the loader) plus a CLI render helper (`compareLayouts`), which the
 ratchet holds flat.
-**Verify:** `make ir-model-check` returns clean — no `func … *ir.Design …` parameter outside the
+**Verify:** `make ir-model-check` returns clean, meaning no `func … *ir.Design …` parameter outside the
 allowed paths that is not already grandfathered in `hack/ir_model_baseline.txt`; a new one fails the
 gate (which `make testall` runs).
 
 ## C20: Convention interpretation is left-shifted to ingestion; the check path reads normalized facts
-**Rule:** Convention-specific interpretation — net names to roles (rail/ground/feedback), part text to
-a class, house naming to meaning — happens once at ingestion/normalization and is stored as a
+**Rule:** Convention-specific interpretation, such as net names to roles (rail/ground/feedback), part text to
+a class, or house naming to meaning, happens once at ingestion/normalization and is stored as a
 normalized IR fact (`net.role`, `device_classes`). The check path (rules, the query engine) reads those
 facts and MUST NOT re-run convention matching per-entity-per-rule. Convention VOCABULARIES are config
 with built-in defaults (the naming lexicon WS3-069, the class lexicon WS3-070); they are APPLIED at the
@@ -498,13 +500,13 @@ deferred Verify is not a Verify, and nothing re-reads the sentence that defers i
 the rules and findings computed over them) is sourced from the NETLIST the design team produces (for
 OrCAD/Allegro that is the `.edn` netlist view; for KiCad the schematic/PCB, which carry the netlist
 inline). A schematic-view or board file supplied ALONGSIDE it
-(an OrCAD `.eds`, a `.kicad_pcb`, an IPC-2581 board) is a GEOMETRY companion — a canvas for rendering
-and for locating/highlighting findings — and MUST NOT be treated as a second, independent COMPONENT
+(an OrCAD `.eds`, a `.kicad_pcb`, an IPC-2581 board) is a GEOMETRY companion, a canvas for rendering
+and for locating/highlighting findings, and MUST NOT be treated as a second, independent COMPONENT
 source to be reconciled or merged against the netlist. Findings computed on the netlist join to a
 companion's geometry by NET NAME (primary, drift-resistant) and ref-des (secondary, degrading to a
 "couldn't locate" note), never by inventing identity the companion lacks. A netlist SYNTHESIZED from an
 `.eds` (when no real netlist exists) is a degraded, explicitly-labeled fallback with tool-synthesized
-ref-des — net-level findings authoritative, component-identity cross-reference not — and is never
+ref-des (net-level findings authoritative, component-identity cross-reference not) and is never
 promoted to the source of truth.
 
 Part ATTRIBUTES are a separate question and this rule does not answer it. MPN, manufacturer,
@@ -515,12 +517,12 @@ established: it may enrich a component, and it may be RECONCILED against the net
 disagreement as a finding, but it MUST NOT add, remove, or rename one. The component set stays the
 netlist's.
 **Why:** an exported schematic is a lossy, point-in-time SNAPSHOT, not the design's system of record.
-Reference designators (`C1`, `R3005`) are the OUTPUT of a stateful authoring process — annotation +
+Reference designators (`C1`, `R3005`) are the OUTPUT of a stateful authoring process (annotation +
 layout back-annotation performed inside the native project, with the tool's netlister assigning numbers
-as it emits the netlist — so a schematic export can carry placeholder (`C?`) or per-sheet-duplicate
+as it emits the netlist), so a schematic export can carry placeholder (`C?`) or per-sheet-duplicate
 designators for parts the netlist numbers uniquely (observed: a real EDIF `.eds` export ≈ 50% un-back-annotated
 vs a flat, fully-numbered `.edn`, WS1-046). The identity simply is not in the file, and no reader can
-recover it — like regenerating a database's auto-increment keys from a keyless dump. Treating the
+recover it, any more than a database's auto-increment keys can be regenerated from a keyless dump. Treating the
 netlist as truth and the schematic/board as a companion to highlight (WS1-047) makes the join
 drift-resistant (net names are stable across annotation), keeps analysis off an assumption we cannot
 verify (that two exports are from the same instant), and matches the real workflow: the team gets the
@@ -545,24 +547,24 @@ REVIEW rather than by a test is the direction of the join, since a rule sourcing
 geometry model compiles and passes.
 
 ## C22: Configuration travels as a value, never as ambient state or a locator the callee resolves
-**Rule:** Configuration that changes what a run CHECKS or how it INTERPRETS a design — naming
+**Rule:** Configuration that changes what a run CHECKS or how it INTERPRETS a design (naming
 conventions and their vocabularies, interface profiles, design intent, a review manifest, house policy
-thresholds — is passed to the code that uses it as a VALUE, along the same call it configures. Two
+thresholds) is passed to the code that uses it as a VALUE, along the same call it configures. Two
 things it must not be. It must not be **ambient process state**: a package-level vocabulary that a
 caller installs before invoking (`SetActiveRoleVocab` and friends) may exist only as a startup DEFAULT,
 never mutated per run, because ambient state cannot be scoped to one request and one caller's config
 then reaches another caller's work. It must not be a **locator the callee resolves**: a wire request
 carries the config as a message (`OverlayConfig.conventions` is a `NamingConvention`, not a
-`conventions_path`), so `service` composes it with NO file I/O and how it was obtained — a
-YAML file the CLI read, a form a browser filled, a registry a deployment queried — stays the caller's
+`conventions_path`), so `service` composes it with NO file I/O and how it was obtained (a
+YAML file the CLI read, a form a browser filled, a registry a deployment queried) stays the caller's
 business.
 
-**Amended (agni issue 224): a config tier that is a CORPUS travels as a ref, resolved through an
-injected port, and a host that cannot resolve one refuses.** The value rule above holds for config
-that is small enough to inline — a naming convention is a message, never a `conventions_path`, and
+**As amended by agni issue 224, a config tier that is a CORPUS travels as a ref, resolved through
+an injected port, and a host that cannot resolve one refuses.** The value rule above holds for config
+that is small enough to inline. A naming convention is a message, never a `conventions_path`, and
 that is what lets a filesystem-free host honour one. It never held for interface profiles, seeded
 parameters, or a design's intent, which are DIRECTORIES of many files: a project has always named
-those as URIs that `ProjectConfigLoader` read, so "the service composes with no file I/O" described
+those as URIs that `ConfigResolver` reads, so "the service composes with no file I/O" described
 the request tier only, and the schema froze that asymmetry into a request being able to carry one
 config tier out of five.
 
@@ -570,9 +572,8 @@ config tier out of five.
 and `ConfigResolver` is the one port that resolves the ref-shaped tiers of either. The no-I/O property
 becomes a property of the DEPLOYMENT rather than of the schema: a host wired with no resolver still
 composes a value-shaped config with no file access, and REFUSES a config naming a directory rather
-than silently dropping the tier. Refusing is the load-bearing half. A dropped tier reports a clean run
-against config that never loaded, which is the silent-pass failure this whole layer exists to prevent,
-and it is the same posture `GetNamingConvention` already took for a host that cannot resolve a stored
+than silently dropping the tier. Without the refusal, a dropped tier reports a clean run
+against config that never loaded. Refusing is also the posture `GetNamingConvention` already took for a host that cannot resolve a stored
 convention.
 
 What is still forbidden is unchanged: ambient process state, and a config tier whose only form is a
@@ -588,10 +589,10 @@ The URI replaced a `(mount, path)` PAIR (agni issue 177). The Loader was indiffe
 got, but nothing above it was: two fields that mean one thing must travel together, and 24 request
 messages repeated that pairing by hand. Two properties came with the collapse. **Parsing IS the
 containment check**, so a parsed `artifact.URI` cannot name a location outside the mount it claims and
-the 26 call sites that re-checked stopped needing to — an adapter can no longer forget, because it
-cannot receive a bad value. And **relative resolution became specified rather than hand-rolled**: a
-schematic naming its sub-sheets or a symbol library resolves against the file being read, and a URI
-path is always slash-separated, so the `path`-vs-`filepath` split that `formats.Loader` warned was
+the 26 call sites that re-checked stopped needing to. An adapter can no longer forget, because it
+cannot receive a bad value. And **relative resolution became specified rather than hand-rolled**, so a
+schematic naming its sub-sheets or a symbol library resolves against the file being read, and since a
+URI path is always slash-separated, the `path`-vs-`filepath` split that `formats.Loader` warned was
 "invisible on unix, breaks every sibling lookup on Windows" has nowhere to hide.
 
 The authority is always `mount`, never `s3://` or `db://`. What a mount resolves to is the
@@ -599,8 +600,8 @@ deployment's business, and a per-store scheme would put the storage kind in the 
 is the indirection the Loader and ProjectStore ports exist to keep.
 
 RESOURCE NAMES are a different system and are NOT URIs. `projects/{project}` and `reviews/{review}`
-are AIP paths naming IDENTITY, not location: a project keeps its name when its folder is renamed or
-moved between mounts, which is the whole reason its id is declared rather than derived. Addressing
+are AIP paths naming IDENTITY rather than location, and a project keeps its name when its folder is
+renamed or moved between mounts because its id is declared rather than derived. Addressing
 answers "where are the bytes"; a resource name answers "what is this thing". Collapsing them would
 give up that stability (C23).
 
@@ -612,7 +613,7 @@ config per-request was blocked by the vocabulary being a process global (WS3-106
 request's conventions would have reached another request's design read, silently producing wrong
 `net.roles`. Passing a PATH instead was the second wrong answer: it forces the service to own file I/O
 to do its job, contradicts C13's os-free posture, and bakes a deployment's filesystem into the API
-contract — a host with no filesystem (WASM, an embedder, a test) then cannot call it. Carrying the
+contract, so a host with no filesystem (WASM, an embedder, a test) then cannot call it. Carrying the
 value instead DELETED a loader interface and seven methods. Values also compose: one
 `service.ComposeOverlay` is pure, so CLI, serve, and web cannot drift, and a test needs no filesystem.
 
@@ -627,7 +628,7 @@ it is named in the contract instead of hiding inside a run, and a caller that al
 never triggers it.
 
 **Verify:** `TestC22WebAPICarriesNoLocatorPair` (`internal/constraints`) fails on a `*_path` or
-`*_ref` FIELD in `protos/agni/v1/webapi/` — an
+`*_ref` FIELD in `protos/agni/v1/webapi/`, because an
 artifact is named by a single `uri` (or `*_uri` where a message names more than one), and a config
 travels as a value. It reads field declarations rather than the whole line, so `ref_des` and
 `cell_refs` (domain names, not locators) and the several comments mentioning a `board_ref` do not
@@ -647,7 +648,7 @@ a `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
 side by ONE question: does what it returns still exist after the call? A derived view of files on
 disk does not, and is verb-shaped. Persisted state does, and is a resource.
 
-**Third case — a DECLARED-identity resource is AIP-shaped and READ-ONLY.** A resource whose id is
+**In a third case, a DECLARED-identity resource is AIP-shaped and READ-ONLY.** A resource whose id is
 declared by an OPERATOR (a `name:` an operator writes in a descriptor) rather than assigned by the
 server or derived from a path is AIP-shaped with `Get` and `List` and NO mutators. This is a real
 third case rather than a loosening of the first two, and the two-question test that separates it is:
@@ -655,10 +656,10 @@ is the identity the caller's to invent (verb-shaped, the arguments ARE the input
 assign (a full resource), or the operator's to declare (this case)?
 
 A `Project` is derived from files, which by the question above sounds verb-shaped. It is not, for
-two reasons that `GetDesign(mount, path)` cannot claim. Its id is DECLARED, so it is not a cache key
+two reasons that `GetDesign(uri)` cannot claim. Its id is DECLARED, so it is not a cache key
 over its arguments: the project keeps its identity when its folder is renamed or moved between
-mounts, and a `(mount, ref)` pair does not. And it is a PARENT — reviews nest under
-`projects/{p}/reviews/{r}` — which a thing with no name cannot be. Mutators are absent because
+mounts, and a URI does not. And it is a PARENT (reviews nest under
+`projects/{p}/reviews/{r}`), which a thing with no name cannot be. Mutators are absent because
 creation is genuinely out of scope rather than pending: scaffolding a project means authoring design
 intent, a judgment step with a confidentiality boundary, not a server operation.
 
@@ -666,9 +667,8 @@ The read-only carve-out is narrow on purpose. It does NOT license a stateless qu
 `name`; that failure is called out below and is unchanged. It licenses exactly the case where an
 identity exists in the world, was written down by a person, and the server only reads it.
 
-**Why:** two conventions in one API is a cost, so it is worth being explicit that this is
-deliberate rather than drift. Every verb-shaped rpc here is a pure function of files: `GetDesign`
-takes a mount and a path, and those two arguments ARE its whole input, so a resource name would be
+**Why:** two conventions in one API is a cost, and this one is deliberate rather than drift. Every verb-shaped rpc here is a pure function of files: `GetDesign`
+takes a URI, and that one argument IS its whole input, so a resource name would be
 ceremony over a cache key. A review run is different in kind. It is produced rather than read, it
 outlives the request that made it, two runs over the same design at different times are different
 things a team wants to compare, and none of that is expressible by naming its inputs. Retrofitting
@@ -682,16 +682,17 @@ is worse than either convention. It invites clients to hold a `name` that is rea
 what was never stable, and eventually ask why deleting it does not work.
 
 **Verify:** every message in `protos/agni/v1/webapi/` carrying a `name` field is served by the
-standard methods and no bespoke mutator — the four of them for a server-assigned id, `Get` and
+standard methods and no bespoke mutator, meaning the four of them for a server-assigned id, `Get` and
 `List` alone for a declared one; every rpc that reads a design and returns a derived view takes
-`(mount, ref)` and returns no `name`; a resource's `List` carries `page_size`, `page_token`, and
+a single artifact `uri` and returns no `name`; a resource's `List` carries `page_size`, `page_token`, and
 `filter`, and its service rejects a filter it does not implement rather than ignoring it
 (`service.parseReviewFilter`, `service.parseProjectFilter`).
 
 **Known limitation:** stored reviews are visible to every client of a server, because `agni serve`
 has no authentication at all. That is a deployment assumption (one team, one trusted network), not
 an access-control boundary, and it is recorded rather than implied so nobody reads the resource
-model as having brought isolation with it. Auth is deliberately deferred; see `OUT_OF_SCOPE.md`.
+model as having brought isolation with it. Auth is deliberately deferred; see
+[running the server](https://panyam.github.io/agni/guide/running-the-server/).
 
 ## C24: A datasheet parameter is compared in SI base units, converted in one place
 **Rule:** Any code that COMPARES a seeded datasheet parameter's value against anything reads the
@@ -727,8 +728,8 @@ for `.Unit != "` does NOT work and must not be substituted: the extractors legit
 `q.Unit` on the converted row, so the invariant that actually discriminates is about the RAW row's
 unit. But that invariant is "never COMPARED outside `datasheet/param`", and no grep can tell a
 comparison from a display, which is why the plain command returned two hits on a clean tree from the
-day `param.unit` and `agni params` shipped. Both read the printed unit to PUBLISH it, which is the
-entire point of that relation and that table. The two sites are allowlisted in the test, and a new
+day `param.unit` and `agni params` shipped. Both read the printed unit to PUBLISH it, which is what
+that relation and that table are for. The two sites are allowlisted in the test, and a new
 one is one of two things: if it compares, it is the bug this constraint exists for and it converts
 through `datasheet/param` first; if it displays, it joins the allowlist, and that addition is the
 review moment. `datasheet/param` itself is skipped rather than allowlisted, because it IS the one
@@ -745,15 +746,15 @@ A row whose unit has no known scale keeps its symbol, kind, conditions and citat
 its NUMBER, so a relation that answers "what does this part specify" never shortens its list
 silently.
 
-That is safe because ORDERING REFUSES TO MIX AN ABSENT NUMBER WITH A PRESENT ONE (`evalCompare`).
+That is safe because ORDERING REFUSES TO MIX AN ABSENT NUMBER WITH A PRESENT ONE (`evalCompare` in jaala's `datalog`).
 Absence is not otherwise representable in a bound value: `query.fieldValue` yields an empty `Value`
 for a nil `Num`, and ordering used to fall back to string comparison, where `"" < "5.0"` is true and
 `"" <= "-2"` is also true, since the empty string precedes everything. The answer depended on the
-author's phrasing and on the sign of the constant. This is not a datasheet-tier concern:
+author's phrasing and on the sign of the constant. The guard is not specific to the datasheet tier, since
 `param.range` emits a one-sided row for any ordinary max-only datasheet limit, so the same guard is
 what makes partial ranges safe at all. Equality is untouched (asking whether two values are the same
-is meaningful across kinds) and so is ordering two non-numbers. AGGREGATION was never exposed:
-`reduce` skips a nil `Num` rather than falling back.
+is meaningful across kinds) and so is ordering two non-numbers. AGGREGATION was never exposed, because
+`reduce` (in jaala's `datalog`) skips a nil `Num` rather than falling back.
 
 Since `query.Value` carries `Absent` and `BaseUnit`, the guard is REPRESENTED rather than inferred
 from a nil pointer, `absent(?x)` selects the rows with no number, and an ordering comparison across
@@ -769,8 +770,8 @@ physics. And `absent = absent` is TRUE here rather than SQL's UNKNOWN, since ful
 would have to thread UNKNOWN through negation, aggregation and the index.
 
 ## C25: A run's recorded provenance is derived from the resolved overlay, never from the caller's flags
-**Rule:** The `RunConfig` a results document records — which datasheet corpus, interface profiles,
-design intent and naming convention a run had attached — is computed from the RESOLVED
+**Rule:** The `RunConfig` a results document records (which datasheet corpus, interface profiles,
+design intent and naming convention a run had attached) is computed from the RESOLVED
 `service.Overlay`, through `Overlay.Provenance` and `service.RunConfigProto`. No other code
 constructs a `checkspb.RunConfig`. A surface must not derive it from its own flags, its startup
 config, or the request message, because none of those is what the run used once a design resolves to
@@ -789,12 +790,12 @@ one non-test site, `service/projectoverlay.go`. Test files are excluded because 
 legitimately builds a document to render (`core/results/results_test.go`); the rule is about who
 WRITES a run's record. The test carries the positive control a grep cannot: finding NO site fails
 too, since a rename would otherwise leave it reading as clean.
-**Note:** which tier a rule source came from is NOT recoverable after composition — a compiled
-interface profile and a compiled intent declaration are both just rules in a catalog — so the flags
-travel on `service.ProjectConfig` rather than being derived from `Overlay.Sources`. Rationale in
+**Note:** which tier a rule source came from is NOT recoverable after composition, since a compiled
+interface profile and a compiled intent declaration are both just rules in a catalog, so the flags
+travel on `service.ResolvedConfig` rather than being derived from `Overlay.Sources`. Rationale in
 [the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
 
-**Second instance, outside `RunConfig` (agni issue 489).** A verdict link took its PATH from the
+**The same shape recurred outside `RunConfig` (agni issue 489).** A verdict link took its PATH from the
 caller's argument and its HASH from the resolved design, which is the same "provenance from the flag
 rather than from the resolution" shape one layer down. It cost the same kind of wrong-but-reassuring
 artifact: a link built from a declared companion carried the entry's hash, so the viewer reported a
@@ -807,8 +808,8 @@ by two calls: make it one call returning both.
 **Rule:** A contract with both a YAML/authoring form and a wire form has ONE schema, the `.proto`,
 and YAML is authoring SYNTAX rather than a second schema (parse it by converting to JSON and binding
 with `protojson`, which also gives strict unknown-field rejection for free). Where a hand-written Go
-twin genuinely must exist — a domain type that carries behaviour, an AST, a struct whose zero values
-mean something a message cannot express — the twin and its converter carry a **deep-equality
+twin genuinely must exist (a domain type that carries behaviour, an AST, a struct whose zero values
+mean something a message cannot express), the twin and its converter carry a **deep-equality
 round-trip test**: build a fixture with EVERY field set to a distinguishable non-zero value, go
 domain -> proto -> domain, and require `reflect.DeepEqual`. A tier with no wire form at all (design
 intent today) has no twin and owes neither.
@@ -819,8 +820,7 @@ so a project declaring them had them dropped on every path except `serve`'s star
 `BuildRoleVocab` substituted the built-in names. `Profile.HostClass` (WS3-044) was added with no wire
 field, so an extension profile binding its host by datasheet device class lost the binding crossing
 `stdlib/ruledef`, `HasHost` went false, and the host requirement compiled to nothing. Both failures
-are indistinguishable from a legitimately quiet run, which is the silent-pass shape this whole layer
-exists to prevent. `core/review`'s manifest conversion has had the guard since it was written and has
+are indistinguishable from a legitimately quiet run. `core/review`'s manifest conversion has had the guard since it was written and has
 never drifted, which is the evidence that the cheap half works. Owning the converter is NOT enough on
 its own: `stdlib/ruledef` claimed a body's wire form is owned beside its vocabulary so an omission is
 a compile error, and that holds for a new NODE TYPE covered by a type switch, not for a new FIELD on
@@ -833,8 +833,8 @@ covered: `TestManifestProtoRoundTrip` (`service`), `TestProfileProtoRoundTrip`
 (`service`, guarded by `TestVerdictFieldCensus` beside it). A new body owes one before it
 ships, not after it drifts.
 
-`RuleMetaProto`/`RuleMetaFromProto` was the fifth pair and went uncovered while this list said four,
-which is worth recording: the gap was found by adding a field (`Rule.Remedy`) that crosses it, not by
+`RuleMetaProto`/`RuleMetaFromProto` was the fifth pair and went uncovered while this list said four.
+The gap was found by adding a field (`Rule.Remedy`) that crosses it, not by
 auditing against the constraint. An enumeration in a Verify block is only as current as the last
 person who edited it.
 
@@ -845,7 +845,7 @@ that one call site. Give it an inverse if it grows.
 NODE, because `check.termProto`/`exprProto` panic on a type with no case. That protection does not
 extend to a new FIELD, which is what the round-trip guard is for. Do not read the panic as covering
 both.
-**Note:** the fixture is the load-bearing part. A field left at its zero value round-trips cleanly
+**Note:** the guard is only as good as its fixture. A field left at its zero value round-trips cleanly
 through a conversion that drops it, because zero in equals zero out, so a guard built on a sparse
 fixture reports success while covering nothing.
 
@@ -868,7 +868,8 @@ that alters the output leaves every stamp valid. Changing one rule's coverage wo
 captures on a plain docsite build and 12 on a forced regeneration. Before `tutorial-runs-check`
 existed, a capture edited by hand passed the entire gate.
 **Verify:** `proto-check`, `catalog-docs-check` and `tutorial-runs-check` are all in `testall`, and
-each regenerates rather than reading `git status`. Exemptions live in
+each regenerates its artifact. `catalog-docs-check` then reads `git status` to compare, so it still
+forces the commit-first ordering the next Note describes. Exemptions live in
 `hack/tutorial_runs_check.ignore`, and a line belongs there only when its command is not a function
 of this repo, never because the artifact merely went stale.
 **Outstanding violation:** `docsite/figures.sh` renders four committed SVGs under
@@ -885,19 +886,19 @@ fails for a reason unrelated to the edit. `proto-check` spells this out and
 issue 588). A capture's stamp hashes `git ls-files` for its fixture, so a fixture file that is not
 committed yet is not in the hash: the local gate passes, the commit moves the hash, and CI fails on a
 tree whose content never changed. `inputHash` refuses a fixture holding files git neither tracks nor
-ignores. IGNORED files stay invisible, which is not a detail but agni issue 357, where counting the
+ignores. IGNORED files stay invisible because of agni issue 357, where counting the
 tutorial's own `make report` output meant everyone who had run the tutorial rewrote the committed
 stamp on every gate run.
-**Note:** the docsite's `guide/` section is the un-generated counterpart and shows the cost. Its 37
-command fences across nine pages are typed by hand with no `runs/` directory, so nothing regenerates
-them and nothing reads them. Four went stale without a word: `getting-started.md` reported 10
+**Note:** the docsite's `guide/` section was the un-generated counterpart and showed the cost. Its
+command fences were typed by hand with no `runs/` directory, so nothing regenerated them and nothing
+read them. Four went stale without a word: `getting-started.md` reported 10
 findings where its fixture produces 11 and named 29 rules where it runs 78, with the prose beneath it
 quoting the wrong number back, and it was found by grepping for the shape rather than by any check.
-This is not a violation of the constraint, since a hand-written fence is not a generated artifact,
+A hand-written fence is not a generated artifact, so this was never a violation of the constraint,
 but it is the evidence for why the constraint exists. `hack/tutorial_runs_check.sh` walks
-`docsite/content/**/runs/` rather than a fixed pair of sections, so a guide page joins the gate by
-gaining a `runs/` directory and one spec per fence, with no harness change. `OUT_OF_SCOPE.md` tracks
-it.
+`docsite/content/**/runs/` rather than a fixed pair of sections, so the guide joined the gate by
+gaining `guide/runs/` and one spec per fence, with no harness change. A fence still typed by hand is
+parsed, though not run, by `TestDocumentedCommandsParse` (`cmd/agni`).
 
 ## C28: A recorded locator names the artifact, never the machine that produced it
 **Rule:** A path stored in an `ir.Provenance` or `geom.Provenance`, or printed by any writer that
@@ -929,11 +930,11 @@ Rationale in [Decisions](DECISIONS.md), "A recorded locator is renamed once at r
 ## C29: The fact layer is the primitive and depends on no query engine
 **Rule:** Relations, the tuple they project into, and the registry they install themselves in live in
 `core/facts`, which imports `core/check` and nothing that answers queries. A query engine depends on
-the fact layer, never the reverse. `stdlib/relations` — the shipped netlist/board/datasheet relation
-catalog — imports `core/facts` only. A RELATION is data derived from the Model and registers with
+the fact layer, never the reverse. `stdlib/relations`, the shipped netlist/board/datasheet relation
+catalog, imports `core/facts` only. A RELATION is data derived from the Model and registers with
 `facts.RegisterRelation`; a PREDICATE, a join strategy, and a query language belong to whichever
 engine computes them (`core/query` is agni's adapter over the Datalog engine in
-`github.com/panyam/jaala/datalog`, and `query.RegisterPredicate` is its seam). A DERIVED relation,
+`github.com/panyam/jaala/datalog`, and `query.RegisterPredicate` is its extension point). A DERIVED relation,
 defined in a query language over other relations, belongs to its engine the same way; one that a Go
 rule or a Spec needs is promoted to a base relation rather than read across engines (DECISIONS,
 "The Datalog engine lives in jaala"). An engine claims its predicate vocabulary with `facts.Reserve`. **No package under `core/` outside
@@ -942,8 +943,8 @@ through a registered `QueryCompiler` returning a `*check.Rule`, which is the sam
 `check.RegisterSource` trades in.
 **Why:** the primitive is the design graph and a tuple view over it, not any one way of asking
 questions. Datalog answers set-of-tuples questions well and cannot return a path, a subgraph, or a
-shortest route at all (issues 374, 518), so it is one query shape among several — beside `check.Spec`
-for per-entity questions and Go for the rest — and a shape that owns the fact tuple would make the
+shortest route at all (issues 374, 518), so it is one query shape among several (beside `check.Spec`
+for per-entity questions and Go for the rest), and a shape that owns the fact tuple would make the
 other shapes second-class and the tuple's limits everyone's limits. Authoring a relation must not
 require picking an engine. This is the query-side twin of C17's downward-only layering and of the
 `check.RegisterSource` posture that already keeps the rule catalog engine-neutral (C14, C18).
@@ -954,7 +955,7 @@ first draft of this constraint was a command, and it went stale within three PRs
 both halves of a violation compile and pass, so nothing surfaces one until someone re-reads the rule.
 The shape is `core/model/deps_test.go`'s, for the same reason.
 **Note:** installing NO relation catalog still builds and still runs, and the fact base is then
-empty, so every relation is unknown and a datalog-authored rule reports clean — a quiet pass on a
+empty, so every relation is unknown and a datalog-authored rule reports clean, passing quietly on a
 design nobody checked. `Registry.Installed` is what separates "matched nothing" from "nothing
 installed", and the unknown-relation error says which it was. The same shape one layer up: a binary
 that registers no `review.QueryCompiler` fails at manifest Load rather than resolving an inline query
@@ -966,7 +967,7 @@ append-only buffer of registration options and nothing reads them directly: `fac
 composes a `*Registry` from them, exactly as `check.DefaultCatalog` composes a `*Catalog`, and a
 `Registry` is immutable once built. A `query.Base` captures the one it was built from, so a
 registration cannot change how an in-flight query reads. The registration half stays global because
-that is the extension seam (C18) and a startup default is what C22 permits; the READ half must not be.
+that is the extension point (C18) and a startup default is what C22 permits; the READ half must not be.
 Composing in a known order is also why collisions need no order-dependent check: every option is
 applied first and clashes are swept once at the end.
 
@@ -982,7 +983,7 @@ hold.
 shape that owned the tuple would make its limits everyone's limits; the same is true of rules.
 Datalog cannot express a path question at all (#374, #518) and `check.Spec` answers per-entity
 questions with no fact base, so a catalog built around either would foreclose the rules that need the
-other. It is also what makes an interface a DATA value rather than new code, which is the lever that
+other. It is also what makes an interface a DATA value rather than new code, and treating it as data
 collapsed roughly 130 near-identical "verify signal X connected" review items into one mechanism.
 The failure is quiet in the usual way: `core/check` importing an authoring shape compiles, passes,
 and only shows up later as a rule someone cannot write.
@@ -1013,7 +1014,7 @@ hand-maintained shapes for one answer drift, and they drift silently, because a 
 never learned is absent from both sides of any assertion made on the proto.
 **Verify:** `TestEveryJSONFormatEmitsAProto` (`cmd/agni`) scans the command tree's json paths and
 fails on a hand-rolled encoder outside the declared exception list.
-**The one exception, and it is declared rather than tolerated:** `agni intake`. `intake.Skeleton`'s
+**`agni intake` is the one exception, and it is declared rather than tolerated.** `intake.Skeleton`'s
 confidentiality guarantee is STRUCTURAL, meaning the type has no field that can hold a net name or a
 connection, so an intake summary cannot express the confidential parts of a design (C16). A proto twin
 would have to carry that guarantee into a file edited by people adding fields for other reasons, where
@@ -1034,7 +1035,7 @@ and attached the schematic companion its descriptor declared, while the server h
 straight to the loader, found no faithful geometry on a netlist, and fell back to a computed layout.
 Same file, same spelling, same mount, different design.
 
-Nothing errored, and that is the property worth naming. Four symptoms followed and each was chased as
+Nothing errored. Four symptoms followed and each was chased as
 its own defect before the common cause turned up: findings came back with no sheet badges, query
 cells reported `LOCATE_REASON_NO_GEOMETRY` with empty sheet lists, `trace --render` wrote the
 design's first sheet whatever the route crossed, and every link the CLI minted opened on an
@@ -1054,9 +1055,8 @@ resolver is unexported and `service` cannot import package main. It is behaviour
 source sweep, so `internal/constraints` is the wrong home by that package's own rule, since C32's
 violation was a function that was never CALLED and no sweep over source can see one.
 
-The second test is the POSITIVE CONTROL and is why this is not a bare equality assertion: both
-surfaces resolving nothing agree perfectly, which is exactly the state the constraint exists to
-catch. It pins an undeclared sibling revision to being read as named on both sides, and then asserts
+The second test is the POSITIVE CONTROL and is why this is not a bare equality assertion, which
+would pass with both surfaces resolving nothing, the state the constraint exists to catch. It pins an undeclared sibling revision to being read as named on both sides, and then asserts
 the design's own entry DOES resolve, so "read as named" stays a decision rather than a resolver that
 never works. Reverting 656 fails the first test alone; disabling resolution entirely fails both.
 

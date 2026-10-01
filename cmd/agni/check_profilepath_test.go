@@ -9,10 +9,11 @@ import (
 	"testing"
 )
 
-// TestCheckProfilePathFlag: --profile-path compiles an overlay YAML interface profile into the
-// catalog for one run (the open-core "author a proprietary interface as config" path). The custom
-// TESTBUS profile's signal-dangling requirement fires on the fixture's single-pin BUS_TBB net,
-// proving a profile authored entirely in YAML — no Go, no recompile — checks a real design.
+// TestCheckProfilePathFlag checks that --profile-path compiles an overlay YAML interface profile
+// into the catalog for one run (the open-core "author a proprietary interface as config" path). The
+// custom TESTBUS profile's signal-dangling requirement fires on the fixture's single-pin BUS_TBB
+// net, proving a profile authored entirely in YAML, with no Go and no recompile, checks a real
+// design.
 func TestCheckProfilePathFlag(t *testing.T) {
 	dir := t.TempDir()
 	yaml := `
@@ -68,11 +69,11 @@ func TestCheckProfilePathBadYAMLErrors(t *testing.T) {
 // TestCheckConventionsComposeOncePerRun pins that `agni check --conventions` still runs after WS3-107
 // made overlay composition EXTEND the service's catalog instead of rebuilding it.
 //
-// The CLI composes a convention twice for two different jobs: the service composes the authoritative
+// The CLI composes a convention twice for two different jobs. The service composes the authoritative
 // catalog from the request, and the CLI needs a local name space to resolve `--rule <config>/<rule>`
 // against before it calls. While composing rebuilt the catalog from scratch, doing both was harmless.
 // Once it extends the base, handing the service a catalog that ALREADY carries the convention asks it
-// to add a source that is present — a duplicate-source error that made the flag unusable. Nothing
+// to add a source that is present, a duplicate-source error that made the flag unusable. Nothing
 // covered this path, so the naive fix broke a shipped flag silently until it was run by hand.
 func TestCheckConventionsComposeOncePerRun(t *testing.T) {
 	got := runCLI(t, checkCmd(),
@@ -83,7 +84,7 @@ func TestCheckConventionsComposeOncePerRun(t *testing.T) {
 	}
 }
 
-// TestCheckConventionsResolveFacets pins the reason the CLI composes locally at all: selecting a
+// TestCheckConventionsResolveFacets pins the reason the CLI composes locally at all. Selecting a
 // convention's rule by name has to resolve against a catalog that contains it.
 func TestCheckConventionsResolveFacets(t *testing.T) {
 	got := runCLI(t, checkCmd(),
@@ -99,7 +100,7 @@ func TestCheckConventionsResolveFacets(t *testing.T) {
 }
 
 // TestCheckConventionsAndProfilesTogether pins the combination on the check surface, mirroring the
-// review-side coexistence test: both overlay tiers must reach one run.
+// review-side coexistence test. Both overlay tiers must reach one run.
 func TestCheckConventionsAndProfilesTogether(t *testing.T) {
 	got := runCLI(t, checkCmd(),
 		"--conventions", "testdata/review/conventions.yaml",
@@ -113,7 +114,7 @@ func TestCheckConventionsAndProfilesTogether(t *testing.T) {
 }
 
 // An over-broad or self-colliding overlay profile warns on STDERR without touching the findings
-// (WS3-101). The routing is the point: a config mistake belongs to the profile author, so it must not
+// (WS3-101). A config mistake belongs to the profile author, so it must not
 // enter the findings stream that --format json serializes, nor change the exit code.
 func TestCheckProfilePathWarnsOnCollidingSignals(t *testing.T) {
 	dir := t.TempDir()
@@ -178,9 +179,10 @@ requirements:
 	}
 }
 
-// TestProfilePathNamingTheProjectsOwnIsRefused: pointing the flag at the directory the design's
-// project already composes loaded the same profiles twice under two source names, so every profile
-// finding was reported twice and the coverage line counted each subject again (agni issue 450).
+// TestProfilePathNamingTheProjectsOwnIsRefused exists because pointing the flag at the directory
+// the design's project already composes loaded the same profiles twice under two source names, so
+// every profile finding was reported twice and the coverage line counted each subject again (agni
+// issue 450).
 func TestProfilePathNamingTheProjectsOwnIsRefused(t *testing.T) {
 	proj := t.TempDir()
 	writeTutorialLikeProject(t, proj)

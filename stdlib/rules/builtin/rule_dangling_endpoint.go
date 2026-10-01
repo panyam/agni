@@ -28,10 +28,10 @@ var danglingEndpoint = &check.Rule{
 	//
 	// `dangling_endpoints` holds the wire ends that terminate on nothing, and nothing counts the wire
 	// ends that terminate on something. The Model has no set of everything the reader examined, so
-	// there is nothing to map over: the verdicts would be the failure list again, which is exactly the
-	// coverage claim StatesConsideredSet exists to withhold.
+	// mapping verdicts over it would reproduce the failure list and present it as the coverage claim
+	// StatesConsideredSet exists to withhold.
 	//
-	// bus-not-modeled is the diagnostic rule that CAN state one, and the difference is instructive.
+	// bus-not-modeled is the diagnostic rule that CAN state one.
 	// `unmodeled_buses` holds every bus construct the reader saw and the rule partitions it, so a bus
 	// whose members are already nets is a pass the reader made visible. Doing the same here means a
 	// reader recording what it looked at, alongside the `supplied` flag that already records THAT it

@@ -19,14 +19,12 @@ func PartIndex(d *ir.Design) map[string]*ir.PartType {
 			parts["/"+p.GetName()] = p
 		}
 	}
-	// Fallback alias on the source's NATIVE ID (WS1-045): a section may reference its part by the id the
+	// Fallback alias on the source's NATIVE ID (WS1-045). A section may reference its part by the id the
 	// source uses, which can DIFFER from the PartType's display name. An EDIF cell `(rename ID "Display")`
-	// is keyed above by Display, but the instance's cellRef names the ID — and the two coincide only for
-	// the OrCAD `(rename &<num> "<num>")` shape the reader's `&`-strip was built for; a cell whose Display
-	// differs from its ID (a real oscillator cell: `MC2016Z50.0000C1ZYSH` vs id `MC2016Z500560000C1ZYSH`)
-	// never resolved, so the part's pins were silently dropped. Add the `&`-stripped id (matching the
-	// reader's section-PartRef normalization) as a fallback, GUARDED so a real display-name key always
-	// wins a collision. Harmless for formats whose native id is empty or equals the name (a no-op).
+	// is keyed above by Display while the instance's cellRef names the ID, and the two coincide only for
+	// the OrCAD `(rename &<num> "<num>")` shape. Without this alias a cell whose Display differs from its
+	// ID never resolves and its pins are silently dropped. The id is `&`-stripped to match the reader's
+	// section-PartRef normalization, and GUARDED so a real display-name key always wins a collision.
 	for _, lib := range d.GetLibraries() {
 		for _, p := range lib.GetParts() {
 			id := strings.TrimPrefix(p.GetProv().GetNativeId(), "&")
@@ -59,11 +57,9 @@ func FirstPart(index map[string]*ir.PartType, c *ir.Component) *ir.PartType {
 }
 
 // Stamp runs the classification pass over a read design, filling each component's device_classes SET
-// once at ingestion (WS3-071). The loader calls it after readers finish, so every format is classified
-// by the same cross-format conventions and check reads a normalized data fact. Idempotent: it recomputes
-// and overwrites the set, so a re-stamp after a re-read is safe.
-// It classifies against the PROCESS-level lexicon; a read that carries its own conventions calls
-// (*Lexicon).Stamp instead, so two designs in one process can be stamped differently (WS3-106).
+// once at ingestion (WS3-071). It recomputes and overwrites the set, so a re-stamp is safe, and
+// Loader.ReadDesign is where its place in the pass order lives. It is the process-level form of
+// (*Lexicon).Stamp (WS3-106).
 func Stamp(d *ir.Design) { ActiveLexicon().Stamp(d) }
 
 // MostSpecific picks the most-specific class from a device_classes set using the classifier's
@@ -71,9 +67,8 @@ func Stamp(d *ir.Design) { ActiveLexicon().Stamp(d) }
 // single component.class stays stable as the set widens with family tags (WS3-071). An empty set is
 // ClassUnknown, and a class outside the token-hint priority (ClassIC) still resolves.
 //
-// It is the head of BySpecificity rather than its own walk, so nothing can rank a set one way for a
-// consumer that wants one answer and another way for a consumer that wants the list. The drawing and
-// the model each want one of those, and they used to disagree (agni issue 710).
+// It is the head of BySpecificity rather than its own walk, so a consumer wanting one answer (the model)
+// and one wanting the list (the drawing) cannot rank a set differently (agni issue 710).
 func MostSpecific(classes []string) ComponentClass {
 	ranked := BySpecificity(classes)
 	if len(ranked) == 0 {
@@ -84,9 +79,9 @@ func MostSpecific(classes []string) ComponentClass {
 
 // BySpecificity orders a device_classes set most-specific first, dropping the unknown marker and the
 // empty string. A class the specificity table ranks comes before one it does not, and two unranked
-// classes keep the order the set had, which is the order the evidence tiers wrote them in: the
-// convention tier stamps first, so a datasheet class the table does not know stays behind the
-// keyword-derived one rather than displacing it.
+// classes keep the order the evidence tiers wrote them in. The convention tier stamps first, so a
+// datasheet class the table does not know stays behind the keyword-derived one rather than displacing
+// it.
 //
 // The set the ingestion pass alone produces is already in this order (ClassesOf writes the specific
 // class then its family), so this reorders nothing until a second evidence tier contributes.
@@ -152,10 +147,10 @@ func AddClassTag(c *ir.Component, class string, src ir.ClassSource) {
 
 // classFamily maps a specific class to its SUBTYPE family parent, the tag a consumer checks for
 // family membership. Only genuine "is-a" subtypes are listed: a TVS is-a diode, an LED is-a diode, a
-// ferrite bead is-a inductor. ClassTestConnector is DELIBERATELY absent — it was split OUT of connector
-// (WS3-066) precisely so protection rules that quantify over connector exclude a bench interface, so it
-// carries no connector family tag. Cross-family electrical groupings (passive, pass-element) are NOT
-// families and stay Go predicates (isPassiveClass, passClass); they are not single-tag memberships.
+// ferrite bead is-a inductor. ClassTestConnector is DELIBERATELY absent, since it was split OUT of
+// connector (WS3-066) so that protection rules quantifying over connector exclude a bench interface.
+// Cross-family electrical groupings (passive, pass-element) are NOT families and stay Go predicates
+// (isPassiveClass, passClass).
 var classFamily = map[ComponentClass]ComponentClass{
 	ClassTVS:     ClassDiode,
 	ClassLED:     ClassDiode,
@@ -164,10 +159,10 @@ var classFamily = map[ComponentClass]ComponentClass{
 	// A thermistor is a two-terminal resistor for every topological question and is not one for
 	// anything temperature-related, which is the split ClassFerrite makes against ClassInductor.
 	ClassThermistor: ClassResistor,
-	// Clock sources (WS10-015). The family is ClassClock, deliberately NOT ClassCrystal: an oscillator
-	// is-NOT-a crystal (it contains one), so a family-level clock rule must not read HasClass(crystal)
-	// true for it. All three carry the clock family tag so a family-level rule quantifies over every
-	// clock source while a subtype-specific rule branches (crystal-load-caps excludes oscillator/resonator).
+	// Clock sources (WS10-015). The family is ClassClock and NOT ClassCrystal, because an oscillator
+	// contains a crystal without being one, so HasClass(crystal) must stay false for it. A family-level
+	// rule quantifies over every clock source while a subtype rule branches (crystal-load-caps excludes
+	// oscillator and resonator).
 	ClassOscillator:       ClassClock,
 	ClassCrystal:          ClassClock,
 	ClassCeramicResonator: ClassClock,
@@ -201,8 +196,8 @@ func Tags(names ...string) []*ir.ComponentClassTag {
 
 // HasClassTags reports whether any component in the design carries a device-class tag, which is how
 // a consumer tells a design the classify pass has seen from a hand-authored IR that never went
-// through it. It is a DESIGN-level question on purpose: a single component with no tags is an
-// ordinary unclassified part, and only the absence across the whole design says the pass never ran.
+// through it. It is a DESIGN-level question because a single component with no tags is an ordinary
+// unclassified part, and only the absence across the whole design says the pass never ran.
 func HasClassTags(d *ir.Design) bool {
 	for _, c := range d.GetComponents() {
 		if len(c.GetDeviceClasses()) > 0 {

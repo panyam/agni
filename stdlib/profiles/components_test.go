@@ -7,10 +7,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Components returns the parts on an interface's nets, inheriting Nets' host-beats-convention scope: a
+// Components returns the parts on an interface's nets, inheriting Nets' host-beats-convention scope. A
 // host-declared interface resolves to the host's nets and thus every part on them (disambiguating a
 // shared suffix); with no host it falls back to the suffix-matched signal nets and their parts. The
-// join it enables: a component on an interface signal net is kept even though its rail net is not.
+// join it enables keeps a component on an interface signal net even though its rail net is not.
 func TestComponentsHostAndSuffix(t *testing.T) {
 	hosted := Profile{
 		Name: "LINX", HostAttrKey: "interface", HostAttrVal: "LINX",
@@ -33,7 +33,8 @@ func TestComponentsHostAndSuffix(t *testing.T) {
 		t.Errorf("host-scoped Components should be the parts on the host's nets (U9, U1), got %v", got)
 	}
 
-	// No host on the design: fall back to suffix, which matches both _TX nets and both their parts.
+	// With no host on the design, fall back to suffix, which matches both _TX nets and both their
+	// parts.
 	conv := Profile{Name: "S", Signals: []Signal{{Name: "TXD", Suffix: "_TX"}}}
 	got2 := Components(check.NewModel(d), conv)
 	if !got2["U9"] || !got2["U1"] || !got2["U2"] {

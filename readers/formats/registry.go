@@ -19,20 +19,21 @@ import (
 )
 
 func init() {
-	// EDIF netlists appear under several extensions in the wild: our fixtures use .edn, but real
-	// exports (and the whole EDIF corpus) use .edf/.edif. All three are the same netlist reader;
-	// the geometry-only .eds is separate (see below). Extension matching is case-insensitive
-	// (lowerExt), so .EDF resolves here too.
+	// EDIF netlists appear under several extensions. Our fixtures use .edn, and real exports (and
+	// the whole EDIF corpus) use .edf/.edif. All three share one netlist reader, and the schematic
+	// export .eds registers separately below. Extension matching is case-insensitive (lowerExt), so
+	// .EDF resolves here too.
 	for _, ext := range []string{".edn", ".edf", ".edif"} {
 		Register(&Format{Ext: ext, Name: "edif", Design: readEDIF})
 	}
 	Register(&Format{
 		Ext:  ".eds",
 		Name: "edif-schematic",
-		// An EDIF SCHEMATIC export carries explicit netlist connectivity too (nets joining
-		// portRefs), the same grammar the .edn/.edf/.edif netlist reader parses — so a .eds is
-		// a dual-capability format (netlist + faithful geometry), like a .kicad_sch. Wiring the
-		// netlist reader makes .eds queryable/checkable/diffable (it renders either way).
+		// An EDIF SCHEMATIC export carries netlist connectivity too (nets joining portRefs), in
+		// the grammar the netlist reader parses, so a .eds is dual-capability (netlist + faithful
+		// geometry) like a .kicad_sch, and wiring the netlist reader makes it queryable, checkable
+		// and diffable. Its netlist counts drawn instances and per-sheet segments, so its counts
+		// are not comparable with an .edn read.
 		Design: readEDIF,
 		Geometry: func(l *Loader, path string) (*geom.SchematicGeometry, error) {
 			f, err := l.Open(path)
@@ -51,11 +52,11 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			// Walk the sheet tree (WS1-018), matching what the geometry entry below shows:
-			// the viewer's sheets and the rules' nets come from the same hierarchy. The
-			// completeness flag is deliberately dropped — a bare .kicad_sch may itself be
-			// one sheet of a larger design, so its external markings never resolve; only
-			// the .kicad_pro read is a completeness witness (WS1-017).
+			// Walk the sheet tree (WS1-018), matching the geometry entry below, so the viewer's
+			// sheets and the rules' nets come from the same hierarchy. The completeness flag is
+			// dropped because a bare .kicad_sch may itself be one sheet of a larger design, so its
+			// external markings never resolve. Only the .kicad_pro read is a completeness witness
+			// (WS1-017).
 			d, _, err := kicad.ReadSchematicHierarchyNetsWithSymbols(path, content, l.sheetOpener(path), l.kicadSymOpener(path))
 			return d, err
 		},
@@ -95,9 +96,9 @@ func init() {
 		Design:   readSchDesign,
 		Geometry: readSchGeometry,
 	})
-	// The flat Telesis netlist the Mentor/Siemens flow emits. Netlist only: the format carries
-	// connectivity and properties and no geometry at all, so Geometry and Board stay nil and the
-	// design renders through auto-layout like any other netlist-only source.
+	// The flat Telesis netlist the Mentor/Siemens flow emits. The format carries connectivity and
+	// properties and no geometry at all, so Geometry and Board stay nil and the design renders
+	// through auto-layout like any other netlist-only source.
 	Register(&Format{Ext: ".tel", Name: "telesis", Design: readTelesis})
 	Register(&Format{Ext: ".xml", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
 	Register(&Format{Ext: ".cvg", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
@@ -128,11 +129,10 @@ func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 	// readers consume, so populate ir.Net.net_class here in the I/O layer (WS1-037, C1).
 	//
 	// The same net_settings block also declares, per class, the clearance / track width / via
-	// sizes its nets are SUPPOSED to route at (WS3-111). Membership without the definitions
-	// leaves the useful half on the table: the board tier already projects what a net's copper
-	// IS, and this is what the project said it should be. Both passes decode the whole file, so
-	// each gets its own reader over one buffer — an fs.File is not required to be an io.Seeker
-	// (WS1-049), and two independent readers make the passes order-independent besides.
+	// sizes its nets are SUPPOSED to route at (WS3-111), to set against the copper the board
+	// tier projects. Both passes decode the whole file, so each gets its own reader over one
+	// buffer. An fs.File is not required to be an io.Seeker (WS1-049), and two independent
+	// readers also make the passes order-independent.
 	if data, err := l.ReadFile(proPath); err == nil {
 		kicad.AnnotateNetClasses(d, kicad.ParseNetClasses(bytes.NewReader(data)))
 		kicad.AnnotateNetClassDefs(d, kicad.ParseNetClassDefs(bytes.NewReader(data)))
@@ -141,14 +141,14 @@ func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 }
 
 // sheetOpener resolves a schematic's sub-sheet Sheetfile references against its own
-// directory — the same contract the geometry walk's opener (readKicadHierarchy) uses, so
-// netlist and geometry read the same tree.
+// directory. The geometry walk (readKicadHierarchy) uses the same opener, so netlist and
+// geometry read the same tree.
 func (l *Loader) sheetOpener(schPath string) func(relPath string) ([]byte, error) {
 	return func(relPath string) ([]byte, error) { return l.ReadFile(l.Sibling(schPath, relPath)) }
 }
 
-// readKicadProjectGeometry reads a project's faithful schematic: its sibling .kicad_sch
-// (same stem), read as a hierarchy.
+// readKicadProjectGeometry reads a project's faithful schematic, which is its sibling
+// .kicad_sch (same stem) read as a hierarchy.
 func readKicadProjectGeometry(l *Loader, proPath string) (*geom.SchematicGeometry, error) {
 	schPath := strings.TrimSuffix(proPath, filepath.Ext(proPath)) + ".kicad_sch"
 	g, err := readKicadHierarchy(l, schPath)
@@ -169,9 +169,9 @@ func readKicadHierarchy(l *Loader, schPath string) (*geom.SchematicGeometry, err
 	return kicad.ReadSchematicHierarchyWithSymbols(schPath, content, l.sheetOpener(schPath), l.kicadSymOpener(schPath))
 }
 
-// readSchDesign nets a .sch, which is shared by xschem, gEDA gschem, and legacy KiCad.
-// Sniff the header: an xschem file opens with "v {xschem", a gEDA file with "v <version>
-// <flags>". Symbol artwork resolves through the Loader's --symbol-path opener.
+// readSchDesign nets a .sch, which is shared by xschem, gEDA gschem, and legacy KiCad. It
+// sniffs the header, where an xschem file opens with "v {xschem" and a gEDA file with
+// "v <version> <flags>". Symbol artwork resolves through the Loader's --symbol-path opener.
 func readSchDesign(l *Loader, path string) (*ir.Design, error) {
 	f, err := l.Open(path)
 	if err != nil {
@@ -210,8 +210,6 @@ func readSchGeometry(l *Loader, path string) (*geom.SchematicGeometry, error) {
 	}
 }
 
-// readIPC2581 reads an IPC-2581 file. .xml is ambiguous, so sniff for the IPC-2581 root
-// before committing to that reader.
 // readEDIF reads an EDIF netlist into the IR. Shared by the .edn/.edf/.edif extensions, which
 // are all the same format under different conventional suffixes.
 func readEDIF(l *Loader, path string) (*ir.Design, error) {
@@ -223,6 +221,8 @@ func readEDIF(l *Loader, path string) (*ir.Design, error) {
 	return edif.Read(f, path)
 }
 
+// readIPC2581 reads an IPC-2581 file. .xml is ambiguous, so sniff for the IPC-2581 root
+// before committing to that reader.
 func readIPC2581(l *Loader, path string) (*ir.Design, error) {
 	f, err := l.Open(path)
 	if err != nil {

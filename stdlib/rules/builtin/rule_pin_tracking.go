@@ -10,22 +10,22 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// The pin-tracking rules (agni issue 192): a datasheet's constraint BETWEEN two pins of one part,
-// checked against what the design does with those two terminals.
+// The pin-tracking rules (agni issue 192) check a datasheet's constraint BETWEEN two pins of one part
+// against what the design does with those two terminals.
 //
 // WHY TWO RULES RATHER THAN ONE. A PinRelation carries a modality, because "shall never exceed" and
 // "should be at least 1 V higher for best translator operation" are different claims and reporting
-// both at one severity misstates one of them. check.Run stamps Finding.Severity from the rule, by
-// design, so a rule states one severity for all its findings. The split is therefore by modality,
-// exactly as pin-exceeds-abs-max and pin-out-of-recommended split one comparison by LimitKind. It
-// also gives a team the selector it actually wants: fail CI on the required rule, report the other.
+// both at one severity misstates one of them. check.Run stamps Finding.Severity from the rule, so a
+// rule states one severity for all its findings. The split is therefore by modality, as
+// pin-exceeds-abs-max and pin-out-of-recommended split one comparison by LimitKind. It also lets a
+// team fail CI on the required rule and only report the other.
 //
 // THE TWO EVIDENCE TIERS, AND WHY CONNECTIVITY GOES FIRST. Every other voltage rule in the catalog
-// reads a rail's volts off its NAME (check.NominalVoltageFromName), which is a convention: silent on
-// a rail nobody named for its voltage, wrong on a name that outlived a design change. A relation
+// reads a rail's volts off its NAME (check.NominalVoltageFromName), a convention that is silent on a
+// rail nobody named for its voltage and wrong on a name that outlived a design change. A relation
 // bounds the DIFFERENCE between two terminals, and connectivity settles that difference outright in
-// one case -- two pins on ONE net are one node, so the difference is exactly zero with no name
-// involved. That tier is decisive in both directions: a `max 0` bound (VCCA <= VCCB) is SATISFIED by
+// one case. Two pins on ONE net are one node, so the difference is exactly zero with no name
+// involved. That tier is decisive in both directions. A `max 0` bound (VCCA <= VCCB) is SATISFIED by
 // tying them, and a `min 1` bound (an enable required to sit a volt above a reference) is VIOLATED by
 // tying them. Only when the terminals sit on different nets does the rule fall back to comparing two
 // name-derived nominals.
@@ -37,9 +37,9 @@ import (
 // rail role (Model.IsRailNet, the narrow role question) before it reads either name.
 
 // pinRelationSpec returns the seeded spec for a component when it carries pins AND relations, else
-// nil. Deliberately NOT pinBoundSpec: that gate additionally requires a pin-bound PARAMETER, which is
-// what a per-pin limit needs and what a relation does not -- a spec may state a tracking constraint
-// between two pins and bind no limit row to either.
+// nil. Deliberately NOT pinBoundSpec, which also requires a pin-bound PARAMETER. A per-pin limit needs
+// one and a relation does not, since a spec may state a tracking constraint between two pins and bind
+// no limit row to either.
 func pinRelationSpec(m check.Model, refDes string) *parampb.PartSpec {
 	spec := m.PartSpec(refDes)
 	if spec == nil || len(spec.GetPins()) == 0 || len(spec.GetRelations()) == 0 {
@@ -49,7 +49,7 @@ func pinRelationSpec(m check.Model, refDes string) *parampb.PartSpec {
 }
 
 // netByPin indexes every design terminal onto the net it sits on. A pin claimed by SEVERAL nets is
-// mapped to nil rather than to one of them: that is malformed input (pin-net-conflict reports it),
+// mapped to nil rather than to one of them. That is malformed input (pin-net-conflict reports it),
 // and picking a claimant would decide the same-net question by luck.
 func netByPin(m check.Model) map[string]*ir.Net {
 	idx := make(map[string]*ir.Net)
@@ -68,8 +68,8 @@ func netByPin(m check.Model) map[string]*ir.Net {
 
 // designPinsBySpecPin maps this component's spec pins back onto its design terminals, by running
 // param.ResolvePin over each design pin and inverting the result. Inverting the DESIGN->SPEC join
-// rather than writing a second one keeps ResolvePin's precedence and, more importantly, its
-// refusals: an ambiguous name or a name/number disagreement drops the terminal here too. A spec pin
+// rather than writing a second one keeps ResolvePin's precedence and its refusals, so an ambiguous
+// name or a name/number disagreement drops the terminal here too. A spec pin
 // reached by two design terminals is dropped for the same reason.
 func designPinsBySpecPin(m check.Model, refDes string, spec *parampb.PartSpec) map[string]string {
 	pkg := ""
@@ -99,7 +99,7 @@ func designPinsBySpecPin(m check.Model, refDes string, spec *parampb.PartSpec) m
 	return out
 }
 
-// pinTracking is one resolved comparison: the relation, the two terminals it binds, and the
+// pinTracking is one resolved comparison, holding the relation, the two terminals it binds, and the
 // difference the design puts between them.
 type pinTracking struct {
 	component *ir.Component
@@ -121,9 +121,9 @@ type pinTracking struct {
 }
 
 // differenceInVolts reduces a relation's bound to volts, and reports false for a bound printed in
-// anything that does not reduce to volts. Both prefixes occur in real documents -- a tracking bound
-// is stated as "0.5 V" by one vendor and "100mV" by another -- so rejecting everything but a bare
-// "V" would silently drop the millivolt half of the evidence.
+// anything that does not reduce to volts. Both prefixes occur in real documents (one vendor states a
+// tracking bound as "0.5 V", another as "100mV"), so rejecting everything but a bare "V" would
+// silently drop the millivolt half of the evidence.
 func differenceInVolts(rel *parampb.PinRelation) (*parampb.RangeValue, bool) {
 	base, exp, ok := param.BaseUnit(rel.GetUnit())
 	if !ok || base != "V" {
@@ -184,7 +184,7 @@ func eachPinTracking(m check.Model, wantModality func(parampb.Modality) bool, yi
 				subjNet: subjNet, refNet: refNet,
 			}
 			if subjNet == refNet {
-				pt.shared = true // one node: the difference is 0 by connectivity, no name read
+				pt.shared = true // one node, so the difference is 0 by connectivity and no name is read
 				yield(pt)
 				continue
 			}
@@ -208,9 +208,8 @@ func eachPinTracking(m check.Model, wantModality func(parampb.Modality) bool, yi
 
 // roundVolts trims the representation error a SUBTRACTION of two decimal rail nominals introduces.
 // 3.3 - 1.8 is 1.4999999999999998 in binary floating point, which both prints as noise in a finding
-// and misjudges a bound of exactly 1.5. This is the one rule that subtracts two voltages, which is
-// why the problem appears here and not in the per-pin limit rules that only compare. Microvolt
-// resolution is finer than any bound a datasheet states, so nothing real is rounded away.
+// and misjudges a bound of exactly 1.5. This is the one rule that subtracts two voltages; the
+// per-pin limit rules only compare. Microvolt resolution is finer than any bound a datasheet states, so nothing real is rounded away.
 func roundVolts(v float64) float64 { return math.Round(v*1e6) / 1e6 }
 
 // boundBreach reports how a difference breaks a relation's bound, and whether it does at all. An
@@ -254,25 +253,22 @@ func evidenceText(pt pinTracking) string {
 		pt.refDes, pt.refPin.GetName(), pt.refNet.GetName(), rv, pt.diff)
 }
 
-// trackingVerdicts is the body both rules share: every tracking relation of the requested modality
-// whose two terminals the design places, decided and reported.
+// trackingVerdicts is the body both rules share. It decides and reports every tracking relation of
+// the requested modality whose two terminals the design places.
 //
 // THE SUBJECT IS THE PAIR OF PINS, because that is what a tracking relation binds. A part stating two
 // tracking relations is two answers about one ref-des, and a spec pin can be the subject of more than
 // one of them, so neither the ref-des nor a single (ref-des, pin) key separates them. The order is the
-// relation's own: subject pin then reference pin, and it is load-bearing rather than cosmetic, since
-// the bound is on subject MINUS reference and swapping the two inverts the sign of the whole claim.
+// relation's own, subject pin then reference pin. The bound is on subject MINUS reference, so
+// swapping the two inverts the sign of the claim.
 //
-// THE PASS IS THE HALF THIS RULE NEVER HAD, and it is the one a reviewer signing off a supply
-// sequence actually wants: "VCCA - VCCB is 0V, inside the required -0.3V to 0.3V, per SLLSEA9 p.6".
-// Before, a part whose ordering was correct and a part whose relation the walk could not resolve both
-// produced nothing.
+// A pass carries a witness, such as "VCCA - VCCB is 0V, inside the required -0.3V to 0.3V, per
+// SLLSEA9 p.6", which is what a reviewer signing off a supply sequence wants.
 //
-// THE TWO CAVEATS KEEP THEIR MEANING and stay Inconclusive rather than becoming a pass or a decline.
-// A regime-scoped bound and an unstated modality are breaches the rule REACHED and could not rate, so
-// they must still reach a reviewer; that is the contract Finding.Inconclusive carries and the reason
-// VerdictsToFindings projects Inconclusive as well as Fail. Where the numbers are INSIDE the bound
-// those same two cases are an ordinary pass, because there is nothing for anyone to look at.
+// THE TWO CAVEATS stay Inconclusive rather than becoming a pass or a decline. A regime-scoped bound
+// and an unstated modality are breaches the rule REACHED and could not rate, so they still reach a
+// reviewer through Finding.Inconclusive, which VerdictsToFindings projects as well as Fail. Where the
+// numbers are INSIDE the bound those same two cases are an ordinary pass.
 func trackingVerdicts(m check.Model, wantModality func(parampb.Modality) bool) []check.Verdict {
 	var out []check.Verdict
 	eachPinTracking(m, wantModality, func(pt pinTracking) {
@@ -294,18 +290,16 @@ func trackingVerdicts(m check.Model, wantModality func(parampb.Modality) bool) [
 			out = append(out, v)
 			return
 		}
-		// Two things can reach here breached and still not be reportable as a violation, and both
-		// are an ordinary pass when the numbers are WITHIN the bound: there is nothing for a reviewer
-		// to look at, and flagging every affected relation would convert a coverage gap into noise
-		// (the Finding.Inconclusive contract asks that the rule NAME what it could not resolve).
+		// The two caveats from the doc comment. Each names what the rule could not resolve, per the
+		// Finding.Inconclusive contract.
 		//
-		// A regime-scoped bound: the rule cannot tell whether the regime the vendor named is the one
-		// the design is in ("transient only, not for DC").
+		// A regime-scoped bound means the rule cannot tell whether the regime the vendor named is the
+		// one the design is in ("transient only, not for DC").
 		//
-		// An unstated modality: param.Validate requires a relation's kind, bound and provenance but
-		// NOT its modality, so a draft can carry a breach whose severity is unknown. Reporting it as
-		// an error would invent a requirement and dropping it would pass in silence, so the required
-		// rule takes it and says what is missing.
+		// An unstated modality gets here because param.Validate requires a relation's kind, bound and
+		// provenance but NOT its modality, so a draft can carry a breach whose severity is unknown.
+		// Reporting it as an error would invent a requirement and dropping it would pass in silence,
+		// so the required rule takes it and says what is missing.
 		var caveat string
 		switch {
 		case len(pt.rel.GetConditions()) > 0:
@@ -374,8 +368,8 @@ var pinTrackingViolated = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-violated"),
-	// The two pins the relation binds, subject then reference. The order is the relation's and it is
-	// the claim: the bound is on subject MINUS reference, so swapping them inverts its sign.
+	// The two pins the relation binds, subject then reference. The order matters (see
+	// trackingVerdicts).
 	SubjectShape: []string{check.KindPin, check.KindPin},
 	Eval: func(m check.Model) []check.Verdict {
 		// UNSPECIFIED lands here rather than on the advisory rule so an unstated modality cannot
@@ -403,8 +397,8 @@ var pinTrackingAdvisory = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-advisory"),
-	// The two pins the relation binds, subject then reference. The order is the relation's and it is
-	// the claim: the bound is on subject MINUS reference, so swapping them inverts its sign.
+	// The two pins the relation binds, subject then reference. The order matters (see
+	// trackingVerdicts).
 	SubjectShape: []string{check.KindPin, check.KindPin},
 	Eval: func(m check.Model) []check.Verdict {
 		return trackingVerdicts(m, func(md parampb.Modality) bool {

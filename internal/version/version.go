@@ -1,10 +1,8 @@
 // Package version reports the engine build's identity, so an artifact the engine writes can name
 // what produced it.
 //
-// It exists because a check-result document is meant to outlive the run that made it (WS3-103): a
-// report read weeks later, or compared against another tool's, is only interpretable once you know
-// which build produced it. Every other consumer of a version string is cosmetic; this one is
-// load-bearing.
+// A check-result document outlives the run that made it (WS3-103), and a report read weeks later
+// is only interpretable once you know which build produced it.
 package version
 
 import (
@@ -16,8 +14,7 @@ import (
 //
 //	go build -ldflags "-X github.com/panyam/agni/internal/version.stamped=v0.4.1"
 //
-// It wins over the VCS metadata below, because a tagged release is a stronger claim than the commit
-// it happened to be cut from.
+// It wins over the VCS metadata below.
 var stamped string
 
 var resolve = sync.OnceValue(func() string {
@@ -39,8 +36,8 @@ var resolve = sync.OnceValue(func() string {
 		}
 	}
 	if rev == "" {
-		// A `go run` build, or a module consumed as a dependency: the module version is the only
-		// identity available, and "(devel)" for a local build is itself honest.
+		// A `go run` build, or a module consumed as a dependency, where the module version is the
+		// only identity available ("(devel)" for a local build).
 		if v := info.Main.Version; v != "" {
 			return v
 		}
@@ -50,8 +47,7 @@ var resolve = sync.OnceValue(func() string {
 		rev = rev[:12]
 	}
 	if dirty {
-		// An uncommitted tree is not a reproducible build. A document that claims a bare commit for
-		// one would be quietly wrong, and quietly wrong provenance is worse than none.
+		// An uncommitted tree is not a reproducible build, so a bare commit would be wrong provenance.
 		return rev + "+dirty"
 	}
 	return rev

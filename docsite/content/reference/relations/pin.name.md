@@ -36,13 +36,14 @@ How far apart the two spellings are depends on the format:
 file declares no pin designator the reader falls back to the port name (`readers/edif/reader.go`,
 issue 71), because the Model indexes pins by designator while a `portRef` names the port, so without
 the fallback nothing resolved. A design read that way answers `pin.name` and `component.pin` with identical
-values, which is correct rather than a defect: the format supplied one spelling and both fields
+values, which is correct rather than a defect, because the format supplied one spelling and both fields
 carry it. Where the file does declare designators, they differ as everywhere else.
 
 ### For software engineers
 
-A **field's declared name against its offset** (see the analogy guide): `pin` is the position in the
-package and `name` is the identifier the header file gives it. Rows are 1:1 with named pins and
+The two are a **field's declared name against its offset** (see
+[the analogy guide](../../../../docsite/content/reference/analogy.md)), where `pin` is the position in
+the package and `name` is the identifier the header file gives it. Rows are 1:1 with named pins and
 absent for the rest, so `component.pin(?r,?p), not pin.name(?r,?p,?_)` reads as "the read gave this pin no
 name", which is a statement about the SOURCE rather than about the board.
 
@@ -52,7 +53,8 @@ multiply rows. Join on `(ref_des, pin)` when you mean one pin.
 
 The name is recorded exactly as the source spells it, with no normalization. `PTE7` and `PTE07` are
 the same pin to a person and two different strings here. Anything comparing a name against a name
-from another document has to canonicalize both sides first, and the traps in doing that (zero
+from another document has to canonicalize both sides first (`core/ident`'s `Canonical` is the one
+canonical form), and the traps in doing that (zero
 padding, invisible format characters, multi-valued cells) are real enough to have produced a whole
 run of false warnings in a shipped in-house checker.
 

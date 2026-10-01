@@ -5,10 +5,10 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// DatasheetCitationOf builds the structured datasheet Citation for one seeded parameter: it resolves
+// DatasheetCitationOf builds the structured datasheet Citation for one seeded parameter. It resolves
 // the SourceDoc title from the parameter's doc_ref, copies the page, section, method, and confidence,
-// and derives the verification state against the revision that SourceDoc records. It is the shared
-// core of both the string Citation() and the typed Finding.DatasheetProv.
+// and derives the verification state against the revision that SourceDoc records. Both the string
+// Citation() and the typed Finding.DatasheetProv are built on it.
 //
 // Verification is derived here rather than stored on the finding because it is a fact about the
 // document as the corpus holds it right now. Computing it at citation time means a re-seed changes
@@ -21,9 +21,8 @@ func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *Datashee
 }
 
 // DatasheetCitationOfProv is the same build from a bare ParamProvenance, for the rows that carry one
-// but are not parameters: a Pin's declaration and a PinRelation's bound. It exists for the reason
-// PinCitation does on the string side — provenance is provenance, and duplicating the doc_ref
-// resolution per row type is how the two drift.
+// but are not parameters, such as a Pin's declaration and a PinRelation's bound. Like PinCitation on
+// the string side, it keeps the doc_ref resolution in one place so the row types cannot drift.
 func DatasheetCitationOfProv(spec *parampb.PartSpec, prov *parampb.ParamProvenance) *DatasheetCitation {
 	return &DatasheetCitation{
 		Doc:        DocTitle(spec, prov.GetDocRef()),

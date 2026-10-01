@@ -6,7 +6,7 @@ import (
 	"github.com/panyam/agni/datasheet/param"
 )
 
-// NewSpecLibBase queries the whole seeded corpus with no design: the datasheet relations range over
+// NewSpecLibBase queries the whole seeded corpus with no design. The datasheet relations range over
 // every PartSpec, and model-dependent relations/predicates yield nothing rather than panicking on the
 // absent model.
 func TestNewSpecLibBase(t *testing.T) {

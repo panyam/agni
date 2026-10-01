@@ -41,9 +41,9 @@ func readAttrBlock(lines []string, start int) (attrs map[string]string, nets []s
 	return attrs, nets, i
 }
 
-// readText consumes a gEDA text (T) or path (H) object: a header line whose last field is the
-// content-line count, followed by that many content lines. It returns the joined content and
-// the index just past the object.
+// readText consumes a gEDA text (T) or path (H) object, which is a header line whose last field
+// is the content-line count, followed by that many content lines. It returns the joined content
+// and the index just past the object.
 func readText(lines []string, start int) (string, int) {
 	f := strings.Fields(lines[start])
 	n := 0

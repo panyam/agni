@@ -53,7 +53,7 @@ func TestJunctionDotAtConvergence(t *testing.T) {
 			}},
 		},
 	}
-	// Dots are now: one junction at the 3-pin net's hub, plus one connection dot per
+	// Dots are now one junction at the 3-pin net's hub, plus one connection dot per
 	// distinct attach point (five: R1.1/R2.1/R3.1 and R1.2/R2.2). The 2-pin net's hub
 	// still gets no junction dot, so its dot count stays exactly its two endpoints.
 	g := layout(d)

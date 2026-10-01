@@ -13,7 +13,7 @@ import (
 )
 
 // orderFixture is the design the order-sensitive tests run on. It has to produce ENOUGH findings
-// for a reordering to be detectable: the three-finding EDIF fixture lets a shuffled writer agree
+// for a reordering to be detectable. The three-finding EDIF fixture lets a shuffled writer agree
 // with itself about one run in six, so a determinism test built on it passes most of the time and
 // proves nothing. This one produces eleven.
 const orderFixture = "testdata/conformance/showcase.fires.kicad_pro"
@@ -62,7 +62,7 @@ func TestCheckCSVHeaderAndRows(t *testing.T) {
 	}
 }
 
-// TestCheckCSVMatchesJSON is the anti-drift check: the two machine-readable formats must report the
+// TestCheckCSVMatchesJSON is the anti-drift check. The two machine-readable formats must report the
 // same findings for one run. Without it the csv writer can quietly fall behind the json one and
 // nothing fails.
 func TestCheckCSVMatchesJSON(t *testing.T) {

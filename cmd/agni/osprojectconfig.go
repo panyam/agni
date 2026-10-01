@@ -16,18 +16,13 @@ import (
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
-// osProjectConfig is the OS-backed service.ProjectConfigLoader: it reads the interface profiles and
-// seeded parameters a project names, from the mounts. All filesystem access stays at the cmd edge
-// (C1/C13).
+// osProjectConfig is the OS-backed service.ConfigResolver. It reads the interface profiles and
+// seeded parameters a project names, from the mounts.
 //
 // It holds NO CACHE. An operator edits a profile or seeds a part while the server runs, and an index
-// that answered with the previous version would produce a confident wrong verdict, which is the
-// failure this whole workstream exists to remove. A large parameter corpus re-read per request is a
-// cost, and a visible one; a stale one is not.
-//
-// If a deployment ever feels that cost, internal/projects/cache.go is the shape to copy rather than
-// the trade to reopen: it caches, and it still stats every file it depends on before answering, so
-// the speedup never comes out of freshness.
+// answering with the previous version would produce a confident wrong verdict. If re-reading a large
+// parameter corpus per request ever costs too much, copy internal/projects/cache.go, which caches
+// and still stats every file it depends on before answering.
 type osProjectConfig struct {
 	mounts []mounts.Mount
 }
@@ -35,15 +30,13 @@ type osProjectConfig struct {
 // ResolveConfig loads what an AnalysisConfig's URIs point at, whether it came from a project
 // descriptor or from a request.
 //
-// A tier that fails to load is an ERROR, not a skip. An operator who wrote a profiles directory and
-// silently got the built-ins would read the resulting clean report as a clean design, which is the
-// same silent-pass failure C24 was written for. A tier the config simply does not name never reaches
-// here as an error: the loops below run zero times.
+// A tier that fails to load is an ERROR, not a skip, since an operator who wrote a profiles
+// directory and silently got the built-ins would read the clean report as a clean design (C24). A
+// tier the config does not name is not an error, because the loops below run zero times.
 func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
 	var out service.ResolvedConfig
-	// read records every host path this resolution opened, so the digest below covers exactly what
-	// was read rather than what the config named. A URI that resolves to a different directory on
-	// two servers is the same config and different bytes, and it is the bytes that decide the run.
+	// read records every host path this resolution opened, so the digest covers what was read
+	// rather than what the config named. One URI can resolve to different bytes on two servers.
 	var read []string
 	for _, uri := range cfg.GetProfileUris() {
 		dir, err := c.dir(uri)
@@ -77,9 +70,8 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 		}
 		out.SymbolPaths = append(out.SymbolPaths, dir)
 	}
-	// Intent composes as its own rule source. A config that declared none simply contributes nothing,
-	// which is how the intent-bound checklist items read needs-design-intent rather than passing on an
-	// architecture nobody stated.
+	// Intent composes as its own rule source. A config declaring none contributes nothing, so the
+	// intent-bound checklist items read needs-design-intent rather than passing.
 	if uri := cfg.GetIntentUri(); uri != "" {
 		abs, err := c.file(uri)
 		if err != nil {
@@ -93,9 +85,8 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 		out.Sources = append(out.Sources, intent.Source("intent", decl))
 		out.Intent = true
 	}
-	// A resolution that read nothing is identifiable as having read nothing, which is a real answer
-	// and not an absent one. Symbol paths go in as NAMES: this call never opens them, and they are
-	// URIs rather than host paths, so statting one would fail rather than digest.
+	// A resolution that read nothing still gets a digest identifying it as such. Symbol paths go in
+	// as NAMES, since this call never opens them and statting a URI would fail.
 	digest, err := digestConfig(read, cfg.GetSymbolPathUris())
 	if err != nil {
 		return service.ResolvedConfig{}, fmt.Errorf("%s config digest: %w", namespace, err)
@@ -122,37 +113,28 @@ func (c *osProjectConfig) dir(uri string) (string, error) {
 	return mounts.Resolve(c.mounts, u)
 }
 
-// projectSourceName is the catalog namespace a project's interface profiles appear under, so a
+// sourceName is the catalog namespace a project's interface profiles appear under, so a
 // finding reads `gateway-profiles/can-esd-missing` and says which project asked for it.
 func sourceName(namespace string) string {
 	if id, ok := service.ProjectID(namespace); ok {
 		return id + "-profiles"
 	}
-	// A namespace that is not a project resource name is a request's. It keeps the same `-profiles`
-	// suffix so the two read alike in a catalog snapshot, and it cannot collide with a project's,
-	// because a project id can never be the literal "request".
+	// A namespace that is not a project resource name is a request's. It keeps the `-profiles` suffix
+	// and cannot collide with a project's, because a project id can never be the literal "request".
 	return namespace + "-profiles"
 }
 
 // refuseProfilePathTheProjectOwns rejects a --profile-path naming a directory the design's own
 // project already composes.
 //
-// Pointing the flag at the project's own profiles/ reads as reasonable and is a mistake. The project
-// composes that directory because it declared it, so the flag loads the same files a SECOND time under
-// a second source name. Nothing collides, because the two namespaces differ, so both copies run: every
-// profile finding is reported twice, and the coverage line counts each subject again. On the tutorial
-// board that turned 15 findings into 18 and 201 considered subjects into 213, with the three extra
-// findings being the same three on the same subjects (agni issue 450).
+// The flag would load the project's own profiles a SECOND time under a second source name. The
+// namespaces differ, so nothing collides and both copies run, reporting every profile finding twice.
+// On the tutorial board that turned 15 findings into 18 and 201 considered subjects into 213 (agni
+// issue 450). It refuses rather than dropping the duplicate, as --conventions does (see
+// service/overlay.go).
 //
-// It refuses rather than silently dropping the duplicate, on the same reasoning the convention path
-// one layer down already uses: an operator passing --conventions for the file their project declares
-// gets a duplicate-source error rather than a merge. Resolving it quietly would leave the operator
-// believing the flag did something.
-//
-// A design in NO project, a project declaring no profiles, or a flag naming somewhere else are all
-// ordinary and return nil. So is any failure to resolve the project: this function's job is to refuse
-// a known-bad combination, and a resolution error is reported by whichever call needed the project to
-// do real work.
+// A design in NO project, a project declaring no profiles, or a flag naming somewhere else return
+// nil. So does any failure to resolve the project, which whichever call needs the project reports.
 func refuseProfilePathTheProjectOwns(ctx context.Context, designArg, profilePath string) error {
 	_, p, err := cliResolveProject(ctx, designArg)
 	if err != nil || p == nil {

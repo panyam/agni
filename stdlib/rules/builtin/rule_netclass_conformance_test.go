@@ -56,8 +56,8 @@ func ncModel(t *testing.T, nets []*ir.Net, defs []*ir.Constraint, bg *geom.Board
 
 // TestNetclassTrackWidthCascade is the regression that motivated the design. VBUS is in HighSpeed
 // (priority 1, declaring only a clearance) and Power (priority 5, declaring 0.8mm). It is routed at
-// 0.8mm, which is exactly what the winning class asks for. A naive per-class comparison would fan
-// out over both classes and FAIL it against Default's 0.25mm or against a class that lost — this
+// 0.8mm, which is what the winning class asks for. A naive per-class comparison would fan
+// out over both classes and FAIL it against Default's 0.25mm or against a class that lost. This
 // asserts it stays silent.
 func TestNetclassTrackWidthCascade(t *testing.T) {
 	defs := []*ir.Constraint{
@@ -88,8 +88,8 @@ func TestNetclassTrackWidthCascade(t *testing.T) {
 	}
 }
 
-// TestNetclassTrackWidthDefaultAppliesToUnclassedNet: the Default class is not just the lowest
-// priority, it applies to nets in NO class. A memberships-only cascade would skip this net entirely
+// TestNetclassTrackWidthDefaultAppliesToUnclassedNet checks that the Default class, beyond being the
+// lowest priority, applies to nets in NO class. A memberships-only cascade would skip this net entirely
 // and report clean over a genuine violation.
 func TestNetclassTrackWidthDefaultAppliesToUnclassedNet(t *testing.T) {
 	defs := []*ir.Constraint{ncDef("Default", 2147483647, true, map[string]string{"track_width": "0.25"})}
@@ -100,13 +100,13 @@ func TestNetclassTrackWidthDefaultAppliesToUnclassedNet(t *testing.T) {
 	}
 }
 
-// TestNetclassRulesSilentWithoutDefinitions: no definitions means no limit, so both rules stay
-// silent rather than inventing one. The capability gate is what reports this honestly to a review;
-// this asserts the rule's own internal guard, which protects a direct caller of Eval.
+// TestNetclassRulesSilentWithoutDefinitions checks that no definitions means no limit, so both
+// rules stay silent rather than inventing one. The capability gate is what reports this to a
+// review; this asserts the rule's own internal guard, which protects a direct caller of Eval.
 //
-// The VBUS copper here is absurdly thin (1µm), so a rule that invented a limit would certainly fire.
-// That is the positive control: "no findings" from a rule that could not fire either way would prove
-// nothing.
+// The VBUS copper here is absurdly thin (1µm), so a rule that invented a limit would certainly
+// fire. That is the positive control, since "no findings" from a rule that could not fire either
+// way would prove nothing.
 func TestNetclassRulesSilentWithoutDefinitions(t *testing.T) {
 	m := ncModel(t, []*ir.Net{{Name: "VBUS", NetClasses: []string{"Power"}}}, nil,
 		ncCopper(ncNet{net: "VBUS", widthMM: 0.001, drillMM: 0.001}))
@@ -131,8 +131,8 @@ func TestNetclassRulesSilentWithoutDefinitions(t *testing.T) {
 	}
 }
 
-// TestNetclassViaDrill: same cascade, the other quantity, and a net whose classes state no drill at
-// all must be skipped rather than compared against nothing.
+// TestNetclassViaDrill runs the same cascade over the other quantity, and a net whose classes state
+// no drill at all must be skipped rather than compared against nothing.
 func TestNetclassViaDrill(t *testing.T) {
 	defs := []*ir.Constraint{
 		ncDef("Power", 5, false, map[string]string{"via_drill": "0.4"}),
@@ -161,8 +161,8 @@ func TestNetclassViaDrill(t *testing.T) {
 	}
 }
 
-// TestNetclassTrackWidthPriorityDecides exercises the ORDER, which the cascade test above cannot:
-// there, only one of the net's classes stated a track width, so any ordering gave the same answer.
+// TestNetclassTrackWidthPriorityDecides exercises the ORDER, which the cascade test above cannot.
+// There, only one of the net's classes stated a track width, so any ordering gave the same answer.
 // Here BOTH state one and they disagree, so the winner is decided purely by priority. Routed at the
 // high-priority class's value, the net must be silent; a rule that took the wrong class would fire.
 func TestNetclassTrackWidthPriorityDecides(t *testing.T) {
@@ -182,7 +182,7 @@ func TestNetclassTrackWidthPriorityDecides(t *testing.T) {
 		t.Errorf("net routed at the WINNING class's width produced findings: %+v", f)
 	}
 
-	// Below Zeta's width: fires, and names Zeta rather than Alpha or Default.
+	// Below Zeta's width it fires, and names Zeta rather than Alpha or Default.
 	m2 := ncModel(t, nets, defs, ncCopper(ncNet{net: "SIG", widthMM: 0.10}))
 	f := netclassTrackWidth.Findings(m2)
 	if len(f) != 1 {

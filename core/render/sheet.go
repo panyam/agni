@@ -7,11 +7,10 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// PickSheet resolves a sheet selector against a schematic's sheets: a numeric index, or a match
-// on sheet id or name. An explicit id/name match wins over a positional index, so a sheet whose
-// id happens to be numeric (e.g. a flat single-sheet format that ids its page "1") is still
-// selectable by that id rather than being misread as an out-of-range index. This is a pure
-// geometry operation (no I/O), shared by the CLI render command and the web design service.
+// PickSheet resolves a sheet selector (a numeric index, a sheet id or a sheet name) against a
+// schematic's sheets. An id or name match wins over an index, so a single-sheet format that ids
+// its page "1" is still selectable by that id. It does no I/O, and both the CLI render command
+// and the web design service call it.
 func PickSheet(g *geom.SchematicGeometry, sel string) (*geom.SheetGeometry, error) {
 	for _, s := range g.Sheets {
 		if s.Id == sel || s.Name == sel {

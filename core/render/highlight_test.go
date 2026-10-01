@@ -91,8 +91,8 @@ func TestHighlightPackedNoMatch(t *testing.T) {
 // TestHighlightSVG checks the SVG overlay projection: the document has the exact frame
 // (width/height/viewBox) of SheetSVG for the same sheet so the layers composite, it is
 // transparent (no background rect), and it draws the matched net wire, the matched
-// component's outline and pin dots, and the individually matched pin — in the spec's
-// color/alpha — while unmatched elements stay out.
+// component's outline and pin dots, and the individually matched pin, in the spec's
+// color/alpha, while unmatched elements stay out.
 func TestHighlightSVG(t *testing.T) {
 	g := highlightFixture()
 	specs := []*geom.HighlightSpec{
@@ -144,11 +144,11 @@ func TestHighlightSVG(t *testing.T) {
 	}
 }
 
-// TestSheetSVGHighlighted proves the baked single-document render composites exactly: the base
-// sheet content (page rect + wires) AND the highlight overlay (the marked net's re-stroke, the
-// matched pin dots) in one SVG, with nothing lost or doubled. For every element kind the two layers
-// contribute, the baked count equals base + overlay — the one-code-path guarantee the CLI static
-// render leans on (same projection the server serves as a separate overlay).
+// TestSheetSVGHighlighted proves the baked single-document render composites exactly. It carries
+// the base sheet content (page rect + wires) AND the highlight overlay (the marked net's re-stroke,
+// the matched pin dots) in one SVG, with nothing lost or doubled. For every element kind the two
+// layers contribute, the baked count equals base + overlay. That is the one-code-path guarantee the
+// CLI static render relies on (same projection the server serves as a separate overlay).
 func TestSheetSVGHighlighted(t *testing.T) {
 	g := highlightFixture()
 	specs := []*geom.HighlightSpec{
@@ -201,7 +201,7 @@ func TestHasHighlights(t *testing.T) {
 }
 
 // TestHighlightSVGBus checks that a bus spec re-strokes ONLY its own bus trunk, keyed by the bus
-// NAME and gated on the bus kind so it never matches a net (WS7-042b): a non-matching name paints
+// NAME and gated on the bus kind so it never matches a net (WS7-042b). A non-matching name paints
 // nothing, and a net wire that shares the bus name is not caught.
 func TestHighlightSVGBus(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{
@@ -372,7 +372,7 @@ func TestHighlightEntityFraming(t *testing.T) {
 }
 
 // TestHighlightSVGBoundingShapes: a BOUNDING_RECT spec emits one translucent filled <rect>
-// per matched entity (component and net — never one box over the union) and none of the
+// per matched entity (component and net, never one box over the union) and none of the
 // outline re-strokes; BOUNDING_CIRCLE likewise emits per-entity filled circles. Unset alpha
 // on a bounding shape defaults to 0.3, not opaque.
 func TestHighlightSVGBoundingShapes(t *testing.T) {
@@ -423,7 +423,7 @@ func equalU32(a, b []uint32) bool {
 // The viewer stacks two layers: the field of findings underneath and the focused subject on top. It
 // used to send both with no color, so both took DefaultHighlightColor and the reader had one hue at
 // two alphas to tell "what I clicked" from "everything else". The client now stamps the base layer
-// with its own color, and the whole fix rests on the server honoring that rather than flattening it.
+// with its own color, and the fix rests on the server honoring that rather than flattening it.
 //
 // The SVG overlay is the path where that could silently not happen: the WebGL renderer resolves specs
 // on the client, but SVG mode round-trips them here and paints from what arrives.
@@ -440,7 +440,7 @@ func TestHighlightSVGPaintsLayersInTheirOwnColors(t *testing.T) {
 	if !strings.Contains(overlay, DefaultHighlightColor) {
 		t.Errorf("the focus layer names no color and must fall back to %s:\n%s", DefaultHighlightColor, overlay)
 	}
-	// The point of the change, stated as the property rather than as two separate presence checks:
+	// The change, stated as the property rather than as two separate presence checks, is that
 	// whatever the two colors are, they must not be the same one.
 	if baseColor == DefaultHighlightColor {
 		t.Fatal("the base and focus colors are identical, so the layers cannot be told apart")

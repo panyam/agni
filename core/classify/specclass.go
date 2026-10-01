@@ -2,31 +2,25 @@ package classify
 
 import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
-// StampClassesFromSpecs is the DATASHEET evidence tier of the device-class stamp: for every
+// StampClassesFromSpecs is the DATASHEET evidence tier of the device-class stamp. For every
 // component whose MPN joins a seeded spec carrying a device_class, it adds that class and its family
 // tag to ir.Component.device_classes, attributed to CLASS_SOURCE_DATASHEET.
 //
-// It is a second pass rather than part of classify.Stamp because it cannot run there. The join key is
-// the MPN, which StampMPN fills in the same ingestion sweep, and the corpus it joins against only
-// exists once a params tier is attached, which a read without one never has. That is C9's
-// evidence-tier variant, one shared pass PER TIER, and this is the pass the variant was written for
-// (agni issue 280 named the case, 710 closed it).
+// It is its own pass, run after Stamp and StampMPN, because Stamp REPLACES the class set and the join
+// key is the MPN that StampMPN fills. It also needs a params corpus, which a read without one never
+// has (C9's evidence-tier variant; agni issue 280 named the case, 710 closed it). The ordering is in
+// docsite/content/architecture/ingestion-and-ir.md#derived-fields-and-the-tiers-that-fill-them.
 //
-// WHAT ONLY THIS TIER KNOWS. The keyword path deliberately refuses to subtype a clock source, because
-// the vendor's own part text is unreliable there (tokenClasses has the measurement: a library named
-// "Oscillator" carrying every crystal in it, and a per-part type label swapped in the field). It
-// cannot reach ideal_diode_controller at all, since no netlist labels a FET plus a bias network as
-// one. So a design read without a corpus is not missing a refinement; it is missing the only evidence
-// that resolves those classes.
+// Only this tier can subtype a clock source (tokenClasses says why the keyword path refuses) or reach
+// ideal_diode_controller, since no netlist labels a FET plus a bias network as one.
 //
-// ADDITIVE AND IDEMPOTENT. It never removes or downgrades what the convention tier established, and
-// running it twice, or running it after check.Model has already built its own class set, changes
-// nothing. Both properties matter because two callers run it: the Loader when the read carries a
-// corpus, and check.Model when the model is given one the read did not have.
+// ADDITIVE AND IDEMPOTENT. It never removes or downgrades a convention-tier class, and a second run
+// changes nothing. Both matter because two callers run it, the Loader when the read carries a corpus
+// and check.Model when the model is given one the read did not have.
 //
 // deviceClassFor answers the vendor's device_class string for an MPN, or "" for a part with no spec
-// or no class on it. A narrow function rather than the param provider itself, so the ingestion layer
-// does not take on the datasheet layer (C1): what this pass needs is one string per part.
+// or no class on it. It is a function rather than the param provider so classify does not import the
+// datasheet layer.
 func StampClassesFromSpecs(d *ir.Design, deviceClassFor func(mpn string) string) {
 	if deviceClassFor == nil {
 		return
@@ -36,11 +30,9 @@ func StampClassesFromSpecs(d *ir.Design, deviceClassFor func(mpn string) string)
 		if mpn == "" {
 			continue
 		}
-		// The vendor string is free-form ("SPXO", "ceramic resonator"), so it is normalized to a
-		// canonical class FIRST and only then expanded, which is what lets a spelling variant reach
-		// the same family tag the keyword path produces instead of landing bare. A value the engine
-		// does not recognise passes through as itself: an unrecognised class is still a fact about
-		// the part, and it sorts behind the keyword-derived one rather than displacing it.
+		// The vendor string is free-form ("SPXO", "ceramic resonator"), so it is normalized before it
+		// is expanded, and a spelling variant reaches the same family tag the keyword path produces. An
+		// unrecognised value passes through as itself and sorts behind the keyword-derived class.
 		cl := NormalizeDeviceClass(deviceClassFor(mpn))
 		for _, name := range ClassesOf(cl) {
 			AddClassTag(c, name, ir.ClassSource_CLASS_SOURCE_DATASHEET)

@@ -70,7 +70,7 @@ describe("comparePickerIsland", () => {
   });
 
   // Pushing the open design as the tree's state also drives the tree's auto-reveal, so the picker
-  // opens already expanded to that design's folder — its neighbours (the likely comparison targets,
+  // opens already expanded to that design's folder, so its neighbours (the likely comparison targets,
   // e.g. sibling versions) are one click away with no navigating. Asserted here because it is a
   // behavior the picker gets for free from the tree, which makes it easy to break unknowingly.
   it("opens already expanded to the folder holding the open design", async () => {
@@ -128,7 +128,7 @@ describe("comparePickerIsland", () => {
   });
 
   // Opening with no design open is reachable only if the button's disabled guard fails, but the
-  // picker must not throw on a null exclude — nothing is then marked unavailable.
+  // picker must not throw on a null exclude. Nothing is then marked unavailable.
   it("opens with no design to exclude", async () => {
     const { treeEl, onPick, picker } = mountPicker();
     picker.open(null);

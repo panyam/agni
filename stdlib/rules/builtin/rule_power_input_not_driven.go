@@ -31,20 +31,18 @@ var powerInputNotDriven = &check.Rule{
 
 // powerInputNotDrivenVerdicts decides every net carrying a power-INPUT pin, and that set is the
 // considered set. A net with no supply pin on it is not a subject of a supply rule and yields no
-// verdict, which is the distinction the led-polarity conversion found the hard way: a pass emitted
-// about a subject the rule never asked about claims a check that did not happen.
+// verdict, since a pass about a subject the rule never asked about claims a check that did not happen.
 //
-// THE FORMAT GATE BECOMES NotConsidered, and that is the finding-shaped half of this conversion.
-// "No power source" is only conclusive where the format types power OUTPUTS. EDIF and IPC-2581 carry
-// no power_out, so a rail's own regulator reads as a plain input there and the rule would fire on
-// every switched or derived rail. Gating is right; going SILENT about it was not, because a review
-// then reads the same nothing it reads from a board whose rails are all properly fed. `Run` never
+// THE FORMAT GATE IS NotConsidered. "No power source" is only conclusive where the format types power
+// OUTPUTS. EDIF and IPC-2581 carry no power_out, so a rail's own regulator reads as a plain input there
+// and the rule would fire on every switched or derived rail. A SILENT gate would read the same as a
+// board whose rails are all properly fed, so each gated net gets a verdict saying why. `Run` never
 // consults RequiresCapability, so the rule-level declaration reaches only a caller that asks
-// Available first; this reaches every caller.
+// Available first, and this reaches every caller.
 //
-// The EXTERNAL exemption is NotConsidered for the same reason it is in floating-input: the feed may
-// be on a sheet this read did not open. The power-flag exemption is a genuine PASS, because a power
-// flag is the designer stating the net is driven, which is an answer rather than an absence.
+// The EXTERNAL exemption is NotConsidered for the same reason it is in floating-input, since the feed
+// may be on a sheet this read did not open. The power-flag exemption is a genuine PASS, because a
+// power flag is the designer stating the net is driven.
 func powerInputNotDrivenVerdicts(m check.Model) []check.Verdict {
 	typesPowerOut := m.FormatTypesPowerOut()
 

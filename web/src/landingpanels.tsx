@@ -3,8 +3,8 @@
 // a file rather than each taking one the way the viewer's panels do.
 //
 // Neither list is a file browser. The tree stays one click away behind the Designs and Datasheets
-// cards, and these lists exist to skip it for the two cases where drilling down is pure cost: you
-// were just here, or someone declared the design by name.
+// cards, and these lists skip it in two cases where drilling down buys nothing, when you were just
+// here or when a project declares the design by name.
 
 import { createSignal, For, Show } from "solid-js";
 import type { EventBus } from "@panyam/tsappkit";
@@ -22,9 +22,8 @@ export function openUrl(kind: RecentKind, mount: string, path: string): string {
   return kind === "datasheet" ? dsToUrl({ mount, path }) : locationToUrl({ ...emptyLocation(), mount, path });
 }
 
-// ago words an age the way someone reading a list scans it. Coarse on purpose: the question is
-// "was this today", never "was this 43 minutes ago", and a precise answer costs a re-render to
-// stay true.
+// ago words an age the way someone reading a list scans it. Coarse, because the question is "was
+// this today" and not "was this 43 minutes ago", and a precise answer costs a re-render to stay true.
 export function ago(then: number, now: number): string {
   const mins = Math.floor((now - then) / 60000);
   if (mins < 1) return "just now";
@@ -87,8 +86,8 @@ interface ProjectGroup {
 }
 
 // loadProjects fetches every project and its designs. A deployment with no descriptors is the
-// ordinary case rather than an error (see project.proto), so the failure and the empty answer land
-// in the same place: the section renders nothing at all.
+// ordinary case rather than an error (see project.proto), so a failure and an empty answer both
+// leave the section rendering nothing.
 async function loadProjects(): Promise<ProjectGroup[]> {
   const client = projectClient();
   const { projects } = await client.listProjects({});

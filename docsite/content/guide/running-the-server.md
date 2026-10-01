@@ -21,8 +21,8 @@ Open `http://localhost:8080`. Your boards are in the file tree on the left, unde
 With no `-v` at all it still runs, serving the two demo boards baked into the image, so you can
 confirm the thing works before pointing it at your own designs.
 
-The examples on this page pin a version, for the same reason
-[Getting started](../getting-started/#install) does: a report is only reproducible if you can say
+The examples on this page pin a version, as
+[Getting started](../getting-started/#install) does, because a report is only reproducible if you can say
 which build produced it. Every published version is on
 [the package page](https://github.com/panyam/agni/pkgs/container/agni), and `:latest` tracks the
 newest if you would rather not pin. `agni version` inside the container always tells you what you
@@ -40,7 +40,7 @@ docker run -p 8080:8080 \
   ghcr.io/panyam/agni:v0.1.1
 ```
 
-That gives two mounts, `boards` and `datasheets`. The mount is the containment boundary: the
+That gives two mounts, `boards` and `datasheets`. Each mount is a containment boundary, because the
 browser addresses files as a mount name plus a mount-relative path, never an absolute one, and the
 server rejects any path that escapes its mount.
 
@@ -51,8 +51,8 @@ design folder.
 
 ## Without Docker
 
-The image exists because it carries the pieces a server needs beyond the engine: the viewer's built
-assets, and the symbol libraries. Running the binary directly means supplying the first of those
+The image exists because it carries the viewer's built assets and the symbol libraries, which a
+server needs beyond the engine. Running the binary directly means supplying the first of those
 yourself.
 
 ```
@@ -82,7 +82,7 @@ Two ways to avoid typing it every time:
 
 | where you put it | what it suits |
 |---|---|
-| `web_dir:` in an `agni.yaml` ([machine configuration](../cli-reference/#machine-configuration-agniyaml)) | per-directory, and it travels with a checkout |
+| `web_dir:` in an `agni.yaml` ([machine configuration](../cli-reference/#machine-configuration-in-agniyaml)) | per-directory, and it travels with a checkout |
 | `AGNI_WEB_DIR` in the environment | an installed binary whose assets sit at a fixed path |
 
 A run says on stderr when the value came from the environment, because an `AGNI_WEB_DIR` exported
@@ -99,12 +99,12 @@ resolve to a pin-level {{ explainable "netlist" }}. The image ships the KiCad, x
 symbol libraries and points `--symbol-path` at all three, so external symbols resolve with nothing
 to install.
 
-This is worth knowing because the failure it prevents is a quiet one. Without the libraries the
-design still reads, it just reads short: fewer components, fewer nets, and therefore fewer
-findings, with no error to tell you so. If your component or net counts look low, that is the first
+The failure this prevents is a quiet one. Without the libraries the
+design still reads, it just reads short, with fewer components, fewer nets, and therefore fewer
+findings and no error to tell you so. If your component or net counts look low, that is the first
 thing to check, whether you are running in Docker or not.
 
-The libraries are most of the image's ~310MB. That is the trade being made deliberately: a smaller
+The libraries are most of the image's ~310MB. The size is deliberate, because a smaller
 image that renders your board wrong is the worse default.
 
 ## Running one-shot commands
@@ -175,7 +175,7 @@ It is deliberately a different volume from your board folders.
 <details>
 <summary>Why the store sits outside your design mounts, and what one stored run is</summary>
 
-Design mounts are read-only, and keeping runs somewhere else is what preserves that: nothing the
+Design mounts are read-only, and keeping runs somewhere else preserves that, because nothing the
 server saves ever lands beside your schematics. A named volume also survives `docker rm`, without
 which storing runs would be pointless.
 
@@ -186,14 +186,14 @@ rewrites what an older run says it asked.
 
 </details>
 
-Two things to know before you rely on it. Runs are visible to every client of the server, because
-`agni serve` has no authentication yet, so treat the store the way you treat the mounts: fine for one
-team on a trusted network, not a boundary between teams. And nothing prunes it, so a CI job creating
+Runs are visible to every client of the server, because
+`agni serve` has no authentication yet, so treat the store the way you treat the mounts, as fine for one
+team on a trusted network and no boundary between teams. And nothing prunes it, so a CI job creating
 a run per commit will grow the volume until you delete runs yourself.
 
 ## Writes and file ownership
 
-The datasheets workbench writes back into a mount: saving a PartSpec or an annotation lands a file
+The datasheets workbench writes back into a mount, so saving a PartSpec or an annotation lands a file
 in your bind-mounted folder. The container runs as a non-root user (uid 10001) so those files are
 never written as root.
 
@@ -213,15 +213,15 @@ docker run --user $(id -u):$(id -g) -p 8080:8080 -v ~/boards:/workspace/boards g
 Two capabilities shell out to external programs and are deliberately left out, because both are
 large and neither is needed to read, check, diff, or query a design.
 
-- **Native golden renders.** `agni native render/open` drives the format's own tool (`kicad-cli`,
+- `agni native render/open` makes native golden renders by driving the format's own tool (`kicad-cli`,
   xschem, Lepton). See [native verification](../../build/native-verification/).
-- **Datasheet extraction.** The `/datasheets` workbench's "Extract (first pass)" action shells out
+- Datasheet extraction, the `/datasheets` workbench's "Extract (first pass)" action, shells out
   to a doc-IR producer configured with `--pdf2doc`. Transcribing parameters by hand and reading an
   already-extracted doc-IR both work without it.
 
 ## A shared deployment
 
 Everything above assumes one engineer, one machine. There is no authentication, no per-user
-scoping, and no session isolation: anyone who can reach the port sees every mount and can write
+scoping, and no session isolation, so anyone who can reach the port sees every mount and can write
 through the datasheets workbench. That is the right trade for localhost and the wrong one for a
 shared host. Put it behind something that authenticates before you expose it.

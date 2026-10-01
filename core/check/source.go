@@ -1,45 +1,39 @@
 package check
 
-// RuleSource is one origin of rules: the built-ins, an embedder's Go suite, a design's own
-// rule file, or (later) the Phase-2 DSL compiler's output — all register through this one
-// seam, so nothing downstream distinguishes where a rule came from (WS3-006). Name is the
-// source's namespace: the empty name is reserved for the built-in source, whose rule names
-// pass through bare; every other source's rules are exposed by the Catalog as
-// "<name>/<rule>" so an external suite cannot silently shadow a built-in.
+// RuleSource is one origin of rules, such as the built-ins, an embedder's Go suite or a design's
+// own rule file. Nothing downstream distinguishes where a rule came from (WS3-006). Name is the
+// source's namespace. The empty name is reserved for the built-ins, whose rule names pass through
+// bare, and every other source's rules are exposed as "<name>/<rule>" so an external suite cannot
+// silently shadow a built-in.
 type RuleSource interface {
 	Name() string
 	Rules() []*Rule
 }
 
-// SupersedingSource is an OPTIONAL capability a RuleSource may also implement: it REPLACES rules an
-// earlier source contributed instead of running alongside them. Composition type-asserts for it, so
-// this is additive. Widening RuleSource itself would break every out-of-module suite, which is the
-// open-core seam RegisterSource exists to keep stable.
+// SupersedingSource is an OPTIONAL capability a RuleSource may also implement, for a source that
+// REPLACES rules another source contributed instead of running alongside them. Composition
+// type-asserts for it, because widening RuleSource would break every out-of-module suite.
 //
-// Each returned Facets selects the rules this source supersedes, using the same selection vocabulary
-// as Filter. That is what gives both granularities the catalog needs with no second matcher: Names
-// supersedes individual rules (a house rule replacing one built-in), Tags supersedes a whole family
-// (every rule of one interface profile, via the "profile" tag).
+// Each returned Facets selects superseded rules with Filter's vocabulary. Names supersedes
+// individual rules (a house rule replacing one built-in) and Tags a whole family (every rule of one
+// interface profile, via the "profile" tag).
 //
-// Composition never applies a source's own declaration to its own rules. A profile overlay and the
-// built-in profile it replaces tag their rules identically, so an unexempted declaration would
-// delete the replacement along with what it replaced and leave the interface unchecked.
+// A source's declaration never applies to its own rules. See applySupersessions for why.
 type SupersedingSource interface {
 	RuleSource
 	Supersedes() []Facets
 }
 
 // Supersession records that one source's rules were dropped from a composed catalog because another
-// source superseded them. The Catalog keeps these so a surface can SAY what it suppressed: silently
-// dropping a rule turns a false failure into an invisible gap, which is the worse of the two.
+// source superseded them. The Catalog keeps these so a surface can SAY what it suppressed, since a
+// silently dropped rule turns a false failure into an invisible gap.
 type Supersession struct {
 	By    string   // Name() of the superseding source
 	Rules []string // composed names of the rules that were dropped, in catalog order
 }
 
 // NewSupersedingSource wraps a fixed rule slice as a named source that supersedes every rule matching
-// any of the given Facets. It is NewSource plus the replace semantic, for the common case where the
-// superseded set is known when the source is built.
+// any of the given Facets, for when the superseded set is known at construction.
 func NewSupersedingSource(name string, rules []*Rule, supersedes ...Facets) SupersedingSource {
 	return supersedingSource{fixedSource{name: name, rules: rules}, supersedes}
 }
@@ -51,11 +45,9 @@ type supersedingSource struct {
 
 func (s supersedingSource) Supersedes() []Facets { return s.supersedes }
 
-// Builtins is the built-in rule set as a RuleSource — the default (and only anonymous)
-// source. It reads the installed built-in registry at call time, so the rules registered by
-// stdlib/rules/builtin's init (via RegisterBuiltins) are always included. With that package
-// not imported the built-in set is empty, and the engine runs whatever sources ARE registered
-// — the open-core posture where the core owns no rules.
+// Builtins is the built-in rule set as a RuleSource, and the only anonymous source. It reads the
+// set RegisterBuiltins installed at call time. Without stdlib/rules/builtin imported the set is
+// empty and the engine runs only the sources that ARE registered.
 var Builtins RuleSource = builtins{}
 
 type builtins struct{}
@@ -71,13 +63,11 @@ var (
 	builtinSpecs map[string]*Spec
 )
 
-// RegisterBuiltins installs the standard EE rule catalog as the anonymous built-in source. It is
-// the built-in analogue of RegisterSource: stdlib/rules/builtin calls it from its init so the
-// rules pass through the Catalog bare (the empty source name is reserved for the built-ins), while
-// extension suites register named and are namespaced. rules is exposed through Builtins (and
-// BuiltinRules); specs is the Go-eval'd rules' declarative twins (BuiltinSpecs), held to their Go
-// Eval by the parity tests. Calling it more than once replaces the set (the last import wins);
-// there is exactly one built-in source, so this is a set, not an append.
+// RegisterBuiltins installs the standard EE rule catalog as the anonymous built-in source, whose
+// rules pass through the Catalog un-namespaced. stdlib/rules/builtin calls it from its init. rules
+// is exposed through Builtins and BuiltinRules. specs holds the Go-eval'd rules' declarative twins
+// (BuiltinSpecs), which the parity tests hold to their Go Eval. A second call replaces the set
+// rather than appending, so the last import wins.
 func RegisterBuiltins(rules []*Rule, specs map[string]*Spec) {
 	builtinRules, builtinSpecs = rules, specs
 }
@@ -90,9 +80,9 @@ func BuiltinRules() []*Rule { return builtinRules }
 // is not imported). Callers must not mutate the returned map.
 func BuiltinSpecs() map[string]*Spec { return builtinSpecs }
 
-// NewSource wraps a fixed rule slice as a named RuleSource: the one-liner for an embedder's
-// suite or a test source. The name becomes the namespace prefix; it must match the Catalog's
-// source-name grammar (lowercase [a-z0-9-]+).
+// NewSource wraps a fixed rule slice as a named RuleSource, for an embedder's
+// suite or a test source. The name becomes the namespace prefix and must match the Catalog's
+// source-name grammar, lowercase [a-z0-9-]+.
 func NewSource(name string, rules []*Rule) RuleSource {
 	return fixedSource{name: name, rules: rules}
 }
@@ -106,24 +96,17 @@ func (s fixedSource) Name() string   { return s.name }
 func (s fixedSource) Rules() []*Rule { return s.rules }
 
 // registeredSources are the out-of-module rule suites added via RegisterSource. The built-in
-// set is NOT here — it is Builtins, composed first — so this holds only the extra sources an
-// embedder contributes.
+// set is NOT here, since Builtins is composed first on its own.
 var registeredSources []RuleSource
 
-// RegisterSource adds a rule source to the process-global registry, so a suite living in
-// another module — house-style or proprietary rules in the open-core extension — is picked up by
-// the engine's own surfaces (the CLI and serve both compose DefaultCatalog / CatalogWith) with
-// no re-wiring. This is the rule-side twin of the reader registry's formats.Register (WS12-004):
-// an embedder calls it from an init or the composing binary's main and its rules appear in
-// ListRules and run in CheckDesign, namespaced "<source>/<rule>" so they can never shadow a
-// built-in.
+// RegisterSource adds a rule source to the process-global registry, so a suite living in another
+// module is picked up by the CLI and serve (both compose DefaultCatalog / CatalogWith) with no
+// re-wiring. It is the rule-side twin of formats.Register (WS12-004). Call it from an init or the
+// composing binary's main, and the rules appear in ListRules and CheckDesign as "<source>/<rule>".
 //
-// RegisterSource panics on a nil source, an anonymous source (the empty name is reserved for the
-// built-ins), a name outside [a-z0-9-]+, or a duplicate source name — all programming errors
-// surfaced at process start, matching the standard library's registry convention
-// (image.RegisterFormat, sql.Register) and formats.Register. A source is registered once; the
-// deeper composition checks (no "/" in a rule name, no duplicate composed names) stay with the
-// Catalog and surface when DefaultCatalog / CatalogWith builds.
+// RegisterSource panics on a nil source, an anonymous source, a name outside [a-z0-9-]+, or a
+// duplicate source name, as image.RegisterFormat and sql.Register do. The deeper checks (no "/" in a
+// rule name, no duplicate composed names) run when DefaultCatalog / CatalogWith builds.
 func RegisterSource(s RuleSource) {
 	if s == nil {
 		panic("check: RegisterSource(nil)")
@@ -144,8 +127,7 @@ func RegisterSource(s RuleSource) {
 }
 
 // RegisteredSources returns the sources added via RegisterSource, in registration order (the
-// built-ins are not included). It is the introspection hook a catalog builder or a test uses;
-// callers must not mutate the returned slice.
+// built-ins are not included). Callers must not mutate the returned slice.
 func RegisteredSources() []RuleSource {
 	return registeredSources
 }

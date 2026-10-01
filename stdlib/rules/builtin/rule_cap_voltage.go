@@ -7,12 +7,12 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// capVoltageDerate is the margin multiplier the rated voltage must clear:
+// capVoltageDerate is the margin multiplier the rated voltage must clear, so
 // Vrated >= rail_V x derate. 1.25 is the common 20%-derating convention for ceramics.
 // Per-run parameterization is WS3-006; a computed worst-case rail voltage is WS4.
 const capVoltageDerate = 1.25
 
-// capVoltage is the cap-voltage rule (WS10-005): a capacitor joined to its seeded
+// capVoltage is the cap-voltage rule (WS10-005). A capacitor joined to its seeded
 // datasheet spec must have a rated voltage clearing the worst rail it touches times the
 // derate factor. The join and compare live behind the cap_voltage_detail SpecFunc, whose
 // declared Reads flow into the rule's derived metadata (the WS3-004 fact capture). The
@@ -28,7 +28,7 @@ var capVoltage = func() *check.Rule {
 	r := (&check.Spec{
 		Over: "components",
 		Let:  map[string]check.Term{"detail": check.Call{Fn: "cap_voltage_detail"}},
-		// Scope is the capacitors: the rule is not about any other part.
+		// Scope is the capacitors, since the rule is about no other part.
 		Scope:   check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}},
 		Where:   check.Cmp{L: check.Var{Name: "detail"}, Op: "!=", R: check.Lit{V: ""}},
 		Message: "{detail}",
@@ -46,16 +46,15 @@ var capVoltage = func() *check.Rule {
 		},
 		Detail: ruleDoc("cap-voltage"),
 	})
-	// THE ONE SPEC RULE THAT MUST NOT CLAIM A CONSIDERED SET, and the reason is in capVoltageDetail:
-	// it returns "" for a pass AND for every skip, including a capacitor with no seeded datasheet at
-	// all. Scope narrows the subjects to capacitors correctly, but inside that scope a false Where
-	// still means either "rated voltage clears the rail" or "there was nothing to compare".
+	// THE ONE SPEC RULE THAT MUST NOT CLAIM A CONSIDERED SET. capVoltageDetail returns "" for a pass
+	// AND for every skip, including a capacitor with no seeded datasheet at all. Scope narrows the
+	// subjects to capacitors correctly, but inside that scope a false Where still means either "rated
+	// voltage clears the rail" or "there was nothing to compare".
 	//
 	// Reporting the second as a Pass would assert the part is within its rating when nothing was ever
-	// checked, which is a worse answer than the silence it replaced. The fix is a way for a SpecFunc
-	// to return "no data" distinctly from "no violation", which is the NoLimit outcome the datasheet
-	// rules already produce by hand. Until the spec language can express that, this rule reports
-	// violations only.
+	// checked, which is worse than silence. Lifting this needs a SpecFunc to return "no data"
+	// distinctly from "no violation", the NoLimit outcome the datasheet rules produce by hand. Until
+	// the spec language can express that, this rule reports violations only.
 	r.StatesConsideredSet = false
 	return r
 }()

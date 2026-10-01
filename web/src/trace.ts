@@ -1,7 +1,7 @@
-// trace.ts is the framework-neutral state for the trace panel (agni issue 600): the reader names two
+// trace.ts is the framework-neutral state for the trace panel (agni issue 600). The reader names two
 // pins, the presenter calls TraceDesign and pushes a TraceState, the panel renders it and the canvas
-// highlights the route. Keeping the shape here rather than in the .tsx mirrors coverage.ts /
-// findings.ts and lets the presenter and its tests build state without touching Solid.
+// highlights the route. The shape lives here rather than in the .tsx, as in coverage.ts and
+// findings.ts, so the presenter and its tests build state without touching Solid.
 import { type Trace, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
 import type { HighlightSubject } from "./findings.js";
 
@@ -31,8 +31,8 @@ export interface TraceNetItem {
   stubsElided: number;
   busLike: boolean;
   // The sheets this net is drawn on, empty when it is drawn on none. Per net rather than one per
-  // trace, because a route crossing three sheets is exactly when a reader wants to choose which to
-  // open, and this is the same list a finding and a query cell already carry.
+  // trace, because a route crossing three sheets is when a reader wants to choose which to open (see
+  // service.AnnotateTraceSheets).
   sheetIds: string[];
 }
 
@@ -42,20 +42,19 @@ export interface TraceEndItem {
   pinName: string;
   net: string;
   // Where this endpoint is DRAWN, resolved from its placement and falling back to its net. Filled on
-  // a no-route too: the two nets that fail to join are drawn somewhere, and that is the picture a
-  // reader goes looking for the moment they read that the pins do not join.
+  // a no-route too, since the two nets that fail to join are still drawn somewhere.
   sheetIds: string[];
 }
 
 // TraceState is the panel's whole state.
 //
-// `ran` separates "not asked yet" (a blank panel) from an answer, which matters more here than in
-// most panels: two of the three outcomes are NEGATIVE, and a panel that rendered "no route" before
-// anyone asked anything would be stating something false about the design.
+// `ran` separates "not asked yet" (a blank panel) from an answer. Two of the three outcomes are
+// NEGATIVE, so a panel rendering "no route" before anyone asked would state something false about
+// the design.
 //
-// `error` is for a request that failed (an unloadable design, a transport error) and is a different
-// thing from an UNRESOLVED outcome, which is a successful answer saying the question named something
-// the design does not have.
+// `error` is for a request that failed (an unloadable design, a transport error). An UNRESOLVED
+// outcome is different, a successful answer saying the question named something the design does not
+// have.
 export interface TraceState {
   from: TraceEndItem;
   to: TraceEndItem;
@@ -132,13 +131,12 @@ export function traceFromResponse(t: Trace): TraceState {
 // answer was.
 //
 // A route lights its nets and the parts it crossed. A no-route lights the two nets that fail to
-// join, which is the picture a reader goes looking for the moment they read the words, and an
-// unresolved endpoint lights whichever end DID resolve, because half an answer located is more use
-// than none and the panel beside it already says the other end named nothing.
+// join. An unresolved endpoint lights whichever end DID resolve, since the panel beside it already
+// says the other end named nothing.
 //
-// It is the twin of traceSpecs in cmd/agni, deliberately: the CLI draws an SVG and the viewer paints
-// a canvas, so neither can call the other, and what they share is the CLAIM about which entities a
-// trace is about. That claim is stated in both places and tested in both.
+// It is the twin of traceSpecs in cmd/agni. The CLI draws an SVG and the viewer paints a canvas, so
+// neither can call the other, and the CLAIM about which entities a trace is about is stated and
+// tested in both places.
 export function traceSubjects(s: TraceState): HighlightSubject[] {
   if (!s.ran || s.error) return [];
   const subjects: HighlightSubject[] = [];
@@ -156,7 +154,7 @@ export function traceSubjects(s: TraceState): HighlightSubject[] {
   return subjects;
 }
 
-// TraceView is the command-down surface: the presenter pushes each answer.
+// TraceView is the command-down surface the presenter pushes each answer to.
 export interface TraceView {
   setState: (s: TraceState) => void;
 }
@@ -164,8 +162,8 @@ export interface TraceView {
 // parseEndpoint reads "U1.3" into its two halves, splitting at the FIRST dot because a ref-des does
 // not contain one and a pin designator occasionally does. null when the text is not a pin at all.
 //
-// Same reading the CLI takes, and stated here rather than shared because the two live in different
-// languages. What must not diverge is the SPLIT RULE, which is why both say which dot they split on.
+// Same reading the CLI takes, duplicated because the two live in different languages. Keep the
+// SPLIT RULE (first dot) in step with it.
 export function parseEndpoint(text: string): { refDes: string; pin: string } | null {
   const t = text.trim();
   const i = t.indexOf(".");
@@ -175,10 +173,9 @@ export function parseEndpoint(text: string): { refDes: string; pin: string } | n
 
 // splitTraceParam reads a `?trace=U1.3,J1.1` URL parameter into its two pins.
 //
-// The FIRST comma separates them, which bounds what is addressable: a pin designator containing a
-// comma cannot be named this way. That is a real limit and a cheap one, since a comma in a
-// designator would already be unusual, and the alternative is an escaping scheme in a parameter
-// whose whole value is being readable in an address bar.
+// The FIRST comma separates them, so a pin designator containing a comma cannot be named this way.
+// A comma in a designator is unusual, and the alternative is an escaping scheme in a parameter meant
+// to be readable in an address bar.
 export function splitTraceParam(param: string): [string, string] {
   const i = param.indexOf(",");
   if (i < 0) return [param.trim(), ""];
@@ -189,8 +186,8 @@ export function splitTraceParam(param: string): [string, string] {
 //
 // The FROM endpoint's first, because the reader named that pin and a route reads in that direction;
 // then the first net of the route that is drawn. It picks ONE because the canvas shows one sheet at
-// a time. Every other sheet of every net stays reachable as a badge, which is the affordance a
-// finding and a query cell already use for an entity that lives on several.
+// a time. Every other sheet of every net stays reachable as a badge, as it is for a finding or a
+// query cell on several sheets.
 export function traceSheet(t: TraceState): string {
   if (t.from.sheetIds.length > 0) return t.from.sheetIds[0];
   for (const n of t.nets) {

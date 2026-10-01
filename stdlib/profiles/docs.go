@@ -13,14 +13,13 @@ import (
 var requirementDocs = []string{"signal-missing", "missing-pullup", "signal-dangling", "termination", "esd"}
 
 // requirementCaption is the docsite caption and severity for each requirement TYPE, shown in the
-// docsite reference index (tools/catalogdocs). The caption is interface-agnostic on purpose: the
-// runtime Rule.Summary a finding carries embeds the profile name (e.g. "A required CAN signal is
-// absent"), so a generic per-requirement page needs a name-free caption. Severity matches the
-// generated rule's.
-// remedy is what to DO about a violation, in the imperative (check.Rule.Remedy). It sits here rather
-// than at each rule builder for the reason the caption does: the rule is generated per-profile, but
-// the fix is per-REQUIREMENT and identical across every interface that declares one. Both the runtime
-// rule and the docsite exemplar read it from here, so there is one copy rather than two.
+// docsite reference index (tools/catalogdocs). The caption is interface-agnostic because the runtime
+// Rule.Summary a finding carries embeds the profile name (e.g. "A required CAN signal is absent"), so
+// a generic per-requirement page needs a name-free caption. Severity matches the generated rule's.
+// remedy fills check.Rule.Remedy. It sits here rather than at each rule builder for the same reason
+// as the caption. The rule is generated per-profile, but the fix is per-REQUIREMENT and identical
+// across every interface that declares one. Both the runtime rule and the docsite exemplar read it
+// from here.
 var requirementCaption = map[string]struct {
 	summary  string
 	severity string
@@ -45,8 +44,8 @@ func requirementRemedy(req string) string { return requirementCaption[req].remed
 // DocRules returns one representative rule per requirement TYPE for the docsite catalog generator
 // (tools/catalogdocs). Profile rules are generated per-profile, so there is no static catalog to
 // enumerate; this projects each requirement's Detail into a single page-worthy rule with a generic
-// caption (requirementDoc) in place of the profile-specific runtime Summary. Callers must not mutate
-// the returned rules.
+// caption (requirementCaption) in place of the profile-specific runtime Summary. Callers must not
+// mutate the returned rules.
 func DocRules() []*check.Rule {
 	out := make([]*check.Rule, 0, len(requirementDocs))
 	for _, req := range requirementDocs {
@@ -63,16 +62,17 @@ func DocRules() []*check.Rule {
 	return out
 }
 
-// ruleDocs embeds the per-REQUIREMENT documentation (signal-missing / missing-pullup /
-// signal-dangling), shared across every profile the compiler generates — the rule is per-profile
+// ruleDocs embeds the per-REQUIREMENT documentation, one docs/<type>.md per entry in
+// requirementDocs, shared across every profile the compiler generates. The rule is per-profile
 // (spi_nor-signal-missing), but the contract it enforces is per-requirement, so the doc is too. The
-// whole docs/ directory is embedded so a doc can add images (mirrors check/docs, datalogrules/docs).
+// whole docs/ directory is embedded so a doc can add images, the same shape as
+// stdlib/rules/builtin/docs.go.
 //
 //go:embed docs
 var ruleDocs embed.FS
 
-// ruleDoc returns the embedded markdown for a requirement type (signal-missing, missing-pullup,
-// signal-dangling). A missing file is a programmer error caught at init, when Compile loads Detail.
+// ruleDoc returns the embedded markdown for a requirement type. A missing file is a programmer error
+// caught at init, when Compile loads Detail.
 func ruleDoc(requirement string) string {
 	b, err := ruleDocs.ReadFile("docs/" + requirement + ".md")
 	if err != nil {

@@ -1,13 +1,12 @@
 // Artifact URIs, browser side (agni issue 177).
 //
-// The wire names an artifact with one string, `mount://<mount>/<path>`. The viewer keeps a mount and
-// a path as separate pieces of its own state, and deliberately keeps doing so: they are separate in
-// the URL the user can bookmark (`/designs/<mount>/<path...>/view`), and the file tree navigates by
-// path within a mount. This module is the seam between the two, so the assembly happens in one place
-// rather than at each of the call sites that address an artifact.
+// The wire names an artifact with one string, `mount://<mount>/<path>`. The viewer keeps the mount
+// and path as separate state, because they are separate in the bookmarkable URL
+// (`/designs/<mount>/<path...>/view`) and the file tree navigates by path within a mount. This
+// module converts between the two, so the assembly happens in one place.
 //
-// Nothing here validates. Containment is decided by the server when it parses the URI, and a browser
-// that pre-judged it would either duplicate that rule or, worse, disagree with it.
+// Nothing here validates. The server decides containment when it parses the URI, and a check here
+// could only duplicate that rule or disagree with it.
 
 const PREFIX = "mount://";
 

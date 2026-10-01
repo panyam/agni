@@ -9,13 +9,10 @@ import (
 
 // composeRules builds the catalog every rule-running surface shares, plus the profile index the
 // review's absence gate reads. Both come out of one call so a caller cannot compose a catalog that
-// silently omits a tier: serve used to REBUILD its review catalog for the naming-convention case,
-// which dropped the profile and intent sources whenever an operator passed --conventions together
-// with --profile-path or --intent-path.
+// silently omits a tier (WS3-109).
 //
 // It takes VALUES rather than paths. Reading a profile directory or an intent file is the caller's
-// business (C22), which is also what lets an embedder compose from profiles it built in Go and never
-// wrote to disk.
+// business (C22), so an embedder can compose from profiles it built in Go and never wrote to disk.
 func composeRules(overlay []profiles.Profile, decl *intent.Declaration, extra ...check.RuleSource) (*check.Catalog, map[string][]profiles.Profile, error) {
 	var sources []check.RuleSource
 	byName := map[string][]profiles.Profile{}
@@ -25,18 +22,14 @@ func composeRules(overlay []profiles.Profile, decl *intent.Declaration, extra ..
 	if len(overlay) > 0 {
 		sources = append(sources, profiles.Source("profile-overlay", overlay))
 		// An overlay profile REPLACES the same-named built-in here, tracking the catalog, whose overlay
-		// source supersedes that built-in's rules (WS3-056). This map is the review's absence gate:
-		// reviewClosures reports an interface as evaluating if ANY profile under its name is in use, and
-		// unions every one of their nets for scoping. Keeping the built-in here while the catalog drops it
-		// would let the gate clear on a profile whose rules are no longer in the run, and an item scoped by
-		// it would score a clean pass on an interface nothing checked. That is the WS3-090 twin
-		// disagreement, which is silent by construction.
+		// source supersedes that built-in's rules (WS3-056). This map is the review's absence gate, and
+		// reviewClosures reports an interface as evaluating if ANY profile under its name is in use.
+		// Keeping the built-in here while the catalog drops it would let an item score a clean pass on
+		// an interface nothing checked, silently (WS3-090).
 		//
-		// Cleared in a separate pass before any overlay profile is added. Clearing and appending in one
-		// pass would make a later profile wipe an earlier one of the same name. That specific input is
-		// rejected upstream (identical rule names fail catalog composition), so the two-pass form is not
-		// load-bearing today, but it costs nothing and the one-pass form is wrong for a reason unrelated
-		// to why it currently cannot happen.
+		// Cleared in a separate pass before any overlay profile is added, because clearing and
+		// appending in one pass would make a later profile wipe an earlier one of the same name.
+		// Catalog composition rejects that input today, so this guards a future relaxation.
 		for _, p := range overlay {
 			delete(byName, p.Name)
 		}

@@ -7,8 +7,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestCoverageGood: a fully-wired SPI-NOR bus is detected and every signal reads present (CS is
-// pulled up to +3V3 through R1).
+// TestCoverageGood checks that a fully-wired SPI-NOR bus is detected and every signal reads present
+// (CS is pulled up to +3V3 through R1).
 func TestCoverageGood(t *testing.T) {
 	cov := Coverage(SPINOR, check.NewModel(spinorGood()))
 	if cov == nil {
@@ -27,8 +27,9 @@ func TestCoverageGood(t *testing.T) {
 	}
 }
 
-// TestCoverageBroken: the broken bus is still detected (five signals present), with IO2 missing,
-// SCLK dangling (single-pin), and CS's pull-up missing — the exact three the profile rules fire on.
+// TestCoverageBroken checks that the broken bus is still detected (five signals present), with IO2
+// missing, SCLK dangling (single-pin), and CS's pull-up missing, the three the profile rules fire
+// on.
 func TestCoverageBroken(t *testing.T) {
 	cov := Coverage(SPINOR, check.NewModel(spinorBroken()))
 	if cov == nil {
@@ -55,8 +56,8 @@ func TestCoverageBroken(t *testing.T) {
 	}
 }
 
-// TestCoverageUndetected: a single matching signal is below the in-use confidence gate, so the
-// interface is not detected (nil) — no false coverage on a lone _CS net.
+// TestCoverageUndetected checks that a single matching signal is below the in-use confidence gate,
+// so the interface is not detected (nil), so a lone _CS net yields no false coverage.
 func TestCoverageUndetected(t *testing.T) {
 	d := &ir.Design{Components: comps("U1"), Nets: []*ir.Net{net("SPI_CS", "U1.1")}}
 	if cov := Coverage(SPINOR, check.NewModel(d)); cov != nil {

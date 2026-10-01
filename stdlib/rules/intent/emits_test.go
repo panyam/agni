@@ -2,8 +2,8 @@ package intent
 
 import "testing"
 
-// TestEmits covers the vocabulary Emits recognizes and, load-bearingly, the names it must REJECT: a
-// not-yet-shipped intent rule name (the WS3-098 pre-bind case) and a non-intent name.
+// TestEmits covers the vocabulary Emits recognizes and, more importantly, the names it must REJECT,
+// a not-yet-shipped intent rule name (the WS3-098 pre-bind case) and a non-intent name.
 func TestEmits(t *testing.T) {
 	known := []string{
 		"module-missing", "module-count", "voltage-domain-mismatch",
@@ -34,9 +34,9 @@ func TestEmits(t *testing.T) {
 	}
 }
 
-// TestEmitsCoversCompiler holds Emits to Compile's actual output: every rule the compiler produces from
-// a declaration exercising all four kinds must satisfy Emits. A new intent rule KIND added to Compile
-// without updating Emits fails here, so the two cannot drift.
+// TestEmitsCoversCompiler holds Emits to Compile's actual output. Every rule the compiler produces
+// from the declaration below must satisfy Emits. A new rule KIND added to Compile without updating
+// Emits fails here only once this declaration includes a form that produces it.
 func TestEmitsCoversCompiler(t *testing.T) {
 	decl := Declaration{
 		Name:           "t",

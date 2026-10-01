@@ -19,8 +19,8 @@ func meta(name string) check.Rule {
 	return check.Rule{Name: name, Severity: "warning", Summary: "s"}
 }
 
-// TestCompileRejectsWhatItCannotRun is the load-time gate, and the reason it exists is worth stating:
-// every one of these definitions would otherwise compile to a rule that never fires, and a rule that
+// TestCompileRejectsWhatItCannotRun is the load-time gate.
+// Every one of these definitions would otherwise compile to a rule that never fires, and a rule that
 // never fires is indistinguishable from a design with nothing wrong with it. So each is an error when
 // the definition is READ, not a surprise when someone later trusts a clean report.
 func TestCompileRejectsWhatItCannotRun(t *testing.T) {
@@ -148,9 +148,9 @@ func TestCompileDeckStopsAtTheFirstBadDefinition(t *testing.T) {
 	}
 }
 
-// TestSourceJoinsACatalog pins the data seam: definitions read from a document become a catalog
-// source exactly the way a Go-registered suite does, which is what makes a rule source a document
-// rather than code linked into the binary.
+// TestSourceJoinsACatalog pins that definitions read from a document become a catalog source
+// exactly the way a Go-registered suite does, so a rule source can be a document rather than code
+// linked into the binary.
 func TestSourceJoinsACatalog(t *testing.T) {
 	d := deck(SpecDef(meta("stub-net"), check.Spec{
 		Over:    "nets",
@@ -178,7 +178,7 @@ func TestSourceJoinsACatalog(t *testing.T) {
 	}
 }
 
-// TestMarshalParseRoundTripsADeck pins the encoding itself, separately from compiling: a deck must
+// TestMarshalParseRoundTripsADeck pins the encoding itself, separately from compiling. A deck must
 // survive bytes even when it holds a definition this build could not run.
 func TestMarshalParseRoundTripsADeck(t *testing.T) {
 	d := deck(SpecDef(meta("r"), check.Spec{Over: "nets", Message: "m"}))

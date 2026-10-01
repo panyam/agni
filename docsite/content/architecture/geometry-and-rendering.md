@@ -15,42 +15,42 @@ The mistake would be collapsing the API, the wire format, and the compute layout
 
 {{ includeFile "figures/geometry-three-tiers.svg" }}
 
-### Tier 1: logical contract (the public API)
+### Tier 1, the logical contract (the public API)
 
 Nested, ergonomic proto messages, sized in the thousands: `SymbolDef`, `SymbolPlacement{ref_des, transform}`, `PinPoint{port_ref, x, y}`, `WireGeometry{net, ...}`, `SheetGeometry`. This is what single reads ("give me placement R12"), list reads ("placements on sheet 3"), picking results, and IR-keying use, and what other tools consume. It is stable and readable, and storage or packing details never leak into it. The proto is the single source of truth for this tier.
 
-### Tier 2: columnar transport (the storage and wire-optimized form)
+### Tier 2, the columnar transport (the storage and wire-optimized form)
 
 A separate message that carries the vertex streams as a **`bytes` blob** with a defined little-endian columnar layout, addressed by index back to tier 1. The bulk path requests it explicitly ("give me the packed buffers for sheet N"), and it is never mixed into tier 1. This is what crosses to the GPU.
 
 Coordinates here are int32 and sheet-relative (rebased). The reason is not disk size (the whole design is about 1.2MB versus 2.4MB, immaterial) but the consumer. WebGL2 and GLSL ES 3.0 have no 64-bit vertex attribute and no `int64` or `double` in shaders, so the blob that feeds GPU buffers is physically 32-bit. Storing int64 here would force a narrowing pass on load and defeat the zero-copy envelope. int32 rather than float32 because int32 is exact to 2^31 while float32 loses exactness at 2^24, below the coordinate range. Rebasing per sheet (subtracting the sheet's minimum corner) bounds every value by the sheet extent regardless of absolute-coordinate magnitude, which makes int32 provably safe and avoids the float32 precision trap at the GPU. Tier 1 stays int64, since it is read-only, small, range-safe, and bakes no unit assumption into the public API. Narrowing happens only in tier 2.
 
-### Tier 3: in-memory compute form (Go)
+### Tier 3, the in-memory compute form (Go)
 
-What the reader builds and what a server-side spatial index or culler operates on. Columnar and allocation-light (`struct { Xs, Ys []int32; ... }`). This is a derived projection of the proto contract, not a second schema. Proto is the boundary format, not the compute format.
+The reader builds this form, and a server-side spatial index or culler operates on it. Columnar and allocation-light (`struct { Xs, Ys []int32; ... }`). This is a derived projection of the proto contract, not a second schema.
 
 ## Why not just use proto everywhere
 
-Vanilla protobuf-go generates `[]*Point` for a `repeated Point`, so bulk geometry becomes about 149k heap objects with pointer chasing, and marshal or unmarshal touches every varint. That is fine as a wire or disk contract but wrong as the thing a renderer or spatial index iterates. It also buys nothing at the browser edge, because bulk data is copied into a typed array at the WASM boundary regardless. So proto is the boundary format and tier 3 is the compute format.
+Vanilla protobuf-go generates `[]*Point` for a `repeated Point`, so bulk geometry becomes about 149k heap objects with pointer chasing, and marshal or unmarshal touches every varint. That is fine as a wire or disk contract but wrong as the thing a renderer or spatial index iterates. It also buys nothing at the browser edge, because bulk data is copied into a typed array at the browser boundary regardless (a WASM boundary in the plan at the time). So proto is the boundary format and tier 3 is the compute format.
 
 ## Making wire serialization nearly free
 
 Tier 2 is a `bytes` field holding a packed columnar buffer. This removes the mapping tax on the hot path:
 
-- **In-memory (tier 3):** the columnar arrays' backing store *is* the byte slice, or a trivial view over it. Mapping to proto is a slice assignment. No per-element copy, no `[]*Point`.
-- **Serialize:** proto encodes a `bytes` field as tag, length, and a raw copy. One memcpy, not 149k varint encodes.
-- **Deserialize:** you get the slice back and reinterpret it as columnar arrays.
-- **Browser:** the blob arrives as a `Uint8Array`, and you make `Int32Array` or `Float32Array` views over it and hand them to GPU buffers. Zero-copy on the JS side.
+- **In memory (tier 3)** the columnar arrays' backing store *is* the byte slice, or a trivial view over it. Mapping to proto is a slice assignment. No per-element copy, no `[]*Point`.
+- **To serialize**, proto encodes a `bytes` field as tag, length, and a raw copy, which is one memcpy rather than 149k varint encodes.
+- **To deserialize**, you get the slice back and reinterpret it as columnar arrays.
+- **In the browser** the blob arrives as a `Uint8Array`, and you make `Int32Array` or `Float32Array` views over it and hand them to GPU buffers, zero-copy on the JS side.
 
-The cost is that the blob is opaque to proto tooling: no field-level introspection, no unknown-field evolution inside the blob. That layout is versioned explicitly with a `layout_version`, which is acceptable for a render-only vertex stream. The unknown-field retention that motivates strict proto modeling elsewhere is a property of the lossless IR and does not apply to this lossy-bounded render subset. The cross-language no-drift intent still holds, honored by keeping the layout spec authoritative and versioned.
+The cost is that the blob is opaque to proto tooling, which can neither introspect its fields nor evolve unknown fields inside it. That layout is versioned explicitly with a `layout_version`, which is acceptable for a render-only vertex stream. The unknown-field retention that motivates strict proto modeling elsewhere is a property of the lossless IR and does not apply to this lossy-bounded render subset. The layout spec stays authoritative and versioned, so the cross-language no-drift intent still holds.
 
 <details>
 <summary>Why FlatBuffers and Cap'n Proto were considered and not adopted</summary>
 
-They are serialization formats, not a replacement for the Go-WASM-to-JS bridge generator that emits the service exposure, the TS client facades, and the duplex presenter scaffolding. Two reasons proto stays:
+They are serialization formats, not a replacement for the Go-WASM-to-JS bridge generator (the plan at the time) that emits the service exposure, the TS client facades, and the duplex presenter scaffolding. Two reasons proto stays:
 
-1. **The zero-copy win is marginal here.** FlatBuffers and Cap'n Proto read fields in place with no parse step. For the vertex tier the `bytes` envelope already gets that: the blob is the columnar layout, TS makes typed-array views over it zero-copy, and Go assigns the slice. The only extra they offer is structured random access inside the blob, which a flat vertex pool with an owned layout does not need. Adopting a new toolchain would save one memcpy of a few MB per sheet.
-2. **Neither ships a Go-WASM bridge generator.** Adopting one means hand-writing the presenter-service exposure, the TS clients, and the boundary wiring the wasmjs pipeline generates, plus running a second IDL alongside the proto IR, which creates a seam between the netlist IR and the geometry sidecar. One schema toolchain across the system beats a per-vertex micro-optimization.
+1. **The zero-copy win is marginal here.** FlatBuffers and Cap'n Proto read fields in place with no parse step. For the vertex tier the `bytes` envelope already gets that, because the blob is the columnar layout, TS makes typed-array views over it zero-copy, and Go assigns the slice. The only extra they offer is structured random access inside the blob, which a flat vertex pool with an owned layout does not need. Adopting a new toolchain would save one memcpy of a few MB per sheet.
+2. **Neither ships a Go-WASM bridge generator.** Adopting one means hand-writing the presenter-service exposure, the TS clients, and the boundary wiring the planned wasmjs pipeline would generate, plus running a second IDL alongside the proto IR, which splits the netlist IR and the geometry sidecar across two schema toolchains. One schema toolchain across the system beats a per-vertex micro-optimization.
 
 If profiling later shows the tier-2 or boundary copy is a real bottleneck, FlatBuffers could be adopted just for the vertex blob while keeping proto for the contract and the bridge, since tier 2 sits behind the contract and the swap is localized. That is premature now.
 
@@ -100,7 +100,7 @@ message Polyline { repeated Point points = 1; }
 message Label { string text = 1; Point origin = 2; int64 height = 3; string justify = 4; int32 rotation_deg = 5; }
 ```
 
-The sidecar is a format-neutral geometry IR, not an EDIF dump. The primitives (shapes, points, polylines, placements, pins, labels, sheets) are universal 2D schematic vector constructs, and the transform is a general rotation, mirror, and scale rather than EDIF's fixed orientation enum. So KiCad, Altium (via export), OrCAD, IPC-2581, and other readers can populate the same sidecar, mirroring the many-readers-one-IR idea. Symbol graphics come from the source file itself (EDIF embeds them as vectors), so the renderer needs no external symbol-asset library for the faithful view. Only the netlist-graph fallback and text glyphs are drawn by Agni.
+The sidecar is a format-neutral geometry IR, not an EDIF dump. The primitives (shapes, points, polylines, placements, pins, labels, sheets) are universal 2D schematic vector constructs, and the transform is a general rotation, mirror, and scale rather than EDIF's fixed orientation enum. So KiCad, xschem, gEDA, and other readers (Altium via export, OrCAD) can populate the same sidecar, mirroring the many-readers-one-IR idea. Symbol graphics come from the source file itself (EDIF embeds them as vectors), so the renderer needs no external symbol-asset library for the faithful view. Only the netlist-graph fallback and text glyphs are drawn by Agni.
 
 Tier 2 (columnar transport) is a separate message, requested per sheet:
 
@@ -119,7 +119,7 @@ The reader emits tier 1 always. Tier 2 is generated for the scale path (per-shee
 
 ## Reader plan
 
-- A reader exposes `ReadSchematic(io.Reader, sourceFile) (*geom.SchematicGeometry, error)`, reusing the format's parser, and does not touch the netlist extractor.
+- A reader exposes a geometry entry point (`ReadSchematic` in EDIF, `ReadSchematicGeometry` elsewhere) returning `*geom.SchematicGeometry`, reusing the format's parser, and does not touch the netlist extractor.
 - It parses into the tier-3 columnar Go form, then maps to tier-1 proto, and to tier-2 when the renderer needs it.
 - Fidelity is lossy-bounded (a render subset). It drops the connectivity graph, properties, style palette, display metadata, and back-annotation, and keeps shapes, pin points, placements with transforms, wire polylines, labels, and sheets.
 - The sidecar is heavy (about 62MB for the reference board), so it is produced server-side or by the CLI only.
@@ -127,35 +127,35 @@ The reader emits tier 1 always. Tier 2 is generated for the scale path (per-shee
 
 ## Renderer plan
 
-- **SVG verification backend (built first).** A pure-Go `SheetSVG(geometry, sheet)` renders a sheet to SVG through a small zero-dependency element builder. It is the eyeball and golden instrument, not the production renderer, and it proved the geometry model against the real 62MB board before any browser code existed: symbol placement and orientation math, pins landing on wire endpoints, per-view (multi-section) symbol selection, and the annotation layer (pin numbers, title-block and symbol text, off-page connector net names). WebGL2 is a second backend over the same render layer.
-- **WebGL2 from the start**, not a per-sprite scene graph (which does not scale to 100k+ vector primitives). Static geometry is uploaded once as GPU buffers from the tier-2 blob, and a small dynamic overlay (selection, hover) crosses per frame.
-- **Per-sheet loading.** One sheet at a time (a few thousand primitives), not the whole design. Server-side spatial indexing and culling are optional later additions.
+- **The SVG verification backend came first.** A pure-Go `SheetSVG(geometry, sheet)` renders a sheet to SVG through a small zero-dependency element builder. It is the eyeball and golden instrument, not the production renderer, and it proved the geometry model against the real 62MB board before any browser code existed: symbol placement and orientation math, pins landing on wire endpoints, per-view (multi-section) symbol selection, and the annotation layer (pin numbers, title-block and symbol text, off-page connector net names). WebGL2 is a second backend over the same render layer.
+- **The browser renderer is WebGL2 from the start**, not a per-sprite scene graph (which does not scale to 100k+ vector primitives). Static geometry is uploaded once as GPU buffers from the tier-2 blob, and a small dynamic overlay (selection, hover) crosses per frame.
+- **The viewer loads one sheet at a time** (a few thousand primitives), not the whole design. Server-side spatial indexing and culling are optional later additions.
 - **Camera and picking are view-local.** Pan and zoom are an affine transform in the view. Picking uses a view-local spatial index over what was drawn and emits semantic intents (`ComponentSelected(refDes)`, `NetHovered(net)`). The presenter never sees pixels.
-- **Renderer runtime is TS in-process** (this superseded an original WASM plan). A continuously dragged canvas is exactly the high-frequency surface kept in TS to avoid per-event boundary cost, so the WebGL renderer and camera are plain TS. There is no Go/WASM presenter for the canvas. The server stays authoritative for parsing, geometry, and style, and the client only draws.
-- **Fallback view:** a {{ explainable "netlist" }}-graph diagram derived from the IR alone (auto-layout), for when geometry is absent. It is a separate renderer over the same presenter contract.
+- **Renderer runtime is TS in-process** (this superseded an original WASM plan). A continuously dragged canvas is the kind of high-frequency surface the presenter pattern keeps in TS to avoid per-event boundary cost, so the WebGL renderer and camera are plain TS. There is no Go/WASM presenter for the canvas. The server stays authoritative for parsing, geometry, and style, and the client only draws.
+- **A fallback view** draws a {{ explainable "netlist" }}-graph diagram derived from the IR alone (auto-layout) when geometry is absent. It synthesizes a `SchematicGeometry`, so the same two renderers draw it (see Auto-layout node drawing below).
 
 ## WebGL renderer as built
 
 The WebGL path reaches SVG-backend parity for a schematic sheet. WebGL2, upload-once, view-local camera, and per-sheet loading all held. The runtime and a few mechanics differ from the plan:
 
 - **Join by embedded keys, not a separate IR load.** `PackedSheet` carries `PrimitiveKey{ref_des, net}` inline, so picking reads the key off the packed primitive with no second IR fetch.
-- **Y-up end to end.** geom is Y-up and WebGL NDC is Y-up, so the camera matrix does **not** flip Y (an early bug did, rendering upside-down versus the SVG oracle). The SVG backend flips once, only because SVG pixel space is Y-down.
+- **Coordinates stay Y-up end to end.** geom is Y-up and WebGL NDC is Y-up, so the camera matrix does **not** flip Y (an early bug did, rendering upside-down versus the SVG oracle). The SVG backend flips once, only because SVG pixel space is Y-down.
 - **Worksheet furniture is synthesized in the packer**, in world units, only when the sheet has a page (a set `sheet.Size`): frame border, zone-ruler ticks, and the title-block box and dividers, under a frame group. It mirrors the SVG worksheet drawing, and the frame extends the packed bounds so the camera fits the whole page. Ruler and title-block text is not geometry (see the overlay below).
-- **Text overlay.** A GPU line pipeline draws no glyphs. Labels ride on the wire as packed labels (world position, height, rotation, justify, and color, computed server-side with the same transform math as SVG). The client draws them as a second SVG layer over the canvas: each `<text>` is placed once in a Y-flipped world space (`y -> -y`, so glyphs stay upright), and pan and zoom are a single CSS transform on the layer (GPU-composited, one style write per frame). Both layers read the same camera in the same `requestAnimationFrame`, so text stays locked to geometry with no drift. The layer is `pointer-events:none` and shows only in WebGL mode. Text metrics are browser-owned, so there is no glyph atlas. There is one font per sheet, and a per-element font waits on the IR carrying it.
-- **One palette for both renderers.** Colors and the default font are injectable data, resolved server-side and consumed by both backends. SVG draws from the style directly, and the WebGL side receives group colors (indexed by group), a background color, a font family, and a per-label color on the wire, so the WebGL code holds no palette of its own. `agni serve --theme default|dark` recolors both backends from one style. The two agree by construction.
+- **Text draws as an SVG overlay.** A GPU line pipeline draws no glyphs. Labels ride on the wire as packed labels (world position, height, rotation, justify, and color, computed server-side with the same transform math as SVG). The client draws them as a second SVG layer over the canvas: each `<text>` is placed once in a Y-flipped world space (`y -> -y`, so glyphs stay upright), and pan and zoom are a single CSS transform on the layer (GPU-composited, one style write per frame). Both layers read the same camera in the same `requestAnimationFrame`, so text stays locked to geometry with no drift. The layer is `pointer-events:none` and shows only in WebGL mode. Text metrics are browser-owned, so there is no glyph atlas. There is one font per sheet, and a per-element font waits on the IR carrying it.
+- **Both renderers share one palette.** Colors and the default font are injectable data, resolved server-side and consumed by both backends. SVG draws from the style directly, and the WebGL side receives group colors (indexed by group), a background color, a font family, and a per-label color on the wire, so the WebGL code holds no palette of its own. `agni serve --theme default|dark` recolors both backends from one style. The two agree by construction.
 
 ## The geometry proto is a render contract
 
 `geom.SchematicGeometry` decouples **producers** from **renderers**, and no one format owns it.
 
-- Producers: faithful readers (EDIF's `ReadSchematic` for `.eds`, KiCad's `ReadSchematicGeometry` for `.kicad_sch`) and the auto-layout path (grid and layered).
-- Renderers: the SVG backend and the tier-2 packer that feeds WebGL.
+- The producers are the faithful readers (EDIF's `ReadSchematic` for `.eds`, and `ReadSchematicGeometry` in the KiCad, xschem and gEDA readers) and the auto-layout path (grid and layered).
+- The renderers are the SVG backend and the tier-2 packer that feeds WebGL.
 
 {{ includeFile "figures/geometry-producers-renderers.svg" }}
 
-A new source plugs into the contract and every renderer inherits it, and a new renderer consumes every source. Adding the KiCad reader lit up faithful KiCad rendering on the SVG backend with no renderer change. The corollary bites too: when two producers feed the same field into one renderer, their conventions have to be reconciled (see `justify` below). The shared contract surfaces the inconsistency instead of hiding it.
+A new source plugs into the contract and every renderer inherits it, and a new renderer consumes every source. Adding the KiCad reader lit up faithful KiCad rendering on the SVG backend with no renderer change. The corollary bites too, since two producers feeding the same field into one renderer have to reconcile their conventions (see `justify` below). The shared contract surfaces the inconsistency instead of hiding it.
 
-## KiCad geometry reader: coordinate conventions
+## KiCad coordinate conventions
 
 KiCad uses two coordinate frames, and conflating them is the trap.
 
@@ -164,8 +164,8 @@ KiCad uses two coordinate frames, and conflating them is the trap.
 - **Library symbol graphics are Y-up** (like the geom contract). Map lib-local points straight through (mm to nm, no Y flip).
 - **The schematic sheet is Y-down.** Flip Y only for sheet-level coordinates: placement origins, wires, labels, junctions.
 - **Rotation is negated** (`geom = 360 − kicad`). Converting the sheet frame to Y-up is a reflection, which inverts rotation direction. Mirror axes and origin translation are unchanged by the flip. Flipping lib points too, or not negating rotation, mirrors or overlaps every rotated symbol (an upside-down {{ explainable "ground" "GND" }} is the tell).
-- Units: KiCad mm to nm (times 1e6, exact at KiCad's 0.0001mm grid), and `unit_nm = 1`.
-- `#`-prefixed references (`#PWR`, `#FLG` power and flag virtuals) are hidden by KiCad and dropped for display, but the {{ explainable "reference-designator" "ref-des" }} stays the picking key.
+- Units convert from KiCad mm to nm (times 1e6, exact at KiCad's 0.0001mm grid), and `unit_nm = 1`.
+- `#`-prefixed references (`#PWR`, `#FLG` power and flag virtuals) are hidden by KiCad and are not parts, so the reader leaves the placement's {{ explainable "reference-designator" "ref-des" }} empty and a power symbol carries its net in `net_anchor` instead (see [Symbols that name a net](#symbols-that-name-a-net)).
 
 The pin-on-wire coincidence rate (the fraction of placed pin connect-points landing on wire endpoints) is the cheap correctness signal for the transform math. It is not sensitive to rotation *direction* on symmetric 2-pin parts (the pins just swap), so the asymmetric symbol bodies need an eyeball check too.
 
@@ -173,70 +173,108 @@ The pin-on-wire coincidence rate (the fraction of placed pin connect-points land
 
 These were added to the contract so a reader-produced sheet renders like the source tool.
 
-- `SheetGeometry.shapes`: free sheet graphics not owned by a symbol (junction dots, no-connect markers, notes). KiCad junctions, no-connects, and graphics, and EDIF comment graphics.
-- `Shape.fill` (`UNSPECIFIED` / `OUTLINE` / `BACKGROUND` / `COLOR`, plus `fill_color`): solid symbol bodies render filled. It is not a bool, because KiCad distinguishes fill types. The placement transform must propagate it.
-- **Canonical `justify`**: `"<h> <v>"` (h left/center/right, v top/middle/bottom). Each reader maps its native codes (EDIF `LOWERLEFT` to `"left bottom"`, while KiCad tokens are already canonical). The SVG backend applies `text-anchor` (horizontal) and `dominant-baseline` (vertical).
-- `SymbolPlacement.fields` (`Field{name, value, origin, justify, visible, ...}`) plus `PinPoint.name`: instance text (Reference, Value, custom) is structured on the placement rather than being loose sheet labels, so a consumer knows which text is which field (useful for the visual diff). Sheet labels are then only genuine free text (net labels, notes).
+- `SheetGeometry.shapes` holds free sheet graphics not owned by a symbol (junction dots, no-connect markers, notes). KiCad junctions, no-connects, and graphics, and EDIF comment graphics.
+- `Shape.fill` (`UNSPECIFIED` / `OUTLINE` / `BACKGROUND` / `COLOR`, plus `fill_color`) makes solid symbol bodies render filled. It is not a bool, because KiCad distinguishes fill types. The placement transform must propagate it.
+- **`justify` has one canonical form**, `"<h> <v>"` (h left/center/right, v top/middle/bottom). Each reader maps its native codes (EDIF `LOWERLEFT` to `"left bottom"`, while KiCad tokens are already canonical). The SVG backend applies `text-anchor` (horizontal) and `dominant-baseline` (vertical).
+- `SymbolPlacement.fields` (`Field{name, value, origin, justify, visible, ...}`) plus `PinPoint.name` structure instance text (Reference, Value, custom) on the placement rather than leaving it as loose sheet labels, so a consumer knows which text is which field (useful for the visual diff). Sheet labels are then only genuine free text (net labels, notes).
+
+## Symbols that name a net
+
+A ground glyph, a rail symbol or a hierarchy port is drawn like a part and is not one. Its job is to
+give the net at its pin a name. `SymbolPlacement.net_anchor` carries that name, and a placement that
+sets it leaves `ref_des` empty. A ref-des on such a glyph would join to no `ir.Component`, so a
+viewer could select it and then ask about a part that does not exist. An ordinary component
+placement leaves `net_anchor` empty. Every schematic format has the construct and spells it
+differently, so the contract holds one neutral field and each reader translates its own spelling
+into it (CONSTRAINTS C1). No consumer needs to know how any format writes a power symbol.
+
+| Reader | Anchored placements, and where the name comes from | Left unanchored |
+|---|---|---|
+| KiCad | a `#`-prefixed reference (`#PWR`), named by its `Value` field | `PWR_FLAG`, which asserts a net is driven and names nothing |
+| xschem | a label symbol (`gnd`, `vdd`, `vss`, `lab_pin`, `lab_wire`, `ipin`, `opin`, `iopin`), named by its `lab` property | every other symbol |
+| gEDA | a power symbol (`gnd`, `vcc`, `vdd`, `vss` and the `<rail>-plus-N` and `<rail>-minus-N` rails), named by the instance `net=`, else the symbol's own `net=`, else the conventional supply for the family (`GND`, `VCC`, `VDD`, `VSS`) | every other symbol |
+| EDIF `.eds` | a placement with no designator whose cell name, or one of whose field values, is a net on the same sheet | a no-connect, a sheet port, and every placement that has a designator |
+
+The anchor is a net name and joins the netlist by name, the way `WireGeometry.net` does. Each
+reader takes it from the same fact its netlist side uses, so the glyph's key and the net it joins
+cannot disagree. KiCad's netlist read turns the same `Value` into a rank-0 name anchor (see
+[KiCad connection-point semantics](../net-solving/#kicad-connection-point-semantics)). gEDA's
+geometry resolves the name through the same three-step fallback as `resolveAnchors` in the netlist
+read, and the two must change together. xschem's `lab` is the name `read.go` anchors at the symbol
+origin.
+
+EDIF works by matching rather than by a table, because the spellings are inconsistent even within
+one export. On one measured `.eds`, 3329 of 6102 placements carry no designator. Across five real
+schematics, `GND` and `DGND` glyphs carry no fields and are named by their cell (5772 placements,
+every one matching a net on its sheet), while `PWR` and `PWR_2` carry the name in a "Global Signal
+Name" field (1666 placements). A table of cell names would have caught the first group and missed
+the second. The match also classifies. A no-connect (1653 on the first export) asserts a pin is
+open and names nothing, so neither its cell nor its fields match a net and it gets no anchor. Sheet
+ports (`in_flat` and `out_flat`, 4752 of them) carry no name anywhere, since the wire they touch
+names them, so they stay anonymous rather than guessed at. A placement with a designator is never
+anchored, so a part whose value happens to equal a net name stays a part.
+
+The SVG backend keys an anchored placement's graphics as its net (`data-kind="net"` and
+`data-net`), the key a wire carries, so clicking a ground symbol selects its net. It emits no pin
+pick target for an anchor, because that target would carry an empty ref-des and resolve to nothing.
+The tier-2 packer does not read the field yet. It keys symbol primitives by `ref_des` alone, so an
+anchored placement packs with no `PrimitiveKey` and cannot be picked in WebGL mode.
 
 ## Text stays readable and inside its box
 
-Readers carry a source's text orientation and sizing faithfully, and making that text legible is the render layer's job, shared by the SVG backend and the WebGL overlay so the two agree by construction. These rules live in the render layer and are applied by both:
+Readers carry a source's text orientation and sizing faithfully, and making that text legible is the render layer's job, shared by the SVG backend and the WebGL overlay so the two agree by construction. These rules live there and both backends apply them:
 
-- **Upright text.** No run is ever drawn upside down, the way every EDA viewer (Eeschema, Altium, OrCAD, and the tool that authored the EDIF) draws it. A run whose angle would read upside down (normalized magnitude over 90, for example a symbol placed at 180 degrees or a net label with its own 180-degree orientation) is turned a further 180 and its justify flipped on both axes, so it stays anchored to the same corner. Vertical text (plus or minus 90) is left alone, so the KiCad-90 parity holds. Without this, 180-degree-placed connectors on a real headers sheet rendered their ref-des and half their net-stub labels upside down.
-- **Caption fits its box (condense, do not shrink).** A symbol caption with no source text height fell back to a fixed size and spilled past its symbol. It is now condensed horizontally to the drawn body-box width (the widest boxed rect, not the pin-stub-widened bounding box) via SVG `textLength` with `lengthAdjust="spacingAndGlyphs"`, which keeps the font height instead of dropping it to a few pixels, and only when it would overflow. The packed label carries the budget to the overlay so it condenses identically.
+- **Text is drawn upright**, the way every EDA viewer (Eeschema, Altium, OrCAD, and the tool that authored the EDIF) draws it. A run whose angle would read upside down (normalized magnitude over 90, for example a symbol placed at 180 degrees or a net label with its own 180-degree orientation) is turned a further 180 and its justify flipped on both axes, so it stays anchored to the same corner. Vertical text (plus or minus 90) is left alone, so the KiCad-90 parity holds. Without this, 180-degree-placed connectors on a real headers sheet rendered their ref-des and half their net-stub labels upside down.
+- **A caption is condensed to fit its box, never shrunk.** A symbol caption with no source text height fell back to a fixed size and spilled past its symbol. It is now condensed horizontally to the drawn body-box width (the widest boxed rect, not the pin-stub-widened bounding box) via SVG `textLength` with `lengthAdjust="spacingAndGlyphs"`, which keeps the font height instead of dropping it to a few pixels, and only when it would overflow. The packed label carries the budget to the overlay so it condenses identically.
 
 - **Every size comes from the drawing.** No text is sized from a constant. A run with no source height falls back to the sheet's own median text height (`defaultTextHeight`), shared with the WebGL path so both backends draw height-less text the same. The legibility floor and the absurd-height ceiling are **fractions of the drawing**, not pixel counts, because a bound is a claim about how much of a sheet one run may occupy.
-- **A justify anchors the whole block, not its first line.** A multi-line run stacks *upward* from a bottom anchor, both ways from a centered one, and downward only from a top anchor. This is not cosmetic: a tool that bottom-anchors its notes places the NEXT note relative to that same bottom.
+- **A justify anchors the whole block, not its first line.** A multi-line run stacks *upward* from a bottom anchor, both ways from a centered one, and downward only from a top anchor. It matters beyond looks, because a tool that bottom-anchors its notes places the NEXT note relative to that same bottom.
 
 <details>
 <summary>The measurements behind those two rules</summary>
 
-A flat 40px ceiling was not a safety net in either direction: on a sparse auto-layout, where the drawing zooms until symbol bodies are ~444px tall, it pinned every net label to 9% of the body it labels where the layout asked for 33%; on a dense faithful sheet it sat at 2.5% while a real title measured 2.2%, a hair from truncating it.
+A flat 40px ceiling failed in both directions. On a sparse auto-layout, where the drawing zooms until symbol bodies are ~444px tall, it pinned every net label to 9% of the body it labels where the layout asked for 33%, and on a dense faithful sheet it sat at 2.5% while a real title measured 2.2%, a hair from truncating it.
 
 One export spaced a 3-line note and the note below it exactly two line pitches apart, which prints as a blank line. Growing the first downward landed its last line 2.10px from the second note's anchor, where a blank line at that font is 21.4px.
 
 </details>
 
-One gotcha: `rsvg-convert` (librsvg) silently ignores `textLength` and `lengthAdjust`, so an offline PNG of the SVG backend still shows a caption overflowing. Browsers honor it, and the viewer's SVG and WebGL output is browser-consumed, so it is correct in the product. Verify condensing in a real browser, not via an rsvg PNG or a golden.
+Beware that `rsvg-convert` (librsvg) silently ignores `textLength` and `lengthAdjust`, so an offline PNG of the SVG backend still shows a caption overflowing. Browsers honor it, and the viewer's SVG and WebGL output is browser-consumed, so it is correct in the product. Verify condensing in a real browser, not via an rsvg PNG or a golden.
 
 ### The font is a name, never a file
 
-Schematic formats do not record a font. An EDIF export naming 24,523 text heights names zero fonts, typefaces or point sizes, so "use whatever the source uses" is not available: a PDF of that design is a *different program's* rendering, and its face was that program's choice.
+Schematic formats do not record a font. An EDIF export naming 24,523 text heights names zero fonts, typefaces or point sizes, so "use whatever the source uses" is not available, because a PDF of that design is a *different program's* rendering and its face was that program's choice.
 
-`Style.Font` is therefore a CSS family list resolved by the viewer, and the engine loads and ships no font file. It leads with the face the authoring tools print in and falls back to a **metric-compatible** substitute, so a machine without the first lays text out at identical advance widths rather than drifting. Family names in it are **single-quoted**: `core/svg`'s `Attr` writes its value verbatim inside double quotes, so a double-quoted family name emits invalid XML on the SVG root element.
+`Style.Font` is therefore a CSS family list resolved by the viewer, and the engine loads and ships no font file. It leads with the face the authoring tools print in and falls back to a **metric-compatible** substitute, so a machine without the first lays text out at identical advance widths rather than drifting. Family names in it are **single-quoted**, because `core/svg`'s `Attr` writes its value verbatim inside double quotes, so a double-quoted family name emits invalid XML on the SVG root element.
 
 ### A source text height may not be an em size
 
 `Label.height` and friends mean **glyph height**, and the renderer maps it straight to `font-size`. A format that spells text size differently is converted **in the reader**, because that is a fact about the format rather than a rendering preference.
 
-EDIF is the case in point: its `textHeight` is a **line pitch**. The authoring tool stacks a component's field rows exactly `textHeight` apart (measured over 2377 instances of one export, 3161 of the same-column row gaps were exactly 1.000x that row's `textHeight`), so mapping it onto `font-size` leaves zero leading and consecutive rows touch. `readers/edif` divides by the tool's line height to recover an em. KiCad states a glyph height directly and is correctly left alone.
+In EDIF, `textHeight` is a **line pitch**. The authoring tool stacks a component's field rows exactly `textHeight` apart (measured over 2377 instances of one export, 3161 of the same-column row gaps were exactly 1.000x that row's `textHeight`), so mapping it onto `font-size` leaves zero leading and consecutive rows touch. `readers/edif` divides by the tool's line height to recover an em. KiCad states a glyph height directly and is correctly left alone.
 
 ### A pin's number is a join key, not a caption
 
-`PinPoint.port_ref` holds the **physical pin designator**, joining to `ir.Port.designator`, and `render/pack.go` feeds it to `PrimitiveKey.pin` so a finding can target one pin. A reader that puts a port *name* there both draws the wrong text and breaks that join, which is one bug with two symptoms.
+`PinPoint.port_ref` holds the **physical pin designator**, joining to `ir.Port.designator`, and `core/render/pack.go` feeds it to `PrimitiveKey.pin` so a finding can target one pin. A reader that puts a port *name* there both draws the wrong text and breaks that join, which is one bug with two symptoms.
 
-Formats differ in where they keep the two. KiCad states the number directly on the pin. EDIF splits them: the `portImplementation` names the PORT and the number lives on the cell interface's `(port X (designator "N"))`. A pin also carries a text height like any other run, and may state **two** independent text positions (the name on its own display, the number on a `keywordDisplay designator`), so `PinPoint` carries both `label_origin` and `number_origin`.
-
-## Fidelity
-
-The reader declares lossy-bounded (a render subset). It is not a round-trip oracle. The schematic drawing is not reconstructed byte-for-byte, only the render subset is extracted.
+Formats differ in where they keep the two. KiCad states the number directly on the pin. EDIF splits them, with the `portImplementation` naming the PORT and the number living on the cell interface's `(port X (designator "N"))`. A pin also carries a text height like any other run, and may state **two** independent text positions (the name on its own display, the number on a `keywordDisplay designator`), so `PinPoint` carries both `label_origin` and `number_origin`.
 
 ## Board geometry sidecar
 
 There are two geometries and two sidecars, one per physical medium.
 
-- **Schematic-page geometry**: symbol shapes, wire runs, labels. This is `SchematicGeometry`, the subject above.
-- **Board geometry**: component placement, pads, routed copper, {{ explainable "via" "vias" }}, zones, the layer stackup, and the board outline. This is `BoardGeometry`, in the same `agni.v1.geom` package, so the primitive vocabulary (`Point`, `Polyline`, `BBox`, `Provenance`) is shared rather than duplicated.
+- **Schematic-page geometry** (symbol shapes, wire runs, labels) is `SchematicGeometry`, the subject above.
+- **Board geometry** (component placement, pads, routed copper, {{ explainable "via" "vias" }}, zones, the layer stackup, and the board outline) is `BoardGeometry`, in the same `agni.v1.geom` package, so the primitive vocabulary (`Point`, `Polyline`, `BBox`, `Provenance`) is shared rather than duplicated.
 
-The board sidecar follows every rule established above. It is a separate keyed artifact, never imported by diff, rules, or simulation, and joined to the netlist IR at consumption time by stable keys: `ref_des` for placements (with a pad `number` matching the connection's `pin_ref`, so `(ref_des, number)` joins a copper land to its netlist pin) and net name for routed copper (`NetCopper`, the board analogue of `WireGeometry`). The first producer is the KiCad reader, over the same s-expr parse as the netlist reader. IPC-2581 and ODB++ producers slot in behind the same proto, keeping the one-contract, N-producers property.
+The board sidecar follows every rule established above. It is a separate keyed artifact, never imported by diff, rules, or simulation, and joined to the netlist IR at consumption time by stable keys: `ref_des` for placements (with a pad `number` matching the connection's `pin_ref`, so `(ref_des, number)` joins a copper land to its netlist pin) and net name for routed copper (`NetCopper`, the board analogue of `WireGeometry`). The first producer is the KiCad reader, over the same s-expr parse as the netlist reader. IPC-2581 is the second producer (below), and an ODB++ producer would slot in behind the same proto, keeping the one-contract, N-producers property.
 
-**Silkscreen and legend text.** `BoardText` carries the board's placed strings: each {{ explainable "footprint" }}'s ref-des and value, plus free graphic text such as the title block, so both board renderers draw them, matching what KiCad shows. Text is universal across board formats (IPC-2581 legend, ODB++, Gerber), so it lives in the shared contract, not in a reader, and the IR never overfits one format. Every `BoardText` is board-frame absolute: the reader composes a footprint's local text offset through the placement transform with the same composer the pads use, and that is what pins text to its part. Free text is authored absolute already. Glyph angle folds under KiCad's default keep-upright so text on a rotated footprint never renders inverted (free graphic text is exempt, so a deliberately mirrored back-side title stays mirrored). Hidden source text is dropped.
+**Silkscreen and legend text travel in `BoardText`**, which carries each {{ explainable "footprint" }}'s ref-des and value plus free graphic text such as the title block, so both board renderers draw them, matching what KiCad shows. Text is universal across board formats (IPC-2581 legend, ODB++, Gerber), so it lives in the shared contract, not in a reader, and the IR never overfits one format. Every `BoardText` is board-frame absolute, because the reader composes a footprint's local text offset through the placement transform with the same composer the pads use, and that is what pins text to its part. Free text is authored absolute already. Glyph angle folds under KiCad's default keep-upright so text on a rotated footprint never renders inverted (free graphic text is exempt, so a deliberately mirrored back-side title stays mirrored). Hidden source text is dropped.
 
-**Silkscreen and fab graphics.** `BoardGraphic` carries the non-copper artwork the same way: a footprint's silk and fab body outlines, courtyards, and polarity marks, plus free graphics that are not the board edge (the edge stays `BoardOutline`). It reuses `geom.Shape` for the geometry itself (polyline, rect, circle, with arcs approximated to polylines under the same lossy bound), adds only a stroke width, carries the source layer verbatim, and, like `BoardText`, pre-composes footprint graphics to board coordinates so they sit on their part. Both renderers draw them in a silk group, and per-layer visibility is the same client-side concern as the copper strata. This is universal across board formats, so it is a shared-contract field a second producer fills, not a reader's. Filled zone regions and per-side silk and fab default-visibility remain a later refinement.
+**Silkscreen and fab graphics travel in `BoardGraphic`** the same way, which carries a footprint's silk and fab body outlines, courtyards, and polarity marks, plus free graphics that are not the board edge (the edge stays `BoardOutline`). It reuses `geom.Shape` for the geometry itself (polyline, rect, circle, with arcs approximated to polylines under the same lossy bound), adds only a stroke width, carries the source layer verbatim, and, like `BoardText`, pre-composes footprint graphics to board coordinates so they sit on their part. Both renderers draw them in a silk group, and per-layer visibility is the same client-side concern as the copper strata. This is universal across board formats, so it is a shared-contract field a second producer fills, not a reader's. Filled zone regions and per-side silk and fab default-visibility remain a later refinement.
 
-Only tier 1 exists for the board today. The columnar packed transport for high-volume copper (the `PackedSheet` analogue) is deliberately deferred until its consumer, the board renderer, exists. The tier split above is the design it will follow. Coordinates are nanometers (`unit_nm=1`), Y-up, matching the KiCad schematic reader's convention. Rotations are carried verbatim from the source, and composition with the Y-flip is the renderer's concern. Fidelity is lossy-bounded (a render and DRC subset): arc tracks, zone fill polygons, teardrops, and 3D references are out, zone outlines are kept as authored, and outline arcs are approximated as polylines. What this enables is that the geometric DRC class (clearance, width, annular ring) gets its data tier, and a board viewer gets its contract.
+The board's tier-2 form is `render.PackBoard`, which projects a `BoardGeometry` into the same `PackedSheet` envelope the schematic uses, adding board layer groups and a filled-triangle primitive kind, so the web canvas decodes both through one path. Coordinates are nanometers (`unit_nm=1`), Y-up, matching the KiCad schematic reader's convention. Rotations are carried verbatim from the source, and composition with the Y-flip is the renderer's concern. Fidelity is lossy-bounded to a render and DRC subset, which leaves out arc tracks, zone fill polygons, teardrops, and 3D references, keeps zone outlines as authored, and approximates outline arcs as polylines. It gives the geometric DRC class (clearance, width, annular ring) its data tier, and a board viewer its contract.
 
-**Copper stroke width (both renderers).** Board copper renders at its true physical width, floored to a *physical* minimum (about 25µm in board space), never to a fixed output-pixel constant. The SVG backend strokes `max(width, minStroke) * scale`, and the WebGL packer tessellates the same floored width. An output-pixel floor (an earlier fixed 0.8px) clamped every sub-pixel trace to one width on a scaled-to-fit board, merging dense copper into a blob and erasing relative trace widths. The board-space floor keeps thickness proportional to the copper at every zoom, as EDA viewers draw. WebGL was already faithful, because browser GL line width is about 1px, so the packer already drew tracks as triangle quads rather than lines and only the SVG backend needed converging. The scope is board copper. Schematic wire strokes stay a fixed pixel width (line-art at readable zoom, no blobbing), and pad and via size-floors stay (discrete-feature visibility, a separate concern).
+**Both renderers draw board copper at its true physical width**, floored to a *physical* minimum (about 25µm in board space), never to a fixed output-pixel constant. The SVG backend strokes `max(width, minStroke) * scale`, and the WebGL packer tessellates the same floored width. An output-pixel floor (an earlier fixed 0.8px) clamped every sub-pixel trace to one width on a scaled-to-fit board, merging dense copper into a blob and erasing relative trace widths. The board-space floor keeps thickness proportional to the copper at every zoom, as EDA viewers draw. WebGL was already faithful, because browser GL line width is about 1px, so the packer already drew tracks as triangle quads rather than lines and only the SVG backend needed converging. The scope is board copper. Schematic wire strokes stay a fixed pixel width (line-art at readable zoom, no blobbing), and pad and via size-floors stay (discrete-feature visibility, a separate concern).
 
 **{{ explainable "bus" "Buses" }} draw distinctly.** `WireGeometry.kind` (unset = wire, `KIND_BUS`, `KIND_BUS_ENTRY`) lets the readers flag a bus trunk or entry so both renderers style it apart from a net wire. The SVG backend strokes it thicker in the bus color, and the WebGL packer tessellates it to true-width triangle quads in a distinct bus group with the same "GL lines are about 1px, so widen via quads" path copper takes. The kind is format-neutral (KiCad sets it today from `bus` and `bus_entry`, and a bus carries no net, so its member nets stay unmodeled).
 
@@ -249,25 +287,25 @@ An undrawable bus (a bus alias, an EDIF `array`, a hierarchical port with no dra
 
 </details>
 
-### Second producer: IPC-2581, and the contract's first second-format audit
+### IPC-2581 as the second producer, and the contract's first second-format audit
 
 The IPC-2581 board reader is the second `BoardGeometry` producer. The proto was designed from one producer (KiCad), so the second producer is also the audit that proves the fields are not overfit: the overfit rule only bites when a second vendor's data lands in them. The audit's outcomes, all resolved without a proto change:
 
-- **No new fields earned.** IPC-2581's stackup carries per-layer material and thickness, but no board rule or renderer consumes them, so `BoardLayer` keeps only `kind` (IPC-2581's `layerFunction` verbatim, the same discipline as KiCad's `kind` word). The richer stackup stays in the netlist IR's `ir.Stackup`, ledgered for when a consumer earns it.
+- **It earned no new fields.** IPC-2581's stackup carries per-layer material and thickness, but no board rule or renderer consumes them, so `BoardLayer` keeps only `kind` (IPC-2581's `layerFunction` verbatim, the same discipline as KiCad's `kind` word). The richer stackup stays in the netlist IR's `ir.Stackup`, ledgered for when a consumer earns it.
 - **Padstack def and instance resolve to the same inline `Pad`.** IPC-2581 references pad shapes by id from a primitive dictionary, where KiCad inlines them per footprint. The producer resolves the indirection and emits the identical flattened `Pad` (shape word, size, footprint-local position), confirming the inline mapping holds for a def-and-instance source.
-- **Frame.** IPC-2581 is Y-up like the geom contract, so coordinates map directly with **no** Y negation (KiCad is Y-down and negates). Sides normalize into the contract's KiCad-style vocabulary (`TOP` to `F.Cu`, `BOTTOM` to `B.Cu`) so the format-neutral renderer's front and back classifier works unchanged, the N-producers-one-vocabulary property in miniature.
-- **The board-availability gate generalized.** The check layer's `board.` gate keyed on `SourceFormat == "kicad-pcb"`, and it now tests a set of board formats. The authoritative per-design gate remains the Model's board tier: empty means the board rules stay silent.
+- **The frame needs no flip.** IPC-2581 is Y-up like the geom contract, so coordinates map directly with **no** Y negation (KiCad is Y-down and negates). Sides normalize into the contract's KiCad-style vocabulary (`TOP` to `F.Cu`, `BOTTOM` to `B.Cu`) so the format-neutral renderer's front and back classifier works unchanged, the N-producers-one-vocabulary property in miniature.
+- **The board-availability gate was generalized.** The check layer's `board.` gate keyed on `SourceFormat == "kicad-pcb"`, and it now tests a set of board formats. The authoritative per-design gate remains the Model's board tier: empty means the board rules stay silent.
 
-Scope landed in two parts: placements, pads, layers, and outline first, then routed copper (tracks with interleaved straight and arc steps decoded in document order, arcs approximated as 16-chord polylines) and vias (a drilled hole marked as a via, with the co-located copper pad as the annular). That lights all four board DRC rules on IPC-2581 (track-width, copper-clearance, hole-size, annular-width).
+Scope landed in two parts, with placements, pads, layers, and outline first, then routed copper (tracks with interleaved straight and arc steps decoded in document order, arcs approximated as 16-chord polylines) and vias (a drilled hole marked as a via, with the co-located copper pad as the annular). That lights all four board DRC rules on IPC-2581 (track-width, copper-clearance, hole-size, annular-width).
 
-**Full producer parity.** The second producer initially lagged the contract: fields KiCad filled sat empty on IPC. That gap is now closed, all into existing fields with no proto change.
+**The second producer now matches the first.** It initially lagged the contract, leaving fields KiCad filled empty on IPC, and the gap closed entirely into existing fields with no proto change.
 
-**Two render-faithfulness bugs on real Allegro exports**, both of which passed unit fixtures and showed only on a corpus PNG render. The general lesson for any second producer: a construct that is copper on one layer is drawing geometry on another, so classify by the source layer function, not by the element name.
+**Two render-faithfulness bugs surfaced on real Allegro exports**, and both passed unit fixtures and showed only on a corpus PNG render. The general lesson for any second producer is that a construct that is copper on one layer is drawing geometry on another, so classify by the source layer function, not by the element name.
 
 <details>
 <summary>Which fields closed the parity gap, and what the two bugs were</summary>
 
-Component value goes to `ir.Component` attributes. Silk and fab graphics (marking, outline, assembly-drawing packages, composed per placement) go to `BoardGraphic` (IPC encodes silk as vector geometry, not string text, so `BoardText` legitimately stays empty for this producer, a genuine format difference). Copper plane and pour fills go to `Zone` (authored outline, cutouts dropped under the lossy bound). Via layer spans go to `Via.layer_from/to`. User-primitive pads (their own units) become real pad extents. Two gotchas the work pinned: the fill is nested under a features contour, not a direct child (a fixture test passed while the real board rendered zero zones, caught only by the corpus-render rule), and a drill layer's span lives on the layer, not the hole. Non-via copper, fill cutouts, and the padstack def-and-instance indirection remain ledgered (no consumer yet), and stackup materials are a later refinement.
+Component value goes to `ir.Component` attributes. Silk and fab graphics (marking, outline, assembly-drawing packages, composed per placement) go to `BoardGraphic` (IPC encodes silk as vector geometry, not string text, so `BoardText` legitimately stays empty for this producer, a genuine format difference). Copper plane and pour fills go to `Zone` (authored outline, cutouts dropped under the lossy bound). Via layer spans go to `Via.layer_from/to`. User-primitive pads (their own units) become real pad extents. The work pinned two gotchas. The fill is nested under a features contour, not a direct child (a fixture test passed while the real board rendered zero zones, caught only by the corpus-render rule), and a drill layer's span lives on the layer, not the hole. Non-via copper, fill cutouts, and the padstack def-and-instance indirection remain ledgered (no consumer yet), and stackup materials are a later refinement.
 
 Cadence Allegro writes `clockwise="TRUE"/"FALSE"` in uppercase, and a case-sensitive `== "true"` read every clockwise arc as counter-clockwise, so it swept the long way and ballooned outline and copper arcs. Parse it case-insensitively. Second, a `Zone` is a copper pour, so the zone extraction must gate on the layer being a copper function (conductor or plane). Without the gate, document (fab and assembly-drawing) contours leaked in as copper and blew up the render bounds.
 
@@ -277,39 +315,39 @@ Cadence Allegro writes `clockwise="TRUE"/"FALSE"` in uppercase, and a case-sensi
 
 The netlist-graph fallback (`agni render --layout=grid|layered`) has no source geometry, so it synthesizes a `SchematicGeometry` from the IR. The assembly step decides what to draw at each component node through a pluggable **`SymbolSource`**, so the layout stays fixed while node artwork varies.
 
-- **`Registry`**: classified synthetic glyphs, keyed on open string class ids each with a hand-authored glyph (resistor, capacitor, inductor, ferrite, diode, led, tvs, fuse, connector, test point, crystal, ic, transistor, ground). Multi-pin bodies (ic, connector) carry no per-pin terminals, so their edges attach at the node center like the box does.
+- **`Registry`** draws classified synthetic glyphs, keyed on open string class ids each with a hand-authored glyph (resistor, capacitor, inductor, ferrite, diode, led, tvs, fuse, connector, test point, crystal, ic, transistor, ground). Multi-pin bodies (ic, connector) carry no per-pin terminals, so their edges attach at the node center like the box does.
 
   **The glyph follows the class the ingestion passes stamped.** `classify.Stamp` fills
   `ir.Component.device_classes` on every read, from part text, the project's own `lexicon.class`
   patterns and the refinements a glob cannot express, and `classify.StampClassesFromSpecs` adds what
   only a datasheet can establish where the read carries a params corpus. The drawing reads that
-  rather than deciding again: a part the engine calls a `tvs` is drawn as a TVS, and a query answer
+  rather than deciding again, so a part the engine calls a `tvs` is drawn as a TVS, and a query answer
   and a picture of the same board cannot disagree about what a component is (agni issues 701 and
   710). Where the set holds more than one class the drawing takes the head of
   `classify.BySpecificity`, which is the ordering `check.Model` resolves `component.class` with, so
-  the two are one answer rather than two that happen to agree. Three ends around it. A
+  the two are one answer rather than two that happen to agree. Three cases sit around that default. A
   user rule wins outright (`--class sym=class`, `--class-file`), because naming a glyph for a symbol
   is saying what to draw. A component carrying no stamp falls back to the built-in rule table, which
   matches the resolved part or symbol name first and then the ref-des letter prefix on a startswith
-  match (so `RE1` and `Cout` still classify) — that is the path a hand-built `ir.Design` and any
+  match (so `RE1` and `Cout` still classify), which is the path a hand-built `ir.Design` and any
   host that skipped the loader take. And only a class that reaches no glyph draws the generic box.
 
   A class with no glyph of its own draws through its family, which is already in the stamped set:
   a zener carries `["zener", "diode"]` and draws as a diode. `glyphAliases` covers the rest, where
   the set holds no drawable tag (`clock`, `test_connector`, `ideal_diode_controller`) or the class
   arrives outside a set from a user rule. These are drawing conventions and not classification
-  claims, which is why they are not in `classify`'s family table: a test connector is deliberately
-  NOT a connector for the protection rules, and is still drawn as one. `TestEveryStampedClassDraws`
-  holds every shipped class to reaching a glyph, so a new class cannot quietly draw as a box while
-  every rule and query knows what it is.
-- **`FaithfulSource`**: the design's own symbols (from a geometry sidecar) re-laid-out, falling back per ref to the Registry and then the box. `--symbols=faithful` selects it. A symbol that failed to load counts as unresolved, not provided.
+  claims, so they stay out of `classify`'s family table, where a test connector is deliberately
+  NOT a connector for the protection rules even though it is drawn as one.
+  `TestEveryStampedClassDraws` holds every shipped class to reaching a glyph, so a new class cannot
+  quietly draw as a box while every rule and query knows what it is.
+- **`FaithfulSource`** draws the design's own symbols (from a geometry sidecar) re-laid-out, falling back per ref to the Registry and then the box. `--symbols=faithful` selects it. A symbol that failed to load counts as unresolved, not provided.
 
 Two layout properties keep the output legible, both applied in assembly (no per-strategy change, because grid and layered both place on integer pitch multiples):
 
-- **Size-aware packing**: group nodes by distinct X (columns) and Y (rows), and size each cell to `max(pitch, symbolSize + gutter)`. A uniform glyph grid stays at `pitch`, and only a large (faithful) symbol expands its own column or row, so mixed sizes pack tightly without overlap.
-- **Pin-accurate edges**: a net's hyperedge star runs from each connection's *pin* (the placed node origin plus the symbol's pin point whose `port_ref` matches the connection's pin), with a node-center fallback when the symbol has no such pin. A net where three or more pins meet gets a junction dot at the centroid. Auto-layout placements carry no rotation, so `origin + pin.Loc` is the world point.
+- **Size-aware packing** groups nodes by distinct X (columns) and Y (rows) and sizes each cell to `max(pitch, symbolSize + gutter)`. A uniform glyph grid stays at `pitch`, and only a large (faithful) symbol expands its own column or row, so mixed sizes pack tightly without overlap.
+- **Edges are pin-accurate.** A net's hyperedge star runs from each connection's *pin* (the placed node origin plus the symbol's pin point whose `port_ref` matches the connection's pin), with a node-center fallback when the symbol has no such pin. A net where three or more pins meet gets a junction dot at the centroid. Auto-layout placements carry no rotation, so `origin + pin.Loc` is the world point.
 
-A conversion report (behind `agni render --report` and the `GetReport` web API) explains how each component mapped: its device class and whether it drew a glyph, the generic box (a class with no glyph, or no class at all), a provided symbol, or an unresolved fallback, with call-outs for the box list and the unresolved list (which points at the symbol libraries a run searched: the design's project descriptor and `--symbol-path`, the latter needed for xschem and gEDA whose symbol artwork lives in external `.sym` files).
+A conversion report (behind `agni render --report` and the `GetReport` web API) explains how each component mapped, giving its device class and whether it drew a glyph, the generic box (a class with no glyph, or no class at all), a provided symbol, or an unresolved fallback, with call-outs for the box list and the unresolved list (which points at the symbol libraries a run searched: the design's project descriptor and `--symbol-path`, the latter needed for xschem and gEDA whose symbol artwork lives in external `.sym` files).
 The report names the class and the cell separately, because they answer different questions and can
 legitimately differ: a thermistor is reported as a thermistor and drawn with the resistor glyph. The
 kind is decided on the CELL for that reason. Reading the class instead would call a box a glyph the
@@ -318,12 +356,12 @@ moment a stamped class had no artwork.
 **A render that came up short says so.** A placement whose symbol did not resolve contributes no
 shapes, so it drops out of the document along with the entity keys that make it pickable, while the
 annotation pass still draws its reference designator. The sheet then shows every ref des, every wire
-and the title block, and every component on it is silently unclickable: a reader sees `C1` printed,
+and the title block, and every component on it is silently unclickable, so a reader sees `C1` printed,
 clicks it, gets nothing, and reasonably concludes agni knows nothing about `C1`.
 
 `SchematicGeometry.undrawn` carries those placements, filled where geometry is produced (both the
 faithful read and the auto-layout) through `geomath.SymbolFor`, the same resolution the renderer
-performs. That sharing is load-bearing rather than tidy: `core/validate` used to run a stricter join
+performs. The two have to share it, because `core/validate` used to run a stricter join
 of its own and counted a placement resolvable by the renderer's cell-only fallback as unresolved, so a
 shortfall report built on it would have named placements that draw perfectly well. A banner that is
 usually wrong teaches a reader to distrust the one time it is right (agni issue 354).
@@ -332,4 +370,4 @@ usually wrong teaches a reader to distrust the one time it is right (agni issue 
 missing library commonly costs every part drawn from it. The viewer shows it as a notice over the
 canvas. Both are silent when nothing is undrawn.
 
-The report reads the design through the same configured read the drawing does. That is load-bearing rather than tidy: this is the surface that would REPORT an unresolved symbol, so a report built from a read that could not see the project's declared library would diagnose a problem it had caused itself (agni issue 347).
+The report reads the design through the same configured read the drawing does. It has to, because the report is the surface that would REPORT an unresolved symbol, and one built from a read that could not see the project's declared library would diagnose a problem it had caused itself (agni issue 347).

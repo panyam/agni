@@ -5,15 +5,10 @@ import geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 // SymbolIndex is a geometry's symbol table keyed for placement lookup, with the fallbacks a
 // placement may need when its refs do not match a definition exactly.
 //
-// It lives here rather than in core/render because more than one tier has to answer "does this
-// placement draw?" and they must not answer it differently. The renderer asks in order to draw; the
-// reader asks in order to report what it could not draw (agni issue 354); validate asks in order to
-// judge a read's health. Those three had two different joins between them, so a placement resolvable
-// by the renderer's cell-only fallback counted as UNRESOLVED to validate, and any shortfall report
-// built on that would have named placements that draw perfectly well.
-//
-// It is also the only home readers can use. C17 forbids a reader importing core/render, and the
-// shortfall has to be computed where geometry is produced.
+// The renderer, the readers (to report what they could not draw, agni issue 354) and validate all
+// ask "does this placement draw?", and they must get one answer. With separate joins, a placement
+// the renderer resolved by its cell-only fallback counted as UNRESOLVED to validate. It lives here
+// rather than core/render because C17 forbids a reader importing core/render.
 type SymbolIndex map[string]*geom.SymbolDef
 
 // symKey is the composite lookup key. NUL separates the parts because it cannot occur in a cell,
@@ -24,8 +19,7 @@ func symKey(cell, lib, view string) string { return cell + "\x00" + lib + "\x00"
 //
 // Each definition is registered under its exact (cell, library, view) triple and then under two
 // progressively looser keys, FIRST DEFINITION WINS, so a placement whose view or library ref does not
-// match exactly still resolves. The looser keys are what make a multi-section cell and a
-// single-view cell both work off one table.
+// match exactly still resolves. That lets a multi-section cell and a single-view cell share one table.
 func IndexSymbols(g *geom.SchematicGeometry) SymbolIndex {
 	m := make(SymbolIndex, len(g.GetSymbols()))
 	for _, s := range g.GetSymbols() {
@@ -44,8 +38,8 @@ func IndexSymbols(g *geom.SchematicGeometry) SymbolIndex {
 // will be. An exact (cell, library, view) match selects the right bank of a multi-section cell; the
 // view- and library-agnostic fallbacks keep single-view cells and any ref mismatch resolving.
 //
-// A nil answer is what "this placement contributes no shapes" means, so every consumer that wants to
-// know whether a placement draws should ask THIS rather than re-deriving the join.
+// nil means the placement contributes no shapes. A consumer asking whether a placement draws should
+// call THIS rather than re-deriving the join.
 func (m SymbolIndex) SymbolFor(pl *geom.SymbolPlacement) *geom.SymbolDef {
 	if s := m[symKey(pl.GetCellRef(), pl.GetLibraryRef(), pl.GetViewRef())]; s != nil {
 		return s
@@ -56,16 +50,12 @@ func (m SymbolIndex) SymbolFor(pl *geom.SymbolPlacement) *geom.SymbolDef {
 	return m[symKey(pl.GetCellRef(), "", "")]
 }
 
-// MarkUndrawn fills a geometry's `undrawn` list: every placement no symbol resolves for, in sheet
+// MarkUndrawn fills a geometry's `undrawn` list with every placement no symbol resolves for, in sheet
 // then placement order so the answer is stable across runs.
 //
-// Called where geometry is PRODUCED rather than where it is consumed, so the list is computed once,
-// with the same resolution the renderer performs, and every consumer reads one answer. A consumer
-// deriving it independently is how the count and the drawing drift apart.
-//
-// It overwrites rather than appends, so re-running it on the same geometry is a no-op rather than a
-// doubling. A geometry with no placements yields an empty list, since a sheet that draws nothing has
-// not failed to draw anything.
+// Call it where geometry is PRODUCED, so every consumer reads one list computed with the renderer's
+// own resolution. It overwrites rather than appends, so re-running it is a no-op. A geometry with no
+// placements yields an empty list.
 func MarkUndrawn(g *geom.SchematicGeometry) {
 	if g == nil {
 		return

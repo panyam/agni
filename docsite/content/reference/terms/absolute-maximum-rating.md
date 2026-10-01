@@ -19,7 +19,7 @@ mistakes one for the other looks fine until a part fails in the field. So the la
 separate `LimitKind` values (`ABSOLUTE_MAX` and `RECOMMENDED_OPERATING`) rather than one number, and a
 rule declares which it means.
 
-Rules that read it: [`supply-exceeds-abs-max`](../../rules/supply-exceeds-abs-max/) compares a supply
+Two rules read it. [`supply-exceeds-abs-max`](../../rules/supply-exceeds-abs-max/) compares a supply
 pin's rail against the part's rating, and
 [`pin-out-of-recommended`](../../rules/pin-out-of-recommended/) catches the quieter case of a pin
 sitting in the middle band.
@@ -28,7 +28,7 @@ A rating is only meaningful next to the conditions it was measured under, so a v
 them is treated as under-specified rather than compared. That is the same discipline the
 [datasheet layer](../../../architecture/datasheet-layer/) applies to every parameter.
 
-**Where the course teaches it:**
-[chapter 7](../../../learn/07-reading-a-datasheet/) is the whole chapter, and
+The course teaches it in [chapter 7](../../../learn/07-reading-a-datasheet/), which is the whole
+chapter about it, and
 [Two numbers that look alike](../../../learn/07-reading-a-datasheet/#two-numbers-that-look-alike-ee5)
 is the distinction on its own.

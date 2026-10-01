@@ -10,10 +10,9 @@ const MODES: { mode: RenderMode; label: string }[] = [
   { mode: "native", label: "Native" },
 ];
 
-// Controls renders the render-mode buttons and the layout selector from ControlsState. The
-// active button, Native's disabled state, and the layout options/selection/disabled all derive
-// from the signal, so the presenter drives them by pushing state (no imperative DOM). Clicks and
-// selection changes emit intents up (onMode / onLayout).
+// Controls renders the render-mode buttons, layout selector and the other toggles from
+// ControlsState. Everything derives from the signal, so the presenter drives it by pushing state,
+// and every click or selection emits an intent up.
 function Controls(props: {
   state: () => ControlsState;
   onMode: (m: RenderMode) => void;
@@ -79,9 +78,8 @@ function Controls(props: {
           <For each={["all", "front", "back"]}>{(s) => <option value={s}>{s} layers</option>}</For>
         </select>
       </Show>
-      {/* Always rendered rather than shown only when something is lit: a control that appears on a
-          state change is one the reader has to discover twice, and this one exists because the
-          gesture had nowhere to live (agni issue 348). Disabled carries "nothing to clear". */}
+      {/* Always rendered, and disabled when there is nothing to clear, because a control that
+          appears on a state change has to be discovered twice (agni issue 348). */}
       <button
         type="button"
         class="mode-btn clear-highlights"
@@ -95,8 +93,7 @@ function Controls(props: {
   );
 }
 
-// controlBarIsland mounts the control bar and returns its command-down view. onMode / onLayout
-// are the intents up (the user chose a renderer / a layout).
+// controlBarIsland mounts the control bar and returns its command-down view.
 export function controlBarIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

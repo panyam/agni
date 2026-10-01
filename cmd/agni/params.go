@@ -19,10 +19,9 @@ import (
 // paramsCmd prints one part's whole datasheet record.
 //
 // The query relations carry the part of a datasheet a query can BIND: join keys, comparable scalars,
-// and closed vocabularies. Everything else in the record is read rather than queried, and until this
-// command there was no way to read it outside the browser, which made "the flat relations do not
-// carry that, read the record instead" an answer nobody could act on (agni issue 547; DECISIONS.md,
-// "The datasheet tier is normalized into narrow relations, never flattened into a wider tuple").
+// and closed vocabularies. Everything else in the record is read rather than queried, and this
+// command is how to read it outside the browser (agni issue 547; DECISIONS.md, "The datasheet tier is
+// normalized into narrow relations, never flattened into a wider tuple").
 //
 // It takes NO DESIGN. A spec library is not a design, and the datasheet relations already answer
 // against a seeded corpus with none loaded (query.NewSpecLibBase). --design exists only so a design's
@@ -65,8 +64,8 @@ parameters the way it owns its profiles).
 			if spec == nil {
 				// Never an empty record. A part nobody has transcribed and a part with no parameters
 				// are different answers, and printing an empty spec for the first says the second.
-				// The match is case-insensitive but never fuzzy (param.ParamSet.Lookup): a near-miss
-				// MPN is a different part until a human says otherwise.
+				// The match is case-insensitive but never fuzzy (param.ParamSet.Lookup), because a
+				// near-miss MPN is a different part until a human says otherwise.
 				return fmt.Errorf("no seeded spec for mpn %q in %s", args[0], corpus)
 			}
 			if format == "json" {
@@ -83,10 +82,9 @@ parameters the way it owns its profiles).
 
 // paramsCorpus resolves the corpus to read and a name for it, from the two routes in.
 //
-// The project WINS over the flag (Overlay.SpecsOr), which is the opposite of the mount rule and
-// deliberate: a project owns its parameters the way it owns its profiles. A command reading its tier
-// from the flag alone is the bug shape that made intake's datasheet-gap section absent rather than
-// empty inside a project (agni issue 474).
+// The project WINS over the flag (Overlay.SpecsOr), the opposite of the mount rule, because a project
+// owns its parameters the way it owns its profiles. Reading the tier from the flag alone left intake's
+// datasheet-gap section absent rather than empty inside a project (agni issue 474).
 func paramsCorpus(paramsDir, designPath string) (param.ParamProvider, string, error) {
 	var flagSpecs param.ParamProvider
 	if paramsDir != "" {
@@ -109,13 +107,9 @@ func paramsCorpus(paramsDir, designPath string) (param.ParamProvider, string, er
 	return flagSpecs, paramsDir, nil
 }
 
-// writeSpecJSON emits the PartSpec itself in protojson form, matching how every other --format json
-// in this CLI emits its wire message.
-//
-// The BARE PartSpec rather than a wrapper: no RPC serves this, and inventing a response message for
-// one consumer would put a wire shape in the schema that nothing speaks. The spec IS the contract
-// type (C-"a type crossing a runtime boundary is a proto"), so a script binding to this binds to the
-// same message the workbench and the params panel carry.
+// writeSpecJSON emits the BARE PartSpec in protojson (C31). No rpc serves this, so it emits the
+// contract type rather than a wrapper invented for one consumer, and a script binding to it binds to
+// the same message the workbench and the params panel carry.
 func writeSpecJSON(w io.Writer, spec *parampb.PartSpec) error {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(spec)
 	if err != nil {
@@ -127,10 +121,9 @@ func writeSpecJSON(w io.Writer, spec *parampb.PartSpec) error {
 
 // writeSpecText renders the record as a sequence of report.Table sections.
 //
-// Through report.Table rather than a private printer, because the check and diff renderers were
-// written in cmd/, the second was copied from the first, and the copies drifted (agni issue 380). A
-// section is omitted when the spec carries nothing for it, so a minimal seeded part prints two short
-// tables instead of five empty ones.
+// It goes through report.Table rather than a private printer so it cannot drift from the other
+// renderers (agni issue 380). A section is omitted when the spec carries nothing for it, so a minimal
+// seeded part prints two short tables instead of five empty ones.
 func writeSpecText(w io.Writer, spec *parampb.PartSpec) error {
 	fmt.Fprintf(w, "%s\n", specHeading(spec))
 	for _, s := range specSections(spec) {
@@ -142,7 +135,7 @@ func writeSpecText(w io.Writer, spec *parampb.PartSpec) error {
 	return nil
 }
 
-// specHeading is the part's identity line: what it is, before any of what it says.
+// specHeading is the part's identity line, the MPN with its manufacturer and device class.
 func specHeading(spec *parampb.PartSpec) string {
 	var qual []string
 	if m := spec.GetManufacturer(); m != "" {
@@ -186,8 +179,7 @@ func specSections(spec *parampb.PartSpec) []specSection {
 }
 
 // docsTable lists the source documents, each with the content hash staleness is decided on. The
-// locator rides in the provenance column: it is where this corpus keeps the file, which is the one
-// thing a reader chasing a citation actually needs.
+// locator goes in the provenance column, since it says where this corpus keeps the file.
 func docsTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 	t := rpt.Table{Columns: []string{"id", "title", "vendor", "content hash"}}
 	for _, d := range spec.GetDocs() {
@@ -199,8 +191,8 @@ func docsTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 	return t, len(t.Rows) > 0
 }
 
-// parametersTable is the record's centre: every value with the kind of claim it makes, the
-// conditions it holds under, the terminals it binds to, and whether anyone has stood behind it.
+// parametersTable lists every value with its limit kind, the conditions it holds under, the pins it
+// binds to, and its verification state.
 func parametersTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 	t := rpt.Table{Columns: []string{"symbol", "name", "kind", "min", "typ", "max", "unit", "conditions", "variant", "pins", "verification"}}
 	for _, p := range spec.GetParameters() {
@@ -235,8 +227,8 @@ func packagesTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 }
 
 // pinsTable lists the declared terminals. The numbers column is package-qualified, because a pin
-// number is a fact about a BODY rather than about the die: the same silicon in a different package
-// numbers differently.
+// number belongs to a BODY rather than the die, and the same silicon in another package numbers
+// differently.
 func pinsTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 	t := rpt.Table{Columns: []string{"id", "name", "function", "numbers", "description"}}
 	for _, p := range spec.GetPins() {
@@ -278,11 +270,11 @@ func relationsTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 // verificationCell reports whether anyone has stood behind a value, and what to do when the document
 // has moved on.
 //
-// STALE NAMES BOTH REVISIONS, which is the whole reason Verification snapshots the printed identity
-// beside the hash. "Verified against Rev K, corpus now holds Rev L" is a task someone can pick up;
-// two content hashes is not (DECISIONS.md, "A document revision is recorded for the reader, and never
-// compared"). The state itself comes from param.VerificationOfIn, so staleness is decided on the
-// hash here exactly as it is everywhere else, and never on these strings.
+// STALE NAMES BOTH REVISIONS, from the printed identity Verification snapshots beside the hash.
+// "Verified against Rev K, corpus now holds Rev L" is a task someone can pick up, and two content
+// hashes are not (DECISIONS.md, "A document revision is recorded for the reader, and never
+// compared"). The state comes from param.VerificationOfIn, so staleness is decided on the hash as it
+// is everywhere else, and never on these strings.
 func verificationCell(spec *parampb.PartSpec, p *parampb.Parameter) string {
 	state := param.VerificationOfIn(spec, p)
 	v := p.GetVerification()

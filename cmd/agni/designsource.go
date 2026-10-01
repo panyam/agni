@@ -15,10 +15,9 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// readAsNamed is the --as-named flag's binding: a cobra persistent flag bound once at startup and
-// never mutated per run, like symbolPaths below it, the startup-DEFAULT shape CONSTRAINTS C22
-// permits. Only newDesignResolver reads it, so it reaches resolution as a resolver FIELD rather
-// than as ambient state.
+// readAsNamed is the --as-named flag's binding, set once at startup and never mutated per run, like
+// symbolPaths below it (the startup-DEFAULT shape C22 permits). Only newDesignResolver reads it, so
+// it reaches resolution as a resolver FIELD rather than as ambient state.
 var readAsNamed bool
 
 // designResolver answers "which artifacts should this read open" for the CLI, as a client of
@@ -29,10 +28,9 @@ var readAsNamed bool
 // what a malformed descriptor does (agni issue 170).
 type designResolver struct {
 	ws *cliWorkspace
-	// asNamed disables descriptor-driven redirection: read exactly the artifact named, even when the
-	// enclosing design declares it a companion view of a different entry. Reading a companion AS a
-	// netlist is a legitimate DIAGNOSTIC operation, not only a mistake (`examples/tutorial-project`
-	// diffs a schematic export against the netlist that way in its check-views target).
+	// asNamed disables descriptor-driven redirection and reads exactly the artifact named, even a
+	// declared companion. `examples/tutorial-project`'s check-views target uses it to diff a
+	// schematic export against the netlist.
 	asNamed bool
 }
 
@@ -47,27 +45,26 @@ func newDesignResolver(ws *cliWorkspace) *designResolver {
 // 170). The fields are REFS resolved by the loader, not paths this type does arithmetic on.
 type designSource struct {
 	service.DesignSources
-	// Note is a line for stderr, empty when the named path was taken exactly as given. It is written
-	// whenever an artifact the user did NOT name was read, because which file was read is not
-	// recoverable from a component count or a findings list.
+	// Note is a line for stderr, written whenever an artifact the user did NOT name was read and
+	// empty when the named path was taken exactly as given.
 	Note string
 }
 
 // Resolve decides which artifacts a read should open, given the path a user named.
 //
-// The path is turned into a (mount, ref) pair against a tree rooted a bounded number of levels above
-// it, then handed to ProjectService.ResolveDesign. Three outcomes:
+// The path becomes an artifact URI through the workspace's mount table and goes to
+// ProjectService.ResolveDesign over a store rooted at that mount. The outcomes:
 //
-//   - Resolves to nothing: read exactly what was named, the ordinary case for any folder with no
-//     descriptors.
-//   - Resolves, and the named ref is the design's ENTRY or an undeclared sibling: read what was
-//     named. Redirection is confined to files an operator explicitly listed as companions, because a
-//     later revision of the netlist sits in the same folder and IS a legitimate analysis source; an
-//     inferred rule would turn a diff of two revisions into a diff of one against itself.
-//   - Resolves, and the named ref is a declared COMPANION: analysis reads the design's entry, while
-//     the named artifact keeps whatever tier it alone supplies.
+//   - Resolves to nothing: read exactly what was named. A DIRECTORY that resolves to nothing is an
+//     error.
+//   - Names the design FOLDER or its ENTRY: read the entry, with the declared companions' tiers.
+//   - Names an undeclared sibling: read exactly that file.
+//   - Names a declared COMPANION: analysis reads the entry, while the named artifact keeps whatever
+//     tier it alone supplies.
 //
-// Naming a design FOLDER resolves the same way and reads the declared entry (agni issue 170).
+// Why companions are declared file by file is in
+// docsite/content/architecture/projects-and-designs.md#the-netlist-is-the-source-the-rest-are-views
+// (agni issues 170, 528).
 func (r *designResolver) Resolve(ctx context.Context, named string) (designSource, error) {
 	uri, err := r.ws.URI(named)
 	if err != nil {
@@ -91,25 +88,22 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	d := resp.GetDesign()
 	if d == nil {
 		if isDir {
-			// A reader handed a directory can only report an unsupported extension for something that
-			// is not a file at all, so say what was actually missing.
+			// A reader handed a directory would report an unsupported extension, so name what is missing.
 			return designSource{}, fmt.Errorf("%s is a directory that declares no design: name a design file, or add a %s declaring which file is this design's entry", named, projects.DesignDescriptor)
 		}
 		plain.Note = edsSiblingNote(named)
 		return plain, nil
 	}
-	// The decision itself is service.ResolveSources, so the CLI and the served path cannot disagree
-	// about which artifact a tier reads (C32). What stays here is the I/O around it: turning a typed
-	// path into a ref, finding the tree root, and the stderr note.
+	// The decision itself is service.ResolveSources, shared with the served path (C32). Only the I/O
+	// around it lives here.
 	res := service.ResolveSources(d, uri.String(), isDir, r.asNamed)
 	if !res.FromDeclaration {
-		// Read exactly what was named, so there is nothing to narrate: an undeclared sibling, or
-		// --as-named on a companion. plain already holds the ref in all three tiers.
+		// An undeclared sibling, or --as-named on a companion, reads exactly what was named, so
+		// there is no note. plain already holds the ref in all three tiers.
 		return plain, nil
 	}
-	// Computed on REFS, before they become paths, so "did this tier come from the file the user
-	// named" compares like with like. A ref against the path string the user typed silently never
-	// matches, and the note then claims every tier was pulled in unasked.
+	// Compare REFS, not the path string the user typed. A ref never matches a typed path, and the
+	// note would then claim every tier was pulled in unasked.
 	note := resolutionNote(named, uri.String(), d, res.DesignSources, res.NamedIsTheDesign, res.NamedIsTheEntry)
 
 	return designSource{DesignSources: res.DesignSources, Note: note}, nil
@@ -118,12 +112,11 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 // resolutionNote is the stderr line naming every artifact that was read but not asked for.
 //
 // It lists the board and sheet tiers whenever they came from somewhere other than the entry AND
-// somewhere other than what the caller named, in both the design-named and companion-named cases. A
-// design's declared board is its board whichever view you point at, so pointing at the schematic
-// still runs board-tier rules against that board, which is more than was asked for.
+// other than what the caller named. A design's declared board is its board whichever view you point
+// at, so pointing at the schematic still runs board-tier rules against that board.
 func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSources, namedIsTheDesign, namedIsTheEntry bool) string {
-	// Named by the DESIGN's own mount-relative path, not by joining onto whatever the caller typed.
-	// The caller may have typed a path or a URI, and filepath.Join on a URI mangles its scheme.
+	// Built from the DESIGN's own mount-relative path, since filepath.Join onto a typed URI mangles
+	// its scheme.
 	descriptor := path.Join(uriPath(d.GetUri()), projects.DesignDescriptor)
 	var extra []string
 	if g := tiers.GeometryURI; g != tiers.NetlistURI && g != ref {
@@ -132,9 +125,8 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 	if b := tiers.BoardURI; b != tiers.NetlistURI && b != ref {
 		extra = append(extra, "board geometry from "+path.Base(b))
 	}
-	// Naming the entry read exactly the file asked for, so the netlist tier is not news and a run
-	// that picked up no companion says nothing at all. Only the tiers that came from elsewhere are
-	// worth a line, on the same rule as every other case: report what was read but not asked for.
+	// Naming the entry read exactly the file asked for, so only companion tiers get a line, and a
+	// run that picked up no companion prints nothing.
 	if namedIsTheEntry {
 		if len(extra) == 0 {
 			return ""
@@ -158,14 +150,13 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 	return note + ".\n"
 }
 
-// edsSiblingNote is the fallback advice for a folder that declares no design: reading an EDIF
+// edsSiblingNote is the fallback advice for a folder that declares no design, when reading an EDIF
 // SCHEMATIC-geometry (.eds) export while the sibling NETLIST (.edn) exists. The .eds reflects what
-// the schematic DRAWS and the .edn is authoritative for component identity, so a component count
-// taken off the .eds is a silent footgun (565 test points off the .eds against the .edn's 1385, on
-// one real board). Empty when there is no .eds, no sibling .edn, or the input already is the .edn.
+// the schematic DRAWS and the .edn is authoritative for component identity, so counts differ (565
+// test points off the .eds against the .edn's 1385, on one real board). Empty when there is no .eds,
+// no sibling .edn, or the input already is the .edn.
 //
-// It is ADVICE only where there is no declaration to act on. A design that names its entry gets
-// Resolve's redirect instead (agni issue 170).
+// A design that declares its entry gets Resolve's redirect instead (agni issue 170).
 func edsSiblingNote(path string) string {
 	if !strings.EqualFold(filepath.Ext(path), ".eds") {
 		return ""
@@ -191,8 +182,8 @@ func mountRoot(ws *cliWorkspace, uri artifact.URI) (string, bool) {
 	return m.Root, true
 }
 
-// uriPath is the mount-relative path of a URI, or the string unchanged when it is not one. It exists
-// so a message can name a file the same way whether the caller typed a path or a URI.
+// uriPath is the mount-relative path of a URI, or the string slash-normalized when it is not one, so
+// a message names a file the same way whether the caller typed a path or a URI.
 func uriPath(s string) string {
 	if u, err := artifact.Parse(s); err == nil {
 		return u.Path

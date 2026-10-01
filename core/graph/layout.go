@@ -10,17 +10,14 @@ import (
 	"github.com/panyam/agni/internal/geomath"
 )
 
-// Placement is what a layout strategy produces: a position for each component node, keyed by
-// ref_des. It is intentionally only positions. Turning positions into drawable geometry (node
-// boxes, net hyperedge stars, labels) is shared across all strategies (see assemble), so a
-// new layout algorithm implements placement only, not rendering. The struct leaves room for a
-// future strategy (e.g. orthogonal routing) to also carry explicit edge routes.
+// Placement is what a layout strategy produces, a position for each component node keyed by
+// ref_des. Turning positions into drawable geometry is shared across all strategies (see assemble),
+// so a new layout algorithm implements placement only.
 type Placement struct {
 	Positions map[string]*geom.Point
-	// Route selects how assemble draws each net: the default hyperedge star, or orthogonal
-	// L-runs (WS7-010). It is a style, not literal route points, because assemble re-spaces
-	// positions (compactBySize) after the strategy returns, so routes must be computed from
-	// the final positions, which only assemble has.
+	// Route selects how assemble draws each net, as the default hyperedge star or as orthogonal
+	// L-runs (WS7-010). It is a style rather than route points because assemble re-spaces positions
+	// (compactBySize) after the strategy returns, so only assemble knows the final positions.
 	Route RouteStyle
 }
 
@@ -33,9 +30,8 @@ const (
 	RouteOrthogonal RouteStyle = "orthogonal"
 )
 
-// Strategy is a named layout algorithm. Place maps a design's components to node positions;
-// everything downstream of placement is shared. The available strategies are returned by
-// Strategies; select one by name with ByName.
+// Strategy is a named layout algorithm. Place maps a design's components to node positions, and
+// everything downstream of placement is shared. Strategies lists them and ByName selects one.
 type Strategy struct {
 	Name  string
 	Doc   string
@@ -45,10 +41,9 @@ type Strategy struct {
 // DefaultStrategy is the layout used when the caller does not request one.
 const DefaultStrategy = "grid"
 
-// Strategies returns the available layout strategies in a stable (name-sorted) order. The set
-// is fixed at compile time (every layout lives in this package), so this builds the list
-// directly rather than through a mutable registry: no package-global state, no init ordering,
-// and each call is independent, so tests cannot leak strategies into one another.
+// Strategies returns the available layout strategies sorted by name. Every layout lives in this
+// package, so the list is built per call rather than kept in a registry, and tests cannot leak
+// strategies into one another.
 func Strategies() []Strategy {
 	out := []Strategy{
 		{Name: "grid", Doc: "components on a ref_des-sorted square grid; edge-agnostic placeholder", Place: gridPlace},
@@ -61,8 +56,8 @@ func Strategies() []Strategy {
 	return out
 }
 
-// ByName returns the named strategy. The error lists the available names so a CLI typo is
-// self-correcting.
+// ByName returns the named strategy. The error lists the available names, so a CLI typo shows the
+// valid choices.
 func ByName(name string) (Strategy, error) {
 	all := Strategies()
 	for _, s := range all {
@@ -106,18 +101,15 @@ func LayoutWith(d *ir.Design, name string, opts ...Option) (*geom.SchematicGeome
 		return nil, err
 	}
 	g := assemble(d, s.Place(d), resolveConfig(opts).source)
-	// An auto-layout can come up short too: SymbolsFaithful draws the design's own symbols, and a
-	// library that did not resolve leaves the same bodyless placement the faithful path does
-	// (agni issue 354).
+	// An auto-layout can come up short too, since SymbolsFaithful draws the design's own symbols and
+	// a library that did not resolve leaves a bodyless placement (agni issue 354).
 	geomath.MarkUndrawn(g)
 	return g, nil
 }
 
-// assemble turns node positions into a full netlist-graph geometry: one box symbol per
-// component at its position, each net as a hyperedge star from its member nodes to the net
-// centroid, plus ref_des and net labels. It is shared by every strategy, so layouts differ
-// only in placement. Node order is ref_des-sorted, and nets keep source order, so output is
-// deterministic given deterministic positions.
+// assemble turns node positions into a full netlist-graph geometry, with one symbol per component,
+// each net drawn per pl.Route, and ref_des and net labels. Node order is ref_des-sorted and nets keep
+// source order, so output is deterministic given deterministic positions.
 func assemble(d *ir.Design, pl Placement, source SymbolSource) *geom.SchematicGeometry {
 	if source == nil {
 		source = DefaultRegistry()
@@ -128,9 +120,8 @@ func assemble(d *ir.Design, pl Placement, source SymbolSource) *geom.SchematicGe
 	}
 	sort.Strings(refs)
 
-	// Ask the symbol source for each node's symbol: a classified synthetic glyph (Registry) or
-	// the design's own artwork (FaithfulSource). The source is injected, so the layout is fixed
-	// while what is drawn at each node varies.
+	// The injected source picks each node's artwork (Registry glyph or FaithfulSource), independent
+	// of the layout.
 	parts := partIndex(d)
 	byRef := make(map[string]*ir.Component, len(d.Components))
 	for _, c := range d.Components {
@@ -146,10 +137,8 @@ func assemble(d *ir.Design, pl Placement, source SymbolSource) *geom.SchematicGe
 		sizes[ref] = symbolSize(sym)
 	}
 
-	// Space each node by its own symbol's size, not the largest one: a small part gets a small
-	// cell, only a large (faithful) symbol expands its column/row. An all-glyph/box design fits one
-	// node per pitch, so its layout is unchanged. Everything downstream (placements, net stars)
-	// uses these positions.
+	// Space each node by its own symbol's size rather than the largest one (see compactBySize).
+	// Everything downstream uses these positions.
 	positions := compactBySize(pl.Positions, sizes, refs)
 
 	placements := make([]*geom.SymbolPlacement, 0, len(refs))
@@ -161,10 +150,9 @@ func assemble(d *ir.Design, pl Placement, source SymbolSource) *geom.SchematicGe
 		})
 	}
 
-	// One net -> one hyperedge star from each connected pin to the net centroid. Skip nets that
-	// touch fewer than two distinct pins (nothing to draw between). A net where three or more pins
-	// meet gets a junction dot at its hub (the centroid for the star style, the Manhattan
-	// median for orthogonal routes).
+	// Skip nets that touch fewer than two distinct pins. A net where three or more pins meet gets a
+	// junction dot at its hub (the centroid for the star style, the Manhattan median for orthogonal
+	// routes).
 	wires := make([]*geom.WireGeometry, 0, len(d.Nets))
 	labels := make([]*geom.Label, 0, len(d.Nets))
 	var junctions []*geom.Shape
@@ -195,8 +183,8 @@ func assemble(d *ir.Design, pl Placement, source SymbolSource) *geom.SchematicGe
 		if len(pins) >= 3 {
 			junctions = append(junctions, &geom.Shape{Kind: geom.Shape_KIND_DOT, Points: []*geom.Point{hub}})
 		}
-		// A connection dot at each attach point, so a reader sees where a wire actually
-		// starts and ends (crucial for center-attach bodies, whose wires end mid-symbol).
+		// A connection dot at each attach point shows where a wire ends, which a center-attach body
+		// would otherwise hide mid-symbol.
 		for _, p := range pins {
 			k := [2]int64{p.X, p.Y}
 			if !dotted[k] {

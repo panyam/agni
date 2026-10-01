@@ -41,7 +41,7 @@ func atoiInt(s string) int {
 
 // loadPins adapts the gEDA symbol pipeline (open, line split, pin extraction) to the
 // shared resolver; memoization lives in symread.ResolvePins. The bool reports whether the
-// symbol RESOLVED (opened) — the signal the dangling-endpoint gate needs (WS1-013): a
+// symbol RESOLVED (opened), which the dangling-endpoint gate needs (WS1-013), because a
 // failed open drops the symbol's pins and would fabricate dangles.
 func loadPins(open SymbolOpener) func(string) ([]symread.Pin, bool) {
 	return func(symref string) ([]symread.Pin, bool) {
@@ -113,7 +113,7 @@ func resolveSlots(placements []symread.Placement, slots []string, open SymbolOpe
 }
 
 // resolveAnchors places each power/ground tap by resolving its symbol pin, transforming it to
-// the schematic grid, and naming the net: the instance net= wins, else the symbol's own net=
+// the schematic grid, and naming the net. The instance net= wins, else the symbol's own net=
 // attribute, else the conventional name for the symbol basename. A tap whose symbol fails to
 // open is skipped (it cannot be located without its pin geometry).
 func resolveAnchors(powers []powerTap, open SymbolOpener) []netgraph.Anchor {
@@ -143,7 +143,7 @@ func resolveAnchors(powers []powerTap, open SymbolOpener) []netgraph.Anchor {
 		// A power symbol has a single connection pin.
 		ax, ay := transform(pins[0].x, pins[0].y, pt.x, pt.y, pt.angle, pt.mirror)
 		// A power/ground supply symbol asserts the net is a global rail fed from a supply
-		// (WS1-021): mark it External, matching KiCad's power-symbol semantics (a rail
+		// (WS1-021), so it is marked External, matching KiCad's power-symbol semantics (a rail
 		// name whose full membership/source may lie off the read). External keeps
 		// power-input-not-driven quiet on a tapped rail without the bulk-cap noise a
 		// power_driven mark would add on sim-oriented designs. gEDA has no separate

@@ -23,8 +23,8 @@ function RulesPanel(props: { state: () => RulesState; onSelectionChange: (names:
   const [groupKey, setGroupKey] = createSignal("category");
   const [search, setSearch] = createSignal("");
   const [availableOnly, setAvailableOnly] = createSignal(false);
-  // expanded holds the rule names whose long-form detail is open (WS9-020) — ephemeral view
-  // state like the group-by knob, so it lives here, not in the presenter.
+  // expanded holds the rule names whose long-form detail is open (WS9-020). It is ephemeral view
+  // state like the group-by knob, so it lives here rather than in the presenter.
   const [expanded, setExpanded] = createSignal<Set<string>>(new Set());
   const toggleDetail = (name: string) => {
     const next = new Set(expanded());
@@ -34,13 +34,14 @@ function RulesPanel(props: { state: () => RulesState; onSelectionChange: (names:
   };
 
   // Bundle state is panel-local: the saved bundles (from localStorage), the currently applied
-  // bundle name (a label, not a lock — the user may tweak checkboxes after), and the save input.
+  // bundle name (a label rather than a lock, so the user may tweak checkboxes after), and the save
+  // input.
   const [saved, setSaved] = createSignal<Bundle[]>(loadSaved());
   const [bundle, setBundle] = createSignal("");
   const [saving, setSaving] = createSignal(false);
   const [newName, setNewName] = createSignal("");
 
-  // applyBundle resolves the chosen bundle to rule names and fires the selection intent — the same
+  // applyBundle resolves the chosen bundle to rule names and fires the selection intent, the same
   // path a checkbox click takes, so the presenter re-runs the checks over it.
   const applyBundle = (name: string) => {
     setBundle(name);

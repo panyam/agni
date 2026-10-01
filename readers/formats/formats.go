@@ -1,22 +1,17 @@
 // Package formats is the single registry of design-file formats the engine reads: for each
-// extension, the UI label, the netlist reader, and the faithful-geometry reader. Every
-// consumer that used to keep its own format table (the CLI's extension switch, the
-// geometry switch, the service's faithful/netlist extension sets, the file-tree labels)
-// derives from this one, so adding a reader is one entry here (plus CONSTRAINTS C10's
-// example). File I/O lives in this package's Loader — it is the edge-orchestration layer
-// the CLI and the serve adapters share (CONSTRAINTS C13); the readers themselves stay
-// io.Reader-pure (C1).
+// extension, the UI label, the netlist reader, and the faithful-geometry reader. The CLI's extension
+// switch, the geometry switch, the service's faithful/netlist extension sets and the file-tree labels
+// all derive from it, so adding a reader is one entry here (plus CONSTRAINTS C10's example). File
+// I/O lives in this package's Loader, the edge-orchestration layer the CLI and the serve adapters
+// share (CONSTRAINTS C13). The readers themselves stay io.Reader-pure (C1).
 //
 // A registered reader reaches its bytes through Loader.Open / Loader.ReadFile / Loader.Sibling,
-// never through os directly (WS1-049). That is what lets one Loader serve a host filesystem and an
-// in-memory fs.FS with the same registry, the same dispatch, and the same post-read stamps; a
-// reader that opens its own files works on a server and fails everywhere else.
+// never through os directly (WS1-049), so one Loader can serve a host filesystem or an in-memory
+// fs.FS. See docsite/content/build/format-reader.md#the-registry-entry.
 //
-// This package is public (not internal/) because it is the engine's reader extension point
-// for the open-core split (WS12-003): a reader living in another module — a proprietary
-// format in the private extension — registers itself with Register and gains every derived
-// surface with no fork of the engine. The built-in readers use the same Register, so the
-// registry stays one table with one code path.
+// This package is public (not internal/) because it is the engine's reader extension point for the
+// open-core split (WS12-003). A reader in another module registers itself with Register and gains
+// every derived surface with no fork of the engine. The built-in readers use the same Register.
 package formats
 
 import (
@@ -31,10 +26,10 @@ import (
 
 // LayoutFaithful is the layout name that renders the design's own ingested geometry (the
 // coordinates the designer placed), as opposed to an auto-computed layout. It is not a
-// graph.Strategy: it reads the geometry sidecar rather than computing from the IR.
+// graph.Strategy, since it reads the geometry sidecar rather than computing from the IR.
 const LayoutFaithful = "faithful"
 
-// Symbol-source names for an auto-layout: draw nodes with synthetic classified glyphs
+// Symbol-source names for an auto-layout, which draws nodes with synthetic classified glyphs
 // (default) or with the design's own symbol artwork re-laid-out (partial-faithful, WS7-031).
 const (
 	SymbolsGlyph    = "glyph"
@@ -42,8 +37,7 @@ const (
 )
 
 // Format describes what the engine can do with one file extension. A nil reader means the
-// capability is absent for that extension: .eds is geometry-only (no netlist), .edn and the
-// board/netlist formats carry no faithful schematic geometry.
+// capability is absent for that extension, as Geometry is for .edn and the board/netlist formats.
 type Format struct {
 	// Ext is the lowercase extension including the dot.
 	Ext string
@@ -65,18 +59,13 @@ type Format struct {
 // consumer (the open-core extension) adds its own via Register.
 var byExt = map[string]*Format{}
 
-// Register adds a format to the single registry, keyed by its extension. This is the public
-// extension point: a package in another module (a proprietary-format reader in the private
-// overlay) calls Register — from its init or the composing binary's main — and its extension
-// then resolves through every derived surface (ByExt, the CLI reader dispatch, the file-tree
-// label, the supported-extensions error text), because they all read this one table. The
-// built-in readers register through this same function, so there is exactly one code path.
+// Register adds a format to the registry, keyed by its extension. A package in another module
+// calls it from its init or from the composing binary's main, and its extension then resolves
+// through ByExt, the CLI reader dispatch, the file-tree label and the supported-extensions error text.
 //
-// Register panics on a malformed entry or a duplicate extension, matching the standard
-// library's registry convention (image.RegisterFormat, sql.Register): both are programming
-// errors surfaced at process start, not runtime conditions a caller recovers from. An
-// extension is claimed first-come; to override a built-in, a consumer composes a binary that
-// does not register the built-in rather than re-registering the extension.
+// Register panics on a malformed entry or a duplicate extension, as image.RegisterFormat and
+// sql.Register do. An extension is claimed first-come, so to override a built-in a consumer composes
+// a binary that does not register the built-in rather than re-registering the extension.
 func Register(f *Format) {
 	switch {
 	case f == nil:
@@ -147,9 +136,8 @@ func lowerExt(name string) string {
 }
 
 // faithfulUnavailable explains why a file has no faithful schematic geometry and points at
-// the auto-layout fallback. The message differs by format so the user knows whether the
-// schematic is missing (KiCad, not yet extracted) or does not exist for that format at all
-// (netlist/board).
+// the auto-layout fallback. The message differs by format, so a netlist or board file says the
+// format has no schematic view at all.
 func faithfulUnavailable(ext string) error {
 	switch ext {
 	case ".edn":

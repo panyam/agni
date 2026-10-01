@@ -13,7 +13,7 @@ import (
 // The contract every Finding.Context entry has to satisfy, asserted over whatever the catalog
 // actually fires rather than rule by rule (agni issue 349, sweep agni issue 361).
 //
-// Written as a property over the whole catalog on purpose. The per-rule tests below assert that a
+// Written as a property over the whole catalog. The per-rule tests below assert that a
 // given rule DOES carry context; this asserts that no rule carries it WRONGLY, and it keeps holding
 // for rules converted later without anybody remembering to add a check. The failure modes it catches
 // are the four the authoring convention warns about, and all four produce a chip that looks fine and
@@ -107,7 +107,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		}
 		assertContextContract(t, fs)
 		by := ctxOf(fs[0])
-		// The PIN is the interesting one: the subject is the whole part, and a part can have several
+		// The PIN is the interesting one. The subject is the whole part, and a part can have several
 		// supply pins, so the ref des alone cannot say which terminal is over its limit.
 		if p := by["pin"]; p.Kind != check.KindPin || p.Ref != fs[0].Subject.Ref || p.Pin == "" {
 			t.Errorf("pin context = %+v, want a pin of the subject part", p)
@@ -173,8 +173,8 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	})
 
 	t.Run("reverse-blocking names the transistor it cannot classify", func(t *testing.T) {
-		// The inconclusive branch: the whole remedy is "seed THAT part's datasheet", so naming it only
-		// in prose left the next step a manual search.
+		// In the inconclusive branch the whole remedy is "seed THAT part's datasheet", so naming it
+		// only in prose left the next step a manual search.
 		fs := revFindings(revDesign("transistor", false))
 		if len(fs) != 1 || !fs[0].Inconclusive {
 			t.Fatalf("want the one inconclusive finding of the unclassifiable path, got %+v", fs)

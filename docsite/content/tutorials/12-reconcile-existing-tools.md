@@ -4,8 +4,8 @@ description: "Bring your existing DRC or ERC report into the same model, and see
 ---
 
 You already run a design-rule check. Your CAD tool ships one, you have tuned it, and it gates your
-release. The honest question about anything new is not "is it good" but "what does it add to what I
-already have, and where do the two disagree".
+release. The question to ask of anything new is "what does it add to what I already have,
+and where do the two disagree".
 
 Answering that by reading two reports side by side does not scale and nobody does it twice. So bring
 the other tool's report into the same model and ask directly.
@@ -36,8 +36,8 @@ nothing about what it did not check, so its silence must not be read as a pass.
 
 Three things in that summary are worth reading slowly.
 
-**219 of 309 attached.** A vendor report names things in prose, so importing it means resolving
-"Track [PMIC_MAIN_12V0] on F.Cu" to the net your design calls `PMIC_MAIN_12V0`. Most resolve.
+**219 of 309 findings attached to an entity.** A vendor report names things in prose, so
+importing it means resolving "Track [PMIC_MAIN_12V0] on F.Cu" to the net your design calls `PMIC_MAIN_12V0`. Most resolve.
 
 **The 90 that did not are named, with a reason.** They are board-outline geometry, which genuinely
 belongs to no component or net. Nothing was dropped quietly, which matters because a silently
@@ -60,7 +60,7 @@ agni results agni.results.json --compare kicad.results.json
 
 The board is a declared companion of this design, so that `check` reads the netlist and pulls the
 copper in beside it, and says so on stderr. Both tools are therefore reading the same geometry, but
-only one of them is reading *only* geometry, which is the whole point of the comparison below.
+only one of them is reading *only* geometry.
 
 ```
 comparing:
@@ -89,36 +89,36 @@ ours only:
 The instinct is to compare 28 against 309 and conclude something about which tool is better. That
 reading is wrong, and the three-way split is there to stop you making it.
 
-**Theirs only, 17 components.** Physical manufacturability: edge clearance, silkscreen over pads,
-footprint library mismatches. Agni has no opinion about most of that and should not pretend to.
+**Theirs only** is 17 components, all physical manufacturability: edge clearance, silkscreen over
+pads, footprint library mismatches. Agni has no opinion about most of that and should not pretend to.
 Your existing DRC is not being replaced.
 
-**Ours only, 9 nets.** Look at what they are. `I2C_SCL` and `I2C_SDA` are missing {{ explainable "pull-up" "pull-ups" }}.
+**Ours only** is 9 nets. `I2C_SCL` and `I2C_SDA` are missing {{ explainable "pull-up" "pull-ups" }}.
 `CAN1_TXD` and `CAN1_RXD` are the {{ explainable "transceiver" }}'s logic side. `PMIC_EN`, `PMIC_PG` and `MCU_NRST` are
 control signals. Each of those is a statement about what the circuit *means*, and a board DRC
 structurally cannot reach any of them. It is checking copper against fabrication limits. It has no
 model in which "this bus needs a pull-up" is expressible.
 
-`XTAL_IN` and `XTAL_OUT` are the last two, and they are a different kind of thing again: this
+`XTAL_IN` and `XTAL_OUT` are the last two, and they are a different kind of thing again, because this
 project's naming convention says a signal net should be named for its function, and those two are
 not. That is a statement about house process rather than about the circuit, and a copper checker has
 no model for it either.
 
-**Both, 8 entities.** The overlap, where the two tools genuinely agree, including the sub-floor track
+**Both** is 8 entities, the overlap where the two tools genuinely agree, including the sub-floor track
 on `CAN1_CANH` that both flag by their own route.
 
 {{ includeFile "figures/tool-overlap-axes.svg" }}
 
-That is the useful answer to "what does this add". Not a bigger number. A different axis.
+The useful answer to "what does this add" is a different axis, not a bigger number.
 
 ## About this board's copper
 
-Full disclosure, because it affects the numbers above. The tutorial board's `.kicad_pcb` is
+One caveat affects the numbers above. The tutorial board's `.kicad_pcb` is
 generated from the netlist rather than laid out by a person, so its geometry is crude and DRC has a
 great deal to say about it. On your own board, laid out properly, the "theirs only" column will be
 far shorter.
 
-That does not change the shape of the result. The columns stay complementary, because the two tools
+That does not change what the comparison shows. The columns stay complementary, because the two tools
 are answering different questions, and no amount of careful layout gives a copper checker access to
 the fact that an I2C bus has no pull-up.
 
@@ -126,7 +126,7 @@ the fact that an I2C bus has no pull-up.
 
 `agni import-results` writes an ordinary check-result document, so everything from [rung
 11](../11-archive-and-gate/) applies: archive it, re-render it later, diff it against next month's
-run. A vendor report that was a terminal scroll becomes an artifact with the same shape as your own.
+run. A vendor report that was a terminal scroll becomes an artifact in the same format as your own.
 
 The comparison is the more useful gate. A finding that appears in "theirs only" and stays there for
 months is a check you are not doing, and a finding that moves from "both" into "theirs only" means

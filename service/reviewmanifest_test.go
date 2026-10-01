@@ -53,9 +53,9 @@ func fullManifest() review.Manifest {
 }
 
 // TestManifestProtoRoundTrip is the field-drift guard. Going Go -> proto -> Go and requiring deep
-// equality means a conversion that forgets a field cannot pass: the returned struct would differ from
-// the one that went in. Asserting on the proto instead would not catch it, since a field the
-// conversion never writes is simply absent from both sides of that comparison.
+// equality means a conversion that forgets a field cannot pass, because the returned struct would
+// differ from the one that went in. Asserting on the proto instead would not catch it, since a
+// field the conversion never writes is simply absent from both sides of that comparison.
 func TestManifestProtoRoundTrip(t *testing.T) {
 	want := fullManifest()
 	got := ManifestFromProto(ManifestProto(want))
@@ -64,9 +64,9 @@ func TestManifestProtoRoundTrip(t *testing.T) {
 	}
 }
 
-// TestManifestFromProtoNil: a nil manifest converts to the zero value rather than panicking, so an
-// absent field is rejected by validation (with a message naming the manifest) instead of crashing the
-// service on a request that simply omitted it.
+// TestManifestFromProtoNil checks that a nil manifest converts to the zero value rather than
+// panicking, so an absent field is rejected by validation (with a message naming the manifest)
+// instead of crashing the service on a request that simply omitted it.
 func TestManifestFromProtoNil(t *testing.T) {
 	if got := ManifestFromProto(nil); !reflect.DeepEqual(got, review.Manifest{}) {
 		t.Errorf("ManifestFromProto(nil) = %+v, want zero Manifest", got)
@@ -76,10 +76,10 @@ func TestManifestFromProtoNil(t *testing.T) {
 	}
 }
 
-// TestManifestProtoOmitsAbsentSubMessages: an item with no query/present/scope converts to a binding
-// carrying nil for each, not an empty message. A zero-valued PresentBinding on the way back would be a
-// present binding with an empty class, which validation rejects, so a manifest with plain rule items
-// would fail to round trip.
+// TestManifestProtoOmitsAbsentSubMessages checks that an item with no query/present/scope converts
+// to a binding carrying nil for each, not an empty message. A zero-valued PresentBinding on the way
+// back would be a present binding with an empty class, which validation rejects, so a manifest with
+// plain rule items would fail to round trip.
 func TestManifestProtoOmitsAbsentSubMessages(t *testing.T) {
 	m := review.Manifest{Name: "t", Areas: []review.Area{{Name: "A", Items: []review.Item{
 		{ID: "1", Binding: review.Binding{Rule: "bulk-cap"}},

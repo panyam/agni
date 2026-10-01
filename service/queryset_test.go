@@ -13,8 +13,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// countingLoader counts how often a design and its geometry are read, which is the whole claim a
-// query set makes: one read, however many questions.
+// countingLoader counts how often a design and its geometry are read, since a query set claims
+// one read however many questions.
 type countingLoader struct {
 	fakeLoader
 	designs, geoms *int

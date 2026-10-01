@@ -5,12 +5,11 @@ import (
 	"io"
 )
 
-// TableSet is the answers to a named set of queries asked of one design (agni issue 729), rendered
-// as one document: an audit is usually a workbook, and handing someone twelve files for one review
-// loses the thing that makes them one review.
+// TableSet is the answers to a named set of queries asked of one design, rendered as one document
+// (agni issue 729).
 //
 // Each section's table renders through the single-table renderer for its format, so a table in a set
-// and the same query asked alone cannot come out differently.
+// and the same query asked alone come out the same.
 type TableSet struct {
 	// Title names the set. Empty renders as "Query set".
 	Title string
@@ -26,12 +25,11 @@ type TableSet struct {
 type TableSection struct {
 	Name        string
 	Description string
-	// Table is the answer. Its Title and Source are ignored: the section's name is its heading and
-	// the set carries the source.
+	// Table is the answer. Its Title and Source are ignored, since the section's name is its heading
+	// and the set carries the source.
 	Table Table
-	// Error, when set, replaces the table. A section that failed says so in words, because an empty
-	// table would read as a question that matched nothing. Table.Query is still shown above it, since
-	// the reader needs the question to see what went wrong with it.
+	// Error, when set, replaces the table, so a failure never reads as a question that matched
+	// nothing. Markdown and html still show Table.Query above it; the text renderer does not.
 	Error string
 }
 

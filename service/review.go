@@ -23,41 +23,36 @@ import (
 
 // ErrReviewStoreNotConfigured is returned by every review resource method when the server was started
 // without a review store. It is its own sentinel, like ErrNativeNotEnabled and ErrExtractNotEnabled,
-// so the transport can map it to a failed-precondition rather than a generic invalid argument: the
-// request was fine, the deployment is not configured to answer it.
+// so the transport maps it to failed-precondition rather than invalid-argument, since the request was
+// fine and the deployment is what is missing.
 var ErrReviewStoreNotConfigured = errors.New("no review store configured")
 
-// ReviewLoader is the narrow file surface ReviewService needs: the netlist design, an optional
-// separate board export (WS3-089), and a stored checklist manifest — all mount-scoped by the impl. It
-// is a subset of the fat service.Loader plus Manifest, defined at the point of use so the service
-// depends only on what it reads (the fat Loader stays the design/render services' contract).
+// ReviewLoader is the narrow file surface ReviewService needs, defined at the point of use as a
+// subset of service.Loader plus Manifest. It reads the netlist design, an optional separate board
+// export (WS3-089) and a stored checklist manifest, each resolved inside a mount by the impl and never
+// as a host path (C22).
 //
-// Manifest is deliberately NOT on the run path (WS9-050). CreateReview takes the checklist as a
-// value, so it needs no loader at all to score a design; this method backs GetReviewManifest alone,
-// which exists so a client that only holds a ref can obtain that value. The refs are keys the impl
-// resolves inside a mount, never host paths the service may interpret (C22).
+// Manifest is NOT on the run path (WS9-050). CreateReview takes the checklist as a value, so only
+// GetReviewManifest calls it.
 type ReviewLoader interface {
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
 	Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error)
 	// DesignHash returns "sha256:<hex>" over the design's bytes, the revision identity a stored run
-	// records so a document is never silently re-read against a design that has since changed. It is on
-	// the loader because hashing means reading bytes, and this package does no I/O (C13/C22).
+	// records so a document is never re-read against a design that has since changed. It is on the
+	// loader because hashing reads bytes and this package does no I/O (C13/C22).
 	//
-	// An unreadable design is NOT an error here: the run itself already succeeded, so failing a whole
-	// create over a provenance field would be worse than a document that honestly records no hash.
-	// Return ("", nil) in that case, which DesignRef.content_hash explicitly allows.
+	// An unreadable design is NOT an error, since the run already succeeded. Return ("", nil), which
+	// DesignRef.content_hash allows.
 	DesignHash(ctx context.Context, uri artifact.URI) (string, error)
 }
 
-// ReviewEnv is the deployment-level provenance a stored run records: which overlay tiers were
-// composed into the catalog this service holds, and what build produced the document.
+// ReviewEnv is the deployment-level provenance a stored run records, naming which overlay tiers were
+// composed into the catalog this service holds and what build produced the document.
 //
-// It is injected rather than derived because the service genuinely cannot see it. By the time a
-// catalog reaches here, an overlay profile is just another rule in it, so "were profiles attached"
-// is unanswerable from the catalog alone. RunConfig exists precisely so a reader can tell a design
-// with no datasheet violations from a run that had no datasheet corpus attached, and a service that
-// guessed those flags would produce documents that lie about what was evaluable.
+// It is injected rather than derived because a composed catalog cannot answer "were profiles
+// attached", since an overlay profile is just another rule in it. See
+// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 type ReviewEnv struct {
 	// ProducerVersion is the engine build identity (version.Version() at the entrypoint).
 	ProducerVersion string
@@ -68,14 +63,11 @@ type ReviewEnv struct {
 }
 
 // ReviewService runs a review checklist manifest over one or more designs, the transport-neutral
-// analogue of `agni review` (WS9-047) and the check family's aggregation surface. The catalog, the
-// profile presence index, and the datasheet provider are design-INDEPENDENT and injected once
-// (composed from serve's --profile-path / --intent-path / --params, exactly as CheckService receives
-// its catalog and --params specs); only the Model and its presence/scope closures are per design. It
-// knows no transport (C13).
+// analogue of `agni review` (WS9-047). The catalog, the profile presence index and the datasheet
+// provider are design-INDEPENDENT and injected once, as CheckService receives its catalog and specs.
+// Only the Model and its presence/scope closures are per design. It knows no transport (C13).
 type ReviewService struct {
-	// projects resolves a design to its project and loads that project's config; nil when this
-	// deployment declares none. fallback is the deployment default used for a design with no project.
+	// projects and fallback play the same roles as on CheckService; see ProjectResolver.
 	projects *ProjectResolver
 	fallback Overlay
 	loader   ReviewLoader
@@ -83,33 +75,28 @@ type ReviewService struct {
 	// byName is every profile (built-in + overlay) keyed by Name, for the interface-absence check that
 	// marks a profile item not-applicable when its interface is absent from the design.
 	byName map[string][]profiles.Profile
-	// specs is the datasheet knowledge base the params join reads (WS10-003), nil when serve ran
-	// without --params; NewModelWithParams guards a nil provider (no joined specs, no false pass).
+	// specs is the datasheet knowledge base the params join reads (WS10-003), nil without --params.
 	specs param.ParamProvider
-	// store persists runs (WS9-053). Nil means no store was configured, and the four resource methods
-	// then report that rather than half-working: a create that ran the checks and dropped the result
-	// would be the worst of both, since it costs the full sweep and leaves nothing behind.
+	// store persists runs (WS9-053). Nil makes the four resource methods refuse up front, rather than
+	// a create running the full sweep and dropping the result.
 	store ReviewStore
 	env   ReviewEnv
 	// baseConvention is the catalog source name of the deployment's --conventions default, "" when
-	// there is none. Same role it plays on CheckService: a request's own convention replaces it.
+	// there is none. A request's own convention replaces it, as on CheckService.
 	baseConvention string
 }
 
 // NewReviewService returns a ReviewService over the given loader, review store, composed rule
-// catalog, profile presence index, and optional datasheet provider (nil when no corpus is wired). The
-// catalog and index are built once by the caller (serve/CLI) because they are design-independent.
+// catalog, profile presence index, and optional datasheet provider (nil when no corpus is wired).
 //
 // store may be nil, which disables the review resource methods; pass a MemReviewStore for a caller
-// that wants runs to work without persisting them, which is what `agni review` does. baseConvention
-// names the startup convention a request-supplied one replaces; "" when the catalog carries none.
+// that wants runs without persisting them, as `agni review` does.
 func NewReviewService(loader ReviewLoader, store ReviewStore, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider, env ReviewEnv, baseConvention string, projects *ProjectResolver) *ReviewService {
 	return &ReviewService{loader: loader, store: store, catalog: catalog, byName: byName, specs: specs, env: env, baseConvention: baseConvention, projects: projects}
 }
 
-// reviewStore returns the configured store or an error naming the flag that configures it. Every
-// resource method goes through it, so the "not configured" message is written once and a deployment
-// that forgot the volume gets told which flag it forgot rather than a nil dereference.
+// reviewStore returns the configured store or ErrReviewStoreNotConfigured. Every resource method
+// goes through it.
 func (s *ReviewService) reviewStore() (ReviewStore, error) {
 	if s.store == nil {
 		return nil, ErrReviewStoreNotConfigured
@@ -118,20 +105,15 @@ func (s *ReviewService) reviewStore() (ReviewStore, error) {
 }
 
 // CreateReview runs the checklist against the design and persists the result (WS9-053). The run is
-// all-or-nothing — an invalid manifest, an unreadable design, or a board_ref at a file that carries
-// no board geometry is an error — so a partial read never reports items clean without checking them
-// (the same posture as a bad --params corpus failing the CLI run). Nothing is stored when the run
-// fails, so the store never accumulates half-answers.
+// all-or-nothing, so an invalid manifest, an unreadable design, or a board_ref at a file with no board
+// geometry is an error and nothing is stored.
 //
-// The checklist arrives as a VALUE (WS9-050), so the RUN itself needs no filesystem: every input is
-// either in the request or was injected at construction. That is also why the manifest is validated
-// here rather than trusted. A manifest that never passed through review.Load has had no parser
-// enforce its rules, and an item carrying two mutually-exclusive bindings would otherwise score a
-// design against a check its author did not ask for.
+// The checklist arrives as a VALUE (WS9-050) and is validated here rather than trusted. A manifest
+// that never passed through review.Load has had no parser enforce its rules, and an item carrying two
+// mutually-exclusive bindings would otherwise score a check its author did not ask for.
 //
-// The document it stores is the same self-contained CheckResults `agni review --results-out` writes,
-// carrying the checklist SNAPSHOT rather than its name, so re-rendering the run later reproduces what
-// was actually asked instead of whatever the checklist file says by then.
+// The stored document is the same self-contained CheckResults `agni review --results-out` writes,
+// carrying the checklist SNAPSHOT rather than its name (docsite/content/architecture/web-services.md).
 func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateReviewRequest) (*webapi.Review, error) {
 	parent, err := reviewParent(req.GetParent())
 	if err != nil {
@@ -159,8 +141,8 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err := review.Validate(man); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	// Per-request overlay config (WS3-102), composed BEFORE the design is read: its lexicon half has
-	// to reach the read, since net roles are resolved at ingestion. An empty overlay leaves the
+	// Per-request overlay config (WS3-102), composed BEFORE the design is read, because net roles
+	// are resolved at ingestion and its lexicon half has to reach the read. An empty overlay leaves the
 	// service's own catalog and the default vocabulary in place.
 	ov, err := s.projects.Overlay(ctx, designURI, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
@@ -176,12 +158,8 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err != nil {
 		return nil, err
 	}
-	// The hash is provenance, not a precondition: a design that ran but cannot be re-read still
-	// produced real outcomes, so an unreadable source records no hash rather than failing the create.
-	//
-	// Taken from the NETLIST tier the run actually scored, not from the request. This provenance is
-	// STORED, so a review created by naming the design folder recorded the folder, which does not
-	// hash, and the document then claimed no revision for a run that read perfectly good bytes.
+	// The hash is provenance, not a precondition, so an unreadable source records no hash. It is taken
+	// from the NETLIST tier the run scored, not the request's URI, because a design folder does not hash.
 	hash, err := s.loader.DesignHash(ctx, netlistURI)
 	if err != nil {
 		hash = ""
@@ -191,27 +169,21 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			Schema:          results.Schema,
 			Producer:        results.Producer,
 			ProducerVersion: s.env.ProducerVersion,
-			// A native run records what it could NOT check as well as what it found: a rule whose fact
-			// tier is absent reads not-applicable, and a review item that did not evaluate never reads
-			// pass. That is the axis an imported vendor report does not have.
+			// A native run records what it could NOT check as well as what it found. See
+			// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
 			CoverageAxis: true,
 		},
 		Design: &checkspb.DesignRef{Source: designURI.String(), ContentHash: hash},
-		// Provenance comes off the RESOLVED overlay, not off this service's startup config. The run used
-		// ov.SpecsOr(s.specs) and ov.Catalog(s.catalog), so reading the flags back from s.specs/s.env
-		// described the deployment rather than the run: a design in a project that declares params/,
-		// profiles/ and conventions.yaml scored against all three and recorded `run: {}`, while the same
-		// document's own catalog snapshot listed the project's rules. A reader comparing two runs would
-		// have concluded the corpus was never attached.
+		// Provenance comes off the RESOLVED overlay the run used, not this service's startup config,
+		// which describes the deployment rather than the run. See
+		// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 		Run: RunConfigProto(ov.Provenance(RunProvenance{
 			Params:      s.specs != nil,
 			Profiles:    s.env.Profiles,
 			Intent:      s.env.Intent,
 			Conventions: req.GetOverlay().GetConfig().GetConventions().GetName(),
 		}), req.GetRatifiedFloor()),
-		// The catalog snapshot is the one composed for THIS run, overlay included, not the service's
-		// base: a reader has to see the rules that actually ran, or a per-request convention's rules
-		// would be missing from the record of a run they shaped.
+		// The catalog snapshot is the one composed for THIS run, overlay included, not the service's base.
 		Catalog:          results.RuleRecords(cat.Rules()),
 		Manifest:         man.Name,
 		ManifestSnapshot: req.GetManifest(),
@@ -225,8 +197,8 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	return &webapi.Review{Name: name, Results: doc}, nil
 }
 
-// GetReview returns a stored run. It reads only the store: the document is self-contained, so neither
-// the design nor the checklist it was about needs to still exist.
+// GetReview returns a stored run. It reads only the store, so neither the design nor the checklist
+// it was about needs to still exist.
 func (s *ReviewService) GetReview(ctx context.Context, req *webapi.GetReviewRequest) (*webapi.Review, error) {
 	store, err := s.reviewStore()
 	if err != nil {
@@ -242,9 +214,7 @@ func (s *ReviewService) GetReview(ctx context.Context, req *webapi.GetReviewRequ
 // ListReviews returns stored runs newest first, paginated, optionally narrowed to one project and to
 // one design.
 //
-// An empty parent lists EVERY run, parented or not. That is what keeps the two name shapes from
-// costing a client anything: a viewer asking "what runs exist" asks once, and only narrows when it
-// has a project in mind.
+// An empty parent lists EVERY run, parented or not.
 func (s *ReviewService) ListReviews(ctx context.Context, req *webapi.ListReviewsRequest) (*webapi.ListReviewsResponse, error) {
 	store, err := s.reviewStore()
 	if err != nil {
@@ -269,8 +239,8 @@ func (s *ReviewService) ListReviews(ctx context.Context, req *webapi.ListReviews
 	return resp, nil
 }
 
-// DeleteReview removes a stored run. Deleting an absent run is ErrNotFound rather than a silent
-// success, so a client acting on a stale listing is told rather than left believing it cleaned up.
+// DeleteReview removes a stored run. Deleting an absent run is ErrNotFound, so a client acting on a
+// stale listing is told.
 func (s *ReviewService) DeleteReview(ctx context.Context, req *webapi.DeleteReviewRequest) (*emptypb.Empty, error) {
 	store, err := s.reviewStore()
 	if err != nil {
@@ -285,10 +255,8 @@ func (s *ReviewService) DeleteReview(ctx context.Context, req *webapi.DeleteRevi
 // parseReviewFilter reads the one supported AIP-160 filter, `design="..."`, returning the design or
 // "" for an empty filter.
 //
-// An unsupported filter is an ERROR rather than an ignored argument, and that is the whole reason
-// this is a function instead of a string compare. A client that believed it had narrowed to its own
-// board, and silently got every board's runs, would read another team's failures as its own. Refusing
-// what we do not implement keeps a wrong answer from looking like a right one.
+// An unsupported filter is an ERROR rather than an ignored argument. A client that believed it had
+// narrowed to its own board and got every board's runs would read another team's failures as its own.
 func parseReviewFilter(filter string) (string, error) {
 	f := strings.TrimSpace(filter)
 	if f == "" {
@@ -308,13 +276,12 @@ func parseReviewFilter(filter string) (string, error) {
 	return value, nil
 }
 
-// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It is the one place
-// in this service that reads a file, and it is a separate RPC precisely so that read is visible in
-// the contract rather than hidden inside a run: a caller that already holds a manifest never triggers
-// it, and a host with no filesystem simply does not serve it.
+// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It is the one
+// place in this service that reads a file, so a caller already holding a manifest never triggers it
+// and a host with no filesystem need not serve it.
 //
-// It validates before returning, so a malformed checklist is reported once, here, with the item that
-// is wrong — rather than on every subsequent run, or worse, silently at scoring time.
+// It validates before returning, so a malformed checklist is reported here with the item that is
+// wrong rather than at scoring time.
 func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetReviewManifestRequest) (*webapi.GetReviewManifestResponse, error) {
 	if req.GetUri() == "" {
 		return nil, fmt.Errorf("%w: GetReviewManifest needs a uri", ErrInvalidArgument)
@@ -333,14 +300,12 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 	return &webapi.GetReviewManifestResponse{Manifest: ManifestProto(man)}, nil
 }
 
-// runOne builds one design's Model (netlist + optional separate board tier + the shared params tier)
-// and runs the manifest over it. The board tier is read from board_ref, not the design, so a netlist
-// entry can attach a separate confidential board export (WS3-089); an override that reads no board is
-// an error, never a silent nil.
-// It returns the composed catalog alongside the report because the stored document has to record the
-// rules that ACTUALLY ran. That is the per-request catalog, overlay spliced on, not the service's
-// base one: a run shaped by a request's own naming convention would otherwise archive a rule list its
-// findings could not have come from.
+// runOne builds one design's Model (netlist, optional separate board tier, the shared params tier)
+// and runs the manifest over it. The board tier is read from board_ref, so a netlist entry can attach
+// a separate confidential board export (WS3-089); an override that reads no board is an error.
+//
+// It returns the per-request catalog, overlay spliced on, because the stored document records the
+// rules that ACTUALLY ran.
 func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, error) {
 	m, err := BuildModel(ctx, s.loader, designURI, boardURI, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
@@ -354,44 +319,42 @@ func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact
 	return review.Run(review.RunParams{
 		Model: m, Catalog: cat, Manifest: man, Design: designURI.String(),
 		Present: present, Scope: scope, CompScope: compScope, RatifiedFloor: floor,
-		// intent.Emits narrows the intent/ prefix to the compiler's actual name space, so a pre-bound
-		// not-yet-shipped intent rule reads not-automated instead of a misleading needs-design-intent
-		// (WS3-098). Injected to keep `review` decoupled from the `intent` package.
+		// intent.Emits narrows the intent/ prefix to the compiler's name space, so a pre-bound intent
+		// rule that has not shipped reads not-automated rather than needs-design-intent (WS3-098).
+		// Injected to keep `review` decoupled from `intent`.
 		IntentRuleKnown: intent.Emits,
 	}), cat, nil
 }
 
-// reviewClosures builds the presence and scope closures a review run needs over a designURI's Model and
-// the profile index: present marks an item bound to a known-but-absent interface not-applicable, and
-// scope/compScope filter a scoped binding's findings to the interface's nets/parts (WS3-058/083). The
-// service owns this now that the CLI is a thin client of the review service (WS9-048); it keeps `review`
-// decoupled from `profiles`.
+// reviewClosures builds the presence and scope closures a review run needs over a design's Model and
+// the profile index. present marks an item bound to a known-but-absent interface not-applicable, and
+// scope/compScope filter a scoped binding's findings to the interface's nets/parts (WS3-058/083).
+// Keeping them here keeps `review` decoupled from `profiles` (WS9-048).
 func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review.PresenceFunc, review.ScopeFunc, review.CompScopeFunc) {
 	present := func(name string) (review.Presence, bool) {
 		ps, ok := byName[name]
 		if !ok {
-			return review.IfaceAbsent, false // unknown interface: leave the item running
+			return review.IfaceAbsent, false // unknown interface, so leave the item running
 		}
-		// The interface genuinely evaluates when a component declares its host, or when its signal
-		// convention is in use AND the convention completeness rule can anchor — the same preconditions
-		// the profile's rules apply (WS3-090, and its anchor half WS3-099). The host path does not need
-		// the anchor: hostIncompleteRule anchors on the declared component instead.
+		// The interface evaluates when a component declares its host, or when its signal convention is
+		// in use AND the completeness rule can anchor, the same preconditions the profile's rules apply
+		// (WS3-090, WS3-099). The host path needs no anchor because hostIncompleteRule anchors on the
+		// declared component.
 		for _, p := range ps {
 			if profiles.HostDeclared(m, p) || (profiles.InUse(m, p) && profiles.Anchored(m, p)) {
 				return review.IfacePresent, true
 			}
 		}
-		// In use but unanchored: the interface is visibly named to the convention, yet the completeness
-		// rule has nothing to hang on. Neither absent nor checkable under this profile's naming (WS3-099).
+		// In use but unanchored. The interface is named to the convention, yet the completeness rule has
+		// nothing to hang on, so it is neither absent nor checkable under this naming (WS3-099).
 		for _, p := range ps {
 			if profiles.InUse(m, p) {
 				return review.IfaceConventionUnmatched, true
 			}
 		}
-		// Not strictly evaluable. A host-bound interface that IS named on the board (loose evidence) but
-		// whose host is annotated nowhere and whose convention is not in use is host-unsatisfied — the
-		// intended check is blocked, so not-automated. A profile with no such evidence is simply absent
-		// (-> not-applicable); a genuinely-absent host-bound interface must NOT read not-automated.
+		// Not strictly evaluable. A host-bound interface that IS named on the board but whose host is
+		// annotated nowhere is host-unsatisfied, which reads not-automated. With no such evidence it is
+		// absent (not-applicable); an absent host-bound interface must NOT read not-automated.
 		for _, p := range ps {
 			if p.HasHost() && profiles.Named(m, p) {
 				return review.IfaceHostUnsatisfied, true
@@ -420,10 +383,9 @@ func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review
 	return present, scope, compScope
 }
 
-// reviewReportProto maps a review.Report to its wire form. Outcome is the review.Outcome string as-is
-// (both the CLI and a panel key on it); the tally is derived by the consumer from the item outcomes,
-// the same pure function review.Report.Tally() applies, so it is not carried on the wire. Findings
-// reuse the one canonical FindingProto conversion CheckService uses.
+// reviewAreaProtos maps a review.Report's areas to their wire form. Outcome is the review.Outcome
+// string as-is, since the CLI and a panel both key on it. The tally is not carried because a consumer
+// derives it from the item outcomes, as review.Report.Tally() does.
 func reviewAreaProtos(r review.Report) []*checkspb.ReviewArea {
 	var out []*checkspb.ReviewArea
 	for _, ar := range r.Areas {
@@ -446,9 +408,8 @@ func reviewAreaProtos(r review.Report) []*checkspb.ReviewArea {
 // reviewParent validates an optional parent project name. Empty is legal and means "no project",
 // which is the ordinary state of a design on a mounted folder rather than a missing argument.
 //
-// A malformed parent is an ERROR rather than a silent fallback to the unparented collection. A client
-// that believed it had scoped to its project and quietly got everything would read another team's
-// verdicts as its own, which is the same failure parseReviewFilter refuses a bad filter for.
+// A malformed parent is an ERROR rather than a fallback to the unparented collection, for the same
+// reason parseReviewFilter refuses a bad filter.
 func reviewParent(parent string) (string, error) {
 	if parent == "" {
 		return "", nil
@@ -459,9 +420,8 @@ func reviewParent(parent string) (string, error) {
 	return parent, nil
 }
 
-// unmetProtos carries a needs-data item's unmet dependencies onto the wire. Order is preserved
-// because UnseededSymbols already sorted them, and the results document's byte-for-byte re-render
-// guarantee depends on it.
+// unmetProtos carries a needs-data item's unmet dependencies onto the wire. It preserves the order
+// UnseededSymbols sorted them into, which the results document's byte-for-byte re-render relies on.
 func unmetProtos(deps []check.UnmetDependency) []*checkspb.UnmetDependency {
 	if len(deps) == 0 {
 		return nil

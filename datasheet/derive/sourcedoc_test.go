@@ -31,7 +31,7 @@ func TestRunRecordsTheRevisionItDerivedFrom(t *testing.T) {
 	}
 }
 
-// The property the field exists for, end to end through the real seeder: verify a derived value
+// The property the field exists for, end to end through the real seeder. Verify a derived value
 // against the revision it came from, re-derive from a revised document, and the verification must
 // stop counting without anyone touching it.
 func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
@@ -46,9 +46,10 @@ func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
 	if len(spec.GetParameters()) == 0 {
 		t.Fatal("fixture derived no parameters, so this test proves nothing")
 	}
-	// derive leaves the document identity unstated (issue 290): it cannot read the printed revision
-	// yet, and a part number in that field is a citation that cannot name what it cites. Curating it
-	// is what an author does, and doing it here is what gives the snapshot below something to carry.
+	// derive leaves the document identity unstated (issue 290) because it cannot read the printed
+	// revision yet, and a part number in that field is a citation that cannot name what it cites.
+	// Curating it is what an author does, and doing it here is what gives the snapshot below
+	// something to carry.
 	spec.Docs[0].Title = "BSS138 datasheet - REVISED MAY 2019"
 
 	p := spec.GetParameters()[0]
@@ -67,7 +68,7 @@ func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The corpus re-seeds: the spec's documents move to the new revision while the verification,
+	// The corpus re-seeds. The spec's documents move to the new revision while the verification,
 	// which lives on the fact, stays pinned to the old one.
 	spec.Docs = newSpec.GetDocs()
 	if got := param.VerificationOfIn(spec, p); got != param.Stale {

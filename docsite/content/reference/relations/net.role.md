@@ -16,7 +16,7 @@ at ingestion, not read from the design file; the attributes a file declares are 
 
 A role is what the engine thinks a net IS, worked out from what it is called. `12V_OUT` reads as a
 rail. `12V_SW` reads as a rail by its prefix and a switch node by its suffix, and the second reading
-is the one that matters, because a switch node is not a 12V supply.
+decides how rules treat it, because a switch node is not a 12V supply.
 
 Four of the six roles exist to say "this is named after a rail and is not one":
 

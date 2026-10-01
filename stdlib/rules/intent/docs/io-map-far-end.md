@@ -45,8 +45,9 @@ the columns were blank.
 
 A path question has three answers and collapsing any two of them is a defect in the tool:
 
-- **A route was found.** Reported with the route.
-- **No route within the radius.** A real answer about the design: these two pins do not join.
+- **A route was found.** The verdict carries the route.
+- **No route exists within the radius.** That is a real answer about the design, and it says these
+  two pins do not join.
 - **The question could not be asked.** An endpoint resolved to a pin that sits on no net, so nothing
   was walked. This reports as `not-considered` and never as a no-route, because a pin spelled wrong
   in a declaration and two pins genuinely unconnected send a reader to opposite places.

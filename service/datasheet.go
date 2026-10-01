@@ -12,9 +12,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// ErrConflict is the optimistic-concurrency failure: a SavePartSpec whose base_version no longer
-// matches the on-disk version (another writer got there first). A transport maps it to a code the
-// client treats as "refetch and retry" (Connect Aborted), distinct from a bad request.
+// ErrConflict is the optimistic-concurrency failure, a SavePartSpec whose base_version no longer
+// matches the on-disk version because another writer got there first. A transport maps it to a code
+// the client treats as "refetch and retry" (Connect Aborted), distinct from a bad request.
 var ErrConflict = errors.New("version conflict")
 
 // ErrExtractNotEnabled is returned when ExtractDocIR is called on a server started without a
@@ -22,23 +22,21 @@ var ErrConflict = errors.New("version conflict")
 // must enable extraction), distinct from a bad request.
 var ErrExtractNotEnabled = errors.New("doc-IR extraction not enabled")
 
-// DocLoader materializes a datasheet's doc-IR from a (mount, path). path names the source
-// document (the PDF the browser renders); the adapter resolves the datasheet's sibling doc-IR
-// and parses it. The os-backed adapter (cmd/agni) owns all file I/O and the sibling-file
-// convention (CONSTRAINTS C1/C13); the service package stays os-free. A datasheet with no
-// derived doc-IR yet returns (nil, nil): "not yet extracted" is a normal state, not an error,
-// and GetDocument reports it as extracted=false. An unknown mount or a containment violation is
-// returned already classified (ErrNotFound / ErrInvalidPath); a present-but-unparseable doc-IR
-// is any other error, classified as invalid.
+// DocLoader materializes a datasheet's doc-IR. The URI names the source document (the PDF the
+// browser renders), and the adapter resolves and parses the datasheet's sibling doc-IR. The
+// os-backed adapter (cmd/agni) owns the sibling-file convention. A datasheet with no derived doc-IR
+// yet returns (nil, nil), a normal state that GetDocument reports as extracted=false. An unknown
+// mount or a containment violation is returned already classified (ErrNotFound / ErrInvalidPath),
+// and a present-but-unparseable doc-IR is any other error, classified as invalid.
 type DocLoader interface {
 	Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
 }
 
 // PartSpecStore persists and loads a datasheet's shared PartSpec (the manual backend's output).
-// The os-backed adapter (cmd/agni) writes it as a sibling file in the mount and owns all I/O
-// (C1/C13). Get returns (nil, "", false, nil) when nothing is saved yet. Save is compare-and-swap:
-// baseVersion must equal the current on-disk version (empty asserts absence), else it returns
-// ErrConflict; the read/compare/write is atomic per path. version is an opaque content token.
+// The os-backed adapter (cmd/agni) writes it as a sibling file in the mount. Get returns
+// (nil, "", false, nil) when nothing is saved yet. Save is compare-and-swap, so baseVersion must
+// equal the current on-disk version (empty asserts absence) or it returns ErrConflict. The
+// read/compare/write is atomic per path. version is an opaque content token.
 type PartSpecStore interface {
 	Get(ctx context.Context, uri artifact.URI) (spec *parampb.PartSpec, version string, found bool, err error)
 	Save(ctx context.Context, uri artifact.URI, spec *parampb.PartSpec, baseVersion string) (newVersion string, err error)
@@ -46,20 +44,20 @@ type PartSpecStore interface {
 
 // DocExtractor runs the configured doc-IR producer (pdf2doc/docling) over a datasheet, writing the
 // sibling doc-IR and returning it. The os-backed adapter (cmd/agni) shells out to the configured
-// command and owns all I/O (C1/C13). Available reports whether a producer is configured, so the
-// service can tell the client whether to offer extraction; Extract returns the produced Document,
-// or an error (a producer run/parse failure, or a bad mount/path).
+// command. Available reports whether a producer is configured, so the service can tell the client
+// whether to offer extraction. Extract returns the produced Document, or an error (a producer run or
+// parse failure, or a bad URI).
 type DocExtractor interface {
 	Available() bool
 	Extract(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
 }
 
 // AnnotationStore persists and loads a datasheet's per-author region-annotation overlays
-// (WS13-011). The os-backed adapter (cmd/agni) writes one file per author in the mount and owns
-// all I/O (C1/C13). Unlike PartSpecStore there is NO compare-and-swap: each author owns their own
-// file, so Save overwrites just that author's overlay and never contends, and Get UNIONS every
-// author's overlay for the datasheet. Get returns an empty slice (not an error) when nobody has
-// annotated yet. author is a client-supplied coordination namespace, not an authenticated identity.
+// (WS13-011). The os-backed adapter (cmd/agni) writes one file per author in the mount. Unlike
+// PartSpecStore there is NO compare-and-swap, because each author owns their own file, so Save
+// overwrites just that author's overlay and Get UNIONS every author's overlay for the datasheet.
+// Get returns an empty slice (not an error) when nobody has annotated yet. author is a
+// client-supplied coordination namespace, not an authenticated identity.
 type AnnotationStore interface {
 	Get(ctx context.Context, uri artifact.URI) ([]*webapi.AnnotationSet, error)
 	Save(ctx context.Context, uri artifact.URI, author string, set *webapi.AnnotationSet) error
@@ -83,11 +81,10 @@ func NewDatasheetService(loader DocLoader, store PartSpecStore, extractor DocExt
 	return &DatasheetService{loader: loader, store: store, extractor: extractor, annotations: annotations}
 }
 
-// GetDocument returns the doc-IR for the datasheet at (mount, path). A datasheet with no derived
-// doc-IR yet yields extracted=false and no document (the workbench then shows the PDF with an empty
-// region overlay — silence never reads as coverage). A load or parse failure is classified for the
-// transport (invalid argument), while an unknown mount or containment violation keeps its loader
-// classification.
+// GetDocument returns the doc-IR for the datasheet at the request's URI. A datasheet with no
+// derived doc-IR yet yields extracted=false and no document, and the workbench then shows the PDF
+// with an empty region overlay. A load or parse failure is classified as an invalid argument, while
+// an unknown mount or containment violation keeps its loader classification.
 func (s *DatasheetService) GetDocument(ctx context.Context, req *webapi.GetDocumentRequest) (*webapi.GetDocumentResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -106,7 +103,7 @@ func (s *DatasheetService) GetDocument(ctx context.Context, req *webapi.GetDocum
 // ExtractDocIR runs the configured doc-IR producer over the datasheet and returns the produced
 // doc-IR (the "first pass" the workbench then shows for review). A server with no producer
 // configured rejects it as ErrExtractNotEnabled (FailedPrecondition). A producer run or parse
-// failure is a server-side error (Internal); a bad mount/path keeps its classification.
+// failure is a server-side error (Internal), and a bad URI keeps its classification.
 func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *webapi.ExtractDocIRRequest) (*webapi.ExtractDocIRResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -149,34 +146,28 @@ func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePar
 	if req.GetSpec() == nil {
 		return nil, fmt.Errorf("%w: SavePartSpec requires a spec", ErrInvalidArgument)
 	}
-	// NO VALIDATION HERE, DELIBERATELY. Saving records what the author has; whether it is any good is
-	// a separate question, answered as status and correctable later. Coupling the two lets a judgment
-	// destroy work: every mutation path would have to preserve the invariant or leave a document its
-	// author cannot save and cannot escape through the UI.
+	// NO VALIDATION HERE, DELIBERATELY. Saving records what the author has, and whether it is any
+	// good is reported as status after the write. Rejecting an invalid save would leave a document
+	// its author cannot save and cannot fix through the UI.
 	//
-	// Nothing downstream forces the coupling either. This sibling is <stem>.partspec.json, and
-	// param.LoadSet reads *.textproto only, so an incoherent draft cannot reach the corpus by sitting
-	// on disk. Promotion to a seeded corpus is a separate, deliberate step, and that is where
-	// param.Validate belongs.
-	//
-	// The editor surfaces the same structural problems live (bank.ts pinProblems), which is the right
-	// place for them: advisory, immediate, and unable to cost anyone their work.
+	// This sibling is <stem>.partspec.json and param.LoadSet reads *.textproto only, so an
+	// incoherent draft cannot reach the corpus by sitting on disk. param.Validate belongs on the
+	// separate step that promotes a spec into a seeded corpus.
 	version, err := s.store.Save(ctx, u, req.GetSpec(), req.GetBaseVersion())
 	if err != nil {
 		if errors.Is(err, ErrConflict) {
-			return nil, err // keep it ErrConflict for the transport (Aborted), not invalid-argument
+			return nil, err // stays ErrConflict (Aborted), not invalid-argument
 		}
 		return nil, classifyLoadErr(err)
 	}
-	// Judged AFTER the write, and reported rather than enforced. The client renders these; it does
-	// not reimplement them, which is the point of returning them here rather than leaving the editor
-	// to keep its own copy of the rules in sync.
+	// Judged AFTER the write and reported rather than enforced. The editor (web/src/transcribe.tsx)
+	// renders these rather than keeping its own copy of the rules.
 	return &webapi.SavePartSpecResponse{Version: version, Problems: validationProblems(req.GetSpec())}, nil
 }
 
-// validationProblems renders param's classified findings onto the wire type. The mapping is total on
-// purpose: a kind this does not recognize would silently vanish from the editor, so an unknown kind
-// travels as UNSPECIFIED and still shows its message.
+// validationProblems renders param's classified findings onto the wire type. The mapping is total,
+// so a kind this does not recognize travels as UNSPECIFIED and still shows its message rather than
+// vanishing from the editor.
 func validationProblems(spec *parampb.PartSpec) []*webapi.ValidationProblem {
 	found := param.Problems(spec)
 	if len(found) == 0 {

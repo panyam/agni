@@ -12,7 +12,7 @@ func TestForceStrategyRegistered(t *testing.T) {
 	}
 }
 
-// TestForceDeterministic: identical positions across independent runs, the promise every
+// TestForceDeterministic asserts identical positions across independent runs, the promise every
 // strategy makes (fixed seedless init + fixed iteration budget, no RNG).
 func TestForceDeterministic(t *testing.T) {
 	s, _ := ByName("force")
@@ -28,8 +28,8 @@ func TestForceDeterministic(t *testing.T) {
 	}
 }
 
-// TestForceSeparatesAndClusters: on a path, adjacent components must land nearer each other
-// than the path's endpoints land to each other (attraction worked), and no two nodes may
+// TestForceSeparatesAndClusters checks two things. On a path, adjacent components must land nearer
+// each other than the path's endpoints land to each other (attraction worked), and no two nodes may
 // share a cell (repulsion + snap worked).
 func TestForceSeparatesAndClusters(t *testing.T) {
 	s, _ := ByName("force")
@@ -50,7 +50,7 @@ func TestForceSeparatesAndClusters(t *testing.T) {
 	}
 }
 
-// TestForceHyperedgeStar: a 5-member net must pull all members toward a shared hub without
+// TestForceHyperedgeStar checks that a 5-member net pulls all members toward a shared hub without
 // collapsing them (the virtual-node model); every member is placed, distinct, and no member
 // is stranded far away (its distance to the net's centroid is bounded by the layout extent).
 func TestForceHyperedgeStar(t *testing.T) {
@@ -76,8 +76,8 @@ func TestForceHyperedgeStar(t *testing.T) {
 	}
 }
 
-// TestForceDisconnectedComponents: islands pack side by side without overlap, same contract
-// as the stress strategy.
+// TestForceDisconnectedComponents checks that islands pack side by side without overlap, the same
+// contract as the stress strategy.
 func TestForceDisconnectedComponents(t *testing.T) {
 	d := &ir.Design{Name: "two-islands"}
 	for _, r := range []string{"A1", "A2", "B1", "B2"} {

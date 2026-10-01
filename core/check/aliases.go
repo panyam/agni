@@ -7,7 +7,7 @@ import (
 )
 
 // The design read-surface CONTRACT lives in package model (WS1-043) so consumers depend on the
-// interface, not this implementation. These aliases keep the historical check.* names — every rule,
+// interface, not this implementation. These aliases keep the historical check.* names, so every rule,
 // test, and external caller that referenced check.Model / check.ComponentClass / ... is unchanged,
 // because a type alias is the same type. check.NewModel* still return model.Model, and irModel
 // implements it (asserted below).

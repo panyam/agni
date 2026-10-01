@@ -2,8 +2,8 @@
 
 ### What it is
 
-`param.pin_range(mpn, pin, symbol, kind, min, max)` is `param.range` with a pin column: one row per
-(parameter, bound pin) pair, so a limit the datasheet states for a specific terminal is queryable
+`param.pin_range(mpn, pin, symbol, kind, min, max)` is `param.range` with a pin column, emitting one row
+per (parameter, bound pin) pair, so a limit the datasheet states for a specific terminal is queryable
 against that terminal rather than against the part as a whole.
 
 `kind` is the same token `param.range` uses (`absolute_max`, `recommended_operating`,
@@ -11,7 +11,7 @@ against that terminal rather than against the part as a whole.
 vendor printed. A bound the datasheet did not state is absent, and `absent(?min)` selects those rows.
 Every row carries a citation back to the page and table.
 
-A parameter bound to several pins emits **one row per pin**. That is the point: a part may state a
+A parameter bound to several pins emits **one row per pin**. A part may state a
 single output range for a whole port of four terminals, and a query asking about one of them has to
 find it without knowing it was written as a group.
 
@@ -25,8 +25,8 @@ answers nothing at all.
 ### For hardware engineers
 
 `param.range` can tell you a part's supply limits. It cannot tell you *which supply*, and plenty of
-parts have more than one at different voltages: a level translator sits between a 1.8 V world and a
-5 V world and has a separate supply pin for each, with genuinely different windows. Asked through
+parts have more than one at different voltages, such as a level translator sitting between a 1.8 V
+world and a 5 V world with a separate supply pin for each and genuinely different windows. Asked through
 `param.range`, that part has one blurred "supply" answer. Asked through `param.pin_range`, it has
 two correct ones.
 
@@ -43,15 +43,15 @@ bounds absent, because an unmeasurable value must not become orderable.
 
 `param.range` is keyed by `(mpn, symbol)`; this is keyed by `(mpn, pin, symbol)`. It is a
 denormalized fact table, not a view to be reconstructed by joining `param.range` to a binding
-relation: two parameters can share a symbol and bind to different pins (a part stating one ESD rating
-for its A-port terminals and a different one for its B port publishes both under `V(ESD)`), so a join
-on symbol alone would cross-product them onto the wrong terminals.
+relation, because two parameters can share a symbol and bind to different pins (a part stating one
+ESD rating for its A-port terminals and a different one for its B port publishes both under
+`V(ESD)`), so a join on symbol alone would cross-product them onto the wrong terminals.
 
-This is the widest relation in the fact base and the reason `facts.Row` grew a `Qualifier` slot:
-`mpn`, `pin` and `symbol` consume Subject, Object and Value, leaving the limit kind nowhere to go.
-The conditions slot was not reused for it, because every param relation carries test conditions there
-as unbound metadata and spending it would strip the trust context from exactly the rows most likely
-to be compared against.
+This was the first six-column relation in the fact base and the reason `facts.Row` grew a
+`Qualifier` slot, because `mpn`, `pin` and `symbol` consume Subject, Object and Value and leave the
+limit kind nowhere to go. The conditions slot was not reused for it, because every param relation
+carries test conditions there as unbound metadata and spending it would strip the trust context from
+exactly the rows most likely to be compared against.
 
 ### Go projector
 
@@ -59,7 +59,7 @@ to be compared against.
 param projectors and emits through `specParamPinRangeRows`, which skips parameters with an empty
 `pin_refs` and otherwise emits one row per referenced pin. `Value` is the symbol, `Qualifier` the
 kind token, `Min` and `Num` the reduced bounds (each nil when the datasheet omitted that end), and
-`Cite` the parameter's datasheet provenance. Empty without `--params`.
+`Cites` the parameter's datasheet provenance. Empty without `--params`.
 
 ### Datalog
 
@@ -76,7 +76,7 @@ param.pin_range(?mpn, ?pin, ?sym, "recommended_operating", ?min, ?max),
 param.pin(?mpn, ?pin, ?name, ?fn) => ?mpn, ?name, ?fn, ?min, ?max
 ```
 
-Find the parts this relation exists for: those stating more than one distinct supply window across
+Find the parts that state more than one distinct supply window across
 their terminals, which `param.range` reports as a single blurred answer.
 
 ```

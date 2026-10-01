@@ -15,25 +15,24 @@ transients; the regulator is electrically far away.
 
 ### Why engineers want it
 
-Missing decoupling is a classic review catch and a recurring
-field-reliability defect: the design works at the bench, then resets or corrupts under load or
-temperature. Vendor app notes (TI, ST, NXP) specify decoupling per power pin precisely because it
-is external and easy to forget.
+Missing decoupling is a classic review catch and a recurring field-reliability defect, where the
+design works at the bench and then resets or corrupts under load or temperature. Vendor app notes
+(TI, ST, NXP) specify decoupling per power pin because it is external and easy to forget.
 
 ### Impact
 
-Supply sag and ground bounce at the pin: intermittent resets, logic corruption, EMC
+Supply sag and ground bounce at the pin, showing up as intermittent resets, logic corruption and EMC
 failures. Rarely visible at first power-on, expensive to find later.
 
 ![Power rail with no capacitor is flagged; rail with a decoupling cap is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/decoupling-present.svg)
 
 ### Scope note
 
-This is the netlist presence check: "a capacitor somewhere on the rail". It does
-not check value, count-per-pin, or placement distance, since proximity is a board-tier notion and the
+This is the netlist presence check, asking only for "a capacitor somewhere on the rail". It does not
+check value, count-per-pin, or placement distance, since proximity is a board-tier notion and the
 value/impedance version is a datasheet-joined rule (Tier X). Ground-named nets (GND/VSS/...) are
-skipped: their pins are power_in too, but decoupling is a supply-rail concept and the same
-capacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a
+skipped even though their pins are power_in too, because decoupling is a supply-rail concept and the
+same capacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a
 sheet we did not read). Capacitor identity is the shared component.class fact.
 
 ### Two nets that declare a supply pin and are not rails
@@ -50,16 +49,15 @@ switch's OUTPUT carries the FET's source, feeds downstream supply pins, and want
 as much as a regulator output does. Excluding every net with a transistor on it would silence that.
 
 **A net carrying an inductor beside a transistor is a switching node.** That is a buck converter's
-switch node, and the advice to fit a capacitor there would short the switch to ground every cycle. A
-rule that tells you to destroy the circuit is worse than a rule that says nothing.
+switch node, and the advice to fit a capacitor there would short the switch to ground every cycle.
 
 The inductor only disqualifies alongside a transistor. On its own it is an LC or ferrite FILTER, and
 a filtered supply is a rail that genuinely wants decoupling on the far side.
 
-Both are proxies for a question this rule cannot ask yet. "The switching node of a buck converter" is
-a topology question, an inductor between a switch node and an output with the capacitor beyond it,
-which is what the topology pattern work is for. Expect these class checks to be replaced by a pattern
-that states it properly.
+Both are proxies for a question this rule cannot ask yet. "The switching node of a buck converter"
+is a topology question, an inductor between a switch node and an output with the capacitor beyond
+it, which is the topology pattern work in agni issue 374. Expect these class checks to be replaced
+by a pattern that states it properly.
 
 ### Query structure
 
@@ -74,7 +72,7 @@ select power nets that are plausibly rails and carry no capacitor member.
 Reads: component.class, net.attributes (external), net.names (the ground-name skip), on_net,
 pin.electrical_type. Tier R.
 
-The gate guard also consults pin.role, which the declared read set does not list: that field is
-validated against the declarative twin, and the twin carries the comparison without the scope guards.
-The omission is safe in the direction that matters, since a format carrying no pin data yields
-RoleUnknown and the guard does not fire there.
+The gate guard also consults pin.role, which the declared read set does not list, because that field
+is validated against the declarative twin, and the twin carries the comparison without the scope
+guards. The omission is safe in the direction that matters, since a format carrying no pin data
+yields RoleUnknown and the guard does not fire there.

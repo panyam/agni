@@ -56,8 +56,8 @@ func runReviewCapturing(t *testing.T, args ...string) (string, string, error) {
 	return out.String(), errb.String(), err
 }
 
-// TestReviewUsesProjectChecklist is the point of the change: a design whose project declares a
-// checklist needs no --checklist. Before this, `agni review designs/gateway` errored out before
+// TestReviewUsesProjectChecklist checks that a design whose project declares a checklist needs no
+// --checklist. Before this, `agni review designs/gateway` errored out before
 // reading anything, even with the project's review.yaml sitting two directories up.
 func TestReviewUsesProjectChecklist(t *testing.T) {
 	design := checklistProject(t, t.TempDir(), "proj", "review.yaml")
@@ -75,9 +75,9 @@ func TestReviewUsesProjectChecklist(t *testing.T) {
 	}
 }
 
-// TestReviewReadsTheDeclaredChecklistNotTheDefault: the project names a file that is NOT review.yaml,
-// so a run that worked by finding the conventional name rather than by reading the declaration would
-// fail here.
+// TestReviewReadsTheDeclaredChecklistNotTheDefault has the project name a file that is NOT
+// review.yaml, so a run that worked by finding the conventional name rather than by reading the
+// declaration would fail here.
 func TestReviewReadsTheDeclaredChecklistNotTheDefault(t *testing.T) {
 	design := checklistProject(t, t.TempDir(), "proj", "checklists/house.yaml")
 	out, _, err := runReviewCapturing(t, design)
@@ -102,9 +102,9 @@ func TestReviewChecklistFlagWins(t *testing.T) {
 	}
 }
 
-// TestReviewChecklistErrorsAreActionable: the three no-checklist states produce three different
-// messages. Collapsing them would tell an operator with a real project to pass a flag when the
-// actionable fix is a line in the project.yaml they already have.
+// TestReviewChecklistErrorsAreActionable checks that the three no-checklist states produce three
+// different messages. Collapsing them would tell an operator with a real project to pass a flag
+// when the actionable fix is a line in the project.yaml they already have.
 func TestReviewChecklistErrorsAreActionable(t *testing.T) {
 	t.Run("no project", func(t *testing.T) {
 		_, _, err := runReviewCapturing(t, "testdata/review/can-broken.edn")
@@ -132,7 +132,7 @@ func TestReviewChecklistErrorsAreActionable(t *testing.T) {
 // TestReviewRollupRefusesMixedChecklists guards the rollup renderer's documented assumption that
 // every report shares the manifest structure. RenderAggregateMarkdown builds its traceability matrix
 // from Reports[0].Areas, so two manifests would label the rows from the first design's checklist and
-// fill the cells from the second's — every row looking answered, with the wrong labels.
+// fill the cells from the second's, so every row looks answered under the wrong labels.
 func TestReviewRollupRefusesMixedChecklists(t *testing.T) {
 	a := checklistProject(t, t.TempDir(), "proj-a", "review.yaml")
 	b := checklistProject(t, t.TempDir(), "proj-b", "review.yaml")
@@ -149,8 +149,8 @@ func TestReviewRollupRefusesMixedChecklists(t *testing.T) {
 	}
 }
 
-// TestReviewRollupAcceptsOneChecklist: two designs under the SAME project resolve to one checklist and
-// roll up without a flag, which is the case a gate in CI is most likely to be.
+// TestReviewRollupAcceptsOneChecklist checks that two designs under the SAME project resolve to one
+// checklist and roll up without a flag, which is the case a gate in CI is most likely to be.
 func TestReviewRollupAcceptsOneChecklist(t *testing.T) {
 	root := t.TempDir()
 	first := checklistProject(t, root, "proj", "review.yaml")
@@ -186,10 +186,10 @@ func breakDescriptor(t *testing.T, path string) {
 	}
 }
 
-// TestReviewRefusesMalformedDesignDescriptor: a design.yaml that exists and does not parse is THIS
-// design's own configuration. Reading it as "no project" sends the operator to --checklist when the
-// actionable fix is the descriptor, and would score the run against the built-in vocabulary while
-// looking authoritative.
+// TestReviewRefusesMalformedDesignDescriptor covers a design.yaml that exists and does not parse,
+// which is THIS design's own configuration. Reading it as "no project" sends the operator to
+// --checklist when the actionable fix is the descriptor, and would score the run against the
+// built-in vocabulary while looking authoritative.
 func TestReviewRefusesMalformedDesignDescriptor(t *testing.T) {
 	root := t.TempDir()
 	design := checklistProject(t, root, "proj", "review.yaml")

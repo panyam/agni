@@ -27,7 +27,7 @@ describe("projectBar", () => {
   });
 
   // Blank reads as "still resolving", and belonging to no project is an ordinary answer rather than a
-  // missing one: most files on a mounted folder are in no project at all.
+  // missing one, since most files on a mounted folder are in no project at all.
   it("states no-project rather than going blank", () => {
     const { el } = mount({});
     expect(el.querySelector(".projbar-name")?.textContent).toBe(NO_PROJECT_LABEL);
@@ -49,8 +49,8 @@ describe("projectBar", () => {
     expect(el.querySelector(".projbar-plain-box")).toBeNull();
   });
 
-  // The acceptance criterion from the issue: viewing a project design under the built-in catalog is
-  // visible on screen, not merely remembered from a control someone touched.
+  // The acceptance criterion from the issue is that viewing a project design under the built-in
+  // catalog is visible on screen, not merely remembered from a control someone touched.
   it("says the built-in catalog is in effect, and styles that state", () => {
     const { el } = mount({ ...inProject, plain: true });
     expect(el.querySelector(".projbar-name")?.textContent).toBe(PLAIN_LABEL);

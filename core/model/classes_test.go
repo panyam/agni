@@ -11,7 +11,7 @@ import (
 )
 
 // TestComponentClassesListsEveryConstant holds ComponentClasses to the const block it enumerates, by
-// reading types.go: every constant typed ComponentClass, bar ClassUnknown, must be listed, and nothing
+// reading types.go. Every constant typed ComponentClass, bar ClassUnknown, must be listed, and nothing
 // else may be. A class added to the vocabulary and not to the list is a class no project can extend.
 func TestComponentClassesListsEveryConstant(t *testing.T) {
 	f, err := parser.ParseFile(token.NewFileSet(), "types.go", nil, 0)

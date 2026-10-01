@@ -1,12 +1,9 @@
-// The compare picker (WS9-049 phase 3): a modal file chooser for "compare the open design against
-// this one". It replaces the arm-then-click-in-the-tree flow, which had two problems — arming was
-// invisible mode state, and picking the other design required the Files dock panel to be open, so
-// the panel could not be retired while that flow existed.
+// The compare picker is a modal file chooser for "compare the open design against this one"
+// (WS9-049 phase 3). It carries no armed mode and does not need the Files dock panel open.
 //
-// The picker reports a CHOSEN DESIGN, not "side B". The distinction matters for what comes next:
-// the viewer holds one comparison today, but the intent is several at once (design A against
-// successive versions). A callback that means "here is a design to compare against" needs no
-// change when the presenter layer grows to hold a set; one that means "set side B" does.
+// The picker reports a CHOSEN DESIGN, not "side B". The viewer holds one comparison, and a callback
+// meaning "a design to compare against" still fits if it grows to hold several (design A against
+// successive versions), where "set side B" would not.
 import type { EventBus } from "@panyam/tsappkit";
 import type { SolidIsland } from "@panyam/tsappkit-solid";
 import { fileTreeIsland } from "./filetree.js";
@@ -17,9 +14,8 @@ export interface CompareTarget {
   path: string;
 }
 
-// ComparePicker is the modal's control surface. It is plain DOM chrome, like the panels menu:
-// which files exist is the tree island's business, and whether the modal is showing is not
-// presenter state.
+// ComparePicker is the modal's control surface. It is plain DOM chrome, like the panels menu, since
+// the tree island owns which files exist and whether the modal is showing is not presenter state.
 export interface ComparePicker {
   // open shows the picker. exclude is the design already open (side A), greyed out in the list so
   // the user cannot start a comparison of a design against itself.
@@ -30,10 +26,9 @@ export interface ComparePicker {
   isOpen(): boolean;
 }
 
-// comparePickerIsland builds the modal over a server-rendered hole. The hole must contain a
-// backdrop element and a tree host (see ViewerPage.html); the island mounts once at boot like
-// every other island (C11), and opening is a CSS toggle rather than a lazy mount, so the file
-// listing is already warm the first time the user asks for it.
+// comparePickerIsland builds the modal over a server-rendered hole, which must contain a backdrop
+// element and a tree host (see ViewerPage.html). The island mounts once at boot (C11) and opening is
+// a CSS toggle, so the file listing is already loaded the first time the user asks for it.
 export function comparePickerIsland(
   host: HTMLElement,
   treeEl: HTMLElement,
@@ -47,20 +42,20 @@ export function comparePickerIsland(
   const setOpen = (on: boolean): void => {
     open = on;
     host.classList.toggle("on", on);
-    // aria-hidden rather than display:none on the host itself: the tree island lives inside and
-    // must stay mounted and measurable, and the .on class is what actually drives visibility.
+    // aria-hidden rather than display:none on the host, because the tree island inside must stay
+    // mounted and measurable. The .on class drives visibility.
     host.setAttribute("aria-hidden", on ? "false" : "true");
   };
 
   const tree = fileTreeIsland(treeEl, eventBus, {
     onFileSelect: (mount, path) => {
-      // Choosing side A again is not a comparison. Ignore rather than close, so the click reads as
-      // "that one is already open" instead of silently dismissing the picker.
+      // Choosing side A again is ignored rather than closing, so the click reads as "that one is
+      // already open".
       if (excluded && excluded.mount === mount && excluded.path === path) return;
       setOpen(false);
       onPick({ mount, path });
     },
-    // A folder click in the picker only expands; the picker addresses no URL and opens no design.
+    // A folder click only expands. The picker addresses no URL and opens no design.
     onDirSelect: () => {},
     // Nothing pushes sheet state into this tree, so no sheet node is ever rendered.
     onSheetSelect: () => {},
@@ -80,8 +75,8 @@ export function comparePickerIsland(
     picker: {
       open: (exclude) => {
         excluded = exclude;
-        // Mark the open design so it reads as unavailable. The tree highlights its "active" file
-        // from the sheet state it is pushed, which is the same channel the work page uses.
+        // Mark the open design as unavailable. The tree highlights its "active" file from the sheet
+        // state it is pushed, the same channel the work page uses.
         tree.view.setState({ mount: exclude?.mount ?? "", path: exclude?.path ?? "", sheets: [], activeId: "" });
         setOpen(true);
       },

@@ -8,7 +8,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// pinFixture: one two-section part sharing a power-pin designator across sections
+// pinFixture holds one two-section part sharing a power-pin designator across sections
 // (dedup case), one part with a bare pin and an NC pin, and an NC pin wired into a
 // real net.
 func pinFixture() *ir.Design {
@@ -42,7 +42,7 @@ func pinFixture() *ir.Design {
 			tnet("A", "U1.1", "U2.1"),
 			tnet("VCC", "U1.14", "R1.1"),
 			tnet("BADNC", "U2.4", "R1.2"),
-			tnet("LONE_NC_STUB", "U2.3"), // single-member NC net: the intentional case, silent for both rules
+			tnet("LONE_NC_STUB", "U2.3"), // single-member NC net, the intentional case, silent for both rules
 		},
 	}
 }
@@ -65,7 +65,7 @@ func TestPinsModelSurface(t *testing.T) {
 	}
 }
 
-// TestUnconnectedPin: fires per bare typed pin with the designator on the finding.
+// TestUnconnectedPin checks that the rule fires per bare typed pin with the designator on the finding.
 // U1.2 (unwired gate input) and U2.2 fire; U2.3 (bare NC), U2.4 (wired NC), and U2.5
 // (bare but direction-unknown) stay silent.
 func TestUnconnectedPin(t *testing.T) {
@@ -88,7 +88,7 @@ func TestUnconnectedPin(t *testing.T) {
 	}
 }
 
-// TestNCPinConnected: the wired NC pin's net fires; the lone-stub NC case stays silent.
+// TestNCPinConnected checks that the wired NC pin's net fires and the lone-stub NC case stays silent.
 func TestNCPinConnected(t *testing.T) {
 	m := check.NewModel(pinFixture())
 	fs := ncPinConnected.Findings(m)
@@ -97,9 +97,9 @@ func TestNCPinConnected(t *testing.T) {
 	}
 }
 
-// TestOutputConflictCountsComponents (WS1-025 fallout): paralleled driving pins of ONE
-// component are one driver (the real corpus: a driver IC with six output pads on one
-// net); two different components' outputs still fire.
+// TestOutputConflictCountsComponents (WS1-025 fallout) checks that paralleled driving pins of ONE
+// component are one driver (the real corpus has a driver IC with six output pads on one
+// net), while two different components' outputs still fire.
 func TestOutputConflictCountsComponents(t *testing.T) {
 	drv := &ir.PartType{Name: "DRV", Pins: []*ir.Pin{
 		{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_OUTPUT},
@@ -123,10 +123,11 @@ func TestOutputConflictCountsComponents(t *testing.T) {
 	}
 }
 
-// TestOutputConflictWiredOr (WS3-064): a multi-output net that carries a resistor is an intentional
-// open-drain wired-OR bus (a shared interrupt/inhibit line, the resistor its pull), not contention,
-// and stays silent; two push-pull outputs with no resistor still fight. The signal is the resistor's
-// PRESENCE, name-independent, because a real pull runs to an auto-named rail or to ground.
+// TestOutputConflictWiredOr (WS3-064) treats a multi-output net that carries a resistor as an
+// intentional open-drain wired-OR bus (a shared interrupt/inhibit line, the resistor its pull), not
+// contention, so it stays silent; two push-pull outputs with no resistor still fight. The signal is
+// the resistor's PRESENCE, name-independent, because a real pull runs to an auto-named rail or to
+// ground.
 func TestOutputConflictWiredOr(t *testing.T) {
 	drv := &ir.PartType{Name: "DRV", Pins: []*ir.Pin{{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_OUTPUT}}}
 	pwr := &ir.PartType{Name: "PWR", Pins: []*ir.Pin{{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_OUT}}}
@@ -163,8 +164,8 @@ func TestOutputConflictWiredOr(t *testing.T) {
 	}
 }
 
-// TestUnspecifiedPinWithDriver: the matrix's unspecified column. An untyped pin fires
-// only where a driver is in evidence — including a virtual power symbol's power_out
+// TestUnspecifiedPinWithDriver covers the matrix's unspecified column. An untyped pin fires
+// only where a driver is in evidence, including a virtual power symbol's power_out
 // (WS1-014), the evidence path that unblocked the row. Declared (passive) pins,
 // undriven nets, external nets, and virtual pins as subjects all stay out.
 func TestUnspecifiedPinWithDriver(t *testing.T) {
@@ -207,8 +208,8 @@ func TestUnspecifiedPinWithDriver(t *testing.T) {
 	}
 }
 
-// TestFloatingInputPassiveExemption (WS1-025 fallout): a passive member silences the
-// rule — a resistor is the classic pull, and libraries that type passive pins INPUT
+// TestFloatingInputPassiveExemption (WS1-025 fallout) checks that a passive member silences the
+// rule. A resistor is the classic pull, and libraries that type passive pins INPUT
 // (the Mentor corpus's capacitors) must not turn cap+input nets into findings.
 func TestFloatingInputPassiveExemption(t *testing.T) {
 	inp := &ir.PartType{Name: "BUF", Pins: []*ir.Pin{
@@ -237,9 +238,9 @@ func TestFloatingInputPassiveExemption(t *testing.T) {
 	}
 }
 
-// TestFloatingInputDiodeExemption: a diode/LED/TVS terminal is typed INPUT by some libraries
-// but is not a logic input, so a pure diode network (e.g. two steering-diode cathodes tied
-// together) must not read as floating; a real IC input that merely carries a clamp diode still
+// TestFloatingInputDiodeExemption exists because a diode/LED/TVS terminal is typed INPUT by some
+// libraries but is not a logic input, so a pure diode network (e.g. two steering-diode cathodes
+// tied together) must not read as floating; a real IC input that merely carries a clamp diode still
 // does, since the exclusion is per-pin, not per-net.
 func TestFloatingInputDiodeExemption(t *testing.T) {
 	pin1 := func(name string) *ir.PartType {
@@ -274,8 +275,8 @@ func TestFloatingInputDiodeExemption(t *testing.T) {
 	}
 }
 
-// TestTestPointCoverage: uncovered rails and ground fire ONLY on boards that place test
-// points at all (the DFT channel gate); covered rails, external rails, and plain signal
+// TestTestPointCoverage checks that uncovered rails and ground fire ONLY on boards that place test
+// points at all (the DFT channel gate), and that covered rails, external rails, and plain signal
 // nets stay out.
 func TestTestPointCoverage(t *testing.T) {
 	comp := func(ref string) *ir.Component {

@@ -46,11 +46,12 @@ type fakeErr struct{}
 
 func (*fakeErr) Error() string { return "fake resolve failure" }
 
-// TestRequestConfigResolvesRefTiers is the capability this schema exists for: a caller that is not the
-// CLI can hand the engine profiles, parameters and intent, not only a naming convention.
+// TestRequestConfigResolvesRefTiers covers the capability this schema exists for, which is that a
+// caller that is not the CLI can hand the engine profiles, parameters and intent, not only a naming
+// convention.
 //
 // Before this, OverlayConfig could carry exactly one of five config tiers, so a browser could be given
-// a fifth of the configuration a command line could — and the gap was invisible, because a run against
+// a fifth of the configuration a command line could, and the gap was invisible, because a run against
 // less config produces fewer findings and fewer findings is what a clean board looks like.
 func TestRequestConfigResolvesRefTiers(t *testing.T) {
 	res := &recordingResolver{specs: someSpecs()}
@@ -79,10 +80,10 @@ func TestRequestConfigResolvesRefTiers(t *testing.T) {
 	}
 }
 
-// TestRequestConfigLayersOverTheProject: a request's profiles ADD to the project's rather than
-// replacing them. That is the opposite of how a request CONVENTION behaves, and deliberately so — a
-// caller sending profiles is adding a check to the run, where a caller sending a convention is
-// answering for the whole naming vocabulary and cannot stack two.
+// TestRequestConfigLayersOverTheProject checks that a request's profiles ADD to the project's
+// rather than replacing them. That is the opposite of how a request CONVENTION behaves, and
+// deliberately so. A caller sending profiles is adding a check to the run, where a caller sending a
+// convention is answering for the whole naming vocabulary and cannot stack two.
 func TestRequestConfigLayersOverTheProject(t *testing.T) {
 	res := &recordingResolver{}
 	project := &webapi.Project{
@@ -106,7 +107,7 @@ func TestRequestConfigLayersOverTheProject(t *testing.T) {
 	}
 }
 
-// TestRequestCorpusWinsOverTheProject follows SpecsOr's rule one layer up: the caller named a corpus
+// TestRequestCorpusWinsOverTheProject follows SpecsOr's rule one layer up. The caller named a corpus
 // for this run, and merging two would let one team's transcribed limits decide another's pass/fail.
 func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 	res := &recordingResolver{specs: someSpecs()}
@@ -121,11 +122,11 @@ func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 	}
 }
 
-// TestHostWithoutResolverRefusesRefs is the honest half of the capability, and the reason this is a
+// TestHostWithoutResolverRefusesRefs is the refusing half of the capability, and the reason this is a
 // deployment property rather than a schema one.
 //
 // A host with no resolver (the engine in WASM, a service constructed without one) can still honour a
-// config carrying a RESOLVED convention, because that composes with no I/O — which is the property
+// config carrying a RESOLVED convention, because that composes with no I/O, the property
 // C22 protects and this change had to preserve. A config naming a directory is a different request,
 // and answering it by silently dropping the tier would report a clean run against config that never
 // loaded. So it errors, and the error says what it could not resolve.
@@ -142,7 +143,7 @@ func TestHostWithoutResolverRefusesRefs(t *testing.T) {
 		}
 	}
 
-	// The no-I/O path is untouched: a resolved convention still composes with no resolver at all.
+	// The no-I/O path is untouched, so a resolved convention still composes with no resolver at all.
 	valueOnly := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("house", "^H_")}}
 	ov, err := OverlayFor(ctx, nil, nil, nil, nil, valueOnly, Overlay{}, "")
 	if err != nil {
@@ -153,7 +154,7 @@ func TestHostWithoutResolverRefusesRefs(t *testing.T) {
 	}
 }
 
-// TestProjectRefsAlsoNeedAResolver: the same refusal applies to a PROJECT that declares refs on a host
+// TestProjectRefsAlsoNeedAResolver applies the same refusal to a PROJECT that declares refs on a host
 // that cannot read them. Failing only on the request side would mean a deployment silently ran a
 // project's designs against a fraction of that project's config.
 func TestProjectRefsAlsoNeedAResolver(t *testing.T) {
@@ -170,9 +171,9 @@ func TestProjectRefsAlsoNeedAResolver(t *testing.T) {
 	}
 }
 
-// TestMergeConfigLayersFieldWise: a Design sets only intent and a Project sets the rest, so merging
-// has to be per field. A whole-message replace would make a design that declares intent drop its
-// project's profiles — which reads as the project having none.
+// TestMergeConfigLayersFieldWise covers a Design setting only intent while a Project sets the rest,
+// so merging has to be per field. A whole-message replace would make a design that declares intent
+// drop its project's profiles, which reads as the project having none.
 func TestMergeConfigLayersFieldWise(t *testing.T) {
 	p := &webapi.AnalysisConfig{ProfileUris: []string{"p"}, ParamUris: []string{"q"}, ChecklistUri: "c"}
 	d := &webapi.AnalysisConfig{IntentUri: "i"}

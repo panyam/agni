@@ -9,9 +9,9 @@ Connect the far end of the signal. The net exists, so presence checks pass, but 
 
 ### What it means
 
-A profile signal net that exists by name but carries fewer than two connections. It is present in
-the netlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not
-actually reached.
+It reports a profile signal net that exists by name but carries fewer than two connections. It is
+present in the netlist, so a presence check passes, but wired to only one pin, so the far end of the
+bus is not actually reached.
 
 ### Why engineers want it
 
@@ -21,8 +21,8 @@ this catches the half-made connection by its fan-out.
 
 ### How it is checked
 
-`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:
-named, but not wired through.
+`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets, on a bus the presence gate says is
+in use. A single-connection net is a stub, named but not wired through.
 
 ### For software readers
 

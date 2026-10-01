@@ -8,20 +8,18 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// An overlay's identity is what lets a caller know two runs were configured the SAME way, which is
-// what a cache of analysis results needs and what nothing here could answer before (agni issue 390).
+// An overlay's identity tells a caller two runs were configured the SAME way, for a cache of analysis
+// results (agni issue 390).
 //
-// It is built from the inputs an overlay was composed FROM, never from the composed value. That
-// distinction is the whole design. `Overlay` carries a `*classify.Lexicon`, compiled
-// `check.RuleSource` values and a `param.ParamProvider` interface, none of which has a canonical
-// serialization, so identifying the composed value would mean hand-writing one. A hand-written
-// serializer covers the fields somebody remembered, and the day a vocabulary gains a field it
-// silently stops covering it, which turns a cache into a machine for serving confident wrong
-// answers. The inputs are protos and content digests, which have canonical forms already.
+// It is built from the inputs an overlay was composed FROM, never from the composed value. `Overlay`
+// carries a `*classify.Lexicon`, compiled `check.RuleSource` values and a `param.ParamProvider`, none
+// of which has a canonical serialization. A hand-written serializer would silently stop covering a
+// field added later, and a cache keyed on it would serve wrong answers. The inputs are protos and
+// content digests, which have canonical forms already.
 //
 // REFUSING IS PART OF THE CONTRACT. An input nothing can identify (config a resolver read without
 // reporting what it read) makes Identity return false rather than a value covering less than it
-// appears to. A caller that cannot identify an overlay must decline to cache, not guess.
+// appears to.
 
 // overlayID accumulates the labeled inputs one overlay was composed from, in composition order.
 type overlayID struct {
@@ -84,8 +82,8 @@ func (id *overlayID) unidentifiable(label string) {
 // value hashes the accumulated inputs, and reports false when any of them was unidentifiable.
 //
 // Each part is folded in with its label and an explicit length, so two different compositions cannot
-// hash alike by running their bytes together: without the lengths, ("ab", "c") and ("a", "bc") are
-// one string.
+// hash alike by running their bytes together. Without the lengths, ("ab", "c") and ("a", "bc") would
+// be one string.
 func (id *overlayID) value() (string, bool) {
 	if id == nil {
 		return "", false
@@ -108,9 +106,8 @@ func (id *overlayID) value() (string, bool) {
 
 // inherit folds in an overlay this one is layered on top of.
 //
-// A zero overlay contributes nothing and is identified as such. A non-zero one that carries no
-// identity of its own cannot be identified here either, because what it holds are composed values,
-// which is exactly what this scheme refuses to hash.
+// A zero overlay contributes nothing and is identified as such. A non-zero one with no identity of its
+// own is unidentifiable, because it holds only composed values and this scheme does not hash those.
 func (id *overlayID) inherit(label string, o Overlay) {
 	if id == nil {
 		return
@@ -140,11 +137,9 @@ func (o Overlay) isZero() bool {
 // Identity returns a value that differs whenever anything this overlay was composed FROM differs,
 // and reports false when the composition cannot be fully identified.
 //
-// It is for a caller that wants to reuse work done under one configuration only when the
-// configuration is the same, a check-result cache being the case it was built for. Two overlays with
-// equal identities were composed from equal inputs. Two with different identities may still behave
-// identically, since this compares inputs rather than outcomes, which is the safe direction to be
-// wrong in.
+// It is for a caller reusing work only under the same configuration, such as a check-result cache.
+// Equal identities mean equal inputs. Different identities may still behave identically, since this
+// compares inputs rather than outcomes, and that is the safe direction to be wrong in.
 //
 // FALSE IS NOT AN ERROR. It means an input could not be identified, most often config a resolver
 // read without reporting a digest. A caller must then do the work rather than reuse any, and must

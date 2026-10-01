@@ -9,7 +9,7 @@ import (
 
 // TestFindingProtoBusSubject checks that a bus finding carries its NAME to the client on
 // Subject.bus_id (the bus's range-label identity, = the subject), so a bus-not-modeled finding
-// highlights its own drawn bus by name (WS7-042b) — and that a non-bus finding never gets a bus id,
+// highlights its own drawn bus by name (WS7-042b), and that a non-bus finding never gets a bus id,
 // keeping the two disjoint.
 func TestFindingProtoBusSubject(t *testing.T) {
 	bus := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindBus, Ref: "DATA[7:0]"}, Rule: "bus-not-modeled", Prov: &ir.Provenance{SourceFile: "x.kicad_sch"}})
@@ -30,9 +30,9 @@ func TestFindingProtoBusSubject(t *testing.T) {
 	}
 }
 
-// TestFindingProtoCarriesDatasheet: a datasheet-backed finding carries its citation on the wire
-// (WS9-048), so the CLI's review/check --format json and the web check panel both show the source
-// without parsing the message; a finding with no datasheet provenance leaves the field nil.
+// TestFindingProtoCarriesDatasheet checks that a datasheet-backed finding carries its citation on
+// the wire (WS9-048), so the CLI's review/check --format json and the web check panel both show the
+// source without parsing the message; a finding with no datasheet provenance leaves the field nil.
 func TestFindingProtoCarriesDatasheet(t *testing.T) {
 	backed := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: "U1"}, Rule: "supply-exceeds-abs-max", DatasheetProv: []*check.DatasheetCitation{{Doc: "SNOS412Q", DocRef: "snos412q", Page: 4, Section: "7.1 Absolute Maximum Ratings", Method: "hand", Confidence: 1.0}}})
 	dss := backed.GetDatasheets()
@@ -54,7 +54,7 @@ func TestFindingProtoCarriesDatasheet(t *testing.T) {
 // TestPartitionAvailableReportsWhatCouldNotRun is the silence-reads-as-coverage failure at the
 // finding tier.
 //
-// A board rule on a NETLIST cannot evaluate: check.Available gates it, it contributes no findings, and
+// A board rule on a NETLIST cannot evaluate. check.Available gates it, it contributes no findings, and
 // a findings list has no way to distinguish "checked and clean" from "never ran". On the viewer's
 // default-open panel that reads as a healthy board, which is the bug this reports its way out of.
 func TestPartitionAvailableReportsWhatCouldNotRun(t *testing.T) {
@@ -92,9 +92,10 @@ func TestPartitionAvailableReportsWhatCouldNotRun(t *testing.T) {
 	}
 }
 
-// TestPartitionAvailableChangesNoFindings: running only the runnable half is not an optimisation.
-// check.Run already skips a gated rule, so the findings are identical either way — the split exists
-// so the response can REPORT the other half instead of leaving a caller to infer it from an absence.
+// TestPartitionAvailableChangesNoFindings pins that running only the runnable half is not an
+// optimisation. check.Run already skips a gated rule, so the findings are identical either way. The
+// split exists so the response can REPORT the other half instead of leaving a caller to infer it
+// from an absence.
 func TestPartitionAvailableChangesNoFindings(t *testing.T) {
 	m := check.NewModel(&ir.Design{})
 	rules := check.DefaultCatalog().Rules()
@@ -104,11 +105,11 @@ func TestPartitionAvailableChangesNoFindings(t *testing.T) {
 	}
 }
 
-// TestFindingProtoCarriesContext: a finding whose message names an entity other than its subject
-// carries that entity to the client as structured data (agni issue 349), so the panel can render it
-// as its own clickable chip instead of the reader parsing it out of the sentence.
+// TestFindingProtoCarriesContext checks that a finding whose message names an entity other than its
+// subject carries that entity to the client as structured data (agni issue 349), so the panel can
+// render it as its own clickable chip instead of the reader parsing it out of the sentence.
 //
-// The order assertion is the load-bearing one. Order is the rule author's and matches the order the
+// The order assertion is the one that matters. Order is the rule author's and matches the order the
 // message names them, so a panel rendering chips left to right reads in the same order as the
 // sentence above it. A conversion that sorted or bucketed would silently break that, and nothing
 // else in the pipeline would notice.
@@ -138,7 +139,7 @@ func TestFindingProtoCarriesContext(t *testing.T) {
 	}
 }
 
-// TestFindingProtoContextRolesNeedNotBeUnique: two entities can play the SAME part, which is exactly
+// TestFindingProtoContextRolesNeedNotBeUnique covers two entities playing the SAME part, which is
 // the i2c-address-collision shape ("A and B both strap to address N"). A consumer must therefore
 // treat context as a list rather than a map, and this pins that so a later "tidy" keying by role
 // cannot silently drop one.
@@ -152,9 +153,9 @@ func TestFindingProtoContextRolesNeedNotBeUnique(t *testing.T) {
 	}
 }
 
-// TestFindingProtoContextBusJoinKey: a bus context entity needs its name on bus_id for the same
-// reason a bus SUBJECT does — a bus carries no net, so its name is the only geometry join key it has.
-// Without this a bus named as context renders as a chip that highlights nothing.
+// TestFindingProtoContextBusJoinKey covers a bus context entity, which needs its name on bus_id for
+// the same reason a bus SUBJECT does. A bus carries no net, so its name is the only geometry join
+// key it has. Without this a bus named as context renders as a chip that highlights nothing.
 func TestFindingProtoContextBusJoinKey(t *testing.T) {
 	f := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "STRAP0"}, Rule: "strap-group-collision", Context: []check.ContextSubject{{Entity: check.Entity{Kind: check.KindBus, Ref: "ADDR[3:0]"}, Role: "bus"}}})
 	if id := f.GetContext()[0].GetSubject().GetBusId(); id != "ADDR[3:0]" {

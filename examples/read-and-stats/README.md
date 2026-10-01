@@ -10,8 +10,8 @@ formats, the physical tier. It is the walkthrough form of `agni stats <file>`.
   I/O edge. File paths stay at the edge; the core readers only see an `io.Reader`
   (CONSTRAINTS C1). The design input is a path (default `../common/designs/two-resistors.edn`),
   so you can point it at your own file.
-- The neutral IR: one shape for every source format, so diff and checks downstream never
-  care which format you started from.
+- The neutral IR, which is one shape for every source format, so diff and checks downstream
+  never care which format you started from.
 - The `(ref_des, pin)` connection key that diff and checks match on, never a format-native
   id.
 

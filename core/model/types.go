@@ -7,44 +7,38 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// ComponentClass is the device class of a placed component: the component.class fact
-// (docs/19). Values are stable strings so rules and reports can match on them; a class the
-// derivation cannot establish is ClassUnknown, never a guess, so class-quantified rules
-// stay silent rather than misfire on unfamiliar designs.
+// ComponentClass is the device class of a placed component, the component.class fact
+// (docsite/content/architecture/rules-and-checks.md#the-fact-base-and-querying-it). Values are
+// stable strings so rules and reports can match on them. A class the derivation cannot establish is
+// ClassUnknown, never a guess, so class-quantified rules stay silent on unfamiliar designs.
 type ComponentClass string
 
-// The component.class vocabulary. ClassLED, ClassTVS, and ClassZener are deliberately distinct
-// from ClassDiode (protection and indicator rules quantify over them separately), and
-// ClassFerrite from ClassInductor, even though each is electrically a subtype. ClassZener is a
-// clamp/reference, distinct from ClassTVS because a Zener is a slower clamp than a fast ESD TVS
-// (esd-clamp-not-tvs, WS3-078, credits them differently).
-// ClassTestConnector is distinct from ClassConnector: a debug / test / edge-card / programming
-// connector is a bench interface, not a field-facing harness, so protection rules (esd,
-// input-protection) that quantify over ClassConnector exclude it.
+// The component.class vocabulary. ClassLED, ClassTVS, and ClassZener are distinct from ClassDiode
+// (protection and indicator rules quantify over them separately), and ClassFerrite from
+// ClassInductor, even though each is electrically a subtype. ClassZener is distinct from ClassTVS
+// because a Zener is a slower clamp than a fast ESD TVS (esd-clamp-not-tvs, WS3-078, credits them
+// differently). ClassTestConnector is distinct from ClassConnector because a debug, test, edge-card
+// or programming connector is a bench interface, not a field-facing harness, so protection rules
+// (esd, input-protection) that quantify over ClassConnector exclude it.
 //
-// ClassClock is the clock-source FAMILY (WS10-015); ClassOscillator, ClassCrystal, and
-// ClassCeramicResonator are its subtypes. The family is deliberately NOT ClassCrystal: an active
-// oscillator is-NOT-a crystal (it CONTAINS one), so a family-level clock rule must not answer
+// ClassClock is the clock-source FAMILY (WS10-015), with ClassOscillator, ClassCrystal, and
+// ClassCeramicResonator as its subtypes. The family is NOT ClassCrystal, since an active oscillator
+// CONTAINS a crystal rather than being one, so a family-level clock rule must not answer
 // HasClass(crystal) for it. A part's clock TYPE branches rules (an oscillator uses no external load
-// caps; a ceramic resonator has them integrated; a bare crystal needs them). Crystal-vs-resonator is
-// datasheet-driven — the vendor label is unreliable (swapped in the field) and the two are structurally
-// alike — so the keyword/structural path only ever resolves the oscillator subtype or stays at the
-// family; the crystal / ceramic_resonator subtype comes from a seeded device_class.
+// caps, a ceramic resonator has them integrated, a bare crystal needs them). Crystal-vs-resonator is
+// datasheet-driven, because the vendor label is unreliable and the two are structurally alike. So
+// the keyword/structural path only resolves the oscillator subtype or stays at the family, and the
+// crystal / ceramic_resonator subtype comes from a seeded device_class.
 const (
 	ClassResistor  ComponentClass = "resistor"
 	ClassCapacitor ComponentClass = "capacitor"
 	ClassInductor  ComponentClass = "inductor"
 	ClassFerrite   ComponentClass = "ferrite"
-	// ClassThermistor is a temperature-dependent resistor: NTC inrush limiters, PTC resettable fuses,
-	// and the sense elements a temperature circuit is built around. Its family is ClassResistor,
-	// because it is a two-terminal resistor for every topological question (in series, in a divider,
-	// probed at both ends) and is not one for anything temperature-related, which is the same split
-	// ClassFerrite makes against ClassInductor.
-	//
-	// Before it existed a thermistor classified UNKNOWN, so component.class emitted no row for it and
-	// it fell out of every class-scoped rule and query silently, an absent row being indistinguishable
-	// from one that did not match. Found reconciling per-part coverage against a second tool on a real
-	// board, where the whole residual in one direction was 15 thermistors (agni issue 627).
+	// ClassThermistor is a temperature-dependent resistor (NTC inrush limiters, PTC resettable fuses,
+	// temperature sense elements). Its family is ClassResistor, because it is a two-terminal resistor
+	// for every topological question and not for anything temperature-related, the same split
+	// ClassFerrite makes against ClassInductor. Without it a thermistor emits no component.class row
+	// and drops out of every class-scoped rule; on one real board that was 15 parts (agni issue 627).
 	ClassThermistor       ComponentClass = "thermistor"
 	ClassDiode            ComponentClass = "diode"
 	ClassLED              ComponentClass = "led"
@@ -60,24 +54,20 @@ const (
 	ClassCeramicResonator ComponentClass = "ceramic_resonator"
 	ClassIC               ComponentClass = "ic"
 	ClassTransistor       ComponentClass = "transistor"
-	// ClassIdealDiodeController is a controller that drives an external FET to behave as a diode:
-	// ORing controllers, ideal-diode controllers, power muxes. It exists because a rule cannot tell
-	// one from any other FET by structure. An ideal diode IS a transistor plus a bias network, and no
-	// netlist labels that arrangement, so reverse-blocking analysis has to take the part's identity
-	// from a seeded datasheet or stay honest about not knowing (agni issue 74).
-	//
-	// It is DATASHEET-DRIVEN, like the crystal / ceramic_resonator split above and for the same
-	// reason: the structural path cannot resolve it, so it is reached through deviceClassAliases from
-	// a seeded device_class rather than from a refdes prefix or a name keyword.
+	// ClassIdealDiodeController is a controller that drives an external FET to behave as a diode
+	// (ORing controllers, ideal-diode controllers, power muxes). No netlist labels a FET plus bias
+	// network as an ideal diode, so reverse-blocking analysis takes the identity from a seeded
+	// datasheet or reports that it does not know (agni issue 74). It is DATASHEET-DRIVEN like the
+	// crystal / ceramic_resonator split, reached through deviceClassAliases from a seeded
+	// device_class rather than from a refdes prefix or a name keyword.
 	ClassIdealDiodeController ComponentClass = "ideal_diode_controller"
 	ClassUnknown              ComponentClass = "unknown"
 )
 
 // ComponentClasses is every class in the vocabulary above except ClassUnknown, in declaration order.
-// Anything that enumerates the vocabulary reads this rather than keeping its own list: the class
-// names a project's conventions may extend were a hand-kept copy, and it silently lacked thermistor,
-// zener and ideal_diode_controller (agni issue 677). Go cannot enumerate constants, so
-// TestComponentClassesListsEveryConstant reads the const block and holds this list to it.
+// Anything that enumerates the vocabulary reads this rather than keeping its own list (agni issue
+// 677). Go cannot enumerate constants, so TestComponentClassesListsEveryConstant reads the const
+// block and holds this list to it.
 func ComponentClasses() []ComponentClass {
 	return []ComponentClass{
 		ClassResistor, ClassCapacitor, ClassInductor, ClassFerrite, ClassThermistor,
@@ -94,8 +84,8 @@ type PinRole string
 
 // The pin-role vocabulary. Polarity roles are assigned only within the diode family
 // (diode, led, tvs) so a "K" pin on an IC never reads as a cathode; power/ground come
-// from rail-name conventions on any class. RoleUnknown is the honest default — rules
-// skip unknowns, never guess.
+// from rail-name conventions on any class. RoleUnknown is the default, and rules skip
+// unknowns rather than guess.
 const (
 	RoleAnode   PinRole = "anode"
 	RoleCathode PinRole = "cathode"
@@ -112,9 +102,9 @@ const (
 
 // PinInst is one part-type pin of one placed component: the entity pin-level rules
 // quantify over. It exists only for components whose part type declares pins (a
-// netlist-only source with no part data yields none). It deliberately carries no
-// direction — resolve it through Model.PinDir so every consumer sees the same
-// last-section-wins value; membership is Model.PinConnected.
+// netlist-only source with no part data yields none). It carries no direction, so
+// every consumer resolves it through Model.PinDir and sees the same last-section-wins
+// value; membership is Model.PinConnected.
 type PinInst struct {
 	Component  *ir.Component
 	Designator string
@@ -148,8 +138,8 @@ type BoardSeg struct {
 	Width int64
 }
 
-// BoardVia is one via. Annular returns the copper ring width around the drill,
-// (Size - Drill) / 2 — the quantity the annular-width rule bounds.
+// BoardVia is one via. Annular returns the copper ring width around the drill, which is
+// the quantity the annular-width rule bounds.
 type BoardVia struct {
 	At    *geom.Point
 	Size  int64
@@ -159,34 +149,27 @@ type BoardVia struct {
 // Annular is the copper ring width around the drill: (Size - Drill) / 2.
 func (v BoardVia) Annular() int64 { return (v.Size - v.Drill) / 2 }
 
-// Reach is a bounded series-walk neighborhood (WS3-011, the "reach" primitive): the nets
-// reachable from a start net by crossing SERIES PASS ELEMENTS, in BFS order (start
-// first), plus the ref-des set of the elements crossed. Protection and presence rules are
-// reachability questions ("a fuse sits somewhere between the connector and the
-// regulator"), and a series element by definition splits the schematic net, so a per-net
-// rule cannot see across it. Parent records how each net was entered, for path extraction
-// (PathTo / ThroughOnPath); the builder — the Model implementation's walk — populates it.
+// Reach is a bounded series-walk neighborhood (WS3-011), the nets reachable from a start net
+// by crossing SERIES PASS ELEMENTS, in BFS order (start first), plus the ref-des set of the
+// elements crossed. See Model.Reach for why protection rules need it. Parent records how each
+// net was entered, for PathTo / ThroughOnPath, and the Model implementation's walk populates it.
 type Reach struct {
 	Nets    []*ir.Net
 	Crossed map[string]bool
 	Parent  map[string]ReachStep // net name -> how it was entered
-	// Depth is the number of series crossings from the start net, which the BFS knows as it
-	// goes (the start net is 0, so the walk is reflexive at distance zero). Recorded rather
-	// than re-derived by chasing Parent: that is O(path) per net, and where parallel passes
-	// bridge the same two nets the chain is one of several equally-valid paths, so a derived
-	// count can disagree with the count the walk actually used. Exposed because DISTANCE is
-	// part of the question a reachability rule asks (WS3-112), not an implementation detail.
+	// Depth is the number of series crossings from the start net as the BFS recorded it (the
+	// start net is 0, so the walk is reflexive at distance zero). Do not re-derive it by chasing
+	// Parent, because where parallel passes bridge the same two nets the chain is one of several
+	// paths and its length can disagree with the walk's. Reachability rules read it (WS3-112).
 	Depth map[string]int // net name -> series crossings from the start
 }
 
 // ReachStep records how a net was reached during the series walk: the net crossed FROM, the pass
 // element (ref-des) crossed THROUGH, and that element's own pin on each side of the crossing.
 //
-// The pins are what make a step renderable as the thing a reviewer reads, "R5.1 to R5.2", rather
-// than as a component name with the direction left implicit. They come off ir.Connection.pin_ref
-// on each net, so recording them costs the walk a scan of the net it just landed on and needs
-// nothing new in the IR. Either may be empty on a source whose connections carry no pin reference,
-// which a renderer has to expect rather than assume away.
+// The pins let a step render as "R5.1 to R5.2" rather than a bare component name. They come off
+// ir.Connection.pin_ref on each net. Either may be empty on a source whose connections carry no pin
+// reference, and a renderer must handle that.
 type ReachStep struct {
 	From    string
 	Through string
@@ -251,13 +234,9 @@ func (r Reach) ThroughOnPath(target *ir.Net) []string {
 }
 
 // StepsTo returns the crossings from the walk's start to target, in crossing order; nil when the
-// target was not reached or IS the start. It is ThroughOnPath with the whole step kept rather than
-// only the ref-des, which is what a caller reporting the route needs: the pins on each side of a
-// crossing are on the step and were being dropped on the way out.
-//
-// The two coexist because the older callers ask a membership question over the path ("is a fuse on
-// it") and a ref-des list answers that exactly. Widening ThroughOnPath's return would have made
-// every one of them index into a struct to ask the same thing.
+// target was not reached or IS the start. It is ThroughOnPath with the whole step kept, pins
+// included, for a caller reporting the route (agni issue 518). ThroughOnPath stays for the callers
+// asking a membership question over the path ("is a fuse on it").
 func (r Reach) StepsTo(target *ir.Net) []ReachStep {
 	if target == nil {
 		return nil
@@ -278,10 +257,9 @@ func (r Reach) StepsTo(target *ir.Net) []ReachStep {
 	return rev
 }
 
-// routeArrow separates the hops of a rendered route, and the brackets around a part are what keep it
-// readable out of context. Nets and ref-des are not distinguishable by shape on a real board (one
-// sample names its nets N$1 and N$6 and its parts R1 and L1), so without the brackets a reader has
-// to count positions to know which is which. With them, `N$6 -> [L1] -> N$1` needs no counting.
+// routeArrow separates the hops of a rendered route. RenderRoute brackets each part because nets and
+// ref-des are not distinguishable by shape on a real board (one sample names its nets N$1 and N$6 and
+// its parts R1 and L1), so `N$6 -> [L1] -> N$1` reads without counting positions.
 const routeArrow = " -> "
 
 // RouteLine renders the route from the walk's start to target as one line, naming the nets it passed
@@ -290,19 +268,16 @@ const routeArrow = " -> "
 //	VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
 //
 // It is the fourth reading of one walk, beside PathTo (the nets), ThroughOnPath (the parts) and
-// StepsTo (both, with pins). Those three answer questions a caller then has to render; this answers
-// the one where the rendering IS the answer, so a query can bind a route as a value and a table can
-// carry it in a cell (agni issue 518).
+// StepsTo (both, with pins), for when the rendering IS the answer, so a query can bind a route as a
+// value and a table can carry it in a cell (agni issue 518).
 //
-// Three returns, kept apart because two of them are answers and one is not:
+// It returns one of three things:
 //
 //   - a route, when target was reached across one or more crossings
-//   - target's own name, when target IS the start: the two points are one electrical node, which is
-//     the strongest form of connected there is rather than a degenerate case
-//   - "", when target was not reached, so a caller cannot print an empty line and call it a route
+//   - target's own name, when target IS the start, since the two points are one electrical node
+//   - "", when target was not reached
 //
-// The pins on each crossing are deliberately left out. They are on StepsTo for a caller with room to
-// print them, and a column a hundred rows tall is not that caller.
+// Pins are left out to keep a table column narrow; StepsTo has them.
 func (r Reach) RouteLine(target *ir.Net) string {
 	if target == nil {
 		return ""
@@ -310,9 +285,8 @@ func (r Reach) RouteLine(target *ir.Net) string {
 	if _, reached := r.Depth[target.Name]; !reached {
 		return ""
 	}
-	// StepsTo records the net a step came FROM, and the rendering names the net each crossing arrives
-	// AT, so the two are shifted one place against each other. Step i arrives at step i+1's From, and
-	// the last one arrives at the target.
+	// StepsTo records the net a step came FROM and the rendering names the net it arrives AT, so
+	// step i arrives at step i+1's From, and the last one arrives at the target.
 	steps := r.StepsTo(target)
 	if len(steps) == 0 {
 		return target.Name // the target IS the walk's start: one node, no crossings
@@ -335,13 +309,9 @@ type RouteHop struct {
 }
 
 // RenderRoute is the ONE renderer for a series route, and every surface that prints one calls it.
-//
-// It exists because the format was written twice within a week of itself, once here off a walk result
-// and once in the IO-map rules off a check.Trace, and the two agreed only because one person wrote
-// both. DECISIONS.md ("A path is not a query column") names that hazard exactly: rendering a path into
-// a string makes the rendering a format nobody can change, and a second implementation is how that
-// starts. The two shapes carry different types, which is why the duplication looked reasonable at the
-// time; the fix is a renderer that takes neither of them.
+// The rendered string is a format callers depend on (DECISIONS.md, "A path is not a query column"),
+// so a second implementation, such as the IO-map rules rendering off a check.Trace, must call this
+// rather than copy it (#664). It takes plain hops so neither caller's walk type leaks in.
 func RenderRoute(first string, hops []RouteHop) string {
 	parts := make([]string, 0, 2*len(hops)+1)
 	parts = append(parts, first)

@@ -1,5 +1,5 @@
-// Pure doc-IR region helpers for the extraction workbench (WS13-006), split out of regionview.tsx
-// so they are testable without importing pdf.js (which regionview pulls in for rendering).
+// Pure doc-IR region helpers for the extraction workbench (WS13-006), outside regionview.tsx so
+// they are testable without importing pdf.js.
 import type { Document, Page, BBox } from "./gen/agni/v1/doc/doc_pb.js";
 
 // Region is one selectable region: a doc-IR table/figure/text block, or a "user" region the human
@@ -31,20 +31,19 @@ export function regionsForPage(doc: Document | undefined, pageNumber: number): R
   return page ? pageRegions(page) : [];
 }
 
-// RegionType is the user-assigned routing tag that decides which backend and target IR a region
-// feeds (WS13-006 "region typing"). It is distinct from doc-IR `kind`: doc-IR gives table/figure/
-// text and cannot tell a chart from a schematic (both are figures), so the chart/schematic/pinout
-// distinction is the human's, stored in the bank per region id. Only `table` has a transcribe path
-// in this PR; `schematic` -> ir.Design (WS13-002) and `chart` -> curve IR (WS13-003) are taggable
-// but their extraction is deferred, so the coverage view stays honest across modalities.
+// RegionType is the user-assigned tag that decides which backend and target IR a region feeds
+// (WS13-006 "region typing"). Doc-IR `kind` cannot tell a chart from a schematic (both are figures),
+// so that distinction is the human's, stored in the bank per region id. `table` and `pinout` have a
+// transcribe path. `schematic` -> ir.Design (WS13-002) and `chart` -> curve IR (WS13-003) are
+// taggable with no extraction yet, so coverage still counts them.
 export type RegionType = "table" | "schematic" | "chart" | "pinout" | "text" | "other";
 
 // REGION_TYPES is the closed vocabulary the type picker offers, in display order.
 export const REGION_TYPES: RegionType[] = ["table", "schematic", "chart", "pinout", "text", "other"];
 
-// defaultType is the type a region starts as before the human tags it, derived from the doc-IR
-// kind: a table is a table and text is text, but a figure is ambiguous (chart vs schematic vs
-// pinout) and a user-drawn region has no source hint, so both default to "other" until tagged.
+// defaultType is the type a region starts as before the human tags it. A table stays a table and
+// text stays text, while a figure (chart, schematic or pinout) and a user-drawn region default to
+// "other".
 export function defaultType(kind: Region["kind"]): RegionType {
   switch (kind) {
     case "table":
@@ -57,8 +56,8 @@ export function defaultType(kind: Region["kind"]): RegionType {
 }
 
 // pxRectToBBox converts a marquee rectangle in rendered pixels to a page-local doc-IR BBox in
-// points (dividing by the page's render scale), normalizing so width/height are positive whichever
-// way the drag went. The inverse of the point->pixel overlay mapping in regionview.
+// points (dividing by the page's render scale), with positive width/height whichever way the drag
+// went. The inverse of the point->pixel overlay mapping in regionview.
 export function pxRectToBBox(x0: number, y0: number, x1: number, y1: number, scale: number): BBox {
   return {
     x: Math.min(x0, x1) / scale,
@@ -68,8 +67,8 @@ export function pxRectToBBox(x0: number, y0: number, x1: number, y1: number, sca
   } as BBox;
 }
 
-// Coverage is the per-datasheet gap record the toolbar shows: how many regions carry at least one
-// transcribed parameter vs how many are still pending, so silence never reads as coverage.
+// Coverage is the per-datasheet gap record the toolbar shows, counting regions with at least one
+// transcribed parameter against those still pending.
 export interface Coverage {
   total: number;
   done: number;

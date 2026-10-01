@@ -9,10 +9,9 @@ import (
 
 // The i2c-sensor fixture is one design in two files, and they are hand-authored separately. The
 // netlist is what every analysis reads and the schematic is what a finding gets drawn on, and they
-// are joined BY NAME: a highlight for net SDA lands on the wire the .eds calls SDA and nowhere else.
+// are joined BY NAME, so a highlight for net SDA lands on the wire the .eds calls SDA and nowhere else.
 // Nothing in the engine holds the two together, so a ref-des renamed in one and not the other
-// produces a drawing that is silently pointing at the wrong part, which is exactly the failure a
-// reader trusts the picture not to have.
+// produces a drawing that is silently pointing at the wrong part.
 
 func TestTheDrawnSheetCoversEveryPartInTheNetlist(t *testing.T) {
 	d, err := ReadFixture("i2c-sensor.edn")
@@ -143,7 +142,7 @@ func TestNoWireRunsOverAPinOfAnotherNet(t *testing.T) {
 }
 
 // onSegment reports whether p lies on the segment a->b, endpoints included. Integer arithmetic on a
-// 10nm grid, so exact rather than tolerant: a wire drawn to meet a pin meets it exactly, and a near
+// 10nm grid, so exact rather than tolerant. A wire drawn to meet a pin meets it exactly, and a near
 // miss is a drawing bug worth seeing rather than rounding away.
 func onSegment(p [2]int64, ax, ay, bx, by int64) bool {
 	cross := (p[0]-ax)*(by-ay) - (p[1]-ay)*(bx-ax)

@@ -35,7 +35,7 @@ name says the voltage, and a name is a convention somebody followed rather than 
 tree is declared beside the design, in `voltage_domains`, `rail_budgets` and `sequences`, and the
 checks compare the board against the declaration instead of against physics.
 
-Rules that read it. [`intent-rail-current-capacity`](../../rules/intent-rail-current-capacity/) asks
+Five rules read it. [`intent-rail-current-capacity`](../../rules/intent-rail-current-capacity/) asks
 whether the supplying part's rating clears the rail's declared peak, and
 [`intent-rail-current-margin`](../../rules/intent-rail-current-margin/) asks whether it clears it with
 headroom. [`intent-load-switch-trip-below-budget`](../../rules/intent-load-switch-trip-below-budget/)
@@ -46,8 +46,8 @@ order against the enable chain in copper. And
 needs no declaration, because a stage driving a rail above what a part downstream can survive is a
 fact about two datasheets.
 
-**Where the course teaches it:**
-[chapter 8](../../../learn/08-the-power-tree/) is the whole chapter, and
+The course teaches it in [chapter 8](../../../learn/08-the-power-tree/), which is the whole chapter
+about it, and
 [A board is fed by a cascade](../../../learn/08-the-power-tree/#a-board-is-fed-by-a-cascade-ee6)
 reads one off the tutorial board's regulators.
 [Chapter 9](../../../learn/09-sequencing-and-straps/) covers the order the tree comes up in.

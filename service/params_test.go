@@ -11,9 +11,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// TestGetComponentParams: the RPC surfaces only components whose MPN joins to a seeded PartSpec, with
-// that spec; and a service built without a provider (serve without --params) returns no components,
-// never an error.
+// TestGetComponentParams checks that the RPC surfaces only components whose MPN joins to a seeded
+// PartSpec, with that spec, and that a service built without a provider (serve without --params)
+// returns no components, never an error.
 func TestGetComponentParams(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", Mpn: "LM1117"},

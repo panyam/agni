@@ -171,7 +171,8 @@ web-test:
 	cd web && pnpm run typecheck && pnpm test
 
 # Browser tests (agni issue 323): the handful of assertions that need real layout, run against a
-# real Chromium driving a real server. NOT part of testall, deliberately.
+# real Chromium driving a real server. Part of testall since PR 629, so a machine running the gate
+# needs a Chromium (cd web && pnpm exec playwright-core install chromium).
 #
 # jsdom has no layout engine, so the unit suite can prove what a panel renders and nothing about
 # what a reader can see; a CSS bug once shipped through a fully green run.

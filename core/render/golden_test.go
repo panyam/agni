@@ -94,7 +94,7 @@ func TestGoldenSVGAutoLayout(t *testing.T) {
 		t.Fatal(err)
 	}
 	svg := SheetSVG(g, sheet)
-	// Guard the golden's premise before comparing: the layout must be deterministic, or the
+	// Guard the golden's premise before comparing. The layout must be deterministic, or the
 	// golden would flake rather than catch regressions.
 	if g2, _ := graph.LayoutWith(d, "grid"); SheetSVG(g2, mustPick(t, g2)) != svg {
 		t.Fatal("grid layout is not deterministic; a golden cannot guard it")

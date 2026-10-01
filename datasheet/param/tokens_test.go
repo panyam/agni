@@ -8,7 +8,7 @@ import (
 
 // TestEveryEnumMemberHasItsOwnToken walks the proto enum value maps rather than a hand-written list,
 // so a member added to the contract without a case here fails instead of falling silently to
-// "unspecified". Silent is the dangerous direction: a query filtering on the token would match
+// "unspecified". Silent is the dangerous direction, because a query filtering on the token would match
 // nothing and read as "no such rows" rather than as an unrendered enum.
 //
 // Every relation test exercises only the members its fixtures happen to use, which is why this walks

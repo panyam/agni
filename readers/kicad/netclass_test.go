@@ -8,7 +8,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestParseAndAnnotateNetClasses covers WS1-037: net_classes is populated from the .kicad_pro
+// TestParseAndAnnotateNetClasses covers WS1-037. net_classes is populated from the .kicad_pro
 // net_settings (patterns plus explicit assignments), the only place KiCad records net-class
 // membership. Wildcards span '/' (net names embed sheet paths), and a net matching no rule is
 // left untouched.
@@ -45,7 +45,7 @@ func TestParseAndAnnotateNetClasses(t *testing.T) {
 	}
 }
 
-// TestNetClassMultipleMemberships is the WS1-050 acceptance: KiCad stores a net's membership as a
+// TestNetClassMultipleMemberships is the WS1-050 acceptance. KiCad stores a net's membership as a
 // SET (map<netname, set<netclass>>), unioning the explicit assignment with EVERY matching pattern,
 // so all three of the reader's old collapse points must carry every class instead of one.
 func TestNetClassMultipleMemberships(t *testing.T) {
@@ -77,8 +77,8 @@ func TestNetClassMultipleMemberships(t *testing.T) {
 	}
 }
 
-// TestNetClassesSortedAndDeduped pins the ordering contract the IR field documents: sorted for
-// determinism (the assignment map is a Go map, so read order is random), and deduplicated so a net
+// TestNetClassesSortedAndDeduped pins the ordering contract the IR field documents, sorted for
+// determinism (the assignment map is a Go map, so read order is random) and deduplicated so a net
 // named by both an assignment and a pattern of the same class carries that class once.
 func TestNetClassesSortedAndDeduped(t *testing.T) {
 	const pro = `{
@@ -134,7 +134,7 @@ func TestWildcardMatch(t *testing.T) {
 	}
 }
 
-// TestParseNetClassDefs covers WS3-111: the classes[] block carries each class's declared routing
+// TestParseNetClassDefs covers WS3-111. The classes[] block carries each class's declared routing
 // constraints. Absent and zero must stay distinguishable (a class that states no track width lets a
 // lower-priority class fill it), and an unstated priority must cascade LAST rather than first.
 func TestParseNetClassDefs(t *testing.T) {
@@ -165,7 +165,7 @@ func TestParseNetClassDefs(t *testing.T) {
 	for _, d := range defs {
 		byName[d.Name] = d
 	}
-	// HighSpeed declares ONLY a clearance: its other fields must be absent, not 0.
+	// HighSpeed declares ONLY a clearance, so its other fields must be absent, not 0.
 	hs := byName["HighSpeed"]
 	if hs.Clearance == nil || *hs.Clearance != 0.15 {
 		t.Errorf("HighSpeed clearance = %v, want 0.15", hs.Clearance)
@@ -181,8 +181,8 @@ func TestParseNetClassDefs(t *testing.T) {
 	}
 }
 
-// TestAnnotateNetClassDefs: the definitions land on ir.Design as Constraint nodes of kind
-// "netclass" — the first reader to populate that provisional node. Only STATED scalars become
+// TestAnnotateNetClassDefs checks that the definitions land on ir.Design as Constraint nodes of kind
+// "netclass". This is the first reader to populate that provisional node. Only STATED scalars become
 // params, so a consumer can still tell "declares none" from "declares zero".
 func TestAnnotateNetClassDefs(t *testing.T) {
 	d := &ir.Design{}

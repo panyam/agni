@@ -1,13 +1,12 @@
-// Command whole-enchilada is the capstone rung of the Agni examples ladder: it runs the
-// whole engine end to end over bundled synthetic designs, so one walkthrough shows every
-// surface at once. Convergence across formats, structural checks, semantic diff, cross-format
-// emit, and both renderers. The per-feature examples go deeper on each step; this is the tour.
+// Command whole-enchilada is the capstone rung of the Agni examples ladder. It runs the engine
+// end to end over bundled synthetic designs, covering convergence across formats, structural
+// checks, semantic diff, cross-format emit, and both renderers. The per-feature examples go deeper
+// on each step.
 //
-// Each step echoes the equivalent `agni` command before it runs (via echo), so the
-// walkthrough doubles as a copy/paste reference you can paste into a second terminal. Those
-// commands assume agni is on your PATH (`make install`) and are run from the repo root.
+// Each step echoes the equivalent `agni` command before it runs, so you can paste it into a second
+// terminal. Those commands assume agni is on your PATH (`make install`) and run from the repo root.
 //
-// Narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds
+// Narration lives in the sidecar walkthrough.md (demokit FromMarkdown), and this file only binds
 // the steps that run engine code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
@@ -33,8 +32,7 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// echo prints the CLI command(s) a step is equivalent to, so the demo doubles as a
-// copy/paste reference. Paths are repo-root-relative to match `make install` + run-from-root.
+// echo prints the CLI command(s) a step is equivalent to. Paths are relative to the repo root.
 func echo(cmds ...string) {
 	for _, c := range cmds {
 		fmt.Printf("$ %s\n", c)
@@ -47,7 +45,7 @@ func main() {
 		Dir("whole-enchilada").
 		FromMarkdownBytes(walkthroughMD)
 
-	// 1) Convergence: the same board read from three formats yields the same netlist.
+	// 1) Convergence. The same board read from three formats yields the same netlist.
 	demo.Bind("converge").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		echo(
 			"agni stats examples/common/designs/mixer.kicad_pcb",
@@ -82,7 +80,7 @@ func main() {
 		return nil
 	})
 
-	// 3) Semantic diff of two revisions: the full change taxonomy.
+	// 3) Semantic diff of two revisions, showing the full change taxonomy.
 	demo.Bind("diff").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		echo("agni diff examples/common/designs/rev-a.edn examples/common/designs/rev-b.edn")
 		a, err := common.ReadFixture("rev-a.edn")
@@ -97,7 +95,7 @@ func main() {
 		return nil
 	})
 
-	// 4) Emit: cross-format convert through the IR, with an in-line round-trip.
+	// 4) Emit. Convert across formats through the IR, with an in-line round-trip.
 	demo.Bind("emit").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		echo("agni emit examples/common/designs/mixer.edn mixer.ipc2581.xml")
 		d, err := common.ReadFixture("mixer.edn")
@@ -137,7 +135,7 @@ func main() {
 	})
 
 	// 6) Render a netlist-graph view from the IR alone (works for any format), and score
-	// every registered layout by crossings so the choice is a number, not an opinion.
+	// every registered layout by crossings.
 	demo.Bind("graph").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		echo(
 			"agni render --compare examples/common/designs/i2c-sensor",
@@ -156,7 +154,7 @@ func main() {
 			q := graph.Measure(g)
 			fmt.Printf("  %-8s %d nodes, %d nets, %d crossings\n", s.Name, q.Nodes, q.Nets, q.Crossings)
 		}
-		// Render the layered layout (the better of the two on real designs) to SVG.
+		// Render the layered layout to SVG.
 		g, err := graph.LayoutWith(d, "layered")
 		if err != nil {
 			return demokit.Errf("layout layered: %v", err)

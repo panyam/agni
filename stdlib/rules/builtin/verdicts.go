@@ -6,7 +6,7 @@ import (
 )
 
 // Helpers shared by the converted rule bodies (agni issue 391). They exist because a witness has to
-// NAME the part its statement rests on, not merely assert that one exists: a reader told a rail is
+// NAME the part its statement rests on, not merely assert that one exists. A reader told a rail is
 // decoupled still has to know which capacitor said so before they can judge whether the answer is
 // right. `check.Exists` answers the predicate and throws the entity away, so every converted rule
 // that used it needs the entity back.
@@ -25,7 +25,7 @@ func firstOnNet(m check.Model, n *ir.Net, class check.ComponentClass) string {
 }
 
 // firstPassive names the first passive part on a net in connection order, or "" when there is none.
-// Broader than firstOnNet with one class: `check.IsPassiveClass` spans the R/C/L/ferrite/fuse/
+// Broader than firstOnNet with one class, since `check.IsPassiveClass` spans the R/C/L/ferrite/fuse/
 // test-point family that makes a net not-provably-floating.
 func firstPassive(m check.Model, n *ir.Net) string {
 	for _, c := range n.Connections {

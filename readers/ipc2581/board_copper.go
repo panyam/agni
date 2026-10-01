@@ -11,8 +11,8 @@ import (
 )
 
 // arcSegments is the fixed polyline count an arc step is approximated with, matching the
-// KiCad outline-arc precedent (C6: copper/outline arcs are bounded polylines, not a native
-// arc primitive).
+// KiCad outline-arc precedent. C6 bounds copper and outline arcs to polylines rather than a
+// native arc primitive.
 const arcSegments = 16
 
 // Copper XML subset. A LayerFeature groups per-layer feature Sets; each Set names its net and
@@ -53,7 +53,7 @@ type holeEl struct {
 	Y             string `xml:"y,attr"`
 }
 
-// dictLineDesc is a line-descriptor dictionary: trace widths referenced by id from a track's
+// dictLineDesc is a line-descriptor dictionary of trace widths referenced by id from a track's
 // LineDescRef (the width def half of the def/instance split, mirroring the padstack dict).
 type dictLineDesc struct {
 	Entries []entryLineDescEl `xml:"EntryLineDesc"`
@@ -68,8 +68,8 @@ type lineDescEl struct {
 	Width string `xml:"lineWidth,attr"`
 }
 
-// polyStep is one ordered step of a polyline: a destination point, and when it is an arc, the
-// arc center and direction. Interleaved segment/curve order is significant, so the steps are
+// polyStep is one ordered step of a polyline, a destination point plus the arc center and
+// direction when it is an arc. Interleaved segment/curve order is significant, so the steps are
 // decoded in document order (see polyPath.UnmarshalXML) rather than into per-kind slices.
 type polyStep struct {
 	x, y   float64
@@ -78,8 +78,8 @@ type polyStep struct {
 	cw     bool
 }
 
-// polyPath is a track/outline polyline decoded in document order: a start point, ordered
-// steps, and the id of the LineDesc that sets its width.
+// polyPath is a track/outline polyline decoded in document order. It holds a start point,
+// ordered steps, and the id of the LineDesc that sets its width.
 type polyPath struct {
 	x, y    float64
 	steps   []polyStep
@@ -119,8 +119,8 @@ func (p *polyPath) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	}
 }
 
-// copperNets groups routed copper by net into NetCopper: tracks flattened to straight
-// TrackSegments (arcs approximated), plus vias from drilled holes. Sorted by net name for
+// copperNets groups routed copper by net into NetCopper, with tracks flattened to straight
+// TrackSegments (arcs approximated) and vias from drilled holes. Sorted by net name for
 // deterministic output, mirroring the KiCad producer.
 func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape) []*geom.NetCopper {
 	widths := f.lineWidths(nmPerUnit)
@@ -194,7 +194,7 @@ func (f *ipcGeomFile) copperLayers() map[string]bool {
 }
 
 // layerSpans indexes each drill layer's Span (fromLayer,toLayer) so a via records the copper
-// layers it bridges — a through via spans the outer pair, blind/buried vias a narrower one.
+// layers it bridges. A through via spans the outer pair, blind/buried vias a narrower one.
 func (f *ipcGeomFile) layerSpans() map[string][2]string {
 	m := map[string][2]string{}
 	for _, l := range f.Layers {
@@ -205,9 +205,9 @@ func (f *ipcGeomFile) layerSpans() map[string][2]string {
 	return m
 }
 
-// zones emits each Set's copper plane/pour fill (a Set-direct Contour) as a geom.Zone: net, layer,
-// and the authored outline polygon. Cutouts (holes in the fill) are dropped per the C6 zone bound —
-// consumers regenerate the fill or a later tier carries it. Sorted for a deterministic artifact.
+// zones emits each Set's copper plane/pour fill (a Set-direct Contour) as a geom.Zone carrying
+// net, layer, and the authored outline polygon. Cutouts (holes in the fill) are dropped per the
+// C6 zone bound, so consumers regenerate the fill or a later tier carries it. Sorted for a deterministic artifact.
 func (f *ipcGeomFile) zones(nmPerUnit float64) []*geom.Zone {
 	copper := f.copperLayers()
 	var out []*geom.Zone

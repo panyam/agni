@@ -6,7 +6,7 @@ import solid from "vite-plugin-solid";
 //
 // The solid plugin compiles .tsx islands with Solid's JSX transform (vitest's default esbuild
 // transform would produce React-style calls that break reactivity). solid-js and the island
-// wrapper are inlined so the tests and the components share ONE reactive core — externalizing
+// wrapper are inlined so the tests and the components share ONE reactive core. Externalizing
 // them recreates the two-cores setState-no-op bug inside the test runner itself (see the
 // solidAlias note in build.mjs).
 export default defineConfig({

@@ -7,12 +7,12 @@ import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
 // Fakes for the presenter's collaborators. The presenter only calls typed methods, so plain
-// stubs suffice — no DOM, no transport. getSheet returns the oneof-shaped response the real
+// stubs suffice, with no DOM and no transport. getSheet returns the oneof-shaped response the real
 // client would, keyed on the requested format.
 function harness() {
   // getDesign echoes the requested layout (empty -> faithful) so the presenter's adopted
   // layout reflects the request, as the real server's effective-layout does.
-  // undrawn is OPTIONAL here exactly as it is on the wire: a response that omits it means a complete
+  // undrawn is OPTIONAL here as it is on the wire, so a response that omits it means a complete
   // drawing, and every existing override in this file predates the field (agni issue 354).
   type DesignReply = {
     name: string;
@@ -24,7 +24,7 @@ function harness() {
     nativeAvailable: boolean;
     availableLayouts: string[];
     undrawn?: { refDes: string; cellRef: string; libraryRef: string; sheetId: string }[];
-    // Optional for the same reason undrawn is, and its absence is MEANINGFUL: a server that did not
+    // Optional for the same reason undrawn is, and its absence is MEANINGFUL. A server that did not
     // hash sends nothing, which is the unverifiable case rather than agreement (agni issue 392).
     contentHash?: string;
   };
@@ -63,7 +63,7 @@ function harness() {
     expectations: [] as { rule: string; subjects: string[]; pending: boolean }[],
     hasSidecar: false,
   }));
-  // Two mock clients mirror the WS9-026 service split: rendering RPCs on the design client,
+  // Two mock clients mirror the WS9-026 service split, with rendering RPCs on the design client,
   // rules/findings/expectations on the checks client.
   const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
   const checks = { checkDesign, listRules, getExpectations } as any;
@@ -115,7 +115,7 @@ function harness() {
   return { presenter, onUndrawnNote, onStaleLinkNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
-// openAndCheck opens a file and then runs the on-demand checks — the two-step the app does when the
+// openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
 // user opens a design and presses Run. Checks no longer fire on open (WS9), so a test asserting on
 // findings/highlights/expectations must run them explicitly.
 async function openAndCheck(h: ReturnType<typeof harness>, mount: string, path: string, wantSheet = "") {
@@ -148,7 +148,7 @@ function lastFindings(h: ReturnType<typeof harness>) {
 }
 
 // lastSpecs returns the HighlightSpec[] from the most recent canvas.setHighlights call, which is the
-// presenter's real output for a highlight: both renderers are driven from it.
+// presenter's real output for a highlight, and both renderers are driven from it.
 function lastSpecs(h: ReturnType<typeof harness>) {
   const calls = h.canvas.setHighlights.mock.calls;
   return calls[calls.length - 1][0];
@@ -401,7 +401,7 @@ describe("ViewerPresenter", () => {
   });
 
   // Following a link is a question about ONE verdict, and answering it used to cost the whole
-  // catalog: a cold page load has an empty cache, so restore ran every selected rule (which defaults
+  // catalog. A cold page load has an empty cache, so restore ran every selected rule (which defaults
   // to every available rule) before it could resolve anything. On a real board that was 56 rules and
   // about fifteen seconds, paid again on every click, because each click is a fresh page load.
   describe("a verdict link runs only the rule it names", () => {
@@ -426,7 +426,7 @@ describe("ViewerPresenter", () => {
     });
 
     // A rule this catalog does not have cannot be run, and scoping to it would resolve nothing and
-    // report a working link as stale. The full run is the honest fallback.
+    // report a working link as stale. The full run is the fallback.
     it("falls back when the named rule is not in the catalog", async () => {
       const h = harness();
       await h.presenter.restore(linkLoc("a-rule-from-a-later-release"));
@@ -443,7 +443,7 @@ describe("ViewerPresenter", () => {
     });
   });
 
-  // The CLI-to-viewer hop's honesty guard (agni issue 392). `agni check --url-base` mints a link
+  // The CLI-to-viewer hop's revision guard (agni issue 392). `agni check --url-base` mints a link
   // carrying the revision it ran against; a verdict id is derived from a rule name and a subject ref,
   // so it resolves against an EDITED design just as readily and draws its proof on whatever now
   // answers to that ref. Nothing else on screen can tell the reader that happened.
@@ -549,9 +549,9 @@ describe("ViewerPresenter", () => {
     expect(last.ruleCount).toBe(2);
   });
 
-  // The query panel marks the badge pointing at the sheet on screen. That mark is only honest if the
+  // The query panel marks the badge pointing at the sheet on screen. That mark is only right if the
   // presenter reports EVERY navigation, not just the ones a result cell started, so this pins the
-  // wire rather than the mark: navigating by any other route has to move it too.
+  // wire rather than the mark. Navigating by any other route has to move it too.
   it("tells the query panel which sheet is on screen, on every navigation", async () => {
     const h = harness();
     h.getDesign.mockResolvedValue({
@@ -576,7 +576,7 @@ describe("ViewerPresenter", () => {
 
   // The entity view is a PROJECTION of the pass, so the query panel has to receive the same state
   // the checks panel does, from the same push. A separate call would be a second source of truth
-  // and would drift on exactly the fields that make a zero readable.
+  // and would drift on the fields that make a zero readable.
   it("hands the query panel the same findings state the checks panel gets", async () => {
     const h = harness();
     h.checkDesign.mockResolvedValue({
@@ -780,10 +780,11 @@ describe("ViewerPresenter", () => {
     await openAndCheck(h, "m", "board.edn");
 
     expect(h.getExpectations).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn") });
-    // Caption (the non-anchored verdict): single-pin-net matched exactly; the pending row is excluded.
+    // The caption (the non-anchored verdict) shows single-pin-net matched exactly; the pending row
+    // is excluded.
     const capCalls = h.onExpectCaption.mock.calls;
     expect(capCalls[capCalls.length - 1][0]).toMatchObject({ pass: true, expected: 1, matched: 1, unexpected: 0, silent: false });
-    // Overlay (the anchored assertion): matched subject STUB highlighted green.
+    // The overlay (the anchored assertion) highlights matched subject STUB green.
     type Spec = { color?: string; nets?: string[] };
     const specs = h.canvas.setHighlights.mock.calls.flatMap((c: Spec[][]) => c[0]) as Spec[];
     expect(specs.find((s) => s?.color === "#22c55e")?.nets).toEqual(["STUB"]);
@@ -909,8 +910,8 @@ describe("ViewerPresenter", () => {
 
     await h.presenter.selectFinding("STUB");
     expect(lastControls(h).mode).toBe("svg"); // no mode hop: the overlay draws in place
-    // Exact by kind: STUB is a net, so the focus spec lists it only under nets (not components).
-    // Focus stacks (WS9-017): the OTHER finding (TXP) keeps its outline, the focused net STUB
+    // Exact by kind. STUB is a net, so the focus spec lists it only under nets (not components).
+    // Focus stacks (WS9-017). The OTHER finding (TXP) keeps its outline, the focused net STUB
     // drops out of the base and paints as a translucent PATH highlighter on top (WS9-040), so
     // its marker is not muddied by an opaque underlay.
     // The base is stamped as context so the focus reads as figure (agni issue 348); the focus layer
@@ -940,7 +941,7 @@ describe("ViewerPresenter", () => {
     await openAndCheck(h, "m", "board.edn");
     h.canvas.setHighlights.mockClear();
     await h.presenter.selectFinding("C1");
-    // A focused COMPONENT stays in the base (only a focused net is dropped), so C1 appears twice: once
+    // A focused COMPONENT stays in the base (only a focused net is dropped), so C1 appears twice, once
     // as muted context and once as the focus rect on top.
     expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([
       { components: ["C1"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
@@ -1005,7 +1006,7 @@ describe("on-demand checks (WS9)", () => {
   it("toggling a rule fetches nothing; a not-yet-run rule shows pending until the next run", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn");
-    await h.presenter.setRuleSelection(["single-pin-net"]); // toggle only — no fetch
+    await h.presenter.setRuleSelection(["single-pin-net"]); // toggle only, so no fetch
     expect(h.checkDesign).not.toHaveBeenCalled();
     await h.presenter.runChecks(); // runs only the selected rule
     expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net"] });
@@ -1022,7 +1023,7 @@ describe("sheet overview push (WS9-025)", () => {
     await h.presenter.openFile("m", "d.edn");
     const calls = h.onOverview.mock.calls;
     const afterOpen = calls[calls.length - 1][0];
-    // Single-sheet design: the one tile carries the total findings count (none by default).
+    // In a single-sheet design the one tile carries the total findings count (none by default).
     expect(afterOpen.tiles).toEqual([{ id: "s1", name: "S1", count: 0, unresolved: 0 }]);
     expect(afterOpen.activeId).toBe("s1");
     expect(afterOpen.ruleCount).toBe(2); // the default catalog selects both rules
@@ -1069,9 +1070,9 @@ describe("board layer visibility (WS7-034)", () => {
 
 // Clearing the highlight field, which the viewer simply could not do (agni issue 348).
 //
-// setHighlights([]) was reachable from exactly one place in the whole client, on opening a DIFFERENT
+// setHighlights([]) was reachable from one place in the client, on opening a DIFFERENT
 // design, so once checks had run the field stayed on until the reader navigated away. Toggling the
-// focused row off is not a way to clear: it deliberately restores the base layer, which is correct
+// focused row off is not a way to clear, because it restores the base layer, which is correct
 // for a toggle and is why the gap went unnoticed.
 describe("clearHighlights (agni issue 348)", () => {
   // Two component findings, so the field has something in it and a focus has a base to sit on.
@@ -1109,7 +1110,7 @@ describe("clearHighlights (agni issue 348)", () => {
 
   it("leaves the toggle-off path alone: re-clicking a focused finding still restores the field", async () => {
     // The regression guard for the fix. Clearing and toggling are different intents and must stay
-    // different: a toggle returns the reader to the overview, and only the clear turns it off.
+    // different. A toggle returns the reader to the overview, and only the clear turns it off.
     const h = seeded();
     await openAndCheck(h, "m", "d.edn");
     await h.presenter.selectFinding("R1");
@@ -1147,7 +1148,7 @@ describe("the incomplete-drawing notice", () => {
 });
 
 // The verdict cache holds a per-rule considered set, and what INVALIDATES it is the interesting
-// half. A verdict is keyed by rule name and a convention change is exactly when rule names change,
+// half. A verdict is keyed by rule name and a convention change is when rule names change,
 // so a surviving verdict can name a rule that no longer exists and answer for a subject nothing
 // re-examined. Reporting "this was checked" under a vocabulary nobody ran is the false coverage
 // claim verdicts exist to remove, which is why this is asserted rather than left to the mirror

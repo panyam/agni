@@ -11,46 +11,33 @@ import (
 )
 
 // ProjectResolver is the two ports a rule-running surface needs to answer "whose config applies to
-// this design": the store that maps an artifact to its project, and the loader that turns that
+// this design", the store that maps an artifact to its project and the loader that turns that
 // project's config into engine inputs.
 //
-// They travel together because neither is useful alone, and because every surface that runs rules
-// needs both or none. Bundling them makes that a single constructor parameter rather than two, which
-// matters more than it looks: --conventions once reached `agni check` and not `agni review` because
-// each knob was wired per surface, and a surface that forgets one of a pair is exactly that bug
-// again (WS3-102, WS3-109).
+// Every surface that runs rules needs both or neither, so they are one constructor parameter. Wired
+// per surface, --conventions once reached `agni check` and not `agni review` (WS3-102, WS3-109).
 //
-// A nil resolver means this deployment resolves no projects. Every design then falls back to the
-// caller's default, which is how a server started with no descriptors behaves — and how the CLI
-// behaved before projects existed at all.
+// A nil resolver means this deployment resolves no projects, and every design falls back to the
+// caller's default, as on a server started with no descriptors.
 type ProjectResolver struct {
 	Store  ProjectStore
 	Config ConfigResolver
 }
 
-// Overlay composes the config for one design: its project's where it has one, the fallback where it
+// Overlay composes the config for one design, its project's where it has one and the fallback where it
 // does not, and the request's own on top of either.
 //
-// Finding NO descriptor is not an error: a loose file genuinely belongs to no project, and it runs
-// against the fallback. A descriptor that EXISTS and does not parse is a different thing, and it is
-// returned.
-//
-// The distinction is the whole point, and it used to be flattened. "A malformed descriptor somewhere
-// on a mount should not make an unrelated design unreadable" is sound, but it was implemented by
-// discarding every resolution error, which also swallowed the descriptor governing THIS design. A
-// run then composed against the built-in vocabulary and reported findings that looked authoritative:
-// on one folder that was 40 findings the project's own lexicon would not have raised and 95 it would
-// have. ResolveDesign already tells the two apart — absent is (nil, nil, nil), malformed is an error
-// — so honoring that costs nothing and keeps the unrelated-neighbour case tolerant.
-//
-// This matches how the rest of the config tiers already fail: a malformed overlay profile or
-// conventions file fails the run with a teaching error rather than being silently skipped.
+// Finding NO descriptor is not an error, since a loose file belongs to no project and runs against
+// the fallback, and neither is an unknown mount. A descriptor that EXISTS and does not parse is
+// returned as an error, as ResolveDesign reports it. Swallowing it ran the design against the
+// built-in vocabulary, which on one folder gave 40 findings the project's lexicon would not have
+// raised and missed 95 it would have (#307). A malformed descriptor for an UNRELATED design still
+// does not surface here. See docsite/content/architecture/projects-and-designs.md#resolution-is-an-interface-not-a-path-convention.
 func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
 	var p *webapi.Project
 	var d *webapi.Design
-	// A caller asking for the built-in catalog is asking to be treated as though this design belonged
-	// to no project, so the resolution simply does not happen. Filtering the config out afterwards
-	// would be a second implementation of "no project" that could drift from the real one.
+	// A caller asking for the built-in catalog is treated as though the design belonged to no
+	// project, so resolution is skipped rather than its result filtered out afterwards.
 	if req.GetIgnoreProject() {
 		return OverlayFor(ctx, nil, nil, nil, nil, req, fallback, baseConvention)
 	}
@@ -79,11 +66,9 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 // RunProvenance is which config tiers a run actually had attached, the value a results document's
 // RunConfig records.
 //
-// It exists because that question has two sources and either alone gives a wrong answer. A deployment
-// composes its startup flags into the service's own catalog and specs; a project composes its own onto
-// the request. A document built from only the first reports `params: false` for a run scored against a
-// project's seeded corpus, which is the reassuring direction to be wrong in and exactly the failure the
-// field was added to prevent.
+// The answer has two sources. A deployment composes its startup flags into the service's own catalog
+// and specs, and a project composes its own onto the request. A document built from only the first
+// reports `params: false` for a run scored against a project's seeded corpus.
 type RunProvenance struct {
 	Params      bool
 	Profiles    bool
@@ -91,15 +76,13 @@ type RunProvenance struct {
 	Conventions string
 }
 
-// Provenance reports what a run under this overlay actually had attached: this overlay's own tiers
-// unioned with the deployment defaults the caller composed into its catalog and specs.
+// Provenance reports what a run under this overlay actually had attached, meaning this overlay's own
+// tiers unioned with the deployment defaults the caller composed into its catalog and specs.
 //
-// Union rather than override, because the two genuinely stack for every tier except the convention. A
-// server started with --profile-path serving a project that also declares profiles ran BOTH, and a
-// document claiming only one of them would misdescribe the catalog its own snapshot records. The
-// convention is the exception and is already resolved by the time it gets here: a request-supplied one
-// replaces whatever was in place (WS3-124), so conventionName is the single answer and the deployment's
-// name is only the fallback when nothing replaced it.
+// Union rather than override, because the two stack for every tier except the convention. A server
+// started with --profile-path serving a project that also declares profiles runs BOTH. The convention
+// is already resolved here, since a request-supplied one replaces whatever was in place (WS3-124), so
+// conventionName wins and the deployment's name is only the fallback.
 func (o Overlay) Provenance(deployment RunProvenance) RunProvenance {
 	p := RunProvenance{
 		Params:      o.Specs != nil || deployment.Params,
@@ -125,13 +108,12 @@ func RunConfigProto(p RunProvenance, ratifiedFloor float64) *checkspb.RunConfig 
 	}
 }
 
-// SpecsOr returns the datasheet corpus this run should use: the project's when it supplied one, the
+// SpecsOr returns the datasheet corpus this run should use, the project's when it supplied one and the
 // deployment's otherwise.
 //
-// The project WINS rather than merging, and that is the same rule the rest of this config follows. A
-// merged corpus would let one team's transcribed limits decide another team's pass/fail, which is
-// the class of cross-design leak this whole change exists to close — and a silent one, because a
-// parameter that came from the wrong seed still produces a confident number.
+// The project WINS rather than merging, as the rest of this config does. A merged corpus would let
+// one team's transcribed limits decide another team's pass/fail, and a parameter from the wrong
+// corpus still produces a confident number.
 func (o Overlay) SpecsOr(fallback param.ParamProvider) param.ParamProvider {
 	if o.Specs != nil {
 		return o.Specs
@@ -142,22 +124,18 @@ func (o Overlay) SpecsOr(fallback param.ParamProvider) param.ParamProvider {
 // Sources resolves an artifact ref to the artifact each tier should read, applying the enclosing
 // design's declaration when there is one.
 //
-// This is the served counterpart of what `cmd/agni` does around `ResolveSources`, and it exists
-// because nothing on this side called it: every geometry decision keyed off the URI as handed in, so
-// a netlist entry yielded no faithful geometry and the design fell back to an auto-layout while the
-// CLI drew the real sheets from the declared companion (agni issue 656, constraint C32).
+// This is the served counterpart of what `cmd/agni` does around `ResolveSources`. Without it a
+// netlist entry drew an auto-layout on the server while the CLI drew the declared companion's real
+// sheets (agni issue 656, C32).
 //
 // A nil resolver, a resolver with no store, and a ref belonging to no declared design all yield the
-// ref in every tier. That is the ordinary case for a mounted folder, not an error, which is why the
-// store's own miss is (nil, nil, nil).
+// ref in every tier. That is the ordinary case for a mounted folder, not an error.
 //
-// isDir is derived rather than stat'ed, because a design's URI IS its directory (`fsstore` sets it
-// from the descriptor's folder), so a ref equal to it names the design and nothing else can. The
-// service reads no filesystem of its own (C13), and this is what lets it decide without one.
+// isDir is derived rather than stat'ed (C13), because a design's URI IS its directory (`fsstore`
+// sets it from the descriptor's folder), so only a ref equal to it names the design.
 //
-// asNamed comes off the request. It has to be expressible, because the CLI is itself a client of
-// these services and carries the same flag: resolving here unconditionally would silently override
-// a caller that asked for the file it named.
+// asNamed comes off the request, because the CLI is a client of these services and its --as-named
+// asks for the file it named.
 func (r *ProjectResolver) Sources(ctx context.Context, uri artifact.URI, asNamed bool) (Resolution, error) {
 	ref := uri.String()
 	plain := Resolution{DesignSources: DesignSources{NetlistURI: ref, BoardURI: ref, GeometryURI: ref}}
@@ -173,14 +151,12 @@ func (r *ProjectResolver) Sources(ctx context.Context, uri artifact.URI, asNamed
 
 // TierURIs is Sources with the refs parsed back into artifact URIs, which is what every read takes.
 //
-// It is the one call a service makes to learn which artifact each of its tiers should open. Doing it
-// per service rather than inside the loader keeps the loader a reader of what it is handed, which is
-// what lets a caller deliberately read a companion as a netlist by naming it.
+// It is the one call a service makes to learn which artifact each tier should open. Resolving here
+// rather than in the loader keeps the loader a reader of what it is handed, so a caller can read a
+// companion as a netlist by naming it.
 //
-// boardOverride is the request's own board_uri, and it WINS over the design's declaration, matching
-// `--board-path` on the CLI: a caller who named a board is answering the question the descriptor
-// would otherwise answer. A zero override leaves the declared board in place, which is the case that
-// was broken, since the request field is empty on nearly every call.
+// boardOverride is the request's own board_uri and it WINS over the design's declaration, matching
+// `--board-path` on the CLI. A zero override, which is nearly every call, leaves the declared board.
 func (r *ProjectResolver) TierURIs(ctx context.Context, u artifact.URI, boardOverride artifact.URI, asNamed bool) (netlist, board, geometry artifact.URI, err error) {
 	src, err := r.Sources(ctx, u, asNamed)
 	if err != nil {
@@ -194,9 +170,8 @@ func (r *ProjectResolver) TierURIs(ctx context.Context, u artifact.URI, boardOve
 	}
 	board = boardOverride
 	if board.IsZero() && src.BoardURI != src.NetlistURI {
-		// Only when the design declared a SEPARATE board. Leaving it zero otherwise preserves
-		// BuildModel's own rule, which reads the netlist artifact for copper when it carries any and
-		// treats a non-board override as a loud error.
+		// Only when the design declared a SEPARATE board. Otherwise stay zero so BuildModel reads
+		// the netlist artifact for copper when it carries any and errors on a non-board override.
 		if board, err = artifactURI(src.BoardURI); err != nil {
 			return u, boardOverride, u, err
 		}

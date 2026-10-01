@@ -11,8 +11,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// ldoSpec hand-builds a seeded spec for the fake part: abs-max VDD with a structured
-// TA condition (machine-comparable by docs/20 rules).
+// ldoSpec hand-builds a seeded spec for the fake part, abs-max VDD with a structured TA
+// condition (machine-comparable by docsite/content/architecture/datasheet-layer.md rules).
 func ldoSpec(mpn string, absMax float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	return &parampb.PartSpec{
@@ -38,7 +38,7 @@ func ldoSpec(mpn string, absMax float64) *parampb.PartSpec {
 	}
 }
 
-// supplyDesign builds a one-part design: U1 (part LDO, pin 1 = VDD power_in) with its
+// supplyDesign builds a one-part design, U1 (part LDO, pin 1 = VDD power_in) with its
 // VDD pin on the given net, joined to a spec via the given identity channel. It is the
 // builtin-package copy of the fixture (the check package keeps its own for the Available gate).
 func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
@@ -152,7 +152,7 @@ func TestSupplySkipsNotFalsePasses(t *testing.T) {
 // part the design genuinely over-volts.
 //
 // Asserted against the volt-spelled run rather than against a hardcoded count, so the test says the
-// thing that matters: the two spellings of one datasheet row must produce the same verdict.
+// two spellings of one datasheet row must produce the same verdict.
 func TestSupplyReadsMillivoltRows(t *testing.T) {
 	d := supplyDesign("+5V", false, "ACME-33")
 	volts := runSupplyRule(t, d, param.ParamSet{"ACME-33": ldoSpec("ACME-33", 4.6)})
@@ -183,9 +183,9 @@ func TestSupplyDedupsPerNet(t *testing.T) {
 }
 
 // TestParamProviderMockBackend proves the datasheet source is pluggable behind the
-// ParamProvider seam: the model reaches specs through Lookup only, so an in-memory
+// ParamProvider interface. The model reaches specs through Lookup only, so an in-memory
 // ProviderFunc mock (no textproto directory) drives a datasheet rule exactly as a ParamSet
-// does. This is the seam a shared datasheet service later slots into.
+// does. A shared datasheet service later slots in here.
 func TestParamProviderMockBackend(t *testing.T) {
 	spec := ldoSpec("ACME-33", 4.6)
 	var lookups int
@@ -209,8 +209,8 @@ func TestParamProviderMockBackend(t *testing.T) {
 	}
 }
 
-// TestSupplyInputPinViaIngestionStamp pins the format-neutral supply-pin detection (WS3-072 PR2): a
-// source that does not classify pin electrical type — EDIF marks a VDD pin plain INPUT — is recovered
+// TestSupplyInputPinViaIngestionStamp pins the format-neutral supply-pin detection (WS3-072 PR2). A
+// source that does not classify pin electrical type (EDIF marks a VDD pin plain INPUT) is recovered
 // by the ingestion stamp (classify.StampPowerInPins), which promotes an under-typed supply-named input
 // pin to POWER_IN. So the datasheet rail rules are not silently KiCad-only, but now via a plain
 // PinDir == POWER_IN check (the WS3-036 name-role fallback is gone). The stamp is gated away from
@@ -218,7 +218,7 @@ func TestParamProviderMockBackend(t *testing.T) {
 func TestSupplyInputPinViaIngestionStamp(t *testing.T) {
 	set := param.ParamSet{"ACME-33": ldoSpec("ACME-33", 4.6)}
 
-	// EDIF-style: the VDD pin is typed INPUT (EDIF has no POWER_IN); the ingestion stamp promotes it
+	// EDIF-style, the VDD pin is typed INPUT (EDIF has no POWER_IN); the ingestion stamp promotes it
 	// to POWER_IN, so a +5V rail over the 4.6V abs-max fires.
 	edif := supplyDesign("+5V", false, "ACME-33")
 	edif.Libraries[0].Parts[0].Pins[0].Direction = ir.PinDirection_PIN_DIRECTION_INPUT

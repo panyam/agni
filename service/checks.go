@@ -15,42 +15,36 @@ import (
 	"github.com/panyam/agni/internal/expect"
 )
 
-// CheckService runs the rule checks over a design's netlist IR and serves the rule catalog,
-// over the same injected Loader the design service uses (CONSTRAINTS C13). Extracted from
-// DesignService (WS9-026): checks are their own concern, run on demand and independent of
-// rendering. It knows no transport.
+// CheckService runs the rule checks over a design's netlist IR and serves the rule catalog, over
+// the same injected Loader the design service uses (C13). It was split out of DesignService
+// (WS9-026) and knows no transport.
 type CheckService struct {
-	// projects resolves a design to its project and loads that project's config; nil when this
-	// deployment declares none. fallback is the deployment default used for a design with no project.
+	// projects resolves a design to its project's config, nil when the deployment declares none.
+	// fallback is the default for a design with no project. See ProjectResolver.Overlay.
 	projects *ProjectResolver
 	fallback Overlay
 	loader   Loader
-	// catalog is the composed rule set the service lists and runs (WS3-006). It is injected
-	// rather than read from package state so an embedder composes its own sources (a customer
-	// suite, later the DSL compiler's output) alongside the built-ins:
-	// check.NewCatalog(check.Builtins, check.NewSource("tesla", suite)). The catalog owns the
-	// namespace/collision policy, so a wired service can never carry two rules with one name.
+	// catalog is the composed rule set the service lists and runs (WS3-006). It is injected so an
+	// embedder can compose its own sources beside the built-ins, e.g.
+	// check.NewCatalog(check.Builtins, check.NewSource("acme", suite)). The catalog rejects two
+	// rules with one name.
 	catalog *check.Catalog
-	// specs is the datasheet knowledge base the params join reads (WS10-003), nil when the serve
-	// process was started without --params. GetComponentParams builds the model with it; a nil
-	// provider yields no joined specs (PartSpec guards nil), so the panel simply shows nothing.
+	// specs is the datasheet provider the params join reads (WS10-003), nil when serve ran without
+	// --params, in which case GetComponentParams returns an empty list.
 	specs param.ParamProvider
-	// baseConvention is the catalog source name of the deployment's --conventions default, "" when
-	// there is none. A request carrying its own convention REPLACES it (WS3-124), and this is how the
-	// service says which of its catalog's sources is the one to replace.
+	// baseConvention names the catalog source of the deployment's --conventions default, "" when
+	// there is none. A request convention replaces that source (WS3-124). See ComposeOverlay.
 	baseConvention string
-	// conventions resolves a stored convention config into a value, backing GetNamingConvention. It is
-	// a narrow port defined at the point of use rather than a method on the fat Loader, the same shape
-	// ReviewLoader takes: only this one rpc reads a convention, and a host that cannot (or should not)
-	// resolve one passes nil rather than stubbing a method it has no answer for.
+	// conventions backs GetNamingConvention alone, so it is a narrow port rather than a Loader
+	// method, like ReviewLoader. A host that cannot resolve a stored convention passes nil.
 	conventions ConventionLoader
 }
 
 // ConventionLoader reads a stored naming-convention config, mount-scoped by the impl.
 //
-// It is deliberately NOT on the path that RUNS checks. A convention reaches a check run as a value on
-// the request (C22), so CheckDesign needs no filesystem; this backs the separate resolver rpc that a
-// client with a ref and no filesystem calls first.
+// It is NOT on the path that RUNS checks. A convention reaches a check run as a value on the
+// request (C22), so CheckDesign needs no filesystem. This backs the resolver rpc a client with a
+// ref and no filesystem calls first.
 type ConventionLoader interface {
 	Convention(ctx context.Context, uri artifact.URI) (*configpb.NamingConvention, error)
 }
@@ -83,9 +77,8 @@ func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetN
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	// Compile both halves now. naming.Load already parses, but a config whose patterns will not compile
-	// or whose lexicon names an unknown component class only fails when it is USED, which would be on
-	// every future request rather than on the one that chose it.
+	// Compile both halves now. naming.Load only parses, and a bad pattern or an unknown component
+	// class would otherwise fail on every later request that sends this config.
 	if _, err := naming.BuildLexicon(cfg); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
@@ -97,23 +90,17 @@ func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetN
 	return &webapi.GetNamingConventionResponse{Convention: cfg}, nil
 }
 
-// ListRules returns the catalog the service runs, mapping each rule to its wire form: identity,
-// the full prose (summary, impact, detail markdown), the facts it reads, its classification tags,
-// and whether it can run now (from check.Available). The request's mount/path are advisory today
-// since availability derives from each rule's Reads (design-independent); the design is not
-// loaded, so ListRules works before a file is chosen and never fails on a bad path.
+// ListRules returns the catalog a run under the same uri and overlay would use, each rule in its
+// wire form with its availability from check.Available. The uri is optional, and when given it
+// picks the project whose catalog is listed. The design itself is never loaded, so ListRules works
+// before a file is chosen.
 func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
-	// The uri is optional here (an empty one lists the whole catalog before a file is chosen), but
-	// when it is given it decides WHOSE catalog is listed: a design in a project sees that project's
-	// rules. Listing a different catalog from the one a run would use is the same invisible failure
-	// as running the wrong one, just one step earlier.
 	u, err := optionalArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
-	// The listed catalog is the one a run under the SAME overlay would use. A request convention
-	// replaces the server's (WS3-124), so listing the service's own catalog would advertise rules that
-	// will not run and hide the ones that will.
+	// A request convention replaces the server's (WS3-124), so listing the service's own catalog
+	// would show rules that will not run and hide the ones that will.
 	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
@@ -141,19 +128,16 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 	return resp, nil
 }
 
-// CheckDesign runs the rule checks (the check/ library) over a loaded design's netlist IR. A
-// geometry-only file with no netlist classifies as an invalid argument. request.rules selects the
-// subset to run (empty = the whole catalog). Each finding's subject (kind + ref) is the join key
-// the viewer uses to highlight the offending element, and its sheets locate that subject in the
-// design's default-layout geometry (WS9-024); a design with no resolvable geometry degrades to
-// findings without sheets rather than an error.
+// CheckDesign runs the rule checks over a loaded design's netlist IR. A geometry-only file with no
+// netlist is an invalid argument. request.rules selects the subset to run, empty meaning the whole
+// catalog. Each finding's sheets locate its subject in the design's geometry (WS9-024), and a
+// design with no resolvable geometry gets findings without sheets rather than an error.
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
-	// Per-request overlay config (WS3-102) resolves the same way it does for a review, through the one
-	// ComposeOverlay, so the two surfaces cannot read a convention file differently.
+	// Per-request overlay config (WS3-102) resolves through the same ComposeOverlay a review uses.
 	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
@@ -177,16 +161,12 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		return nil, err
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
-	// Partition before running. check.Available is the same gate review.Run consults per item, and it
-	// is asked HERE with the model — where ListRules asks it with a nil one, because that question is
-	// "can this rule ever run" rather than "did it run on this design". The two are different answers
-	// and the panel needs the second: a rule that is available in principle and gated in practice is
-	// exactly the case a findings list cannot express.
+	// check.Available is asked HERE with the model, where ListRules asks it with nil. ListRules wants
+	// "can this rule ever run" and the panel wants "did it run on this design", so a rule gated on
+	// this design is reported in `skipped` rather than vanishing from the findings.
 	runnable, skipped := partitionAvailable(rules, m)
-	// Verdicts come from the SAME runnable set as the findings, so the considered set describes the
-	// run that actually happened rather than the catalog that might have. A rule gated to
-	// not-applicable is reported by `skipped` and contributes no verdicts, which is the honest
-	// answer: it did not consider anything, because it did not run.
+	// Verdicts come from the SAME runnable set as the findings. A skipped rule contributes no
+	// verdicts, since it considered nothing.
 	resp := &webapi.CheckDesignResponse{
 		Findings: FindingProtos(check.Run(m, runnable)),
 		Verdicts: VerdictProtos(check.RunVerdicts(m, runnable)),
@@ -196,10 +176,10 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	return resp, nil
 }
 
-// GetExpectations returns a design's expected findings from its sidecar (WS6-006). A missing sidecar
-// yields an empty list, not an error, so the viewer's panel is empty rather than broken; only an
-// invalid mount/path or a malformed sidecar is an error. The `fires` entries come first, then the
-// `pending` ones, each flattened to a RuleExpectation the client reconciles against CheckDesign.
+// GetExpectations returns a design's expected findings from its sidecar (WS6-006). A missing
+// sidecar yields an empty list, and only an invalid uri or a malformed sidecar is an error. The
+// `fires` entries come first, then the `pending` ones, which the client reconciles against
+// CheckDesign.
 func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpectationsRequest) (*webapi.GetExpectationsResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -216,12 +196,9 @@ func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpec
 	return resp, nil
 }
 
-// GetComponentParams surfaces the datasheet join read-only (WS9-035): every component whose MPN
-// resolves to a seeded PartSpec, with that spec's parameters for the panel tree. It is the only
-// CheckService method that needs the datasheet provider, so it builds the model WITH it
-// (NewModelWithParams); a nil provider (serve started without --params) or an unseeded design yields
-// an empty list — never an error — so the panel degrades gracefully. Board geometry is irrelevant to
-// the join, so nil is passed.
+// GetComponentParams returns the datasheet join read-only (WS9-035), listing every component whose
+// MPN resolves to a seeded PartSpec with that spec's parameters. A nil provider or an unseeded design
+// yields an empty list rather than an error. The join needs no board, so none is passed.
 func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetComponentParamsRequest) (*webapi.GetComponentParamsResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -246,9 +223,9 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 	return resp, nil
 }
 
-// expectationProtos flattens a rule->entry map to sorted RuleExpectations (rule order stable so
-// the panel does not reshuffle between fetches), stamping pending on each and carrying the
-// sidecar's optional why narration (WS6-008).
+// expectationProtos flattens a rule->entry map to RuleExpectations sorted by rule, so the panel does
+// not reshuffle between fetches. It stamps pending on each and carries the sidecar's optional why
+// (WS6-008).
 func expectationProtos(m map[string]expect.Entry, pending bool) []*webapi.RuleExpectation {
 	rules := make([]string, 0, len(m))
 	for r := range m {
@@ -262,25 +239,16 @@ func expectationProtos(m map[string]expect.Entry, pending bool) []*webapi.RuleEx
 	return out
 }
 
-// FindingProto is the one place a check.Finding becomes its webapi wire form, so the RPC and any
-// other surface (e.g. the CLI's `check --format json`) share a single finding shape instead of two
-// that can drift. Subject (kind + ref + pin) is the highlight join key; Provenance is carried
-// through when the subject has it (nil-safe) so a consumer can link back to the source.
-//
-// A KindBus subject carries no net, so its geometry join key is the bus NAME (its range-label
-// identity under WS1-034): it rides Subject.bus_id from the finding subject (the same name the
-// geometry reader stamped on the bus WireGeometry.Net), so a bus-not-modeled finding highlights its
-// own drawn bus (WS7-042b). A bus with no drawn geometry (a bus_alias, an EDIF array) simply
-// resolves to nothing — its "bus not drawn" note is WS7-042c.
+// FindingProto is the one place a check.Finding becomes its wire form, shared by the rpc and the
+// CLI's `check --format json` (C31). Subject is the highlight join key, and Provenance is carried
+// when present so a consumer can link back to the source. A bus subject's join key is handled in
+// subjectProto.
 func FindingProto(f check.Finding) *checkspb.Finding {
 	return &checkspb.Finding{Subject: subjectProto(f.Subject), Rule: f.Rule, Severity: f.Severity, Inconclusive: f.Inconclusive, Message: f.Message, Provenance: f.Prov, Datasheets: datasheetCitationProtos(f.DatasheetProv), Context: contextSubjectProtos(f.Context)}
 }
 
-// contextSubjectProtos maps a finding's context entities to the wire form, PRESERVING ORDER, because
+// contextSubjectProtos maps a finding's context entities to the wire form, PRESERVING ORDER, since
 // the order is the rule author's and matches the order the message names them (agni issue 349).
-//
-// A bus context entity gets its bus_id set from its ref for the same reason a bus SUBJECT does: a bus
-// carries no net, so its name is the only geometry join key it has.
 func contextSubjectProtos(cs []check.ContextSubject) []*checkspb.ContextSubject {
 	if len(cs) == 0 {
 		return nil
@@ -293,11 +261,11 @@ func contextSubjectProtos(cs []check.ContextSubject) []*checkspb.ContextSubject 
 }
 
 // subjectProto is the ONE place a check.Entity becomes a wire Subject, shared by findings, verdict
-// tuples and context entries. One conversion rather than three copies is what keeps the bus rule
-// below from being remembered in two places and forgotten in the third.
+// tuples and context entries, so the bus rule below lives in one place.
 //
-// A bus entity gets its bus_id set from its ref: a bus carries no net, so its name is the only
-// geometry join key it has (WS7-042b), and a bus with no drawn geometry resolves to nothing.
+// A bus carries no net, so its name is its only geometry join key and rides as bus_id (WS7-042b).
+// A bus with no drawn geometry, such as a bus_alias or an EDIF array, resolves to nothing
+// (WS7-042c).
 func subjectProto(e check.Entity) *checkspb.Subject {
 	out := &checkspb.Subject{Kind: e.Kind, Ref: e.Ref, Pin: e.Pin, NetId: e.NetID}
 	if e.Kind == check.KindBus {
@@ -306,15 +274,12 @@ func subjectProto(e check.Entity) *checkspb.Subject {
 	return out
 }
 
-// subjectFromProto is the inverse of subjectProto. bus_id is not read back: it is derived from the
-// ref, so an inbound one that disagreed would let a producer rename a bus by asserting a second name.
+// subjectFromProto is the inverse of subjectProto. bus_id is not read back, because it derives from
+// the ref and trusting an inbound one would let a producer rename a bus.
 func subjectFromProto(s *checkspb.Subject) check.Entity {
 	return check.Entity{Kind: s.GetKind(), Ref: s.GetRef(), Pin: s.GetPin(), NetID: s.GetNetId()}
 }
 
-// datasheetCitationProto maps a check.DatasheetCitation to its wire form, nil for a finding not
-// backed by a seeded datasheet value (WS9-048). One conversion site, shared by every Finding
-// consumer (the review/check JSON surfaces and the web check panel).
 // datasheetCitationProtos maps a finding's citations to the wire form, preserving order. A
 // connection-aware rule contributes one per part its conclusion rests on (WS3-028).
 func datasheetCitationProtos(cs []*check.DatasheetCitation) []*checkspb.DatasheetCitation {
@@ -330,6 +295,7 @@ func datasheetCitationProtos(cs []*check.DatasheetCitation) []*checkspb.Datashee
 	return out
 }
 
+// datasheetCitationProto maps one citation to its wire form, nil for nil (WS9-048).
 func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitation {
 	if c == nil {
 		return nil
@@ -357,11 +323,8 @@ func FindingProtos(fs []check.Finding) []*checkspb.Finding {
 }
 
 // partitionAvailable splits selected rules into those that can evaluate on this design and those that
-// cannot, carrying each skipped rule's own reason.
-//
-// Running only the runnable half is not an optimisation. check.Run already skips a gated rule, so the
-// findings are identical either way; the split exists so the response can REPORT the other half
-// rather than leaving the caller to infer it from an absence.
+// cannot, carrying each skipped rule's reason. check.Run already skips a gated rule, so the findings
+// are the same either way; the split lets the response REPORT the skipped half.
 func partitionAvailable(rules []*check.Rule, m check.Model) ([]*check.Rule, []*webapi.SkippedRule) {
 	runnable := make([]*check.Rule, 0, len(rules))
 	var skipped []*webapi.SkippedRule
@@ -376,17 +339,15 @@ func partitionAvailable(rules []*check.Rule, m check.Model) ([]*check.Rule, []*w
 	return runnable, skipped
 }
 
-// VerdictProto and VerdictFromProto are the conversion pair for the considered set, and they carry a
-// C26 round-trip guard (TestVerdictProtoRoundTrip) because check.Verdict is a hand-written Go twin of
-// a wire message. The guard is the whole point: a field the converter never learned is absent from
-// both sides of any assertion made on the proto, which is how naming.Lexicon and Profile.HostClass
-// each shipped a silently dropped field.
+// VerdictProto and VerdictFromProto are the conversion pair for the considered set. check.Verdict is
+// a hand-written twin of a wire message, so the pair carries a C26 round-trip guard
+// (TestVerdictProtoRoundTrip); a field the converter never learned is otherwise invisible to any
+// assertion on the proto, as naming.Lexicon and Profile.HostClass each found.
 //
-// Verdict.Finding is DELIBERATELY not on the wire and so not in the round trip. A failing verdict's
-// finding travels in CheckDesignResponse.findings as it always has; putting it here too would send
-// one defect twice and let the copies disagree. TestVerdictFieldCensus is what keeps that a decision
-// rather than an omission: it fails when a field is added to check.Verdict, so the next person has to
-// say whether it belongs on the wire instead of discovering later that it never arrived.
+// Verdict.Finding is DELIBERATELY not on the wire. A failing verdict's finding travels in
+// CheckDesignResponse.findings, and a second copy here could disagree with it.
+// TestVerdictFieldCensus fails when a field is added to check.Verdict, so whoever adds one decides
+// whether it goes on the wire.
 func VerdictProto(v check.Verdict) *checkspb.Verdict {
 	subjects := make([]*checkspb.Subject, 0, len(v.Subjects))
 	for _, e := range v.Subjects {
@@ -395,8 +356,8 @@ func VerdictProto(v check.Verdict) *checkspb.Verdict {
 	return &checkspb.Verdict{Subjects: subjects, Id: check.VerdictID(v), Rule: v.Rule, Outcome: outcomeProto(v.Outcome), Witness: witnessProto(v.Witness), Reason: v.Reason, Context: contextSubjectProtos(v.Context)}
 }
 
-// VerdictFromProto is the inverse. Id is not read back: it is derived from the other fields, so
-// trusting an inbound one would let a producer rename a verdict by asserting a different name.
+// VerdictFromProto is the inverse. Id is not read back, because it derives from the other fields and
+// trusting an inbound one would let a producer rename a verdict.
 func VerdictFromProto(p *checkspb.Verdict) check.Verdict {
 	if p == nil {
 		return check.Verdict{}
@@ -421,8 +382,7 @@ func VerdictProtos(vs []check.Verdict) []*checkspb.Verdict {
 }
 
 // outcomeProto maps the Go outcome vocabulary to the enum. An unrecognised outcome maps to
-// UNSPECIFIED rather than silently to PASS, because a new outcome reaching a consumer as "fine" is
-// the exact false-pass shape verdicts exist to remove.
+// UNSPECIFIED rather than PASS, so a new outcome never reaches a consumer as a false pass.
 func outcomeProto(o check.Outcome) checkspb.Outcome {
 	switch o {
 	case check.Pass:
@@ -494,7 +454,7 @@ func witnessFromProto(p *checkspb.Witness) *check.Witness {
 }
 
 // contextSubjectsFromProto is the inverse of contextSubjectProtos, PRESERVING ORDER for the same
-// reason: the order is the rule author's and matches the order the proof names them.
+// reason.
 func contextSubjectsFromProto(ps []*checkspb.ContextSubject) []check.ContextSubject {
 	if len(ps) == 0 {
 		return nil
@@ -507,9 +467,9 @@ func contextSubjectsFromProto(ps []*checkspb.ContextSubject) []check.ContextSubj
 	return out
 }
 
-// datasheetCitationsFromProto is the inverse of datasheetCitationProtos. It exists because a Verdict
-// round-trips under C26 where a Finding never did: FindingProto has no inverse, and its field
-// coverage rests on nothing but review of the one call site.
+// datasheetCitationsFromProto is the inverse of datasheetCitationProtos, needed because a Verdict
+// round-trips under C26. FindingProto has no inverse, so its field coverage is checked only by
+// review.
 func datasheetCitationsFromProto(ps []*checkspb.DatasheetCitation) []*check.DatasheetCitation {
 	if len(ps) == 0 {
 		return nil

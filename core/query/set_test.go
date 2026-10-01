@@ -74,7 +74,7 @@ func TestQuerySetRejects(t *testing.T) {
 	}
 }
 
-// A malformed query is its own problem: the set still validates, and Compile reports the one query.
+// A malformed query is its own problem. The set still validates, and Compile reports the one query.
 func TestABadQueryDoesNotInvalidateTheSet(t *testing.T) {
 	s, err := ParseQuerySet([]byte("queries: [{name: good, query: 'entity(?n,?k)'}, {name: bad, query: 'entity(?n'}]"))
 	if err != nil {

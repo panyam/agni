@@ -42,7 +42,7 @@ func TestDeclaredTiersIncludesOptionalReads(t *testing.T) {
 
 // TestRecordingModelNotesEveryGatedAccessor is what keeps the audit from going blind.
 //
-// The audit reports green both when every rule declares honestly and when the recorder silently
+// The audit reports green both when every rule declares accurately and when the recorder silently
 // stopped noticing. Dropping one note() call from RecordingModel passes the whole audit suite,
 // because a rule reading that accessor then looks like a rule that never touched it. So the
 // recorder's own completeness is pinned here, accessor by accessor, rather than resting on the

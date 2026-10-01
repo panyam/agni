@@ -5,26 +5,21 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Nets returns the set of net names that belong to interface p on this design — the scope a review can
-// filter a broad rule's findings to, so a per-interface ask (e.g. "CAN ESD") reflects only that
-// interface's nets, not the whole design. It mirrors the profile's own host-beats-convention
-// precedence: when the interface declares a host and that host is on the design, the scope is exactly
-// the host component's nets (precise, and it disambiguates suffixes shared across buses, e.g. LIN's
-// _TX/_RX); otherwise it falls back to nets matched by the profile's signal matchers — the SAME
-// matchers the rules compile to, so a scoped item cannot pull in a foreign net no finding can name.
+// Nets returns the net names that belong to interface p on this design, the scope a review filters a
+// broad rule's findings to so a per-interface ask (e.g. "CAN ESD") sees only that interface's nets.
+// When the interface declares a host and the host is on the design, the scope is exactly the host's
+// nets, which disambiguates suffixes shared across buses such as LIN's _TX/_RX. Otherwise it is the
+// nets matched by the profile's signal matchers, the same ones the rules compile to, so a scoped item
+// cannot pull in a net no finding can name.
 //
-// Presence is a SEPARATE concern (Present): an absent interface is marked not-applicable before any
-// filtering, so an empty result here means "present but none of its nets matched", which reads as a
-// clean pass for the scoped ask.
+// An empty result means present but unmatched, a clean pass. Absence is InUse's job (see present.go).
 func Nets(m check.Model, p Profile) map[string]bool {
 	nets, _ := scope(m, p)
 	return nets
 }
 
-// scope walks the design ONCE and returns both the net names belonging to interface p and the
-// component RefDes on those nets. Nets and Components are thin projections of it, so the
-// host-beats-convention logic lives in one place and the design's nets are scanned a single time
-// (Components previously called Nets and then re-scanned every net — one redundant linear pass).
+// scope walks the design once and returns both the net names of interface p and the RefDes on those
+// nets. Nets and Components project it, so the host-beats-convention precedence lives in one place.
 func scope(m check.Model, p Profile) (nets, comps map[string]bool) {
 	nets, comps = map[string]bool{}, map[string]bool{}
 	if p.HasHost() {

@@ -10,14 +10,15 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// The pin-table path. A pin FUNCTION table yields terminals rather than values, so it
-// shares the title-attachment and classification machinery with the parameter path and
-// nothing else: its columns are data-dependent, its cells are multi-valued, and a row
-// can mean either one pin or several.
+// The pin-table path (#240). A pin FUNCTION table yields terminals rather than values,
+// so it shares only title attachment and classification with the parameter path. Its
+// columns are data-dependent, its cells are multi-valued, and a row can mean one pin or
+// several.
 //
-// Everything here is shaped by reading real producer output rather than the printed
-// page, because the two differ in ways that matter. See the fixture header for the
-// document this was built against.
+// Everything here is shaped by real producer output, which differs from the printed
+// page (docsite/content/architecture/datasheet-layer.md#how-a-partspec-is-derived-from-a-document).
+// testdata/txb0104-pintable-docir.textproto's header names the document it was built
+// against.
 
 // compiledPinRule is one recipe pin-table rule, pattern compiled.
 type compiledPinRule struct {
@@ -25,8 +26,8 @@ type compiledPinRule struct {
 	axis derivepb.PinColumnAxis
 }
 
-// Header vocabularies. Small and closed in practice: measured across a 63-document
-// corpus, pin tables label these four roles with the spellings below and little else.
+// Header vocabularies. Measured across a 63-document corpus, pin tables label these
+// four roles with the spellings below and little else.
 var (
 	pinNameHeaders   = map[string]bool{"name": true, "pin name": true, "signal name": true, "symbol": true}
 	pinIOHeaders     = map[string]bool{"i/o": true, "type": true, "i/o type": true, "buffer type": true, "dir": true}
@@ -48,8 +49,8 @@ type numberColumn struct {
 	packages []string
 	// labelled marks a column found by its own header word ("NO.", "PIN") rather than
 	// by sitting inside a band. Such a column is THE numbering of a single-package
-	// table and names no package, so it must never be read as one: doing so mints a
-	// package called "pin" and then collides every designator inside it.
+	// table and names no package. Reading it as one mints a package called "pin" and
+	// collides every designator inside it.
 	labelled bool
 }
 
@@ -126,21 +127,19 @@ func findPinColumns(t *docpb.Table, axis derivepb.PinColumnAxis) (int32, pinColu
 	}
 
 	// A TWO-ROW HEADER puts the outer columns a row ABOVE the one naming the pin, and
-	// scanning only the name's row loses them. The common shape:
+	// scanning only the name's row loses them (#293). The common shape:
 	//
 	//	row 0:  PIN (spanning)          TYPE    DESCRIPTION
 	//	row 1:  NO.        NAME
 	//	row 2:  1          TXD          DI      Transmit data input
 	//
-	// The header row is located by finding the pin NAME, which is on the inner row, so
-	// TYPE and DESCRIPTION were invisible and every pin came out untyped with no prose.
-	// That is not a rare layout: it is what a table gets as soon as it bands its
-	// designator columns, and it silently cost the type column on documents that HAVE one.
+	// The header row is found by the pin NAME, on the inner row, so without this scan
+	// TYPE and DESCRIPTION are invisible and every pin comes out untyped. Any table that
+	// bands its designator columns has this shape.
 	//
-	// Only columns still unset are filled, so the name's own row always wins, and the
-	// scan is bounded by headerRow, which the search above caps at the table's first few
-	// rows. A stray cell cannot masquerade as a header here because these vocabularies
-	// match whole keys, not substrings.
+	// Only columns still unset are filled, so the name's own row wins. The scan is
+	// bounded by headerRow, which the search above caps at the first few rows, and the
+	// vocabularies match whole keys, so a stray cell cannot pass for a header.
 	for _, c := range t.Cells {
 		if c.Row >= headerRow {
 			continue
@@ -154,7 +153,7 @@ func findPinColumns(t *docpb.Table, axis derivepb.PinColumnAxis) (int32, pinColu
 	}
 	// Package codes come off the header cell, and only when the recipe says these
 	// columns ARE packages. Under any other axis the codes are recorded raw and no
-	// Package is minted, which is what keeps a variant column from becoming a body.
+	// Package is minted, so a variant column never becomes a body.
 	if axis == derivepb.PinColumnAxis_PIN_COLUMN_AXIS_PACKAGE {
 		for i := range cols.numbers {
 			if cols.numbers[i].labelled {
@@ -173,9 +172,8 @@ func findPinColumns(t *docpb.Table, axis derivepb.PinColumnAxis) (int32, pinColu
 // two packages sharing one column of designators; a cell naming none yields none.
 func splitPackageCodes(s string) []string {
 	// The footnote marker a vendor hangs off a header cell ("LCCC (1)", "SOIC, ...,
-	// CFP (1)") belongs to the cell, not to the last code in it. Stripping it here
-	// rather than per-code is what keeps the final package in a list from being
-	// silently dropped.
+	// CFP (1)") belongs to the cell, not to the last code in it. Stripping it only
+	// per-code would drop the final package in a list.
 	s = footnoteSuffix.ReplaceAllString(strings.TrimSpace(s), "")
 	var out []string
 	for _, part := range strings.Split(s, ",") {
@@ -205,10 +203,10 @@ func absentNumber(s string) bool {
 	return false
 }
 
-// splitDesignators splits a designator cell into its numbers. ONLY on commas, never on
-// whitespace: producers flatten a footnote marker into the cell as a trailing token, so
-// "8 2" is pin 8 carrying footnote 2 while "2, 3" is genuinely two terminals. Splitting
-// on whitespace invents a pin on every footnoted row.
+// splitDesignators splits a designator cell into its numbers, ONLY on commas and never
+// on whitespace. Producers flatten a footnote marker into the cell as a trailing token,
+// so "8 2" is pin 8 carrying footnote 2 while "2, 3" is two terminals. Splitting on
+// whitespace invents a pin on every footnoted row.
 func splitDesignators(s string) []string {
 	if absentNumber(s) {
 		return nil
@@ -242,18 +240,14 @@ func isAllDigits(s string) bool {
 
 // pinFunctionOf maps a table's own type column onto the closed PinFunction vocabulary.
 //
-// The fallback reads the DESCRIPTION, never the name, and that line is the whole design.
-// Inferring POWER_INPUT from a name like "VCCA" would be this stage inventing a
-// classification the document did not make; reading it from a description that opens
-// "A-port supply voltage" is repeating one the document DID make, in the column real
-// tables put it in when they leave the type column dashed. A name is our guess, a
-// description is the vendor's sentence.
+// The supply and ground fallback reads the DESCRIPTION, never the name (#287).
+// Inferring POWER_INPUT from a name like "VCCA" would invent a classification the
+// document did not make, while a description opening "A-port supply voltage" is the
+// vendor's own sentence. Only the no-connect check reads the name.
 func pinFunctionOf(ioRaw, name, desc string) parampb.PinFunction {
 	switch headerKey(ioRaw) {
-	// The abbreviated spellings (di / do / bi/o) are as standard as the long ones and turn
-	// up across the corpus; they were simply absent. Vendor-specific tokens are NOT added
-	// here on sight: a token this stage does not know now says so in the untyped-pin gap,
-	// naming itself, so widening this list stays evidence-driven rather than speculative.
+	// Vendor-specific tokens are NOT added here on sight. An unknown token names itself
+	// in the untyped-pin gap, so widening this list stays evidence-driven.
 	case "i/o", "io", "d_io", "a_io", "bi/o", "bio", "bidirectional", "input/output":
 		return parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL
 	case "i", "in", "input", "a_in", "d_in", "di", "digital input", "analog input":
@@ -277,23 +271,19 @@ func pinFunctionOf(ioRaw, name, desc string) parampb.PinFunction {
 // for the common table that leaves its type column dashed on exactly those rows.
 //
 // DELIBERATELY DUMB, and it should stay that way. It matches how a description OPENS, in
-// the handful of phrasings that are near-universal, and answers UNSPECIFIED for everything
-// else. The temptation is to search the whole sentence for "ground" or "supply", and that
-// is the failure: "Connect to ground through a 10 kΩ resistor" describes a signal with a
-// pulldown, and typing that pin GROUND would stamp a false ground onto a net every rail
-// rule then quantifies over. An untyped pin is the status quo and costs nothing; a wrongly
-// typed one is a confident wrong answer.
+// a handful of near-universal phrasings, and answers UNSPECIFIED for everything else.
+// Searching the whole sentence for "ground" is the failure: "Connect to ground through a
+// 10 kΩ resistor" describes a signal with a pulldown, and typing it GROUND would stamp a
+// false ground onto a net every rail rule quantifies over. An untyped pin costs nothing,
+// and a wrongly typed one is a confident wrong answer.
 //
-// What this deliberately does NOT try to do is be complete. Everything it declines lands in
-// the run manifest as an untyped-pin gap, which is the curation worklist: a human, or an
-// assistant searching the document on their behalf, sees the pin and its prose and decides.
-// Widening this matcher to swallow the long tail would trade a visible gap for an invisible
-// guess, which is the wrong direction.
+// Everything it declines lands in the manifest as an untyped-pin gap, the curation
+// worklist, so widening it to the long tail would trade a visible gap for an invisible
+// guess (docsite/content/architecture/datasheet-layer.md#the-manifest-and-why-declining-is-recorded).
 //
-// The lexicon is local rather than shared with classify's rail naming, and that is a
-// deviation from what OUT_OF_SCOPE suggested. Those vocabularies turn out to be different
-// languages: classify matches net NAMES (VCC, +3V3, start-anchored tokens), this matches
-// English prose. Sharing would mean one of them carrying patterns that can never fire.
+// The lexicon is not shared with classify's rail naming because classify matches net
+// NAMES (VCC, +3V3) and this matches English prose, so a shared list would carry patterns
+// one side can never fire.
 func pinFunctionFromDescription(desc string) parampb.PinFunction {
 	d := headerKey(desc)
 	switch {
@@ -312,10 +302,9 @@ func pinFunctionFromDescription(desc string) parampb.PinFunction {
 // pin and then bounding it; "Enable input. Tie to supply voltage for normal operation" is a
 // signal that merely mentions one, and its first clause says so.
 //
-// A sentence break is a period FOLLOWED BY A SPACE, not any period. Pin descriptions are
-// full of decimals ("1.2V"), and splitting on those would cut "A-port supply voltage 1.2V"
-// down to "a-port supply voltage 1" — which happens to still match here, and would stop
-// matching the moment a vendor led with the number.
+// A sentence break is a period FOLLOWED BY A SPACE, not any period, because pin
+// descriptions are full of decimals ("1.2V") and a vendor leading with the number would
+// otherwise be cut before the words.
 func firstClause(d string) string {
 	cut := len(d)
 	for _, sep := range []string{". ", ",", ";"} {
@@ -335,13 +324,12 @@ func isNoConnect(name, desc string) bool {
 }
 
 // normalizePinName repairs a pin name whose SUBSCRIPT was flattened with an injected
-// space. Producers render "VCCA" as "V CCA", and the name is the channel that resolves a
-// design pin to a spec pin, so leaving it split would make the join fail against every
-// symbol library on exactly the multi-supply parts pin binding exists for.
+// space. Producers render "VCCA" as "V CCA", and the name resolves a design pin to a
+// spec pin, so leaving it split breaks the join on the multi-supply parts pin binding
+// exists for.
 //
-// The join is deliberately narrow: every field must be a short all-caps alphanumeric
-// token, which "V CCA" is and "Thermal pad" is not. A pin name is one token by
-// convention; a multi-word entry is a descriptive label and keeps its spaces.
+// The join is narrow. Every field must be a short all-caps alphanumeric token, which
+// "V CCA" is and "Thermal pad" is not, so a multi-word label keeps its spaces.
 func normalizePinName(s string) string {
 	f := strings.Fields(s)
 	if len(f) < 2 {
@@ -364,10 +352,9 @@ func isAlnum(s string) bool {
 	return s != ""
 }
 
-// pinIDFor derives a spec-local id from a pin's name, uniquely. A SPLIT pin takes the
-// designator that distinguishes it ("nc6", "nc9") rather than an ordinal, because the
-// legs are what tell the two apart on the page; a bare collision counter would make the
-// id say nothing a reader could check against the document.
+// pinIDFor derives a unique spec-local id from a pin's name. A SPLIT pin takes the
+// designator that distinguishes it ("nc6", "nc9") rather than an ordinal, so the id
+// can be checked against the document.
 func pinIDFor(name, designator string, taken map[string]bool) string {
 	base := strings.Trim(nonIDChars.ReplaceAllString(strings.ToLower(strings.TrimSpace(name)), "_"), "_")
 	if base == "" {
@@ -447,8 +434,7 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 				}
 				declared[id] = true
 				// Name is the code as printed. The body name ("TSSOP-14") lives in the
-				// ordering-information table, not this one, so claiming it here would
-				// be inventing a fact this table does not carry.
+				// ordering-information table, which no recipe classifies.
 				spec.Packages = append(spec.Packages, &parampb.Package{Id: id, Name: code, MpnSuffix: code})
 			}
 		}
@@ -515,18 +501,13 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 			})
 		}
 
-		// A pin nobody could type is the curation worklist's whole reason for existing. The
-		// classifier is deliberately narrow, so declining is the ORDINARY outcome on a table
-		// whose type column is dashed and whose prose is not one of the standard openings, and
-		// an undeclared decline is indistinguishable from a pin that carries no function at
-		// all. Gapping it carries the pin's own sentence, which is what a human (or an
-		// assistant searching the document for them) needs in order to decide.
+		// Declining is the ORDINARY outcome on a table whose type column is dashed and whose
+		// prose is not a standard opening, and an ungapped decline looks like a pin with no
+		// function at all. The gap carries the pin's own sentence for whoever decides.
 		if fn == parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED {
-			// Say WHICH channel came up empty, because the two want opposite fixes. A row whose
-			// type column holds a token this stage does not know ("DI") is a vocabulary gap and
-			// the token is the whole answer; a row with no type column at all is a prose
-			// judgement someone has to make. Reporting "no type column" for both, as this first
-			// did, sends a reader looking for a missing column that is right there.
+			// Say WHICH channel came up empty, because the two want opposite fixes. An unknown
+			// type token ("DI") is a vocabulary gap that names its own fix, while a row with no
+			// type column is a prose judgement for a human (#293).
 			why := fmt.Sprintf("type column reads %q, which is not in the vocabulary", ioRaw)
 			if strings.TrimSpace(ioRaw) == "" {
 				why = "no type column and no standard description opening"
@@ -579,8 +560,8 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 			}
 			// A pin table spanning several pages arrives as several tables that restate
 			// rows, so the same terminal is met twice. Two pins are the SAME terminal
-			// when they share a name AND a designator; that second half is what keeps
-			// the no-connect split intact, since nc6 and nc9 share a name and no leg.
+			// when they share a name AND a designator, which keeps the no-connect split
+			// intact, since nc6 and nc9 share a name and no leg.
 			if prev := sameTerminal(spec, pin); prev != nil {
 				mergeNumbers(prev, pin)
 				continue
@@ -593,10 +574,9 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 	}
 }
 
-// sameTerminal finds an already-emitted pin that is the same terminal as the candidate:
-// same name, and at least one identical (package, designator) pair. Name alone is not
-// enough, because a part may print one name on several terminals, which is exactly the
-// case the no-connect split exists for.
+// sameTerminal finds an already-emitted pin that is the same terminal as the candidate,
+// meaning the same name and at least one identical (package, designator) pair. Name
+// alone is not enough, because a part may print one name on several terminals.
 func sameTerminal(spec *parampb.PartSpec, cand *parampb.Pin) *parampb.Pin {
 	if len(cand.Numbers) == 0 {
 		return nil

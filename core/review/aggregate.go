@@ -7,11 +7,9 @@ import (
 )
 
 // Aggregate is a multi-design review rollup: the same manifest run against N designs, one Report each.
-// It is the project-level view. Automation is MANIFEST-level — which asks a rule covers is the same for
-// every design (the catalog is design-independent), so a naive sum of per-design tallies would multiply
-// the automated/not-automated counts by N. Pass/fail/n-a is PER DESIGN (a rule passes on one board, is
-// not-applicable where the interface is absent on another). So a renderer states automation once and
-// the outcome per design.
+// Automation is MANIFEST-level, since the catalog is design-independent, so summing per-design tallies
+// would multiply the automated/not-automated counts by N. Pass/fail/n-a is PER DESIGN. A renderer
+// states automation once and the outcome per design.
 type Aggregate struct {
 	Manifest string
 	Reports  []Report // one per design, in the order the designs were given (= column order)
@@ -54,10 +52,8 @@ func writeAggregateSummary(b *strings.Builder, a Aggregate) {
 			t0.Covered(), t0.Total, t0.NotAutomated)
 	}
 	b.WriteString("## Per-design outcomes\n\n")
-	// Answered is per DESIGN where coverage is per manifest: two designs run against one checklist can
-	// answer different numbers of it, because a rule's inputs are a property of the board rather than of
-	// the checklist. That is exactly the column a rollup gate reads, so it is a column rather than a
-	// number a reader has to reconstruct from the other seven.
+	// Answered is per DESIGN where coverage is per manifest, because a rule's inputs are a property of
+	// the board rather than of the checklist. A rollup gate reads this column.
 	b.WriteString("| Design | Answered | Pass | Fail | Provisional | Needs-intent | Needs-data | Computed-n/a | N/A |\n")
 	b.WriteString("|--------|----------|------|------|-------------|--------------|------------|--------------|-----|\n")
 	var tot Tally
@@ -68,8 +64,7 @@ func writeAggregateSummary(b *strings.Builder, a Aggregate) {
 		tot.Pass, tot.Fail, tot.NotApplicable = tot.Pass+t.Pass, tot.Fail+t.Fail, tot.NotApplicable+t.NotApplicable
 		tot.Provisional, tot.NeedsDesignIntent, tot.ComputedNA = tot.Provisional+t.Provisional, tot.NeedsDesignIntent+t.NeedsDesignIntent, tot.ComputedNA+t.ComputedNA
 		tot.NeedsData += t.NeedsData
-		// Total accumulates so the answered cell can read x/y like the per-design rows. Nothing else in
-		// this rollup uses it, which is why it was not summed before.
+		// Total accumulates only so the answered cell can read x/y like the per-design rows.
 		tot.Total += t.Total
 	}
 	fmt.Fprintf(b, "| **Total** | %d/%d | %d | %d | %d | %d | %d | %d | %d |\n\n",
@@ -87,8 +82,7 @@ func RenderAggregateCoverageMarkdown(a Aggregate) string {
 
 // RenderAggregateMarkdown is the full project rollup: the summary above, then a per-item traceability
 // matrix (rows = checklist items grouped by review area, columns = designs, cells = the item's outcome
-// on that design). This is the ACME-style coverage matrix — one ask per row, its outcome across every
-// reference design — as a first-class engine output.
+// on that design), so each ask reads across every reference design.
 func RenderAggregateMarkdown(a Aggregate) string {
 	var b strings.Builder
 	writeAggregateSummary(&b, a)
@@ -136,9 +130,8 @@ type jsonAggregate struct {
 
 type jsonDesignSummary struct {
 	Design string `json:"design"`
-	// Answered is the per-design gate input, alongside the manifest-level Covered/NotAutomated above.
-	// A rollup gate reads this row by row, so a design that stopped answering its checklist is visible
-	// here without the consumer recounting outcomes.
+	// Answered is the per-design gate input, alongside the manifest-level Covered/NotAutomated above, so
+	// a design that stopped answering its checklist shows without the consumer recounting outcomes.
 	Answered          int    `json:"answered"`
 	Total             int    `json:"total"`
 	Pass              int    `json:"pass"`

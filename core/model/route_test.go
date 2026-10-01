@@ -7,8 +7,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// chainReach hand-builds the walk result for N0 -R1- N1 -R2- N2, which is what the BFS records:
-// every reached net has a Depth, and every net past the start has the step that entered it.
+// chainReach hand-builds the walk result for N0 -R1- N1 -R2- N2, which is what the BFS records.
+// Every reached net has a Depth, and every net past the start has the step that entered it.
 func chainReach() (Reach, map[string]*ir.Net) {
 	nets := map[string]*ir.Net{}
 	for _, n := range []string{"N0", "N1", "N2", "OFF"} {
@@ -67,18 +67,19 @@ func TestRouteLineReadsTheSameWalkAsStepsTo(t *testing.T) {
 	}
 }
 
-// The two surfaces that print a route must agree, and nothing held them together before: the query
+// The two surfaces that print a route must agree, and nothing held them together before. The query
 // column rendered off a walk result and the IO-map witness rendered off a check.Trace, in two
 // separate implementations that matched only because one person wrote both.
 //
 // This drives RenderRoute the way each caller does and requires one answer. It is the guard
-// DECISIONS.md asks for under "A path is not a query column": rendering a path into a string makes
-// the rendering a format nobody can change, so the format needs exactly one owner.
+// DECISIONS.md asks for under "A path is not a query column", because rendering a path into a
+// string makes the rendering a format nobody can change, so the format needs exactly one owner.
 func TestRenderRouteIsTheOnlyFormat(t *testing.T) {
 	r, nets := chainReach()
 	viaWalk := r.RouteLine(nets["N2"])
 
-	// The trace-shaped caller: a first net plus one hop per crossing, naming the net it arrives at.
+	// The trace-shaped caller passes a first net plus one hop per crossing, naming the net it
+	// arrives at.
 	viaTrace := RenderRoute("N0", []RouteHop{{Through: "R1", To: "N1"}, {Through: "R2", To: "N2"}})
 
 	if viaWalk != viaTrace {

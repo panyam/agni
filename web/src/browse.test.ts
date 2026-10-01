@@ -6,15 +6,15 @@ import { join } from "node:path";
 // The browse page's composition root, under test (agni issue 136).
 //
 // composition.test.ts does this for the viewer and explains at length why a composition root needs
-// its own test: the ports are optional by design, so an unwired one is a silent no-op rather than a
+// its own test. The ports are optional by design, so an unwired one is a silent no-op rather than a
 // type error, and no panel-level test can see it because every panel test supplies its own
 // collaborators. That argument is not about main.ts. It is about composition roots, and this page
-// has one too — the tree, the preview driver, and the stage are each covered on their own, and
+// has one too. The tree, the preview driver, and the stage are each covered on their own, and
 // nothing until now asserted that browse.ts connects them.
 //
 // So this boots the REAL browse.ts against the REAL BrowsePage.html and walks the flow the ticket
-// names: choose a design, see it previewed, open it. What it does not assert is how the SVG looks,
-// which needs a browser and stays on the successor issue.
+// names, which is to choose a design, see it previewed, open it. What it does not assert is how the
+// SVG looks, which needs a browser and stays on the successor issue.
 
 // pageBody slices the shipped template's Body block, for the same reason composition.test.ts does:
 // the holes and their ids are the contract between the server-rendered page and browse.ts, and a
@@ -28,7 +28,7 @@ function pageBody(): string {
 
 const SHEET_SVG = '<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>';
 
-// One reply per rpc the browse flow makes. Deliberately thin: this asserts that a call was MADE and
+// One reply per rpc the browse flow makes. These are thin because this asserts that a call was MADE and
 // that its result reached the page, never what the server would really return.
 const REPLIES: Record<string, unknown> = {
   ListMounts: { mounts: [{ name: "m", root: "/m" }], prunedMounts: 0 },
@@ -66,7 +66,7 @@ const buttonFor = (label: string): HTMLButtonElement | undefined =>
 
 beforeAll(async () => {
   // jsdom implements neither of these, and the tree reaches for scrollIntoView whenever a node
-  // becomes active. Stubbing them cannot hide a wiring bug: an island mounts or it does not.
+  // becomes active. Stubbing them cannot hide a wiring bug, because an island mounts or it does not.
   Element.prototype.scrollIntoView = vi.fn();
   vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
     bootErrors.push(args[0]);
@@ -81,7 +81,7 @@ beforeAll(async () => {
     });
   };
   // Leaving the page is a real document navigation (routing is server-owned, C11), which jsdom
-  // does not implement. Recording it is the assertion: Open's whole job is to hand off a URL.
+  // does not implement. Recording it is the assertion, since Open's only job is to hand off a URL.
   Object.defineProperty(window, "location", {
     configurable: true,
     value: { ...window.location, pathname: "/designs/", assign: (u: string) => navigated.push(u) },
@@ -114,7 +114,7 @@ describe("choose a design, see it, open it", () => {
     buttonFor("board.edn")!.click();
     await vi.waitFor(() => expect(called).toContain("GetSheet"), 5000);
 
-    // The whole point of the page: the design's own drawing, and a caption naming it.
+    // The page exists to show the design's own drawing and a caption naming it.
     expect(el("browse-preview").querySelector("rect")).toBeTruthy();
     expect(el("browse-name").textContent).toBe("Sample Board");
     expect(el("browse-summary").textContent).toContain("19 components");

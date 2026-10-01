@@ -18,9 +18,9 @@ import (
 // as it goes, it accepts any atom the tokenizer returns as an identifier, and it falls back to
 // treating a port reference as a pin designator when no portInstance table maps it.
 //
-// They are asserted over the emitted TEXT rather than over a re-read, deliberately. A re-read goes
+// They are asserted over the emitted TEXT rather than over a re-read. A re-read goes
 // back through the same forgiving reader and so agrees with the writer no matter what either does,
-// which is the whole reason this went unnoticed. GNU Electric is the out-of-tree check that these
+// which is how this went unnoticed. GNU Electric is the out-of-tree check that these
 // three are the RIGHT properties (see the issue for how to run it); these tests are what keeps them
 // true without a 23MB Java dependency in the gate.
 
@@ -50,7 +50,7 @@ func TestEmitEDIFDeclaresBeforeReferencing(t *testing.T) {
 var badAtom = regexp.MustCompile(`[:;{}|]`)
 
 // identifier matches the identifier position of every construct that declares or references one. The
-// display half of a (rename ID "Display") is deliberately not checked: it is a quoted string, so it
+// display half of a (rename ID "Display") is not checked. It is a quoted string, so it
 // can hold anything, and it is where a name too rich for the grammar is supposed to end up.
 var identifier = regexp.MustCompile(`\((?:cell|library|instance|port|portInstance|net|cellRef|libraryRef|instanceRef|portRef|viewRef|rename) ([^\s()"]+)`)
 
@@ -92,11 +92,11 @@ func TestEmitEDIFWritesLegalIdentifiers(t *testing.T) {
 // A reference resolves if the cell declares a port of that name, or the instance's portInstance
 // table maps it. The table is what the writer now rebuilds from the part type's pins.
 //
-// EVERY row resolves, including the two formats that deliver no part types at all. A design read from
-// a board file or from IPC-2581 knows its footprints, its pads and its nets and never learns what the
-// parts are, so the writer declares the cell and its ports from the connections. That is why this
-// assertion is a plain zero rather than a per-row count: there is no format left where a reference
-// dangles.
+// EVERY row resolves, including the two formats that deliver no part types at all. A design read
+// from a board file or from IPC-2581 knows its footprints, its pads and its nets and never learns
+// what the parts are, so the writer declares the cell and its ports from the connections. That is
+// why this assertion is a plain zero rather than a per-row count, since there is no format left
+// where a reference dangles.
 func TestEmitEDIFResolvesEveryPortRef(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -158,8 +158,8 @@ var (
 )
 
 // scanEmitted reads the writer's own line-oriented layout rather than parsing EDIF properly, which is
-// enough because the layout is what the writer controls: one cell, port, instance or portInstance per
-// line, and every portRef of a net on the net's single line.
+// enough because the writer controls the layout. It writes one cell, port, instance or portInstance
+// per line, and every portRef of a net on the net's single line.
 func scanEmitted(text string) emitted {
 	f := emitted{
 		instCell:  map[string]string{},

@@ -33,18 +33,18 @@ void main() {
 const DEFAULT_COLOR: Rgba = [0.5, 0.5, 0.5, 1];
 const WHITE: Rgba = [1, 1, 1, 1];
 
-// HighlightDraw is one resolved highlight layer for the GPU: the primitives to redraw and
-// the RGBA to draw them in (alpha already folded in). Built by the canvas from
-// resolveHighlights (or from a server PackedHighlight — same shape either way).
+// HighlightDraw is one resolved highlight layer for the GPU, holding the primitives to redraw
+// and the RGBA to draw them in (alpha already folded in). The canvas builds it from
+// resolveHighlights or from a server PackedHighlight.
 export interface HighlightDraw {
   color: Rgba;
   primitives: Set<number>;
 }
 
-// OverlayDraw is one bounding-shape highlight layer (WS9-017): computed world-space
-// triangles (already tessellated by the canvas from the entity frames) drawn translucent
-// above the base geometry. This is the one dynamic buffer that crosses to the GPU after
-// load (C4) — it re-uploads only when the highlight specs change, not per frame.
+// OverlayDraw is one bounding-shape highlight layer (WS9-017), world-space triangles the
+// canvas tessellated from the entity frames, drawn translucent above the base geometry. It is
+// the one dynamic buffer that crosses to the GPU after load (C4), and it re-uploads only when
+// the highlight specs change, not per frame.
 export interface OverlayDraw {
   color: Rgba;
   vertices: Int32Array; // triangle list, (x,y) world-coordinate pairs
@@ -173,7 +173,7 @@ export class Renderer {
     gl.bufferData(gl.ARRAY_BUFFER, sheet.vertices, gl.STATIC_DRAW);
     const aPos = gl.getAttribLocation(this.program, "a_pos");
     gl.enableVertexAttribArray(aPos);
-    // Integer attribute: ivec2 of int32, tightly packed (stride 0 = 8 bytes).
+    // Integer attribute, ivec2 of int32, tightly packed (stride 0 = 8 bytes).
     gl.vertexAttribIPointer(aPos, 2, gl.INT, 0, 0);
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -188,7 +188,7 @@ export class Renderer {
     this.background = hexToRgba(sheet.backgroundColor, WHITE);
   }
 
-  // setHighlights replaces the highlight layers: each group's primitives redraw in its RGBA,
+  // setHighlights replaces the highlight layers. Each group's primitives redraw in its RGBA,
   // a later group winning where they overlap. An empty array clears every highlight. Called
   // by the canvas whenever the highlight specs (or the sheet) change.
   setHighlights(groups: HighlightDraw[]): void {
@@ -198,7 +198,7 @@ export class Renderer {
     }
   }
 
-  // Bounding-shape overlay state: one dynamically-(re)uploaded buffer holding every
+  // Bounding-shape overlay state is one dynamically (re)uploaded buffer holding every
   // overlay group's triangles back to back, with per-group offsets so each draws in its
   // own color. Lazily created on the first overlay.
   private overlayBuf: WebGLBuffer | null = null;
@@ -206,8 +206,8 @@ export class Renderer {
   private overlayGroups: { color: Rgba; first: number; count: number }[] = [];
 
   // setOverlays replaces the bounding-shape overlay layers (WS9-017). The concatenated
-  // triangle lists upload once per call — the overlay changes with the highlight specs,
-  // not with the camera, so no per-frame upload happens. An empty array clears the overlay.
+  // triangle lists upload once per call, since the overlay changes with the highlight specs
+  // and not with the camera. An empty array clears the overlay.
   setOverlays(overlays: OverlayDraw[]): void {
     this.overlayGroups = [];
     const total = overlays.reduce((n, o) => n + o.vertices.length, 0);
@@ -238,9 +238,9 @@ export class Renderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
-  // hiddenGroups skips whole primitive groups at draw time — board layer visibility
-  // (WS7-035): hiding the back side means skipping its groups, no re-upload. Highlighted
-  // primitives still draw (a finding on a hidden layer stays visible).
+  // hiddenGroups is board layer visibility (WS7-035), skipped at draw time so hiding the back
+  // side needs no re-upload. Highlighted primitives still draw, so a finding on a hidden layer
+  // stays visible.
   private hiddenGroups = new Set<number>();
 
   // setHiddenGroups replaces the hidden set.
@@ -263,8 +263,8 @@ export class Renderer {
       const p = this.primitives[i];
       if (p.count === 0) continue;
       const hl = this.highlightColors.get(i);
-      // A highlighted primitive always draws (never culled), so selecting an off-screen finding
-      // still tints its element.
+      // A highlighted primitive always draws, neither hidden nor culled, so selecting an
+      // off-screen finding still tints its element.
       if (!hl && this.hiddenGroups.has(p.group)) continue;
       if (!hl && outside(this.bounds[i], viewRect)) continue;
       if (hl) {
@@ -279,9 +279,9 @@ export class Renderer {
     }
     gl.bindVertexArray(null);
 
-    // The bounding-shape overlay draws last, above everything: translucent by design, so
-    // the entity it frames stays readable through it. Never culled — like highlighted
-    // primitives, a framed off-screen entity's shape must appear the moment it pans in.
+    // The bounding-shape overlay draws last, translucent so the entity it frames stays readable
+    // through it. Like highlighted primitives it is never culled, so a framed off-screen
+    // entity's shape appears the moment it pans in.
     if (this.overlayVao && this.overlayGroups.length > 0) {
       gl.bindVertexArray(this.overlayVao);
       for (const g of this.overlayGroups) {

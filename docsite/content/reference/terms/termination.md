@@ -25,7 +25,7 @@ flowchart TB
     U ~~~ T
 ```
 
-The value is not a choice. It is the impedance the bus standard specifies, which is why CAN
+The value is the impedance the bus standard specifies, which is why CAN
 terminators are 120Ω on every board that has ever carried CAN. On a
 [differential pair](../differential-pair/) the resistor bridges the two halves; on a single-ended bus
 it goes to ground.
@@ -34,5 +34,5 @@ A profile declares the requirement rather than the board proving it, since a net
 terminator from any other resistor of that value. See
 [`profile-termination`](../../rules/profile-termination/).
 
-**Where the course teaches it:** [chapter 1](../../../learn/01-what-a-board-is-made-of/) for the
-resistor, [chapter 12](../../../learn/12-when-the-copper-matters/) for why the copper decides.
+The course teaches it in [chapter 1](../../../learn/01-what-a-board-is-made-of/) for the resistor,
+and in [chapter 12](../../../learn/12-when-the-copper-matters/) for why the copper decides.

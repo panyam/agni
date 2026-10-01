@@ -23,7 +23,7 @@ func seedCorpus(f *testing.F, glob string) {
 	}
 }
 
-// FuzzRead throws arbitrary bytes at the board (s-expr) parser: it must error, never
+// FuzzRead throws arbitrary bytes at the board (s-expr) parser. It must error, never
 // panic, and never return a nil design without an error.
 func FuzzRead(f *testing.F) {
 	seedCorpus(f, "*.kicad_pcb")

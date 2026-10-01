@@ -34,16 +34,13 @@ import (
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
-// serveCmd hosts the web viewer over HTTP for local development. It serves three things on
-// one listener: the server-rendered pages (goapplib/templar, the border-layout shell) at
-// `/`, the esbuild bundle and other frontend assets under `/static/`, and the WS9 web API
-// as Connect handlers under their proto service paths. This replaces `npx serve .`: the
-// browser tooling (esbuild bundle, buf gen, vitest/playwright) stays npm, but serving is
-// the Go binary, one fewer dependency in the dev loop.
+// serveCmd hosts the web viewer over HTTP for local development. One listener serves the
+// server-rendered pages (goapplib/templar) at `/`, the esbuild bundle under `/static/`, and the
+// WS9 web API as Connect handlers under their proto service paths. The browser tooling stays npm;
+// only serving is the Go binary.
 //
-// The page shell is server-rendered and routing is server-owned (CONSTRAINTS C11); the API
-// is proto-defined and served over Connect (C2), so the same contract drives the Go server
-// and the TS client with no hand-written JSON.
+// Routing is server-owned (CONSTRAINTS C11) and the API is proto-defined over Connect (C2), so
+// one contract drives the Go server and the TS client.
 func serveCmd() *cobra.Command {
 	var addr string
 	var mountRoot string
@@ -91,11 +88,10 @@ func serveCmd() *cobra.Command {
 }
 
 // viewerOpts is everything the viewer server is built from, so `serve` and `open` compose the same
-// process from different inputs rather than growing two assemblies that agree until they do not.
+// process from different inputs.
 //
-// `serve` fills every field from its flags. `open` fills three and leaves the rest at their zero
-// values, which is the honest description of what it offers: one design, no deployment config, no
-// review store.
+// `serve` fills every field from its flags. `open` fills three and leaves the rest zero, since it
+// offers one design, no deployment config and no review store.
 type viewerOpts struct {
 	addr        string
 	webDir      string
@@ -110,16 +106,15 @@ type viewerOpts struct {
 
 	reviewStorePath string
 	// listener, when non-nil, is a listener the caller already BOUND, and the server serves on it
-	// instead of binding addr itself. `--server self` uses it so a port is held from the moment the
-	// flag is parsed: a taken port then fails before the command does its work, and nothing can take
-	// the port between the check and the serve.
+	// instead of binding addr itself. `--server self` holds the port from the moment the flag is
+	// parsed, so a taken port fails before the command does its work and nothing can take the port
+	// between the check and the serve.
 	listener net.Listener
 	// extraMounts are mounts the caller composed itself, merged with the declared and discovered ones.
-	// `open` uses it to serve the single mount it minted for the design named on the command line,
-	// which is a mount no flag and no file declared.
+	// `open` uses it to serve the mount it minted for the design named on the command line.
 	extraMounts []mounts.Mount
 	// banner replaces the default "serving ... at ..." line when non-nil. `open` prints the design's
-	// own URL instead, because landing on a browse tree is the thing it exists to skip.
+	// own URL instead, so it lands on the design rather than a browse tree.
 	banner func(urls []string, mountCount int)
 
 	// requireViewer refuses to start without the viewer's assets, for `open`, which exists to show a
@@ -127,7 +122,7 @@ type viewerOpts struct {
 	requireViewer bool
 }
 
-// runViewer builds and runs the viewer server. The body is `serve`'s, unchanged.
+// runViewer builds and runs the viewer server for both `serve` and `open`.
 func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	addr, webDir, mountRoot := o.addr, o.webDir, o.mountRoot
 	nativeTools, pdf2docCmd, theme := o.nativeTools, o.pdf2docCmd, o.theme
@@ -140,11 +135,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if !ok {
 		return fmt.Errorf("unknown --theme %q (have: %s)", theme, strings.Join(themeNames(), ", "))
 	}
-	// Where the viewer's assets are is a --web-dir question now, not a positional one. The
-	// argument this replaced was passed as the literal string "web" by every caller in the tree,
-	// which is the default anyway, so it never once carried information. What it did carry was a
-	// standing invitation to pass a DESIGN folder, which is why checkWebAssets still has to say
-	// what it is not.
+	// The viewer's assets come from --web-dir, never a positional argument, since a positional
+	// invited passing a DESIGN folder; checkWebAssets still guards that mistake (#468).
 	var assets webAssets
 	if o.requireViewer {
 		dir, source, err := resolveWebAssets(webDir, os.Getenv)
@@ -159,11 +151,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 	}
 	dir, source := assets.dir, assets.source
-	// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read, and
-	// the serving line below already prints the resolved directory, so announcing that case here
-	// says nothing a reader does not have twice over. The environment is the one provenance
-	// nothing else reports, and it is the one most worth reporting: an AGNI_WEB_DIR exported into
-	// a shell months ago outlives every memory of exporting it.
+	// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read and the
+	// serving line prints the directory, but nothing else reports an AGNI_WEB_DIR exported into a
+	// shell months ago.
 	if source == envWebDir {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
 	}
@@ -171,22 +161,22 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if err != nil {
 		return err
 	}
-	// --mount-root is the container's zero-flag path: every subdirectory under it becomes a
-	// mount named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit
-	// --mount values still win on a name collision (see mounts.Merge). Empty disables
-	// discovery entirely, which is what a local `make serve` run wants.
+	// --mount-root is the container's zero-flag path. Every subdirectory under it becomes a mount
+	// named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit --mount
+	// values win on a name collision (see mounts.Merge). Empty disables discovery, as a local
+	// `make serve` wants.
 	var discovered []mounts.Mount
 	if mountRoot != "" {
 		if discovered, err = mounts.Discover(mountRoot); err != nil {
 			return err
 		}
 	}
-	// A caller-composed mount is layered in last, so `open`'s minted mount is present alongside
-	// anything a flag or an agni.yaml declared rather than replacing it.
+	// A caller-composed mount is layered in last, so `open`'s minted mount sits alongside anything a
+	// flag or an agni.yaml declared.
 	mounts := mounts.Merge(discovered, append(explicit, o.extraMounts...))
 	// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
-	// Absent --params leaves it nil, so the params RPC returns no joined specs (never an
-	// error) — the same optional posture as the CLI's --params (main.go readModelWithParams).
+	// Absent --params leaves it nil, so the params RPC returns no joined specs and never an
+	// error, like the CLI's --params (main.go readModelWithParams).
 	var specs param.ParamProvider
 	if paramsDir != "" {
 		set, err := param.LoadSet(os.DirFS(paramsDir))
@@ -198,15 +188,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 
 	mux := http.NewServeMux()
 	// Connect handlers register under their fully-qualified service path
-	// (/agni.v1.webapi.WorkspaceService/). Static assets (the esbuild bundle) live
-	// under /static/. The goapplib page catches the rest at "/". The services are the
-	// transport-neutral internal/service implementations; internal/server wraps them
-	// for Connect (C13).
+	// (/agni.v1.webapi.WorkspaceService/). Static assets live under /static/, and the goapplib
+	// page catches the rest at "/". The services are the transport-neutral service package
+	// implementations, which internal/server wraps for Connect (C13).
 	loader := &osLoader{mounts: mounts, loader: newLoader()}
-	// Tier-1 fallback, the same shape resolveWebDir uses: the flag wins OUTRIGHT, so an
-	// operator who named the renderers is answering for the whole set and a file cannot
-	// quietly widen it. applyEnvConfig already named the file it read, so there is nothing
-	// to announce here.
+	// Tier-1 fallback, as in resolveWebDir. The flag wins OUTRIGHT, so an operator who named the
+	// renderers answers for the whole set and agni.yaml cannot widen it.
 	if len(nativeTools) == 0 {
 		nativeTools = envConfigNativeTools
 	}
@@ -217,33 +204,25 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
 	wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(&osWorkspace{mounts: mounts})))
 	mux.Handle(wsPath, wsHandler)
-	// ProjectService (agni issue 170) resolves the project/design descriptors sitting in the
-	// mounts. It needs no flag: a mount either carries descriptors or it does not, and a mount
-	// with none resolves to nothing, which is what keeps one project's config from reaching
-	// another project's design.
+	// ProjectService (agni issue 170) resolves the project/design descriptors in the mounts and
+	// needs no flag. A mount with no descriptors resolves to nothing, so one project's config never
+	// reaches another project's design.
 	//
-	// Each mount becomes one tree in the filesystem-backed store, which is the ONLY place the
-	// serve wiring knows projects live in directories. Swapping in an index- or database-backed
-	// service.ProjectStore is this line and nothing else.
+	// Each mount becomes one tree in the filesystem-backed store. This is the ONLY place the serve
+	// wiring knows projects live in directories, so swapping in another service.ProjectStore is
+	// this line alone.
 	projectStore := projects.NewFSStore(projectTrees(mounts)...)
-	// One resolver for every rule-running surface. Per-design config reaches a run through
-	// this rather than through the startup flags below, which are now only the DEFAULT for a
-	// design that resolves to no project (agni issue 173).
+	// One resolver for every rule-running surface. Per-design config reaches a run through this,
+	// and the startup flags below are only the DEFAULT for a design with no project (agni issue 173).
 	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
 	prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projectStore)))
 	mux.Handle(prPath, prHandler)
 	dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style, projectResolver)))
 	mux.Handle(dsPath, dsHandler)
 	// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
-	// installed process-wide, which is the one legitimate use of a process-global (startup, before
-	// any request, never mutated after, C22). Its RULES join the catalog composition instead,
-	// inside serveRuleServices. A request that names its own conventions REPLACES both for that
-	// request, with that lexicon travelling with the read (WS3-106).
-	//
-	// "Replaces" is now true of both halves (WS3-124). The lexicon half always overrode, because
-	// it travels with the read; the catalog half used to ADD, so a request got its own rules
-	// stacked on the server's and could not turn the server's off. The two halves of one config
-	// composing differently is the shape that let WS3-102's bug hide, so they were made to agree.
+	// installed process-wide, at startup and never mutated after (C22). Its RULES join the catalog
+	// inside serveRuleServices. A request that names its own conventions REPLACES both halves for
+	// that request, with that lexicon travelling with the read (WS3-106, WS3-124).
 	var conventionCfg *configpb.NamingConvention
 	if conventions != "" {
 		cfg, err := naming.Load(conventions)
@@ -255,9 +234,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 		conventionCfg = cfg
 	}
-	// --review-store is the writable volume stored runs live in, deliberately separate from the
-	// read-only design mounts. Absent, the review resource methods report that they are not
-	// configured rather than silently discarding runs.
+	// --review-store is the writable volume stored runs live in, separate from the read-only design
+	// mounts. Absent, the review resource methods report that they are not configured rather than
+	// discarding runs.
 	var reviewStore service.ReviewStore
 	if reviewStorePath != "" {
 		st, err := newOSReviewStore(reviewStorePath)
@@ -278,27 +257,25 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	mux.Handle(dtPath, dtHandler)
 	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)))
 	mux.Handle(qPath, qHandler)
-	// ReviewService (WS9-047): the served analogue of `agni review`, built alongside the
-	// CheckService above from the one composed catalog.
+	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
+	// one composed catalog.
 	rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc))
 	mux.Handle(rvPath, rvHandler)
 	if assets.viewer {
 		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
 	}
-	// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
-	// served read-only so the rules/expectations panels resolve their relative image refs
-	// (WS9-030). Images only, from the embed FS only — no filesystem access. The built-in and
-	// intent rule docs live in separate embed FSes (WS3-093), but a rule's Detail references its
-	// card as images/<name> under this one route regardless of source, so the two handlers are
-	// composed (first non-404 wins; card basenames are unique across sources).
+	// The rule-doc explainer diagrams (WS3-025) are served read-only, images only and from the embed
+	// FS only, so the rules/expectations panels resolve their relative image refs (WS9-030). The
+	// built-in and intent docs live in separate embed FSes (WS3-093) behind one route, so the two
+	// handlers are composed by firstImageHandler.
 	mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/",
 		firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())))
-	// The per-relation fact-doc schematic cards (WS14-005), same read-only image-only posture
-	// as the rule docs, so the query panel resolves a relation Detail's image refs.
+	// The per-relation fact-doc cards (WS14-005), read-only and image-only like the rule docs, so
+	// the query panel resolves a relation Detail's image refs.
 	mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
-	// The datasheets workbench renders the source PDF in the browser (pdf.js), so its raw
-	// bytes are served from the mounts. A more-specific prefix than the /datasheets/ page,
-	// so ServeMux routes /datasheets/raw/... here and the page space elsewhere.
+	// The datasheets workbench renders the source PDF with pdf.js, so its raw bytes are served
+	// from the mounts. The prefix is more specific than the /datasheets/ page, so ServeMux routes
+	// /datasheets/raw/... here.
 	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(mounts)))
 	mux.Handle("GET /healthz", healthHandler())
 	switch {
@@ -334,8 +311,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
-// the whole of the OS adapter for projects: one os.DirFS per mount, which also makes containment
-// structural rather than checked, since an fs.FS has no parent to climb into.
+// all of the OS adapter for projects. Each mount gets one os.DirFS, which makes containment
+// structural, since an fs.FS has no parent to climb into.
 func projectTrees(ms []mounts.Mount) []projects.Tree {
 	out := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
@@ -351,22 +328,14 @@ type serveLoader = agni.RuleLoader
 // serveRuleServices builds the two services that RUN rules from one composed catalog: the
 // CheckService behind the check panel and ListRules, and the ReviewService behind the review resources.
 //
-// They are built together, from one catalog, on purpose (WS3-109). Every overlay knob is startup
-// config for the whole server rather than for one surface, but they used to be wired one at a time at
-// the call site and drifted exactly as that invites: --profile-path reached both surfaces only after
-// WS3-048, while --intent-path and a --conventions config's RULES reached reviews alone. A rule
-// missing from the check panel's catalog is indistinguishable there from a rule that ran and found
-// nothing, so the drift is silent from the outside.
+// Both come from one catalog because every overlay knob is config for the whole server, and a rule
+// missing from the check panel's catalog looks the same as a rule that ran and found nothing
+// (WS3-109). Returning the services rather than the catalog means a caller never holds the catalog,
+// so it cannot hand the two surfaces different ones.
 //
-// Returning both services rather than the catalog is what makes that structural. A caller cannot hand
-// one surface the composed catalog and the other something else, because it never holds the catalog.
-// That specific mistake is not hypothetical: this function replaces a serveCheckCatalog helper whose
-// own doc warned about a future edit passing NewCheckService a bare DefaultCatalog, and mutation
-// testing confirmed the warning was unenforceable while the wiring lived at the call site.
-//
-// conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here: that
-// is a process-global install the caller does once at startup, and doing it inside a function tests
-// call would leak one test's vocabulary into the next.
+// conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here,
+// since that is a process-global install done once at startup, and doing it in a function tests call
+// would leak one test's vocabulary into the next.
 func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions *configpb.NamingConvention, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
@@ -399,21 +368,17 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 	return checkSvc, reviewSvc, nil
 }
 
-// serveURLs turns a listen address into URLs a human can click, which the bind address by itself is
-// not: the default ":8080" prints as "http://:8080/", a string no browser opens.
+// serveURLs turns a listen address into URLs a human can click. The default ":8080" alone would
+// print as "http://:8080/", which no browser opens.
 //
-// An empty, "0.0.0.0", or "::" host is the WILDCARD, so the process is reachable on every interface
-// and no single URL describes it. The first entry returned is always the one to click on this
-// machine; any others are the addresses another machine on the network reaches it by. Those are
-// worth printing rather than hiding, because this server has no authentication: a wildcard bind
-// means the mounted design folders are readable by anything that can route here. Printing the LAN
-// URL does not create that exposure, it makes an existing one visible. Bind 127.0.0.1 to remove it.
+// An empty, "0.0.0.0", or "::" host is the WILDCARD, reachable on every interface. The first entry
+// returned is the one to click on this machine, and any others are the LAN addresses. Those are
+// printed because this server has no authentication, so a wildcard bind exposes the mounted design
+// folders to anything that can route here. Bind 127.0.0.1 to remove that.
 //
-// Only IPv4 is enumerated. A link-local IPv6 address needs a zone suffix to be usable and would
-// print a URL that does not work, which is worse than printing one fewer.
+// Only IPv4 is enumerated, because a link-local IPv6 address needs a zone suffix to be usable.
 //
-// ips is a parameter so the address shaping can be tested without depending on the interfaces of
-// whatever machine runs the test; production passes lanIPs.
+// ips is a parameter so tests do not depend on the host's interfaces; production passes lanIPs.
 func serveURLs(addr string, ips func() []string) []string {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -430,23 +395,19 @@ func serveURLs(addr string, ips func() []string) []string {
 	return out
 }
 
-// hostURL joins a host and port into a URL. JoinHostPort is what brackets an IPv6 literal, so
-// bracketing here as well would double them and produce an address no client parses.
+// hostURL joins a host and port into a URL. JoinHostPort already brackets an IPv6 literal, so do
+// not bracket it here too.
 func hostURL(host, port string) string {
 	return "http://" + net.JoinHostPort(host, port) + "/"
 }
 
 // lanIPs reports this host's non-loopback IPv4 addresses, for the wildcard case in serveURLs. An
 // interface that is down or has no usable address contributes nothing, and an enumeration error
-// yields no addresses rather than an error: this is decoration on a startup line, and failing to
-// serve because the interface list could not be read would be a worse trade than printing one URL.
+// yields no addresses rather than an error, since this only decorates a startup line.
 //
-// Inside a container it reports nothing at all. The address on a container interface (172.17.0.2
-// and the like) is reachable only from the container network, while the address that actually
-// reaches this server is the published port on the HOST, which the process cannot see: the port
-// mapping lives in the runtime, not in anything the container observes about itself. Printing the
-// internal address would hand the reader a URL that does not open, which is worse than printing
-// none. `docker run -p` is where the real one comes from, so the operator already knows it.
+// Inside a container it reports nothing. A container interface address (172.17.0.2 and the like)
+// is reachable only from the container network, and the published HOST port lives in the runtime
+// where the process cannot see it. The operator set that port with `docker run -p` and knows it.
 func lanIPs() []string {
 	if inContainer() {
 		return nil
@@ -474,13 +435,11 @@ func lanIPs() []string {
 }
 
 // inContainer reports whether this process is running inside a container, which lanIPs uses to
-// decide that its own interface addresses are not worth printing. Both runtimes drop a marker file
-// at a fixed path for exactly this question: Docker writes /.dockerenv, Podman writes
-// /run/.containerenv.
+// decide that its own interface addresses are not worth printing. Docker writes /.dockerenv and
+// Podman writes /run/.containerenv.
 //
-// A false negative only costs an unhelpful line on startup, and a false positive only costs a
-// missing one, so this deliberately does not go further (parsing /proc/1/cgroup, checking pid 1)
-// to catch runtimes that leave no marker. Nothing behavioural hangs off the answer.
+// A wrong answer costs one startup line either way, so this does not go further (parsing
+// /proc/1/cgroup, checking pid 1) to catch runtimes that leave no marker.
 func inContainer() bool {
 	for _, marker := range []string{"/.dockerenv", "/run/.containerenv"} {
 		if _, err := os.Stat(marker); err == nil {
@@ -490,16 +449,13 @@ func inContainer() bool {
 	return false
 }
 
-// healthHandler answers the container orchestrator's liveness/readiness probe. It is registered
-// on the exact path "GET /healthz" so it does not shadow the page space, and it is deliberately
-// trivial: it reports that this process is up and serving HTTP, which is the entire question a
-// restart policy acts on.
+// healthHandler answers the container orchestrator's liveness/readiness probe. It is registered on
+// the exact path "GET /healthz" so it does not shadow the page space, and it reports only that this
+// process is up and serving HTTP.
 //
-// It does NOT re-probe the mounts, the rule catalog, or the params set. Those are all validated
-// during startup — a bad --mount, --profile-path, --intent-path, or --params fails before the
-// listener exists — so a probe that re-checked them could only ever report a state the process
-// cannot be in. A probe that appears to verify more than it does is worse than a trivial one,
-// because it invites treating a 200 as evidence about configuration that it is not.
+// It does NOT re-probe the mounts, the rule catalog, or the params set. A bad --mount,
+// --profile-path, --intent-path, or --params fails before the listener exists, so a 200 says
+// nothing about configuration and should not be read as if it did.
 func healthHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -515,7 +471,7 @@ func healthHandler() http.Handler {
 type webAssets struct {
 	dir    string
 	source string // where dir came from, as resolveWebDir reports it
-	// viewer is false only for API-only serving: nothing named a web dir and the default is absent.
+	// viewer is false only for API-only serving, when nothing named a web dir and the default is absent.
 	viewer bool
 	// datasheetsErr says why the workbench is not served, and is nil when it is.
 	datasheetsErr error
@@ -525,10 +481,8 @@ type webAssets struct {
 // servable from what it found. It returns the directory and where the value came from, so a caller
 // can narrate the provenance. The datasheets workbench is not required here; see resolveServeAssets.
 //
-// Split out of runViewer so `--server self` can ask the same question BEFORE the command it wraps
-// does its work (agni issue 637). That ordering is the whole point: self mints links into an artifact
-// and then serves them, so a run that cannot serve must fail while the artifact is still unwritten,
-// the way a taken port already does.
+// `--server self` calls it BEFORE the command it wraps does its work, so a run that cannot serve
+// fails while its artifact is still unwritten, as a taken port does (agni issue 637).
 func resolveWebAssets(flag string, getenv func(string) string) (dir, source string, err error) {
 	dir, source = resolveWebDir(flag, getenv)
 	if fi, serr := os.Stat(dir); serr != nil || !fi.IsDir() {
@@ -540,15 +494,13 @@ func resolveWebAssets(flag string, getenv func(string) string) (dir, source stri
 	return dir, source, nil
 }
 
-// resolveServeAssets is `serve`'s version of the question, which admits one more answer: no viewer
-// at all. Absent is a choice and broken is a mistake, so the rule is narrow. When NOTHING named a web
-// dir (no flag, no agni.yaml, no environment) and the default ./web does not exist, serve runs the
-// API alone, which is what an installed binary run outside a checkout has. Every other failure still
-// fails: a named directory that is wrong is a typo the operator wants to hear about, and a ./web that
-// exists without its bundle is a checkout that forgot `make ui`.
+// resolveServeAssets is `serve`'s version of resolveWebAssets, which also admits no viewer at all.
+// When NOTHING named a web dir (no flag, no agni.yaml, no environment) and the default ./web does not
+// exist, serve runs the API alone, as an installed binary outside a checkout must. Every other
+// failure still fails, because a wrong named directory is a typo and a ./web without its bundle is a
+// checkout that forgot `make ui` (agni issue 735).
 //
-// `open` and `--server self` keep calling resolveWebAssets, because their whole job is minting
-// viewer links, so for them no viewer is an error.
+// `open` and `--server self` call resolveWebAssets instead, since for them no viewer is an error.
 func resolveServeAssets(flag string, getenv func(string) string) (webAssets, error) {
 	dir, source := resolveWebDir(flag, getenv)
 	if flag == "" && source == "" {
@@ -630,11 +582,10 @@ func unavailableHandler(err error) http.Handler {
 }
 
 // firstImageHandler composes several rule-source image handlers into one, serving the response of the
-// first that does not 404 (WS3-093). Each source's rule-doc images live in its own embed FS behind its
-// own handler, but the web resolves every rule's card under the single /rule-docs/ route, so a request
-// is tried against each in turn and the first hit is copied through. Card basenames are unique across
-// sources, so order does not affect which card a request resolves to. Each handler is image-only and
-// 404s cleanly on a miss, so the buffered probe never has a side effect to undo.
+// first that does not 404 (WS3-093). The web resolves every rule's card under the single /rule-docs/
+// route, so a request is tried against each source in turn. Card basenames are unique across
+// sources, so order does not matter. Each handler is image-only and 404s cleanly on a miss, so the
+// buffered probe has no side effect to undo.
 func firstImageHandler(handlers ...http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, h := range handlers {

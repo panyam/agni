@@ -18,7 +18,7 @@ const urlBaseFlag = "http://localhost:8080"
 // Two things have to be undone, and the second is the one that bites. --mount is a root PERSISTENT
 // flag, so the variable is set directly rather than passed to a check command built on its own. And
 // the mount TABLE is parsed once per process behind a sync.Once, which is right for a CLI serving one
-// invocation and wrong inside a test binary where every test shares the process: without the reset
+// invocation and wrong inside a test binary where every test shares the process. Without the reset
 // these tests pass alone and fail in the package run, because whichever test resolves a mount first
 // fixes the table for all of them.
 func withMount(t *testing.T) {
@@ -32,9 +32,9 @@ func withMount(t *testing.T) {
 	})
 }
 
-// mountedShowcase runs the showcase board through a named mount, which is what makes a link possible:
-// the viewer's path is /designs/<mount>/<path>/view, and a CLI reading a loose file has no mount to
-// put there.
+// mountedShowcase runs the showcase board through a named mount, which a link needs because the
+// viewer's path is /designs/<mount>/<path>/view and a CLI reading a loose file has no mount to put
+// there.
 func mountedShowcase(t *testing.T, args ...string) string {
 	t.Helper()
 	withMount(t)
@@ -54,8 +54,8 @@ func TestVerdictRowsCarryAProofURL(t *testing.T) {
 		if !strings.Contains(tc.out, urlBaseFlag+"/designs/demo/showcase.fires.kicad_sch/view?verdict=") {
 			t.Errorf("%s: no verdict link in:\n%s", tc.name, tc.out)
 		}
-		// The hash rides along so a stale link can be told apart from a live one, which is the whole
-		// reason the URL is worth more than the id.
+		// The hash rides along so a stale link can be told apart from a live one, which the id alone
+		// cannot do.
 		if !strings.Contains(tc.out, "hash=sha256") {
 			t.Errorf("%s: the link carries no content hash, so nothing downstream can detect a stale one", tc.name)
 		}
@@ -94,8 +94,8 @@ func TestNoURLBaseMeansNoLinks(t *testing.T) {
 
 // The three renderers compose one link, so a row in a terminal, a cell in a spreadsheet and an anchor
 // on the page all address the same verdict. They read it from different places (Row.URL for two of
-// them, a per-row call for the csv, which emits in the run's order rather than the report's), which is
-// exactly the split that lets two spellings drift apart.
+// them, a per-row call for the csv, which emits in the run's order rather than the report's), and
+// that split is how two spellings drift apart.
 func TestEveryFormatComposesTheSameLink(t *testing.T) {
 	text, csv, html := mountedShowcase(t), mountedShowcase(t, "--format", "csv"), mountedShowcase(t, "--format", "html")
 	const want = urlBaseFlag + "/designs/demo/showcase.fires.kicad_sch/view?verdict=esd-protection%3A%28net%3AUSB_D%2B%29"
@@ -106,7 +106,7 @@ func TestEveryFormatComposesTheSameLink(t *testing.T) {
 	}
 }
 
-// The point of agni issue 459: a link depends on whether the mount is real, not on how the design was
+// Per agni issue 459, a link depends on whether the mount is real, not on how the design was
 // spelled. Both forms address the same file through the same declared mount, so both are equally
 // followable and both must be emitted.
 func TestAPlainPathThroughADeclaredMountIsLinkable(t *testing.T) {
@@ -191,7 +191,7 @@ func TestLinkTargetIsNilSafe(t *testing.T) {
 	}
 }
 
-// Every refusal carries a reason. This is the property the note on stderr rests on: if any path can
+// Every refusal carries a reason, and the note on stderr rests on that. If any path can
 // return ("", "") the operator gets "no verdict links were emitted: " with nothing after the colon.
 func TestLinkTargetAlwaysExplainsARefusal(t *testing.T) {
 	ws, err := newCLIWorkspace()
@@ -210,12 +210,13 @@ func TestLinkTargetAlwaysExplainsARefusal(t *testing.T) {
 	}
 }
 
-// TestDesignContentHashIsTheEntryForBothForms: a verdict link carries &hash= so the viewer can say it
-// was computed against different bytes than the ones now on disk. That parameter went missing on the
-// design-FOLDER form, which is the form the tutorial teaches and the one `agni open` prints, because
-// hashing the caller's argument opened a directory, failed the read with EISDIR, and reported it the
-// same way it reports a genuinely unhashable file. The file form carried a hash and the folder form
-// silently did not, so the staleness signal was absent on most runs.
+// TestDesignContentHashIsTheEntryForBothForms covers the &hash= a verdict link carries so the
+// viewer can say it was computed against different bytes than the ones now on disk. That parameter
+// went missing on the design-FOLDER form, which is the form the tutorial teaches and the one `agni
+// open` prints, because hashing the caller's argument opened a directory, failed the read with
+// EISDIR, and reported it the same way it reports a genuinely unhashable file. The file form
+// carried a hash and the folder form silently did not, so the staleness signal was absent on most
+// runs.
 //
 // Both forms name the same design, so both must hash the same entry.
 func TestDesignContentHashIsTheEntryForBothForms(t *testing.T) {
@@ -280,9 +281,9 @@ func withDeclaredMount(t *testing.T, dir string) {
 	})
 }
 
-// TestVerdictLinkTargetNamesTheResolvedEntry: the link's PATH used to come from the caller's argument
-// while its hash came from the resolved entry, and the difference has no symptom until the argument
-// is not the entry (agni issue 489).
+// TestVerdictLinkTargetNamesTheResolvedEntry pins the link's PATH to the resolved entry. It used to
+// come from the caller's argument while its hash came from the resolved entry, and the difference
+// has no symptom until the argument is not the entry (agni issue 489).
 //
 // A design FOLDER produced /designs/<mount>/<dir>/view, which the viewer's URL space reads as the
 // FILE at <dir>. GetDesign refuses it and the page loads nothing, on the form the tutorial teaches.
@@ -318,10 +319,11 @@ func TestVerdictLinkTargetNamesTheResolvedEntry(t *testing.T) {
 	}
 }
 
-// TestVerdictLinkPathAndHashNameOneArtifact is the invariant behind the fix rather than a third case
-// of it. The two halves are resolved together now, so no argument form can produce a path and a hash
-// that describe different files. A regression here is a false stale-link banner, which is worse than
-// the silence the banner replaced: it discredits the one mechanism built to catch a real mismatch.
+// TestVerdictLinkPathAndHashNameOneArtifact is the invariant behind the fix rather than a third
+// case of it. The two halves are resolved together now, so no argument form can produce a path and
+// a hash that describe different files. A regression here is a false stale-link banner, which is
+// worse than the silence the banner replaced, because it discredits the one mechanism built to
+// catch a real mismatch.
 func TestVerdictLinkPathAndHashNameOneArtifact(t *testing.T) {
 	dir := distinctDesignFolder(t)
 	withDeclaredMount(t, dir)

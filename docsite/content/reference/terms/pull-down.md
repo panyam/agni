@@ -25,7 +25,6 @@ for.
 Both appear as strap resistors, where the level a pin reads at power-on selects an address or a boot
 mode.
 
-**Where the course teaches it:**
-[chapter 1](../../../learn/01-what-a-board-is-made-of/) for the role, and
-[chapter 4](../../../learn/04-pull-ups-and-undefined-states/) for why an undefined level is the
+The course teaches it in [chapter 1](../../../learn/01-what-a-board-is-made-of/) for the role, and
+in [chapter 4](../../../learn/04-pull-ups-and-undefined-states/) for why an undefined level is the
 error case.

@@ -51,8 +51,8 @@ read off the generated descriptors. The named methods (`check_design`, `run_quer
 ## Choosing a transport
 
 **The CLI transport** needs no server and ships as one binary. Every call starts a process and reads
-the design again, which is the cost on a large board. `run_queries` asks many queries in one call,
-so over either transport a whole audit costs one read.
+the design again, and on a large board that read is the slow part. `run_queries` asks many queries
+in one call, so over either transport a whole audit costs one read.
 
 **The Connect transport** posts JSON to `/agni.v1.webapi.<Service>/<Method>`. The server reads a
 design once and answers many questions about it. `agni serve` with no web dir serves the API alone,
@@ -104,8 +104,8 @@ with an unanswered query unless asked to drop it, because a workbook missing a t
 that matched nothing. `clients/python/examples/audit_workbook.py` writes a five-sheet audit of the
 tutorial board this way.
 
-The engine has no xlsx writer, on purpose. C1 keeps the engine's dependencies lean, and a workbook is
-a zip of cross-referencing XML parts whose layout belongs to whoever reads it.
+The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts whose
+layout belongs to whoever reads it, so it stays in the client.
 
 ## Another language
 

@@ -13,7 +13,7 @@ that did not record one. Every row carries a citation back to the page and table
 
 **The pin order is the fact, not a presentation choice.** The bound is on subject *minus* reference,
 so a query that swaps the two columns reads the opposite requirement. They occupy two distinct slots
-for exactly that reason.
+for that reason.
 
 Only tracking relations are projected. `PinRelationKind` has one member today and the proto's own
 comment says a second arrives only once a second vendor can populate it, so the kind is not spent on
@@ -46,13 +46,13 @@ a *design* terminal onto one of these ids is `param.ResolvePin`'s job and delibe
 join, because it can refuse (an ambiguous name, a name and number that disagree) and a join cannot.
 
 A relation whose unit has no known scale keeps its pins, modality and citation with both bounds
-absent, the posture the sibling projections take: an unmeasurable bound must not become orderable.
+absent, as the sibling projections do, because an unmeasurable bound must not become orderable.
 
 ### Go projector
 
 `paramPinRelationFacts` in `stdlib/relations/facts.go` shares the per-MPN join and dedup of the other
 param projectors and emits through `specParamPinRelationRows`. `Object` and `Value` are the subject
-and reference pin ids, `Qualifier` the modality token, `Min` and `Num` the reduced bounds, and `Cite`
+and reference pin ids, `Qualifier` the modality token, `Min` and `Num` the reduced bounds, and `Cites`
 the relation's datasheet provenance. Empty without `--params`, and empty for every spec that declares
 no relations.
 
@@ -67,7 +67,7 @@ param.pin(?mpn, ?s, ?sname, ?sfn), param.pin(?mpn, ?r, ?rname, ?rfn)
   => ?mpn, ?sname, ?rname, ?mod, ?min, ?max
 ```
 
-The requirements alone, all a CI gate cares about:
+The requirements alone, which is what a CI gate usually checks:
 
 ```
 param.pin_relation(?mpn, ?s, ?r, "required", ?min, ?max) => ?mpn, ?s, ?r, ?min, ?max

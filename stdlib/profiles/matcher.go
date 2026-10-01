@@ -7,17 +7,17 @@ import (
 	"github.com/panyam/agni/core/query"
 )
 
-// This file is the ONE place a net name is matched against a profile signal. There are two callers'
-// worlds — the generated datalog (netMatch, compiled into every requirement's rules) and plain Go
-// (netMatchesSignal, behind InUse / Nets / Coverage) — and they must agree, or a rule that will not
-// fire gets scored as a clean pass (the WS3-090 false-pass shape) or a panel binds a net no finding
-// ever names. Both live here, side by side, and the glob/regex forms share one compiler with the
+// This file is the ONE place a net name is matched against a profile signal. It serves two callers'
+// worlds, the generated datalog (netMatch, compiled into every requirement's rules) and plain Go
+// (netMatchesSignal, behind InUse / Nets / Coverage). They must agree, or a rule that will not fire
+// gets scored as a clean pass (the WS3-090 false-pass shape) or a panel binds a net no finding ever
+// names. Both live here, side by side, and the glob/regex forms share one compiler with the
 // query predicates (query.CompileGlob / query.CompilePattern) rather than twinning the translation.
 //
 // A signal declares exactly one matcher FORM (WS3-057):
 //
-//	affix  prefix and/or suffix, conjunctive. The readable default: the role is the tail of the net
-//	       name, optionally discriminated by a bus prefix (PCIE_ + _TXP).
+//	affix  prefix and/or suffix, conjunctive. The readable default, where the role is the tail of the
+//	       net name, optionally discriminated by a bus prefix (PCIE_ + _TXP).
 //	glob   whole-name shell-style glob (ETH_SW*_A_H). For naming where the identity is the prefix and
 //	       the suffix is shared with a foreign bus, which affix matching cannot tell apart.
 //	regex  an unanchored RE2 escape hatch, for multi-instance naming a glob cannot express
@@ -27,8 +27,8 @@ import (
 // for Go-literal ones, so an unsound matcher can never reach rule generation.
 
 // netMatch is the datalog literal(s) binding net-var v to signal s's naming convention. Every
-// generated rule that selects a signal's net goes through here — presence, the completeness anchor,
-// host-present, pull-up, and dangling — so a discriminating matcher is applied uniformly and no rule
+// generated rule that selects a signal's net goes through here (presence, the completeness anchor,
+// host-present, pull-up, and dangling), so a discriminating matcher is applied uniformly and no rule
 // can latch onto a foreign net that merely shares a suffix.
 func netMatch(v query.Term, s Signal) []query.Literal {
 	switch {
@@ -47,9 +47,9 @@ func netMatch(v query.Term, s Signal) []query.Literal {
 	return lits
 }
 
-// netMatchesSignal is the Go twin of netMatch: a net satisfies a signal under the signal's declared
-// form. A signal with NO matcher matches nothing — the safe direction for the presence gates, which
-// take a Profile directly and so are not covered by Compile's validation.
+// netMatchesSignal is the Go twin of netMatch, reporting whether a net satisfies a signal under the
+// signal's declared form. A signal with NO matcher matches nothing. That is the safe direction for the
+// presence gates, which take a Profile directly and so are not covered by Compile's validation.
 func netMatchesSignal(name string, s Signal) bool {
 	switch {
 	case s.Glob != "":
@@ -71,8 +71,8 @@ func netMatchesSignal(name string, s Signal) bool {
 	return true
 }
 
-// matchesAnySignal reports whether name satisfies ANY of p's signals — the profile-level convention
-// match behind the review scope fallback.
+// matchesAnySignal reports whether name satisfies ANY of p's signals. It is the profile-level
+// convention match behind the review scope fallback.
 func matchesAnySignal(p Profile, name string) bool {
 	for _, s := range p.Signals {
 		if netMatchesSignal(name, s) {
@@ -84,10 +84,10 @@ func matchesAnySignal(p Profile, name string) bool {
 
 // validateSignalMatcher rejects a signal whose matcher cannot discriminate: no form declared, more
 // than one form declared, a pattern that does not compile, or a pattern that matches the EMPTY net
-// name. The last is the over-broad guard: `*`, `.*`, and an alternation with an empty branch all
-// match every net on the design, so a completeness check built on one anchors anywhere and reports
-// noise. It is a static rule on purpose — "matches an implausible COUNT of nets" needs the design,
-// which neither Parse nor Compile has.
+// name. The last is the over-broad guard, since `*`, `.*`, and an alternation with an empty branch
+// all match every net on the design, so a completeness check built on one anchors anywhere and reports
+// noise. The rule is static because "matches an implausible COUNT of nets" needs the design, which
+// neither Parse nor Compile has.
 func validateSignalMatcher(s Signal) error {
 	forms := 0
 	if s.Prefix != "" || s.Suffix != "" {

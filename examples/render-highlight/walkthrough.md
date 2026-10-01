@@ -10,7 +10,7 @@ actors:
 
 ## A report finding, seen on the real design
 
-A review report says "duplicate-ref-des on U1" but a reader still has to hunt for U1 on the schematic. This example closes that gap offline: it runs the rule catalog over a design, maps each finding's subject to a highlight, and bakes the highlights into one rendered SVG. The finding is now a picture. It is the static, no-server twin of the web viewer's click-to-locate, over the same HighlightSpec vocabulary the server projects as a live overlay.
+A review report says "duplicate-ref-des on U1" but a reader still has to hunt for U1 on the schematic. This example closes that gap offline by running the rule catalog over a design, mapping each finding's subject to a highlight, and baking the highlights into one rendered SVG. It is the static, no-server twin of the web viewer's click-to-locate, over the same HighlightSpec vocabulary the server projects as a live overlay.
 
 Findings are computed on the netlist and located on the geometry by name (a net) or ref-des (a component), never merged as a second component source (CONSTRAINTS C21). So the picture is the design's own drawing with the flagged parts framed in place.
 
@@ -30,7 +30,7 @@ Agni -->> You: []check.Finding (subject + severity)
 
 ## Bake the findings into the render {#render}
 
-> Each finding's subject becomes one geom.HighlightSpec: a net draws as a PATH marker along its wire, a component or pin as a translucent bounding box, one box per matched placement, colored by severity. render.SheetSVGHighlighted draws the base sheet and composites those highlights onto ONE canvas, the same projection the server serves as a separate overlay, so the CLI static picture and the live viewer are one code path. It writes render.svg. Because U1 is duplicated, both offending symbols are framed.
+> Each finding's subject becomes one geom.HighlightSpec: a net draws as a PATH marker along its wire, a component as a translucent bounding box, one box per matched placement, and a pin as an outline, all colored by severity. render.SheetSVGHighlighted draws the base sheet and composites those highlights onto ONE canvas, the same projection the server serves as a separate overlay, so the CLI static picture and the live viewer are one code path. It writes render.svg. Because U1 is duplicated, both offending symbols are framed.
 
 ```mermaid
 sequenceDiagram
@@ -40,7 +40,7 @@ Agni -->> You: one SVG, findings baked in
 
 ## Same thing from the CLI
 
-The render step is the narrated form of the `--highlight` flag: name a subject and it bakes into the SVG.
+The render step is the narrated form of the `--highlight` flag, which bakes a named subject into the SVG.
 
     agni render ../common/designs/duplicate-refdes.kicad_sch --highlight ref=U1,shape=rect -o render.svg
 

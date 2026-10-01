@@ -5,9 +5,9 @@ description: "the net is a regulator power-stage node, the switch node or its bo
 
 ### What it is
 
-`net.switching(net)` yields one row per net whose name reads as a regulator's power-stage node: a leaf
-name ending in `_SW`, `_BOOT`, `_PHASE`, or `_LX`. It is name-derived, and it is the twin of
-`net.feedback`: both relations name a net that matches the rail vocabulary and is not a rail.
+`net.switching(net)` yields one row per net whose name reads as a regulator's power-stage node, meaning a leaf
+name ending in `_SW`, `_BOOT`, `_PHASE`, or `_LX`. It is name-derived and is the twin of
+`net.feedback`, since both relations name a net that matches the rail vocabulary and is not a rail.
 
 ### For hardware engineers
 
@@ -20,18 +20,18 @@ spellings.
 
 All of them are conventionally named after the rail the converter produces, so a 12V converter's
 switch node is `12V_SW` and is never at 12V. Two consequences a review cares about. Probing one is
-worse than useless: a test point there loads the fastest edge in the design and couples it into
+worse than useless, because a test point there loads the fastest edge in the design and couples it into
 whatever the probe is attached to. And any rule that reasons about a rail's voltage will be wrong
 about this net by the whole input-to-output ratio.
 
-During a review you query `net.switching` to list the power-stage nodes, and you subtract it from `net.rail`
-alongside `net.feedback` so a probe-point or decoupling rule does not treat a switch node as ordinary
-distribution.
+During a review you query `net.switching` to list the power-stage nodes, and `net.rail` already
+leaves it out alongside `net.feedback`, so a probe-point or decoupling rule does not treat a switch node
+as ordinary distribution.
 
 ### For software engineers
 
-A switch node is a name that looks like it belongs to an object and does not: `12V_SW` reads as the
-12V rail's member and is a separate net with a different value. `net.switching` is a filtered projection
+A switch node's name looks like it belongs to an object when it does not, since `12V_SW` reads as
+the 12V rail's member and is a separate net with a different value. `net.switching` is a filtered projection
 over `Nets()` with the naming predicate, so rows are 1:1 with switching-named nets, and an empty
 result means no net name matched the power-stage lexicon.
 
@@ -58,6 +58,8 @@ pull-up rule may treat as ordinary distribution:
 net.rail(?n), not net.feedback(?n), not net.switching(?n) => ?n
 ```
 
-Note that `net.rail` already excludes both, because `Model.IsRailNet` subtracts them before the rail role
-is granted. The form above is worth writing anyway when a query reads alongside one that does not go
+Note that `net.rail` already excludes a rail-NAMED net carrying either role, because `Model.IsRailNet`
+subtracts them before the rail role is granted. A net marked `global` or asserted-driven still
+answers `net.rail` whatever its name, since `Model.IsPowerRail` admits those before it consults the name.
+The form above is worth writing anyway when a query reads alongside one that does not go
 through the rail relation, such as a rule built from the name FFIs.

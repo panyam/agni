@@ -35,7 +35,7 @@ describe("verdictProofStack", () => {
     expect(specs[specs.length - 1].nets).toEqual(["SDA"]);
   });
 
-  // A multi-hop pull-up is the case the ordering matters for: the reader follows the path.
+  // A multi-hop pull-up is the case the ordering matters for, because the reader follows the path.
   it("keeps a multi-hop path in the order the walk found it", () => {
     const v = verdict({
       context: [
@@ -50,8 +50,8 @@ describe("verdictProofStack", () => {
     expect(ground.flatMap((s) => s.nets ?? [])).toEqual(["SCL_ISO", "+3V3"]);
   });
 
-  // A fail has nothing to point at: the search found no resistor and no rail. The subject must still
-  // light up, or clicking a failing row would appear to do nothing.
+  // A fail has nothing to point at, because the search found no resistor and no rail. The subject
+  // must still light up, or clicking a failing row would appear to do nothing.
   it("still draws the subject when the proof names no entities", () => {
     const v = verdict({ outcome: "fail", subjects: [{ kind: "net", subject: "SCL", pin: "" }], context: [] });
     const specs = verdictProofStack(v, [{ nets: ["SCL"] }]);

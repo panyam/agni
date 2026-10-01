@@ -7,21 +7,17 @@ import (
 
 // This file is the review manifest's wire <-> value conversion, the manifest half of what overlay.go
 // does for a naming convention (WS3-102, generalized by WS9-050). It lives here, not in core/review,
-// because the core must not depend on the wire types; this package already sits between the two.
+// because the core must not depend on the wire types.
 //
-// The conversions are total and lossless in both directions, and TestManifestProtoRoundTrip pins
-// that: a Binding field added to the Go struct without a matching proto field fails the round trip
-// rather than quietly dropping off the wire. A dropped binding field is the worst kind of bug here
-// because the item still SCORES — it just scores against a check nobody asked for, or against no
-// check at all while reading not-automated.
+// The conversions are lossless in both directions, and TestManifestProtoRoundTrip fails when a
+// Binding field is added to the Go struct without a matching proto field. A dropped binding field
+// still SCORES, against a check nobody asked for or against none while reading not-automated.
 
 // ManifestFromProto converts a wire manifest to the engine's value. A nil message yields the zero
-// Manifest rather than panicking: an absent manifest is a validation error the caller reports with a
-// message, not a crash.
+// Manifest, which validation then reports as absent.
 //
-// It does NOT validate. Conversion and validation are separate so a caller decides when to pay for
-// the query compilation that validation performs, and so a validation failure names the manifest
-// rather than the conversion. Every service path that converts an inbound manifest validates it.
+// It does NOT validate, so a caller decides when to pay for the query compilation validation
+// performs. Every service path that converts an inbound manifest validates it.
 func ManifestFromProto(p *checkspb.ReviewManifest) review.Manifest {
 	if p == nil {
 		return review.Manifest{}
@@ -87,10 +83,9 @@ func bindingFromProto(p *checkspb.ItemBinding) review.Binding {
 }
 
 // bindingProto mirrors bindingFromProto. The three sub-messages are emitted only when the binding
-// actually carries them, because presence is MEANINGFUL for two of them: a non-nil Present is a
-// present binding (an empty one fails validation for its missing class), and a non-nil Query counts
-// toward the mutually-exclusive binding limit. Materializing an empty message would turn every plain
-// rule item into an item with three extra bindings.
+// carries them, because presence is MEANINGFUL for two. A non-nil Present is a present binding (an
+// empty one fails validation for its missing class), and a non-nil Query counts toward the
+// mutually-exclusive binding limit.
 func bindingProto(b review.Binding) *checkspb.ItemBinding {
 	p := &checkspb.ItemBinding{
 		Rule:           b.Rule,

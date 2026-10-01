@@ -15,7 +15,7 @@ import (
 // the fix, and before this every rule left them to know it already.
 //
 // It lives here because this is the only package composing all four rule sources, and it is
-// catalog-wide on purpose: the point is that rule 69 cannot ship without a remedy, which a per-source
+// catalog-wide so that rule 69 cannot ship without a remedy, which a per-source
 // test would not catch for a source nobody thought to add one to. Detail-less rules are NOT skipped
 // the way TestPageSlugsUnique skips them, because a rule with no docsite page still emits findings.
 func TestEveryRuleStatesARemedy(t *testing.T) {
@@ -45,7 +45,7 @@ func TestEveryRuleStatesARemedy(t *testing.T) {
 	}
 }
 
-// TestPageSlugsUnique guards the reason non-built-in rules are namespaced: a rule name shared across
+// TestPageSlugsUnique guards the reason non-built-in rules are namespaced. A rule name shared across
 // sources (or a future collision, e.g. the datalog crystal-load-caps twin of the built-in) must not
 // resolve to the same page slug, or one page would overwrite the other. It composes the same source
 // list genRules uses and asserts every documented rule's slug is unique.
@@ -88,12 +88,12 @@ func TestPageSlugsUnique(t *testing.T) {
 }
 
 // TestRemedySectionLeadsThePage pins the two decisions in remedySection that a reader of the
-// generated markdown cannot infer: the remedy is a "### " section rather than a blockquote (the
+// generated markdown cannot infer. The remedy is a "### " section rather than a blockquote (the
 // docsite styles headings and has no blockquote rule at all), and it comes FIRST, above the doc
 // body, because a reader arrives here from a finding that just fired.
 //
-// The empty case is not vacuous here: a rule that states no remedy must add NOTHING, or every page
-// for an unconverted rule would carry a stray empty heading.
+// The empty case is not vacuous here, because a rule that states no remedy must add NOTHING, or
+// every page for an unconverted rule would carry a stray empty heading.
 func TestRemedySectionLeadsThePage(t *testing.T) {
 	page := frontMatter("i2c-pull-up", "a summary") + remedySection("Fit a pull-up.") + "### What it means\n\nbody\n"
 

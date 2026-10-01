@@ -11,7 +11,7 @@ const p = (over: Partial<UndrawnPlacement>): UndrawnPlacement => ({
 
 describe("undrawnNote", () => {
   it("is null for a complete drawing, so the strip carries no chrome", () => {
-    // The control that keeps the notice worth reading: a banner on every render is a banner nobody
+    // The control that keeps the notice worth reading. A banner on every render is a banner nobody
     // reads, and most renders are complete.
     expect(undrawnNote([])).toBeNull();
     expect(undrawnNote(undefined)).toBeNull();
@@ -24,7 +24,7 @@ describe("undrawnNote", () => {
       p({ refDes: "U1", cellRef: "MCU" }),
     ]);
     expect(note?.count).toBe(3);
-    // Worst first: the library costing the most parts is the one to go and find.
+    // Worst first, since the library costing the most parts is the one to go and find.
     expect(note?.libraries).toEqual([
       { name: "Acme:CAP", count: 2 },
       { name: "Acme:MCU", count: 1 },

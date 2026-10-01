@@ -1,10 +1,10 @@
-// Command netlist-audit walks a netlist audit written as a query set (agni issue 729): the tables a
+// Command netlist-audit walks a netlist audit written as a query set (agni issue 729). Each table a
 // review workbook holds (parts on nets, part numbers, test points per net, passives a tester can
-// measure, part numbers never probed on both ends), each a named query in audit.yaml, all answered
-// over one read of the design.
+// measure, part numbers never probed on both ends) is a named query in audit.yaml, and all of them
+// are answered over one read of the design.
 //
-// The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds the
-// steps that run engine code. Every step prints the CLI line that reproduces it.
+// The narration lives in the sidecar walkthrough.md (demokit FromMarkdown), and this file only binds
+// the steps that run engine code. Every step prints the CLI line that reproduces it.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -88,15 +88,15 @@ type section struct {
 	err  error
 }
 
-// answerSet answers every query of a set over ONE fact base, which is the whole point of a set: the
-// design is read and projected once, and each query is a lookup against the same indexes.
+// answerSet answers every query of a set over ONE fact base. The design is read and projected once,
+// and each query is a lookup against the same indexes.
 func answerSet(d *ir.Design, yaml []byte) ([]section, error) {
 	set, err := query.ParseQuerySet(yaml)
 	if err != nil {
 		return nil, err
 	}
-	// NewModelWithParams, not NewModel: component.mpn reads the MPN map only the params constructor
-	// fills, so built the other way every part-number table would come back empty.
+	// NewModelWithParams, not NewModel, because component.mpn reads the MPN map only the params
+	// constructor fills. Built the other way every part-number table comes back empty.
 	base := query.NewBase(check.NewModelWithParams(d, nil, nil))
 	out := make([]section, 0, len(set.Queries))
 	for i, nq := range set.Queries {

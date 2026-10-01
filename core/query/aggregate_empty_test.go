@@ -10,9 +10,9 @@ import (
 // aggFixture has no resistor at all, so every query below that asks about one matches nothing.
 const noResistor = `component.class(?r,"resistor"), component.net(?r,?n)`
 
-// TestAggregateOverNothingIsOneRow: with no group-by column the whole answer is one group, and it
-// exists when nothing matched, so a count answers 0 rather than no rows (agni issue 726). The
-// empty values follow SQL: COUNT is 0, while MIN, MAX and SUM have no value to report.
+// TestAggregateOverNothingIsOneRow pins that with no group-by column the whole answer is one group,
+// and it exists when nothing matched, so a count answers 0 rather than no rows (agni issue 726).
+// The empty values follow SQL, so COUNT is 0, while MIN, MAX and SUM have no value to report.
 func TestAggregateOverNothingIsOneRow(t *testing.T) {
 	rows := runQuery(t, check.NewModel(aggFixture()),
 		noResistor+` => count(?r), count(distinct ?r), list(?r), min(?r), max(?r), sum(?r)`)
@@ -40,7 +40,7 @@ func TestAggregateOverNothingIsOneRow(t *testing.T) {
 	}
 }
 
-// TestAggregateOverSomethingStillCounts is the positive control for the test above: the same shape
+// TestAggregateOverSomethingStillCounts is the positive control for the test above. The same shape
 // over a class the fixture does carry answers its real count, so the zero is not a constant.
 func TestAggregateOverSomethingStillCounts(t *testing.T) {
 	rows := runQuery(t, check.NewModel(aggFixture()),
@@ -50,8 +50,8 @@ func TestAggregateOverSomethingStillCounts(t *testing.T) {
 	}
 }
 
-// TestGroupedAggregateOverNothingHasNoRows: a projection with a group-by column has no key to name
-// a group by when nothing matched, so it stays empty, as SQL's GROUP BY does.
+// TestGroupedAggregateOverNothingHasNoRows pins that a projection with a group-by column has no key
+// to name a group by when nothing matched, so it stays empty, as SQL's GROUP BY does.
 func TestGroupedAggregateOverNothingHasNoRows(t *testing.T) {
 	rows := runQuery(t, check.NewModel(aggFixture()), noResistor+` => ?n, count(?r)`)
 	if len(rows) != 0 {
@@ -59,9 +59,9 @@ func TestGroupedAggregateOverNothingHasNoRows(t *testing.T) {
 	}
 }
 
-// TestHavingStillFiltersTheEmptyGroup: having runs after the reduce, so it sees the zero and can
-// reject it. Without that, "=> count(?r) having count(?r) > 0" would answer 0, which its own filter
-// excludes.
+// TestHavingStillFiltersTheEmptyGroup pins that having runs after the reduce, so it sees the zero
+// and can reject it. Without that, "=> count(?r) having count(?r) > 0" would answer 0, which its
+// own filter excludes.
 func TestHavingStillFiltersTheEmptyGroup(t *testing.T) {
 	m := check.NewModel(aggFixture())
 	if rows := runQuery(t, m, noResistor+` => count(?r) having count(?r) > 0`); len(rows) != 0 {
@@ -72,10 +72,11 @@ func TestHavingStillFiltersTheEmptyGroup(t *testing.T) {
 	}
 }
 
-// TestRuleFromQueryRejectsAnUnprojectedSubject: every answer row becomes a finding, and its subject
-// is read off the row by name. An aggregate column is labelled count(r), not r, so a finding query
-// projecting only aggregates has no subject to name. It used to compile and then report findings
-// about the empty string, and since agni issue 726 it would do so over an empty design too.
+// TestRuleFromQueryRejectsAnUnprojectedSubject exists because every answer row becomes a finding,
+// and its subject is read off the row by name. An aggregate column is labelled count(r), not r, so
+// a finding query projecting only aggregates has no subject to name. It used to compile and then
+// report findings about the empty string, and since agni issue 726 it would do so over an empty
+// design too.
 func TestRuleFromQueryRejectsAnUnprojectedSubject(t *testing.T) {
 	cases := map[string]FindingQuery{
 		"subject behind an aggregate": {
@@ -102,7 +103,7 @@ func TestRuleFromQueryRejectsAnUnprojectedSubject(t *testing.T) {
 	}
 }
 
-// TestRuleFromQueryAcceptsAnImplicitProjection is the control for the rejection above: a query with
+// TestRuleFromQueryAcceptsAnImplicitProjection is the control for the rejection above. A query with
 // no "=>" projects every goal variable, so its subject is a column and it must still compile.
 func TestRuleFromQueryAcceptsAnImplicitProjection(t *testing.T) {
 	_, err := RuleFromQuery(FindingQuery{

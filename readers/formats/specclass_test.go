@@ -7,13 +7,13 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestReadDesignStampsDatasheetClasses is the wiring half of agni issue 710: a Loader carrying a
+// TestReadDesignStampsDatasheetClasses is the wiring half of agni issue 710. A Loader carrying a
 // datasheet corpus stamps the classes only that corpus can establish, so the design every consumer
 // receives already knows what its parts are. Before this the enrichment lived inside check.Model, so
 // a drawing built from the same design disagreed with a query over it.
 //
 // It reads through ReadDesign rather than calling the pass, because the ORDER is the part that can
-// break: the join key is the MPN a previous pass fills, and the convention stamp REPLACES the set, so
+// break. The join key is the MPN a previous pass fills, and the convention stamp REPLACES the set, so
 // either one running after this would silently undo it.
 func TestReadDesignStampsDatasheetClasses(t *testing.T) {
 	const design = "../../cmd/agni/testdata/classproject/designs/clocks/clocks.edn"

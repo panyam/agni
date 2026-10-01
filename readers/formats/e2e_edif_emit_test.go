@@ -14,7 +14,7 @@ import (
 )
 
 // emitCases is one design per reader that produces connectivity, which is the axis agni issue 563
-// went unnoticed along: the EDIF writer was only ever exercised on EDIF input, so a fallback that
+// went unnoticed along. The EDIF writer was only ever exercised on EDIF input, so a fallback that
 // dropped every anchor was invisible for every other format. Adding a row is how a new reader
 // inherits the guarantee.
 //
@@ -23,9 +23,10 @@ import (
 var emitCases = []struct {
 	name, path           string
 	wantComps, wantConns int
-	// unanchored is the number of connections naming a component the design does not carry: a KiCad
-	// power symbol or PWR_FLAG, which the reader records on "#PWR01" while keeping the component list
-	// physical. EDIF has no instance for one, so those alone come back as no-ref connections.
+	// unanchored is the number of connections naming a component the design does not carry, such as
+	// a KiCad power symbol or PWR_FLAG, which the reader records on "#PWR01" while keeping the
+	// component list physical. EDIF has no instance for one, so those alone come back as no-ref
+	// connections.
 	unanchored int
 }{
 	{name: "kicad-sch", path: "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch", wantComps: 19, wantConns: 56},
@@ -43,11 +44,11 @@ var emitCases = []struct {
 // TestEmitEDIFKeepsConnectivity is the guard agni issue 563 needed and did not have. Read a design in
 // each format, emit an EDIF netlist, read that back, and require every pin-to-part link to survive.
 //
-// It asserts the PAIRS rather than a count, because a count is the thing the bug already satisfied:
-// the broken writer emitted one (portRef ...) per connection and the re-read produced one connection
-// per portRef, so connection totals matched exactly while every one of them had lost its component.
-// The failing report on a real board was 1123 components and 1387 nets, all correct, and 1123
-// unconnected components.
+// It asserts the PAIRS rather than a count, because a count is the thing the bug already satisfied.
+// The broken writer emitted one (portRef ...) per connection and the re-read produced one
+// connection per portRef, so connection totals matched exactly while every one of them had lost its
+// component. The failing report on a real board was 1123 components and 1387 nets, all correct, and
+// 1123 unconnected components.
 func TestEmitEDIFKeepsConnectivity(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -180,10 +181,11 @@ var emittedInstanceIDs = regexp.MustCompile(`\(instance (?:\(rename ([^\s()]+) "
 
 // TestEmitEDIFKeepsPartIdentity requires a part number stated by the source to survive an export.
 //
-// The datasheet tier joins on component.mpn, so an export that drops it hands the recipient a netlist
-// that looks complete and silently fails a BOM join. The writer carries a SECTION's attributes into
-// the instance's properties, which is why a reader that records the part number only on the component
-// exports nothing: the value is in the IR and not in the half the writer reads (agni issue 584).
+// The datasheet tier joins on component.mpn, so an export that drops it hands the recipient a
+// netlist that looks complete and silently fails a BOM join. The writer carries a SECTION's
+// attributes into the instance's properties, which is why a reader that records the part number
+// only on the component exports nothing, since the value is in the IR and not in the half the
+// writer reads (agni issue 584).
 //
 // Rows with no MPN in the source are skipped rather than asserted at zero, because most fixtures here
 // state none and a design that carries no part number legitimately exports none.

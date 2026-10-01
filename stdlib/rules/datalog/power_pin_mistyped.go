@@ -13,12 +13,11 @@ import (
 )
 
 // powerPinMistyped flags a pin whose NAME says power or ground (pin.role) but whose electrical TYPE
-// is not power_in, sitting alone on its net. It is the datalog successor to the withdrawn Spec
-// power-pin-unconnected (PR 217), and does not overlap power-input-not-driven, which needs the
-// power_in type and so misses exactly this case. Keyed on net fan-out (net.pin_count < 2), NOT net
-// membership, because KiCad stub-synthesizes a net for every bare pin, so "not on a net" is never
-// true there but "alone on its net" is. Gated by design.has_nc_channel so it stays silent on formats that
-// cannot express intentional no-connect.
+// is not power_in, sitting alone on its net. It replaces the withdrawn Spec power-pin-unconnected
+// (PR 217) and does not overlap power-input-not-driven, which needs the power_in type. Keyed on net
+// fan-out (net.pin_count < 2), NOT net membership, because KiCad synthesizes a stub net for every
+// bare pin. Gated by design.has_nc_channel so it stays silent on formats that cannot express
+// intentional no-connect.
 var powerPinMistypedQ = query.FindingQuery{
 	Rule: check.Rule{
 		Name:     "power-pin-mistyped",
@@ -38,15 +37,12 @@ var powerPinMistypedQ = query.FindingQuery{
 		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
 		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
 		bad(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
-	// The considered set: every pin the NAME says is a supply or a ground, on a format that can
-	// express intentional no-connect. Both of the rule's tests drop out, the type test and the
-	// fan-out comparison alike, because a pin that is correctly typed and a pin that is wired are
-	// both pins this rule looked at and cleared.
-	//
-	// design.has_nc_channel stays. It is not a test the pin passes, it is whether the FORMAT can answer the
-	// question at all, and a pin read from a format that cannot express no-connect was never judged.
-	// Leaving it out would report every pin on an EDIF netlist as verified by a rule that is
-	// structurally silent there, which is the false-pass shape the capability gate exists to prevent.
+	// The considered set is every pin the NAME says is a supply or ground, on a format that can
+	// express intentional no-connect. The type test and the fan-out test both drop out, since a
+	// correctly typed pin and a wired pin were both looked at and cleared. design.has_nc_channel stays
+	// because it asks whether the FORMAT can answer at all; without it every pin on an EDIF netlist
+	// would read as verified by a rule that is silent there. See
+	// docsite/content/architecture/rules-and-checks.md#source-format-capabilities.
 	Domain: &query.Domain{
 		Query: query.MustParse(`
 		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  pin.net(?ref, ?pin, ?net), design.has_nc_channel(?nc);
@@ -58,9 +54,8 @@ var powerPinMistypedQ = query.FindingQuery{
 	SubjectVar: "ref",
 	PinVar:     "pin",
 	Message:    "pin {pin} is named like a power/ground pin but is typed as a plain signal, alone on net {net} — a mistyped supply pin power-input-not-driven cannot catch",
-	// The net, and only the net. {pin} is already the subject here (Kind is KindPin, so the subject is
-	// the ref/pin pair), and repeating the subject as its own context would give the panel a chip that
-	// navigates to the thing the reader is already looking at (agni issue 349).
+	// Only the net. KindPin makes the ref/pin pair the subject, so a {pin} chip would navigate to what
+	// the reader is already looking at (agni issue 349).
 	ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "net"}},
 }
 

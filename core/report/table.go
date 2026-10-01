@@ -10,26 +10,20 @@ import (
 // Table is one query answer, ready to render in any format: the projected columns, the rows, and
 // the question that produced them.
 //
-// It exists because a query result is the one artifact in this repo with no report shape. A check
-// run has Report, a checklist has Checklist, and a query printed an aligned table straight out of
-// cmd/ with no way to get csv, markdown or html out of it at all. Those are the formats a view
-// leaves the tool in, so the type is the view rather than a rendering detail.
-//
-// It lives here rather than in cmd/ for the reason agni issue 380 records: the check and diff
-// renderers were written in cmd/, the second was copied from the first, and the copies drifted. A
-// third table renderer in the same place would be the same mistake a third time.
+// It is the query result's report shape, as Report is a check run's and Checklist a review's, so one
+// value renders as text, csv, markdown or html. It lives here rather than in cmd/ so the renderers
+// are not copied and left to drift (agni issue 380).
 type Table struct {
-	// Title names the view, e.g. "Test point coverage". Empty for an ad-hoc query, which is the
-	// common CLI case and renders with the query as its own heading.
+	// Title names the view, e.g. "Test point coverage". Empty for an ad-hoc query, the common CLI
+	// case.
 	Title string
 	// Query is the datalog that produced the rows, carried so an exported view states the question
-	// it answers. A view whose question is missing cannot be re-run, checked, or argued with, which
-	// is most of what separates a view from a screenshot.
+	// it answers and can be re-run.
 	Query string
 	// Source names the design the query ran against. Rendered in the subtitle, not in a cell.
 	Source string
 	// Columns are the projected column names, in the query's own order. Provenance is NOT among
-	// them; every renderer appends it, so the two cannot disagree about where it goes.
+	// them; every renderer appends it as the last column.
 	Columns []string
 	Rows    []TableRow
 }
@@ -37,8 +31,8 @@ type Table struct {
 // TableRow is one answer: a cell per column, plus the provenance of the facts that produced it.
 type TableRow struct {
 	Cells []string
-	// Cites are the fact citations behind this row. Rendered as one trailing column rather than as
-	// a footnote, because a citation a reader has to go and find is one they will not check.
+	// Cites are the fact citations behind this row, rendered as one trailing column rather than as
+	// a footnote.
 	Cites []string
 }
 
@@ -57,8 +51,7 @@ func (r TableRow) cells() []string {
 }
 
 // TableText writes the aligned terminal table: the projected columns plus provenance, then the
-// count. This is the format `agni query` has always printed, kept byte-identical so adding the
-// others changed nothing for anyone already parsing it.
+// count. Keep it byte-stable, since scripts parse `agni query` output.
 func TableText(w io.Writer, t Table) error {
 	if len(t.Rows) == 0 {
 		_, err := fmt.Fprintln(w, "no results")
@@ -79,13 +72,11 @@ func TableText(w io.Writer, t Table) error {
 // TableCSV writes the rows as csv, header first, with every cell sanitized against spreadsheet
 // formula execution (see SanitizeCell).
 //
-// It emits THE TABLE AND NOTHING ELSE: no title, no query, no count. The other formats carry that
-// preamble and this one deliberately does not, because a csv is read by a machine or bound to by a
-// spreadsheet whose first row must be the header. A commented preamble is a convention some readers
-// honour and others hand you as a row of garbage.
+// It emits THE TABLE AND NOTHING ELSE: no title, no query, no count, because whatever binds to a
+// csv expects the header as its first row. A commented preamble is not portable across readers.
 //
-// An empty result still writes the header. A zero-row csv with columns is a table that ran and
-// matched nothing; an empty FILE is indistinguishable from a run that failed.
+// An empty result still writes the header, so it reads as a query that matched nothing rather than
+// a run that failed.
 func TableCSV(w io.Writer, t Table) error {
 	c := NewCSVWriter(w)
 	c.Header(t.header())
@@ -98,9 +89,8 @@ func TableCSV(w io.Writer, t Table) error {
 // TableMarkdown writes the view as a GitHub-flavoured markdown section: a heading, the query in a
 // fence, then the table.
 //
-// The empty case gets a SENTENCE, not an empty table. A markdown table with a header and no rows
-// reads as an omission or a broken generator, and a view that matched nothing has to say so in
-// words for the same reason a check that did not run may not render as a pass.
+// The empty case gets a SENTENCE, not an empty table, since a header with no rows reads as a broken
+// generator.
 func TableMarkdown(w io.Writer, t Table) error {
 	bw := &errWriter{w: w}
 	if t.Title != "" {
@@ -127,8 +117,8 @@ func TableMarkdown(w io.Writer, t Table) error {
 }
 
 // mdEscape makes a cell safe inside a markdown table row. A pipe would end the cell early, and a
-// newline would end the ROW, silently shifting every following cell one column left. Both occur in
-// real data: provenance joins several citations, and a net name is whatever the design called it.
+// newline would end the ROW, shifting every following cell one column left. Net names can carry
+// either.
 func mdEscape(s string) string {
 	s = strings.ReplaceAll(s, "|", "\\|")
 	s = strings.ReplaceAll(s, "\r\n", " ")
@@ -144,11 +134,8 @@ func mdEscapeAll(in []string) []string {
 	return out
 }
 
-// TableHTML writes the view as one self-contained page, sharing the stylesheet the check report and
-// the checklist use, so three artifacts out of one tool look like one tool.
-//
-// html/template rather than string building, for the reason stated on HTML: every cell here came out
-// of a design file this engine did not author.
+// TableHTML writes the view as one self-contained page on the stylesheet the check report and the
+// checklist share. html/template for the reason stated on HTML.
 func TableHTML(w io.Writer, t Table) error {
 	tm, err := parse("table.html.tmpl")
 	if err != nil {
@@ -174,7 +161,7 @@ func (t Table) bodyRows() [][]string {
 }
 
 // errWriter retains the first write error so a renderer can print a document without checking after
-// every line. Same posture as CSVWriter, for the same reason.
+// every line, like CSVWriter.
 type errWriter struct {
 	w   io.Writer
 	err error

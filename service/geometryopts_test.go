@@ -15,9 +15,9 @@ import (
 )
 
 // recordingLoader answers every Loader method with a fixed fixture and records the ReadOptions each
-// call received, keyed by method. It is the only way to observe config reaching a read: the options
-// are consumed inside the adapter, so a test that looked at the RESULT would be asserting on the
-// reader's symbol resolution rather than on whether the service passed the config at all.
+// call received, keyed by method. It is the only way to observe config reaching a read, because the
+// options are consumed inside the adapter, so a test that looked at the RESULT would be asserting on
+// the reader's symbol resolution rather than on whether the service passed the config at all.
 type recordingLoader struct {
 	mu   sync.Mutex
 	seen map[string][]ReadOptions
@@ -105,14 +105,14 @@ func symbolProjectResolver(hostDir string) *ProjectResolver {
 
 // TestSymbolPathsReachTheRenderRead is the twin of TestSymbolPathsReachTheRead, for the render tier.
 //
-// The reason is the same sentence: an unresolved symbol changes what the design CONTAINS rather than
+// The reason is the same. An unresolved symbol changes what the design CONTAINS rather than
 // what is checked about it. On the render side the consequence is sharper, because it is invisible. A
 // placement whose symbol did not resolve contributes no shapes, so it is dropped from the document
 // along with the entity keys that make it pickable, while the annotation pass still draws its
 // reference designator. The sheet then looks complete and every component and pin on it is silently
 // unclickable (agni issue 347).
 //
-// This assertion could not be written before: Loader.Geometry took no options, so there was no
+// This assertion could not be written before, because Loader.Geometry took no options, so there was no
 // channel for a call site to pass config through and nothing for a test to observe.
 func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 	uri := "mount://m/p/board.kicad_sch"
@@ -159,8 +159,8 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 }
 
 // TestSymbolPathsReachTheNetlistReadsBesideTheRender covers the reads that sit NEXT to the render on
-// the same service and were equally unconfigured: GetDesign's component/net counts, and the netlist
-// HighlightSheet reads to resolve net ids to names for a name-join.
+// the same service and were equally unconfigured, namely GetDesign's component/net counts and the
+// netlist HighlightSheet reads to resolve net ids to names for a name-join.
 //
 // They are here rather than in a separate test because they share the defect's cause. The service had
 // no resolver at all, so every read it made was unconfigured, and fixing only the ones the render
@@ -187,10 +187,10 @@ func TestSymbolPathsReachTheNetlistReadsBesideTheRender(t *testing.T) {
 // TestDiffReadsBothSidesConfigured is the folded-in half of agni issue 347.
 //
 // A diff rests entirely on its two netlist reads, and both were made with no options. A project whose
-// symbol library did not resolve was therefore compared from two reads that each lose every
-// connection through the affected parts, so a revision that CHANGED such a connection showed no
-// change at all. `agni diff` on the CLI reads through readDesign and is configured, so the two
-// surfaces answered the same question differently — the service-side survivor of agni issue 228.
+// symbol library did not resolve was therefore compared from two reads that each lose every connection
+// through the affected parts, so a revision that CHANGED such a connection showed no change at all.
+// `agni diff` on the CLI reads through readDesign and is configured, so the two surfaces answered the
+// same question differently. This was the service-side survivor of agni issue 228.
 func TestDiffReadsBothSidesConfigured(t *testing.T) {
 	ld := newRecordingLoader()
 	svc := NewDiffService(ld, symbolProjectResolver("/host/p/symbols"))

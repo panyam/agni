@@ -10,22 +10,23 @@ rail whose declared voltage times the derate factor (`1.25`) exceeds that rating
 
 ### Why engineers want it
 
-This is the stakeholder-named cap-voltage rule: the classic
-review checklist item ("is every cap rated for its rail, with margin?") turned into a check
+This rule turns the classic
+review checklist item ("is every cap rated for its rail, with margin?") into a check
 whose limit is the vendor's number with provenance, not a rule-of-thumb constant in code.
 The finding cites the datasheet page/table so the margin is verifiable, on the datasheet layer's
-whole posture (docs/20).
+whole posture (architecture/datasheet-layer.md).
 
-### Evidence honesty
+### What it skips rather than guesses
 
-Every untrusted input is a skip, never a guess: no MPN / unseeded MPN
-/ no seeded corpus; no machine-comparable rated-voltage row (docs/20 comparison semantics);
-units other than "V"; a rail with neither a max_voltage attribute nor a name-derived
-nominal. The worst (highest) known rail among the cap's nets governs.
+Every untrusted input is a skip, never a guess: no MPN / unseeded MPN / no seeded corpus; no
+machine-comparable rated-voltage row (architecture/datasheet-layer.md, "Comparison semantics");
+units other than "V"; a rail with neither a max_voltage attribute nor a name-derived nominal. The
+worst (highest) known rail among the cap's nets governs. Because a skip and a pass look the same to
+the spec, the rule reports violations only and states no considered set.
 
 ### Query structure
 
-Spec-authored (docs/19 "a rule is a value"); the join and float
+Spec-authored (architecture/rules-and-checks.md, "A rule is a value"); the join and float
 compare live in the cap_voltage_detail SpecFunc, which returns the violation sentence or "",
 so the rule body stays AST and the derived Reads carry the param join as named relations.
 

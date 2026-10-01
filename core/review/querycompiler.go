@@ -7,16 +7,11 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// A manifest may bind an item to an INLINE query — a house rule authored in the checklist rather than
-// in the shipped catalog. Compiling one means parsing a query language, and this package does not
-// know a query language. It knows the manifest's own vocabulary (which fields are required, what a
-// kind may be, what the rule is called) and delegates the rest.
-//
-// That split is the point. A query language is one way to ask a question about a design, beside
-// check.Spec for per-entity questions and Go for the rest, and no core package should be able to
-// answer only in the one that happens to ship (C29). The engine and the manifest meet at *check.Rule,
-// which is the same neutral currency check.RegisterSource already trades in — so a second engine
-// contributes house rules by registering here, and nothing in core learns its syntax.
+// A manifest may bind an item to an INLINE query, a house rule authored in the checklist rather than
+// in the shipped catalog. This package knows the manifest's own vocabulary (required fields, what a
+// kind may be, what the rule is called) and delegates parsing the query to a registered compiler, so
+// no core package knows a query language (C29). The two meet at *check.Rule, the same currency
+// check.RegisterSource trades in, so a second engine contributes house rules by registering here.
 
 // QueryRequest is everything a compiler needs that is NOT its own language: the identity and
 // presentation the manifest fixed, plus the query text in whatever language the compiler speaks.
@@ -67,10 +62,10 @@ func RegisterQueryCompiler(c QueryCompiler) {
 	compiler = c
 }
 
-// QueryCompilerInstalled reports whether an engine has claimed the inline-query seam. It exists for a
-// composition check at startup: a binary that registers no compiler loads every manifest that binds
-// no inline query, so the absence is legitimate and cannot be an error here, but it is invisible
-// until some manifest happens to use one. A composer can say so up front instead.
+// QueryCompilerInstalled reports whether an engine has registered an inline-query compiler, for a
+// composition check at startup. A binary with no compiler still loads every manifest that binds no
+// inline query, so the absence is not an error here, but it stays invisible until some manifest uses
+// one.
 func QueryCompilerInstalled() bool {
 	compilerMu.RLock()
 	defer compilerMu.RUnlock()
@@ -79,12 +74,9 @@ func QueryCompilerInstalled() bool {
 
 // queryCompiler returns the registered compiler, or an error naming the omission.
 //
-// A missing compiler is an ERROR rather than a skipped item, deliberately. A binary that composes no
-// query engine still loads a manifest, and an inline query it cannot compile would otherwise resolve
-// to no rules — which runItem reads as an item nothing checked, and a checklist reporting a house rule
-// as unverified when it was never even parsed is the silence-reads-as-coverage shape verdicts exist to
-// remove. Load surfaces this at parse time, so the failure lands where the manifest is read rather
-// than in the middle of a run.
+// A missing compiler is an ERROR rather than a skipped item. Otherwise the inline query resolves to no
+// rules and runItem reports a house rule as unverified when it was never even parsed. Load surfaces
+// this at parse time, so the failure lands where the manifest is read rather than mid-run.
 func queryCompiler() (QueryCompiler, error) {
 	compilerMu.RLock()
 	defer compilerMu.RUnlock()

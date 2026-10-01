@@ -10,10 +10,10 @@ Fit the over-voltage clamp the intent declares for this rail, chosen to conduct 
 ### What it means
 
 The design intent declares that a named rail must be over-voltage protected. This rule fails when the
-declared rail carries no clamp: it probes that exact net for a TVS or a zener among its components, and
-a declared rail with none is flagged. It keys on the declared net NAME (not the rail-role heuristic,
-which misses names like `VBATT01` that carry no voltage token), so an input rail the customer names
-explicitly is checkable.
+declared rail carries no clamp, which it finds by probing that exact net for a TVS or a zener among
+its components, and a declared rail with none is flagged. It keys on the declared net NAME (not the
+rail-role heuristic, which misses names like `VBATT01` that carry no voltage token), so an input rail
+the declaration names explicitly is checkable.
 
 ### Why engineers want it
 
@@ -24,8 +24,8 @@ declaration names the rail and this rule verifies the clamp is actually on it.
 
 ### Impact
 
-A rail the design was intended to protect has no OV clamp, so a transient reaches downstream parts:
-latch-up, degraded silicon, or an immediate failure on a hot-plug or load-dump event.
+A rail the design was intended to protect has no OV clamp, so a transient reaches downstream parts
+and causes latch-up, degraded silicon, or an immediate failure on a hot-plug or load-dump event.
 
 ![A declared input rail with no clamp is flagged; the same rail with a TVS to ground is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/protection-ovp.svg)
 

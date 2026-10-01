@@ -39,12 +39,12 @@ func isolatedDesign(t *testing.T, fixture string) string {
 }
 
 // TestResultsRoundTripWithoutTheDesign is the acceptance test for the results half of the checks
-// contract (WS3-103): a written document must be SELF-CONTAINED, not a view over live state.
+// contract (WS3-103), that a written document must be SELF-CONTAINED, not a view over live state.
 //
 // It proves that by deleting the design before re-rendering. Every format the live command emits has
-// to come back byte for byte from the document alone — no design file, no re-run of a single rule. A
-// document that merely round-tripped its own fields would pass a weaker test while still being
-// unreadable to anyone who does not have the design, which is the whole population this artifact
+// to come back byte for byte from the document alone, with no design file and no re-run of a single
+// rule. A document that merely round-tripped its own fields would pass a weaker test while still
+// being unreadable to anyone who does not have the design, and those readers are who this artifact
 // exists for.
 func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
 	design := isolatedDesign(t, "testdata/conformance/fires.edn")
@@ -55,7 +55,7 @@ func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
 	for _, f := range formats {
 		live[f] = runCLI(t, checkCmd(), "--format", f, design)
 	}
-	// One write, then every format re-rendered from it: the document is not per-format.
+	// One write, then every format re-rendered from it, because the document is not per-format.
 	written := runCLI(t, checkCmd(), "--format", "text", "--results-out", doc, design)
 	if written != live["text"] {
 		t.Errorf("--results-out changed the terminal output:\n got %q\nwant %q", written, live["text"])
@@ -71,8 +71,8 @@ func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
 			// THE ONE THING A DOCUMENT CANNOT REPLAY. The live text output closes with what the run
 			// considered, and CheckResults has no field for a considered set (OUT_OF_SCOPE.md), so a
 			// replay states no coverage rather than inventing one from the findings it does carry.
-			// Everything else must still come back byte for byte, which is what the strip below
-			// keeps this test honest about: it removes the coverage lines and nothing else.
+			// Everything else must still come back byte for byte, so the strip below removes the
+			// coverage lines and nothing else.
 			want = stripCoverage(want)
 			if want == live[f] {
 				t.Fatal("live text output no longer states coverage; this exemption is now hiding a real diff")
@@ -136,8 +136,8 @@ func TestResultsDocumentRecordsTheRun(t *testing.T) {
 	if got.Meta.Producer != "agni" || got.Meta.ProducerVersion == "" || got.Meta.CreatedAt == "" {
 		t.Errorf("meta = %+v, want a named producer with a build identity and a timestamp", got.Meta)
 	}
-	// The document records the design's URI, not the path as typed: a stored document outlives the
-	// machine that made it, and a renderer shortens the URI for reading (displayName).
+	// The document records the design's URI, not the path as typed, because a stored document
+	// outlives the machine that made it, and a renderer shortens the URI for reading (displayName).
 	wantURI, err := cliArgURI(design)
 	if err != nil {
 		t.Fatal(err)
@@ -164,7 +164,7 @@ func TestResultsDocumentRecordsTheRun(t *testing.T) {
 	}
 }
 
-// TestResultsDocumentRecordsOverlayTiers pins the other half of the run record: with a convention
+// TestResultsDocumentRecordsOverlayTiers pins the other half of the run record. With a convention
 // attached, the document names it. The name matters more than a flag would, because it is also the
 // namespace the convention's rules are reported under.
 func TestResultsDocumentRecordsOverlayTiers(t *testing.T) {
@@ -189,7 +189,7 @@ func TestResultsDocumentRecordsOverlayTiers(t *testing.T) {
 
 // TestReviewResultsRoundTripWithoutTheDesign is the review half of the self-containment proof. The
 // outcome vocabulary is the part of the document with no incumbent equivalent, so it is the part most
-// worth pinning: every item's verdict, note and findings must survive the write.
+// worth pinning. Every item's verdict, note and findings must survive the write.
 func TestReviewResultsRoundTripWithoutTheDesign(t *testing.T) {
 	design := isolatedDesign(t, "testdata/review/can-broken.edn")
 	doc := filepath.Join(t.TempDir(), "review.results.json")
@@ -216,7 +216,7 @@ func TestReviewResultsRoundTripWithoutTheDesign(t *testing.T) {
 
 // TestReviewResultsRejectsARollup pins that --results-out refuses a multi-design run rather than
 // silently documenting the first. A document claims to be about ONE design (it carries one
-// DesignRef), so a rollup has no honest encoding here.
+// DesignRef), so a rollup cannot be encoded faithfully here.
 func TestReviewResultsRejectsARollup(t *testing.T) {
 	a := isolatedDesign(t, "testdata/review/can-broken.edn")
 	b := isolatedDesign(t, "testdata/review/conv-demo.edn")
@@ -235,8 +235,8 @@ func TestReviewResultsRejectsARollup(t *testing.T) {
 
 // TestResultsRejectsAForeignDocument pins the schema gate. Half-reading a document this build does
 // not understand would produce a findings list shorter than the run that made it, with nothing to say
-// so — the exact silence-as-coverage failure the contract exists to rule out, so an unknown schema is
-// an error rather than a best-effort read.
+// so. That is the silence-as-coverage failure the contract exists to rule out, so an unknown schema
+// is an error rather than a best-effort read.
 func TestResultsRejectsAForeignDocument(t *testing.T) {
 	dir := t.TempDir()
 	cases := map[string]string{
@@ -258,12 +258,13 @@ func TestResultsRejectsAForeignDocument(t *testing.T) {
 	}
 }
 
-// TestResultsCarriesSkippedRules: a document records what could NOT be checked as well as what was.
+// TestResultsCarriesSkippedRules checks that a document records what could NOT be checked as well as
+// what was.
 //
 // It is the other half of what `catalog` exists for. A catalog snapshot separates a clean design from
 // a run that checked nothing; this separates a clean design from one whose questions were GATED. A
-// document carrying one without the other lets a reader conclude the run was broader than it was —
-// and a re-render is meant to reproduce the original output, which it could not while one surface
+// document carrying one without the other lets a reader conclude the run was broader than it was. A
+// re-render is meant to reproduce the original output, which it could not while one surface
 // knew something the other did not.
 func TestResultsCarriesSkippedRules(t *testing.T) {
 	design := isolatedDesign(t, "testdata/review/can-broken.edn")
@@ -290,7 +291,7 @@ func TestResultsCarriesSkippedRules(t *testing.T) {
 	}
 }
 
-// results shares review's shadowing: its render switch tests coverage before format, so an explicit
+// results shares review's shadowing. Its render switch tests coverage before format, so an explicit
 // --format was discarded silently. The rollup renders as markdown alone, so an explicit request for
 // anything else is refused rather than quietly answered with markdown.
 func TestReviewResultsCoverageRefusesAFormatItCannotRender(t *testing.T) {

@@ -16,11 +16,11 @@ import {
   tallySeverities,
   verdictSubjectLabel, type VerdictItem } from "./findings.js";
 
-// GroupAxis extends the finding group axes with "none" — a flat sorted table with no group headers.
+// GroupAxis adds "none" to the finding group axes, meaning a flat sorted table with no group headers.
 type GroupAxis = FindingGroupAxis | "none";
 
-// GROUP_OPTIONS drives the "Group by" selector. "none" is a flat table; "entity"/"interface" label
-// the kind/profile axes the way the retired report/findings panels did.
+// GROUP_OPTIONS drives the "Group by" selector. "entity" and "interface" label the kind and profile
+// axes.
 const GROUP_OPTIONS: { key: GroupAxis; label: string }[] = [
   { key: "none", label: "none" },
   { key: "rule", label: "rule" },
@@ -37,34 +37,30 @@ const SORT_COLS: { key: FindingSortKey; label: string }[] = [
   { key: "rule", label: "rule" },
 ];
 
-// ChecksPanel is the merged checks surface (WS9): it replaces the separate findings and report
-// panels with one server-sourced, client-ordered table. The presenter pushes the flat finding list
-// (from CheckDesign) plus the rule catalog summaries; the panel owns ALL ordering — a "Group by"
-// axis, per-column sort, and the collapse of repeated findings — so the same data groups any way
-// without a server round-trip. Checks are on-demand: the Run button triggers the run, and pending
-// (selected-but-not-run rules) badges it. Everything shown is pushed (command-down, C3).
+// ChecksPanel is the checks table (WS9). The presenter pushes the flat finding list from CheckDesign
+// plus the rule catalog summaries, and the panel owns ALL ordering (group-by axis, per-column sort,
+// collapse of repeated findings), so regrouping needs no server round-trip. Checks run on demand from
+// the Run button, whose badge counts selected rules not yet run. Everything shown is pushed (C3).
 function ChecksPanel(props: {
   state: () => FindingsState;
   locateNote: () => string;
   onSelect: (subject: string, sheet?: string, netId?: string) => void;
-  // onLocateContext is the locate intent for a CONTEXT entity: the entities a finding's message names
-  // but is not about (agni issue 349). It is separate from onSelect because a context entity is not a
-  // finding, so the finding-by-subject lookup behind onSelect would not find it.
+  // onLocateContext locates a CONTEXT entity, one a finding's message names but is not about (agni
+  // issue 349). onSelect cannot, because its finding-by-subject lookup would not find it.
   onLocateContext: (kind: string, subject: string, pin: string) => void;
   onRun: () => void;
-  // onSelectVerdict focuses one verdict by its derived id and draws its proof. Separate from
-  // onSelect, which looks a FINDING up by subject: a passing verdict has no finding to find.
+  // onSelectVerdict focuses a verdict by its derived id (see viewer.ts locateVerdict). A passing
+  // verdict has no finding, so onSelect's lookup by subject cannot serve it.
   onSelectVerdict: (id: string) => void;
 }) {
-  // mode is panel-local view state, like the group-by axis: which of the two tables is shown. They
-  // are separate tables rather than one with extra rows, because a findings row is a violation and a
-  // consumer counting rows would start counting passes as defects.
+  // mode is panel-local view state picking which table shows. Two tables rather than one with extra
+  // rows, because a findings row is a violation and anything counting rows would count passes as
+  // defects.
   const [mode, setMode] = createSignal<"violations" | "considered">("violations");
-  // A focused verdict switches the panel to the table that CONTAINS it. Arriving on a link that
-  // names a verdict otherwise draws the proof on the canvas while the row explaining it stays hidden
-  // behind a toggle the reader has no reason to know about, which is the CLI-to-viewer hop delivering
-  // a highlight and withholding the sentence. Clicking a row is unaffected: that path is already in
-  // this mode, so the effect is a no-op there.
+  // A focused verdict switches the panel to the table that CONTAINS it, so a link naming a verdict
+  // shows the explaining row and not only the canvas highlight. A row click is already in this mode,
+  // so there it is a no-op. See
+  // docsite/content/architecture/web-client.md#a-panel-that-works-on-click-can-still-be-broken-on-arrival.
   createEffect(() => {
     if (props.state().focusedVerdict) setMode("considered");
   });
@@ -97,25 +93,14 @@ function ChecksPanel(props: {
   const collapseSorted = (items: ReturnType<() => FindingsState>["findings"]) =>
     collapseInstances(sortFindings(items, sortKey(), sortDir()));
 
-  // sections is the render model: either one unlabeled section (flat) or one per group value, each
-  // carrying its collapsed+sorted rows and the total finding count (before collapse) for the badge.
-  // MEMOIZED, and the memo boundary is the whole point rather than a speed tweak.
-  //
-  // <For> keys by object reference, and collapseSorted/groupFindings mint fresh objects on every
-  // call. As a plain function this re-ran on ANY state push, so selecting a finding (which only
-  // changes `selected`) produced all-new rows, <For> matched nothing, and the entire table was torn
-  // down and rebuilt. Rebuilding the rows resets the scroll container, so clicking a finding halfway
-  // down a long list threw the reader back to the top (agni issue 367).
-  //
-  // findings() isolates the one input that should rebuild rows. A Solid memo compares by reference,
-  // so a state push that leaves the findings array identical stops here and the DOM survives. The
-  // selected row still restyles, because Row reads props.state().selected itself and that is a
-  // fine-grained read rather than a reason to re-create anything.
+  // sections is the render model, one unlabeled section when flat or one per group value, each with
+  // its collapsed, sorted rows and badge counts. It MUST stay a memo over findings() alone: <For>
+  // keys by reference and collapseSorted/groupFindings mint fresh objects, so recomputing on every
+  // state push rebuilds the table on each selection and resets the scroll (agni issue 367,
+  // docsite/content/architecture/web-client.md#traps-that-ship-green).
   const findings = createMemo(() => props.state().findings);
-  // A section's badge is the DEFECT count, with the inconclusive results beside it rather than
-  // inside it (agni issue 350). `count: items.length` said "12 findings" over a group holding four
-  // failures and eight results the rule could not decide, which is the number a reader acts on and
-  // the one that was wrong.
+  // A section's badge counts DEFECTS, with inconclusive results shown beside it rather than inside
+  // it (agni issue 350).
   const section = (value: string | null, items: FindingItem[]) => {
     const t = tallySeverities(items);
     return { value, rows: collapseSorted(items), count: t.total, unresolved: t.inconclusive };
@@ -167,11 +152,10 @@ function ChecksPanel(props: {
       </Show>
 
       {/*
-        Rules that could not run, shown ABOVE the findings and whether or not any findings exist.
-        Above, because it qualifies everything below it: a list of two findings from a selection of
-        ten rules, six of which never ran, is not the same claim as two findings from ten. And
-        whether or not the list is empty, because "no findings" is exactly the case it exists to
-        correct — that is the reading a gated rule silently produces.
+        Rules that could not run. Shown ABOVE the findings because it qualifies them (two findings
+        from ten selected rules, six of which never ran, is a weaker claim than two from ten), and
+        shown even with no findings, since "no findings" is the reading a gated rule silently
+        produces.
       */}
       <Show when={props.state().skipped.length > 0}>
         <div class="checks-skipped" role="status">
@@ -257,11 +241,9 @@ function ChecksPanel(props: {
   );
 }
 
-// Row renders one collapsed finding. A single-instance finding is a plain row; a multi-instance one
-// (N findings that share every display field, e.g. duplicate-net-name over N same-named nets) gets a
-// ×N expander whose sub-rows are the instances — each a click-to-locate target (distinct once they
-// carry a per-instance identity; identical until WS9 Phase 2). The subject cell locates the entity;
-// sheet badges navigate to a sheet, the findings idiom the query panel shares.
+// Row renders one collapsed finding. A multi-instance finding (N findings sharing every display
+// field, e.g. duplicate-net-name over N same-named nets) gets a ×N expander whose sub-rows each
+// locate their own instance by net or bus id. Sheet badges switch sheets, as in the query panel.
 function Row(props: {
   row: CollapsedFinding;
   state: () => FindingsState;
@@ -276,11 +258,8 @@ function Row(props: {
   const key = () => findingKey(f());
   const open = () => props.expanded().has(key());
   const selected = () => props.state().selected === f().subject;
-  // A single finding locates by its own net id (precise); a collapsed head locates by NAME (no id),
-  // so clicking it highlights the whole family of same-named nets, while the instance sub-rows below
-  // each locate their own net.
-  // The per-instance locate id: a net id, or a bus id for a bus finding (WS7-042b). "" for a
-  // collapsed multi-instance head (its instances each locate individually).
+  // A single finding locates by its net id, or its bus id for a bus finding (WS7-042b). A collapsed
+  // head passes "" and locates by NAME, highlighting every same-named net.
   const headNetId = () => (multi() ? "" : f().netId || f().busId);
 
   return (
@@ -295,10 +274,9 @@ function Row(props: {
           </Show>
         </td>
         {/*
-          An inconclusive result takes a mark of its own rather than a severity dot. It carries the
-          severity the rule WOULD have reported, so the dot painted an undecided result in the red a
-          reader reads as a defect, three inches from the query panel calling the same finding
-          "unresolved" (agni issue 350).
+          An inconclusive result gets its own mark rather than a severity dot. It carries the
+          severity the rule WOULD have reported, and a red dot would read as a defect beside a query
+          panel calling the same finding "unresolved" (agni issue 350).
         */}
         <td class="check-sev">
           <Show
@@ -327,11 +305,8 @@ function Row(props: {
         </td>
         <td class="check-msg" title={f().message}>
           {f().message}
-          {/* The entities the sentence above names but the finding is not ABOUT (agni issue 349).
-              They sit AFTER the message rather than in the subject cell on purpose: the subject cell
-              answers "what failed", and these answer "what else the sentence mentions". Putting them
-              in the subject column would read as a second subject, which is the confusion the field
-              exists to remove. */}
+          {/* The entities the message names but the finding is not ABOUT (agni issue 349). They go
+              after the message so they do not read as a second subject. */}
           <For each={f().context}>
             {(c) => (
               <button
@@ -378,15 +353,9 @@ function Row(props: {
   );
 }
 
-// findingsPanelIsland mounts the merged checks panel and returns its command-down view. onSelect is
-// the locate intent (a finding/instance clicked); onRun is the run intent (the Run button). The
-// island id ("findings") and hole are unchanged, so the dock adopts the same server-rendered hole.
-// VerdictTable is the considered set: one row per subject a rule was applied to, passes included.
-//
-// The outcome leads each row, because scanning a column of them is the question this table answers
-// ("what did you look at and what did you conclude"). The proof follows, which is the statement for a
-// decided verdict and the reason for one the rule could not decide, since a row with neither would be
-// the silence the table exists to remove.
+// VerdictTable is the considered set, one row per subject a rule was applied to, passes included.
+// Outcome leads so the column can be scanned. Proof is the statement for a decided verdict and the
+// reason for one the rule could not decide.
 function VerdictTable(props: {
   verdicts: () => VerdictItem[];
   focused: () => string;
@@ -421,6 +390,8 @@ function VerdictTable(props: {
   );
 }
 
+// findingsPanelIsland mounts the checks panel on the "findings" island and returns its command-down
+// view (docsite/content/architecture/web-client.md#wiring-a-new-panel).
 export function findingsPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

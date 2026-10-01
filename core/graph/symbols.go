@@ -11,14 +11,14 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Built-in device class ids. Class ids are open strings, not a closed enum: a new class is just
-// a rule plus a glyph (WS7-030), so users can extend classification without a code change. The
+// Built-in device class ids. Class ids are open strings rather than a closed enum, so a new class
+// is a rule plus a glyph (WS7-030) and users can extend classification without a code change. The
 // empty id is the "no class" fallback that draws the generic node box.
 //
 // Every id that names a class the engine stamps is BOUND to model's constant rather than spelled
 // again, because a glyph is chosen from the stamped set and an id that drifted by one character
 // would silently draw the box (agni issue 701). ClassGround and ClassOther have no model
-// counterpart: a power symbol is drawn as a component and classified as none.
+// counterpart, since a power symbol is drawn as a component and classified as none.
 const (
 	ClassResistor   = string(model.ClassResistor)
 	ClassCapacitor  = string(model.ClassCapacitor)
@@ -37,16 +37,15 @@ const (
 	ClassOther      = "" // generic box
 )
 
-// glyphAliases maps a stamped class with no glyph of its own to the class whose glyph draws it.
-// Each entry is a drawing convention a schematic already follows: a thermistor IS drawn as a
-// resistor, a zener as a diode, an oscillator as a crystal. They are not classification claims,
-// which is why they live here and not in classify's family table (a test connector is deliberately
-// NOT a connector for protection rules, and is still drawn as one).
+// glyphAliases maps a stamped class with no glyph of its own to the class whose glyph draws it, as
+// a schematic already does (a thermistor IS drawn as a resistor, an oscillator as a crystal). These
+// are drawing conventions and not classification claims, so they stay out of classify's family table.
 //
 // Most stamped classes need no entry, because the device_classes set already carries the family
 // tag and choose walks it. An entry is needed when the set holds no drawable tag (clock,
 // test_connector, ideal_diode_controller) or when the class arrives OUTSIDE a set, from a user
-// --class rule, where there is no family to walk.
+// --class rule, where there is no family to walk. See
+// docsite/content/architecture/geometry-and-rendering.md#auto-layout-node-drawing.
 var glyphAliases = map[string]string{
 	string(model.ClassThermistor):           ClassResistor,
 	string(model.ClassZener):                ClassDiode,
@@ -100,9 +99,8 @@ func (r ClassRule) matches(symbol, prefix string) bool {
 // The zero value is not usable; build one with DefaultRegistry (optionally .With user rules).
 //
 // A component the ingestion pass already stamped (ir.Component.device_classes) is drawn from that
-// stamp, so the picture and the facts cannot disagree about what a part is (agni issue 701). Rules
-// are the two ends around it: UserRules are explicit and win outright, Rules is the fallback for a
-// component carrying no stamp.
+// stamp, so the picture and the facts cannot disagree about what a part is (agni issue 701).
+// UserRules win outright over the stamp, and Rules is the fallback for a component carrying none.
 type Registry struct {
 	// UserRules are caller-supplied rules (the CLI's --class), tried FIRST and ahead of the
 	// stamped class, because a user naming a glyph for a symbol is saying what to draw.
@@ -185,8 +183,8 @@ func DefaultRegistry() *Registry {
 
 // With returns a copy of the registry with the given rules prepended to UserRules, so they take
 // precedence over both the stamped class and the built-in defaults (first match wins). The glyph
-// map is shared: user rules map to the existing glyphs unless the caller also adds a glyph for a
-// new class id.
+// map is shared with r, so user rules map to the existing glyphs unless the caller also adds a
+// glyph for a new class id.
 func (r *Registry) With(rules ...ClassRule) *Registry {
 	if len(rules) == 0 {
 		return r
@@ -199,8 +197,7 @@ func (r *Registry) With(rules ...ClassRule) *Registry {
 
 // GlyphClasses returns the class ids the registry can DRAW, sorted, for validating user input and
 // for error messages. That is the classes with a glyph of their own plus the ones that reach a
-// glyph through glyphAliases, so a user rule may name "thermistor" for the same reason the stamped
-// class may: it draws, as a resistor.
+// glyph through glyphAliases, so a user rule may name "thermistor", which draws as a resistor.
 func (r *Registry) GlyphClasses() []string {
 	out := make([]string, 0, len(r.Glyphs)+len(glyphAliases))
 	for c := range r.Glyphs {
@@ -215,23 +212,22 @@ func (r *Registry) GlyphClasses() []string {
 	return out
 }
 
-// Classify returns the device class id for a component: a matching user rule, else the class the
-// ingestion pass stamped on it, else the first built-in rule that matches its source
+// Classify returns the device class id for a component. That is a matching user rule, else the
+// class the ingestion pass stamped on it, else the first built-in rule that matches its source
 // symbol/part-type name (preferred) or ref-des prefix, else ClassOther (the box). A resolved
 // PartType's designator_prefix, when present, overrides the ref-des guess.
 //
-// The stamp is the whole reason this is not the rule table alone. classify.Stamp reads part text,
-// the project's own lexicon.class patterns, and refinements no glob can express, and it runs on
-// every read. A second classifier here would answer "diode" for a part the engine already calls a
-// tvs, so the class in a query answer and the class in the drawing would differ with nothing saying
-// which is right (agni issue 701).
+// The stamp comes from classify.Stamp, which reads part text, the project's own lexicon.class
+// patterns and refinements no glob can express, on every read. A second classifier here would
+// answer "diode" for a part the engine calls a tvs, and the drawing would disagree with a query
+// answer (agni issue 701).
 func (r *Registry) Classify(c *ir.Component, parts map[string]*ir.PartType) string {
 	class, _ := r.choose(c, parts)
 	return class
 }
 
-// choose resolves a component to its class id and the glyph to draw it with. The two are not the
-// same answer: a thermistor is drawn as a resistor and stays a thermistor in the report.
+// choose resolves a component to its class id and the glyph to draw it with. The two can differ,
+// since a thermistor is drawn as a resistor and stays a thermistor in the report.
 func (r *Registry) choose(c *ir.Component, parts map[string]*ir.PartType) (string, *geom.SymbolDef) {
 	if c == nil {
 		return ClassOther, nodeSymbol()
@@ -270,13 +266,11 @@ func (r *Registry) Symbol(_ string, c *ir.Component, parts map[string]*ir.PartTy
 // stamped reads the classes the ingestion passes put on the component. The identity is the most
 // specific of them and the glyph is the most specific one this registry can draw, both taken off ONE
 // ordering, classify.BySpecificity, which is the same order check.Model resolves component.class
-// with. Sharing the order is the point rather than a convenience: the drawing and the model used to
-// rank a set independently and agreed only while the set had one author (agni issue 710).
+// with. Two independent rankings disagree once a set has more than one author (agni issue 710).
 //
-// Walking the ordered set is what makes the family tag do the work. A zener carries
-// ["zener", "diode"], so it draws as a diode without zener needing an alias, and glyphAliases covers
-// only the classes whose set holds no drawable tag. An empty or unknown-only set returns "", meaning
-// nothing was stamped and the caller should fall back to its rules.
+// Walking the ordered set lets the family tag pick the glyph, so a zener carrying
+// ["zener", "diode"] draws as a diode. An empty or unknown-only set returns "", meaning nothing was
+// stamped and the caller should fall back to its rules.
 func (r *Registry) stamped(c *ir.Component) (string, *geom.SymbolDef) {
 	ranked := classify.BySpecificity(classify.ClassNames(c))
 	if len(ranked) == 0 {
@@ -379,7 +373,7 @@ func poly(xy ...int64) *geom.Shape {
 
 // Node glyphs live in the same coordinate scale as the box node (halfNode), centered on the
 // origin so a placement's transform origin is the node center. Terminals reach out to terminalX
-// so net edges (WS7-026) will attach at the pin, not the body.
+// so net edges (WS7-026) attach at the pin, not the body.
 const (
 	terminalX = 40 // half-width to the pin terminals
 	bodyHalf  = 18 // half-height of a glyph body

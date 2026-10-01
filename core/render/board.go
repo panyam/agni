@@ -12,22 +12,19 @@ import (
 )
 
 // boardTextMinPx is the legibility floor for silkscreen/fab text. Board text is authored at a
-// true physical height and a board fits a lot of it into one view, so a floor keeps the smallest
-// designators readable rather than letting them vanish. It is a board concern: schematic text
-// sizes from labelFont, which floors relative to the drawing instead.
+// true physical height and a board fits a lot of it into one view, so without a floor the smallest
+// designators vanish. Schematic text sizes from labelFont, which floors relative to the drawing.
 const boardTextMinPx = 6.0
 
-// BoardSVG renders a board (the WS1-006 geometry sidecar) to a standalone SVG document —
-// the board analogue of SheetSVG, and like it a verification/eyeball backend first (the
-// packed/WebGL tier is WS7-035). Copper draws per layer back-to-front so the front side
-// reads on top; every stratum goes into a classed <g> (edge / copper-front / copper-back /
-// copper-inner / through / zones-* / labels), so layer visibility is a pure client-side
-// CSS concern — no per-layer re-render, and highlight overlays (HighlightBoardSVG) share
-// the exact frame.
+// BoardSVG renders a board (the WS1-006 geometry sidecar) to a standalone SVG document, the
+// board analogue of SheetSVG (the packed/WebGL tier is WS7-035). Copper draws per layer
+// back-to-front so the front side reads on top. Every stratum goes into a classed <g> (edge,
+// copper-front, copper-back, copper-inner, through, zones-*, silk, labels), so layer visibility is
+// client-side CSS with no re-render, and HighlightBoardSVG overlays share the same frame.
 //
-// Coordinates are the sidecar's: nanometers, Y-up (the reader flips), placement/pad
-// rotations verbatim from the source's Y-down frame — so composing them here negates the
-// angle (see padWorld). Pad positions are footprint-local per the proto contract.
+// Coordinates are the sidecar's, nanometers and Y-up (the reader flips). Rotations arrive already
+// in the Y-up frame (see padWorld) and are negated only for the SVG transform. Pad positions are
+// footprint-local per the proto contract.
 func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	style := resolveStyle(opts)
 	fr := frameBoard(b)
@@ -36,8 +33,8 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	c := svg.Open(fr.pxW, fr.pxH, svg.A("font-family", style.Font))
 	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", fr.pxW), svg.F("height", fr.pxH), svg.A("fill", style.Page))
 
-	// Zones first (authored outlines only — the sidecar carries no fill): a faint wash of
-	// their layer's copper color, under everything.
+	// Zones first, as a faint wash of their layer's copper color under everything. The sidecar
+	// carries authored outlines only, no fill.
 	front, back, inner := splitByLayer(func(z *geom.Zone) string { return z.GetLayer() }, b.GetZones())
 	for _, grp := range []struct {
 		cls   string
@@ -131,9 +128,9 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 		c.GroupEnd()
 	}
 
-	// Silkscreen / legend text: the ref-des, value, and free (title-block) text the reader
-	// composed to board coordinates. Rotation negates for the Y-down screen exactly like a
-	// pad; anchor and font-size follow the authored justify and height.
+	// Silkscreen and legend text (ref-des, value, free title-block text) in board coordinates.
+	// Rotation negates for the Y-down screen like a pad, and anchor and font-size follow the
+	// authored justify and height.
 	c.Group(svg.A("class", "labels"))
 	for _, t := range b.GetTexts() {
 		if t.GetAt() == nil {
@@ -192,8 +189,8 @@ func svgAnchor(t *geom.BoardText) string {
 }
 
 // frameBoard maps board nanometers into the shared pixel space, bounding over the outline,
-// copper, pads (world positions), and zones — the same sheetFrame contract SheetSVG uses,
-// so highlight overlays composite exactly.
+// copper, pads (world positions), zones, texts and graphics. It returns the same sheetFrame
+// contract SheetSVG uses, so highlight overlays composite exactly.
 func frameBoard(b *geom.BoardGeometry) sheetFrame {
 	var bounds geomath.Bounds
 	for _, p := range b.GetOutline().GetPaths() {
@@ -248,20 +245,17 @@ func frameBoard(b *geom.BoardGeometry) sheetFrame {
 }
 
 // padWorld composes a pad's footprint-local offset with its placement in the canonical Y-up
-// frame (WS1-030): world = at + M(R(rotation_deg) * pad_offset), where R rotates CCW and M
-// mirrors X iff the placement is on the back (mirror after rotation, so a back part is its
-// front footprint rotated then reflected). Each reader delivers rotation_deg already in this
-// frame (a Y-down source negates it on import), so the renderer never remaps — it is a pure
-// composer shared by every board producer.
+// frame (WS1-030). geomath.ComposePlacement carries the transform, the mirror order and the
+// frame contract, and every board producer shares it.
 func padWorld(pl *geom.ComponentPlacement, pad *geom.Pad) (int64, int64) {
 	p := geomath.ComposePlacement(pl.GetAt(), pl.GetRotationDeg(), pl.GetMirror(), pad.GetAt())
 	return p.X, p.Y
 }
 
-// drawPad draws one pad at its world position: rect/roundrect/oval as a (rounded)
-// rectangle, circle as a circle, rotated by the pad's own verbatim angle (KiCad stores it
-// cumulative with the footprint, so it is NOT composed with the placement again — only
-// negated for the Y-flip). A drilled pad gets a page-colored hole.
+// drawPad draws one pad at its world position, rect/roundrect/oval as a (rounded) rectangle and
+// circle as a circle. It rotates by the pad's own verbatim angle, which KiCad stores cumulative
+// with the footprint, so it is NOT composed with the placement again, only negated for the Y-flip.
+// A drilled pad gets a page-colored hole.
 func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, color string, style Style) {
 	wx, wy := padWorld(pl, pad)
 	cx, cy := fr.tx(wx), fr.ty(wy)
@@ -325,10 +319,9 @@ func layerSide(layer string) string {
 	}
 }
 
-// copperStrokePx is a copper trace's rendered stroke width: its true width floored to the
-// physical minStrokeNm minimum, then scaled to output pixels. Unlike a fixed output-pixel
-// floor, this keeps rendered thickness proportional to the actual copper, so a dense board's
-// fine traces stay thin and legible instead of clamping to one width and merging. It matches
+// copperStrokePx is a copper trace's rendered stroke width, its true width floored to the
+// physical minStrokeNm and then scaled to output pixels. A floor in board space keeps a dense
+// board's fine traces proportional instead of clamping to one pixel width and merging. It matches
 // the WebGL packer's quadPts, so both renderers draw copper at identical width.
 func copperStrokePx(widthNm int64, scale float64) float64 {
 	return math.Max(float64(widthNm), minStrokeNm) * scale

@@ -1,9 +1,8 @@
 // Package myfmt is the format-reader slot of the extension template. Copy this package, rename it,
-// and replace the toy parser with your proprietary format's reader. It registers a ".myfmt"
-// reader with the engine's public formats registry (formats.Register); blank-importing it
-// (import _ ".../myfmt") makes the extension resolve through the engine's Loader and CLI.
+// and replace the toy parser with your own format's reader. It registers a ".myfmt" reader with
+// formats.Register, so blank-importing it makes the engine's Loader and CLI resolve the format.
 //
-// See the docsite page build/extending.md for the full walkthrough.
+// See docsite/content/build/extending.md for the full walkthrough.
 package myfmt
 
 import (
@@ -23,8 +22,8 @@ func init() {
 		// TODO: your file extension (lowercase, with the dot) and a UI label.
 		Ext:  ".myfmt",
 		Name: "myfmt",
-		// The registry entry owns the file open (C1: the Loader owns I/O); Read stays io.Reader-pure.
-		// Set Geometry / Board too if your format carries a faithful schematic or a board layout.
+		// The registry entry opens the file so Read stays io.Reader-pure (C1). Set Geometry or
+		// Board too if your format carries a faithful schematic or a board layout.
 		Design: func(_ *formats.Loader, path string) (*ir.Design, error) {
 			f, err := os.Open(path)
 			if err != nil {
@@ -37,8 +36,8 @@ func init() {
 }
 
 // Read parses your format into an ir.Design. This toy version reads one component per
-// non-blank line ("<refdes> <kind>"); replace the body with your real parser. It takes an
-// io.Reader and never opens a file itself, so the engine's Loader owns file I/O (C1).
+// non-blank line ("<refdes> <kind>"); replace the body with your real parser. It never opens a
+// file itself.
 func Read(r io.Reader, src string) (*ir.Design, error) {
 	d := &ir.Design{IrVersion: "0", SourceFormat: "myfmt", Prov: &ir.Provenance{SourceFile: src}}
 	sc := bufio.NewScanner(r)

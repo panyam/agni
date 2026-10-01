@@ -117,7 +117,7 @@ func TestOneFindingPerItem(t *testing.T) {
 }
 
 // TestSeverityMapping pins that KiCad's levels land inside our vocabulary. "exclusion" is the
-// interesting one: it is a violation the user acknowledged, and passing it through verbatim would sort
+// interesting one. It is a violation the user acknowledged, and passing it through verbatim would sort
 // it ABOVE error, because SeverityRank ranks an unrecognized level highest.
 func TestSeverityMapping(t *testing.T) {
 	cases := map[string]string{

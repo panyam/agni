@@ -6,7 +6,7 @@ import "testing"
 // assignment is the whole content of the Answered axis and it is not derivable from the outcome names.
 //
 // The pair that matters most is NotApplicable and ComputedNA. Both read as "this item does not apply",
-// and they are opposite answers: ComputedNA is the DESIGN determining the item is irrelevant (no
+// and they are opposite answers. ComputedNA is the DESIGN determining the item is irrelevant (no
 // crystal on the board), which is an answer; NotApplicable is the rule's inputs being absent (the
 // datasheet corpus moved), which is the question going unasked. Covered() cannot tell them apart, and
 // the second is the regression this axis exists to catch.
@@ -37,7 +37,7 @@ func TestTallyAnsweredTiers(t *testing.T) {
 	}
 }
 
-// TestAnsweredDivergesFromCovered is the acceptance case for the axis: a checklist whose answered count
+// TestAnsweredDivergesFromCovered is the acceptance case for the axis, a checklist whose answered count
 // drops while covered and fail both stay put.
 //
 // This is the shape `check --fail-on` structurally cannot see. Nothing failed, nothing left the

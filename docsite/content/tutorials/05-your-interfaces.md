@@ -23,14 +23,14 @@ them pass and say nothing in this view. The pair reaches a connector with no pro
 
 ## Absence is not a pass
 
-Before adding anything, the more important half. The board has no LIN at all. A checklist item
+Start with the more important half, before adding anything. The board has no LIN at all. A checklist item
 asking "is the LIN interface complete" must not come back green just because a check for a bus that
 is not there found nothing to complain about.
 
 The profile tier gates on presence. An interface whose anchor signal is nowhere on the board is
 reported as unevaluated rather than passed. You will see this directly in rung 9, where the LIN item
-reads `not-automated` with the reason attached, and the difference between that and `pass` is the
-whole point of the review layer.
+reads `not-automated` with the reason attached, and the review layer exists to keep that apart from
+`pass`.
 
 ## Adding your own
 
@@ -57,7 +57,7 @@ requirements:
 `anchor: true` marks the signal whose presence means the bus exists at all. `host` says which
 component declares it.
 
-The difference from the built-in is one line: a `STB` signal. This team always routes the
+Your file differs from the built-in by one line, the `STB` signal. This team always routes the
 {{ explainable "transceiver" }}'s standby pin back to the MCU so firmware can put the bus to sleep. The built-in profile
 has no opinion about that, because it is a house practice rather than a CAN requirement.
 
@@ -74,14 +74,14 @@ The board does not route STB, so the new requirement has a real finding.
 Compare the rule names against the run at the top of this page. `profile/can-esd-missing` has become
 `gateway-profiles/can-esd-missing`, and no `profile/can-*` rule appears in the second run at all.
 
-Your profile has the same name as a built-in one, so it **replaces** it. It does not run alongside
-it. Every rule the built-in CAN profile contributed is gone, and only what your file declares is
+Your profile has the same name as a built-in one, so it **replaces** it rather than running
+alongside it. Every rule the built-in CAN profile contributed is gone, and only what your file declares is
 checked.
 
 Supersession is per interface, not per run. The shipped LIN profile is untouched by any of this,
 because this project declared no LIN.
 
-This is the right default. Two profiles both claiming to be CAN, both firing on the same nets, would
+Two profiles both claiming to be CAN, both firing on the same nets, would
 double-report everything and there would be no way to say your naming differs from the built-in
 assumption.
 
@@ -91,8 +91,8 @@ checked on every board this project reviews, and nothing would say so. The run w
 because there would be fewer findings.
 
 So the file above repeats the built-in's signals and requirements rather than listing only the
-delta. That repetition states the whole declaration rather than repeating itself, because a whole declaration
-is what supersession replaces.
+delta. The repetition is required, because supersession replaces the whole
+declaration rather than the lines that differ.
 
 `agni check --verdicts` is your check on this. When you add a profile, read which rules ran and
 confirm your file covers each one the built-in contributed, or that you meant to drop it.
@@ -106,16 +106,16 @@ without profiles/   27 finding(s)   257 subject(s) considered by 36 rule(s)
 with profiles/      28 finding(s)   258 subject(s) considered by 36 rule(s)
 ```
 
-One more finding and one more subject, and both of them are the `STB` line you added. That is the
-size of the change you made, which is what a tier ought to move.
+One more finding and one more subject, and both of them are the `STB` line you added. The counts
+moved by exactly the size of the change you made.
 
 Supersession shows up here as the rule count holding at 36. Four built-in CAN rules left and four of
 yours arrived, so the same number of rules has an opinion about this board. They are now your
 rules.
 
-The second number is the one worth watching as you add tiers. Findings tell you what is wrong today;
-the considered count tells you how much of the board anything is looking at, which is what you are
-actually buying when you declare an interface.
+The second number is the one worth watching as you add tiers. Findings tell you what is wrong today,
+and the considered count tells you how much of the board anything is looking at, which is what
+declaring an interface buys you.
 
 Ask a requirement what it concluded and it will tell you, whether or not it found anything:
 
@@ -123,8 +123,8 @@ Ask a requirement what it concluded and it will tell you, whether or not it foun
 agni check --verdicts --rule gateway-profiles/can-host-incomplete designs/gateway/gateway.edn
 ```
 
-`U4` comes back as one answer per required signal rather than one answer as a part: `STB` fails and
-the other four pass, each with the evidence behind it. A satisfied requirement that printed nothing
+`U4` comes back as one answer per required signal rather than one answer for the part, with `STB`
+failing and the other four passing, each with the evidence behind it. A satisfied requirement that printed nothing
 would be indistinguishable from a requirement that never ran, which is the distinction
 [rung 9](../09-read-the-verdicts/) is built on.
 

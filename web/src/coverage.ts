@@ -4,7 +4,7 @@
 // the same locate path a query cell or finding does.
 import type { GetInterfaceCoverageResponse } from "./gen/agni/v1/webapi/checks_pb.js";
 
-// SignalState is one required signal's coverage, mirroring the server's SignalCoverage.state values
+// SignalCoverageItem is one required signal's coverage, mirroring the server's SignalCoverage.state values
 // (WS9-041): "present" | "missing" | "dangling" | "pullup_missing".
 export interface SignalCoverageItem {
   name: string;

@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// TestOpenArgs: the GUI launch command dispatches by format (KiCad file types, and .sch
+// TestOpenArgs checks that the GUI launch command dispatches by format (KiCad file types, and .sch
 // sniffed for xschem vs Lepton) and by platform (macOS via `open -a`, otherwise the binary
 // direct); formats with no native GUI report ErrNoTool.
 func TestOpenArgs(t *testing.T) {
@@ -56,8 +56,8 @@ func TestOpenArgs(t *testing.T) {
 	}
 }
 
-// TestRenderFileGates: the CLI render skips the operator allowlist but still reports ErrNoTool
-// for a format with no renderer, without needing any binary installed.
+// TestRenderFileGates checks that the CLI render skips the operator allowlist but still reports
+// ErrNoTool for a format with no renderer, without needing any binary installed.
 func TestRenderFileGates(t *testing.T) {
 	dir := t.TempDir()
 	edn := filepath.Join(dir, "d.edn")

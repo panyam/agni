@@ -62,7 +62,7 @@ func TestPinTableDerivesPackagesFromHeaderCells(t *testing.T) {
 	}
 }
 
-// The golden gate for the pin path, mirroring TestGoldenAgreementWithHandEncoded: every
+// The golden gate for the pin path, mirroring TestGoldenAgreementWithHandEncoded. Every
 // pin of the hand-encoded WS10 fixture must have a derived pin agreeing on the packages
 // that fixture declares. The hand encoding is the ORACLE; the derived spec is allowed to
 // carry more (it reads all 13 rows and all 9 bodies), never to disagree.
@@ -103,7 +103,7 @@ func pinIDs(spec *parampb.PartSpec) []string {
 	return out
 }
 
-// The ambiguity this ticket turns on: "NC 6, 9" and a hypothetical "GND 2, 5, 7" are the
+// This ticket turns on one ambiguity. "NC 6, 9" and a hypothetical "GND 2, 5, 7" are the
 // same cell shape and mean opposite things. The split is keyed on the one function the
 // document states in words, and BOTH outcomes are gapped so neither is trusted silently.
 func TestNoConnectRowSplitsIntoSeparatePins(t *testing.T) {
@@ -188,9 +188,9 @@ func TestTypeColumnIsNotSecondGuessed(t *testing.T) {
 	}
 }
 
-// The line the classifier is drawn on: a description, not a name. A pin named like a supply
+// The classifier draws its line at a description, not a name. A pin named like a supply
 // whose prose does not say so stays untyped, because typing it would be this stage guessing
-// from spelling — the thing the type column's silence was protecting against.
+// from spelling, which is what the type column's silence was protecting against.
 func TestPinNameIsNeverEvidenceOfFunction(t *testing.T) {
 	cases := []struct {
 		name, desc string
@@ -200,7 +200,7 @@ func TestPinNameIsNeverEvidenceOfFunction(t *testing.T) {
 		{"GND", "Ground", parampb.PinFunction_PIN_FUNCTION_GROUND},
 		{"VDD", "", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
 		{"VBUS", "Bus monitor tap", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
-		// The failure the narrow matcher exists to avoid: a signal that MENTIONS ground.
+		// A signal that MENTIONS ground is the failure the narrow matcher exists to avoid.
 		{"OE", "Connect to ground through a 10 kOhm resistor", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
 		{"EN", "Enable input. Tie to supply voltage for normal operation", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
 	}
@@ -269,7 +269,7 @@ func TestVariantAxisMintsNoPackages(t *testing.T) {
 	}
 }
 
-// Degrade-safety: a recipe with no pin_tables behaves exactly as before, and a document
+// For degrade-safety, a recipe with no pin_tables behaves exactly as before, and a document
 // whose tables are all parameter tables emits no pins.
 func TestRecipeWithoutPinTablesUnchanged(t *testing.T) {
 	spec, manifest := runFixture(t)
@@ -421,7 +421,7 @@ func TestContinuationTableMergesRestatedPins(t *testing.T) {
 		cell(2, 0, "RX_ER"), cell(2, 1, "54"), cell(2, 2, "Receive error."),
 	)
 	d.Pages[0].Tables[0].Cells[0].ColSpan = 2
-	// The continuation: same terminal restated, plus a body the first statement omitted.
+	// The continuation restates the same terminal and adds a body the first statement omitted.
 	d.Pages[0].Tables = append(d.Pages[0].Tables, &docpb.Table{
 		Id: "p1.t2", Rows: 3, Cols: 4, Confidence: 1,
 		Bbox: &docpb.BBox{X: 72, Y: 320, Width: 400, Height: 100},
@@ -455,7 +455,7 @@ func TestContinuationTableMergesRestatedPins(t *testing.T) {
 	}
 }
 
-// The merge must not undo the no-connect split: nc6 and nc9 share a name and no leg.
+// The merge must not undo the no-connect split, since nc6 and nc9 share a name and no leg.
 func TestMergeDoesNotCollapseTheNoConnectSplit(t *testing.T) {
 	spec, _ := runPinFixture(t)
 	var ncs int
@@ -470,7 +470,7 @@ func TestMergeDoesNotCollapseTheNoConnectSplit(t *testing.T) {
 }
 
 // twoRowHeaderTable is the shape a pin table takes the moment it bands its designator
-// columns: the outer TYPE and DESCRIPTION sit a row ABOVE the row naming the pin.
+// columns, with the outer TYPE and DESCRIPTION a row ABOVE the row naming the pin.
 //
 //	row 0:  PIN (spanning)          TYPE (2)   DESCRIPTION
 //	row 1:  NO.        NAME
@@ -519,7 +519,7 @@ func TestInnerHeaderRowWinsOverTheBandRow(t *testing.T) {
 }
 
 // An untyped pin's gap must say WHICH channel came up empty, because the two want opposite
-// fixes: an unknown token is a vocabulary gap and names its own answer, while a missing
+// fixes. An unknown token is a vocabulary gap and names its own answer, while a missing
 // column is a prose judgement for a human.
 func TestUntypedGapDistinguishesUnknownTokenFromMissingColumn(t *testing.T) {
 	tbl := twoRowHeaderTable()

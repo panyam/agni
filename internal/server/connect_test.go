@@ -18,7 +18,7 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// TestToConnectErr pins the one sentinel-to-code table every adapter shares — the mapping the
+// TestToConnectErr pins the one sentinel-to-code table every adapter shares, the mapping the
 // per-RPC connect.NewError calls used to encode before WS9-026 moved translation here.
 func TestToConnectErr(t *testing.T) {
 	cases := []struct {
@@ -53,8 +53,8 @@ func (m memWS) ListDir(context.Context, artifact.URI) ([]service.DirEntry, error
 	return nil, m.err
 }
 
-// TestAdapterRoundTrip drives one adapter method both ways: a success comes back wrapped in a
-// connect.Response, a classified service error comes back as a coded connect error. Every other
+// TestAdapterRoundTrip drives one adapter method both ways. A success comes back wrapped in a
+// connect.Response, and a classified service error comes back as a coded connect error. Every other
 // adapter method is the same three lines, so one probe stands for the pattern.
 func TestAdapterRoundTrip(t *testing.T) {
 	a := NewWorkspace(service.NewWorkspaceService(memWS{}))
@@ -93,7 +93,7 @@ func (m memReviewLoader) Manifest(context.Context, artifact.URI) (review.Manifes
 	return m.man, m.err
 }
 
-// TestReviewAdapterRoundTrip drives the Review adapter both ways: a served CreateReview returns a
+// TestReviewAdapterRoundTrip drives the Review adapter both ways. A served CreateReview returns a
 // wrapped response (proving the mux-visible handler delegates to the service, the CodeUnimplemented
 // gotcha), and a classified service error comes back as a coded connect error.
 func TestReviewAdapterRoundTrip(t *testing.T) {
@@ -119,10 +119,11 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 	}
 }
 
-// TestGetReviewManifestAdapter drives the second Review RPC the same way: the mux-visible handler must
-// delegate to the service rather than inheriting the generated CodeUnimplemented stub, and a
-// classified service error must come back coded. This is the gotcha that makes a hand-written adapter
-// worth testing at all — an unimplemented method compiles fine and fails only at request time.
+// TestGetReviewManifestAdapter drives the second Review RPC the same way. The mux-visible handler
+// must delegate to the service rather than inheriting the generated CodeUnimplemented stub, and a
+// classified service error must come back coded. This is the gotcha that makes a hand-written
+// adapter worth testing at all, since an unimplemented method compiles fine and fails only at
+// request time.
 func TestGetReviewManifestAdapter(t *testing.T) {
 	man := review.Manifest{Name: "M", Areas: []review.Area{{
 		Name:  "A",

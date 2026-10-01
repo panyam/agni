@@ -17,23 +17,16 @@ import (
 
 // QueryService evaluates ad-hoc datalog queries over a design's fact base (WS3-029) for the web
 // query panel, over the same injected Loader the design and check services use (CONSTRAINTS C13).
-// It is the web front-end to the engine `agni query` runs: a rule is one named query, a search is
-// an arbitrary one, and both share the `query` evaluator. It knows no transport.
-//
-// The evaluator is pluggable behind query.Evaluator; this service holds the default naive
-// interpreter. v1 evaluates the netlist fact base only — the datasheet `param.max` relation is empty
-// because serve wires no params dir and datasheet data stays deployment-bound (C16), so a query
-// over `param.max` yields no rows rather than an error.
+// It answers what `agni query` answers and knows no transport. The evaluator sits behind
+// query.Evaluator and defaults to the naive interpreter.
 type QueryService struct {
-	// projects resolves a design to its project and loads that project's config; nil when this
-	// deployment declares none. fallback is the deployment default used for a design with no project.
+	// projects and fallback are documented on ProjectResolver and Overlay.
 	projects *ProjectResolver
 	fallback Overlay
 	loader   Loader
 	eval     query.Evaluator
-	// specs is the datasheet provider the model's param.* relations read (WS9-048), nil when serve
-	// ran without --params. Without it a query over param.* / component.device_class returned no rows
-	// while the CLI's `agni query --params` did — the same board/params drift BuildModel closes.
+	// specs is the datasheet provider the param.* and component.device_class relations read
+	// (WS9-048), nil when serve ran without --params. A project's own params win (Overlay.SpecsOr).
 	specs param.ParamProvider
 }
 
@@ -45,10 +38,9 @@ func NewQueryService(loader Loader, specs param.ParamProvider, projects *Project
 }
 
 // RunQuery loads the design, parses and evaluates the datalog query over its fact base, and returns
-// the projected columns and answer rows with provenance. A geometry-only file with no netlist maps
-// to invalid argument (via classifyLoadErr); a malformed query is an invalid argument too, so the
-// panel shows the parse error inline rather than treating it as a server fault. A well-formed query
-// that matches nothing returns an empty row set (not an error).
+// the projected columns and answer rows with provenance. A geometry-only file with no netlist and a
+// malformed query are both invalid arguments, so the panel shows the parse error inline. A query
+// that matches nothing returns an empty row set, not an error.
 func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest) (*webapi.RunQueryResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -132,9 +124,9 @@ func QuerySetProto(s query.QuerySet) *webapi.QuerySet {
 	return p
 }
 
-// designRead is one read of a design, shared by every query asked of it: the model, one fact base
-// over it, and the schematic geometry, loaded only when some answer has a cell to place on a sheet
-// and then only once.
+// designRead is one read of a design, shared by every query asked of it. It holds the model, one
+// fact base over it, and the schematic geometry, which loads once and only when some answer has a
+// cell to place on a sheet.
 type designRead struct {
 	u      artifact.URI
 	source string
@@ -151,24 +143,18 @@ type designRead struct {
 
 // read resolves the design's tiers, composes its overlay, and builds the model and fact base once.
 func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, source string, overlay *webapi.OverlayConfig, asNamed bool) (*designRead, error) {
-	// The request's overlay is composed BEFORE the read, because only its lexicon half matters here and
-	// that half has to reach the READ: net roles are resolved once at ingestion, so the vocabulary
-	// decides what `net.rail`, `net.feedback`, and everything derived from them answer (WS3-113).
-	//
-	// The convention's RULES half is ignored, deliberately. A query composes no catalog, and a project
-	// keeps one conventions file carrying both halves, so refusing it over rules this call will never
-	// run would reject a config that is perfectly valid for the question being asked. There is no base
-	// convention to replace for the same reason: nothing here holds a catalog.
+	// The overlay is composed BEFORE the read because its lexicon has to reach the READ (see
+	// readopt.go), which decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113).
+	// Its RULES half is ignored and no base convention is passed, since a query composes no catalog
+	// and a conventions file carrying rules is still valid for a query.
 	ov, err := s.projects.Overlay(ctx, u, overlay, s.fallback, "")
 	if err != nil {
 		return nil, err
 	}
-	// One FULL Model over the design (netlist + board + params, WS9-048): the query evaluator reads
-	// it, and the per-cell locate classifier (WS9-039) shares its indexes rather than re-scanning the
-	// raw IR. The board/params tiers back the board.* / param.* query relations, matching `agni query`.
-	// Which artifact each tier reads comes from the design's declaration, so a query addressed at a
-	// schematic companion counts the NETLIST's 1617 nets rather than the drawing's 4572 per-sheet
-	// segments (agni issue 656).
+	// One FULL Model (netlist, board, params; WS9-048) backs the board.* and param.* relations and
+	// the per-cell locate classifier (WS9-039). Tiers come from the design's declaration, so a query
+	// addressed at a schematic companion counts the netlist's 1617 nets rather than the drawing's
+	// 4572 per-sheet segments (agni issue 656).
 	nu, bu, gu, err := s.projects.TierURIs(ctx, u, boardURI, asNamed)
 	if err != nil {
 		return nil, err
@@ -195,9 +181,9 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 	return d.ix, d.drawnComps, d.drawnNets
 }
 
-// answer evaluates one query over a read and assembles its response. queryText is echoed as the
-// response's query, so an answer states the question it answers. An error is the evaluator's, a
-// malformed or unanswerable query, and the caller decides what it means for the call.
+// answer evaluates one query over a read and assembles its response, echoing queryText as the
+// response's query. An error is the evaluator's (a malformed or unanswerable query), and the caller
+// decides what it means for the call.
 func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string) (*webapi.RunQueryResponse, error) {
 	rows, err := s.eval.Eval(q, d.base)
 	if err != nil {
@@ -205,10 +191,8 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	}
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKinds(q)
-	// The answer echoes its own question and the design it was asked of, so a response is
-	// self-describing wherever it ends up: a saved file, a pasted ticket, a cache. Both come from the
-	// request rather than being re-derived, so they cannot describe a different run than the one that
-	// produced these rows.
+	// Query and Source come from the request rather than being re-derived, so a saved response
+	// cannot describe a different run than the one that produced these rows.
 	resp := &webapi.RunQueryResponse{
 		Columns: make([]string, len(cols)), ColumnKinds: kinds,
 		Query: queryText, Source: d.source,
@@ -216,11 +200,10 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
 	}
-	// A query naming an entity column (a component or net) resolves each such cell's sheet
-	// membership so the panel can badge it and navigate on click (WS9-038). Nets resolve from the
-	// netlist alone (AttrSheets); components need schematic geometry, loaded best-effort — a
-	// netlist-only file then simply yields no component badges rather than an error. A scalar-only
-	// query names no entity and loads no geometry.
+	// Entity cells get their sheets so the panel can badge them and navigate on click (WS9-038).
+	// Nets resolve from the netlist alone; components need schematic geometry, loaded best-effort, so
+	// a netlist-only file yields no component badges rather than an error. A scalar-only query loads
+	// no geometry.
 	var ix sheetIndex
 	navigable := false
 	for i := range kinds {
@@ -229,10 +212,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 			break
 		}
 	}
-	// drawnComps/drawnNets are the entities the faithful geometry actually draws (a placement /
-	// a wire). A navigable cell absent from them will not highlight in the faithful view, so it
-	// gets a locate reason (WS9-039). Empty when no geometry loaded, in which case no reasons are
-	// emitted (the design renders via an auto-layout that draws every entity).
+	// A navigable cell missing from drawnComps/drawnNets gets a locate reason (WS9-039).
 	var drawnComps, drawnNets map[string]bool
 	if navigable {
 		ix, drawnComps, drawnNets = d.geometry(ctx, s.loader)
@@ -248,10 +228,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 			row.CellReasons = make([]checkspb.LocateReason, len(cols))
 			for i := range cols {
 				// A polymorphic column takes its kind from THIS row's binding of the kind variable
-				// (agni issue 338), and says so on the wire so the client types the cell the same
-				// way. Everything downstream then works off one kind rather than branching on
-				// where it came from: the sheet lookup, the locate reason, the client's click
-				// handler.
+				// and puts it on the wire so the client types the cell the same way (agni issue 338).
 				kind := kinds[i]
 				if v := kindVars[i]; v != "" {
 					kind = entityKind(r.Bind[v].S)
@@ -260,9 +237,8 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 					}
 					row.CellKinds[i] = kind
 				}
-				// A pin cell needs its component before it names anything, so carry the ref this row
-				// bound and use it for everything the ref answers: which sheets the pin is on (its
-				// component's), and whether it is drawn.
+				// A pin cell carries the ref this row bound, and the ref answers which sheets the pin
+				// is on and whether it is drawn.
 				ref := cells[i]
 				if kind == check.KindPin {
 					ref = termValue(refTerms[i], r.Bind)
@@ -270,8 +246,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 						row.CellRefs = make([]string, len(cols))
 					}
 					row.CellRefs[i] = ref
-					// A pin whose component did not resolve names nothing a client can act on, so it
-					// stays a scalar rather than becoming a link to nowhere.
+					// A pin whose component did not resolve stays a scalar.
 					if ref == "" {
 						kind = ""
 					}
@@ -289,10 +264,9 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	return resp, nil
 }
 
-// drawnEntities collects the ref_des and net names the faithful geometry actually draws — a
-// component with a symbol placement, a net with a wire. Membership answers "will highlighting this
-// paint anything on the faithful view", the authoritative locate check regardless of render mode
-// (SVG or WebGL draw the same geometry).
+// drawnEntities collects the ref_des with a symbol placement and the nets with a wire in the
+// faithful geometry. Membership answers whether highlighting an entity paints anything, in either
+// render mode, since SVG and WebGL draw the same geometry.
 func drawnEntities(g *geom.SchematicGeometry) (comps, nets map[string]bool) {
 	comps, nets = map[string]bool{}, map[string]bool{}
 	for _, sh := range g.GetSheets() {
@@ -314,10 +288,9 @@ func drawnEntities(g *geom.SchematicGeometry) (comps, nets map[string]bool) {
 // NO_GEOMETRY (drawn nowhere for no more specific reason). A drawn entity never gets a reason, so a
 // rail that happens to carry a wire (e.g. VBUS) reports UNSPECIFIED.
 //
-// onSheet answers "did this cell resolve to any sheet at all", which is the only drawn-test a BUS
-// has: a bus is neither a placement nor a named wire, so neither drawn set can speak for it. That
-// is the same rule AnnotateSheets applies to a bus finding, kept identical so a bus explains itself
-// the same way whether the reader reached it through a check or through a search.
+// onSheet reports whether the cell resolved to any sheet, the only drawn-test a BUS has, since a
+// bus is neither a placement nor a named wire. Keep it identical to AnnotateSheets' rule for a bus
+// finding.
 func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[string]bool, onSheet bool) checkspb.LocateReason {
 	if kind == check.KindBus {
 		if onSheet {
@@ -329,9 +302,8 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 	if kind == check.KindNet {
 		drawn = drawnNets[subject]
 	}
-	// A pin is drawn if its COMPONENT is, and it is explained by its component's facts: a pin of a
-	// virtual `#PWR` symbol is a virtual pin, and a pin of a ref the design does not list is not in
-	// the design. Asking about the pin designator instead would answer about a thing called "5".
+	// A pin is drawn if its COMPONENT is, and is explained by its component's facts. Asking about the
+	// pin designator instead would answer about a thing called "5".
 	if kind == check.KindPin {
 		kind = check.KindComponent
 	}
@@ -352,18 +324,13 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 
 // columnKinds derives each answer column's entity kind for the panel's click-to-locate (WS9-038):
 // "component" (a ref_des), "net", "bus", or "" (a scalar or unresolved column). It reads what each
-// relation DECLARES about its arguments (facts.RelationInfo.ArgKinds), so a column's meaning is data
-// the relation states rather than something inferred from the prose of its arg labels (agni issue
-// 548). An explicit Select is walked term-by-term so an aggregate or constant column
-// stays scalar even when it reduces an entity variable (count(?ref) is a number, not a part); the
-// default select (goal variables) has no aggregates, so its columns map straight through.
+// relation DECLARES about its arguments (facts.RelationInfo.ArgKinds), never its arg labels (agni
+// issue 548). An aggregate or constant column stays scalar even when it reduces an entity variable,
+// since count(?ref) is a number.
 //
-// It returns a second slice because kind is USUALLY a column property and not always one. A
-// variable binds at the same relation position in every row, so its kind is fixed, except where
-// the relation's own answer says what the row is about. `entity(?name, ?kind)` enumerates what
-// exists, so one answer set holds a component, a net and a bus (agni issue 338). kindVars[i] names
-// the variable whose per-row binding types column i; it is "" for every ordinary column, and where
-// it is set, kinds[i] is "".
+// kindVars[i] names the variable whose per-row binding types column i, for a relation like
+// `entity(?name, ?kind)` whose answer set mixes components, nets and buses (agni issue 338). It is
+// "" for an ordinary column, and where it is set, kinds[i] is "".
 func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []query.Term) {
 	decls := catalogArgDecls()
 	terms := q.Select
@@ -388,33 +355,18 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 // variable used as a net in one atom and a scalar in another is a net; a variable bound only in
 // scalar positions is a scalar.
 //
-// It follows a USER RULE into its body, which it did not before. A rule is not in the catalog, so the
-// lookup missed and the column came back scalar even when the rule's own body had bound the variable
-// from a relation that declares an entity: the same question, answering the same rows, was clickable
-// in one spelling and dead in the other (agni issue 654). Derived relations are the idiom the
-// querying guide teaches for anything past one clause, and negation REQUIRES a unary helper rule, so
-// the queries worth clicking were exactly the ones losing their kinds.
+// A variable the catalog cannot type is followed into the USER RULES that bind it (agni issue 654),
+// so a derived relation keeps the kind its body established. That walk has three properties, each
+// wrong in the obvious implementation:
 //
-// Three properties of that walk, each of which is wrong in the obvious implementation:
+//   - It follows MORE THAN ONE HOP, since a rule defined through another rule is ordinary. `seen`
+//     bounds it, because a rule set may be recursive.
+//   - Rules that DISAGREE about a head position yield a scalar rather than the first one written,
+//     which would be wrong for half the rows.
+//   - A rule wrapping `entity(?name, ?kind)` stays scalar, because a head argument has no per-row
+//     identity to carry kindVars through.
 //
-//   - It follows MORE THAN ONE HOP. A rule defined in terms of another rule is ordinary, and stopping
-//     at the first would be a silent partial answer, which is the failure this fixes rather than a
-//     smaller version of it. `seen` bounds it: a rule set may be recursive, and a cycle must end the
-//     walk rather than the process.
-//   - Rules that DISAGREE yield a scalar, not the first one written. Two rules may define one head
-//     and bind that position to a component in one and a net in the other, and a column typed from
-//     whichever was written first is wrong for half the rows. Scalar is the honest answer and is also
-//     the previous behaviour, so disagreement costs nothing new.
-//   - A rule wrapping `entity(?name, ?kind)` stays scalar. That relation's kind is per-row, carried by
-//     kindVars, and a head argument has no per-row identity to carry it through. Better a scalar than
-//     a kind invented for the column.
-//
-// Every branch below reads a DECLARATION. It used to match the catalog's arg-label prose, which put a
-// type system inside a naming convention and needed a hand-written pairing guard each time the
-// convention misfired: one so `bus(label, kind)` and `param.range(mpn, symbol, kind, ...)` did not
-// have their non-entity `kind` read as an entity kind, another so `param.pin(mpn, pin, ...)`'s
-// part-TYPE pin was not treated as a pin on the canvas. Both are gone, because neither relation
-// declares anything now (agni issue 548).
+// Every branch reads a DECLARATION, never the catalog's arg labels (agni issue 548).
 func varKind(col query.Var, body query.Body, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Var, query.Term) {
 	for _, lit := range body.Literals {
 		a := lit.Pos
@@ -433,17 +385,15 @@ func varKind(col query.Var, body query.Body, decls map[string]relArgDecl, rules 
 			if !ok {
 				continue // the relation declares this argument as a scalar
 			}
-			// A polymorphic column: its kind is the VALUE another column binds, per row.
+			// A polymorphic column takes its kind from the VALUE another column binds, per row.
 			if k.KindArg != "" {
 				if arg, ok := argAt(a, d.labels, k.KindArg); ok {
 					switch {
 					case arg.Var != "":
 						return "", arg.Var, query.Term{}
 					case arg.Const != nil:
-						// A constant types the column statically, which is worth the branch because
-						// "find a net by name" is the common search and should be a plain net column.
-						// entityKind is the guard: a value outside the vocabulary stays a scalar
-						// rather than handing the client a kind it cannot act on.
+						// A constant types the column statically, so "find a net by name" gives a
+						// plain net column. A value outside entityKind's vocabulary stays a scalar.
 						if ek := entityKind(arg.Const.S); ek != "" {
 							return ek, "", query.Term{}
 						}
@@ -451,8 +401,8 @@ func varKind(col query.Var, body query.Body, decls map[string]relArgDecl, rules 
 				}
 				continue
 			}
-			// A pin is locatable only through the component that owns it, so a declaration naming an
-			// owner must find it. A relation whose owner argument is missing declares itself wrong.
+			// A pin is locatable only through its owning component. A declared owner argument the
+			// relation lacks means the declaration is wrong, and the column stays untyped.
 			if k.OwnerArg != "" {
 				if ref, ok := argAt(a, d.labels, k.OwnerArg); ok {
 					return k.Entity, "", ref
@@ -466,10 +416,8 @@ func varKind(col query.Var, body query.Body, decls map[string]relArgDecl, rules 
 }
 
 // kindThroughRules resolves a variable the catalog could not type by following the user rules that
-// define the relations binding it.
-//
-// Run only after the catalog walk above has failed, so a variable the catalog CAN type keeps the
-// answer it always had and this changes nothing for a query with no rules.
+// define the relations binding it. It runs only after the catalog walk fails, so a variable the
+// catalog can type is unaffected.
 func kindThroughRules(col query.Var, body query.Body, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Var, query.Term) {
 	if len(rules) == 0 {
 		return "", "", query.Term{}
@@ -493,11 +441,8 @@ func kindThroughRules(col query.Var, body query.Body, decls map[string]relArgDec
 }
 
 // headKind types argument j of a derived relation by asking every rule that defines it, and returns a
-// kind only when they agree.
-//
-// A rule binding the position to a per-row kind (kindVars) is treated as DISAGREEMENT rather than as
-// an answer, because the caller has no per-row identity to carry through a head. That collapses to a
-// scalar, which is what the column was before.
+// kind only when they agree. A rule binding the position to a per-row kind (kindVars) counts as
+// DISAGREEMENT, so the column is a scalar.
 func headKind(rel string, j int, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Term, bool) {
 	next := make(map[string]bool, len(seen)+1)
 	for k := range seen {
@@ -516,16 +461,14 @@ func headKind(rel string, j int, decls map[string]relArgDecl, rules []query.Rule
 		if hv == "" {
 			return "", query.Term{}, false // a constant head argument types nothing
 		}
-		// A rule that reaches back into one already being resolved ABSTAINS rather than vetoing. Its
-		// silence is "no new information", not disagreement: a transitive closure defines itself in
-		// terms of itself, and letting the recursive clause veto would make every recursive relation
-		// scalar even where its base case types the position perfectly well.
+		// A rule reaching back into one already being resolved ABSTAINS rather than vetoing, so a
+		// transitive closure is typed by its base case instead of collapsing to a scalar.
 		if bodyTouches(r.Body, next) {
 			continue
 		}
 		k, kv, rf := varKind(hv, r.Body, decls, rules, next)
 		if k == "" || kv != "" {
-			return "", query.Term{}, false // untypeable, or per-row: the whole head is scalar
+			return "", query.Term{}, false // untypeable or per-row, so the head is scalar
 		}
 		if found && k != kind {
 			return "", query.Term{}, false // two rules, two kinds: scalar rather than first-wins
@@ -546,8 +489,7 @@ func bodyTouches(body query.Body, seen map[string]bool) bool {
 	return false
 }
 
-// relArgDecl is one relation's argument labels beside what they denote, the pair varKind resolves a
-// column through.
+// relArgDecl is one relation's argument labels and what they denote.
 type relArgDecl struct {
 	labels []string
 	kinds  map[string]facts.ArgKind
@@ -574,9 +516,8 @@ func argAt(a *query.Atom, labels []string, label string) (query.Term, bool) {
 	return query.Term{}, false
 }
 
-// termValue resolves a term against one answer row: a constant yields itself, a variable yields
-// what it bound to. A variable the projection dropped still resolves, because the binding is in the
-// row whether or not the column survived the projection.
+// termValue resolves a term against one answer row. A constant yields itself and a variable yields
+// its binding, which the row keeps even when the projection dropped the column.
 func termValue(t query.Term, bind map[query.Var]query.Value) string {
 	if t.Const != nil {
 		return t.Const.S
@@ -588,12 +529,8 @@ func termValue(t query.Term, bind map[query.Var]query.Value) string {
 }
 
 // entityKind passes through the kinds a POLYMORPHIC column can take and rejects everything else.
-// The vocabulary is check's, the same one a finding's subject and a picked element on the canvas
-// carry.
-//
-// Pins stay out. A pin cell IS clickable now, via a pin column and its cell_refs (see varKind), but
-// that is a different route: entity() does not enumerate pins, so no row of a polymorphic column can
-// ever be one, and a `kind` cell reading "pin" would be a value from outside the fact base.
+// The vocabulary is check's. Pins stay out because entity() does not enumerate them; a pin cell is
+// clickable through a pin column and its cell_refs instead (see varKind).
 func entityKind(s string) string {
 	switch s {
 	case check.KindComponent, check.KindNet, check.KindBus:
@@ -604,8 +541,8 @@ func entityKind(s string) string {
 
 // ListRelations returns the queryable relation catalog (WS9-037) for the panel's relation picker:
 // the built-in relations and predicates plus any overlay-registered relations, pre-sorted by kind
-// then name (query.Catalog). It loads no design — the catalog is static per build — so it never
-// fails on a bad path and the client can fetch it once at startup.
+// then name (query.Catalog). It loads no design, so it never fails on a bad path and the client can
+// fetch it once at startup.
 func (s *QueryService) ListRelations(_ context.Context, _ *webapi.ListRelationsRequest) (*webapi.ListRelationsResponse, error) {
 	resp := &webapi.ListRelationsResponse{}
 	for _, r := range query.Catalog() {
@@ -628,20 +565,10 @@ func (s *QueryService) ListRelations(_ context.Context, _ *webapi.ListRelationsR
 	return resp, nil
 }
 
-// portableCites rewrites a fact's provenance so it names the design the way the CALLER did.
-//
-// A reader stamps ir.Provenance.SourceFile with the path it was handed, and the loader hands it an
-// ABSOLUTE host path — so a cite came out as
-// "/Users/someone/work/agni/examples/tutorial-project/designs/gateway/gateway.edn:GND". That is wrong
-// in three ways at once. It is not reproducible, since the same query on the same design prints
-// different text on two machines. It leaks where somebody works into anything the output is pasted
-// into. And it disagrees with every other surface: `review` prints "Design: designs/gateway" and a
-// finding's source_file is relative, so query was the only place an absolute path escaped.
-//
-// The rewrite keys on the design's own URI path rather than on a working directory, so it holds
-// however the caller addressed the design and whatever the loader resolved it to. A cite that does not
-// contain that path is left alone: it came from somewhere else (a datasheet citation names a document
-// and a page, not a file), and truncating it on a guess would be worse than leaving it long.
+// portableCites rewrites a fact's provenance so it names the design the way the CALLER did, rather
+// than the ABSOLUTE host path the loader handed the reader (agni issue 242). It keys on the design's
+// own URI path, so it holds however the design was addressed. A cite not containing that path, such
+// as a datasheet citation, is left alone.
 func portableCites(cites []string, designPath string) []string {
 	if designPath == "" || len(cites) == 0 {
 		return cites

@@ -11,16 +11,16 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestOracleCorpus is the reader cross-check against real boards, and the oracle is free: every
+// TestOracleCorpus is the reader cross-check against real boards, and the oracle is free, because every
 // KiCad project carries both the schematic and the .kicad_pcb, and the board file holds the netlist
 // KiCad itself resolved. So we read a design our way, read KiCad's answer for the same design, and
 // compare which pins share a net.
 //
 // The boards are third-party designs under their own licences and live in panyam/agni-samples. They
-// need the BOTH-VIEWS tarball, which is 19MB against tutorial-board's 3MB and deliberately not in the
-// gate's default fetch, so this runs as its own target: `make oracle` fetches the corpus and then
-// runs exactly this test. `make browser-test` was the other suite outside the gate for a comparable
-// reason, until PR 629 moved it inside. This one stays out: a browser is a fixed one-time
+// need the BOTH-VIEWS tarball, which is 19MB against tutorial-board's 3MB and not in the
+// gate's default fetch, so this runs as its own target. `make oracle` fetches the corpus and then
+// runs this test. `make browser-test` was the other suite outside the gate for a comparable
+// reason, until PR 629 moved it inside. This one stays out because a browser is a fixed one-time
 // install, where the corpus is 19MB fetched per cache miss.
 //
 // It asserts against a COMMITTED BASELINE of the disagreements rather than demanding zero, because
@@ -30,7 +30,7 @@ import (
 //
 // What the corpus does NOT cover is worth stating, since two boards is not a survey. Neither of them
 // crosses a sheet boundary with a bus VECTOR, so this test does not move when the agni issue 561 fix
-// is reverted — TestBusVectorCrossesSheetBoundary is that guard, on a fixture with kicad-cli's own
+// is reverted. TestBusVectorCrossesSheetBoundary is that guard, on a fixture with kicad-cli's own
 // answer beside it. The boards that would cover it (kit-dev-coldfire, video) ship with no licence, so
 // they cannot be redistributed; run the sweep against a local KiCad demos directory for those.
 // Breaking the scalar sheet-pin join moves jetson by 27 lines, which is what red-checked this file.
@@ -41,7 +41,8 @@ func TestOracleCorpus(t *testing.T) {
 	const dir = "../../tools/samples"
 	boards, err := filepath.Glob(filepath.Join(dir, "boards", "*"))
 	if err != nil || len(boards) == 0 {
-		// Fatal, never skipped: reached only via `make oracle`, which has already fetched.
+		// Fatal, never skipped, because it is reached only via `make oracle`, which has already
+		// fetched.
 		t.Fatalf("no boards under %s/boards, run `make samples-oracle` (glob err %v)", dir, err)
 	}
 	baseline := readBaseline(t)
@@ -77,7 +78,7 @@ func TestOracleCorpus(t *testing.T) {
 
 // baselinePath is deliberately NOT under testdata/. The docsite run specs mount that directory as a
 // fixture and stamp each capture with a hash of every tracked file in it, so a baseline living there
-// would restamp five tutorial captures every time a reader fix shrinks it — coupling two things that
+// would restamp five tutorial captures every time a reader fix shrinks it, coupling two things that
 // have nothing to do with each other.
 const baselinePath = "oracle_corpus.baseline"
 
@@ -124,7 +125,7 @@ func crossCheckBoard(t *testing.T, dir string) []string {
 }
 
 // errKind reduces a read error to its stable prefix. The message carries a line number, which is
-// part of what makes the error useful and is exactly the wrong thing to freeze into a baseline.
+// part of what makes the error useful and is the wrong thing to freeze into a baseline.
 func errKind(err error) string {
 	s := err.Error()
 	if i := strings.Index(s, " at line "); i >= 0 {

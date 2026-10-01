@@ -5,15 +5,14 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// The ERC connection matrix (WS3-014): which pin-type pairings on one net are illegal.
+// The ERC connection matrix (WS3-014) says which pin-type pairings on one net are illegal.
 // Every capture tool ships this as a grid (KiCad's pin-conflict matrix, Altium's
 // connection matrix). Here each illegal pairing is a matrixRow, metadata plus the Spec
 // that detects it, and the rules are GENERATED from the table via Spec.Rule. These rows
-// are spec-only: no Go Eval exists, the interpreter is the runtime
+// are spec-only. No Go Eval exists and the interpreter is the runtime
 // (docsite/content/architecture/rules-and-checks.md, "A rule is a value"; the twin
 // discipline is in docsite/content/build/check-rule.md). One file holds every row, a
-// deliberate exception to one-file-per-rule, because the table itself is the artifact:
-// adding a pairing is adding a row.
+// deliberate exception to one-file-per-rule, so adding a pairing is adding a row.
 //
 // Rows deliberately absent, and why:
 //   - input-only-with-no-driver: shipped separately as floating-input, whose guards
@@ -23,7 +22,7 @@ import (
 //     (WS1-014). power_out ↔ power_out and power_out ↔ output are the same
 //     distinct-driver count.
 
-// matrixRow is one illegal pairing: the rule identity/prose and the Spec detecting it.
+// matrixRow is one illegal pairing, the rule identity/prose plus the Spec detecting it.
 type matrixRow struct {
 	meta check.Rule
 	spec *check.Spec
@@ -33,7 +32,7 @@ type matrixRow struct {
 // from the Spec).
 func (r matrixRow) rule() *check.Rule { return r.spec.Rule(r.meta) }
 
-// rowOutputOutput is the matrix's driver conflict: two hard drivers on one net.
+// rowOutputOutput is the matrix's driver conflict, two hard drivers on one net.
 var rowOutputOutput = matrixRow{
 	meta: check.Rule{
 		Name:     "output-output-conflict",
@@ -53,15 +52,13 @@ var rowOutputOutput = matrixRow{
 		Let: map[string]check.Term{
 			"drivers": check.Call{Fn: "driving_components"},
 		},
-		// NO Scope, deliberately: contention is possible on any net, so every net is a subject and a
-		// pass says something worth saying ("at most one thing drives this"). Both clauses below are
-		// the violation condition rather than scope, including the has_pull exemption: a multi-driver
-		// net WITH a pull is an open-drain wired-OR bus working as intended, which is a real pass and
-		// not a subject the rule declined.
+		// NO Scope. Contention is possible on any net, so every net is a subject and a pass says
+		// "at most one thing drives this". Both clauses below are the violation condition rather
+		// than scope, including the has_pull exemption, because a multi-driver net WITH a pull is an
+		// open-drain wired-OR bus working as intended and so a real pass.
 		//
-		// The has_pull guard exempts open-drain wired-OR buses (see isWiredOrBus). Without it,
-		// EDIF that types open-drain pins "output" reads a shared interrupt line as N drivers
-		// fighting.
+		// Without the has_pull guard, EDIF that types open-drain pins "output" reads a shared
+		// interrupt line as N drivers fighting (see isWiredOrBus).
 		Where: check.And{Xs: []check.Expr{
 			check.Cmp{L: check.Var{Name: "drivers"}, Op: ">=", R: check.Lit{V: 2}},
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "has_pull"}}},
@@ -71,12 +68,12 @@ var rowOutputOutput = matrixRow{
 }
 
 // isWiredOrBus reports whether a multi-driver net looks like an intentional open-drain WIRED-OR bus (a
-// shared interrupt/inhibit/reset line) rather than output contention. Evidence: a resistor member (the
-// pull an open-drain bus needs, its idle level) AND NO power-source (POWER_OUT) driver. The resistor is
-// keyed on PRESENCE, deliberately not on where it pulls to, because a real pull runs through several
+// shared interrupt/inhibit/reset line) rather than output contention. The evidence is a resistor member
+// (the pull an open-drain bus needs, its idle level) AND NO power-source (POWER_OUT) driver. The
+// resistor is keyed on PRESENCE and not on where it pulls to, because a real pull runs through several
 // elements to an auto-named rail or to ground (both defeat a name-based "pull to a rail" test). A
-// POWER_OUT driver blocks the exemption: two power sources fighting on a rail is a real conflict even
-// with a bleeder/load resistor present.
+// POWER_OUT driver blocks the exemption, since two power sources fighting on a rail is a real conflict
+// even with a bleeder/load resistor present.
 func isWiredOrBus(m check.Model, n *ir.Net) bool {
 	resistor := false
 	for _, c := range n.Connections {
@@ -100,7 +97,7 @@ func registerHasPull() {
 	})
 }
 
-// rowNCConnected is the matrix's no-connect column: a pin the symbol marks "do not
+// rowNCConnected is the matrix's no-connect column, a pin the symbol marks "do not
 // connect" wired into a real net.
 var rowNCConnected = matrixRow{
 	meta: check.Rule{
@@ -130,7 +127,7 @@ var rowNCConnected = matrixRow{
 	},
 }
 
-// rowUnspecifiedWithDriver is the matrix's unspecified column against the driver rows: a
+// rowUnspecifiedWithDriver is the matrix's unspecified column against the driver rows, a
 // pin whose symbol declares NO electrical type, on a net something actively drives.
 var rowUnspecifiedWithDriver = matrixRow{
 	meta: check.Rule{
@@ -151,9 +148,8 @@ var rowUnspecifiedWithDriver = matrixRow{
 		Let: map[string]check.Term{
 			"drivers": check.Call{Fn: "driving_components"},
 		},
-		// SCOPE: the rule's own name says it. An undriven net cannot exhibit this defect, so a pass on
-		// one would claim a check that never happened. What is left is a real answer: of the nets
-		// something drives, these carry no pin of unknown type.
+		// SCOPE: driven nets only, as the rule's name says. An undriven net cannot exhibit this
+		// defect, so a pass on one would claim a check that never happened.
 		Scope: check.And{Xs: []check.Expr{
 			check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 			check.Cmp{L: check.Var{Name: "drivers"}, Op: ">=", R: check.Lit{V: 1}},
@@ -177,7 +173,7 @@ var (
 		return rowOutputOutput.rule()
 	}()
 	ncPinConnected = rowNCConnected.rule()
-	// Declared after outputOutputConflict on purpose: same-file var order guarantees the
+	// Declared after outputOutputConflict on purpose, because same-file var order guarantees the
 	// driving_components FFI is registered before this row's bind-time Call validation.
 	unspecifiedPinWithDriver = rowUnspecifiedWithDriver.rule()
 )
@@ -185,14 +181,14 @@ var (
 func registerDrivingComponents() {
 	check.RegisterSpecFunc("driving_components", &check.SpecFunc{
 		// Distinct components with at least one hard-driver pin (output / power_out) on
-		// the in-scope net: paralleled driving pins of one part are one driver.
+		// the in-scope net. Paralleled driving pins of one part count as one driver.
 		Reads:      []string{"on_net", "pin.electrical_type"},
 		Primitives: []string{"count", "pin-role", "traverse"},
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {
 			n := ents["net"].(*ir.Net)
 			comps := map[string]bool{}
 			for _, c := range n.Connections {
-				switch check.ConnDir(m, c) { // attribute-aware: virtual power pins drive too (WS1-014)
+				switch check.ConnDir(m, c) { // attribute-aware, so virtual power pins drive too (WS1-014)
 				case ir.PinDirection_PIN_DIRECTION_OUTPUT, ir.PinDirection_PIN_DIRECTION_POWER_OUT:
 					comps[c.ComponentRef] = true
 				}

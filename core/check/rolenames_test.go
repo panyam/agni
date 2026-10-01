@@ -38,8 +38,8 @@ func TestDefaultRoleVocab(t *testing.T) {
 	}
 }
 
-// TestBuildRoleVocabExtendReplace: a project's patterns extend the built-ins by default and replace
-// them when Replace is set; a bad regex is a returned error.
+// TestBuildRoleVocabExtendReplace checks that a project's patterns extend the built-ins by default
+// and replace them when Replace is set; a bad regex is a returned error.
 func TestBuildRoleVocabExtendReplace(t *testing.T) {
 	ext, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{`^HV_`}}}})
 	if err != nil {
@@ -68,8 +68,8 @@ func TestBuildRoleVocabExtendReplace(t *testing.T) {
 	}
 }
 
-// TestSetActiveRoleVocab: swapping the process vocab changes what the is*Name helpers report; nil
-// restores the defaults.
+// TestSetActiveRoleVocab checks that swapping the process vocab changes what the is*Name helpers
+// report; nil restores the defaults.
 func TestSetActiveRoleVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
 	v, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{`^HV_`}}, Feedback: &configpb.VocabPatterns{Patterns: []string{`_ETH_FB$`}}}})
@@ -89,7 +89,7 @@ func TestSetActiveRoleVocab(t *testing.T) {
 	}
 }
 
-// NetRoleSource answers the question NetHasRole deliberately does not: how do we know. It is the
+// NetRoleSource answers how we know a role, which NetHasRole does not. It is the
 // hook a consumer needs to weigh a role rather than just read it.
 func TestNetRoleSourceReportsTheEvidence(t *testing.T) {
 	declared := &ir.Net{Name: "N$17", Roles: []*ir.NetRole{
@@ -106,9 +106,9 @@ func TestNetRoleSourceReportsTheEvidence(t *testing.T) {
 	}
 }
 
-// The name-fallback path (an IR built without the ingestion pass) reports CONVENTION, because that
-// is precisely what the fallback is: a naming convention read at the point of use instead of at
-// ingestion. Reporting UNSPECIFIED there would hide that the answer rests on a name.
+// The name-fallback path (an IR built without the ingestion pass) reports CONVENTION, because the
+// fallback is a naming convention read at the point of use instead of at ingestion. Reporting
+// UNSPECIFIED there would hide that the answer rests on a name.
 func TestNetRoleSourceOnTheNameFallbackIsConvention(t *testing.T) {
 	unstamped := &ir.Net{Name: "GND"}
 	src, ok := NetRoleSource(unstamped, ir.Role_ROLE_GROUND, func(n string) bool { return n == "GND" })

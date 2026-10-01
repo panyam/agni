@@ -7,7 +7,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// netNames is the shape Diagnose reads: just the design's net names.
+// netNames is the shape Diagnose reads, just the design's net names.
 func netNames(d *ir.Design) []string {
 	out := make([]string, 0, len(d.Nets))
 	for _, n := range d.Nets {
@@ -25,7 +25,7 @@ func manyNets(n int, suffix string) []string {
 	return out
 }
 
-// The motivating case (WS3-101): an unanchored regex that is a legitimate pattern but claims every
+// The motivating case (WS3-101) is an unanchored regex that is a legitimate pattern but claims every
 // _H net on the board. Nothing at load time can catch it, because the verdict needs the design.
 func TestDiagnoseFlagsOverBroadMatcher(t *testing.T) {
 	p := Profile{
@@ -44,8 +44,8 @@ func TestDiagnoseFlagsOverBroadMatcher(t *testing.T) {
 	}
 }
 
-// Two roles of one profile resolving to the same net is broken with no threshold to argue about:
-// whichever generated rule runs first claims it.
+// Two roles of one profile resolving to the same net is broken with no threshold to argue about,
+// because whichever generated rule runs first claims it.
 func TestDiagnoseFlagsCollidingSignals(t *testing.T) {
 	p := Profile{
 		Name: "MYBUS",
@@ -61,7 +61,7 @@ func TestDiagnoseFlagsCollidingSignals(t *testing.T) {
 	}
 }
 
-// A design too small for a share to mean anything stays quiet: on four nets, one match is 25% and
+// A design too small for a share to mean anything stays quiet. On four nets, one match is 25% and
 // says nothing about the matcher. Without the floor every correct profile on a fixture would warn.
 func TestDiagnoseQuietBelowFloor(t *testing.T) {
 	p := Profile{Name: "MYBUS", Signals: []Signal{{Name: "H", Suffix: "_H", Anchor: true}}}
@@ -70,9 +70,9 @@ func TestDiagnoseQuietBelowFloor(t *testing.T) {
 	}
 }
 
-// Multi-instance naming is CORRECT, not over-broad: a role legitimately matches one net per channel.
-// This is the false positive the share threshold is set to avoid — 16 LIN channels on a 200-net
-// board is 8%, well under the bar.
+// Multi-instance naming is CORRECT, not over-broad, since a role legitimately matches one net per
+// channel. This is the false positive the share threshold is set to avoid. Sixteen LIN channels on
+// a 200-net board is 8%, well under the bar.
 func TestDiagnoseQuietOnMultiInstanceNaming(t *testing.T) {
 	p := Profile{Name: "LIN_MULTI", Signals: []Signal{{Name: "TX", Suffix: "_TX", Anchor: true}}}
 	nets := make([]string, 0, 200)

@@ -22,14 +22,11 @@ import (
 // This file is the CLI edge of the checks results contract (WS3-103): writing a run to a
 // self-contained document, and rendering one back.
 //
-// The rendering side deliberately reuses the SAME writers the live commands use. A results document
-// that rendered through a second set of writers would be a plausible-looking artifact that quietly
-// disagreed with the tool, which is the failure this contract exists to prevent — so the parity is
-// structural (one writer) rather than asserted (two writers held equal by a test).
+// Rendering goes through the SAME writers the live commands use, so a replayed document cannot
+// disagree with the tool. The parity is one writer rather than two held equal by a test.
 
-// resultsCmd renders a written check-result document. It is the read half of --results-out, and the
-// proof that the document is self-contained: it loads no design, composes no catalog, and runs no
-// rule, so anything it can render came out of the file.
+// resultsCmd renders a written check-result document, the read half of --results-out. It loads no
+// design, composes no catalog and runs no rule, so anything it renders came out of the file.
 func resultsCmd() *cobra.Command {
 	var format, compare string
 	var coverage bool
@@ -47,8 +44,8 @@ func resultsCmd() *cobra.Command {
 			"person reads side by side.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Same shadowing as review's, in the same shape: the render switch tests coverage before it
-			// tests format, so an explicit --format was discarded without a word.
+			// As in review, the render switch tests coverage before format, so an explicit --format
+			// would be silently discarded.
 			if coverageShadowsFormat(cmd, coverage) {
 				return fmt.Errorf("results: --coverage emits the per-area rollup, which renders as markdown "+
 					"only, so --format %q would be discarded. Pass one or the other", format)
@@ -88,20 +85,20 @@ func resultsCmd() *cobra.Command {
 }
 
 // renderCheckResults writes a check document through the same writers `agni check` uses, so the two
-// outputs are identical by construction rather than by convention.
+// outputs match by construction.
 func renderCheckResults(w io.Writer, doc *checkspb.CheckResults, format string) error {
 	if format == "" {
 		format = "text"
 	}
 	switch format {
 	case "text":
-		// No verdicts: a results document has no field for a considered set (see OUT_OF_SCOPE.md), so
-		// a replay states no coverage rather than inventing one from the findings it does carry.
+		// Passes no verdicts, because a results document has no field for a considered set (see
+		// OUT_OF_SCOPE.md). A replay states no coverage rather than inventing one from its findings.
 		writeCheckText(w, findingsFromProto(doc.GetFindings()), len(doc.GetCatalog()), nil)
 		return nil
 	case "json":
-		// Skipped travels back too, or the round trip stops being one: `check --format json` now emits
-		// it, and self-containment means a re-render reproduces that output byte for byte.
+		// Skipped travels back too, because `check --format json` emits it and a re-render must
+		// reproduce that output byte for byte (#250).
 		return writeCheckDesignJSON(w, &webapi.CheckDesignResponse{
 			Findings: doc.GetFindings(),
 			Skipped:  skippedFromDoc(doc.GetSkipped()),
@@ -155,14 +152,12 @@ func renderReviewResults(w io.Writer, doc *checkspb.CheckResults, format string,
 	return err
 }
 
-// resultsDoc assembles a document from one run. Callers supply what only they know — the findings,
-// the rules that ran, and which overlay tiers were attached — and this stamps the producer identity
-// and the design's revision hash.
+// resultsDoc assembles a document from one run. Callers supply the findings, the rules that ran and
+// which overlay tiers were attached, and this stamps the producer identity and the design's revision
+// hash.
 //
-// The hash is computed from the source file here rather than by the check service, because the
-// service is deliberately filesystem-free: it resolves an opaque mount/path key through an injected
-// loader and never reads bytes itself (C13). Hashing is the producing edge's job for the same reason
-// reading the design is.
+// The hash is computed here rather than by the check service, because the service is filesystem-free
+// and resolves an artifact.URI through an injected loader without reading bytes itself (C13).
 func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding, skipped []*checkspb.SkippedRule, run *checkspb.RunConfig) *checkspb.CheckResults {
 	return &checkspb.CheckResults{
 		Meta: &checkspb.ResultsMeta{
@@ -170,9 +165,8 @@ func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding
 			Producer:        results.Producer,
 			ProducerVersion: version.Version(),
 			CreatedAt:       time.Now().UTC().Format(time.RFC3339),
-			// A native run records what it could NOT check as well as what it found: a rule whose fact
-			// tier is absent reads not-applicable, and a review item that did not evaluate never reads
-			// pass. That is the axis an imported vendor report does not have.
+			// A native run records what it could NOT check as well as what it found. See
+			// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
 			CoverageAxis: true,
 		},
 		Design:   &checkspb.DesignRef{Source: source, ContentHash: hashSource(localOf(source))},
@@ -193,13 +187,11 @@ func writeResults(path string, doc *checkspb.CheckResults) error {
 }
 
 // hashSource returns "sha256:<hex>" over a file's bytes, or "" when it cannot be read. An unreadable
-// source is not an error here: the run itself already succeeded, so failing the whole command over a
-// provenance field would be worse than a document that honestly records no hash (the field's doc
-// comment allows exactly that).
+// source is not an error, since the run already succeeded, and DesignRef.content_hash allows an empty
+// hash.
 //
-// It hashes the ENTRY file only. A hierarchical design's sub-sheets and a project's sidecars are not
-// covered, so a matching hash means "the same entry file", not "the same design" — enough to catch a
-// document read against a since-edited file, and not claimed to be more.
+// It hashes the ENTRY file only, not a hierarchical design's sub-sheets or a project's sidecars, so a
+// matching hash means the same entry file and not the same design.
 func hashSource(path string) string {
 	f, err := os.Open(path)
 	if err != nil {
@@ -213,16 +205,12 @@ func hashSource(path string) string {
 	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }
 
-// displayName is how an artifact URI is shown to a person: its mount-relative path.
+// displayName shows an artifact URI to a person as its mount-relative path.
 //
-// This is the reading half of the split option 3 settles. A stored document records the URI, because
-// a document outlives the machine that made it and has to say WHICH design it scored in terms that
-// survive the move. A terminal report is read now, by someone who typed the path a second ago, and
-// `mount://local/Users/…/fires.edn` tells them nothing `fires.edn` does not.
-//
-// The PATH rather than the base name, because a rollup lists several designs at once and two boards
-// called gateway.edn in different folders would render identically. It is also what a user typed in
-// the ordinary case, so the report reads back the way the command was written.
+// A stored document records the full URI so it names WHICH design it scored after it leaves the
+// machine, while a terminal report shows the path the user just typed (#179). The PATH rather than
+// the base name, because a rollup lists several designs and two gateway.edn files in different
+// folders would render identically.
 //
 // A value that is not a URI passes through unchanged, so a document written before this renders.
 func displayName(s string) string {
@@ -235,10 +223,9 @@ func displayName(s string) string {
 	return s
 }
 
-// forDisplay returns a shallow copy of a check report with every source rendered for reading. It
-// copies rather than mutating because the caller's document is the artifact that gets stored, and a
-// renderer that shortened the design's name in place would quietly write the un-portable form to
-// disk on the next --results-out.
+// forDisplay returns a copy of a check report with every source rendered for reading. It copies
+// because the caller's document is what gets stored, and shortening names in place would write the
+// un-portable form to disk on the next --results-out.
 func forDisplay(rep *checkspb.CheckReport) *checkspb.CheckReport {
 	out := proto.CloneOf(rep)
 	out.Source = displayName(rep.GetSource())
@@ -256,10 +243,9 @@ func forDisplay(rep *checkspb.CheckReport) *checkspb.CheckReport {
 
 // skippedProtos converts the served response's skipped list to the document's.
 //
-// Two messages for one idea, because the wire API and the results DOCUMENT are separate contracts:
-// agni.v1.checks declares no service and imports no transport, which is what lets a document be
-// written, mailed and re-read by something that never spoke to this server. One shared message would
-// make the document import the web API.
+// Two messages for one idea, because the wire API and the results DOCUMENT are separate contracts.
+// agni.v1.checks declares no service and imports no transport, so a document can be re-read by
+// something that never spoke to this server. One shared message would make it import the web API.
 func skippedProtos(in []*webapi.SkippedRule) []*checkspb.SkippedRule {
 	if len(in) == 0 {
 		return nil

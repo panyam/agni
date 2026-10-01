@@ -9,26 +9,17 @@ import (
 	"github.com/panyam/agni/core/render"
 )
 
-// renderSubjects draws one design with a set of entities baked in as highlight overlays, and is the
-// shared half of every command that can point at something on a drawing.
+// renderSubjects draws one design with a set of entities baked in as highlight overlays. It is the
+// shared half of every command that can point at something on a drawing. Turning a command's answer
+// into subjects is TYPED and stays with that command (traceSpecs in trace.go, findingSpecs in
+// reviewrender.go).
 //
-// The split is deliberate. Turning a command's own answer into subjects is TYPED and lives with that
-// command (traceSpecs here, findingSpecs in reviewrender.go), while loading the geometry, picking a
-// sheet and emitting the SVG is the same work every time and lives here. A single untyped
-// "highlight these strings" entry point would be shorter and would put the interesting decision, what
-// counts as a subject of this answer, somewhere nobody reviews it.
-//
-// It draws the design's OWN sheets when it has them and falls back to an auto-layout when it does
-// not, saying which on stderr. Most designs a reader points at are netlists with no drawn schematic,
-// and refusing those would make the flag useless exactly where a picture helps most: an auto-layout
-// is a true picture of the connectivity, and the note is what stops it being mistaken for the
-// schematic somebody drew.
+// It draws the design's OWN sheets when it has them and otherwise falls back to an auto-layout,
+// saying so on stderr. Most designs are netlists with no drawn schematic, and the note stops the
+// auto-layout being mistaken for one somebody drew.
 func renderSubjects(errOut io.Writer, named, out, sheetID string, specs []*geom.HighlightSpec) error {
-	// The resolver's note is DROPPED here, and errOut carries only this function's own. Every caller
-	// had to read the design to compute its subjects, so it has already resolved and reported the
-	// same design, and renderSource produces the identical sentence. What errOut must still carry is
-	// the auto-layout fallback below, which is a statement about the DRAWING rather than about which
-	// file was read, and which nothing else is in a position to make.
+	// The resolver's note is DROPPED. Every caller already read the design to compute its subjects
+	// and printed the same sentence. errOut carries only the auto-layout note below.
 	file, _ := renderSource(named)
 	reg, err := buildRegistry(nil, "")
 	if err != nil {
@@ -49,13 +40,10 @@ func renderSubjects(errOut io.Writer, named, out, sheetID string, specs []*geom.
 		}
 		fmt.Fprintf(errOut, "note: %s carries no drawn schematic, so this is an auto-layout of its netlist.\n", file)
 	}
-	// The sheet the ANSWER is on, when the caller knows it. Defaulting to "0" drew the design's first
-	// sheet whatever the subjects were, which on an 82-sheet export is a table of contents with no
-	// wires on it at all (agni issue 657).
-	//
-	// A sheet the loaded geometry does not hold falls back rather than failing: the auto-layout path
-	// above has its own sheet names, so a sheet id resolved against the faithful drawing means nothing
-	// there, and a picture of the right subjects on a computed layout beats an error.
+	// The sheet the ANSWER is on, when the caller knows it, rather than always sheet "0" (on one
+	// 82-sheet export that was a table of contents with no wires, agni issue 657). A sheet id the loaded
+	// geometry does not hold falls back to "0" rather than failing, because the auto-layout has its
+	// own sheet names and a sheet id from the faithful drawing means nothing there.
 	sheet, err := render.PickSheet(g, sheetID)
 	if err != nil {
 		if sheet, err = render.PickSheet(g, "0"); err != nil {

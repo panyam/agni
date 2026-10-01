@@ -43,7 +43,7 @@ func TestParseRejects(t *testing.T) {
 		"strap no net":     "name: N\nnet_properties:\n  - {property: strap, value: high}",
 		"unknown property": "name: N\nnet_properties:\n  - {net: BOOT0, property: strapp, value: high}",
 		// A zero or negative peak is met by every supply, so it would be a declaration that can only
-		// pass. Same reasoning as the strap value: reject it at load rather than compile a rule that
+		// pass. Same reasoning as the strap value, so reject it at load rather than compile a rule that
 		// never fires.
 		"budget no peak":       "name: N\nrail_budgets:\n  - {rail: 3V3}",
 		"budget negative peak": "name: N\nrail_budgets:\n  - {rail: 3V3, peak: -1}",
@@ -65,8 +65,9 @@ func TestParseRejects(t *testing.T) {
 	}
 }
 
-// TestParseRailBudgets: the WS3-095 form round-trips, and margin_factor is optional. Omitted it stays
-// zero, which is what leaves the margin rule uncompiled (no house policy baked into a rule literal).
+// TestParseRailBudgets checks that the WS3-095 form round-trips and margin_factor is optional.
+// Omitted it stays zero, which is what leaves the margin rule uncompiled (no house policy baked
+// into a rule literal).
 func TestParseRailBudgets(t *testing.T) {
 	d, err := Parse([]byte("name: N\nrail_budgets:\n  - {rail: +3V3, peak: 0.8}\n  - {rail: +1V8, peak: 0.35}\nmargin_factor: 1.2\n"))
 	if err != nil {
@@ -94,11 +95,11 @@ func TestParseErrorTeaches(t *testing.T) {
 	}
 }
 
-// TestLoadStrapBandValidation (WS3-119): a band that could never be satisfied, or one declared on a
-// kind with no resistance to bound, is an AUTHORING error. It is rejected at load rather than
-// compiling to a check that can never fire, which is the route-six false pass (a well-formed-looking
-// declaration that means nothing) — a runtime verdict is the wrong tool for a declaration that is
-// wrong on every design.
+// TestLoadStrapBandValidation (WS3-119) covers a band that could never be satisfied, or one
+// declared on a kind with no resistance to bound, is an AUTHORING error. It is rejected at load
+// rather than compiling to a check that can never fire, which is the route-six false pass (a
+// well-formed-looking declaration that means nothing). A runtime verdict is the wrong tool for a
+// declaration that is wrong on every design.
 func TestLoadStrapBandValidation(t *testing.T) {
 	for _, tc := range []struct{ name, yaml, want string }{
 		{
@@ -129,8 +130,8 @@ func TestLoadStrapBandValidation(t *testing.T) {
 	}
 }
 
-// TestLoadStrapBandAccepted: the forms that ARE valid, including one-sided bands, survive the loader
-// with their numbers intact.
+// TestLoadStrapBandAccepted checks that the forms that ARE valid, including one-sided bands,
+// survive the loader with their numbers intact.
 func TestLoadStrapBandAccepted(t *testing.T) {
 	d, err := Parse([]byte("name: t\nnet_properties:\n" +
 		"  - {net: B0, property: strap, value: high, min_ohms: 1000, max_ohms: 100000}\n" +
@@ -154,8 +155,9 @@ func TestLoadStrapBandAccepted(t *testing.T) {
 	}
 }
 
-// TestLoadStrapGroupValidation (WS3-120): a group that could never be satisfied on ANY design is an
-// authoring error, so it fails the load rather than compiling to a rule that reports a design finding.
+// TestLoadStrapGroupValidation (WS3-120) covers a group that could never be satisfied on ANY
+// design. That is an authoring error, so it fails the load rather than compiling to a rule that
+// reports a design finding.
 func TestLoadStrapGroupValidation(t *testing.T) {
 	for _, tc := range []struct{ name, yaml, want string }{
 		{
@@ -196,8 +198,9 @@ func TestLoadStrapGroupValidation(t *testing.T) {
 	}
 }
 
-// TestLoadStrapGroupAccepted: a declaration carrying ONLY strap_groups is valid (the empty-declaration
-// guard has to know about the new form), and the fields survive the loader intact.
+// TestLoadStrapGroupAccepted checks that a declaration carrying ONLY strap_groups is valid (the
+// empty-declaration guard has to know about the new form), and the fields survive the loader
+// intact.
 func TestLoadStrapGroupAccepted(t *testing.T) {
 	d, err := Parse([]byte("name: t\nstrap_groups:\n" +
 		"  - {name: PHYAD, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 5, bus: MDIO, default: low}\n"))

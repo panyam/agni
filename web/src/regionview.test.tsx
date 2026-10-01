@@ -4,7 +4,7 @@ import { workbenchIsland } from "./regionview.jsx";
 import type { PdfSource, PDFDocumentProxy, RenderedPage } from "./pdfsource.js";
 import { fitInto } from "./panzoom.js";
 
-// The datasheet workbench's first component test. What kept it untested was one dependency: pdf.js
+// The datasheet workbench's first component test. What kept it untested was one dependency. pdf.js
 // rasterizes onto a 2d canvas context, which jsdom does not have, so nothing could render this
 // component at all. With the PdfSource injected, a stub page is enough, and the wiring that was
 // exercised only by hand comes under test: the non-passive wheel listener, the live-transform /
@@ -65,14 +65,15 @@ function openWorkbench() {
 }
 
 const pageEl = (el: HTMLElement): HTMLElement | null => el.querySelector(".ds-page-canvas");
-// settled waits for the crisp raster to catch up with the live view: the stretch factor returns to
+// settled waits for the crisp raster to catch up with the live view, so the stretch factor returns to
 // 1 when the bitmap on screen was rasterized at the scale the page is currently shown at. Opening a
 // datasheet is itself a zoom (the fit), so a test that skipped this would be racing that settle.
 const settled = async (el: HTMLElement): Promise<void> => {
   await vi.waitFor(() => expect(cssScaleOf(el)).toBeCloseTo(1, 3), { timeout: 2000 });
 };
 const transformOf = (el: HTMLElement): string => pageEl(el)?.style.transform ?? "";
-// scale(N) out of the page's transform: how much the already-rasterized bitmap is being stretched.
+// cssScaleOf reads scale(N) out of the page's transform, which is how much the already-rasterized
+// bitmap is being stretched.
 const cssScaleOf = (el: HTMLElement): number => Number(/scale\(([\d.]+)\)/.exec(transformOf(el))?.[1] ?? NaN);
 
 beforeEach(() => {
@@ -98,15 +99,15 @@ describe("workbench viewport", () => {
 
     // Height is the binding dimension for a portrait page in a landscape viewport, less the 4%
     // margin fitInto leaves. The arithmetic is panzoom's and covered in panzoom.test.ts; what this
-    // asserts is the WIRING — that opening a datasheet fits it to the viewport's real size — so it
-    // calls the same function rather than restating the formula. The second line is what keeps that
-    // honest: the fit is not BASE_SCALE, so this cannot pass with no fit happening at all.
+    // asserts is the WIRING, that opening a datasheet fits it to the viewport's real size, so it
+    // calls the same function rather than restating the formula. The second line checks the fit is
+    // not BASE_SCALE, so this cannot pass with no fit happening at all.
     const fit = fitInto(PAGE_W, PAGE_H, VIEWPORT_W, VIEWPORT_H).scale;
     expect(renders[renders.length - 1].scale).toBeCloseTo(fit, 3);
     expect(renders[0].scale).not.toBeCloseTo(fit, 2);
   });
 
-  // The split the ledger named: a wheel notch moves the page NOW, by stretching the bitmap already
+  // The split the ledger named. A wheel notch moves the page NOW, by stretching the bitmap already
   // on screen, and only asks pdf.js for a crisp raster once the gesture holds still. Rasterizing per
   // notch would blank the page on every one, because each render is async with nothing to show while
   // it runs.
@@ -120,7 +121,7 @@ describe("workbench viewport", () => {
     const viewport = el.querySelector(".ds-viewport") as HTMLElement;
     viewport.dispatchEvent(new WheelEvent("wheel", { deltaY: -120, clientX: 450, clientY: 300, bubbles: true, cancelable: true }));
 
-    // Immediately: the bitmap on screen is being stretched, and no new raster was asked for.
+    // Immediately the bitmap on screen is being stretched, and no new raster was asked for.
     expect(cssScaleOf(el)).toBeGreaterThan(1);
     expect(renders.length).toBe(rendersBefore);
 

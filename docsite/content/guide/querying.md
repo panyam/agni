@@ -28,13 +28,13 @@ Each fact is a named relation with a few fields. You query them by name:
 | `board.via_drill(net, mm)` | a net's smallest {{ explainable "via" }} drill | the PCB |
 | `board.layer(net, layer)` | a layer the net is routed on | the PCB |
 
-The datasheet facts need a parameter set (`--params`), the board facts need a `.kicad_pcb` or an
+The datasheet facts need a parameter set (`--params`), and the board facts need a `.kicad_pcb` or an
 IPC-2581 board. Ask for a fact your design doesn't carry and you simply get no rows. The tool never
 makes one up.
 
 That table is the short form. Every relation also has a full card covering what it means for
 hardware, how the projection is built, and the cases where an empty result is *not* a clean answer.
-The ones this page leans on are inlined at the [bottom of this page](#reference-the-relations-used-here);
+The ones this page leans on are inlined at the [bottom of this page](#the-relations-used-here);
 the complete set is the [relation catalog](../../reference/relations/).
 
 A name before a dot is a **module** and the part after it is a **member**: `net.pin_count` is the
@@ -69,7 +69,7 @@ component.mpn(?ref, ?mpn), net.max_voltage(?net, ?v), ?v < 30  =>  ?ref, ?net
 
 That is the whole language. The examples below build on it.
 
-## Start here: the five-rung ladder
+## The five-rung ladder
 
 These are the starter queries the panel offers as click-to-run chips (and `agni query --examples`
 prints the same set). Each adds exactly one idea over the one before. Run one, read the result, then
@@ -99,7 +99,7 @@ A bare comparison prunes rows, a `WHERE` clause. Operators: `< <= = != > >=`. Nu
 component.net(?ref, ?net), net.max_voltage(?net, ?v), ?v > 3 => ?ref, ?net, ?v
 ```
 
-Reusing `?net` in two facts means "the same net in both", that is a `JOIN ... ON`. Joins are how you
+Reusing `?net` in two facts means "the same net in both", which is a `JOIN ... ON`. Joins are how you
 connect what a part is, where it sits, and what its {{ explainable "rail" }} carries.
 
 {{ includeFile "figures/query-join.svg" }}
@@ -150,7 +150,7 @@ sample beyond the names it happens to carry.
 ### Find something by name
 
 `entity(name, kind)` is the relation that names what exists. Every other relation ranges over a
-relationship, so a search built on one inherits its blind spots: looking through `component.net`
+relationship, so a search built on one inherits its blind spots, and looking through `component.net`
 cannot find a part that sits on no net, because such a part has no row there.
 
 {{ agniRun "content/guide/runs/query-entity-by-name.yaml" }}
@@ -188,7 +188,7 @@ a sentence you can edit into a better question.
 
 ### Reading a result cell in the viewer
 
-A cell that names a component, a net or a {{ explainable "bus" }} is a link: clicking it highlights
+A cell that names a component, a net or a {{ explainable "bus" }} is a link, and clicking it highlights
 that thing on the drawing. The small chips beside it are the **sheets it appears on**, one per
 sheet, and clicking one opens that sheet. They are not a grouping of related names, and they have
 nothing to do with the cell being a net in particular. Any locatable cell gets them.
@@ -204,8 +204,8 @@ spans rather than which; clicking the `+N` expands it.
 
 Whichever entity is on the drawing right now is marked in the table, and so is the chip for the
 sheet you are looking at. That is what tells you where you are after a click sends the canvas
-somewhere, and it follows the viewer rather than your last click here: pick something on the drawing
-instead and the mark moves to that.
+somewhere, and it follows the viewer rather than your last click here, so if you pick something on
+the drawing instead the mark moves to that.
 
 ### Find parts stressed above their datasheet rating
 
@@ -228,9 +228,9 @@ cites both sides, the schematic and the datasheet page, so you can open each and
 `J1` is placed but carries no part number, so a datasheet can never be matched to it.
 
 **A `not` has to be anchored.** At least one variable inside it must also appear in a positive
-relation, so the negation is about the row rather than about the design. Above, `?r` is the anchor:
+relation, so the negation is about the row rather than about the design. Above, `?r` is the anchor, so
 `not component.mpn(?r,?m)` asks whether THIS part has a part number. The `?m` is free on purpose and
-means "for any value", which is what you want.
+means "for any value".
 
 Drop the anchor and the question changes without looking like it has:
 
@@ -252,7 +252,7 @@ entity(?n,"net"), not has_test_point(?n) => ?n
 ```
 
 Clauses are separated by `;`, a clause containing `:-` defines a relation, and the one clause
-without one is the question. This is the general shape for any "X with no related Y", which is most
+without one is the question. This is the general form for any "X with no related Y", which is most
 of what a coverage question asks: rails with no decoupling, buses with no pull-up, parts with no
 protection.
 
@@ -276,7 +276,7 @@ conventionally named for the supply they serve, so a 12V converter's nodes are `
 net.role(?n, ?r), ?r != "rail", ?r != "ground" => ?n, ?r
 ```
 
-The one worth knowing before you scope a question by it: **`net.rail(?n)` and `net.role(?n, "rail")` are
+**`net.rail(?n)` and `net.role(?n, "rail")` are
 different sets.** `net.rail` is a conclusion, true for a net that is asserted-driven or global or a ground
 *or* carries the rail role. `net.role` is what the naming lexicon stamped. On a board with a few
 regulators the second is the larger of the two, and a probe-point or decoupling question almost always
@@ -406,9 +406,6 @@ routed thin that carries a high-current part":
 board.track_width(?net,?w), component.net(?ref,?net), component.mpn(?ref,?mpn), param.max(?mpn,"IOUT",?i), ?w < 0.25 => ?net, ?ref, ?i
 ```
 
-A single query can span copper, connectivity, and datasheets at once, and each answer stays
-traceable back to the layer and the datasheet page.
-
 ### Follow a rail through passives (reaches)
 
 `net.reaches(from, net)` walks connectivity through series passives (resistors, ferrites, fuses). It is
@@ -420,7 +417,7 @@ how you ask "what does this rail actually feed after the filter". "Everything re
 
 `net.reaches` tells you a net is reachable. It does not tell you what stands between the two, so you
 end up opening the schematic to check an answer the tool already knew. `net.route(from, net, path)` is
-the same walk with that half kept: `path` binds the nets in crossing order with the part crossed
+the same walk with that half kept, and its `path` binds the nets in crossing order with the part crossed
 between each pair, so an answer carries the evidence for itself.
 
 {{ agniRun "content/guide/runs/query-route.yaml" }}
@@ -433,18 +430,18 @@ It answers with *a* route and not every route. The walk is breadth-first, so whe
 bridge the same two nets you get the shorter one and no mention of the other. And a route never ends
 on a rail or a plane, because the walk refuses to enter one at all. For the pin-to-pin form, which
 does end on a rail and reports the test points sitting on each net along the way, use
-[`agni trace`](../cli-reference/#trace).
+[`agni trace`](../cli-reference/#trace-file).
 
 ## Asking under your own vocabulary
 
-Some relations do not report what is in the file; they report what the engine *believes*. `net.rail`,
+Some relations report what the engine *believes* rather than what is in the file. `net.rail`,
 `net.feedback`, and `pin.type` are resolved from a vocabulary at the moment the design is read.
 
 That vocabulary is the built-in one unless you say otherwise, and it is anchored on the names most
 boards use. On a board that names rails function-first, what the built-in vocabulary returns can be
 badly wrong for your project.
 
-Isolating that takes moving two things aside rather than one, which is itself worth knowing. The
+Isolating that takes moving two things aside rather than one. The
 tutorial project declares its `conventions.yaml`, so naming the design applies it automatically and
 the before-state is otherwise unreachable. And a seeded datasheet's pin functions establish the rail
 role on their own, so with `params/` in place this board classifies all four rails whatever the
@@ -461,8 +458,9 @@ Nothing about the design changed. This is the loop to author a lexicon in: ask, 
 rails you know the board has, fix the pattern, ask again. See
 [Naming conventions](../naming-conventions/).
 
-The datasheet route is the other way to the same answer, and it needs no lexicon at all: that is what
-the corpus was doing before it was moved aside, and [Datasheets](../datasheets/) is where it lives.
+The datasheet route is the other way to the same answer, and it needs no lexicon at all, since
+that is what the corpus was doing before it was moved aside, and [Datasheets](../datasheets/) is
+where it lives.
 
 Only the config's lexicon half is used here, since a query runs no rules.
 
@@ -489,7 +487,7 @@ query. Hover a chip to see its full signature and a one-line description.
 
 The last column is always **provenance**, the source of the facts that produced the row: a schematic
 file, or a datasheet document, page, and table, or a board net. A query never gives you a number you
-cannot trace back to its source, so a search you run is one you can verify. In the viewer the
+cannot trace back to its source. In the viewer the
 provenance rides behind each row's expand toggle instead of a trailing column.
 
 ## Taking a view out of the tool
@@ -503,14 +501,14 @@ agni query designs/gateway/gateway.edn \
 ```
 
 Five formats. `text` is the aligned terminal table and is the default. `csv` opens in a spreadsheet.
-`json` is for tooling. `markdown` and `html` are documents: they carry the title, the design, and
+`json` is for tooling. `markdown` and `html` are documents that carry the title, the design, and
 **the query itself**, above the answer.
 
-That last part is the point of the flag rather than a decoration. A table pasted into a ticket is a
+A table pasted into a ticket is a
 screenshot, and nobody downstream can re-run it, scope it differently, or disagree with it. A view
 carries the question that produced it, so it can be checked the way any other claim can.
 
-Two behaviours worth knowing, both deliberate:
+Two of these behaviours are deliberate:
 
 - **`csv` carries no preamble.** No title, no query, no count, because its first row has to be the
   header for a spreadsheet or a script to bind to it. The document formats carry the question; csv
@@ -529,23 +527,24 @@ agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n' --format csv > rails
 
 ## Following a signal across the parts in the way
 
-A query joins facts. It cannot follow a path, because a path is not a fact: it is a sequence, of
-unknown length, and there is no relation whose columns can hold one. So "which nets carry a resistor"
-is a query and "what does this pin go through to reach that one" is not.
+A query joins facts, and a path is a sequence of unknown length that a relation can hold only as a
+rendered string. `net.route` does that between two nets, one route per pair and never ending on a rail,
+so it cannot answer pin to pin. "Which nets carry a resistor" is a query and "what does this pin go
+through to reach that one" is not.
 
 `agni trace` is that second question. It walks from one pin to another through the series parts that
 split a net without breaking the path, and prints what it crossed.
 
 {{ agniRun "content/guide/runs/trace-path.yaml" }}
 
-Three things in that output are the point of the command.
+That output shows three things.
 
-**The part in the middle.** `R3` sits between the MCU's reset pin and the PMIC's power-good output,
+`R3`, **the part in the middle**, sits between the MCU's reset pin and the PMIC's power-good output,
 so the two pins are on different nets and no per-net question can see that they are joined. A series
 element splitting a net is the ordinary case, not an awkward one, which is why "are these connected"
 is so often answered wrongly by eye.
 
-**What else is sitting there.** The parts on each net are listed, probe points first, because a
+**The output also lists what else sits on each net**, probe points first, because a
 reviewer reading a route is usually working out where to put a probe or which capacitor is in the
 way. Filtering the output down to the series elements would remove the most useful thing on the line.
 
@@ -554,18 +553,18 @@ on, how far it searched, and what it will and will not cross. A capacitor is a D
 never crosses one; a rail or plane can be where a route ENDS but is never passed through, since a
 supply joins everything to everything and a route through one would mean nothing.
 
-What the command refuses to do is guess. A pin you name that the design does not have is an error
+The command does not guess. A pin you name that the design does not have is an error
 rather than an empty result, because a name spelled wrong in a declaration and two pins that are
 genuinely unconnected are opposite problems, and reporting the first as the second sends you to look
 at the board instead of at what you typed.
 
 ## What a query is not
 
-A query **reports**, it does not judge. It has no notion of pass/fail, that is what
+A query **reports** and does not judge. It has no notion of pass/fail, which is what
 [checks](../checks-and-reports/) are for. If you find yourself running the same query to catch a
 recurring problem, that is a sign it should become a rule.
 
-## Reference: the relations used here
+## The relations used here
 
 These are the full cards for the relations the examples above use, inlined so you do not have to
 leave the page. They are the same text the [relation catalog](../../reference/relations/) serves, and

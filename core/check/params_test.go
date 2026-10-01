@@ -41,7 +41,7 @@ func TestNominalVoltageFromName(t *testing.T) {
 	}
 }
 
-// supplyDesign builds a one-part design: U1 (part LDO, pin 1 = VDD power_in) with its
+// supplyDesign builds a one-part design, U1 (part LDO, pin 1 = VDD power_in), with its
 // VDD pin on the given net, joined to a spec via the given identity channel. It is a shared
 // fixture for the Available param-tier gate here and (a copy) the datasheet rule tests in
 // stdlib/rules/builtin.
@@ -83,9 +83,9 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 // together.
 //
 // What they must agree on is the CANONICAL SPELLING they each normalize to. A rule comparing a
-// design-side resistance against a datasheet-side one compares two unit strings, so a divergence here
-// would make every such comparison silently find nothing, which is this file's whole failure mode.
-// This test lives in core/check because it is the one package that imports both layers.
+// design-side resistance against a datasheet-side one compares two unit strings, so a divergence
+// here would make every such comparison silently find nothing. That is the failure this file
+// guards. This test lives in core/check because it is the one package that imports both layers.
 func TestUnitVocabulariesAgree(t *testing.T) {
 	if param.UnitOhm != classify.UnitOhm {
 		t.Errorf("ohm symbol diverged: datasheet/param has %q (%U), core/classify has %q (%U)",
@@ -104,7 +104,7 @@ func TestUnitVocabulariesAgree(t *testing.T) {
 }
 
 // SeedsAnySymbol answers "does ANY part seed this", which decides the verdict and cannot act on it.
-// UnseededSymbols keeps what that walk discards, at the unit a datasheet author works in: the PART.
+// UnseededSymbols keeps what that walk discards, at the unit a datasheet author works in, the PART.
 func TestUnseededSymbols(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", Mpn: "ACME-1"},
@@ -174,8 +174,9 @@ func TestUnseededSymbolsRespectsClassGate(t *testing.T) {
 	}
 }
 
-// railSpec types two terminals the way a vendor pin table does: a supply input and a ground. Neither
-// net name below matches any built-in rail vocabulary, so the datasheet is the only evidence.
+// railSpec types two terminals as a supply input and a ground, the way a vendor pin table does.
+// Neither net name below matches any built-in rail vocabulary, so the datasheet is the only
+// evidence.
 func railSpec(mpn string) *parampb.PartSpec {
 	pin := func(id, name string, f parampb.PinFunction) *parampb.Pin {
 		return &parampb.Pin{Id: id, Name: name, Function: f,
@@ -191,8 +192,8 @@ func railSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// houseNamedRailDesign uses a function-first naming convention the built-in start-anchored vocabulary
-// (VCC / VDD / +3V3) matches on none of: the very case that made a real board show 13 rails instead
+// houseNamedRailDesign uses a function-first naming convention the built-in start-anchored
+// vocabulary (VCC / VDD / +3V3) matches none of. That case made a real board show 13 rails instead
 // of 91 until its project declared a lexicon.
 func houseNamedRailDesign(mpn string) *ir.Design {
 	return &ir.Design{
@@ -221,7 +222,7 @@ func netNamed(m Model, name string) *ir.Net {
 	return nil
 }
 
-// The point of the tier: a datasheet classifies rails a naming convention cannot reach. None of
+// The tier exists because a datasheet classifies rails a naming convention cannot reach. None of
 // these names matches the built-in vocabulary, so without the params tier the design has no rails
 // and no ground at all.
 func TestDatasheetEvidenceClassifiesRailsANameCannotReach(t *testing.T) {

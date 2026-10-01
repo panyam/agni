@@ -22,17 +22,17 @@ The line it prints is a quality report on the drawing, not on your board. `cross
 that cross each other, and crossings are what mainly make a generated schematic hard to follow.
 
 This is a drawing of your netlist, not a reproduction of your schematic. Parts sit where the layout
-algorithm put them. It is for following connectivity, not for review of the drawing itself.
+algorithm put them. It is for following connectivity, not for judging the layout itself.
 
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-netlist.svg"
-             caption="gateway.edn drawn by the command above: no geometry came from the file, every position here was calculated"></agni-viewer>
+             caption="gateway.edn drawn by the command above, with every position calculated because no geometry came from the file"></agni-viewer>
 
-Compare it against the faithful drawing further down. Same board, same nets, and a completely
-different picture, because one was drawn by a person and the other was solved for.
+Compare it against the faithful drawing further down. The board and the nets are the same and the
+picture is completely different, because one was drawn by a person and the other was solved for.
 
 ## Pick a layout
 
-There are five, and which one reads best depends entirely on the board. Rather than guess:
+There are five, and which one reads best depends on the board, so compare them rather than guess:
 
 {{ agniRun "content/tutorials/runs/03-render-designs-gateway-gateway-edn-compare.yaml" }}
 
@@ -56,7 +56,7 @@ somebody drew. Faithful is the default. `--layout` is what you reach for when th
 faithful to.
 
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-schematic.svg"
-             caption="gateway.kicad_sch rendered faithfully: every position, wire, and label came out of the file"></agni-viewer>
+             caption="gateway.kicad_sch rendered faithfully, with every position, wire, and label read out of the file"></agni-viewer>
 
 ## The same board, twice
 
@@ -65,8 +65,8 @@ question of whether they still agree. Ask directly:
 
 {{ agniRun "content/tutorials/runs/03-diff-views.yaml" }}
 
-Zero net changes. The two readers converged on the same netlist, and the whole engine rests on that
-premise: analysis runs over one internal representation, so the format you started from stops
+Zero net changes. The two readers converged on the same netlist, and the whole engine depends on that,
+because analysis runs over one internal representation and the format you started from stops
 mattering once the file is read.
 
 This is also the practical way to check a CAD migration. Export from the old tool and the new one,

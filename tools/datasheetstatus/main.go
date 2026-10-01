@@ -1,14 +1,12 @@
-// Command datasheetstatus reports the Stage-A extraction freshness of a datasheet corpus laid out
-// as datasheets/<vendor>/<PART>/ (WS13-009): per part, which source PDFs have a doc-IR sibling,
-// whether that doc-IR still matches the PDF bytes and the installed toolchain, and whether a
-// part-level PartSpec exists. It is report-only and never writes. The workspace `hw/Makefile`
-// invokes it over the private, gitignored datasheets/ folder (the folder path is the only private
-// input; this tool carries none), the same split as tools/pdf2doc.
+// Command datasheetstatus reports the Stage-A (PDF -> doc-IR) extraction freshness of a datasheet
+// corpus laid out as <vendor>/<PART>/ (WS13-009). Per part it reports which PDFs have a doc-IR
+// sibling, whether that doc-IR still matches the PDF bytes and the installed toolchain, and whether
+// a part-level PartSpec exists. It never writes. `make datasheets-status` runs it over
+// DATASHEET_DIR.
 //
-// The freshness signals are read straight out of each doc-IR: Document.content_hash (the source
-// bytes at extraction time) and Document.producer (the toolchain identity). A recipe/patch change
-// is a derive-stage concern and does NOT make a doc-IR stale, so this tool reports Stage-A
-// (PDF -> doc-IR) only.
+// Freshness is read from each doc-IR's Document.content_hash (the source bytes at extraction time)
+// and Document.producer (the toolchain). A recipe or patch change is a derive-stage concern and
+// does NOT make a doc-IR stale.
 //
 // Usage:
 //
@@ -30,8 +28,8 @@ import (
 	"github.com/panyam/agni/datasheet/doc"
 )
 
-// docSiblingSuffix is the doc-IR sibling extension, kept in step with the serve-side loader
-// (cmd/agni/osdocloader.go): LM1117.pdf pairs with LM1117.doc.textproto.
+// docSiblingSuffix is the doc-IR sibling extension, so LM1117.pdf pairs with LM1117.doc.textproto.
+// Keep it in step with cmd/agni/osdocloader.go.
 const docSiblingSuffix = ".doc.textproto"
 
 type pdfInfo struct {
@@ -43,10 +41,10 @@ type pdfInfo struct {
 type partInfo struct {
 	name    string // directory relative to the scanned root, e.g. "onsemi/BSS138"
 	pdfs    []pdfInfo
-	hasSpec bool // a <...>.partspec.json exists in the part dir (part-level, WS13-009)
+	hasSpec bool // a <...>.partspec.json exists in the part dir (WS13-009)
 }
 
-// rollup is the part's worst-case status: the one that most needs attention across its PDFs.
+// rollup is the status most needing attention across the part's PDFs.
 func (p partInfo) rollup() PDFStatus {
 	worst := Fresh
 	for _, f := range p.pdfs {
@@ -152,8 +150,8 @@ func statusOf(pdfPath, toolchain string) (PDFStatus, error) {
 	return classify(true, pdfHash, dir.ContentHash, dir.Producer, toolchain), nil
 }
 
-// hasPartSpec reports whether the part directory holds a PartSpec (a <...>.partspec.json). The
-// PartSpec is part-level (one per part dir), so its presence is a property of the dir, not a PDF.
+// hasPartSpec reports whether the part directory holds a PartSpec (a <...>.partspec.json). There
+// is one per part dir, not one per PDF.
 func hasPartSpec(dir string) bool {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

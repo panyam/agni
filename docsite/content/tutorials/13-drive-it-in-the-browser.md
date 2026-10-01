@@ -5,9 +5,9 @@ description: "The same catalog, the same verdicts, against the drawing instead o
 
 Every rung so far ran at the command line, which is right for CI and wrong for the part of review
 where somebody points at a net and asks what is wrong with it. `agni serve` puts the same engine
-behind a browser: same rules, same tiers, same verdicts, rendered against the drawing.
+behind a browser, with the same rules, tiers and verdicts rendered against the drawing.
 
-Nothing new is computed here. That is the point. If the panel disagreed with the CLI, one of them
+Nothing new is computed here. If the panel disagreed with the CLI, one of them
 would be lying.
 
 ## Serve the project
@@ -16,17 +16,17 @@ would be lying.
 agni serve --addr :8090 --mount proj=. --review-store ./reviews
 ```
 
-Run it from the project root. That is the whole command, and the short flag list is the lesson
-rather than an omission.
+Run it from the project root. That is the whole command, and the flag list is short on purpose,
+because the server discovers the rest.
 
 ```
 serving web at http://localhost:8090/ with 1 mount(s) (Ctrl-C to stop)
   on this network: http://192.168.1.23:8090/ (all interfaces, no auth)
 ```
 
-That second line of the startup output is the one to read twice. `--addr :8090` binds every
-interface, so anyone who can reach your machine can reach the server, and it has no authentication:
-whatever you mounted is readable by them. That is usually what you want on a workbench and rarely
+Read the second line of the startup output twice. `--addr :8090` binds every
+interface, so anyone who can reach your machine can reach the server, and it has no authentication,
+so whatever you mounted is readable by them. That is usually what you want on a workbench and rarely
 what you want on shared Wi-Fi. `--addr 127.0.0.1:8090` binds this machine only, and the line
 disappears when it applies to nobody.
 
@@ -38,7 +38,7 @@ mounts several project folders at once. Point it at the **project root**, not at
 `designs/gateway/`. A mount rooted inside the design puts `project.yaml` and `review.yaml` above the
 mount, where the server cannot reach them, and the Review panel then has no checklist to offer.
 
-`--review-store` is the only other flag, and it is the one genuinely new thing here: somewhere to
+`--review-store` is the only other flag, and it is the one genuinely new thing here, a place to
 keep review runs. Everything else this rung needs, the server discovers.
 
 ## The tiers arrive on their own
@@ -52,8 +52,8 @@ second time. Rung 4's run shows the harmless version of that, where `--conventio
 the project already composed and the output does not change; `agni check` now refuses the profile
 case outright rather than reporting every profile finding twice.
 
-That the tier reaches the design is worth confirming rather than assuming, which is what the Rules
-panel below is for.
+The Rules panel below is how you confirm the tier reaches the design rather than assuming
+it.
 
 Open `http://localhost:8090/`, pick the mount, choose a design, and open it.
 
@@ -69,10 +69,10 @@ Read the rule column. `gateway/` is your conventions file. `gateway-profiles/` i
 superseding the built-in. `intent/` is your architecture declaration. Every tier you added is
 present, namespaced exactly as it is at the command line, because it is the same catalog.
 
-The namespace is worth a second look, because it records **how** the tier arrived. A project
+The namespace also records **how** the tier arrived. A project
 composes its profiles under the project's own name, so these read `gateway-profiles/`. An overlay
-passed with `--profile-path` composes under the fixed name `profile-overlay/` instead. Same file,
-same rules, different label, and the label is how you tell which route a run took.
+passed with `--profile-path` composes under the fixed name `profile-overlay/` instead. The file and
+the rules are the same, and the label is how you tell which route a run took.
 
 ## The failure this read cannot have
 
@@ -80,8 +80,8 @@ same rules, different label, and the label is how you tell which route a run too
 load, the pins do not, and the checks report a board in ruins that is really a bad read. It is the
 most expensive mistake on the ladder, so it is fair to ask what it looks like here.
 
-It does not look like anything here, and the reason is worth knowing. This rung serves the EDIF
-netlist, and EDIF declares its own pins:
+It does not look like anything here, because this rung serves the EDIF netlist and EDIF declares
+its own pins:
 
 ```
 $ agni query designs/gateway/gateway.edn 'pin.net(?r,?p,?n) => count(?p)'
@@ -104,18 +104,17 @@ again. That is rung 1's recipe, scored this time by the review layer:
 
 {{ agniRun "content/tutorials/runs/13-review-broken-read.yaml" }}
 
-Eight of the fifteen items are `inconclusive`, and that is the outcome worth knowing. The rules ran.
+Eight of the fifteen items are `inconclusive`. The rules ran.
 They had the design. They could not reach a verdict, because the pins they needed were never
 resolved, and rather than pass, fail, or stay silent, each one says so and names the parts it could
 not resolve.
 
 Compare that to the plain catalog on the same broken read, where rung 1 counted a hundred and
-fourteen confident and entirely wrong findings. The difference is not that the tool got cleverer
-between the two rungs. It is that [rung 9's](../09-read-the-verdicts/) vocabulary has a word for "I
-looked and I cannot tell" and a bare finding list does not.
+fourteen confident and entirely wrong findings. The tool got no cleverer between the two rungs.
+The difference is that [rung 9's](../09-read-the-verdicts/) vocabulary has a word for "I looked
+and I cannot tell" and a bare finding list does not.
 
-Serve that design and the panel shows the same eight, styled apart from the passes, which is the
-whole reason the review layer is worth the extra tier.
+Serve that design and the panel shows the same eight, styled apart from the passes.
 
 ## What the panels are for
 
@@ -124,15 +123,15 @@ whole reason the review layer is worth the extra tier.
 The **sheet badge** carries the finding count, so a multi-sheet design shows you where the problems
 are before you open anything.
 
-**Findings** is the table above. Selecting a row highlights its subject on the canvas, doing the one
-thing a terminal cannot: going from "net `CAN1_CANH` has no ESD protection" to seeing where that
-net actually runs.
+**Findings** is the table above. Selecting a row highlights its subject on the canvas, which a terminal
+cannot do, so you go from "net `CAN1_CANH` has no ESD protection" to seeing where that net
+actually runs.
 
 **Canvas** renders faithfully when the design carries geometry and computes a layout when it does
 not, exactly as [rung 3](../03-see-it/) described. The WebGL and SVG toggle matters on large boards.
 
 **Rules** lists the composed catalog, which is how you confirm a tier actually loaded rather than
-inferring it from findings that did or did not appear. Select the design first: with no design
+inferring it from findings that did or did not appear. Select the design first, because with no design
 chosen the panel lists the server's own catalog, and a project's tiers compose per design, so
 `gateway/`, `gateway-profiles/` and `intent/` appear only once the panel knows which design it is
 listing for.
@@ -146,11 +145,11 @@ composes its own profiles prints nothing, so the count is the thing to read.
 **Compare** is [rung 10's](../10-compare-revisions/) diff with a revision picker.
 
 **Review** is your checklist from [rung 8](../08-write-your-checklist/), scored in the browser. It
-needs no second server: `--review-store` was on the command at the top, and `review.yaml` sits at
-the project root, which is inside the mount.
+needs no second server, because `--review-store` was on the command at the top, and `review.yaml`
+sits at the project root, which is inside the mount.
 
 Pick your `review.yaml` and press Run review. What comes back is the same verdict
-[rung 9](../09-read-the-verdicts/) read in the terminal, item by item, with the same vocabulary: an
+[rung 9](../09-read-the-verdicts/) read in the terminal, item by item, with the same vocabulary, so an
 item that could not be evaluated is styled differently from one that passed, because the two mean
 opposite things. The headline leads with coverage rather than pass/fail, for the reason rung 9 gave
 about what a bare pass count hides.
@@ -165,9 +164,9 @@ A failing item lists the findings that failed it, and clicking one highlights it
 is the same move Findings offers one level down.
 
 Runs are kept, so the panel opens on the latest one and the picker holds the history. That is the
-browser half of [rung 11](../11-archive-and-gate/): comparing this week's verdict against last
-month's, without either of them being a file somebody had to remember to save. Each stored run also
-carries the checklist it actually scored, so a run from before you edited `review.yaml` still shows
+browser half of [rung 11](../11-archive-and-gate/), and it compares this week's verdict against
+last month's without either of them being a file somebody had to remember to save. Each stored
+run also carries the checklist it actually scored, so a run from before you edited `review.yaml` still shows
 the questions it really asked.
 
 ## Where this fits

@@ -10,7 +10,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// regCurrentSpec hand-builds a regulator spec stating an output current the way a real one does: a
+// regCurrentSpec hand-builds a regulator spec stating an output current the way a real one does, as a
 // recommended-operating row, not an absolute maximum. A rule filtering to ABSOLUTE_MAX would find
 // nothing on a real part, which is why OutputCurrentLimits does not constrain the kind.
 func regCurrentSpec(mpn, symbol string, iout float64) *parampb.PartSpec {
@@ -78,7 +78,7 @@ func budgetDecl(rail string, peak, factor float64) Declaration {
 	}
 }
 
-// TestRailCapacityFiresWhenUnderRated is the WS3-095 acceptance for the capacity half: a rail declared
+// TestRailCapacityFiresWhenUnderRated is the WS3-095 acceptance for the capacity half. A rail declared
 // to draw 0.8A peak, supplied by a regulator rated 0.5A, is over-subscribed by the design's own
 // numbers. The finding names both figures and cites the datasheet the rating came from.
 func TestRailCapacityFiresWhenUnderRated(t *testing.T) {
@@ -110,7 +110,7 @@ func TestRailCapacitySilentWhenRated(t *testing.T) {
 	}
 }
 
-// TestRailMarginFiresInTheHeadroomBand is the acceptance for the margin half: 0.9A clears the 0.8A
+// TestRailMarginFiresInTheHeadroomBand is the acceptance for the margin half. 0.9A clears the 0.8A
 // peak but falls short of the 0.96A the declared 1.2 factor asks for.
 func TestRailMarginFiresInTheHeadroomBand(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.9)
@@ -140,12 +140,12 @@ func TestRailUnderPeakFiresCapacityOnlyNotMargin(t *testing.T) {
 	}
 }
 
-// TestRailMarginSilentAtExactlyTheMargin: a supply rated at exactly the margin meets it and must not
-// fire. The values matter. 0.1 x 1.5 is 0.15000000000000002 in float64 while the literal 0.15 is
-// 0.1499999999999999944, so a 150mA part on a 100mA rail at a 1.5 factor fails a margin it meets
-// exactly unless below() carries its relative tolerance. Picking a pair that happens to round the
-// other way (0.8 x 1.2 is one) would make this test pass with the tolerance deleted, which is the
-// wrong reason to be green.
+// TestRailMarginSilentAtExactlyTheMargin covers the boundary. A supply rated at exactly the margin
+// meets it and must not fire. The values matter. 0.1 x 1.5 is 0.15000000000000002 in float64 while
+// the literal 0.15 is 0.1499999999999999944, so a 150mA part on a 100mA rail at a 1.5 factor fails
+// a margin it meets exactly unless below() carries its relative tolerance. Picking a pair that
+// happens to round the other way (0.8 x 1.2 is one) would make this test pass with the tolerance
+// deleted, which is the wrong reason to be green.
 func TestRailMarginSilentAtExactlyTheMargin(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.15)
 	if fs := railBudgetMarginRule(budgetDecl("3V3", 0.1, 1.5)).Findings(m); len(fs) != 0 {
@@ -158,8 +158,8 @@ func TestRailMarginSilentAtExactlyTheMargin(t *testing.T) {
 	}
 }
 
-// TestRailBudgetAcrossSeriesElement: a ferrite between the regulator and the rail is ordinary layout
-// and must not hide the supply, so the association walks one series crossing.
+// TestRailBudgetAcrossSeriesElement checks that a ferrite between the regulator and the rail, which is
+// ordinary layout, does not hide the supply, so the association walks one series crossing.
 func TestRailBudgetAcrossSeriesElement(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", "FB1"), "IOUT", 0.5)
 	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 1 {
@@ -167,9 +167,9 @@ func TestRailBudgetAcrossSeriesElement(t *testing.T) {
 	}
 }
 
-// TestRailBudgetSymbolAliases: the vendor spelling lives in the model layer, so a spec printing I_OUT
-// or IOUT(MAX) is read exactly like one printing IOUT. A rule that matched one spelling would go
-// silent on most real datasheets, which reads as a clean design.
+// TestRailBudgetSymbolAliases covers vendor spellings. The vendor spelling lives in the model
+// layer, so a spec printing I_OUT or IOUT(MAX) is read exactly like one printing IOUT. A rule that
+// matched one spelling would go silent on most real datasheets, which reads as a clean design.
 func TestRailBudgetSymbolAliases(t *testing.T) {
 	for _, sym := range []string{"IOUT", "I_OUT", "IOUT(MAX)", "IO", "ICONT"} {
 		t.Run(sym, func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestRailBudgetSymbolAliases(t *testing.T) {
 			}
 		})
 	}
-	// A current the rule must NOT credit as capacity: a quiescent current is not what the part
+	// A current the rule must NOT credit as capacity. A quiescent current is not what the part
 	// delivers, and reading it would compare a rail's demand against an unrelated number.
 	m := budgetModel(budgetDesign("3V3", ""), "IQ", 0.5)
 	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
@@ -188,13 +188,14 @@ func TestRailBudgetSymbolAliases(t *testing.T) {
 }
 
 // TestRailBudgetReadsMilliampRatings is the rule half of agni issue 148, and the failure it closes is
-// the one the whole outcome vocabulary exists to prevent: a wrong PASS on a power rail.
+// the one the outcome vocabulary exists to prevent, a wrong PASS on a power rail.
 //
 // MILLIAMPS ARE THE ORDINARY SPELLING for a sub-amp regulator, so a spec transcribed as the sheet
-// prints it hit this without doing anything unusual. The row used to fail the extractor's unit gate,
-// which left the rule with no supply for the rail, nothing to compare, and no finding. Neither guard
-// caught it: check.Available saw a params tier attached, and the needs-data gate saw the symbol seeded.
-// The item scored a clean pass on a rail the design over-subscribes by 60%.
+// prints it hit this without doing anything unusual. The row used to fail the extractor's unit
+// gate, which left the rule with no supply for the rail, nothing to compare, and no finding.
+// Neither guard caught it, because check.Available saw a params tier attached and the needs-data
+// gate saw the symbol seeded. The item scored a clean pass on a rail the design over-subscribes by
+// 60%.
 //
 // Both directions are asserted. A 500mA part under an 0.8A budget must fire, and the same part under a
 // 0.3A budget must not, because a conversion that fired unconditionally would look identical to a
@@ -232,11 +233,11 @@ func TestRailBudgetReadsMilliampRatings(t *testing.T) {
 	}
 }
 
-// TestRailBudgetSkipsUnrecognizedUnits: converting the units the layer knows must not soften its
-// refusal of the ones it does not. An unrecognized unit still yields no supply, and the residual the
-// old milliamp case documented survives here unchanged: the symbol IS seeded, so needs-data does not
-// cover it and the item reads pass. That is now a genuinely narrow gap (a vendor unit no SI scale
-// applies to) rather than the everyday milliamp row it used to be.
+// TestRailBudgetSkipsUnrecognizedUnits checks that converting the units the layer knows does not
+// soften its refusal of the ones it does not. An unrecognized unit still yields no supply, and the
+// residual the old milliamp case documented survives here unchanged. The symbol IS seeded, so
+// needs-data does not cover it and the item reads pass. That is now a genuinely narrow gap (a
+// vendor unit no SI scale applies to) rather than the everyday milliamp row it used to be.
 func TestRailBudgetSkipsUnrecognizedUnits(t *testing.T) {
 	d := budgetDesign("3V3", "")
 	spec := regCurrentSpec("ACME-REG", "IOUT", 0.5)
@@ -250,10 +251,11 @@ func TestRailBudgetSkipsUnrecognizedUnits(t *testing.T) {
 	}
 }
 
-// TestRailBudgetSilentWithoutTheDatasheet: with no seeded spec there is no rating, so the rule has
-// nothing to compare and must not fire. It reports the rail as unevaluable rather than clean, and the
-// unevaluable half is the review runner's needs-data gate (TestRuleBoundDatasheetItemNeedsData in
-// core/review), which these rules feed by declaring ParamSymbols.
+// TestRailBudgetSilentWithoutTheDatasheet covers the no-datasheet case. With no seeded spec there
+// is no rating, so the rule has nothing to compare and must not fire. It reports the rail as
+// unevaluable rather than clean, and the unevaluable half is the review runner's needs-data gate
+// (TestRuleBoundDatasheetItemNeedsData in core/review), which these rules feed by declaring
+// ParamSymbols.
 func TestRailBudgetSilentWithoutTheDatasheet(t *testing.T) {
 	m := check.NewModel(budgetDesign("3V3", ""))
 	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
@@ -272,7 +274,7 @@ func TestRailBudgetSilentWithoutTheDatasheet(t *testing.T) {
 }
 
 // TestRailBudgetSilentOnUndeclaredAndAbsentRails holds the direction of the iteration. The rule walks
-// the DECLARATION and probes the design: a rail the design carries but the intent does not budget is
+// the DECLARATION and probes the design. A rail the design carries but the intent does not budget is
 // not its business, and a budgeted rail the design does not carry is a missing-rail defect the
 // voltage-domain and subsystem forms report, so firing here would report one defect twice.
 func TestRailBudgetSilentOnUndeclaredAndAbsentRails(t *testing.T) {
@@ -285,11 +287,11 @@ func TestRailBudgetSilentOnUndeclaredAndAbsentRails(t *testing.T) {
 	}
 }
 
-// TestRailBudgetTakesTheBestSupply: with two seeded parts reaching one rail the rule reads the
-// highest rating. The reach radius can pull in a part that does not feed this rail, and a
-// multi-channel regulator states a rating per channel with no way to say which channel this net is, so
-// reading the smallest would report a shortfall the design does not have. Every fail must be a genuine
-// defect, so ambiguous evidence takes the reading that does not fire.
+// TestRailBudgetTakesTheBestSupply checks that with two seeded parts reaching one rail the rule
+// reads the highest rating. The reach radius can pull in a part that does not feed this rail, and a
+// multi-channel regulator states a rating per channel with no way to say which channel this net is,
+// so reading the smallest would report a shortfall the design does not have. Every fail must be a
+// genuine defect, so ambiguous evidence takes the reading that does not fire.
 func TestRailBudgetTakesTheBestSupply(t *testing.T) {
 	d := budgetDesign("3V3", "")
 	d.Components = append(d.Components, &ir.Component{

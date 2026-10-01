@@ -17,21 +17,18 @@ import (
 	rpt "github.com/panyam/agni/core/report"
 )
 
-// serverMountTimeout bounds the one call --server makes. A wrong address must cost a moment, not
-// the run: the links are a convenience on top of an analysis that has already finished.
+// serverMountTimeout bounds the one call --server makes, so a wrong address costs a moment rather
+// than stalling a run whose analysis has already finished.
 const serverMountTimeout = 2 * time.Second
 
 // linkTarget is the path half of a viewer URL, plus the reason there is none.
 //
-// The rule it applies is unchanged from the linkablePath it replaces: a link is only promised for a
-// mount THE OPERATOR NAMED, because a mount the CLI minted locally means nothing on a server the
-// operator did not start with it (agni issue 392), and the question is whether the mount was
-// declared rather than how the argument was spelled (agni issue 459).
+// A link is only promised for a mount THE OPERATOR NAMED, because a mount the CLI minted locally
+// means nothing on a server the operator did not start with it (agni issue 392). The test is whether
+// the mount was declared, not how the argument was spelled (agni issue 459).
 //
-// What is new is the second return. Refusing to link is the right answer, but refusing silently is
-// not: a report with 265 rows and no links looks like a broken renderer, and nothing on the page or
-// in the terminal said which of the two halves was missing. The caller prints this whenever
-// --server was given and nothing came back.
+// The caller prints why whenever --server was given and no path came back, since a 265-row report
+// with no links otherwise looks like a broken renderer (#476).
 func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why string) {
 	if ws == nil {
 		return "", "this run has no mount table"
@@ -40,10 +37,8 @@ func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why 
 	if err != nil || u.Mount == "" || u.Path == "" {
 		return "", fmt.Sprintf("%s does not address a mount", designURI)
 	}
-	// The declared-mount rule exists because a mount minted for one run means nothing on a server that
-	// was not started with it. Under `--server self` that premise is gone: this process serves the
-	// table it just minted, so the minted mount is exactly the one the link resolves against. Lifting
-	// the rule here is most of what the flag is for.
+	// Under `--server self` this process serves the table it just minted, so a minted mount is
+	// linkable and the declared-mount rule does not apply.
 	if !selfServed && !ws.Declared(u.Mount) {
 		return "", fmt.Sprintf("mount %q was minted for this run rather than declared, so a link built from it would resolve on no server; pass --mount %s=<root> to name it, or --server self to serve it from here", u.Mount, u.Mount)
 	}
@@ -52,18 +47,14 @@ func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why 
 
 // verifyServerMount asks the server at urlBase whether it serves this mount from the same root.
 //
-// linkablePath could only ever check that the OPERATOR named the mount, never that the SERVER agrees
-// about it, and the two are different claims. `--mount gateway=/a` against a server started with
-// `--mount gateway=/b` passed every local check and emitted links that resolve to a different board,
-// which is worse than emitting none: the reader has no reason to doubt a link that loads. The
-// mitigation named in the old comment was the content hash on the URL. That now works end to end (the
-// URL carries it and the viewer compares it), so a mount table that disagrees is caught twice: here
-// when the server can be reached, and in the browser when it cannot.
+// linkTarget checks only that the OPERATOR named the mount. This checks that the SERVER agrees, since
+// `--mount gateway=/a` against a server started with `--mount gateway=/b` passes every local check
+// and emits links that load a different board. The content hash on the URL catches the same mismatch
+// in the browser when the server cannot be reached here.
 //
-// UNREACHABLE IS NOT MISMATCHED. A server that does not answer leaves the question open, and the
-// report may well be generated now and read once the viewer is up, so an unreachable address keeps
-// the links and says the table went unverified. A server that answers and disagrees is a definite
-// broken promise, and those links are dropped.
+// UNREACHABLE IS NOT MISMATCHED. A report may be generated now and read once the viewer is up, so an
+// unreachable server keeps the links with a note that the table went unverified. A server that
+// answers and disagrees gets its links dropped.
 func verifyServerMount(ctx context.Context, urlBase string, want mounts.Mount) (ok bool, why string) {
 	ctx, cancel := context.WithTimeout(ctx, serverMountTimeout)
 	defer cancel()
@@ -84,10 +75,8 @@ func verifyServerMount(ctx context.Context, urlBase string, want mounts.Mount) (
 	return false, fmt.Sprintf("%s serves no mount named %q, so every link would resolve to nothing", urlBase, want.Name)
 }
 
-// mountURIAuthority is the mount name in an artifact URI, or "" when it names none. It exists so the
-// link site can look the mount's ROOT back up: linkTarget answers whether to link and returns the
-// path, but verifying against the server needs the local root to compare, which only the mount table
-// carries.
+// mountURIAuthority is the mount name in an artifact URI, or "" when it names none. The link site
+// uses it to look the mount's ROOT back up in the mount table for verifyServerMount.
 func mountURIAuthority(designURI string) string {
 	u, err := artifact.Parse(designURI)
 	if err != nil {
@@ -96,28 +85,18 @@ func mountURIAuthority(designURI string) string {
 	return u.Mount
 }
 
-// verdictLinkTarget resolves the design ONCE and returns both halves of the link built from it: the
-// viewer path, and the revision that path is at.
+// verdictLinkTarget resolves the design ONCE and returns both halves of the link built from it, the
+// viewer path and the revision that path is at, so the two always name the same artifact (agni
+// issue 489).
 //
-// One function because the two used to be two, and they disagreed (agni issue 489). The path came
-// from the caller's ARGUMENT and the hash came from the resolved ENTRY, which is a difference with no
-// symptom until the argument is not the entry. Then it has two, both bad:
-//
-//   - A design FOLDER produced `/designs/<mount>/<dir>/view`, which the viewer's URL space reads as
-//     the FILE at <dir>. GetDesign refuses it and the page loads no design at all. That is the form
-//     the tutorial teaches.
-//   - A declared COMPANION produced its own path with the ENTRY's hash, so the viewer compared two
-//     different files and drew the stale-link banner over a design that was perfectly in sync. A
-//     false alarm in the mechanism built to prevent false confidence is worse than the silence it
-//     replaced.
-//
-// Resolving once is what makes those unrepresentable rather than merely fixed. There is no longer a
-// pair of values that could name different artifacts.
+// Built separately, the path came from the ARGUMENT and the hash from the resolved ENTRY. A design
+// FOLDER then linked to `/designs/<mount>/<dir>/view`, which the viewer reads as a file and refuses,
+// and a declared COMPANION got the entry's hash, which drew the stale-link banner over an in-sync
+// design.
 func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, designURI string, selfServed bool) (mountPath, contentHash, why string) {
 	target := designURI
-	// A resolution failure leaves the argument standing rather than dropping the link. The design was
-	// already read and analysed by the time anything asks for a link, so a descriptor that will not
-	// resolve here is a surprise about CONFIG, not a reason to withhold the answer.
+	// A resolution failure leaves the argument standing rather than dropping the link, because the
+	// design has already been read and analysed by now.
 	if ll != nil {
 		if u, err := artifact.Parse(designURI); err == nil {
 			if e, err := ll.designEntry(ctx, u); err == nil {
@@ -133,13 +112,11 @@ func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, d
 // verdict link (issue 392).
 //
 // It goes through the loader's DesignHash rather than hashing the caller's argument, because the
-// argument may name a design FOLDER or a companion view, and neither is the file that was analysed.
-// Hashing the argument gave "" for a folder, since opening a directory succeeds and reading it fails,
-// and hashSource reports a read failure and a genuinely unhashable file the same way.
+// argument may name a design FOLDER or a companion view, and neither is the file that was analysed
+// (#479).
 //
-// An error still yields "", which is what DesignRef.content_hash documents for a producer that did
-// not hash. A link without the staleness parameter is worse than one with it and better than no link,
-// and this is not the place to fail a run that has already finished its analysis.
+// An error yields "", which is what DesignRef.content_hash documents for a producer that did not
+// hash. The link then carries no staleness parameter, and the finished run does not fail.
 func designContentHash(ctx context.Context, ll *localLoader, designURI string) string {
 	u, err := artifact.Parse(designURI)
 	if err != nil {
@@ -152,19 +129,17 @@ func designContentHash(ctx context.Context, ll *localLoader, designURI string) s
 	return h
 }
 
-// viewerLinkMeta resolves the LINK half of a run: where a viewer would serve this design, the bytes
-// the run read, and whether the server at urlBase agrees about the mount. It is the one place the
-// promise a link makes is decided, which is why `check` and `trace` share it rather than each
-// applying the rule and drifting.
+// viewerLinkMeta resolves the LINK half of a run, meaning where a viewer would serve this design, the
+// bytes the run read, and whether the server at urlBase agrees about the mount. `check` and `trace`
+// both call it, so the rule for when a link is promised lives only here.
 //
-// Three refusals, all fail-closed and all SAID OUT LOUD when urlBase was given. A workspace that
-// failed to build, a design reached through a mount the CLI minted rather than one the operator
-// named, and a server that serves that mount name from a different root. Refusing was already the
-// right answer and was already silent, so an operator who asked for links and got none had nothing
-// to read that named the missing half.
+// Three refusals, all fail-closed and all reported on stderr and in LinksWithheld when urlBase was
+// given (agni issue 626). They are a workspace that failed to build, a design reached through a mount
+// the CLI minted rather than one the operator named, and a server that serves that mount name from a
+// different root.
 //
-// It returns an rpt.Report because that is what the renderers take; a caller wanting only the URL
-// halves reads URLBase and MountPath off it and ignores the rest.
+// It returns an rpt.Report because that is what the renderers take. A caller wanting only the URL
+// halves reads URLBase and MountPath off it.
 func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, designURI string, spec serverSpec) rpt.Report {
 	ws, _ := workspace()
 	urlBase := spec.base()
@@ -174,8 +149,8 @@ func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, de
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: --server is set but no links were emitted: %s\n", why)
 		withheld = why
 	}
-	// A remote server is asked whether it agrees about the mount. `self` is not asked, because there is
-	// nobody to disagree: the table the links name is the table this process is about to serve.
+	// Only a remote server is asked. Under `self` the table the links name is the one this process
+	// is about to serve.
 	if spec.url != "" && mountPath != "" {
 		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
 			keep, note := verifyServerMount(ctx, urlBase, m)
@@ -184,9 +159,8 @@ func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, de
 			}
 			if !keep {
 				mountPath = ""
-				// This is the SECOND way links get withheld, and its reason was stderr-only too. A
-				// server that serves the mount name from another root is the case a reader is least
-				// able to guess from the page, so it is the one most worth carrying.
+				// Carried into the report as well as stderr, since a reader of the saved page cannot
+				// guess a root mismatch from the page itself.
 				withheld = note
 			}
 		}

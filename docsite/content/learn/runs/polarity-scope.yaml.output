@@ -1,4 +1,4 @@
-#agni-run f5e3260fc58ac375
+#agni-run ca85f07a86e7541a
 r   n               provenance
 D1  GND             designs/gateway/gateway.edn ; designs/gateway/gateway.edn:GND
 D1  PMIC_MAIN_12V0  designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_MAIN_12V0

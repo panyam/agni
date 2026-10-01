@@ -11,37 +11,31 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// ReviewStore persists review runs (WS9-053). It is the third injected port in this package, after
-// PartSpecStore and AnnotationStore, and follows their shape: the interface lives here, the
-// os-backed adapter lives in cmd/agni and owns all I/O (C1/C13).
+// ReviewStore persists review runs (WS9-053). Like PartSpecStore and AnnotationStore, the interface
+// lives here and the os-backed adapter in cmd/agni owns all I/O (C1/C13). Unlike them it is not keyed
+// by an artifact.URI holding ONE current value, because a design accumulates MANY runs, so this store
+// mints identities and lists them.
 //
-// It differs from those two in the way that matters. They are keyed by (mount, path) and hold ONE
-// current value per artifact, so they need no identity and no listing. A design accumulates MANY
-// review runs over time, and the history is the point, so this store mints identities and lists.
-//
-// Create owns identity AND time, deliberately. An id is derived from the creation instant so a
-// directory listing sorts chronologically without opening a single document, which means the two
-// cannot be assigned independently without them disagreeing. Putting both in the adapter also keeps
-// the service pure: ReviewService composes a document from its inputs and never calls a clock, so its
-// output for given inputs is fixed and its tests need no injected time.
+// Create owns identity AND time. The os adapter derives an id from the creation instant, which lets a
+// listing sort chronologically without opening a document, so the two cannot be assigned separately.
+// It also keeps ReviewService free of a clock, so its output is fixed for given inputs.
 type ReviewStore interface {
 	// Create stores a completed run under a parent project ("" for a design that belongs to none) and
-	// returns it with its assigned name and stamped creation time. The document passed in has no name
-	// and no created_at; the store fills both, so a caller cannot mint an id that collides or backdate
-	// a run.
+	// returns its assigned name and stamped creation time. The caller supplies neither, so it cannot
+	// mint a colliding id or backdate a run.
 	Create(ctx context.Context, parent string, results *checkspb.CheckResults) (name string, createdAt string, err error)
 	// Get returns a stored run. A name that names nothing is ErrNotFound.
 	Get(ctx context.Context, name string) (*checkspb.CheckResults, error)
 	// List returns runs newest first, at most pageSize of them, starting after pageToken (empty starts
 	// at the newest).
 	//
-	// parent narrows to one project's runs; EMPTY means every run the store holds, parented or not,
-	// which is what keeps the two name shapes from costing a client an extra call. designFilter, when
-	// non-empty, keeps only runs whose DesignRef.source matches it exactly. The returned token is
-	// empty when the last page has been reached.
+	// parent narrows to one project's runs, and EMPTY means every run the store holds, parented or
+	// not, so a client needs one call across both name shapes. designFilter, when non-empty, keeps
+	// only runs whose DesignRef.source matches it exactly. The returned token is empty on the last
+	// page.
 	List(ctx context.Context, parent string, pageSize int, pageToken, designFilter string) (results []*checkspb.CheckResults, names []string, nextPageToken string, err error)
-	// Delete removes a stored run. Deleting an absent run is ErrNotFound, not a silent success: a
-	// client asking to remove something that is not there holds a stale view and is better told.
+	// Delete removes a stored run. Deleting an absent run is ErrNotFound rather than a success, since
+	// a client removing something that is not there holds a stale view.
 	Delete(ctx context.Context, name string) error
 }
 
@@ -49,12 +43,11 @@ type ReviewStore interface {
 const reviewsSegment = "reviews/"
 
 // ReviewName builds a resource name from a parent and a bare store id, and SplitReviewName is its
-// inverse. They exist so the shape is written once: a store deals in (parent, id), the API deals in
-// names, and having both spell the boundary by hand is how one of them ends up storing a name as an
-// id.
+// inverse. A store deals in (parent, id) and the API in names, so both go through these two rather
+// than spelling the shape by hand and ending up storing a name as an id.
 //
-// An empty parent yields the unparented form, "reviews/{id}". That is a real state rather than a
-// missing value: a design that belongs to no project has runs that belong to no project either.
+// An empty parent yields the unparented form, "reviews/{id}", for a design that belongs to no
+// project.
 func ReviewName(parent, id string) string {
 	if parent == "" {
 		return reviewsSegment + id
@@ -65,9 +58,9 @@ func ReviewName(parent, id string) string {
 // SplitReviewName splits a review resource name into its parent project name (empty when the run is
 // unparented) and its store id, reporting whether the name was well formed.
 //
-// An empty id, a separator inside the id, or a `.`/`..` id is rejected: an id reaches a
-// filesystem-backed adapter, so a caller must not be able to steer it out of the store directory.
-// The parent, when present, is validated as a project resource name for the same reason.
+// An empty id, a separator inside the id, or a `.`/`..` id is rejected, because an id reaches a
+// filesystem-backed adapter and must not steer it out of the store directory. The parent, when
+// present, is validated as a project resource name for the same reason.
 func SplitReviewName(name string) (parent, id string, ok bool) {
 	rest, found := strings.CutPrefix(name, reviewsSegment)
 	if found {
@@ -88,23 +81,22 @@ func validReviewID(id string) bool {
 	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\")
 }
 
-// MemReviewStore is an in-memory ReviewStore. It backs `agni review`, which is a thin client of
-// CreateReview but must not leave files behind: a local run reports to stdout, and --results-out is
-// the explicit way to write a document. It is also what most tests want.
+// MemReviewStore is an in-memory ReviewStore. It backs `agni review`, a thin client of CreateReview
+// that must leave no files behind (--results-out is how it writes a document), and most tests.
 //
-// Ids are the insertion ordinal rather than a timestamp, which keeps every test deterministic. The
-// ordering contract is what callers actually depend on (newest first), and this honors it.
+// Ids are the insertion ordinal rather than a timestamp, which keeps tests deterministic and still
+// lists newest first.
 type MemReviewStore struct {
 	mu   sync.Mutex
 	seq  int
 	ids  []string // insertion order, oldest first
 	docs map[string]*checkspb.CheckResults
-	// parents keys each stored id to the project it belongs to, "" for an unparented run. It is kept
-	// beside the document rather than inside it because a parent is where a run LIVES, not something
-	// the run recorded about itself: the document already names the design it scored.
+	// parents keys each stored id to its project, "" for an unparented run. It sits beside the
+	// document rather than inside it because a parent is where a run LIVES, not something the run
+	// recorded about itself.
 	parents map[string]string
-	// Clock, when set, stamps created_at. Nil leaves it empty, which is what the CLI wants: a run it
-	// never persists has no meaningful creation record to invent.
+	// Clock, when set, stamps created_at. Nil leaves it empty, which the CLI wants for a run it never
+	// persists.
 	Clock func() string
 }
 
@@ -122,8 +114,7 @@ func (m *MemReviewStore) Create(_ context.Context, parent string, results *check
 	if m.Clock != nil {
 		createdAt = m.Clock()
 	}
-	// Store a CLONE. The caller keeps a pointer to the document it passed in, and a store that aliased
-	// it would let a later edit through that pointer rewrite history in place.
+	// Store a CLONE, so a later edit through the caller's pointer cannot rewrite a stored run.
 	stored := proto.Clone(results).(*checkspb.CheckResults)
 	m.docs[id] = stored
 	m.parents[id] = parent
@@ -179,18 +170,13 @@ func (m *MemReviewStore) Delete(_ context.Context, name string) error {
 }
 
 // PageReviews applies the filter, the page token, and the page size to an ids slice that is ALREADY
-// newest-first, loading each kept document through load. It is shared by every ReviewStore
-// implementation so the paging contract has exactly one definition: an adapter that re-derived it
-// would be free to disagree about whether a token is inclusive, and a client would silently skip or
-// repeat a run at every page boundary.
+// newest-first, loading each kept document through load. Every ReviewStore pages through it, so no
+// adapter can disagree about whether a token is inclusive and make a client skip or repeat a run at
+// a page boundary.
 //
 // The token is the id to resume AFTER, so it stays valid when runs are created or deleted between
-// pages. An offset would shift under exactly that, and a review store is append-mostly, so new runs
-// arriving mid-pagination is the normal case rather than the edge one.
-// nameOf builds each kept run's resource name, which the store supplies because only it knows which
-// parent an id lives under. It is a parameter rather than a fixed ReviewName call so an adapter that
-// stores parented and unparented runs together does not have to re-derive the shape and get it
-// subtly different from this one.
+// pages, which an offset would not. nameOf builds each kept run's resource name, because only the
+// store knows which parent an id lives under.
 func PageReviews(newestFirst []string, pageSize int, pageToken, designFilter string, load func(string) *checkspb.CheckResults, nameOf func(string) string) ([]*checkspb.CheckResults, []string, string, error) {
 	if pageSize <= 0 {
 		pageSize = defaultReviewPageSize
@@ -223,8 +209,8 @@ func PageReviews(newestFirst []string, pageSize int, pageToken, designFilter str
 			continue
 		}
 		if len(docs) == pageSize {
-			// One kept run beyond the page proves there is a next page. Emitting a token without that
-			// proof would hand back a token that returns nothing, which reads to a client as data loss.
+			// One kept run beyond the page proves there is a next page, so a token never leads to an
+			// empty page.
 			return docs, names, last, nil
 		}
 		docs = append(docs, doc)
@@ -251,8 +237,8 @@ func slicesDelete(ids []string, want string) []string {
 	return out
 }
 
-// SortReviewIDsDescending orders ids newest-first for a store whose ids are time-sortable strings. It is the
-// property the os-backed adapter's id scheme buys: chronological order with no document reads.
+// SortReviewIDsDescending orders ids newest-first for a store whose ids are time-sortable strings,
+// such as the os-backed adapter's, so it lists chronologically with no document reads.
 func SortReviewIDsDescending(ids []string) {
 	sort.Sort(sort.Reverse(sort.StringSlice(ids)))
 }

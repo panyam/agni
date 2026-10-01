@@ -1,17 +1,17 @@
 # multi-format
 
-Read the same board from EDIF, KiCad, and IPC-2581 and watch the neutral IR converge. The
+Read the same board from EDIF, KiCad, and IPC-2581 and watch the neutral IR converge. It is the
 payoff example for the "many readers, one IR" thesis.
 
 ## What it shows
 
 - Three readers normalizing three source formats of one board (R1, R2, U1; nets VCC, GND,
   SIG) into the same `ir.Design`.
-- `diff.Designs` used as a convergence oracle: EDIF-read vs KiCad-read and EDIF-read vs
+- `diff.Designs` used as a convergence oracle, where EDIF-read vs KiCad-read and EDIF-read vs
   IPC-read report **zero net changes** and the same component set. Same connectivity, keyed on
   `(ref_des, pin)`, regardless of format.
-- What legitimately differs: component attributes (a Value, a part reference) and the physical
-  tier (footprints, layers, stackup, BOM appear only for KiCad and IPC-2581). The semantic
+- Component attributes (a Value, a part reference) and the physical tier legitimately differ,
+  since footprints, layers, stackup and BOM appear only for KiCad and IPC-2581. The semantic
   netlist converges; format-specific detail stays in attributes and the physical tier
   (CONSTRAINTS C9).
 

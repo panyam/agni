@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/readers/ipc2581"
 )
 
-// TestBoardIPCPlacementLandsInFrame is the WS1-029 behavioral gate: an IPC-2581 placement pad,
+// TestBoardIPCPlacementLandsInFrame is the WS1-029 behavioral gate. An IPC-2581 placement pad,
 // composed through the real renderer rule (padWorld), must land at its true board position.
 // Before the fix, top parts rotated the wrong way and bottom parts were not mirrored, so an
 // asymmetric rotated connector flew off the board (testcase1 CN11 sat ~0.8" past the edge). The

@@ -1,14 +1,14 @@
 // What the reader clicked, and what to ask about it.
 //
-// A Selection is deliberately the same shape as a finding's subject (kind + ref/pin/net), because
-// that is what lets three entry points converge: clicking the drawing, clicking a search result, and
-// clicking a finding all produce one value, so the highlighter, the query generator and (later) the
-// entity panel each take one input type rather than three.
+// A Selection has the same shape as a finding's subject (kind + ref/pin/net), so clicking the
+// drawing, a search result or a finding all produce one value for the highlighter and the query
+// generator to take.
 //
-// Resolution is view-local by design (CONSTRAINTS C11: the view turns a cursor position into a
-// semantic intent). This module holds the parts that are NOT view-local — reading a keyed element,
-// ranking overlapping candidates, and writing the query — so the SVG and WebGL views can differ in
-// how they find candidates while agreeing on what a candidate means.
+// Resolution is view-local (CONSTRAINTS C11, the view turns a cursor position into a semantic
+// intent). This module holds the parts that are NOT view-local (reading a keyed element, ranking
+// overlapping candidates, writing the query), so the SVG and WebGL views can find candidates their
+// own way and still agree on what one means. The cross-renderer contract is on
+// docsite/content/architecture/web-picking.md#picking-from-the-drawing.
 
 export type SelectionKind = "pin" | "component" | "bus" | "net";
 
@@ -24,8 +24,8 @@ export interface Selection {
 }
 
 // PRIORITY ranks overlapping candidates, most specific first. A click inside a symbol that lands on
-// a pin means the pin: the pin is the thing with the least area, so the reader who hit it meant it.
-// Topmost-wins would give the symbol body every time, since it is drawn over its own pins.
+// a pin means the pin, the entity with the least area. Topmost-wins would give the symbol body every
+// time, since it is drawn over its own pins.
 const PRIORITY: SelectionKind[] = ["pin", "component", "bus", "net"];
 
 // selectionFromElement reads one keyed element, or null for an unkeyed one (the page rect, a label,
@@ -67,13 +67,11 @@ export function bestOf(candidates: (Selection | null)[]): Selection | null {
   return null;
 }
 
-// PROBES are the offsets sampled around a click, in CSS pixels: the exact point first, then a ring.
-//
-// A schematic wire is a 1px stroke, and hit-testing one exactly is a game of skill. Sampling a small
-// ring gives it a tolerance without widening anything in the document: the alternative, an invisible
-// fat stroke under every wire, would make every consumer of the SVG (a report, a saved file, a diff
-// artifact) carry the viewer's interaction model. The ring is deliberately small — 5px at cursor
-// scale — so that clicking BETWEEN two close wires still misses rather than guessing.
+// PROBES are the offsets sampled around a click in CSS pixels, the exact point first and then a
+// ring that gives small targets some tolerance. The ring does not rescue a bare wire, since every
+// probe faces the same sub-pixel stroke; the served render's invisible wide wire companion does
+// (core/render/svg.go, WithPickTargets). The ring stays small, 5px at cursor scale, so a click
+// BETWEEN two close wires still misses rather than guessing.
 const PROBE_R = 5;
 const PROBES: [number, number][] = [
   [0, 0],
@@ -89,8 +87,7 @@ const PROBES: [number, number][] = [
 
 // pickAt resolves a viewport point to an entity by asking the document what is under it, at the
 // point and around it. Client coordinates, because that is what elementFromPoint takes and what a
-// pointer event carries; no camera maths is needed here, which is the whole advantage of letting
-// the browser hit-test its own document.
+// pointer event carries, so no camera maths is needed here.
 export function pickAt(doc: Document, clientX: number, clientY: number): Selection | null {
   const seen: (Selection | null)[] = [];
   for (const [dx, dy] of PROBES) {
@@ -101,17 +98,15 @@ export function pickAt(doc: Document, clientX: number, clientY: number): Selecti
 
 // fillEntityQuery substitutes a selection into a preset the SERVER wrote (query.EntityQueries).
 //
-// The templates deliberately do not live here. Every one names relations defined in Go, so a client
-// that held its own copy would be the one caller nothing checks: rename a relation and the server's
-// example tests go red while every click in the viewer starts producing a query that errors. Beside
-// the relations, a preset gets a parse check and an evaluate-against-a-real-design check.
+// The templates name relations defined in Go, so they live beside them, where each preset gets a
+// parse check and an evaluate-against-a-real-design check. A client copy would be the one caller
+// nothing checks, so renaming a relation would turn the server's tests red while every click in the
+// viewer produced a query that errors. This file only turns what was clicked into values.
 //
-// So this file keeps the part that IS the client's: turning what was clicked into values.
-//
-// Quotes are stripped rather than escaped because the query grammar has no escape sequence — a
-// string literal is '"' { char } '"' — so a designator carrying a quote cannot be represented at
-// all, and splicing one in would end the literal early and produce a query that means something
-// else. Stripping yields a query that finds nothing, which is the honest failure.
+// Quotes are stripped rather than escaped because the query grammar has no escape sequence (a
+// string literal is '"' { char } '"'). A designator carrying a quote cannot be represented, and
+// splicing one in would end the literal early and change what the query means. Stripping yields a
+// query that finds nothing.
 export function fillEntityQuery(template: string, sel: Selection): string {
   const lit = (v: string | undefined): string => (v ?? "").replace(/"/g, "");
   return template
@@ -140,17 +135,16 @@ export function labelFor(sel: Selection): string {
 // derived from the relation catalog's arg labels), and those kind strings are check.KindComponent /
 // check.KindNet, the same vocabulary a picked element carries.
 //
-// A scalar cell, or an entity kind with no selection shape yet, yields null: the cell still locates,
-// it just names nothing to ask about.
+// A scalar cell, or an entity kind with no selection shape yet, yields null. The cell still locates
+// but names nothing to ask about.
 //
 // `ref` is the other half of a pin's identity, from the row's cell_refs. A pin cell holds "5", which
-// names nothing until you know it means U7's pin 5, and that is the whole reason a pin column used
-// to type as a scalar. Ignored for every other kind, where the cell names the entity by itself.
+// names nothing until you know it means U7's pin 5. Ignored for every other kind, where the cell
+// names the entity by itself.
 //
-// A bus is here because a search can now return one (agni issue 338): entity() enumerates buses,
-// and a bus with no drawn wire is exactly the sort of thing a reviewer goes looking for by name.
-// Its subject IS its label, the same key a drawn bus element carries in data-bus, so the two entry
-// points converge on one value the way component and net already do.
+// A search can return a bus (agni issue 338), since entity() enumerates buses and a bus with no
+// drawn wire is the sort of thing a reviewer looks for by name. Its subject IS its label, the key a
+// drawn bus element carries in data-bus, so both entry points converge on one value.
 export function selectionFromCell(kind: string, subject: string, ref = ""): Selection | null {
   if (!subject) return null;
   switch (kind) {
@@ -161,7 +155,7 @@ export function selectionFromCell(kind: string, subject: string, ref = ""): Sele
     case "bus":
       return { kind: "bus", busId: subject };
     case "pin":
-      // Both halves or nothing. A pin with no component is not a less precise pin, it is not a pin.
+      // Both halves or nothing, since a pin number with no component names no pin.
       return ref ? { kind: "pin", ref, pin: subject } : null;
     default:
       return null;
@@ -169,10 +163,10 @@ export function selectionFromCell(kind: string, subject: string, ref = ""): Sele
 }
 
 // sameSelection reports whether two picks name the same thing, which is how a surface marks the one
-// it is currently showing. It is an identity test rather than a deep equality: the canvas pushes a
-// net with both its name and its id, while a result cell can only carry the name, and those two are
-// the same net. Comparing ids when BOTH carry one keeps the precise case precise (two nets can share
-// a display name across sheets) without making the imprecise case a mismatch.
+// it is currently showing. It tests identity rather than deep equality, because the canvas pushes a
+// net with both its name and its id while a result cell carries only the name, and those are the
+// same net. Ids are compared only when BOTH carry one, since two nets can share a display name
+// across sheets.
 export function sameSelection(a: Selection | null, b: Selection | null): boolean {
   if (!a || !b || a.kind !== b.kind) return false;
   switch (a.kind) {
@@ -188,9 +182,8 @@ export function sameSelection(a: Selection | null, b: Selection | null): boolean
 }
 
 // askLabel is the plain-language question the preset for this selection answers, for the button that
-// takes the next hop. The copy lives on the client for the same reason the relation-group labels and
-// the locate-reason messages do: the SERVER owns the query (it names relations defined there), the
-// client owns how it is worded on screen.
+// takes the next hop. The copy lives on the client, like the relation-group labels and the
+// locate-reason messages, because the SERVER owns the query and the client owns its wording.
 export function askLabel(sel: Selection): string {
   const name = labelFor(sel);
   switch (sel.kind) {

@@ -1,27 +1,21 @@
-// panzoom is the single definition of how an Agni viewport navigates: the wheel (a two-finger
-// trackpad drag) zooms toward the cursor, and a pointer drag pans. The WebGL schematic canvas, the
-// SVG reference render, and the datasheet workbench all take the curve and the anchoring math from
-// here, so the three cannot drift. Someone who learns one viewport has learned all of them.
+// panzoom defines how an Agni viewport navigates. The wheel (a two-finger trackpad drag) zooms
+// toward the cursor, and a pointer drag pans. The WebGL schematic canvas, the SVG reference render,
+// and the datasheet workbench all take the curve and the anchoring math from here.
+// Why wheel zooms rather than scrolls is on docsite/content/architecture/web-app.md#the-client.
 //
-// It also makes the policy one edit rather than three. The wheel-zooms choice is deliberate but not
-// obviously right: every PDF reader scrolls on the wheel and zooms on ctrl+wheel, so the datasheet
-// workbench trades that convention for consistency with the schematic viewers. Switching back would
-// be a change to this file's callers, not a hunt through canvas.ts, svgview.ts, and regionview.tsx.
-//
-// PanZoom is in VIEW pixels: tx/ty place the content's top-left corner within the viewport (origin
+// PanZoom is in VIEW pixels. tx/ty place the content's top-left corner within the viewport (origin
 // top-left, matching a CSS transform-origin of "0 0") and scale is view pixels per content unit.
-// The content unit differs per viewport — SVG px for the reference render, PDF points for the
-// datasheet workbench — and nothing here cares which it is.
+// The content unit differs per viewport (SVG px for the reference render, PDF points for the
+// datasheet workbench), and nothing here cares which it is.
 export interface PanZoom {
   tx: number;
   ty: number;
   scale: number;
 }
 
-// WHEEL_ZOOM_K converts a wheel delta into an exponent. The curve is exponential rather than a
-// fixed step per notch so zoom is scale-free: the same delta multiplies the scale by the same
-// factor whether you are at 20% or 400%, and zooming in then back out by an equal delta lands
-// exactly where you started. A linear step does neither.
+// WHEEL_ZOOM_K converts a wheel delta into an exponent. An exponential curve makes zoom scale-free,
+// so the same delta multiplies the scale by the same factor at 20% or 400%, and zooming in then back
+// out by an equal delta lands exactly where you started.
 export const WHEEL_ZOOM_K = 0.001;
 
 export function wheelZoomFactor(deltaY: number): number {
@@ -29,8 +23,7 @@ export function wheelZoomFactor(deltaY: number): number {
 }
 
 // zoomAbout scales by factor while holding the content point currently under (cx, cy) fixed on
-// screen, which is what makes wheel-zoom feel like it is aimed rather than centered. cx/cy are
-// viewport-local pixels.
+// screen. cx/cy are viewport-local pixels.
 export function zoomAbout(v: PanZoom, cx: number, cy: number, factor: number): PanZoom {
   return {
     scale: v.scale * factor,
@@ -40,9 +33,8 @@ export function zoomAbout(v: PanZoom, cx: number, cy: number, factor: number): P
 }
 
 // zoomAboutClamped is zoomAbout with scale limits applied BEFORE the anchoring, so a gesture that
-// runs into a limit stops zooming instead of continuing to slide the content sideways. Anchoring on
-// the requested factor and clamping afterwards drifts the view every frame you hold the wheel at
-// the limit, which reads as the page crawling away on its own.
+// runs into a limit stops zooming. Clamping after anchoring on the requested factor slides the
+// content sideways every frame the wheel is held at the limit.
 export function zoomAboutClamped(
   v: PanZoom,
   cx: number,

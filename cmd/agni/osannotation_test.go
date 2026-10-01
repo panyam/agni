@@ -34,7 +34,7 @@ func TestOsAnnotationStoreUnion(t *testing.T) {
 		return []*webapi.RegionAnnotation{{RegionId: id, Type: typ}}
 	}
 
-	// Absent: an empty union, not an error.
+	// An absent overlay reads as an empty union, not an error.
 	sets, err := st.Get(ctx, mustURI("m", "d.pdf"))
 	if err != nil || len(sets) != 0 {
 		t.Fatalf("absent => sets=%v err=%v", sets, err)

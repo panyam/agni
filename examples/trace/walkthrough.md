@@ -10,13 +10,13 @@ actors:
 
 ## A path is not a net
 
-Two pins are joined by a net, which is the set of pins the copper connects. Put a resistor in the middle of a signal and the connection survives, but the net does not: the two ends of the part are electrically different points, so the netlist now holds two nets where a reader sees one wire.
+Two pins are joined by a net, which is the set of pins the copper connects. Put a resistor in the middle of a signal and the connection survives, but the net does not, because the two ends of the part are electrically different points and the netlist now holds two nets where a reader sees one wire.
 
-That is why "is this pin connected to that one" is rarely a question about a net. It is a question about a path across however many parts happen to sit in the way, and a per-net query cannot see across a single resistor.
+That is why "is this pin connected to that one" is usually a question about a path across however many parts happen to sit in the way, and a per-net query cannot see across a single resistor.
 
 ## Pick a design {#design}
 
-> A path to the design, relative to this folder. Default: ../common/designs/i2c-sensor.edn, which carries an I2C bus with a pull-up resistor onto the supply rail. The other bundled fixtures live alongside it in ../common/designs/.
+> A path to the design, relative to this folder. The default is ../common/designs/i2c-sensor/i2c-sensor.edn, the entry of a declared design, which carries an I2C bus with a pull-up resistor onto the supply rail. The other bundled fixtures live alongside it in ../common/designs/.
 
 ## Pick the two pins {#pins}
 
@@ -57,7 +57,7 @@ Agni -->> You: Trace (outcome, crossings, nets, stubs)
 
 > The route as text tells you R1 is in the way. It does not tell you where R1 is, what else hangs off the nets on either side of it, or whether the path you got is the one you meant. check.TracePins hands back the nets and the parts crossed, and those are exactly the subjects a highlight overlay takes, so drawing the answer is a conversion rather than a second walk.
 >
-> This writes route.svg beside the example. Open it in anything that shows an SVG. The design's own schematic is drawn where it has one, and an auto-layout of the netlist where it does not, which the command says so you never mistake the second for the first.
+> This writes route.svg beside the example. Open it in anything that shows an SVG. The design's own schematic is drawn where it has one, and an auto-layout of the netlist where it does not, and the step says which, so you never mistake the second for the first.
 
 ## Same thing from the CLI
 

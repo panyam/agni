@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TestDescriptorRoundTrip is why the writer lives in this package. The parser is strict — an unknown
-// field is an error, not an ignored line — so a scaffolder marshalling its own struct would produce
+// TestDescriptorRoundTrip is why the writer lives in this package. The parser is strict (an unknown
+// field is an error, not an ignored line), so a scaffolder marshalling its own struct would produce
 // descriptors its own parser rejects the moment either side gained a field. Writing through the same
 // shapes makes that impossible rather than unlikely.
 func TestDescriptorRoundTrip(t *testing.T) {
@@ -26,8 +26,8 @@ func TestDescriptorRoundTrip(t *testing.T) {
 		if id != "gateway" || p.GetTitle() != "Sample Board" {
 			t.Errorf("round trip lost identity: id=%q title=%q", id, p.GetTitle())
 		}
-		// Declaring nothing must resolve to the conventional names, which is the whole reason a
-		// scaffolder can write the layout without naming any of it.
+		// Declaring nothing must resolve to the conventional names, which is what lets a
+		// scaffolder write the layout without naming any of it.
 		want := ProjectConfigNames{Conventions: defaultConventions, Profiles: defaultProfiles, Params: defaultParams, Checklist: defaultChecklist, Symbols: defaultSymbols}
 		if names != want {
 			t.Errorf("undeclared config should fall back to the defaults, got %+v want %+v", names, want)
@@ -72,9 +72,9 @@ func TestDescriptorRoundTrip(t *testing.T) {
 	})
 }
 
-// TestWriteDescriptorRejectsBadIds: an id becomes a path segment in a resource name, so a writer that
-// accepted a slash or an uppercase letter would produce a descriptor the parser refuses, from a
-// command that reported success.
+// TestWriteDescriptorRejectsBadIds exists because an id becomes a path segment in a resource name,
+// so a writer that accepted a slash or an uppercase letter would produce a descriptor the parser
+// refuses, from a command that reported success.
 func TestWriteDescriptorRejectsBadIds(t *testing.T) {
 	for _, id := range []string{"", "Gateway", "a/b", "-lead"} {
 		if err := WriteProject(&bytes.Buffer{}, "", id, "T", nil); err == nil {

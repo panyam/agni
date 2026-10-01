@@ -13,7 +13,7 @@ import (
 func lsPtr(v float64) *float64 { return &v }
 
 // TestOhmsLawCurrent covers the named physical operation the trip current is computed with (WS3-085).
-// The refusals matter more than the arithmetic: a zero-ohm shunt divides to +Inf, which every
+// The refusals matter more than the arithmetic, because a zero-ohm shunt divides to +Inf, which every
 // comparison downstream reads as an enormous current and reports as a defect.
 func TestOhmsLawCurrent(t *testing.T) {
 	for _, c := range []struct {
@@ -49,7 +49,7 @@ func TestOhmsLawCurrent(t *testing.T) {
 
 // TestResistivePowerWatts covers OhmsLawCurrent's sibling, the sizing half of a load switch (WS3-085).
 //
-// Two behaviours differ from OhmsLawCurrent and both are deliberate. ZERO ohms is allowed here: a
+// Two behaviours differ from OhmsLawCurrent and both are deliberate. ZERO ohms is allowed here, since a
 // zero-ohm link dissipates nothing, which is a true answer rather than an unanswerable one, whereas a
 // zero divisor has no current to report. And a NEGATIVE current is allowed and squares to the same
 // positive power, because a resistor heats the same whichever way the current runs. A refusal on
@@ -91,7 +91,7 @@ func TestResistivePowerWatts(t *testing.T) {
 // TestOcpThresholdSymbolsCoverTheAliasSet holds the two spellings of the overcurrent alias set to each
 // other. OcpThresholdLimits matches a seeded row against ocpThresholdSymbols; a rule declares
 // OcpThresholdSymbols() so the review runner can tell needs-data from a clean design. If those drift,
-// the failure is silent and one-directional: a symbol the extractor reads but the gate does not
+// the failure is silent and one-directional. A symbol the extractor reads but the gate does not
 // declare makes a seeded design read needs-data forever, and a symbol the gate declares but the
 // extractor never matches makes an unseeded design look seeded, which scores a pass on a check that
 // never ran.
@@ -120,7 +120,7 @@ func TestOcpThresholdSymbolsCoverTheAliasSet(t *testing.T) {
 			t.Errorf("%q is declared but OcpThresholdLimits matches no such symbol", s)
 		}
 	}
-	// The accessor hands out a copy: a rule storing it in Rule.ParamSymbols must not be able to
+	// The accessor hands out a copy, because a rule storing it in Rule.ParamSymbols must not be able to
 	// corrupt the alias set for every other design in the process.
 	got := OcpThresholdSymbols()
 	got[0] = "CLOBBERED"
@@ -156,7 +156,7 @@ func lsNet(name string, conns ...*ir.Connection) *ir.Net {
 
 func conn(ref, pin string) *ir.Connection { return &ir.Connection{ComponentRef: ref, PinRef: pin} }
 
-// loadSwitchDesign is the canonical external-FET high-side switch: controller U1 drives Q1's gate and
+// loadSwitchDesign is the canonical external-FET high-side switch. Controller U1 drives Q1's gate and
 // senses across R1, which sits in series in the power path with both of its terminals on U1's sense
 // pins (Kelvin sensing). R1 is stamped at 10mOhm, the shape ingestion produces from "0R01".
 func loadSwitchDesign() *ir.Design {
@@ -182,8 +182,8 @@ func loadSwitchDesign() *ir.Design {
 	}
 }
 
-// ctrlSpec is a synthetic switch-controller spec: an overcurrent sense threshold and nothing else a
-// load-switch rule reads.
+// ctrlSpec is a synthetic switch-controller spec carrying an overcurrent sense threshold and
+// nothing else a load-switch rule reads.
 func ctrlSpec(mpn string, ocpVolts float64) *parampb.PartSpec {
 	return &parampb.PartSpec{
 		Mpn: mpn, Manufacturer: "Acme",
@@ -202,7 +202,7 @@ func ctrlSpec(mpn string, ocpVolts float64) *parampb.PartSpec {
 	}
 }
 
-// nfetSpec is a synthetic pass-FET spec: a continuous drain rating and an on-resistance row.
+// nfetSpec is a synthetic pass-FET spec carrying a continuous drain rating and an on-resistance row.
 func nfetSpec(mpn string, idAmps, rdsOhms float64) *parampb.PartSpec {
 	s := &parampb.PartSpec{
 		Mpn: mpn, Manufacturer: "Acme",
@@ -254,8 +254,8 @@ func resolveOne(t *testing.T, d *ir.Design) (ExternalFetLoadSwitch, bool) {
 	return sw[0], true
 }
 
-// TestExternalFetLoadSwitchResolves is the happy path: all three parts found, and the trip current
-// computed from the DESIGN's shunt against the CONTROLLER's threshold. 50mV over 10mOhm is 5A.
+// TestExternalFetLoadSwitchResolves is the happy path. All three parts are found, and the trip current
+// is computed from the DESIGN's shunt against the CONTROLLER's threshold. 50mV over 10mOhm is 5A.
 func TestExternalFetLoadSwitchResolves(t *testing.T) {
 	sw, ok := resolveOne(t, loadSwitchDesign())
 	if !ok {
@@ -277,18 +277,18 @@ func TestExternalFetLoadSwitchResolves(t *testing.T) {
 		t.Errorf("Ocp = %+v, want the V(OCP) row", sw.Ocp)
 	}
 	// The effective on-resistance of a controller-based switch IS the external FET's RDS(on). Nothing
-	// on the controller's sheet answers this, which is the whole reason the ticket exists.
+	// on the controller's sheet answers this.
 	if sw.OnResistance == nil || !QuantityEqual(sw.OnResistance.Value.GetMax(), 0.02) {
 		t.Errorf("OnResistance = %+v, want the FET's 0.02Ohm RDS(on) row", sw.OnResistance)
 	}
 }
 
-// TestLoadSwitchNeedsTheGateRole: the topology hangs off the FET's GATE terminal, resolved through the
-// naming lexicon (WS3-117). A transistor whose pins carry no recognized terminal name yields no
-// switch, rather than the resolver falling back to some other pin.
-// The FET is left on the drive net ALONE, so that a resolver ignoring the role would find exactly one
-// net and resolve a switch. Leaving its other terminals connected would make the test pass for the
-// wrong reason: any resolver would then see several nets and refuse on count rather than on role.
+// TestLoadSwitchNeedsTheGateRole covers the topology hanging off the FET's GATE terminal, resolved
+// through the naming lexicon (WS3-117). A transistor whose pins carry no recognized terminal name
+// yields no switch, rather than the resolver falling back to some other pin. The FET is left on the
+// drive net ALONE, so that a resolver ignoring the role would find exactly one net and resolve a
+// switch. Leaving its other terminals connected would make the test pass for the wrong reason,
+// because any resolver would then see several nets and refuse on count rather than on role.
 func TestLoadSwitchNeedsTheGateRole(t *testing.T) {
 	d := loadSwitchDesign()
 	d.Libraries[0].Parts[1] = lsPart("FET", "P1", "P2", "P3")
@@ -302,8 +302,8 @@ func TestLoadSwitchNeedsTheGateRole(t *testing.T) {
 // TestLoadSwitchSenseValueMustBeInOhms is the EDIF-shaped case, and the one that decides what this
 // rule family may claim on a real board. WS3-118 normalizes the value attribute on KiCad, IPC-2581
 // and gEDA; EDIF and xschem carry it under the exporting tool's own spelling, so the shunt commonly
-// arrives with no parsed number at all. Silence is the only honest answer: a resistor whose value is
-// unknown is not evidence of a milliohm shunt.
+// arrives with no parsed number at all. Silence is the only correct answer, because a resistor whose
+// value is unknown is not evidence of a milliohm shunt.
 func TestLoadSwitchSenseValueMustBeInOhms(t *testing.T) {
 	for _, c := range []struct {
 		name string
@@ -324,8 +324,8 @@ func TestLoadSwitchSenseValueMustBeInOhms(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchZeroOhmShuntIsSilent: a shunt read as 0 would divide to infinity, and an infinite
-// trip current exceeds every rating, so the rule would report a defect on every such design.
+// TestLoadSwitchZeroOhmShuntIsSilent covers a shunt read as 0, which would divide to infinity. An
+// infinite trip current exceeds every rating, so the rule would report a defect on every such design.
 func TestLoadSwitchZeroOhmShuntIsSilent(t *testing.T) {
 	d := loadSwitchDesign()
 	d.Components[2].Value = &ir.Quantity{Input: "0R", Value: lsPtr(0), Unit: classify.UnitOhm}
@@ -334,9 +334,9 @@ func TestLoadSwitchZeroOhmShuntIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchRejectsDividerSizedResistor: a feedback or programming divider between a controller's
-// output and its sense pin has the same STRUCTURE as a Kelvin-sensed shunt. Magnitude separates them,
-// and the resolver must not take a kilohm part for a current shunt.
+// TestLoadSwitchRejectsDividerSizedResistor covers a feedback or programming divider between a
+// controller's output and its sense pin, which has the same STRUCTURE as a Kelvin-sensed shunt.
+// Magnitude separates them, and the resolver must not take a kilohm part for a current shunt.
 func TestLoadSwitchRejectsDividerSizedResistor(t *testing.T) {
 	d := loadSwitchDesign()
 	d.Components[2].Value = &ir.Quantity{Input: "10k", Value: lsPtr(10000), Unit: classify.UnitOhm}
@@ -345,9 +345,9 @@ func TestLoadSwitchRejectsDividerSizedResistor(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchAmbiguousShuntIsSilent: two resistors both sitting entirely on the controller's nets
-// are indistinguishable, and a trip current computed from the wrong one looks exactly as authoritative
-// as a correct one.
+// TestLoadSwitchAmbiguousShuntIsSilent covers two resistors both sitting entirely on the controller's
+// nets. They are indistinguishable, and a trip current computed from the wrong one looks as
+// authoritative as a correct one.
 func TestLoadSwitchAmbiguousShuntIsSilent(t *testing.T) {
 	d := loadSwitchDesign()
 	r2 := lsComponent("R2", "RES", "")
@@ -360,9 +360,9 @@ func TestLoadSwitchAmbiguousShuntIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchExcludesResistorReachingOffTheController: the Kelvin signature is that EVERY one of
-// the resistor's nets is one the controller touches. A series part with a far side the controller
-// cannot see is not being measured, so it is not the shunt.
+// TestLoadSwitchExcludesResistorReachingOffTheController rests on the Kelvin signature, which is
+// that EVERY one of the resistor's nets is one the controller touches. A series part with a far
+// side the controller cannot see is not being measured, so it is not the shunt.
 func TestLoadSwitchExcludesResistorReachingOffTheController(t *testing.T) {
 	d := loadSwitchDesign()
 	// R1's far terminal moves off VSW (which U1 senses) onto VOUT (which it does not).
@@ -373,9 +373,10 @@ func TestLoadSwitchExcludesResistorReachingOffTheController(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchOneTerminalResistorIsNotAShunt: a shunt is MEASURED, so both of its terminals are on
-// the controller. A resistor with one terminal connected has nothing across it, and counting it would
-// make it a second candidate and suppress a switch that is perfectly resolvable.
+// TestLoadSwitchOneTerminalResistorIsNotAShunt rests on a shunt being MEASURED, so both of its
+// terminals are on the controller. A resistor with one terminal connected has nothing across it,
+// and counting it would make it a second candidate and suppress a switch that is perfectly
+// resolvable.
 func TestLoadSwitchOneTerminalResistorIsNotAShunt(t *testing.T) {
 	d := loadSwitchDesign()
 	r9 := lsComponent("R9", "RES", "")
@@ -391,8 +392,8 @@ func TestLoadSwitchOneTerminalResistorIsNotAShunt(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchAmbiguousControllerIsSilent: two parts on the gate net both declaring an overcurrent
-// threshold cannot be told apart, so no verdict.
+// TestLoadSwitchAmbiguousControllerIsSilent checks that two parts on the gate net both declaring an
+// overcurrent threshold cannot be told apart, so they get no verdict.
 func TestLoadSwitchAmbiguousControllerIsSilent(t *testing.T) {
 	d := loadSwitchDesign()
 	d.Components = append(d.Components, lsComponent("U2", "CTRL", "DEMO-HSS"))
@@ -402,9 +403,9 @@ func TestLoadSwitchAmbiguousControllerIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchControllerIsIdentifiedByItsThreshold: the controller is whatever part on the gate net
-// declares an overcurrent threshold, not whatever part is an IC. A gate driver seeded with a spec that
-// states no threshold is not a current-limiting controller.
+// TestLoadSwitchControllerIsIdentifiedByItsThreshold checks that the controller is whatever part on
+// the gate net declares an overcurrent threshold, not whatever part is an IC. A gate driver seeded
+// with a spec that states no threshold is not a current-limiting controller.
 func TestLoadSwitchControllerIsIdentifiedByItsThreshold(t *testing.T) {
 	m := NewModelWithParams(loadSwitchDesign(), nil, param.ParamSet{
 		"DEMO-HSS":  nfetSpec("DEMO-HSS", 3, 0), // seeded, but states no V(OCP)
@@ -415,16 +416,16 @@ func TestLoadSwitchControllerIsIdentifiedByItsThreshold(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentWithoutParams: with no params tier there is no threshold, so no controller can
-// be identified and no trip current exists. Skip, never a clean pass.
+// TestLoadSwitchSilentWithoutParams covers a design with no params tier. There is no threshold, so
+// no controller can be identified and no trip current exists. Skip, never a clean pass.
 func TestLoadSwitchSilentWithoutParams(t *testing.T) {
 	if sw := ExternalFetLoadSwitches(NewModel(loadSwitchDesign())); len(sw) != 0 {
 		t.Errorf("want no switches with no seeded params, got %+v", sw)
 	}
 }
 
-// TestLoadSwitchGateOnTwoNetsIsSilent: a transistor whose gate terminals land on two different nets is
-// not the single pass element this resolver reasons about.
+// TestLoadSwitchGateOnTwoNetsIsSilent covers a transistor whose gate terminals land on two different
+// nets, which is not the single pass element this resolver reasons about.
 func TestLoadSwitchGateOnTwoNetsIsSilent(t *testing.T) {
 	d := loadSwitchDesign()
 	d.Libraries[0].Parts[1] = lsPart("FET", "G", "GATE", "S")
@@ -435,8 +436,8 @@ func TestLoadSwitchGateOnTwoNetsIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchOnResistanceAbsentIsNil: an unseeded on-resistance must read as NOT KNOWN. Zero is a
-// perfect switch, so a caller defaulting to it would report a dissipation of nothing.
+// TestLoadSwitchOnResistanceAbsentIsNil checks that an unseeded on-resistance reads as NOT KNOWN.
+// Zero is a perfect switch, so a caller defaulting to it would report a dissipation of nothing.
 func TestLoadSwitchOnResistanceAbsentIsNil(t *testing.T) {
 	m := NewModelWithParams(loadSwitchDesign(), nil, param.ParamSet{
 		"DEMO-HSS":  ctrlSpec("DEMO-HSS", 0.05),
@@ -451,7 +452,7 @@ func TestLoadSwitchOnResistanceAbsentIsNil(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchHighestThresholdBinds: where a controller states several thresholds, the highest is
+// TestLoadSwitchHighestThresholdBinds covers a controller stating several thresholds. The highest is
 // the most current the switch passes before it acts, which is the worst case for everything
 // downstream. Taking the lowest would under-report the trip current and hide a real over-current.
 func TestLoadSwitchHighestThresholdBinds(t *testing.T) {
@@ -471,9 +472,9 @@ func TestLoadSwitchHighestThresholdBinds(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchWorstOnResistanceBinds: a real sheet states RDS(on) several times under different
-// gate drives and junction temperatures. The HIGHEST is the one a thermal argument has to survive, so
-// reporting the typical row would understate what the FET dissipates.
+// TestLoadSwitchWorstOnResistanceBinds exists because a real sheet states RDS(on) several times
+// under different gate drives and junction temperatures. The HIGHEST is the one a thermal argument
+// has to survive, so reporting the typical row would understate what the FET dissipates.
 func TestLoadSwitchWorstOnResistanceBinds(t *testing.T) {
 	spec := nfetSpec("DEMO-NFET", 3, 0.02)
 	// The worst row is listed LAST, so the selection has to walk past a lower one to reach it.
@@ -493,9 +494,9 @@ func TestLoadSwitchWorstOnResistanceBinds(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchTransistorIsNotAController: a second transistor on the gate net is never a candidate
-// controller, whatever its spec says. Without that exclusion it would count as a second candidate and
-// the ambiguity guard would suppress a switch that is perfectly resolvable.
+// TestLoadSwitchTransistorIsNotAController checks that a second transistor on the gate net is never
+// a candidate controller, whatever its spec says. Without that exclusion it would count as a second
+// candidate and the ambiguity guard would suppress a switch that is perfectly resolvable.
 func TestLoadSwitchTransistorIsNotAController(t *testing.T) {
 	d := loadSwitchDesign()
 	d.Components = append(d.Components, lsComponent("Q9", "RES", "DEMO-HSS"))
@@ -510,12 +511,12 @@ func TestLoadSwitchTransistorIsNotAController(t *testing.T) {
 }
 
 // TestOcpThresholdLimitsConvertsMillivolts is the extractor half of agni issue 148. Real controller
-// sheets print this row in MILLIVOLTS, and it used to fail the unit gate: no threshold row, so no load
+// sheets print this row in MILLIVOLTS, and it used to fail the unit gate. With no threshold row no load
 // switch resolved, so the item scored a PASS on a check that never ran.
 //
 // The two spellings are ONE datasheet row written twice, so the assertion is equality rather than mere
-// presence. 50 mV and 0.05 V must produce the identical double, which is what lets the rest of the
-// engine compare a converted row against a threshold without a tolerance.
+// presence. 50 mV and 0.05 V must produce the identical double, so the rest of the engine can
+// compare a converted row against a threshold without a tolerance.
 func TestOcpThresholdLimitsConvertsMillivolts(t *testing.T) {
 	volts := ctrlSpec("X", 0.05)
 	inVolts := OcpThresholdLimits(volts)
@@ -541,10 +542,10 @@ func TestOcpThresholdLimitsConvertsMillivolts(t *testing.T) {
 	}
 }
 
-// TestOcpThresholdLimitsRefusesUnrecognizedUnits: converting the units it knows must not soften the
-// refusal of the ones it does not. An unrecognized unit is still no row, because a guessed scale on a
-// number that gets divided into an ampere rating is exactly the confident wrong answer this rule
-// family costs the most on.
+// TestOcpThresholdLimitsRefusesUnrecognizedUnits checks that converting the units it knows does not
+// soften the refusal of the ones it does not. An unrecognized unit is still no row, because a
+// guessed scale on a number that gets divided into an ampere rating is the confident wrong answer
+// this rule family costs the most on.
 func TestOcpThresholdLimitsRefusesUnrecognizedUnits(t *testing.T) {
 	for _, unit := range []string{"dBm", "", "KV"} {
 		spec := ctrlSpec("X", 0.05)
@@ -555,7 +556,7 @@ func TestOcpThresholdLimitsRefusesUnrecognizedUnits(t *testing.T) {
 	}
 }
 
-// TestOcpThresholdLimitsSymbolGate: the alias set is narrow because the number is divided by a
+// TestOcpThresholdLimitsSymbolGate keeps the alias set narrow, because the number is divided by a
 // resistance and reported as an ampere rating, so a symbol that could mean something else would
 // produce a confident wrong current.
 func TestOcpThresholdLimitsSymbolGate(t *testing.T) {
@@ -566,7 +567,7 @@ func TestOcpThresholdLimitsSymbolGate(t *testing.T) {
 	}
 }
 
-// TestDrainCurrentLimitsExcludesPulsed: pulsed drain current is a much larger number under a
+// TestDrainCurrentLimitsExcludesPulsed excludes pulsed drain current, a much larger number under a
 // duty-cycle condition. Crediting it against a steady trip current turns a real over-current into a
 // pass, which is the silent direction.
 func TestDrainCurrentLimitsExcludesPulsed(t *testing.T) {
@@ -580,8 +581,8 @@ func TestDrainCurrentLimitsExcludesPulsed(t *testing.T) {
 	}
 }
 
-// TestDrainCurrentLimitsRequiresAbsoluteMax: continuous drain current IS an absolute maximum on a real
-// sheet, so a characteristic row carrying the same symbol is not the rating.
+// TestDrainCurrentLimitsRequiresAbsoluteMax holds that continuous drain current IS an absolute
+// maximum on a real sheet, so a characteristic row carrying the same symbol is not the rating.
 func TestDrainCurrentLimitsRequiresAbsoluteMax(t *testing.T) {
 	spec := nfetSpec("X", 3, 0)
 	spec.Parameters[0].LimitKind = parampb.LimitKind_LIMIT_KIND_CHARACTERISTIC
@@ -590,10 +591,10 @@ func TestDrainCurrentLimitsRequiresAbsoluteMax(t *testing.T) {
 	}
 }
 
-// TestOnResistanceAcceptsBothOhmSpellings: "Ohm" (what the hand-encoded corpus writes) and the symbol
-// are two spellings of ONE unit, so accepting both is normalization rather than conversion. The
-// returned unit is the canonical symbol whichever way the spec spelled it, so a rule comparing a
-// datasheet resistance against a design-side one compares two identical strings.
+// TestOnResistanceAcceptsBothOhmSpellings covers "Ohm" (what the hand-encoded corpus writes) and
+// the symbol, which are two spellings of ONE unit, so accepting both is normalization rather than
+// conversion. The returned unit is the canonical symbol whichever way the spec spelled it, so a
+// rule comparing a datasheet resistance against a design-side one compares two identical strings.
 func TestOnResistanceAcceptsBothOhmSpellings(t *testing.T) {
 	// "Ω" is the deprecated OHM SIGN, byte-different from and visually identical to the canonical
 	// U+03A9. Written as an escape because a literal here would be indistinguishable by eye from the
@@ -612,7 +613,7 @@ func TestOnResistanceAcceptsBothOhmSpellings(t *testing.T) {
 	}
 }
 
-// TestOnResistanceConvertsMilliohms: a MILLIOHM is the ordinary way a modern FET sheet prints
+// TestOnResistanceConvertsMilliohms covers the MILLIOHM, the ordinary way a modern FET sheet prints
 // RDS(on), so the spelling that used to read as no row at all was the common one. 20 mΩ and 0.02 Ω are
 // one row written twice and must land on the same double (agni issue 148).
 func TestOnResistanceConvertsMilliohms(t *testing.T) {

@@ -39,7 +39,7 @@ const state = {
   ],
 } as unknown as PartsState;
 
-// A two-supply part: the shape the panel used to render as four indistinguishable rows. VCCA and
+// A two-supply part, the shape the panel used to render as four indistinguishable rows. VCCA and
 // VCCB carry different limits, one row is bound to a GROUP of two terminals, and one is part-wide.
 const pinBound = {
   parts: [
@@ -52,7 +52,7 @@ const pinBound = {
           { name: "Supply voltage", symbol: "VCCB", unit: "V", limitKind: 1, value: { max: 6.5 }, conditions: [], pinRefs: ["vccb"] },
           { name: "Output voltage", symbol: "VO", unit: "V", limitKind: 2, value: { max: 3.6 }, conditions: [], pinRefs: ["a1", "a2"] },
           { name: "Junction temperature", symbol: "TJ", unit: "C", limitKind: 1, value: { max: 150 }, conditions: [], pinRefs: [] },
-          // A port-wide rating: one datasheet row covering every I/O terminal. Eight is what the real
+          // A port-wide rating, one datasheet row covering every I/O terminal. Eight is what the real
           // TXB0104 has, and it is the case that decides whether a chip row needs truncating.
           {
             name: "ESD (HBM)", symbol: "V(ESD)", unit: "kV", limitKind: 1, value: { max: 2.5 }, conditions: [],
@@ -98,7 +98,7 @@ describe("partsPanel", () => {
     expect(onLocate).toHaveBeenCalledWith("U1");
   });
 
-  // The reason this change exists: two rows printing the same kind of limit are only
+  // Why this change exists. Two rows printing the same kind of limit are only
   // distinguishable by the terminal they apply to, and the panel showed no terminal at all.
   it("names the terminal each parameter is bound to, by its printed pin name", () => {
     const { el } = mount(pinBound);
@@ -127,7 +127,7 @@ describe("partsPanel", () => {
     expect(el.querySelector(".parts-pin-wide")).toBeTruthy();
   });
 
-  // Characterisation, not an endorsement: a row bound to eight terminals currently renders all eight
+  // Characterisation, not an endorsement. A row bound to eight terminals currently renders all eight
   // names inline. Truncation is deliberately deferred (no user has met a part where it hurts yet),
   // and this test is what has to change when it lands, so the decision cannot be reversed silently.
   it("renders every terminal of a wide group binding, untruncated", () => {
@@ -145,8 +145,8 @@ describe("partsPanel", () => {
     expect([...el.querySelectorAll(".parts-count")].map((c) => c.textContent)).toContain("10 pins");
   });
 
-  // Degrade-safety: a spec seeded before pin binding declares no pins, so the panel must render
-  // exactly as it did — no chips at all, not even the part-wide label.
+  // Degrade-safety. A spec seeded before pin binding declares no pins, so the panel must render
+  // as it did, with no chips at all, not even the part-wide label.
   it("shows no pin chips for a spec with no pin data", () => {
     const { el } = mount(state);
     (el.querySelector(".parts-toggle") as HTMLButtonElement).click();

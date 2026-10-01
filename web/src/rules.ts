@@ -1,15 +1,13 @@
-// The rules panel's command-down surface, mirroring findings.ts. The presenter owns the rule
-// catalog and the active selection (which rules run); it pushes RulesState and the panel renders
-// it, emitting an onSelectionChange(names) intent back up. Group-by, filtering, and search are
-// ephemeral view state the panel holds locally; only the selection (which drives CheckDesign)
-// lives in the presenter, so it survives view-knob changes and is keyed by rule name.
+// The rules panel's command-down surface (see ViewSink in viewer.ts). The presenter owns the
+// catalog and the selection, keyed by rule name, which drives CheckDesign and survives view-knob
+// changes. The panel emits onSelectionChange(names) and holds group-by, filtering and search locally.
 
 // RuleItem is the view-side shape of a catalog rule (the wire webapi.RuleInfo, minus proto
 // machinery). tags is the open classification the panel groups and filters by; available gates
 // whether the rule can run (an unavailable rule is shown greyed and cannot be selected).
-// summary/impact/remedy/detail are the rule's prose (WS9-020): the one-liner shown per row, what
-// goes wrong on violation, what to do about it, and the long-form detail markdown behind the row's
-// expand affordance.
+// summary/impact/remedy/detail are the rule's prose (WS9-020), in order the one-liner shown per
+// row, what goes wrong on violation, what to do about it, and the markdown behind the row's expand
+// affordance.
 export interface RuleItem {
   name: string;
   severity: string; // "error" | "warning" | "info"
@@ -25,7 +23,7 @@ export interface RuleItem {
 
 export interface RulesState {
   rules: RuleItem[];
-  // selected rule names — the active ruleset that drives which checks run.
+  // selected rule names, the active ruleset that drives which checks run.
   selected: string[];
   // fired[name] is how many findings that rule produced this run (0 when it ran clean; absent when
   // it has not run). The panel shows it in the per-group fired/selected/available badge.
@@ -49,8 +47,8 @@ export interface RuleFilter {
 // selected, some, or none.
 export type TriState = "all" | "some" | "none";
 
-// tagKeys returns the tag keys present across the catalog, sorted, as the group-by options. A new
-// provider tag key appears here automatically (the group-by is data-driven, not a fixed list).
+// tagKeys returns the tag keys present across the catalog, sorted, as the group-by options, so a
+// new provider tag key appears without a client change.
 export function tagKeys(rules: RuleItem[]): string[] {
   const keys = new Set<string>();
   for (const r of rules) for (const k of Object.keys(r.tags)) keys.add(k);
@@ -98,14 +96,13 @@ export function groupSelectState(group: RuleItem[], selected: Set<string>): TriS
   return "some";
 }
 
-// defaultSelection is every available rule — the active ruleset a design opens with, so the first
-// run matches the whole (runnable) catalog.
+// defaultSelection is every available rule, the ruleset a design opens with.
 export function defaultSelection(rules: RuleItem[]): string[] {
   return rules.filter((r) => r.available).map((r) => r.name);
 }
 
-// toggleRule adds or removes one rule from the selection; an unavailable rule is a no-op (it
-// cannot be selected). Returns a new array.
+// toggleRule adds or removes one rule from the selection, and is a no-op for an unavailable rule.
+// Returns a new array.
 export function toggleRule(rule: RuleItem, selected: string[]): string[] {
   if (!rule.available) return selected;
   return selected.includes(rule.name) ? selected.filter((n) => n !== rule.name) : [...selected, rule.name];

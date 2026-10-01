@@ -57,24 +57,25 @@ Three of the questions carry a lesson wider than this rule.
 
 **1. Is there a tier of evidence better than the name?** A rail's voltage comes from
 `check.NominalVoltageFromName`, a convention that is silent on a rail nobody named for its voltage and
-wrong on a name that outlived a design change. Connectivity sometimes answers outright: the pin-tracking
-rules bound the difference between two pins, and two pins on ONE net are one node, so that difference is
-exactly zero with no name read. That tier settles a "must not exceed 0V" bound as satisfied and a "must
-be at least 1V" bound as violated on a design whose nets carry no voltage token at all. Reach for the
-convention as the fallback, not the first answer.
+wrong on a name that outlived a design change. Connectivity sometimes answers outright, because the
+pin-tracking rules bound the difference between two pins, and two pins on ONE net are one node, so that
+difference is exactly zero with no name read. That tier settles a "must not exceed 0V" bound as
+satisfied and a "must be at least 1V" bound as violated on a design whose nets carry no voltage
+token at all. Reach for the convention as the fallback, not the first answer.
 
-**2. What does a role gate cost when the project has not configured it?** It inherits the role's whole
-configuration surface. `IsRailNet` reads a stamp derived from the naming lexicon, and the built-in
+**2. What does a role gate cost when the project has not configured it?** It inherits all of the role's
+configuration. `IsRailNet` reads a stamp derived from the naming lexicon, and the built-in
 vocabulary is start-anchored (`VCC`, `VDD`, `+3V3`), so a project naming rails function-first matches
 almost none of it. On a real 1700-net board, declaring the project's patterns moved the rail count from
 13 to 91. Gate anyway, and make the gap visible rather than assuming the config is there.
 `rail-not-classified` is the tripwire that does it.
 
-  Measured end to end since (August 2026, against the catalog of the day): on a real board naming
-  rails function-first with no lexicon declared,
-  18 supply nets classified as rails and 91 did not, and `rail-not-classified` fired 45 times.
-  Declaring the project's conventions moved recognition to 62 and the tripwire to **zero**. The
-  tripwire works, and the remedy it points at is configuration rather than more rules.
+We measured it end to end later (August 2026, against the catalog of the day). On a real board
+naming rails function-first with no lexicon declared, 18 supply nets classified as rails and 91 did
+not, and `rail-not-classified` fired 45 times.
+Declaring the project's conventions moved recognition to 62 and the tripwire to **zero**. The
+tripwire works, and the remedy it points at is configuration rather than more rules.
+
 **3. Is your evidence tier actually asking your question?** Preferring connectivity over a name is
 right, and it is still possible to pick a connectivity fact that is wider than the property you mean.
 `decoupling-present` selects "a net with a non-virtual `power_in` pin and no capacitor" and calls that
@@ -118,14 +119,16 @@ highlights the right instance rather than all of them.
 ## Author spec-first
 
 Proven vocabulary goes in the Spec AST. Anything multi-clause goes behind a registered SpecFunc that
-declares its own reads and primitives, so the derivation stays honest across that boundary. The example
-is one FFI (`has_test_points`, the channel gate) plus existing facts:
+declares its own reads and primitives, so the derived reads still cover the code behind that
+boundary. The example is one FFI (`has_test_points`, the channel gate) plus existing facts:
 
     Over: nets
-    Where: has_test_points(design)
+    Scope: has_test_points(design)
        and not external(N)
        and (global(N) or power_driven(N) or rail_name(N) or ground_name(N))
-       and not exists T in N.connections where class(T) == test_point
+       and not feedback_name(N) and not switching_name(N)
+       and not control_name(N) and not gate_drive_name(N)
+    Where: not exists T in N.connections where class(T) == test_point
 
 Bind it with `spec.Rule(check.Rule{...})`. `Reads` and `Primitives` derive from the body, so they cannot
 drift from what the rule does. One init-order trap: register a rule's own FFI inside the rule variable's
@@ -133,8 +136,8 @@ own initializer, because package variables initialize before `init` funcs run an
 Call targets. Shared helpers like `rail_name` need no such care, since `stdlib/rules/builtin` imports
 `core/check` and `check`'s package init registers them first.
 
-The twin discipline: proven vocabulary is spec-only, as here. New interpreter vocabulary (a new entity
-set, a new fact, a new traversal) ships with a Go `Eval` as the canonical twin until it soaks, with
+Under the twin discipline, proven vocabulary is spec-only, as here. New interpreter vocabulary (a new
+entity set, a new fact, a new traversal) ships with a Go `Eval` as the canonical twin until it soaks, with
 parity asserted between the two.
 
 ## One file, one line, one doc
@@ -146,7 +149,8 @@ parity asserted between the two.
 | `stdlib/rules/builtin/docs/<name>.md` | the single source of the rule's `Detail`, embedded at build time |
 
 The built-in catalog is its own package, not part of the core engine. It installs itself through the
-same public `check.RegisterBuiltins` seam an overlay uses, so `core/check` owns no rules of its own.
+same public `check.RegisterBuiltins` registration point an overlay uses, so `core/check` owns no
+rules of its own.
 
 The harness fails CI without the doc. Write it as proper `###` sections under the rule's `##` title,
 not bold run-ins: What it means, Why engineers want it, Impact, an ASCII sketch of fires-versus-fine, a
@@ -162,7 +166,7 @@ imperative, as one engineer would say it to another. `Remedy` is the easiest to 
 it a reader who accepts that the finding matters still has to already know the fix.
 `TestEveryRuleStatesARemedy` (in `tools/catalogdocs`) holds the whole catalog to it.
 
-| Keeping it honest | |
+| What a remedy must get right | |
 |---|---|
 | **Generic over the RULE, not the subject** | name the class of change ("add a bulk capacitor where the rail enters"), never a designator. A remedy templated on the bound subject is a later tier |
 | **Where the fix needs a value the engine cannot derive, say what to size it from and stop** | the pull-up an I2C bus wants depends on its capacitance and clock rate, neither of which the netlist states, so `i2c-pull-up` names no resistance. Inventing a plausible number would be the same silent-authority problem verdicts exist to remove, one layer up |
@@ -206,7 +210,7 @@ the last is the rule:
     not exists(connection with class test_point) <- THE VIOLATION
 
 On the tutorial gateway design that is 15 nets narrowed to 4 rails, so without the split the rule would
-assert that 11 signal nets carry a test point. The first clause is worse: it is design-wide, so a board
+assert that 11 signal nets carry a test point. The first clause is worse, because it is design-wide, so a board
 using no test points anywhere would report every net as passing, which is a rule that declined to run
 claiming universal success.
 
@@ -251,6 +255,32 @@ flowchart TB
 | **An enumerator that drops a subject must say so** | a pin that will not resolve, a net with no voltage in its name, a datasheet binding no row of the kind. Those used to skip silently, reporting the same nothing as a rule that never looked, and are now `NOT_CONSIDERED` verdicts carrying the step that stopped them. Distinguish from OUT OF SCOPE, where a pin that is not a supply terminal yields no event at all |
 | **`StatesConsideredSet` is a declaration, not an inference** | a failures-only rule returns Fail verdicts structurally identical to a considered set whose every subject failed, so only the author can say which. Forgetting it under-reports a converted rule and can never over-report one |
 
+### Five outcomes, and the three that are not a pass
+
+A verdict's outcome is one of five. Three of them say why no pass was possible, and keeping those
+three apart is what lets a report say what the design lacks rather than guess.
+
+| Outcome | Wire form | Meaning |
+|---|---|---|
+| `Pass` | `pass` | the subject reached the comparison and cleared it |
+| `Fail` | `fail` | the subject reached the comparison and did not clear it |
+| `Inconclusive` | `inconclusive` | every input was present and the rule reached its decision, but the design cannot discriminate between the cases. A transistor in a power path may be an ideal-diode controller giving reverse protection or a plain switch giving none, and a netlist cannot tell them apart |
+| `NotConsidered` | `not-considered` | the rule applied to the subject and never reached a comparison. `Reason` names the step that stopped it |
+| `NoLimit` | `no-limit` | the subject DID reach the comparison and the datasheet row stated no bound, so nothing was checked |
+
+**A consumer must not count `Inconclusive` as a failure.** It is the outcome form of
+`Finding.Inconclusive` and carries that field's contract, which is why it cannot simply be `Fail`.
+Mapping it to `NotConsidered` would be worse, because a `NotConsidered` verdict produces no finding
+and the mapping would delete one the check path reports. `reverse-blocking-absent`, the
+`strap-group-*` rules, the `pin-tracking-*` rules, the io-map rules and the `property-*` rules
+produce it today.
+
+`NoLimit` and `NotConsidered` differ in where the rule stopped. `NotConsidered` never reached a
+comparison. `NoLimit` reached it and found nothing to compare against. Before `NoLimit` existed, a
+datasheet row stating no maximum and a design sitting comfortably under a stated maximum took the
+same silent `return` out of a rule. `check.CompareToBound` returns `NoLimit` for a `Bound` with
+neither side stated, so a rule that compares through it gets the distinction without asking.
+
 ### The two rules that still decline
 
 | Rule | How it declines | Why |
@@ -285,13 +315,13 @@ all three symbol-resolving readers supply the diagnostic.
 **A rule that seems to have no fixed arity is usually being asked the wrong question.**
 `strap-address-collision` declined because its subject is the SET of devices sharing an address, two on
 one bus and four on the next, while `SubjectShape` is fixed per rule. That describes the FINDING. The
-question the rule answers is binary: do these two devices strap to the same number. Three devices at one
+question the rule answers is binary, whether these two devices strap to the same number. Three devices at one
 address is three yes answers, so the subject is a PAIR (agni issue 391). Its message got less wrong too,
 since the old single finding said "U12 and U13 and U14 BOTH strap to", and the two cases the old body
 dropped with a bare `continue` became `NOT_CONSIDERED` verdicts. A body that filters has nowhere to put
 a subject it declined.
 
-### Subjects: a tuple in the verdict, one entity in the finding
+### A tuple in the verdict, one entity in the finding
 
 {{ includeFile "figures/verdict-subject-grain.svg" }}
 
@@ -323,8 +353,8 @@ extra terminals carry no `Finding`.
 **Converting a rule that has a spec twin has one trap.** `check.VerdictsToFindings` returns a NON-NIL
 empty slice, matching `check.Report`, and `TestSpecParity` compares with `reflect.DeepEqual`, where a nil
 slice is not equal to an empty one. A converted rule would otherwise diverge from its twin on every clean
-design while agreeing about every finding. Twinned rules have three things that must agree, the Go body,
-the spec twin, and the verdicts, and that affects about a quarter of the catalog.
+design while agreeing about every finding. Twinned rules have three things that must agree (the Go body,
+the spec twin, and the verdicts), and the trap affects about a quarter of the catalog.
 
 ## A rule has one severity, so a severity axis means two rules
 
@@ -339,8 +369,8 @@ merely report the recommendation.
 
 Where a value is legal but leaves the severity unknown, send it to the louder rule and mark the finding
 `Inconclusive` rather than dropping it. `param.Validate` requires a pin relation's kind, bound and
-provenance but not its modality, so an unstated modality is a legal spec: reporting it as an error would
-invent a requirement, and dropping it would pass a breach in silence.
+provenance but not its modality, so an unstated modality is a legal spec, and reporting it as an error would
+invent a requirement while dropping it would pass a breach in silence.
 
 ## Comparing is safe, subtracting is not
 
@@ -369,7 +399,7 @@ flowchart LR
 off the part's own pin declaration, so their agreement is evidence in a way either alone is not, and it
 separated a board with a genuine configuration gap (45) from one without (5).
 
-Two things keep it honest. **Name the channels in the rule's doc**, because a reviewer needs to know the
+Two things keep it from overclaiming. **Name the channels in the rule's doc**, because a reviewer needs to know the
 finding rests on a coincidence of two weak signals. And **check what happens when a channel is
 structurally absent**: on a format that cannot type power pins the second channel is always missing, so
 the rule is a no-op there rather than a partial answer, and the doc should say so.
@@ -379,16 +409,18 @@ the rule is a no-op there rather than a partial answer, and the doc should say s
 Conformance fixtures are executable expectations, and the sidecar drives both the harness and the
 viewer's expectations panel. Author three shapes:
 
-- **fires**: the defect, plus every incidental firing listed, because the harness is exhaustive.
-- **passes**: the same topology done right. `fires: {}` is the strongest assertion the harness holds.
-- **the guard case**: the channel fixture proving the rule stays silent where the convention is absent
-  (rails, zero test points, nothing fires).
+- A **fires** fixture carries the defect, plus every incidental firing listed, because the harness
+  is exhaustive.
+- A **passes** fixture carries the same topology done right. `fires: {}` is the strongest assertion
+  the harness holds.
+- A **guard** fixture is the channel case, proving the rule stays silent where the convention is
+  absent (rails, zero test points, nothing fires).
 
 KiCad authoring details that bite everyone once: pins bind at wire endpoints while labels and junction
 dots bind mid-span, the pin connect point is origin + (local_x, −local_y), and power-symbol fixtures need
 the `{}` `.kicad_pro` stub or their nets stay external.
 
-Expect the showcase boards to react. They are the load-bearing anti-false-positive gates, so a new rule
+Expect the showcase boards to react. They are the gates a false positive has to get past before it ships, so a new rule
 firing there is a deliberate decision. Cover the passes board, which must stay silent, and list the fires
 board's incidental firings in its sidecar.
 

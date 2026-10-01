@@ -1,14 +1,13 @@
-// A rule bundle is a named selection over the catalog — the "run the pre-tapeout suite" gesture
-// instead of hand-ticking rules. It is client-side only (no proto): built-in bundles ship as data
-// and user-saved ones live in localStorage. The panel resolves a bundle to rule names and fires
-// the same onSelectionChange intent a checkbox would, so nothing upstream of the rules panel knows
-// bundles exist.
+// A rule bundle is a named selection over the rule catalog. It is client-side only (no proto).
+// Built-in bundles ship as data and user-saved ones live in localStorage. The panel resolves a
+// bundle to rule names and fires the same onSelectionChange a checkbox would, so nothing upstream
+// of the rules panel knows bundles exist.
 
 import { type RuleItem, type RuleFilter, filterRules } from "./rules.js";
 
-// Bundle is a named selection expressed one of two ways: an explicit rule-name list (a snapshot,
-// e.g. a user-saved selection) or a facet filter (a query that auto-includes new rules matching it
-// as the catalog grows). builtin bundles ship with the app and are not editable/deletable.
+// Bundle is a named selection, either an explicit rule-name list (a user-saved snapshot) or a facet
+// filter that picks up new matching rules as the catalog grows. Built-in bundles are not editable
+// or deletable.
 export interface Bundle {
   name: string;
   builtin?: boolean;
@@ -16,19 +15,17 @@ export interface Bundle {
   filter?: RuleFilter; // facet filter (the built-in defaults)
 }
 
-// BUILTIN_BUNDLES are the shipped defaults, expressed as filters so a newly added rule that matches
-// a filter joins its bundle with no code change. They resolve against whatever catalog ListRules
-// returns, so the shareable build (which serves no proprietary rules, WS3-005) yields only
-// shareable selections without any special handling here.
+// BUILTIN_BUNDLES are the shipped defaults, written as filters so a new matching rule joins with no
+// code change. They resolve against whatever ListRules returns, so the shareable build (no
+// proprietary rules, WS3-005) yields only shareable selections.
 export const BUILTIN_BUNDLES: Bundle[] = [
   { name: "Topology baseline", builtin: true, filter: { tagValues: {}, availableOnly: true, search: "" } },
   { name: "Open rules", builtin: true, filter: { tagValues: { distribution: ["open"] }, availableOnly: true, search: "" } },
 ];
 
-// resolveBundle returns the rule names a bundle selects for the given catalog. A filter bundle
-// applies the facet filter; an explicit-list bundle takes its listed rules that still exist in the
-// catalog. Either way only *available* rules are selected, since an unavailable rule cannot run
-// (so a saved bundle degrades gracefully on a design that lacks a rule's data layer).
+// resolveBundle returns the rule names a bundle selects from the given catalog. Only *available*
+// rules are selected, because an unavailable rule cannot run, so a saved bundle degrades gracefully
+// on a design that lacks a rule's data layer.
 export function resolveBundle(rules: RuleItem[], bundle: Bundle): string[] {
   if (bundle.filter) {
     return filterRules(rules, bundle.filter).filter((r) => r.available).map((r) => r.name);
@@ -67,12 +64,12 @@ export function loadSaved(): Bundle[] {
   }
 }
 
-// persistSaved writes the user's custom bundles to localStorage; a no-localStorage or full store is
-// a silent no-op (the bundles just do not survive a reload).
+// persistSaved writes the user's custom bundles to localStorage. With no localStorage or a full
+// store it is a silent no-op, and the bundles do not survive a reload.
 export function persistSaved(saved: Bundle[]): void {
   try {
     globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(saved));
   } catch {
-    // storage unavailable/full: nothing to do.
+    // storage unavailable or full
   }
 }

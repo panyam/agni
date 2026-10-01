@@ -9,19 +9,13 @@ import (
 
 // Join attaches each imported finding to an entity in the model, and reports what it could not attach.
 //
-// The join is by NAME — the ref_des, pin, and net a foreign checker printed into its item description
-// — because that is the only identity the two tools share. KiCad's uuids are carried through as
-// provenance, but they identify board and schematic OBJECTS (this track, this pad), and our model is a
-// netlist of components and nets, so there is nothing to join a track uuid to.
+// The join is by NAME (the ref_des, pin, and net a foreign checker printed into its item description),
+// since that is the only identity the two tools share. KiCad's uuids stay as provenance, but they name
+// board and schematic OBJECTS (a track, a pad), which our netlist model has nothing to join to.
 //
-// Two rules govern it, and both exist so that an import cannot quietly overstate itself:
-//
-// A finding is only joined to an entity the model actually HAS. A parsed ref_des that names no
-// component leaves the finding unjoined rather than inventing a subject, because a wrong join attaches
-// a real violation to an innocent part, which is worse than no join at all.
-//
-// An unjoined finding is KEPT, never dropped, and counted in the summary. Dropping it would make the
-// import report fewer problems than the tool found, with nothing to say so.
+// A finding joins only to an entity the model HAS, because a wrong join pins a real violation on an
+// innocent part. An unjoined finding is KEPT and counted in the summary, never dropped. See
+// docsite/content/architecture/checks-contract.md#importing-another-tools-results.
 func Join(m check.Model, doc *checkspb.CheckResults) {
 	unjoined := map[string][]string{}
 	joined := 0
@@ -44,10 +38,10 @@ func Join(m check.Model, doc *checkspb.CheckResults) {
 	doc.ImportSummary = summarize(len(doc.GetFindings()), joined, unjoined)
 }
 
-// notInDesign is the residue class that matters most: the import UNDERSTOOD the description and the
-// entity is simply not in the model we loaded. That is a real signal — the report was run against a
-// different revision, or against the board while we read the schematic — and it is deliberately
-// distinct from "we did not recognize the shape".
+// notInDesign is the residue class that matters most. The import UNDERSTOOD the description and the
+// entity is not in the model we loaded, which usually means the report ran against a different
+// revision, or against the board while we read the schematic. Kept distinct from "we did not
+// recognize the shape".
 const notInDesign = "an entity the description names but the loaded design does not contain"
 
 // itemDescription recovers the per-item half of a finding message. findings() joins the violation
@@ -70,9 +64,9 @@ func subjectKind(r itemRef) string {
 	return check.KindComponent
 }
 
-// hasNet reports whether the model carries a net of this name. Names are not unique (duplicate-net-name
-// is a shipped rule), so this answers presence only; a foreign report carries nothing that could pick
-// between two same-named nets, and inventing a choice would be a guess.
+// hasNet reports whether the model carries a net of this name. Names are not unique
+// (duplicate-net-name is a shipped rule), so this answers presence only, and a foreign report carries
+// nothing that could pick between two same-named nets.
 func hasNet(m check.Model, name string) bool {
 	for _, n := range m.Nets() {
 		if n.GetName() == name {

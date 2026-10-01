@@ -11,7 +11,7 @@ import (
 //
 // Every test below asserts what AskPath does with its BUNDLED default, and replacing that default is
 // the variable's entire job (agni 643). So a developer who exports it to drive a walkthrough over
-// their own board could not run this package's tests: three failed, and each printed the path they
+// their own board could not run this package's tests. Three failed, and each printed the path they
 // had set into the test log. The gate was green in CI and red on the machine that had the variable,
 // which is the worst way round for a test to fail.
 //
@@ -61,8 +61,9 @@ func TestPathInputLoad(t *testing.T) {
 	}
 }
 
-// TestAskPathEnvDefault: AGNI_EXAMPLE_DESIGN replaces the bundled default, so a walkthrough can be
-// driven over a design this repo cannot carry without that path being typed or committed.
+// TestAskPathEnvDefault checks that AGNI_EXAMPLE_DESIGN replaces the bundled default, so a
+// walkthrough can be driven over a design this repo cannot carry without that path being typed or
+// committed.
 func TestAskPathEnvDefault(t *testing.T) {
 	t.Setenv(DesignPathEnv, "/somewhere/else/board.edn")
 	p := AskPath("design", "../common/designs/two-resistors.edn")
@@ -74,8 +75,8 @@ func TestAskPathEnvDefault(t *testing.T) {
 	}
 }
 
-// TestAskPathEnvBlankKeepsTheBundledDefault: an exported-but-empty variable is not a value. Without
-// this an `export AGNI_EXAMPLE_DESIGN=` in a shell would point every example at "".
+// TestAskPathEnvBlankKeepsTheBundledDefault pins that an exported-but-empty variable is not a
+// value. Without this an `export AGNI_EXAMPLE_DESIGN=` in a shell would point every example at "".
 func TestAskPathEnvBlankKeepsTheBundledDefault(t *testing.T) {
 	for _, v := range []string{"", "   "} {
 		t.Setenv(DesignPathEnv, v)
@@ -85,8 +86,8 @@ func TestAskPathEnvBlankKeepsTheBundledDefault(t *testing.T) {
 	}
 }
 
-// TestAskPathEnvIsStillOverridableByTheUser: the variable moves the DEFAULT, not the value, so the
-// prompt still shows it and typing a path still wins.
+// TestAskPathEnvIsStillOverridableByTheUser pins that the variable moves the DEFAULT, not the
+// value, so the prompt still shows it and typing a path still wins.
 func TestAskPathEnvIsStillOverridableByTheUser(t *testing.T) {
 	t.Setenv(DesignPathEnv, "/somewhere/else/board.edn")
 	p := AskPath("design", "designs/two-resistors.edn")

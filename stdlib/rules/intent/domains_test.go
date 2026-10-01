@@ -26,7 +26,7 @@ func TestVoltageDomainFiresOnAbsentRail(t *testing.T) {
 }
 
 func TestVoltageDomainFiresOnWrongDomain(t *testing.T) {
-	// A rail named 5V0 is declared to be in the 3.3V domain: its name declares a different voltage
+	// A rail named 5V0 is declared to be in the 3.3V domain, but its name declares a different voltage
 	// than the domain, so it is on the wrong domain and must fire.
 	decl := declOf(t, "name: I\nvoltage_domains:\n  - {name: io_3v3, nominal: 3.3, rails: [5V0]}")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "5V0"}}}

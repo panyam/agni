@@ -18,7 +18,7 @@ not that the design is wrong.
 Distinct from `net.bus_like(net)`, which reports a *solved* net whose electrical role is
 shared-distribution (a ground plane, a global rail, or rail-scale fan-out). `bus` is about a
 source-file token the reader has not expanded; `net.bus_like` is about a net that already exists
-and passed a fan-out/role predicate. Different concepts, similar names.
+and passed a fan-out/role predicate.
 
 ### For hardware engineers
 
@@ -26,7 +26,7 @@ A bus is schematic shorthand for a group of related signals drawn as one thick l
 `ADDR[15:0]`) with the members broken out at bus entries. The reader recognised the bus notation
 but has not yet split it into the individual member nets it stands for. You query `bus` during a
 review to see which bus constructs a design uses and which reader saw them, so you know where the
-connectivity model is still coarse. A row is a coverage note, not an error: the members may be
+connectivity model is still coarse. A row is a coverage note, not an error, since the members may be
 correct on the sheet and simply not expanded in the read yet.
 
 ### For software engineers
@@ -40,11 +40,11 @@ design has no shared-distribution nets. For those, query `net.bus_like`.
 
 ### Go projector
 
-`busFacts` in `check/facts.go` iterates `Model.UnmodeledBuses()` (which returns the reader-emitted
-`ir.BusNotModeled` list off `InputDiagnostics`) and emits one `bus(label, kind)` row per entry, with
-the construct's provenance as the citation. One row per detected bus construct; empty for a design
-whose read detected no bus notation. Every reader populates the same channel, so the relation is
-format-neutral.
+`busFacts` in `stdlib/relations/facts.go` iterates `Model.UnmodeledBuses()` (which returns the
+reader-emitted `ir.BusNotModeled` list off `InputDiagnostics`) and emits one `bus(label, kind)` row
+per entry, with the construct's provenance as the citation. One row per detected bus construct;
+empty for a design whose read detected no bus notation. Every reader that recognizes bus notation
+(KiCad, EDIF, xschem, gEDA) populates the same channel, so the relation is format-neutral.
 
 ### Datalog
 

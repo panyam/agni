@@ -58,8 +58,8 @@ func TestFSStoreProjectsAndDesigns(t *testing.T) {
 	if len(ds) != 1 || ds[0].GetName() != "projects/gateway/designs/gateway" {
 		t.Fatalf("designs = %+v", ds)
 	}
-	// Descriptor-relative names become mount-relative refs HERE, once, because every consumer above
-	// the port addresses files by (mount, ref) and none knows where the design folder sits.
+	// Descriptor-relative names become mount:// URIs HERE, once, because every consumer above
+	// the port addresses files by artifact.URI and none knows where the design folder sits.
 	if ds[0].GetEntryUri() != "mount://m/designs/gateway/gateway.edn" {
 		t.Errorf("entry ref = %q", ds[0].GetEntryUri())
 	}
@@ -106,9 +106,9 @@ func TestFSStoreResolve(t *testing.T) {
 	}
 }
 
-// TestFSStoreResolveWithoutAProjectKeepsTheDeclaration: a design with no project above it is a real
-// design, not a half-resolved one. Its declaration still says which file analysis reads; what it
-// lacks is a resource NAME, since a name needs a parent.
+// TestFSStoreResolveWithoutAProjectKeepsTheDeclaration pins that a design with no project above it
+// is a real design, not a half-resolved one. Its declaration still says which file analysis reads;
+// what it lacks is a resource NAME, since a name needs a parent.
 func TestFSStoreResolveWithoutAProjectKeepsTheDeclaration(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"board/design.yaml": "name: board\nentry: board.edn\n",
@@ -132,8 +132,9 @@ func TestFSStoreResolveWithoutAProjectKeepsTheDeclaration(t *testing.T) {
 	}
 }
 
-// TestFSStoreRejectsDuplicateIDs: two projects claiming one name means one is unreachable through
-// its own resource name, and serving the other would answer a question about A with B's designs.
+// TestFSStoreRejectsDuplicateIDs exists because two projects claiming one name means one is
+// unreachable through its own resource name, and serving the other would answer a question about A
+// with B's designs.
 func TestFSStoreRejectsDuplicateIDs(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"a/project.yaml": "name: same\n",
@@ -144,7 +145,7 @@ func TestFSStoreRejectsDuplicateIDs(t *testing.T) {
 	}
 }
 
-// TestFSStoreRejectsDuplicateIDsAcrossTrees: the check has to span trees, since each tree only ever
+// TestFSStoreRejectsDuplicateIDsAcrossTrees pins that the check spans trees, since each tree only ever
 // sees its own descriptors and a resource name is global to the store.
 func TestFSStoreRejectsDuplicateIDsAcrossTrees(t *testing.T) {
 	one := mapFS(map[string]string{"project.yaml": "name: same\n"})
@@ -154,8 +155,8 @@ func TestFSStoreRejectsDuplicateIDsAcrossTrees(t *testing.T) {
 	}
 }
 
-// TestFSStoreMalformedDescriptorFailsLoudly: a skipped descriptor would leave an operator reading
-// default behaviour as the engine agreeing with what they wrote.
+// TestFSStoreMalformedDescriptorFailsLoudly exists because a skipped descriptor would leave an
+// operator reading default behaviour as the engine agreeing with what they wrote.
 func TestFSStoreMalformedDescriptorFailsLoudly(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: Gateway\n"})})
 	if _, err := s.Projects(context.Background()); err == nil {
@@ -180,8 +181,8 @@ func TestFSStoreSkipsDotDirsAndStopsAtDepth(t *testing.T) {
 	}
 }
 
-// TestFSStoreNestedProjectsDoNotCompound: a project inside a project is an ambiguity nobody meant,
-// so the walk stops at the outer one.
+// TestFSStoreNestedProjectsDoNotCompound exists because a project inside a project is an ambiguity
+// nobody meant, so the walk stops at the outer one.
 func TestFSStoreNestedProjectsDoNotCompound(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"outer/project.yaml":       "name: outer\n",
@@ -197,7 +198,7 @@ func TestFSStoreNestedProjectsDoNotCompound(t *testing.T) {
 }
 
 // TestFSStoreCannotEscapeItsTree is the containment property, and it is STRUCTURAL rather than
-// checked: an fs.FS has no parent to climb into, so an upward walk stops at the root and a ref
+// checked. An fs.FS has no parent to climb into, so an upward walk stops at the root and a ref
 // carrying `..` never opens a file at all.
 func TestFSStoreCannotEscapeItsTree(t *testing.T) {
 	d, _, err := demoStore().ResolveDesign(context.Background(), testURI(t, "m", "elsewhere/design.yaml"))
@@ -213,8 +214,8 @@ func TestFSStoreUnknownMount(t *testing.T) {
 	}
 }
 
-// testURI builds an artifact URI for a test, failing rather than returning an error: a hard-coded
-// fixture URI that will not parse is a broken test, not a condition under test.
+// testURI builds an artifact URI for a test, failing rather than returning an error, because a
+// hard-coded fixture URI that will not parse is a broken test, not a condition under test.
 func testURI(t *testing.T, mount, p string) artifact.URI {
 	t.Helper()
 	u, err := artifact.New(mount, p)
@@ -224,10 +225,10 @@ func testURI(t *testing.T, mount, p string) artifact.URI {
 	return u
 }
 
-// TestFSStoreNamesTheConventionsFile: the conventions VALUE is what composes a run, and the URI is
-// what a client needs to offer the project's convention back as a choice. A picker has to pass
-// something, and a resolved value is not a ref, so without this a viewer can say which convention is
-// in effect but cannot let a reader re-select it after trying another.
+// TestFSStoreNamesTheConventionsFile exists because the conventions VALUE is what composes a run,
+// and the URI is what a client needs to offer the project's convention back as a choice. A picker
+// has to pass something, and a resolved value is not a ref, so without this a viewer can say which
+// convention is in effect but cannot let a reader re-select it after trying another.
 func TestFSStoreNamesTheConventionsFile(t *testing.T) {
 	p, err := demoStore().Project(context.Background(), "projects/gateway")
 	if err != nil {
@@ -238,7 +239,7 @@ func TestFSStoreNamesTheConventionsFile(t *testing.T) {
 	}
 }
 
-// TestFSStoreConventionsUriAbsentWhenUndeclared keeps the URI honest: a project with no conventions
+// TestFSStoreConventionsUriAbsentWhenUndeclared keeps the URI accurate. A project with no conventions
 // file must not advertise one, or a picker offers a ref that resolves to nothing.
 func TestFSStoreConventionsUriAbsentWhenUndeclared(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{

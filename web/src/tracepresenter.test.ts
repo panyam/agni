@@ -117,7 +117,7 @@ describe("trace presenter", () => {
     expect(comps).toContain("R1");
   });
 
-  // A typo in the box is caught here rather than at the server: the panel is showing the box, and a
+  // A typo in the box is caught here rather than at the server. The panel is showing the box, and a
   // round trip to be told the same thing is only slower.
   it("rejects a malformed pin without calling the service", async () => {
     const h = harness();
@@ -183,7 +183,7 @@ describe("a trace arriving in the URL", () => {
   });
 });
 
-// The address bar and the panel must not disagree: a route found by typing pins is addressable
+// The address bar and the panel must not disagree. A route found by typing pins is addressable
 // without the reader doing anything, and a NEGATIVE answer is addressable too, since "these two pins
 // do not join" is a thing worth sending someone.
 describe("a trace reaching the URL", () => {
@@ -199,7 +199,7 @@ describe("a trace reaching the URL", () => {
   });
 });
 
-// A route is drawn on a sheet, and before agni 657 the viewer never went to it: runTrace painted the
+// A route is drawn on a sheet, and before agni 657 the viewer never went to it. runTrace painted the
 // highlight onto whichever sheet happened to be showing, which on a cold link is the design's first.
 // On an 82-sheet export that is a table of contents with no wires on it at all.
 describe("a trace goes to a sheet the route is on", () => {
@@ -212,7 +212,7 @@ describe("a trace goes to a sheet the route is on", () => {
     expect(asked).toContain("s2");
   });
 
-  // The control for the case above: with the route drawn nowhere there is no sheet to go to, and
+  // The control for the case above. With the route drawn nowhere there is no sheet to go to, and
   // jumping somewhere arbitrary would be worse than staying. Without it the test above passes on a
   // presenter that navigates unconditionally.
   it("stays put when nothing on the route is drawn", async () => {

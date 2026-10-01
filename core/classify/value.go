@@ -6,30 +6,26 @@ import (
 )
 
 // ParseQuantity reads a component's value text into a number in its SI BASE unit, the unit symbol, and
-// whether a number was found at all (WS3-118). It is the format-neutral half of the value pass: every
-// reader hands it whatever its dialect wrote, and it applies the one grammar that is actually
-// specified.
+// whether a number was found at all (WS3-118). It is the format-neutral half of the value pass, so
+// every reader hands it whatever its dialect wrote and it applies the one grammar that is specified.
 //
-// THE GRAMMAR IS REAL, AND IT IS ONLY PART OF THE PROBLEM. IEC 60062 defines the RKM code, where the
-// multiplier letter stands in for the decimal point: 4R7 is 4.7 Ω, 4k7 is 4700 Ω, 0R05 is 0.05 Ω, 1M5
-// is 1.5 MΩ. Combined with SI prefixes that covers nearly every spelling a design carries, and it is a
-// small deterministic grammar rather than a pile of special cases:
+// IEC 60062 defines the RKM code, where the multiplier letter stands in for the decimal point (4R7 is
+// 4.7 Ω, 4k7 is 4700 Ω, 0R05 is 0.05 Ω, 1M5 is 1.5 MΩ). With SI prefixes that covers nearly every
+// spelling a design carries:
 //
 //	quantity := mantissa prefix? unit?        // 10k, 1.5kΩ, 100nF
 //	          | digits prefix digits          // RKM: 4k7, 0R05
 //
-// What is NOT in any specification, and therefore is NOT decided here: what unit a bare number carries.
-// That depends on the component's CLASS and on house convention, so it belongs in the lexicon
-// (ValueVocab) rather than in this function, the same reason net-role name patterns live in RoleVocab
-// instead of in rule text. ParseQuantity returns the number with an EMPTY unit and lets the caller
-// decide, which is why an empty unit is a real state rather than a failure.
+// The unit of a BARE number is NOT decided here, because no specification defines it; ValueVocab owns
+// that convention. ParseQuantity returns such a number with an EMPTY unit, which is a real state and
+// not a failure.
 //
-// THE PARSE IS EXACT DECIMAL AND SCALES ONCE, WHICH IS NOT COSMETIC. Every component value is printed
-// in decimal on the part and in the datasheet, so the text is exact and the parse is string
-// manipulation into (digits, decimal exponent); scale() then converts that pair in a single operation.
+// THE PARSE IS EXACT DECIMAL AND SCALES ONCE. A component value is printed in decimal, so the text is
+// exact and the parse is string manipulation into (digits, decimal exponent), which scale() converts
+// in a single operation.
 // Reading the mantissa as a float first and scaling after rounds twice, and the two routes land on
 // DIFFERENT doubles for 1573 of the 7920 two-and-three-significant-figure values across the SI prefixes
-// designs use. The divergence is concentrated at small magnitudes: picofarads, where crystal load caps
+// designs use. The divergence is concentrated at small magnitudes, in picofarads, where crystal load caps
 // live and where a shipped rule already reads capacitance.
 //
 // It also means two spellings of one value produce the IDENTICAL double, so a diff can compare
@@ -43,24 +39,19 @@ func ParseQuantity(text string) (value float64, unit string, ok bool) {
 }
 
 // parseQuantityDetail is ParseQuantity plus whether the notation carried a MULTIPLIER PREFIX. The stamp
-// pass needs that distinction because the two unit-less cases are not equally ambiguous:
+// pass needs it because the two unit-less cases differ:
 //
-//   - "10u" on a capacitor states the magnitude and omits only the DIMENSION, and a capacitor's
-//     dimension is farads with no ambiguity at all. The class settles it.
-//   - "100" on a capacitor omits the magnitude too, and there the old conventions genuinely disagree
-//     (farads, microfarads, picofarads). Nothing can settle it but a declared convention.
+//   - "10u" on a capacitor omits only the DIMENSION, which the class settles.
+//   - "100" on a capacitor omits the magnitude too, which only a declared convention settles.
 //
-// Collapsing them would either refuse "10u" (making the whole feature useless for capacitors and
-// inductors, which is most passives) or guess "100" (putting a value six orders of magnitude out into a
-// field that reads as authoritative).
+// ValueVocab's dimension and bareUnit fields are the two halves, and its doc says why they stay apart.
 func parseQuantityDetail(text string) (value float64, unit string, prefixed bool, ok bool) {
 	s := strings.TrimSpace(text)
 	if s == "" {
 		return 0, "", false, false
 	}
-	// Real fields concatenate several things into one string ("10k 1% 0402", "100nF/50V"). The value is
-	// the first token; the rest is tolerance, package and rating, which are separate facts this type
-	// deliberately does not model.
+	// Real fields concatenate several things ("10k 1% 0402", "100nF/50V"). The value is the first
+	// token, and the tolerance, package and rating after it are not modeled here.
 	if i := strings.IndexAny(s, " \t/,;"); i > 0 {
 		s = s[:i]
 	}
@@ -71,10 +62,9 @@ func parseQuantityDetail(text string) (value float64, unit string, prefixed bool
 	return scale(mant, exp), unitSym, sawPrefix, true
 }
 
-// UnitOhm is the canonical ohm symbol every reader's spelling normalizes to: GREEK CAPITAL LETTER OMEGA
-// (U+03A9). Designs also carry the visually IDENTICAL OHM SIGN (U+2126) and a bare "R", and a consumer
-// comparing unit strings would treat those as three different units. Naming the canonical one here
-// keeps that decision in one place rather than in every rule that touches a resistance.
+// UnitOhm is the canonical ohm symbol every reader's spelling normalizes to, GREEK CAPITAL LETTER OMEGA
+// (U+03A9). Designs also carry the visually IDENTICAL OHM SIGN (U+2126) and a bare "R", which a consumer
+// comparing unit strings would treat as three different units.
 const UnitOhm = "\u03a9" // Ω
 
 // ohmSign is the deprecated OHM SIGN codepoint (U+2126). Unicode normalizes it to U+03A9, but designs
@@ -91,11 +81,11 @@ var unitSuffixes = map[string]string{
 }
 
 // siPrefixes maps a multiplier letter to its power of ten. It doubles as the RKM decimal-point letter
-// set, which is why "R" (10^0) is here: 4R7 means 4.7 Ω with R marking the point.
+// set, which is why "R" (10^0) is here, so 4R7 means 4.7 Ω with R marking the point.
 //
-// "M" is the one genuine collision in the notation: mega in IEC 60062, milli in several SPICE dialects.
-// This table takes the IEC reading because it is the one a schematic uses, and a house that means milli
-// says so through the lexicon rather than by arguing with the parser.
+// "M" is the one collision in the notation, mega in IEC 60062 and milli in several SPICE dialects. This
+// table takes the IEC reading because a schematic uses it, and a house that means milli says so through
+// the lexicon.
 var siPrefixes = map[byte]int{
 	'p': -12, 'P': -12,
 	'n': -9, 'N': -9,
@@ -110,8 +100,8 @@ var siPrefixes = map[byte]int{
 
 // parseDecimal splits a value token into an integer mantissa, a decimal exponent, and a unit symbol,
 // working entirely in strings so no precision is lost before the caller scales. It handles the two
-// shapes together because RKM is the same grammar with the multiplier moved: "4k7" and "4.7k" differ
-// only in where the point is written, so both reduce to mantissa 47, exponent 2.
+// shapes together because RKM is the same grammar with the multiplier moved, so "4k7" and "4.7k" both
+// reduce to mantissa 47, exponent 2.
 func parseDecimal(s string) (mant int64, exp int, unit string, prefixed bool, ok bool) {
 	s = strings.TrimSuffix(s, ".")
 	// A trailing unit word is stripped before the prefix scan so "100nF" does not read F as a
@@ -122,8 +112,8 @@ func parseDecimal(s string) (mant int64, exp int, unit string, prefixed bool, ok
 		}
 		suffix := strings.ToUpper(s[len(s)-cand:])
 		if u, hit := unitSuffixes[suffix]; hit && isDigitOrPrefix(s[len(s)-cand-1]) {
-			// A bare trailing R is ambiguous: "10R" is 10 Ω but so is the RKM "10R". Both give the
-			// same answer, so leave R to the prefix scan and take only the unambiguous words here.
+			// A trailing R reads as a unit or as an RKM point, and "10R" is 10 Ω either way, so R
+			// is left to the prefix scan.
 			if suffix != "R" {
 				s, unit = s[:len(s)-cand], u
 				break
@@ -179,9 +169,9 @@ func parseDecimal(s string) (mant int64, exp int, unit string, prefixed bool, ok
 	return mant, prefixExp - frac, unit, seenPrefix, true
 }
 
-// unitForPrefixLetter recovers the unit a multiplier letter implies on its own. Only R does: it is the
-// RKM point marker for OHMS specifically, so "4R7" is 4.7 Ω even with no unit written. Every other
-// prefix is unit-neutral ("100n" could be nF or nH) and yields an empty unit for the lexicon to fill.
+// unitForPrefixLetter recovers the unit a multiplier letter implies on its own. Only R does, as the RKM
+// point marker for OHMS, so "4R7" is 4.7 Ω with no unit written. Every other prefix is unit-neutral
+// ("100n" could be nF or nH) and yields an empty unit for the lexicon to fill.
 func unitForPrefixLetter(c byte) string {
 	if c == 'R' || c == 'r' {
 		return UnitOhm
@@ -200,8 +190,8 @@ func isDigitOrPrefix(c byte) bool {
 }
 
 // atoi converts an accumulated digit slice (optionally leading '-') to an int64 without going through
-// a float. Overflow returns false rather than wrapping: a value with more digits than an int64 holds is
-// not a component value, it is a parse gone wrong.
+// a float. Overflow returns false rather than wrapping, since a value with more digits than an int64
+// holds is a parse gone wrong.
 func atoi(digits []byte) (int64, bool) {
 	neg := digits[0] == '-'
 	if neg {
@@ -223,11 +213,10 @@ func atoi(digits []byte) (int64, bool) {
 // scale turns an exact (mantissa, decimal exponent) pair into a double. It is the ONLY floating-point
 // step in the parse, and the DIVISION on the negative branch is the part that matters.
 //
-// A positive power of ten is exactly representable in a double up to 1e22; a NEGATIVE one is not, since
-// 1e-9 has no exact binary form. So dividing by Pow10(9) is exact where multiplying by Pow10(-9) rounds
-// twice, and at small magnitudes the two land on different doubles. Writing this branch as a
-// multiplication by Pow10(exp) would look tidier and would change the answer for 100n, 2p2 and the rest
-// of the picofarad range where crystal load caps live.
+// A positive power of ten is exactly representable in a double up to 1e22, and a NEGATIVE one is not,
+// since 1e-9 has no exact binary form. So dividing by Pow10(9) is exact where multiplying by Pow10(-9)
+// rounds twice. Written as a multiplication by Pow10(exp), this branch would change the answer for
+// 100n, 2p2 and the rest of the picofarad range where crystal load caps live.
 //
 // TestParseQuantitySpellings fails if this is rewritten as a multiplication.
 func scale(mant int64, exp int) float64 {

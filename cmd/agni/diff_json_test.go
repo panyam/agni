@@ -7,7 +7,7 @@ import (
 )
 
 // TestDiffJSON pins the `diff --format json` wire contract (the DiffDesignsResponse shape the
-// viewer's DiffService also serves, WS9-004) over the rev-a/rev-b fixture pair: the report's
+// viewer's DiffService also serves, WS9-004) over the rev-a/rev-b fixture pair, covering the report's
 // classified changes plus the highlight maps, with a renamed net keyed under both names.
 func TestDiffJSON(t *testing.T) {
 	cmd := diffCmd()
@@ -59,7 +59,7 @@ func TestDiffJSON(t *testing.T) {
 	}
 }
 
-// TestDiffTextDefault: without --format the human text output is unchanged (the summary
+// TestDiffTextDefault checks that without --format the human text output is unchanged (the summary
 // header the existing consumers read).
 func TestDiffTextDefault(t *testing.T) {
 	cmd := diffCmd()

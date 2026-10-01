@@ -12,8 +12,9 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// TestFindingSpecs: findings map to specs by kind (net->path, component->rect, pin), severity picks
-// the color, and a finding that repeats (bound to several items) collapses to one spec.
+// TestFindingSpecs checks that findings map to specs by kind (net->path, component->rect, pin),
+// that severity picks the color, and that a finding that repeats (bound to several items) collapses
+// to one spec.
 func TestFindingSpecs(t *testing.T) {
 	findings := []check.Finding{
 		{Subject: check.Entity{Kind: check.KindNet, Ref: "CAN_H", NetID: "n1"}, Severity: "warning"},
@@ -81,9 +82,10 @@ func TestCompanionPath(t *testing.T) {
 	}
 }
 
-// TestReviewRenderCompanion: a netlist design's findings are drawn on its auto-detected sibling .eds
-// (companion-demo.eds), joined by net name — the WS1-047 join. The finding on SIGA highlights the
-// SIGA wire on the .eds, the summary names the companion, and a matching pair raises no warning.
+// TestReviewRenderCompanion checks that a netlist design's findings are drawn on its auto-detected
+// sibling .eds (companion-demo.eds), joined by net name (the WS1-047 join). The finding on SIGA
+// highlights the SIGA wire on the .eds, the summary names the companion, and a matching pair raises
+// no warning.
 func TestReviewRenderCompanion(t *testing.T) {
 	dir := t.TempDir()
 	r := review.Report{Design: "testdata/review/companion-demo.edn", Areas: []review.AreaResult{{
@@ -111,9 +113,10 @@ func TestReviewRenderCompanion(t *testing.T) {
 	}
 }
 
-// TestReviewRenderCompanionMismatch: an explicit companion whose net names do not overlap the
-// design's is flagged (likely a different-revision or wrong file), rather than silently drawing a
-// wrong picture. can-broken's CAN_* nets share nothing with companion-demo.eds's SIGA/SIGB.
+// TestReviewRenderCompanionMismatch checks that an explicit companion whose net names do not
+// overlap the design's is flagged (likely a different-revision or wrong file), rather than silently
+// drawing a wrong picture. can-broken's CAN_* nets share nothing with companion-demo.eds's
+// SIGA/SIGB.
 func TestReviewRenderCompanionMismatch(t *testing.T) {
 	dir := t.TempDir()
 	r := review.Report{Design: "testdata/review/can-broken.edn", Areas: []review.AreaResult{{
@@ -130,10 +133,10 @@ func TestReviewRenderCompanionMismatch(t *testing.T) {
 	}
 }
 
-// TestReviewCmdRender: --render writes an annotated SVG per design that has findings, with the
-// findings baked in (a highlight stroke), while the report on stdout stays the normal markdown.
-// can-broken is a netlist, so it renders on the auto-layout sheet ("graph"), proving findings locate
-// there and not only on faithful geometry.
+// TestReviewCmdRender checks that --render writes an annotated SVG per design that has findings,
+// with the findings baked in (a highlight stroke), while the report on stdout stays the normal
+// markdown. can-broken is a netlist, so it renders on the auto-layout sheet ("graph"), proving
+// findings locate there and not only on faithful geometry.
 func TestReviewCmdRender(t *testing.T) {
 	dir := t.TempDir()
 	cmd := reviewCmd()

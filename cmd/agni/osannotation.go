@@ -17,18 +17,17 @@ import (
 	"github.com/panyam/agni/internal/mounts"
 )
 
-// annotationsDirSuffix is the per-datasheet directory that holds one region-annotation file per
-// author: LM1117.pdf pairs with the directory LM1117.annotations/, and author "alice" writes
-// LM1117.annotations/alice.json. A directory (not one sibling file) keeps each author's overlay
-// isolated so Save never contends and Get is a plain directory union (WS13-011).
+// annotationsDirSuffix names the per-datasheet directory holding one region-annotation file per
+// author, so LM1117.pdf pairs with LM1117.annotations/ and author "alice" writes
+// LM1117.annotations/alice.json. One file per author means Save never contends and Get is a plain
+// directory union (WS13-011).
 const annotationsDirSuffix = ".annotations"
 
-// osAnnotationStore is the OS-backed service.AnnotationStore: per-author region-annotation overlays
-// written under the mount. It mirrors osPartSpecStore's I/O discipline (mounts.Resolve containment,
-// per-file lock, protojson) with two deliberate differences: there is NO compare-and-swap (each
-// author owns their file, so writes cannot clobber each other), and Get UNIONS every author's file
-// for one datasheet rather than reading a single shared artifact. Overlays are visible to anyone who
-// mounts the folder — author namespaces, it does not authenticate (mounts are the security boundary).
+// osAnnotationStore is the OS-backed service.AnnotationStore, writing per-author region-annotation
+// overlays under the mount. It follows osPartSpecStore's I/O discipline (mounts.Resolve containment,
+// per-file lock, protojson) except that there is NO compare-and-swap, since each author owns their
+// file, and Get UNIONS every author's file for one datasheet. Anyone who mounts the folder sees every
+// overlay, because author namespaces and does not authenticate (mounts are the security boundary).
 type osAnnotationStore struct {
 	mounts []mounts.Mount
 	locks  sync.Map // abs author-file path -> *sync.Mutex
@@ -45,11 +44,10 @@ func annotationsDir(path string) string {
 	return strings.TrimSuffix(path, filepath.Ext(path)) + annotationsDirSuffix
 }
 
-// safeAuthor maps a client-supplied author id to a single safe filename component: it keeps
-// [A-Za-z0-9_-] and replaces everything else with '_', so an author can never traverse out of its
-// datasheet's annotation directory (mounts.Resolve is the containment backstop; this keeps the
-// filenames sane and human-readable). Distinct exotic authors may collide after mapping, which is
-// acceptable for a coordination namespace.
+// safeAuthor maps a client-supplied author id to a single filename component, keeping [A-Za-z0-9_-]
+// and replacing everything else with '_', so an author cannot traverse out of its datasheet's
+// annotation directory (mounts.Resolve is the containment backstop). Distinct exotic authors may
+// collide after mapping.
 func safeAuthor(author string) string {
 	var b strings.Builder
 	for _, r := range author {
@@ -100,8 +98,8 @@ func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*webap
 }
 
 // Save writes one author's overlay, creating the annotation directory on first write and
-// overwriting just that author's file. No compare-and-swap: the per-file lock only serializes an
-// author's own concurrent writes; different authors never share a file.
+// overwriting just that author's file. The per-file lock only serializes one author's concurrent
+// writes, and there is no compare-and-swap.
 func (s *osAnnotationStore) Save(ctx context.Context, uri artifact.URI, author string, set *webapi.AnnotationSet) error {
 	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
 	if err != nil {

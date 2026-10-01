@@ -7,9 +7,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestStampPowerInPins: an under-typed supply-named input pin is promoted to POWER_IN; a confident
-// direction, a supply OUTPUT name (VOUT), a polarized-cap "+" terminal, a net-form name ("3V3"),
-// ground, and a plain signal are all left untouched.
+// TestStampPowerInPins checks that an under-typed supply-named input pin is promoted to POWER_IN; a
+// confident direction, a supply OUTPUT name (VOUT), a polarized-cap "+" terminal, a net-form name
+// ("3V3"), ground, and a plain signal are all left untouched.
 func TestStampPowerInPins(t *testing.T) {
 	const (
 		IN     = ir.PinDirection_PIN_DIRECTION_INPUT
@@ -47,9 +47,10 @@ func TestStampPowerInPins(t *testing.T) {
 	}
 }
 
-// TestStampPowerInPinsHonorsSupplyPinVocab: the supply-pin vocabulary is config-overridable via the
-// same lexicon as the net roles (WS3-069), so a project whose parts name supply pins with a house
-// prefix ("PWR_") extends it and the stamp promotes those pins — no engine change, no frozen literal.
+// TestStampPowerInPinsHonorsSupplyPinVocab checks that the supply-pin vocabulary is
+// config-overridable via the same lexicon as the net roles (WS3-069), so a project whose parts name
+// supply pins with a house prefix ("PWR_") extends it and the stamp promotes those pins with no
+// engine change and no frozen literal.
 func TestStampPowerInPinsHonorsSupplyPinVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
 	v, err := BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{Supply: &configpb.VocabPatterns{Patterns: []string{`^PWR_`}}}})
@@ -66,7 +67,8 @@ func TestStampPowerInPinsHonorsSupplyPinVocab(t *testing.T) {
 	}
 }
 
-// TestStampPowerInPinsIdempotent: a re-stamp (a re-read) does not change an already-promoted pin.
+// TestStampPowerInPinsIdempotent checks that a re-stamp (a re-read) does not change an
+// already-promoted pin.
 func TestStampPowerInPinsIdempotent(t *testing.T) {
 	d := &ir.Design{Libraries: []*ir.PartLibrary{{Parts: []*ir.PartType{{
 		Name: "P", Pins: []*ir.Pin{{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_INPUT}},

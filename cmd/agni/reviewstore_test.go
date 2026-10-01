@@ -28,9 +28,10 @@ func storeDoc(design string) *checkspb.CheckResults {
 	}
 }
 
-// TestOSReviewStoreRoundTrip: a document written to the volume comes back identical in the fields a
-// consumer renders, and it is on disk as a readable results document rather than a private encoding,
-// so the volume stays inspectable with the same tools that read `--results-out` output.
+// TestOSReviewStoreRoundTrip checks that a document written to the volume comes back identical in
+// the fields a consumer renders, and it is on disk as a readable results document rather than a
+// private encoding, so the volume stays inspectable with the same tools that read `--results-out`
+// output.
 func TestOSReviewStoreRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	st, err := newOSReviewStore(dir)
@@ -73,8 +74,8 @@ func TestOSReviewStoreRoundTrip(t *testing.T) {
 	}
 }
 
-// TestOSReviewStoreListsNewestFirst is the property the id scheme buys: ids lead with a UTC timestamp,
-// so ordering a listing is a string sort over filenames with no document opened.
+// TestOSReviewStoreListsNewestFirst pins the property the id scheme buys. Ids lead with a UTC
+// timestamp, so ordering a listing is a string sort over filenames with no document opened.
 func TestOSReviewStoreListsNewestFirst(t *testing.T) {
 	st, err := newOSReviewStore(t.TempDir())
 	if err != nil {
@@ -110,10 +111,10 @@ func TestOSReviewStoreListsNewestFirst(t *testing.T) {
 	}
 }
 
-// TestOSReviewStoreSkipsUnreadableFiles: a long-lived volume accumulates whatever an operator or a
-// half-finished write leaves there. One bad file must not make every OTHER run unlistable, because the
-// error a user would meet would name pagination rather than the file, and the runs that are fine would
-// look lost.
+// TestOSReviewStoreSkipsUnreadableFiles exists because a long-lived volume accumulates whatever an
+// operator or a half-finished write leaves there. One bad file must not make every OTHER run
+// unlistable, because the error a user would meet would name pagination rather than the file, and
+// the runs that are fine would look lost.
 func TestOSReviewStoreSkipsUnreadableFiles(t *testing.T) {
 	dir := t.TempDir()
 	st, err := newOSReviewStore(dir)
@@ -141,8 +142,9 @@ func TestOSReviewStoreSkipsUnreadableFiles(t *testing.T) {
 	}
 }
 
-// TestOSReviewStoreMissingAndBadNames: an absent run is ErrNotFound on both Get and Delete, and a name
-// that would escape the store directory is refused before it reaches the filesystem.
+// TestOSReviewStoreMissingAndBadNames checks that an absent run is ErrNotFound on both Get and
+// Delete, and a name that would escape the store directory is refused before it reaches the
+// filesystem.
 func TestOSReviewStoreMissingAndBadNames(t *testing.T) {
 	dir := t.TempDir()
 	st, err := newOSReviewStore(dir)
@@ -167,8 +169,9 @@ func TestOSReviewStoreMissingAndBadNames(t *testing.T) {
 	}
 }
 
-// TestNewOSReviewStoreCreatesAndValidates: a fresh volume works on first boot, and a path that is not
-// a directory fails at startup where an operator can still fix it rather than at the first create.
+// TestNewOSReviewStoreCreatesAndValidates checks that a fresh volume works on first boot, and that
+// a path that is not a directory fails at startup where an operator can still fix it rather than at
+// the first create.
 func TestNewOSReviewStoreCreatesAndValidates(t *testing.T) {
 	base := t.TempDir()
 	nested := filepath.Join(base, "reviews", "runs")
@@ -190,8 +193,8 @@ func TestNewOSReviewStoreCreatesAndValidates(t *testing.T) {
 // TestOldFlatRunsReadAsUnparented is the migration, and it is a no-op by construction.
 //
 // Every run written before projects existed sits directly in the store directory, and that is
-// exactly where an unparented run belongs now. So the old files need no move and no rewrite, and
-// they read back as what they actually were: reviews of designs that belonged to no project. A
+// where an unparented run belongs now. So the old files need no move and no rewrite, and
+// they read back as what they were, reviews of designs that belonged to no project. A
 // layout that had claimed them for some project would have been retroactively asserting an ownership
 // that did not exist when the run was made.
 func TestOldFlatRunsReadAsUnparented(t *testing.T) {
@@ -202,7 +205,7 @@ func TestOldFlatRunsReadAsUnparented(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	// A run as an older agni wrote it: a file at the store root.
+	// A run as an older agni wrote it, as a file at the store root.
 	old, _, err := st.Create(ctx, "", storeDoc("legacy.edn"))
 	if err != nil {
 		t.Fatal(err)

@@ -23,7 +23,7 @@ func runDiffCSV(t *testing.T) ([][]string, string) {
 	return recs, out.String()
 }
 
-// TestDiffCSVOneTablePerChange is the load-bearing assertion for the shape decision: a diff report
+// TestDiffCSVOneTablePerChange is the main assertion for the shape decision. A diff report
 // is four collections of different kinds, and they arrive as one table discriminated by
 // change_class. Every row is the full width, so a component row and a net row parse the same.
 func TestDiffCSVOneTablePerChange(t *testing.T) {
@@ -57,7 +57,7 @@ func TestDiffCSVOneTablePerChange(t *testing.T) {
 }
 
 // TestDiffCSVProvenanceIsPerSide checks the two source-file columns carry the asymmetry that makes
-// them worth having: a new net exists only on the right, a deleted one only on the left.
+// them worth having, since a new net exists only on the right and a deleted one only on the left.
 func TestDiffCSVProvenanceIsPerSide(t *testing.T) {
 	recs, _ := runDiffCSV(t)
 	byClass := map[string][]string{}
@@ -100,7 +100,7 @@ func TestDiffCSVIsDeterministic(t *testing.T) {
 	}
 }
 
-// TestDiffRejectsUnknownFormat covers the behaviour change alongside the new format: this command
+// TestDiffRejectsUnknownFormat covers the behaviour change alongside the new format. This command
 // used to accept any --format value and silently render text, so a misspelling produced a human
 // summary that a script then failed to parse for reasons nothing explained.
 func TestDiffRejectsUnknownFormat(t *testing.T) {
@@ -118,9 +118,9 @@ func TestDiffRejectsUnknownFormat(t *testing.T) {
 	}
 }
 
-// TestDiffRenameApproxIsOptIn drives the near-match pass through the CLI, which is the seam the flag
-// actually crosses: the engine's default is disabled, so a missing flag here would silently produce
-// today's output and every unit test in core/diff would still pass.
+// TestDiffRenameApproxIsOptIn drives the near-match pass through the CLI, which is the boundary the
+// flag actually crosses. The engine's default is disabled, so a missing flag here would silently
+// produce today's output and every unit test in core/diff would still pass.
 func TestDiffRenameApproxIsOptIn(t *testing.T) {
 	run := func(args ...string) string {
 		var out bytes.Buffer
@@ -158,8 +158,9 @@ func TestDiffRenameApproxIsOptIn(t *testing.T) {
 	}
 }
 
-// TestDiffCSVCarriesRenameEvidence: the spreadsheet is where a reviewer triages a near match, so the
-// numbers that decided it have to be in columns rather than only in the text form's prose.
+// TestDiffCSVCarriesRenameEvidence exists because the spreadsheet is where a reviewer triages a
+// near match, so the numbers that decided it have to be in columns rather than only in the text
+// form's prose.
 func TestDiffCSVCarriesRenameEvidence(t *testing.T) {
 	var out bytes.Buffer
 	cmd := diffCmd()

@@ -21,8 +21,9 @@ func rolesDesign() *ir.Design {
 	}}
 }
 
-// TestNetRoleProjectsEveryStampedRole: the point of the relation. A role the engine acts on must be
-// nameable in a query, and before agni 691 control and gate_drive were stamped and projected nowhere.
+// TestNetRoleProjectsEveryStampedRole covers the point of the relation. A role the engine acts on
+// must be nameable in a query, and before agni 691 control and gate_drive were stamped and
+// projected nowhere.
 func TestNetRoleProjectsEveryStampedRole(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(rolesDesign())))
 
@@ -49,7 +50,7 @@ func TestNetRoleProjectsEveryStampedRole(t *testing.T) {
 			t.Errorf("net.role(%s, %s) missing; got %v", c.net, c.role, got[c.net])
 		}
 	}
-	// A net can carry several: 12V_SW is rail by prefix and switching by suffix.
+	// A net can carry several, and 12V_SW is rail by prefix and switching by suffix.
 	if !got["12V_SW"][classify.RoleToken(ir.Role_ROLE_RAIL)] {
 		t.Errorf("net.role must emit EVERY role, not the first: 12V_SW = %v", got["12V_SW"])
 	}
@@ -59,9 +60,9 @@ func TestNetRoleProjectsEveryStampedRole(t *testing.T) {
 	}
 }
 
-// TestEveryRoleInTheVocabularyIsProjectable: the ratchet. classify.AllNetRoles is what the projector
+// TestEveryRoleInTheVocabularyIsProjectable is the ratchet. classify.AllNetRoles is what the projector
 // iterates, so a role added to the token list and forgotten here is invisible to every query, which is
-// exactly how control and gate_drive spent a release unqueryable.
+// how control and gate_drive spent a release unqueryable.
 func TestEveryRoleInTheVocabularyIsProjectable(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(rolesDesign())))
 	seen := map[string]bool{}
@@ -75,7 +76,7 @@ func TestEveryRoleInTheVocabularyIsProjectable(t *testing.T) {
 	}
 }
 
-// TestNetAttrProjectsDeclaredAttributes: the twin of component.attr, and the half nets never had.
+// TestNetAttrProjectsDeclaredAttributes covers the twin of component.attr, and the half nets never had.
 func TestNetAttrProjectsDeclaredAttributes(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(rolesDesign())))
 
@@ -88,7 +89,7 @@ func TestNetAttrProjectsDeclaredAttributes(t *testing.T) {
 	if !found {
 		t.Errorf("net.attr(SCL, external, true) missing: %+v", byRel[RelNetAttr])
 	}
-	// Declared, not derived: a role must not leak into the attribute relation.
+	// Declared, not derived. A role must not leak into the attribute relation.
 	for _, f := range byRel[RelNetAttr] {
 		if f.Object == "role" {
 			t.Errorf("net.attr carries a role (%+v); roles are net.role, attributes are what the file declared", f)

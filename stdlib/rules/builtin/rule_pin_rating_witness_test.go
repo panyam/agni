@@ -10,7 +10,7 @@ import (
 )
 
 // Tests for the proof-on-pass prototype. The failure mode these are written against is the one
-// build/evidence.md warns about: "a witness is present on a pass" is an assertion that cannot fail,
+// build/evidence.md warns about. "A witness is present on a pass" is an assertion that cannot fail,
 // because a rule that hardcoded a witness would satisfy it. The property asserted here instead is
 // that the witness TRACKS THE FACT, so changing the seeded limit changes what the witness says and
 // removing the limit removes the pass.
@@ -116,7 +116,7 @@ func TestAbsMaxWithNoStatedMaximumIsNotAPass(t *testing.T) {
 }
 
 // A pass must cite the document, or it is an assertion rather than evidence. This is the review
-// meeting flow: "you say it is fine, against what?"
+// meeting's question, "you say it is fine, against what?"
 func TestPassingWitnessCarriesItsCitation(t *testing.T) {
 	f := func(v float64) *float64 { return &v }
 	v := verdictFor(t, pinAbsMaxVerdicts(absMaxModel(t, f(6.5), "+3V3", "+5V")), "14")
@@ -129,7 +129,7 @@ func TestPassingWitnessCarriesItsCitation(t *testing.T) {
 	}
 }
 
-// The two-sided case: a recommended range has to be reported as a range, not as one bound.
+// In the two-sided case, a recommended range has to be reported as a range, not as one bound.
 func TestRecommendedWitnessStatesBothBounds(t *testing.T) {
 	v := verdictFor(t, pinRecommendedVerdicts(xlatModel(t, "+3V3", "+5V")), "14")
 
@@ -143,7 +143,7 @@ func TestRecommendedWitnessStatesBothBounds(t *testing.T) {
 	}
 }
 
-// PROJECTION PARITY. The whole refactor rests on Eval still returning exactly the failures it
+// PROJECTION PARITY. The refactor rests on Eval still returning exactly the failures it
 // always did, so the verdict list and the finding list must agree about what failed.
 func TestVerdictsProjectToTheSameFindings(t *testing.T) {
 	m := xlatModel(t, "+5V", "+5V") // over VCCA's limits, inside VCCB's

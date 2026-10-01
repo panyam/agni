@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// linGood: LIN/TXD/RXD wired, and the LIN bus pulled up to VBAT through R1 (a resistor the reach walk
-// crosses; VBAT is a recognized rail). No profile finding.
+// linGood has LIN/TXD/RXD wired, and the LIN bus pulled up to VBAT through R1 (a resistor the reach
+// walk crosses; VBAT is a recognized rail). No profile finding.
 func linGood() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2", "R1"),
@@ -22,8 +22,8 @@ func linGood() *ir.Design {
 	}
 }
 
-// linBroken: RXD net absent (missing), the LIN bus reaches no rail (missing-pullup), and TXD on a
-// single-pin net (dangling).
+// linBroken has the RXD net absent (missing), the LIN bus reaches no rail (missing-pullup), and TXD
+// on a single-pin net (dangling).
 func linBroken() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2"),
@@ -80,8 +80,8 @@ func linHost(ref string) *ir.Component {
 		Attributes: map[string]string{"interface": "LIN"}}
 }
 
-// A component declaring interface=LIN wired to none of its signals: host-anchored completeness flags
-// every one of the three required signals.
+// When a component declares interface=LIN but is wired to none of its signals, host-anchored
+// completeness flags every one of the three required signals.
 func TestLINHostWhollyAbsent(t *testing.T) {
 	d := &ir.Design{
 		Components: append(comps("U1"), linHost("U2")),

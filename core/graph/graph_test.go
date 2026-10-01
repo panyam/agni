@@ -7,7 +7,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// design builds a tiny 3-component, 2-net IR fixture: R1-R2 share NET_A, R2-R3 share NET_B.
+// design builds a tiny 3-component, 2-net IR fixture where R1-R2 share NET_A and R2-R3 share NET_B.
 func design() *ir.Design {
 	return &ir.Design{
 		Name: "tiny",
@@ -37,7 +37,7 @@ func TestLayoutNodesAndEdges(t *testing.T) {
 	if len(sheet.Wires) != 2 {
 		t.Errorf("want 2 net edges, got %d", len(sheet.Wires))
 	}
-	// Each 2-member net is a star: one polyline per member, ending at the shared centroid.
+	// Each 2-member net is a star, with one polyline per member, ending at the shared centroid.
 	for _, w := range sheet.Wires {
 		if len(w.Polylines) != 2 {
 			t.Errorf("net %q: want 2 polylines, got %d", w.Net, len(w.Polylines))
@@ -73,9 +73,9 @@ func TestLayoutSkipsUnconnectedAndDangling(t *testing.T) {
 		Name:       "edge-cases",
 		Components: []*ir.Component{{RefDes: "R1"}},
 		Nets: []*ir.Net{
-			// Single real member: nothing to draw between, so no edge.
+			// A single real member has nothing to draw between, so no edge.
 			{Name: "SOLO", Connections: []*ir.Connection{{ComponentRef: "R1"}}},
-			// Reference to a component not in the design: dangling, dropped.
+			// A reference to a component not in the design dangles and is dropped.
 			{Name: "DANGLE", Connections: []*ir.Connection{
 				{ComponentRef: "R1"}, {ComponentRef: "R9"},
 			}},

@@ -12,7 +12,7 @@ import (
 	"github.com/panyam/agni/internal/mounts"
 )
 
-// The banner's whole job is to be paste-able. A mount minted by the serving process means nothing to
+// The banner exists to be pasted. A mount minted by the serving process means nothing to
 // a second agni, so a line without --mount is illustrative rather than usable.
 func TestOpenBannerPrintsAPasteableCheckCommand(t *testing.T) {
 	var b bytes.Buffer
@@ -88,7 +88,7 @@ func TestFreePortIsBindable(t *testing.T) {
 	}
 }
 
-// The banner prints TWO commands and they drifted: the check line moved to --server and the trace
+// The banner prints TWO commands and they drifted. The check line moved to --server and the trace
 // line beside it went on saying --url-base for a release, which is worse than a stale doc because it
 // is generated for someone to copy (agni issue 636). This holds both lines to the flag set the CLI
 // actually defines, so the pair cannot drift again.

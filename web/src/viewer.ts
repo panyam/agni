@@ -68,32 +68,32 @@ export interface RenderView {
   // setSvgOverlay stacks a transparent highlight-overlay SVG document (framed exactly like
   // the base document) above the shown sheet; "" clears it. Only meaningful in SVG mode.
   setSvgOverlay(markup: string): void;
-  // setBusy shows/hides a loading indicator around a render (slow on large schematics, and
-  // especially for the native shell-out). An optional label names the current phase (loading /
-  // rendering / running checks) so the overlay says what it is doing; it is left unchanged when
-  // omitted.
+  // setBusy shows or hides a loading indicator around a render, which is slow on large schematics
+  // and slower for the native shell-out. label names the current phase (loading, rendering, running
+  // checks) and is left unchanged when omitted.
   setBusy(busy: boolean, label?: string): void;
-  // getView / setView snapshot and restore the active renderer's pan/zoom for the given mode
-  // (WebGL -> canvas, SVG/Native -> the SVG host). The value is opaque to the presenter — it
-  // stores and replays whatever the renderer returns. getView returns null when there is
-  // nothing to snapshot (no sheet drawn yet in that renderer).
+  // getView / setView snapshot and restore the active renderer's pan/zoom for the given mode (WebGL
+  // -> canvas, SVG/Native -> the SVG host). The value is opaque to the presenter, which stores and
+  // replays whatever the renderer returns. getView returns null when there is nothing to snapshot
+  // (no sheet drawn yet in that renderer).
   getView(mode: RenderMode): unknown;
   setView(mode: RenderMode, view: unknown): void;
-  // setBoardLayers applies board layer visibility ("all" | "front" | "back") to the shown
-  // document (WS7-034) — a pure view concern: BoardSVG stratifies into classed groups and
-  // the host toggles CSS classes; no re-render. A schematic document has no such classes,
-  // so the setting is harmless there.
+  // setBoardLayers applies board layer visibility ("all" | "front" | "back") to the shown document
+  // (WS7-034). It is a pure view concern, since BoardSVG stratifies into classed groups and the
+  // host toggles CSS classes with no re-render. A schematic document has no such classes, so the
+  // setting is harmless there.
   setBoardLayers(side: string): void;
 }
 
-// ViewSink bundles every view surface the presenter pushes state to (WS9-019): one typed
-// object instead of a positional callback per panel, so adding a panel is one field here and
-// one line in the composition root. Panel fields are the panels' framework-neutral view
-// interfaces (the presenter calls setState, never a DOM node or a Solid signal — C3);
-// summary, report, and location stay plain functions because their hosts are not islands.
+// ViewSink bundles every view surface the presenter pushes state to (WS9-019), one typed object
+// instead of a positional callback per panel, so adding a panel is one field here and one line in
+// the composition root. Each field is a command-down surface, which the presenter pushes state into
+// and never reads back from. A panel field is that panel's framework-neutral view interface, so the
+// presenter calls setState and never touches a DOM node or a Solid signal (C3). summary, report,
+// and location stay plain functions because their hosts are not islands.
 export interface ViewSink {
-  // sheetNavs are the sheet-navigation surfaces (today just the file tree) that stay in sync
-  // from this one source; a second surface joins without presenter changes.
+  // sheetNavs are the sheet-navigation surfaces (the sheet tabs today), kept in sync from this one
+  // source, so a second surface joins without presenter changes.
   sheetNavs: SheetsView[];
   summary: (text: string) => void;
   // controls receives the full control-bar state (active mode, native availability, layout
@@ -101,18 +101,19 @@ export interface ViewSink {
   controls: ControlsView;
   // findings receives the findings list + selection.
   findings: FindingsView;
-  // expectationCaption receives the conformance sidecar's non-anchored verdict (WS9-045): the
-  // set-equality counts and the fires:{} silent assertion, as a canvas strip. null hides it (no
-  // sidecar). The anchored assertions render as the status-colored highlight overlay, not here.
+  // expectationCaption receives the conformance sidecar's non-anchored verdict (WS9-045), meaning
+  // the set-equality counts and the fires:{} silent assertion, shown as a canvas strip. null hides
+  // it when there is no sidecar. The anchored assertions render as the status-colored highlight
+  // overlay instead.
   expectationCaption: (caption: ExpectationCaption | null) => void;
   // undrawnNote receives "this drawing is incomplete" for the open design, or null when it is
   // complete (agni issue 354). A render that lost its symbols still draws every ref des and wire, so
   // this is the only thing on screen that can say the sheet is short.
   undrawnNote: (note: UndrawnNote | null) => void;
   // staleLinkNote receives "the link you arrived on was computed against different bytes", or null
-  // when there is nothing to say (agni issue 392). Nothing else on screen can say it: a verdict id is
-  // derived from a rule name and a subject ref, so it resolves against an edited design just as
-  // readily and draws its proof on whatever now answers to that ref.
+  // when there is nothing to say (agni issue 392). Nothing else on screen can say it, because a
+  // verdict id is derived from a rule name and a subject ref, so it resolves against an edited
+  // design just as readily and draws its proof on whatever now answers to that ref.
   staleLinkNote: (note: StaleLinkNote | null) => void;
   // rules receives the rule catalog + active selection.
   rules: RulesView;
@@ -126,8 +127,8 @@ export interface ViewSink {
   // overview receives the per-sheet violation tiles (WS9-025) whenever the findings or the
   // shown sheet change. Optional like query.
   overview?: OverviewView;
-  // query receives the datalog query results (WS9-036) after each run. Optional: hosts without
-  // the panel need not wire it, and the presenter no-ops runQuery when it is absent.
+  // query receives the datalog query results (WS9-036) after each run. Optional, since hosts
+  // without the panel need not wire it; the presenter no-ops runQuery when it is absent.
   query?: QueryView;
   // coverage receives the per-interface coverage matrix (WS9-041) on each design load. Optional
   // like query; the presenter no-ops refreshCoverage when it is absent.
@@ -142,26 +143,24 @@ export interface ViewSink {
   review?: ReviewView;
   // conventionBar reports which naming vocabulary the answers were computed under (WS9-128).
   // Optional like the panels; setConvention no-ops when it is absent, so a host that offers no
-  // convention picker simply always uses the server's default.
+  // convention picker always uses the server's default.
   conventionBar?: ConventionBarView;
   // projectBar states which project the open design resolved to and whether the built-in catalog is
-  // in effect (agni issue 175). Optional like the rest: a host without it simply never says, which is
-  // the pre-project behaviour.
+  // in effect (agni issue 175). Optional like the rest; a host without it never says.
   projectBar?: ProjectBarView;
 }
 
-// ViewerPresenter coordinates the viewer's semantic loop: a file selected in the tree is
-// loaded (GetDesign), its sheets fill the navigator, and the chosen sheet is rendered in the
-// active mode (GetSheet -> WebGL, or GetSheetSvg -> the SVG reference). It is framework-neutral
-// — it calls the canvas, the navigator's view interface, and RenderView, never a DOM node or a
-// Solid signal (C3). Its runtime is in-process TS because file/sheet/mode switches are
-// low-frequency (C7).
+// ViewerPresenter coordinates the viewer's semantic loop. An opened file is loaded (GetDesign), its
+// sheets fill the navigator, and the chosen sheet is rendered in the active mode (GetSheet ->
+// WebGL, or GetSheetSvg -> the SVG reference). It is framework-neutral, calling the canvas, the
+// navigator's view interface, and RenderView and never a DOM node or a Solid signal (C3). It runs
+// in-process TS because file, sheet and mode switches are low-frequency (C7).
 export class ViewerPresenter {
   private mount = "";
   private path = "";
   private sheets: SheetRef[] = [];
   private currentSheet = "";
-  // Default to SVG: it renders faithfully (with text) for every design, where WebGL is
+  // Default to SVG, since it renders faithfully (with text) for every design, where WebGL is
   // currently lower-fidelity and native is per-format/opt-in.
   private mode: RenderMode = "svg";
   // currentLayout is the geometry axis (faithful / grid / layered / ...), empty until the first
@@ -187,7 +186,7 @@ export class ViewerPresenter {
   private checksRunning = false;
 
   // rules is the catalog for the open design (ListRules), and selectedRules the active ruleset the
-  // user has checked — the subset CheckDesign runs. It defaults to every available rule so a design
+  // user has checked, the subset CheckDesign runs. It defaults to every available rule so a design
   // opens showing all runnable checks. Group-by/filter/search are the panel's own view state.
   private rules: RuleItem[] = [];
   private selectedRules: string[] = [];
@@ -198,30 +197,29 @@ export class ViewerPresenter {
   // it is not re-fetched.
   private rulesByName = new Map<string, RuleItem>();
   private readonly findingCache = new Map<string, FindingItem[]>();
-  // verdictCache mirrors findingCache: the CONSIDERED SET per rule, keyed the same way and filled
-  // from the same response, since CheckDesign already returns both. A rule that states no considered
-  // set caches an empty list, which is why the panel must distinguish "this rule reported nothing"
-  // from "this rule does not report considered sets" using the catalog rather than this map.
+  // verdictCache holds the CONSIDERED SET per rule, keyed like findingCache and filled from the
+  // same CheckDesign response. A rule that states no considered set caches an empty list, so the
+  // panel must use the catalog, not this map, to tell "this rule reported nothing" from "this rule
+  // does not report considered sets".
   private readonly verdictCache = new Map<string, VerdictItem[]>();
   // focusedVerdict is the id currently drawn as a proof, "" when none. It rides the URL so a link
   // reopens on the same proof, and it is cleared by anything that replaces the highlight, since a
   // stale id in the address bar would promise a drawing the canvas is no longer showing.
   private focusedVerdict = "";
-  // linkHash is the design revision the URL the viewer was opened on claimed, "" when it claimed
-  // none. designContentHash is the revision this server actually read, off GetDesign. The pair is
-  // what the stale-link note is computed from, and they are kept apart rather than reduced to a
-  // boolean at the point of comparison so the note can distinguish "different bytes" from "could not
-  // check", which is the whole reason the field exists.
+  // linkHash is the design revision the viewer's URL claimed, "" when it claimed none.
+  // designContentHash is the revision this server actually read, off GetDesign. The stale-link note
+  // is computed from the pair, kept apart rather than reduced to a boolean so the note can tell
+  // "different bytes" from "could not check".
   //
-  // linkHash outlives the focused verdict deliberately. The claim is about the DESIGN this viewer
-  // read, so it still holds after the reader dismisses a proof and re-focuses it; what drops it is
-  // opening a different design, where the claim stops applying at all.
+  // linkHash outlives the focused verdict. The claim is about the DESIGN this viewer read, so it
+  // still holds after the reader dismisses a proof and re-focuses it; opening a different design
+  // drops it.
   private linkHash = "";
   private designContentHash = "";
 
   // tracedPins is the "from,to" the panel last asked about ("" when none), and tracedHops the radius
   // it asked at (0 for the server default). They are URL state in the same category as the focused
-  // verdict: which question the open viewer is looking at.
+  // verdict, naming which question the open viewer is looking at.
   private tracedPins = "";
   private tracedHops = 0;
   // highlights are the active highlight layers (the selection API): each spec names
@@ -243,14 +241,14 @@ export class ViewerPresenter {
   // viewKey includes the layout, so a design's faithful view and its grid view remember their
   // pan/zoom independently.
   private viewKey(mode: RenderMode, sheetId: string): string {
-    // Include the symbol source: faithful symbols scale the layout, so its pan/zoom is its own.
+    // Include the symbol source, because faithful symbols scale the layout and need their own pan/zoom.
     return `${mode}|${this.currentLayout}|${this.faithfulSymbols ? "f" : "g"}|${this.mount}|${this.path}|${sheetId}`;
   }
 
   constructor(
     private readonly client: DesignClient,
-    // checks is the CheckService client (rules, findings, expectations, the severity report) —
-    // its own service since WS9-026, so its own client.
+    // checks is the CheckService client (rules, findings, expectations, the severity report), a
+    // separate service (WS9-026).
     private readonly checks: CheckClient,
     private readonly canvas: CanvasComponent,
     private readonly render: RenderView,
@@ -263,16 +261,15 @@ export class ViewerPresenter {
     private readonly reviews?: ReviewClient,
     private readonly workspace?: WorkspaceClient,
     // projects resolves the open design to its project, so a review is stored under the project
-    // whose config scored it. Optional like the rest: without it a run stores unparented, which is
-    // the correct answer for a design that belongs to no project anyway.
+    // whose config scored it. Optional like the rest; without it a run stores unparented.
     private readonly projects?: ProjectClient,
   ) {}
 
-  // runQuery evaluates an ad-hoc datalog query over the open design (WS9-036) and pushes the
-  // result to the query panel. It needs a file open: with none it reports that as the panel's
-  // error rather than calling the service. A parse error or unloadable design comes back as an
-  // InvalidArgument, whose message the panel shows inline (search stays in the panel, never a
-  // toast). The busy flag rides in the pushed result so the panel disables Run while a query runs.
+  // runQuery evaluates an ad-hoc datalog query over the open design (WS9-036) and pushes the result
+  // to the query panel. With no file open it reports that as the panel's error rather than calling
+  // the service. A parse error or an unloadable design comes back as InvalidArgument, whose message
+  // the panel shows inline rather than as a toast. The busy flag rides in the pushed result so the
+  // panel disables Run while a query runs.
   async runQuery(text: string): Promise<void> {
     if (!this.views.query || !this.query) return;
     if (!this.mount || !this.path) {
@@ -281,9 +278,9 @@ export class ViewerPresenter {
     }
     this.views.query.setState(emptyResult(true));
     try {
-      // The overlay goes here too, or the vocabulary bar lies. The bar names the vocabulary the
-      // answers on screen were computed under, and a Query panel answering under the server's while
-      // the bar said otherwise would be the exact over-claim the bar exists to prevent (WS3-113).
+      // The overlay goes here too, because the vocabulary bar names the convention the answers on
+      // screen were computed under, and a Query panel answering under the server's would contradict
+      // it (WS3-113).
       const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay() });
       this.views.query.setState(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
@@ -291,12 +288,11 @@ export class ViewerPresenter {
     }
   }
 
-  // locateEntity focuses a query result cell's entity (WS9-038): it navigates to the given sheet
-  // (a badge click) then highlights the component/net, stacking the entity as a translucent focus
-  // over any active findings highlight — the same two-layer emphasis selectFinding uses. Native
-  // rendering shows the tool's own document with no overlay, so it hops to WebGL to reveal the
-  // tint. A query entity is not a finding, so the highlight is built from the bare (kind, subject)
-  // via entitySpecs rather than a findings lookup.
+  // locateEntity focuses a query result cell's entity (WS9-038). It navigates to the given sheet (a
+  // badge click), then stacks the entity as a translucent focus over any active findings highlight,
+  // the same two-layer emphasis selectFinding uses. Native rendering shows the tool's own document
+  // with no overlay, so it hops to WebGL to reveal the tint. A query entity is not a finding, so
+  // the highlight is built from the bare (kind, subject) via entitySpecs.
   async locateEntity(
     kind: string,
     subject: string,
@@ -307,9 +303,9 @@ export class ViewerPresenter {
     if (!subject) return;
     if (sheet && sheet !== this.currentSheet) await this.showSheet(sheet);
     if (this.mode === "native") await this.setMode("webgl");
-    // pin is carried because a picked PIN is a different target from its component: the spec builder
-    // keys a pin highlight by (ref, pin), and an empty pin would silently widen the focus to the
-    // whole part. Callers that locate a net or a component pass nothing and are unaffected.
+    // A picked PIN is a different target from its component, since the spec builder keys a pin
+    // highlight by (ref, pin) and an empty pin would silently widen the focus to the whole part.
+    // Net and component callers pass nothing.
     const focus = withFocusShape(entitySpecs(kind, subject, pin), this.highlightStyle);
     await this.setHighlights(focusStack(this.findings, [{ kind, subject, pin: "" }], focus));
     // Explain an entity the faithful view doesn't draw (WS9-039). The server sets a reason only for
@@ -320,36 +316,35 @@ export class ViewerPresenter {
     this.views.query?.setLocateNote(note);
   }
 
-  // locateVerdict focuses ONE verdict by its derived id and draws its proof: the verdict's context
-  // as ground, its subject as the figure on top.
+  // locateVerdict focuses ONE verdict by its derived id and draws its proof, with the verdict's
+  // context as ground and its subject as the figure on top.
   //
-  // This is the CLI-to-viewer hop. A row printed by `agni check --verdicts` carries the same id this
-  // resolves, computed independently on both sides from the same fields, so neither has to have
-  // talked to the other. An unknown id draws nothing and returns false rather than clearing the
-  // canvas, because a stale or mistyped link should leave what the reader was looking at alone.
+  // This is the CLI-to-viewer hop. A row printed by `agni check --verdicts` carries the same id
+  // this resolves, computed independently on both sides from the same fields. An unknown id draws
+  // nothing and returns false rather than clearing the canvas, because a stale or mistyped link
+  // should leave what the reader was looking at alone.
   //
-  // Returns whether the id resolved, so the caller can say so. A verdict whose rule has not been run
-  // yet is simply absent, which is the same "not computed" state the findings list already models.
+  // Returns whether the id resolved, so the caller can say so. A verdict whose rule has not run yet
+  // is absent, the same "not computed" state the findings list models.
   async locateVerdict(id: string): Promise<boolean> {
     const v = this.findVerdict(id);
     if (!v) return false;
     if (this.mode === "native") await this.setMode("webgl");
-    // Every entity in the tuple is the figure. A clearance verdict lights both nets, which is the
-    // whole answer; lighting the first would show half of a distance.
+    // Every entity in the tuple is the figure, so a clearance verdict lights both nets rather than
+    // half of a distance.
     const focus = withFocusShape(subjectsToSpecs(v.subjects), this.highlightStyle);
     await this.setHighlights(verdictProofStack(v, focus));
     this.focusedVerdict = v.id;
-    // Pushed so the panel learns which verdict is focused. setHighlights above cleared the field and
-    // pushed nothing, so without this the canvas shows the proof and the table never learns there is
-    // one to point at.
+    // Pushed so the panel learns which verdict is focused, since setHighlights above cleared the
+    // field and pushed nothing.
     this.pushFindings();
     this.syncLocation();
     return true;
   }
 
   // findVerdict looks one up across every rule's cached considered set. Linear over a few thousand
-  // rows at worst (the sum of the considered sets, not the rules-times-subjects cross product), so
-  // an index would buy nothing a profiler could see.
+  // rows at worst (the sum of the considered sets, not rules times subjects), too few for an index
+  // to matter.
   private findVerdict(id: string): VerdictItem | undefined {
     for (const vs of this.verdictCache.values()) {
       const hit = vs.find((v) => v.id === id);
@@ -358,17 +353,17 @@ export class ViewerPresenter {
     return undefined;
   }
 
-  // verdicts is the flattened considered set across the selected rules, in the catalog's order, for
-  // the panel to render.
+  // verdictList is the flattened considered set across the selected rules, in the catalog's order,
+  // for the panel to render.
   verdictList(): VerdictItem[] {
     const out: VerdictItem[] = [];
     for (const name of this.selectedRules) out.push(...(this.verdictCache.get(name) ?? []));
     return out;
   }
 
-  // sheetBadges denormalizes a finding's wire sheet ids into display badges (WS9-024): the id
-  // for navigation, the SheetRef's name for the label (falling back to the id). A single-sheet
-  // design gets no badges — there is nowhere to navigate — so panels render badges iff present.
+  // sheetBadges denormalizes a finding's wire sheet ids into display badges (WS9-024), the id for
+  // navigation and the SheetRef's name for the label (falling back to the id). A single-sheet
+  // design gets no badges, since there is nowhere to navigate, so panels render badges iff present.
   private sheetBadges(ids: string[]): SheetBadge[] {
     if (this.sheets.length <= 1) return [];
     return ids.map((id) => ({ id, name: this.sheets.find((s) => s.id === id)?.name || id }));
@@ -394,9 +389,9 @@ export class ViewerPresenter {
     this.pushOverview(activeId);
   }
 
-  // pushOverview reflects the per-sheet violation tiles (WS9-025): the design's sheets,
-  // each counted from the current findings' sheet badges. Re-pushed when the sheet set,
-  // the shown sheet, or the findings change.
+  // pushOverview reflects the per-sheet violation tiles (WS9-025), each sheet counted from the
+  // current findings' sheet badges. Re-pushed when the sheet set, the shown sheet, or the findings
+  // change.
   private pushOverview(activeId = this.currentSheet): void {
     this.views.overview?.setState({ tiles: sheetTiles(this.sheets, this.findings), activeId, ruleCount: this.selectedRules.length });
   }
@@ -420,30 +415,29 @@ export class ViewerPresenter {
     });
   }
 
-  // setBoardLayers adopts a layer-visibility choice for the board sheet (WS7-034): a CSS
-  // toggle on the shown document, no re-render.
+  // setBoardLayers adopts a layer-visibility choice for the board sheet (WS7-034), a CSS toggle on
+  // the shown document with no re-render.
   setBoardLayers(side: string): void {
     this.boardLayers = side;
     this.render.setBoardLayers(side);
     this.pushControls();
   }
 
-  // openFile loads the design behind a tree selection, populates the sheet navigator, reports
-  // whether NATIVE is available for it, and renders a sheet in the active mode. wantSheet names
-  // the sheet to open (used when restoring a deep link); it defaults to the first sheet, and
-  // falls back to the first sheet if the named one is absent from this design.
+  // openFile loads a design, populates the sheet navigator, reports whether NATIVE is available for
+  // it, and renders a sheet in the active mode. wantSheet names the sheet to open (a deep-link
+  // restore), falling back to the first sheet when empty or absent from this design.
+  //
   // A DIFFERENT design starts from the server's default layout (faithful when the file carries
-  // geometry) rather than inheriting the previous design's layout: a sticky auto-layout would
-  // draw a geometry-bearing design as a graph instead of as authored. keepLayout opts out for
-  // deep-link restores, where the URL's layout must win; a same-file re-open (setLayout) keeps
-  // the chosen layout because mount/path are unchanged.
+  // geometry) instead of inheriting the previous design's, since a sticky auto-layout would draw a
+  // geometry-bearing design as a graph. keepLayout opts out for deep-link restores, where the URL's
+  // layout must win; a same-file re-open (setLayout) keeps the chosen layout because mount/path are
+  // unchanged.
   async openFile(mount: string, path: string, wantSheet = "", keepLayout = false): Promise<void> {
     const newFile = mount !== this.mount || path !== this.path;
     if (!keepLayout && newFile) this.currentLayout = "";
-    // A different design retires the link's claim entirely: the hash described the bytes behind the
-    // OLD path, so carrying it forward would compare two unrelated files and report a mismatch that
-    // means nothing. restore() re-sets it after this call, which is why it clears rather than being
-    // set from a location here.
+    // A different design retires the link's claim, since the hash described the bytes behind the
+    // OLD path. restore() re-sets it after this call, which is why it clears here rather than
+    // reading a location.
     if (newFile) {
       this.linkHash = "";
       this.views.staleLinkNote(null);
@@ -464,21 +458,19 @@ export class ViewerPresenter {
       if (!keepLayout && newFile) this.faithfulSymbols = this.availableLayouts.includes("faithful");
       this.summary = summaryLine(path, d.name, d.layout, d.sourceFormat, d.componentCount, d.netCount);
       this.views.summary(this.summary);
-      // Pushed with the summary because it is a property of THIS read: the layout the server resolved
-      // either found its symbols or did not, and a reader needs that before trusting the drawing.
+      // Pushed with the summary because it is a property of THIS read, and a reader needs it before
+      // trusting the drawing.
       this.views.undrawnNote(undrawnNote(d.undrawn));
-      // Recorded with the rest of this read's properties. "" is what the server sends when it could
-      // not hash the file, and it MUST NOT be read as agreement with a link that named a revision.
-      // staleLinkNote keeps that a third state rather than folding it into a match.
+      // "" means the server could not hash the file, and it MUST NOT be read as agreement with a
+      // link that named a revision; staleLinkNote keeps it a third state.
       this.designContentHash = d.contentHash ?? "";
       // If the newly opened file can't render natively but we're in native mode, fall back to
       // SVG (the always-works renderer) so switching files doesn't error.
       if (!d.nativeAvailable && this.mode === "native") this.mode = "svg";
       this.nativeAvailable = d.nativeAvailable;
       this.pushControls();
-      // Resolve the project as soon as the design is known, before the report and parts work. Whose
-      // config is in effect is something a reader needs while the rest is still loading, and it is
-      // what the pickers below are filtered by.
+      // Resolve the project before the report and parts work, since a reader wants to know whose
+      // config is in effect while the rest loads, and the pickers below filter by it.
       await this.resolveProject();
       const target = (wantSheet && d.sheets.find((s) => s.id === wantSheet)) || d.sheets[0];
       this.pushSheets(target?.id ?? "");
@@ -486,14 +478,14 @@ export class ViewerPresenter {
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
       this.findingCache.clear(); // findings are per-design; a new file starts a fresh cache
       this.verdictCache.clear();
-      this.skippedCache.clear(); // and so is which rules could not run: a new design has new tiers
+      this.skippedCache.clear(); // and so is which rules could not run, since a new design has new tiers
       this.setBusyPhase("loading rules…");
-      await this.loadRules(mount, path); // catalog + default selection; checks now run on demand (Run button)
-      this.assembleFindings(); // empty until a run — pushes the "press Run" state + zero overview counts
+      await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
+      this.assembleFindings(); // empty until a run; pushes the "press Run" state + zero overview counts
       await this.setHighlights([]); // clear any highlight carried over from the previously open design
       this.clearExpectations(); // the sidecar reconcile is part of the on-demand run, not the load
       this.setBusyPhase("building report…");
-      await this.refreshReport(); // the auto-layout conversion report is not a check — still eager
+      await this.refreshReport(); // the auto-layout conversion report is not a check, so it stays eager
       await this.refreshParts(); // the datasheet-params join is a per-design read, not a check
       // One resolution feeds both pickers, each with the kind it can actually parse.
       const choices =
@@ -511,33 +503,31 @@ export class ViewerPresenter {
     }
   }
 
-  // restore reopens the viewer at a URL-derived location: it adopts the mode/layout/symbol knobs
+  // restore reopens the viewer at a URL-derived location. It adopts the mode/layout/symbol knobs
   // from the location (so the design loads and renders in that view) and opens the file at the
   // requested sheet. Used on initial load and on browser back/forward, so a refresh or a shared
-  // link lands where you left off rather than on the empty shell. It sets the knobs directly
-  // (not via setMode/setLayout) to avoid their re-render side effects: the single openFile below
-  // does one load, and its native-unavailable guard still corrects an impossible mode.
+  // link lands where you left off rather than on the empty shell. It sets the knobs directly (not
+  // via setMode/setLayout) to avoid their re-render side effects, so the single openFile below does
+  // one load and its native-unavailable guard still corrects an impossible mode.
   async restore(loc: ViewerLocation): Promise<void> {
     if (loc.mode) this.mode = loc.mode;
     this.currentLayout = loc.layout; // empty -> server picks the effective layout, as on a fresh open
     this.faithfulSymbols = loc.symbols;
     await this.openFile(loc.mount, loc.path, loc.sheet, true);
-    // A verdict id in the link RUNS THE CHECKS before resolving it, which is a deliberate exception
-    // to checks being on-demand (WS9). A cold load has an empty verdict cache, so without this a
-    // pasted link lands on "Press Run checks" and resolves nothing, which is the whole CLI-to-viewer
-    // hop failing at the one moment it is being used. A URL naming a verdict is an explicit request
-    // for that answer, so paying for the run is what the reader asked for.
-    // Adopted and reported BEFORE the checks run and the proof is drawn, so a reader looking at a
-    // highlight has already been told not to trust it. Reporting afterwards would put the warning on
-    // screen at the same moment as the drawing it warns about, which is too late to be a warning.
+    // A verdict id in the link RUNS THE CHECKS before resolving it, a deliberate exception to
+    // checks being on-demand (WS9). A cold load has an empty verdict cache, so without this a
+    // pasted link lands on "Press Run checks" and resolves nothing
+    // (docsite/content/architecture/web-client.md#a-panel-that-works-on-click-can-still-be-broken-on-arrival).
+    // The hash is adopted and reported BEFORE the checks run and the proof is drawn, so the warning
+    // is on screen before the highlight it warns about.
     this.linkHash = loc.hash;
     this.views.staleLinkNote(staleLinkNote(this.linkHash, this.designContentHash));
     if (loc.verdict) {
       await this.runChecksForLink(loc.rule);
       await this.locateVerdict(loc.verdict);
     }
-    // A trace link needs no run first, unlike a verdict: it carries the QUESTION, so the viewer just
-    // asks it. Nothing has to be cached, derived on both sides, or checked against a revision.
+    // A trace link needs no run first, because it carries the QUESTION rather than a derived id, so
+    // the viewer just asks it.
     if (loc.trace) {
       const [from, to] = splitTraceParam(loc.trace);
       await this.runTrace(from, to, loc.traceHops);
@@ -559,15 +549,15 @@ export class ViewerPresenter {
       // Named from the focused verdict rather than remembered from the URL, so a verdict reached by
       // clicking in the panel produces the same cheap link as one arrived at from a report.
       rule: this.focusedVerdict ? (this.findVerdict(this.focusedVerdict)?.rule ?? "") : "",
-      // The trace the panel is showing, so a route found by typing two pins is addressable without
-      // the reader having to think about it, and the address bar and the panel never disagree.
+      // The trace the panel is showing, so a typed route is addressable and the address bar never
+      // disagrees with the panel.
       trace: this.tracedPins,
       traceHops: this.tracedHops,
     };
   }
 
-  // syncLocation reports the current URL-addressable state to the host (which reflects it into
-  // the browser URL). Cheap and idempotent — the host dedupes against the address bar.
+  // syncLocation reports the current URL-addressable state to the host (which reflects it into the
+  // browser URL). Cheap and idempotent, since the host dedupes against the address bar.
   private syncLocation(): void {
     this.views.location?.(this.currentLoc());
   }
@@ -602,42 +592,31 @@ export class ViewerPresenter {
   // panel (the fired count comes from the finding cache, so a rule's badge shows how many findings
   // it produced this run).
   private pushRules(): void {
-    // fired counts only the currently selected rules, so the rules-panel badges stay consistent
-    // with the checks panel (which shows only the selection): a rule that ran but was then
-    // deselected keeps its cached findings but drops out of the fired counts.
+    // fired counts only the currently selected rules, matching the checks panel, so a rule that ran
+    // and was then deselected keeps its cached findings but drops out of the fired counts.
     const fired: Record<string, number> = {};
     for (const name of this.selectedRules) fired[name] = this.findingCache.get(name)?.length ?? 0;
     this.views.rules.setState({ rules: this.rules, selected: this.selectedRules, fired });
   }
 
   // setRuleSelection adopts a new active ruleset (from the rules panel's checkboxes) and re-renders
-  // the findings over just that subset FROM THE CACHE — it fetches nothing (checks are on-demand), so
-  // toggling a rule is instant. A selected rule with no cache entry shows as pending until the next
-  // Run; a deselected rule's findings are simply hidden.
+  // the findings over just that subset FROM THE CACHE. It fetches nothing (checks are on-demand),
+  // so toggling a rule is instant. A selected rule with no cache entry shows as pending until the
+  // next Run; a deselected rule's findings are hidden.
   async setRuleSelection(names: string[]): Promise<void> {
     this.selectedRules = names;
     this.assembleFindings();
     await this.setHighlights(subjectsToSpecs(this.findings));
   }
 
-  // runChecksForLink resolves a verdict a URL named, running ONE rule when the link says which.
+  // runChecksForLink resolves a verdict a URL named, running ONE rule when the link says which (see
+  // ViewerLocation.rule in router.ts). A cold load has an empty verdict cache, so a link must run
+  // something first. Running the whole catalog was 56 rules and about fifteen seconds per click on
+  // the board this was measured against, since each click is a fresh page load.
   //
-  // A cold load has an empty verdict cache, so a link has to run something before it can resolve
-  // anything. What it does not have to do is run everything: the catalog was 56 rules on the board
-  // this was measured against and one link cost the whole of it, about fifteen seconds, on every
-  // click, because each click is a fresh page load and the cache never survives one.
-  //
-  // The rule comes off the URL rather than out of the verdict id (agni issue 518's neighbour). Ids
-  // are generated and never parsed, so the minting side names the rule instead.
-  //
-  // An unnamed rule falls back to the full run, which is what every link written before this
-  // parameter existed carries, and what a hand-typed verdict id carries too. A named rule the
-  // catalog does not have also falls back, because the alternative is resolving nothing at all and
-  // reporting it as a stale link.
-  //
-  // The rest of the catalog stays PENDING afterwards rather than running behind the scenes. Following
-  // a link is a question about one verdict, and the findings panel already models an unrun rule, so
-  // the reader who wants the others presses Run.
+  // An unnamed rule (an older or hand-typed link) or one the catalog does not have falls back to
+  // the full run, because the alternative is resolving nothing and reporting it as a stale link.
+  // The rest of the catalog stays PENDING afterwards; the reader who wants it presses Run.
   private async runChecksForLink(rule: string): Promise<void> {
     if (!rule || !this.rulesByName.has(rule)) {
       await this.runChecks();
@@ -653,11 +632,10 @@ export class ViewerPresenter {
     this.assembleFindings();
   }
 
-  // runChecks is the on-demand check trigger (the Run button): it fetches the selected rules not yet
-  // cached, reconciles the expectation sidecar (a full run), and refreshes interface coverage. Checks
-  // no longer fire on load or on a rule toggle, so this is the single place a design is evaluated and
-  // a large design does not stall the open. Re-entrancy and no-open-file are guarded; running disables
-  // the button meanwhile.
+  // runChecks is the on-demand check trigger (the Run button). It fetches the selected rules not
+  // yet cached, reconciles the expectation sidecar (a full run), and refreshes interface coverage.
+  // It is the only place a design is evaluated, so a large design does not stall the open.
+  // Re-entrancy and no-open-file are guarded, and running disables the button meanwhile.
   async runChecks(): Promise<void> {
     if (this.checksRunning || !this.mount || !this.path) return;
     this.checksRunning = true;
@@ -710,9 +688,8 @@ export class ViewerPresenter {
             locateReason: f.locateReason ?? 0,
           });
         }
-        // ?? [] for the same reason skipped uses it: an older server or a hand-built stub may omit
-        // the field, and a missing considered set must read as "this rule stated none" rather than
-        // throwing mid-run and costing the findings their display too.
+        // ?? [] as for skipped, so a missing considered set reads as "this rule stated none"
+        // instead of throwing mid-run and losing the findings too.
         for (const v of resp.verdicts ?? []) {
           this.verdictCache.get(v.rule)?.push({
             id: v.id,
@@ -752,9 +729,10 @@ export class ViewerPresenter {
     this.pushOverview(); // per-sheet counts follow the same findings
   }
 
-  // pushFindings reflects the current findings + focus + selection to the checks panel, including the
-  // pending count (selected rules not yet run — badges the Run button and tells "press Run" from "ran
-  // clean") and the rule catalog summaries (the per-rule one-liners the merged panel shows).
+  // pushFindings reflects the current findings + focus + selection to the checks panel, including
+  // the pending count (selected rules not yet run, which badges the Run button and tells "press
+  // Run" from "ran clean") and the rule catalog summaries (the per-rule one-liners the merged panel
+  // shows).
   private pushFindings(): void {
     const pending = this.selectedRules.filter((n) => !this.findingCache.has(n)).length;
     const ruleSummaries: Record<string, string> = {};
@@ -776,17 +754,16 @@ export class ViewerPresenter {
       ruleSummaries,
     };
     this.views.findings.setState(state);
-    // The query panel projects the SAME state onto whatever is selected (agni issue 259), which is
-    // what keeps an entity view a projection of one pass rather than a second evaluation path. It
-    // gets the state whole rather than a count, because only pending/running separate "nothing is
-    // wrong with this net" from "nobody has checked it", and a count computed here would have to be
-    // recomputed here on every selection change, in a place that does not know the selection.
+    // The query panel projects the SAME state onto whatever is selected (agni issue 259), so an
+    // entity view is a projection of one pass rather than a second evaluation. It gets the whole
+    // state rather than a count because only pending/running separate "nothing is wrong with this
+    // net" from "nobody has checked it", and this code does not know the selection.
     this.views.query?.setFindings(state);
   }
 
-  // skippedCache is rule name -> why it could not run on this design, alongside findingCache. It is a
-  // cache for the same reason: checks are on-demand and per rule, so a rule's gated-ness is learned
-  // when it is first run and has to survive until the design changes.
+  // skippedCache is rule name -> why it could not run on this design, alongside findingCache.
+  // Cached for the same reason, since checks are on-demand and per rule, so a rule's gated-ness is
+  // learned when it first runs and has to survive until the design changes.
   private skippedCache = new Map<string, string>();
 
   private expectations: RuleExpectationItem[] = [];
@@ -795,19 +772,17 @@ export class ViewerPresenter {
 
   // ---- Naming convention (WS9-128) -----------------------------------------------------------
   //
-  // A request may carry its own naming convention, which REPLACES the server's startup default for
-  // that request (WS3-124). The presenter holds the chosen one and stamps it onto every rule-running
-  // call, so a user asking "what does this board look like under my vocabulary" gets a consistent
-  // answer across the checks panel, the report, and a review run.
+  // A request convention REPLACES the server's startup default (WS3-124; see conventions.ts). The
+  // presenter holds the chosen one and stamps it onto every rule-running call, so the checks panel,
+  // the report, and a review run answer under one vocabulary.
 
   // convention is the resolved value sent on each request, null while the server's default applies.
   // conventionRef is the ref it was resolved from, so the UI can name it.
   private convention: NamingConvention | null = null;
   private conventionRef = "";
 
-  // overlay is what every rule-running call carries. It is a method rather than a field so a caller
-  // cannot forget: the three call sites that run rules all go through it, and a fourth added later
-  // that did not would be visibly different from its neighbours.
+  // overlay is what every rule-running call carries. Every call site that runs rules goes through
+  // it, so one that did not would stand out from its neighbours.
   private overlay(): OverlayConfig | undefined {
     if (!this.convention && !this.projectState.plain) return undefined;
     return create(OverlayConfigSchema, {
@@ -815,19 +790,16 @@ export class ViewerPresenter {
       // a config tier added there is one a request can carry without a second edit here.
       config: { conventions: this.convention ?? undefined },
       // ignore_project is the "show me the built-in catalog" choice. It rides on every rule-running
-      // request rather than being applied once, because each surface composes its own overlay: a
-      // toggle that reached the check panel but not the rules list would show findings from one
-      // catalog beside the rule set of another.
+      // request because each surface composes its own overlay, and a toggle that reached only some
+      // would show findings from one catalog beside the rule set of another.
       ignoreProject: this.projectState.plain,
     });
   }
 
   // resolveProject asks which project the open design belongs to and pushes the answer to the bar.
-  //
-  // The viewer resolves and SHOWS, rather than the server's loader silently swapping in the design's
-  // entry. That was the open question from the resource work, and the browser is what settles it: the
-  // CLI can print a line saying which file it actually read, and a silent swap in a viewer has no
-  // equivalent — the user picked a file in a tree and would be looking at a different one.
+  // The viewer resolves and SHOWS rather than letting the server's loader silently swap in the
+  // design's entry, because the user picked one file and would be looking at a different one (see
+  // project.ts).
   private async resolveProject(): Promise<void> {
     if (!this.views.projectBar && !this.views.review && !this.views.conventionBar) return;
     const plain = this.projectState.plain;
@@ -866,15 +838,14 @@ export class ViewerPresenter {
   }
 
   // setPlainCatalog switches between this design's project config and the built-in catalog, then
-  // re-runs whatever is on screen. Re-running is the point: the toggle answers "whose rules are
-  // these" by subtraction, and subtraction needs the second run.
+  // re-runs whatever is on screen. The toggle answers "whose rules are these" by subtraction, which
+  // needs the second run.
   async setPlainCatalog(plain: boolean): Promise<void> {
     if (this.projectState.plain === plain) return;
     this.projectState = { ...this.projectState, plain };
     this.pushProject();
-    // The rule LIST is recomposed too, not just the findings. A toggle that changed which rules ran
-    // but left the panel listing the other catalog's rules would show findings from one and the rule
-    // set of another, which is the drift the toggle exists to make visible.
+    // The rule LIST is recomposed too, or the panel would list one catalog's rules beside the
+    // other's findings.
     await this.loadRules(this.mount, this.path);
     await this.runChecks();
   }
@@ -883,12 +854,11 @@ export class ViewerPresenter {
   // back to the server's default when ref is empty.
   //
   // It resolves through the SERVER (GetNamingConvention) rather than parsing YAML here, because the
-  // browser holds a ref and no filesystem and because the config's validity is the engine's call: a
-  // pattern that will not compile is rejected once, here, instead of on every run that carries it.
+  // browser holds a ref and no filesystem, and a pattern that will not compile is then rejected
+  // once instead of on every run.
   //
-  // Cached findings are dropped, and that is the point rather than housekeeping. A convention changes
-  // which rules exist and what the engine believes a rail IS, so every cached finding was computed
-  // under a different question. Keeping them would mix two vocabularies in one list.
+  // Cached findings are dropped because a convention changes which rules exist and what the engine
+  // believes a rail IS, so every cached finding answered a different question.
   async setConvention(ref: string): Promise<void> {
     if (!this.views.conventionBar) return;
     if (ref === "") {
@@ -910,36 +880,29 @@ export class ViewerPresenter {
     }
   }
 
-  // reloadForConvention re-reads the rule CATALOG and drops cached findings after the vocabulary
-  // changes.
-  //
-  // Reloading the catalog is the part that is easy to miss and expensive to get wrong. A request
-  // convention replaces the server's, so the set of rules that EXIST changes: the server's naming
-  // rules disappear and the request's appear under a different namespace. A client that kept the old
-  // catalog would hold a selection naming rules that no longer exist, run none of them, and show no
-  // naming findings at all — which reads as a design with no naming problems rather than as a client
-  // asking the wrong question.
+  // reloadForConvention re-reads the rule CATALOG and drops every cached answer after the
+  // vocabulary changes. The catalog reload, the finding/verdict/skipped cache clears, and the
+  // query-result reset must happen together, since a request convention changes which rules EXIST
+  // (docsite/content/architecture/web-client.md#two-caches-for-one-answer-will-drift). A client
+  // that kept the old catalog would run none of the selected naming rules, which reads as a design
+  // with no naming problems.
   private async reloadForConvention(): Promise<void> {
     this.findingCache.clear();
-    // The considered set goes with them, and for a sharper reason than the findings do. A verdict is
-    // keyed by rule name, and a convention change is precisely when rule names change, so a surviving
-    // verdict could name a rule that no longer exists and answer for a subject nothing re-examined.
-    // Reporting "this was checked" under a vocabulary nobody ran is the false coverage claim verdicts
-    // exist to remove.
+    // A verdict is keyed by rule name, which is what a convention changes, so a surviving verdict
+    // could claim coverage for a rule nobody ran.
     this.verdictCache.clear();
     this.focusedVerdict = "";
     this.skippedCache.clear();
-    // Query results were computed under the previous vocabulary too, and `rail` answering differently
-    // is the whole point of the feature, so leaving them on screen would show two vocabularies at once.
+    // Query results were computed under the previous vocabulary too (`net.rail` answers differently),
+    // so leaving them would show two vocabularies at once.
     this.views.query?.setState(emptyResult(false));
     if (this.mount && this.path) await this.loadRules(this.mount, this.path);
     this.assembleFindings();
   }
 
-  // pushConvention reports which vocabulary is in effect. It is a first-class piece of state rather
-  // than a label, because a finding that changed because the vocabulary changed and one that changed
-  // because the design changed are not the same claim, and nothing in a findings list distinguishes
-  // them (WS9-128).
+  // pushConvention reports which vocabulary is in effect (WS9-128). Nothing in a findings list
+  // distinguishes a finding that changed with the vocabulary from one that changed with the design,
+  // so the bar has to say.
   private pushConvention(busy = false, error = ""): void {
     this.views.conventionBar?.setState({
       choices: this.conventionChoices,
@@ -963,10 +926,8 @@ export class ViewerPresenter {
 
   // ---- Review (WS9-052) ----------------------------------------------------------------------
   //
-  // A review RUN is a resource (WS9-053), so the panel is not a "run and render" surface: it shows
-  // the runs already stored for this design, and creating one is an explicit act. That shape is the
-  // point rather than an accident of the API. A checklist verdict is compared between revisions, so
-  // a panel that could only ever show the latest run would rebuild the gap the resource model closed.
+  // A review RUN is a resource (WS9-053; see review.ts), so the panel shows the runs already stored
+  // for this design and creating one is an explicit act.
 
   // reviewState is the panel's pushed state, held here because the presenter owns the interaction
   // loop (which run is selected, which checklist is chosen) and the panel is a humble view (C3).
@@ -978,13 +939,12 @@ export class ViewerPresenter {
   }
 
   // refreshReviews loads the runs stored for the open design plus the checklists sitting beside it.
-  // It runs on each design load, so opening a reviewed board shows its latest verdict rather than an
-  // empty panel.
+  // It runs on each design load, so opening a reviewed board shows its latest verdict rather than
+  // an empty panel.
   //
-  // A server started without --review-store answers with a failed precondition, which is recorded as
-  // storeConfigured=false rather than as an error. That distinction is the panel's, and it matters:
-  // "this deployment keeps no runs" and "nobody has reviewed this board" look identical in an empty
-  // list, and a user told the wrong one goes hunting for a button that was never going to appear.
+  // A server started without --review-store answers FailedPrecondition, recorded as
+  // storeConfigured=false rather than as an error, because "this deployment keeps no runs" and
+  // "nobody has reviewed this board" look identical in an empty list.
   private async refreshReviews(): Promise<void> {
     if (!this.views.review || !this.reviews) return;
     this.reviewState = emptyReview();
@@ -1006,24 +966,18 @@ export class ViewerPresenter {
     this.pushReview();
   }
 
-  // pickerChoices are the config files the convention and checklist pickers offer, ONE LIST PER KIND.
+  // pickerChoices are the config files the convention and checklist pickers offer, ONE LIST PER
+  // KIND. When the design resolves to a project they are what the PROJECT DECLARES, since a sibling
+  // listing cannot tell the kinds apart and offers intent files and descriptors that never resolve.
   //
-  // When the design resolves to a project, they are what the PROJECT DECLARES — because it does
-  // declare them, and a declaration beats a guess. Before this the pickers listed every YAML sitting
-  // beside the design and could not tell which were really their own kind, so they offered
-  // design-intent files and descriptors that could never resolve; conventionbar's own doc called
-  // choosing one "an EXPECTED path, not an edge case".
+  // The kinds stay APART because a checklist and a naming convention are parsed by different rpcs,
+  // and offering `review.yaml` in the vocabulary picker fails with a YAML error naming a field the
+  // other schema has never heard of. Profiles appear in NEITHER, since a profile is composed into
+  // the catalog rather than selected.
   //
-  // The kinds are kept APART. A checklist and a naming convention are different file formats parsed
-  // by different rpcs, so a single shared list only moves the problem: offering `review.yaml` in the
-  // vocabulary picker fails exactly the way offering `intent.yaml` did, with a YAML error naming a
-  // field the other schema has never heard of. Profiles appear in NEITHER, because a profile is
-  // composed into the catalog rather than selected as a vocabulary or run as a checklist; there is no
-  // picker it is an answer to.
-  //
-  // A design with no project falls back to listing the siblings for both, which is the honest answer:
-  // nothing declared anything, so the picker cannot know, and offering a file that turns out not to be
-  // a checklist costs one clear error where hiding a real one costs a user their own file.
+  // A design with no project falls back to listing the siblings for both. Nothing declared
+  // anything, and offering a file that turns out not to be a checklist costs one clear error where
+  // hiding a real one costs a user their own file.
   private async pickerChoices(): Promise<{ conventions: ChecklistOption[]; checklists: ChecklistOption[] }> {
     const cfg = this.projectResolved?.project?.config;
     if (cfg && (cfg.conventionsUri || cfg.checklistUri)) {
@@ -1036,14 +990,11 @@ export class ViewerPresenter {
     return { conventions: siblings, checklists: siblings };
   }
 
-  // yamlSiblings lists the design's own directory and keeps the YAML files. It deliberately does not
-  // read them: whether a YAML file is a checklist or a naming convention is decided by the server
-  // (GetReviewManifest / GetNamingConvention), which parse and validate. Guessing here would mean
-  // either hiding a user's real file or duplicating two parsers in the browser.
-  //
-  // One listing feeds BOTH pickers. A project keeps its review.yaml and its conventions.yaml side by
-  // side, and two calls asking the same question of the same directory would be two chances to
-  // disagree about what is there.
+  // yamlSiblings lists the design's own directory and keeps the YAML files. It does not read them,
+  // because the server decides whether a YAML file is a checklist or a naming convention
+  // (GetReviewManifest / GetNamingConvention), and guessing here would either hide a user's real
+  // file or duplicate two parsers in the browser. One listing feeds BOTH pickers, since a project
+  // keeps its review.yaml and its conventions.yaml side by side.
   private async yamlSiblings(): Promise<ChecklistOption[]> {
     if (!this.workspace) return [];
     const slash = this.path.lastIndexOf("/");
@@ -1056,9 +1007,9 @@ export class ViewerPresenter {
     }
   }
 
-  // designParent is the project resource name the open design belongs to, "" when it belongs to none
-  // or when resolution fails. A failure is not worth surfacing here: the run still stores, just
-  // unparented, which is strictly better than refusing to record a review that ran.
+  // designParent is the project resource name the open design belongs to, "" when it belongs to
+  // none or when resolution fails. A failure is not surfaced, because the run still stores
+  // unparented, which beats refusing to record a review that ran.
   private async designParent(): Promise<string> {
     if (!this.projects || !this.mount || !this.path) return "";
     try {
@@ -1069,10 +1020,9 @@ export class ViewerPresenter {
     }
   }
 
-  // createReview runs the chosen checklist against the open design and stores the result, then shows
-  // it. The manifest is resolved server-side first (GetReviewManifest) and sent back as a VALUE, which
-  // is the C22 seam: the browser holds a ref and no filesystem, so the one read is a named rpc rather
-  // than something the run does behind its back.
+  // createReview runs the chosen checklist against the open design and stores the result, then
+  // shows it. The manifest is resolved server-side first (GetReviewManifest) and sent back as a
+  // VALUE (C22), because the browser holds a ref and no filesystem.
   async createReview(): Promise<void> {
     if (!this.views.review || !this.reviews) return;
     if (this.reviewState.running) return;
@@ -1083,18 +1033,17 @@ export class ViewerPresenter {
     try {
       const man = await this.reviews.getReviewManifest({ uri: artifactUri(this.mount, this.reviewState.checklist) });
       const created = await this.reviews.createReview({
-        // A run is stored under the design's project when it has one. Resolving it here rather than
-        // letting the server re-derive it keeps the run filed under the same project whose config
-        // scored it, and an empty parent is a real answer: a design on a mounted folder often
-        // belongs to no project, and its runs belong to none either.
+        // Resolved here rather than re-derived by the server, so the run is filed under the project
+        // whose config scored it. An empty parent is a real answer, since a design on a mounted
+        // folder often belongs to no project.
         parent: await this.designParent(),
         designUri: artifactUri(this.mount, this.path),
         manifest: man.manifest,
         overlay: this.overlay(),
       });
       const run = reviewFromWire(created);
-      // Prepend rather than refetch: the new run is the newest, and the server hands the whole
-      // document back, so a second round-trip would only re-fetch what is already in hand.
+      // Prepend rather than refetch, since the new run is the newest and the server already handed
+      // back the whole document.
       this.reviewState.runs = [run, ...this.reviewState.runs];
       this.reviewState.selected = run.name;
     } catch (e) {
@@ -1123,16 +1072,13 @@ export class ViewerPresenter {
 
   // runTrace walks from one named pin to another over the open design and lights the answer.
   //
-  // The highlight goes through the SAME two-layer stack a query cell and a verdict use: the findings
-  // layer becomes context underneath and the route is the figure on top. Nothing about a route needed
-  // a new painting path, which is the whole reason this is a small method.
+  // The highlight goes through the SAME two-layer stack a query cell and a verdict use, with the
+  // findings layer as context underneath and the route as the figure on top. traceSubjects decides
+  // what to light for each outcome (see trace.ts), including the two nets that fail to join on a
+  // no-route.
   //
-  // It lights the answer whatever the answer was, and traceSubjects decides what that means. A
-  // no-route lights the two nets that fail to join, because that is the picture a reader goes looking
-  // for the moment they read the words.
-  //
-  // A malformed pin is caught HERE rather than at the server: it is a typo in the box, the panel is
-  // showing the box, and a round trip to be told the same thing would only make it slower.
+  // A malformed pin is caught HERE rather than at the server, since it is a typo in the box the
+  // panel is showing.
   async runTrace(fromText: string, toText: string, hops = 0): Promise<void> {
     const view = this.views.trace;
     if (!view) return;
@@ -1160,22 +1106,17 @@ export class ViewerPresenter {
       return;
     }
     view.setState(state);
-    // Recorded whatever the outcome was, so a link can carry a NEGATIVE answer too. "these two pins
-    // do not join" is a thing worth sending someone, and a URL that only survived a success would
-    // quietly drop the half of the answers people argue about.
+    // Recorded whatever the outcome, so a link can carry a NEGATIVE answer too.
     this.tracedPins = `${from.refDes}.${from.pin},${to.refDes}.${to.pin}`;
     this.tracedHops = hops;
     this.syncLocation();
     const subjects = traceSubjects(state);
     if (subjects.length === 0) return;
     if (this.mode === "native") await this.setMode("webgl");
-    // Go to a sheet the answer is ON, the way selectFinding does. Without this a route was drawn on
-    // whatever sheet happened to be open, which on a cold link is the design's first: an 82-sheet
-    // export opens on a table of contents with no wires at all (agni issue 657).
-    //
-    // The FROM endpoint first, because the reader named that pin and a route reads in that direction,
-    // then any net of the route that is drawn. An answer drawn nowhere leaves the view alone rather
-    // than jumping somewhere arbitrary.
+    // Go to a sheet the answer is ON, the way selectFinding does, or a cold link draws on the
+    // design's first sheet, which on an 82-sheet export is a table of contents with no wires (agni
+    // issue 657). traceSheet prefers the FROM endpoint's sheet (see trace.ts), and an answer drawn
+    // nowhere leaves the view alone.
     const target = traceSheet(state);
     if (target && target !== this.currentSheet) await this.showSheet(target);
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
@@ -1183,7 +1124,7 @@ export class ViewerPresenter {
   }
 
   // refreshCoverage fetches the interface-coverage matrix for the open design (WS9-041) and pushes
-  // it to the coverage panel. Optional panel: a no-op when unwired. A design with no detected
+  // it to the coverage panel, a no-op when the panel is unwired. A design with no detected
   // interface (or a fetch failure) pushes an empty state, so the panel shows its empty message
   // rather than stale coverage from the previous design.
   private async refreshCoverage(): Promise<void> {
@@ -1201,7 +1142,7 @@ export class ViewerPresenter {
   }
 
   // refreshParts fetches the datasheet-params join for the open design (WS9-035) and pushes it to
-  // the parts panel. Optional panel: a no-op when unwired. A design with no joined specs (or a serve
+  // the parts panel, a no-op when the panel is unwired. A design with no joined specs (or a serve
   // started without --params, or a fetch failure) pushes an empty state, so the panel shows its
   // empty hint rather than stale parts from the previous design.
   private async refreshParts(): Promise<void> {
@@ -1218,10 +1159,10 @@ export class ViewerPresenter {
     }
   }
 
-  // clearExpectations resets the expectations panel to empty and pushes it. Called on design load,
-  // because the sidecar reconcile is now part of the on-demand Run (refreshExpectations) rather than
-  // the load — before the first Run the panel shows its neutral empty state instead of reconciling
-  // against zero findings (which would mislabel every non-pending expectation "missing").
+  // clearExpectations resets the expectations panel to empty and pushes it. Called on design load
+  // because the sidecar reconcile runs with the on-demand Run (refreshExpectations), so before the
+  // first Run the panel shows its neutral empty state instead of reconciling against zero findings,
+  // which would mislabel every non-pending expectation "missing".
   private clearExpectations(): void {
     this.expectations = [];
     this.expectationFindings = [];
@@ -1266,8 +1207,8 @@ export class ViewerPresenter {
       }
     }
     // A conformance fixture's assertions become the status-colored highlight overlay (the anchored
-    // half) — replacing the plain "all findings lit" base for this design — plus the caption (the
-    // non-anchored verdict). A real design (no sidecar) keeps the findings base and hides the caption.
+    // half), replacing the plain "all findings lit" base, plus the caption (the non-anchored
+    // verdict). A real design with no sidecar keeps the findings base and hides the caption.
     if (this.hasSidecar) {
       await this.setHighlights(expectationSpecs(this.reconcileExpectations(), this.expectationFindings));
     }
@@ -1282,47 +1223,38 @@ export class ViewerPresenter {
       : [];
   }
 
-  // pushExpectations reflects the conformance caption (WS9-045): the set-equality verdict + counts for
-  // a design with a sidecar, null (hidden) otherwise. It carries no highlight — the anchored overlay is
-  // applied once by refreshExpectations, so a later focus change does not disturb it.
+  // pushExpectations reflects the conformance caption (WS9-045), the set-equality verdict and
+  // counts for a design with a sidecar, null (hidden) otherwise. It carries no highlight, because
+  // refreshExpectations applies the anchored overlay once and a later focus change must not disturb
+  // it.
   private pushExpectations(): void {
     this.views.expectationCaption(this.hasSidecar ? expectationCaption(this.reconcileExpectations()) : null);
   }
 
-  // setHighlights replaces the active highlight layers — the selection/unselection API. Each
-  // spec selects components/nets/pins with a color/alpha; an empty array clears everything.
-  // The WebGL canvas applies specs locally (it holds the packed keys, so no round-trip); SVG
-  // mode fetches the matching overlay document and composites it above the sheet. Native mode
-  // shows the format's own golden document, which the overlay cannot frame-match, so
-  // highlights are simply not drawn there (they appear on the next switch to WebGL/SVG).
+  // setHighlights replaces the active highlight layers (the selection API). Each spec selects
+  // components/nets/pins with a color/alpha; an empty array clears everything. The WebGL canvas
+  // applies specs locally since it holds the packed keys, and SVG mode fetches the matching overlay
+  // document and composites it above the sheet. Native mode shows the format's own golden document,
+  // which the overlay cannot frame-match, so highlights are not drawn there until the next switch
+  // to WebGL/SVG.
   async setHighlights(specs: HighlightSpec[]): Promise<void> {
     this.highlights = specs;
-    // Any change to the highlight drops the focused verdict, for the same reason the controls are
-    // pushed here: there are seven paths that replace it and every one of them invalidates the
-    // claim the URL is making. locateVerdict re-sets it AFTER calling this, so the one path that
-    // legitimately owns a proof keeps it and the other six cannot leave a stale id in the address
-    // bar promising a drawing the canvas stopped showing.
+    // Any change to the highlight drops the focused verdict, because every path that replaces the
+    // highlight invalidates the claim the URL makes. locateVerdict re-sets it AFTER calling this,
+    // so the one path that owns a proof keeps it.
     this.focusedVerdict = "";
     this.canvas.setHighlights(specs);
-    // Pushed HERE rather than at each call site, because every path that changes the highlight has to
-    // reach the clear control's enabled state and there are seven of them.
+    // Pushed HERE rather than at each of the seven call sites, because every one has to update the
+    // clear control's enabled state.
     this.pushControls();
     await this.refreshSvgOverlay();
   }
 
-  // clearHighlights turns the highlight field off entirely.
+  // clearHighlights turns the highlight field off entirely (agni issue 348). Toggling the focused
+  // row off is NOT this, because that path restores the base layer.
   //
-  // The viewer could not do this at all. setHighlights([]) was reachable from exactly one place in the
-  // client, on opening a DIFFERENT design, so once checks had run the field stayed on until the reader
-  // navigated away (agni issue 348).
-  //
-  // Toggling the focused row off is NOT this. That path deliberately restores the base layer, which is
-  // right for a toggle and is why the gap went unnoticed: the obvious gesture did something reasonable
-  // and the reader assumed it was the off switch.
-  //
-  // It drops the FOCUS too, not just the layers. A cleared drawing with a still-selected row in the
-  // panel is a surface disagreeing with itself, and the next style change would repaint the focus the
-  // reader thought they had dismissed.
+  // It drops the FOCUS too, so the panel does not keep a selected row beside a cleared drawing and
+  // the next style change does not repaint a dismissed focus.
   async clearHighlights(): Promise<void> {
     this.selectedSubject = "";
     this.selectedNetId = "";
@@ -1331,9 +1263,9 @@ export class ViewerPresenter {
     await this.setHighlights([]);
   }
 
-  // refreshSvgOverlay fetches the highlight overlay for the current sheet and stacks it above
-  // the SVG document; no highlights (or a failed fetch) clears it instead. Called whenever the
-  // specs change or an SVG sheet (re)renders — the overlay is framed per sheet, so it must be
+  // refreshSvgOverlay fetches the highlight overlay for the current sheet and stacks it above the
+  // SVG document; no highlights (or a failed fetch) clears it instead. Called whenever the specs
+  // change or an SVG sheet (re)renders, because the overlay is framed per sheet and must be
   // re-fetched with the base document.
   private async refreshSvgOverlay(): Promise<void> {
     if (this.mode !== "svg" || !this.currentSheet) return;
@@ -1356,13 +1288,12 @@ export class ViewerPresenter {
     }
   }
 
-  // selectFinding focuses one finding: it highlights just that finding's subject (exactly by its
-  // kind — net, component, or pin), in whichever renderer is showing. Clicking the focused finding
-  // again clears the focus and returns to the whole-selection highlight (every current finding).
-  // sheet names an explicit sheet to show (a badge click); without it, a subject that does not
-  // appear on the current sheet navigates to the first sheet it lives on before highlighting
-  // (WS9-024) — previously the highlight join silently missed. An explicit sheet never toggles
-  // the focus off, so clicking a second badge of a focused spanning net just switches sheets.
+  // selectFinding focuses one finding, highlighting just its subject by kind (net, component, or
+  // pin) in whichever renderer is showing. Clicking the focused finding again clears the focus and
+  // returns to highlighting every current finding. sheet names an explicit sheet to show (a badge
+  // click); without it, a subject absent from the current sheet navigates to the first sheet it
+  // lives on (WS9-024). An explicit sheet never toggles the focus off, so clicking a second badge
+  // of a focused spanning net just switches sheets.
   async selectFinding(subject: string, sheet?: string, netId = ""): Promise<void> {
     const toggleOff = this.selectedSubject === subject && this.selectedNetId === netId && !sheet;
     this.selectedSubject = toggleOff ? "" : subject;
@@ -1387,16 +1318,15 @@ export class ViewerPresenter {
     const onCurrent = focused?.sheets.some((b) => b.id === this.currentSheet) ?? true;
     const target = sheet ?? (focused && focused.sheets.length > 0 && !onCurrent ? focused.sheets[0].id : "");
     if (target && target !== this.currentSheet) await this.showSheet(target);
-    // Focus stacks two layers (WS9-017): the other findings keep their outline, and the focused
-    // subject frames on top — a component/pin as a translucent bounding rect, a net as a
-    // translucent PATH highlighter along its wire (WS9-040) — so the selection reads as emphasis
-    // without losing the surrounding finding context. focusStack drops the focused NET from the
-    // base layer so the opaque underlay does not show through its translucent highlighter.
+    // Focus stacks two layers (WS9-017). The other findings keep their outline, and the focused
+    // subject frames on top, a component/pin as a translucent bounding rect and a net as a
+    // translucent PATH highlighter along its wire (WS9-040). focusStack drops the focused NET from
+    // the base layer so the opaque underlay does not show through its highlighter.
     await this.reapplyFocus(subject, netId);
   }
 
   // findFinding locates the focused finding by its per-instance id when given (a net id, or a bus
-  // id for a bus finding — WS7-042b — the two namespaces are disjoint), so one of two same-named
+  // id for a bus finding per WS7-042b; the two namespaces are disjoint), so one of two same-named
   // nets or anonymous buses is picked; else by subject name. It falls back to the full-run
   // expectation findings, since a subject can be clicked from the expectations panel with its rule
   // deselected.
@@ -1414,7 +1344,7 @@ export class ViewerPresenter {
     await this.setHighlights(focusStack(this.findings, focused ? [{ kind: focused.kind, subject: focused.subject, pin: focused.pin ?? "", netId: focused.netId ?? "" }] : [], focusLayers));
   }
 
-  // setHighlightStyle applies a user highlight style (WS9-044) to the focus marker: subsequent
+  // setHighlightStyle applies a user highlight style (WS9-044) to the focus marker. Subsequent
   // focuses use it, and a currently focused subject re-renders in it immediately. The presenter
   // does not persist the style (that is dock chrome); passing undefined restores the built-in look.
   setHighlightStyle(style: FocusStyle | undefined): void {
@@ -1451,9 +1381,9 @@ export class ViewerPresenter {
   }
 
   // renderSheet fetches one sheet in the given format, draws it in the matching renderer, then
-  // restores a remembered pan/zoom for the current (mode, file, sheet) — else the fresh fit
-  // stands. It keys the view on the active mode, so a native-mode SVG fallback still restores
-  // the native slot's view (native and SVG share the SVG host). Throws on RPC failure.
+  // restores a remembered pan/zoom for the current (mode, file, sheet); otherwise the fresh fit
+  // stands. It keys the view on the active mode, so a native-mode SVG fallback still restores the
+  // native slot's view (native and SVG share the SVG host). Throws on RPC failure.
   private async renderSheet(sheetId: string, format: SheetFormat): Promise<void> {
     const symbols = this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH;
     const resp = await this.client.getSheet({ uri: artifactUri(this.mount, this.path), sheet: sheetId, layout: this.currentLayout, format, symbols });
@@ -1543,10 +1473,10 @@ function summaryLine(path: string, name: string, layout: string, format: string,
   return parts.join(" · ");
 }
 
-// isStoreUnconfigured reports the one server condition the review panel must not show as an error:
-// the deployment was started without --review-store, so it keeps no runs at all. Connect maps the
-// service's sentinel to FailedPrecondition, and matching on the CODE rather than the message keeps
-// this from breaking when the wording changes.
+// isStoreUnconfigured reports the one server condition the review panel must not show as an error,
+// a deployment started without --review-store that keeps no runs. Connect maps the service's
+// sentinel to FailedPrecondition, and matching on the CODE keeps this working when the message
+// wording changes.
 function isStoreUnconfigured(e: unknown): boolean {
   return ConnectError.from(e).code === Code.FailedPrecondition;
 }
@@ -1564,8 +1494,8 @@ function baseOf(uri: string): string {
 }
 
 // optionsFor turns one declared URI into a picker's option list, empty when the project declared
-// none. A project that declares no convention offers only the server's, which is the truthful state:
-// there is no project convention to go back to.
+// none. A project that declares no convention offers only the server's, since there is no project
+// convention to go back to.
 function optionsFor(uri: string | undefined): ChecklistOption[] {
   return uri ? [{ ref: uriPath(uri), label: baseOf(uri) }] : [];
 }

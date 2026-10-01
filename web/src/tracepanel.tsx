@@ -18,11 +18,10 @@ function endLabel(e: TraceEndItem): string {
 // TracePanel asks for two pins and shows the answer: the route as one line, then each net with what
 // else sits on it, then what the answer rests on.
 //
-// The three outcomes render as three different things rather than as one message with a status word,
-// because they are three different kinds of statement. A route is a fact about the design. A
-// no-route is also a fact about the design and says which nets it is about. An unresolved endpoint is
-// a failed QUESTION, so it says which name failed and does not mention connectivity at all: a reader
-// who saw "not connected" there would go and look at the board instead of at what they typed.
+// The three outcomes render as three different things rather than one message with a status word.
+// A route and a no-route are facts about the design, and a no-route names the nets it is about. An
+// unresolved endpoint is a failed QUESTION, so it names the name that failed and never mentions
+// connectivity, or a reader would go look at the board instead of at what they typed.
 function TracePanel(props: {
   state: () => TraceState;
   onTrace: (from: string, to: string) => void;
@@ -99,10 +98,9 @@ function TracePanel(props: {
                     <Show when={n.busLike}>
                       <span class="trace-rail-note">rail or plane: a route may end here, never pass through</span>
                     </Show>
-                    {/* The elided COUNT lives inside this list, so the gate has to admit a net
-                        whose stubs were all dropped. The server caps at twelve and so cannot
-                        produce that today, and a panel that renders nothing when it does would be
-                        silently hiding the one thing the count exists to say. */}
+                    {/* The elided COUNT lives inside this list, so the gate admits a net whose
+                        stubs were all dropped. The server caps at twelve and cannot produce that
+                        today, but rendering nothing then would hide the count. */}
                     <Show when={n.stubs.length > 0 || n.stubsElided > 0}>
                       <ul class="trace-stubs">
                         <For each={n.stubs}>
@@ -153,9 +151,9 @@ function TracePanel(props: {
   );
 }
 
-// tracePanelIsland mounts the panel and returns its command-down view. onTrace is the intent up: the
-// reader named two pins, so the presenter runs the walk and highlights what came back. Same island
-// shape as coveragePanelIsland / findingsPanelIsland.
+// tracePanelIsland mounts the panel and returns its command-down view. onTrace is the intent up,
+// fired when the reader names two pins, and the presenter runs the walk and highlights the answer.
+// Same island shape as coveragePanelIsland / findingsPanelIsland.
 export function tracePanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

@@ -17,8 +17,8 @@ func readSch(t *testing.T, name string) []byte {
 	return b
 }
 
-// TestUnresolvedSymbolReported (WS1-052): an opener that cannot find a .sym leaves every placement
-// pinless, and the reference is now recorded instead of only making the read quieter.
+// TestUnresolvedSymbolReported (WS1-052) covers an opener that cannot find a .sym, which leaves every
+// placement pinless. The reference is now recorded instead of only making the read quieter.
 func TestUnresolvedSymbolReported(t *testing.T) {
 	failing := func(symref string) ([]byte, error) { return nil, fmt.Errorf("no symbol %q", symref) }
 	d, err := ReadWithSymbols(bytes.NewReader(readSch(t, "divider.sch")), "divider.sch", failing)
@@ -39,10 +39,10 @@ func TestUnresolvedSymbolReported(t *testing.T) {
 	}
 }
 
-// TestUnresolvedSymbolSuppressesDanglesAndSaysWhy is the pairing that motivates the whole ticket:
-// the reader already suppressed dangling endpoints when a symbol failed (WS1-013), because missing
+// TestUnresolvedSymbolSuppressesDanglesAndSaysWhy is the pairing that motivates the ticket.
+// The reader already suppressed dangling endpoints when a symbol failed (WS1-013), because missing
 // pins turn real wire ends into phantom dangles. Before this, that suppression was the ONLY effect
-// and it was invisible. Both must now hold at once — dangles quiet, cause reported.
+// and it was invisible. Both must now hold at once, with dangles quiet and the cause reported.
 func TestUnresolvedSymbolSuppressesDanglesAndSaysWhy(t *testing.T) {
 	failing := func(string) ([]byte, error) { return nil, fmt.Errorf("missing") }
 	d, err := ReadWithSymbols(bytes.NewReader(readSch(t, "dangle.sch")), "dangle.sch", failing)
@@ -58,8 +58,9 @@ func TestUnresolvedSymbolSuppressesDanglesAndSaysWhy(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolReportsNothing: the fixture's own symbols resolve, so a clean read stays clean.
-// Guards against a reader that flags unconditionally, which would make the diagnostic worthless.
+// TestResolvedSymbolReportsNothing checks that the fixture's own symbols resolve, so a clean read
+// stays clean. Guards against a reader that flags unconditionally, which would make the diagnostic
+// worthless.
 func TestResolvedSymbolReportsNothing(t *testing.T) {
 	open := func(symref string) ([]byte, error) { return os.ReadFile("testdata/" + symref) }
 	d, err := ReadWithSymbols(bytes.NewReader(readSch(t, "divider.sch")), "divider.sch", open)
@@ -73,10 +74,10 @@ func TestResolvedSymbolReportsNothing(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolsRecorded (agni issue 418): the references that loaded are recorded beside the
-// ones that did not, with the pin count each supplied. Without this a rule over symbol resolution
-// holds only a failure list and can therefore report only failures, so a design where everything
-// loaded looks exactly like one the reader never opened a symbol for.
+// TestResolvedSymbolsRecorded (agni issue 418) checks that the references that loaded are recorded
+// beside the ones that did not, with the pin count each supplied. Without this a rule over symbol
+// resolution holds only a failure list and can therefore report only failures, so a design where
+// everything loaded looks exactly like one the reader never opened a symbol for.
 //
 // The COUNT is what makes it evidence. A stale library answering with an empty stub resolves as
 // successfully as the real symbol and costs the netlist the same pins.
@@ -103,9 +104,9 @@ func TestResolvedSymbolsRecorded(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolsAbsentWithoutOpener is the honesty half. Reading with no opener is a caller
+// TestResolvedSymbolsAbsentWithoutOpener is the no-overclaim half. Reading with no opener is a caller
 // deliberately asking for a symbol-free read, and declaring the diagnostic there would turn "we did
-// not look" into "we looked and found nothing missing", which is the coverage claim the whole
+// not look" into "we looked and found nothing missing", which is the coverage claim the
 // considered-set idea exists to withhold.
 func TestResolvedSymbolsAbsentWithoutOpener(t *testing.T) {
 	d, err := Read(bytes.NewReader(readSch(t, "divider.sch")), "divider.sch")
@@ -121,8 +122,8 @@ func TestResolvedSymbolsAbsentWithoutOpener(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolsExcludeFailures: the two lists are one partition, and a reference on both would
-// let a rule report the same subject as passed and failed at once.
+// TestResolvedSymbolsExcludeFailures checks that the two lists are one partition, and a reference
+// on both would let a rule report the same subject as passed and failed at once.
 func TestResolvedSymbolsExcludeFailures(t *testing.T) {
 	failing := func(string) ([]byte, error) { return nil, fmt.Errorf("missing") }
 	d, err := ReadWithSymbols(bytes.NewReader(readSch(t, "divider.sch")), "divider.sch", failing)

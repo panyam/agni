@@ -11,7 +11,7 @@ func rel(name string) Option {
 	return WithRelation(name, []Field{FieldSubject}, func(check.Model) []Row { return nil })
 }
 
-// TestInstalledSeparatesEmptyFromAbsent pins the distinction the package exists to keep: a registry
+// TestInstalledSeparatesEmptyFromAbsent pins the distinction the package exists to keep. A registry
 // with no relations is a different state from one whose relations matched nothing, and only the
 // second is a clean result. A host that omits the relation-catalog import still builds and still
 // runs, so this is the only place the omission is answerable.
@@ -26,7 +26,8 @@ func TestInstalledSeparatesEmptyFromAbsent(t *testing.T) {
 	if got := bare.Rows(nil); len(got) != 0 {
 		t.Errorf("Rows on a bare registry = %d rows, want 0", len(got))
 	}
-	// An overlay-only registry IS installed: relations came from somewhere, just not a built-in catalog.
+	// An overlay-only registry IS installed, since relations came from somewhere, just not a
+	// built-in catalog.
 	one, err := NewRegistry(rel("test.only"))
 	if err != nil {
 		t.Fatalf("overlay-only registry: %v", err)
@@ -83,7 +84,7 @@ func TestDuplicateRelationFailsComposition(t *testing.T) {
 	}
 }
 
-// TestRegistryIsASnapshot pins the property that makes a Registry a value rather than a view: a
+// TestRegistryIsASnapshot pins the property that makes a Registry a value rather than a view. A
 // registration after composition does not change what an existing registry answers. A caller holding
 // one cannot have it change underneath them.
 func TestRegistryIsASnapshot(t *testing.T) {
