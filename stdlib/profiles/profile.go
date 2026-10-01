@@ -411,7 +411,7 @@ func (p Profile) signalMissingRule() *check.Rule {
 		fmt.Sprintf("%s interface (anchored at net {a}) is missing required signal {sig}", p.Name))
 	fq.TupleVars = []query.TupleVar{{Var: "sig", Kind: check.KindSignal}}
 	fq.Domain = &query.Domain{
-		Query:   mustBindHeadFirst(domain),
+		Query:   mustBeInjective(domain),
 		Witness: fmt.Sprintf("%s interface (anchored at net {a}) carries required signal {sig}", p.Name),
 	}
 	return query.MustRuleFromQuery(fq)
@@ -452,7 +452,7 @@ func (p Profile) hostIncompleteRule() *check.Rule {
 		fmt.Sprintf("%s host {h} declares the interface but is missing required signal {sig}", p.Name))
 	fq.TupleVars = []query.TupleVar{{Var: "sig", Kind: check.KindSignal}}
 	fq.Domain = &query.Domain{
-		Query:   mustBindHeadFirst(domain),
+		Query:   mustBeInjective(domain),
 		Witness: fmt.Sprintf("%s host {h} is wired to required signal {sig}", p.Name),
 	}
 	return query.MustRuleFromQuery(fq)
@@ -469,7 +469,7 @@ func (p Profile) missingFindingQuery(nameSuffix string, q query.Query, kind, sub
 			Tags:     p.tags(),
 			Detail:   ruleDoc("signal-missing"),
 		},
-		Query:      mustBindHeadFirst(q),
+		Query:      mustBeInjective(q),
 		Kind:       kind,
 		SubjectVar: subjectVar,
 		Message:    msg,
@@ -598,39 +598,32 @@ func (p Profile) danglingRule() *check.Rule {
 			Tags:     p.tags(),
 			Detail:   ruleDoc("signal-dangling"),
 		},
-		Query:      mustBindHeadFirst(q),
+		Query:      mustBeInjective(q),
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} has fewer than 2 connections (named but not wired through)", p.Name),
 		Domain: &query.Domain{
-			Query:   mustBindHeadFirst(danglingDomain),
+			Query:   mustBeInjective(danglingDomain),
 			Witness: fmt.Sprintf("%s signal net {n} is wired to at least two pins", p.Name),
 		},
 	})
 }
 
-// mustBindHeadFirst guards every query a requirement compiler generates. No derived rule may OPEN with
-// an unbound `net.reaches`, which walks from every net on the board before any filter applies (WS3-114),
-// and none may be non-injective (WS3-127).
+// mustBeInjective guards every query a requirement compiler generates: no derived rule may be
+// non-injective (WS3-127).
 //
 // It panics because a violation is an authoring mistake in engine code and the compilers run at
-// package init, so a bad rule fails the moment anything imports profiles. Two rules once shipped in
-// that shape and made `agni check` non-terminating on a real board while every fixture stayed green.
+// package init, so a bad rule fails the moment anything imports profiles.
 //
-// It is applied here and not in query.RuleFromQuery. A hand-authored query may lead with a small
-// relation that omits the head variable when that is the cheaper plan, while a generated query's
-// author cannot see the board it will run against.
-func mustBindHeadFirst(q query.Query) query.Query {
+// It used to refuse a rule OPENING with an unbound `net.reaches` too, since two such rules once made
+// `agni check` non-terminating on a real board (WS3-114). query.Default plans every rule body, so a
+// body's written order no longer decides where a walk starts, and the engine removed that lint.
+func mustBeInjective(q query.Query) query.Query {
 	if bad := query.NonInjectiveRules(q); len(bad) > 0 {
 		panic(fmt.Sprintf("profiles: generated rule(s) %v put two variables in ONE argument position "+
 			"of one relation with nothing separating them, so datalog's homomorphic matching lets a "+
 			"single node satisfy both (WS3-127); a presence rule in that shape reports an interface "+
 			"in use on half the evidence. Add the disequality the body means", bad))
-	}
-	if bad := query.GeneratorFirstRules(q); len(bad) > 0 {
-		panic(fmt.Sprintf("profiles: generated rule(s) %v open with an unbound reaches, so the walk "+
-			"starts from every net on the board and `agni check` will not finish on a real design "+
-			"(WS3-114); reorder the body to lead with the guard the consuming rule already conjoins", bad))
 	}
 	return q
 }

@@ -116,20 +116,6 @@ func railChainDesign() *ir.Design {
 	return d
 }
 
-// TestRouteIsLintedAsAGenerator wires the new predicate into the guard that already exists for the
-// old one. route walks from every net on the board when its first argument is unbound, so a rule
-// opening with it is the same non-terminating shape WS3-114 named, and a generator the lint cannot
-// see is a generator that ships without the warning.
-func TestRouteIsLintedAsAGenerator(t *testing.T) {
-	q, err := Parse(`bad(?n) :- net.route(?a, ?n, ?p); bad(?n) => ?n`)
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-	if got := GeneratorFirstRules(q); len(got) != 1 || got[0] != "bad" {
-		t.Errorf("GeneratorFirstRules = %v, want [bad]: route is a generator and the lint must see it", got)
-	}
-}
-
 // TestRouteArityIsFixed pins that route takes exactly three arguments. reaches next door accepts two
 // or three. route does not, because it is a separate predicate so that no spelling binds a path
 // without the caller asking for one.

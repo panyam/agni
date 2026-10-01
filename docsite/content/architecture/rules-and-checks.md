@@ -471,6 +471,16 @@ same three shapes at 4,000 components took about 0.28 s (flat), 1.25 s (bounded 
 (closure). The machine differs from the original measurement, so read those as the new order of
 magnitude rather than a precise ratio. The bounded reach walk is now the slowest of the three.
 
+Since jaala v0.1.7, agni evaluates with `SemiNaive` (`query.Default`) rather than `Naive`, which
+stays as the engine's reference. It answers the same rows, and on these three shapes it costs the same
+within noise, because each is already written in a good order. What it changes is the shape the table
+cannot show. It plans each rule body, so a literal runs once its inputs are bound whatever order the
+author wrote, and a derived relation called with a bound argument is derived only for that value.
+A rule opening with an unbound `net.reaches` cost 16,066 comparisons under `Naive` against 694 when
+guarded first, and 310 either way under `SemiNaive`
+(`TestTheDefaultEvaluatorPlansAnUnboundWalk`). On a 1,123-part public sample board, `agni check`
+produced the same 18,293 verdicts under both.
+
 The migration described in the previous section runs through this evaluator, which is why the join
 had to come first. Moving rules out of Go over an unindexed join would have made the catalog slower
 in exchange for making it more declarative.

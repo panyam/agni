@@ -48,12 +48,11 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	// nets between them. Crediting it keeps this requirement from double-reporting a net the catalog
 	// already speaks about.
 	//
-	// Every clause opens with needs_esd(?n), which BINDS the head variable before anything scans.
-	// Without it the body starts at net.reaches(?n, ?rn, ?h) with all three unbound, so the evaluator
-	// walks the series neighborhood from every net on the board and only then filters. That is
-	// quadratic, and it made `agni check` non-terminating on a real design (WS3-114). The guard
-	// restricts nothing, because unprotected already conjoins needs_esd, so esd_ok facts outside it
-	// were computed and then discarded.
+	// Every clause carries needs_esd(?n), which binds the head variable for the walk. Without it the
+	// walk has nothing to start from and runs from every net on the board, which is quadratic and made
+	// `agni check` non-terminating on a real design (WS3-114). The guard restricts nothing, because
+	// unprotected already conjoins needs_esd. It is written first for the reader; query.Default plans
+	// the body, so the order no longer decides where the walk starts.
 	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
 		rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
 			query.Pos(query.Rel("needs_esd", query.V("n"))),
@@ -124,7 +123,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 			Tags:     p.tags(),
 			Detail:   ruleDoc("esd"),
 		},
-		Query:      mustBindHeadFirst(q),
+		Query:      mustBeInjective(q),
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} is exposed on a connector with no ESD protection in reach", p.Name),
@@ -133,7 +132,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		// clamp, and a context var that does not bind contributes nothing.
 		ContextVars: []query.ContextVar{{Var: "clamp", Kind: check.KindComponent, Role: "clamp"}},
 		Domain: &query.Domain{
-			Query: mustBindHeadFirst(domain),
+			Query: mustBeInjective(domain),
 			Witness: fmt.Sprintf("%s signal net {n} is exposed on a connector and reaches ESD protection within %d hops",
 				p.Name, check.ProtectionReachHops),
 			Evidence: &evidence,

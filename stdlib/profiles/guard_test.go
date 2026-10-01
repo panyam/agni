@@ -7,17 +7,17 @@ import (
 	"github.com/panyam/agni/core/query"
 )
 
-// TestBuiltinsCompileWithoutGeneratorFirst is the WS3-114 regression guard, and since WS3-127 it
-// carries a second property. Every requirement compiler routes its query through mustBindHeadFirst,
-// which panics on a rule that opens with an unbound reaches AND on a rule whose body puts two
-// variables in one argument position with nothing separating them. Compiling every built-in profile
-// is the assertion for both, so a future requirement type added to any of these fails here rather than
-// on a customer's board.
+// TestBuiltinsCompileAsInjective is the WS3-127 regression guard. Every requirement compiler routes
+// its query through mustBeInjective, which panics on a rule whose body puts two variables in one
+// argument position with nothing separating them. Compiling every built-in profile is the assertion, so
+// a future requirement type added to any of these fails here rather than on a customer's board.
+// WS3-114's shape, a rule opening with an unbound walk, is covered where it is now prevented, by
+// TestTheDefaultEvaluatorPlansAnUnboundWalk in core/query.
 //
 // A wall-clock assertion would be the obvious test and is the wrong one. It is flaky on CI and it
 // only fires on a design big enough to hurt, which no fixture in this repo is. That is why
 // the original regression shipped green.
-func TestBuiltinsCompileWithoutGeneratorFirst(t *testing.T) {
+func TestBuiltinsCompileAsInjective(t *testing.T) {
 	for _, c := range []struct {
 		name string
 		p    Profile
@@ -46,11 +46,11 @@ func TestGateRejectsANonInjectiveRule(t *testing.T) {
 	defer func() {
 		r := recover()
 		if r == nil {
-			t.Fatal("mustBindHeadFirst accepted a rule where one node satisfies two signal atoms")
+			t.Fatal("mustBeInjective accepted a rule where one node satisfies two signal atoms")
 		}
 		if msg, ok := r.(string); !ok || !strings.Contains(msg, "in_use") {
 			t.Errorf("panic should name the offending head relation, got %v", r)
 		}
 	}()
-	mustBindHeadFirst(bad)
+	mustBeInjective(bad)
 }

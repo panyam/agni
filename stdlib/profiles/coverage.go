@@ -111,6 +111,6 @@ func hostDeclares(base *query.Base, p Profile) bool {
 	}
 	q := query.Build(p.hostRules(),
 		[]query.Literal{query.Pos(query.Rel("host", query.V("ref")))}, query.V("ref"))
-	rows, err := query.Naive{}.Eval(q, base)
+	rows, err := query.Default.Eval(q, base)
 	return err == nil && len(rows) > 0
 }

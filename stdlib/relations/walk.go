@@ -43,16 +43,23 @@ const RelReaches = "net.reaches"
 // docsite/content/reference/relations/net.route.md.
 const RelRoute = "net.route"
 
+// walkModes are the bindings both walks accept. With `from` bound a walk starts from one net, and with
+// nothing bound it starts from every net on the board, which an all-pairs question legitimately asks.
+// Declaring the second is what makes that full walk a stated choice: the engine's planner runs a walk
+// once `from` is bound wherever the body can bind it first, and uses the full walk only when nothing
+// can (the WS3-114 rule that made `agni check` non-terminating opened with exactly that walk).
+var walkModes = [][]bool{{true, false, false}, {false, false, false}}
+
 func init() {
 	netArg := ns.ArgType{Kind: check.KindNet}
 	facts.RegisterPredicate(RelReaches, ns.Builtin{
-		Arity: 2, MaxArity: 3, Gen: genReaches,
+		Arity: 2, MaxArity: 3, Gen: genReaches, Modes: walkModes,
 		Labels: []string{"from", "net", "hops?"},
 		Types:  []ns.ArgType{netArg, netArg, {}},
 		Doc:    "transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two",
 	})
 	facts.RegisterPredicate(RelRoute, ns.Builtin{
-		Arity: 3, Gen: genRoute,
+		Arity: 3, Gen: genRoute, Modes: walkModes,
 		Labels: []string{"from", "net", "path"},
 		Types:  []ns.ArgType{netArg, netArg, {}},
 		Doc:    "the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one",
@@ -92,8 +99,7 @@ func genRoute(src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) erro
 // when the atom has one.
 //
 // The START RESOLUTION is shared so it cannot drift between the two. A bound or constant `from` is
-// one walk; an unbound one walks from every net on the board, which is what GeneratorFirstRules
-// reports.
+// one walk; an unbound one walks from every net on the board, the second of walkModes.
 //
 // The name index is built once per fact base (Env.Memo) rather than per call, because the walk runs
 // once per binding of the atom calling it and a per-call index would make it quadratic.

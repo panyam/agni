@@ -87,8 +87,10 @@ proto-check:
 tidy:
 	$(GO) mod tidy
 
-# Tidy every module: the engine plus each example module (they have their own go.mod). Run
-# after changing imports anywhere the examples consume. EXAMPLE_MODS is defined below.
+# Tidy every module in the repo, found the way hack/tidy_check.sh finds them, so the module the check
+# fails on is always one this target tidies. It walked a hand-kept list (the root and examples/*)
+# until datasheet/ became its own module (agni issue 744), when the check's advice to run
+# `make tidyall` stopped fixing what it reported. Run after changing imports or a shared dependency.
 # Freshness gate: fail when any module's go.mod/go.sum disagrees with a fresh `go mod tidy`.
 #
 # The gate BUILT every module and never asked whether one was tidy, and those are different
@@ -103,10 +105,10 @@ tidyall-check:
 	./hack/tidy_check.sh
 
 tidyall:
-	$(GO) mod tidy
-	@for d in $(EXAMPLE_MODS); do \
+	@find . -name go.mod -not -path './.git/*' | sort | while read -r m; do \
+		d=$$(dirname "$$m"); \
 		echo "== tidy $$d =="; \
-		( cd $$d && $(GO) mod tidy ) || exit 1; \
+		( cd "$$d" && $(GO) mod tidy ) || exit 1; \
 	done
 	@echo "tidy: all modules tidied"
 

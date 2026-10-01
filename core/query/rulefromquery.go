@@ -211,7 +211,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// passed over are not in the answer and the only accurate report is failures-only.
 	if fq.Domain == nil {
 		r.Eval = check.FailuresOnly(func(m check.Model) []check.Finding {
-			rows, err := Naive{}.Eval(q, NewBase(m))
+			rows, err := Default.Eval(q, NewBase(m))
 			if err != nil {
 				// Construction validated this query, so this is the ENGINE failing on a design. An
 				// inconclusive finding says the rule could not decide, where nil would read as a clean
@@ -234,7 +234,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 		base := NewBase(m)
 		var vs []check.Verdict
 		failed := map[string]bool{}
-		rows, err := Naive{}.Eval(q, base)
+		rows, err := Default.Eval(q, base)
 		if err != nil {
 			// The failing half never ran, so any considered set would report every subject as passing
 			// on evidence never gathered. One inconclusive verdict says the rule could not decide
@@ -266,7 +266,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 				Finding:  &f,
 			})
 		}
-		drows, err := Naive{}.Eval(fq.Domain.Query, base)
+		drows, err := Default.Eval(fq.Domain.Query, base)
 		if err != nil {
 			// Keep the findings. A defect must never disappear because the coverage half failed, even
 			// though the rule then reports fewer passes than it examined.
@@ -277,7 +277,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 		// means no evidence rather than an error, so a pass loses its chips and not itself.
 		evidence := map[string][]check.ContextSubject{}
 		if fq.Domain.Evidence != nil {
-			if erows, err := (Naive{}).Eval(*fq.Domain.Evidence, base); err == nil {
+			if erows, err := Default.Eval(*fq.Domain.Evidence, base); err == nil {
 				for _, row := range erows {
 					subjects := fq.tuple(row)
 					if len(subjects) == 0 {

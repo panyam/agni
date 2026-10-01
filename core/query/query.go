@@ -46,9 +46,22 @@ type (
 	Base = datalog.Base
 	// Evaluator answers a Query over a Base.
 	Evaluator = datalog.Evaluator
-	// Naive is the default backtracking-join evaluator.
+	// Naive is the engine's reference evaluator: rule bodies run in written order and derived
+	// relations are computed in full. Tests compare against it; agni answers with Default.
 	Naive = datalog.Naive
+	// SemiNaive is the evaluator agni answers with (see Default).
+	SemiNaive = datalog.SemiNaive
 )
+
+// Default is the evaluator every agni surface answers with: the engine's semi-naive fixpoint, which
+// plans each rule body, inlines single-rule relations, and derives a relation called with a bound
+// argument only for the values the query demands. It answers as Naive does (the engine tests the two
+// against each other); what differs is cost, and that a body's written order no longer decides it, so a
+// rule opening with an unbound walk is reordered rather than walking from every net (WS3-114).
+//
+// Citations can differ from Naive's on a recursive relation reachable two ways, since the rounds run in
+// a different order; rows never do.
+var Default Evaluator = SemiNaive{}
 
 // V builds a variable term (?name in the text syntax).
 func V(name string) Term { return datalog.V(name) }

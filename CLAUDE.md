@@ -104,7 +104,12 @@ lets the fact layer import it and nothing more of jaala. **The shipped library o
 is `stdlib/lib`**, one `.dl` file per module (`component.probed_both`, `net.has_test_point`), and
 `agni query --relations <path>` prints any member's signature and definition. Its modules register
 as ONE batch, because the vocabulary is checked at every registration and a module reading another
-module's member is refused if it arrives first. A language change
+module's member is refused if it arrives first. **agni answers with `query.Default`**, jaala's
+`SemiNaive`, which plans each rule body and derives a relation called with a bound argument only for
+that value, so written clause order no longer decides cost. `Naive` is the reference tests compare
+against, and a new call site that evaluates for a user uses `query.Default`. A generator declares the
+bindings it accepts (`ns.Builtin.Modes`); `net.reaches` and `net.route` declare `from` bound or a
+deliberate full walk. A language change
 (parser, evaluator, index, aggregation) is a jaala PR and a tag first, then a `go get` here. Its
 issues live on panyam/jaala.
 
