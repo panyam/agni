@@ -194,14 +194,16 @@ class GetComponentParamsRequest(_message.Message):
     def __init__(self, uri: _Optional[str] = ...) -> None: ...
 
 class ComponentParams(_message.Message):
-    __slots__ = ("ref_des", "mpn", "spec")
+    __slots__ = ("ref_des", "mpn", "spec", "corpus")
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     MPN_FIELD_NUMBER: _ClassVar[int]
     SPEC_FIELD_NUMBER: _ClassVar[int]
+    CORPUS_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     mpn: str
     spec: _param_pb2.PartSpec
-    def __init__(self, ref_des: _Optional[str] = ..., mpn: _Optional[str] = ..., spec: _Optional[_Union[_param_pb2.PartSpec, _Mapping]] = ...) -> None: ...
+    corpus: str
+    def __init__(self, ref_des: _Optional[str] = ..., mpn: _Optional[str] = ..., spec: _Optional[_Union[_param_pb2.PartSpec, _Mapping]] = ..., corpus: _Optional[str] = ...) -> None: ...
 
 class GetComponentParamsResponse(_message.Message):
     __slots__ = ("components",)

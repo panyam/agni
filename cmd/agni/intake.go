@@ -33,8 +33,8 @@ design that belongs to no project, or overrides nothing when the project already
 			if err != nil {
 				return err
 			}
-			// The corpus comes from the design's PROJECT first and the flag second, the same
-			// precedence check uses (Overlay.SpecsOr, agni issue 474).
+			// The design's PROJECT corpus is layered over the flag's per MPN, the same precedence
+			// check uses (Overlay.SpecsOver, agni issues 474, 749).
 			var flagSpecs param.ParamProvider
 			if paramsDir != "" {
 				set, err := param.LoadSet(os.DirFS(paramsDir))
@@ -44,7 +44,7 @@ design that belongs to no project, or overrides nothing when the project already
 				flagSpecs = set
 			}
 			// A nil provider is the same as none, so this covers a design with no corpus too.
-			s := intake.Build(check.NewModel(d, check.WithParamProvider(ov.SpecsOr(flagSpecs))))
+			s := intake.Build(check.NewModel(d, check.WithParamProvider(ov.SpecsOver(flagSpecs))))
 			full := parts == "full"
 			switch format {
 			case "json":

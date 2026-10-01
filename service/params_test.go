@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -50,5 +51,36 @@ func TestGetComponentParams(t *testing.T) {
 	}
 	if len(empty.GetComponents()) != 0 {
 		t.Errorf("nil provider must yield no components, got %d", len(empty.GetComponents()))
+	}
+}
+
+// projectWithParams resolves every ref to one design in a project that declares its own params.
+type projectWithParams struct{ ProjectStore }
+
+func (projectWithParams) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+	return &webapi.Design{Uri: "mount://m/d"}, &webapi.Project{Name: "projects/p", Config: &webapi.AnalysisConfig{ParamUris: []string{"mount://m/params"}}}, nil
+}
+
+// The params panel reads through the design's project, as a check does, so it shows the spec a verdict
+// rests on: the project's for a part it seeds, the server's for the rest, each naming its corpus. It
+// used the server's corpus alone, so inside a project it showed the wrong spec or none (agni 749).
+func TestGetComponentParamsLayersTheProjectAndNamesTheCorpus(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", Mpn: "LDO"}, {RefDes: "U2", Mpn: "BUCK"}}}
+	projectLDO := &parampb.PartSpec{Mpn: "LDO", Manufacturer: "project"}
+	shared := param.ParamSet{"LDO": {Mpn: "LDO", Manufacturer: "shared"}, "BUCK": {Mpn: "BUCK", Manufacturer: "shared"}}
+	projects := &ProjectResolver{Store: projectWithParams{}, Config: &recordingResolver{specs: param.ParamSet{"LDO": projectLDO}}}
+
+	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), shared, "", nil, projects)
+	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d/board.edn"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, c := range resp.GetComponents() {
+		got[c.GetRefDes()] = c.GetSpec().GetManufacturer() + "/" + c.GetCorpus()
+	}
+	want := map[string]string{"U1": "project/project", "U2": "shared/shared"}
+	if len(got) != 2 || got["U1"] != want["U1"] || got["U2"] != want["U2"] {
+		t.Errorf("panel = %v, want %v", got, want)
 	}
 }

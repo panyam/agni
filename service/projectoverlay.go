@@ -108,17 +108,17 @@ func RunConfigProto(p RunProvenance, ratifiedFloor float64) *checkspb.RunConfig 
 	}
 }
 
-// SpecsOr returns the datasheet corpus this run should use, the project's when it supplied one and the
-// deployment's otherwise.
-//
-// The project WINS rather than merging, as the rest of this config does. A merged corpus would let
-// one team's transcribed limits decide another team's pass/fail, and a parameter from the wrong
-// corpus still produces a confident number.
-func (o Overlay) SpecsOr(fallback param.ParamProvider) param.ParamProvider {
-	if o.Specs != nil {
-		return o.Specs
+// SpecsOver returns the datasheet corpus this run should use: the project's own layered over the
+// shared one (--params or --params-url) per MPN, so the project decides every part it seeds and the
+// shared corpus answers for the rest (agni issue 749). Each citation names the corpus it came from,
+// because a limit transcribed outside the project now decides some of its verdicts, and a reader has
+// to be able to see which. DECISIONS.md records the reversal from the project replacing the shared
+// corpus outright. nil when neither exists.
+func (o Overlay) SpecsOver(shared param.ParamProvider) param.ParamProvider {
+	if o.Specs == nil && shared == nil {
+		return nil
 	}
-	return fallback
+	return param.Layered{{Name: param.CorpusProject, Provider: o.Specs}, {Name: param.CorpusShared, Provider: shared}}
 }
 
 // Sources resolves an artifact ref to the artifact each tier should read, applying the enclosing

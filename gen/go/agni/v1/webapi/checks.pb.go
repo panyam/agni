@@ -1248,10 +1248,12 @@ func (x *GetComponentParamsRequest) GetUri() string {
 // highlights, the resolved MPN, and the full PartSpec (its parameters, limit kinds, conditions, and
 // per-parameter provenance) for the tree the panel renders.
 type ComponentParams struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
-	Mpn           string                 `protobuf:"bytes,2,opt,name=mpn,proto3" json:"mpn,omitempty"`
-	Spec          *param.PartSpec        `protobuf:"bytes,3,opt,name=spec,proto3" json:"spec,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	RefDes string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Mpn    string                 `protobuf:"bytes,2,opt,name=mpn,proto3" json:"mpn,omitempty"`
+	Spec   *param.PartSpec        `protobuf:"bytes,3,opt,name=spec,proto3" json:"spec,omitempty"`
+	// corpus is where the spec came from: "project" or "shared", as a datasheet citation names it.
+	Corpus        string `protobuf:"bytes,4,opt,name=corpus,proto3" json:"corpus,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1305,6 +1307,13 @@ func (x *ComponentParams) GetSpec() *param.PartSpec {
 		return x.Spec
 	}
 	return nil
+}
+
+func (x *ComponentParams) GetCorpus() string {
+	if x != nil {
+		return x.Corpus
+	}
+	return ""
 }
 
 type GetComponentParamsResponse struct {
@@ -1435,11 +1444,12 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"interfaces\x18\x01 \x03(\v2!.agni.v1.webapi.InterfaceCoverageR\n" +
 	"interfaces\"-\n" +
 	"\x19GetComponentParamsRequest\x12\x10\n" +
-	"\x03uri\x18\x01 \x01(\tR\x03uri\"i\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"\x81\x01\n" +
 	"\x0fComponentParams\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03mpn\x18\x02 \x01(\tR\x03mpn\x12+\n" +
-	"\x04spec\x18\x03 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\"]\n" +
+	"\x04spec\x18\x03 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12\x16\n" +
+	"\x06corpus\x18\x04 \x01(\tR\x06corpus\"]\n" +
 	"\x1aGetComponentParamsResponse\x12?\n" +
 	"\n" +
 	"components\x18\x01 \x03(\v2\x1f.agni.v1.webapi.ComponentParamsR\n" +

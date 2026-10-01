@@ -107,8 +107,9 @@ func TestRequestConfigLayersOverTheProject(t *testing.T) {
 	}
 }
 
-// TestRequestCorpusWinsOverTheProject follows SpecsOr's rule one layer up. The caller named a corpus
-// for this run, and merging two would let one team's transcribed limits decide another's pass/fail.
+// TestRequestCorpusWinsOverTheProject is the one place a corpus still replaces rather than layers: the
+// caller named a corpus for this run, which is choosing it outright (DECISIONS.md, "A project's
+// datasheet corpus is layered over a shared one per MPN").
 func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 	res := &recordingResolver{specs: someSpecs()}
 	project := &webapi.Project{Name: "projects/acme", Config: &webapi.AnalysisConfig{}}

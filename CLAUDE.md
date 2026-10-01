@@ -220,10 +220,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   "off" state you must MOVE THE DIRECTORY ASIDE, which is why rungs 4, 5 and 6 open with
   `mv <tier> <tier>-off`; rung 6 shipped a before/after whose two captures were byte-identical
   because both ran with the corpus in place.
-- **Between a project tier and its flag, the project wins (`Overlay.SpecsOr`).** That is the
-  opposite of the mount rule above, deliberately, because a project owns its parameters the way it
-  owns its profiles. A command that reads a tier from its flag alone is the bug shape, and `intake`
-  did, so inside a project its datasheet-gap section was absent rather than empty (issue 474).
+- **Between a project tier and its flag, the project wins, and for the datasheet corpus it wins PER
+  MPN (`Overlay.SpecsOver`, agni 749).** That is the opposite of the mount rule above, deliberately,
+  because a project owns its parameters the way it owns its profiles. The project's `params/` is
+  layered over `--params` or `--params-url` (`param.Layered`), and every datasheet citation names its
+  corpus (`project` or `shared`, stamped by `check.Run` and `RunVerdicts` through the model, never by
+  a rule); DECISIONS.md records the reversal from wholesale replacement. A command that reads a tier
+  from its flag alone is the bug shape, and `intake` did, so inside a project its datasheet-gap
+  section was absent rather than empty (issue 474). The params panel's `GetComponentParams` did too,
+  until 749.
   `readDesignWithConfig` returns the overlay the read already composed, which is where a non-service
   command should get a tier rather than resolving the project a second time.
 - `make natrender FILE=... OUT=...` and `make natopen FILE=...` drive the native tools over the
@@ -294,7 +299,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   because a spec library is not one. The datalog relations carry what a query can BIND; the conditions
   a value holds under, the pin bindings, the full provenance and the verification state are read off
   the `PartSpec`. `--params <dir>` names a corpus, `--design <path>` lets a design's PROJECT supply
-  one (and the project WINS, per `Overlay.SpecsOr`), `--format json` emits the bare `PartSpec`. A
+  one (layered over `--params` per MPN, per `Overlay.SpecsOver`), `--format json` emits the bare `PartSpec`. A
   parameter someone verified reports `stale` when the corpus moved to a later revision, naming BOTH
   revisions, though staleness is decided on the content hash and NEVER on the printed one, so the
   two strings are for the reader (`DECISIONS.md`, "A document revision is recorded for the reader,

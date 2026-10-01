@@ -25,7 +25,7 @@ import (
 //
 // It takes NO DESIGN. A spec library is not a design, and the datasheet relations already answer
 // against a seeded corpus with none loaded (query.NewSpecLibBase). --design exists only so a design's
-// PROJECT can supply the corpus, which is the tier precedence Overlay.SpecsOr states.
+// PROJECT can supply its corpus, layered over --params per MPN as Overlay.SpecsOver states.
 func paramsCmd() *cobra.Command {
 	var paramsDir, designPath, format string
 	c := &cobra.Command{
@@ -40,8 +40,8 @@ param.range, param.typ, param.pin, ...); the conditions a value is valid under, 
 full provenance and the verification state live here.
 
 It needs no design. Name a corpus with --params, or name a design with --design so the project that
-design belongs to supplies its own params/ (which WINS over --params, since a project owns its
-parameters the way it owns its profiles).
+design belongs to supplies its own params/. With both, the project's spec answers for a part it
+seeds and --params for any other, and a note on stderr says which answered.
 
   agni params LM1117 --params seed/
   agni params LM1117 --design designs/gateway/gateway.kicad_sch
@@ -61,6 +61,11 @@ parameters the way it owns its profiles).
 				return fmt.Errorf("no datasheet corpus: name one with --params <dir>, or --design <path> for a design whose project declares one")
 			}
 			spec := specs.Lookup(args[0])
+			if spec != nil && paramsDir != "" && designPath != "" {
+				if n, ok := specs.(param.CorpusNamer); ok {
+					fmt.Fprintf(cmd.ErrOrStderr(), "note: answered from the %s corpus\n", n.CorpusOf(spec))
+				}
+			}
 			if spec == nil {
 				// Never an empty record. A part nobody has transcribed and a part with no parameters
 				// are different answers, and printing an empty spec for the first says the second.
@@ -74,7 +79,7 @@ parameters the way it owns its profiles).
 			return writeSpecText(cmd.OutOrStdout(), spec)
 		},
 	}
-	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet corpus). A project's own params/ wins over this when --design names a design in one")
+	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet corpus). When --design names a design in a project with its own params/, the project's spec answers for each part it seeds and this for the rest")
 	c.Flags().StringVar(&designPath, "design", "", "a design whose PROJECT supplies the corpus, for a part seeded in a project rather than a loose directory")
 	c.Flags().StringVar(&format, "format", "text", "output format: text or json (json emits the PartSpec itself, the contract type)")
 	return c
@@ -82,9 +87,9 @@ parameters the way it owns its profiles).
 
 // paramsCorpus resolves the corpus to read and a name for it, from the two routes in.
 //
-// The project WINS over the flag (Overlay.SpecsOr), the opposite of the mount rule, because a project
-// owns its parameters the way it owns its profiles. Reading the tier from the flag alone left intake's
-// datasheet-gap section absent rather than empty inside a project (agni issue 474).
+// The project's corpus is layered over the flag's per MPN (Overlay.SpecsOver), so the project decides
+// every part it seeds. Reading the tier from the flag alone left intake's datasheet-gap section absent
+// rather than empty inside a project (agni issue 474).
 func paramsCorpus(paramsDir, designPath string) (param.ParamProvider, string, error) {
 	var flagSpecs param.ParamProvider
 	if paramsDir != "" {
@@ -101,7 +106,10 @@ func paramsCorpus(paramsDir, designPath string) (param.ParamProvider, string, er
 	if err != nil {
 		return nil, "", err
 	}
-	if ov.Specs != nil {
+	switch {
+	case ov.Specs != nil && flagSpecs != nil:
+		return ov.SpecsOver(flagSpecs), "the project's params/ or " + paramsDir, nil
+	case ov.Specs != nil:
 		return ov.Specs, "the project's params/", nil
 	}
 	return flagSpecs, paramsDir, nil

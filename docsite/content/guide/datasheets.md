@@ -111,8 +111,12 @@ treating every part as unseeded. A file edited behind a running server's index i
 `agnids index` is run over it, or the server restarts, because serving a file the index did not
 validate would hand out a spec nobody checked.
 
-A project's own `params/` still replaces the shared corpus for that project's designs, as it replaces
-`--params`.
+A project's own `params/` sits over the shared corpus, part by part. The project's spec answers for
+every MPN it seeds and the shared corpus answers for the rest, the same way over `--params`. Every
+datasheet citation says which corpus it came from: a verdict's citation carries `corpus` as
+`project` or `shared`, the terminal marks a value from outside the project as "(shared corpus)", and
+the params panel shows each spec's corpus. A project that wants a part judged only by its own
+numbers seeds that part.
 
 ## Where to go next
 

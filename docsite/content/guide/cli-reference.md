@@ -240,7 +240,7 @@ checked, and the one held now. Those two revisions tell you what to re-confirm, 
 
 | flag | what it does |
 |---|---|
-| `--params <dir>` | the datasheet corpus to read. A project's own `params/` wins over this when `--design` names a design in that project |
+| `--params <dir>` | the datasheet corpus to read. When `--design` names a design in a project with its own `params/`, the project's spec answers for each part it seeds and this for the rest |
 | `--design <path>` | a design whose project supplies the corpus, for a part seeded in a project rather than a loose directory |
 | `--format <fmt>` | `text` (default) or `json`. `json` emits the `PartSpec` itself, so a script binds to the same message the viewer carries |
 

@@ -55,7 +55,7 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOver(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

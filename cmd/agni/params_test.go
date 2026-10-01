@@ -213,7 +213,7 @@ func TestParamsJSONIsTheRecordItself(t *testing.T) {
 // bite. A command that reads its tier from the flag alone answers about the wrong corpus inside a
 // project. The two corpora seed DIFFERENT numbers for one MPN, so reading the flag produces a
 // visibly wrong answer rather than an identical one.
-func TestParamsProjectCorpusWinsOverTheFlag(t *testing.T) {
+func TestParamsLayersTheProjectOverTheFlag(t *testing.T) {
 	proj := t.TempDir()
 	mk := func(rel, body string) {
 		p := filepath.Join(proj, rel)
@@ -243,14 +243,30 @@ parameters {
 	mk("designs/board/design.yaml", "name: board\ntitle: Test board\nentry: board.edn\n")
 	mk("designs/board/board.edn", mpnEDN)
 	mk("other/seeded.textproto", spec("99.9"))
+
+	mk("other/unseeded-by-project.textproto", strings.Replace(spec("12"), `mpn: "ACME-SEEDED"`, `mpn: "ACME-OTHER"`, 1))
 	t.Chdir(proj)
 
 	got := paramsOut(t, "params", "ACME-SEEDED", "--design", "designs/board/board.edn", "--params", "other")
 	if !strings.Contains(got, "4.6") {
-		t.Errorf("the project's own params/ did not win over --params (Overlay.SpecsOr):\n%s", got)
+		t.Errorf("the project's own params/ did not win over --params for a part it seeds (Overlay.SpecsOver):\n%s", got)
 	}
 	if strings.Contains(got, "99.9") {
-		t.Errorf("the flag's corpus answered inside a project that declares its own:\n%s", got)
+		t.Errorf("the flag's corpus answered for a part the project seeds:\n%s", got)
+	}
+
+	// A part the project does NOT seed is answered by --params, which the old wholesale rule refused
+	// inside a project, and a note says which corpus answered (agni issue 749).
+	cmd := rootCmd()
+	var out, notes bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&notes)
+	cmd.SetArgs([]string{"params", "ACME-OTHER", "--design", "designs/board/board.edn", "--params", "other"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("a part only --params seeds was not answered inside the project: %v", err)
+	}
+	if !strings.Contains(out.String(), "12") || !strings.Contains(notes.String(), "answered from the shared corpus") {
+		t.Errorf("ACME-OTHER: stdout %q, stderr %q", out.String(), notes.String())
 	}
 }
 

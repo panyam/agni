@@ -15,10 +15,10 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 1. **The datasheet workstream: #749's loose ends.** #749's design is in: a published corpus with an
    index (`datasheet/corpus`), `PartSpecService` read by `agni serve --params-url`, drafts keyed by
-   MPN in the corpus store, and the workbench's draft list, New draft and Publish. Open: whether a
-   project's `params/` should win per MPN over a shared corpus rather than wholesale
-   (`Overlay.SpecsOr`); #799 (the contract module, when a trigger appears). The first release after #744 publishes `agnids` for the first time, so
-   confirm an anonymous pull of it then.
+   MPN in the corpus store, the workbench's draft list, New draft and Publish, and a project's
+   `params/` layered over the shared corpus per MPN. Open: #799 (the contract module, when a trigger
+   appears). The first release after #744 publishes `agnids` for the first time, so confirm an
+   anonymous pull of it then.
 2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.
