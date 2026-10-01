@@ -9,6 +9,9 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/panyam/agni/internal/opscmd"
+	"github.com/panyam/agni/internal/version"
 )
 
 func main() {
@@ -24,7 +27,8 @@ func rootCmd() *cobra.Command {
 		Short:         "The agni datasheet service: the extraction workbench and the derive step",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Version:       version.Version(),
 	}
-	root.AddCommand(serveCmd(), deriveCmd())
+	root.AddCommand(serveCmd(), deriveCmd(), opscmd.Version("agnids"), opscmd.Healthcheck("agnids", "localhost:8090"))
 	return root
 }

@@ -29,6 +29,7 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/opscmd"
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/readers/edif"
 	"github.com/panyam/agni/readers/formats"
@@ -87,7 +88,7 @@ func rootCmd() *cobra.Command {
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched). Defaults to "+
 			envSymbolPath+" when unset.")
-	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), openCmd(), nativeCmd(), queryCmd(), traceCmd(), reviewCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), healthcheckCmd(), versionCmd(), paramsCmd())
+	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), openCmd(), nativeCmd(), queryCmd(), traceCmd(), reviewCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd())
 	return root
 }
 

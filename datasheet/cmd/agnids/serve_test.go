@@ -112,3 +112,51 @@ func TestWorkbenchHeadingLinksTheViewerOnlyWhenConfigured(t *testing.T) {
 		t.Error("without --viewer-url, the heading should be plain text, since / on agnids is the workbench")
 	}
 }
+
+// TestMountRootExposesEachFolder pins the image's zero-flag path: every subdirectory of
+// --mount-root is a mount named after itself, a plain file beside them is not, and an explicit
+// --mount of the same name wins over the discovered one.
+func TestMountRootExposesEachFolder(t *testing.T) {
+	root := t.TempDir()
+	for _, d := range []string{"ti", "adi"} {
+		if err := os.Mkdir(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "README"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	elsewhere := t.TempDir()
+
+	ms, err := serveMounts([]string{"ti=" + elsewhere}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, m := range ms {
+		got[m.Name] = m.Root
+	}
+	if len(got) != 2 {
+		t.Fatalf("mounts = %v, want exactly ti and adi", got)
+	}
+	if got["adi"] != filepath.Join(root, "adi") {
+		t.Errorf("adi = %q, want the discovered %q", got["adi"], filepath.Join(root, "adi"))
+	}
+	if got["ti"] != elsewhere {
+		t.Errorf("ti = %q, want the explicit --mount %q to win", got["ti"], elsewhere)
+	}
+}
+
+// TestAgnidsCarriesTheImageCommands pins the two subcommands the agnids image leans on: the release
+// workflow checks `version` against the tag, and HEALTHCHECK runs `healthcheck`.
+func TestAgnidsCarriesTheImageCommands(t *testing.T) {
+	root := rootCmd()
+	for _, name := range []string{"version", "healthcheck"} {
+		if c, _, err := root.Find([]string{name}); err != nil || c.Name() != name {
+			t.Errorf("agnids has no %q subcommand", name)
+		}
+	}
+	if root.Version == "" {
+		t.Error("root Version is empty, so --version is not registered")
+	}
+}

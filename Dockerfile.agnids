@@ -1,0 +1,134 @@
+# The datasheet service: agnids, the extraction workbench it serves, and the Python/docling stack
+# behind the workbench's "Extract (first pass)" action, in one image (agni issue 744).
+#
+#   docker run -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:v0.1.0
+#
+# Every subdirectory of /datasheets becomes a mount named after itself (serve --mount-root), as
+# /workspace does in the agni image. The workbench WRITES into those mounts (a PartSpec draft and
+# region annotations beside each PDF, and the doc-IR Extract derives), so mount them read-write and
+# see the USER note below for who owns what gets written.
+#
+# This is a separate image from agni's because it is a separate service. It is deployed apart,
+# against a different store, and nearly all of its size is the docling stack (torch, the layout and
+# table models), which the engine never needs. The two link to each other by URL:
+# `agni serve --datasheets-url` and `agnids serve --viewer-url`.
+#
+# ENTRYPOINT is the bare binary, so `docker run <image> derive ...` works as the CLI.
+
+# ---------------------------------------------------------------------------------------------
+# The docling stack, declared before the first FROM so every stage can read it. Pinned, so an image names the producer every doc-IR it derives will carry
+# (pdf2doc stamps `docling/<version>`), and torch comes from its CPU-only index, which keeps the
+# CUDA libraries (several gigabytes nothing here can use) out of the image.
+# ---------------------------------------------------------------------------------------------
+ARG DOCLING_VERSION=2.132.0
+ARG TORCH_VERSION=2.14.1
+ARG TORCHVISION_VERSION=0.29.1
+
+# ---------------------------------------------------------------------------------------------
+# Stage 1: the workbench bundle, from datasheet/web in the pnpm workspace. Built once on the build
+# platform, since the JavaScript is identical on every architecture.
+# ---------------------------------------------------------------------------------------------
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS web
+WORKDIR /src
+# Every member's manifest, because --frozen-lockfile checks all of them against the lockfile; the
+# --filter then installs only the workbench and what it depends on.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY web/package.json web/
+COPY web-shared/package.json web-shared/
+COPY datasheet/web/package.json datasheet/web/
+RUN corepack enable
+RUN pnpm install --frozen-lockfile --filter agni-datasheets-web...
+COPY web-shared/ web-shared/
+COPY datasheet/web/ datasheet/web/
+RUN pnpm -C datasheet/web build
+
+# ---------------------------------------------------------------------------------------------
+# Stage 2: the agnids binary, cross-compiled CGO-free on the build platform. The datasheet module
+# requires the engine through `replace ../`, so the build sees the whole repository.
+# ---------------------------------------------------------------------------------------------
+FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
+# VERSION is what `agnids version` reports. The context has no .git (see .dockerignore), so it is
+# passed in, exactly as for the agni image; the release workflow sets it from the tag.
+ARG VERSION=dev
+WORKDIR /src
+COPY go.mod go.sum ./
+COPY datasheet/go.mod datasheet/go.sum datasheet/
+RUN cd datasheet && go mod download
+COPY . .
+ARG TARGETOS
+ARG TARGETARCH
+RUN cd datasheet && CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath \
+      -ldflags "-X github.com/panyam/agni/internal/version.stamped=${VERSION}" \
+      -o /out/agnids ./cmd/agnids
+
+# ---------------------------------------------------------------------------------------------
+# Stage 3: the models, fetched by RUNNING pdf2doc once over a synthetic page, on the build
+# platform. Running it is the only prefetch that provably matches what Extract loads: docling reads
+# its models from the Hugging Face cache, and `docling-tools models download` fills a different
+# directory that this path never reads. The cache is architecture-independent files, so it is
+# fetched once natively and copied into every platform's runtime.
+# ---------------------------------------------------------------------------------------------
+FROM --platform=$BUILDPLATFORM python:3.12-slim-bookworm AS models
+ARG DOCLING_VERSION
+ARG TORCH_VERSION
+ARG TORCHVISION_VERSION
+# docling imports OpenCV, which links libGL and glib even when nothing is drawn.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
+ && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+      torch==${TORCH_VERSION} torchvision==${TORCHVISION_VERSION} \
+ && pip install --no-cache-dir docling==${DOCLING_VERSION}
+ENV HF_HOME=/models
+COPY datasheet/tools/pdf2doc/ /pdf2doc/
+RUN python /pdf2doc/pdf2doc.py /pdf2doc/testdata/warmup.pdf -o /tmp/warmup.doc.textproto
+
+# ---------------------------------------------------------------------------------------------
+# Stage 4: the runtime, per target platform. The venv is installed here rather than copied, because
+# torch's wheels are architecture-specific; on a multi-arch build this is the one stage that runs
+# under emulation, and it only unpacks wheels.
+# ---------------------------------------------------------------------------------------------
+FROM python:3.12-slim-bookworm
+ARG DOCLING_VERSION
+ARG TORCH_VERSION
+ARG TORCHVISION_VERSION
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
+ && rm -rf /var/lib/apt/lists/*
+RUN python -m venv /opt/docling \
+ && /opt/docling/bin/pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+      torch==${TORCH_VERSION} torchvision==${TORCHVISION_VERSION} \
+ && /opt/docling/bin/pip install --no-cache-dir docling==${DOCLING_VERSION}
+
+COPY --from=models /models                  /opt/docling/models
+COPY --from=build  /out/agnids              /usr/local/bin/agnids
+COPY               datasheet/tools/pdf2doc/pdf2doc.py /opt/agnids/pdf2doc.py
+# serve's --web-dir: the workbench's templates and its built bundle. checkWorkbenchAssets checks
+# both at startup, so a broken copy fails by name before the listener opens.
+COPY               datasheet/web/templates  /srv/agnids/web/templates
+COPY --from=web    /src/datasheet/web/static /srv/agnids/web/static
+COPY               LICENSE NOTICE           /usr/share/agnids/
+
+# The models are read from the copy above and never fetched at run time, so Extract works on a host
+# with no outbound network. HF_HUB_OFFLINE makes a missing model a clear error rather than a
+# download into a directory the agnids user cannot write.
+ENV HF_HOME=/opt/docling/models \
+    HF_HUB_OFFLINE=1
+
+# Non-root, because the workbench writes into the bind-mounted datasheet folders, and as root those
+# files would land on the operator's host owned by root. Run with `--user $(id -u)` to have them
+# land as your own uid.
+RUN useradd --system --create-home --uid 10001 agnids \
+ && mkdir -p /datasheets \
+ && chown agnids:agnids /datasheets
+USER agnids
+
+WORKDIR /srv/agnids
+EXPOSE 8090
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["agnids", "healthcheck"]
+
+ENTRYPOINT ["agnids"]
+CMD ["serve", "--addr", ":8090", "--mount-root", "/datasheets", "--web-dir", "/srv/agnids/web", \
+     "--pdf2doc", "/opt/docling/bin/python /opt/agnids/pdf2doc.py"]

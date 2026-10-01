@@ -1,4 +1,6 @@
-# Publishes the container image to GHCR when a release tag is pushed.
+# Publishes the two container images to GHCR when a release tag is pushed: ghcr.io/panyam/agni (the
+# engine and viewer, Dockerfile) and ghcr.io/panyam/agnids (the datasheet service, Dockerfile.agnids,
+# agni issue 744). Both carry the tag's version, from one build-arg.
 #
 # The tag is the single source of the version. `make tag-push V=v0.1.0` publishes the tag, which is
 # the Go module release, and this workflow then builds the image from that same tag and stamps the
@@ -17,9 +19,14 @@
 # client. The private-by-default warning applies to a package with no repository link, which is not
 # the case here.
 #
+# agnids is a SECOND package pushed from this repository. The same linking applies to it, and the
+# image also carries an org.opencontainers.image.source label naming this repository, which is the
+# documented way to link a package to a repo. Its first release is the run to confirm with an
+# anonymous pull, since the measurement above was of the agni package.
+#
 # The distinction matters for the verify step below: it authenticates as the workflow, so it proves
 # the image runs and reports its tag, but it can say NOTHING about whether a stranger can pull it. If
-# that ever needs checking again, the only honest test is an anonymous pull from a logged-out client.
+# that ever needs checking again, the only reliable test is an anonymous pull from a logged-out client.
 name: release
 
 on:
@@ -41,6 +48,15 @@ permissions:
 jobs:
   image:
     runs-on: ubuntu-latest
+    strategy:
+      # One image failing must not cancel the other mid-push; each is published or not on its own.
+      fail-fast: false
+      matrix:
+        include:
+          - kind: agni
+            file: Dockerfile
+          - kind: agnids
+            file: Dockerfile.agnids
     steps:
       # The tag reaches the shell through the ENVIRONMENT, never through ${{ }} interpolation into
       # the script body. A workflow_dispatch input is free text and a tag name can carry shell
@@ -72,9 +88,14 @@ jobs:
           # branch, so without this an image labelled v0.1.0 could contain unreleased commits.
           ref: ${{ steps.rel.outputs.tag }}
 
-      # No QEMU. Every stage that compiles or installs runs on $BUILDPLATFORM (see the Dockerfile):
-      # the bundle is JavaScript, the symbol libraries are architecture-independent text, and the
-      # binary is CGO-free so Go cross-compiles it. Only the final COPY-only stage is per-platform.
+      # QEMU for agnids alone. Every agni stage that compiles or installs runs on $BUILDPLATFORM (see
+      # the Dockerfile): the bundle is JavaScript, the symbol libraries are architecture-independent
+      # text, and the binary is CGO-free so Go cross-compiles it. agnids' runtime stage installs
+      # torch's architecture-specific wheels, so its arm64 half runs under emulation; it only
+      # unpacks wheels, and the models are fetched once natively (see Dockerfile.agnids).
+      - uses: docker/setup-qemu-action@v3
+        if: matrix.kind == 'agnids'
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -87,6 +108,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ${{ matrix.file }}
           platforms: linux/amd64,linux/arm64
           push: true
           # VERSION is what the binary reports. It comes from the tag, which is the whole point of
@@ -94,28 +116,26 @@ jobs:
           build-args: |
             VERSION=${{ steps.rel.outputs.tag }}
           tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.rel.outputs.tag }}
-            ghcr.io/${{ github.repository }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }}:${{ steps.rel.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.kind }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.kind }}
 
       # Proves the published image runs and agrees with its own tag, on the runner's architecture.
       # A published image that reports the wrong version is the specific failure this workflow was
-      # built to prevent, so it is worth one pull to confirm rather than assume.
-      - name: Verify the published image reports the tag
+      # built to prevent, so it is worth one pull to confirm rather than assume. hack/image_smoke.sh
+      # is the same check the `images` workflow runs on a PR, so the two cannot drift.
+      - name: Verify the published image reports the tag and works
         env:
           # Via env for the same reason as above. This value is validated, but keeping one rule
           # ("untrusted-ish values reach the shell through env") is easier to hold than a per-site
           # judgement about which interpolations happen to be safe.
-          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          KIND: ${{ matrix.kind }}
           TAG: ${{ steps.rel.outputs.tag }}
         run: |
-          img="ghcr.io/${REPO}:${TAG}"
+          img="ghcr.io/${OWNER}/${KIND}:${TAG}"
           docker pull "$img"
-          got="$(docker run --rm "$img" version | head -1)"
-          want="agni ${TAG}"
-          echo "reported: $got"
-          [ "$got" = "$want" ] || { echo "::error::image reports '$got', expected '$want'"; exit 1; }
-          # It must also actually work, not merely start: run the catalog over a board baked into
-          # the image, so a broken symbol path or missing asset fails here rather than for a user.
-          docker run --rm "$img" check /workspace/demo/showcase.fires.kicad_pro | head -5
+          hack/image_smoke.sh "$KIND" "$img" "$TAG"

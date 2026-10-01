@@ -1,4 +1,4 @@
-package main
+package opscmd
 
 import (
 	"fmt"
@@ -8,17 +8,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// healthcheckCmd probes a running server's /healthz and exits non-zero unless it answers 200. The
-// container image's HEALTHCHECK runs it because the debian-slim runtime ships neither curl nor wget,
-// and installing one would add a package to every deployment for a single request. It reads only
-// the status code and checks no other route.
-func healthcheckCmd() *cobra.Command {
+// Healthcheck probes a running server's /healthz and exits non-zero unless it answers 200. The
+// container images' HEALTHCHECK runs it because their slim runtimes ship neither curl nor wget, and
+// installing one would add a package to every deployment for a single request. It reads only the
+// status code and checks no other route. defaultAddr is the loopback form of the server's own
+// default --addr, since ":8080" listens on every interface and is not a dialable host.
+func Healthcheck(server, defaultAddr string) *cobra.Command {
 	var addr string
 	var timeout time.Duration
 	c := &cobra.Command{
 		Use:   "healthcheck",
 		Short: "Probe a running server's /healthz and exit non-zero if it is unhealthy",
-		Long: "healthcheck GETs /healthz on a running agni server and exits 0 only on a 200.\n" +
+		Long: "healthcheck GETs /healthz on a running " + server + " server and exits 0 only on a 200.\n" +
 			"It is what the container image's HEALTHCHECK runs, so the image needs no curl or wget.",
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
@@ -38,9 +39,7 @@ func healthcheckCmd() *cobra.Command {
 			return nil
 		},
 	}
-	// Defaults to the loopback form of serve's own default --addr. serve accepts ":8080" (all
-	// interfaces), which is not a dialable host, so the probe names localhost explicitly.
-	c.Flags().StringVar(&addr, "addr", "localhost:8080", "address of the server to probe")
+	c.Flags().StringVar(&addr, "addr", defaultAddr, "address of the server to probe")
 	c.Flags().DurationVar(&timeout, "timeout", 3*time.Second, "how long to wait for a response")
 	return c
 }

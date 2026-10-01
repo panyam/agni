@@ -1,0 +1,76 @@
+# Builds both container images on a change that could break them, and smoke-tests each, without
+# pushing anything.
+#
+# Before this, an image was first built by `release`, after a tag was already public, so a broken
+# Dockerfile surfaced as a failed release. It runs only when a file the images are made from
+# changes, because the agnids image installs torch and docling and takes minutes, which an
+# ordinary PR should not pay. It builds linux/amd64 alone: the arm64 half differs only in which
+# wheels the runtime stage unpacks, and release builds it.
+name: images
+
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - Dockerfile.agnids
+      - .dockerignore
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - datasheet/tools/pdf2doc/**
+      - hack/image_smoke.sh
+      - .github/workflows/images.yml
+      - .github/workflows/release.yml
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - Dockerfile.agnids
+      - .dockerignore
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - datasheet/tools/pdf2doc/**
+      - hack/image_smoke.sh
+      - .github/workflows/images.yml
+      - .github/workflows/release.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: agni
+            file: Dockerfile
+          - kind: agnids
+            file: Dockerfile.agnids
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # load: true puts the image in the runner's daemon so the smoke test can run it. The cache is
+      # scoped per image, so the two builds do not evict each other's layers.
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          load: true
+          push: false
+          build-args: |
+            VERSION=v0.0.0-ci
+          tags: agni-ci/${{ matrix.kind }}:ci
+          cache-from: type=gha,scope=${{ matrix.kind }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.kind }}
+
+      - name: Smoke test
+        env:
+          KIND: ${{ matrix.kind }}
+        run: |
+          hack/image_smoke.sh "$KIND" "agni-ci/$KIND:ci" v0.0.0-ci
+          docker image ls "agni-ci/$KIND:ci" --format '{{.Repository}}:{{.Tag}} {{.Size}}'

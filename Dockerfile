@@ -20,10 +20,10 @@
 # the engine and the symbol data together, which is what makes an archived report reproducible.
 #
 # What is deliberately NOT here: the native EDA tool binaries (kicad-cli, xschem, Lepton) that
-# `agni native render/open` shells out to, and the Python/docling stack behind the /datasheets
-# "Extract (first pass)" action. Both are large and both are reached by shelling out to a
-# command, so they belong in their own images rather than inflating this one. See
-# Dockerfile.nattools for the tool host.
+# `agni native render/open` shells out to, and the datasheets workbench with the Python/docling
+# stack behind its Extract action. Both are large, so they have images of their own:
+# Dockerfile.nattools for the tool host, and Dockerfile.agnids for the datasheet service, which is
+# a separate binary and deployment since agni issue 744.
 
 # ---------------------------------------------------------------------------------------------
 # Stage 1: the browser bundle. Node is needed only to produce web/static/*.js, which is a
@@ -140,10 +140,10 @@ COPY --from=web /src/web/static          /srv/agni/web/static
 COPY            demo                     /workspace/demo
 COPY            LICENSE NOTICE           /usr/share/agni/
 
-# Run as a non-root user. This matters beyond general hygiene: the datasheets workbench writes
-# back into a mount (SavePartSpec / SaveAnnotations), and as root those files land in the
-# operator's bind-mounted host directory owned by root. Override with `docker run --user $(id -u)`
-# to have writes land as your own uid.
+# Run as a non-root user. This matters beyond general hygiene: anything the server writes into a
+# bind-mounted directory, such as a --review-store, would otherwise land on the operator's host
+# owned by root. Override with `docker run --user $(id -u)` to have writes land as your
+# own uid.
 RUN useradd --system --create-home --uid 10001 agni \
  && mkdir -p /workspace \
  && chown -R agni:agni /workspace
