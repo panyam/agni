@@ -644,8 +644,9 @@ pdf2doc:
 	$(PDF2DOC_PY) datasheet/tools/pdf2doc/pdf2doc.py $(PDF) -o $(OUT)
 	cd datasheet && $(GO) run ./tools/pdf2doc/validate $(abspath $(OUT))
 
-# Report-only extraction status: per part, whether each PDF has a fresh, stale, or absent doc-IR and
-# whether a part-level PartSpec exists. Reads doc-IR content_hash + producer, and writes nothing.
+# Report-only extraction status: per part, whether each PDF has a fresh, stale, or absent doc-IR, and,
+# when CORPUS_DIR exists, which drafts cite the part's PDFs and whether each is published (agni issue
+# 749). Reads doc-IR content_hash + producer and the corpus store, and writes nothing.
 #
 # The --toolchain value is the producer string the INSTALLED docling would stamp now, which is what
 # lets the walker flag a doc-IR that predates a toolchain bump. It is computed in the recipe rather
@@ -653,7 +654,7 @@ pdf2doc:
 # best-effort: docling missing means the flag is omitted and only hash freshness gets reported.
 datasheets-status:
 	@v=$$($(PDF2DOC_PY) -c "import importlib.metadata as m; print(m.version('docling'))" 2>/dev/null); \
-	cd datasheet && $(GO) run ./tools/datasheetstatus $${v:+--toolchain docling/$$v} $(abspath $(DATASHEET_DIR))
+	cd datasheet && $(GO) run ./tools/datasheetstatus $${v:+--toolchain docling/$$v} $(if $(wildcard $(CORPUS_DIR)),--corpus $(abspath $(CORPUS_DIR))) $(abspath $(DATASHEET_DIR))
 
 # Run pdf2doc on exactly the PDFs the walker flags as not-extracted or stale-source (fresh ones are
 # skipped; a stale-toolchain refresh stays a deliberate `make pdf2doc PDF=... OUT=...`). Each PDF's

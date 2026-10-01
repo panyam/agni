@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
+
+	"github.com/panyam/agni/datasheet/corpus"
 )
 
 func TestClassify(t *testing.T) {
@@ -62,5 +65,29 @@ func TestHashPDF(t *testing.T) {
 	}
 	if got != want {
 		t.Errorf("hashPDF = %q, want %q", got, want)
+	}
+}
+
+// A part reports the drafts citing its PDFs, by the mount URI the workbench cites them with, and
+// whether each draft's MPN is published; a draft citing another datasheet is not attached.
+func TestAttachDraftsByCitedDocument(t *testing.T) {
+	draft := func(mpn, doc string) string {
+		return `{"mpn": "` + mpn + `", "spec": {"mpn": "` + mpn + `"}, "documentUris": ["` + doc + `"]}`
+	}
+	store := fstest.MapFS{
+		corpus.DraftFile("LM1117-3.3"): {Data: []byte(draft("LM1117-3.3", "mount://ds/ti/LM1117/LM1117.pdf"))},
+		corpus.DraftFile("LM1117-5.0"): {Data: []byte(draft("LM1117-5.0", "mount://ds/ti/LM1117/LM1117.pdf"))},
+		corpus.DraftFile("BSS138"):     {Data: []byte(draft("BSS138", "mount://ds/onsemi/BSS138/BSS138.pdf"))},
+		corpus.IndexFile:               {Data: []byte(`{"generation": 3, "entries": [{"mpn": "LM1117-3.3", "file": "LM1117-3.3.textproto", "hash": "sha256:x"}]}`)},
+	}
+	parts := []partInfo{{name: "ti/LM1117", pdfs: []pdfInfo{{name: "LM1117.pdf", uri: "mount://ds/ti/LM1117/LM1117.pdf"}}}}
+	if err := attachDrafts(parts, store); err != nil {
+		t.Fatal(err)
+	}
+	if got := draftColumn(parts[0].drafts); got != "LM1117-3.3 (published), LM1117-5.0 (draft)" {
+		t.Errorf("draft column = %q", got)
+	}
+	if got := draftColumn(nil); got != "no-draft" {
+		t.Errorf("no drafts = %q", got)
 	}
 }
