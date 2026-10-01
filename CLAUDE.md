@@ -185,6 +185,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench is
   NOT served by `agni` at all since agni 744; it is `agnids serve` (`make dsserve`), and
   `agni serve --datasheets-url <url>` is what makes the landing page link to it.
+- **There are two images, published by one release tag**: `Dockerfile` (`ghcr.io/panyam/agni`, the
+  engine, viewer and symbol libraries) and `Dockerfile.agnids` (`ghcr.io/panyam/agnids`, the
+  workbench and the docling stack). `make image` and `make dsimage` build them. The `images` workflow
+  builds and smoke-tests both on a PR that touches what they are made from, through
+  `hack/image_smoke.sh`, which `release` also runs against what it published. The agnids image
+  prefetches its models by RUNNING pdf2doc over a synthetic page, because docling reads the Hugging
+  Face cache and `docling-tools models download` fills a different one (agni 786).
 - **The web code is ONE pnpm workspace with one lockfile at the root**: `web/` (the viewer),
   `datasheet/web/` (the workbench `agnids` serves, with pdf.js) and `web-shared/` (plain TS both
   import as `@agni/web-shared/<name>.js`, with no npm dependency of its own, so neither page pulls

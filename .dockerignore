@@ -1,5 +1,5 @@
-# Keep the build context small. Shared by Dockerfile (the packaged server) and
-# Dockerfile.nattools (the native EDA tool host).
+# Keep the build context small. Shared by Dockerfile (the packaged server), Dockerfile.agnids (the
+# datasheet service) and Dockerfile.nattools (the native EDA tool host).
 #
 # Note what is deliberately NOT excluded: web/ source and web/templates, which the server image
 # needs, and demo/, which it bakes in so `docker run` with no volumes still shows a board.
@@ -14,6 +14,13 @@ node_modules
 web-shared/node_modules
 datasheet/web/node_modules
 datasheet/web/static
+
+# The local datasheet corpus (DATASHEET_DIR's default) is vendor-licensed PDFs, which must never
+# enter an image, and a docling venv is gigabytes of host-architecture wheels the agnids image
+# installs for itself.
+datasheets
+.venv
+clients/python/.venv
 
 # Host build output.
 bin

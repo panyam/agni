@@ -21,7 +21,7 @@ import (
 // which carries the workbench's whole API including its folder tree, so agnids can be hosted apart
 // from the engine's `agni serve` (agni issue 744).
 func serveCmd() *cobra.Command {
-	var addr, webDir, pdf2doc, viewerURL string
+	var addr, webDir, pdf2doc, viewerURL, mountRoot string
 	var specs []string
 	c := &cobra.Command{
 		Use:   "serve",
@@ -31,7 +31,7 @@ func serveCmd() *cobra.Command {
 			"holding datasheets, and --web-dir for the built workbench assets.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ms, err := mounts.Parse(specs)
+			ms, err := serveMounts(specs, mountRoot)
 			if err != nil {
 				return err
 			}
@@ -45,6 +45,7 @@ func serveCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&addr, "addr", ":8090", "address to listen on")
 	c.Flags().StringArrayVar(&specs, "mount", nil, "expose a folder of datasheets as name=path (repeatable)")
+	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().StringVar(&webDir, "web-dir", "datasheet/web", "directory holding the workbench's built assets (templates/DatasheetsPage.html, static/datasheets.js, static/pdf.worker.js); the default is where a repo checkout keeps them, after `make ui`")
 	c.Flags().StringVar(&viewerURL, "viewer-url", "", "where the viewer (`agni serve`) is served, e.g. http://host:8080; the workbench's heading links home there, and is plain text when this is empty")
 	c.Flags().StringVar(&pdf2doc, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 datasheet/tools/pdf2doc/pdf2doc.py\"; empty disables the workbench's Extract (first pass) action")
@@ -72,6 +73,23 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerU
 		fmt.Fprintln(w, "ok")
 	})
 	return mux
+}
+
+// serveMounts composes the mount table from --mount and --mount-root. The root is the image's
+// zero-flag path, as on `agni serve`: every subdirectory becomes a mount named after itself, so
+// `-v ~/datasheets/ti:/datasheets/ti` needs no flag, and an explicit --mount of the same name wins.
+func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
+	explicit, err := mounts.Parse(specs)
+	if err != nil {
+		return nil, err
+	}
+	var discovered []mounts.Mount
+	if root != "" {
+		if discovered, err = mounts.Discover(root); err != nil {
+			return nil, err
+		}
+	}
+	return mounts.Merge(discovered, explicit), nil
 }
 
 // displayAddr turns a listen address into one a browser can open, since ":8090" listens on every

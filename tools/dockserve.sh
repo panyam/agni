@@ -8,20 +8,19 @@
 # Each "--mount NAME=PATH" becomes "-v PATH:/workspace/NAME", and the image's own CMD already passes
 # --mount-root /workspace, so nothing needs a --mount flag inside the container.
 #
-# THREE of serve's parameters cannot be forwarded, because the image does not contain what they
+# TWO of serve's parameters cannot be forwarded, because the image does not contain what they
 # describe:
 #
 #   NATIVE_TOOLS  no kicad-cli/xschem/Lepton inside (see the Dockerfile header). Use serve, or
 #                 reach the tools through the nattools container.
-#   PDF2DOC       no Python/docling inside, and the value is a host path.
 #   OVERLAY_FLAGS host paths that do not resolve in the container. Pass OVERLAY_DIR instead: the
 #                 folder is mounted at /overlay and the flags are rebuilt against it.
 #
 # WHETHER THAT IS A HARD ERROR OR A DROPPED FLAG DEPENDS ON WHO SET THE VALUE. Typed on the make
 # command line, it is an instruction, and the honest answer is to refuse rather than to run
 # something other than what was asked for. Inherited from the environment or from the Makefile's own
-# defaults, it is ambient config for the whole tree: a shell that exports the serve settings, or a
-# `make setup` that turned the Extract default on. Refusing those would mean dockserve stops working
+# defaults, it is ambient config for the whole tree, such as a shell that exports the serve
+# settings. Refusing those would mean dockserve stops working
 # the moment serve is configured, so they are announced and dropped instead. Announced, never
 # silent, because the hazard here is a run that quietly describes less than you think it does.
 #
@@ -68,13 +67,6 @@ if [ -n "${NATIVE_TOOLS:-}" ]; then
 		"ignoring NATIVE_TOOLS=$NATIVE_TOOLS; no native tools in the image." \
 		"NATIVE_TOOLS is not available in the image (no kicad-cli/xschem/Lepton inside)." \
 		"          Use 'make serve' for native golden renders."
-fi
-
-if [ -n "${PDF2DOC:-}" ]; then
-	refuse_or_drop PDF2DOC \
-		"ignoring PDF2DOC; no Python/docling in the image, so no Extract action." \
-		"PDF2DOC is not available in the image (no Python/docling inside), and the" \
-		"          value is a host path. Use 'make serve' for the datasheet Extract action."
 fi
 
 if [ -n "${OVERLAY_FLAGS:-}" ] && [ -z "${OVERLAY_DIR:-}" ]; then

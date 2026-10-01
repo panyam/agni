@@ -201,11 +201,35 @@ Runs are visible to every client of the server, because
 team on a trusted network and no boundary between teams. And nothing prunes it, so a CI job creating
 a run per commit will grow the volume until you delete runs yourself.
 
+## The datasheet service image
+
+The datasheets workbench has an image of its own, `ghcr.io/panyam/agnids`, published by every release
+from the same tag as `agni`'s. It carries `agnids`, the workbench, and the docling environment behind
+the "Extract (first pass)" action, with docling's models already inside, so Extract works on a host
+with no outbound network. That environment is why the image is about 2.6GB where `agni`'s is about
+230MB, and why the two are separate.
+
+```
+docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:latest
+```
+
+Every subdirectory of `/datasheets` becomes a mount named after itself, as `/workspace` does in the
+`agni` image. Mount them read-write, since the workbench saves into them. To link the workbench's
+heading back to a viewer, pass the whole command, because arguments after the image replace its
+default rather than adding to it:
+
+```
+docker run -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:latest \
+  serve --addr :8090 --mount-root /datasheets --web-dir /srv/agnids/web \
+  --pdf2doc "/opt/docling/bin/python /opt/agnids/pdf2doc.py" --viewer-url http://host:8080
+```
+
 ## Writes and file ownership
 
-The datasheets workbench (`agnids`) writes back into a mount, so saving a PartSpec or an annotation
-lands a file in your bind-mounted folder. The container runs as a non-root user (uid 10001) so those files are
-never written as root.
+The datasheets workbench (`agnids`) writes back into a mount, so saving a PartSpec or an annotation,
+or running Extract, lands a file in your bind-mounted folder. The `agni` image writes only to a
+`--review-store`. Both containers run as a non-root user (uid 10001), so those files are never
+written as root.
 
 On **Docker Desktop** (macOS, Windows) that is the whole story. Its file-sharing layer maps
 ownership to you, so a file the container wrote as uid 10001 appears on your host owned by your own
@@ -215,20 +239,18 @@ On **Linux**, bind mounts pass ownership through unchanged, so those files land 
 and you may not be able to edit them afterwards. Run as yourself instead:
 
 ```
-docker run --user $(id -u):$(id -g) -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.1
+docker run --user $(id -u):$(id -g) -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:latest
 ```
 
 ## What is not in the image
 
-Two capabilities shell out to external programs and are deliberately left out, because both are
-large and neither is needed to read, check, diff, or query a design.
+Two capabilities shell out to external programs and are deliberately left out of the `agni` image,
+because both are large and neither is needed to read, check, diff, or query a design.
 
 - `agni native render/open` makes native golden renders by driving the format's own tool (`kicad-cli`,
   xschem, Lepton). See [native verification](../../build/native-verification/).
-- Datasheet extraction, the workbench's "Extract (first pass)" action, shells out to a doc-IR
-  producer configured with `agnids serve --pdf2doc`. The workbench is a separate binary, `agnids`,
-  and transcribing parameters by hand and reading an already-extracted doc-IR both work without
-  the producer.
+- Datasheet extraction, the workbench's "Extract (first pass)" action, belongs to the separate
+  datasheet service, which has [its own image](#the-datasheet-service-image).
 
 ## A shared deployment
 

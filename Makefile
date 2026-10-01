@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -434,6 +434,15 @@ IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
 image:
 	docker build --build-arg VERSION=$(IMAGE_TAG) -t $(IMAGE) .
 
+# The datasheet service (Dockerfile.agnids): agnids, the workbench, and the docling stack with its
+# models prefetched, so Extract works offline. Same IMAGE_TAG, so one release names both images.
+#   make dsimage
+#   docker run -p 8090:8090 --user $$(id -u) -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:dev
+DS_IMAGE_NAME ?= ghcr.io/panyam/agnids
+DS_IMAGE := $(DS_IMAGE_NAME):$(IMAGE_TAG)
+dsimage:
+	docker build -f Dockerfile.agnids --build-arg VERSION=$(IMAGE_TAG) -t $(DS_IMAGE) .
+
 # dockserve is serve's container twin: same MOUNTS / EXTRA_MOUNTS / DESIGNS / ADDR, run from the
 # image instead of `go run`.
 #
@@ -452,17 +461,17 @@ OVERLAY_DIR ?=
 DOCKER_FLAGS ?=
 DOCKER_NAME ?= agni-dockserve
 
-# The names the CALLER typed on this command line, out of the three the script may have to refuse.
+# The names the CALLER typed on this command line, out of the two the script may have to refuse.
 # $(origin) is the only thing that can tell a typed argument from ambient config, and it exists only
 # here, so the answer is computed in make and passed down.
-DOCKSERVE_CLI_SET = $(foreach v,NATIVE_TOOLS PDF2DOC OVERLAY_FLAGS,$(if $(filter command line,$(origin $(v))),$(v)))
+DOCKSERVE_CLI_SET = $(foreach v,NATIVE_TOOLS OVERLAY_FLAGS,$(if $(filter command line,$(origin $(v))),$(v)))
 
 dockserve:
 	@MAKE='$(MAKE)' IMAGE='$(IMAGE)' ADDR='$(ADDR)' \
 	  MOUNTS='$(MOUNTS)' EXTRA_MOUNTS='$(EXTRA_MOUNTS)' DESIGNS='$(strip $(DESIGNS))' \
 	  OVERLAY_DIR='$(strip $(OVERLAY_DIR))' OVERLAY_FLAGS='$(strip $(OVERLAY_FLAGS))' \
 	  REVIEW_STORE='$(strip $(REVIEW_STORE))' NATIVE_TOOLS='$(strip $(NATIVE_TOOLS))' \
-	  PDF2DOC='$(strip $(PDF2DOC))' SYMBOL_PATH='$(strip $(SYMBOL_PATH))' \
+	  SYMBOL_PATH='$(strip $(SYMBOL_PATH))' \
 	  DOCKER_FLAGS='$(DOCKER_FLAGS)' DOCKER_NAME='$(DOCKER_NAME)' \
 	  CLI_SET='$(DOCKSERVE_CLI_SET)' \
 	  tools/dockserve.sh
