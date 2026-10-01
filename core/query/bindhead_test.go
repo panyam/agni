@@ -1,62 +1,85 @@
 package query
 
 import (
-	"strings"
+	"fmt"
 	"testing"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestGeneratorFirstRules covers the WS3-114 lint. The first two cases are the ACTUAL rule bodies from
-// before and after the fix, so the test proves the guard catches the real regression rather than a
-// shape invented to match the guard.
-func TestGeneratorFirstRules(t *testing.T) {
-	for _, c := range []struct {
-		name string
-		text string
-		want []string
-	}{{
-		name: "the regression: esd_ok opened with an unbound reaches",
-		text: `esd_ok(?n) :- net.reaches(?n, ?rn, ?h), component.net(?t, ?rn), component.class(?t, "tvs"); esd_ok(?n) => ?n`,
-		want: []string{"esd_ok"},
-	}, {
-		name: "the fix: the guard binds the start net before the walk",
-		text: `esd_ok(?n) :- needs_esd(?n), net.reaches(?n, ?rn, ?h), component.net(?t, ?rn); esd_ok(?n) => ?n`,
-		want: nil,
-	}, {
-		name: "a constant start is a single walk, not a scan of the board",
-		text: `near(?n) :- net.reaches("VBUS", ?n, ?h); near(?n) => ?n`,
-		want: nil,
-	}, {
-		name: "the 2-arity reaches has the same hazard",
-		text: `far(?n) :- net.reaches(?a, ?n), net.rail(?n); far(?n) => ?n`,
-		want: []string{"far"},
-	}, {
-		name: "a filter cannot enumerate, so leading with one is not this bug",
-		text: `named(?n) :- net.rail(?n), str.prefix(?n, "V"); named(?n) => ?n`,
-		want: nil,
-	}} {
-		t.Run(c.name, func(t *testing.T) {
-			q, err := Parse(c.text)
-			if err != nil {
-				t.Fatalf("Parse: %v", err)
+// walkChain is a design shaped to make an unbound walk expensive: n nets in a chain, each pair joined
+// by a resistor so every net reaches every other, two IO nets at one end that the query is really
+// about, and a TVS on the far end.
+func walkChain(n int) *ir.Design {
+	p := &ir.Provenance{SourceFile: "chain"}
+	d := &ir.Design{}
+	net := func(name string) *ir.Net {
+		for _, x := range d.Nets {
+			if x.Name == name {
+				return x
 			}
-			if got := GeneratorFirstRules(q); strings.Join(got, ",") != strings.Join(c.want, ",") {
-				t.Errorf("GeneratorFirstRules = %v, want %v", got, c.want)
-			}
-		})
+		}
+		x := &ir.Net{Name: name, Prov: p}
+		d.Nets = append(d.Nets, x)
+		return x
 	}
+	join := func(ref, a, b string) {
+		d.Components = append(d.Components, &ir.Component{RefDes: ref, Prov: p})
+		net(a).Connections = append(net(a).Connections, &ir.Connection{ComponentRef: ref, PinRef: "1"})
+		net(b).Connections = append(net(b).Connections, &ir.Connection{ComponentRef: ref, PinRef: "2"})
+	}
+	for i := 0; i+1 < n; i++ {
+		join(fmt.Sprintf("R%d", i), fmt.Sprintf("N%d", i), fmt.Sprintf("N%d", i+1))
+	}
+	join("R100", "IO1", "N0")
+	join("R101", "IO2", "N0")
+	d.Components = append(d.Components, &ir.Component{RefDes: "TVS1", Prov: p})
+	last := net(fmt.Sprintf("N%d", n-1))
+	last.Connections = append(last.Connections, &ir.Connection{ComponentRef: "TVS1", PinRef: "1"})
+	return d
 }
 
-// TestGeneratorFirstRulesMissesJoinOrder pins what this lint does NOT do, so nobody reads a clean run
-// as "the join orders are fine". `pulled` opened with component.net with both variables unbound, a
-// full EDB scan re-entered per survivor. That was 21s on a real board, not forever, and no syntactic
-// check distinguishes it from a legitimate small-relation lead. That needs a cost-based planner
-// (WS3-031). Recording it here so the gap is documented where someone would look for it.
-func TestGeneratorFirstRulesMissesJoinOrder(t *testing.T) {
-	q, err := Parse(`pulled(?n) :- component.net(?pu, ?n), component.class(?pu, "resistor"), component.net(?pu, ?rail); pulled(?n) => ?n`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := GeneratorFirstRules(q); len(got) != 0 {
-		t.Errorf("GeneratorFirstRules = %v, want empty: this lint deliberately does not judge join order", got)
+// TestTheDefaultEvaluatorPlansAnUnboundWalk is the WS3-114 regression guard, now that the engine plans
+// rule bodies rather than an engine lint refusing one shape. A shipped rule opened with an unbound
+// walk, `esd_ok(?n) :- net.reaches(?n, ...), needs_esd(?n), ...`, which walked from every net on the
+// board before its guard applied and took `agni check` from 13s to not finishing. Under query.Default
+// the written order no longer decides where the walk starts, so the walk-first body must cost about
+// what the guard-first body costs.
+//
+// Naive runs bodies as written, and is the positive control: on the same design the walk-first body
+// must cost far more there, or the work measure could not see the hazard at all. net.route walks the
+// same way and is held to the same property.
+func TestTheDefaultEvaluatorPlansAnUnboundWalk(t *testing.T) {
+	m := check.NewModel(walkChain(60))
+	const io = `io(?n) :- entity(?n, "net"), str.prefix(?n, "IO"); `
+	for _, walk := range []string{"net.reaches(?n, ?rn, ?h)", "net.route(?n, ?rn, ?h)"} {
+		walkFirst := io + `esd_ok(?n) :- ` + walk + `, io(?n), component.net(?t, ?rn), component.class(?t, "tvs"); esd_ok(?n) => ?n`
+		guardFirst := io + `esd_ok(?n) :- io(?n), ` + walk + `, component.net(?t, ?rn), component.class(?t, "tvs"); esd_ok(?n) => ?n`
+		cost := func(ev Evaluator, text string) (int64, int) {
+			b := NewBase(m)
+			rows, err := ev.Eval(MustParse(text), b)
+			if err != nil {
+				t.Fatalf("%s: %v", text, err)
+			}
+			return b.Work(), len(rows)
+		}
+		guarded, n := cost(Default, guardFirst)
+		if n != 2 {
+			t.Fatalf("%s: the guarded rule answered %d rows, want IO1 and IO2", walk, n)
+		}
+		planned, n := cost(Default, walkFirst)
+		if n != 2 {
+			t.Fatalf("%s: the walk-first rule answered %d rows under Default, want 2", walk, n)
+		}
+		if planned > 2*guarded {
+			t.Errorf("%s: walk-first cost %d under Default against %d guard-first; the planner should start the walk from the guard", walk, planned, guarded)
+		}
+		naiveGuarded, _ := cost(Naive{}, guardFirst)
+		naiveWalkFirst, _ := cost(Naive{}, walkFirst)
+		t.Logf("%s: Default guard-first %d, walk-first %d; Naive guard-first %d, walk-first %d", walk, guarded, planned, naiveGuarded, naiveWalkFirst)
+		if naiveWalkFirst < 10*naiveGuarded {
+			t.Errorf("%s: walk-first cost %d under Naive against %d guard-first; the control should show the hazard, or this test cannot see it", walk, naiveWalkFirst, naiveGuarded)
+		}
 	}
 }

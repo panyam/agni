@@ -26,12 +26,12 @@ import (
 // The query joins a NET-level relation with two PIN relations. It finds an experimental part and a
 // net it sits on, then asks whether some other part's declared POWER pin is on that same net.
 //
-// CLAUSE ORDER IS NOT COSMETIC. The evaluator is a naive backtracking join that runs literals left
-// to right, so the first atom decides what gets enumerated before any filter applies. Leading with
-// the experimental part binds ?net immediately and starts from the most selective set on the board
-// (a handful of X-prefixed parts). Opening with pin.role instead scans every power pin in the design
-// first. A toy fixture never notices. On a real board that is the whole runtime, and it is how a
-// shipped profile rule made `agni check` non-terminating (WS3-114). Copy the ordering habit too.
+// The body leads with the experimental part, which binds ?net from the most selective set on the board
+// (a handful of X-prefixed parts). agni's evaluator (query.Default) plans each body, so the order is
+// for the reader rather than for speed: it starts from the most bound literal whatever is written
+// first. Under the engine's reference evaluator, Naive, which runs literals as written, opening with
+// pin.role would scan every power pin in the design first, which is how a shipped profile rule once
+// made `agni check` non-terminating (WS3-114).
 //
 // `str.prefix` is one of the standard string predicates every vocabulary holds, so the extension
 // registers no relation or predicate of its own.

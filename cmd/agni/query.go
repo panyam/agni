@@ -111,7 +111,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if err != nil {
 					return err
 				}
-				rows, err := (query.Naive{}).Eval(q, query.NewSpecLibBase(specs))
+				rows, err := query.Default.Eval(q, query.NewSpecLibBase(specs))
 				if err != nil {
 					return err
 				}

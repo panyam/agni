@@ -82,12 +82,12 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 			Tags:     p.tags(),
 			Detail:   ruleDoc("termination"),
 		},
-		Query:      mustBindHeadFirst(tq),
+		Query:      mustBeInjective(tq),
 		Kind:       check.KindNet,
 		SubjectVar: "h",
 		Message:    fmt.Sprintf("%s bus (net {h}) has no termination resistor bridging %s and %s", p.Name, high, low),
 		Domain: &query.Domain{
-			Query:   mustBindHeadFirst(dq),
+			Query:   mustBeInjective(dq),
 			Witness: fmt.Sprintf("%s bus (net {h}) is bridged to its %s twin by a series passive", p.Name, low),
 		},
 	})

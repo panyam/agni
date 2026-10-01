@@ -92,9 +92,11 @@ net.route(?from, ?net, ?path), component.net(?ref, ?net), component.class(?ref, 
   => ?from, ?net, ?ref, ?path
 ```
 
-Lead with a bound or constant `from` wherever you can. An unbound first argument walks from every
-net on the board, which is the shape `GeneratorFirstRules` reports and which took one shipped rule
-from thirteen seconds to not finishing at all.
+An unbound `from` walks from every net on the board. agni's evaluator plans each rule body, so a
+walk starts from whatever binds `from` first, whichever order the body is written in; a shipped rule
+that opened with the walk once took `agni check` from thirteen seconds to not finishing at all, before
+the planner existed (WS3-114). When nothing in the body binds `from`, the full walk is what the query
+asked for, and on a large board it costs accordingly.
 
 ### Where this is going
 

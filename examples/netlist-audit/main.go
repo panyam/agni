@@ -103,7 +103,7 @@ func answerSet(d *ir.Design, yaml []byte) ([]section, error) {
 		q, err := set.Compile(i)
 		if err == nil {
 			var got []query.Row
-			got, err = query.Naive{}.Eval(q, base)
+			got, err = query.Default.Eval(q, base)
 			for _, c := range q.Columns() {
 				s.cols = append(s.cols, string(c))
 			}

@@ -41,21 +41,28 @@ func benchDesign(n int) *ir.Design {
 
 var benchSizes = []int{100, 500, 1000, 2000, 4000}
 
+// benchQuery runs one query shape at each size under both evaluators: Default, which agni answers
+// with, and Naive, the engine's reference, so a regression in either shows against the other.
 func benchQuery(b *testing.B, name, text string) {
-	for _, n := range benchSizes {
-		b.Run(fmt.Sprintf("%s/n=%d", name, n), func(b *testing.B) {
-			m := check.NewModel(benchDesign(n))
-			q, err := Parse(text)
-			if err != nil {
-				b.Fatalf("Parse: %v", err)
-			}
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				if _, err := (Naive{}).Eval(q, NewBase(m)); err != nil {
-					b.Fatalf("Eval: %v", err)
+	for _, ev := range []struct {
+		name string
+		ev   Evaluator
+	}{{"default", Default}, {"naive", Naive{}}} {
+		for _, n := range benchSizes {
+			b.Run(fmt.Sprintf("%s/%s/n=%d", name, ev.name, n), func(b *testing.B) {
+				m := check.NewModel(benchDesign(n))
+				q, err := Parse(text)
+				if err != nil {
+					b.Fatalf("Parse: %v", err)
 				}
-			}
-		})
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					if _, err := ev.ev.Eval(q, NewBase(m)); err != nil {
+						b.Fatalf("Eval: %v", err)
+					}
+				}
+			})
+		}
 	}
 }
 
