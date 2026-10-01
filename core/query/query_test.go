@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -86,7 +87,7 @@ func runQuery(t *testing.T, m check.Model, text string) []Row {
 	if err != nil {
 		t.Fatalf("Parse(%q): %v", text, err)
 	}
-	rows, err := (Naive{}).Eval(q, NewBase(m))
+	rows, err := (Naive{}).Eval(context.Background(), q, NewBase(m))
 	if err != nil {
 		t.Fatalf("Eval(%q): %v", text, err)
 	}
@@ -101,7 +102,7 @@ func runQueryOn(t *testing.T, reg *facts.Registry, m check.Model, text string) [
 	if err != nil {
 		t.Fatalf("Parse(%q): %v", text, err)
 	}
-	rows, err := (Naive{}).Eval(q, NewBaseFrom(reg, m))
+	rows, err := (Naive{}).Eval(context.Background(), q, NewBaseFrom(reg, m))
 	if err != nil {
 		t.Fatalf("Eval(%q): %v", text, err)
 	}
@@ -332,7 +333,7 @@ func TestReachesArityBothPathsAgree(t *testing.T) {
 	}
 	q, err := Parse(`net.reaches(?a, ?b, ?c, ?d) => ?a`)
 	if err == nil {
-		if _, err = (Naive{}).Eval(q, NewBase(m)); err == nil {
+		if _, err = (Naive{}).Eval(context.Background(), q, NewBase(m)); err == nil {
 			t.Error("reaches at arity 4: want an error naming the accepted arity")
 		}
 	}
@@ -437,7 +438,7 @@ func TestStringPredicates(t *testing.T) {
 // TestStringPredicateUnbound (WS3-029 fast-follow): a string predicate whose value is not bound by
 // a relation errors clearly (it filters, it cannot enumerate every string).
 func TestStringPredicateUnbound(t *testing.T) {
-	if _, err := (Naive{}).Eval(mustParse(t, `str.contains(?x,"LM") => ?x`), NewBase(check.NewModel(&ir.Design{}))); err == nil {
+	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, `str.contains(?x,"LM") => ?x`), NewBase(check.NewModel(&ir.Design{}))); err == nil {
 		t.Error("contains on an unbound variable succeeded; want an error")
 	}
 }
@@ -527,7 +528,7 @@ func TestUnstratifiable(t *testing.T) {
 	q := `p(?r) :- component.net(?r,?n), not q(?r);
 	      q(?r) :- component.net(?r,?n), not p(?r);
 	      p(?r) => ?r`
-	if _, err := (Naive{}).Eval(mustParse(t, q), NewBase(check.NewModel(chainDesign()))); err == nil {
+	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, q), NewBase(check.NewModel(chainDesign()))); err == nil {
 		t.Error("recursion through negation was accepted; want an unstratifiable error")
 	}
 }
@@ -550,7 +551,7 @@ func TestRuleErrors(t *testing.T) {
 			if err != nil {
 				return // a parse-level rejection is also acceptable
 			}
-			if _, err := (Naive{}).Eval(q, NewBase(m)); err == nil {
+			if _, err := (Naive{}).Eval(context.Background(), q, NewBase(m)); err == nil {
 				t.Errorf("Eval(%q) succeeded; want an error", text)
 			}
 		})
@@ -561,11 +562,11 @@ func TestRuleErrors(t *testing.T) {
 // a Base reused for a second query that defines no rules sees none of the first query's IDB.
 func TestRulesDoNotLeakAcrossQueries(t *testing.T) {
 	b := NewBase(check.NewModel(chainDesign()))
-	if _, err := (Naive{}).Eval(mustParse(t, `v(?a) :- component.net(?a,?n); v(?a) => ?a`), b); err != nil {
+	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, `v(?a) :- component.net(?a,?n); v(?a) => ?a`), b); err != nil {
 		t.Fatalf("first query: %v", err)
 	}
 	// The second query references the same IDB name; it must now be unknown (the rule did not persist).
-	if _, err := (Naive{}).Eval(mustParse(t, `v(?a) => ?a`), b); err == nil {
+	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, `v(?a) => ?a`), b); err == nil {
 		t.Error("IDB relation v survived into a ruleless query; rules must not leak across queries")
 	}
 }
@@ -725,7 +726,7 @@ func TestEvalErrors(t *testing.T) {
 			if err != nil {
 				return // a parse-level rejection is also acceptable
 			}
-			if _, err := (Naive{}).Eval(q, NewBase(m)); err == nil {
+			if _, err := (Naive{}).Eval(context.Background(), q, NewBase(m)); err == nil {
 				t.Errorf("Eval(%q) succeeded; want an error", text)
 			}
 		})
@@ -783,7 +784,7 @@ func TestBusRelation(t *testing.T) {
 func TestUnanchoredNegationErrors(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
-	_, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max(?x,"VIN",?v) => ?m`), NewBase(m))
+	_, err := (Naive{}).Eval(context.Background(), mustParse(t, `component.mpn(?r,?m), not param.max(?x,"VIN",?v) => ?m`), NewBase(m))
 	if err == nil {
 		t.Fatal("an unanchored negation was accepted; it silently answers nothing")
 	}
@@ -805,7 +806,7 @@ func TestUnanchoredNegationErrors(t *testing.T) {
 func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
-	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?m`), NewBase(m)); err != nil {
+	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?m`), NewBase(m)); err != nil {
 		t.Fatalf("an anchored negation with a free value variable must be accepted: %v", err)
 	}
 }
@@ -815,7 +816,7 @@ func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 func TestGroundNegationNeedsNoAnchor(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
-	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max("REG-24","VIN",20) => ?m`), NewBase(m)); err != nil {
+	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, `component.mpn(?r,?m), not param.max("REG-24","VIN",20) => ?m`), NewBase(m)); err != nil {
 		t.Fatalf("a ground negation carries no variables to anchor and must be accepted: %v", err)
 	}
 }
@@ -834,7 +835,7 @@ func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
 			{Neg: &Atom{Relation: "param.max", Args: []Term{{Var: "x"}, {Const: &Value{S: "VIN"}}, {Var: "v"}}}},
 		}},
 	}}
-	if _, err := (Naive{}).Eval(q, NewBase(m)); err == nil {
+	if _, err := (Naive{}).Eval(context.Background(), q, NewBase(m)); err == nil {
 		t.Fatal("an unanchored negation in a rule body was accepted")
 	}
 }
@@ -940,7 +941,7 @@ func TestHavingRejectsANonGroupKeyOnTheRight(t *testing.T) {
 	if perr != nil {
 		t.Fatalf("Parse: %v", perr)
 	}
-	_, err := (Naive{}).Eval(q, NewBase(check.NewModel(aggFixture())))
+	_, err := (Naive{}).Eval(context.Background(), q, NewBase(check.NewModel(aggFixture())))
 	if err == nil || !strings.Contains(err.Error(), "group key") {
 		t.Errorf("err = %v, want a complaint that ?tp is not a group key", err)
 	}

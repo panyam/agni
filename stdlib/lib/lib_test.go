@@ -1,6 +1,7 @@
 package lib_test
 
 import (
+	"context"
 	"regexp"
 	"sort"
 	"strings"
@@ -40,7 +41,7 @@ func probeDesign() *ir.Design {
 func answers(t *testing.T, q string) []string {
 	t.Helper()
 	parsed := query.MustParse(q)
-	rows, err := (query.Naive{}).Eval(parsed, query.NewBase(check.NewModel(probeDesign())))
+	rows, err := (query.Naive{}).Eval(context.Background(), parsed, query.NewBase(check.NewModel(probeDesign())))
 	if err != nil {
 		t.Fatalf("%s: %v", q, err)
 	}

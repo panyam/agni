@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -43,7 +44,7 @@ func TestCompiledQueryCarriesThePreamble(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Compile: %v", err)
 	}
-	rows, err := Naive{}.Eval(q, NewBase(check.NewModel(aggFixture())))
+	rows, err := Naive{}.Eval(context.Background(), q, NewBase(check.NewModel(aggFixture())))
 	if err != nil {
 		t.Fatalf("Eval: %v", err)
 	}

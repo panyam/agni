@@ -27,6 +27,7 @@ package query
 import (
 	"github.com/panyam/jaala/datalog"
 	"github.com/panyam/jaala/ns"
+	"github.com/panyam/jaala/stdlib"
 )
 
 // The query IR. See the engine's documentation for each; they are aliases, not copies.
@@ -103,7 +104,7 @@ func NonInjectiveRules(q Query) []string { return datalog.NonInjectiveRules(q) }
 
 // CompileGlob compiles a shell-style glob the way the str.glob predicate does, for a Go caller that
 // must match the same pattern the same way.
-var CompileGlob = ns.CompileGlob
+var CompileGlob = stdlib.CompileGlob
 
 // CompilePattern compiles a regular expression the way the str.match predicate does.
-var CompilePattern = ns.CompilePattern
+var CompilePattern = stdlib.CompilePattern

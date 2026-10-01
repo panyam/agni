@@ -166,6 +166,12 @@ named for the rail it carries whichever block named it:
 
 {{ agniRun "content/guide/runs/query-entity-by-glob.yaml" }}
 
+`str.glob` follows SQLite's GLOB: `*` is any run of characters (including `/`, so a hierarchical
+name matches), `?` is one character, and `[...]` is a character class, so `DATA[0-3]` matches
+`DATA0` to `DATA3`. That makes a literal bracket special. A bus name such as `DATA[1:0]` is matched
+with the bracket inside a class, `DATA[[]1:0]`. Before jaala v0.1.8 a `[` was literal, so a pattern
+written for a bracketed name before then now means something else.
+
 The cases only this relation reaches are the ones worth finding during a review. A part connected to
 nothing:
 

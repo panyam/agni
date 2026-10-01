@@ -99,8 +99,9 @@ fact base per design over one vocabulary, `RuleFromQuery`, the wire form and the
 queryable name registers in `core/facts` at a path of jaala's `ns.Vocabulary`** (agni issue 751):
 `facts.RegisterRelation`, `facts.RegisterPredicate` (an `ns.Builtin`, such as the `net.reaches`
 generator in `stdlib/relations`, which reaches the design through `facts.EnvOf`) and
-`facts.RegisterModules`. `jaala/ns` holds names and signatures with no evaluator, which is why C29
-lets the fact layer import it and nothing more of jaala. **The shipped library of derived relations
+`facts.RegisterModules`. `jaala/ns` holds names and signatures, and `jaala/stdlib` the standard
+predicates, with no evaluator in either, which is why C29 lets the fact layer import those two and
+nothing more of jaala. **The shipped library of derived relations
 is `stdlib/lib`**, one `.dl` file per module (`component.probed_both`, `net.has_test_point`), and
 `agni query --relations <path>` prints any member's signature and definition. Its modules register
 as ONE batch, because the vocabulary is checked at every registration and a module reading another

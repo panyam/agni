@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"testing"
@@ -125,7 +126,7 @@ func TestRouteArityIsFixed(t *testing.T) {
 		if err != nil {
 			continue // a parse error is a fine way to reject it too
 		}
-		if _, err := (Naive{}).Eval(q, NewBase(check.NewModel(reachChainDesign()))); err == nil {
+		if _, err := (Naive{}).Eval(context.Background(), q, NewBase(check.NewModel(reachChainDesign()))); err == nil {
 			t.Errorf("%s: want an error naming the accepted arity", text)
 		}
 	}

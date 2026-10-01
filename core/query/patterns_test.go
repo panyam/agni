@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -86,7 +87,7 @@ func TestPatternPredicateErrors(t *testing.T) {
 		`str.match(?x,"^ETH_") => ?x`,                          // unbound, and a filter cannot enumerate
 		`net.pin_count(?n,?c), str.glob(?n) => ?n`,             // wrong arity
 	} {
-		if _, err := (Naive{}).Eval(mustParse(t, text), NewBase(m)); err == nil {
+		if _, err := (Naive{}).Eval(context.Background(), mustParse(t, text), NewBase(m)); err == nil {
 			t.Errorf("%s: want an error, got nil", text)
 		}
 	}

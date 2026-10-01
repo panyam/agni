@@ -94,7 +94,7 @@ Defined in Datalog over the relations above rather than projected from the desig
 | [`net.reaches(from, net, hops?)`](net.reaches/) | transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two |
 | [`net.route(from, net, path)`](net.route/) | the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one |
 | `str.contains(string, substring)` | reports whether a string contains a substring |
-| `str.glob(string, pattern)` | reports whether the whole string matches a shell-style glob (`*` any run, `?` one character) |
+| `str.glob(string, pattern)` | reports whether the whole string matches a SQLite-style glob (`*` any run, `?` one character, `[a-z]` or `[^a-z]` one of a class, `[[]` a literal `[`) |
 | `str.match(string, regex)` | reports whether the string matches an unanchored regular expression |
 | `str.prefix(string, prefix)` | reports whether a string starts with a prefix |
 | `str.suffix(string, suffix)` | reports whether a string ends with a suffix |

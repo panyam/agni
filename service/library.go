@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/panyam/agni/core/facts"
@@ -98,7 +97,7 @@ func composeLibrary(mods []LibraryModule, docs map[string]string) (*facts.Regist
 			}
 			definedBy[p] = m.Source
 		}
-		ms = append(ms, ns.Module{Path: m.Path, Language: m.Language, Text: m.Text})
+		ms = append(ms, ns.Module{Path: m.Path, Language: m.Language, Text: m.Text, Origin: m.Source})
 	}
 	opts := append(facts.Registered(), facts.WithModules(ms...))
 	if len(docs) > 0 {
@@ -106,29 +105,10 @@ func composeLibrary(mods []LibraryModule, docs map[string]string) (*facts.Regist
 	}
 	reg, err := facts.NewRegistry(opts...)
 	if err != nil {
-		// The vocabulary's message names a module by its path, which is its file's name, so naming the
-		// directories it was read from locates the file. panyam/jaala#30 asks for an error carrying the
-		// module itself, which would let this name the file outright.
-		return nil, fmt.Errorf("library %s: %w", strings.Join(libraryDirs(mods), ", "), err)
+		// Each module's Origin is its source, so the fact layer's error names the file to fix.
+		return nil, fmt.Errorf("library: %w", err)
 	}
 	return reg, nil
-}
-
-// libraryDirs is the distinct directories a library's modules were read from, in order.
-func libraryDirs(mods []LibraryModule) []string {
-	var out []string
-	seen := map[string]bool{}
-	for _, m := range mods {
-		d := m.Source
-		if i := strings.LastIndex(d, "/"); i >= 0 {
-			d = d[:i]
-		}
-		if !seen[d] {
-			seen[d] = true
-			out = append(out, d)
-		}
-	}
-	return out
 }
 
 // inlineLibrary reads the library modules and pages a config carries as values (agni issue 788). An

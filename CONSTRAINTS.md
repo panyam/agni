@@ -934,7 +934,8 @@ the fact layer, never the reverse. `stdlib/relations`, the shipped netlist/board
 catalog, imports `core/facts` only. Every name a query can call registers in `core/facts` at a PATH
 of one vocabulary, jaala's `ns.Vocabulary` (agni issue 751). `jaala/ns` holds names, signatures and
 values with no parser or evaluator, so importing it names things without answering anything about
-them, and it is the one part of jaala the fact layer may import. A RELATION is data derived from the
+them. `jaala/stdlib` holds the standard predicates the fact layer registers (`str.*`, `absent`) and
+imports `ns` only. Those two are the parts of jaala the fact layer may import. A RELATION is data derived from the
 Model (`facts.RegisterRelation`). A PREDICATE is an `ns.Builtin`, a filter or a generator reaching the
 design through `facts.EnvOf` (`facts.RegisterPredicate`). A MODULE of derived relations is text in a
 language some engine registered (`facts.RegisterModules`, `facts.RegisterLanguage`), and the fact

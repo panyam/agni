@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -57,7 +58,7 @@ func benchQuery(b *testing.B, name, text string) {
 				}
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					if _, err := ev.ev.Eval(q, NewBase(m)); err != nil {
+					if _, err := ev.ev.Eval(context.Background(), q, NewBase(m)); err != nil {
 						b.Fatalf("Eval: %v", err)
 					}
 				}

@@ -44,7 +44,7 @@ func init() {
 	}
 	var ms []ns.Module
 	for _, m := range mods {
-		ms = append(ms, ns.Module{Path: m.Path, Language: datalog.LanguageName, Text: m.Text})
+		ms = append(ms, ns.Module{Path: m.Path, Language: datalog.LanguageName, Text: m.Text, Origin: "stdlib/lib/" + m.File})
 	}
 	facts.RegisterModules(ms...)
 	facts.RegisterDocs(docs)

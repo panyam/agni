@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/param"
@@ -16,7 +17,7 @@ func TestNewSpecLibBase(t *testing.T) {
 	b := NewSpecLibBase(set)
 
 	// param ranges the whole spec library (both parts), no design join.
-	rows, err := (Naive{}).Eval(mustParse(t, `param.max(?mpn, ?sym, ?max)`), b)
+	rows, err := (Naive{}).Eval(context.Background(), mustParse(t, `param.max(?mpn, ?sym, ?max)`), b)
 	if err != nil {
 		t.Fatalf("spec library param query: %v", err)
 	}
@@ -25,7 +26,7 @@ func TestNewSpecLibBase(t *testing.T) {
 	}
 
 	// part.audience: only the annotated part appears.
-	arows, err := (Naive{}).Eval(mustParse(t, `part.audience(?mpn, ?who)`), b)
+	arows, err := (Naive{}).Eval(context.Background(), mustParse(t, `part.audience(?mpn, ?who)`), b)
 	if err != nil {
 		t.Fatalf("spec library part.audience query: %v", err)
 	}
@@ -34,7 +35,7 @@ func TestNewSpecLibBase(t *testing.T) {
 	}
 
 	// reaches is model-dependent; a spec library has no model, so it is a clean empty, not a panic.
-	rrows, err := (Naive{}).Eval(mustParse(t, `net.reaches(?a, ?b)`), b)
+	rrows, err := (Naive{}).Eval(context.Background(), mustParse(t, `net.reaches(?a, ?b)`), b)
 	if err != nil {
 		t.Fatalf("reaches over a spec library should be a clean empty, got error %v", err)
 	}

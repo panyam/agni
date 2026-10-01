@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"fmt"
 	"github.com/panyam/jaala/datalog"
 	"sort"
@@ -44,11 +45,11 @@ func TestIndexedResultsMatchUnindexed(t *testing.T) {
 		`component.net(?r,?n) => ?n, count(?r)`,
 	} {
 		q := mustParse(t, text)
-		indexed, err := (Naive{}).Eval(q, NewBase(m))
+		indexed, err := (Naive{}).Eval(context.Background(), q, NewBase(m))
 		if err != nil {
 			t.Fatalf("%s: indexed: %v", text, err)
 		}
-		plain, err := (Naive{}).Eval(q, newUnindexedBase(m))
+		plain, err := (Naive{}).Eval(context.Background(), q, newUnindexedBase(m))
 		if err != nil {
 			t.Fatalf("%s: unindexed: %v", text, err)
 		}
@@ -163,7 +164,7 @@ func TestBaseReuseAcrossRuleBearingQueries(t *testing.T) {
 
 func evalOn(t *testing.T, b *Base, text string) []Row {
 	t.Helper()
-	rows, err := (Naive{}).Eval(mustParse(t, text), b)
+	rows, err := (Naive{}).Eval(context.Background(), mustParse(t, text), b)
 	if err != nil {
 		t.Fatalf("%s: %v", text, err)
 	}
@@ -211,7 +212,7 @@ func TestWorkScalesSubQuadratically(t *testing.T) {
 func workFor(t *testing.T, text string, n int) int64 {
 	t.Helper()
 	b := NewBase(check.NewModel(benchDesign(n)))
-	if _, err := (Naive{}).Eval(mustParse(t, text), b); err != nil {
+	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, text), b); err != nil {
 		t.Fatalf("eval at n=%d: %v", n, err)
 	}
 	return b.Work()
