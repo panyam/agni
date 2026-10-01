@@ -14,6 +14,7 @@ import (
 	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/lib"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -33,6 +34,7 @@ func queryCmd() *cobra.Command {
 	var format, title string
 	var setPath string
 	var relDesign string
+	var libDirs []string
 	c := &cobra.Command{
 		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
@@ -96,7 +98,11 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if len(args) == 1 {
 					path = args[0]
 				}
-				return printRelations(cmd.Context(), cmd.OutOrStdout(), path, relDesign, format, verbose)
+				cfg := &webapi.AnalysisConfig{}
+				if err := addLibraries(cfg, libDirs); err != nil {
+					return err
+				}
+				return printRelations(cmd.Context(), cmd.OutOrStdout(), path, relDesign, cfg, format, verbose)
 			}
 			if showExamples {
 				printExamples(cmd.OutOrStdout())
@@ -131,13 +137,16 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			}
 			// The CLI reads the convention file and the service takes the value (C22), as in `check`
 			// and `review`.
-			overlay := &webapi.OverlayConfig{}
+			overlay := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{}}
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
 					return err
 				}
-				overlay.Config = &webapi.AnalysisConfig{Conventions: cfg}
+				overlay.Config.Conventions = cfg
+			}
+			if err := addLibraries(overlay.Config, libDirs); err != nil {
+				return err
 			}
 			svc := service.NewQueryService(&localLoader{loader: newLoader()}, specs, cliProjects())
 			designURI, err := cliArgURI(args[0])
@@ -170,6 +179,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	outFileFlag(c, &outPath)
 	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
+	c.Flags().StringArrayVar(&libDirs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the query, beside any the design's project carries. Repeatable")
 	c.Flags().StringVar(&relDesign, "design", "", "with --relations, a design whose project's own library (lib/) joins the catalog, so its members list beside the shipped ones")
 	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations and no member path, also print each member's full reference doc")
 	return c
@@ -181,7 +191,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 // root prints every module with its members' signatures and one-line docs, a module prints its own
 // members, and a member prints everything the rpc carries. --format json writes the rpc's
 // ListRelationsResponse for the path (C31); for the root that is the entry, not the flat catalog.
-func printRelations(ctx context.Context, w io.Writer, path, design, format string, verbose bool) error {
+func printRelations(ctx context.Context, w io.Writer, path, design string, cfg *webapi.AnalysisConfig, format string, verbose bool) error {
 	svc := service.NewQueryService(nil, nil, cliProjects())
 	uri, err := cliArgURI(design)
 	if err != nil {
@@ -191,7 +201,7 @@ func printRelations(ctx context.Context, w io.Writer, path, design, format strin
 		if p == "" {
 			p = "."
 		}
-		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p, Uri: uri})
+		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p, Uri: uri, Overlay: &webapi.OverlayConfig{Config: cfg}})
 		if err != nil {
 			return nil, err
 		}
@@ -428,4 +438,31 @@ func respFromRows(q query.Query, rows []query.Row, queryText, corpus string) *we
 		resp.Rows = append(resp.Rows, &webapi.QueryRow{Cells: cells, Cites: r.Cites})
 	}
 	return resp
+}
+
+// addLibraries reads each --lib directory and adds its modules and pages to cfg as values, so the CLI
+// sends a library exactly as any other client does (agni issue 788) rather than handing the service a
+// path. A module's source names the directory and file it came from, for errors.
+func addLibraries(cfg *webapi.AnalysisConfig, dirs []string) error {
+	for _, dir := range dirs {
+		mods, docs, err := lib.Read(os.DirFS(dir))
+		if err != nil {
+			return fmt.Errorf("--lib %s: %w", dir, err)
+		}
+		if len(mods) == 0 {
+			return fmt.Errorf("--lib %s holds no .dl module", dir)
+		}
+		for _, m := range mods {
+			cfg.LibraryModules = append(cfg.LibraryModules, &webapi.LibraryModule{
+				Path: m.Path, Text: m.Text, Source: filepath.Join(dir, m.File),
+			})
+		}
+		for p, d := range docs {
+			if cfg.LibraryDocs == nil {
+				cfg.LibraryDocs = map[string]string{}
+			}
+			cfg.LibraryDocs[p] = d
+		}
+	}
+	return nil
 }

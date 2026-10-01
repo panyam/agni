@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -150,13 +151,60 @@ def _check_argv(fmt: str) -> Callable[[Message], List[str]]:
     return argv
 
 
+def _library_only(req: Message) -> None:
+    """Refuse an overlay carrying anything but library modules and pages, the part of it the CLI can
+    send (as ``--lib``, written by ``CliTransport.call``)."""
+    if not req.HasField("overlay"):
+        return
+    ov = req.overlay
+    extra = [f.name for f, _ in ov.ListFields() if f.name != "config"]
+    extra += [f.name for f, _ in ov.config.ListFields() if f.name not in ("library_modules", "library_docs")]
+    if not (ov.config.library_modules or ov.config.library_docs):
+        extra.append("overlay")  # nothing in it the CLI sends, so it would be silently dropped
+    if extra:
+        raise CliUnsupported(
+            f"{req.DESCRIPTOR.name}: the CLI sends only library modules from an overlay, not "
+            f"{', '.join(sorted(extra))}; use ConnectTransport, or leave the field unset"
+        )
+
+
+def _lib_name(name: str) -> str:
+    """A module or member path as a file name. A path is dotted, so a separator or a leading dot can
+    only be an attempt to write outside the library directory."""
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        raise CliUnsupported(f"{name!r} is not a module or member path")
+    return name
+
+
+def _write_library(req: Message, root: str) -> List[str]:
+    """Write a request's inline library to ``root`` laid out as a ``lib/`` directory, one
+    ``<module.path>.dl`` per module and ``docs/<member.path>.md`` per page, and return the ``--lib``
+    flag naming it. Empty when the request carries none."""
+    cfg = req.overlay.config if hasattr(req, "overlay") and req.HasField("overlay") else None
+    if cfg is None or not (cfg.library_modules or cfg.library_docs):
+        return []
+    for m in cfg.library_modules:
+        if m.language not in ("", "datalog"):
+            raise CliUnsupported(f"the CLI reads datalog modules only, not {m.language!r} ({m.path})")
+        with open(os.path.join(root, f"{_lib_name(m.path)}.dl"), "w", encoding="utf-8") as f:
+            f.write(m.text)
+    if cfg.library_docs:
+        os.makedirs(os.path.join(root, "docs"), exist_ok=True)
+        for path, page in cfg.library_docs.items():
+            with open(os.path.join(root, "docs", f"{_lib_name(path)}.md"), "w", encoding="utf-8") as f:
+                f.write(page)
+    return ["--lib", root]
+
+
 def _query_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "query", "board_uri", "as_named"))
+    _only(req, ("uri", "query", "board_uri", "as_named", "overlay"))
+    _library_only(req)
     return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req)
 
 
 def _query_set_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "set", "board_uri", "as_named"))
+    _only(req, ("uri", "set", "board_uri", "as_named", "overlay"))
+    _library_only(req)
     return ["query", req.uri, "--set", "-", "--format", "json"] + _read_flags(req)
 
 
@@ -252,7 +300,12 @@ class CliTransport:
         if cmd is None:
             raise CliUnsupported(f"{rpc.service}/{rpc.method} has no CLI command; use ConnectTransport")
         stdin = cmd.stdin(request) if cmd.stdin else None
-        out = self._run_text(cmd.argv(request), allow_failure=cmd.answers_on_failure, stdin=stdin)
+        argv = cmd.argv(request)
+        # A library sent with the request travels as files the binary reads with --lib, so the request
+        # means the same here as over Connect (agni issue 788). The directory lives for this call.
+        with tempfile.TemporaryDirectory(prefix="agni-lib-") as lib_dir:
+            argv += _write_library(request, lib_dir)
+            out = self._run_text(argv, allow_failure=cmd.answers_on_failure, stdin=stdin)
         msg = parse(out, cmd.emits, strict=self.strict)
         return cmd.wrap(msg) if cmd.wrap else msg
 

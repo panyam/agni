@@ -2,10 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
 )
 
 const gatewayDesign = "../../examples/tutorial-project/designs/gateway"
@@ -109,4 +113,45 @@ func runQueryErr(t *testing.T, args ...string) error {
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetArgs(args)
 	return cmd.Execute()
+}
+
+// TestLibFlagAnswersAsTheInlineRequestDoes is the C32 parity test for agni issue 788. `--lib` reads a
+// directory and sends its modules inline, so the CLI and a client sending the same modules to the
+// service must get the same rows, on a design that belongs to no project and so has no library of its
+// own. Without the flag the member does not exist.
+func TestLibFlagAnswersAsTheInlineRequestDoes(t *testing.T) {
+	const (
+		lib    = "../../examples/tutorial-project/lib"
+		design = "../../examples/common/designs/probe-coverage.edn"
+		q      = "net.has_test_point(?n), not house.pmic_probe_point(?n) => ?n"
+	)
+	if err := runQueryErr(t, design, q); err == nil || !strings.Contains(err.Error(), `unknown module "house"`) {
+		t.Fatalf("without --lib: err = %v, want house unknown", err)
+	}
+	cli := runCLI(t, queryCmd(), design, q, "--lib", lib, "--format", "csv")
+
+	cfg := &webapi.AnalysisConfig{}
+	if err := addLibraries(cfg, []string{lib}); err != nil {
+		t.Fatal(err)
+	}
+	uri, err := cliArgURI(design)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := service.NewQueryService(&localLoader{loader: newLoader()}, nil, cliProjects())
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q, Overlay: &webapi.OverlayConfig{Config: cfg}})
+	if err != nil {
+		t.Fatalf("RunQuery with the modules inline: %v", err)
+	}
+	var fromService []string
+	for _, r := range resp.GetRows() {
+		fromService = append(fromService, r.GetCells()[0])
+	}
+	var fromCLI []string
+	for _, line := range strings.Split(strings.TrimSpace(cli), "\n")[1:] {
+		fromCLI = append(fromCLI, strings.Split(line, ",")[0])
+	}
+	if len(fromCLI) == 0 || strings.Join(fromCLI, " ") != strings.Join(fromService, " ") {
+		t.Errorf("--lib answered %v, the inline request %v; want the same non-empty rows", fromCLI, fromService)
+	}
 }

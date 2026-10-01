@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIvYBCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_config_naming]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIqkDCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_config_naming]);
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -150,6 +150,25 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
    * @generated from field: repeated string library_uris = 9;
    */
   libraryUris: string[];
+
+  /**
+   * library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller
+   * whose modules live with it rather than on the server: a script calling a shared server, a
+   * generated client's CLI transport, the viewer trying a module, an embedder. They compose exactly
+   * as a library directory's do, accumulating with the design's project library, and a member path
+   * defined twice is refused naming each module's source. Being values, they need no ConfigResolver.
+   *
+   * @generated from field: repeated agni.v1.webapi.LibraryModule library_modules = 10;
+   */
+  libraryModules: LibraryModule[];
+
+  /**
+   * library_docs are optional reference pages for library members, keyed by member path, as a
+   * library directory's docs/<member.path>.md are. A page for a member nothing defines is refused.
+   *
+   * @generated from field: map<string, string> library_docs = 11;
+   */
+  libraryDocs: { [key: string]: string };
 };
 
 /**
@@ -158,4 +177,48 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
  */
 export const AnalysisConfigSchema: GenMessage<AnalysisConfig> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_config, 0);
+
+/**
+ * LibraryModule is one module of derived relations sent as a value.
+ *
+ * @generated from message agni.v1.webapi.LibraryModule
+ */
+export type LibraryModule = Message<"agni.v1.webapi.LibraryModule"> & {
+  /**
+   * path is the module path its members register under, as a library file's name gives it: "house"
+   * defines house.<member>, "net" adds members to net.
+   *
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * language is the module's language. Empty means "datalog", the only one agni registers.
+   *
+   * @generated from field: string language = 2;
+   */
+  language: string;
+
+  /**
+   * text is the module's source.
+   *
+   * @generated from field: string text = 3;
+   */
+  text: string;
+
+  /**
+   * source names the module in an error or drill-down, such as "request:house.dl". Empty becomes
+   * "request:<path>".
+   *
+   * @generated from field: string source = 4;
+   */
+  source: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.LibraryModule.
+ * Use `create(LibraryModuleSchema)` to create a new message.
+ */
+export const LibraryModuleSchema: GenMessage<LibraryModule> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_config, 1);
 

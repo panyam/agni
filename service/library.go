@@ -11,6 +11,7 @@ import (
 
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/jaala/ns"
 )
 
@@ -69,11 +70,20 @@ func libraryKey(mods []LibraryModule, docs map[string]string) string {
 
 func composeLibrary(mods []LibraryModule, docs map[string]string) (*facts.Registry, error) {
 	base := facts.DefaultRegistry().Vocabulary()
+	definedBy := map[string]string{} // member path -> the module source that defines it, across the library
 	ms := make([]ns.Module, 0, len(mods))
+	seen := map[string]bool{}
 	for _, m := range mods {
+		// The same module reaching a query twice, a project's lib/ also named by --lib or sent inline, is
+		// one module. Two DIFFERENT definitions of one member are still refused below.
+		if k := m.Path + "\x00" + m.Language + "\x00" + m.Text; seen[k] {
+			continue
+		} else {
+			seen[k] = true
+		}
 		names, err := query.ModuleMembers(m.Text)
 		if err != nil {
-			return nil, fmt.Errorf("project library %s: %w", m.Source, err)
+			return nil, fmt.Errorf("library module %s: %w", m.Source, err)
 		}
 		for _, n := range names {
 			p := n
@@ -81,8 +91,12 @@ func composeLibrary(mods []LibraryModule, docs map[string]string) (*facts.Regist
 				p = m.Path + "." + n
 			}
 			if base.Has(p) {
-				return nil, fmt.Errorf("project library %s defines %s, which agni already defines; a project may add members to a module but not replace one", m.Source, p)
+				return nil, fmt.Errorf("library module %s defines %s, which agni already defines; a library may add members to a module but not replace one", m.Source, p)
 			}
+			if prev, ok := definedBy[p]; ok {
+				return nil, fmt.Errorf("library modules %s and %s both define %s", prev, m.Source, p)
+			}
+			definedBy[p] = m.Source
 		}
 		ms = append(ms, ns.Module{Path: m.Path, Language: m.Language, Text: m.Text})
 	}
@@ -95,7 +109,7 @@ func composeLibrary(mods []LibraryModule, docs map[string]string) (*facts.Regist
 		// The vocabulary's message names a module by its path, which is its file's name, so naming the
 		// directories it was read from locates the file. panyam/jaala#30 asks for an error carrying the
 		// module itself, which would let this name the file outright.
-		return nil, fmt.Errorf("project library %s: %w", strings.Join(libraryDirs(mods), ", "), err)
+		return nil, fmt.Errorf("library %s: %w", strings.Join(libraryDirs(mods), ", "), err)
 	}
 	return reg, nil
 }
@@ -116,6 +130,30 @@ func libraryDirs(mods []LibraryModule) []string {
 	}
 	return out
 }
+
+// inlineLibrary reads the library modules and pages a config carries as values (agni issue 788). An
+// empty language is datalog, and an empty source names the module after the request it came in.
+func inlineLibrary(cfg *webapi.AnalysisConfig) ([]LibraryModule, map[string]string) {
+	var mods []LibraryModule
+	for _, m := range cfg.GetLibraryModules() {
+		lm := LibraryModule{Path: m.GetPath(), Language: m.GetLanguage(), Text: m.GetText(), Source: m.GetSource()}
+		if lm.Language == "" {
+			lm.Language = datalogLanguage
+		}
+		if lm.Source == "" {
+			lm.Source = "request:" + lm.Path
+		}
+		mods = append(mods, lm)
+	}
+	var docs map[string]string
+	if d := cfg.GetLibraryDocs(); len(d) > 0 {
+		docs = maps.Clone(d)
+	}
+	return mods, docs
+}
+
+// datalogLanguage is the module language agni registers, and the one a module naming none is in.
+const datalogLanguage = "datalog"
 
 // mergeDocs layers b's pages over a's without changing either.
 func mergeDocs(a, b map[string]string) map[string]string {

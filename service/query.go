@@ -402,7 +402,7 @@ func entityKind(s string) string {
 // A request naming a path answers that one place in the namespace tree instead (describeEntry), and
 // an unknown path is ErrInvalidArgument carrying the engine's suggestion.
 func (s *QueryService) ListRelations(ctx context.Context, req *webapi.ListRelationsRequest) (*webapi.ListRelationsResponse, error) {
-	reg, err := s.catalogRegistry(ctx, req.GetUri())
+	reg, err := s.catalogRegistry(ctx, req.GetUri(), req.GetOverlay())
 	if err != nil {
 		return nil, err
 	}
@@ -461,15 +461,19 @@ func portableCites(cites []string, designPath string) []string {
 // catalogRegistry is the vocabulary a catalog request describes: the shipped one, or with a design
 // named, that design's project's library joined to it, resolved exactly as a query on that design
 // would resolve it.
-func (s *QueryService) catalogRegistry(ctx context.Context, uri string) (*facts.Registry, error) {
+func (s *QueryService) catalogRegistry(ctx context.Context, uri string, overlay *webapi.OverlayConfig) (*facts.Registry, error) {
 	u, err := optionalArtifactURI(uri)
 	if err != nil {
 		return nil, err
 	}
 	if u.IsZero() {
-		return facts.DefaultRegistry(), nil
+		ov, err := ComposeOverlay(overlay, "")
+		if err != nil {
+			return nil, err
+		}
+		return ov.Registry()
 	}
-	ov, err := s.projects.Overlay(ctx, u, nil, s.fallback, "")
+	ov, err := s.projects.Overlay(ctx, u, overlay, s.fallback, "")
 	if err != nil {
 		return nil, err
 	}

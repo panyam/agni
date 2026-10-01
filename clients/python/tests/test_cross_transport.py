@@ -64,6 +64,24 @@ _SET_WITH_TYPO = query_pb2.QuerySet(
     preamble=_SET.preamble,
 )
 
+# A library sent with the request (agni issue 788): a plain member and one taking a parameter. Over the
+# CLI it travels as files under --lib, over Connect as the field itself, and both must answer alike.
+_LIB = {
+    "config": {
+        "library_modules": [
+            {
+                "path": "probe",
+                "text": (
+                    "# A net a resistor sits on.\n"
+                    "resistor_net(?n: net) :- component.net(?r, ?n), component.class(?r, \"resistor\");\n"
+                    "# A net a part of the given class sits on.\n"
+                    "class_net(?n: net, ?k: string) :- component.net(?r, ?n), component.class(?r, ?k);\n"
+                ),
+            }
+        ]
+    }
+}
+
 CASES: List[Case] = [
     Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN), {"verdicts": VERDICTS}),
     Case(
@@ -76,6 +94,16 @@ CASES: List[Case] = [
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?c, ?p, ?n) => ?n, count(distinct ?c)")),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='pin.net(?c, ?p, "NO_SUCH_NET") => ?c')),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET)),
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="probe.resistor_net(?n) => ?n", overlay=_LIB)),
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='probe.class_net(?n, "capacitor") => ?n', overlay=_LIB)),
+    Case(
+        "QueryService/RunQueries",
+        lambda c: c.run_queries(
+            uri=DESIGN,
+            set=query_pb2.QuerySet(title="lib", queries=[query_pb2.NamedQuery(name="r", query="probe.resistor_net(?n) => ?n")]),
+            overlay=_LIB,
+        ),
+    ),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET_WITH_TYPO)),
     Case(
         "DiffService/DiffDesigns",

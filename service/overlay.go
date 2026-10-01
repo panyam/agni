@@ -66,6 +66,8 @@ type Overlay struct {
 // got the built-ins would read the clean report as a clean design.
 func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	o := Overlay{baseConvention: baseConvention}
+	// Library modules sent as values compose with no I/O, like the convention below (agni issue 788).
+	o.Library, o.LibraryDocs = inlineLibrary(cfg.GetConfig())
 	conv := cfg.GetConfig().GetConventions()
 	if conv == nil {
 		return o, nil
@@ -332,7 +334,8 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	// Every tier a request can contribute must appear in this guard. A tier missing from it is silently
 	// dropped for a request carrying ONLY that tier, which is how symbol paths usually arrive.
 	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 &&
-		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 && len(reqResolved.Library) == 0 {
+		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 && len(reqResolved.Library) == 0 &&
+		len(reqOv.Library) == 0 && len(reqOv.LibraryDocs) == 0 {
 		base.id = id
 		return base, nil
 	}
@@ -362,8 +365,8 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.SymbolPaths = append(append([]string{}, out.SymbolPaths...), reqResolved.SymbolPaths...)
 	// A request's library modules ACCUMULATE too, and a path both define is refused when Registry
 	// composes them, as any two definers of one path are.
-	out.Library = append(append([]LibraryModule{}, out.Library...), reqResolved.Library...)
-	out.LibraryDocs = mergeDocs(out.LibraryDocs, reqResolved.LibraryDocs)
+	out.Library = append(append(append([]LibraryModule{}, out.Library...), reqResolved.Library...), reqOv.Library...)
+	out.LibraryDocs = mergeDocs(mergeDocs(out.LibraryDocs, reqResolved.LibraryDocs), reqOv.LibraryDocs)
 	out.Profiles = out.Profiles || reqResolved.Profiles
 	out.Intent = out.Intent || reqResolved.Intent
 	out.conventionName = req.GetConfig().GetConventions().GetName()

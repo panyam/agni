@@ -110,7 +110,16 @@ type AnalysisConfig struct {
 	// members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
 	// path, or reading a relation nothing registers, fails the read rather than answering nothing.
 	// Rules compiled from queries do not read them yet (agni issue 779).
-	LibraryUris   []string `protobuf:"bytes,9,rep,name=library_uris,json=libraryUris,proto3" json:"library_uris,omitempty"`
+	LibraryUris []string `protobuf:"bytes,9,rep,name=library_uris,json=libraryUris,proto3" json:"library_uris,omitempty"`
+	// library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller
+	// whose modules live with it rather than on the server: a script calling a shared server, a
+	// generated client's CLI transport, the viewer trying a module, an embedder. They compose exactly
+	// as a library directory's do, accumulating with the design's project library, and a member path
+	// defined twice is refused naming each module's source. Being values, they need no ConfigResolver.
+	LibraryModules []*LibraryModule `protobuf:"bytes,10,rep,name=library_modules,json=libraryModules,proto3" json:"library_modules,omitempty"`
+	// library_docs are optional reference pages for library members, keyed by member path, as a
+	// library directory's docs/<member.path>.md are. A page for a member nothing defines is refused.
+	LibraryDocs   map[string]string `protobuf:"bytes,11,rep,name=library_docs,json=libraryDocs,proto3" json:"library_docs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -208,11 +217,100 @@ func (x *AnalysisConfig) GetLibraryUris() []string {
 	return nil
 }
 
+func (x *AnalysisConfig) GetLibraryModules() []*LibraryModule {
+	if x != nil {
+		return x.LibraryModules
+	}
+	return nil
+}
+
+func (x *AnalysisConfig) GetLibraryDocs() map[string]string {
+	if x != nil {
+		return x.LibraryDocs
+	}
+	return nil
+}
+
+// LibraryModule is one module of derived relations sent as a value.
+type LibraryModule struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// path is the module path its members register under, as a library file's name gives it: "house"
+	// defines house.<member>, "net" adds members to net.
+	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	// language is the module's language. Empty means "datalog", the only one agni registers.
+	Language string `protobuf:"bytes,2,opt,name=language,proto3" json:"language,omitempty"`
+	// text is the module's source.
+	Text string `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	// source names the module in an error or drill-down, such as "request:house.dl". Empty becomes
+	// "request:<path>".
+	Source        string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LibraryModule) Reset() {
+	*x = LibraryModule{}
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LibraryModule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LibraryModule) ProtoMessage() {}
+
+func (x *LibraryModule) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LibraryModule.ProtoReflect.Descriptor instead.
+func (*LibraryModule) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *LibraryModule) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *LibraryModule) GetLanguage() string {
+	if x != nil {
+		return x.Language
+	}
+	return ""
+}
+
+func (x *LibraryModule) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *LibraryModule) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
 var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/config/naming.proto\"\xea\x02\n" +
+	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/config/naming.proto\"\xc6\x04\n" +
 	"\x0eAnalysisConfig\x12B\n" +
 	"\vconventions\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\x12'\n" +
 	"\x0fconventions_uri\x18\x02 \x01(\tR\x0econventionsUri\x12!\n" +
@@ -224,7 +322,18 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"intent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n" +
 	"\aextends\x18\a \x01(\tR\aextends\x12(\n" +
 	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUris\x12!\n" +
-	"\flibrary_uris\x18\t \x03(\tR\vlibraryUrisB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\flibrary_uris\x18\t \x03(\tR\vlibraryUris\x12F\n" +
+	"\x0flibrary_modules\x18\n" +
+	" \x03(\v2\x1d.agni.v1.webapi.LibraryModuleR\x0elibraryModules\x12R\n" +
+	"\flibrary_docs\x18\v \x03(\v2/.agni.v1.webapi.AnalysisConfig.LibraryDocsEntryR\vlibraryDocs\x1a>\n" +
+	"\x10LibraryDocsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"k\n" +
+	"\rLibraryModule\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1a\n" +
+	"\blanguage\x18\x02 \x01(\tR\blanguage\x12\x12\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\x12\x16\n" +
+	"\x06source\x18\x04 \x01(\tR\x06sourceB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_config_proto_rawDescOnce sync.Once
@@ -238,18 +347,22 @@ func file_agni_v1_webapi_config_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_config_proto_rawDescData
 }
 
-var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_agni_v1_webapi_config_proto_goTypes = []any{
 	(*AnalysisConfig)(nil),          // 0: agni.v1.webapi.AnalysisConfig
-	(*config.NamingConvention)(nil), // 1: agni.v1.config.NamingConvention
+	(*LibraryModule)(nil),           // 1: agni.v1.webapi.LibraryModule
+	nil,                             // 2: agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
+	(*config.NamingConvention)(nil), // 3: agni.v1.config.NamingConvention
 }
 var file_agni_v1_webapi_config_proto_depIdxs = []int32{
-	1, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.config.NamingConvention
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	3, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.config.NamingConvention
+	1, // 1: agni.v1.webapi.AnalysisConfig.library_modules:type_name -> agni.v1.webapi.LibraryModule
+	2, // 2: agni.v1.webapi.AnalysisConfig.library_docs:type_name -> agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_config_proto_init() }
@@ -263,7 +376,7 @@ func file_agni_v1_webapi_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_config_proto_rawDesc), len(file_agni_v1_webapi_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
