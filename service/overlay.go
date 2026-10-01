@@ -33,6 +33,10 @@ type Overlay struct {
 	// derived from Sources.
 	Profiles bool
 	Intent   bool
+	// Library and LibraryDocs are the project's own derived relations and their pages, composed into
+	// a query vocabulary by Registry.
+	Library     []LibraryModule
+	LibraryDocs map[string]string
 	// conventionName is the source name of the convention THIS overlay carries, from a project or the
 	// deployment default. A request-supplied convention replaces it by name (WS3-124).
 	conventionName string
@@ -189,6 +193,11 @@ type ResolvedConfig struct {
 	// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 	Profiles bool
 	Intent   bool
+	// Library is the project's own derived relations (agni issue 773), one module per file of a
+	// library directory, and LibraryDocs their optional reference pages keyed by member path. A query
+	// run under this config reads them through Overlay.Registry.
+	Library     []LibraryModule
+	LibraryDocs map[string]string
 	// Digest identifies the BYTES this resolution read, so an overlay composed from it can say
 	// whether two runs saw the same config. Empty means this resolver does not report one, which is
 	// legal and costs the overlay its identity (see Overlay.Identity).
@@ -203,7 +212,7 @@ type ResolvedConfig struct {
 // dropping the tier would report a clean run against config that never loaded.
 func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 || cfg.GetIntentUri() != "" ||
-		len(cfg.GetSymbolPathUris()) > 0
+		len(cfg.GetSymbolPathUris()) > 0 || len(cfg.GetLibraryUris()) > 0
 }
 
 // OverlayFor composes the engine inputs for one design: the project's config where the design
@@ -246,6 +255,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		}
 		o.Sources, o.Specs, o.Profiles, o.Intent = cfg.Sources, cfg.Specs, cfg.Profiles, cfg.Intent
 		o.SymbolPaths = cfg.SymbolPaths
+		o.Library, o.LibraryDocs = cfg.Library, cfg.LibraryDocs
 		id.addDigest("project-config", cfg.Digest)
 	} else if configNeedsResolver(merged) {
 		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, p.GetName())
@@ -285,6 +295,7 @@ func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 		ProfileUris:    append(append([]string{}, a.GetProfileUris()...), b.GetProfileUris()...),
 		ParamUris:      append(append([]string{}, a.GetParamUris()...), b.GetParamUris()...),
 		SymbolPathUris: append(append([]string{}, a.GetSymbolPathUris()...), b.GetSymbolPathUris()...),
+		LibraryUris:    append(append([]string{}, a.GetLibraryUris()...), b.GetLibraryUris()...),
 		IntentUri:      a.GetIntentUri(),
 		ChecklistUri:   a.GetChecklistUri(),
 	}
@@ -321,7 +332,7 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	// Every tier a request can contribute must appear in this guard. A tier missing from it is silently
 	// dropped for a request carrying ONLY that tier, which is how symbol paths usually arrive.
 	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 &&
-		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 {
+		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 && len(reqResolved.Library) == 0 {
 		base.id = id
 		return base, nil
 	}
@@ -349,6 +360,10 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	}
 	// Symbol paths ACCUMULATE, since a request naming a library adds somewhere to look.
 	out.SymbolPaths = append(append([]string{}, out.SymbolPaths...), reqResolved.SymbolPaths...)
+	// A request's library modules ACCUMULATE too, and a path both define is refused when Registry
+	// composes them, as any two definers of one path are.
+	out.Library = append(append([]LibraryModule{}, out.Library...), reqResolved.Library...)
+	out.LibraryDocs = mergeDocs(out.LibraryDocs, reqResolved.LibraryDocs)
 	out.Profiles = out.Profiles || reqResolved.Profiles
 	out.Intent = out.Intent || reqResolved.Intent
 	out.conventionName = req.GetConfig().GetConventions().GetName()

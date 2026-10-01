@@ -240,7 +240,7 @@ func (s *FSStore) readProject(t Tree, dir, name string) (string, *webapi.Project
 // attachConfig fills in the config a project owns, as URIs for what exists.
 //
 // A declared name that names nothing is SILENTLY ABSENT rather than an error. The names default
-// (conventions.yaml, profiles/, params/, review.yaml), so otherwise a project that declared nothing
+// (conventions.yaml, profiles/, params/, review.yaml, lib/), so otherwise a project that declared nothing
 // would fail for lacking files. An explicitly declared missing name deserves an error, but the
 // descriptor cannot tell the two apart yet.
 //
@@ -284,6 +284,9 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 	}
 	if uri, ok := rel(names.Symbols); ok {
 		p.Config.SymbolPathUris = []string{uri}
+	}
+	if uri, ok := rel(names.Lib); ok {
+		p.Config.LibraryUris = []string{uri}
 	}
 	return nil
 }

@@ -171,6 +171,10 @@ message ListRelationsRequest {
   // before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
   // with the suggestion a query would get.
   string path = 1;
+  // uri, when set, names a design whose project's own library joins the catalog (agni issue 773), so
+  // its members list and describe beside the shipped ones. Empty answers for the shipped vocabulary
+  // alone. A project library that does not compose is an error rather than a catalog without it.
+  string uri = 2;
 }
 
 // RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,

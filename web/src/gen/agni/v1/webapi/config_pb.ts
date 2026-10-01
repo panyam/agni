@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIuABCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_config_naming]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIvYBCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_config_naming]);
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -138,6 +138,18 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
    * @generated from field: repeated string symbol_path_uris = 8;
    */
   symbolPathUris: string[];
+
+  /**
+   * library_uris are directories of the project's own derived relations (agni issue 773), one
+   * Datalog module per `<module.path>.dl` file, with optional pages in `docs/<member.path>.md`. A
+   * query run under this config can call them beside the shipped library, so `lib/net.dl` adds
+   * members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
+   * path, or reading a relation nothing registers, fails the read rather than answering nothing.
+   * Rules compiled from queries do not read them yet (agni issue 779).
+   *
+   * @generated from field: repeated string library_uris = 9;
+   */
+  libraryUris: string[];
 };
 
 /**

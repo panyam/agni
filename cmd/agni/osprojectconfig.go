@@ -6,14 +6,17 @@ import (
 
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/lib"
 	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/rules/intent"
+	"github.com/panyam/jaala/datalog"
 )
 
 // osProjectConfig is the OS-backed service.ConfigResolver. It reads the interface profiles and
@@ -84,6 +87,30 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 		}
 		out.Sources = append(out.Sources, intent.Source("intent", decl))
 		out.Intent = true
+	}
+	// A project's own library is read here and composed by the service (Overlay.Registry), so a module
+	// that does not parse or collides is reported when a query first runs over it, naming the file.
+	for _, uri := range cfg.GetLibraryUris() {
+		dir, err := c.dir(uri)
+		if err != nil {
+			return service.ResolvedConfig{}, err
+		}
+		read = append(read, dir)
+		mods, docs, err := lib.Read(os.DirFS(dir))
+		if err != nil {
+			return service.ResolvedConfig{}, fmt.Errorf("%s library %s: %w", namespace, uri, err)
+		}
+		for _, m := range mods {
+			out.Library = append(out.Library, service.LibraryModule{
+				Path: m.Path, Language: datalog.LanguageName, Text: m.Text, Source: strings.TrimSuffix(uri, "/") + "/" + m.File,
+			})
+		}
+		for p, d := range docs {
+			if out.LibraryDocs == nil {
+				out.LibraryDocs = map[string]string{}
+			}
+			out.LibraryDocs[p] = d
+		}
 	}
 	// A resolution that read nothing still gets a digest identifying it as such. Symbol paths go in
 	// as NAMES, since this call never opens them and statting a URI would fail.
