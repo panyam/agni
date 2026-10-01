@@ -696,3 +696,275 @@ func TestLoadValidation(t *testing.T) {
 		}
 	}
 }
+
+// TestValidateRejectsMalformedValues holds a manifest that never saw YAML to the same rules Load
+// applies (WS9-050). Every case here is built as a struct, which is the path a manifest takes when it
+// arrives as a request value. No parser ran, so Load's checks would never have fired. Without this,
+// the wire path would accept an item with two selectors and resolve one of them arbitrarily.
+func TestValidateRejectsMalformedValues(t *testing.T) {
+	area := func(items ...Item) []Area { return []Area{{Name: "A", Items: items}} }
+	cases := map[string]Manifest{
+		"missing name":           {Areas: area(Item{ID: "i"})},
+		"no areas":               {Name: "t"},
+		"area no name":           {Name: "t", Areas: []Area{{Items: []Item{{ID: "i"}}}}},
+		"item no id":             {Name: "t", Areas: area(Item{Title: "x"})},
+		"two selectors":          {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Rule: "r", Profile: "P"}})},
+		"present plus rule":      {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Rule: "r", Present: &PresentBinding{Class: "test_connector"}}})},
+		"present no class":       {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Present: &PresentBinding{}}})},
+		"unparseable query":      {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Query: &QueryBinding{Match: "garbage(", Subject: "r", Message: "m"}}})},
+		"query missing message":  {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Query: &QueryBinding{Match: "component.mpn(?r,\"X\") => ?r", Subject: "r"}}})},
+		"requirement no profile": {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Requirement: "esd"}})},
+		"scope with no selector": {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Scope: ScopeBinding{Profiles: []string{"CAN"}}}})},
+	}
+	for name, m := range cases {
+		if err := Validate(m); err == nil {
+			t.Errorf("%s: want error, got nil", name)
+		}
+	}
+}
+
+// TestValidateAcceptsValidValue is the other half, that a well-formed struct passes, including the
+// narrower fields (scope, requirement) that compose with a selector rather than counting as one.
+func TestValidateAcceptsValidValue(t *testing.T) {
+	m := Manifest{Name: "t", Areas: []Area{{Name: "CAN", Items: []Item{
+		{ID: "1", Title: "termination", Binding: Binding{Rule: "r", Scope: ScopeBinding{Profiles: []string{"CAN"}}}},
+		{ID: "2", Title: "esd", Binding: Binding{Profile: "CAN", Requirement: "esd"}},
+		{ID: "3", Title: "manual"},
+	}}}}
+	if err := Validate(m); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+}
+
+func TestLoadValid(t *testing.T) {
+	y := `
+name: mini
+areas:
+  - name: CAN
+    items:
+      - {id: "1", title: termination, description: "120 ohm across CANH/CANL at both bus ends", rule: profile/can-termination-missing}
+      - {id: "2", title: transceiver, }
+      - {id: "3", title: ESD protection, profile: CAN, requirement: esd}
+`
+	m, err := Load(strings.NewReader(y))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if m.Name != "mini" || len(m.Areas) != 1 || len(m.Areas[0].Items) != 3 {
+		t.Fatalf("parsed wrong: %+v", m)
+	}
+	if got := m.Areas[0].Items[0]; got.Title != "termination" || got.Description != "120 ohm across CANH/CANL at both bus ends" {
+		t.Errorf("Title/Description round-trip: got %+v", got)
+	}
+	// A requirement narrows a profile binding rather than being one, so the pair is valid together.
+	if got := m.Areas[0].Items[2].Binding; got.Profile != "CAN" || got.Requirement != "esd" {
+		t.Errorf("profile+requirement round-trip: got %+v", got)
+	}
+}
+
+// TestConventionUnmatchedRunsButDoesNotPass (WS3-099): an interface whose signal convention is in
+// use but whose completeness anchor is absent reads not-automated on zero findings, never pass.
+// Unlike the host-unsatisfied verdict this is NOT a run gate, because a profile's secondary rules
+// (signal-dangling, missing-pullup) gate on in_use alone, so they DO evaluate without the anchor
+// and a real finding must still read fail. That is the WS3-097 discipline, where not-automated
+// replaces a would-be pass, never a fail.
+func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
+	unmatched := func(string) (Presence, bool) { return IfaceConventionUnmatched, true }
+	// A clean design: the bound rule finds nothing, so the only verdict available is not-automated.
+	clean := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets: []*ir.Net{{Name: "SIG", Prov: &ir.Provenance{SourceFile: "t"},
+			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "2"}}}},
+	}
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+		{ID: "x", Title: "iface", Binding: Binding{Rule: "single-pin-net", Scope: ScopeBinding{Profiles: []string{"IF"}}}},
+	}}}}
+	run := func(d *ir.Design) ItemResult {
+		return Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man,
+			Design: "d", Present: unmatched}).Areas[0].Items[0]
+	}
+	got := run(clean)
+	if got.Outcome != NotAutomated {
+		t.Errorf("unanchored interface, no findings: want not-automated, got %s", got.Outcome)
+	}
+	if !strings.Contains(got.Note, "anchor") {
+		t.Errorf("want a note naming the missing anchor, got %q", got.Note)
+	}
+	// oneDesign's SIG net has a single connection, so single-pin-net fires. The verdict must stay fail,
+	// since gating this case at the top (the host-unsatisfied shape) would have swallowed it.
+	if got := run(oneDesign()); got.Outcome != Fail {
+		t.Errorf("unanchored interface with a real finding: want fail, got %s", got.Outcome)
+	}
+}
+
+// TestRuleBoundDatasheetItemNeedsData (WS3-095) closes the rule-side half of the WS3-097 hole.
+// Before it, only an INLINE QUERY declared the datasheet symbol it joined on, so a RULE-bound
+// datasheet item run WITH --params but with the relevant part unseeded ran a rule that could join
+// nothing, found nothing, and scored a PASS. check.Available does not catch it, because it gates on
+// the params TIER, which is present.
+//
+// The rule declares its symbols (Rule.ParamSymbols) and the runner reads them, so the item reads
+// needs-data instead. The design, the catalog and the binding are identical across the three cases and
+// the ONLY variable is which symbol the part seeds.
+func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Mpn: "ACME-1", Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets:       []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	// A datasheet rule that never fires, so the outcome turns purely on whether its symbol is seeded.
+	silent := &check.Rule{
+		Name: "sizing", Severity: "error", Summary: "s",
+		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil }),
+	}
+	// The same rule, firing, to prove a real defect is never masked as needs-data.
+	loud := &check.Rule{
+		Name: "sizing", Severity: "error", Summary: "s",
+		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
+			return []check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Message: "over budget"}}
+		}),
+	}
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+		{ID: "18", Title: "regulator output ratings", Binding: Binding{Rule: "sz/sizing"}},
+	}}}}
+	run := func(r *check.Rule, seededSym string) ItemResult {
+		provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
+			if mpn == "ACME-1" {
+				return &parampb.PartSpec{Mpn: "ACME-1", Parameters: []*parampb.Parameter{{Symbol: seededSym}}}
+			}
+			return nil
+		})
+		m := check.NewModel(d, check.WithParamProvider(provider))
+		cat := check.CatalogWith(check.NewSource("sz", []*check.Rule{r}))
+		return Run(RunParams{Model: m, Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
+	}
+	if got := run(silent, "IOUT"); got.Outcome != Pass {
+		t.Errorf("symbol seeded, rule silent: got (%s, %q), want pass", got.Outcome, got.Note)
+	}
+	if got := run(silent, "VDD"); got.Outcome != NeedsData || got.Note == "" {
+		t.Errorf("symbol unseeded (only VDD present): got (%s, %q), want (needs-data, non-empty reason)", got.Outcome, got.Note)
+	}
+	if got := run(loud, "VDD"); got.Outcome != Fail {
+		t.Errorf("rule fires: got %s, want fail (a real finding is never masked as needs-data)", got.Outcome)
+	}
+	// A rule that declares NO symbols is unaffected, because the gate applies only where a
+	// datasheet dependency is declared, so every existing netlist-rule item keeps its behavior.
+	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil })}
+	if got := run(plain, "VDD"); got.Outcome != Pass {
+		t.Errorf("rule with no declared symbols: got %s, want pass (gate must not over-reach)", got.Outcome)
+	}
+}
+
+// TestInconclusiveNeverReadsPass (agni issue 74) is the end-to-end proof for the inconclusive
+// primitive. A rule that RAN, had everything it needed, and could not decide about a subject must
+// not give its bound item a pass.
+//
+// It is checked here rather than only in the rule package because the damage is invisible one layer
+// down. A rule emitting an inconclusive finding looks fine in isolation; the defect is the REPORT
+// saying "pass" for a question nothing answered, and only the runner can get that wrong.
+//
+// The two cases form a pair. The same design and manifest, with only the finding's Inconclusive
+// flag differing, must produce two different outcomes and never pass in either. A real defect must
+// still read fail, so the new branch cannot be masking failures.
+func TestInconclusiveNeverReadsPass(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets:       []*ir.Net{{Name: "RST", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	ruleEmitting := func(f check.Finding) *check.Rule {
+		return &check.Rule{
+			Name:     "probe",
+			Severity: "warning",
+			Summary:  "s",
+			Eval:     check.FailuresOnly(func(check.Model) []check.Finding { return []check.Finding{f} }),
+		}
+	}
+	run := func(r *check.Rule) ItemResult {
+		man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+			{ID: "1", Title: "reset polarity", Binding: Binding{Rule: "probe"}},
+		}}}}
+		cat, err := check.NewCatalog(check.NewSource("", []*check.Rule{r}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return Run(RunParams{Model: check.NewModel(d), Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
+	}
+
+	undecided := run(ruleEmitting(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "RST"}, Message: "cannot tell", Inconclusive: true}))
+	if undecided.Outcome != Inconclusive {
+		t.Errorf("an undecided subject: got %s, want inconclusive", undecided.Outcome)
+	}
+	if undecided.Outcome == Pass {
+		t.Error("an unanswered question must never read pass; that is the defect this outcome exists to remove")
+	}
+	if !strings.Contains(undecided.Note, "RST") {
+		t.Errorf("the note must name the subject the check gave up on, got %q", undecided.Note)
+	}
+
+	defect := run(ruleEmitting(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "RST"}, Message: "wrong"}))
+	if defect.Outcome != Fail {
+		t.Errorf("a real defect: got %s, want fail (the new branch must not mask failures)", defect.Outcome)
+	}
+}
+
+// TestInconclusiveCountsAsCoveredNotPassing pins that an inconclusive item HAS a mechanism, so it
+// counts toward Covered() exactly like needs-data and needs-design-intent. Scoring it not-automated
+// would understate coverage and hide that a check exists; scoring it pass is the defect. It is
+// covered and unresolved.
+func TestInconclusiveCountsAsCoveredNotPassing(t *testing.T) {
+	var tal Tally
+	tal.add(Inconclusive) // add increments Total itself
+	if tal.Covered() != 1 {
+		t.Errorf("Covered() = %d, want 1 (a mechanism exists and ran)", tal.Covered())
+	}
+	if tal.Pass != 0 {
+		t.Errorf("Pass = %d, want 0", tal.Pass)
+	}
+	if tal.Inconclusive != 1 {
+		t.Errorf("Inconclusive = %d, want 1", tal.Inconclusive)
+	}
+}
+
+// The needs-data verdict already knew which parts were missing which symbol; it flattened that into
+// a sentence and threw the structure away. Keeping the structure makes the outcome actionable.
+func TestNeedsDataCarriesUnmetDependencies(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "U1", Mpn: "ACME-1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U2", Mpn: "ACME-1", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	q := &QueryBinding{Match: `net.pin_count(?n, ?c), ?c > 1000000 => ?n`, Subject: "n", Kind: check.KindNet, Message: "x", ParamSymbol: "IOUT"}
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{{ID: "23", Title: "UVLO", Binding: Binding{Query: q}}}}}}
+	run := func(seededSym string) ItemResult {
+		provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
+			if mpn == "ACME-1" {
+				return &parampb.PartSpec{Mpn: "ACME-1", Manufacturer: "MakerCo", Parameters: []*parampb.Parameter{{Symbol: seededSym}}}
+			}
+			return nil
+		})
+		return Run(RunParams{Model: check.NewModel(d, check.WithParamProvider(provider)),
+			Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
+	}
+
+	blocked := run("OTHER")
+	if blocked.Outcome != NeedsData {
+		t.Fatalf("outcome = %q, want needs-data", blocked.Outcome)
+	}
+	if len(blocked.Unmet) != 1 {
+		t.Fatalf("want one dependency for the one unseeded part, got %+v", blocked.Unmet)
+	}
+	if got := blocked.Unmet[0]; got.MPN != "ACME-1" || got.Symbol != "IOUT" || got.SpecAbsent {
+		t.Errorf("dependency = %+v, want ACME-1 / IOUT with a spec present", got)
+	}
+	if blocked.Note == "" {
+		t.Error("the human sentence must survive alongside the structured form, not be replaced by it")
+	}
+
+	// Seeding the symbol removes both the verdict and the dependency.
+	if seeded := run("IOUT"); seeded.Outcome == NeedsData || len(seeded.Unmet) != 0 {
+		t.Errorf("a seeded symbol must leave no gap: outcome %q, unmet %+v", seeded.Outcome, seeded.Unmet)
+	}
+}
