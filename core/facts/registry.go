@@ -3,6 +3,8 @@ package facts
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"sync"
 
@@ -66,7 +68,8 @@ type Registry struct {
 	schema    map[string][]Field // every relation, built-in and extension alike
 	extension []Relation         // in composition order, so a merge is deterministic
 	builtin   BuiltinFacts
-	vocab     *ns.Vocabulary // every queryable name at its path: relations, predicates, modules
+	vocab     *ns.Vocabulary    // every queryable name at its path: relations, predicates, modules
+	docs      map[string]string // reference markdown for names no relation catalog documents (WithDocs)
 }
 
 // An Option contributes to a Registry under construction. The three kinds mirror the three ways a
@@ -81,6 +84,7 @@ type builder struct {
 	predicates []namedBuiltin
 	modules    []ns.Module
 	languages  []ns.Language
+	docs       map[string]string
 	errs       []error
 }
 
@@ -145,6 +149,25 @@ func WithModules(ms ...ns.Module) Option {
 	return func(bd *builder) {
 		for _, m := range ms {
 			bd.modules = append(bd.modules, ns.Module{Path: m.Path, Language: m.Language, Text: m.Text})
+		}
+	}
+}
+
+// WithDocs supplies reference markdown for names the relation catalog does not document, keyed by
+// path: a library's derived relations, which Registry.Doc then serves the way it serves a relation's
+// doc. Composition refuses a doc for a path nothing defines, and two docs for one path, so a renamed
+// member cannot leave its page behind.
+func WithDocs(docs map[string]string) Option {
+	return func(bd *builder) {
+		if bd.docs == nil {
+			bd.docs = map[string]string{}
+		}
+		for path, d := range docs {
+			if _, dup := bd.docs[path]; dup {
+				bd.err(fmt.Errorf("two docs supplied for %q", path))
+				continue
+			}
+			bd.docs[path] = d
 		}
 	}
 }
@@ -243,6 +266,12 @@ func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
 			errs = append(errs, err)
 		}
 	}
+	for _, path := range slices.Sorted(maps.Keys(b.docs)) {
+		if !v.Has(path) {
+			errs = append(errs, fmt.Errorf("a doc is supplied for %q, which nothing defines", path))
+		}
+	}
+	r.docs = b.docs
 	return v, errs
 }
 
@@ -416,13 +445,15 @@ func (r *Registry) Relations() []RelationInfo {
 	return out
 }
 
-// Doc resolves a relation's reference markdown, or "" when this registry has no resolver or the
-// relation has no doc.
+// Doc resolves a name's reference markdown, or "" when it has none: the relation catalog's doc for a
+// relation, and a doc supplied with WithDocs for anything else, such as a library member.
 func (r *Registry) Doc(name string) string {
-	if r.builtin.Doc == nil {
-		return ""
+	if r.builtin.Doc != nil {
+		if d := r.builtin.Doc(name); d != "" {
+			return d
+		}
 	}
-	return r.builtin.Doc(name)
+	return r.docs[name]
 }
 
 // The registration buffer is the only package state. It is written at init and read by RegistryWith,
@@ -444,6 +475,10 @@ func RegisterRelation(name string, fields []Field, project Projector) {
 
 // RegisterPredicate adds a predicate to the process default at path. Call it once at init.
 func RegisterPredicate(path string, b ns.Builtin) { addOption(WithPredicate(path, b)) }
+
+// RegisterDocs adds reference markdown for names the relation catalog does not document to the
+// process default (see WithDocs). Call it once at init, after the names it documents register.
+func RegisterDocs(docs map[string]string) { addOption(WithDocs(docs)) }
 
 // RegisterModules adds a library of derived-relation modules to the process default, all at once so
 // they may read each other in any order (see WithModules). Call it once at init per library.

@@ -613,7 +613,7 @@ discovered.
 | A format reader | see the page | `docsite/content/build/format-reader.md` | see the page |
 | A check rule | see the page | `docsite/content/build/check-rule.md` | see the page |
 | A query relation | 7, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check`, `TestColumnKindsMatchGolden` |
-| A library member (derived relation) | 3 (the rule in a `stdlib/lib/*.dl` file with a `#` doc comment and typed head, `columnkinds.golden`, `make catalog-docs`) | `stdlib/lib/lib.go`'s package comment | `TestEveryMemberIsDocumentedAndTyped`, `TestColumnKindsMatchGolden`, `catalog-docs-check` |
+| A library member (derived relation) | 4 (the rule in a `stdlib/lib/*.dl` file with a `#` summary and typed head, its page in `stdlib/lib/docs/`, `columnkinds.golden`, `make catalog-docs`) | `docsite/content/build/library-member.md` | `TestEveryMemberIsDocumentedAndTyped`, `TestEveryMemberHasItsDoc`, `TestDocQueriesValidate`, `TestColumnKindsMatchGolden`, `catalog-docs-check` |
 | A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
 | A hand-written `agni …` fence | 1, plus `docCommandCount` | `docsite/README.md` | `cmd/agni/doccommands_test.go` |
 | A multi-command `agniRun` block | 1 (`steps:` in the spec, one per command) | `docsite/README.md` | `tutorial-runs-check` |

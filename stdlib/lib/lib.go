@@ -3,6 +3,8 @@
 // give (agni issue 751). component.dl defines component.two_terminal, component.probed_both and
 // component.probed_one; net.dl defines net.has_test_point. A query calls them exactly as it calls a
 // base relation, and `agni query --relations <path>` prints a member's signature and definition.
+// Each member has a reference page in docs/, and docsite/content/build/library-member.md is the
+// how-to for adding one.
 //
 // A member belongs here when it is a general hardware question many queries ask. One that only a
 // single report needs stays in that report's query, and one that a Go rule or a Spec must read is
@@ -31,12 +33,41 @@ import (
 //go:embed *.dl
 var modules embed.FS
 
+// docs holds one reference page per public member, docs/<path>.md, served by Registry.Doc and
+// generated into the docsite's relation reference by `make catalog-docs`.
+//
+//go:embed docs/*.md
+var docs embed.FS
+
 func init() {
 	var ms []ns.Module
 	for _, m := range Modules() {
 		ms = append(ms, ns.Module{Path: m.Path, Language: datalog.LanguageName, Text: m.Text})
 	}
 	facts.RegisterModules(ms...)
+	facts.RegisterDocs(Docs())
+}
+
+// Docs returns each member's reference markdown keyed by its path. A file whose name starts with "_"
+// is a template and is skipped.
+func Docs() map[string]string {
+	names, err := fs.Glob(docs, "docs/*.md")
+	if err != nil {
+		panic("stdlib/lib: " + err.Error())
+	}
+	out := map[string]string{}
+	for _, n := range names {
+		base := path.Base(n)
+		if strings.HasPrefix(base, "_") {
+			continue
+		}
+		text, err := docs.ReadFile(n)
+		if err != nil {
+			panic("stdlib/lib: " + err.Error())
+		}
+		out[strings.TrimSuffix(base, ".md")] = string(text)
+	}
+	return out
 }
 
 // Module is one library file: the module path its rules register under, and its Datalog text.

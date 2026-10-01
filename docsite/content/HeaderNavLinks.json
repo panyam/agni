@@ -50,6 +50,7 @@
       { "name": "Developer guide", "url": "build/", "group": true },
       { "name": "Adding a format reader", "url": "build/format-reader/" },
       { "name": "Authoring a check rule", "url": "build/check-rule/" },
+      { "name": "Adding a library member", "url": "build/library-member/" },
       { "name": "Extending and embedding the engine", "url": "build/extending/" },
       { "name": "Calling agni from another language", "url": "build/other-languages/" },
       { "name": "Native verification", "url": "build/native-verification/" },

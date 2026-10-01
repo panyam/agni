@@ -31,15 +31,19 @@ The last step goes past what a coverage report can ask.
 
 ## Which nets a probe can reach {#probed}
 
-> One join answers it, pairing each test point with the net it sits on. An unprobed rail is the one that costs
-> you at bring-up, because the alternative is holding a probe against a component lead.
+> `net.has_test_point` answers it, a derived relation from the shipped library that pairs each test
+> point with the net it sits on. Negated over every net, it lists the nets a probe cannot reach. An
+> unprobed rail is the one that costs you at bring-up, because the alternative is holding a probe
+> against a component lead.
 
 ## Which parts a tester can measure {#passives}
 
-> Measuring a two-terminal part needs BOTH ends reachable, so one end covered measures nothing. One
-> pair of derived relations yields three buckets: both ends, one end, neither. The third needs negation
-> through a unary helper, because a negated atom with an unbound variable is unsafe and returns
-> nothing rather than an error.
+> Measuring a two-terminal part needs BOTH ends reachable, so one end covered measures nothing. The
+> library has the first two buckets as members, `component.probed_both` and `component.probed_one`,
+> and the walk only adds what it means by a passive. The third bucket negates `net.has_test_point` on
+> both nets `component.two_terminal` binds, so neither negated atom has an unbound variable, which
+> would be unsafe and return nothing rather than an error. `agni query --relations
+> component.probed_one` prints any of them with its definition.
 
 ## The parts nobody can measure, by part number {#by-mpn}
 

@@ -24,6 +24,7 @@ import (
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/examples/common"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	_ "github.com/panyam/agni/stdlib/lib"           // register the shipped derived relations the coverage buckets call
 	_ "github.com/panyam/agni/stdlib/relations"     // register the fact relations the queries below bind
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the rule catalog; check.BuiltinRules is EMPTY without it, silently
 	"github.com/panyam/demokit"
@@ -32,16 +33,26 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// passivePrelude names the two ideas every coverage question below is built on, as derived relations.
-// A `passive` is a two-terminal part whose value an in-circuit tester wants to measure; `covered`
-// pairs one with a net a probe can reach. Datalog has no disjunction, so "resistor or capacitor" is
-// two rules for one relation, and adding a rule extends every question below.
+// passiveDef is the one idea this walk defines for itself: a `passive` is a resistor or a capacitor,
+// the parts this coverage report counts. Datalog has no disjunction, so "resistor or capacitor" is two
+// rules for one relation, and adding a rule extends every question below.
 //
-// The same string is printed and executed, so the CLI line beside each step is the query that ran.
-const passivePrelude = `passive(?p) :- component.class(?p, "resistor"); ` +
-	`passive(?p) :- component.class(?p, "capacitor"); ` +
-	`covered(?p, ?n) :- passive(?p), component.net(?p, ?n), ` +
-	`component.class(?tp, "test_point"), component.net(?tp, ?n); `
+// Everything else comes from the shipped library (stdlib/lib): net.has_test_point,
+// component.two_terminal, component.probed_both and component.probed_one. `agni query --relations
+// component.probed_one` prints any of them with its definition.
+const passiveDef = `passive(?p) :- component.class(?p, "resistor"); ` +
+	`passive(?p) :- component.class(?p, "capacitor"); `
+
+// The coverage buckets, each one query. The same string is printed and executed, so the CLI line
+// beside each step is the query that ran.
+const (
+	bothQuery    = passiveDef + `passive(?p), component.probed_both(?p) => ?p`
+	oneQuery     = passiveDef + `passive(?p), component.probed_one(?p, ?probed, ?unprobed) => ?p, ?unprobed`
+	neitherQuery = passiveDef + `passive(?p), component.two_terminal(?p, ?a, ?b), not net.has_test_point(?a), not net.has_test_point(?b) => ?p`
+	byMPNQuery   = passiveDef + `passive(?p), component.two_terminal(?p, ?a, ?b), not net.has_test_point(?a), not net.has_test_point(?b), ` +
+		`component.mpn(?p, ?m) => ?m, count(distinct ?p), list(distinct ?p)`
+	unprobedQuery = `entity(?net, "net"), not net.has_test_point(?net) => ?net`
+)
 
 func main() {
 	design := common.AskPath("design", "../common/designs/probe-coverage.edn")
@@ -75,16 +86,13 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
-		cli(`agni query <design> 'component.class(?tp, "test_point"), component.net(?tp, ?net) => ?net, count(?tp)'`)
-		probed := probedNets(d)
+		cli("agni query <design> '" + unprobedQuery + "'")
 		var unprobed []string
-		for _, n := range d.GetNets() {
-			if !probed[n.GetName()] {
-				unprobed = append(unprobed, n.GetName())
-			}
+		for _, r := range must(rows(d, unprobedQuery)) {
+			unprobed = append(unprobed, r[0])
 		}
 		sort.Strings(unprobed)
-		fmt.Printf("%d of %d nets carry a test point.\n", len(probed), len(d.GetNets()))
+		fmt.Printf("%d of %d nets carry a test point.\n", len(d.GetNets())-len(unprobed), len(d.GetNets()))
 		if len(unprobed) > 0 {
 			fmt.Printf("Unprobed: %s\n", strings.Join(unprobed, ", "))
 		}
@@ -96,16 +104,14 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
-		// Both ends, one end, neither. The first two differ only in the having clause; the third needs
-		// negation, and is written through a unary `hascov` so the negated atom's variable is bound
-		// (an unbound one is unsafe and returns nothing rather than an error, agni issue 522).
-		both := passiveQuery(`covered(?p, ?n) => ?p, count(distinct ?n) having count(distinct ?n) > 1`)
-		one := passiveQuery(`covered(?p, ?n) => ?p, count(distinct ?n) having count(distinct ?n) < 2`)
-		neither := passiveQuery(`hascov(?p) :- covered(?p, ?n); nocov(?p) :- passive(?p), not hascov(?p); nocov(?p) => ?p`)
-		cli("agni query <design> '" + one + "'")
-		fmt.Printf("both ends probed (measurable in circuit): %d\n", len(must(rows(d, both))))
-		fmt.Printf("one end probed  (present, not measurable): %d  %s\n", len(must(rows(d, one))), refs(must(rows(d, one))))
-		fmt.Printf("neither end     (invisible to test)      : %d  %s\n", len(must(rows(d, neither))), refs(must(rows(d, neither))))
+		// Both ends, one end, neither. The first two are library members; the third negates
+		// net.has_test_point on both of the nets component.two_terminal binds, so neither negated atom
+		// has an unbound variable (an unbound one is unsafe and returns nothing rather than an error,
+		// agni issue 522).
+		cli("agni query <design> '" + oneQuery + "'")
+		fmt.Printf("both ends probed (measurable in circuit): %d\n", len(must(rows(d, bothQuery))))
+		fmt.Printf("one end probed  (present, not measurable): %d  %s\n", len(must(rows(d, oneQuery))), refs(must(rows(d, oneQuery))))
+		fmt.Printf("neither end     (invisible to test)      : %d  %s\n", len(must(rows(d, neitherQuery))), refs(must(rows(d, neitherQuery))))
 		return nil
 	})
 
@@ -114,10 +120,8 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
-		q := passiveQuery(`hascov(?p) :- covered(?p, ?n); nocov(?p) :- passive(?p), not hascov(?p); ` +
-			`nocov(?p), component.mpn(?p, ?m) => ?m, count(distinct ?p), list(distinct ?p)`)
-		cli("agni query <design> '" + q + "'")
-		got := must(rows(d, q))
+		cli("agni query <design> '" + byMPNQuery + "'")
+		got := must(rows(d, byMPNQuery))
 		if len(got) == 0 {
 			fmt.Println("Every passive has at least one end probed.")
 			return nil
@@ -161,9 +165,6 @@ func main() {
 	common.SetupRenderer(demo)
 	demo.Execute()
 }
-
-// passiveQuery prefixes the shared derived relations onto one question.
-func passiveQuery(q string) string { return passivePrelude + q }
 
 // subjectRefs names a verdict's subject tuple. A verdict is about a TUPLE because some rules ask
 // about a relation between entities.
@@ -229,15 +230,6 @@ func must(rs [][]string, err error) [][]string {
 		panic(err)
 	}
 	return rs
-}
-
-// probedNets names every net a test point sits on.
-func probedNets(d *ir.Design) map[string]bool {
-	out := map[string]bool{}
-	for _, r := range must(rows(d, `component.class(?tp, "test_point"), component.net(?tp, ?net) => ?net`)) {
-		out[r[0]] = true
-	}
-	return out
 }
 
 // atoi reads an aggregate column, which arrives as text like every other binding.
