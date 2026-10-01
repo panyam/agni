@@ -322,7 +322,7 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 // It returns the per-request catalog, overlay spliced on, because the stored document records the
 // rules that ACTUALLY ran.
 func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, error) {
-	m, err := BuildModel(ctx, s.loader, designURI, boardURI, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, designURI, boardURI, ov.SpecsOver(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return review.Report{}, nil, err
 	}

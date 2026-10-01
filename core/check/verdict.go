@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"github.com/panyam/agni/core/param"
 )
 
 // Verdict is what one rule concluded about one subject, passes included, with the evidence the
@@ -310,6 +312,12 @@ func citationLine(c *DatasheetCitation) string {
 	}
 	if c.Section != "" {
 		s += ", " + c.Section
+	}
+	// Only a value from OUTSIDE the project is marked. The project's own params are the expected
+	// source, and a limit someone else transcribed deciding this design's verdict is the case worth
+	// a reader's attention.
+	if c.Corpus == param.CorpusShared {
+		s += " (shared corpus)"
 	}
 	return s
 }

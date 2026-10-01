@@ -61,7 +61,7 @@ class ContextSubject(_message.Message):
     def __init__(self, subject: _Optional[_Union[Subject, _Mapping]] = ..., role: _Optional[str] = ...) -> None: ...
 
 class DatasheetCitation(_message.Message):
-    __slots__ = ("doc", "doc_ref", "page", "section", "method", "confidence", "verification", "verified_revision")
+    __slots__ = ("doc", "doc_ref", "page", "section", "method", "confidence", "verification", "verified_revision", "corpus")
     DOC_FIELD_NUMBER: _ClassVar[int]
     DOC_REF_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
@@ -70,6 +70,7 @@ class DatasheetCitation(_message.Message):
     CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
     VERIFICATION_FIELD_NUMBER: _ClassVar[int]
     VERIFIED_REVISION_FIELD_NUMBER: _ClassVar[int]
+    CORPUS_FIELD_NUMBER: _ClassVar[int]
     doc: str
     doc_ref: str
     page: int
@@ -78,7 +79,8 @@ class DatasheetCitation(_message.Message):
     confidence: float
     verification: str
     verified_revision: str
-    def __init__(self, doc: _Optional[str] = ..., doc_ref: _Optional[str] = ..., page: _Optional[int] = ..., section: _Optional[str] = ..., method: _Optional[str] = ..., confidence: _Optional[float] = ..., verification: _Optional[str] = ..., verified_revision: _Optional[str] = ...) -> None: ...
+    corpus: str
+    def __init__(self, doc: _Optional[str] = ..., doc_ref: _Optional[str] = ..., page: _Optional[int] = ..., section: _Optional[str] = ..., method: _Optional[str] = ..., confidence: _Optional[float] = ..., verification: _Optional[str] = ..., verified_revision: _Optional[str] = ..., corpus: _Optional[str] = ...) -> None: ...
 
 class Finding(_message.Message):
     __slots__ = ("rule", "severity", "subject", "message", "inconclusive", "provenance", "sheets", "locate_reason", "datasheets", "context")

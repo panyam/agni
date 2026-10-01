@@ -334,6 +334,8 @@ message ComponentParams {
   string ref_des = 1;
   string mpn = 2;
   agni.v1.param.PartSpec spec = 3;
+  // corpus is where the spec came from: "project" or "shared", as a datasheet citation names it.
+  string corpus = 4;
 }
 
 message GetComponentParamsResponse {

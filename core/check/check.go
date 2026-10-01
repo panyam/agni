@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // Finding is one rule violation. Prov locates it in the source, nil when the source carries no
@@ -142,6 +143,16 @@ type DatasheetCitation struct {
 	// checked revision survives, which lets a stale citation say "verified against SCES650K, corpus now
 	// holds SCES650L". Display only, never compared.
 	VerifiedRevision string
+	// Corpus names whose transcription the value rests on: param.CorpusProject for the design's own
+	// project params/, param.CorpusShared for a corpus the project does not own (--params,
+	// --params-url), "" when the provider cannot say. A project's corpus is layered over a shared one
+	// per MPN, so one run can cite both, and a value from outside the project is the one a reader
+	// needs to see flagged (agni issue 749). Stamped by Run and RunVerdicts, not by the rules.
+	Corpus string
+
+	// spec is the PartSpec the citation was built from, which is how Run learns its corpus without
+	// every rule passing one along.
+	spec *parampb.PartSpec
 }
 
 // Finding subject kinds, the values of Entity.Kind.
@@ -328,6 +339,32 @@ const (
 // It checks ctx before each rule and returns its error when the caller has gone (agni issue 795),
 // rather than the findings so far, which would read as a run that found nothing more.
 func Run(ctx context.Context, m Model, rules []*Rule) ([]Finding, error) {
+	out, err := runFindings(ctx, m, rules)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		stampCorpus(m, out[i].DatasheetProv)
+	}
+	return out, nil
+}
+
+// stampCorpus names the corpus each citation's spec came from, when the model's provider can say.
+func stampCorpus(m Model, cs []*DatasheetCitation) {
+	sc, ok := m.(interface {
+		SpecCorpus(*parampb.PartSpec) string
+	})
+	if !ok {
+		return
+	}
+	for _, c := range cs {
+		if c != nil && c.spec != nil {
+			c.Corpus = sc.SpecCorpus(c.spec)
+		}
+	}
+}
+
+func runFindings(ctx context.Context, m Model, rules []*Rule) ([]Finding, error) {
 	var out []Finding
 	gate := unresolvedSymbolGate(m)
 	for _, r := range rules {
@@ -429,6 +466,9 @@ func RunVerdicts(ctx context.Context, m Model, rules []*Rule) ([]Verdict, error)
 		}
 		for _, v := range r.Eval(ctx, m) {
 			v.Rule = r.Name
+			if v.Witness != nil {
+				stampCorpus(m, v.Witness.Datasheet)
+			}
 			out = append(out, v)
 		}
 	}

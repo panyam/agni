@@ -188,6 +188,15 @@ func (m *irModel) PartSpec(refDes string) *parampb.PartSpec {
 	return m.specs.Lookup(m.mpn[refDes])
 }
 
+// SpecCorpus names the corpus a spec this model was given came from, when its provider can say
+// (param.Layered can); "" otherwise. Run and RunVerdicts stamp it onto every datasheet citation.
+func (m *irModel) SpecCorpus(spec *parampb.PartSpec) string {
+	if n, ok := m.specs.(param.CorpusNamer); ok {
+		return n.CorpusOf(spec)
+	}
+	return ""
+}
+
 // Datasheet limit extractors. Each alias set below holds the vendor symbols one limit prints under, so
 // vendor spelling lives in the model layer and never in rule text. Each *Limits extractor keeps the rows
 // whose symbol is in its set, whose unit reduces to the extractor's base unit through param.InBaseUnit,

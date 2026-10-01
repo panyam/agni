@@ -110,6 +110,10 @@ message DatasheetCitation {
   // than only the one the corpus now holds. Display only, never compared; see the field's own
   // comment in param.proto. Empty when nothing was ever verified.
   string verified_revision = 8;
+  // Whose transcription the value rests on: "project" for the design's own project params/, "shared"
+  // for a corpus the project does not own (--params, --params-url), "" when unknown. A project's
+  // corpus is layered over a shared one per MPN, so one run can cite both (agni issue 749).
+  string corpus = 9;
 }
 
 // Finding is one rule violation, the wire form of check.Finding. `subject` is the highlight join

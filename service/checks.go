@@ -153,7 +153,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOver(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -218,21 +218,34 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, s.specs)
+	// Through the project's overlay, as CheckDesign is, so the panel shows the same specs a check
+	// judges by. It used the server's corpus alone, which inside a project with its own params/
+	// showed a different spec than the verdict rested on, or none.
+	ov, err := s.projects.Overlay(ctx, u, nil, s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
+	specs := ov.SpecsOver(s.specs)
+	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, specs, ov.ReadOptions()...)
+	if err != nil {
+		return nil, err
+	}
+	namer, _ := specs.(param.CorpusNamer)
 	resp := &webapi.GetComponentParamsResponse{}
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.GetRefDes())
 		if spec == nil {
 			continue
 		}
-		resp.Components = append(resp.Components, &webapi.ComponentParams{
+		cp := &webapi.ComponentParams{
 			RefDes: c.GetRefDes(),
 			Mpn:    m.ComponentMPN(c.GetRefDes()),
 			Spec:   spec,
-		})
+		}
+		if namer != nil {
+			cp.Corpus = namer.CorpusOf(spec)
+		}
+		resp.Components = append(resp.Components, cp)
 	}
 	return resp, nil
 }
@@ -323,6 +336,7 @@ func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitat
 		Confidence:       c.Confidence,
 		Verification:     c.Verification,
 		VerifiedRevision: c.VerifiedRevision,
+		Corpus:           c.Corpus,
 	}
 }
 
@@ -502,6 +516,7 @@ func datasheetCitationsFromProto(ps []*checkspb.DatasheetCitation) []*check.Data
 			Confidence:       p.GetConfidence(),
 			Verification:     p.GetVerification(),
 			VerifiedRevision: p.GetVerifiedRevision(),
+			Corpus:           p.GetCorpus(),
 		})
 	}
 	return out

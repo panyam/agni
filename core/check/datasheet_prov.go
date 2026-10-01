@@ -25,6 +25,7 @@ func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *Datashee
 // the string side, it keeps the doc_ref resolution in one place so the row types cannot drift.
 func DatasheetCitationOfProv(spec *parampb.PartSpec, prov *parampb.ParamProvenance) *DatasheetCitation {
 	return &DatasheetCitation{
+		spec:       spec,
 		Doc:        DocTitle(spec, prov.GetDocRef()),
 		DocRef:     prov.GetDocRef(),
 		Page:       prov.GetPage(),

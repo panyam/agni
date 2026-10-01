@@ -1910,3 +1910,33 @@ with source DECLARED. Attributes are the input channel; roles are the normalized
 
 **Reopen if** an entity turns up whose facts are genuinely all one kind. The test is whether "the
 design said so" and "we inferred it" are distinguishable and worth distinguishing.
+
+## A project's datasheet corpus is layered over a shared one per MPN, and every citation says which
+
+**Question.** A design's project has its own `params/`, and the server has a shared corpus (`--params`
+or `--params-url`). Which one answers for a part?
+
+**It was wholesale: the project's corpus replaced the shared one outright.** The recorded reason was
+that a merged corpus would let one team's transcribed limits decide another team's pass/fail, and a
+parameter from the wrong corpus still produces a confident number.
+
+**Answer, since agni 749: per MPN. The project answers for every part it seeds and the shared corpus
+for the rest, and every datasheet citation names its corpus (`project` or `shared`).** Three things
+changed under the old reason.
+
+- The shared corpus stopped being someone else's loose directory. It is a published store: a spec
+  enters it only through publish, which validates it, and every value carries its provenance,
+  confidence and verification state.
+- Wholesale replacement had a silent failure of its own. A project that seeds two parts lost the
+  datasheet tier for every other part, with nothing in the output to say so, which is the
+  shrink-without-a-signal shape LoadSet's all-or-nothing rule exists to prevent.
+- The risk the old reason named is real, so it is answered by visibility rather than by exclusion. A
+  citation's `corpus` field says whose transcription a verdict rests on, the terminal marks a value
+  from outside the project as "(shared corpus)", and the params panel shows each spec's corpus.
+
+A project that wants a part judged only by its own numbers seeds that part, since the project wins for
+every MPN it seeds. A request-level corpus (`AnalysisConfig.param_uris`) still replaces the project's,
+because a caller naming a corpus for one run is choosing it outright.
+
+**Reopen if** a deployment needs a project to opt out of the shared corpus entirely. That is a project
+setting to add, rather than a reason to restore wholesale replacement for everyone.

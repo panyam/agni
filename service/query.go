@@ -28,7 +28,7 @@ type QueryService struct {
 	loader   Loader
 	eval     query.Evaluator
 	// specs is the datasheet provider the param.* and component.device_class relations read
-	// (WS9-048), nil when serve ran without --params. A project's own params win (Overlay.SpecsOr).
+	// (WS9-048), nil when serve ran without --params. A project's own params are layered over it per MPN (Overlay.SpecsOver).
 	specs param.ParamProvider
 }
 
@@ -186,7 +186,7 @@ func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, sourc
 	if err != nil {
 		return nil, err
 	}
-	model, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	model, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOver(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

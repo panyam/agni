@@ -76,6 +76,8 @@ type jsonDatasheet struct {
 	// `doc` (the revision the corpus holds NOW) it turns a "stale" flag into a re-confirm task naming
 	// both sides. Omitted when nothing was ever verified.
 	VerifiedRevision string `json:"verified_revision,omitempty"`
+	// Corpus is whose transcription the value rests on: "project" or "shared" (agni issue 749).
+	Corpus string `json:"corpus,omitempty"`
 }
 
 // RenderJSON emits the report as indented JSON with the full finding list for every item. It is the
@@ -141,6 +143,7 @@ func datasheetProv(f check.Finding) []jsonDatasheet {
 			Confidence:       c.Confidence,
 			Verification:     c.Verification,
 			VerifiedRevision: c.VerifiedRevision,
+			Corpus:           c.Corpus,
 		})
 	}
 	return out

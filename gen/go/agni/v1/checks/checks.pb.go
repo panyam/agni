@@ -357,8 +357,12 @@ type DatasheetCitation struct {
 	// than only the one the corpus now holds. Display only, never compared; see the field's own
 	// comment in param.proto. Empty when nothing was ever verified.
 	VerifiedRevision string `protobuf:"bytes,8,opt,name=verified_revision,json=verifiedRevision,proto3" json:"verified_revision,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Whose transcription the value rests on: "project" for the design's own project params/, "shared"
+	// for a corpus the project does not own (--params, --params-url), "" when unknown. A project's
+	// corpus is layered over a shared one per MPN, so one run can cite both (agni issue 749).
+	Corpus        string `protobuf:"bytes,9,opt,name=corpus,proto3" json:"corpus,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DatasheetCitation) Reset() {
@@ -443,6 +447,13 @@ func (x *DatasheetCitation) GetVerification() string {
 func (x *DatasheetCitation) GetVerifiedRevision() string {
 	if x != nil {
 		return x.VerifiedRevision
+	}
+	return ""
+}
+
+func (x *DatasheetCitation) GetCorpus() string {
+	if x != nil {
+		return x.Corpus
 	}
 	return ""
 }
@@ -2498,7 +2509,7 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x06bus_id\x18\x05 \x01(\tR\x05busId\"W\n" +
 	"\x0eContextSubject\x121\n" +
 	"\asubject\x18\x01 \x01(\v2\x17.agni.v1.checks.SubjectR\asubject\x12\x12\n" +
-	"\x04role\x18\x02 \x01(\tR\x04role\"\xf5\x01\n" +
+	"\x04role\x18\x02 \x01(\tR\x04role\"\x8d\x02\n" +
 	"\x11DatasheetCitation\x12\x10\n" +
 	"\x03doc\x18\x01 \x01(\tR\x03doc\x12\x17\n" +
 	"\adoc_ref\x18\x02 \x01(\tR\x06docRef\x12\x12\n" +
@@ -2509,7 +2520,8 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"confidence\x18\x06 \x01(\x01R\n" +
 	"confidence\x12\"\n" +
 	"\fverification\x18\a \x01(\tR\fverification\x12+\n" +
-	"\x11verified_revision\x18\b \x01(\tR\x10verifiedRevision\"\xba\x03\n" +
+	"\x11verified_revision\x18\b \x01(\tR\x10verifiedRevision\x12\x16\n" +
+	"\x06corpus\x18\t \x01(\tR\x06corpus\"\xba\x03\n" +
 	"\aFinding\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x121\n" +
