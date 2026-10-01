@@ -469,6 +469,7 @@ function QueryPanel(props: {
                   <input
                     class="query-binding-value"
                     aria-label={`value of ?${name}`}
+                    size={Math.max(4, value.length)}
                     value={value}
                     onInput={(e) => setBindings({ ...bindings(), [name]: e.currentTarget.value })}
                     onKeyDown={(e) => {
