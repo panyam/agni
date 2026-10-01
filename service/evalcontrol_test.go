@@ -64,6 +64,40 @@ func TestAQueryPastItsBudgetIsResourceExhausted(t *testing.T) {
 	}
 }
 
+// TestEachQueryInASetHasItsOwnBudget: a set's budget applies to each query rather than to the set,
+// so a query past it is reported against its name and a cheaper one still answers.
+func TestEachQueryInASetHasItsOwnBudget(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	const cheap = "component.net(?r, ?n) => ?r"
+	cost := func(q string) int64 {
+		t.Helper()
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: q})
+		if err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+		return resp.GetWork()
+	}
+	c, j := cost(cheap), cost(joinQuery)
+	if c >= j {
+		t.Fatalf("the cheap query costs %d and the join %d, so no budget separates them", c, j)
+	}
+	set := &webapi.QuerySet{Title: "t", Queries: []*webapi.NamedQuery{{Name: "join", Query: joinQuery}, {Name: "cheap", Query: cheap}}}
+	resp, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Uri: "mount://m/x.edn", Set: set, WorkBudget: c})
+	if err != nil {
+		t.Fatalf("RunQueries: %v", err)
+	}
+	res := resp.GetResults()
+	if len(res) != 2 {
+		t.Fatalf("got %d results, want 2", len(res))
+	}
+	if !strings.Contains(res[0].GetError(), "budget") {
+		t.Errorf("the join past the budget: error = %q, want it named as over budget", res[0].GetError())
+	}
+	if res[1].GetError() != "" || len(res[1].GetResult().GetRows()) == 0 {
+		t.Errorf("the cheap query: error = %q with %d rows, want it answered", res[1].GetError(), len(res[1].GetResult().GetRows()))
+	}
+}
+
 // TestARequestCannotRaiseTheBudget: the deployment's budget rides the context (agni serve's
 // interceptor sets it), and a request asking for more still gets the deployment's.
 func TestARequestCannotRaiseTheBudget(t *testing.T) {
