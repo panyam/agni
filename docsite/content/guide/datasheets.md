@@ -89,14 +89,6 @@ agnids index params/
 agnids index params/ --check
 ```
 
-Drafts saved before they were keyed by MPN sit beside each datasheet as `<stem>.partspec.json`.
-`agnids migrate-drafts` moves each one that names an MPN into the store, citing its datasheet, leaves
-the empty ones the workbench seeded for every datasheet browsed, and overwrites nothing:
-
-```
-agnids migrate-drafts --mount ds=~/datasheets --corpus params/ --dry-run
-```
-
 ### Serving a shared corpus
 
 A project's own `params/` is read straight from disk, which suits the few dozen parts a project

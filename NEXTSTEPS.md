@@ -15,7 +15,7 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 1. **The datasheet workstream: the workbench's draft list (#749 step 2, PR B).** PR A keyed drafts
    by MPN in the corpus store (`GetDraft`, `ListDrafts`, `SaveDraft`, `PublishDraft`, `agnids
-   publish`, `agnids migrate-drafts`) and changed the workbench just enough: it opens the first draft
+   publish`) and changed the workbench just enough: it opens the first draft
    citing a datasheet, and starts one from a suggested MPN. PR B is the workbench proper: a draft
    list per datasheet, starting a second draft for a family datasheet, and a Publish button. Also
    open: `datasheets-status` still looks for a `.partspec.json` beside each PDF, so it needs the
