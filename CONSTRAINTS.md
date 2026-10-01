@@ -1116,7 +1116,7 @@ vendor PDFs that C16 keeps inside one deployment, which is why it is a separate 
 module the root `go.mod` does not require, and `TestEngineModuleRequiresNoExtension` (C18) fails if
 it ever requires one inside this repo. `TestDatasheetIsItsOwnModule` (`deps_test.go`) holds that
 `datasheet/go.mod` declares the module and that no root package lives under `datasheet/`.
-`TestEngineImportsNoProducerProto` holds that no package of the root module imports a producer
-message, which the producer protos still generated into the root's `gen/` could otherwise allow.
+`TestEngineImportsNoProducerProto` holds that the producer's protos live in `datasheet/protos`, that
+none generate into the root's `gen/`, and that no package of the root module imports one.
 `TestDatasheetProducerIsVisibleFromItsHost` is the positive control: inside the datasheet module,
 `agnids` depends on the pipeline and on a producer proto, so the names both checks look for are real.

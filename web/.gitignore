@@ -1,11 +1,6 @@
 node_modules/
 static/app.js
 static/app.js.map
-# WS13-006 datasheets workbench bundles (build artifacts, like app.js)
-static/datasheets.js
-static/datasheets.js.map
-static/pdf.worker.js
-static/pdf.worker.js.map
 # WS9-049 design browse page bundle (build artifact, like app.js)
 static/browse.js
 static/browse.js.map

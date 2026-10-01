@@ -10,6 +10,10 @@
 # web/.gitignore); copying a host build in would mask a broken bundle stage.
 web/node_modules
 web/static
+node_modules
+web-shared/node_modules
+datasheet/web/node_modules
+datasheet/web/static
 
 # Host build output.
 bin

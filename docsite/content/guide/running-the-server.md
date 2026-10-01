@@ -79,12 +79,14 @@ its own mounts, writes into them, and is where the docling environment lives, so
 from the viewer:
 
 ```
-agnids serve --addr :8090 --mount ds=~/datasheets --web-dir /path/to/agni/web
+agnids serve --addr :8090 --mount ds=~/datasheets --web-dir /path/to/agni/datasheet/web --viewer-url http://host:8080
 ```
 
-From a checkout, `make dsserve DATASHEET_DIR=~/datasheets` runs it. `agni serve --datasheets-url
-http://host:8090` points the landing page's Datasheets card at it, and without that flag the card is
-hidden, since this server has no workbench of its own.
+Its web assets are its own, `datasheet/web`, built by `make ui`, so a workbench deployment needs no
+part of the viewer's `web/`. From a checkout, `make dsserve DATASHEET_DIR=~/datasheets` runs it. The
+two link to each other only when told where the other is: `agni serve --datasheets-url
+http://host:8090` shows the landing page's Datasheets card, and `agnids serve --viewer-url
+http://host:8080` makes the workbench's heading link home.
 
 Two ways to avoid typing it every time:
 

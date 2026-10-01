@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	candpb "github.com/panyam/agni/gen/go/agni/v1/candidate"
-	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	candpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/candidate"
+	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 

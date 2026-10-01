@@ -6,7 +6,7 @@
 // It lives apart from browse.ts (the page's boot wiring) so the load sequence is unit-testable
 // against fake clients without standing up a DOM root.
 import type { Client } from "@connectrpc/connect";
-import { artifactUri } from "./uri.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 
 type DesignClient = Client<typeof DesignService>;

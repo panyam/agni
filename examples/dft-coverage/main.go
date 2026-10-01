@@ -207,7 +207,7 @@ func rows(d *ir.Design, q string) ([][]string, error) {
 	}
 	// No provider: component.mpn reads the MPN every model joins from the design (agni issue 748), and
 	// only the datasheet relations need specs.
-	got, err := (query.Naive{}).Eval(parsed, query.NewBase(check.NewModel(d)))
+	got, err := query.Default.Eval(parsed, query.NewBase(check.NewModel(d)))
 	if err != nil {
 		return nil, fmt.Errorf("eval: %w", err)
 	}

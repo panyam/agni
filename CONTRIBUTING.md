@@ -11,7 +11,7 @@ welcome, especially readers for new formats and check rules.
 sample corpus.
 
 ```
-cd web && pnpm install && cd ..   # once
+pnpm install                      # once: the web workspace (web/, web-shared/, datasheet/web/)
 make build                        # web bundle + go build ./...
 make testall                      # the full gate CI runs
 ```

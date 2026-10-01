@@ -217,15 +217,18 @@ var datasheetProducer = []string{
 }
 
 // datasheetProducerProtos are the producer's generated messages and its API (dsapi, which carries
-// doc-IR). They are still generated into this module's gen/ until the producer's protos move into the
-// datasheet module.
+// doc-IR), generated into the datasheet module's own gen/ from datasheet/protos.
 var datasheetProducerProtos = []string{
-	self + "gen/go/agni/v1/doc",
-	self + "gen/go/agni/v1/derive",
-	self + "gen/go/agni/v1/candidate",
-	self + "gen/go/agni/v1/dsapi",
-	self + "gen/go/agni/v1/dsapi/dsapiconnect",
+	datasheetModule + "/gen/go/agni/v1/doc",
+	datasheetModule + "/gen/go/agni/v1/derive",
+	datasheetModule + "/gen/go/agni/v1/candidate",
+	datasheetModule + "/gen/go/agni/v1/dsapi",
+	datasheetModule + "/gen/go/agni/v1/dsapi/dsapiconnect",
 }
+
+// producerProtoNames are the producer's proto packages by their last path element, which is what
+// a copy generated back into this module's gen/ would be called.
+var producerProtoNames = []string{"doc", "derive", "candidate", "dsapi"}
 
 // TestDatasheetIsItsOwnModule is C34's structural half: datasheet/ declares the producer's module,
 // and no package of this module lives under it, so nothing here can import the pipeline without a
@@ -253,9 +256,18 @@ func TestDatasheetIsItsOwnModule(t *testing.T) {
 	}
 }
 
-// TestEngineImportsNoProducerProto is C34's proto half. Every package of this module, generated
-// code included, imports none of the producer's messages.
+// TestEngineImportsNoProducerProto is C34's proto half. The producer's protos live in
+// datasheet/protos and generate into the datasheet module, so this module's gen/ holds none of them,
+// and no package here imports one.
 func TestEngineImportsNoProducerProto(t *testing.T) {
+	for _, n := range producerProtoNames {
+		if _, err := os.Stat("gen/go/agni/v1/" + n); err == nil {
+			t.Errorf("gen/go/agni/v1/%s exists: the producer's protos generate into datasheet/gen (C34)", n)
+		}
+		if _, err := os.Stat("protos/agni/v1/" + n); err == nil {
+			t.Errorf("protos/agni/v1/%s exists: the producer's protos live in datasheet/protos (C34)", n)
+		}
+	}
 	out, err := exec.Command("go", "list", "-f", "{{.ImportPath}} {{join .Imports \" \"}}", "./...").Output()
 	if err != nil {
 		t.Fatalf("go list -f: %v", err)
@@ -288,7 +300,7 @@ func TestDatasheetProducerIsVisibleFromItsHost(t *testing.T) {
 		t.Fatalf("go list -deps ./cmd/agnids in datasheet/: %v", err)
 	}
 	got := strings.Fields(string(out))
-	for _, p := range []string{datasheetModule + "/derive", datasheetModule + "/doc", self + "gen/go/agni/v1/doc"} {
+	for _, p := range []string{datasheetModule + "/derive", datasheetModule + "/doc", datasheetModule + "/gen/go/agni/v1/doc"} {
 		if !slices.Contains(got, p) {
 			t.Errorf("agnids does not depend on %s, so C34 checks for a name nothing uses", p)
 		}

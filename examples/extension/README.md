@@ -59,12 +59,13 @@ The Go rule still fired and the datalog one was gone without a word, on a design
 the rule. `main.go` spells the import out, `agni.New` now refuses the composition, and
 `extension_test.go` asserts the rule actually produces findings.
 
-**Clause order decides the cost.** The evaluator is a naive backtracking join running literals left to
-right, so the first atom decides what gets enumerated before any filter applies. Lead with the atom
-that binds your head variable and is most selective. The rule here opens on the handful of
-`X`-prefixed parts rather than on every power pin in the design; the reverse spelling reads more
-naturally and is the shape that made a shipped profile rule non-terminating on a real board. A toy
-fixture will never show you the difference.
+**Clause order no longer decides the cost.** agni evaluates with the engine's semi-naive evaluator,
+which plans each rule body, so a literal runs once its inputs are bound whatever order the body is
+written in. Before the planner, the evaluator ran literals left to right, and a shipped profile rule
+that opened on every power pin rather than on the few parts it was about never finished on a real
+board. The rule here still leads with the handful of `X`-prefixed parts, because that is the order
+a reader follows. A toy fixture would not have shown the difference then, and the planner test in
+`core/query` is what holds it now.
 
 **Pin relations need the reader to declare pins.** `component.pin`, `pin.role`, `pin.type` and `pin.net`
 project from PART-TYPE pins, not from net connections. A connection says a pin is wired somewhere; a

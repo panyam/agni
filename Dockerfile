@@ -33,18 +33,24 @@
 # building it natively lets a multi-arch build produce it once instead of once per platform under
 # emulation.
 FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS web
-WORKDIR /src/web
-# Manifest first so a dependency-unchanged rebuild reuses the install layer; the source copy
-# below is what actually churns.
-COPY web/package.json web/pnpm-lock.yaml ./
-# pnpm is pinned here rather than taken from corepack's default, because web/package.json has no
-# packageManager field to pin it. The major must match the lockfile (lockfileVersion 9.0 = pnpm
-# 9 or 10); --frozen-lockfile then fails loudly on a mismatch instead of silently resolving
-# different dependency versions than a local build.
-RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
-RUN pnpm install --frozen-lockfile
-COPY web/ ./
-RUN pnpm build
+WORKDIR /src
+# The web code is a pnpm workspace with one lockfile at the root (agni issue 744): the viewer
+# (web/), what it shares with the datasheets workbench (web-shared/), and the workbench itself
+# (datasheet/web/, served by agnids rather than this image). Manifests first so a
+# dependency-unchanged rebuild reuses the install layer; the source copy below is what churns.
+# The workbench's manifest is copied too, because --frozen-lockfile checks every workspace member
+# against the lockfile, and the --filter then installs only the viewer and what it depends on.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY web/package.json web/
+COPY web-shared/package.json web-shared/
+COPY datasheet/web/package.json datasheet/web/
+# corepack activates the pnpm the root package.json's packageManager names, so the image builds with
+# the same pnpm as a developer and CI.
+RUN corepack enable
+RUN pnpm install --frozen-lockfile --filter agni-web...
+COPY web-shared/ web-shared/
+COPY web/ web/
+RUN pnpm -C web build
 
 # ---------------------------------------------------------------------------------------------
 # Stage 2: the engine binary. CGO off so it runs on the distroless-ish runtime below with no

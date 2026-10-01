@@ -1,0 +1,6 @@
+node_modules/
+# Build artifacts (`pnpm build`)
+static/datasheets.js
+static/datasheets.js.map
+static/pdf.worker.js
+static/pdf.worker.js.map

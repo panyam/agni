@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { artifactUri } from "./uri.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";

@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/panyam/agni/artifact"
-	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
+	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	"github.com/panyam/agni/mounts"
 )
 

@@ -11,8 +11,8 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/panyam/agni/datasheet/dsservice"
-	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
-	"github.com/panyam/agni/gen/go/agni/v1/dsapi/dsapiconnect"
+	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
+	"github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi/dsapiconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )

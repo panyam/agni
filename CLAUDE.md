@@ -104,7 +104,12 @@ lets the fact layer import it and nothing more of jaala. **The shipped library o
 is `stdlib/lib`**, one `.dl` file per module (`component.probed_both`, `net.has_test_point`), and
 `agni query --relations <path>` prints any member's signature and definition. Its modules register
 as ONE batch, because the vocabulary is checked at every registration and a module reading another
-module's member is refused if it arrives first. A language change
+module's member is refused if it arrives first. **agni answers with `query.Default`**, jaala's
+`SemiNaive`, which plans each rule body and derives a relation called with a bound argument only for
+that value, so written clause order no longer decides cost. `Naive` is the reference tests compare
+against, and a new call site that evaluates for a user uses `query.Default`. A generator declares the
+bindings it accepts (`ns.Builtin.Modes`); `net.reaches` and `net.route` declare `from` bound or a
+deliberate full walk. A language change
 (parser, evaluator, index, aggregation) is a jaala PR and a tag first, then a `go get` here. Its
 issues live on panyam/jaala.
 
@@ -180,6 +185,14 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench is
   NOT served by `agni` at all since agni 744; it is `agnids serve` (`make dsserve`), and
   `agni serve --datasheets-url <url>` is what makes the landing page link to it.
+- **The web code is ONE pnpm workspace with one lockfile at the root**: `web/` (the viewer),
+  `datasheet/web/` (the workbench `agnids` serves, with pdf.js) and `web-shared/` (plain TS both
+  import as `@agni/web-shared/<name>.js`, with no npm dependency of its own, so neither page pulls
+  the other's libraries in through it). Run `pnpm install` at the ROOT. `make ui`, `make web-test`
+  and `make proto-web` cover all three. The workbench's TS generates from the whole buf workspace
+  and the viewer's from `protos/` alone. The workbench has its OWN `BasePage.html`, holding only the
+  thirteen rules it uses of the viewer's 50KB of styles, so `datasheet/web` deploys on its own; a
+  computed-style comparison of all 86 workbench elements, before and after, was identical.
 - **An unknown key in `agni.yaml` is a hard ERROR, and the file is shared by every lane, every
   released binary and the container image.** So a new key goes in only after every reader on the
   machine understands it. The obvious probe is a trap, because `agni <cmd> --help` short-circuits
@@ -391,9 +404,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   tests read a board file and a test whose fixture is absent skips rather than fails. One stamp PER
   ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each other's work.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
-  `make proto-check` fails the gate on any of the three being stale. The Python half uses buf's REMOTE
+  `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
   plugins pinned by version, so it needs network, and `pyproject.toml`'s `protobuf>=` floor moves with
-  the plugin version.
+  the plugin version. **The protos are TWO buf modules in one workspace** (the root `buf.yaml`): the
+  engine's `protos/` and the datasheet producer's `datasheet/protos/` (`doc`, `derive`, `candidate`,
+  `dsapi`), which generates into `datasheet/gen/go` and imports `param.proto` and `workspace.proto`
+  through the workspace. `make proto` runs both. The datasheet half is generated from the repo ROOT,
+  because its `go tool` plugins resolve against the go.mod of the directory buf runs in, and only the
+  root go.mod pins them. The TS step reads the whole workspace (the workbench still builds from
+  `web/`), and the Python client reads `protos/` alone, since it is the engine's client.
 - **`render --report` prints to stdout and IGNORES `-o`**, which is the same axis confusion as
   `review --coverage`, since the report replaces the drawing rather than being a format of it, so the
   flag that names the drawing's file has nothing to write. It exits 0 having written nothing.

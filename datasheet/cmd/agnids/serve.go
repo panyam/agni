@@ -11,7 +11,7 @@ import (
 
 	"github.com/panyam/agni/datasheet/dsserver"
 	"github.com/panyam/agni/datasheet/dsservice"
-	"github.com/panyam/agni/gen/go/agni/v1/dsapi/dsapiconnect"
+	"github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi/dsapiconnect"
 	"github.com/panyam/agni/mounts"
 	goal "github.com/panyam/goapplib"
 	skhttp "github.com/panyam/servicekit/http"
@@ -21,7 +21,7 @@ import (
 // which carries the workbench's whole API including its folder tree, so agnids can be hosted apart
 // from the engine's `agni serve` (agni issue 744).
 func serveCmd() *cobra.Command {
-	var addr, webDir, pdf2doc string
+	var addr, webDir, pdf2doc, viewerURL string
 	var specs []string
 	c := &cobra.Command{
 		Use:   "serve",
@@ -38,14 +38,15 @@ func serveCmd() *cobra.Command {
 			if err := checkWorkbenchAssets(webDir); err != nil {
 				return err
 			}
-			mux := newWorkbenchMux(ms, webDir, strings.Fields(pdf2doc))
+			mux := newWorkbenchMux(ms, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"))
 			fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at http://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, displayAddr(addr), len(ms))
 			return skhttp.ListenAndServeGraceful(&http.Server{Addr: addr, Handler: mux})
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8090", "address to listen on")
 	c.Flags().StringArrayVar(&specs, "mount", nil, "expose a folder of datasheets as name=path (repeatable)")
-	c.Flags().StringVar(&webDir, "web-dir", "web", "directory holding the workbench's built assets (templates/DatasheetsPage.html, static/datasheets.js, static/pdf.worker.js)")
+	c.Flags().StringVar(&webDir, "web-dir", "datasheet/web", "directory holding the workbench's built assets (templates/DatasheetsPage.html, static/datasheets.js, static/pdf.worker.js); the default is where a repo checkout keeps them, after `make ui`")
+	c.Flags().StringVar(&viewerURL, "viewer-url", "", "where the viewer (`agni serve`) is served, e.g. http://host:8080; the workbench's heading links home there, and is plain text when this is empty")
 	c.Flags().StringVar(&pdf2doc, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 datasheet/tools/pdf2doc/pdf2doc.py\"; empty disables the workbench's Extract (first pass) action")
 	return c
 }
@@ -53,7 +54,7 @@ func serveCmd() *cobra.Command {
 // newWorkbenchMux routes everything agnids serves: the DatasheetService API, the raw PDFs the
 // workbench renders, its static bundle, the page itself, and a liveness probe. It is separate from
 // serveCmd so a test can drive the real routes without a listener.
-func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string) *http.ServeMux {
+func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerURL string) *http.ServeMux {
 	mux := http.NewServeMux()
 	svc := dsservice.NewDatasheetService(&osDocLoader{mounts: ms}, &osPartSpecStore{mounts: ms},
 		&osDocExtractor{mounts: ms, cmd: pdf2doc}, &osAnnotationStore{mounts: ms}, mounts.NewWorkspace(ms))
@@ -63,7 +64,7 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string) *http.S
 	// The prefix is more specific than the page's, so ServeMux routes it here.
 	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(ms)))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(webDir, "static")))))
-	app := goal.NewApp(&dsApp{}, goal.SetupTemplates(filepath.Join(webDir, "templates")))
+	app := goal.NewApp(&dsApp{viewerURL: viewerURL}, goal.SetupTemplates(filepath.Join(webDir, "templates")))
 	goal.Register[*DatasheetsPage](app, mux, "/datasheets/")
 	mux.Handle("GET /{$}", http.RedirectHandler("/datasheets/", http.StatusFound))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -94,20 +95,26 @@ func checkWorkbenchAssets(dir string) error {
 	return nil
 }
 
-// dsApp is the goapplib application context for the workbench page. The page is a static shell, so
-// it carries nothing yet.
-type dsApp struct{}
+// dsApp is the goapplib application context for the workbench page. It carries where the viewer is,
+// for the heading's link home, since the workbench is hosted apart from it.
+type dsApp struct {
+	viewerURL string
+}
 
 // DatasheetsPage is the server-rendered shell of the extraction workbench (WS13-006). Its template
 // (DatasheetsPage.html) renders a datasheet-tree sidebar and the region viewer hole, and its own
 // bundle (static/datasheets.js) loads pdf.js. goapplib maps this type to DatasheetsPage.html by name.
 type DatasheetsPage struct {
 	Title string
+	// ViewerURL is the viewer's base URL (--viewer-url). The heading links home there, and is plain
+	// text without it, since "/" on agnids is the workbench itself.
+	ViewerURL string
 }
 
 // Load populates the workbench page before render. The shell is static, since a datasheet's doc-IR
 // and source PDF arrive over the Connect API and the raw endpoint.
 func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*dsApp]) (error, bool) {
 	p.Title = "Agni datasheets"
+	p.ViewerURL = app.Context.viewerURL
 	return nil, false
 }
