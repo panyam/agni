@@ -158,7 +158,7 @@ func mpnDesign() *ir.Design {
 var emptyCorpus = param.ProviderFunc(func(string) *parampb.PartSpec { return nil })
 
 func TestDatasheetGapsAreDistinctMPNs(t *testing.T) {
-	s := Build(check.NewModelWithParams(mpnDesign(), nil, emptyCorpus))
+	s := Build(check.NewModel(mpnDesign(), check.WithParamProvider(emptyCorpus)))
 	want := []string{"ACME-CAP-100N", "ACME-MCU-G1", "ACME-RES-10K"}
 	if len(s.DatasheetGaps) != len(want) {
 		t.Fatalf("gaps = %v (%d), want %d distinct MPNs; six components carry three part numbers and seeding is per part number", s.DatasheetGaps, len(s.DatasheetGaps), len(want))
@@ -173,9 +173,9 @@ func TestDatasheetGapsAreDistinctMPNs(t *testing.T) {
 // TestDatasheetGapsAreStablyOrdered guards the set the dedupe introduced. Go randomizes map iteration,
 // so an unsorted queue would differ between runs and no two reports could be compared.
 func TestDatasheetGapsAreStablyOrdered(t *testing.T) {
-	first := Build(check.NewModelWithParams(mpnDesign(), nil, emptyCorpus)).DatasheetGaps
+	first := Build(check.NewModel(mpnDesign(), check.WithParamProvider(emptyCorpus))).DatasheetGaps
 	for i := 0; i < 20; i++ {
-		got := Build(check.NewModelWithParams(mpnDesign(), nil, emptyCorpus)).DatasheetGaps
+		got := Build(check.NewModel(mpnDesign(), check.WithParamProvider(emptyCorpus))).DatasheetGaps
 		if strings.Join(got, ",") != strings.Join(first, ",") {
 			t.Fatalf("run %d gave %v, first run gave %v", i, got, first)
 		}
@@ -187,7 +187,7 @@ func TestDatasheetGapsAreStablyOrdered(t *testing.T) {
 // fully seeded board.
 func TestGapSectionDistinguishesEmptyFromAbsent(t *testing.T) {
 	seeded := param.ProviderFunc(func(mpn string) *parampb.PartSpec { return &parampb.PartSpec{Mpn: mpn} })
-	withCorpus := Markdown(Build(check.NewModelWithParams(mpnDesign(), nil, seeded)), false)
+	withCorpus := Markdown(Build(check.NewModel(mpnDesign(), check.WithParamProvider(seeded))), false)
 	if !strings.Contains(withCorpus, "Datasheet gaps") {
 		t.Error("a board with every part seeded printed no gap section, so it reads as a run with no corpus")
 	}

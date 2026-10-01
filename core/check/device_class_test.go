@@ -29,7 +29,7 @@ func efuseSpec(mpn string) *parampb.PartSpec {
 // unchanged (additive, not promoted).
 func TestDeviceClassEnrichesClassSet(t *testing.T) {
 	set := param.ParamSet{"TPS2HB16": efuseSpec("TPS2HB16")}
-	m := NewModelWithParams(supplyDesign("+5V", false, "TPS2HB16"), nil, set)
+	m := NewModel(supplyDesign("+5V", false, "TPS2HB16"), WithParamProvider(set))
 
 	// U1 keyword-classifies as ic (U prefix); the datasheet adds efuse as a membership tag.
 	if !m.HasClass("U1", "efuse") {
@@ -57,7 +57,7 @@ func TestDeviceClassRelationAvailability(t *testing.T) {
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {
 		t.Errorf("component.device_class rule on a params-less model: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
-	seeded := NewModelWithParams(supplyDesign("+5V", false, "TPS2HB16"), nil, param.ParamSet{})
+	seeded := NewModel(supplyDesign("+5V", false, "TPS2HB16"), WithParamProvider(param.ParamSet{}))
 	if ok, _ := Available(r, seeded); !ok {
 		t.Error("component.device_class rule with a params tier attached: want available")
 	}
@@ -71,7 +71,7 @@ func TestEsdRatedRelationAvailability(t *testing.T) {
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {
 		t.Errorf("component.esd_rated rule on a params-less model: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
-	seeded := NewModelWithParams(supplyDesign("+5V", false, "TPS2HB16"), nil, param.ParamSet{})
+	seeded := NewModel(supplyDesign("+5V", false, "TPS2HB16"), WithParamProvider(param.ParamSet{}))
 	if ok, _ := Available(r, seeded); !ok {
 		t.Error("component.esd_rated rule with a params tier attached: want available")
 	}

@@ -38,7 +38,7 @@ func auditModel() *check.RecordingModel {
 		d.InputDiagnostics = &ir.InputDiagnostics{}
 	}
 	d.InputDiagnostics.Supplied = append(d.InputDiagnostics.Supplied, "ref_des_collisions", "junction_taps")
-	return check.NewRecordingModel(check.NewModelWithParams(d, drcBoard(), param.ParamSet{}))
+	return check.NewRecordingModel(check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{})))
 }
 
 // tiersRead runs one rule and reports the gated tiers it reached for.

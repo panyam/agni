@@ -43,8 +43,8 @@ design that belongs to no project, or overrides nothing when the project already
 				}
 				flagSpecs = set
 			}
-			// NewModelWithParams accepts a nil provider, so this covers a design with no corpus too.
-			s := intake.Build(check.NewModelWithParams(d, nil, ov.SpecsOr(flagSpecs)))
+			// A nil provider is the same as none, so this covers a design with no corpus too.
+			s := intake.Build(check.NewModel(d, check.WithParamProvider(ov.SpecsOr(flagSpecs))))
 			full := parts == "full"
 			switch format {
 			case "json":

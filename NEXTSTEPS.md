@@ -13,12 +13,11 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 ## Open, ranked
 
-1. **The datasheet workstream: PR 750, then #748, then #744, then #749.** The order and the storage
-   design (blob store for raw files, an indexed metadata store derived from it and rebuildable, draft
-   and published as states) are the latest comments on #744. PR 750 adds `agni params promote`, the
-   CLI half of #209: a workbench `.partspec.json` is a deliberately unvalidated DRAFT that `LoadSet`
-   never reads. #748 deletes `NewModelWithBoard` and `NewModelWithParams` outright, with no
-   compatibility window.
+1. **The datasheet workstream: #744, then #749.** The order and the storage design (blob store for
+   raw files, an indexed metadata store derived from it and rebuildable, draft and published as states)
+   are the latest comments on #744. #744 starts with its dependency constraint (the engine never
+   imports `doc`, `derive`, `docindex` or `candidate`), before any move. `agni params promote` (#209's
+   CLI half) and the single `check.NewModel` (#748) have landed.
 2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.
@@ -42,9 +41,9 @@ in release binaries). The query language roadmap lives on
 panyam/jaala, where modules (#3) and aggregation inside rules (#4) come first, since they retire the
 self-join and pasted-preamble workarounds.
 
-Issues #755 to #769 came out of reading every comment for PR #754. Four look like real bugs and are
+Issues #755 to #769 came out of reading every comment for PR #754. Three look like real bugs and are
 small: #755 (`CheckService.fallback` is never assigned), #756 (a nil check after the call it
-guards), #757 (`TraceDesign` uses `check.NewModel`) and #758 (KiCad accepts `[hi:lo]` as a bus).
+guards) and #758 (KiCad accepts `[hi:lo]` as a bus). #757 closed with #748.
 The rest are strings, proto comments, examples and rule semantics.
 
 `OUT_OF_SCOPE.md` has five rows waiting on a decision about the ledger itself, not on code: the

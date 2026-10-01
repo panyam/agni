@@ -27,7 +27,7 @@ func efuseSpec(mpn string) *parampb.PartSpec {
 // this is the projector side.
 func TestComponentDeviceClassFact(t *testing.T) {
 	set := param.ParamSet{"TPS2HB16": efuseSpec("TPS2HB16")}
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "TPS2HB16"), nil, set)
+	m := check.NewModel(supplyDesign("+5V", false, "TPS2HB16"), check.WithParamProvider(set))
 	rows := factsByRelation(Facts(m))[RelComponentDeviceClass]
 	if len(rows) != 1 || rows[0].Subject != "U1" || rows[0].Value != "efuse" {
 		t.Fatalf("component.device_class = %+v, want one (U1, efuse)", rows)

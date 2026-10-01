@@ -63,7 +63,7 @@ func TestRecordingModelNotesEveryGatedAccessor(t *testing.T) {
 		"PinNetConflicts": {func(m Model) { m.PinNetConflicts() }, TierConnectivity},
 		"IsConnected":     {func(m Model) { m.IsConnected("U1") }, TierConnectivity},
 	} {
-		rec := NewRecordingModel(NewModelWithParams(&ir.Design{}, nil, param.ParamSet{}))
+		rec := NewRecordingModel(NewModel(&ir.Design{}, WithParamProvider(param.ParamSet{})))
 		tc.call(rec)
 		got := rec.Read()
 		if len(got) != 1 || got[0] != tc.want {
@@ -75,7 +75,7 @@ func TestRecordingModelNotesEveryGatedAccessor(t *testing.T) {
 // An accessor outside the gated tiers must record NOTHING, or every rule would look like it reads
 // every tier and the audit would assert nothing while still passing.
 func TestRecordingModelIgnoresUngatedAccessors(t *testing.T) {
-	rec := NewRecordingModel(NewModelWithParams(&ir.Design{}, nil, param.ParamSet{}))
+	rec := NewRecordingModel(NewModel(&ir.Design{}, WithParamProvider(param.ParamSet{})))
 	rec.Nets()
 	rec.Components()
 	rec.HasNetName("VCC")
@@ -86,7 +86,7 @@ func TestRecordingModelIgnoresUngatedAccessors(t *testing.T) {
 }
 
 func TestRecordingModelReset(t *testing.T) {
-	rec := NewRecordingModel(NewModelWithParams(&ir.Design{}, nil, param.ParamSet{}))
+	rec := NewRecordingModel(NewModel(&ir.Design{}, WithParamProvider(param.ParamSet{})))
 	rec.Pins()
 	if len(rec.Read()) != 1 {
 		t.Fatalf("setup: want one tier, got %v", rec.Read())

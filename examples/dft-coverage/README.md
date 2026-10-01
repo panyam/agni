@@ -49,11 +49,10 @@ lives in the sidecar. See [../CONVENTIONS.md](../CONVENTIONS.md).
 
 Two details matter if you copy this example.
 
-**The model is built with `check.NewModelWithParams`, not `check.NewModel`.** The model's MPN map is
-filled by the params constructor alone, and `component.mpn` reads that map rather than
-`ir.Component.mpn`. Built the other way the relation is empty on a design whose components all carry a
-part number, so step 5 reports a clean board. A nil spec provider is fine; only the datasheet
-relations need a real one.
+**`component.mpn` needs no datasheet corpus.** Every model joins the part numbers the design carries
+(a BOM line, else the component's own MPN), so `check.NewModel(d)` is enough for step 5. Only the
+datasheet relations need specs, through `check.WithParamProvider`. Before agni issue 748 this took a
+separate constructor, and building the model the other way silently emptied the relation.
 
 **The rule catalog is a blank import.** `check.BuiltinRules()` returns nothing without
 `_ "github.com/panyam/agni/stdlib/rules/builtin"`, and it fails silently, so step 6 read "0 pass, 0 fail,

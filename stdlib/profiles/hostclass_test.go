@@ -55,7 +55,7 @@ func flashSpec() param.ParamSet {
 // as unable to evaluate, so it would be failing and not-automated at once. So the assertion is that
 // they AGREE, not merely that the rule fires.
 func TestHostClassIdentifiesHostInAllReaders(t *testing.T) {
-	m := check.NewModelWithParams(flashDesign(), nil, flashSpec())
+	m := check.NewModel(flashDesign(), check.WithParamProvider(flashSpec()))
 
 	if !flashProfile.HasHost() {
 		t.Fatal("a class-bound profile must report HasHost")
@@ -107,7 +107,7 @@ func TestHostClassSilentWithoutParams(t *testing.T) {
 // would not match. Two classes in the seeded corpus ("ldo", "mcu") are in exactly that position, which
 // is the sharp edge here and part of why no built-in declares a HostClass yet.
 func TestHostClassNormalizesBothSides(t *testing.T) {
-	m := check.NewModelWithParams(flashDesign(), nil, flashSpec())
+	m := check.NewModel(flashDesign(), check.WithParamProvider(flashSpec()))
 	u1 := m.Components()[0]
 	if !flashProfile.IsHost(m, u1) {
 		t.Errorf("IsHost: %q must match a profile declaring %q", "XTAL", flashProfile.HostClass)

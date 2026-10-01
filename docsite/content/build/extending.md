@@ -211,7 +211,7 @@ func main() {
         log.Println("note:", w)
     }
     d, _ := (&formats.Loader{}).ReadDesign("design.myfmt")
-    findings := check.Run(check.NewModelWithParams(d, nil, nil), engine.Catalog().Rules())
+    findings := check.Run(check.NewModel(d), engine.Catalog().Rules())
     // ... report findings
 }
 ```

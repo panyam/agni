@@ -40,7 +40,7 @@ func benchBoard(nSegs, nNets int) *geom.BoardGeometry {
 func BenchmarkCopperClearance(b *testing.B) {
 	for _, n := range []int{400, 2000, 10000} {
 		b.Run(fmt.Sprintf("segs=%d", n), func(b *testing.B) {
-			m := check.NewModelWithBoard(&ir.Design{}, benchBoard(n, 40))
+			m := check.NewModel(&ir.Design{}, check.WithBoard(benchBoard(n, 40)))
 			b.ResetTimer()
 			for b.Loop() {
 				copperClearance.Findings(m)

@@ -121,7 +121,7 @@ func TestUnseededSymbols(t *testing.T) {
 		}
 		return nil
 	})
-	m := NewModelWithParams(d, nil, provider)
+	m := NewModel(d, WithParamProvider(provider))
 
 	got := UnseededSymbols(m, []string{"VCC"}, nil)
 	if len(got) != 2 {
@@ -162,7 +162,7 @@ func TestUnseededSymbolsRespectsClassGate(t *testing.T) {
 	provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
 		return &parampb.PartSpec{Mpn: mpn, DeviceClass: map[string]string{"ACME-1": "ldo"}[mpn]}
 	})
-	m := NewModelWithParams(d, nil, provider)
+	m := NewModel(d, WithParamProvider(provider))
 
 	all := UnseededSymbols(m, []string{"VCC"}, nil)
 	if len(all) != 2 {
@@ -232,7 +232,7 @@ func TestDatasheetEvidenceClassifiesRailsANameCannotReach(t *testing.T) {
 		t.Fatal("precondition: the built-in vocabulary must NOT match this name, else the test proves nothing")
 	}
 
-	m := NewModelWithParams(houseNamedRailDesign(mpn), nil, param.ParamSet{mpn: railSpec(mpn)})
+	m := NewModel(houseNamedRailDesign(mpn), WithParamProvider(param.ParamSet{mpn: railSpec(mpn)}))
 	if !m.IsRailNet(netNamed(m, "PMIC_CORE_3V3")) {
 		t.Error("a net feeding a terminal the vendor types POWER_INPUT is a rail")
 	}
@@ -247,7 +247,7 @@ func TestDatasheetEvidenceClassifiesRailsANameCannotReach(t *testing.T) {
 // The evidence is recorded as what it is, so a consumer can weigh it rather than only read it.
 func TestDatasheetEvidenceRecordsItsSource(t *testing.T) {
 	mpn := "ACME-IC"
-	m := NewModelWithParams(houseNamedRailDesign(mpn), nil, param.ParamSet{mpn: railSpec(mpn)})
+	m := NewModel(houseNamedRailDesign(mpn), WithParamProvider(param.ParamSet{mpn: railSpec(mpn)}))
 
 	src, ok := NetRoleSource(netNamed(m, "PMIC_CORE_3V3"), ir.Role_ROLE_RAIL, func(string) bool { return false })
 	if !ok || src != ir.RoleSource_ROLE_SOURCE_DATASHEET {
@@ -273,7 +273,7 @@ func TestDatasheetEvidenceOnlyAdds(t *testing.T) {
 	d := houseNamedRailDesign(mpn)
 	d.Nets[0].Name = "+3V3" // now the built-in vocabulary matches too
 	classify.StampNetRoles(d)
-	m := NewModelWithParams(d, nil, param.ParamSet{mpn: railSpec(mpn)})
+	m := NewModel(d, WithParamProvider(param.ParamSet{mpn: railSpec(mpn)}))
 
 	n := netNamed(m, "+3V3")
 	if !m.IsRailNet(n) {
@@ -293,8 +293,8 @@ func TestDatasheetEvidenceIsIdempotent(t *testing.T) {
 	mpn := "ACME-IC"
 	d := houseNamedRailDesign(mpn)
 	set := param.ParamSet{mpn: railSpec(mpn)}
-	NewModelWithParams(d, nil, set)
-	m := NewModelWithParams(d, nil, set)
+	NewModel(d, WithParamProvider(set))
+	m := NewModel(d, WithParamProvider(set))
 
 	if got := len(netNamed(m, "PMIC_CORE_3V3").GetRoles()); got != 1 {
 		t.Errorf("re-running the pass merges rather than appending; got %d roles", got)

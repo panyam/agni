@@ -45,7 +45,7 @@ part's spec via `Model.PartSpec(ref)`, and emits a row when `spec.GetDeviceClass
 The citation is the spec's source document title (device_class is a `PartSpec`-level field, so there
 is no per-parameter provenance to cite). The same datasheet class is merged into the component's
 device_classes set by the Loader when the read carries a datasheet corpus, and otherwise at
-model-build time (`NewModelWithParams`), so `component.class`, `HasClass`, and this relation all
+model-build time (`check.WithParamProvider`), so `component.class`, `HasClass`, and this relation all
 agree.
 
 This is a datasheet-tier relation, so it is silent by construction without seeded parameters, because

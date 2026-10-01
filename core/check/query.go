@@ -6,6 +6,7 @@ import (
 
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/datasheet/param"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"
 )
@@ -22,21 +23,22 @@ type irModel struct {
 	pinNetDup []PinNetConflict            // pins claimed by more than one net (malformed input)
 	ncChannel bool                        // source carries any no-connect evidence (typed pin or marker net)
 	netClass  bool                        // at least one net carries a tool-assigned net class (WS3-105)
-	boardNets []BoardNet                  // board tier, populated only by NewModelWithBoard
+	board     *geom.BoardGeometry         // staged by WithBoard, built into boardNets by attachBoard
+	boardNets []BoardNet                  // board tier, populated only when WithBoard attached one
 	hasBoard  bool                        // a non-nil board geometry was attached (tier present, may be empty)
 	connected map[string]bool             // ref_des present on >= 1 net
 	netByName map[string]*ir.Net          // exact net name -> net (rail/attribute lookups)
 	netNames  map[string]bool             // upper-cased net names (for the pair primitive)
 	nameCount map[string]int              // exact-name net counts (duplicate-net-name)
 	classSet  map[string][]ComponentClass // ref_des -> device_classes set (specific + family tags)
-	specs     param.ParamProvider         // params tier, populated only by NewModelWithParams
+	specs     param.ParamProvider         // params tier, set only by WithParamProvider
 	mpn       map[string]string           // ref_des -> design-side MPN (BomLine, else attribute)
 	passNets  map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
 	lex       *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
 }
 
-// ModelOption configures a Model at construction. It is variadic on every constructor so an existing
-// call site is unchanged.
+// ModelOption configures a Model at construction. Options are applied before anything is derived, so an
+// option the derivation reads (the lexicon) is in place when it runs.
 type ModelOption func(*irModel)
 
 // WithLexicon tells the model which naming vocabulary its design was READ with, so the residual
@@ -47,7 +49,9 @@ func WithLexicon(lex *classify.Lexicon) ModelOption {
 	return func(m *irModel) { m.lex = lex }
 }
 
-// NewModel builds the default IR-backed Model for a design.
+// NewModel builds the default IR-backed Model for a design. WithBoard and WithParamProvider attach the
+// board and datasheet tiers; without them the model has neither, and the rules that need them are
+// not-applicable. The design's MPNs are joined either way.
 func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	m := &irModel{
 		d:         d,
@@ -143,6 +147,9 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 			}
 		}
 	}
+	m.attachBoard()
+	m.buildMPN()
+	m.attachParams()
 	return m
 }
 

@@ -151,15 +151,15 @@ func run(design, checklist *common.PathInput) (review.Report, error) {
 	if err != nil {
 		return review.Report{}, fmt.Errorf("checklist %s: %w", checklist.Path(), err)
 	}
-	// NewModelWithParams, not NewModel, because component.mpn reads the map only the params
-	// constructor fills. A nil provider is fine; only the datasheet relations need a real one.
+	// No provider: component.mpn reads the MPN every model joins from the design, and only the
+	// datasheet relations need specs.
 	//
 	// The BUILT-IN catalog, with no project overlay. A project's own interface profiles, design
 	// intent and naming conventions answer items this cannot, so the covered count here is lower
 	// than the CLI reports on the same two files (123 of 302 against 76, on one real board).
 	// Composing an overlay takes a project descriptor and is the CLI's job.
 	return review.Run(review.RunParams{
-		Model:    check.NewModelWithParams(d, nil, nil),
+		Model:    check.NewModel(d),
 		Catalog:  check.DefaultCatalog(),
 		Manifest: man,
 		Design:   design.Path(),

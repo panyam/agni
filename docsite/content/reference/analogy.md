@@ -230,7 +230,7 @@ On a circuit, consider `supply-exceeds-abs-max`. A power-input pin on a rail who
 "+5V", joined to a part whose stub says absolute-max supply is 4.6 V, is a finding that cites
 both ends, the schematic location and the datasheet page.
 
-In the schema, the join is the check Model's params tier (`check.NewModelWithParams`, `Model.PartSpec`), the
+In the schema, the join is the check Model's params tier (`check.WithParamProvider`, `Model.PartSpec`), the
 supply-symbol alias map (vendor spellings live in the model layer, never in rule text), and the
 rule itself. An empty `param.ParamSet` yields no findings by construction, so a missing tier is
 silent rather than a false pass.

@@ -538,7 +538,7 @@ pattern. **`classify.BySpecificity` decides which of several true classes is the
 independently for as long as the set had one author, and 710 is what that cost. An unranked vendor
 class (`regulator`, which the tutorial corpus really states) sorts BEHIND the keyword class rather
 than displacing it. **A second tier must never be the ONLY tier in the set**, because EMPTY is the
-signal that tells a consumer to re-derive, which is why `NewModelWithParams` runs the convention pass
+signal that tells a consumer to re-derive, which is why `WithParamProvider` runs the convention pass
 first on a design that reaches it unstamped.
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
@@ -558,18 +558,15 @@ wrapping `entity(?name, ?kind)` stays scalar, since that kind is per-row and a h
 per-row identity to carry it. And a recursive clause ABSTAINS rather than vetoing, so a transitive
 closure is typed by its base case instead of collapsing to a scalar.
 
-**There are four ways to read a design and get a confident WRONG answer.** The first three were
-hit in one sitting and are silent. Each returns an empty or partial answer rather than an error,
+**There are three ways to read a design and get a confident WRONG answer.** The first two were
+hit in one sitting and are silent. A plain `check.NewModel` used to be a fourth, leaving
+`component.mpn` empty, until agni 748 made every model join the design's MPNs. Each returns an empty or partial answer rather than an error,
 which reads as "the design does not have that".
 
 - **A bare reader skips what `formats.Loader` runs.** The Loader is where the format-neutral passes
   run, so `classify.StampMPN` never fires and every component's `mpn` is empty, which empties the
   whole datasheet tier. This is agni issue 228's shape, and it recurred in `examples/common` (issue 618)
   because the examples are their own Go modules, outside the root build and outside the wiring table.
-- **`check.NewModel` leaves `component.mpn` empty where `check.NewModelWithParams` fills it.** The
-  model's MPN map is filled by the params constructor ALONE and `component.mpn` reads that map, not
-  `ir.Component.mpn`. Built the other way the relation is empty on a design where every component
-  carries a part number. A nil spec provider is fine; only the datasheet relations need a real one.
 - **A missing registration blank-import empties the catalog.** `check.BuiltinRules()` returns
   nothing without `_ "github.com/panyam/agni/stdlib/rules/builtin"`, and a verdict sweep then
   reports "0 pass, 0 fail, across 0 rules". Three of the four registration points fail this way;

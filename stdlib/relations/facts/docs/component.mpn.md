@@ -36,9 +36,9 @@ part-number attributes (`classify.MPNAliases`, which covers OrCAD/Allegro's `Man
 and then from its part type,
 so this one relation reads uniformly across formats.
 
-One row per component with a resolved part number. An empty result means the model was built without a
-params tier. The MPN index is populated only by `NewModelWithParams`, so the relation is empty
-unless `agni` was run with `--params` (an empty params directory is enough to build the index).
+One row per component with a resolved part number. It needs no `--params`: every model joins the part
+numbers the design carries (agni issue 748). An empty result means the design names no part numbers,
+or names them under an attribute `classify.MPNAliases` does not know.
 
 ### Datalog
 

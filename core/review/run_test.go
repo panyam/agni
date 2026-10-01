@@ -125,7 +125,7 @@ func TestDatasheetQueryNeedsData(t *testing.T) {
 			}
 			return nil
 		})
-		m := check.NewModelWithParams(d, nil, provider)
+		m := check.NewModel(d, check.WithParamProvider(provider))
 		return Run(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man(q), Design: "d"}).Areas[0].Items[0]
 	}
 	if got := run(clean, "IOUT"); got.Outcome != Pass {
@@ -836,7 +836,7 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 			}
 			return nil
 		})
-		m := check.NewModelWithParams(d, nil, provider)
+		m := check.NewModel(d, check.WithParamProvider(provider))
 		cat := check.CatalogWith(check.NewSource("sz", []*check.Rule{r}))
 		return Run(RunParams{Model: m, Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
@@ -946,7 +946,7 @@ func TestNeedsDataCarriesUnmetDependencies(t *testing.T) {
 			}
 			return nil
 		})
-		return Run(RunParams{Model: check.NewModelWithParams(d, nil, provider),
+		return Run(RunParams{Model: check.NewModel(d, check.WithParamProvider(provider)),
 			Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
 

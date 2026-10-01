@@ -25,6 +25,6 @@ kind but not in quantity.
 ### Scope note
 
 Only modules that set a count are checked, so a declaration with modules but no counts compiles to
-no count rule. Counting by MPN requires a params-built model, same as the `module-missing` MPN path.
+no count rule. Counting by MPN needs no `--params`, since every model joins the MPNs the design carries.
 Like every intent rule, it takes the expectation from the declaration and never enumerates it from
 the netlist.

@@ -50,8 +50,7 @@ func absMaxSpec(mpn string, vccbMax *float64) *parampb.PartSpec {
 
 func absMaxModel(t *testing.T, vccbMax *float64, netA, netB string) check.Model {
 	t.Helper()
-	return check.NewModelWithParams(xlatDesign("ACME-XLAT", netA, netB), nil,
-		param.ParamSet{"ACME-XLAT": absMaxSpec("ACME-XLAT", vccbMax)})
+	return check.NewModel(xlatDesign("ACME-XLAT", netA, netB), check.WithParamProvider(param.ParamSet{"ACME-XLAT": absMaxSpec("ACME-XLAT", vccbMax)}))
 }
 
 // verdictFor picks the verdict about one pin designator, so a test states which terminal it means.

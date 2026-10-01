@@ -31,7 +31,7 @@ func factsByRelation(fs []facts.Row) map[string][]facts.Row {
 // yields its name-derived nominal. These are the facts the datasheet-range family joins.
 func TestParamRangeAndNominalFacts(t *testing.T) {
 	set := param.ParamSet{"ACME-33": ldoRecommendedSpec("ACME-33", 3.0, 3.6)}
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, set)
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(set))
 	byRel := factsByRelation(Facts(m))
 
 	// param.range(ACME-33, VDD, recommended_operating, 3.0, 3.6), with kind in Value, min in Min,
@@ -69,7 +69,7 @@ func TestParamRangeAndNominalFacts(t *testing.T) {
 // are exactly the reads that rule declares, materialized as tuples.
 func TestFactsProjectsSeedRelations(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
-	m := check.NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set)
+	m := check.NewModel(capDesign("+10V", "DEMO-CAP-6V3"), check.WithParamProvider(set))
 	byRel := factsByRelation(Facts(m))
 
 	// net.max_voltage(+10V, 10). GND yields none (no voltage token), so exactly one.
@@ -261,7 +261,7 @@ func TestEsdRatedFacts(t *testing.T) {
 		"DEMO-XCVR": esdSpec("DEMO-XCVR", 8000), // 8 kV, above the 2 kV floor -> rated
 		"DEMO-WEAK": esdSpec("DEMO-WEAK", 500),  // below floor -> not credited
 	}
-	rated := factsByRelation(Facts(check.NewModelWithParams(d, nil, set)))[RelEsdRated]
+	rated := factsByRelation(Facts(check.NewModel(d, check.WithParamProvider(set))))[RelEsdRated]
 	if len(rated) != 1 || rated[0].Subject != "U9" {
 		t.Fatalf("component.esd_rated = %+v, want one (U9); DEMO-WEAK below floor and R1 unseeded must not appear", rated)
 	}
@@ -304,7 +304,7 @@ func TestNetBusLikeFacts(t *testing.T) {
 // cites the datasheet document/page; the IR facts cite the source file.
 func TestFactsAlwaysCited(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
-	facts := Facts(check.NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set))
+	facts := Facts(check.NewModel(capDesign("+10V", "DEMO-CAP-6V3"), check.WithParamProvider(set)))
 	if len(facts) == 0 {
 		t.Fatal("no facts derived")
 	}
@@ -326,7 +326,7 @@ func TestFactsAlwaysCited(t *testing.T) {
 // store as a second authority.
 func TestFactsRegenerable(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
-	m := check.NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set)
+	m := check.NewModel(capDesign("+10V", "DEMO-CAP-6V3"), check.WithParamProvider(set))
 	if !reflect.DeepEqual(Facts(m), Facts(m)) {
 		t.Error("Facts(m) is not deterministic across calls")
 	}
@@ -336,7 +336,7 @@ func TestFactsRegenerable(t *testing.T) {
 // track width and via drill in mm, and layer membership), reusing the DRC board fixture. This is what
 // makes board geometry queryable through the same fact base, with no query-engine change.
 func TestBoardFacts(t *testing.T) {
-	byRel := factsByRelation(Facts(check.NewModelWithBoard(&ir.Design{}, drcBoard())))
+	byRel := factsByRelation(Facts(check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))))
 
 	tw := map[string]float64{}
 	for _, f := range byRel[RelBoardTrackWidth] {
@@ -682,7 +682,7 @@ func TestRefDesCollisionFactsCiteEveryInstance(t *testing.T) {
 // may state several system-level ESD ratings above the credit floor, and the row cited limits[0].
 func TestEsdRatedFactsCiteEveryQualifyingRating(t *testing.T) {
 	spec := twoEsdRatingSpec("ACME-TVS")
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-TVS"), nil, param.ParamSet{"ACME-TVS": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-TVS"), check.WithParamProvider(param.ParamSet{"ACME-TVS": spec}))
 
 	rows := factsByRelation(Facts(m))[RelEsdRated]
 	if len(rows) != 1 {
@@ -701,7 +701,7 @@ func TestEveryFactCitesSomething(t *testing.T) {
 	d := supplyDesign("+5V", false, "ACME-33")
 	d.Constraints = []*ir.Constraint{netClassDef("Power", 1, map[string]string{"track_width": "0.8"})}
 	d.Nets[0].NetClasses = []string{"Power"}
-	m := check.NewModelWithParams(d, drcBoard(), param.ParamSet{"ACME-33": spec})
+	m := check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
 
 	seen := 0
 	for _, f := range Facts(m) {
@@ -773,8 +773,8 @@ func TestParamFactsAreInBaseUnits(t *testing.T) {
 	milli.Parameters[0].Unit = "mV"
 
 	d := supplyDesign("+5V", false, "ACME-33")
-	inVolts := factsByRelation(Facts(check.NewModelWithParams(d, nil, param.ParamSet{"ACME-33": volts})))
-	inMilli := factsByRelation(Facts(check.NewModelWithParams(d, nil, param.ParamSet{"ACME-33": milli})))
+	inVolts := factsByRelation(Facts(check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-33": volts}))))
+	inMilli := factsByRelation(Facts(check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-33": milli}))))
 
 	v, mv := inVolts[RelParam], inMilli[RelParam]
 	if len(v) != 1 || len(mv) != 1 {
@@ -792,7 +792,7 @@ func TestParamFactsAreInBaseUnits(t *testing.T) {
 func TestParamRangeFactsConvertBothBounds(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
 
 	pr := factsByRelation(Facts(m))[RelParamRange]
 	if len(pr) != 1 {
@@ -812,7 +812,7 @@ func TestParamRangeFactsConvertBothBounds(t *testing.T) {
 func TestParamUnitFactExposesPrintedUnit(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
 
 	pu := factsByRelation(Facts(m))[RelParamUnit]
 	if len(pu) != 1 {
@@ -835,7 +835,7 @@ func TestParamUnitFactExposesPrintedUnit(t *testing.T) {
 func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
 	spec.Parameters[0].Unit = "dBm"
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
 	byRel := factsByRelation(Facts(m))
 
 	pf := byRel[RelParam]
@@ -881,7 +881,7 @@ func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
 
 	seen := map[string]string{} // base unit -> a relation that publishes it
 	for _, f := range Facts(m) {
@@ -916,7 +916,7 @@ func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 // absence instead of arriving downstream as a zero somebody compares a rail against.
 func TestParamTypFacts(t *testing.T) {
 	spec := typSpec("ACME-LDO", "A", 0.000042)
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
 
 	rows := factsByRelation(Facts(m))[RelParamTyp]
 	if len(rows) != 1 {
@@ -944,7 +944,7 @@ func TestParamTypFacts(t *testing.T) {
 // scale.
 func TestParamTypFactsConvertToBaseUnit(t *testing.T) {
 	spec := typSpec("ACME-LDO", "mA", 42)
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
 
 	rows := factsByRelation(Facts(m))[RelParamTyp]
 	if len(rows) != 1 {
@@ -963,7 +963,7 @@ func TestParamTypFactsConvertToBaseUnit(t *testing.T) {
 // shortens its list in silence.
 func TestParamTypFactsKeepUnconvertibleRow(t *testing.T) {
 	spec := typSpec("ACME-LDO", "dBm", 12)
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
 
 	rows := factsByRelation(Facts(m))[RelParamTyp]
 	if len(rows) != 1 {
@@ -988,7 +988,7 @@ func TestSpecLibFactsCarryParamTyp(t *testing.T) {
 // and a number in a slot the dimension guard protects unifies with a voltage (agni issue 545).
 func TestParamProvPageIsNotAQuantity(t *testing.T) {
 	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
 
 	rows := factsByRelation(Facts(m))[RelParamProv]
 	if len(rows) != 1 {
@@ -1033,7 +1033,7 @@ func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
 		netClassDef("Power", 1, map[string]string{"track_width": "0.8", "via_drill": "0.4", "clearance": "0.2", "via_diameter": "0.6"}),
 	}
 	d.Nets[0].NetClasses = []string{"Power"}
-	m := check.NewModelWithParams(d, drcBoard(), param.ParamSet{"ACME-33": spec})
+	m := check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
 
 	seen := map[string]bool{}
 	for _, f := range Facts(m) {
@@ -1063,7 +1063,7 @@ func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
 func TestParamFactsCarryBaseUnit(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
 	byRel := factsByRelation(Facts(m))
 
 	if pf := byRel[RelParam]; len(pf) != 1 || pf[0].BaseUnit != "V" {
@@ -1083,7 +1083,7 @@ func TestParamFactsCarryBaseUnit(t *testing.T) {
 func TestParamFactsMarkUnconvertibleRowsAbsent(t *testing.T) {
 	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
 	spec.Parameters[0].Unit = "dBm"
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
 	byRel := factsByRelation(Facts(m))
 
 	if pf := byRel[RelParam]; len(pf) != 1 || pf[0].Num != nil || pf[0].BaseUnit != "" {
@@ -1098,7 +1098,7 @@ func TestParamFactsMarkUnconvertibleRowsAbsent(t *testing.T) {
 // spec-local id, carries the printed name as a value, and renders the function as a token.
 func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
 	rows := factsByRelation(Facts(m))[RelParamPin]
 	if len(rows) != 4 {
@@ -1127,7 +1127,7 @@ func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
 // symbol-keyed pair of rows a query cannot tell apart by terminal.
 func TestParamPinRangeFactsAnswerPerTerminal(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
 	byPinKind := map[string]facts.Row{}
 	for _, r := range factsByRelation(Facts(m))[RelParamPinRange] {
@@ -1159,7 +1159,7 @@ func TestParamPinRangeFactsAnswerPerTerminal(t *testing.T) {
 // state for it.
 func TestParamPinRangeFanOutsAGroupBinding(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
 	seen := map[string]bool{}
 	for _, r := range factsByRelation(Facts(m))[RelParamPinRange] {
@@ -1177,7 +1177,7 @@ func TestParamPinRangeFanOutsAGroupBinding(t *testing.T) {
 // the collapse the pin tier undoes, re-created one layer down. Those rows stay on param.range.
 func TestParamPinRangeOmitsPartWideRows(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 	byRel := factsByRelation(Facts(m))
 
 	for _, r := range byRel[RelParamPinRange] {
@@ -1201,7 +1201,7 @@ func TestParamPinRangeOmitsPartWideRows(t *testing.T) {
 // Skip-not-false-pass by construction.
 func TestParamPinFactsEmptyWithoutPinData(t *testing.T) {
 	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6) // no Pins, no Packages
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
 	byRel := factsByRelation(Facts(m))
 
 	if n := len(byRel[RelParamPin]); n != 0 {
@@ -1223,7 +1223,7 @@ func TestParamPinFactsEmptyWithoutPinData(t *testing.T) {
 // This runs an actual query end to end, so the assertion is on what a rule author would SEE.
 func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
-	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 	base := query.NewBase(m)
 
 	rows, err := (query.Naive{}).Eval(

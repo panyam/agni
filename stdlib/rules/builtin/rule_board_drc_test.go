@@ -46,7 +46,7 @@ func drcBoard() *geom.BoardGeometry {
 
 func drcFindings(t *testing.T) map[string][]string {
 	t.Helper()
-	m := check.NewModelWithBoard(&ir.Design{}, drcBoard())
+	m := check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))
 	got := map[string][]string{}
 	for _, r := range []*check.Rule{trackWidth, holeSize, annularWidth, copperClearance} {
 		for _, f := range r.Findings(m) {
@@ -73,7 +73,7 @@ func TestBoardDRCRules(t *testing.T) {
 }
 
 func TestCopperClearanceMessageNamesBothNets(t *testing.T) {
-	m := check.NewModelWithBoard(&ir.Design{}, drcBoard())
+	m := check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))
 	fs := copperClearance.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("findings = %+v", fs)
@@ -114,7 +114,7 @@ func TestBoardRuleAvailability(t *testing.T) {
 	// WS3-089: a netlist design (edif) with a SEPARATE board tier attached (the agni review
 	// --board-path path) ungates the geometric rules. The gate follows the attached tier, not
 	// the source format, which stays edif on the netlist entry.
-	if ok, reason := check.Available(trackWidth, check.NewModelWithBoard(&ir.Design{SourceFormat: "edif"}, drcBoard())); !ok {
+	if ok, reason := check.Available(trackWidth, check.NewModel(&ir.Design{SourceFormat: "edif"}, check.WithBoard(drcBoard()))); !ok {
 		t.Errorf("board rule unavailable on a netlist design with a board tier attached: %s", reason)
 	}
 }

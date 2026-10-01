@@ -563,7 +563,7 @@ The join key is part identity, `PartSpec.mpn` matched against the design's MPN, 
 layer, so the dependency points one way. When a
 design carries no BOM or MPN data the join has no key and parameter checks skip, the same
 skip-not-false-pass behaviour used for unseeded parts. The Model's params tier
-(`check.NewModelWithParams`) is the join, taking the BomLine MPN first, else the component's `mpn`
+(`check.WithParamProvider` on `check.NewModel`) is the join, taking the BomLine MPN first, else the component's `mpn`
 field, matched case-insensitively and nothing fuzzier.
 
 That join is by part identity. The finer per-pin join is consumed by `pin-exceeds-abs-max` and

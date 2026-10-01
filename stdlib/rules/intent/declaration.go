@@ -220,10 +220,9 @@ type NetProperty struct {
 }
 
 // Module is one required functional block, matched to a design component by device CLASS or by exact
-// MPN. Class is the primary path, since device_classes are stamped at ingestion and match on any
-// netlist with no --params. The MPN map is built only when the model is loaded with --params, so an
-// MPN-only module is unmatched without it. At least one of Class/MPN is set (Load validates this). A
-// module matches when ANY design component satisfies its criterion.
+// MPN. Both match on any netlist with no --params: device_classes are stamped at ingestion, and every
+// model joins the MPNs the design carries (agni issue 748). At least one of Class/MPN is set (Load
+// validates this). A module matches when ANY design component satisfies its criterion.
 type Module struct {
 	// Name is the human label shown in a "declared module <Name> not present" finding.
 	Name string
@@ -232,12 +231,12 @@ type Module struct {
 	// match by MPN only.
 	Class string
 	// MPN is an exact manufacturer part number; matched case-sensitively against Model.ComponentMPN.
-	// Empty to match by Class only. Requires a params-built model to resolve (see the Module doc).
+	// Empty to match by Class only.
 	MPN string
 	// Count is the EXACT number of components expected to match this module's criterion (e.g. 2 CAN
 	// transceivers). 0 means unspecified, and moduleCountRule skips it. When > 0, moduleCountRule
 	// fails if the matching count differs (too few OR too many), where module-missing asks only "at
-	// least one". Counting by MPN requires a params-built model, as the MPN match does.
+	// least one".
 	Count int
 }
 

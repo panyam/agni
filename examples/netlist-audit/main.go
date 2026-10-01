@@ -95,9 +95,7 @@ func answerSet(d *ir.Design, yaml []byte) ([]section, error) {
 	if err != nil {
 		return nil, err
 	}
-	// NewModelWithParams, not NewModel, because component.mpn reads the MPN map only the params
-	// constructor fills. Built the other way every part-number table comes back empty.
-	base := query.NewBase(check.NewModelWithParams(d, nil, nil))
+	base := query.NewBase(check.NewModel(d))
 	out := make([]section, 0, len(set.Queries))
 	for i, nq := range set.Queries {
 		s := section{name: nq.Name}

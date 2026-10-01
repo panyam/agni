@@ -26,7 +26,7 @@ func boardGeom() *geom.BoardGeometry {
 // TestBoardQuery (WS1-041): a board relation is queryable through the same engine with no evaluator
 // change. The query asks for nets routed thinner than 0.1mm.
 func TestBoardQuery(t *testing.T) {
-	rows := runQuery(t, check.NewModelWithBoard(&ir.Design{}, boardGeom()), `board.track_width(?net,?w), ?w < 0.1 => ?net, ?w`)
+	rows := runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.1 => ?net, ?w`)
 	if len(rows) != 1 || rows[0].Bind["net"].S != "SIG" {
 		t.Errorf("rows = %+v, want SIG (0.08mm thin)", rows)
 	}
@@ -41,7 +41,7 @@ func TestCrossTierJoin(t *testing.T) {
 		Components: []*ir.Component{{RefDes: "U1", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "x"}}},
 		Nets:       []*ir.Net{{Name: "SIG", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "x"}}},
 	}
-	m := check.NewModelWithParams(d, boardGeom(), param.ParamSet{"REG-24": regSpec("REG-24", 20)})
+	m := check.NewModel(d, check.WithBoard(boardGeom()), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
 	rows := runQuery(t, m, `board.track_width(?net,?w), component.net(?ref,?net), component.mpn(?ref,?mpn), ?w < 0.1 => ?net, ?ref, ?mpn`)
 	if len(rows) != 1 || rows[0].Bind["ref"].S != "U1" || rows[0].Bind["mpn"].S != "REG-24" || rows[0].Bind["net"].S != "SIG" {
 		t.Fatalf("cross-tier rows = %+v, want SIG/U1/REG-24", rows)
@@ -111,7 +111,7 @@ func runQueryOn(t *testing.T, reg *facts.Registry, m check.Model, text string) [
 // rail it sits on) joins param.max ⋈ component.mpn ⋈ component.net ⋈ net.max_voltage and the answer
 // carries provenance.
 func TestShowcaseJoin(t *testing.T) {
-	m := check.NewModelWithParams(regDesign("+24V"), nil, param.ParamSet{"REG-24": regSpec("REG-24", 20)})
+	m := check.NewModel(regDesign("+24V"), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
 	rows := runQuery(t, m,
 		`component.mpn(?ref,?mpn), param.max(?mpn,"VIN",?vmax), component.net(?ref,?net), net.max_voltage(?net,?rail), ?vmax < ?rail => ?ref, ?vmax, ?net, ?rail`)
 
@@ -137,7 +137,7 @@ func TestShowcaseJoin(t *testing.T) {
 // TestShowcasePasses (WS3-029): the same query is silent when the rail is within the abs-max. The
 // comparison prunes, so no answer is an answer.
 func TestShowcasePasses(t *testing.T) {
-	m := check.NewModelWithParams(regDesign("+12V"), nil, param.ParamSet{"REG-24": regSpec("REG-24", 20)})
+	m := check.NewModel(regDesign("+12V"), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
 	rows := runQuery(t, m,
 		`component.mpn(?ref,?mpn), param.max(?mpn,"VIN",?vmax), component.net(?ref,?net), net.max_voltage(?net,?rail), ?vmax < ?rail => ?ref`)
 	if len(rows) != 0 {
@@ -177,7 +177,7 @@ func vddSpec(mpn string) *parampb.PartSpec {
 // datalog program" proof that the enriched vocabulary is sufficient for the datasheet-range rule
 // family.
 func TestParamRangeTwoSidedJoin(t *testing.T) {
-	m := check.NewModelWithParams(regDesign("+5V"), nil, param.ParamSet{"REG-24": vddSpec("REG-24")})
+	m := check.NewModel(regDesign("+5V"), check.WithParamProvider(param.ParamSet{"REG-24": vddSpec("REG-24")}))
 
 	// Over the recommended maximum: +5V > 3.6. The "recommended_operating" kind filter keeps the
 	// abs-max row (4.6) out of this check, so exactly one answer.
@@ -196,7 +196,7 @@ func TestParamRangeTwoSidedJoin(t *testing.T) {
 
 	// Under the recommended MINIMUM, the side the thin param relation carries no bound for. A +2V5
 	// rail on the same part is below the 3.0 floor.
-	under := runQuery(t, check.NewModelWithParams(regDesign("+2V5"), nil, param.ParamSet{"REG-24": vddSpec("REG-24")}),
+	under := runQuery(t, check.NewModel(regDesign("+2V5"), check.WithParamProvider(param.ParamSet{"REG-24": vddSpec("REG-24")})),
 		`component.mpn(?ref,?mpn), param.range(?mpn,?sym,"recommended_operating",?min,?max), component.net(?ref,?net), net.nominal_voltage(?net,?v), ?v < ?min => ?ref, ?v, ?min`)
 	if len(under) != 1 || under[0].Bind["min"].Num == nil || *under[0].Bind["min"].Num != 3.0 {
 		t.Fatalf("recommended under-min: rows = %v, want one with min 3.0", under)
@@ -212,7 +212,7 @@ func TestParamRangeTwoSidedJoin(t *testing.T) {
 
 // TestSingleRelation (WS3-029): a one-atom query is a plain select-project over the fact base.
 func TestSingleRelation(t *testing.T) {
-	m := check.NewModelWithParams(regDesign("+24V"), nil, param.ParamSet{"REG-24": regSpec("REG-24", 20)})
+	m := check.NewModel(regDesign("+24V"), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
 	rows := runQuery(t, m, `component.mpn(?ref,?mpn) => ?ref, ?mpn`)
 	if len(rows) != 1 || rows[0].Bind["ref"].S != "U1" || rows[0].Bind["mpn"].S != "REG-24" {
 		t.Errorf("rows = %+v, want one (U1, REG-24)", rows)
@@ -358,7 +358,7 @@ func twoPartDesign() (*ir.Design, param.ParamSet) {
 // any value"); ?m is bound by the positive literal and must match.
 func TestNegation(t *testing.T) {
 	d, set := twoPartDesign()
-	m := check.NewModelWithParams(d, nil, set)
+	m := check.NewModel(d, check.WithParamProvider(set))
 	rows := runQuery(t, m, `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?m`)
 	if len(rows) != 1 || rows[0].Bind["m"].S != "PLAIN" {
 		t.Errorf("rows = %+v, want only PLAIN (REG-24 has a VIN param, so it is excluded)", rows)
@@ -404,7 +404,7 @@ func TestAggregationMax(t *testing.T) {
 		Value: &parampb.RangeValue{Max: f64(800)}, Unit: "V",
 		Prov: &parampb.ParamProvenance{DocRef: "ds", Page: 4, Method: "hand", Confidence: 1},
 	})
-	m := check.NewModelWithParams(regDesign("+24V"), nil, param.ParamSet{"REG-24": spec})
+	m := check.NewModel(regDesign("+24V"), check.WithParamProvider(param.ParamSet{"REG-24": spec}))
 	rows := runQuery(t, m, `param.max(?mpn,?sym,?max) => ?mpn, max(?max)`)
 	if len(rows) != 1 || rows[0].Bind["max(max)"].S != "800" {
 		t.Errorf("rows = %+v, want one with max=800", rows)
@@ -418,7 +418,7 @@ func TestStringPredicates(t *testing.T) {
 		{RefDes: "U1", Mpn: "LM1117", Prov: &ir.Provenance{SourceFile: "d"}},
 		{RefDes: "U2", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "d"}},
 	}}
-	m := check.NewModelWithParams(d, nil, param.ParamSet{"LM1117": regSpec("LM1117", 20), "REG-24": regSpec("REG-24", 20)})
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"LM1117": regSpec("LM1117", 20), "REG-24": regSpec("REG-24", 20)}))
 
 	one := func(text, wantRef string) {
 		t.Helper()
@@ -792,7 +792,7 @@ func TestBusRelation(t *testing.T) {
 // author gets a confident empty answer to the most ordinary question a review asks.
 func TestUnanchoredNegationErrors(t *testing.T) {
 	d, set := twoPartDesign()
-	m := check.NewModelWithParams(d, nil, set)
+	m := check.NewModel(d, check.WithParamProvider(set))
 	_, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max(?x,"VIN",?v) => ?m`), NewBase(m))
 	if err == nil {
 		t.Fatal("an unanchored negation was accepted; it silently answers nothing")
@@ -814,7 +814,7 @@ func TestUnanchoredNegationErrors(t *testing.T) {
 // one exists to state the rule.
 func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 	d, set := twoPartDesign()
-	m := check.NewModelWithParams(d, nil, set)
+	m := check.NewModel(d, check.WithParamProvider(set))
 	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?m`), NewBase(m)); err != nil {
 		t.Fatalf("an anchored negation with a free value variable must be accepted: %v", err)
 	}
@@ -824,7 +824,7 @@ func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 // a legitimate one, so the anchoring rule must not reach it.
 func TestGroundNegationNeedsNoAnchor(t *testing.T) {
 	d, set := twoPartDesign()
-	m := check.NewModelWithParams(d, nil, set)
+	m := check.NewModel(d, check.WithParamProvider(set))
 	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param.max("REG-24","VIN",20) => ?m`), NewBase(m)); err != nil {
 		t.Fatalf("a ground negation carries no variables to anchor and must be accepted: %v", err)
 	}
@@ -835,7 +835,7 @@ func TestGroundNegationNeedsNoAnchor(t *testing.T) {
 // the silent behaviour the goal path just lost.
 func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
 	d, set := twoPartDesign()
-	m := check.NewModelWithParams(d, nil, set)
+	m := check.NewModel(d, check.WithParamProvider(set))
 	q := mustParse(t, `bad(?m) => ?m`)
 	q.Rules = []Rule{{
 		Head: Atom{Relation: "bad", Args: []Term{{Var: "m"}}},

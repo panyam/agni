@@ -114,7 +114,7 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 		d.Components = append(d.Components, &ir.Component{
 			RefDes: fmt.Sprintf("U%d", i+2), Mpn: mpn, Prov: &ir.Provenance{SourceFile: "reg"}})
 	}
-	m := check.NewModelWithParams(d, nil, specs)
+	m := check.NewModel(d, check.WithParamProvider(specs))
 	canonical := runQuery(t, m, `param.max(?mpn,"VIN",20) => ?mpn`)
 	spelled := runQuery(t, m, `param.max(?mpn,"VIN",20.0) => ?mpn`)
 	if len(canonical) == 0 {

@@ -35,8 +35,7 @@ func twoRowAbsMaxSpec(first, second float64) *parampb.PartSpec {
 
 func twoRowModel(t *testing.T, first, second float64) check.Model {
 	t.Helper()
-	return check.NewModelWithParams(xlatDesign("ACME-XLAT", "+3V3", "+5V"), nil,
-		param.ParamSet{"ACME-XLAT": twoRowAbsMaxSpec(first, second)})
+	return check.NewModel(xlatDesign("ACME-XLAT", "+3V3", "+5V"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": twoRowAbsMaxSpec(first, second)}))
 }
 
 // ONE TERMINAL, ONE VERDICT. A verdict is pin-scoped, so a pin carrying several rows of one kind

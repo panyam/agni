@@ -26,11 +26,11 @@ type Model interface {
 	// only available for a board-carrying format.
 	SourceFormat() string
 	// HasParams reports whether a datasheet parameter tier is attached (a ParamProvider was
-	// supplied to NewModelWithParams), whether or not any specific part is seeded. A datasheet rule
+	// supplied through check.WithParamProvider), whether or not any specific part is seeded. A datasheet rule
 	// is applicable exactly when this is true.
 	HasParams() bool
 	// HasBoard reports whether a board-geometry tier is attached (a non-nil BoardGeometry was
-	// supplied to NewModelWithBoard/NewModelWithParams), independent of the design's source
+	// supplied through check.WithBoard), independent of the design's source
 	// format. That is what makes a geometric rule applicable under `agni review --board-path`,
 	// where the netlist SourceFormat is not a board format. A board file with no routed copper
 	// still reports true (checked, clean).
@@ -189,7 +189,7 @@ type Model interface {
 	ReachToTerminus(start *ir.Net, hops int) Reach
 	Between(from, to *ir.Net, class ComponentClass, hops int) bool
 	// board tier (WS3-008): each net's routed copper from the board-geometry sidecar.
-	// Empty when the model was built without a board (NewModel); see NewModelWithBoard.
+	// Empty when the model was built without a board; see check.WithBoard.
 	BoardNets() []BoardNet
 	// component.class: the MOST-SPECIFIC device class from the normalized device_classes set
 	// (WS3-071), stamped once at ingestion by the classify pass and refined by part-type data.
@@ -205,9 +205,9 @@ type Model interface {
 	// tags), or nil for an unknown/unclassified ref-des. The set backing component.class(ref, class).
 	Classes(refDes string) []ComponentClass
 	// params tier (WS10-003): the design-side part identity (BomLine mpn, else the component's mpn
-	// field, else "") and the seeded datasheet spec joined to it. Nil/"" when the model was
-	// built without a seeded set (NewModel, NewModelWithBoard) or the part is unseeded, so
-	// datasheet-backed rules skip rather than false-pass; see NewModelWithParams and params.go.
+	// field, else "") and the seeded datasheet spec joined to it. The MPN is joined on every model;
+	// the spec is nil when the model has no provider (check.WithParamProvider) or the part is
+	// unseeded, so datasheet-backed rules skip rather than false-pass; see params.go.
 	ComponentMPN(refDes string) string
 	PartSpec(refDes string) *parampb.PartSpec
 }

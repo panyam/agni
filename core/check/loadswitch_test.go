@@ -243,7 +243,7 @@ func loadSwitchSet() param.ParamSet {
 
 func resolveOne(t *testing.T, d *ir.Design) (ExternalFetLoadSwitch, bool) {
 	t.Helper()
-	m := NewModelWithParams(d, nil, loadSwitchSet())
+	m := NewModel(d, WithParamProvider(loadSwitchSet()))
 	sw := ExternalFetLoadSwitches(m)
 	if len(sw) == 0 {
 		return ExternalFetLoadSwitch{}, false
@@ -407,10 +407,10 @@ func TestLoadSwitchAmbiguousControllerIsSilent(t *testing.T) {
 // the gate net declares an overcurrent threshold, not whatever part is an IC. A gate driver seeded
 // with a spec that states no threshold is not a current-limiting controller.
 func TestLoadSwitchControllerIsIdentifiedByItsThreshold(t *testing.T) {
-	m := NewModelWithParams(loadSwitchDesign(), nil, param.ParamSet{
+	m := NewModel(loadSwitchDesign(), WithParamProvider(param.ParamSet{
 		"DEMO-HSS":  nfetSpec("DEMO-HSS", 3, 0), // seeded, but states no V(OCP)
 		"DEMO-NFET": nfetSpec("DEMO-NFET", 3, 0.02),
-	})
+	}))
 	if sw := ExternalFetLoadSwitches(m); len(sw) != 0 {
 		t.Errorf("a part with no overcurrent threshold is not a controller, got %+v", sw)
 	}
@@ -439,10 +439,10 @@ func TestLoadSwitchGateOnTwoNetsIsSilent(t *testing.T) {
 // TestLoadSwitchOnResistanceAbsentIsNil checks that an unseeded on-resistance reads as NOT KNOWN.
 // Zero is a perfect switch, so a caller defaulting to it would report a dissipation of nothing.
 func TestLoadSwitchOnResistanceAbsentIsNil(t *testing.T) {
-	m := NewModelWithParams(loadSwitchDesign(), nil, param.ParamSet{
+	m := NewModel(loadSwitchDesign(), WithParamProvider(param.ParamSet{
 		"DEMO-HSS":  ctrlSpec("DEMO-HSS", 0.05),
 		"DEMO-NFET": nfetSpec("DEMO-NFET", 3, 0),
-	})
+	}))
 	sw := ExternalFetLoadSwitches(m)
 	if len(sw) != 1 {
 		t.Fatalf("want 1 switch, got %d", len(sw))
@@ -459,10 +459,10 @@ func TestLoadSwitchHighestThresholdBinds(t *testing.T) {
 	spec := ctrlSpec("DEMO-HSS", 0.05)
 	low := ctrlSpec("DEMO-HSS", 0.02).Parameters[0]
 	spec.Parameters = append([]*parampb.Parameter{low}, spec.Parameters...)
-	m := NewModelWithParams(loadSwitchDesign(), nil, param.ParamSet{
+	m := NewModel(loadSwitchDesign(), WithParamProvider(param.ParamSet{
 		"DEMO-HSS":  spec,
 		"DEMO-NFET": nfetSpec("DEMO-NFET", 3, 0.02),
-	})
+	}))
 	sw := ExternalFetLoadSwitches(m)
 	if len(sw) != 1 {
 		t.Fatalf("want 1 switch, got %d", len(sw))
@@ -480,10 +480,10 @@ func TestLoadSwitchWorstOnResistanceBinds(t *testing.T) {
 	// The worst row is listed LAST, so the selection has to walk past a lower one to reach it.
 	hot := nfetSpec("DEMO-NFET", 3, 0.031).Parameters[1]
 	spec.Parameters = append(spec.Parameters, hot)
-	m := NewModelWithParams(loadSwitchDesign(), nil, param.ParamSet{
+	m := NewModel(loadSwitchDesign(), WithParamProvider(param.ParamSet{
 		"DEMO-HSS":  ctrlSpec("DEMO-HSS", 0.05),
 		"DEMO-NFET": spec,
-	})
+	}))
 	sw := ExternalFetLoadSwitches(m)
 	if len(sw) != 1 {
 		t.Fatalf("want 1 switch, got %d", len(sw))

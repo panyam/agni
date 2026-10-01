@@ -331,13 +331,13 @@ func readModelWithParams(path, paramsDir string) (check.Model, error) {
 		return nil, err
 	}
 	if paramsDir == "" {
-		return check.NewModelWithBoard(d, bg), nil
+		return check.NewModel(d, check.WithBoard(bg)), nil
 	}
 	specs, err := param.LoadSet(os.DirFS(paramsDir))
 	if err != nil {
 		return nil, fmt.Errorf("--params %s: %w", paramsDir, err)
 	}
-	return check.NewModelWithParams(d, bg, specs), nil
+	return check.NewModel(d, check.WithBoard(bg), check.WithParamProvider(specs)), nil
 }
 
 func statsCmd() *cobra.Command {

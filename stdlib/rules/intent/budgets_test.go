@@ -64,9 +64,9 @@ func budgetDesign(rail, beadRef string) *ir.Design {
 
 // budgetModel attaches a seeded spec for the regulator rating iout amps under the given symbol.
 func budgetModel(d *ir.Design, symbol string, iout float64) check.Model {
-	return check.NewModelWithParams(d, nil, param.ParamSet{
+	return check.NewModel(d, check.WithParamProvider(param.ParamSet{
 		"ACME-REG": regCurrentSpec("ACME-REG", symbol, iout),
-	})
+	}))
 }
 
 // budgetDecl is a one-rail declaration with the given peak and margin factor (0 to omit the factor).
@@ -208,7 +208,7 @@ func TestRailBudgetReadsMilliampRatings(t *testing.T) {
 	}
 
 	d := budgetDesign("3V3", "")
-	m := check.NewModelWithParams(d, nil, param.ParamSet{"ACME-REG": milliamps()})
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": milliamps()}))
 	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("a 500mA supply under an 0.8A budget must fire exactly once, got %d: %+v", len(fs), fs)
@@ -221,7 +221,7 @@ func TestRailBudgetReadsMilliampRatings(t *testing.T) {
 
 	// The volt-spelled twin of the same part must reach the identical verdict, which is the property
 	// that makes the conversion a normalization rather than a new comparison.
-	inAmps := check.NewModelWithParams(d, nil, param.ParamSet{"ACME-REG": regCurrentSpec("ACME-REG", "IOUT", 0.5)})
+	inAmps := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": regCurrentSpec("ACME-REG", "IOUT", 0.5)}))
 	amps := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(inAmps)
 	if len(amps) != 1 || amps[0].Message != fs[0].Message {
 		t.Errorf("the mA and A spellings of one row must report identically:\n  mA: %+v\n   A: %+v", fs, amps)
@@ -242,7 +242,7 @@ func TestRailBudgetSkipsUnrecognizedUnits(t *testing.T) {
 	d := budgetDesign("3V3", "")
 	spec := regCurrentSpec("ACME-REG", "IOUT", 0.5)
 	spec.Parameters[0].Unit = "dBm"
-	m := check.NewModelWithParams(d, nil, param.ParamSet{"ACME-REG": spec})
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": spec}))
 	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
 		t.Errorf("an unrecognized unit must be skipped, never scaled by a guess, got %+v", fs)
 	}
@@ -298,10 +298,10 @@ func TestRailBudgetTakesTheBestSupply(t *testing.T) {
 		RefDes: "U3", Mpn: "ACME-REG2", Prov: &ir.Provenance{SourceFile: "t"},
 	})
 	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "U3", PinRef: "1"})
-	m := check.NewModelWithParams(d, nil, param.ParamSet{
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{
 		"ACME-REG":  regCurrentSpec("ACME-REG", "IOUT", 0.5),
 		"ACME-REG2": regCurrentSpec("ACME-REG2", "IOUT", 1.5),
-	})
+	}))
 	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
 		t.Errorf("the 1.5A supply covers the 0.8A budget, so the rail must be silent, got %+v", fs)
 	}

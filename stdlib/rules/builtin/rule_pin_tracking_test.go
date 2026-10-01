@@ -48,7 +48,7 @@ func trackModel(mpn string, rel *parampb.PinRelation, netA, netB string) check.M
 			Prov: &ir.Provenance{SourceFile: "t"},
 		}}
 	}
-	return check.NewModelWithParams(d, nil, param.ParamSet{mpn: trackSpec(mpn, rel)})
+	return check.NewModel(d, check.WithParamProvider(param.ParamSet{mpn: trackSpec(mpn, rel)}))
 }
 
 // The connectivity tier, satisfied. VCCA <= VCCB is a max of 0, and tying the two terminals makes
@@ -194,8 +194,7 @@ func TestPinTrackingNameTierRequiresBothNetsToBeRails(t *testing.T) {
 	for _, p := range spec.Pins {
 		p.Function = parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED
 	}
-	m := check.NewModelWithParams(xlatDesign("ACME-XLAT", "U3_12_U7_4_3V3", "+1V8"), nil,
-		param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(xlatDesign("ACME-XLAT", "U3_12_U7_4_3V3", "+1V8"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
 	if fs := pinTrackingViolated.Findings(m); len(fs) != 0 {
 		t.Errorf("a signal net carrying a voltage token is not a rail nominal; want 0 findings, got %+v", fs)
@@ -227,11 +226,8 @@ func TestPinTrackingSilentWithoutItsInputs(t *testing.T) {
 		m    check.Model
 	}{
 		{"no params tier at all", check.NewModel(xlatDesign("ACME-XLAT", "+3V3", "+1V8"))},
-		{"no seeded spec for the mpn", check.NewModelWithParams(
-			xlatDesign("ACME-XLAT", "+3V3", "+1V8"), nil, param.ParamSet{})},
-		{"a spec with no relations", check.NewModelWithParams(
-			xlatDesign("ACME-XLAT", "+3V3", "+1V8"), nil,
-			param.ParamSet{"ACME-XLAT": xlatSpec("ACME-XLAT")})},
+		{"no seeded spec for the mpn", check.NewModel(xlatDesign("ACME-XLAT", "+3V3", "+1V8"), check.WithParamProvider(param.ParamSet{}))},
+		{"a spec with no relations", check.NewModel(xlatDesign("ACME-XLAT", "+3V3", "+1V8"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": xlatSpec("ACME-XLAT")}))},
 		{"no voltage evidence on either rail", trackModel("ACME-XLAT", rel, "VDD_MAIN", "VDD_AUX")},
 		{"a bound stated in a non-voltage unit", func() check.Model {
 			r := tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED)
@@ -259,8 +255,7 @@ func TestPinTrackingSkipsAnUnresolvableTerminal(t *testing.T) {
 	for _, p := range spec.Pins {
 		p.Numbers = nil
 	}
-	m := check.NewModelWithParams(xlatDesign("ACME-XLAT", "+3V3", "+1V8"), nil,
-		param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(xlatDesign("ACME-XLAT", "+3V3", "+1V8"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
 	if n := len(pinTrackingViolated.Findings(m)); n != 0 {
 		t.Errorf("an ambiguous terminal must be skipped, not guessed; got %d findings", n)
