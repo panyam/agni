@@ -30,7 +30,7 @@ var esdProtection = &check.Rule{
 // esdProtectionVerdicts decides every externally-exposed signal net, which is `ExternalSignalNet`'s
 // scope and is deliberately narrow: a rail, a ground, a deliberately unconnected pad and a net that
 // reaches no connector are none of them subjects of an ESD rule, so none gets a verdict. That scope
-// is shared with esd-clamp-not-tvs and with the external_signal_net query relation, so all three
+// is shared with esd-clamp-not-tvs and with the net.connector_signal query relation, so all three
 // answer about the same nets rather than three hand-assembled approximations of one set.
 //
 // THE ZENER CASE BECOMES NotConsidered, and it is the conversion's whole point on this rule. A Zener

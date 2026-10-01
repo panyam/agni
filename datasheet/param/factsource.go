@@ -7,7 +7,7 @@ import (
 )
 
 // FactSource is the read-all sibling of ParamProvider.Lookup: it yields the WHOLE seeded spec library, not a
-// single MPN. It exists so the datalog surface can query the spec library as a fact base (`param(?mpn, ...)`
+// single MPN. It exists so the datalog surface can query the spec library as a fact base (`param.max(?mpn, ...)`
 // across every seeded part) instead of only the parts joined to one design. A directory-backed
 // ParamSet implements it; a future service backend implements it over its store. Kept separate from
 // ParamProvider because a keyed remote Lookup is cheap while an enumerate-all may not be — a backend

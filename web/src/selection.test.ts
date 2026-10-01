@@ -80,15 +80,15 @@ describe("filling a served preset", () => {
   });
 
   it("substitutes every occurrence, not just the first", () => {
-    const q = fillEntityQuery(`component-on-net(?r, "{net}"), pin.net(?r, ?p, "{net}") => ?r, ?p`, { kind: "net", net: "SDA" });
-    expect(q).toBe(`component-on-net(?r, "SDA"), pin.net(?r, ?p, "SDA") => ?r, ?p`);
+    const q = fillEntityQuery(`component.net(?r, "{net}"), pin.net(?r, ?p, "{net}") => ?r, ?p`, { kind: "net", net: "SDA" });
+    expect(q).toBe(`component.net(?r, "SDA"), pin.net(?r, ?p, "SDA") => ?r, ?p`);
   });
 
   // The grammar has no escape sequence, so a quote in a designator cannot be represented. Splicing
   // one in would end the string literal early and produce a query that means something else.
   it("strips a quote rather than splicing it into a string literal", () => {
-    const q = fillEntityQuery(`component-on-net("{ref}", ?n) => ?n`, { kind: "component", ref: `R"1` });
-    expect(q).toBe(`component-on-net("R1", ?n) => ?n`);
+    const q = fillEntityQuery(`component.net("{ref}", ?n) => ?n`, { kind: "component", ref: `R"1` });
+    expect(q).toBe(`component.net("R1", ?n) => ?n`);
   });
 
   it("leaves a placeholder the selection cannot fill as an empty literal", () => {

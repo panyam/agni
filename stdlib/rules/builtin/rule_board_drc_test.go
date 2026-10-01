@@ -95,7 +95,7 @@ func TestBoardRulesSilentWithoutBoard(t *testing.T) {
 	}
 }
 
-// TestBoardRuleAvailability: the board. read prefix gates like param(...): unavailable
+// TestBoardRuleAvailability: the board. read prefix gates like param.max(...): unavailable
 // for a design whose source carries no board geometry, available for a board read and
 // for the design-less catalog listing.
 func TestBoardRuleAvailability(t *testing.T) {

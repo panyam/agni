@@ -10,7 +10,7 @@ datasheet data, keyed by manufacturer part number (`mpn`). A part annotated for 
 rows; a part with no annotation emits none. The identifiers are free-form deployment tokens (a team
 name, a license id) parsed from the PartSpec's `audience` attribute (comma-separated).
 
-Like `param`, this is the datasheet tier: it is EMPTY without `--params`, and over `--speclib` it ranges
+Like `param.max`, this is the datasheet tier: it is EMPTY without `--params`, and over `--speclib` it ranges
 the whole seeded corpus (every part), where over a design it ranges only the parts joined to it.
 
 It is RECORD-ONLY today (WS10-010). Nothing enforces it, and a request for an un-entitled part is not
@@ -32,7 +32,7 @@ Think of it as a per-record ACL label with no reference monitor wired up yet: th
 attached to the data, this relation projects it, and a future gate reads the same field to actually
 allow/deny. It is a deliberate split: capture the policy metadata now (cheap, no proto change, since it
 rides the PartSpec `attributes` map), enforce it when there is more than one tenant to enforce against.
-Keyed by `mpn`, so it joins the other datasheet relations (`param`, `component.mpn`) on the same
+Keyed by `mpn`, so it joins the other datasheet relations (`param.max`, `component.mpn`) on the same
 identity.
 
 ### Go projector

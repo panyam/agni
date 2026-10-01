@@ -42,7 +42,7 @@ func TestBuiltinsCompileWithoutGeneratorFirst(t *testing.T) {
 // itself in use on half the evidence.
 func TestGateRejectsANonInjectiveRule(t *testing.T) {
 	bad := query.MustParse(
-		`has_signal(?x) :- component-on-net(?x,?n); in_use(?x) :- has_signal(?x), has_signal(?y); in_use(?z) => ?z`)
+		`has_signal(?x) :- component.net(?x,?n); in_use(?x) :- has_signal(?x), has_signal(?y); in_use(?z) => ?z`)
 	defer func() {
 		r := recover()
 		if r == nil {

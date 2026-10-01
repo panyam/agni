@@ -1,4 +1,4 @@
-#agni-run 305ceed488caa2a6
+#agni-run 324311572ebfe3ae
 note: gateway-profiles supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, profile/can-termination-missing, profile/can-signal-dangling, profile/can-esd-missing
 findings by rule:
   bulk-cap               1

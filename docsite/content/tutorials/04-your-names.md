@@ -112,7 +112,7 @@ rules.
 
 ## Writing your own
 
-Start with the lexicon, not the rules. Run `agni query <design> 'rail(?n) => ?n' --conventions
+Start with the lexicon, not the rules. Run `agni query <design> 'net.rail(?n) => ?n' --conventions
 <your file>` on a real board and compare the list against the rails you know it has. Whatever is
 missing tells you the pattern you need. Repeat until the list is right, and only then write naming
 rules.

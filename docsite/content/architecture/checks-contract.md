@@ -237,7 +237,7 @@ negated literal. Then:
 
 </details>
 
-The same rule applies to a capability gate. `power-pin-mistyped` keeps `has_nc_channel` in its
+The same rule applies to a capability gate. `power-pin-mistyped` keeps `design.has_nc_channel` in its
 domain, because that predicate is not a test a pin passes: it is whether the FORMAT can answer the
 question. A pin read from EDIF was never judged, and putting it in the considered set would report
 every supply pin as verified by a rule that is structurally silent there.

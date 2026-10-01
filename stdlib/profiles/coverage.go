@@ -76,7 +76,7 @@ func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 }
 
 // matchSignalNet returns the first net satisfying the signal's matcher that carries at least one
-// component connection — the same net component-on-net(?r,?n) plus netMatch(?n, s) selects, so the
+// component connection — the same net component.net(?r,?n) plus netMatch(?n, s) selects, so the
 // coverage panel binds the net a finding would name and not a foreign one that merely shares a suffix.
 func matchSignalNet(m check.Model, s Signal) *ir.Net {
 	for _, n := range m.Nets() {
@@ -91,7 +91,7 @@ func matchSignalNet(m check.Model, s Signal) *ir.Net {
 // check.PullUpReachesRail the missing-pullup rule decides on.
 //
 // IT USED TO ASK ITS OWN QUESTION, and the two disagreed on the common case. This built a
-// `reaches(?n, ?rail), rail(?rail)` query and claimed in a comment that it was what the rule negated;
+// `net.reaches(?n, ?rail), net.rail(?rail)` query and claimed in a comment that it was what the rule negated;
 // the rule had a second clause the comment did not mention, and that clause existed because the reach
 // walk refuses to enter a net whose fan-out exceeds maxWalkFan (WS3-108). A rail is wide almost by
 // definition, so a DIRECT pull-up onto a real rail was invisible to the reaches form. Measured on a

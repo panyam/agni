@@ -62,7 +62,7 @@ that binds your head variable and is most selective. The rule here opens on the 
 naturally and is the shape that made a shipped profile rule non-terminating on a real board. A toy
 fixture will never show you the difference.
 
-**Pin relations need the reader to declare pins.** `pin`, `pin.role`, `pin.type` and `pin.net`
+**Pin relations need the reader to declare pins.** `component.pin`, `pin.role`, `pin.type` and `pin.net`
 project from PART-TYPE pins, not from net connections. A connection says a pin is wired somewhere; a
 pin declaration says the pin exists, what it is called, and what type it is. A format that emits only
 connections leaves every pin relation empty, so a pin-level rule finds nothing — the same silent

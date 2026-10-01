@@ -27,7 +27,7 @@ TABLES: List[Tuple[str, str]] = [
     ("Part numbers", "component.mpn(?c, ?mpn) => ?c, ?mpn"),
     (
         "Test points per net",
-        'entity(?n, "net"), component-on-net(?tp, ?n), component.class(?tp, "test_point")'
+        'entity(?n, "net"), component.net(?tp, ?n), component.class(?tp, "test_point")'
         " => ?n, count(distinct ?tp), list(distinct ?tp)",
     ),
     ("Nets per component", "component.net_count(?c, ?k) => ?c, ?k"),

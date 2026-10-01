@@ -54,7 +54,7 @@ requires, and reads as unevaluated rather than passed when the interface is abse
 - id: "H2"
   title: every test point sits on a recognized rail
   query:
-    match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), not rail(?n) => ?r, ?n'
+    match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), not net.rail(?n) => ?r, ?n'
     subject: r
     message: '{r} probes {n}, which is not a recognized rail'
 ```

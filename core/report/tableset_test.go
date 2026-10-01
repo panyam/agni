@@ -8,7 +8,7 @@ import (
 
 func sampleSet() TableSet {
 	return TableSet{
-		Title: "Audit", Source: "mount://m/board.edn", Preamble: `has_tp(?n) :- component-on-net(?t,?n);`,
+		Title: "Audit", Source: "mount://m/board.edn", Preamble: `has_tp(?n) :- component.net(?t,?n);`,
 		Sections: []TableSection{
 			{Name: "Probed nets", Description: "nets with a test point", Table: Table{
 				Query: `has_tp(?n) => ?n`, Columns: []string{"n"},

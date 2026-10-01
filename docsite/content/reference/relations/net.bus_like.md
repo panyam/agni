@@ -8,7 +8,7 @@ description: "a shared-distribution net (ground plane, global rail, or rail-scal
 `net.bus_like(net)` yields one row per net the engine treats as a shared-distribution node
 rather than a point-to-point signal: a ground plane, a global-by-name rail, or any net whose
 fan-out is rail-scale. It is the named form of the exact predicate the series-reach walk
-(`reaches`) refuses to cross, so "which nets are bus-scale?" is a query, not a constant buried
+(`net.reaches`) refuses to cross, so "which nets are bus-scale?" is a query, not a constant buried
 in the walk.
 
 A net is bus-like when any one of three holds:
@@ -57,7 +57,7 @@ net.bus_like(?n) => ?n
 Find components sitting on a bus-like net (the loads on rails and ground):
 
 ```
-net.bus_like(?n), component-on-net(?r, ?n) => ?r
+net.bus_like(?n), component.net(?r, ?n) => ?r
 ```
 
 ### Schematic

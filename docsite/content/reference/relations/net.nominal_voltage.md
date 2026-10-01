@@ -71,7 +71,7 @@ Join to a datasheet recommended window (needs `--params`) to compare a rail agai
 feeds. See `param.range`:
 
 ```
-component-on-net(?ref, ?net), net.nominal_voltage(?net, ?v),
+component.net(?ref, ?net), net.nominal_voltage(?net, ?v),
 component.mpn(?ref, ?mpn), param.range(?mpn, ?sym, "recommended_operating", ?min, ?max),
 ?v > ?max => ?ref, ?net, ?v
 ```

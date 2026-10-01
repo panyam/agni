@@ -254,7 +254,7 @@ message UnannotatedComponent {
 // `Library:Symbol` lib_id), so the message can be pasted into a --symbol-path search. kind names
 // the construct ("xschem_sym", "geda_sym", "kicad_sym_lib") so a reader-neutral consumer can still
 // say what kind of thing is missing. ref_des lists the placements that lost pins, which is the
-// blast radius and the join key for the unresolved_symbol query relation.
+// blast radius and the join key for the reader.unresolved_symbol query relation.
 // ResolvedSymbol is one symbol reference that loaded, with the pin count it contributed.
 //
 // The COUNT is what makes a pass evidence rather than an assertion. "the symbol resolved" reads
@@ -437,7 +437,7 @@ message Component {
   // ComponentSection.part_ref names the LIBRARY SYMBOL, which is internal to whoever drew the
   // schematic. mpn names the product a manufacturer sells, and is the only one of the three that
   // means anything outside this design: it is what the BOM lists, what procurement buys, and the key
-  // every datasheet fact joins on (param(mpn, symbol, max)).
+  // every datasheet fact joins on (param.max(mpn, symbol, max)).
   //
   // It is stated PER PLACEMENT rather than per part type because a library symbol is coarser than an
   // orderable product: one generic 0603 resistor symbol is placed as dozens of part numbers. The pass

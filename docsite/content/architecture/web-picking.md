@@ -79,7 +79,7 @@ pin.
 
 Searching for a pin by name is still not possible. `entity(name, kind)` deliberately does not
 enumerate pins, because a pin cannot be one `name` without inventing a composite string nothing else
-in the fact base joins against, and `pin(?ref, ?pin)` already enumerates them for anyone writing the
+in the fact base joins against, and `component.pin(?ref, ?pin)` already enumerates them for anyone writing the
 query by hand.
 
 </details>

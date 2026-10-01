@@ -31,11 +31,11 @@ import (
 // The seed schema is the four relations the cap-voltage rule reads; more accrue as each rule
 // adopts the discipline (its declared Reads name the relations it consumes).
 const (
-	RelNetMaxVoltage  = "net.max_voltage"  // net.max_voltage(net, volts): a net's declared rail voltage. doc: facts/docs/net.max_voltage.md
-	RelComponentMPN   = "component.mpn"    // component.mpn(ref_des, mpn): the design-side part identity. doc: facts/docs/component.mpn.md
-	RelParam          = "param"            // param(mpn, symbol, value, conditions): a datasheet parameter. doc: facts/docs/param.md
-	RelPartAudience   = "part.audience"    // part.audience(mpn, who): a team/license entitled to see a part's datasheet data. doc: facts/docs/part.audience.md
-	RelComponentOnNet = "component-on-net" // component-on-net(ref_des, net): a component sits on a net. doc: facts/docs/component-on-net.md
+	RelNetMaxVoltage  = "net.max_voltage" // net.max_voltage(net, volts): a net's declared rail voltage. doc: facts/docs/net.max_voltage.md
+	RelComponentMPN   = "component.mpn"   // component.mpn(ref_des, mpn): the design-side part identity. doc: facts/docs/component.mpn.md
+	RelParam          = "param.max"       // param.max(mpn, symbol, value, conditions): a datasheet parameter. doc: facts/docs/param.max.md
+	RelPartAudience   = "part.audience"   // part.audience(mpn, who): a team/license entitled to see a part's datasheet data. doc: facts/docs/part.audience.md
+	RelComponentOnNet = "component.net"   // component.net(ref_des, net): a component sits on a net. doc: facts/docs/component.net.md
 
 	// net.nominal_voltage(net, volts) is the DESIGN-side nominal a rail's NAME declares (3V3 -> 3.3),
 	// the same name-derived number RailMaxVoltage falls back to, but exposed on its own so a datasheet
@@ -50,7 +50,7 @@ const (
 	RelNetSignalLevel = "net.signal_level" // net.signal_level(net, volts): name-derived level on a non-rail net. doc: facts/docs/net.signal_level.md
 
 	// param.range(mpn, symbol, kind, min, max) is the two-sided, limit-kind-discriminated datasheet
-	// relation (WS3-082). The thin param(mpn, symbol, max) carries only an upper bound and cannot tell
+	// relation (WS3-082). The thin param.max(mpn, symbol, max) carries only an upper bound and cannot tell
 	// an absolute-max row from a recommended-operating one on the same symbol; param.range adds the
 	// lower bound (min) and the kind token (absolute_max / recommended_operating / characteristic), so a
 	// range rule (min <= nominal <= max, gated by kind) is authorable in datalog. param is kept for
@@ -118,22 +118,22 @@ const (
 	// projection of a Model method that already computes it — no new analysis. pin.role and pin.type
 	// are derived (a name-based role, an electrical-type string); pin.net is absent for an
 	// unconnected pin (so `not pin.net(?r,?p,?_)` reads as "unconnected"); net.pin_count exposes the
-	// net fan-out a stub-vs-real check needs; has_nc_channel is the design-level no-connect gate.
-	RelPin               = "pin"                 // pin(ref_des, pin): a part-type pin of a placed component. doc: facts/docs/pin.md
-	RelPinRole           = "pin.role"            // pin.role(ref_des, pin, role): derived power/ground/anode/cathode. doc: facts/docs/pin.role.md
-	RelPinType           = "pin.type"            // pin.type(ref_des, pin, etype): electrical type (power_in, input, ...). doc: facts/docs/pin.type.md
-	RelPinNet            = "pin.net"             // pin.net(ref_des, pin, net): the net a pin is on (absent if none). doc: facts/docs/pin.net.md
-	RelPinName           = "pin.name"            // pin.name(ref_des, pin, name): the part type's functional name for the pin (absent if unnamed). doc: facts/docs/pin.name.md
-	RelNetPinCount       = "net.pin_count"       // net.pin_count(net, count): connections on a net. doc: facts/docs/net.pin_count.md
-	RelComponentNetCount = "component.net_count" // component.net_count(ref_des, count): distinct nets a component touches. doc: facts/docs/component.net_count.md
-	RelHasNCChannel      = "has_nc_channel"      // has_nc_channel(present): one row when the design can express no-connect. doc: facts/docs/has_nc_channel.md
-	RelTypesPowerOut     = "types_power_out"     // types_power_out(present): one row when the source format types power-output pins (WS3-072). doc: facts/docs/types_power_out.md
-	RelRail              = "rail"                // rail(net): the net is a power/ground rail (Model.IsPowerRail). doc: facts/docs/rail.md
-	RelFeedback          = "feedback"            // feedback(net): the net is a regulator feedback/sense node (naming lexicon). doc: facts/docs/feedback.md
-	RelSwitching         = "switching"           // switching(net): the net is a regulator power-stage node (naming lexicon). doc: facts/docs/switching.md
-	RelNetRole           = "net.role"            // net.role(net, role): a role the net carries, one row per role. doc: facts/docs/net.role.md
-	RelNetAttr           = "net.attr"            // net.attr(net, key, value): a net-level attribute. doc: facts/docs/net.attr.md
-	RelComponentAttr     = "component.attr"      // component.attr(ref_des, key, value): a component-level attribute. doc: facts/docs/component.attr.md
+	// net fan-out a stub-vs-real check needs; design.has_nc_channel is the design-level no-connect gate.
+	RelPin               = "component.pin"          // component.pin(ref_des, pin): a part-type pin of a placed component. doc: facts/docs/component.pin.md
+	RelPinRole           = "pin.role"               // pin.role(ref_des, pin, role): derived power/ground/anode/cathode. doc: facts/docs/pin.role.md
+	RelPinType           = "pin.type"               // pin.type(ref_des, pin, etype): electrical type (power_in, input, ...). doc: facts/docs/pin.type.md
+	RelPinNet            = "pin.net"                // pin.net(ref_des, pin, net): the net a pin is on (absent if none). doc: facts/docs/pin.net.md
+	RelPinName           = "pin.name"               // pin.name(ref_des, pin, name): the part type's functional name for the pin (absent if unnamed). doc: facts/docs/pin.name.md
+	RelNetPinCount       = "net.pin_count"          // net.pin_count(net, count): connections on a net. doc: facts/docs/net.pin_count.md
+	RelComponentNetCount = "component.net_count"    // component.net_count(ref_des, count): distinct nets a component touches. doc: facts/docs/component.net_count.md
+	RelHasNCChannel      = "design.has_nc_channel"  // design.has_nc_channel(present): one row when the design can express no-connect. doc: facts/docs/design.has_nc_channel.md
+	RelTypesPowerOut     = "design.types_power_out" // design.types_power_out(present): one row when the source format types power-output pins (WS3-072). doc: facts/docs/design.types_power_out.md
+	RelRail              = "net.rail"               // net.rail(net): the net is a power/ground rail (Model.IsPowerRail). doc: facts/docs/net.rail.md
+	RelFeedback          = "net.feedback"           // net.feedback(net): the net is a regulator feedback/sense node (naming lexicon). doc: facts/docs/net.feedback.md
+	RelSwitching         = "net.switching"          // net.switching(net): the net is a regulator power-stage node (naming lexicon). doc: facts/docs/net.switching.md
+	RelNetRole           = "net.role"               // net.role(net, role): a role the net carries, one row per role. doc: facts/docs/net.role.md
+	RelNetAttr           = "net.attr"               // net.attr(net, key, value): a net-level attribute. doc: facts/docs/net.attr.md
+	RelComponentAttr     = "component.attr"         // component.attr(ref_des, key, value): a component-level attribute. doc: facts/docs/component.attr.md
 
 	// Device-class and net-attribute relations (WS3-074): the projections a class-quantified rule
 	// needs to be authored in datalog. component.class selects a device family (one row per class tag
@@ -177,20 +177,20 @@ const (
 	//
 	// Pins are deliberately absent. A pin's identity is two fields (ref_des and designator), so it
 	// cannot be one `name` without inventing a composite string that nothing else in the fact base
-	// would join against; pin(ref_des, pin) already enumerates them.
+	// would join against; component.pin(ref_des, pin) already enumerates them.
 	RelEntity = "entity" // entity(name, kind): a component, net or bus exists under this name. doc: facts/docs/entity.md
 	// RelUnresolvedSymbol is keyed by ref_des, NOT by the symbol reference, so it joins straight to
 	// the components that lost pins (WS1-052). One row per affected placement, so a query can ask
 	// what KIND of parts a missing library cost — the blast radius, not just the file name.
-	RelUnresolvedSymbol = "unresolved_symbol" // doc: facts/docs/unresolved_symbol.md
+	RelUnresolvedSymbol = "reader.unresolved_symbol" // doc: facts/docs/reader.unresolved_symbol.md
 
 	// Reader-diagnostic relations (WS3-081): the ENTITY-KEYED input diagnostics promoted to query
 	// relations so they join to components/pins/nets (collisions on a ref-des prefix, the nets a
 	// conflicted pin touches). Point-geometry diagnostics (dangling / no-junction endpoints) stay
 	// rule-scoped — a bare x,y has nothing to join. The rule: a diagnostic earns a query relation when
 	// it carries an entity key; `bus` (keyed by label) fits the same rule (docs/19).
-	RelRefDesCollision = "ref_des_collision" // ref_des_collision(ref_des): a designator shared by >1 part. doc: facts/docs/ref_des_collision.md
-	RelPinNetConflict  = "pin_net_conflict"  // pin_net_conflict(ref_des, pin, net): the read put a pin on >1 net. doc: facts/docs/pin_net_conflict.md
+	RelRefDesCollision = "reader.ref_des_collision" // reader.ref_des_collision(ref_des): a designator shared by >1 part. doc: facts/docs/reader.ref_des_collision.md
+	RelPinNetConflict  = "reader.pin_net_conflict"  // reader.pin_net_conflict(ref_des, pin, net): the read put a pin on >1 net. doc: facts/docs/reader.pin_net_conflict.md
 
 	// net.bus_like(net) (WS3-080): a shared-distribution net (ground plane, global-by-name rail, or
 	// rail-scale fan-out) — the same predicate the series-reach walk stops at, named once and exposed
@@ -203,17 +203,17 @@ const (
 	// vendor rule decks. Deliberately NOT named net.class: that name belongs to the DERIVED
 	// semantic role space (ir.Net.roles from WS3-072, and the net.ground relation), and a rule
 	// author who conflated the two would write a join that silently matches nothing.
-	// has_netclass is the design-level presence marker, the queryable twin of check.CapNetClass:
+	// design.has_netclass is the design-level presence marker, the queryable twin of check.CapNetClass:
 	// only a KiCad project supplies net classes, so a netclass-SCOPED rule selects nothing on
 	// every other read and reports clean. See facts/docs/net.netclass.md.
-	// external_signal_net(net) (WS3-061) is the SCOPE the ESD rules share, projected so a
+	// net.connector_signal(net) (WS3-061) is the SCOPE the ESD rules share, projected so a
 	// datalog-authored ESD check scopes itself exactly as the Go rules do. It is the one part of the
 	// ESD guard stack that cannot be composed from existing relations: the protection predicates are
 	// reachability questions and became plain datalog once reaches carried distance (WS3-112), but
 	// this one reads net ATTRIBUTES (global, power_driven) and the no-connect channel, none of which
 	// have a relation. Reassembling it by hand in datalog would drop a guard sooner or later, and a
 	// dropped guard here is a false FAIL on a rail or an unconnected pad.
-	RelExternalSignalNet = "external_signal_net" // external_signal_net(net): connector-facing signal net, the ESD scope. doc: facts/docs/external_signal_net.md
+	RelExternalSignalNet = "net.connector_signal" // net.connector_signal(net): connector-facing signal net, the ESD scope. doc: facts/docs/net.connector_signal.md
 
 	// Derived net properties (WS3-088): what the DESIGN does, projected so it can be compared against
 	// what an intent declaration says it should do — and so an engineer can ask either question ad hoc.
@@ -222,17 +222,17 @@ const (
 	RelNetBias      = "net.bias"       // net.bias(net, level): a bias resistor holds the net high or low. doc: facts/docs/net.bias.md
 	RelNetACCoupled = "net.ac_coupled" // net.ac_coupled(net): a SERIES capacitor carries the net. doc: facts/docs/net.ac_coupled.md
 
-	RelNetNetClass = "net.netclass" // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
-	RelHasNetClass = "has_netclass" // has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/has_netclass.md
+	RelNetNetClass = "net.netclass"        // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
+	RelHasNetClass = "design.has_netclass" // design.has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/design.has_netclass.md
 
 	// Net-class DEFINITIONS (WS3-111): what the project declares a class's nets should route at,
 	// keyed by CLASS. Millimetres, matching the board tier so declared and actual join with no
 	// conversion. These are the raw per-class rows; the cascaded per-NET values are below.
-	RelNetClassClearance   = "netclass.clearance"    // netclass.clearance(class, mm). doc: facts/docs/netclass.clearance.md
-	RelNetClassTrackWidth  = "netclass.track_width"  // netclass.track_width(class, mm). doc: facts/docs/netclass.track_width.md
-	RelNetClassViaDiameter = "netclass.via_diameter" // netclass.via_diameter(class, mm). doc: facts/docs/netclass.via_diameter.md
-	RelNetClassViaDrill    = "netclass.via_drill"    // netclass.via_drill(class, mm). doc: facts/docs/netclass.via_drill.md
-	RelHasNetClassDefs     = "has_netclass_defs"     // has_netclass_defs(present). doc: facts/docs/has_netclass_defs.md
+	RelNetClassClearance   = "netclass.clearance"       // netclass.clearance(class, mm). doc: facts/docs/netclass.clearance.md
+	RelNetClassTrackWidth  = "netclass.track_width"     // netclass.track_width(class, mm). doc: facts/docs/netclass.track_width.md
+	RelNetClassViaDiameter = "netclass.via_diameter"    // netclass.via_diameter(class, mm). doc: facts/docs/netclass.via_diameter.md
+	RelNetClassViaDrill    = "netclass.via_drill"       // netclass.via_drill(class, mm). doc: facts/docs/netclass.via_drill.md
+	RelHasNetClassDefs     = "design.has_netclass_defs" // design.has_netclass_defs(present). doc: facts/docs/design.has_netclass_defs.md
 
 	// The CASCADED per-net values: what a net should route at once its classes are resolved. A rule
 	// comparing declared against actual joins THESE, never the per-class rows — a net in two classes
@@ -441,7 +441,7 @@ func paramFacts(m check.Model) []facts.Row {
 // through param.InBaseUnit, in the one place that owns the scale (C24).
 //
 // A row whose unit that table does not recognize keeps its symbol, kind, conditions and citation and
-// has its NUMERIC slots left empty. It is not dropped, because `param` answers "what does this part
+// has its NUMERIC slots left empty. It is not dropped, because `param.max` answers "what does this part
 // specify" as much as it feeds a comparison, and a silently shortened list is its own quiet wrong
 // answer.
 //
@@ -453,7 +453,7 @@ func paramFacts(m check.Model) []facts.Row {
 // same fix is what makes param.range safe to emit with one bound absent, which it does on any
 // ordinary max-only datasheet row.
 
-// specParamRows projects the `param` facts of one PartSpec — one row per parameter, keyed by mpn,
+// specParamRows projects the `param.max` facts of one PartSpec — one row per parameter, keyed by mpn,
 // with the upper bound in its SI base unit. Shared by the design-scoped join (paramFacts) and the
 // library-wide projection (SpecLibFacts) so the two surfaces emit identical rows; the only difference
 // is which specs they iterate.
@@ -653,13 +653,13 @@ func perJoinedSpec(m check.Model, rows func(string, *parampb.PartSpec) []facts.R
 // PRINTED in, one row per parameter.
 //
 // It exists because normalizing the numbers would otherwise destroy information the query surface
-// used to carry. `param` and `param.range` now answer "how big is it" in a unit a comparison can
+// used to carry. `param.max` and `param.range` now answer "how big is it" in a unit a comparison can
 // trust; this answers "what did the vendor actually print", which is what a reviewer checking a
 // citation against a datasheet page needs. Splitting them follows `param.prov`'s precedent: a
-// separate relation rather than more columns on `param`, so no existing query changes arity.
+// separate relation rather than more columns on `param.max`, so no existing query changes arity.
 //
 // EVERY parameter is emitted, including one whose unit the conversion table does not recognize and
-// which therefore has no row in `param` or `param.range`. This relation is the reason dropping those
+// which therefore has no row in `param.max` or `param.range`. This relation is the reason dropping those
 // is a narrowing of the NUMERIC surface rather than a disappearance.
 func specParamUnitRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	out := make([]facts.Row, 0, len(spec.Parameters))
@@ -759,7 +759,7 @@ func paramTypFacts(m check.Model) []facts.Row {
 }
 
 // paramRangeFacts emits the two-sided, limit-kind-discriminated view of the same joined datasheet
-// parameters paramFacts projects. Where param(mpn, symbol, max) exposes only the ceiling and collapses
+// parameters paramFacts projects. Where param.max(mpn, symbol, max) exposes only the ceiling and collapses
 // an absolute-max row and a recommended-operating row on one symbol into indistinguishable tuples,
 // param.range keeps both bounds and the kind, so a range rule can join them apart. Deduped by MPN and
 // empty without --params, the same silent-by-construction posture as paramFacts.
@@ -851,7 +851,7 @@ func audienceRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	return out
 }
 
-// SpecLibFacts projects the datalog fact base of a whole seeded corpus — every PartSpec's `param`,
+// SpecLibFacts projects the datalog fact base of a whole seeded corpus — every PartSpec's `param.max`,
 // `param.range` and `part.audience` rows — with NO design join (WS10-010). It is the library-wide
 // analogue of Facts: where Facts derives facts for the parts ON a design, SpecLibFacts derives them for
 // the parts IN the spec library, so `agni query --speclib` searches the corpus (a design is not required). Rows
@@ -964,9 +964,9 @@ func netPinCountFacts(m check.Model) []facts.Row {
 }
 
 // componentNetCountFacts emits how many DISTINCT nets each component touches, the twin of
-// net.pin_count from the part's side. It reads connections, as component-on-net does, rather than
+// net.pin_count from the part's side. It reads connections, as component.net does, rather than
 // part-type pins, so it answers on a bare netlist that carries no pin data, and it always agrees
-// with component-on-net. Every component gets a row, 0 for a part wired to nothing, and a ref seen
+// with component.net. Every component gets a row, 0 for a part wired to nothing, and a ref seen
 // only in a connection gets one too, citing nothing since there is no placement to cite (agni
 // issue 727).
 func componentNetCountFacts(m check.Model) []facts.Row {
@@ -998,7 +998,7 @@ func componentNetCountFacts(m check.Model) []facts.Row {
 }
 
 // ncChannelFacts emits a single row when the design can express intentional no-connect (a
-// NO_CONNECT-typed pin or an nc-marker net), so a rule can gate on it as `has_nc_channel(?_)`.
+// NO_CONNECT-typed pin or an nc-marker net), so a rule can gate on it as `design.has_nc_channel(?_)`.
 // Absent (zero rows) otherwise, so the gate fails closed on a format that cannot express intent.
 func ncChannelFacts(m check.Model) []facts.Row {
 	if m.HasNoConnectChannel() {
@@ -1010,7 +1010,7 @@ func ncChannelFacts(m check.Model) []facts.Row {
 // typesPowerOutFacts emits one row when the source format classifies power-OUTPUT pins (KiCad/gEDA do,
 // EDIF/IPC do not — see Model.FormatTypesPowerOut). The queryable twin of the design.types_power_out
 // spec fact power-input-not-driven gates on, so "can I trust a driver-absence check on this design" is
-// answerable from `agni query`, the same shape as has_nc_channel.
+// answerable from `agni query`, the same shape as design.has_nc_channel.
 func typesPowerOutFacts(m check.Model) []facts.Row {
 	if m.FormatTypesPowerOut() {
 		return []facts.Row{{Relation: RelTypesPowerOut, Subject: "true", Cites: cite("design")}}
@@ -1020,7 +1020,7 @@ func typesPowerOutFacts(m check.Model) []facts.Row {
 
 // railFacts emits one row per net that is a power or ground rail (Model.IsPowerRail: asserted-driven,
 // global, or rail-named). It lets a datalog rule ask "does this signal reach a rail" —
-// reaches(?sig, ?r), rail(?r) — the shape an interface profile's pull-up check needs.
+// net.reaches(?sig, ?r), net.rail(?r) — the shape an interface profile's pull-up check needs.
 func railFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -1033,7 +1033,7 @@ func railFacts(m check.Model) []facts.Row {
 
 // feedbackFacts emits one row per net the naming lexicon reads as a regulator feedback / sense node
 // (WS3-069/067). It is the datalog equivalent of the test-point rule's feedback exclusion: a datalog
-// rule can now ask "a rail that is not a feedback node" — rail(?n), not feedback(?n).
+// rule can now ask "a rail that is not a feedback node" — net.rail(?n), not net.feedback(?n).
 
 func feedbackFacts(m check.Model) []facts.Row {
 	var out []facts.Row
@@ -1071,10 +1071,10 @@ func switchingFacts(m check.Model) []facts.Row {
 // It iterates classify.AllNetRoles rather than reading the stamped set directly, so a net that skipped
 // the ingestion stamp still answers through the same name fallback every other role relation uses.
 //
-// THE PER-ROLE RELATIONS STAY, and they are not all redundant. `rail` is Model.IsPowerRail, which is
-// power-driven OR global OR ground OR the rail role, so rail(?n) is a CONCLUSION while
-// net.role(?n, "rail") is what was STAMPED, and they are different sets. feedback(?n) and
-// switching(?n) are exact shorthands for their net.role rows and are kept for readability.
+// THE PER-ROLE RELATIONS STAY, and they are not all redundant. `net.rail` is Model.IsPowerRail, which is
+// power-driven OR global OR ground OR the rail role, so net.rail(?n) is a CONCLUSION while
+// net.role(?n, "rail") is what was STAMPED, and they are different sets. net.feedback(?n) and
+// net.switching(?n) are exact shorthands for their net.role rows and are kept for readability.
 func netRoleFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -1209,7 +1209,7 @@ func specDocCite(spec *parampb.PartSpec) string {
 // netGroundFacts emits net.ground(net) for each ground-named net. The rail relation covers BOTH
 // power and ground (Model.IsPowerRail ORs the ground test), so this isolates the ground case a rule
 // must treat differently from a supply rail — e.g. a grounded crystal case pin is not the Vdd pin
-// of an active oscillator, so a datalog rule reads `rail(?r), not net.ground(?r)` for "supply rail".
+// of an active oscillator, so a datalog rule reads `net.rail(?r), not net.ground(?r)` for "supply rail".
 func netGroundFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -1246,9 +1246,9 @@ func busFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// unresolvedSymbolFacts emits unresolved_symbol(ref_des, symref) once per PLACEMENT that lost its
+// unresolvedSymbolFacts emits reader.unresolved_symbol(ref_des, symref) once per PLACEMENT that lost its
 // pins (WS1-052). Keyed by ref_des rather than by the reference, because a ref_des is what every
-// other netlist relation joins on: `unresolved_symbol(?r, ?sym), component.class(?r, "fpga")` asks
+// other netlist relation joins on: `reader.unresolved_symbol(?r, ?sym), component.class(?r, "fpga")` asks
 // whether anything IMPORTANT lost its pins, which the file name alone cannot answer. A design whose
 // symbols all resolved emits nothing.
 func unresolvedSymbolFacts(m check.Model) []facts.Row {
@@ -1261,7 +1261,7 @@ func unresolvedSymbolFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// refDesCollisionFacts emits ref_des_collision(ref) for each designator used by more than one part
+// refDesCollisionFacts emits reader.ref_des_collision(ref) for each designator used by more than one part
 // (WS3-081), keyed by ref_des so a query joins it to components (e.g. collisions on a ref-des prefix).
 // EVERY colliding instance is cited, because the plurality is the finding. A reviewer chasing "R5 is
 // used twice" already knows R5 exists; what they need is where the two R5s are, and citing one of
@@ -1280,7 +1280,7 @@ func refDesCollisionFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// pinNetConflictFacts emits pin_net_conflict(ref, pin, net) once PER net a pin was placed on when the
+// pinNetConflictFacts emits reader.pin_net_conflict(ref, pin, net) once PER net a pin was placed on when the
 // read put a single pin on more than one net (WS3-081, the integrity tripwire). The multi-row shape
 // lets a query find every net a conflicted pin touches and join to those nets. Empty when the read is clean.
 func pinNetConflictFacts(m check.Model) []facts.Row {
@@ -1306,7 +1306,7 @@ func netBusLikeFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// externalSignalNetFacts emits external_signal_net(net) for each connector-facing signal net, the
+// externalSignalNetFacts emits net.connector_signal(net) for each connector-facing signal net, the
 // scope check.ExternalSignalNet defines and the two ESD rules share. One row per in-scope net; empty
 // on a design with no connectors, which is the honest answer rather than a permissive one — an ESD
 // question about a board that exposes nothing has nothing to ask about.
@@ -1371,7 +1371,7 @@ func netNetClassFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// hasNetClassFacts emits the single has_netclass(true) row when the design assigns net classes at
+// hasNetClassFacts emits the single design.has_netclass(true) row when the design assigns net classes at
 // all (Model.HasNetClasses). It is the queryable twin of check.CapNetClass, the same shape
 // typesPowerOutFacts has for CapTypesPowerOut: a rule scoped by net class must be able to tell
 // "no net is in class HV" from "this design has no classes", and absent the marker those are the
@@ -1474,7 +1474,7 @@ func netClassDefFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// hasNetClassDefsFacts is the design-level marker for DEFINITIONS, the twin of has_netclass for
+// hasNetClassDefsFacts is the design-level marker for DEFINITIONS, the twin of design.has_netclass for
 // membership. The two are genuinely independent: net_settings carries assignments and class
 // definitions in separate blocks, so a project can assign nets to classes it never defines. A
 // declared-vs-actual rule that found no definitions would report clean, so it gates on this.

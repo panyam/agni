@@ -65,7 +65,7 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 // params is unaffected by a lost symbol, so gating it would convert working checks into noise. The
 // gate has to cost nothing where it buys nothing.
 func TestUnresolvedGateLeavesOtherRulesAlone(t *testing.T) {
-	for _, reads := range [][]string{{"net.names"}, {"component.class"}, {"param.esd_rating"}, {"ref_des_collision"}} {
+	for _, reads := range [][]string{{"net.names"}, {"component.class"}, {"param.esd_rating"}, {"reader.ref_des_collision"}} {
 		fs := Run(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
 		if len(fs) != 1 || fs[0].Inconclusive {
 			t.Errorf("reads %v: findings = %+v, want the rule's own verdict, ungated", reads, fs)

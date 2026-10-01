@@ -39,7 +39,7 @@ func builtinRelationNames(t *testing.T) map[string]bool {
 // EDB require-all set). reaches is the reach-walk predicate, the recursive counterpart to
 // net.bus_like, and route is the same walk with its path bound as a value. The string predicates (contains/prefix/suffix) are deliberately not documented here
 // (tracked in OUT_OF_SCOPE); add a name to this set when its doc lands.
-var predicateDocs = map[string]bool{"reaches": true, "route": true}
+var predicateDocs = map[string]bool{"net.reaches": true, "net.route": true}
 
 // TestRelationDocsBidirectional couples check/facts/docs to the relation set in both directions
 // (WS14-005), the docs_test.go analogue for facts, now REQUIRE-ALL: every built-in EDB relation

@@ -225,7 +225,7 @@ func ReachableOfClass(m Model, n *ir.Net, class ComponentClass) string {
 // what protects them (nothing / a Zener clamp).
 //
 // It lives here rather than beside either rule because it is now a THIRD consumer's vocabulary too:
-// the external_signal_net query relation projects it, so a datalog-authored ESD check scopes itself
+// the net.connector_signal query relation projects it, so a datalog-authored ESD check scopes itself
 // exactly as the Go rules do instead of reassembling six guards by hand and getting one wrong
 // (WS3-061). Its guards read net ATTRIBUTES that have no relation of their own, which is why the
 // scope could not simply be composed in datalog the way the protection predicates now are.

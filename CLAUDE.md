@@ -88,7 +88,7 @@ not the directory.**
 
 **The Datalog engine is a separate module, `github.com/panyam/jaala/datalog`** (agni issue 731), and
 `core/query` is agni's adapter over it: the `Source` projecting a Model through the fact registry,
-`reaches`/`route` as generators, `RuleFromQuery`, the wire form and the catalog. A language change
+`net.reaches`/`net.route` as generators, `RuleFromQuery`, the wire form and the catalog. A language change
 (parser, evaluator, index, aggregation) is a jaala PR and a tag first, then a `go get` here. Its
 issues live on panyam/jaala.
 
@@ -263,9 +263,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   TEXT in `readers/formats/e2e_edif_conformance_test.go`, because a re-read goes back through the same
   forgiving reader and agrees with the writer whatever either does. `build/evidence.md` carries the
   out-of-tree oracle that says which properties are the right ones.
-- **`reaches` answers whether, `route` answers how.** `route(from, net, path)` is the same walk with
+- **`net.reaches` answers whether, `net.route` answers how.** `net.route(from, net, path)` is the same walk with
   the route bound as a rendered string (`VBUS -> [R5] -> VBUS_F`), so a connectivity answer carries
-  its own evidence. It holds for exactly the pairs `reaches` holds for, so a route never ENDS on a
+  its own evidence. It holds for exactly the pairs `net.reaches` holds for, so a route never ENDS on a
   rail; `agni trace` is the pin-to-pin form that does. ONE route per pair, the BFS tree path, so it
   cannot speak about parallel paths. **The rendered string is a CONTRACT**, owned by
   `model.RenderRoute` and nowhere else: it was written twice within a week and the copies agreed only

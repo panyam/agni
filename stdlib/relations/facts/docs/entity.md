@@ -17,7 +17,7 @@ name search and would answer "" to a question about what things are called, so i
 honest report rather than a gap.
 
 Pins are absent by design. A pin's identity is two fields, so it cannot be one `name` without
-inventing a composite string nothing else in the fact base would join against. `pin(ref_des, pin)`
+inventing a composite string nothing else in the fact base would join against. `component.pin(ref_des, pin)`
 already enumerates them.
 
 ### Absence is not a pass
@@ -34,7 +34,7 @@ everything this design names, and what sort of thing each one is". You reach for
 part of a name and want to find the thing: every net with `CAN` in it, every reference designator
 starting with `U`, every bus label the reader saw.
 
-The reason it exists as its own relation is a practical one. Searching through `component-on-net`
+The reason it exists as its own relation is a practical one. Searching through `component.net`
 looks equivalent and is not. A part with no connections, a net with nothing on it, a bus that was
 detected but never expanded: none of them appear in a connection relation, and those are exactly the
 things worth finding during a review, since an unconnected part is usually either a mounting hole or
@@ -48,7 +48,7 @@ node, which is the bug this closes.
 
 Rows are 1:1 with entities and carry no ordering guarantee beyond the IR's own. The relation joins to
 anything keyed by the same identifier: `entity(?n, "net"), net.pin_count(?n, ?c)` counts fan-out for
-every net including the ones nothing sits on, where the same query through `component-on-net` would
+every net including the ones nothing sits on, where the same query through `component.net` would
 silently drop them.
 
 ### Go projector
@@ -82,11 +82,11 @@ entity(?name, "net"), glob(?name, "*_CLK") => ?name
 The isolated cases a connection relation cannot reach. Parts on no net at all:
 
 ```
-entity(?ref, "component"), not component-on-net(?ref, ?any) => ?ref
+entity(?ref, "component"), not component.net(?ref, ?any) => ?ref
 ```
 
 Nets with nothing on them:
 
 ```
-entity(?net, "net"), not component-on-net(?any, ?net) => ?net
+entity(?net, "net"), not component.net(?any, ?net) => ?net
 ```

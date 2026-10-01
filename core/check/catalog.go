@@ -285,7 +285,7 @@ func matches(v string, want []string) bool {
 // a short reason a UI can show. It derives from Reads (the rule's declared fact dependencies) rather
 // than a stored track label: a rule is unavailable when it reads a fact whose provider layer is not
 // present for this design. The datasheet parameter layer (WS10) is absent unless seeded (the
-// param(...) fact); a board.* rule is listed only for a board-carrying source format (m.SourceFormat).
+// param.max(...) fact); a board.* rule is listed only for a board-carrying source format (m.SourceFormat).
 // m may be nil for the design-less catalog listing, where a board rule is available (the tier exists
 // in the engine); topology facts are always available.
 // boardFormats are the ir.Design source formats that can carry a board-geometry sidecar. A

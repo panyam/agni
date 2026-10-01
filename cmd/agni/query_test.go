@@ -20,7 +20,7 @@ func TestQuerySpecLibCLI(t *testing.T) {
 	os.Stdout = w
 
 	cmd := queryCmd()
-	cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params", "param(?mpn, ?sym, ?max)"})
+	cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params", "param.max(?mpn, ?sym, ?max)"})
 	err := cmd.Execute()
 
 	w.Close()
@@ -61,7 +61,7 @@ func TestQueryDesignCLI(t *testing.T) {
 // lives only in the .kicad_pro net_settings, so it reaches the IR through the PROJECT entry point
 // (the loader's AnnotateNetClasses call) and is invisible when the same board is opened as a bare
 // .kicad_sch. Both halves are asserted, because "the schematic read shows no classes" is the exact
-// silence the has_netclass marker exists to make visible.
+// silence the design.has_netclass marker exists to make visible.
 func TestQueryNetClassCLI(t *testing.T) {
 	run := func(path, q string) string {
 		t.Helper()
@@ -93,22 +93,22 @@ func TestQueryNetClassCLI(t *testing.T) {
 	if strings.Contains(s, "SCL") {
 		t.Errorf("net.netclass listed the unclassed net SCL:\n%s", s)
 	}
-	if mk := run("testdata/conformance/showcase.passes.kicad_pro", "has_netclass(?p) => ?p"); !strings.Contains(mk, "1 result(s)") {
-		t.Errorf("project has_netclass: want one row:\n%s", mk)
+	if mk := run("testdata/conformance/showcase.passes.kicad_pro", "design.has_netclass(?p) => ?p"); !strings.Contains(mk, "1 result(s)") {
+		t.Errorf("project design.has_netclass: want one row:\n%s", mk)
 	}
 
 	// The same board read as a bare schematic never sees the project file: no classes, no marker.
 	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "net.netclass(?n, ?c) => ?n, ?c"); !strings.Contains(bare, "no results") {
 		t.Errorf("schematic-only read must yield no net classes:\n%s", bare)
 	}
-	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "has_netclass(?p) => ?p"); !strings.Contains(bare, "no results") {
-		t.Errorf("schematic-only read must yield no has_netclass marker:\n%s", bare)
+	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "design.has_netclass(?p) => ?p"); !strings.Contains(bare, "no results") {
+		t.Errorf("schematic-only read must yield no design.has_netclass marker:\n%s", bare)
 	}
 }
 
 func TestQuerySpecLibRequiresParams(t *testing.T) {
 	cmd := queryCmd()
-	cmd.SetArgs([]string{"--speclib", "param(?m,?s,?x)"})
+	cmd.SetArgs([]string{"--speclib", "param.max(?m,?s,?x)"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("--speclib without --params must error")
 	}
@@ -150,12 +150,12 @@ func TestQueryNetClassDefsCLI(t *testing.T) {
 	if !strings.Contains(d, "net_settings:Default") {
 		t.Errorf("an unclassed net must still carry Default's declared width:\n%s", d)
 	}
-	if !strings.Contains(run(pro, "has_netclass_defs(?p) => ?p"), "1 result(s)") {
-		t.Error("project has_netclass_defs: want one row")
+	if !strings.Contains(run(pro, "design.has_netclass_defs(?p) => ?p"), "1 result(s)") {
+		t.Error("project design.has_netclass_defs: want one row")
 	}
 
 	// The same board read as a bare schematic never sees the project file.
-	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "has_netclass_defs(?p) => ?p"); !strings.Contains(bare, "no results") {
+	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "design.has_netclass_defs(?p) => ?p"); !strings.Contains(bare, "no results") {
 		t.Errorf("schematic-only read must yield no netclass definitions:\n%s", bare)
 	}
 }
@@ -175,14 +175,14 @@ func runQuery(t *testing.T, args ...string) string {
 
 // TestQueryConventionsCLI is WS3-113's reproduction, end to end through the command.
 //
-// `rail(?n)` is not a relation the convention adds; it is one whose ANSWER the convention changes,
+// `net.rail(?n)` is not a relation the convention adds; it is one whose ANSWER the convention changes,
 // because the lexicon is applied at the design read and net roles are resolved there. On this fixture
 // the built-in vocabulary — start-anchored on VCC/VDD/+3V3 — matches none of the project's
 // function-first rail names, so the engine reports one rail on a board with more. That is a correct
 // answer to a question the project did not ask, and until now there was no way to ask theirs.
 func TestQueryConventionsCLI(t *testing.T) {
 	design := "testdata/review/conv-demo.edn"
-	q := "rail(?n) => ?n"
+	q := "net.rail(?n) => ?n"
 
 	builtin := runQuery(t, design, q)
 	if strings.Contains(builtin, "PMIC_VDD_LPM_1V8") {
@@ -209,7 +209,7 @@ func TestQueryConventionsUnreadableCLI(t *testing.T) {
 	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
 		cmd := queryCmd()
 		cmd.SetOut(&bytes.Buffer{})
-		cmd.SetArgs([]string{"testdata/review/conv-demo.edn", "rail(?n) => ?n", "--conventions", path})
+		cmd.SetArgs([]string{"testdata/review/conv-demo.edn", "net.rail(?n) => ?n", "--conventions", path})
 		if err := cmd.Execute(); err == nil {
 			t.Errorf("--conventions %s must error, not answer under the built-in vocabulary", path)
 		}
@@ -239,7 +239,7 @@ func TestQueryBoardPathCLI(t *testing.T) {
 // are in SI base units, run over the real conformance corpus rather than a hand-built model.
 //
 // DEMO-HSS-CTRL seeds its overcurrent threshold in MILLIVOLTS, as a real controller sheet prints it.
-// Before this, `param(?mpn,"V(OCP)",?max)` yielded 50 and a rule written `?max < 0.1` (a
+// Before this, `param.max(?mpn,"V(OCP)",?max)` yielded 50 and a rule written `?max < 0.1` (a
 // hundred-millivolt sanity bound) would have compared 50 against 0.1 and read as wildly over. The
 // same query now yields 0.05, and the threshold means what it says.
 //
@@ -264,7 +264,7 @@ func TestQuerySpecLibUnitsCLI(t *testing.T) {
 	}
 
 	// The threshold is seeded as 50 mV; the query surface must report it in volts.
-	got := run(`param(?mpn, "V(OCP)", ?max) => ?mpn, ?max`)
+	got := run(`param.max(?mpn, "V(OCP)", ?max) => ?mpn, ?max`)
 	if !strings.Contains(got, "0.05") {
 		t.Errorf("V(OCP) must project as 0.05 V, not its printed 50 mV:\n%s", got)
 	}
@@ -273,7 +273,7 @@ func TestQuerySpecLibUnitsCLI(t *testing.T) {
 	}
 
 	// A numeric comparison against a volt-denominated bound now behaves: 0.05 < 0.1 holds.
-	if bounded := run(`param(?mpn, "V(OCP)", ?max), ?max < 0.1 => ?mpn`); !strings.Contains(bounded, "DEMO-HSS-CTRL") {
+	if bounded := run(`param.max(?mpn, "V(OCP)", ?max), ?max < 0.1 => ?mpn`); !strings.Contains(bounded, "DEMO-HSS-CTRL") {
 		t.Errorf("a 50mV threshold must satisfy a 0.1V bound:\n%s", bounded)
 	}
 
@@ -467,7 +467,7 @@ func TestQueryJSONWorksOnTheSpecLibraryPathToo(t *testing.T) {
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params",
-		"param(?mpn, ?sym, ?max)", "--format", "json"})
+		"param.max(?mpn, ?sym, ?max)", "--format", "json"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("query --speclib --format json: %v\n%s", err, out.String())
 	}

@@ -50,7 +50,7 @@ func TestDeviceClassEnrichesClassSet(t *testing.T) {
 
 // TestDeviceClassRelationAvailability: a rule reading component.device_class is not-applicable without
 // a seeded params set (so a review item bound to it reads not-automated, not a hollow pass), and
-// applicable once a params tier is attached — the same gate the param(...) reads get.
+// applicable once a params tier is attached — the same gate the param.max(...) reads get.
 func TestDeviceClassRelationAvailability(t *testing.T) {
 	r := &Rule{Reads: []string{"component.device_class"}}
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {

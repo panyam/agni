@@ -23,7 +23,7 @@ func TestNoCatalogSaysSo(t *testing.T) {
 		t.Fatalf("compose empty registry: %v", err)
 	}
 
-	q := MustParse(`component-on-net(?r,?n) => ?r`)
+	q := MustParse(`component.net(?r,?n) => ?r`)
 	_, err = Naive{}.Eval(q, NewBaseFrom(bare, check.NewModel(chainDesign())))
 	if err == nil {
 		t.Fatal("evaluating against an uninstalled fact base returned no error; a rule reads that as a clean pass")

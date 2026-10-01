@@ -34,8 +34,8 @@ nodes of kind `netclass`, and parses the `track_width` param. Populated in the I
 
 Only a KiCad project read populates this. An EDIF netlist, an IPC-2581 board, a bare `.kicad_sch`,
 and a KiCad project that defines no classes all leave it empty, and a rule scoped by it would find
-nothing and read clean. `has_netclass_defs` is the marker that separates those cases, and it is
-deliberately distinct from `has_netclass`: membership and definitions are independent blocks of
+nothing and read clean. `design.has_netclass_defs` is the marker that separates those cases, and it is
+deliberately distinct from `design.has_netclass`: membership and definitions are independent blocks of
 `net_settings`, so a project can assign nets to a class it never defined.
 
 ### Datalog

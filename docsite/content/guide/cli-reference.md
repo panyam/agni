@@ -229,7 +229,7 @@ bounds, test conditions and citation, the pins the datasheet declares, and any c
 them.
 
 This is the record behind a query answer. The datalog relations carry what a query can bind
-(`param`, `param.range`, `param.typ`, `param.pin`); the conditions a value is valid under, the pin
+(`param.max`, `param.range`, `param.typ`, `param.pin`); the conditions a value is valid under, the pin
 bindings, the full provenance and the verification state live here.
 
 It needs no design, because a spec library is not a design. Name a corpus with `--params`, or name a
@@ -273,8 +273,8 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 
 | flag | what it does |
 |---|---|
-| `--params <dir>` | a parameter set, to query datasheet facts (`param(...)`) |
-| `--conventions <file>` | apply a naming convention's LEXICON to the read, so `rail`/`feedback`/`pin.type` answer under your project's vocabulary (see [Naming conventions](../naming-conventions/)). The rules half is unused here: a query runs no rules |
+| `--params <dir>` | a parameter set, to query datasheet facts (`param.max(...)`) |
+| `--conventions <file>` | apply a naming convention's LEXICON to the read, so `net.rail`/`net.feedback`/`pin.type` answer under your project's vocabulary (see [Naming conventions](../naming-conventions/)). The rules half is unused here: a query runs no rules |
 | `--board-path <file>` | attach a separate board export so the `board.*` relations have facts; without it they are empty |
 | `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (protojson of the `RunQueryResponse` the `RunQuery` rpc returns, so a script and a client parse one shape; it carries the column kinds, and echoes the query and the design so an answer names its own question), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
 | `--set <file>` | answer a query set instead of one query: named queries sharing a `preamble` of rules, all over ONE read of the design (see [Ask many questions at once](../querying/#ask-many-questions-at-once-query-sets)). Takes the design alone, no query argument; `-` reads the set from stdin. `json` is the `RunQueriesResponse`, `markdown`/`html`/`text` one document with a section per query, and `csv` is refused. Every answer is written, then the command exits non-zero if any query could not be answered |

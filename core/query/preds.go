@@ -23,14 +23,14 @@ import (
 // constant.
 const topologyReachHops = 100
 
-// relReaches is the built-in transitive relation reaches(from, to) and reaches(from, to, hops): nets
+// relReaches is the built-in transitive relation net.reaches(from, to) and net.reaches(from, to, hops): nets
 // reachable from `from` through series pass elements, bridged to check.Model.Reach. It is a GENERATOR
 // (it binds `to` by enumerating from the Model), which is why a public generator seam for overlays is
 // deliberately withheld (a value-producing generator could break the finiteness guarantee), while
 // reaches stays a built-in.
-const relReaches = "reaches"
+const relReaches = "net.reaches"
 
-// relRoute is the built-in route(from, to, path): the SAME walk reaches makes, with the route it
+// relRoute is the built-in net.route(from, to, path): the SAME walk reaches makes, with the route it
 // found bound as a value instead of discarded. `path` renders as
 //
 //	VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
@@ -47,7 +47,7 @@ const relReaches = "reaches"
 //
 // ONE route per pair, not every route. The walk is a BFS and the path is its tree path, so where two
 // resistors bridge the same two nets the answer names one of them and is silent about the other.
-const relRoute = "route"
+const relRoute = "net.route"
 
 // predicates is every computed predicate a query may call: the engine's standard filters, the two
 // circuit generators, and whatever an overlay registers through RegisterPredicate. It is the one
@@ -99,17 +99,17 @@ func RegisterPredicate(name string, arity int, holds func(args []Value) (bool, e
 
 // GeneratorFirstRules reports the rules that OPEN their body with a value-producing generator whose
 // own input argument is unbound, naming each offender by its head relation. A shipped profile rule
-// opened with `reaches(?n, ?rn, ?h)` and took `agni check` from 13s to not finishing at all on a real
+// opened with `net.reaches(?n, ?rn, ?h)` and took `agni check` from 13s to not finishing at all on a real
 // design (WS3-114). See the engine's documentation for what it does and does not catch.
 func GeneratorFirstRules(q Query) []string { return datalog.GeneratorFirstRules(q, predicates) }
 
-// genReaches binds reaches(from, to) and reaches(from, to, hops). `from` is a bound/const net when
+// genReaches binds net.reaches(from, to) and net.reaches(from, to, hops). `from` is a bound/const net when
 // possible, else every net is a candidate start; `to` binds to each net reachable from it (reflexive,
 // so from==to holds at distance 0).
 //
 // The optional third argument binds the ACTUAL number of series crossings, so it is an exact value,
-// not a budget. A radius question is therefore written with a comparison — reaches(?n,?rn,?h), ?h<=2
-// — and NOT as reaches(?n,?rn,2), which binds by equality and so means "exactly two hops away",
+// not a budget. A radius question is therefore written with a comparison — net.reaches(?n,?rn,?h), ?h<=2
+// — and NOT as net.reaches(?n,?rn,2), which binds by equality and so means "exactly two hops away",
 // missing anything closer. The catalog entry and the reference doc say this outright, because the
 // constant form is the spelling a reader reaches for first and it silently means something else.
 func genReaches(src datalog.Source, args []datalog.Arg, emit func([]Value, []string) error) error {
@@ -121,7 +121,7 @@ func genReaches(src datalog.Source, args []datalog.Arg, emit func([]Value, []str
 	}, emit)
 }
 
-// genRoute binds route(from, to, path): the walk genReaches makes, with the route rendered into the
+// genRoute binds net.route(from, to, path): the walk genReaches makes, with the route rendered into the
 // third argument rather than the distance.
 //
 // A path is bound and never TESTED against, which is what keeps it safe as a generator output. The

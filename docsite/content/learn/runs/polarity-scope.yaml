@@ -4,5 +4,5 @@
 fixture: examples/tutorial-project
 from_root: true
 steps:
-  - script: agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "tvs"), component-on-net(?r, ?n) => ?r, ?n'
+  - script: agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "tvs"), component.net(?r, ?n) => ?r, ?n'
   - script: agni check --verdicts --rule led-polarity examples/tutorial-project/designs/gateway/gateway.edn

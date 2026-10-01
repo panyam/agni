@@ -83,7 +83,7 @@ func TestFactsProjectsSeedRelations(t *testing.T) {
 		t.Errorf("component.mpn = %+v, want one (C1, DEMO-CAP-6V3)", mp)
 	}
 
-	// param(DEMO-CAP-6V3, VDC, <=6.3, TA=25C) cited to the datasheet page.
+	// param.max(DEMO-CAP-6V3, VDC, <=6.3, TA=25C) cited to the datasheet page.
 	pf := byRel[RelParam]
 	if len(pf) != 1 {
 		t.Fatalf("param facts = %+v, want one", pf)
@@ -96,14 +96,14 @@ func TestFactsProjectsSeedRelations(t *testing.T) {
 		t.Errorf("param conditions = %q, want %q", p.Conditions, "TA = 25C")
 	}
 
-	// component-on-net(C1, +10V) and (C1, GND)
+	// component.net(C1, +10V) and (C1, GND)
 	on := byRel[RelComponentOnNet]
 	if len(on) != 2 {
-		t.Fatalf("component-on-net = %+v, want two (C1 on +10V and GND)", on)
+		t.Fatalf("component.net = %+v, want two (C1 on +10V and GND)", on)
 	}
 	nets := map[string]bool{on[0].Object: true, on[1].Object: true}
 	if !nets["+10V"] || !nets["GND"] {
-		t.Errorf("component-on-net nets = %v, want +10V and GND", nets)
+		t.Errorf("component.net nets = %v, want +10V and GND", nets)
 	}
 }
 
@@ -113,11 +113,11 @@ func TestFactsProjectsSeedRelations(t *testing.T) {
 func TestTypesPowerOutFact(t *testing.T) {
 	k := factsByRelation(Facts(check.NewModel(&ir.Design{SourceFormat: "kicad-sch"})))[RelTypesPowerOut]
 	if len(k) != 1 || k[0].Subject != "true" {
-		t.Errorf("kicad-sch: want one types_power_out row (true), got %+v", k)
+		t.Errorf("kicad-sch: want one design.types_power_out row (true), got %+v", k)
 	}
 	e := factsByRelation(Facts(check.NewModel(&ir.Design{SourceFormat: "edif-2.0.0"})))[RelTypesPowerOut]
 	if len(e) != 0 {
-		t.Errorf("edif: want no types_power_out row, got %+v", e)
+		t.Errorf("edif: want no design.types_power_out row, got %+v", e)
 	}
 }
 
@@ -146,7 +146,7 @@ func TestExternalSignalNetFacts(t *testing.T) {
 	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelExternalSignalNet] {
 		got[f.Subject] = true
 		if len(f.Cites) == 0 {
-			t.Errorf("external_signal_net(%s) has no provenance cite", f.Subject)
+			t.Errorf("net.connector_signal(%s) has no provenance cite", f.Subject)
 		}
 	}
 	if !got["BUS_CANH"] {
@@ -161,7 +161,7 @@ func TestExternalSignalNetFacts(t *testing.T) {
 
 // TestNetClassFacts (WS3-105): net.netclass projects the TOOL-assigned class verbatim, one row per
 // classed net, and leaves an unclassed net out (so `not net.netclass(?n, ?_)` reads as unclassed).
-// has_netclass is the design-level marker that separates "no net is in class X" from "this design
+// design.has_netclass is the design-level marker that separates "no net is in class X" from "this design
 // assigns no classes", the distinction a netclass-scoped rule needs to avoid reading as a pass.
 func TestNetClassFacts(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
@@ -184,7 +184,7 @@ func TestNetClassFacts(t *testing.T) {
 	}
 
 	if mk := byRel[RelHasNetClass]; len(mk) != 1 || mk[0].Subject != "true" {
-		t.Errorf("want one has_netclass row (true), got %+v", mk)
+		t.Errorf("want one design.has_netclass row (true), got %+v", mk)
 	}
 }
 
@@ -227,7 +227,7 @@ func TestNetClassFactsAbsent(t *testing.T) {
 		t.Errorf("want no net.netclass rows on a classless design, got %+v", n)
 	}
 	if mk := byRel[RelHasNetClass]; len(mk) != 0 {
-		t.Errorf("want no has_netclass row on a classless design, got %+v", mk)
+		t.Errorf("want no design.has_netclass row on a classless design, got %+v", mk)
 	}
 }
 
@@ -588,7 +588,7 @@ func TestNetClassDefCascade(t *testing.T) {
 		t.Errorf("netclass.track_width rows = %d, want 2 (Power and Default state one; HighSpeed does not)", n)
 	}
 	if mk := byRel[RelHasNetClassDefs]; len(mk) != 1 {
-		t.Errorf("want one has_netclass_defs row, got %+v", mk)
+		t.Errorf("want one design.has_netclass_defs row, got %+v", mk)
 	}
 }
 
@@ -607,9 +607,9 @@ func TestNetClassDefAbsent(t *testing.T) {
 			t.Errorf("%s on a design with membership but no definitions = %+v, want empty", rel, rows)
 		}
 	}
-	// has_netclass still fires: membership exists. The two markers are independent on purpose.
+	// design.has_netclass still fires: membership exists. The two markers are independent on purpose.
 	if mk := byRel[RelHasNetClass]; len(mk) != 1 {
-		t.Errorf("has_netclass = %+v, want one row (membership is present even with no definitions)", mk)
+		t.Errorf("design.has_netclass = %+v, want one row (membership is present even with no definitions)", mk)
 	}
 }
 
@@ -739,7 +739,7 @@ func TestUnresolvedSymbolFacts(t *testing.T) {
 	}
 	for ref, sym := range want {
 		if got[ref] != sym {
-			t.Errorf("unresolved_symbol(%s) = %q, want %q", ref, got[ref], sym)
+			t.Errorf("reader.unresolved_symbol(%s) = %q, want %q", ref, got[ref], sym)
 		}
 	}
 }
@@ -817,7 +817,7 @@ func TestParamUnitFactExposesPrintedUnit(t *testing.T) {
 }
 
 // TestParamFactsKeepUnconvertibleRowsWithoutNumbers: a row whose unit has no known scale keeps its
-// symbol, kind, conditions and citation, and loses only its NUMBER. `param` answers "what does this
+// symbol, kind, conditions and citation, and loses only its NUMBER. `param.max` answers "what does this
 // part specify" as much as it feeds a comparison, so a silently shortened list would be its own quiet
 // wrong answer.
 //
@@ -1260,7 +1260,7 @@ func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 
 // TestEntityFacts: the enumeration relation names what EXISTS, which is what makes it the one a
 // search can start from. The load-bearing case is the isolated one: a part on no net and a net with
-// nothing on it are both invisible to component-on-net, so a search that borrows that relation's
+// nothing on it are both invisible to component.net, so a search that borrows that relation's
 // range silently cannot find them. Both are exactly what a reviewer wants to find.
 func TestEntityFacts(t *testing.T) {
 	d := supplyDesign("+3V3", false, "")
@@ -1286,10 +1286,10 @@ func TestEntityFacts(t *testing.T) {
 	}
 
 	// The point of the relation: neither isolated entity appears in the connection relation, so a
-	// name search over component-on-net cannot reach them.
+	// name search over component.net cannot reach them.
 	for _, f := range byRel[RelComponentOnNet] {
 		if f.Subject == "TP1" || f.Object == "SPARE" {
-			t.Fatalf("fixture is not isolating: component-on-net carries %s/%s", f.Subject, f.Object)
+			t.Fatalf("fixture is not isolating: component.net carries %s/%s", f.Subject, f.Object)
 		}
 	}
 

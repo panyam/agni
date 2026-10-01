@@ -18,7 +18,7 @@ func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
 	}{
 		{
 			name:  "unknown relation",
-			query: `component-on-nett(?r, ?n) => ?r`,
+			query: `component.nett(?r, ?n) => ?r`,
 			wants: "unknown relation",
 		},
 		{
@@ -26,27 +26,27 @@ func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
 			// first atom yields nothing, so a validator built by evaluating against one would never
 			// look here.
 			name:  "wrong arity on a later atom",
-			query: `component-on-net(?r, ?n), rail(?n, ?extra) => ?r`,
+			query: `component.net(?r, ?n), net.rail(?n, ?extra) => ?r`,
 			wants: "takes 1 args",
 		},
 		{
 			name:  "negation with nothing to range over",
-			query: `component-on-net(?r, ?n), not rail(?other) => ?r`,
+			query: `component.net(?r, ?n), not net.rail(?other) => ?r`,
 			wants: "shares no variable",
 		},
 		{
 			name:  "projecting a variable no positive relation binds",
-			query: `component-on-net(?r, ?n) => ?r, ?nothing`,
+			query: `component.net(?r, ?n) => ?r, ?nothing`,
 			wants: "not bound by a positive relation",
 		},
 		{
 			name:  "rule head redefining a fact relation",
-			query: `rail(?n) :- component-on-net(?r, ?n); rail(?n) => ?n`,
+			query: `net.rail(?n) :- component.net(?r, ?n); net.rail(?n) => ?n`,
 			wants: "redefines a fact relation",
 		},
 		{
 			name:  "unknown aggregate",
-			query: `component-on-net(?r, ?n) => median(?r)`,
+			query: `component.net(?r, ?n) => median(?r)`,
 			wants: "unknown aggregate",
 		},
 	} {
@@ -77,7 +77,7 @@ func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
 // TestRuleFromQueryAcceptsAValidQuery is the positive control. A validator that rejected everything
 // would pass every case above while making the engine useless.
 func TestRuleFromQueryAcceptsAValidQuery(t *testing.T) {
-	q := MustParse(`component-on-net(?r, ?n), rail(?n) => ?r`)
+	q := MustParse(`component.net(?r, ?n), net.rail(?n) => ?r`)
 	rule, err := RuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "t", Severity: "error"},
 		Query:      q,
@@ -97,7 +97,7 @@ func TestRuleFromQueryAcceptsAValidQuery(t *testing.T) {
 // That is what lets a rule be checked where it is BUILT rather than where it first runs, which is the
 // whole reason the construction-time half can exist.
 func TestValidateNeedsNoDesign(t *testing.T) {
-	if err := Validate(MustParse(`component-on-net(?r, ?n), rail(?n) => ?r`), facts.DefaultRegistry()); err != nil {
+	if err := Validate(MustParse(`component.net(?r, ?n), net.rail(?n) => ?r`), facts.DefaultRegistry()); err != nil {
 		t.Errorf("valid query rejected with no design: %v", err)
 	}
 	if err := Validate(MustParse(`nosuchrelation(?x) => ?x`), facts.DefaultRegistry()); err == nil {
@@ -112,7 +112,7 @@ func TestValidateNeedsNoDesign(t *testing.T) {
 // That gap is why the eval-time half of agni issue 540 matters. Construction catches the queries an
 // author gets wrong most often, and this one still slips through to the evaluator, so what the
 // evaluator does with a failure is not academic.
-const evalFailingQuery = `component-on-net(?r, ?n), contains(?loose, "x") => ?r`
+const evalFailingQuery = `component.net(?r, ?n), contains(?loose, "x") => ?r`
 
 // TestEvalFailureIsInconclusiveNotClean: a rule whose query cannot be evaluated reports that it could
 // not decide. It used to return no findings, which every consumer reads as a design with no defects.

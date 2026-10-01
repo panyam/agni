@@ -22,7 +22,7 @@ import (
 // They fail differently, and a fix aimed at one does nothing for the others.
 
 // benchDesign builds a synthetic board of n components in series chains: every component bridges
-// two consecutive nets, which is the topology `reaches` walks. Resistors are the pass element, so
+// two consecutive nets, which is the topology `net.reaches` walks. Resistors are the pass element, so
 // the chains are genuinely traversable rather than a star that terminates in one hop.
 func benchDesign(n int) *ir.Design {
 	d := &ir.Design{}
@@ -61,19 +61,19 @@ func benchQuery(b *testing.B, name, text string) {
 
 // A flat conjunctive pattern: two distinct components sharing a net. No recursion, no reach.
 func BenchmarkEvalFlat(b *testing.B) {
-	benchQuery(b, "flat", `component-on-net(?a,?n), component-on-net(?c,?n), ?a != ?c => ?a`)
+	benchQuery(b, "flat", `component.net(?a,?n), component.net(?c,?n), ?a != ?c => ?a`)
 }
 
 // The bounded-radius protection shape, which is what an ESD rule migrated off its Go FFI would run
-// (the form documented in relations/facts/docs/reaches.md).
+// (the form documented in relations/facts/docs/net.reaches.md).
 func BenchmarkEvalReach(b *testing.B) {
-	benchQuery(b, "reach", `reaches(?a,?bn,?h), ?h <= 2 => ?a`)
+	benchQuery(b, "reach", `net.reaches(?a,?bn,?h), ?h <= 2 => ?a`)
 }
 
 // Recursive transitive closure: the shape whose derived-tuple count grows quadratically on a chain,
 // and where addTuple dedups by linear scan.
 func BenchmarkEvalClosure(b *testing.B) {
-	benchQuery(b, "closure", `conn(?a,?bn) :- component-on-net(?a,?bn); `+
+	benchQuery(b, "closure", `conn(?a,?bn) :- component.net(?a,?bn); `+
 		`linked(?a,?c) :- conn(?a,?n), conn(?c,?n), ?a != ?c; `+
 		`linked("R1",?x) => ?x`)
 }
