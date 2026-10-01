@@ -48,6 +48,13 @@ func (s ParamSet) Lookup(mpn string) *parampb.PartSpec {
 // files claiming the same MPN, fail the whole load with the offending file named, so a
 // bad spec never silently shrinks the corpus.
 func LoadSet(fsys fs.FS) (ParamSet, error) {
+	set, _, err := loadSet(fsys)
+	return set, err
+}
+
+// loadSet is LoadSet that also reports which file each MPN came from, keyed like the set, so a
+// promotion can name the file an existing spec lives in.
+func loadSet(fsys fs.FS) (ParamSet, map[string]string, error) {
 	set := ParamSet{}
 	from := map[string]string{}
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
@@ -77,7 +84,7 @@ func LoadSet(fsys fs.FS) (ParamSet, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return set, nil
+	return set, from, nil
 }

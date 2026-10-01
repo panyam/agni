@@ -257,7 +257,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   parameter someone verified reports `stale` when the corpus moved to a later revision, naming BOTH
   revisions, though staleness is decided on the content hash and NEVER on the printed one, so the
   two strings are for the reader (`DECISIONS.md`, "A document revision is recorded for the reader,
-  and never compared").
+  and never compared"). **A workbench `.partspec.json` is a DRAFT that no check reads**, saved
+  unvalidated on purpose; `agni params promote <draft> --to <params>` validates it into
+  `<mpn>.textproto` (agni 209, 747). Reading drafts in `LoadSet` looks like the fix and is the bug:
+  the workbench seeds an empty one for every document browsed, and one invalid file fails the whole
+  all-or-nothing load.
 - **`emit --format edif` writes for a reader that is NOT ours, and that is a stricter target than the
   round trip.** Our reader resolves references after parsing the whole file, accepts any atom as an
   identifier, and reads a port reference as a pin designator when nothing maps it, so a writer leaning
@@ -401,6 +405,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   cleared in a package's `TestMain`**, because they replace the defaults the tests assert against, so
   a developer who exports either to drive a walk over their own board cannot run the gate and the
   failure prints their path into the log. That was green in CI and red on the machine that had them.
+- **The same is true of a personal `~/.config/agni/agni.yaml`.** A test that runs `rootCmd()` or the
+  binary reads it, and its mounts or `web_dir` become part of the run. A valid `web_dir` there turned an
+  `agni open` refusal test into a real server that hung the suite, and the Python client's tests saw
+  its mounts. Point `HOME` and `XDG_CONFIG_HOME` at a temp dir and run from an empty working directory
+  (`TestOpenStillRequiresTheViewer`, `clients/python/tests/conftest.py`). CI has no such file, so this
+  is also green in CI and red on a developer's machine.
 
 ## Engine gotchas
 

@@ -119,6 +119,11 @@ Browsing a corpus in the workbench WRITES a `.partspec.json` beside every docume
 because a document with no saved spec gets one seeded and persisted, so point it at a scratch copy
 rather than an original. The rest of the workbench is described in [Web app](../web-app/).
 
+That file is a DRAFT. It is saved without validation, so work is never lost, and no check reads it:
+`param.LoadSet` loads `*.textproto` only, even from a directory holding drafts. A draft reaches the
+engine through [`agni params promote`](../../guide/cli-reference/#params-promote-draft), which runs
+`param.Validate`, refuses a draft that fails, and writes `<mpn>.textproto` into the corpus.
+
 </details>
 
 ### Comparison semantics
