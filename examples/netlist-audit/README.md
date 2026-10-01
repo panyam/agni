@@ -15,8 +15,8 @@ queries in one file and answers them over one read of the design.
 | Test points per net | nets carrying a test point, and which |
 | Nets with no test point | the nets a probe cannot reach |
 | Ground test points | test points on ground, for a house ratio |
-| Passives probed on both nets | parts an in-circuit tester can measure |
-| Passives probed on one net | the probed net and the one missing a test point |
+| Two-terminal parts probed on both nets | parts an in-circuit tester can measure |
+| Two-terminal parts probed on one net | the probed net and the one missing a test point |
 | MPNs never probed on both nets | part numbers with no measurable instance |
 
 The same file runs from the command line, where it writes one document with a section per query:

@@ -35,10 +35,15 @@ service QueryService {
   // goal) and a design that cannot be read are errors for the call.
   rpc RunQueries(RunQueriesRequest) returns (RunQueriesResponse);
 
-  // ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
-  // predicates plus any overlay-registered relations, each with its argument labels, a one-line
-  // summary, and a kind for grouping. The catalog is static per service build (it does not depend
-  // on a loaded design), so the client fetches it once to populate the panel's relation picker.
+  // ListRelations returns the queryable relation catalog (WS9-037): the built-in relations, the
+  // derived relations the shipped library defines, the predicates, and any overlay-registered
+  // relations, each with its argument labels, a one-line summary, and a kind for grouping. The
+  // catalog is static per service build (it does not depend on a loaded design), so the client
+  // fetches it once to populate the panel's relation picker.
+  //
+  // With a path set it answers one place in the namespace tree instead (agni issue 751): a module
+  // and its members, or one member with its signature and, for a derived relation, its definition.
+  // `agni query --relations <path>` prints the same answer.
   rpc ListRelations(ListRelationsRequest) returns (ListRelationsResponse);
 }
 
@@ -160,12 +165,18 @@ message RunQueryResponse {
   string source = 5;
 }
 
-message ListRelationsRequest {}
+message ListRelationsRequest {
+  // path names a place in the namespace tree to describe in `entry`: "net" a module,
+  // "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
+  // before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
+  // with the suggestion a query would get.
+  string path = 1;
+}
 
 // RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
 // `args` the labels a template inserts as `?arg` (so `component.net` inserts
 // `component.net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
-// ("netlist" | "board" | "datasheet" | "predicate" | "overlay").
+// ("netlist" | "board" | "datasheet" | "derived" | "predicate" | "extension").
 message RelationInfo {
   string name = 1;
   repeated string args = 2;
@@ -175,6 +186,36 @@ message RelationInfo {
   // or "" when the relation has no doc yet. summary is the one-liner for the picker chip; detail is
   // the deep-dive the panel renders on demand, the same markdown pipeline rule Detail uses.
   string detail = 5;
+  // signature renders the member as a rule head declaring its argument types, such as
+  // `component.two_terminal(r: component, a: net, b: net)`.
+  string signature = 6;
+  // definition is a derived relation's clauses as its module defines them, one per clause. Empty
+  // for every other kind.
+  repeated string definition = 7;
+}
+
+// RelationEntry is one place in the namespace tree, for drill-down: a module listing what it holds,
+// or a member with what a reader needs to call it.
+message RelationEntry {
+  string path = 1;
+  // entry_kind is "module", "base", "predicate" or "derived".
+  string entry_kind = 2;
+  // signature is a member's rule head with its argument types; empty for a module.
+  string signature = 3;
+  // doc is the member's one-line description.
+  string doc = 4;
+  // detail is the member's reference markdown, as on RelationInfo, or "".
+  string detail = 5;
+  // module is the module a derived relation is defined in.
+  string module = 6;
+  // definition is a derived relation's clauses, one per clause.
+  repeated string definition = 7;
+  // inferred names the arguments whose types the engine worked out from the rules rather than
+  // reading from a declaration, so a reader can tell which types the author stated.
+  repeated string inferred = 8;
+  // members are a module's direct children, each a member or a nested module, described one level
+  // deep (their own members are not filled).
+  repeated RelationEntry members = 9;
 }
 
 // ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
@@ -228,6 +269,9 @@ message ListRelationsResponse {
   repeated EntityQuery entity_queries = 3;
   // search_query is the find-by-name template the panel's search mode fills (agni issue 338).
   SearchQuery search_query = 4;
+  // entry answers a request naming a path. When it is set the other fields are empty, since a
+  // drill-down asks about one place rather than for the whole picker.
+  RelationEntry entry = 5;
 }
 
 // QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values

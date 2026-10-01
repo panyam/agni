@@ -8,7 +8,7 @@ type RelationInfo struct {
 	Name    string
 	Args    []string
 	Summary string
-	Kind    string // "netlist" | "board" | "datasheet" | "predicate" | "extension"
+	Kind    string // "netlist" | "board" | "datasheet" | "predicate" | "derived" | "extension"
 	// Detail is the relation's reference markdown (WS14-005), or "" when the relation has no doc
 	// yet. A discovery surface shows Summary in a list and Detail on demand. It is not part of the
 	// arity-vs-schema assertion.
@@ -19,6 +19,9 @@ type RelationInfo struct {
 	// Args is PROSE, so a surface turning an answer cell into a clickable entity reads this rather
 	// than matching label strings (agni issue 548).
 	ArgKinds map[string]ArgKind
+	// Definition is a derived relation's clauses as its module's language prints them, one per
+	// clause, so a reader can see how the member is defined. Empty for every other kind.
+	Definition []string
 }
 
 // ArgKind is what one relation argument denotes. The zero value is a scalar, so a relation declares
@@ -62,8 +65,9 @@ const (
 	KindBoard     = "board"
 	KindDatasheet = "datasheet"
 	KindPredicate = "predicate"
+	KindDerived   = "derived"
 	KindExtension = "extension"
 )
 
 // KindOrder is the display order of the kind groups, most-common first.
-var KindOrder = []string{KindNetlist, KindBoard, KindDatasheet, KindPredicate, KindExtension}
+var KindOrder = []string{KindNetlist, KindBoard, KindDatasheet, KindDerived, KindPredicate, KindExtension}

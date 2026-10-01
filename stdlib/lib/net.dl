@@ -1,0 +1,4 @@
+# Derived net members. Each file in stdlib/lib is one module, registered at the path its name gives.
+
+# A net at least one test point sits on, so a probe can land on it during bring-up or in-circuit test.
+has_test_point(?n: net) :- component.net(?tp, ?n), component.class(?tp, "test_point");

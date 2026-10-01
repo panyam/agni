@@ -27,6 +27,7 @@ import (
 	// into the process-global registries. The intent, datalog and profile rules come from their own
 	// DocRules() accessors below, because intent and profile rules are generated per declaration and
 	// have no static catalog entry.
+	_ "github.com/panyam/agni/stdlib/lib"
 	_ "github.com/panyam/agni/stdlib/relations"
 	_ "github.com/panyam/agni/stdlib/rules/builtin"
 )

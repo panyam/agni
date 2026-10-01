@@ -59,22 +59,50 @@ class RunQueryResponse(_message.Message):
     def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
 
 class ListRelationsRequest(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...
+    __slots__ = ("path",)
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    path: str
+    def __init__(self, path: _Optional[str] = ...) -> None: ...
 
 class RelationInfo(_message.Message):
-    __slots__ = ("name", "args", "summary", "kind", "detail")
+    __slots__ = ("name", "args", "summary", "kind", "detail", "signature", "definition")
     NAME_FIELD_NUMBER: _ClassVar[int]
     ARGS_FIELD_NUMBER: _ClassVar[int]
     SUMMARY_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     DETAIL_FIELD_NUMBER: _ClassVar[int]
+    SIGNATURE_FIELD_NUMBER: _ClassVar[int]
+    DEFINITION_FIELD_NUMBER: _ClassVar[int]
     name: str
     args: _containers.RepeatedScalarFieldContainer[str]
     summary: str
     kind: str
     detail: str
-    def __init__(self, name: _Optional[str] = ..., args: _Optional[_Iterable[str]] = ..., summary: _Optional[str] = ..., kind: _Optional[str] = ..., detail: _Optional[str] = ...) -> None: ...
+    signature: str
+    definition: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, name: _Optional[str] = ..., args: _Optional[_Iterable[str]] = ..., summary: _Optional[str] = ..., kind: _Optional[str] = ..., detail: _Optional[str] = ..., signature: _Optional[str] = ..., definition: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class RelationEntry(_message.Message):
+    __slots__ = ("path", "entry_kind", "signature", "doc", "detail", "module", "definition", "inferred", "members")
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_KIND_FIELD_NUMBER: _ClassVar[int]
+    SIGNATURE_FIELD_NUMBER: _ClassVar[int]
+    DOC_FIELD_NUMBER: _ClassVar[int]
+    DETAIL_FIELD_NUMBER: _ClassVar[int]
+    MODULE_FIELD_NUMBER: _ClassVar[int]
+    DEFINITION_FIELD_NUMBER: _ClassVar[int]
+    INFERRED_FIELD_NUMBER: _ClassVar[int]
+    MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    path: str
+    entry_kind: str
+    signature: str
+    doc: str
+    detail: str
+    module: str
+    definition: _containers.RepeatedScalarFieldContainer[str]
+    inferred: _containers.RepeatedScalarFieldContainer[str]
+    members: _containers.RepeatedCompositeFieldContainer[RelationEntry]
+    def __init__(self, path: _Optional[str] = ..., entry_kind: _Optional[str] = ..., signature: _Optional[str] = ..., doc: _Optional[str] = ..., detail: _Optional[str] = ..., module: _Optional[str] = ..., definition: _Optional[_Iterable[str]] = ..., inferred: _Optional[_Iterable[str]] = ..., members: _Optional[_Iterable[_Union[RelationEntry, _Mapping]]] = ...) -> None: ...
 
 class ExampleQuery(_message.Message):
     __slots__ = ("label", "query", "teaches")
@@ -105,16 +133,18 @@ class SearchQuery(_message.Message):
     def __init__(self, query: _Optional[str] = ..., teaches: _Optional[str] = ...) -> None: ...
 
 class ListRelationsResponse(_message.Message):
-    __slots__ = ("relations", "examples", "entity_queries", "search_query")
+    __slots__ = ("relations", "examples", "entity_queries", "search_query", "entry")
     RELATIONS_FIELD_NUMBER: _ClassVar[int]
     EXAMPLES_FIELD_NUMBER: _ClassVar[int]
     ENTITY_QUERIES_FIELD_NUMBER: _ClassVar[int]
     SEARCH_QUERY_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_FIELD_NUMBER: _ClassVar[int]
     relations: _containers.RepeatedCompositeFieldContainer[RelationInfo]
     examples: _containers.RepeatedCompositeFieldContainer[ExampleQuery]
     entity_queries: _containers.RepeatedCompositeFieldContainer[EntityQuery]
     search_query: SearchQuery
-    def __init__(self, relations: _Optional[_Iterable[_Union[RelationInfo, _Mapping]]] = ..., examples: _Optional[_Iterable[_Union[ExampleQuery, _Mapping]]] = ..., entity_queries: _Optional[_Iterable[_Union[EntityQuery, _Mapping]]] = ..., search_query: _Optional[_Union[SearchQuery, _Mapping]] = ...) -> None: ...
+    entry: RelationEntry
+    def __init__(self, relations: _Optional[_Iterable[_Union[RelationInfo, _Mapping]]] = ..., examples: _Optional[_Iterable[_Union[ExampleQuery, _Mapping]]] = ..., entity_queries: _Optional[_Iterable[_Union[EntityQuery, _Mapping]]] = ..., search_query: _Optional[_Union[SearchQuery, _Mapping]] = ..., entry: _Optional[_Union[RelationEntry, _Mapping]] = ...) -> None: ...
 
 class QuerySet(_message.Message):
     __slots__ = ("title", "preamble", "queries")

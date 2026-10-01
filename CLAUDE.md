@@ -94,8 +94,12 @@ fact base per design over one vocabulary, `RuleFromQuery`, the wire form and the
 queryable name registers in `core/facts` at a path of jaala's `ns.Vocabulary`** (agni issue 751):
 `facts.RegisterRelation`, `facts.RegisterPredicate` (an `ns.Builtin`, such as the `net.reaches`
 generator in `stdlib/relations`, which reaches the design through `facts.EnvOf`) and
-`facts.RegisterModule`. `jaala/ns` holds names and signatures with no evaluator, which is why C29
-lets the fact layer import it and nothing more of jaala. A language change
+`facts.RegisterModules`. `jaala/ns` holds names and signatures with no evaluator, which is why C29
+lets the fact layer import it and nothing more of jaala. **The shipped library of derived relations
+is `stdlib/lib`**, one `.dl` file per module (`component.probed_both`, `net.has_test_point`), and
+`agni query --relations <path>` prints any member's signature and definition. Its modules register
+as ONE batch, because the vocabulary is checked at every registration and a module reading another
+module's member is refused if it arrives first. A language change
 (parser, evaluator, index, aggregation) is a jaala PR and a tag first, then a `go get` here. Its
 issues live on panyam/jaala.
 
@@ -609,6 +613,7 @@ discovered.
 | A format reader | see the page | `docsite/content/build/format-reader.md` | see the page |
 | A check rule | see the page | `docsite/content/build/check-rule.md` | see the page |
 | A query relation | 7, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check`, `TestColumnKindsMatchGolden` |
+| A library member (derived relation) | 3 (the rule in a `stdlib/lib/*.dl` file with a `#` doc comment and typed head, `columnkinds.golden`, `make catalog-docs`) | `stdlib/lib/lib.go`'s package comment | `TestEveryMemberIsDocumentedAndTyped`, `TestColumnKindsMatchGolden`, `catalog-docs-check` |
 | A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
 | A hand-written `agni …` fence | 1, plus `docCommandCount` | `docsite/README.md` | `cmd/agni/doccommands_test.go` |
 | A multi-command `agniRun` block | 1 (`steps:` in the spec, one per command) | `docsite/README.md` | `tutorial-runs-check` |

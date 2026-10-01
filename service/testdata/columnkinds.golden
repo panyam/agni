@@ -23,6 +23,13 @@ component.net_count	arg0=ref_des	kind="component"	kindVar=""	ref=-
 component.net_count	arg1=count	kind=""	kindVar=""	ref=-
 component.pin	arg0=ref_des	kind="component"	kindVar=""	ref=-
 component.pin	arg1=pin	kind="pin"	kindVar=""	ref=?a0
+component.probed_both	arg0=r	kind="component"	kindVar=""	ref=-
+component.probed_one	arg0=r	kind="component"	kindVar=""	ref=-
+component.probed_one	arg1=probed	kind="net"	kindVar=""	ref=-
+component.probed_one	arg2=unprobed	kind="net"	kindVar=""	ref=-
+component.two_terminal	arg0=r	kind="component"	kindVar=""	ref=-
+component.two_terminal	arg1=a	kind="net"	kindVar=""	ref=-
+component.two_terminal	arg2=b	kind="net"	kindVar=""	ref=-
 design.has_nc_channel	arg0=present	kind=""	kindVar=""	ref=-
 design.has_netclass	arg0=present	kind=""	kindVar=""	ref=-
 design.has_netclass_defs	arg0=present	kind=""	kindVar=""	ref=-
@@ -44,6 +51,7 @@ net.declared_via_drill	arg1=mm	kind=""	kindVar=""	ref=-
 net.external	arg0=net	kind="net"	kindVar=""	ref=-
 net.feedback	arg0=net	kind="net"	kindVar=""	ref=-
 net.ground	arg0=net	kind="net"	kindVar=""	ref=-
+net.has_test_point	arg0=n	kind="net"	kindVar=""	ref=-
 net.max_voltage	arg0=net	kind="net"	kindVar=""	ref=-
 net.max_voltage	arg1=volts	kind=""	kindVar=""	ref=-
 net.netclass	arg0=net	kind="net"	kindVar=""	ref=-

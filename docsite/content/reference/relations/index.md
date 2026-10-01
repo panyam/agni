@@ -79,12 +79,21 @@ The relations a datalog query joins over. Each documented relation links to its 
 
 | Relation | Summary |
 |---|---|
-| `absent(value)` | reports whether the source left a field unstated, for any value |
+| `absent(value)` | reports whether the field carried no value at all, which is different from an empty string and from zero; `not absent(?x)` reads "this field is stated" |
 | [`net.reaches(from, net, hops?)`](net.reaches/) | transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two |
 | [`net.route(from, net, path)`](net.route/) | the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one |
 | `str.contains(string, substring)` | reports whether a string contains a substring |
-| `str.glob(string, pattern)` | reports whether a string matches a glob pattern |
-| `str.match(string, regex)` | reports whether a string matches a regular expression |
+| `str.glob(string, pattern)` | reports whether the whole string matches a shell-style glob (`*` any run, `?` one character) |
+| `str.match(string, regex)` | reports whether the string matches an unanchored regular expression |
 | `str.prefix(string, prefix)` | reports whether a string starts with a prefix |
 | `str.suffix(string, suffix)` | reports whether a string ends with a suffix |
+
+## derived
+
+| Relation | Summary |
+|---|---|
+| `component.probed_both(r)` | A two-terminal part with a test point on both of its nets, so it can be measured in circuit. |
+| `component.probed_one(r, probed, unprobed)` | A two-terminal part with a test point on exactly one of its nets, naming the probed net and then the other, which is where a missing test point would go. |
+| `component.two_terminal(r, a, b)` | A part on exactly two nets, with the nets in name order (?a < ?b) so each part answers once. The parts an in-circuit test measures across two nodes: resistors, capacitors, inductors, diodes. |
+| `net.has_test_point(n)` | A net at least one test point sits on, so a probe can land on it during bring-up or in-circuit test. |
 

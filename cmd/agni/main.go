@@ -34,6 +34,7 @@ import (
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/service"
+	_ "github.com/panyam/agni/stdlib/lib"           // registers the shipped derived relations (net.has_test_point, ...)
 	"github.com/panyam/agni/stdlib/profiles"        // registers built-in "profile" rules; LoadDir adds overlay profiles
 	_ "github.com/panyam/agni/stdlib/relations"     // registers the built-in EDB query relations (netlist/board/datasheet)
 	_ "github.com/panyam/agni/stdlib/reviewquery"   // compiles a review manifest's inline query bindings as datalog

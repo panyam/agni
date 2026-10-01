@@ -481,3 +481,32 @@ func TestQueryJSONWorksOnTheSpecLibraryPathToo(t *testing.T) {
 		t.Error("no rows from the spec library")
 	}
 }
+
+// TestQueryRelationsDrillsDown covers `agni query --relations` at its three depths and with a path
+// that names nothing (agni issue 751). The root lists every module, a module lists its members with
+// their signatures, and a member prints its definition.
+func TestQueryRelationsDrillsDown(t *testing.T) {
+	root := runQuery(t, "--relations")
+	for _, want := range []string{"[net]", "[component]", "[str]", "net.has_test_point(n: net)  derived", "str.contains(string: string, substring: string)  predicate"} {
+		if !strings.Contains(root, want) {
+			t.Errorf("--relations lacks %q", want)
+		}
+	}
+	net := runQuery(t, "--relations", "net")
+	if !strings.Contains(net, "net.has_test_point(n: net)  derived") || strings.Contains(net, "[component]") {
+		t.Errorf("--relations net should list the net module alone:\n%s", net)
+	}
+	member := runQuery(t, "--relations", "component.probed_both")
+	for _, want := range []string{"component.probed_both(r: component)", "derived, defined in module component", "defined as", "probed_both(?r: component) :- two_terminal(?r, ?a, ?b)"} {
+		if !strings.Contains(member, want) {
+			t.Errorf("--relations component.probed_both lacks %q:\n%s", want, member)
+		}
+	}
+	cmd := queryCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--relations", "net.has_testpoint"})
+	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), `did you mean "net.has_test_point"`) {
+		t.Errorf("an unknown path = %v, want an error suggesting net.has_test_point", err)
+	}
+}

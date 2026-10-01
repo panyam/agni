@@ -108,6 +108,7 @@ export const RELATION_KINDS: readonly { key: string; label: string }[] = [
   { key: "netlist", label: "Netlist" },
   { key: "board", label: "Board" },
   { key: "datasheet", label: "Datasheet" },
+  { key: "derived", label: "Library" },
   { key: "predicate", label: "Predicates" },
   { key: "overlay", label: "Overlay" },
 ];
