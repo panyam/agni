@@ -1,7 +1,6 @@
-// Command validate loads a doc-IR textproto, runs doc.Validate, and prints a
-// per-page region summary. The check harness for pdf2doc prototype output: a
-// produced file that loads, validates (including table content-hash recomputation),
-// and shows the expected tables is schema-conformant.
+// Command validate loads a doc-IR textproto, runs doc.Validate (which recomputes table content
+// hashes), and prints a per-page region summary. It checks that pdf2doc output is
+// schema-conformant.
 package main
 
 import (

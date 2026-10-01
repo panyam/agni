@@ -1,10 +1,9 @@
-// Package doc loads, validates, and queries doc-IR Documents (agni.v1.doc): the
-// intermediate decomposition of a source document (datasheet PDF, app note) that
-// sits between the raw bytes and the parameter-IR. The schema lives in
-// protos/agni/v1/doc/doc.proto; design and the two-tier query interface are in
-// docs/21-document-ir.md. This package is tier 1: the deterministic in-process
-// query surface recipes, tests, and revision diffing use. The service tier
-// (corpus-wide lookup, full-text search) arrives with the extraction store.
+// Package doc loads, validates, and queries doc-IR Documents (agni.v1.doc), the
+// decomposition of a source document (datasheet PDF, app note) that sits between
+// the raw bytes and the parameter-IR. The schema is protos/agni/v1/doc/doc.proto.
+// This package is query tier 1, the deterministic in-process one that recipes,
+// tests, and revision diffing use; see
+// docsite/content/architecture/datasheet-layer.md#the-document-contract.
 package doc
 
 import (
@@ -21,9 +20,8 @@ import (
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 )
 
-// Load parses one Document in textproto form (the fixture and hand-authoring
-// format; producers may emit binary proto instead and unmarshal directly). It only
-// parses; call Validate for the semantic invariants.
+// Load parses one Document in textproto form, the fixture and hand-authoring
+// format. It only parses, so call Validate for the semantic invariants.
 func Load(r io.Reader) (*docpb.Document, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -37,12 +35,11 @@ func Load(r io.Reader) (*docpb.Document, error) {
 }
 
 // Validate checks the invariants every doc-IR must hold before consumers may trust
-// it: a document content hash and producer, page numbers unique and within
-// page_count, region ids unique across the whole document, cells inside their
+// it. It requires a document content hash and producer, page numbers unique and
+// within page_count, region ids unique across the document, cells inside their
 // table's grid with no duplicate positions, detection confidence in (0, 1], and
-// every table's content_hash equal to TableHash (so revision diffing can trust
-// stored hashes without recomputing). All violations are reported, joined into one
-// error.
+// every table's content_hash equal to TableHash, so revision diffing can trust
+// stored hashes. All violations are joined into one error.
 func Validate(d *docpb.Document) error {
 	var errs []error
 	if d.ContentHash == "" {
@@ -110,9 +107,9 @@ func Validate(d *docpb.Document) error {
 	return errors.Join(errs...)
 }
 
-// TablesMatching returns every table in page order whose title matches re. The
-// recipe-layer primitive: recipes select tables by title pattern, never by id
-// (ids are not stable across producer versions).
+// TablesMatching returns every table in page order whose title matches re. Recipes
+// select tables this way rather than by id, because ids are not stable across
+// producer versions.
 func TablesMatching(d *docpb.Document, re *regexp.Regexp) []*docpb.Table {
 	var out []*docpb.Table
 	for _, pg := range d.Pages {
@@ -151,8 +148,8 @@ func FigureByID(d *docpb.Document, id string) *docpb.Figure {
 }
 
 // CellAt returns the cell whose top-left grid position is (row, col), or nil. A
-// merged cell appears only at its top-left position; positions covered by a span
-// return nil on purpose, so consumers see the merge instead of a phantom duplicate.
+// merged cell appears only at its top-left position, and a position covered by its
+// span returns nil, so consumers see the merge instead of a phantom duplicate.
 func CellAt(t *docpb.Table, row, col int32) *docpb.Cell {
 	for _, c := range t.Cells {
 		if c.Row == row && c.Col == col {
@@ -172,8 +169,7 @@ func CellText(t *docpb.Table, row, col int32) string {
 }
 
 // PageText returns the page's text blocks joined by newlines, in document order.
-// The full-text-search source: an index built over PageText covers everything the
-// producer read outside tables, without re-parsing the source document.
+// It is the full-text-search source for everything the producer read outside tables.
 func PageText(d *docpb.Document, number int32) string {
 	for _, pg := range d.Pages {
 		if pg.Number != number {
@@ -188,11 +184,11 @@ func PageText(d *docpb.Document, number int32) string {
 	return ""
 }
 
-// TableHash is the content identity of a table: a sha256 over its grid shape and
-// cell (position, span, text) tuples in grid order, excluding bboxes, ids,
-// confidence, and header flags, which are derivation artifacts. Two derivations of
-// the same printed table hash equal even if detection nudged coordinates, which is
-// what lets revision diffing skip unchanged tables (WS10-007).
+// TableHash is the content identity of a table, a sha256 over its grid shape, its
+// cell (position, span, text) tuples in grid order, and its footnotes. Bboxes, ids,
+// confidence, and header flags are derivation artifacts and are excluded, so two
+// derivations of the same printed table hash equal and revision diffing can skip
+// unchanged tables (WS10-007). A producer outside Go must replicate it byte-for-byte.
 func TableHash(t *docpb.Table) string {
 	cells := make([]*docpb.Cell, len(t.Cells))
 	copy(cells, t.Cells)
@@ -214,12 +210,11 @@ func TableHash(t *docpb.Table) string {
 }
 
 // FindTableForProv resolves a parameter provenance locator (page number plus the
-// table label as the encoder wrote it) to a doc-IR table. The label matches a
-// table when it equals the title, or when either contains the other
-// (case-insensitive): provenance written from a section-qualified reading
-// ("Electrical Characteristics - On Characteristics") still resolves to the table
-// titled "Electrical Characteristics". Returns nil when nothing on that page
-// matches; callers treat that as a broken citation, not a soft miss.
+// table label as the encoder wrote it) to a doc-IR table. The label matches when it
+// equals the title or either contains the other, case-insensitively, so a
+// section-qualified label ("Electrical Characteristics - On Characteristics") still
+// finds "Electrical Characteristics". Nil when nothing on that page matches, which
+// callers treat as a broken citation rather than a soft miss.
 func FindTableForProv(d *docpb.Document, page int32, label string) *docpb.Table {
 	l := strings.ToLower(label)
 	for _, pg := range d.Pages {
@@ -236,7 +231,7 @@ func FindTableForProv(d *docpb.Document, page int32, label string) *docpb.Table 
 	return nil
 }
 
-// span normalizes a proto span value: 0 (unset) means 1.
+// span normalizes a proto span value, where 0 (unset) means 1.
 func span(s int32) int32 {
 	if s < 1 {
 		return 1

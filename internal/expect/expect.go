@@ -13,11 +13,10 @@
 //	pending:                  # rules staged before they exist: rendered, never asserted
 //	  net-naming-convention: [BAD_NAME]
 //
-// `fires` is a hard expectation (exact subjects, both directions — a listed rule must fire those
-// subjects and no others). `pending` is the "red until implemented" staging: a consumer may show it,
-// but the harness neither requires nor forbids it, so an expectation can land ahead of its rule
-// without breaking CI. Flipping an entry from `pending` to `fires` on implementation turns it into a
-// hard assertion.
+// `fires` is a hard expectation in both directions, so a listed rule must fire those subjects and no
+// others. `pending` stages an expectation ahead of its rule. A consumer may show it, but the harness
+// neither requires nor forbids it, so it lands without breaking CI. Move the entry to `fires` once the
+// rule is implemented.
 package expect
 
 import (
@@ -27,17 +26,16 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
-// Entry is one expected rule: the exact subjects it must fire on, plus an optional Why — the
-// fixture's own narration of what is wrong and what the control case is — so a red expectation
-// explains itself in a harness failure or a viewer panel instead of being a bare rule name.
+// Entry is one expected rule, the exact subjects it must fire on plus an optional Why. Why is the
+// fixture's own narration of what is wrong and what the control case is, shown with a red
+// expectation in a harness failure or a viewer panel.
 type Entry struct {
 	Subjects []string
 	Why      string
 }
 
 // UnmarshalYAML accepts both sidecar entry forms: the short bare subject list
-// (`rule: [A, B]`) and the long mapping (`rule: {subjects: [A], why: "..."}`). Existing
-// short-form sidecars parse unchanged.
+// (`rule: [A, B]`) and the long mapping (`rule: {subjects: [A], why: "..."}`).
 func (e *Entry) UnmarshalYAML(n *yaml.Node) error {
 	switch n.Kind {
 	case yaml.SequenceNode:
@@ -56,16 +54,14 @@ func (e *Entry) UnmarshalYAML(n *yaml.Node) error {
 	return fmt.Errorf("expectation entry must be a subject list or a {subjects, why} mapping (line %d)", n.Line)
 }
 
-// Expectations is a design's expected findings: rule name -> its expected subjects (and
-// optional narration).
+// Expectations is a design's expected findings, keyed by rule name.
 type Expectations struct {
 	Fires   map[string]Entry `yaml:"fires"`
 	Pending map[string]Entry `yaml:"pending"`
 }
 
-// Load reads and parses a `<design>.expect.yaml` sidecar. A missing file is an error (the caller
-// decides which designs are expected to have one); a present-but-empty file is a valid "no findings"
-// expectation.
+// Load reads and parses a `<design>.expect.yaml` sidecar. A missing file is an error, since the
+// caller decides which designs should have one. An empty file is a valid "no findings" expectation.
 func Load(path string) (*Expectations, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {

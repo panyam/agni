@@ -13,22 +13,21 @@ import (
 // Globals for REGISTRATION, values for USE.
 //
 // The only package state is a buffer of registration options, written at init by whatever packages a
-// binary composed in. Nothing reads it directly: DefaultRegistry composes it into a *Registry, and a
-// Registry is immutable once built, so every read goes through a value a caller holds. That is the
-// shape check.Catalog already has on the rule side (NewCatalog / DefaultCatalog / CatalogWith), and
-// the reason it is worth copying is that composing in a KNOWN ORDER removes a class of problem rather
-// than guarding against it: collisions are checked once, at the end, so a relation and a predicate
-// clash whichever registered first, with no bidirectional check and no init-order reasoning.
+// binary composed in. Nothing reads it directly. DefaultRegistry composes it into a *Registry, which
+// is immutable once built, so every read goes through a value a caller holds. check.Catalog has the
+// same shape (NewCatalog / DefaultCatalog / CatalogWith). Collisions are checked once, after
+// composing, so a relation and a predicate clash whichever registered first and init order never
+// matters.
 //
-// The registration half stays global because that is the extension seam (C18): a private extension
-// blank-imports a package whose init calls RegisterRelation, and the engine is composed BY the
-// extension rather than coupled to one. That is a startup default, never mutated per run, which is
-// exactly the carve-out C22 makes for ambient state.
+// Registration stays global because it is the extension hook (C18). A private extension blank-imports
+// a package whose init calls RegisterRelation, so the engine is composed BY the extension rather than
+// coupled to one. It is a startup default never mutated per run, the carve-out C22 makes for ambient
+// state.
 
-// Projector derives a relation's rows from a Model. It runs once per fact base; an empty result is
-// correct when the Model lacks the tier the relation needs (silent-by-construction, never
-// fabricated). A projector DERIVES from the Model and never consults a second authoritative store
-// (C8), which is what keeps the fact base a view rather than a copy.
+// Projector derives a relation's rows from a Model. It runs once per fact base, and an empty result is
+// correct when the Model lacks the tier the relation needs (never fabricated). A projector DERIVES
+// from the Model and never consults a second authoritative store (C8), so the fact base stays a view
+// rather than a copy.
 type Projector func(check.Model) []Row
 
 // SpecLibProjector derives rows from a whole datasheet spec library with NO design (WS10-010), the
@@ -40,9 +39,9 @@ type SpecLibProjector func([]*parampb.PartSpec) []Row
 // design-scoped and library-wide projectors; Doc resolves a relation's reference markdown ("" when it
 // has none).
 //
-// Bulk, not per-relation: a single relation is the EXTENSION shape (one at a time, namespaced), while
-// the built-ins arrive as one payload because their projector is a single monolithic pass and several
-// share it. The rule side made the same call (check.RegisterBuiltins).
+// The built-ins arrive as one payload because their projector is a single monolithic pass that
+// several relations share. One relation at a time is the EXTENSION shape (WithRelation). The rule side
+// does the same (check.RegisterBuiltins).
 type BuiltinFacts struct {
 	Schema  map[string][]Field
 	Catalog []RelationInfo
@@ -95,13 +94,10 @@ func WithBuiltins(bf BuiltinFacts) Option {
 	}
 }
 
-// WithRelation adds one extension-supplied relation.
-//
-// This is the open-core seam generalized to the fact layer: the public engine ships the built-in
-// relations, and a private extension contributes its OWN — house part attributes, a compliance
-// database, an approved-vendor feed — without editing the engine. A registered relation is a
-// first-class citizen of every query surface with no evaluator change, because an engine treats every
-// relation uniformly (name -> field layout -> rows).
+// WithRelation adds one extension-supplied relation, such as a private extension's house part
+// attributes or approved-vendor feed, without editing the engine. It reaches every query surface with
+// no evaluator change, because an engine treats every relation uniformly (name -> field layout ->
+// rows).
 func WithRelation(name string, fields []Field, project Projector) Option {
 	return func(b *builder) {
 		switch {
@@ -120,11 +116,9 @@ func WithRelation(name string, fields []Field, project Projector) Option {
 // Reserving claims names for an engine's own computed predicates (core/query's reaches and the string
 // filters), so a relation cannot shadow one. who names the claimant, for the error message.
 //
-// Order does not matter, and that is the point of composing rather than accumulating. Every option is
-// applied first and collisions are swept once at the end, so a predicate and a relation clash
-// whichever registered first. An engine and a relation catalog are independent imports whose init
-// order is not controllable, so a check that ran at registration time had to look in both directions
-// to cover the same ground.
+// Order does not matter. Collisions are swept once after every option applies, so a predicate and a
+// relation clash whichever registered first, which matters because an engine and a relation catalog
+// are independent imports with no controllable init order.
 func Reserving(who string, names ...string) Option {
 	return func(b *builder) {
 		for _, n := range names {
@@ -138,7 +132,7 @@ func Reserving(who string, names ...string) Option {
 }
 
 // NewRegistry composes a Registry from the given options. It reports every problem it found rather
-// than the first: a caller fixing a composition wants the whole list, not one per rebuild.
+// than only the first, so a caller fixing a composition sees the whole list.
 func NewRegistry(opts ...Option) (*Registry, error) {
 	b := &builder{reserved: map[string]string{}}
 	for _, o := range opts {
@@ -156,8 +150,7 @@ func NewRegistry(opts ...Option) (*Registry, error) {
 		r.schema[rel.Name] = rel.Fields
 		r.extension = append(r.extension, rel)
 	}
-	// One collision sweep, after everything is in. Sorted so the error reads the same on every run
-	// (map iteration order would otherwise reshuffle it).
+	// One collision sweep after everything is in, sorted so the error reads the same on every run.
 	var clashes []string
 	for name := range r.schema {
 		if who, ok := r.reserved[name]; ok {
@@ -175,7 +168,7 @@ func NewRegistry(opts ...Option) (*Registry, error) {
 }
 
 // SchemaOf resolves a relation's positional layout. An extension relation resolves exactly like a
-// built-in one, which is what lets an engine treat the two the same.
+// built-in one.
 func (r *Registry) SchemaOf(rel string) ([]Field, bool) {
 	f, ok := r.schema[rel]
 	return f, ok
@@ -186,8 +179,9 @@ func (r *Registry) SchemaOf(rel string) ([]Field, bool) {
 func (r *Registry) IsRelation(rel string) bool { _, ok := r.schema[rel]; return ok }
 
 // InfoOf resolves one relation's catalog entry, for a caller that needs its per-argument metadata
-// rather than its row layout. Scans the catalog: it runs once per query at validation time, over a
-// list of about a hundred, so an index would be machinery without a reason.
+// rather than its row layout. It searches the built-in catalog only, so an extension relation reports
+// false. It is a linear scan because it runs once per query at validation time over about a hundred
+// entries.
 func (r *Registry) InfoOf(rel string) (RelationInfo, bool) {
 	for _, info := range r.builtin.Catalog {
 		if info.Name == rel {
@@ -197,9 +191,9 @@ func (r *Registry) InfoOf(rel string) (RelationInfo, bool) {
 	return RelationInfo{}, false
 }
 
-// Schema returns every relation's layout as a copy. It exists for the drift guard that asserts the
-// catalog covers the schema: a relation that is queryable but undiscoverable is what that catches,
-// and catching it needs the whole set rather than one lookup.
+// Schema returns every relation's layout as a copy. It exists for the drift guard asserting the
+// catalog covers the schema, which needs the whole set to catch a relation that is queryable but
+// undiscoverable.
 func (r *Registry) Schema() map[string][]Field {
 	out := make(map[string][]Field, len(r.schema))
 	for name, f := range r.schema {
@@ -208,22 +202,17 @@ func (r *Registry) Schema() map[string][]Field {
 	return out
 }
 
-// Installed reports whether this registry carries any relation at all.
-//
-// It is the difference between "this design has no such facts" and "no relations were ever
-// installed", which a fact base otherwise flattens into the same empty result — and an engine whose
-// relations are all missing answers nothing while looking exactly like one whose query matched
-// nothing. That reads as a clean pass on a design nobody checked.
+// Installed reports whether this registry carries any relation at all. It separates "this design has
+// no such facts" from "no relations were ever installed", which an empty fact base flattens into the
+// same result, and the second reads as a clean pass on a design nobody checked.
 func (r *Registry) Installed() bool { return len(r.schema) > 0 }
 
-// Rows projects the whole fact base for a design: the built-in relations first, then each extension
-// relation in composition order.
+// Rows projects the whole fact base for a design, the built-in relations first and then each
+// extension relation in composition order.
 //
 // An extension row is stamped with the name it was REGISTERED under, overriding whatever the projector
-// put in Row.Relation. The registration name is the one a query writes, so letting a projector name
-// its own rows would let a relation answer under a name nothing registered, and silently shadow
-// another. The built-in payload is a single pass over many relations, so its rows carry their own
-// Relation and are taken as given.
+// put in Row.Relation, so a projector cannot answer under a name nothing registered and shadow
+// another. The built-in payload is one pass over many relations, so its rows keep their own Relation.
 func (r *Registry) Rows(m check.Model) []Row {
 	var out []Row
 	if r.builtin.Model != nil {
@@ -246,9 +235,9 @@ func (r *Registry) SpecLibRows(specs []*parampb.PartSpec) []Row {
 	return r.builtin.SpecLib(specs)
 }
 
-// Relations returns the discoverable relation set: the built-ins plus each extension relation, the
-// latter with argument labels synthesized from its field layout. Order is composition order and is
-// not sorted here — a caller that also has predicates to show merges both lists and sorts once.
+// Relations returns the discoverable relation set, the built-ins plus each extension relation, the
+// latter with argument labels synthesized from its field layout. Order is composition order, unsorted,
+// so a caller that also has predicates to show merges both lists and sorts once.
 //
 // Each entry's Detail is resolved through the doc resolver, so an undocumented relation still lists
 // with its Summary.
@@ -277,7 +266,8 @@ func (r *Registry) Doc(name string) string {
 	return r.builtin.Doc(name)
 }
 
-// The registration buffer: the only package state. Written at init, read only by RegistryWith.
+// The registration buffer is the only package state. It is written at init and read by RegistryWith,
+// Registered and addOption.
 
 var (
 	regMu      sync.Mutex
@@ -296,17 +286,10 @@ func RegisterRelation(name string, fields []Field, project Projector) {
 // Reserve claims names for an engine's computed predicates in the process default.
 func Reserve(who string, names ...string) { addOption(Reserving(who, names...)) }
 
-// addOption validates the option against everything registered so far and panics if the combination
-// cannot compose, before appending.
-//
-// It composes to check rather than inspecting the option, because the buffer is APPEND-ONLY: a bad
-// registration cannot be taken back, so admitting one poisons every later DefaultRegistry and the
-// failure then surfaces at some unrelated caller's first query. Validating on the way in keeps the
-// buffer always-composable and puts the error at the registration that created the conflict.
-//
-// Order-dependence disappears with it. A relation registered before the catalog that owns its name
-// composes cleanly at the time; the conflict is caught when the CATALOG registers, because that is
-// the moment both parties are present. Either way the panic names the second one to arrive.
+// addOption composes the option with everything registered so far and panics if that fails, before
+// appending. The buffer is APPEND-ONLY, so an admitted bad registration would poison every later
+// DefaultRegistry and surface at some unrelated caller's first query. Validating here puts the panic
+// at the registration that created the conflict, naming whichever party arrived second.
 //
 // Cost is quadratic in the number of registrations, which is init-time and in the low tens.
 func addOption(o Option) {
@@ -320,12 +303,12 @@ func addOption(o Option) {
 
 // DefaultRegistry composes everything registered at init. It panics on a composition error, because a
 // duplicate or shadowing relation is a programming error that must fail loudly at load rather than
-// silently at query time — the same contract as check.DefaultCatalog.
+// silently at query time. check.DefaultCatalog has the same contract.
 func DefaultRegistry() *Registry { return RegistryWith() }
 
 // RegistryWith composes the registered options followed by the caller's extras, under the same
-// checks. It is how an embedder adds relations explicitly rather than through the global seam, and
-// how a test builds a registry that owes nothing to what the test binary happened to import.
+// checks. An embedder uses it to add relations explicitly rather than through global registration.
+// A test uses it to build a registry that owes nothing to what the test binary happened to import.
 func RegistryWith(extra ...Option) *Registry {
 	regMu.Lock()
 	opts := append(append([]Option(nil), registered...), extra...)
@@ -338,9 +321,9 @@ func RegistryWith(extra ...Option) *Registry {
 }
 
 // Registered returns a copy of the options registered at init, so a caller can compose them with its
-// own and handle a composition error rather than take RegistryWith's panic. That is the difference
-// between a binary's own vocabulary (a programming error if it does not compose) and one assembled
-// from a deck or a test, where a bad combination is data and wants an error.
+// own and handle a composition error rather than take RegistryWith's panic. Use it where a bad
+// combination is data rather than a programming error, as in a vocabulary assembled from a deck or a
+// test.
 func Registered() []Option {
 	regMu.Lock()
 	defer regMu.Unlock()

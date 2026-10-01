@@ -22,19 +22,14 @@ var CSS string
 
 // HTML writes the report as one self-contained page.
 //
-// html/template rather than string building, and the reason is correctness rather than tidiness.
-// Every subject, message and witness in this document came out of a design file the engine did not
-// author: a net named with an angle bracket, or a message carrying a quote, would corrupt the page or
-// inject into it. html/template escapes per context (text, attribute, URL) and knows the difference;
-// concatenation does not.
+// html/template rather than string building, because every subject, message and witness came out of
+// a design file the engine did not author, and a net name holding an angle bracket or a quote would
+// otherwise corrupt or inject into the page. html/template escapes per context (text, attribute, URL).
 //
 // COLLAPSING IS <details>, NOT SCRIPT. The report has to survive being emailed, committed, opened
-// from a file:// path and read with scripts disabled, and a reader who cannot expand a section
-// because JavaScript did not run has a report that lies by omission. The reference tool this format
-// borrows from hand-rolls a script and five buttons for the same effect.
+// from a file:// path and read with scripts disabled, and a section that cannot expand hides its rows.
 //
-// Self-contained on purpose: one file, no external CSS or fonts, so it still renders after being
-// moved somewhere with no network.
+// Self-contained, with no external CSS or fonts, so it renders with no network.
 func HTML(w io.Writer, r Report) error {
 	t, err := parse("report.html.tmpl")
 	if err != nil {
@@ -43,19 +38,18 @@ func HTML(w io.Writer, r Report) error {
 	return t.Execute(w, r)
 }
 
-// parse builds one page template by name. Both pages go through it so neither can end up with a
-// different func map than the other, which is how the shared stylesheet stays shared.
+// parse builds one page template by name. Both pages go through it so they share one func map, and
+// with it the stylesheet.
 func parse(name string) (*template.Template, error) {
 	return template.New(name).Funcs(funcs()).ParseFS(tmplFS, "templates/"+name)
 }
 
 func funcs() template.FuncMap {
 	return template.FuncMap{
-		// css injects the shared stylesheet. template.CSS marks it pre-escaped: it is ours, not
-		// anything read out of a design file, and html/template would otherwise escape the braces.
+		// css injects the shared stylesheet. template.CSS marks it pre-escaped, since it is ours and
+		// html/template would otherwise escape the braces.
 		"css": func() template.CSS { return template.CSS(CSS) },
-		// outcomeClass maps an outcome to its CSS class. Kept as a function rather than a field on Row
-		// so the vocabulary lives in one place if a sixth outcome ever lands.
+		// outcomeClass maps an outcome to its CSS class, keeping the vocabulary in one place.
 		"outcomeClass": func(o check.Outcome) string {
 			switch o {
 			case check.Pass:
@@ -71,9 +65,8 @@ func funcs() template.FuncMap {
 			}
 			return ""
 		},
-		// outcomeLabel is what a reader sees. "not considered" and "no limit" are spelled out because
-		// the distinction between them is the substance: one was never judged, the other reached the
-		// comparison and found nothing stated to compare against.
+		// outcomeLabel is what a reader sees. "not considered" was never judged; "no limit" reached
+		// the comparison and found nothing stated to compare against.
 		"outcomeLabel": func(o check.Outcome) string {
 			switch o {
 			case check.Pass:

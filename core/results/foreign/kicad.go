@@ -1,17 +1,14 @@
 // Package foreign imports a check-result document from another tool's report (WS3-104).
 //
-// It is deliberately NOT a formats registry entry. Every capability on that registry answers a
-// question about a DESIGN file — give me its netlist, its schematic geometry, its board — and a
-// results file describes a design it does not contain. It cannot answer ReadDesign at all. Forcing it
-// through the registry would make the capability set mean two different things, so this is a separate
-// ingest path: the Loader's job is producing a model, and this produces evidence ABOUT one.
+// It is NOT a formats registry entry. Every registry capability answers a question about a DESIGN
+// file, and a results file describes a design it does not contain, so it could never answer
+// ReadDesign. The Loader produces a model; this produces evidence ABOUT one.
 //
-// The imported document is visibly a WEAKER artifact than a native run, and keeping it visibly weaker
-// is the point. A vendor report is a flat violation list. It has no not-applicable, no needs-data, no
-// coverage axis, and no per-item traceability, because those concepts came out of the review work and
-// no incumbent has them. Manufacturing that structure on import would turn "this tool said nothing
-// about X" into "X is fine", which is the same false-pass failure the review outcomes exist to
-// prevent. So meta.coverage_axis is false, and the import reports its own residue.
+// The imported document stays visibly WEAKER than a native run. A vendor report is a flat violation
+// list with no not-applicable, no needs-data, no coverage axis and no per-item traceability, and
+// manufacturing that structure would turn "this tool said nothing about X" into "X is fine". So
+// meta.coverage_axis is false, and the import reports its own residue. See
+// docsite/content/architecture/checks-contract.md#importing-another-tools-results.
 package foreign
 
 import (
@@ -35,18 +32,17 @@ const (
 )
 
 // RulePrefixDRC and RulePrefixERC namespace a foreign checker's rule names. A vendor's `type` string
-// is its own vocabulary, so it is carried VERBATIM behind a prefix rather than translated into one of
-// ours: mapping `copper_edge_clearance` onto a rule of ours would assert an equivalence nobody
-// verified, and the prefix keeps a foreign finding visibly foreign in any report it lands in.
+// is carried VERBATIM behind a prefix rather than translated into one of ours, because mapping
+// `copper_edge_clearance` onto a rule of ours would assert an equivalence nobody verified. The prefix
+// keeps a foreign finding visibly foreign in any report it lands in.
 const (
 	RulePrefixDRC = "kicad-drc/"
 	RulePrefixERC = "kicad-erc/"
 )
 
 // kicadReport is the shape both kicad-cli JSON reports share. DRC fills violations,
-// unconnected_items and schematic_parity; ERC fills sheets. Reading both through one struct is safe
-// because the two schemas are disjoint in which of these they populate, and it is what lets Read sniff
-// the kind from the document itself.
+// unconnected_items and schematic_parity; ERC fills sheets. The two schemas populate disjoint
+// sections, so one struct reads both and lets Read sniff the kind from the document itself.
 type kicadReport struct {
 	Schema       string `json:"$schema"`
 	Source       string `json:"source"`
@@ -75,8 +71,8 @@ type kicadViolation struct {
 // ReadKiCad reads a kicad-cli DRC or ERC JSON report into a results document, choosing between them
 // from the report's own `$schema`. now is passed in so a caller can produce a byte-stable document.
 //
-// The findings it returns carry no subject: attaching them to entities needs a model, which this does
-// not have and should not need. Call Join for that.
+// The findings it returns carry no subject, because attaching them to entities needs a model, which
+// this does not have and should not need. Call Join for that.
 func ReadKiCad(r io.Reader, now time.Time) (*checkspb.CheckResults, error) {
 	var rep kicadReport
 	if err := json.NewDecoder(r).Decode(&rep); err != nil {
@@ -115,9 +111,8 @@ func ReadKiCad(r io.Reader, now time.Time) (*checkspb.CheckResults, error) {
 }
 
 // kindOf decides DRC vs ERC from the report's declared schema, falling back to which sections are
-// populated. An unrecognized document is an error rather than an empty import: a file we cannot
-// classify would otherwise produce a document reporting zero findings, which reads exactly like a
-// design the tool found nothing wrong with.
+// populated. An unrecognized document is an error rather than an empty import, since zero findings
+// would read like a design the tool found nothing wrong with.
 func kindOf(rep kicadReport) (producer, prefix string, err error) {
 	switch {
 	case strings.Contains(rep.Schema, "drc"):
@@ -132,12 +127,9 @@ func kindOf(rep kicadReport) (producer, prefix string, err error) {
 	return "", "", fmt.Errorf("kicad report: not a recognizable DRC or ERC report (no $schema, no sheets, no violations)")
 }
 
-// findings turns one violation into one finding PER ITEM it names.
-//
-// A violation is emitted per item rather than once because a KiCad clearance violation names two
-// items (the two things too close together), and both are genuinely implicated: collapsing them to one
-// finding would silently pick a side. The description repeats across the items of one violation, which
-// is correct — it is one problem seen from each end.
+// findings turns one violation into one finding PER ITEM it names. A KiCad clearance violation names
+// two items and both are implicated, so collapsing them to one finding would silently pick a side.
+// The description repeats across the items of one violation, since it is one problem seen from each end.
 func findings(v kicadViolation, prefix, source string) []*checkspb.Finding {
 	rule := prefix + v.Type
 	sev := severity(v.Severity)
@@ -167,9 +159,8 @@ func findings(v kicadViolation, prefix, source string) []*checkspb.Finding {
 }
 
 // severity maps KiCad's levels onto ours. "exclusion" is a violation the user acknowledged and
-// suppressed, so it becomes info rather than being dropped (the evidence stays) and rather than
-// passing through verbatim: SeverityRank puts an unrecognized level ABOVE error, which would sort
-// every acknowledged violation to the top of a report.
+// suppressed, so it becomes info. Dropping it would lose the evidence, and passing it through verbatim
+// would sort it to the top, since SeverityRank puts an unrecognized level ABOVE error.
 func severity(s string) string {
 	switch strings.ToLower(s) {
 	case "error":
@@ -207,8 +198,8 @@ func summarize(total, joined int, unjoined map[string][]string) *checkspb.Import
 	return s
 }
 
-// maxExamples bounds the residue examples: enough to recognize a shape, not enough to become a second
-// copy of the findings list.
+// maxExamples bounds the residue examples to enough to recognize a shape, and too few to become a
+// second copy of the findings list.
 const maxExamples = 3
 
 func dedupe(in []string) []string {

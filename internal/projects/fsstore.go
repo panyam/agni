@@ -15,13 +15,9 @@ import (
 )
 
 // MaxDepth bounds the downward walk that discovers descriptors under a tree, counting the tree root
-// as depth 0.
-//
-// A bound rather than an unlimited walk because a tree is a folder an operator handed the server,
-// not a curated one: it can contain a build output directory, a vendored library, or a home
-// directory, and an unbounded walk would stat every file in it on every listing. Four levels reaches
-// `<root>/<project>/designs/<design>/`, which is one deeper than the layout a review project takes,
-// so the shipped shape has room to nest one level further without this needing to be raised.
+// as depth 0. A tree is whatever folder an operator handed the server, possibly a build output or a
+// home directory, so an unbounded walk would stat all of it on every listing. Four levels reaches
+// `<root>/<project>/designs/<design>/`, one deeper than a review project's layout.
 const MaxDepth = 4
 
 // Tree is one named filesystem the store looks in: a mount on a server, a bounded slice of the local
@@ -32,21 +28,13 @@ type Tree struct {
 	FS    fs.FS
 }
 
-// FSStore is the filesystem-backed service.ProjectStore. It satisfies that port and nothing above
-// the port knows it exists, which is the whole point: the tree walking below is a fact about keeping
-// projects in a directory hierarchy, and a store backed by a database with design files on object
-// storage answers the same five questions without any of it.
+// FSStore is the filesystem-backed service.ProjectStore. Nothing above the port knows it exists,
+// because the tree walking below is only true of keeping projects in directories.
 //
-// It caches, and the cache never trusts itself: every read revalidates against the filesystem before
-// returning, so an operator's edit is visible on the very next request. That property is not
-// negotiable here — a descriptor is a small file someone changes while the server runs, and answering
-// with the version before their fix is the silent-wrong-answer this whole feature exists to remove.
-// What the cache buys is turning an expensive question (walk every directory, parse every descriptor)
-// into a cheap one (stat what we looked at last time). See cache.go.
+// It caches, but every read revalidates against the filesystem before returning, so an operator's
+// edit to a descriptor is visible on the very next request. See cache.go.
 type FSStore struct {
 	trees []Tree
-	// The caches. They never answer from memory alone: each revalidates against the filesystem
-	// before returning, which is what keeps an operator's edit visible on the very next request.
 	// See cache.go for why discovery and content are keyed on different things.
 	walks    *walkCache
 	projectC *parseCache[*webapi.Project]
@@ -63,7 +51,7 @@ func NewFSStore(trees ...Tree) *FSStore {
 	}
 }
 
-// located pairs a parsed descriptor with where it was found.
+// locatedProject pairs a parsed descriptor with where it was found.
 type locatedProject struct {
 	id  string
 	msg *webapi.Project
@@ -86,9 +74,8 @@ func (s *FSStore) Project(ctx context.Context, name string) (*webapi.Project, er
 
 // Projects discovers every project across the trees, ordered by resource name.
 //
-// A duplicate id is an ERROR rather than a first-wins pick: two projects claiming one name means one
-// of them is unreachable through its own resource name, and silently serving the other would answer
-// a client's question about project A with project B's designs.
+// A duplicate id is an ERROR rather than a first-wins pick, since first-wins would answer a question
+// about project A with project B's designs.
 func (s *FSStore) Projects(context.Context) ([]*webapi.Project, error) {
 	var out []*webapi.Project
 	seen := map[string]string{}
@@ -161,19 +148,13 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 	return out, nil
 }
 
-// ResolveDesign maps a (mount, ref) to the design containing it and that design's project.
+// ResolveDesign maps a URI to the design containing it and that design's project. It walks UP from
+// the URI's path, so the answer costs a few stats however many designs a tree holds.
 //
-// It walks UP from the ref rather than scanning every design, so the answer costs a few stats no
-// matter how many designs a tree holds. That direction is an FS-store detail; the port only promises
-// the mapping.
-//
-// A miss is (nil, nil, nil): a ref belonging to no declared design is the ordinary state of a
-// mounted folder.
+// A miss is (nil, nil, nil), the ordinary state of a mounted folder.
 //
 // A design with no enclosing project is NOT a miss. It comes back with its declaration intact and an
-// EMPTY `name`, because a resource name needs a parent and there is none — but the declaration is
-// still the truth about which file that folder's analysis reads, and a caller pointed at a path by a
-// human (the CLI) needs no resource name to honour it. Only addressability is missing, not meaning.
+// EMPTY `name`, since a resource name needs a parent, and the CLI still honours the declaration.
 func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
 	t, ok := s.tree(uri.Mount)
 	if !ok {
@@ -226,9 +207,8 @@ func (s *FSStore) projectsIn(t Tree) ([]locatedProject, error) {
 // name, which tree it came from, and where in that tree.
 func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, error) {
 	name := path.Join(walkRoot(dir), ProjectDescriptor)
-	// The dependencies are every file this load reads, plus the containing directory so the existence
-	// probes in attachConfig are covered: adding params/ moves the directory's mtime even though no
-	// file read here changed.
+	// The directory is a dependency too, so the existence probes in attachConfig are covered, since
+	// adding params/ moves the directory's mtime without changing any file read here.
 	deps := []string{walkRoot(dir), name, path.Join(walkRoot(dir), defaultConventions)}
 	return s.projectC.get(t.FS, t.Mount+"\x00"+name, deps, func() (string, *webapi.Project, error) {
 		return s.readProject(t, dir, name)
@@ -259,14 +239,13 @@ func (s *FSStore) readProject(t Tree, dir, name string) (string, *webapi.Project
 
 // attachConfig fills in the config a project owns, as URIs for what exists.
 //
-// A declared name that names nothing is SILENTLY ABSENT rather than an error, and that asymmetry is
-// deliberate. The names default (conventions.yaml, profiles/, params/, review.yaml), so a project
-// that never declared anything would otherwise fail for lacking files it never claimed to have.
-// A project that DECLARES a name explicitly is a different case, and one worth failing on — but the
-// descriptor cannot currently tell the two apart, so this errs toward serving the project.
+// A declared name that names nothing is SILENTLY ABSENT rather than an error. The names default
+// (conventions.yaml, profiles/, params/, review.yaml), so otherwise a project that declared nothing
+// would fail for lacking files. An explicitly declared missing name deserves an error, but the
+// descriptor cannot tell the two apart yet.
 //
-// The conventions file is the one tier read HERE rather than handed on as a URI: it is small, it is
-// a value under C22, and composing it must need no I/O.
+// The conventions file is the one tier read HERE rather than handed on as a URI, because it is a
+// value under C22 and composing it must need no I/O.
 func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names ProjectConfigNames, p *webapi.Project) error {
 	rel := func(n string) (string, bool) {
 		if n == "" {
@@ -309,10 +288,9 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 	return nil
 }
 
-// loadDesign parses one design descriptor and rewrites its declared, design-folder-relative refs
-// into the mount-relative ones the wire type promises. The join happens HERE, once, because every
-// consumer above the port addresses files by (mount, ref) and none of them knows where the design
-// folder sits. The caller sets Name, which needs the parent.
+// loadDesign parses one design descriptor and rewrites its design-folder-relative refs into the
+// mount:// URIs the wire type promises. The join happens HERE, once, because no consumer above the
+// port knows where the design folder sits. The caller sets Name, which needs the parent.
 func (s *FSStore) loadDesign(t Tree, dir string) (string, *webapi.Design, error) {
 	name := path.Join(walkRoot(dir), DesignDescriptor)
 	deps := []string{walkRoot(dir), name}
@@ -341,8 +319,8 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 	}
 	d.Uri = base.String()
 	d.EntryUri = entry.String()
-	// Intent is a NAME until here; it becomes a URI only if the file is actually there, so a design
-	// that never wrote one reads as having none rather than as naming a file that is missing.
+	// Intent is a NAME until here and becomes a URI only if the file exists, so a design that never
+	// wrote one reads as having none rather than naming a missing file.
 	if d.GetConfig().GetIntentUri() != "" {
 		if exists(t.FS, path.Join(walkRoot(dir), d.GetConfig().GetIntentUri())) {
 			iu, err := base.Join(d.GetConfig().GetIntentUri())
@@ -354,9 +332,7 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 			d.Config.IntentUri = ""
 		}
 	}
-	// Symbols is a NAME until here, and becomes a URI only if the directory is actually there, on the
-	// same terms intent does: a design that never wrote one reads as having none rather than as naming
-	// a directory that is missing.
+	// Symbols likewise, for a directory.
 	if names := d.GetConfig().GetSymbolPathUris(); len(names) > 0 {
 		var resolved []string
 		for _, n := range names {
@@ -390,9 +366,8 @@ func (s *FSStore) tree(mount string) (Tree, bool) {
 	return Tree{}, false
 }
 
-// findAbove walks up from dir looking for a descriptor, stopping at the tree root. The root is the
-// hard stop, which is what makes containment structural: an fs.FS has no parent to climb into, so
-// resolution cannot reach a descriptor outside the tree.
+// findAbove walks up from dir looking for a descriptor, stopping at the tree root. An fs.FS has no
+// parent to climb into, so resolution cannot reach a descriptor outside the tree.
 func findAbove(fsys fs.FS, dir, name string) (string, bool) {
 	for {
 		if exists(fsys, path.Join(walkRoot(dir), name)) {
@@ -448,9 +423,8 @@ func displayDir(dir string) string {
 	return "the tree root"
 }
 
-// uriOf parses a resource's stored artifact URI. A URI this package wrote is always well formed, so
-// a parse failure means the value came from somewhere else; the zero URI then simply matches nothing
-// rather than failing a listing.
+// uriOf parses a resource's stored artifact URI. On a parse failure it returns the zero URI, which
+// matches nothing rather than failing a listing.
 func uriOf(s string) artifact.URI {
 	u, err := artifact.Parse(s)
 	if err != nil {
@@ -461,9 +435,8 @@ func uriOf(s string) artifact.URI {
 
 // cloneProject and cloneDesign keep a cached message from being handed out by pointer.
 //
-// The store MUTATES what it loads — it fills in resource names and rewrites descriptor-relative refs
-// into URIs — so returning the cached value itself would let one request's fill-in become the next
-// request's starting point, and the second call would join a URI onto a URI.
+// The store MUTATES what it loads (resource names, refs rewritten into URIs), so handing out the
+// cached value would make the second call join a URI onto a URI.
 func cloneProject(p *webapi.Project) *webapi.Project { return proto.CloneOf(p) }
 
 func cloneDesign(d *webapi.Design) *webapi.Design { return proto.CloneOf(d) }

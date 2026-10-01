@@ -1,15 +1,13 @@
-// Command dft-coverage is the design-for-test rung of the Agni examples ladder: which nets can a
-// probe reach, and which two-terminal passives can actually be measured on an assembled board. It is
-// the walkthrough form of the coverage questions a DFT review asks, driven by the fact relations
-// rather than by the rule catalog, so it doubles as the first example that runs a query.
+// Command dft-coverage is the design-for-test rung of the Agni examples ladder. It asks which nets a
+// probe can reach and which two-terminal passives can be measured on an assembled board, using the
+// fact relations rather than the rule catalog.
 //
 // The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds the
 // steps that run engine code.
 //
-// The grouped counts come from the QUERY, not from a fold in this file: `Select` takes count/min/max/sum
-// over the group its variable columns form, so "test points per net" is one query rather than a join
-// plus arithmetic here. Every step prints the CLI line that reproduces it, so nothing the walkthrough
-// shows is reachable only from Go.
+// The grouped counts come from the QUERY's aggregates, not from a fold in this file, so "test points
+// per net" is one query (docsite/content/guide/querying.md#count-parts-per-net-aggregation). Every
+// step prints the CLI line that reproduces it.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -37,8 +35,7 @@ var walkthroughMD []byte
 // passivePrelude names the two ideas every coverage question below is built on, as derived relations.
 // A `passive` is a two-terminal part whose value an in-circuit tester wants to measure; `covered`
 // pairs one with a net a probe can reach. Datalog has no disjunction, so "resistor or capacitor" is
-// two rules for one relation, which is also what makes the vocabulary extensible: add a rule and
-// every question below inherits it.
+// two rules for one relation, and adding a rule extends every question below.
 //
 // The same string is printed and executed, so the CLI line beside each step is the query that ran.
 const passivePrelude = `passive(?p) :- component.class(?p, "resistor"); ` +
@@ -143,9 +140,8 @@ func main() {
 		var undecided []string
 		for _, v := range check.RunVerdicts(m, check.BuiltinRules()) {
 			byOutcome[v.Outcome]++
-			// Reason is populated for NotConsidered alone: it is the rule author saying why the
-			// question could not be decided for this subject, which is the state a findings list has
-			// no way to express.
+			// Reason is populated for NotConsidered alone, in the rule author's words. A findings list
+			// has no way to express it.
 			if v.Outcome == check.NotConsidered && v.Reason != "" {
 				undecided = append(undecided, fmt.Sprintf("  %s on %s\n      %s", v.Rule, subjectRefs(v.Subjects), v.Reason))
 			}
@@ -170,7 +166,7 @@ func main() {
 func passiveQuery(q string) string { return passivePrelude + q }
 
 // subjectRefs names a verdict's subject tuple. A verdict is about a TUPLE because some rules ask
-// about a relation between entities, so this is the general shape even where it is one net.
+// about a relation between entities.
 func subjectRefs(es []check.Entity) string {
 	out := make([]string, 0, len(es))
 	for _, e := range es {
@@ -179,13 +175,12 @@ func subjectRefs(es []check.Entity) string {
 	return strings.Join(out, ",")
 }
 
-// refs joins the first column of each row, which is the ref-des on every query here.
-// refsCap bounds the ref-des list a bucket prints. The bundled fixture has three parts and the count
-// alongside carries the answer anyway, so a full list is only ever useful at fixture scale: pointed at
-// a real board these buckets run to several hundred, and the wall of text buries the three lines
-// around it. The count is never truncated, only the naming.
+// refsCap bounds the ref-des list a bucket prints. On a real board these buckets run to several
+// hundred and bury the lines around them (agni issue 644). The count is never truncated, only the
+// naming.
 const refsCap = 12
 
+// refs joins the first column of each row, which is the ref-des on every query here.
 func refs(rs [][]string) string {
 	out := make([]string, 0, len(rs))
 	for _, r := range rs {
@@ -199,22 +194,19 @@ func refs(rs [][]string) string {
 }
 
 // cli prints the command a reader can paste into a second terminal to reproduce the step. Every step
-// that runs engine code prints one, so the walkthrough is never the only way to get the answer.
+// that runs engine code prints one.
 func cli(line string) { fmt.Printf("$ %s\n\n", line) }
 
 // rows evaluates one datalog query against the design and returns each answer's bindings, in the
-// order the query's head names them. An unparseable query or a failed evaluation yields no rows
-// rather than a panic, which keeps a walkthrough step readable when a relation is not installed.
+// order the query's head names them. A parse or evaluation failure returns an error.
 func rows(d *ir.Design, q string) ([][]string, error) {
 	parsed, err := query.Parse(q)
 	if err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
-	// NewModelWithParams, not NewModel: the model's MPN map is filled by the params constructor
-	// alone, and component.mpn reads it rather than ir.Component.mpn. Built the other way the
-	// relation is EMPTY on a design whose components all carry a part number, so a question about
-	// part numbers answers "none" instead of failing. A nil spec provider is fine; only the datasheet
-	// relations need one.
+	// NewModelWithParams, not NewModel. The params constructor alone fills the model's MPN map, and
+	// component.mpn reads it rather than ir.Component.mpn, so the other way leaves the relation EMPTY
+	// on a design whose parts all carry one. A nil spec provider is fine.
 	got, err := (query.Naive{}).Eval(parsed, query.NewBase(check.NewModelWithParams(d, nil, nil)))
 	if err != nil {
 		return nil, fmt.Errorf("eval: %w", err)
@@ -231,8 +223,8 @@ func rows(d *ir.Design, q string) ([][]string, error) {
 	return out, nil
 }
 
-// must reports a query failure as a step error rather than an empty answer, because an empty answer
-// from a broken query is indistinguishable from a clean design.
+// must panics on a query failure rather than returning an empty answer, because an empty answer
+// from a broken query looks the same as a clean design.
 func must(rs [][]string, err error) [][]string {
 	if err != nil {
 		panic(err)

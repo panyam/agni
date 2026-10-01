@@ -1,28 +1,20 @@
-// Package ruledef reads and writes rule DEFINITIONS: the declarative source a rule compiles from
-// (WS3-103).
+// Package ruledef reads and writes rule DEFINITIONS, the declarative source a rule compiles from
+// (WS3-103). It is the one form shared by the three declarative sources, a check.Spec, a datalog
+// query and an interface profile. See
+// docsite/content/architecture/checks-contract.md#the-other-half-rule-definitions.
 //
-// It exists because the engine has three declarative rule sources with three compilers — a
-// check.Spec, a datalog query, an interface profile — and, until now, no common form. That made
-// profile YAML, datalog text, a future DSL, and a foreign rule deck four parallel paths rather than
-// four front-ends onto one target. This package is that target.
+// It sits ABOVE all three because core/query imports core/check and stdlib/profiles imports both, so
+// a converter for all three cannot live in core/check without a cycle. Each source owns the wire form
+// of its OWN body (check.SpecProto, query.QueryProto, profiles.ProfileProto). This package holds only
+// the join, meaning which body a definition carries and how to compile it back into rules.
 //
-// It has to sit ABOVE all three sources rather than inside any one of them: core/query imports
-// core/check, and stdlib/profiles imports both, so a package that converts all three cannot live in
-// core/check without a cycle. Each source owns the wire form of its OWN body — check.SpecProto,
-// query.QueryProto, profiles.ProfileProto. What lives here is only the join: which body a definition
-// carries, and how to compile it back into rules.
+// A new NODE TYPE is caught where a type switch covers the vocabulary, but a new FIELD on a
+// body the converter copies by hand is silently not copied. Profile.HostClass was dropped that way
+// until the round-trip guard in stdlib/profiles caught it, so each body's wire form owes a
+// deep-equality round-trip test as well as a converter.
 //
-// That ownership catches a new NODE TYPE, which has to be handled where a type switch covers the
-// vocabulary, and it does NOT catch a new FIELD on a body that is already mapped. A field added to a
-// struct the converter copies by hand is simply not copied, and nothing fails to compile.
-// Profile.HostClass was added that way and silently dropped here until the round-trip guard in
-// stdlib/profiles caught it, so each body's wire form owes a deep-equality round-trip test as well as
-// a converter.
-//
-// What is deliberately NOT serializable is check.Rule itself. A Rule carries an Eval closure, and a Go
-// func has no wire form. The serializable artifact is the SOURCE, and compiling is exactly the step
-// that produces the non-serializable part — so a rule with a hand-written Go Eval and no declarative
-// twin is outside this contract by design rather than a gap in it.
+// check.Rule itself is NOT serializable, because its Eval closure has no wire form. A rule with a
+// hand-written Go Eval and no declarative twin is outside this contract.
 package ruledef
 
 import (
@@ -55,17 +47,12 @@ func ProfileDef(p profiles.Profile) *checkspb.RuleDef {
 	return &checkspb.RuleDef{Body: &checkspb.RuleDef_Profile{Profile: profiles.ProfileProto(p)}}
 }
 
-// Compile turns one definition back into the rules it declares.
-//
-// It returns a SLICE because a definition is not always one rule: a spec and a query each yield one,
-// an interface profile yields one per requirement. That asymmetry is the profile mechanism working as
-// intended — a single declaration standing in for a family of near-identical checks — so the signature
-// admits it rather than forcing every caller to pretend otherwise.
+// Compile turns one definition back into the rules it declares. It returns a SLICE because a spec
+// and a query each yield one rule and an interface profile yields one per requirement.
 //
 // Every failure mode is an error, never a panic and never a silent drop. A definition read from
-// outside this build can name a fact, a function, a relation, or a requirement type that does not
-// exist here, and each of those would otherwise produce a rule that quietly never fires — which reads
-// exactly like a design with nothing wrong with it.
+// outside this build can name a fact, function, relation or requirement type that does not exist
+// here, and each would otherwise produce a rule that never fires.
 func Compile(def *checkspb.RuleDef) ([]*check.Rule, error) {
 	switch b := def.GetBody().(type) {
 	case *checkspb.RuleDef_Spec:
@@ -111,8 +98,7 @@ func Compile(def *checkspb.RuleDef) ([]*check.Rule, error) {
 }
 
 // CompileDeck compiles every definition in a deck, in order. It stops at the first bad definition
-// rather than skipping it: a deck that loads with one rule quietly missing is a catalog that looks
-// complete and is not.
+// rather than skipping it, so a deck never loads with one rule quietly missing.
 func CompileDeck(deck *checkspb.RuleDeck) ([]*check.Rule, error) {
 	var out []*check.Rule
 	for i, def := range deck.GetRules() {
@@ -125,9 +111,8 @@ func CompileDeck(deck *checkspb.RuleDeck) ([]*check.Rule, error) {
 	return out, nil
 }
 
-// Source compiles a deck into a check.RuleSource, so a set of definitions read from a document joins a
-// catalog exactly the way a Go-registered suite does. This is the data seam beside check.RegisterSource's
-// runtime seam: a rule source that today must be Go code linked into the binary can be a document.
+// Source compiles a deck into a check.RuleSource, so definitions read from a document join a catalog
+// the way a Go-registered suite does. It is the data-driven counterpart to check.RegisterSource.
 func Source(deck *checkspb.RuleDeck) (check.RuleSource, error) {
 	rules, err := CompileDeck(deck)
 	if err != nil {
@@ -136,8 +121,7 @@ func Source(deck *checkspb.RuleDeck) (check.RuleSource, error) {
 	return check.NewSource(deck.GetName(), rules), nil
 }
 
-// Marshal encodes a deck as indented protojson. A rule deck is authored, reviewed, and diffed by
-// people, so a text encoding is worth more than a compact one.
+// Marshal encodes a deck as indented protojson, since people author, review and diff rule decks.
 func Marshal(deck *checkspb.RuleDeck) ([]byte, error) {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(deck)
 	if err != nil {
@@ -146,8 +130,8 @@ func Marshal(deck *checkspb.RuleDeck) ([]byte, error) {
 	return append(b, '\n'), nil
 }
 
-// Parse decodes a deck. It does not compile: reading and judging are separate so a caller can inspect
-// or re-emit a deck holding a definition this build cannot run.
+// Parse decodes a deck without compiling it, so a caller can inspect or re-emit a deck holding a
+// definition this build cannot run.
 func Parse(b []byte) (*checkspb.RuleDeck, error) {
 	deck := &checkspb.RuleDeck{}
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(b, deck); err != nil {
@@ -156,13 +140,10 @@ func Parse(b []byte) (*checkspb.RuleDeck, error) {
 	return deck, nil
 }
 
-// requirementsRegistered rejects a profile whose declared requirements this build cannot run: an
-// unknown requirement type, or params the type's validator refuses. profiles.Compile panics on either
-// (it is a programming error for a Go literal); arriving from a document it is an input error, and
-// either one silently accepted would mean a declared check that never runs.
-//
-// It delegates to profiles.ValidateRequirements rather than re-deriving the check here, so a deck and
-// a YAML profile cannot drift on what counts as a valid requirement (WS3-047).
+// requirementsRegistered rejects a profile whose requirements this build cannot run, meaning an
+// unknown requirement type or params the type's validator refuses. profiles.Compile panics on either,
+// which suits a Go literal, but from a document it is an input error. It delegates to
+// profiles.ValidateRequirements so a deck and a YAML profile agree on what is valid (WS3-047).
 func requirementsRegistered(p profiles.Profile) error {
 	return profiles.ValidateRequirements(p)
 }

@@ -1,11 +1,9 @@
 // Command agni-extension is the extension template's composing binary. Copy this whole module,
-// rename it, fill in the myfmt/ reader and myrules/ rules, and you have a private extension that
-// extends the public agni engine without forking it.
+// rename it, and fill in the myfmt/ reader and myrules/ rules to extend the public agni engine
+// without forking it.
 //
-// The composition is two blank imports: the reader and rule packages register themselves in
-// their init (formats.Register / check.RegisterSource), so from here the engine's library
-// resolves your format and runs your rules alongside the built-ins. See
-// the docsite page build/extending.md.
+// The composition is two blank imports, whose packages register themselves in their init
+// (formats.Register, check.RegisterSource). See docsite/content/build/extending.md.
 package main
 
 import (

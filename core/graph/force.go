@@ -9,27 +9,25 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Force-directed layout parameters. Fixed budgets keep the output deterministic (no
-// convergence threshold, no RNG); the temperature schedule cools linearly so early sweeps
-// make large corrections and late sweeps only settle.
+// Force-directed layout parameters. A fixed iteration budget with no convergence threshold and no
+// RNG keeps the output deterministic. The temperature cools linearly, so early sweeps make large
+// corrections and late sweeps only settle.
 const (
 	forceIterations = 200
 	forceIdeal      = pitch // ideal spring length k, in layout units
 )
 
-// forcePlace is the deterministic force-directed layout (WS7-008, Fruchterman-Reingold):
-// all node pairs repel (k^2/d), connected nodes attract (d^2/k), iterate under a cooling
-// displacement cap. Each net becomes a star through a virtual hub node (the WS7-003
-// hyperedge model), so the force model stays node-node without turning a wide net into a
-// clique; hubs join the simulation and are dropped before output. Init is the layered
-// placement (deterministic, roughly right), components solve independently and pack left to
-// right, and final positions snap to free pitch cells, all exactly as the stress strategy
-// does, so compactBySize's grid-alignment contract keeps holding.
+// forcePlace is the deterministic Fruchterman-Reingold layout (WS7-008). All node pairs repel
+// (k^2/d) and connected nodes attract (d^2/k), under a cooling displacement cap. Each net becomes a
+// star through a virtual hub node (the WS7-003 hyperedge model), so a wide net does not become a
+// clique, and hubs are dropped before output. As in stressPlace, init is the layered placement,
+// connected components solve independently and pack left to right, and positions snap to free pitch
+// cells, which keeps compactBySize's grid-alignment contract.
 func forcePlace(d *ir.Design) Placement {
 	adj := adjacency(d)
 	init := layeredPlace(d).Positions
 
-	// Net membership by component ref, to attach each component's nets' hubs.
+	// Net membership by component ref, for attaching hubs.
 	memberNets := map[string][]*ir.Net{}
 	for _, n := range d.Nets {
 		seen := map[string]bool{}
@@ -64,7 +62,7 @@ func forceComponent(refs []string, memberNets map[string][]*ir.Net, init map[str
 		inComp[r] = true
 	}
 
-	// Simulation nodes: members (sorted), then this component's net hubs (net-name sorted).
+	// Simulation nodes are the members (sorted), then this component's net hubs (net-name sorted).
 	nodes := append([]string{}, refs...)
 	hubMembers := map[string][]int{} // hub node index -> member node indexes
 	netSeen := map[string]bool{}
@@ -119,7 +117,7 @@ func forceComponent(refs []string, memberNets map[string][]*ir.Net, init map[str
 		x[i] += float64(i) * 1e-3
 	}
 
-	// Edges: hub to each member.
+	// Edges run from each hub to its members.
 	type edge struct{ a, b int }
 	var edges []edge
 	for i := len(refs); i < n; i++ {
@@ -130,7 +128,7 @@ func forceComponent(refs []string, memberNets map[string][]*ir.Net, init map[str
 
 	k := float64(forceIdeal)
 	for iter := range forceIterations {
-		// Linear cooling: from 3*pitch of allowed movement down to (almost) none.
+		// Linear cooling from 3*pitch of allowed movement down to almost none.
 		temp := 3 * k * float64(forceIterations-iter) / float64(forceIterations)
 		dx := make([]float64, n)
 		dy := make([]float64, n)
@@ -142,7 +140,7 @@ func forceComponent(refs []string, memberNets map[string][]*ir.Net, init map[str
 				if dd < 1e-9 {
 					ddx, ddy, dd = 1, 0, 1
 				}
-				f := k * k / dd / dd // force magnitude over distance, applied to the delta vector
+				f := k * k / dd / dd // k^2/d force over distance d
 				dx[i] += ddx * f
 				dy[i] += ddy * f
 				dx[j] -= ddx * f

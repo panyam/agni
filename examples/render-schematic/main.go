@@ -1,7 +1,7 @@
-// Command render-schematic is the render rung of the Agni examples ladder: read an EDIF
-// schematic into the geometry sidecar and drive both render backends over it — the SVG one
-// (offline) and the tier-2 packer that feeds the WebGL2 viewer. Narration lives in the
-// sidecar walkthrough.md; this file only binds the steps that run engine code.
+// Command render-schematic is the render rung of the Agni examples ladder. It reads an EDIF
+// schematic into the geometry sidecar and drives both render backends over it, the offline SVG
+// one and the tier-2 packer that feeds the WebGL2 viewer. Narration lives in the sidecar
+// walkthrough.md, and this file only binds the steps that run engine code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -25,7 +25,7 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	// The shared path input: default to the bundled schematic, accept any .eds path.
+	// The shared path input. It defaults to the bundled schematic and accepts any .eds path.
 	design := common.AskPath("design", "../common/designs/demo-schematic.eds")
 
 	demo := demokit.New("render-schematic").

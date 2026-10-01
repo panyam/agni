@@ -6,27 +6,25 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// gutter is the minimum gap between adjacent node bounding boxes. Sized so a full grid of synthetic
-// glyphs (widest is 2*terminalX = 80) still fits one node per pitch: 80 + gutter <= pitch, so the
-// glyph/box layout stays exactly on the base grid (compactBySize leaves it unchanged).
+// gutter is the minimum gap between adjacent node bounding boxes. It is sized so the widest
+// synthetic glyph (2*terminalX = 80) plus gutter still fits one pitch, which keeps an all-glyph
+// layout exactly on the base grid.
 const gutter = pitch / 5
 
-// compactBySize re-spaces a grid-aligned placement so each node gets a cell sized to its own
-// symbol, rather than every node being spaced for the largest one (the old uniform scale, which
-// left mixed-size layouts sparse). Nodes that share an X form a column and nodes that share a Y
-// form a row (both strategies place on integer multiples of pitch); each column is widened to its
-// widest node and each row heightened to its tallest, floored at pitch so an all-glyph design is
-// unchanged. Nodes sit at their cell centres, and the whole layout is translated so the
-// sorted-first ref anchors the origin (stable for diffing). refs must be the placement's ref-des
-// in sorted order.
+// compactBySize re-spaces a grid-aligned placement so each node gets a cell sized to its own symbol
+// rather than to the largest one. Nodes sharing an X form a column and nodes sharing a Y form a row.
+// Each column is widened to its widest node and each row heightened to its tallest, floored at pitch
+// so an all-glyph design is unchanged. Nodes sit at their cell centres, and the layout is translated
+// so the sorted-first ref anchors the origin. refs must be the placement's ref-des in sorted order.
 //
-// It assumes grid-aligned positions (distinct X = columns, distinct Y = rows), which grid and
-// layered satisfy; a future continuous-coordinate strategy would need its own overlap removal.
+// It assumes grid-aligned positions. Every current strategy places on integer multiples of pitch
+// (stress and force snap to it), and a continuous-coordinate strategy would need its own overlap
+// removal.
 func compactBySize(pos map[string]*geom.Point, sizes map[string]nodeSize, refs []string) map[string]*geom.Point {
 	if len(pos) == 0 {
 		return pos
 	}
-	// Per-column width and per-row height: max node extent in that column/row, floored at pitch.
+	// Per-column width and per-row height, as the max node extent floored at pitch.
 	colW := map[int64]int64{}
 	rowH := map[int64]int64{}
 	for ref, p := range pos {
@@ -48,8 +46,8 @@ func compactBySize(pos map[string]*geom.Point, sizes map[string]nodeSize, refs [
 	floor(colW)
 	floor(rowH)
 
-	// Lay columns left-to-right (X ascending) and rows top-to-bottom (Y descending, since geom is
-	// Y-up) edge to edge; a cell's centre is its running offset plus half its size.
+	// Columns run left to right (X ascending) and rows top to bottom (Y descending, since geom is
+	// Y-up).
 	centerX := runningCenters(colW, false)
 	centerY := runningCenters(rowH, true)
 
@@ -71,8 +69,7 @@ func compactBySize(pos map[string]*geom.Point, sizes map[string]nodeSize, refs [
 }
 
 // runningCenters maps each distinct coordinate to the centre of its cell, laying the cells edge to
-// edge in coordinate order: ascending when descend is false (columns, left to right), descending
-// when true (rows, top to bottom in Y-up).
+// edge in coordinate order, ascending unless descend is set.
 func runningCenters(size map[int64]int64, descend bool) map[int64]int64 {
 	keys := make([]int64, 0, len(size))
 	for k := range size {
@@ -89,7 +86,7 @@ func runningCenters(size map[int64]int64, descend bool) map[int64]int64 {
 	for _, k := range keys {
 		w := size[k]
 		if descend {
-			center[k] = edge - w/2 // going down in Y-up: edges decrease
+			center[k] = edge - w/2 // edges decrease going down in Y-up
 			edge -= w
 		} else {
 			center[k] = edge + w/2

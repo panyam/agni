@@ -1,10 +1,8 @@
-// Package validate holds the reader-health invariants behind `agni validate` (WS6-007):
-// structural sanity checks over what a reader produced, catching "parsed but empty" and
-// "placements that resolve to nothing" regressions that per-fixture unit tests miss on
-// real files. It is not design-rule checking (that is check/, over the design's meaning);
-// these invariants are about the reader. Pure functions over parsed structures — file I/O
-// and format dispatch stay at the edge (CONSTRAINTS C1); the CLI walks files through
-// formats and calls these.
+// Package validate holds the reader-health invariants behind `agni validate` (WS6-007), which
+// are structural sanity checks over what a reader produced. They catch "parsed but empty" and
+// "placements that resolve to nothing" regressions that per-fixture unit tests miss on real
+// files. Design-rule checking is core/check. These are pure functions over parsed structures,
+// and file I/O and format dispatch stay in the CLI (CONSTRAINTS C1).
 package validate
 
 import (
@@ -16,15 +14,14 @@ import (
 )
 
 // MinResolutionRate is the fraction of placements that must resolve to a symbol
-// definition for a geometry to pass. Real exports resolve essentially everything once
-// cell/library ids normalize correctly, so a lower rate signals a reader regression (the
-// invariant that caught the EDIF id-normalization bug); it is not 1.0 because real
-// libraries occasionally carry a genuinely definition-less decorative instance.
+// definition for a geometry to pass. Real exports resolve essentially everything, so a
+// lower rate signals a reader regression (it caught the EDIF id-normalization bug). It is
+// not 1.0 because real libraries occasionally carry a definition-less decorative instance.
 const MinResolutionRate = 0.99
 
-// Design returns the netlist-tier problems with a parsed design: empty problems means it
-// passes. A design that parsed but carries no components or no nets is the classic
-// silent-reader-regression shape.
+// Design returns the netlist-tier problems with a parsed design, empty when it passes. A
+// design that parsed but carries no components or no nets is the usual silent reader
+// regression.
 func Design(d *ir.Design) []string {
 	if d == nil {
 		return []string{"no design produced"}
@@ -39,9 +36,9 @@ func Design(d *ir.Design) []string {
 	return problems
 }
 
-// Geometry returns the drawing-tier problems with a parsed schematic geometry: empty
-// problems means it passes. Beyond non-empty structure, every placement should join to a
-// symbol definition (see MinResolutionRate).
+// Geometry returns the drawing-tier problems with a parsed schematic geometry, empty when
+// it passes. Beyond non-empty structure, placements must join to symbol definitions at
+// MinResolutionRate.
 func Geometry(g *geom.SchematicGeometry) []string {
 	if g == nil {
 		return []string{"no geometry produced"}
@@ -73,11 +70,9 @@ func Geometry(g *geom.SchematicGeometry) []string {
 	return problems
 }
 
-// Resolved counts the placements that will actually DRAW, through the same join the renderers use.
-//
-// It used to build its own (cell_ref, library_ref) index, which was stricter than the renderer's:
-// the renderer falls back to a cell-only key, so a placement naming no library drew while this
-// counted it unresolved. One join, in geomath, so "does it draw" has a single answer (agni issue 354).
+// Resolved counts the placements that will actually DRAW, through the renderers' own join
+// (geomath.IndexSymbols, including its cell-only fallback), so "does it draw" has one answer
+// (agni issue 354).
 func Resolved(g *geom.SchematicGeometry) int {
 	ix := geomath.IndexSymbols(g)
 	n := 0

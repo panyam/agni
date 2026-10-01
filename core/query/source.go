@@ -11,10 +11,9 @@ import (
 	"github.com/panyam/jaala/datalog"
 )
 
-// modelSource is the engine's view of one design: the rows a facts.Registry projects from a
-// check.Model, served as positional tuples. It is the whole impedance match between the fact layer
-// and the engine. Below it everything is a facts.Row with named slots; above it everything is a
-// Datalog tuple.
+// modelSource is the engine's view of one design, the rows a facts.Registry projects from a
+// check.Model served as positional tuples. Below it everything is a facts.Row with named slots, and
+// above it everything is a Datalog tuple.
 //
 // model and netByName are nil for a spec-library base and a validation base, which have no design,
 // so the circuit predicates read nothing through them.
@@ -43,7 +42,7 @@ func newModelSource(reg *facts.Registry) *modelSource {
 // Schema implements datalog.Source. The arity is the relation's field layout; the labels and closed
 // vocabularies come from its catalog entry, which is what lets the engine refuse a constant such as
 // net.role(?n, "swiching") rather than answer "no results" (agni 696). A relation whose catalog entry
-// declares no argument kinds gets no labels, which is exactly the set the engine never checked.
+// declares no argument kinds gets no labels, so its constants go unchecked.
 func (s *modelSource) Schema(rel string) (datalog.Schema, bool) {
 	s.schemaMu.RLock()
 	sc, ok := s.schemas[rel]
@@ -84,9 +83,9 @@ func (s *modelSource) Tuples(rel string) []datalog.Tuple {
 	return out
 }
 
-// Relations implements datalog.Source: the catalog's names in its display order, which is the order
-// a did-you-mean hint has always broken ties in. Empty when no relation catalog is installed, so the
-// engine reports that rather than guessing at a typo (C29).
+// Relations implements datalog.Source, returning the catalog's names in display order, the order a
+// did-you-mean hint breaks ties in. Empty when no relation catalog is installed, so the engine reports
+// that rather than guessing at a typo (C29).
 func (s *modelSource) Relations() []string {
 	s.relsOnce.Do(func() {
 		if !s.reg.Installed() {
@@ -139,9 +138,8 @@ func ftoa(f float64) string { return strconv.FormatFloat(f, 'g', -1, 64) }
 // NewBase projects a Model into its fact base over the process-default relation vocabulary. Use
 // NewBaseFrom to supply one explicitly.
 //
-// A binary that installs no relation catalog gets an EMPTY base, which answers nothing while looking
-// exactly like a query that matched nothing. See Registry.Installed for the check that separates the
-// two.
+// A binary that installs no relation catalog gets an EMPTY base, which looks like a query that
+// matched nothing. Registry.Installed separates the two.
 func NewBase(m check.Model) *Base { return NewBaseFrom(facts.DefaultRegistry(), m) }
 
 // NewBaseFrom projects a Model into its fact base over the given relation vocabulary and indexes it
@@ -158,11 +156,10 @@ func NewBaseFrom(reg *facts.Registry, m check.Model) *Base {
 	return datalog.NewBase(s, predicates)
 }
 
-// NewSpecLibBase builds a fact base over a whole seeded datasheet corpus with NO design (WS10-010):
-// the datasheet relations (`param`, `part.audience`) project over every PartSpec the FactSource
-// yields, so `agni query --speclib` searches the spec library instead of the parts joined to one
-// design. There is no model, so model-dependent relations and predicates (net.*, component.*,
-// reaches) have no facts and yield nothing.
+// NewSpecLibBase builds a fact base over a whole seeded datasheet corpus with NO design (WS10-010).
+// The datasheet relations (`param`, `part.audience`) project over every PartSpec the FactSource
+// yields, so `agni query --speclib` searches the spec library rather than one design's parts.
+// Model-dependent relations and predicates (net.*, component.*, reaches) yield nothing.
 func NewSpecLibBase(fs param.FactSource) *Base {
 	return NewSpecLibBaseFrom(facts.DefaultRegistry(), fs)
 }
@@ -179,16 +176,16 @@ func NewSpecLibBaseFrom(reg *facts.Registry, fs param.FactSource) *Base {
 // Validate reports why a query cannot run, reading only the query and the relation vocabulary it
 // would run against. No design, no rows.
 //
-// It exists because a rule compiled from a query used to be un-rejectable: the failure surfaced only
-// when the rule ran, where it was swallowed into a clean pass (agni issue 540). A registry with no
-// relation installed still validates everything that needs no vocabulary, because stdlib/profiles
-// compiles its built-in profiles in an init() that runs before any relation catalog has registered.
+// Without it a rule compiled from a query fails only when it runs, where the failure is swallowed into
+// a clean pass (agni issue 540). A registry with no relation installed still validates everything that
+// needs no vocabulary, because stdlib/profiles compiles its built-in profiles in an init() that runs
+// before any relation catalog has registered.
 func Validate(q Query, reg *facts.Registry) error {
 	return datalog.Validate(q, newModelSource(reg), predicates)
 }
 
-// Reads returns the fact-base relations a query references, sorted and deduped: the facts a
-// query-backed rule declares it reads, which drives check.Available's param and board gating.
+// Reads returns the fact-base relations a query references, sorted and deduped. A query-backed rule
+// declares these as the facts it reads, and check.Available gates on them for params and board.
 func Reads(q Query) []string { return ReadsFrom(facts.DefaultRegistry(), q) }
 
 // ReadsFrom is Reads over an explicit relation vocabulary, for a caller composing its own.

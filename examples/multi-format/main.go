@@ -1,8 +1,8 @@
-// Command multi-format is the multi-format rung of the Agni examples ladder: read the
-// same board from EDIF, KiCad, and IPC-2581 and show the neutral IR converge. The narration
-// lives in the sidecar walkthrough.md (demokit FromMarkdown); this file binds the steps that
-// run engine code. Unlike the other examples it reads a fixed bundled trio (the point is the
-// matched set), so it does not prompt for a path.
+// Command multi-format is the multi-format rung of the Agni examples ladder. It reads the same
+// board from EDIF, KiCad, and IPC-2581 and shows the neutral IR converge. The narration lives in
+// the sidecar walkthrough.md (demokit FromMarkdown), and this file binds the steps that run engine
+// code. Unlike the other examples it reads a fixed bundled trio, because the point is the matched
+// set, so it does not prompt for a path.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).

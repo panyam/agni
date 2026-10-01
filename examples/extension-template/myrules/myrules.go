@@ -1,10 +1,9 @@
-// Package myrules is the rule slot of the extension template. Copy this package, rename it, and
-// replace the example rule with your house-style/private rules. It registers a named rule source
-// with the engine's public rule registry (check.RegisterSource); blank-importing it makes the
-// rules appear in ListRules and run in CheckDesign, namespaced "myco/..." so they can never
-// shadow a built-in.
+// Package myrules is the rule slot of the extension template. Copy it, rename it, and replace the
+// example rule with your own. It registers a named source through check.RegisterSource, so a blank
+// import puts the rules in ListRules and CheckDesign, namespaced "myco/..." so none can shadow a
+// built-in.
 //
-// See the docsite page build/extending.md for the full walkthrough.
+// Walkthrough: docsite/content/build/extending.md#register-private-rules-with-checkregistersource
 package myrules
 
 import (
@@ -13,15 +12,15 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// init registers the suite by import side effect. To register explicitly from your binary's
-// main instead, delete this init and call check.RegisterSource there.
+// init registers the suite by import side effect. To register from your binary's main instead,
+// delete this init and call check.RegisterSource there.
 func init() {
-	// TODO: your source name (lowercase [a-z0-9-]+) — it becomes the "<name>/<rule>" namespace.
+	// TODO: your source name (lowercase [a-z0-9-]+). It becomes the "<name>/<rule>" namespace.
 	check.RegisterSource(check.NewSource("myco", []*check.Rule{exampleRule}))
 }
 
-// exampleRule is a placeholder house rule: it flags any component with an empty ref-des.
-// Replace it with your real policy — it can read any fact the check.Model exposes.
+// exampleRule is a placeholder house rule that flags any component with an empty ref-des. Replace
+// it with your real policy, which can read any fact the check.Model exposes.
 var exampleRule = &check.Rule{
 	Name:     "example-rule",
 	Severity: "warning",
@@ -30,14 +29,13 @@ var exampleRule = &check.Rule{
 	Remedy:   "describe what to DO about it, in the imperative, as one engineer would say it to another",
 	Reads:    []string{"component.ref_des"},
 	Tags:     map[string]string{check.KeyCategory: "house-style"},
-	// StatesConsideredSet says Eval below returns EVERY subject the rule looked at, not just the ones
-	// that failed. Leave it false while your Eval only reports violations, or `check --verdicts` will
-	// present your failure list as though it were coverage.
+	// StatesConsideredSet says Eval returns EVERY subject the rule looked at, not just the failures.
+	// Leave it false while your Eval reports only violations, or `check --verdicts` presents the
+	// failure list as coverage.
 	StatesConsideredSet: true,
-	// Eval MAPS each subject onto a verdict rather than filtering the design down to what failed. A
-	// pass carries the proof it rests on, so a reader can tell a part you cleared from one nobody
-	// checked. The findings your rule contributes are the projection of this (Rule.Findings), so
-	// there is no second body to keep in step.
+	// Eval MAPS each subject onto a verdict rather than filtering down to what failed. A pass
+	// carries the proof it rests on, so a reader can tell a part you cleared from one nobody
+	// checked. The rule's findings are projected from this (Rule.Findings).
 	Eval: func(m check.Model) []check.Verdict {
 		var out []check.Verdict
 		for _, c := range m.Components() {

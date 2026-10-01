@@ -1,32 +1,26 @@
-// Package candidate is the seam between "something proposed a fact" and "a person accepted it".
-//
-// It exists because the path from a blocked check to a seeded value is otherwise entirely manual: a
-// check reports which fact it wanted (the unmet dependency), and someone reads 58 pages. A proposer
-// can shorten that, but only if what it proposes can be checked faster than it could be found.
+// Package candidate sits between "something proposed a fact" and "a person accepted it" (agni
+// issue 261). A blocked check names the fact it wanted, and a proposer can shorten the search for it,
+// but only if what it proposes can be checked faster than it could be found.
 //
 // # A candidate without a resolvable citation is refused, not down-weighted
 //
-// This is the rule the whole package exists to enforce, and it is a measured decision rather than a
-// cautious one. A pattern sweep over a real corpus ran 71% precision on the easy form and 17% on the
-// hard one. At those rates an author who cannot check an answer instantly will wave it through, and a
-// wrong fact wearing a verified badge is strictly worse than no fact at all: a blocked check is
-// honest, a wrong seeded value is a confident wrong answer that a design review then rests on.
+// A pattern sweep over a real corpus ran 71% precision on the easy form and 17% on the hard one. At
+// those rates an author who cannot check an answer instantly will wave it through, and a wrong seeded
+// value is a confident wrong answer a design review then rests on, where a blocked check is at least
+// visibly blocked. So Validate accepts or rejects a citation and never scores one. "I could not cite
+// this precisely" is a legitimate answer from a proposer; "a value, roughly from page 12" is not.
 //
-// So Validate does not score a citation, it accepts or rejects one. "I could not cite this precisely"
-// is a legitimate answer from a proposer; "here is a value, roughly from page 12" is not.
+// # Fabrication is detectable
 //
-// # Fabrication is structurally detectable
-//
-// A candidate quotes the document verbatim, and Validate checks that the quote actually occurs in the
-// region it claims. A proposer that invents a plausible sentence fails that check without anyone
-// reading the page. This is what makes an unreliable proposer safe to put in front of a person: it
-// can waste their time, but it cannot manufacture evidence.
+// A candidate quotes the document verbatim, and Validate checks that the quote occurs in the region
+// it claims, so an invented sentence fails without anyone reading the page. An unreliable proposer
+// can waste a person's time but cannot manufacture evidence.
 //
 // # The manual path does not depend on any of this
 //
-// Source is an interface with no privileged implementation. A deployment with no proposer configured
-// still authors facts by hand exactly as before, which is the posture param.ParamProvider already
-// takes for the datasheet tier: pluggable, absent-tolerant, never required.
+// Source is an interface with no privileged implementation, and a deployment with no proposer still
+// authors facts by hand. Same posture as param.ParamProvider: pluggable, absent-tolerant, never
+// required.
 package candidate
 
 import (
@@ -39,11 +33,11 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// The wire types ARE the types here, as in param and doc: this is a cross-runtime contract, and a
-// Go twin beside it is the drift a shared schema exists to prevent.
+// The wire types ARE the types here, as in param and doc, because this is a cross-runtime contract
+// and a Go twin would drift from it.
 
-// Source proposes candidates for a request against one document. Returning none is a legitimate and
-// common answer, and is what a proposer must do rather than lower its standards to produce something.
+// Source proposes candidates for a request against one document. Returning none is a common answer,
+// and is what a proposer must do rather than lower its standards to produce something.
 type Source interface {
 	Propose(req *candpb.Request, d *docpb.Document) ([]*candpb.Candidate, error)
 }
@@ -54,22 +48,21 @@ var (
 	// ErrNoCitation: the candidate names no region, so nobody can check it.
 	ErrNoCitation = errors.New("candidate has no citation")
 	// ErrRegionUnknown: the cited region does not exist in this document. A proposer reading a
-	// different revision produces exactly this, which is why it is a refusal and not a warning.
+	// different revision produces this, so it is a refusal and not a warning.
 	ErrRegionUnknown = errors.New("cited region does not exist in this document")
 	// ErrQuoteNotFound: the quote does not occur in the region it cites. This is the fabrication
-	// check: an invented sentence fails it without anyone opening the page.
+	// check.
 	ErrQuoteNotFound = errors.New("quoted text does not occur in the cited region")
 	// ErrConfidenceRange: confidence outside (0, 1], or 1.0 claimed by a machine proposer. A value
 	// nobody stands behind must not be emitted, and only a human verification earns certainty.
 	ErrConfidenceRange = errors.New("confidence outside (0, 1], or 1.0 claimed without human verification")
 )
 
-// Validate accepts or rejects a candidate against the document it cites. There is no middle verdict
-// on purpose: see the package doc.
+// Validate accepts or rejects a candidate against the document it cites, with no middle verdict (see
+// the package doc).
 //
-// The quote check normalises whitespace before comparing, because a producer's line breaking is not
-// part of the claim, but it does not normalise anything else. A proposer that paraphrases fails, and
-// should.
+// The quote check normalises whitespace and case before comparing, since a producer's line breaking
+// is not part of the claim, and nothing else. A proposer that paraphrases fails.
 func Validate(c *candpb.Candidate, d *docpb.Document) error {
 	if c.GetCitation().GetRegionId() == "" || strings.TrimSpace(c.GetCitation().GetQuote()) == "" {
 		return fmt.Errorf("%w: region %q quote %q", ErrNoCitation, c.GetCitation().GetRegionId(), c.GetCitation().GetQuote())
@@ -127,13 +120,12 @@ func squash(s string) string { return strings.Join(strings.Fields(strings.ToLowe
 // Accept turns a validated candidate into the parameter a corpus holds, stamping provenance that
 // points back at the exact region it came from.
 //
-// It re-validates rather than trusting the caller to have done it: this is the one door between a
-// proposal and a corpus, and a check that can be skipped by forgetting a call is not a check.
+// It re-validates rather than trusting the caller, because this is the one door between a proposal
+// and a corpus.
 //
-// The result is deliberately NOT verified. It carries the proposer's confidence and method, and a
-// human confirmation is a separate act on a separate artifact; conflating "a machine proposed this
-// and a person has not looked" with "a person checked this" is the failure this seam exists to
-// prevent.
+// The result is NOT verified. It carries the proposer's confidence and method, and a human
+// confirmation is a separate act on a separate artifact, so "a machine proposed this" never reads as
+// "a person checked this".
 func Accept(c *candpb.Candidate, d *docpb.Document, docRef string) (*parampb.Parameter, error) {
 	if err := Validate(c, d); err != nil {
 		return nil, err

@@ -9,21 +9,11 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
-// Comparing two results documents is what turns a foreign checker from an oracle a person reads
-// alongside ours into a harness (WS3-104). Verifying rule semantics against kicad-cli has repeatedly
-// paid — it is what caught mid-span labels, endpoint-only pin connections, and the brace escapes when
-// unit tests did not — and every one of those was somebody reading two outputs side by side.
-//
-// The comparison is keyed on the ENTITY each tool flagged, not on rule names. Two tools have two rule
-// vocabularies, and a table asserting "our track-width means their track_width" would be an unverified
-// mapping that rots — the same objection that killed identifying an interface host by an MPN prefix
-// list. What can be stated without asserting anything is: here is the set of entities we flagged, here
-// is theirs, here is the overlap. Rule co-occurrence is then REPORTED as an observation, which lets an
-// equivalence be discovered from evidence rather than declared up front.
-//
-// The residue is first-class. A foreign finding that named no entity we could join cannot participate
-// in an entity comparison at all, and dropping it silently would make the overlap look better than it
-// is. It is counted and reported as not comparable.
+// Comparing two results documents turns a foreign checker into a harness (WS3-104). The comparison
+// is keyed on the ENTITY each tool flagged, not on rule names, since there is no verified mapping
+// between two tools' rule vocabularies. Rule co-occurrence is REPORTED as an observation. A finding
+// that named no joinable entity is counted as not comparable rather than dropped. See
+// docsite/content/architecture/checks-contract.md#the-oracle-becomes-a-harness.
 
 // Comparison is the three-way split between two runs plus what could not participate.
 type Comparison struct {
@@ -32,15 +22,14 @@ type Comparison struct {
 	// that run's findings names it.
 	Both, OursOnly, TheirsOnly []string
 	// CoOccurring is every (our rule, their rule) pair seen on a shared entity, most frequent first.
-	// It is an observation about this pair of documents, never a claim that the two rules mean the
-	// same thing.
+	// An observation about these two documents, not a claim that the rules mean the same thing.
 	CoOccurring []RulePair
 	// NotComparable counts findings on each side that named no entity, so a reader can tell a genuine
 	// disagreement from evidence the comparison could not use.
 	OursNotComparable, TheirsNotComparable int
 }
 
-// DocSummary is the identity of one side of a comparison: enough to know what produced it and whether
+// DocSummary is the identity of one side of a comparison, enough to know what produced it and whether
 // its silence can be read as coverage.
 type DocSummary struct {
 	Producer     string
@@ -50,8 +39,8 @@ type DocSummary struct {
 	CoverageAxis bool
 }
 
-// RulePair is one observed co-occurrence: our rule and their rule fired on the same entities, on this
-// pair of documents, this many times.
+// RulePair is one observed co-occurrence, meaning our rule and their rule fired on the same
+// entities, on this pair of documents, this many times.
 type RulePair struct {
 	Ours, Theirs string
 	Entities     int
@@ -113,11 +102,9 @@ func entityRules(doc *checkspb.CheckResults) (map[string][]string, int) {
 	out := map[string]map[string]bool{}
 	skipped := 0
 	for _, f := range doc.GetFindings() {
-		// The subject AND every context entity. A finding's subject is the one entity a reader has to
-		// change, which is an editorial choice rather than the only entity the finding is about: a
-		// clearance violation is filed under one of its two nets, and another tool reporting the same
-		// violation may well file it under the other. Joining on the subject alone read that agreement
-		// as a disagreement. Context carries the rest, typed and ordered, so the join can use it.
+		// The subject AND every context entity. A clearance violation is filed under one of its two
+		// nets, and another tool may file the same violation under the other, so joining on the
+		// subject alone would read agreement as disagreement.
 		keys := map[string]bool{}
 		if k := entityKey(f.GetSubject()); k != "" {
 			keys[k] = true
@@ -150,12 +137,11 @@ func entityRules(doc *checkspb.CheckResults) (map[string][]string, int) {
 	return flat, skipped
 }
 
-// entityKey is the join key between two runs. A PIN subject deliberately keys to its COMPONENT: one
-// tool flags "R1 pin 2" where the other flags "R1", and treating those as different entities would
-// report a disagreement that is only a difference in reporting granularity.
+// entityKey is the join key between two runs. A PIN subject keys to its COMPONENT, since "R1 pin 2"
+// against "R1" is a difference in reporting granularity, not a disagreement.
 //
-// It returns "" for a subject naming nothing, which is what excludes an unjoined import finding from
-// the comparison rather than letting it count as a disagreement.
+// It returns "" for a subject naming nothing, which excludes an unjoined import finding from the
+// comparison.
 func entityKey(s *checkspb.Subject) string {
 	switch s.GetKind() {
 	case "component", "pin":
@@ -182,10 +168,9 @@ func summarize(doc *checkspb.CheckResults) DocSummary {
 	}
 }
 
-// WriteComparison renders a comparison as text. The wording is deliberate in two places: the
-// co-occurrence table says it is an observation, and a side with no coverage axis is labelled, because
-// "they flagged nothing here" from a flat violation list does not mean the same thing as it does from
-// a run that records what it could not check.
+// WriteComparison renders a comparison as text. The co-occurrence table says it is an observation,
+// and a side with no coverage axis is labelled, since silence from a flat violation list is not a
+// pass.
 func WriteComparison(w io.Writer, c Comparison) error {
 	side := func(label string, d DocSummary) {
 		axis := ""

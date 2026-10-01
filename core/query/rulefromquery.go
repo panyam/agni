@@ -9,18 +9,16 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// FindingQuery declares a datalog-backed check rule (WS3-038): a datalog program whose every
-// answer row becomes a check.Finding. It is the bridge from the SEARCH surface (a query returns
-// rows) to the RULE surface (a rule emits findings with a severity, a subject, and a doc), so a
-// declarative datalog query is a first-class catalog rule, not only an ad-hoc search — the "prove
-// it in datalog, optimize in Go later" path.
+// FindingQuery declares a datalog-backed check rule (WS3-038), a datalog program whose every answer
+// row becomes a check.Finding. It is how a datalog query becomes a catalog rule with a severity, a
+// subject and a doc, rather than only an ad-hoc search.
 //
 // Rule carries the rule's identity and metadata (Name, Severity, Summary, Tags, Detail, Reads);
-// RuleFromQuery fills its Eval. Query is the COMPILED datalog program (WS3-043): the front end owns
-// producing it — MustParse for a hand-authored string, Build for a generated AST — so this bridge no
-// longer parses. The goal MUST project SubjectVar (and PinVar when Kind is KindPin). Message is a
-// template whose {var} placeholders are filled from each answer row. If Rule.Reads is empty it is
-// derived from the query (the EDB relations it reads), so check.Available gates it correctly.
+// RuleFromQuery fills its Eval. Query is the COMPILED datalog program (WS3-043), produced by the
+// caller with MustParse for a hand-authored string or Build for a generated AST. The goal MUST
+// project SubjectVar (and PinVar when Kind is KindPin). Message is a template whose {var}
+// placeholders are filled from each answer row. If Rule.Reads is empty it is derived from the query
+// (the EDB relations it reads), so check.Available gates it correctly.
 type FindingQuery struct {
 	Rule       check.Rule
 	Query      Query
@@ -33,80 +31,65 @@ type FindingQuery struct {
 	// seeded spec and attaches it to Finding.DatasheetProv, so a datalog-authored datasheet finding
 	// carries the same doc/page/section/confidence a built-in datasheet rule does. Empty = no citation.
 	ParamSymbol string
-	// ContextVars are further projected variables to carry as each finding's CONTEXT entities: the
+	// ContextVars are further projected variables to carry as each finding's CONTEXT entities, the
 	// entities the message names but is not about (agni issue 349). Empty for a rule whose message
 	// names only its subject, which is most of them.
 	//
-	// SubjectVar already proves this surface can say which projected variable plays which part. This
-	// is that same idea for a list, and it is why the fix is a field rather than a convention: the
-	// binding exists in the row and was simply dropped when the Finding was built.
-	//
-	// A SLICE rather than a map keyed by role, for two reasons. Order is significant (it matches the
-	// order the message names them, so a panel's chips read like the sentence), and two entities may
-	// share a role: "A and B both strap to address N" has two entities playing "device".
+	// A SLICE rather than a map keyed by role, because order is significant (chips render in the order
+	// the message names them) and two entities may share a role ("A and B both strap to address N").
+	// See docsite/content/build/check-rule.md#if-the-sentence-names-two-entities-carry-both.
 	ContextVars []ContextVar
 	// TupleVars are further projected variables that join SubjectVar to form the VERDICT's subject
-	// tuple, in the rule's own order. Empty for the ordinary case: one subject, and the tuple is it.
+	// tuple, in the rule's own order. Empty for the ordinary one-subject case.
 	//
-	// It is separate from ContextVars because the two answer different questions. A context entity is
-	// something the message NAMES; a tuple element is part of what the verdict IS, and therefore part
-	// of its id. A rule reporting one row per (host, required signal) needs the signal here, or every
-	// row for one host answers to one name. Finding.Subject stays singular either way.
+	// Not ContextVars, because a context entity is something the message NAMES and a tuple element is
+	// part of what the verdict IS, and so of its id. A rule reporting one row per (host, required
+	// signal) needs the signal here, or every row for one host answers to one name. Finding.Subject
+	// stays singular either way
+	// (docsite/content/build/check-rule.md#a-tuple-in-the-verdict-one-entity-in-the-finding).
 	TupleVars []TupleVar
-	// Domain, when set, declares the rule's CONSIDERED SET as a second goal beside the finding goal:
-	// its answer rows are every subject the rule examined, where the finding goal's rows are the
-	// subset that came out wrong. Setting it is what lets a query-backed rule state a considered set
-	// (agni issue 424); leaving it unset keeps the failures-only shape, which under-reports the rule
+	// Domain, when set, declares the rule's CONSIDERED SET as a second goal beside the finding goal.
+	// Its rows are every subject the rule examined, where the finding goal's rows are the subset that
+	// came out wrong (agni issue 424). Unset keeps the failures-only shape, which under-reports the rule
 	// and never overstates it.
 	//
-	// DECLARED RATHER THAN DERIVED, which is the whole design. The domain LOOKS derivable. For the
-	// ESD and pull-up requirements it is exactly the finding goal's body minus its negated literal,
-	// but signal-dangling ends in a comparison rather than a negation, and taking its body as the
-	// domain would report the failures AS the considered set. That is a coverage claim the run has
-	// not earned, and it is the same lie StatesConsideredSet exists to prevent. An author knows the
-	// answer; an inference that is right four times out of six is worse than no inference.
+	// DECLARED RATHER THAN DERIVED. For the ESD and pull-up requirements the domain is the finding
+	// goal's body minus its negated literal, but signal-dangling ends in a comparison, so deriving its
+	// domain would report the failures AS the considered set, the false coverage claim
+	// StatesConsideredSet exists to prevent.
 	Domain *Domain
 }
 
-// Domain is a rule's considered set, expressed the way the rule itself is: as a goal over the same
-// datalog program. Its rows must project SubjectVar, PinVar and every TupleVar, so a domain row and
-// a finding row key the same way and the passing subjects are the difference between them.
+// Domain is a rule's considered set, expressed as a goal over the same datalog program as the rule.
+// Its rows must project SubjectVar, PinVar and every TupleVar, so a domain row and a finding row key
+// the same way and the passing subjects are the difference between them.
 type Domain struct {
 	// Query is the compiled domain program. It shares the finding query's rule set by convention
-	// rather than by construction, because a scope goal usually needs one rule of its own (the
-	// finding goal's body with the failing condition dropped) and building it beside the rest is
-	// what keeps the two legible together.
+	// rather than by construction, since a scope goal usually needs one rule of its own (the finding
+	// goal's body with the failing condition dropped).
 	Query Query
 	// Witness is the template for a passing verdict's statement, interpolated from the domain row the
-	// same way Message is from a finding row. REQUIRED when Domain is set, because a Pass without a
-	// witness is the silence verdicts exist to remove.
+	// same way Message is from a finding row. REQUIRED when Domain is set.
 	//
-	// It may assert the positive condition ("{n} reaches an ESD clamp"), which is sound even though
-	// the domain goal does not prove it: a subject in the domain that is not in the failures is one
-	// the finding goal declined to report, and for these rules that is precisely the good case.
+	// It may assert the positive condition ("{n} reaches an ESD clamp") even though the domain goal
+	// does not prove it, because a subject in the domain and not in the failures is one the finding
+	// goal declined to report, which for these rules is the good case.
 	Witness string
 	// Evidence, when set, names the entities a PASSING subject's proof rests on, through the rule's
 	// own ContextVars. Its rows are matched to passing subjects by the subject tuple.
 	//
-	// It is a third goal rather than a widening of the domain, and the reason is structural. The
-	// domain is the CONSIDERED SET: every subject the requirement applied to, passing and failing
-	// alike. A failing subject has no proof to name, so a domain query that bound one could not
-	// enumerate the failures, and a domain that enumerates them cannot bind it. The evidence lives in
-	// the rule that decides the positive case, which the finding goal already negates.
+	// It is a third goal rather than a widening of the domain, because the domain is the CONSIDERED
+	// SET, passing and failing alike, and a failing subject has no proof to bind. So one query cannot
+	// both enumerate the failures and bind the evidence (agni issue 662). The Go-walk requirements get
+	// the same thing from check.PullUpVerdict, which returns its hops as entities.
 	//
-	// Optional, and a passing subject with no evidence row keeps an empty context. Some requirements
-	// prove a negative and have nothing to point at; that is a property of the question rather than a
-	// gap, and inventing a chip for it would be worse than the silence it replaces.
-	//
-	// Without it a query-backed requirement could state its proof only in prose: the ESD requirement
-	// said a net "reaches ESD protection within 2 hops" and named no clamp, so the one claim a
-	// reviewer wanted to check was the one thing they could not click (agni issue 662). The Go-walk
-	// requirements never had this problem, because check.PullUpVerdict returns its hops as entities.
+	// Optional. A passing subject with no evidence row keeps an empty context, since some requirements
+	// prove a negative and have nothing to point at.
 	Evidence *Query
 }
 
 // TupleVar binds one projected datalog variable to an element of the verdict's subject tuple. Kind is
-// required for the reason it is on ContextVar: a datalog variable is a bare string binding, and
+// required for the reason it is on ContextVar, since a datalog variable is a bare string binding and
 // nothing about the column says whether it holds a net name, a ref des or a required-signal role.
 type TupleVar struct {
 	Var  string // projected variable name, no leading "?"
@@ -115,10 +98,9 @@ type TupleVar struct {
 
 // ContextVar binds one projected datalog variable to a context entity on every finding a rule emits.
 //
-// Kind is the entity's subject kind, which is NOT inferable from the variable: a datalog variable is
-// just a string binding, and the same projected column could be a net name or a ref des depending on
-// the relation it came from. Getting it wrong produces a chip that highlights nothing, so it is
-// required rather than defaulted.
+// Kind is the entity's subject kind, which is NOT inferable from the variable, because the same
+// projected column could be a net name or a ref des depending on the relation it came from. A wrong
+// Kind produces a chip that highlights nothing, so it is required rather than defaulted.
 type ContextVar struct {
 	Var  string // projected variable name, no leading "?"
 	Kind string // check.KindNet | check.KindComponent | check.KindPin | check.KindBus
@@ -131,13 +113,11 @@ var placeholderRe = regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
 // maps each answer row to a Finding. The Finding's Prov is resolved from the Model by subject, so a
 // query-backed finding stays as locatable as a hand-written one.
 //
-// IT VALIDATES THE QUERY AND REPORTS WHY IT CANNOT RUN. That is the whole point of the signature: a
-// rule built from a broken query used to compile silently and then report a CLEAN PASS, because the
-// error surfaced only at eval time where it was swallowed (agni issue 540). A query with a misspelled
-// relation looked exactly like a design with no defects.
+// IT VALIDATES THE QUERY AND REPORTS WHY IT CANNOT RUN, so a misspelled relation is an error at
+// construction rather than an empty answer that reads as a CLEAN PASS (agni issue 540).
 //
-// Use it where the query came from a person: a review manifest, a wire RuleDef, an overlay. For a
-// query written into this repo as code, MustRuleFromQuery says so.
+// Use it where the query came from a person (a review manifest, a wire RuleDef, an overlay). For a
+// query written into this repo as code, use MustRuleFromQuery.
 func RuleFromQuery(fq FindingQuery) (*check.Rule, error) {
 	if err := Validate(fq.Query, facts.DefaultRegistry()); err != nil {
 		return nil, err
@@ -155,8 +135,8 @@ func RuleFromQuery(fq FindingQuery) (*check.Rule, error) {
 
 // checkProjects rejects a goal whose rows cannot name the finding's subject. Each row is read by
 // column name, so a subject the goal does not project as a plain column comes back as the empty
-// string and becomes a finding about nothing. An aggregate does not count: count(?r) is labelled
-// count(r), and over an empty design it is still one row (agni issue 726).
+// string and becomes a finding about nothing. An aggregate does not count, because count(?r) is
+// labelled count(r) and over an empty design it is still one row (agni issue 726).
 func (fq FindingQuery) checkProjects(q Query, which string) error {
 	cols := map[Var]bool{}
 	for _, c := range q.Columns() {
@@ -180,14 +160,10 @@ func (fq FindingQuery) checkProjects(q Query, which string) error {
 // MustRuleFromQuery is RuleFromQuery for a query that ships as CODE, panicking if it does not
 // compile.
 //
-// A built-in rule or a compiled profile carries a query its author wrote and this repo's tests run.
-// One that does not validate is a programmer error caught at init, and the alternative is worse than
-// a panic: a package-level `var r = RuleFromQuery(q)` has nowhere to return an error to, so the
-// choice is between failing loudly at startup and dropping the error on the floor, which is the bug
-// this whole change closes.
-//
-// It follows profiles.Compile, which already panics twice on a malformed profile for the same
-// reason.
+// A built-in rule or a compiled profile carries a query this repo's tests run, so one that does not
+// validate is a programmer error. A package-level `var r = RuleFromQuery(q)` has nowhere to return
+// an error to, so it panics at init rather than dropping the error. profiles.Compile panics on a
+// malformed profile for the same reason.
 func MustRuleFromQuery(fq FindingQuery) *check.Rule {
 	r, err := RuleFromQuery(fq)
 	if err != nil {
@@ -199,8 +175,8 @@ func MustRuleFromQuery(fq FindingQuery) *check.Rule {
 // evalFailed is the finding a rule reports when its query could not be evaluated against a design.
 //
 // It carries no subject, because the failure is the RULE's rather than any entity's, and naming an
-// arbitrary component would send a reader to a part that is fine. Inconclusive is the outcome the
-// vocabulary already has for a check that could not run, which is exactly what this is.
+// arbitrary component would send a reader to a part that is fine. It is Inconclusive
+// (docsite/content/build/check-rule.md#five-outcomes-and-the-three-that-are-not-a-pass).
 func evalFailed(rule string, err error) check.Finding {
 	return check.Finding{
 		Inconclusive: true,
@@ -223,10 +199,6 @@ func buildRule(fq FindingQuery) *check.Rule {
 		if fq.PinVar != "" {
 			f.Subject.Pin = row.Bind[Var(fq.PinVar)].S
 		}
-		// In the author's declared order, which is the order the message names them. A context var
-		// that did not bind in this row contributes nothing rather than an empty chip: the row could
-		// not have been projected without it, so an unbound one means the rule was mis-declared and a
-		// blank chip would hide that behind something that looks deliberate.
 		f.Context = append(f.Context, fq.contextOf(row)...)
 		if fq.ParamSymbol != "" && fq.Kind == check.KindComponent {
 			if dp := check.DatasheetProvFor(m, subj, fq.ParamSymbol); dp != nil {
@@ -236,15 +208,14 @@ func buildRule(fq FindingQuery) *check.Rule {
 		return f
 	}
 	// A datalog goal yields the rows that MATCHED, so without a declared Domain the subjects the rule
-	// silently passed over are not in the answer at all and the honest report is failures-only.
+	// passed over are not in the answer and the only accurate report is failures-only.
 	if fq.Domain == nil {
 		r.Eval = check.FailuresOnly(func(m check.Model) []check.Finding {
 			rows, err := Naive{}.Eval(q, NewBase(m))
 			if err != nil {
-				// Construction validated this query, so reaching here means the ENGINE failed on a
-				// design rather than the author writing something wrong. Returning nil reported that
-				// as a clean pass, which is the shape agni issue 540 exists to close. An inconclusive
-				// finding says the rule could not decide, which is what happened.
+				// Construction validated this query, so this is the ENGINE failing on a design. An
+				// inconclusive finding says the rule could not decide, where nil would read as a clean
+				// pass (agni issue 540).
 				return []check.Finding{evalFailed(r.Name, err)}
 			}
 			out := []check.Finding{}
@@ -258,18 +229,16 @@ func buildRule(fq FindingQuery) *check.Rule {
 	r.StatesConsideredSet = true
 	r.SubjectShape = fq.subjectShape()
 	// The failing verdicts are built here rather than through check.FailuresOnly, because that adapter
-	// can only see the Finding, whose subject is singular by contract. A rule reporting one row per
-	// (host, required signal) needs its tuple, and the tuple has to come from the ROW.
+	// sees only the Finding, whose subject is singular, and the subject tuple has to come from the ROW.
 	r.Eval = func(m check.Model) []check.Verdict {
 		base := NewBase(m)
 		var vs []check.Verdict
 		failed := map[string]bool{}
 		rows, err := Naive{}.Eval(q, base)
 		if err != nil {
-			// The failing half never ran, so no considered set can be honest here: every subject in it
-			// would be reported as passing on evidence that was never gathered. One inconclusive
-			// verdict says the rule could not decide, where returning nothing said it had nothing to
-			// report (agni issue 540).
+			// The failing half never ran, so any considered set would report every subject as passing
+			// on evidence never gathered. One inconclusive verdict says the rule could not decide
+			// (agni issue 540).
 			f := evalFailed(r.Name, err)
 			return []check.Verdict{{
 				Outcome: check.Inconclusive,
@@ -285,15 +254,10 @@ func buildRule(fq FindingQuery) *check.Rule {
 			}
 			subjects := fq.tuple(row)
 			failed[tupleKey(subjects)] = true
-			// A witness on the FAILING verdict too, which check.FailuresOnly deliberately omits. There
-			// it would be decoration, because an unconverted rule has no proof to show and inventing one
-			// makes it look converted. Here the answer row IS the proof: the goal matched, and the
-			// message is that match stated in words.
-			//
-			// It is also load-bearing rather than tidy. Verdict.Witness is REQUIRED on Pass and Fail,
-			// and the wire form of a Verdict carries no Finding on purpose (a defect travels once, in
-			// the findings array), so a failing row that crossed the seam with only a Finding rendered
-			// with an empty sentence in every consumer that reads verdicts back from the service.
+			// A witness on the FAILING verdict too, which check.FailuresOnly omits. Here the answer row
+			// IS the proof, and the message states it. Verdict.Witness is REQUIRED on Pass and Fail, and
+			// the wire Verdict carries no Finding (a defect travels once, in the findings array), so
+			// without it a failing verdict read back from the service renders an empty sentence.
 			vs = append(vs, check.Verdict{
 				Outcome:  outcome,
 				Subjects: subjects,
@@ -304,17 +268,13 @@ func buildRule(fq FindingQuery) *check.Rule {
 		}
 		drows, err := Naive{}.Eval(fq.Domain.Query, base)
 		if err != nil {
-			// Keep the findings. A defect must never disappear because the coverage half misbehaved,
-			// even though the rule then reports fewer passes than it examined.
+			// Keep the findings. A defect must never disappear because the coverage half failed, even
+			// though the rule then reports fewer passes than it examined.
 			return vs
 		}
-		// The entities a pass rests on, indexed by subject tuple. Evaluated once for the whole rule
-		// rather than per passing subject, because it is one goal over the same fact base and running
-		// it per subject would re-derive the entire program for each row.
-		//
-		// A failure to evaluate is treated as no evidence rather than as an error, matching the domain
-		// above: the verdicts are the answer, and losing the chips a pass could have carried must not
-		// cost the reader the pass itself.
+		// The entities a pass rests on, indexed by subject tuple. Evaluated once for the whole rule,
+		// since per subject would re-derive the entire program for each row. An evaluation failure
+		// means no evidence rather than an error, so a pass loses its chips and not itself.
 		evidence := map[string][]check.ContextSubject{}
 		if fq.Domain.Evidence != nil {
 			if erows, err := (Naive{}).Eval(*fq.Domain.Evidence, base); err == nil {
@@ -351,12 +311,11 @@ func buildRule(fq FindingQuery) *check.Rule {
 // contextOf projects a row's declared ContextVars as context entities, in the author's order, which
 // is the order the message names them.
 //
-// A context var that did not bind in this row contributes nothing rather than an empty chip: the row
-// could not have been projected without it, so an unbound one means the rule was mis-declared and a
-// blank chip would hide that behind something that looks deliberate.
+// A context var that did not bind in this row contributes nothing rather than an empty chip, because
+// an unbound one means the rule was mis-declared and a blank chip would hide that.
 //
 // Shared by the finding path and the evidence path so the two cannot drift about what a context
-// entity is. They were one loop and a missing one when a pass had no way to carry any.
+// entity is.
 func (fq FindingQuery) contextOf(row Row) []check.ContextSubject {
 	var out []check.ContextSubject
 	for _, cv := range fq.ContextVars {
@@ -418,7 +377,7 @@ func interpolate(tmpl string, row Row) string {
 }
 
 // provFor resolves the design-side provenance for a finding's subject so a query-backed finding is
-// as locatable as a hand-written one: a pin/component subject is a ref-des, a net subject is a net
+// as locatable as a hand-written one. A pin/component subject is a ref-des, a net subject is a net
 // name. Nil when the subject is not found (the message still carries the identity).
 func provFor(m check.Model, kind, subject string) *ir.Provenance {
 	switch kind {

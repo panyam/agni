@@ -1,8 +1,8 @@
 // Package server is the Connect translation layer over the transport-neutral service
-// implementations (CONSTRAINTS C13): one adapter per service, each method a pure
+// implementations (CONSTRAINTS C13), with one adapter per service and each method a pure
 // unwrap/call/wrap plus the sentinel-to-code mapping in toConnectErr. No business logic lives
-// here — a later transport (grpc-gateway, a real gRPC server) is a sibling of this package,
-// wrapping the same internal/service implementations.
+// here, so another transport (grpc-gateway, a real gRPC server) would be a sibling package wrapping
+// the same service/ implementations.
 package server
 
 import (
@@ -18,9 +18,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// toConnectErr maps the service tier's error sentinels to Connect codes — the single
-// translation table for every adapter. An unclassified error is treated as an invalid
-// argument, the service tier's documented default (load/parse failures).
+// toConnectErr maps the service tier's error sentinels to Connect codes, for every adapter. An
+// unclassified error is treated as an invalid argument, the service tier's documented default
+// (load/parse failures).
 func toConnectErr(err error) error {
 	switch {
 	case errors.Is(err, service.ErrNotFound):

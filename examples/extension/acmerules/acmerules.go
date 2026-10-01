@@ -1,11 +1,11 @@
 // Package acmerules is a demonstration out-of-module rule suite for the open-core extension
 // skeleton (WS12-001). It registers a private "house-style" rule with the engine's public rule
-// registry (WS12-004). Blank-importing it (import _ ".../acmerules") makes the rule appear in
-// ListRules and run in CheckDesign on the engine's own CLI and serve, namespaced "acme/..." so
-// it can never shadow a built-in.
+// registry (WS12-004). Blank-importing it (import _ ".../acmerules") puts the rule in ListRules and
+// CheckDesign on the engine's own CLI and serve, namespaced "acme/..." so it can never shadow a
+// built-in.
 //
-// A real extension's rules encode a company's private design policy it does not release; the point
-// here is only the wiring, so the rule is deliberately simple.
+// A real extension's rules encode a company's private design policy. This one shows only the
+// wiring, so the rule is simple.
 package acmerules
 
 import (
@@ -16,13 +16,12 @@ import (
 	"github.com/panyam/agni/core/query"
 )
 
-// init registers the suite as a named RuleSource. An extension uses import-side-effect
-// registration so a consumer wires the suite in with one blank import; the alternative is an
-// explicit RegisterSource call from the composing binary's main (see WS12-004).
+// init registers the suite as a named RuleSource by import side effect, so a consumer wires it in
+// with one blank import. The alternative is an explicit RegisterSource call from the composing
+// binary's main (see WS12-004).
 //
-// The suite carries one rule of each authoring style, which is the point of the pair: a Go rule
-// with an Eval closure (below) and a datalog rule declared as a query (acmedatalog.go). They
-// register identically, so the choice is the author's and the engine does not care.
+// The suite carries one rule of each authoring style, a Go rule with an Eval closure (below) and a
+// datalog rule declared as a query (acmedatalog.go). They register identically.
 func init() {
 	check.RegisterSource(check.NewSource("acme", []*check.Rule{
 		noExperimentalRefDes,
@@ -41,8 +40,8 @@ var noExperimentalRefDes = &check.Rule{
 	Remedy:   "give the part a production ref-des, or take it out of the design before release",
 	Reads:    []string{"component.ref_des"},
 	Tags:     map[string]string{check.KeyCategory: "house-style"},
-	// This rule states its full considered set: every component gets a verdict, so a reviewer can see
-	// which parts were cleared rather than only which ones failed.
+	// Every component gets a verdict, so a reviewer can see which parts were cleared rather than
+	// only which ones failed.
 	StatesConsideredSet: true,
 	Eval: func(m check.Model) []check.Verdict {
 		var out []check.Verdict

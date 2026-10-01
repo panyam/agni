@@ -98,8 +98,7 @@ func NetLines(d *ir.Design, limit int) string {
 // FindingsLines renders check.Run's output the way agni's `check` command does, as a string
 // an example hands to a demokit step: a per-rule count summary, then each finding as
 // "[severity] rule: subject (message)". Returns "no findings" for an empty slice. Findings
-// keep check.Run's order (sorted by rule then subject); the summary is sorted by rule name so
-// the output is stable regardless of map iteration order.
+// keep check.Run's order (sorted by rule then subject), and the summary is sorted by rule name.
 func FindingsLines(fs []check.Finding) string {
 	if len(fs) == 0 {
 		return "no findings"

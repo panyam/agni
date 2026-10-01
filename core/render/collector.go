@@ -17,9 +17,8 @@ type wprim struct {
 
 // primCollector accumulates world-coordinate primitives and their bounds, then emits the
 // tier-2 columnar form (rebased int32 vertex pool, fixed-width primitive records, and the
-// PrimitiveKeys for picking). The gather-then-emit sequence is identical for schematics and
-// boards, so it lives here once; the two packers differ only in what primitives they add and
-// in the label/image tails they build around the shared vertex origin.
+// PrimitiveKeys for picking). PackSheet and PackBoard share it and differ only in the
+// primitives they add and the label/image tails they build around the shared vertex origin.
 type primCollector struct {
 	prims  []wprim
 	bounds geomath.Bounds
@@ -38,9 +37,9 @@ func (c *primCollector) AddWire(group uint8, net, netID string, pts [][2]int64) 
 	c.add(wprim{kind: primLineStrip, group: group, net: net, netID: netID, pts: pts})
 }
 
-// AddBus records a bus trunk/entry primitive (a filled quad) carrying its source id (the KiCad
-// uuid), so a bus-not-modeled finding highlights its own bus (WS7-042b). A bus has no net, so
-// busID is its only join key; every segment of one bus shares the id.
+// AddBus records a bus trunk/entry primitive (a filled quad) carrying the bus NAME as busID, so a
+// bus-not-modeled finding highlights its own bus (WS7-042b). A bus has no net, so busID is its only
+// join key, and every segment of one bus shares it.
 func (c *primCollector) AddBus(group uint8, busID string, pts [][2]int64) {
 	c.add(wprim{kind: primTriangles, group: group, busID: busID, pts: pts})
 }

@@ -6,16 +6,14 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// primTriangles is the filled-area primitive kind (WS7-035): a vertex range drawn as a
-// triangle list. Boards forced it into the packed vocabulary — copper at true width, pads,
-// and via barrels are areas, and browser GL line width is effectively 1px — but the kind is
-// generic; nothing in it is board-specific.
+// primTriangles is the filled-area primitive kind (WS7-035), a vertex range drawn as a
+// triangle list. Boards need it because copper, pads and via barrels are areas and browser GL
+// line width is effectively 1px, but nothing in the kind is board-specific.
 const primTriangles uint8 = 4
 
-// Board primitive groups (WS7-035): the packed transport for boards reuses the PackedSheet
-// ENVELOPE unchanged (int32 vertex pool, 12-byte records, keys, group_colors) — boards are
-// new group constants and one new kind, exactly like the schematic groups. The TS mirror is
-// web/src/packed.ts; the group-indexed colors come from Style (C12).
+// Board primitive groups (WS7-035). Boards reuse the PackedSheet ENVELOPE unchanged and add
+// only these group constants and primTriangles. The TS mirror is web/src/packed.ts, and the
+// group-indexed colors come from Style (C12).
 const (
 	groupBoardEdge        uint8 = 5  // outline (Edge.Cuts)
 	groupBoardCopperFront uint8 = 6  // F.Cu segments, front SMD pads, front zone outlines
@@ -28,15 +26,15 @@ const (
 	boardGroupCount = 12
 )
 
-// viaSegments tessellates round barrels/drills/circle pads; fixed in the packer (not the
-// shader) so every consumer sees identical geometry.
+// viaSegments tessellates round barrels, drills and circle pads. It is fixed in the packer
+// rather than the shader so every consumer sees identical geometry.
 const viaSegments = 16
 
-// PackBoard projects the board sidecar into the tier-2 packed form (WS7-035) — the board
-// analogue of PackSheet, sharing its envelope so the web canvas needs one new draw mode and
-// zero new decode paths. Copper is keyed by net and pads by (ref_des, pad number, net), so
-// resolveHighlights/HighlightPacked join unchanged. Layer visibility is group visibility:
-// the front/back/inner strata are distinct groups a renderer can skip at draw time.
+// PackBoard projects the board sidecar into the tier-2 packed form (WS7-035), the board
+// analogue of PackSheet in the same envelope. Copper is keyed by net and pads by (ref_des, pad
+// number, net), so HighlightPacked and the web's resolveHighlights join unchanged. The
+// front/back/inner strata are distinct groups, so a renderer hides a layer by skipping its group.
+// See docsite/content/architecture/geometry-and-rendering.md#board-geometry-sidecar.
 func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 	style := resolveStyle(opts)
 
@@ -95,8 +93,8 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		}
 	}
 
-	// Silkscreen / fab body graphics: outline primitives (the same shapeVerts the schematic
-	// packer uses), keyed by ref_des so a component highlight can pick them.
+	// Silkscreen and fab body graphics go through the schematic packer's shapeVerts, keyed by
+	// ref_des so a component highlight picks them.
 	for _, gr := range b.GetGraphics() {
 		if gr.GetShape() == nil {
 			continue
@@ -110,9 +108,8 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 
 	vertices, records, keys, ox, oy := c.build()
 
-	// Silkscreen / legend labels: the same board texts the SVG backend draws (ref-des,
-	// value, title block), already composed to board coordinates by the reader. The overlay
-	// draws the glyphs; here they only rebase to the vertex origin.
+	// Silkscreen and legend labels arrive in board coordinates from the reader, so they only
+	// rebase to the vertex origin here. The overlay draws the glyphs.
 	var labels []*geom.PackedLabel
 	for _, t := range b.GetTexts() {
 		if t.GetAt() == nil {
@@ -172,9 +169,8 @@ func copperGroup(layer string) uint8 {
 	}
 }
 
-// quadPts is a track segment as a filled quad (two triangles) at true width, floored to the
-// physical minStrokeNm minimum — the same floor the SVG backend's copperStrokePx applies, so
-// both renderers draw copper at identical width.
+// quadPts is a track segment as a filled quad (two triangles) at true width, floored to
+// minStrokeNm, the same floor as the SVG backend's copperStrokePx so both draw copper alike.
 func quadPts(ax, ay, bx, by, width int64) [][2]int64 {
 	dx, dy := float64(bx-ax), float64(by-ay)
 	l := math.Hypot(dx, dy)
@@ -207,9 +203,9 @@ func diskPts(cx, cy int64, r float64) [][2]int64 {
 	return pts
 }
 
-// padQuadPts is a rectangular-ish pad (rect/roundrect/oval at tier 2) as two triangles,
-// rotated by the pad's own verbatim angle (negated for the Y-flip; source-cumulative, so
-// not composed with the placement again — same rule as drawPad).
+// padQuadPts is a rect, roundrect or oval pad as two triangles, rotated by the pad's own
+// angle negated for the Y-flip. The angle is source-cumulative, so it is not composed with the
+// placement's again (the same rule as drawPad).
 func padQuadPts(cx, cy int64, pad *geom.Pad) [][2]int64 {
 	w, h := float64(pad.GetSize().GetX())/2, float64(pad.GetSize().GetY())/2
 	if w <= 0 || h <= 0 {

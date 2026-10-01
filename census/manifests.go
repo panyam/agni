@@ -1,11 +1,9 @@
 package census
 
-// This file is the reviewed classification of every source construct the readers encounter,
-// seeded from the reader-coverage audit (private research repo docs/18) and completed over the
-// private corpus with `agni census`. Fixture-present constructs MUST be classified or the CI
-// census fails; corpus-only constructs are classified so `agni census` reaches a clean baseline
-// and the known drops are tracked. When a reader starts consuming a construct, flip its entry to
-// Consumed here and the diff shows the coverage change.
+// This file is the reviewed classification of every source construct the readers encounter.
+// Fixture-present constructs MUST be classified or the CI census fails; corpus-only constructs are
+// classified so `agni census` reaches a clean baseline. When a reader starts consuming a
+// construct, flip its entry to Consumed here.
 
 // classification helpers keep the manifests terse.
 func co(why string) Entry         { return Entry{Consumed, why, ""} }
@@ -21,8 +19,8 @@ func fill(m map[string]Entry, e Entry, toks ...string) {
 	}
 }
 
-// Manifests returns every format census, keyed by format name. This is the registry the CI test
-// and the `agni census` CLI both drive.
+// Manifests returns every format census, keyed by format name. The CI test and `agni census`
+// both drive it.
 func Manifests() []Manifest {
 	return []Manifest{kicadPCB(), kicadSch(), edifManifest(), ipc2581(), xschemManifest(), gedaManifest()}
 }

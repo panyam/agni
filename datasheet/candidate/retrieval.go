@@ -7,22 +7,20 @@ import (
 )
 
 // RetrievalSource proposes candidates by SEARCHING the document rather than by reading values out of
-// it. It is the first Source and deliberately the dumbest one.
+// it. It is the simplest Source.
 //
-// It never proposes a Value. That is not a limitation to be fixed later, it is what the mechanism can
-// honestly claim: retrieval knows which passage is about a symbol and nothing whatever about what the
-// passage says. Guessing a number from a ranked hit would be exactly the confident-wrong-answer this
-// package exists to keep out of a corpus.
+// It never proposes a Value, and that is not a gap to fill later. Retrieval knows which passage is
+// about a symbol and nothing about what the passage says, so a number guessed from a ranked hit would
+// be a confident wrong answer.
 //
-// What it does deliver is most of the work: an author lands on the row instead of scrolling 58 pages,
-// and every candidate is a real region of the real document, so the fabrication check cannot fail
-// because there is nothing invented to fail it.
+// An author still lands on the row instead of scrolling 58 pages, and every candidate is a real
+// region quoted verbatim, so there is nothing invented for the fabrication check to catch.
 type RetrievalSource struct {
-	// MaxHits bounds what a person is asked to look at. Zero means 3: a proposer that returns twenty
-	// passages has moved the search rather than done it.
+	// MaxHits bounds what a person is asked to look at. Zero means 3, since twenty passages move the
+	// search rather than do it.
 	MaxHits int
-	// Confidence is stamped on every candidate. Modest by construction, and never 1.0, because
-	// "this passage mentions your symbol" is weak evidence for a specific value.
+	// Confidence is stamped on every candidate. Outside (0, 1) it falls back to 0.3, because "this
+	// passage mentions your symbol" is weak evidence for a specific value.
 	Confidence float64
 }
 

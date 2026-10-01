@@ -17,7 +17,7 @@ import (
 // LoadRecipes walks fsys for *.textproto Recipes and validates each: a name, a
 // compilable doc_title_pattern, and table rules whose patterns compile and whose
 // limit_kind names resolve to agni.v1.param.LimitKind values. All-or-nothing, like
-// param.LoadSet: a recipe corpus with a broken recipe must not silently shrink.
+// param.LoadSet, so a broken recipe fails the load rather than shrinking the corpus.
 func LoadRecipes(fsys fs.FS) ([]*derivepb.Recipe, error) {
 	var out []*derivepb.Recipe
 	err := walkTextprotos(fsys, func(path string, data []byte) error {
@@ -48,10 +48,9 @@ func LoadRecipes(fsys fs.FS) ([]*derivepb.Recipe, error) {
 	return out, nil
 }
 
-// LoadPatches walks fsys for *.textproto Patches. A patch must carry its keys (doc
-// and table content hashes), the corrected text's position, and a non-empty note:
-// an unexplained correction cannot be reviewed, and patches are the layer human
-// trust flows through.
+// LoadPatches walks fsys for *.textproto Patches. A patch must carry a name, its keys
+// (doc and table content hashes), and a non-empty note, because an unexplained
+// correction cannot be reviewed.
 func LoadPatches(fsys fs.FS) ([]*derivepb.Patch, error) {
 	var out []*derivepb.Patch
 	err := walkTextprotos(fsys, func(path string, data []byte) error {

@@ -1,9 +1,9 @@
-// Package native shells out to a format's own CLI to produce a golden reference render
-// (SVG), to validate the WebGL/SVG paths against. This is a deliberate external-process
-// surface, so it is gated three ways: a tool must be registered for the file's extension,
-// its name must be explicitly allowlisted by the operator (--enable-native <tool>), and its
-// binary must be on PATH. Tools are invoked with exec (no shell), on an already-mount-safe
-// absolute path, into a temp output dir, under a timeout.
+// Package native shells out to a format's own CLI to produce a golden reference render (SVG) to
+// validate the WebGL/SVG paths against. Running an external process is gated three ways. A tool
+// must be registered for the file's extension, the operator must allowlist it
+// (--enable-native <tool>), and its binary must be on PATH. Tools run under exec (no shell), on an
+// already mount-safe absolute path, into a temp output dir, under a timeout. See
+// docsite/content/build/native-verification.md.
 package native
 
 import (
@@ -30,8 +30,8 @@ var (
 	ErrNotFound   = errors.New("native renderer binary not found on PATH")
 )
 
-// nativeTimeout bounds a single external render; large schematics are the reason native is
-// slow, but a hung tool must not wedge the server.
+// nativeTimeout bounds a single external render. Large schematics are slow, but a hung tool must not
+// wedge the server.
 const nativeTimeout = 60 * time.Second
 
 // nativeRenderer describes one external tool that renders a file's format to SVG.
@@ -42,12 +42,10 @@ type nativeRenderer struct {
 	args func(absPath, outDir string, page int) []string
 }
 
-// nativeByExt maps a lowercase extension to its native renderer via kicad-cli: KiCad
-// schematics (per page) and boards (a fixed overview layer set). Note the two are different
-// views — the viewer draws a board only as a netlist auto-layout, so NATIVE on a .kicad_pcb
-// is the real board rather than a like-for-like of the WebGL/SVG grid. EDIF (.eds) has no
-// open native CLI, so it is absent. The shared .sch extension is not here: it is resolved by
-// nativeRendererFor, which sniffs the header to pick xschem vs gEDA.
+// nativeByExt maps a lowercase extension to its kicad-cli renderer, for KiCad schematics (per page)
+// and boards (a fixed overview layer set). NATIVE on a .kicad_pcb is the real board, not a
+// like-for-like of the viewer's netlist auto-layout. EDIF (.eds) has no open native CLI. The shared
+// .sch extension is resolved by nativeRendererFor, which sniffs the header for xschem vs gEDA.
 var nativeByExt = map[string]nativeRenderer{
 	".kicad_sch": kicadSch,
 	".kicad_pro": kicadSch,
@@ -76,7 +74,7 @@ var gedaNative = nativeRenderer{
 
 // nativeRendererFor resolves the native renderer for a file. Most formats key off the
 // extension; the shared .sch extension is disambiguated by sniffing the header (xschem opens
-// with "v {xschem", gEDA with "v <date>"), the same rule readDesign uses. A .sch whose header
+// with "v {xschem", gEDA with "v <date>"), the same rule readers/formats uses. A .sch whose header
 // matches neither, or an unreadable file, has no native renderer.
 func nativeRendererFor(absPath string) (nativeRenderer, bool) {
 	if lowerExt(absPath) == ".sch" {
@@ -112,8 +110,8 @@ func readHead(path string, n int) ([]byte, error) {
 	return buf[:m], nil
 }
 
-// pcbLayers is the overview layer set for a native board render. Kept minimal and
-// version-stable (copper + board outline); richer layers are a later refinement.
+// pcbLayers is the overview layer set for a native board render, kept minimal and stable across
+// KiCad versions (copper plus board outline).
 const pcbLayers = "F.Cu,B.Cu,Edge.Cuts"
 
 var kicadSch = nativeRenderer{
@@ -132,7 +130,7 @@ var kicadPcb = nativeRenderer{
 	},
 }
 
-// Available reports whether NATIVE can be served for absPath: a renderer is registered
+// Available reports whether NATIVE can be served for absPath, meaning a renderer is registered
 // (by extension, or by sniffing a .sch), its tool is enabled, and its binary is installed.
 func Available(absPath string, enabled map[string]bool) bool {
 	r, ok := nativeRendererFor(absPath)
@@ -191,12 +189,10 @@ func (c *Cache) Render(ctx context.Context, absPath string, page int, enabled ma
 	return svg, nil
 }
 
-// RenderFile renders one page (1-based) of absPath to SVG using its registered native tool,
-// for direct CLI use. Unlike Cache.Render it does NOT consult the operator allowlist: the
-// allowlist is a server guard against a shared deployment shelling out on a request, whereas
-// invoking the CLI is itself the operator's consent. The other two gates still apply, so it
-// returns ErrNoTool (no renderer for this format) or ErrNotFound (binary not on PATH). No
-// caching — a one-shot CLI render has nothing to reuse.
+// RenderFile renders one page (1-based) of absPath to SVG using its registered native tool, for
+// direct CLI use, uncached. Unlike Cache.Render it does NOT consult the operator allowlist, which
+// guards a shared server against shelling out on a request, whereas invoking the CLI is itself the
+// operator's consent. It returns ErrNoTool or ErrNotFound for the other two gates.
 func RenderFile(ctx context.Context, absPath string, page int) (string, error) {
 	r, ok := nativeRendererFor(absPath)
 	if !ok {
@@ -220,9 +216,8 @@ func runRender(ctx context.Context, r nativeRenderer, bin, absPath string, page 
 	ctx, cancel := context.WithTimeout(ctx, nativeTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, r.args(absPath, outDir, page)...)
-	// Run in outDir so a tool that writes to its working directory (xschem emits plot.svg
-	// there) lands its output where readOnlySVG looks; tools that take an explicit --output
-	// path (kicad-cli, lepton-cli) are unaffected.
+	// Run in outDir so xschem, which writes plot.svg to its working directory, lands its output
+	// where readOnlySVG looks. kicad-cli and lepton-cli take an explicit output path.
 	cmd.Dir = outDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s: %w: %s", r.tool, err, string(out))
@@ -253,11 +248,11 @@ func guiToolFor(absPath string) (string, bool) {
 	return "", false
 }
 
-// OpenArgs returns the command (binary + args) that opens absPath in its native GUI tool on
-// the current platform, or ErrNoTool when no native GUI is known for the format/platform. It
-// launches nothing — the caller execs the result, so the command is deterministic and unit
-// testable. On macOS the KiCad app is launched via `open -a`; elsewhere, and for the X11
-// schematic editors, the binary is invoked directly (a missing binary surfaces at exec time).
+// OpenArgs returns the command (binary + args) that opens absPath in its native GUI tool on the
+// current platform, or ErrNoTool when no native GUI is known for the format or platform. It launches
+// nothing, so the caller execs the result and the command stays unit testable. On macOS KiCad opens
+// via `open -a`. Otherwise, and for the X11 schematic editors, the binary runs directly, so a
+// missing binary surfaces at exec time.
 func OpenArgs(absPath string) (bin string, args []string, err error) {
 	tool, ok := guiToolFor(absPath)
 	if !ok {
@@ -280,8 +275,7 @@ func OpenArgs(absPath string) (bin string, args []string, err error) {
 	}
 }
 
-// readOnlySVG returns the single .svg the tool wrote into dir. Native renders one page into a
-// fresh dir, so exactly one file is expected; anything else is an error worth surfacing.
+// readOnlySVG returns the single .svg the tool wrote into dir. Any other count is an error.
 func readOnlySVG(dir string) (string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

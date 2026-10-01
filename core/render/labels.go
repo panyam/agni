@@ -25,14 +25,13 @@ type placedLabel struct {
 // collectLabels gathers all schematic text for a sheet in world (Y-up) coordinates:
 // placement fields (ref-des/value), sheet labels, symbol annotations, pin numbers and names,
 // and the synthesized worksheet text (zone-ruler numbers/letters and the title-block fields).
-// It is the text counterpart to PackSheet's geometry; the packer rebases these into
-// PackedSheet.Labels and the WebGL overlay draws them. Colors come from the Style, the same
-// palette the SVG backend draws with, so the two renderers agree.
+// It is the text counterpart to PackSheet's geometry. The packer rebases these into
+// PackedSheet.Labels and the WebGL overlay draws them, in colors from the same Style palette the
+// SVG backend uses.
 func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style Style) []placedLabel {
 	syms := indexSymbols(g)
-	// A world text height for text that carries none (many readers leave field/label height
-	// unset; the SVG backend then falls back to a clamped pixel size). Using one sheet default
-	// keeps such text a consistent, readable size under the page-fitting camera.
+	// World text height for text that carries none, which many readers leave unset. One sheet
+	// default keeps such text a consistent, readable size under the page-fitting camera.
 	def := defaultTextHeight(g, sheet)
 	var out []placedLabel
 	add := func(x, y int64, text string, h int64, rot int32, justify, color string, maxWidth int64) {
@@ -42,14 +41,14 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 		if h <= 0 {
 			h = def
 		}
-		// Keep text upright, matching the SVG backend (see readableText): the WebGL overlay
-		// applies rotationDeg/justify verbatim, so it must receive already-readable values.
+		// Keep text upright like the SVG backend (see readableText). The WebGL overlay applies
+		// rotationDeg/justify verbatim, so it must receive already-readable values.
 		rot, justify = readableText(rot, justify)
 		out = append(out, placedLabel{x: x, y: y, text: text, height: h, rotationDeg: rot, justify: justify, color: color, maxWidth: maxWidth})
 	}
 
-	// Placement text fields (ref-des, value, custom) — already in sheet coordinates. KiCad
-	// rotates a field with its parent symbol, so add the placement rotation to the field's own.
+	// Placement text fields (ref-des, value, custom), already in sheet coordinates. KiCad rotates
+	// a field with its parent symbol, so add the placement rotation to the field's own.
 	for _, pl := range sheet.Placements {
 		rot := placementRotation(pl.Transform)
 		for _, f := range pl.Fields {
@@ -59,9 +58,8 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			add(f.Origin.X, f.Origin.Y, f.Value, f.Height, rot+f.RotationDeg, f.Justify, style.Field, 0)
 		}
 	}
-	// Sheet labels (net labels, page text). Multi-line free-text columns are shrunk to fit their
-	// layout (WS7-038, freetext.go); the same factor the SVG backend uses, applied to the world
-	// text height so the two renderers agree.
+	// Sheet labels (net labels, page text). Multi-line free-text columns shrink by the same
+	// freeTextFit factor the SVG backend uses (WS7-038), applied to the world text height.
 	fit := freeTextFit(g, sheet)
 	for _, l := range sheet.Labels {
 		if l.Origin == nil {
@@ -96,16 +94,14 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 				continue
 			}
 			lp := geomath.ApplyTransform(pl.Transform, pin.LabelOrigin)
-			// Height comes from the source when the format states one; add() substitutes the
-			// sheet default when it does not.
+			// Resolved here rather than left to add(), because the number offset below needs it.
 			h := pin.Height
 			if h <= 0 {
 				h = def
 			}
-			// The number takes its own origin when the source places it apart from the name;
-			// otherwise it stacks a line off the name. World space is Y-up, so a line DOWN is -h.
-			// Mirrors the SVG backend: without a separate position the two land on one point and
-			// the overlay draws the name straight over the number.
+			// The number takes its own origin when the source places it apart from the name,
+			// otherwise it stacks a line below the name (Y-up, so -h). Mirrors the SVG backend.
+			// Without the offset the overlay draws the name over the number.
 			nx, ny, nj := lp.X, lp.Y-int64(float64(h)*1.4), pin.Justify
 			if pin.NumberOrigin != nil {
 				np := geomath.ApplyTransform(pl.Transform, pin.NumberOrigin)
@@ -175,12 +171,10 @@ func worksheetLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, textH
 	return out
 }
 
-// captionWidth is the world-space width a symbol's caption is allowed to occupy: the width of the
-// symbol's drawn body rectangle (its widest BOX figure), which is the box the authoring tool fits
-// a label like "Net Splitter" inside. A caption wider than this is condensed to fit (see drawText
-// / the WebGL overlay's textLength) rather than spilling past the rectangle. It falls back to the
-// full symbol bounding box when there is no BOX figure, then 0 (unbounded). The body box is
-// symbol-local, the frame the caption rotates in, so this is correct for a rotated placement too.
+// captionWidth is the world-space width a symbol's caption may occupy, the width of its widest
+// BOX figure, which is where the authoring tool fits a label like "Net Splitter". A wider caption
+// is condensed to fit (drawText, and the WebGL overlay's textLength). Falls back to the symbol
+// bounding box, then 0 (unbounded). The box is symbol-local, so a rotated placement is correct too.
 func captionWidth(sym *geom.SymbolDef) int64 {
 	if sym == nil {
 		return 0
@@ -215,9 +209,9 @@ func absI64(v int64) int64 {
 	return v
 }
 
-// defaultTextHeight is a world text height for labels that carry none (pin numbers/names):
-// the median of the explicit field/label heights on the sheet, so pin text sits at a size
-// consistent with the rest. Falls back to a fraction of the frame margin, then 1.
+// defaultTextHeight is the world text height for labels that carry none (pin numbers/names),
+// the median of the explicit field/label heights on the sheet so pin text matches the rest.
+// Falls back to the frame margin, then 1.
 func defaultTextHeight(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) int64 {
 	var hs []int64
 	for _, pl := range sheet.Placements {
@@ -234,7 +228,7 @@ func defaultTextHeight(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) int
 	}
 	if len(hs) == 0 {
 		if fl, ok := worksheetLayout(g, sheet); ok {
-			return max(fl.m, 1) // ~2% of the page: readable under the page-fitting camera
+			return max(fl.m, 1) // ~2% of the page, readable under the page-fitting camera
 		}
 		return 1
 	}

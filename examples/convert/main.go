@@ -1,10 +1,9 @@
-// Command convert is the emit rung of the Agni examples ladder: read any supported
-// source format into the neutral IR and emit it back out, so a conversion is just
-// A -> IR -> B with the IR as the pivot. Today the writer is IPC-2581, so this converts
-// EDIF or KiCad (or IPC-2581 itself) into IPC-2581 and proves the semantic round-trip.
+// Command convert is the emit rung of the Agni examples ladder. It reads a supported source
+// format into the neutral IR and emits it back out, so a conversion is A -> IR -> B. The only
+// writer it offers is IPC-2581, and it re-reads the output to check the round trip.
 //
-// The narration lives in the sidecar walkthrough.md (loaded via demokit's FromMarkdown),
-// so this file only binds the steps that run engine code and wires the renderer.
+// The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds
+// the steps that run engine code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -25,8 +24,8 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	// chosen / format carry the picks from the input steps to the emit step. They default to
-	// the same values the markdown inputs default to, so a non-interactive run stays coherent.
+	// chosen and format carry the picks to the emit step. Their defaults must match the markdown
+	// inputs' defaults, or a non-interactive run reads one design and reports another.
 	chosen := "demo-board.kicad_pcb"
 	format := "ipc-2581"
 
@@ -73,7 +72,7 @@ func main() {
 		}
 		fmt.Printf("%s -> IR -> ipc-2581 (%d bytes):\n\n%s\n", chosen, buf.Len(), head(buf.String(), 16))
 
-		// Read the emitted document straight back; matching stats show the modeled IR survived.
+		// Matching stats on the re-read show the modeled IR survived.
 		rt, err := ipc2581.Read(bytes.NewReader(buf.Bytes()), "roundtrip.xml")
 		if err != nil {
 			return demokit.Errf("re-read emitted ipc-2581: %v", err)
@@ -86,8 +85,7 @@ func main() {
 	demo.Execute()
 }
 
-// head returns the first n lines of s, with an ellipsis marker when it truncates, so a long
-// emitted document shows its shape without flooding the walkthrough output.
+// head returns the first n lines of s, with an ellipsis marker when it truncates.
 func head(s string, n int) string {
 	lines := strings.Split(s, "\n")
 	if len(lines) <= n {

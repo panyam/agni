@@ -1,15 +1,13 @@
 // Package results reads and writes the check-result document (agni.v1.checks.CheckResults), the
 // artifact half of the checks contract (WS3-103).
 //
-// The document is meant to be self-contained: everything needed to render a run is inside it, so a
-// report can be archived, mailed, diffed against another revision, or handed to a reviewer with no
-// design file, no rule catalog, and no engine build present. That property is only real if the
-// rendering path is shared rather than reimplemented, which is why the severity pivot lives here and
-// both the live service and a reloaded document call it.
+// The document is self-contained, so a report renders with no design file, no rule catalog and no
+// engine build present. That holds only while the rendering path is shared, which is why the severity
+// pivot lives here and both the live service and a reloaded document call it. See
+// docsite/content/architecture/checks-contract.md#the-document.
 //
-// The package is deliberately low in the stack: it reads the generated contract and check's rule
-// type, and nothing above (C17). A results document is evidence about a design, not a service
-// response, so nothing here knows about transport, mounts, or files.
+// The package sits low in the stack, reading only the generated contract and check's rule type
+// (C17). Nothing here knows about transport, mounts, or files.
 package results
 
 import (
@@ -27,8 +25,7 @@ import (
 const Schema = "agni.checks.results/v1"
 
 // Producer is the producer name a native engine run stamps. A foreign checker's import stamps its
-// own, which is the whole point of recording it: two documents are only comparable once you know
-// which tool made each.
+// own, since two documents are only comparable once you know which tool made each.
 const Producer = "agni"
 
 // SeverityRank orders severities for report sections and fail-on gating; higher is worse. An unknown
@@ -47,9 +44,8 @@ func SeverityRank(s string) int {
 }
 
 // RuleRecords snapshots the rules a run evaluated into the document's lean catalog form: identity,
-// severity, one-line summary, and the classification tags. The long-form rule prose is deliberately
-// left behind — it belongs to the engine's catalog surface, and copying it into every document would
-// repeat the same markdown across every archived run.
+// severity, one-line summary, and the classification tags. The long-form rule prose stays in the
+// engine's catalog, rather than being repeated across every archived run.
 func RuleRecords(rules []*check.Rule) []*checkspb.RuleRecord {
 	out := make([]*checkspb.RuleRecord, 0, len(rules))
 	for _, r := range rules {
@@ -67,14 +63,12 @@ func RuleRecords(rules []*check.Rule) []*checkspb.RuleRecord {
 // severity leads, then error, warning, info), empty severities omitted, findings grouped by rule in
 // input order, each group stamped with the rule's summary so a report reads without the tool at hand.
 //
-// It takes findings already in wire form, and a rule -> summary lookup rather than a rule catalog, so
-// the same function serves a live run (summaries from the catalog that ran) and a reloaded document
-// (summaries from its own snapshot). rulesRun is carried rather than derived from the findings,
-// because it is what distinguishes a clean design from a run that checked nothing.
+// It takes wire-form findings and a rule -> summary lookup rather than a catalog, so a live run and a
+// reloaded document both call it. rulesRun is passed in rather than derived from the findings, because
+// it is what distinguishes a clean design from a run that checked nothing.
 //
-// The pivot is idempotent under its own flattening: re-pivoting the findings of a report it produced
-// yields the same report, since grouping is stable and section order is recomputed from the same
-// severities. That is what lets a document written from a report round-trip.
+// Re-pivoting the findings of a report it produced yields the same report, which is what lets a
+// document written from a report round-trip.
 func Pivot(source string, fs []*checkspb.Finding, summaries map[string]string, rulesRun int) *checkspb.CheckReport {
 	bySeverity := map[string][]*checkspb.Finding{}
 	for _, f := range fs {
@@ -113,7 +107,7 @@ func Pivot(source string, fs []*checkspb.Finding, summaries map[string]string, r
 
 // Report rebuilds a document's severity pivot from the document alone: the findings it carries, the
 // summaries in its catalog snapshot, and the size of that snapshot as the rules-run count. This is
-// the reason the catalog is in the document at all.
+// why the catalog is in the document at all.
 func Report(doc *checkspb.CheckResults) *checkspb.CheckReport {
 	summaries := make(map[string]string, len(doc.GetCatalog()))
 	for _, r := range doc.GetCatalog() {
@@ -122,10 +116,9 @@ func Report(doc *checkspb.CheckResults) *checkspb.CheckReport {
 	return Pivot(doc.GetDesign().GetSource(), doc.GetFindings(), summaries, len(doc.GetCatalog()))
 }
 
-// Marshal encodes a document as indented protojson, the same encoding the datasheet workbench uses
-// for a PartSpec sibling: a results document is a file a human opens, greps, and diffs, so a text
-// encoding is worth more than a compact one. Unpopulated fields are omitted, because an archived
-// artifact should carry what was true rather than a full skeleton of what was not.
+// Marshal encodes a document as indented protojson, the encoding the datasheet workbench uses for a
+// PartSpec sibling, because a results document is a file a human opens, greps, and diffs. Unpopulated
+// fields are omitted.
 func Marshal(doc *checkspb.CheckResults) ([]byte, error) {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(doc)
 	if err != nil {
@@ -136,11 +129,10 @@ func Marshal(doc *checkspb.CheckResults) ([]byte, error) {
 
 // Parse decodes a document and rejects one this build cannot faithfully read.
 //
-// An unknown schema version is an error rather than a best-effort read: a results document exists so
-// that silence is never mistaken for coverage, and half-reading a future document would produce
-// exactly that — a findings list shorter than the run that made it, with nothing to say so. Unknown
+// An unknown schema version is an error rather than a best-effort read, because half-reading a future
+// document yields a findings list shorter than the run that made it, with nothing to say so. Unknown
 // FIELDS within a known schema are tolerated (protojson's default), since those are additive by the
-// versioning rule above.
+// versioning rule on Schema. See docsite/content/architecture/checks-contract.md#versioning.
 func Parse(b []byte) (*checkspb.CheckResults, error) {
 	doc := &checkspb.CheckResults{}
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(b, doc); err != nil {

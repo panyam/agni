@@ -1,11 +1,11 @@
 // Package acmeformat is a demonstration out-of-module format reader for the open-core extension
 // skeleton (WS12-001). It parses a toy ".acme" netlist into the agni IR and registers itself
-// with the engine's public formats registry (WS12-003). Blank-importing it for the side effect
-// (import _ ".../acmeformat") makes ".acme" resolve through every engine surface — the CLI
-// reader dispatch, the file-tree label, the Loader — with no fork of the engine.
+// with the engine's public formats registry (WS12-003). A blank import (import _ ".../acmeformat")
+// makes ".acme" resolve through the CLI reader dispatch, the file-tree label and the Loader, with
+// no fork of the engine.
 //
-// A real extension's reader would be a proprietary schematic/netlist format the house does not
-// release; the point here is only the wiring, so the format is deliberately trivial.
+// A real extension's reader would be a proprietary format the house does not release. This one
+// shows only the wiring, so the format is trivial.
 package acmeformat
 
 import (
@@ -19,14 +19,15 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// init registers the .acme reader. An extension chooses import-side-effect registration (like the
-// standard library's image format readers) so a consumer wires the format in with one blank
-// import; the alternative is an explicit call from the composing binary's main (see WS12-003).
+// init registers the .acme reader by import side effect, like the standard library's image
+// formats, so a consumer wires it in with one blank import. The alternative is an explicit call
+// from the composing binary's main (see WS12-003).
 func init() {
 	formats.Register(&formats.Format{
 		Ext:  ".acme",
 		Name: "acme",
-		// The registry entry owns the file open (C1: the Loader owns I/O); Read stays io.Reader-pure.
+		// The registry entry opens the file and Read stays io.Reader-pure (C1). It calls os.Open
+		// rather than the Loader's Open, so it reads the host filesystem and never the Loader's FS.
 		Design: func(_ *formats.Loader, path string) (*ir.Design, error) {
 			f, err := os.Open(path)
 			if err != nil {
@@ -39,8 +40,8 @@ func init() {
 }
 
 // pinDirections maps the toy format's pin-type spelling to the IR enum. Only the types this
-// example needs are here; an unrecognized one is an error rather than a silent UNSPECIFIED,
-// because a pin that reads as untyped is exactly what a pin-type rule would then miss.
+// example needs are here. An unrecognized one is an error rather than a silent UNSPECIFIED,
+// because a pin-type rule misses an untyped pin.
 var pinDirections = map[string]ir.PinDirection{
 	"power_in":  ir.PinDirection_PIN_DIRECTION_POWER_IN,
 	"power_out": ir.PinDirection_PIN_DIRECTION_POWER_OUT,
@@ -49,10 +50,10 @@ var pinDirections = map[string]ir.PinDirection{
 	"inout":     ir.PinDirection_PIN_DIRECTION_INOUT,
 }
 
-// partByName finds an already-declared PartType so a `pin` line can attach to it. Linear because a
-// toy netlist is small and the reader stays dependency-free.
+// partByName finds an already-declared PartType so a `pin` line can attach to it. Linear, because a
+// toy netlist is small.
 //
-// Pins belong to a PART TYPE in the IR, not to a placed component: one part definition is shared by
+// Pins belong to a PART TYPE in the IR, not to a placed component. One part definition is shared by
 // every placement of it, and a ComponentSection points at it by PartRef. This toy format synthesizes
 // one part type PER COMPONENT (named after the ref-des) so `pin <ref> ...` reads naturally, at the
 // cost of not sharing a definition between two placements of the same part. A real reader emits one
@@ -75,13 +76,12 @@ func partByName(d *ir.Design, name string) *ir.PartType {
 //	pin <ref> <designator> <name> [power_in|power_out|input|output|inout]
 //	net <name> <ref>.<pin> [<ref>.<pin> ...]
 //
-// The `pin` line declares a component's PART-TYPE pins, which is a different thing from a net
-// connection: a connection says a pin is wired somewhere, a pin declaration says the pin exists
-// and what it is called. The engine's pin relations (pin, pin.role, pin.type, pin.net) project
-// from the declared pins, so a format that emits only connections leaves every one of them empty
-// and a pin-level rule silently finds nothing. That is why this toy format carries them.
+// The `pin` line declares a component's PART-TYPE pins. A net connection says a pin is wired
+// somewhere, and a pin declaration says the pin exists and what it is called. The engine's pin
+// relations (pin, pin.role, pin.type, pin.net) project from the declared pins, so a format that
+// emits only connections leaves every one of them empty and a pin-level rule silently finds nothing.
 //
-// It takes an io.Reader and never opens a file itself, so the engine's Loader owns file I/O (C1).
+// It takes an io.Reader and never opens a file itself (C1). The registration in init does the open.
 func Read(r io.Reader, src string) (*ir.Design, error) {
 	d := &ir.Design{IrVersion: "0", SourceFormat: "acme", Prov: &ir.Provenance{SourceFile: src}}
 	lib := &ir.PartLibrary{Name: "acme", Prov: &ir.Provenance{SourceFile: src}}
@@ -99,10 +99,8 @@ func Read(r io.Reader, src string) (*ir.Design, error) {
 			if len(f) < 3 {
 				return nil, fmt.Errorf("acme %s: component needs <ref> <kind>: %q", src, line)
 			}
-			// One synthesized part type per component, named after the ref-des, so a later
-			// `pin` line has something to attach to and the section resolves to it. Without a
-			// PartRef the engine's part index never resolves the section, so the component has
-			// no declared pins and every pin relation is empty for it.
+			// One synthesized part type per component (see partByName). Without a PartRef the
+			// engine's part index never resolves the section, so every pin relation is empty for it.
 			part := &ir.PartType{Name: f[1], Kind: f[2], Prov: &ir.Provenance{SourceFile: src}}
 			lib.Parts = append(lib.Parts, part)
 			sec := &ir.ComponentSection{PartRef: f[1], Attributes: map[string]string{"kind": f[2]}}

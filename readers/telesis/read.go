@@ -1,6 +1,12 @@
 // Package telesis reads the flat Telesis netlist (`.tel`) that the Mentor/Siemens schematic flow
 // emits into the neutral IR. The format carries connectivity and properties and no geometry, so
-// this is a Design-only reader (CONSTRAINTS C21), and fidelity is lossy-bounded (CONSTRAINTS C6).
+// this is a Design-only reader (CONSTRAINTS C21).
+//
+// Fidelity: lossy-bounded (CONSTRAINTS C6). Read extracts the components and their part types (with
+// the manufacturer part number the `$PACKAGES` head carries), the nets and their pin membership, and
+// both property blocks transposed onto the components and pins they name. It drops the file's own
+// ordering and grouping, because a property is stored on each component it named and the
+// inverted-index entry it arrived on is not recoverable. There is no geometry to lose.
 //
 // The sections, the entry grammar and the IR mapping are in GRAMMAR.md beside this file. Three
 // rules there produce a design that parses cleanly and is wrong when missed: only a `!` entry is a

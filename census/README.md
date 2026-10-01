@@ -34,5 +34,3 @@ It asserts *classification* coverage, not behavioral consumption — "a construc
 about appeared", not "the reader extracts it correctly". Behavioral correctness is the
 conformance harness's job (`check`, WS6-004). The two are complementary.
 
-Seed classifications and the motivating audit are in the private research repo (`docs/18`,
-reader-coverage audit).

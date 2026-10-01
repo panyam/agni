@@ -265,11 +265,12 @@ straight into the wire messages, the port passes those, and the service serves t
 runtime-neutral twin of a resource whose whole content is the message would be a field-for-field
 copy and one more place for two layers to disagree about what a design is.
 
-Discovery is bounded and uncached, both deliberately. Bounded, because a mount is a folder an
-operator handed the server and may contain a build directory or a home directory. Uncached, because
-a descriptor is a small file an operator edits while the server runs, and an index that answered
-with a design's old entry after they fixed it would give the silent wrong answer this
-feature exists to remove.
+Discovery is bounded, because a mount is a folder an operator handed the server and may contain a
+build directory or a home directory. It is cached, but the cache never answers without checking. A
+descriptor is a small file an operator edits while the server runs, so every read revalidates the
+directory mtimes the walk visited and each descriptor's mtime and size before it returns, and an
+edit shows on the next request (agni issue 176). An index that answered with a design's old entry
+after they fixed it would give a silent wrong answer.
 
 ## Read-only, on purpose
 

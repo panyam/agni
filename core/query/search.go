@@ -1,25 +1,20 @@
 package query
 
-// The find-by-name template: the query the viewer runs when someone TYPES a name instead of
+// The find-by-name template is the query the viewer runs when someone TYPES a name instead of
 // clicking a thing on the drawing.
 //
-// It lives here for the reason the entity presets and the examples do. It names `entity` and
-// `match`, both defined in Go, so a copy held in the browser would be the one caller nothing
-// checks. Beside them it inherits the parse check in this package and the evaluate-against-a-real-
-// design check at the RPC layer.
+// It lives in Go beside the entity presets and the examples, because it names `entity` and `match`,
+// both defined in Go, so a copy held in the browser would go unchecked. Here it gets this package's
+// parse check and the RPC layer's evaluate-against-a-real-design check.
 //
-// The choice of `entity` is the whole point of that relation existing. Every other relation ranges
-// over an association, so a name search built on one silently cannot find a part with no
-// connections or a net with nothing on it, which are exactly the things a reviewer is hunting.
-//
-// `match` rather than `contains` for two reasons. A search box that only matches case is a search
-// box a newcomer gives up on, and `(?i)` is how you say otherwise. And a reader who wants "every
-// designator starting with U" can write `^U` in the box they are already typing in, which is the
-// same bargain the rest of the panel makes: answer the question, and leave the language behind.
+// It uses `entity` because every other relation ranges over an association, so a search built on
+// one cannot find a part with no connections or a net with nothing on it
+// (docsite/content/guide/querying.md#find-something-by-name). It uses `match` rather than `contains`
+// so the search is case-insensitive via `(?i)` and a reader can type a pattern such as `^U`.
 //
 // The caller substitutes {term} with the reader's text, regex-escaped (see the web client's
-// searchPattern). Escaping is the caller's job because only the caller knows whether the text came
-// from a human typing a name or from something that already is a pattern.
+// searchPattern). Escaping is the caller's job because only the caller knows whether the text is a
+// typed name or already a pattern.
 
 // SearchQuery is the find-by-name template, with Teaches carrying the concept a search leaves
 // behind the way an example's does.
@@ -28,9 +23,9 @@ type SearchQuery struct {
 	Teaches string
 }
 
-// Search returns the find-by-name template. One template rather than one per kind: the answer names
-// the kind of every hit in its own column, so a reader searching "CAN" sees the net, the connector
-// and the bus label together and learns that those are three different sorts of thing.
+// Search returns the find-by-name template. It is one template rather than one per kind, since the
+// answer names each hit's kind in its own column, so a search for "CAN" shows the net, the connector
+// and the bus label together.
 func Search() SearchQuery {
 	return SearchQuery{
 		Query:   `entity(?name, ?kind), match(?name, "(?i){term}")`,

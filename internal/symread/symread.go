@@ -1,9 +1,7 @@
-// Package symread is the shared rim of the symbol-file schematic readers (xschem, gEDA
-// gschem, and any future dialect such as Lepton EDA): the netlist-tier logic that was
-// byte-identical or constant-parameterized between them. What stays in each reader is the
-// format itself: parsing, the placement transform semantics (rotation/flip encodings), and
-// the coordinate grid; those come in as closures and a Dialect. See the cross-format notes
-// in the private research corpus for why the tokenizers deliberately stay forked.
+// Package symread is the shared netlist-tier logic of the symbol-file schematic readers (xschem,
+// gEDA gschem, and any future dialect such as Lepton EDA). Each reader keeps the format itself
+// (parsing, the rotation/flip encodings, the coordinate grid) and passes it in as closures and a
+// Dialect. The tokenizers stay forked per reader.
 package symread
 
 import (
@@ -31,8 +29,8 @@ type Pin struct {
 }
 
 // Placement is one symbol instance to resolve into absolute pins. Place maps a
-// symbol-local point onto the schematic plane; it captures the instance's origin and the
-// format's own rotation/flip semantics, which is exactly the part that differs per dialect.
+// symbol-local point onto the schematic plane, capturing the instance's origin and the
+// format's own rotation/flip semantics.
 //
 // SlotPins remaps the symbol's drawn pin numbers onto this instance's physical package pins
 // for a multi-gate package (gEDA slot=/slotdef=): the pin with Seq i takes SlotPins[i-1] as
@@ -54,15 +52,12 @@ type Placement struct {
 // grid. Resolved pins are also recorded on the PartType, so the library reflects the
 // symbol's terminals.
 //
-// load reports whether the symbol RESOLVED (its file opened and parsed) alongside its
-// pins: a symbol that resolves with zero pins is fine (a graphic-only part), but one that
-// fails to resolve drops every pin it should have contributed, which turns each wire end
-// meant to land on those pins into a phantom dangling endpoint (WS1-013). unresolved lists
-// each reference that did not resolve with the placements it cost pins, so the caller can
-// gate dangling emission (a design with any unresolved placement cannot trust its dangle
-// set) AND report the gap (WS1-052) rather than only going quieter because of it. resolved is the
-// other half of the same answer, the references that DID load with the pin count each supplied, so a
-// caller can say what it examined instead of only what went wrong (agni issue 418).
+// load reports whether the symbol RESOLVED (its file opened and parsed) alongside its pins. Zero
+// pins is fine (a graphic-only part), but a failed resolve drops every pin and turns each wire end
+// meant to land on them into a phantom dangling endpoint (WS1-013). unresolved lists each reference
+// that failed with the placements it cost pins, so the caller can gate dangling emission AND report
+// the gap (WS1-052). resolved lists the references that DID load with each one's pin count, so a
+// caller can say what it examined (agni issue 418).
 func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant func(x, y float64) netgraph.Point) (out []netgraph.Pin, resolved []Resolved, unresolved []Unresolved) {
 	type entry struct {
 		pins []Pin
@@ -78,8 +73,7 @@ func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant 
 		cache[symref] = e
 		return e
 	}
-	// Order of first appearance, so the report is stable across runs without a sort that would
-	// scramble the source's own ordering.
+	// Order of first appearance, so the report is stable and keeps the source's own ordering.
 	var missing []string
 	var loaded []string
 	byRef := map[string][]string{}
@@ -117,23 +111,18 @@ func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant 
 
 // Resolved is one symbol reference that loaded, with the pin count it contributed.
 //
-// Returned alongside Unresolved rather than left implicit, because a caller holding only the failures
-// can report only failures: a read where every symbol loaded and a read that opened no symbol at all
-// hand back the same empty slice. The PIN COUNT is what makes the success checkable, since a stale
-// library answering with an empty stub resolves just as successfully as the real symbol and costs the
-// netlist exactly as much as a missing file does.
-//
-// Grouped per reference, matching Unresolved: one library entry is one answer however many placements
-// draw with it.
+// Without it, a read where every symbol loaded and one that opened no symbol both hand back an empty
+// Unresolved. The PIN COUNT makes success checkable, since a stale library's empty stub resolves as
+// successfully as the real symbol and costs the netlist as much as a missing file. Grouped per
+// reference, matching Unresolved.
 type Resolved struct {
 	Symref   string
 	PinCount int
 }
 
 // Unresolved is one symbol reference that failed to load, with every placement that lost its pins.
-// Grouped per reference rather than per placement because one missing file is one cause, however
-// many parts are drawn with it. The reader turns this into ir.UnresolvedSymbol, stamping the kind
-// and provenance it alone knows.
+// Grouped per reference rather than per placement, since one missing file is one cause. The reader
+// turns this into ir.UnresolvedSymbol, stamping the kind and provenance it alone knows.
 type Unresolved struct {
 	Symref string
 	RefDes []string
@@ -240,13 +229,11 @@ func sectionNativeID(comp *ir.Component, attrs map[string]string) string {
 // RefDesCollisions reports designators claimed by more than one distinct physical placement, for
 // the readers that build components through this package (gEDA and xschem).
 //
-// Both can answer the question their format's own rules already settle, which is what makes the
-// answer trustworthy rather than a guess. gEDA STATES THE GATE: a package's gates share a refdes and
-// carry distinct slot=, folded by the caller into one Component with a section per gate. xschem
-// DECLARES NAMES UNIQUE within a schematic, and this module relies on that (an instance name is the
-// provenance native id), so a repeat is a duplicate and a break of the reader's own assumption at
-// once. Neither is EDIF, which represents a multi-gate part as instances sharing a designator with
-// no unit to distinguish them, and therefore supplies nothing (agni issue 309).
+// Both formats settle the question by their own rules. gEDA STATES THE GATE, since a package's gates
+// share a refdes and carry distinct slot=, folded by the caller into one Component with a section per
+// gate. xschem DECLARES NAMES UNIQUE within a schematic (an instance name is the provenance native
+// id), so a repeat is a duplicate. EDIF has no unit to distinguish gates sharing a designator, so it
+// supplies nothing (agni issue 309).
 //
 // A designator is duplicated when the same gate is claimed twice, in either of the two shapes that
 // produces:
@@ -256,11 +243,11 @@ func sectionNativeID(comp *ir.Component, attrs map[string]string) string {
 //   - two placements that were never folded, which stay separate Components wearing one refdes.
 //     That is every xschem repeat, and gEDA's unslotted one.
 //
-// A placeholder designator is not a claimed name (two unnamed resistors are not fighting over "R?"),
-// so it is skipped here exactly as the KiCad reader skips it; unannotated-components reports those.
+// A placeholder designator ("R?") is not a claimed name, so it is skipped as the KiCad reader skips
+// it, and unannotated-components reports those.
 //
 // Callers declare "ref_des_collisions" in InputDiagnostics.supplied alongside the result, INCLUDING
-// when it is empty: that declaration is what separates "no duplicates" from "never looked".
+// when it is empty, since that separates "no duplicates" from "never looked".
 func RefDesCollisions(comps []*ir.Component) []*ir.RefDesCollision {
 	order := []string{}
 	byRef := map[string][]*ir.Component{}
