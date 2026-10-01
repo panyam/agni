@@ -1,6 +1,7 @@
 package datalog
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -39,7 +40,7 @@ func mistypedFixture() *ir.Design {
 }
 
 func TestPowerPinMistyped_Fires(t *testing.T) {
-	fs := powerPinMistyped.Findings(check.NewModel(mistypedFixture()))
+	fs := powerPinMistyped.Findings(context.Background(), check.NewModel(mistypedFixture()))
 	if len(fs) != 1 || fs[0].Subject.Ref != "U1" || fs[0].Subject.Pin != "1" {
 		t.Fatalf("want exactly {U1 pin 1 (VDD, passive, alone)}, got %+v", fs)
 	}
@@ -63,7 +64,7 @@ func TestPowerPinMistyped_Silent(t *testing.T) {
 			{Name: "P3V3", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}, {ComponentRef: "R1", PinRef: "1"}}},
 		},
 	}
-	if fs := powerPinMistyped.Findings(check.NewModel(d)); len(fs) != 0 {
+	if fs := powerPinMistyped.Findings(context.Background(), check.NewModel(d)); len(fs) != 0 {
 		t.Fatalf("want silent (correct type / connected), got %+v", fs)
 	}
 }
@@ -92,7 +93,7 @@ func TestPowerPinMistyped_StatesConsideredSet(t *testing.T) {
 		t.Fatal("the rule declares a Domain, so it must state its considered set")
 	}
 	got := map[string]check.Verdict{}
-	for _, v := range powerPinMistyped.Eval(check.NewModel(mistypedFixture())) {
+	for _, v := range powerPinMistyped.Eval(context.Background(), check.NewModel(mistypedFixture())) {
 		got[check.EntityRef(v.Subjects[0])] = v
 	}
 	if len(got) != 2 {
@@ -126,7 +127,7 @@ func TestPowerPinMistyped_FormatGateKeepsItOutOfTheSet(t *testing.T) {
 	// Dropping the NO_CONNECT pin makes design.has_nc_channel go false, and the rule can conclude nothing.
 	pins := d.Libraries[0].Parts[0].Pins
 	d.Libraries[0].Parts[0].Pins = append(pins[:2:2], pins[3])
-	if vs := powerPinMistyped.Eval(check.NewModel(d)); len(vs) != 0 {
+	if vs := powerPinMistyped.Eval(context.Background(), check.NewModel(d)); len(vs) != 0 {
 		t.Fatalf("want no verdicts where the format cannot answer, got %d: %+v", len(vs), vs)
 	}
 }

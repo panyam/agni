@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -41,7 +42,7 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 // THE UNRATED PASS FET BECOMES NotConsidered rather than passing silently (#400).
 // check.CompareToBound makes the comparison and the witness together, so a pass carries the two
 // numbers it rests on.
-func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
+func loadSwitchTripVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, sw := range check.ExternalFetLoadSwitches(m) {
 		v := check.Verdict{

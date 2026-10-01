@@ -87,6 +87,10 @@ message RunQueryRequest {
   // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
   // how two views of one design are checked against each other.
   bool as_named = 5;
+  // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+  // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+  // deployment's own budget, never raise it, and zero leaves that budget as it is. A query past its budget fails with RESOURCE_EXHAUSTED, naming the budget.
+  int64 work_budget = 6;
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
@@ -163,6 +167,9 @@ message RunQueryResponse {
   // of a self-describing response and it is one string each.
   string query = 4;
   string source = 5;
+  // work is what answering this query cost, in the units a work budget counts, so a deployment can
+  // see which queries are expensive and choose a budget from evidence (agni issue 792).
+  int64 work = 6;
 }
 
 message ListRelationsRequest {
@@ -311,6 +318,10 @@ message RunQueriesRequest {
   OverlayConfig overlay = 3;
   string board_uri = 4;
   bool as_named = 5;
+  // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+  // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+  // deployment's own budget, never raise it, and zero leaves that budget as it is. Each query in the set has the whole budget; one past it reports that in its own result.
+  int64 work_budget = 6;
 }
 
 message RunQueriesResponse {

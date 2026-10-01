@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -73,7 +74,7 @@ func testRule(name string) *check.Rule {
 	return &check.Rule{
 		Name: name, Severity: "info", Summary: "t", Reads: []string{"net.names"},
 		Tags: map[string]string{check.KeyCategory: check.CategoryNaming},
-		Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil }),
+		Eval: check.FailuresOnly(func(context.Context, check.Model) []check.Finding { return nil }),
 	}
 }
 

@@ -130,6 +130,10 @@ message CreateReviewRequest {
   // It exists because the CLI's `review` is a client of this service and carries the same flag, so
   // resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
   bool as_named = 7;
+  // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+  // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+  // deployment's own budget, never raise it, and zero leaves that budget as it is. A checklist item whose query passes its budget reads inconclusive, naming the budget, and the other items still answer.
+  int64 work_budget = 8;
 }
 
 message GetReviewRequest {

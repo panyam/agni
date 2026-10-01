@@ -9,6 +9,7 @@
 package acmerules
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -43,7 +44,7 @@ var noExperimentalRefDes = &check.Rule{
 	// Every component gets a verdict, so a reviewer can see which parts were cleared rather than
 	// only which ones failed.
 	StatesConsideredSet: true,
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		var out []check.Verdict
 		for _, c := range m.Components() {
 			if strings.HasPrefix(c.RefDes, "X") {

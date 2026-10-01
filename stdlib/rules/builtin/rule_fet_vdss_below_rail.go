@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -66,7 +67,7 @@ var fetVdssBelowRail = &check.Rule{
 // the corpus rather than a bound nobody stated.
 //
 // Only rails are in scope (see the header), and a ground is not a subject.
-func fetVdssVerdicts(m check.Model) []check.Verdict {
+func fetVdssVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.RefDes)

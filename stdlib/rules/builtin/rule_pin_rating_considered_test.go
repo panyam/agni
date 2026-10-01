@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -42,7 +43,7 @@ func twoRowModel(t *testing.T, first, second float64) check.Model {
 // must still answer once. The row-shaped enumerator this replaces returned one verdict per ROW, so
 // "what does this rule say about U1.14" had two answers that disagreed about the limit.
 func TestOneTerminalProducesOneVerdict(t *testing.T) {
-	vs := pinAbsMaxVerdicts(twoRowModel(t, 6.5, 5.0))
+	vs := pinAbsMaxVerdicts(context.Background(), twoRowModel(t, 6.5, 5.0))
 
 	seen := map[string]int{}
 	for _, v := range vs {
@@ -71,7 +72,7 @@ func TestVerdictRestsOnTheMostRestrictiveRow(t *testing.T) {
 		{"tighter row second", 6.5, 5.0},
 		{"tighter row first", 5.0, 6.5},
 	} {
-		v := verdictFor(t, pinAbsMaxVerdicts(twoRowModel(t, c.first, c.second)), "14")
+		v := verdictFor(t, pinAbsMaxVerdicts(context.Background(), twoRowModel(t, c.first, c.second)), "14")
 		if v.Witness == nil {
 			t.Fatalf("%s: a pass must carry its evidence", c.name)
 		}
@@ -85,7 +86,7 @@ func TestVerdictRestsOnTheMostRestrictiveRow(t *testing.T) {
 // A row the design VIOLATES governs over one it clears, whatever the margins. Without this, a
 // terminal over its tightest limit could report a pass against a looser row and be believed.
 func TestAViolatedRowWinsOverAClearedOne(t *testing.T) {
-	v := verdictFor(t, pinAbsMaxVerdicts(twoRowModel(t, 6.5, 4.0)), "14")
+	v := verdictFor(t, pinAbsMaxVerdicts(context.Background(), twoRowModel(t, 6.5, 4.0)), "14")
 
 	if v.Outcome != check.Fail {
 		t.Fatalf("+5V exceeds the 4.0V row, so the terminal is not fine; got %s (%v)", v.Outcome, v.Witness)
@@ -101,7 +102,7 @@ func TestAViolatedRowWinsOverAClearedOne(t *testing.T) {
 func TestUnjudgeableTerminalIsReportedNotDropped(t *testing.T) {
 	f := func(v float64) *float64 { return &v }
 	// absMaxSpec binds ABSOLUTE_MAX rows only, so the recommended-range rule can judge neither pin.
-	vs := pinRecommendedVerdicts(absMaxModel(t, f(6.5), "+3V3", "+5V"))
+	vs := pinRecommendedVerdicts(context.Background(), absMaxModel(t, f(6.5), "+3V3", "+5V"))
 
 	if len(vs) == 0 {
 		t.Fatal("both supply terminals are in scope and neither has a recommended row; " +
@@ -130,14 +131,14 @@ func TestNotConsideredProjectsToNoFinding(t *testing.T) {
 	f := func(v float64) *float64 { return &v }
 	m := absMaxModel(t, f(6.5), "+3V3", "+5V")
 
-	vs := pinRecommendedVerdicts(m)
+	vs := pinRecommendedVerdicts(context.Background(), m)
 	if len(vs) == 0 {
 		t.Fatal("fixture must produce NotConsidered verdicts or this proves nothing")
 	}
 	if got := check.VerdictsToFindings(vs); len(got) != 0 {
 		t.Errorf("NotConsidered is not a defect, want 0 findings, got %d: %+v", len(got), got)
 	}
-	if got := pinOutOfRecommended.Findings(m); len(got) != 0 {
+	if got := pinOutOfRecommended.Findings(context.Background(), m); len(got) != 0 {
 		t.Errorf("Eval must be unchanged by the considered set, want 0 findings, got %d", len(got))
 	}
 }

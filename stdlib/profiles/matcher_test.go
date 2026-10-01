@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -37,7 +38,7 @@ func prefixedBusWithForeignNet() *ir.Design {
 // prefix-discriminated profile fired on any same-suffix net of a foreign bus once its own bus put
 // it in use.
 func TestPrefixedProfilePullupIgnoresForeignNet(t *testing.T) {
-	fs := check.Run(check.NewModel(prefixedBusWithForeignNet()), Compile(pulledProfile()))
+	fs := check.RunBackground(check.NewModel(prefixedBusWithForeignNet()), Compile(pulledProfile()))
 	for _, f := range fs {
 		t.Errorf("missing-pullup fired on a net outside the prefixed bus: %s (%s)", f.Subject, f.Message)
 	}
@@ -52,7 +53,7 @@ func TestPrefixedProfileDanglingIgnoresForeignNet(t *testing.T) {
 	d := prefixedBusWithForeignNet()
 	d.Nets[3] = net("FLASH_B_CS", "U7.1") // one connection: dangling by the rule's definition
 
-	for _, f := range check.Run(check.NewModel(d), Compile(p)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(p)) {
 		t.Errorf("signal-dangling fired on a net outside the prefixed bus: %s (%s)", f.Subject, f.Message)
 	}
 }
@@ -82,7 +83,7 @@ func TestCoverageRespectsMatcher(t *testing.T) {
 	// Put the foreign net FIRST so a suffix-only scan reaches it before the profile's own CS net.
 	d.Nets = []*ir.Net{d.Nets[3], d.Nets[0], d.Nets[1], d.Nets[2]}
 
-	cov := Coverage(pulledProfile(), check.NewModel(d))
+	cov := Coverage(context.Background(), pulledProfile(), check.NewModel(d))
 	if cov == nil {
 		t.Fatal("the prefixed bus is in use and should be detected")
 	}
@@ -131,10 +132,10 @@ func TestGlobDiscriminatesSharedSuffix(t *testing.T) {
 	}
 	m := check.NewModel(d)
 
-	if fs := check.Run(m, Compile(ethLike())); len(fs) != 0 {
+	if fs := check.RunBackground(m, Compile(ethLike())); len(fs) != 0 {
 		t.Errorf("Ethernet is complete; want 0 findings, got %d: %+v", len(fs), fs)
 	}
-	fs := check.Run(m, Compile(canLike()))
+	fs := check.RunBackground(m, Compile(canLike()))
 	if len(fs) != 1 {
 		t.Fatalf("CAN is missing _L; want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -153,7 +154,7 @@ func TestGlobProfileSilentOnForeignBusOnly(t *testing.T) {
 		net("CAN_00_H", "U3.1", "U4.1"),
 		net("CAN_00_L", "U3.2", "U4.2"),
 	}}
-	if fs := check.Run(check.NewModel(d), Compile(ethLike())); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(ethLike())); len(fs) != 0 {
 		t.Errorf("no Ethernet on this design; want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
@@ -179,7 +180,7 @@ func TestRegexSignalMatching(t *testing.T) {
 	if !InUse(m, p) {
 		t.Fatal("the 1000M H and L lines are present; a regex signal should read as matched")
 	}
-	fs := check.Run(m, Compile(p))
+	fs := check.RunBackground(m, Compile(p))
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "ETH_SW1_P1_1000M_A_H" {
 		t.Fatalf("want one finding anchored at the 1000M H net, got %+v", fs)
 	}
@@ -209,7 +210,7 @@ func TestInUseAgreesWithRulesForGlobAndRegex(t *testing.T) {
 			// signal-dangling fires only under in_use, so a finding is proof the compiled gate held.
 			probe := p
 			probe.Requirements = []Requirement{{Type: "signal-dangling"}}
-			rulesSawInUse := len(check.Run(m, Compile(probe))) > 0
+			rulesSawInUse := len(check.RunBackground(m, Compile(probe))) > 0
 			if got := InUse(m, p); got != rulesSawInUse {
 				t.Errorf("%s/%s: InUse = %v but the compiled in_use gate = %v", p.Name, name, got, rulesSawInUse)
 			}
@@ -223,7 +224,7 @@ func TestInUseAgreesWithRulesForGlobAndRegex(t *testing.T) {
 func TestSuffixOnlyProfilesUnchanged(t *testing.T) {
 	m := check.NewModel(spinorBroken())
 	names := map[string]int{}
-	for _, f := range check.Run(m, Compile(SPINOR)) {
+	for _, f := range check.RunBackground(m, Compile(SPINOR)) {
 		names[f.Rule]++
 	}
 	for _, want := range []string{"spi_nor-signal-missing", "spi_nor-missing-pullup", "spi_nor-signal-dangling"} {

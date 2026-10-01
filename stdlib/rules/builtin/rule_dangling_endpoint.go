@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -36,7 +37,7 @@ var danglingEndpoint = &check.Rule{
 	// whose members are already nets is a pass the reader made visible. Doing the same here means a
 	// reader recording what it looked at, alongside the `supplied` flag that already records THAT it
 	// looked. That is a reader-and-IR change rather than a rule conversion.
-	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(ctx context.Context, m check.Model) []check.Finding {
 		return check.Report(m.DanglingEndpoints(), func(e *ir.DanglingEndpoint) check.Finding {
 			return check.Finding{Subject: check.Entity{Kind: check.KindEndpoint, Ref: fmt.Sprintf("%d,%d", e.X, e.Y)}, Message: "wire endpoint connects to nothing", Prov: e.Prov}
 		})

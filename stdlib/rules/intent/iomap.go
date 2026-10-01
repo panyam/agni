@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -40,7 +41,7 @@ func ioMapPinRule(d Declaration) *check.Rule {
 		Remedy:              intentRemedy(RuleIOMapPin),
 		Reads:               []string{"component.pin", "pin.name", "pin.net"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return ioMapPinVerdicts(m, d) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return ioMapPinVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }
@@ -58,7 +59,7 @@ func ioMapNetAbsentRule(d Declaration) *check.Rule {
 		Remedy:              intentRemedy(RuleIOMapNetAbsent),
 		Reads:               []string{"on_net"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return ioMapNetAbsentVerdicts(m, d) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return ioMapNetAbsentVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }
@@ -76,7 +77,7 @@ func ioMapFarEndRule(d Declaration) *check.Rule {
 		Remedy:              intentRemedy(RuleIOMapFarEnd),
 		Reads:               []string{"component.pin", "pin.name", "pin.net", "net.reaches"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return ioMapFarEndVerdicts(m, d) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return ioMapFarEndVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }

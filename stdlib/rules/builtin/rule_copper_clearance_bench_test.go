@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -43,7 +44,7 @@ func BenchmarkCopperClearance(b *testing.B) {
 			m := check.NewModel(&ir.Design{}, check.WithBoard(benchBoard(n, 40)))
 			b.ResetTimer()
 			for b.Loop() {
-				copperClearance.Findings(m)
+				copperClearance.Findings(context.Background(), m)
 			}
 		})
 	}

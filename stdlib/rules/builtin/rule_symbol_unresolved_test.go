@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -34,7 +35,7 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 		Symref: "res.sym", Kind: "xschem_sym", RefDes: []string{"R1", "R2"},
 		Prov: &ir.Provenance{SourceFile: "board.sch"},
 	})
-	fs := symbolUnresolved.Findings(check.NewModel(d))
+	fs := symbolUnresolved.Findings(context.Background(), check.NewModel(d))
 	if len(fs) != 1 {
 		t.Fatalf("findings = %d, want 1 per unresolved reference", len(fs))
 	}
@@ -61,7 +62,7 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 // is no longer silent in verdicts, which is what agni issue 418 changed, and that is asserted
 // below.
 func TestSymbolUnresolvedSilentWhenClean(t *testing.T) {
-	if fs := symbolUnresolved.Findings(check.NewModel(unresolvedDesign())); len(fs) != 0 {
+	if fs := symbolUnresolved.Findings(context.Background(), check.NewModel(unresolvedDesign())); len(fs) != 0 {
 		t.Errorf("findings = %v, want none for a clean read", fs)
 	}
 }
@@ -81,7 +82,7 @@ func TestSymbolUnresolvedStatesConsideredSet(t *testing.T) {
 		&ir.UnresolvedSymbol{Symref: "gone.sym", Kind: "xschem_sym", RefDes: []string{"R1"}},
 	)
 	m := check.NewModel(d)
-	vs := symbolUnresolved.Eval(m)
+	vs := symbolUnresolved.Eval(context.Background(), m)
 	if len(vs) != 3 {
 		t.Fatalf("verdicts = %d, want 3 (one per reference the reader tried)", len(vs))
 	}
@@ -95,7 +96,7 @@ func TestSymbolUnresolvedStatesConsideredSet(t *testing.T) {
 	if got := byOutcome[check.Fail]; !slices.Equal(got, []string{"gone.sym"}) {
 		t.Errorf("fails = %v, want the one reference that did not", got)
 	}
-	if fs := symbolUnresolved.Findings(m); len(fs) != 1 || check.EntityRef(fs[0].Subject) != "gone.sym" {
+	if fs := symbolUnresolved.Findings(context.Background(), m); len(fs) != 1 || check.EntityRef(fs[0].Subject) != "gone.sym" {
 		t.Errorf("findings = %+v, want the failure only, unchanged by the pass verdicts", fs)
 	}
 	for _, v := range vs {
@@ -114,7 +115,7 @@ func TestSymbolUnresolvedStatesConsideredSet(t *testing.T) {
 // witness that carries a constant.
 func TestSymbolUnresolvedPassCarriesPinCount(t *testing.T) {
 	statement := func(pins int32) string {
-		vs := symbolUnresolved.Eval(check.NewModel(resolvedDesign(
+		vs := symbolUnresolved.Eval(context.Background(), check.NewModel(resolvedDesign(
 			[]*ir.ResolvedSymbol{{Symref: "Device:R", Kind: "kicad_sym_embedded", PinCount: pins}})))
 		if len(vs) != 1 || vs[0].Witness == nil {
 			t.Fatalf("verdicts = %+v, want one carrying a witness", vs)
@@ -134,7 +135,7 @@ func TestSymbolUnresolvedPassCarriesPinCount(t *testing.T) {
 // the half that can be missing on somebody else's machine, so the witness separates it from one the
 // schematic carries itself.
 func TestSymbolUnresolvedPassNamesSource(t *testing.T) {
-	vs := symbolUnresolved.Eval(check.NewModel(resolvedDesign([]*ir.ResolvedSymbol{
+	vs := symbolUnresolved.Eval(context.Background(), check.NewModel(resolvedDesign([]*ir.ResolvedSymbol{
 		{Symref: "Device:R", Kind: "kicad_sym_embedded", PinCount: 2},
 		{Symref: "ext:U", Kind: "kicad_sym_lib", PinCount: 2},
 	})))
@@ -165,7 +166,7 @@ func TestSymbolUnresolvedSeverityIsWarning(t *testing.T) {
 // a usable message rather than a dangling sentence fragment.
 func TestSymbolUnresolvedMessageWithoutPlacements(t *testing.T) {
 	d := unresolvedDesign(&ir.UnresolvedSymbol{Symref: "ghost.sym", Kind: "xschem_sym"})
-	fs := symbolUnresolved.Findings(check.NewModel(d))
+	fs := symbolUnresolved.Findings(context.Background(), check.NewModel(d))
 	if len(fs) != 1 || !strings.Contains(fs[0].Message, "ghost.sym") {
 		t.Errorf("findings = %+v, want one naming ghost.sym", fs)
 	}

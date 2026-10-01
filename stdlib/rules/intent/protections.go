@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -28,7 +29,7 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 		Remedy:              intentRemedy("protection-" + kind),
 		Reads:               []string{"component.net", "component.class", "net.ground"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return protectionVerdicts(m, ps, kind) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return protectionVerdicts(m, ps, kind) },
 		StatesConsideredSet: true,
 	}
 }

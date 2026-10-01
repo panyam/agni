@@ -68,7 +68,7 @@ func capDesign(railNet, mpn string) *ir.Design {
 
 func runCapRule(t *testing.T, d *ir.Design, set param.ParamSet) []check.Finding {
 	t.Helper()
-	return check.Run(check.NewModel(d, check.WithParamProvider(set)), []*check.Rule{capVoltage})
+	return check.RunBackground(check.NewModel(d, check.WithParamProvider(set)), []*check.Rule{capVoltage})
 }
 
 func TestCapVoltageFires(t *testing.T) {

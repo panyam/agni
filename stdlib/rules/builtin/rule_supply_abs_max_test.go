@@ -72,7 +72,7 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 func runSupplyRule(t *testing.T, d *ir.Design, set param.ParamSet) []check.Finding {
 	t.Helper()
 	m := check.NewModel(d, check.WithParamProvider(set))
-	return check.Run(m, []*check.Rule{supplyExceedsAbsMax})
+	return check.RunBackground(m, []*check.Rule{supplyExceedsAbsMax})
 }
 
 func TestSupplyExceedsAbsMax(t *testing.T) {
@@ -197,14 +197,14 @@ func TestParamProviderMockBackend(t *testing.T) {
 		return nil
 	})
 	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(mock))
-	if fs := check.Run(m, []*check.Rule{supplyExceedsAbsMax}); len(fs) != 1 {
+	if fs := check.RunBackground(m, []*check.Rule{supplyExceedsAbsMax}); len(fs) != 1 {
 		t.Fatalf("mock ParamProvider backend: want 1 finding, got %v", fs)
 	}
 	if lookups == 0 {
 		t.Error("the model never consulted the provider")
 	}
 	// A nil provider (a model built without params) is silent, not a panic.
-	if fs := check.Run(check.NewModel(supplyDesign("+5V", false, "ACME-33")), []*check.Rule{supplyExceedsAbsMax}); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(supplyDesign("+5V", false, "ACME-33")), []*check.Rule{supplyExceedsAbsMax}); len(fs) != 0 {
 		t.Errorf("nil provider: want silent, got %v", fs)
 	}
 }

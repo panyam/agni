@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -37,7 +38,7 @@ var diffPairNaming = &check.Rule{
 //
 // The witness names the complement it looked for, so renaming the negative half turns a pass into a
 // failure naming the missing net.
-func diffPairNamingVerdicts(m check.Model) []check.Verdict {
+func diffPairNamingVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	uses := check.DiffConventionPresent(m)
 
 	var out []check.Verdict

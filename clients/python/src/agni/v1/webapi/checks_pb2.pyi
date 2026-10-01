@@ -11,18 +11,20 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CheckDesignRequest(_message.Message):
-    __slots__ = ("rules", "overlay", "uri", "board_uri", "as_named")
+    __slots__ = ("rules", "overlay", "uri", "board_uri", "as_named", "work_budget")
     RULES_FIELD_NUMBER: _ClassVar[int]
     OVERLAY_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     BOARD_URI_FIELD_NUMBER: _ClassVar[int]
     AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     rules: _containers.RepeatedScalarFieldContainer[str]
     overlay: OverlayConfig
     uri: str
     board_uri: str
     as_named: bool
-    def __init__(self, rules: _Optional[_Iterable[str]] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    work_budget: int
+    def __init__(self, rules: _Optional[_Iterable[str]] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ...) -> None: ...
 
 class OverlayConfig(_message.Message):
     __slots__ = ("config", "ignore_project")

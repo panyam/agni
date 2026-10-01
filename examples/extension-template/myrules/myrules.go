@@ -7,6 +7,7 @@
 package myrules
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -36,7 +37,7 @@ var exampleRule = &check.Rule{
 	// Eval MAPS each subject onto a verdict rather than filtering down to what failed. A pass
 	// carries the proof it rests on, so a reader can tell a part you cleared from one nobody
 	// checked. The rule's findings are projected from this (Rule.Findings).
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		var out []check.Verdict
 		for _, c := range m.Components() {
 			// TODO: your condition. This placeholder flags an unnamed component.

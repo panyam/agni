@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -36,7 +37,12 @@ func run(path string) error {
 	if err != nil {
 		return err
 	}
-	findings := check.Run(check.NewModel(d), check.DefaultCatalog().Rules())
+	// Run takes a context so a long check stops when its caller does; a command line has none to
+	// cancel. It returns an error only when that context is done.
+	findings, err := check.Run(context.Background(), check.NewModel(d), check.DefaultCatalog().Rules())
+	if err != nil {
+		return err
+	}
 	fmt.Printf("%s: %d components, %d finding(s)\n", path, len(d.Components), len(findings))
 	for _, f := range findings {
 		fmt.Printf("  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)

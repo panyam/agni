@@ -134,7 +134,11 @@ type CreateReviewRequest struct {
 	//
 	// It exists because the CLI's `review` is a client of this service and carries the same flag, so
 	// resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
-	AsNamed       bool `protobuf:"varint,7,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	AsNamed bool `protobuf:"varint,7,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+	// a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+	// deployment's own budget, never raise it, and zero leaves that budget as it is. A checklist item whose query passes its budget reads inconclusive, naming the budget, and the other items still answer.
+	WorkBudget    int64 `protobuf:"varint,8,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -216,6 +220,13 @@ func (x *CreateReviewRequest) GetAsNamed() bool {
 		return x.AsNamed
 	}
 	return false
+}
+
+func (x *CreateReviewRequest) GetWorkBudget() int64 {
+	if x != nil {
+		return x.WorkBudget
+	}
+	return 0
 }
 
 type GetReviewRequest struct {
@@ -535,7 +546,7 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"T\n" +
 	"\x06Review\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
-	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\xa0\x02\n" +
+	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\xc1\x02\n" +
 	"\x13CreateReviewRequest\x12\x16\n" +
 	"\x06parent\x18\x06 \x01(\tR\x06parent\x12\x1d\n" +
 	"\n" +
@@ -544,7 +555,9 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x0eratified_floor\x18\x03 \x01(\x01R\rratifiedFloor\x127\n" +
 	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12:\n" +
 	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\x12\x19\n" +
-	"\bas_named\x18\a \x01(\bR\aasNamed\"&\n" +
+	"\bas_named\x18\a \x01(\bR\aasNamed\x12\x1f\n" +
+	"\vwork_budget\x18\b \x01(\x03R\n" +
+	"workBudget\"&\n" +
 	"\x10GetReviewRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n" +
 	"\x12ListReviewsRequest\x12\x16\n" +

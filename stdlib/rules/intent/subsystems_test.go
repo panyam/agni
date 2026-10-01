@@ -18,7 +18,7 @@ subsystems:
 		Components: []*ir.Component{{RefDes: "X1", DeviceClasses: classify.Tags("crystal")}},
 		Nets:       []*ir.Net{{Name: "XTAL_IN"}, {Name: "XTAL_OUT"}},
 	}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a complete subsystem must not fire, got %+v", fs)
 	}
 }
@@ -34,7 +34,7 @@ subsystems:
 		Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("ic")}},
 		Nets:       []*ir.Net{{Name: "PORZ"}},
 	}
-	fs := check.Run(check.NewModel(d), Compile(decl))
+	fs := check.RunBackground(check.NewModel(d), Compile(decl))
 	if len(fs) != 2 {
 		t.Fatalf("want 2 findings (absent source + absent net), got %d: %+v", len(fs), fs)
 	}
@@ -67,7 +67,7 @@ func TestSubsystemNetsOnlyOrSourceOnly(t *testing.T) {
 	// A nets-only subsystem (the power-tree shape) requires every rail to exist.
 	decl := declOf(t, "name: I\nsubsystems:\n  - {name: power tree, nets: [5V0, 3V3, 1V8]}")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "5V0"}, {Name: "3V3"}}} // 1V8 missing
-	fs := check.Run(check.NewModel(d), Compile(decl))
+	fs := check.RunBackground(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "1V8" || fs[0].Rule != "subsystem-power-tree" {
 		t.Fatalf("nets-only subsystem should fire once for the missing rail, got %+v", fs)
 	}

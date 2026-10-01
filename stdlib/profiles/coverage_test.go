@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -10,7 +11,7 @@ import (
 // TestCoverageGood checks that a fully-wired SPI-NOR bus is detected and every signal reads present
 // (CS is pulled up to +3V3 through R1).
 func TestCoverageGood(t *testing.T) {
-	cov := Coverage(SPINOR, check.NewModel(spinorGood()))
+	cov := Coverage(context.Background(), SPINOR, check.NewModel(spinorGood()))
 	if cov == nil {
 		t.Fatal("SPI_NOR should be detected on the good fixture")
 	}
@@ -31,7 +32,7 @@ func TestCoverageGood(t *testing.T) {
 // missing, SCLK dangling (single-pin), and CS's pull-up missing, the three the profile rules fire
 // on.
 func TestCoverageBroken(t *testing.T) {
-	cov := Coverage(SPINOR, check.NewModel(spinorBroken()))
+	cov := Coverage(context.Background(), SPINOR, check.NewModel(spinorBroken()))
 	if cov == nil {
 		t.Fatal("SPI_NOR should still be detected on the broken fixture")
 	}
@@ -60,7 +61,7 @@ func TestCoverageBroken(t *testing.T) {
 // so the interface is not detected (nil), so a lone _CS net yields no false coverage.
 func TestCoverageUndetected(t *testing.T) {
 	d := &ir.Design{Components: comps("U1"), Nets: []*ir.Net{net("SPI_CS", "U1.1")}}
-	if cov := Coverage(SPINOR, check.NewModel(d)); cov != nil {
+	if cov := Coverage(context.Background(), SPINOR, check.NewModel(d)); cov != nil {
 		t.Errorf("one signal should not detect the interface, got %+v", cov)
 	}
 }

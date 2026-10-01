@@ -1,6 +1,7 @@
 package check
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -26,7 +27,7 @@ func designWithUnresolved() *ir.Design {
 func alwaysFires(reads ...string) *Rule {
 	return &Rule{
 		Name: "test-rule", Severity: "error", Reads: reads,
-		Eval: FailuresOnly(func(Model) []Finding {
+		Eval: FailuresOnly(func(context.Context, Model) []Finding {
 			return []Finding{{Subject: Entity{Kind: KindNet, Ref: "SIG"}, Message: "a defect"}}
 		}),
 	}
@@ -37,7 +38,7 @@ func alwaysFires(reads ...string) *Rule {
 // gate it evaluated normally and its silence (or its finding) read as authoritative.
 func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 	for _, reads := range [][]string{{"on_net"}, {"pin.electrical_type"}, {"pin.no_connect"}, {"net.names", "on_net"}} {
-		fs := Run(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
+		fs := RunBackground(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
 		if len(fs) != 1 {
 			t.Fatalf("reads %v: findings = %d, want 1 (the gate's own)", reads, len(fs))
 		}
@@ -66,7 +67,7 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 // The gate has to cost nothing where it buys nothing.
 func TestUnresolvedGateLeavesOtherRulesAlone(t *testing.T) {
 	for _, reads := range [][]string{{"net.names"}, {"component.class"}, {"param.esd_rating"}, {"reader.ref_des_collision"}} {
-		fs := Run(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
+		fs := RunBackground(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
 		if len(fs) != 1 || fs[0].Inconclusive {
 			t.Errorf("reads %v: findings = %+v, want the rule's own verdict, ungated", reads, fs)
 		}
@@ -77,7 +78,7 @@ func TestUnresolvedGateLeavesOtherRulesAlone(t *testing.T) {
 // completely. A gate that fired on clean designs would be worse than the silence it replaces.
 func TestUnresolvedGateInactiveOnACleanRead(t *testing.T) {
 	clean := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}}}
-	fs := Run(NewModel(clean), []*Rule{alwaysFires("on_net")})
+	fs := RunBackground(NewModel(clean), []*Rule{alwaysFires("on_net")})
 	if len(fs) != 1 || fs[0].Inconclusive {
 		t.Errorf("findings = %+v, want the rule's own verdict on a design whose symbols all resolved", fs)
 	}
@@ -89,11 +90,11 @@ func TestUnresolvedGateInactiveOnACleanRead(t *testing.T) {
 func TestUnresolvedGateIsDesignWide(t *testing.T) {
 	aboutU1 := &Rule{
 		Name: "about-u1", Severity: "error", Reads: []string{"on_net"},
-		Eval: FailuresOnly(func(Model) []Finding {
+		Eval: FailuresOnly(func(context.Context, Model) []Finding {
 			return []Finding{{Subject: Entity{Kind: KindComponent, Ref: "U1"}, Message: "a defect on U1"}}
 		}),
 	}
-	fs := Run(NewModel(designWithUnresolved()), []*Rule{aboutU1})
+	fs := RunBackground(NewModel(designWithUnresolved()), []*Rule{aboutU1})
 	if len(fs) != 1 || !fs[0].Inconclusive {
 		t.Errorf("findings = %+v, want inconclusive even though only R1 lost pins (design-wide gate)", fs)
 	}

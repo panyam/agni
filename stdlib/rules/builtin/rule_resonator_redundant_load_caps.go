@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
@@ -43,7 +44,7 @@ var resonatorRedundantLoadCaps = &check.Rule{
 //
 // A terminal whose net continues onto a sheet the read did not open is NotConsidered rather than
 // dropped, so it stays distinguishable from a resonator with no such terminal (#400).
-func resonatorRedundantLoadCapsVerdicts(m check.Model) []check.Verdict {
+func resonatorRedundantLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	// Ceramic resonators only. A bare un-subtyped clock candidate may be a crystal that needs caps.
 	resos := map[string]*clockPart{}
 	var order []string

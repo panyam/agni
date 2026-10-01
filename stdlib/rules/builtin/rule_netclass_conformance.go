@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -31,7 +32,7 @@ var netclassTrackWidth = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("netclass-track-width"),
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		return declaredVsActual(m, "track_width", "routed width", "declared track width",
 			func(bn check.BoardNet) (float64, bool) { return minSegmentWidthMM(bn) },
 			"the net carries no routed track, so there is no width to compare",
@@ -55,7 +56,7 @@ var netclassViaDrill = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("netclass-via-drill"),
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		return declaredVsActual(m, "via_drill", "smallest drill", "declared via drill",
 			func(bn check.BoardNet) (float64, bool) { return minViaDrillMM(bn) },
 			"the net carries no via, so there is no drill to compare",

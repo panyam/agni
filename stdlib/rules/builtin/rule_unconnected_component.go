@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -39,7 +40,7 @@ var unconnectedComponent = &check.Rule{
 //
 // The nets are NOT carried as Context. A large part has dozens, and the viewer renders each as a
 // chip, so the list would read worse than the count.
-func unconnectedComponentVerdicts(m check.Model) []check.Verdict {
+func unconnectedComponentVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	netsOn := map[string]int{}
 	for _, n := range m.Nets() {
 		seen := map[string]bool{}

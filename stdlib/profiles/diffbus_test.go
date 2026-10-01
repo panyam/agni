@@ -33,7 +33,7 @@ func TestDiffBusRegistered(t *testing.T) {
 func fires(t *testing.T, p Profile, d *ir.Design, want ...string) {
 	t.Helper()
 	got := map[string]bool{}
-	for _, f := range check.Run(check.NewModel(d), Compile(p)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(p)) {
 		got[f.Rule] = true
 	}
 	for _, w := range want {
@@ -45,7 +45,7 @@ func fires(t *testing.T, p Profile, d *ir.Design, want ...string) {
 
 func silent(t *testing.T, p Profile, d *ir.Design) {
 	t.Helper()
-	if fs := check.Run(check.NewModel(d), Compile(p)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(p)); len(fs) != 0 {
 		t.Fatalf("good %s bus: want 0 findings, got %d: %+v", p.Name, len(fs), fs)
 	}
 }

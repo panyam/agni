@@ -100,7 +100,7 @@ func TestPartitionAvailableChangesNoFindings(t *testing.T) {
 	m := check.NewModel(&ir.Design{})
 	rules := check.DefaultCatalog().Rules()
 	runnable, _ := partitionAvailable(rules, m)
-	if a, b := len(check.Run(m, rules)), len(check.Run(m, runnable)); a != b {
+	if a, b := len(check.RunBackground(m, rules)), len(check.RunBackground(m, runnable)); a != b {
 		t.Errorf("partitioning must not change what fires: %d findings over all rules, %d over the runnable half", a, b)
 	}
 }

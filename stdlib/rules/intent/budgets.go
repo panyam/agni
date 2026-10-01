@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -35,7 +36,7 @@ func railBudgetCapacityRule(d Declaration) *check.Rule {
 		Reads:        []string{"param.output_current", "on_net"},
 		ParamSymbols: check.OutputCurrentSymbols(),
 		Tags:         intentTags(),
-		Eval: func(m check.Model) []check.Verdict {
+		Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 			return evalRailBudgets(m, d.RailBudgets, 1, func(b RailBudget, need float64, ref string, p *parampb.Parameter) string {
 				return fmt.Sprintf("rail %q is declared to draw up to %gA peak, but %s supplies it rated at only %s %gA",
 					b.Rail, b.Peak, ref, p.GetSymbol(), p.GetValue().GetMax())
@@ -60,7 +61,7 @@ func railBudgetMarginRule(d Declaration) *check.Rule {
 		Reads:        []string{"param.output_current", "on_net"},
 		ParamSymbols: check.OutputCurrentSymbols(),
 		Tags:         intentTags(),
-		Eval: func(m check.Model) []check.Verdict {
+		Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 			return evalRailBudgets(m, d.RailBudgets, d.MarginFactor, func(b RailBudget, need float64, ref string, p *parampb.Parameter) string {
 				return fmt.Sprintf("rail %q is declared to draw up to %gA peak and the declared margin factor of %g asks for %gA, but %s supplies it rated at only %s %gA",
 					b.Rail, b.Peak, d.MarginFactor, need, ref, p.GetSymbol(), p.GetValue().GetMax())

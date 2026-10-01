@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -33,7 +34,7 @@ var railNominalOutOfRecommended = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("rail-nominal-out-of-recommended"),
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		return aliasSupplyVerdicts(m, check.RecommendedOperatingLimits, singleRecommendedRow,
 			"recommended operating supply", "recommended range",
 			func(p *parampb.Parameter) check.Bound { return check.Bound{Min: p.Value.Min, Max: p.Value.Max} },

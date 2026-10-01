@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -79,7 +80,7 @@ func unresolvedMessage(u *ir.UnresolvedSymbol) string {
 // The KIND is carried through for the same reason. On KiCad a reference resolves either from the
 // schematic's own lib_symbols block or from --symbol-path, and only the second can behave differently
 // on someone else's machine.
-func symbolUnresolvedVerdicts(m check.Model) []check.Verdict {
+func symbolUnresolvedVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, u := range m.UnresolvedSymbols() {
 		v := check.Verdict{

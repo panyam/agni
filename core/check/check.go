@@ -8,6 +8,7 @@
 package check
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -219,7 +220,11 @@ type Rule struct {
 	// undecidable subject says so, and a violation carries its Finding. Findings are the projection
 	// of this (VerdictsToFindings, taken by Run), so a rule's findings cannot disagree with its
 	// verdicts.
-	Eval func(Model) []Verdict
+	//
+	// The context is the caller's. A rule that walks a whole board, or evaluates a query, should stop
+	// when it is done (agni issue 795); the runners check it between rules regardless, so a rule that
+	// ignores it delays a cancellation by one rule at most.
+	Eval func(context.Context, Model) []Verdict
 	// SubjectShape declares the KINDS of a verdict's subject tuple, in the rule's order, for a rule
 	// whose subject is a relation between entities. Empty means one subject of whatever kind the rule
 	// enumerates. It tells a reader how to spell a verdict id without running the check, e.g.
@@ -242,7 +247,9 @@ type Rule struct {
 // Findings is the rule's verdicts projected onto the findings contract, the violations alone, which
 // is what `check` and every consumer of its output read. It is a projection rather than a second
 // body, so the two cannot disagree.
-func (r *Rule) Findings(m Model) []Finding { return VerdictsToFindings(r.Eval(m)) }
+func (r *Rule) Findings(ctx context.Context, m Model) []Finding {
+	return VerdictsToFindings(r.Eval(ctx, m))
+}
 
 // FailuresOnly adapts a pre-verdicts rule body to the Eval signature, turning each Finding into a
 // Fail (or Inconclusive) verdict and claiming nothing about the subjects that did not fail. A built-in
@@ -251,9 +258,9 @@ func (r *Rule) Findings(m Model) []Finding { return VerdictsToFindings(r.Eval(m)
 //
 // It invents no Witness. The Finding is the evidence, and a Witness restating the message would make
 // an unconverted rule look converted.
-func FailuresOnly(eval func(Model) []Finding) func(Model) []Verdict {
-	return func(m Model) []Verdict {
-		fs := eval(m)
+func FailuresOnly(eval func(context.Context, Model) []Finding) func(context.Context, Model) []Verdict {
+	return func(ctx context.Context, m Model) []Verdict {
+		fs := eval(ctx, m)
 		out := make([]Verdict, 0, len(fs))
 		for _, f := range fs {
 			outcome := Fail
@@ -317,16 +324,22 @@ const (
 // picks the rules (the full set, a subset, diff gates); RunDesign is the shortcut for the standard
 // checks over a design. On a design with an unresolved symbol, a connectivity rule emits one
 // Inconclusive finding instead of evaluating (see unresolvedSymbolGate).
-func Run(m Model, rules []*Rule) []Finding {
+//
+// It checks ctx before each rule and returns its error when the caller has gone (agni issue 795),
+// rather than the findings so far, which would read as a run that found nothing more.
+func Run(ctx context.Context, m Model, rules []*Rule) ([]Finding, error) {
 	var out []Finding
 	gate := unresolvedSymbolGate(m)
 	for _, r := range rules {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if f, gated := gate(r); gated {
 			f.Rule, f.Severity = r.Name, r.Severity
 			out = append(out, f)
 			continue
 		}
-		for _, f := range r.Findings(m) {
+		for _, f := range r.Findings(ctx, m) {
 			f.Rule, f.Severity = r.Name, r.Severity
 			out = append(out, f)
 		}
@@ -337,7 +350,10 @@ func Run(m Model, rules []*Rule) []Finding {
 		}
 		return EntityRef(out[i].Subject) < EntityRef(out[j].Subject)
 	})
-	return out
+	if err := ctx.Err(); err != nil {
+		return nil, err // the last rule ran past a cancellation, so its findings are not to be trusted as complete
+	}
+	return out, nil
 }
 
 // unresolvedSymbolGate returns a per-rule gate reporting whether a rule cannot be DECIDED because the
@@ -389,7 +405,9 @@ func readsConnectivity(r *Rule) bool {
 
 // RunDesign runs the installed built-in rules over NewModel(d). The built-ins install by importing
 // stdlib/rules/builtin; without that import the set is empty and RunDesign returns no findings.
-func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), builtinRules) }
+//
+// It runs without a caller's context, so it cannot be cancelled; a caller that has one uses Run.
+func RunDesign(d *ir.Design) []Finding { return RunBackground(NewModel(d), builtinRules) }
 
 // RunVerdicts collects verdicts from every rule that sets StatesConsideredSet, stamping Rule from the
 // rule's name, and orders them as Run does (rule, then subject).
@@ -398,13 +416,18 @@ func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), builtinRules) }
 // apart from a rule that considered no subjects. So this returns a verdict list rather than a
 // coverage report, which over a part-converted catalog would overstate the run. See
 // StatesConsideredSet for why the filter is a declaration.
-func RunVerdicts(m Model, rules []*Rule) []Verdict {
+//
+// Like Run, it checks ctx before each rule and returns its error rather than a partial list.
+func RunVerdicts(ctx context.Context, m Model, rules []*Rule) ([]Verdict, error) {
 	var out []Verdict
 	for _, r := range rules {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if !r.StatesConsideredSet {
 			continue
 		}
-		for _, v := range r.Eval(m) {
+		for _, v := range r.Eval(ctx, m) {
 			v.Rule = r.Name
 			out = append(out, v)
 		}
@@ -415,7 +438,10 @@ func RunVerdicts(m Model, rules []*Rule) []Verdict {
 		}
 		return SubjectRefs(out[i]) < SubjectRefs(out[j])
 	})
-	return out
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // Report maps a selection to findings (the report step every rule ends with). Subject and
@@ -441,4 +467,19 @@ func CompFinding(msg string) func(*ir.Component) Finding {
 	return func(c *ir.Component) Finding {
 		return Finding{Subject: ComponentEntity(c.RefDes), Message: msg, Prov: c.Prov}
 	}
+}
+
+// RunBackground is Run for a caller with no context to pass, such as a test or an example: it cannot
+// be cancelled, so it cannot fail, and it returns the findings alone. A caller serving a request, or
+// with a command's context, uses Run so the work stops when nobody is waiting for it.
+func RunBackground(m Model, rules []*Rule) []Finding {
+	fs, _ := Run(context.Background(), m, rules) // a background context is never done
+	return fs
+}
+
+// RunVerdictsBackground is RunVerdicts for a caller with no context to pass, on the same terms as
+// RunBackground.
+func RunVerdictsBackground(m Model, rules []*Rule) []Verdict {
+	vs, _ := RunVerdicts(context.Background(), m, rules)
+	return vs
 }

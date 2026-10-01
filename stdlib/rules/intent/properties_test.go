@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -38,7 +39,7 @@ func propDesign(net, biasTo, capTo string) *ir.Design {
 
 func propFindings(t *testing.T, d *ir.Design, p NetProperty) []check.Finding {
 	t.Helper()
-	return propertyRule(p.Property, []NetProperty{p}).Findings(check.NewModel(d))
+	return propertyRule(p.Property, []NetProperty{p}).Findings(context.Background(), check.NewModel(d))
 }
 
 // TestResetPolarityFiresOnContradiction (WS3-088) covers a net declared active-low that is biased

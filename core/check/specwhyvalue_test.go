@@ -1,6 +1,7 @@
 package check
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -51,7 +52,7 @@ func TestSpecPassWitnessCarriesTheValue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &Spec{Over: "nets", Let: tc.let, Where: tc.where, Message: "stub"}
 			got := ""
-			for _, v := range s.Verdicts(NewModel(scopeDesign())) {
+			for _, v := range s.Verdicts(context.Background(), NewModel(scopeDesign())) {
 				if EntityRef(v.Subjects[0]) == "OK" {
 					if v.Outcome != Pass {
 						t.Fatalf("want pass for OK, got %s", v.Outcome)
@@ -141,7 +142,7 @@ func TestSpecPassWitnessCountsWhatAnAbsenceExamined(t *testing.T) {
 func passWitnessFor(t *testing.T, let map[string]Term, where Expr, subject string) string {
 	t.Helper()
 	s := &Spec{Over: "nets", Let: let, Where: where, Message: "stub"}
-	for _, v := range s.Verdicts(NewModel(scopeDesign())) {
+	for _, v := range s.Verdicts(context.Background(), NewModel(scopeDesign())) {
 		if EntityRef(v.Subjects[0]) != subject {
 			continue
 		}
@@ -183,7 +184,7 @@ func TestEverySpecPassStatementReadsSomething(t *testing.T) {
 	var checked int
 	for _, where := range specs {
 		s := &Spec{Over: "nets", Where: where, Message: "stub"}
-		for _, v := range s.Verdicts(NewModel(scopeDesign())) {
+		for _, v := range s.Verdicts(context.Background(), NewModel(scopeDesign())) {
 			if v.Outcome != Pass {
 				continue
 			}

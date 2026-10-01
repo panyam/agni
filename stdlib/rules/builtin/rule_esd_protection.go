@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"github.com/panyam/agni/core/check"
 )
 
@@ -40,7 +41,7 @@ var esdProtection = &check.Rule{
 // The two passes rest on different evidence and say so. A discrete TVS is a part on the board, so the
 // witness names it. An IC-integrated rating is a datasheet claim, so the witness carries the value
 // and cites the document it was read from.
-func esdProtectionVerdicts(m check.Model) []check.Verdict {
+func esdProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		if !check.ExternalSignalNet(m, n) {

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -42,7 +43,7 @@ func ledFixture() *ir.Design {
 
 func TestLedPolarity(t *testing.T) {
 	m := check.NewModel(ledFixture())
-	fs := ledPolarity.Findings(m)
+	fs := ledPolarity.Findings(context.Background(), m)
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "LED1" || fs[0].Subject.Kind != check.KindComponent {
 		t.Fatalf("findings = %+v, want exactly LED1", fs)
 	}
@@ -59,7 +60,7 @@ func TestPinNetConflict(t *testing.T) {
 			tnet("NET_B", "U1.3", "U1.4"),
 		},
 	}
-	fs := pinNetConflict.Findings(check.NewModel(d))
+	fs := pinNetConflict.Findings(context.Background(), check.NewModel(d))
 	if len(fs) != 1 || fs[0].Subject.Ref != "U1" || fs[0].Subject.Pin != "3" || fs[0].Subject.Kind != check.KindPin {
 		t.Fatalf("findings = %+v, want one KindPin finding on U1 pin 3", fs)
 	}
@@ -68,7 +69,7 @@ func TestPinNetConflict(t *testing.T) {
 	}
 
 	d.InputDiagnostics = &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{{RefDes: "U1"}}}
-	if fs := pinNetConflict.Findings(check.NewModel(d)); len(fs) != 0 {
+	if fs := pinNetConflict.Findings(context.Background(), check.NewModel(d)); len(fs) != 0 {
 		t.Errorf("collided ref-des still fired pin-net-conflict: %+v", fs)
 	}
 }
@@ -101,7 +102,7 @@ func TestPinNetConflictSkipsPlaceholderRefDes(t *testing.T) {
 				Components: []*ir.Component{{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}},
 				Nets:       []*ir.Net{tnet("NET_A", ref+".1"), tnet("NET_B", ref+".1")},
 			}
-			if fs := pinNetConflict.Findings(check.NewModel(d)); len(fs) != 0 {
+			if fs := pinNetConflict.Findings(context.Background(), check.NewModel(d)); len(fs) != 0 {
 				t.Errorf("placeholder %q reported %d conflicts, want none: %+v", ref, len(fs), fs)
 			}
 		})
@@ -118,7 +119,7 @@ func TestPinNetConflictStillFiresOnRealRefDes(t *testing.T) {
 				Components: []*ir.Component{{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}},
 				Nets:       []*ir.Net{tnet("NET_A", ref+".1"), tnet("NET_B", ref+".1")},
 			}
-			if fs := pinNetConflict.Findings(check.NewModel(d)); len(fs) != 1 {
+			if fs := pinNetConflict.Findings(context.Background(), check.NewModel(d)); len(fs) != 1 {
 				t.Errorf("real ref-des %q reported %d conflicts, want 1: %+v", ref, len(fs), fs)
 			}
 		})

@@ -260,3 +260,28 @@ Everything above assumes one engineer, one machine. There is no authentication, 
 scoping, and no session isolation, so anyone who can reach the port sees every mount, and anyone who
 can reach `agnids` can write through the datasheets workbench. That is the right trade for localhost and the wrong one for a
 shared host. Put it behind something that authenticates before you expose it.
+
+## A work budget for served queries
+
+A query that joins two large relations can run for minutes on a big board, and a shared server
+answers everyone's queries from one process. `--query-budget <work>` stops any query, and any
+query-backed rule a check or review runs, once it has done that much work. A query stopped this way
+returns `resource_exhausted` naming the budget, and a rule stopped this way reports one inconclusive
+finding saying so, since it never decided. A request can ask for a smaller budget with
+`work_budget` and never for a larger one.
+
+No budget is enforced by default, because the right number depends on the boards a deployment
+serves. Instead the server logs every query costing more than `--query-budget-warn` (10,000,000
+units by default) with the query and a budget ten times its cost, so a deployment can watch what
+its users ask before choosing one.
+This line is from the tutorial project's board with `--query-budget-warn 100`:
+
+```
+query cost: /agni.v1.webapi.QueryService/RunQuery spent 394 work units, over the 100 warning threshold; no budget is enforced, and --query-budget 3940 would allow ten times this cost: component.net(?a, ?n), component.net(?b, ?n) => ?a, ?b
+```
+
+One unit is one tuple a rule derives or one fact a lookup reads, so the number grows with the
+board. On a public 1,123-part sample board the heaviest shipped example query cost about one
+million units. `agni query --format json` and the `RunQuery` response report what an answer cost
+as `work`. A served request also stops when its caller goes away, which returns `canceled` rather
+than an error about the request.

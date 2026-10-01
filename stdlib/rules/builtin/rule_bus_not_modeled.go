@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -48,7 +49,7 @@ var busNotModeled = &check.Rule{
 // THE TWO FAILING CASES ARE DIFFERENT AND THE WITNESS SAYS WHICH. A bus whose member set the reader
 // could not determine at all is a different gap from one whose members are known and are not nets,
 // and the second names the member that is missing.
-func busNotModeledVerdicts(m check.Model) []check.Verdict {
+func busNotModeledVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, b := range m.UnmodeledBuses() {
 		// A bus rather than a net, so its highlight join is its own label (WS7-042b).

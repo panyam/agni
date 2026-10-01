@@ -33,11 +33,11 @@ func TestNamingMapRemapsSuffixes(t *testing.T) {
 			net("BUS_XIO3", "U1.6", "U2.6"),
 		},
 	}
-	if fs := check.Run(check.NewModel(d), Compile(SPINOR)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(SPINOR)); len(fs) != 0 {
 		t.Fatalf("core SPI_NOR should be silent on the project naming, got %d: %+v", len(fs), fs)
 	}
 	fired := false
-	for _, f := range check.Run(check.NewModel(d), Compile(p)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(p)) {
 		if f.Rule == "spi_nor-signal-missing" && strings.Contains(f.Message, "IO2") {
 			fired = true
 		}
@@ -165,7 +165,7 @@ requirements:
 		net("ETH_SW1_P1_A_L", "U1.2"), // in use, and this one is dangling
 		net("CAN_00_L", "U3.1"),       // foreign, also single-pin: must NOT be reported
 	}}
-	fs := check.Run(check.NewModel(d), Compile(p))
+	fs := check.RunBackground(check.NewModel(d), Compile(p))
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "ETH_SW1_P1_A_L" {
 		t.Fatalf("want only the ETH _L net reported dangling, got %+v", fs)
 	}

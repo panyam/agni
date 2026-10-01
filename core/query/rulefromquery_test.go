@@ -193,7 +193,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 		Message:     "{r}: IOUT below requirement",
 		ParamSymbol: "IOUT",
 	})
-	fs := rule.Findings(m)
+	fs := rule.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -214,7 +214,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 		SubjectVar: "r",
 		Message:    "{r}",
 	})
-	if pf := plain.Findings(m); len(pf) != 1 || pf[0].DatasheetProv != nil {
+	if pf := plain.Findings(context.Background(), m); len(pf) != 1 || pf[0].DatasheetProv != nil {
 		t.Fatalf("no ParamSymbol should mean no citation: %+v", pf)
 	}
 }
@@ -231,7 +231,7 @@ func TestMustRuleFromQuery(t *testing.T) {
 		PinVar:     "pin",
 		Message:    "pin {pin} sits alone on net {net}",
 	})
-	fs := rule.Findings(check.NewModel(pinDesign()))
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -266,7 +266,7 @@ func TestRuleFromQueryCarriesContext(t *testing.T) {
 			{Var: "net", Kind: check.KindNet, Role: "net"},
 		},
 	})
-	fs := rule.Findings(check.NewModel(pinDesign()))
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -300,7 +300,7 @@ func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
 			{Var: "net", Kind: check.KindNet, Role: "net"},
 		},
 	})
-	fs := rule.Findings(check.NewModel(pinDesign()))
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
 	if len(fs) != 1 || len(fs[0].Context) != 2 {
 		t.Fatalf("want 1 finding with 2 context entities, got %+v", fs)
 	}
@@ -320,7 +320,7 @@ func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
 		SubjectVar: "ref",
 		Message:    "no context here",
 	})
-	fs := rule.Findings(check.NewModel(pinDesign()))
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
 	if len(fs) != 1 || fs[0].Context != nil {
 		t.Errorf("a rule declaring no context vars must carry none, got %+v", fs[0].Context)
 	}
@@ -343,7 +343,7 @@ func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
 	if rule.StatesConsideredSet {
 		t.Fatal("a query rule with no declared Domain must not claim a considered set")
 	}
-	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
 		if v.Outcome != check.Fail {
 			t.Fatalf("want failures only, got a %s verdict: %+v", v.Outcome, v)
 		}
@@ -372,7 +372,7 @@ func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
 		t.Fatal("a query rule with a declared Domain must state its considered set")
 	}
 	var pass, fail []check.Verdict
-	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
 		switch v.Outcome {
 		case check.Pass:
 			pass = append(pass, v)
@@ -399,7 +399,7 @@ func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
 	}
 	// The findings contract is unchanged by declaring a domain: still one violation, and the passes
 	// do not leak into it.
-	if fs := rule.Findings(check.NewModel(pinDesign())); len(fs) != 1 {
+	if fs := rule.Findings(context.Background(), check.NewModel(pinDesign())); len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
 }
@@ -429,7 +429,7 @@ func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
 	}
 	seen := map[string]int{}
 	var u1 int
-	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
 		seen[check.VerdictID(v)]++
 		if v.Subjects[0].Ref == "U1" {
 			u1++
@@ -466,7 +466,7 @@ func TestRuleFromQueryDomainFailuresCarryAWitness(t *testing.T) {
 		},
 	})
 	fails := 0
-	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
 		if v.Outcome != check.Fail {
 			continue
 		}

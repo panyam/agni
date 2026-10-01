@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -163,12 +164,12 @@ func run(design, checklist *common.PathInput) (review.Report, error) {
 	// intent and naming conventions answer items this cannot, so the covered count here is lower
 	// than the CLI reports on the same two files (123 of 302 against 76, on one real board).
 	// Composing an overlay takes a project descriptor and is the CLI's job.
-	return review.Run(review.RunParams{
+	return review.Run(context.Background(), review.RunParams{
 		Model:    check.NewModel(d),
 		Catalog:  check.DefaultCatalog(),
 		Manifest: man,
 		Design:   design.Path(),
-	}), nil
+	})
 }
 
 // manifestText prefers the file the reader named and falls back to the bundled copy, the same

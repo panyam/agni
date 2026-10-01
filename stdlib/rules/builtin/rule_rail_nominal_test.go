@@ -36,7 +36,7 @@ func ldoRecommendedSpec(mpn string, min, max float64) *parampb.PartSpec {
 
 func runRailNominal(t *testing.T, d *ir.Design, set param.ParamSet) []check.Finding {
 	t.Helper()
-	return check.Run(check.NewModel(d, check.WithParamProvider(set)), []*check.Rule{railNominalOutOfRecommended})
+	return check.RunBackground(check.NewModel(d, check.WithParamProvider(set)), []*check.Rule{railNominalOutOfRecommended})
 }
 
 func TestRailNominalFiresOverAndUnder(t *testing.T) {

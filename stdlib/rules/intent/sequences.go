@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -45,7 +46,7 @@ func sequenceRule(s Sequence) *check.Rule {
 		// the later stage's enable. A gating link belongs to neither net alone, and the pair is what the
 		// rule judges (agni issue 391's tuple).
 		SubjectShape:        []string{check.KindNet, check.KindNet},
-		Eval:                func(m check.Model) []check.Verdict { return evalSequence(m, s) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return evalSequence(m, s) },
 		StatesConsideredSet: true,
 	}
 }

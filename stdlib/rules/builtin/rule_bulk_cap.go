@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/internal/netgraph"
 )
@@ -31,7 +32,7 @@ var bulkCap = &check.Rule{
 // decoupling-present asks the same question about rails that reach a supply PIN, where this one asks
 // about rails the design NAMES, so a rail can be a subject of one and not the other (#400). A pass
 // names the capacitor, so a reviewer can go and look at it.
-func bulkCapVerdicts(m check.Model) []check.Verdict {
+func bulkCapVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"

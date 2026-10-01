@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -71,8 +72,8 @@ func verdictFor(t *testing.T, vs []check.Verdict, pin string) check.Verdict {
 func TestAbsMaxWitnessTracksTheSeededLimit(t *testing.T) {
 	f := func(v float64) *float64 { return &v }
 
-	loose := verdictFor(t, pinAbsMaxVerdicts(absMaxModel(t, f(6.5), "+3V3", "+5V")), "14")
-	tight := verdictFor(t, pinAbsMaxVerdicts(absMaxModel(t, f(5.5), "+3V3", "+5V")), "14")
+	loose := verdictFor(t, pinAbsMaxVerdicts(context.Background(), absMaxModel(t, f(6.5), "+3V3", "+5V")), "14")
+	tight := verdictFor(t, pinAbsMaxVerdicts(context.Background(), absMaxModel(t, f(5.5), "+3V3", "+5V")), "14")
 
 	for _, c := range []struct {
 		name string
@@ -101,7 +102,7 @@ func TestAbsMaxWitnessTracksTheSeededLimit(t *testing.T) {
 // the same silent `return`, which is why a design could read clean against a datasheet that said
 // nothing about the terminal.
 func TestAbsMaxWithNoStatedMaximumIsNotAPass(t *testing.T) {
-	v := verdictFor(t, pinAbsMaxVerdicts(absMaxModel(t, nil, "+3V3", "+5V")), "14")
+	v := verdictFor(t, pinAbsMaxVerdicts(context.Background(), absMaxModel(t, nil, "+3V3", "+5V")), "14")
 
 	if v.Outcome == check.Pass {
 		t.Fatal("a row stating no maximum checked nothing; reporting pass is the false pass this work removes")
@@ -118,7 +119,7 @@ func TestAbsMaxWithNoStatedMaximumIsNotAPass(t *testing.T) {
 // meeting's question, "you say it is fine, against what?"
 func TestPassingWitnessCarriesItsCitation(t *testing.T) {
 	f := func(v float64) *float64 { return &v }
-	v := verdictFor(t, pinAbsMaxVerdicts(absMaxModel(t, f(6.5), "+3V3", "+5V")), "14")
+	v := verdictFor(t, pinAbsMaxVerdicts(context.Background(), absMaxModel(t, f(6.5), "+3V3", "+5V")), "14")
 
 	if len(v.Witness.Datasheet) == 0 {
 		t.Fatal("a passing witness must carry the citation it rests on")
@@ -130,7 +131,7 @@ func TestPassingWitnessCarriesItsCitation(t *testing.T) {
 
 // In the two-sided case, a recommended range has to be reported as a range, not as one bound.
 func TestRecommendedWitnessStatesBothBounds(t *testing.T) {
-	v := verdictFor(t, pinRecommendedVerdicts(xlatModel(t, "+3V3", "+5V")), "14")
+	v := verdictFor(t, pinRecommendedVerdicts(context.Background(), xlatModel(t, "+3V3", "+5V")), "14")
 
 	if v.Outcome != check.Pass {
 		t.Fatalf("+5V is inside VCCB's 1.65 to 5.5 range, want pass, got %s", v.Outcome)
@@ -152,8 +153,8 @@ func TestVerdictsProjectToTheSameFindings(t *testing.T) {
 		verdicts []check.Verdict
 		findings []check.Finding
 	}{
-		{"abs-max", pinAbsMaxVerdicts(m), pinExceedsAbsMax.Findings(m)},
-		{"recommended", pinRecommendedVerdicts(m), pinOutOfRecommended.Findings(m)},
+		{"abs-max", pinAbsMaxVerdicts(context.Background(), m), pinExceedsAbsMax.Findings(context.Background(), m)},
+		{"recommended", pinRecommendedVerdicts(context.Background(), m), pinOutOfRecommended.Findings(context.Background(), m)},
 	} {
 		var failed int
 		for _, v := range c.verdicts {

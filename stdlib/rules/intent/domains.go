@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -22,7 +23,7 @@ func voltageDomainRule(d Declaration) *check.Rule {
 		Remedy:              intentRemedy(RuleVoltageDomain),
 		Reads:               []string{"net.nominal_voltage"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return voltageDomainVerdicts(m, d) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return voltageDomainVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }

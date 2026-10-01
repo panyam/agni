@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -83,7 +84,7 @@ func budgetDecl(rail string, peak, factor float64) Declaration {
 // numbers. The finding names both figures and cites the datasheet the rating came from.
 func TestRailCapacityFiresWhenUnderRated(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.5)
-	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m)
+	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding (0.5A supply on a 0.8A rail), got %d: %+v", len(fs), fs)
 	}
@@ -105,7 +106,7 @@ func TestRailCapacityFiresWhenUnderRated(t *testing.T) {
 // while every assertion in the firing test still passed.
 func TestRailCapacitySilentWhenRated(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 1.0)
-	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("a 1.0A supply on a 0.8A rail must be silent, got %+v", fs)
 	}
 }
@@ -114,7 +115,7 @@ func TestRailCapacitySilentWhenRated(t *testing.T) {
 // peak but falls short of the 0.96A the declared 1.2 factor asks for.
 func TestRailMarginFiresInTheHeadroomBand(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.9)
-	fs := railBudgetMarginRule(budgetDecl("3V3", 0.8, 1.2)).Findings(m)
+	fs := railBudgetMarginRule(budgetDecl("3V3", 0.8, 1.2)).Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding (0.9A against a 0.96A margin), got %d: %+v", len(fs), fs)
 	}
@@ -132,10 +133,10 @@ func TestRailMarginFiresInTheHeadroomBand(t *testing.T) {
 func TestRailUnderPeakFiresCapacityOnlyNotMargin(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.5)
 	d := budgetDecl("3V3", 0.8, 1.2)
-	if fs := railBudgetCapacityRule(d).Findings(m); len(fs) != 1 {
+	if fs := railBudgetCapacityRule(d).Findings(context.Background(), m); len(fs) != 1 {
 		t.Fatalf("capacity must fire below the peak, got %d: %+v", len(fs), fs)
 	}
-	if fs := railBudgetMarginRule(d).Findings(m); len(fs) != 0 {
+	if fs := railBudgetMarginRule(d).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("margin must stay silent below the peak (capacity's range), got %+v", fs)
 	}
 }
@@ -148,12 +149,12 @@ func TestRailUnderPeakFiresCapacityOnlyNotMargin(t *testing.T) {
 // deleted, which is the wrong reason to be green.
 func TestRailMarginSilentAtExactlyTheMargin(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.15)
-	if fs := railBudgetMarginRule(budgetDecl("3V3", 0.1, 1.5)).Findings(m); len(fs) != 0 {
+	if fs := railBudgetMarginRule(budgetDecl("3V3", 0.1, 1.5)).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("a supply rated at exactly the margin must be silent, got %+v", fs)
 	}
 	// The same rail one milliamp short still fires, so the tolerance has not blunted the check.
 	short := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.149)
-	if fs := railBudgetMarginRule(budgetDecl("3V3", 0.1, 1.5)).Findings(short); len(fs) != 1 {
+	if fs := railBudgetMarginRule(budgetDecl("3V3", 0.1, 1.5)).Findings(context.Background(), short); len(fs) != 1 {
 		t.Errorf("a supply genuinely short of the margin must still fire, got %+v", fs)
 	}
 }
@@ -162,7 +163,7 @@ func TestRailMarginSilentAtExactlyTheMargin(t *testing.T) {
 // ordinary layout, does not hide the supply, so the association walks one series crossing.
 func TestRailBudgetAcrossSeriesElement(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", "FB1"), "IOUT", 0.5)
-	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 1 {
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 1 {
 		t.Errorf("want the finding to survive one series crossing, got %d: %+v", len(fs), fs)
 	}
 }
@@ -174,7 +175,7 @@ func TestRailBudgetSymbolAliases(t *testing.T) {
 	for _, sym := range []string{"IOUT", "I_OUT", "IOUT(MAX)", "IO", "ICONT"} {
 		t.Run(sym, func(t *testing.T) {
 			m := budgetModel(budgetDesign("3V3", ""), sym, 0.5)
-			if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 1 {
+			if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 1 {
 				t.Errorf("symbol %q should be read as an output current, got %d findings", sym, len(fs))
 			}
 		})
@@ -182,7 +183,7 @@ func TestRailBudgetSymbolAliases(t *testing.T) {
 	// A current the rule must NOT credit as capacity. A quiescent current is not what the part
 	// delivers, and reading it would compare a rail's demand against an unrelated number.
 	m := budgetModel(budgetDesign("3V3", ""), "IQ", 0.5)
-	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("a quiescent-current row must not be read as output capacity, got %+v", fs)
 	}
 }
@@ -209,7 +210,7 @@ func TestRailBudgetReadsMilliampRatings(t *testing.T) {
 
 	d := budgetDesign("3V3", "")
 	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": milliamps()}))
-	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m)
+	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("a 500mA supply under an 0.8A budget must fire exactly once, got %d: %+v", len(fs), fs)
 	}
@@ -222,13 +223,13 @@ func TestRailBudgetReadsMilliampRatings(t *testing.T) {
 	// The volt-spelled twin of the same part must reach the identical verdict, which is the property
 	// that makes the conversion a normalization rather than a new comparison.
 	inAmps := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": regCurrentSpec("ACME-REG", "IOUT", 0.5)}))
-	amps := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(inAmps)
+	amps := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), inAmps)
 	if len(amps) != 1 || amps[0].Message != fs[0].Message {
 		t.Errorf("the mA and A spellings of one row must report identically:\n  mA: %+v\n   A: %+v", fs, amps)
 	}
 
 	// A budget the part genuinely covers stays silent, so the conversion is not simply firing always.
-	if within := railBudgetCapacityRule(budgetDecl("3V3", 0.3, 0)).Findings(m); len(within) != 0 {
+	if within := railBudgetCapacityRule(budgetDecl("3V3", 0.3, 0)).Findings(context.Background(), m); len(within) != 0 {
 		t.Errorf("a 500mA supply covers an 0.3A budget and must stay silent, got %+v", within)
 	}
 }
@@ -243,7 +244,7 @@ func TestRailBudgetSkipsUnrecognizedUnits(t *testing.T) {
 	spec := regCurrentSpec("ACME-REG", "IOUT", 0.5)
 	spec.Parameters[0].Unit = "dBm"
 	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": spec}))
-	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("an unrecognized unit must be skipped, never scaled by a guess, got %+v", fs)
 	}
 	if !check.SeedsAnySymbol(m, check.OutputCurrentSymbols()) {
@@ -258,7 +259,7 @@ func TestRailBudgetSkipsUnrecognizedUnits(t *testing.T) {
 // ParamSymbols.
 func TestRailBudgetSilentWithoutTheDatasheet(t *testing.T) {
 	m := check.NewModel(budgetDesign("3V3", ""))
-	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("want no findings with no seeded params, got %+v", fs)
 	}
 	if ok, reason := check.Available(railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)), m); ok || reason == "" {
@@ -279,10 +280,10 @@ func TestRailBudgetSilentWithoutTheDatasheet(t *testing.T) {
 // voltage-domain and subsystem forms report, so firing here would report one defect twice.
 func TestRailBudgetSilentOnUndeclaredAndAbsentRails(t *testing.T) {
 	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.5)
-	if fs := railBudgetCapacityRule(budgetDecl("1V8", 0.8, 0)).Findings(m); len(fs) != 0 {
+	if fs := railBudgetCapacityRule(budgetDecl("1V8", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("a budgeted rail the design does not carry must be silent, got %+v", fs)
 	}
-	if fs := railBudgetCapacityRule(Declaration{Name: "t"}).Findings(m); len(fs) != 0 {
+	if fs := railBudgetCapacityRule(Declaration{Name: "t"}).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("a design rail nobody budgeted must be silent, got %+v", fs)
 	}
 }
@@ -302,7 +303,7 @@ func TestRailBudgetTakesTheBestSupply(t *testing.T) {
 		"ACME-REG":  regCurrentSpec("ACME-REG", "IOUT", 0.5),
 		"ACME-REG2": regCurrentSpec("ACME-REG2", "IOUT", 1.5),
 	}))
-	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(m); len(fs) != 0 {
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("the 1.5A supply covers the 0.8A budget, so the rail must be silent, got %+v", fs)
 	}
 }

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"regexp"
 	"strings"
 
@@ -34,7 +35,7 @@ var i2cPullUp = &check.Rule{
 //
 // A pass carries its PATH as the witness ("SCL reaches rail +3V3 through R7"), and the same hops are
 // the entities the viewer highlights.
-func i2cPullUpVerdicts(m check.Model) []check.Verdict {
+func i2cPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		if !isI2C(n.Name) {

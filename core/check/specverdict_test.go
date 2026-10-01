@@ -1,6 +1,7 @@
 package check
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestScopeExcludesRatherThanPasses(t *testing.T) {
 		Message: "stub",
 	}
 	bySubject := map[string]Outcome{}
-	for _, v := range s.Verdicts(NewModel(scopeDesign())) {
+	for _, v := range s.Verdicts(context.Background(), NewModel(scopeDesign())) {
 		bySubject[EntityRef(v.Subjects[0])] = v.Outcome
 	}
 	if _, present := bySubject["EMPTY"]; present {
@@ -72,7 +73,7 @@ func TestScopeAndWhereProjectToTheSameFindings(t *testing.T) {
 		Where:   Cmp{L: Fact{Name: "net.pin_count"}, Op: "<", R: Lit{V: 2}},
 		Message: "stub",
 	}
-	a, b := merged.Eval(m), split.Eval(m)
+	a, b := merged.Eval(context.Background(), m), split.Eval(context.Background(), m)
 	if len(a) != len(b) || len(a) != 1 || a[0].Subject != b[0].Subject {
 		t.Errorf("the split changed the failure set\n merged: %+v\n  split: %+v", a, b)
 	}
@@ -90,7 +91,7 @@ func TestSpecPassWitnessNamesTheDecidingClause(t *testing.T) {
 		Message: "stub",
 	}
 	var okWitness string
-	for _, v := range s.Verdicts(NewModel(scopeDesign())) {
+	for _, v := range s.Verdicts(context.Background(), NewModel(scopeDesign())) {
 		if EntityRef(v.Subjects[0]) == "OK" {
 			if v.Outcome != Pass {
 				t.Fatalf("OK has two pins, want pass, got %s", v.Outcome)

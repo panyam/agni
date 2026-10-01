@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestVerdictParity(t *testing.T) {
 			// a change to what projects has to be made deliberately in both places instead of
 			// silently in one.
 			want := []check.Finding{}
-			for _, v := range r.Eval(tc.m) {
+			for _, v := range r.Eval(context.Background(), tc.m) {
 				// Fail AND Inconclusive. An inconclusive verdict is not a defect and must not be
 				// counted as one, but it must still reach a reviewer. A bound review item reading
 				// silence as a pass is what agni issue 74 cost. reverse-blocking-absent is the rule
@@ -59,7 +60,7 @@ func TestVerdictParity(t *testing.T) {
 					inconclusive++
 				}
 			}
-			if got := r.Findings(tc.m); !reflect.DeepEqual(got, want) {
+			if got := r.Findings(context.Background(), tc.m); !reflect.DeepEqual(got, want) {
 				t.Errorf("%s/%s: the findings projection and the failing verdicts disagree\n got: %+v\n want: %+v",
 					tc.name, r.Name, got, want)
 			}
@@ -91,7 +92,7 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 		if r.Name != "i2c-pull-up" {
 			continue
 		}
-		if got := r.Findings(m); len(got) == 0 {
+		if got := r.Findings(context.Background(), m); len(got) == 0 {
 			t.Errorf("%s: the fixture carries this rule's subjects, so an empty considered set means "+
 				"the conversion reports nothing rather than reporting a pass", r.Name)
 		}
@@ -101,7 +102,7 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 // RunVerdicts is the entry point that makes a verdict reachable at all. Before it, every verdict died
 // inside the function that built it and no caller outside these three rules could obtain one.
 func TestRunVerdictsCollectsAcrossRules(t *testing.T) {
-	vs := check.RunVerdicts(check.NewModel(ruleFixture()), rules)
+	vs := check.RunVerdictsBackground(check.NewModel(ruleFixture()), rules)
 	if len(vs) == 0 {
 		t.Fatal("no verdicts collected; the considered set is unreachable again")
 	}

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
@@ -76,7 +77,7 @@ func notARail(m check.Model, n *ir.Net) string {
 //
 // A pass NAMES the capacitor in the witness and in Context, so a reviewer can go and see where it
 // sits, and deleting that capacitor changes the witness or flips the verdict.
-func decouplingPresentVerdicts(m check.Model) []check.Verdict {
+func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		hasPowerIn := check.Exists(n.Connections, func(c *ir.Connection) bool {

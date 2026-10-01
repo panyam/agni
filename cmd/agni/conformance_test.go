@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -44,7 +45,7 @@ func TestConformance(t *testing.T) {
 				t.Fatalf("readModel: %v", err)
 			}
 			got := map[string][]string{}
-			for _, f := range check.Run(m, check.BuiltinRules()) {
+			for _, f := range check.RunBackground(m, check.BuiltinRules()) {
 				got[f.Rule] = append(got[f.Rule], f.Subject.Ref)
 			}
 			for rule, e := range exp.Fires {
@@ -90,7 +91,7 @@ func TestConformanceSpecParity(t *testing.T) {
 				if !ok {
 					continue // spec-only rule, whose Eval is the interpreter, so nothing to compare
 				}
-				if got, want := spec.Eval(m), r.Findings(m); !reflect.DeepEqual(got, want) {
+				if got, want := spec.Eval(context.Background(), m), r.Findings(context.Background(), m); !reflect.DeepEqual(got, want) {
 					t.Errorf("%s: spec findings diverge\n spec: %+v\n   go: %+v", r.Name, got, want)
 				}
 			}

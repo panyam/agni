@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -62,7 +63,7 @@ var i2cPullUpSplitRail = &check.Rule{
 // Its considered set is every I2C net, including the ones pulled correctly. "This bus has exactly one
 // pull-up" is a fact worth stating, and a rule reporting only the doubled ones could not distinguish a
 // clean board from an unexamined one.
-func i2cRedundantPullUpVerdicts(m check.Model) []check.Verdict {
+func i2cRedundantPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return pullUpCountVerdicts(m, "i2c-redundant-pull-up", func(rails []string) bool {
 		return len(rails) == 1
 	}, func(n string, terms []check.PullUpTermination) string {
@@ -72,7 +73,7 @@ func i2cRedundantPullUpVerdicts(m check.Model) []check.Verdict {
 
 // i2cPullUpSplitRailVerdicts decides every I2C net, failing one with more than one resistor, landing
 // on DIFFERENT rails.
-func i2cPullUpSplitRailVerdicts(m check.Model) []check.Verdict {
+func i2cPullUpSplitRailVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return pullUpCountVerdicts(m, "i2c-pull-up-split-rail", func(rails []string) bool {
 		return len(rails) > 1
 	}, func(n string, terms []check.PullUpTermination) string {

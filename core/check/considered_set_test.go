@@ -1,6 +1,7 @@
 package check
 
 import (
+	"context"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -16,14 +17,14 @@ import (
 //
 // So the claim is a DECLARATION (StatesConsideredSet), and this pins that RunVerdicts honours it.
 func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
-	failing := func(m Model) []Finding {
+	failing := func(_ context.Context, m Model) []Finding {
 		return []Finding{{Subject: NetNameEntity("SIG"), Message: "bad"}}
 	}
 	unconverted := &Rule{Name: "unconverted", Eval: FailuresOnly(failing)}
 	converted := &Rule{
 		Name:                "converted",
 		StatesConsideredSet: true,
-		Eval: func(m Model) []Verdict {
+		Eval: func(ctx context.Context, m Model) []Verdict {
 			return []Verdict{
 				{Subjects: []Entity{NetNameEntity("CLEAN")}, Outcome: Pass, Witness: &Witness{Statement: "fine"}},
 				{Subjects: []Entity{NetNameEntity("SIG")}, Outcome: Fail, Finding: &Finding{Subject: NetNameEntity("SIG"), Message: "bad"}},
@@ -36,12 +37,12 @@ func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 
 	// Both rules reach the FINDINGS contract, since not stating a considered set is not a reason to
 	// drop a violation. That keeps the migration safe for every existing consumer.
-	if got := len(Run(m, rules)); got != 2 {
+	if got := len(RunBackground(m, rules)); got != 2 {
 		t.Errorf("both rules must contribute findings, got %d", got)
 	}
 
 	// Only the declaring rule reaches the VERDICT contract.
-	vs := RunVerdicts(m, rules)
+	vs := RunVerdictsBackground(m, rules)
 	for _, v := range vs {
 		if v.Rule == "unconverted" {
 			t.Errorf("a failures-only rule must not be reported as a considered set, got %+v", v)
@@ -66,10 +67,10 @@ func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 // an unconverted rule look converted to anything reading verdicts, which is the decoration
 // build/evidence.md warns about.
 func TestFailuresOnlyCarriesNoWitness(t *testing.T) {
-	eval := FailuresOnly(func(m Model) []Finding {
+	eval := FailuresOnly(func(ctx context.Context, m Model) []Finding {
 		return []Finding{{Subject: NetNameEntity("SIG"), Message: "bad"}}
 	})
-	for _, v := range eval(NewModel(&ir.Design{})) {
+	for _, v := range eval(context.Background(), NewModel(&ir.Design{})) {
 		if v.Witness != nil {
 			t.Errorf("an unconverted rule must not carry a witness, got %+v", v.Witness)
 		}

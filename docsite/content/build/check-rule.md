@@ -241,6 +241,13 @@ design onto outcomes rather than filtering it down to failures, and the findings
 projection of that map, taken by `Run` through `Rule.Findings`. There is one body, so a rule cannot
 report findings that disagree with its verdicts.
 
+`Eval` takes the run's `context.Context` first, because a served check stops when its caller goes
+away. A rule walking a large set checks `ctx.Err()` between subjects and returns early, since `Run`
+then reports the cancellation and discards what the rule returned. A query-backed rule passes
+`query.EvalOptions(ctx)` to the evaluator, which is how a server's work budget reaches it. A test
+with no caller passes `context.Background()`, and `check.RunBackground` runs a whole rule list
+that way.
+
 ```mermaid
 flowchart TB
     En["enumerate<br/>the subjects the rule applies to"] --> J["judge one subject"]

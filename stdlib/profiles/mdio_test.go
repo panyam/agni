@@ -33,7 +33,7 @@ func mdioBroken() *ir.Design {
 }
 
 func TestMDIOSilentOnAGoodBus(t *testing.T) {
-	if fs := check.Run(check.NewModel(mdioGood()), Compile(MDIO)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(mdioGood()), Compile(MDIO)); len(fs) != 0 {
 		t.Fatalf("good MDIO bus: want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
@@ -41,7 +41,7 @@ func TestMDIOSilentOnAGoodBus(t *testing.T) {
 // Issue 516 opened this gap. A management bus with no pull-up reported nothing at all.
 func TestMDIOMissingPullUpFires(t *testing.T) {
 	var got []check.Finding
-	for _, f := range check.Run(check.NewModel(mdioBroken()), Compile(MDIO)) {
+	for _, f := range check.RunBackground(check.NewModel(mdioBroken()), Compile(MDIO)) {
 		if f.Rule == "mdio-missing-pullup" {
 			got = append(got, f)
 		}
@@ -58,7 +58,7 @@ func TestMDIOMissingPullUpFires(t *testing.T) {
 // correctly-built board. This is the assertion that keeps the profile from copying the four-signal
 // treatment other tools give this bus. Re-check it by adding `pullup: true` to MDC in the yaml.
 func TestMDCIsNotRequiredToHaveAPullUp(t *testing.T) {
-	for _, f := range check.Run(check.NewModel(mdioBroken()), Compile(MDIO)) {
+	for _, f := range check.RunBackground(check.NewModel(mdioBroken()), Compile(MDIO)) {
 		if f.Rule == "mdio-missing-pullup" && check.EntityRef(f.Subject) == "ETH_MDC" {
 			t.Errorf("MDC must not require a pull-up: %+v", f)
 		}
@@ -75,7 +75,7 @@ func TestMDIODoesNotMatchMDCLK(t *testing.T) {
 			net("SPI_MDIOX", "U1.2", "U2.2"),
 		},
 	}
-	if fs := check.Run(check.NewModel(d), Compile(MDIO)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(MDIO)); len(fs) != 0 {
 		t.Fatalf("MDCLK/MDIOX are not an MDIO bus: want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }

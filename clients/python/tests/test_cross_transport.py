@@ -14,6 +14,7 @@ import pytest
 from google.protobuf.message import Message
 
 from agni import CLI_COMMANDS, Client
+from agni.errors import AgniError
 from agni.v1.webapi import query_pb2
 from agni.v1.webapi import design_pb2
 
@@ -94,6 +95,8 @@ CASES: List[Case] = [
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?c, ?p, ?n) => ?n, count(distinct ?c)")),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='pin.net(?c, ?p, "NO_SUCH_NET") => ?c')),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET)),
+    # A budget the query fits in answers alike, work included (agni issue 792).
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c', work_budget=10_000_000)),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="probe.resistor_net(?n) => ?n", overlay=_LIB)),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='probe.class_net(?n, "capacitor") => ?n', overlay=_LIB)),
     Case(
@@ -160,3 +163,12 @@ def test_a_trace_to_nothing_still_answers_over_the_cli(cli: Client):
     """`agni trace` prints a complete answer and exits non-zero for an endpoint naming nothing."""
     got = _trace("J1.3", "ZZ9.1")(cli)
     assert got.trace.outcome == design_pb2.TRACE_OUTCOME_UNRESOLVED
+
+
+def test_a_query_past_its_budget_fails_on_both_transports(cli: Client, connect: Client):
+    """agni issue 792. Over Connect the code is resource_exhausted; over the CLI the binary exits
+    non-zero. Both name the budget, so a client can tell an expensive question from a wrong one."""
+    for c in (cli, connect):
+        with pytest.raises(AgniError) as e:
+            c.run_query(uri=DESIGN, query="component.net(?r, ?n), component.net(?r2, ?n) => ?r, ?r2", work_budget=5)
+        assert "budget of 5" in (str(e.value) + getattr(e.value, "detail", "")), e.value

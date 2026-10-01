@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -65,7 +66,7 @@ func revDesign(seriesKind string, flip bool) *ir.Design {
 }
 
 func revFindings(d *ir.Design) []check.Finding {
-	return reverseBlockingAbsent.Findings(check.NewModel(d))
+	return reverseBlockingAbsent.Findings(context.Background(), check.NewModel(d))
 }
 
 // TestReverseBlockingFiresOnBarePath (WS3-094) checks that a connector feeding a power input

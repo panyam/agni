@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -56,7 +57,7 @@ func TestAProfilePassNamesTheResistorAndTheRail(t *testing.T) {
 	if rule == nil {
 		t.Fatal("no pull-up rule compiled")
 	}
-	for _, v := range rule.Eval(m) {
+	for _, v := range rule.Eval(context.Background(), m) {
 		if check.EntityRef(v.Subjects[0]) != "SPI_CS" {
 			continue
 		}
@@ -89,7 +90,7 @@ func TestTheProfileAndTheBuiltinProveAPassTheSameWay(t *testing.T) {
 		}
 	}
 	wantOutcome, wantWitness, wantCtx := check.PullUpVerdict(m, net)
-	for _, v := range spiProfile().pullupRule().Eval(m) {
+	for _, v := range spiProfile().pullupRule().Eval(context.Background(), m) {
 		if check.EntityRef(v.Subjects[0]) != "SPI_CS" {
 			continue
 		}
@@ -112,7 +113,7 @@ func TestTheProfileAndTheBuiltinProveAPassTheSameWay(t *testing.T) {
 func TestAProfileFailureStatesTheRadiusItSearchedTo(t *testing.T) {
 	d := directPullUpDesign("SPI_CS")
 	d.Nets[0].Connections = d.Nets[0].Connections[:1] // drop R1 from the CS net: no pull-up left
-	for _, v := range spiProfile().pullupRule().Eval(check.NewModel(d)) {
+	for _, v := range spiProfile().pullupRule().Eval(context.Background(), check.NewModel(d)) {
 		if check.EntityRef(v.Subjects[0]) != "SPI_CS" {
 			continue
 		}
@@ -133,7 +134,7 @@ func TestAProfileFailureStatesTheRadiusItSearchedTo(t *testing.T) {
 // looks at before the findings.
 func TestCoverageAgreesWithTheRuleOnADirectPullUp(t *testing.T) {
 	m := check.NewModel(directPullUpDesign("SPI_CS"))
-	cov := Coverage(spiProfile(), m)
+	cov := Coverage(context.Background(), spiProfile(), m)
 	if cov == nil {
 		t.Fatal("the interface was not detected, so this proves nothing")
 	}
@@ -154,7 +155,7 @@ func TestCoverageAgreesWithTheRuleOnADirectPullUp(t *testing.T) {
 func TestNoVerdictsWhenTheInterfaceIsNotInUse(t *testing.T) {
 	d := directPullUpDesign("UNRELATED_NET")
 	d.Nets[1].Name = "OTHER" // and drop the second matching signal, so InUse is false
-	if got := spiProfile().pullupRule().Eval(check.NewModel(d)); len(got) != 0 {
+	if got := spiProfile().pullupRule().Eval(context.Background(), check.NewModel(d)); len(got) != 0 {
 		t.Errorf("verdicts = %+v, want none on a board this profile is not on", got)
 	}
 }

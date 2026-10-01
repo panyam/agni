@@ -5,6 +5,7 @@
 package check_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -21,7 +22,7 @@ func widgetRule() *check.Rule {
 		Summary:  "an external house-style rule",
 		Reads:    []string{"component.ref_des"},
 		Tags:     map[string]string{check.KeyCategory: "house-style"},
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(ctx context.Context, m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, c := range m.Components() {
 				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: c.RefDes}, Message: "seen by the overlay rule"})
@@ -57,7 +58,7 @@ func TestExternalRuleRegistrationEndToEnd(t *testing.T) {
 	if len(rules) != 1 {
 		t.Fatalf("Filter for the registered rule returned %d rules, want 1", len(rules))
 	}
-	findings := check.Run(check.NewModel(d), rules)
+	findings := check.RunBackground(check.NewModel(d), rules)
 	if len(findings) != 1 || findings[0].Rule != "acme/widget-present" || check.EntityRef(findings[0].Subject) != "U1" {
 		t.Errorf("findings = %+v, want one acme/widget-present finding on U1", findings)
 	}

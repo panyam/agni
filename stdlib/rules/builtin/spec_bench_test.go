@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -55,7 +56,7 @@ func BenchmarkRulesGo(b *testing.B) {
 	b.ResetTimer()
 	for b.Loop() {
 		for _, r := range rules {
-			r.Findings(m)
+			r.Findings(context.Background(), m)
 		}
 	}
 }
@@ -66,9 +67,9 @@ func BenchmarkRulesSpec(b *testing.B) {
 	for b.Loop() {
 		for _, r := range rules {
 			if s, ok := specs[r.Name]; ok {
-				s.Eval(m)
+				s.Eval(context.Background(), m)
 			} else {
-				r.Findings(m) // spec-only rule: its Eval already is the interpreter
+				r.Findings(context.Background(), m) // spec-only rule: its Eval already is the interpreter
 			}
 		}
 	}

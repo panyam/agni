@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -55,7 +56,7 @@ func trackModel(mpn string, rel *parampb.PinRelation, netA, netB string) check.M
 // the difference exactly 0, which is inside the bound. No net name is read to reach that verdict.
 func TestPinTrackingSharedNetSatisfiesAMaxOfZero(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED), "VCC", "VCC")
-	if fs := pinTrackingViolated.Findings(m); len(fs) != 0 {
+	if fs := pinTrackingViolated.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("tying two terminals satisfies a max-0 bound; want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
@@ -65,7 +66,7 @@ func TestPinTrackingSharedNetSatisfiesAMaxOfZero(t *testing.T) {
 // nets here carry no parseable voltage token, so the name tier would have been silent.
 func TestPinTrackingSharedNetViolatesAMinimum(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(f64(1), nil, parampb.Modality_MODALITY_REQUIRED), "VCC_MAIN", "VCC_MAIN")
-	fs := pinTrackingViolated.Findings(m)
+	fs := pinTrackingViolated.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("a shared net breaks a min-1V bound; want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -85,7 +86,7 @@ func TestPinTrackingSharedNetViolatesAMinimum(t *testing.T) {
 // The name tier: two different rails, both named for their voltage, breaking a max-0 bound.
 func TestPinTrackingNameTierComparesTwoRails(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED), "+3V3", "+1V8")
-	fs := pinTrackingViolated.Findings(m)
+	fs := pinTrackingViolated.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("3.3 - 1.8 = 1.5V exceeds a max of 0; want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -98,7 +99,7 @@ func TestPinTrackingNameTierComparesTwoRails(t *testing.T) {
 // on subject MINUS reference, so swapping the rails must flip the verdict rather than keep it.
 func TestPinTrackingRespectsSubtractionOrder(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED), "+1V8", "+3V3")
-	if fs := pinTrackingViolated.Findings(m); len(fs) != 0 {
+	if fs := pinTrackingViolated.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("1.8 - 3.3 = -1.5V is within a max of 0; want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
@@ -107,18 +108,18 @@ func TestPinTrackingRespectsSubtractionOrder(t *testing.T) {
 // both a "shall never exceed" and a "should, for best operation" misstates one of them.
 func TestPinTrackingModalitySelectsTheRule(t *testing.T) {
 	required := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED), "+3V3", "+1V8")
-	if n := len(pinTrackingViolated.Findings(required)); n != 1 {
+	if n := len(pinTrackingViolated.Findings(context.Background(), required)); n != 1 {
 		t.Errorf("a required bound belongs to the error rule; want 1, got %d", n)
 	}
-	if n := len(pinTrackingAdvisory.Findings(required)); n != 0 {
+	if n := len(pinTrackingAdvisory.Findings(context.Background(), required)); n != 0 {
 		t.Errorf("the advisory rule must not report a required bound; want 0, got %d", n)
 	}
 
 	recommended := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_RECOMMENDED), "+3V3", "+1V8")
-	if n := len(pinTrackingAdvisory.Findings(recommended)); n != 1 {
+	if n := len(pinTrackingAdvisory.Findings(context.Background(), recommended)); n != 1 {
 		t.Errorf("a recommended bound belongs to the warning rule; want 1, got %d", n)
 	}
-	if n := len(pinTrackingViolated.Findings(recommended)); n != 0 {
+	if n := len(pinTrackingViolated.Findings(context.Background(), recommended)); n != 0 {
 		t.Errorf("the error rule must not report a recommended bound; want 0, got %d", n)
 	}
 }
@@ -132,7 +133,7 @@ func TestPinTrackingRegimeScopedBoundIsInconclusive(t *testing.T) {
 	rel.Conditions = []*parampb.Condition{{Raw: "transient only (not for DC)"}}
 	m := trackModel("ACME-XLAT", rel, "+3V3", "+1V8")
 
-	fs := pinTrackingViolated.Findings(m)
+	fs := pinTrackingViolated.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("1.5V breaches a 100mV bound; want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -156,7 +157,7 @@ func TestPinTrackingRegimeScopedBoundIsSilentWhenWithin(t *testing.T) {
 	rel.Conditions = []*parampb.Condition{{Raw: "transient only (not for DC)"}}
 	m := trackModel("ACME-XLAT", rel, "+3V3", "+3V3")
 
-	if fs := pinTrackingViolated.Findings(m); len(fs) != 0 {
+	if fs := pinTrackingViolated.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("a scoped bound that is not breached says nothing; want 0 findings, got %+v", fs)
 	}
 }
@@ -167,14 +168,14 @@ func TestPinTrackingRegimeScopedBoundIsSilentWhenWithin(t *testing.T) {
 func TestPinTrackingUnstatedModalityIsReportedInconclusive(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_UNSPECIFIED), "+3V3", "+1V8")
 
-	fs := pinTrackingViolated.Findings(m)
+	fs := pinTrackingViolated.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("an unstated modality must still be reported; want 1 finding, got %d: %+v", len(fs), fs)
 	}
 	if !fs[0].Inconclusive {
 		t.Error("severity is unknown without a modality, so the finding is inconclusive")
 	}
-	if n := len(pinTrackingAdvisory.Findings(m)); n != 0 {
+	if n := len(pinTrackingAdvisory.Findings(context.Background(), m)); n != 0 {
 		t.Errorf("only one rule may claim an unstated modality; want 0 from advisory, got %d", n)
 	}
 }
@@ -196,7 +197,7 @@ func TestPinTrackingNameTierRequiresBothNetsToBeRails(t *testing.T) {
 	}
 	m := check.NewModel(xlatDesign("ACME-XLAT", "U3_12_U7_4_3V3", "+1V8"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
-	if fs := pinTrackingViolated.Findings(m); len(fs) != 0 {
+	if fs := pinTrackingViolated.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("a signal net carrying a voltage token is not a rail nominal; want 0 findings, got %+v", fs)
 	}
 }
@@ -208,7 +209,7 @@ func TestPinTrackingDatasheetEvidenceBeatsASignalLookingName(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED),
 		"U3_12_U7_4_3V3", "+1V8")
 
-	fs := pinTrackingViolated.Findings(m)
+	fs := pinTrackingViolated.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("the spec types both terminals as supply inputs, so both nets are rails; want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -236,10 +237,10 @@ func TestPinTrackingSilentWithoutItsInputs(t *testing.T) {
 		}()},
 	}
 	for _, tc := range cases {
-		if n := len(pinTrackingViolated.Findings(tc.m)); n != 0 {
+		if n := len(pinTrackingViolated.Findings(context.Background(), tc.m)); n != 0 {
 			t.Errorf("%s: want 0 findings from the required rule, got %d", tc.name, n)
 		}
-		if n := len(pinTrackingAdvisory.Findings(tc.m)); n != 0 {
+		if n := len(pinTrackingAdvisory.Findings(context.Background(), tc.m)); n != 0 {
 			t.Errorf("%s: want 0 findings from the advisory rule, got %d", tc.name, n)
 		}
 	}
@@ -257,7 +258,7 @@ func TestPinTrackingSkipsAnUnresolvableTerminal(t *testing.T) {
 	}
 	m := check.NewModel(xlatDesign("ACME-XLAT", "+3V3", "+1V8"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
-	if n := len(pinTrackingViolated.Findings(m)); n != 0 {
+	if n := len(pinTrackingViolated.Findings(context.Background(), m)); n != 0 {
 		t.Errorf("an ambiguous terminal must be skipped, not guessed; got %d findings", n)
 	}
 }

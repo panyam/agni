@@ -26,7 +26,7 @@ from agni.v1.checks import checks_pb2 as agni_dot_v1_dot_checks_dot_checks__pb2
 from agni.v1.webapi import checks_pb2 as agni_dot_v1_dot_webapi_dot_checks__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1a\x61gni/v1/webapi/query.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/checks/checks.proto\x1a\x1b\x61gni/v1/webapi/checks.proto\"\xaa\x01\n\x0fRunQueryRequest\x12\x14\n\x05query\x18\x01 \x01(\tR\x05query\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x1b\n\tboard_uri\x18\x03 \x01(\tR\x08\x62oardUri\x12\x10\n\x03uri\x18\x04 \x01(\tR\x03uri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\"\xf0\x01\n\x08QueryRow\x12\x14\n\x05\x63\x65lls\x18\x01 \x03(\tR\x05\x63\x65lls\x12\x14\n\x05\x63ites\x18\x02 \x03(\tR\x05\x63ites\x12;\n\x0b\x63\x65ll_sheets\x18\x03 \x03(\x0b\x32\x1a.agni.v1.webapi.CellSheetsR\ncellSheets\x12?\n\x0c\x63\x65ll_reasons\x18\x04 \x03(\x0e\x32\x1c.agni.v1.checks.LocateReasonR\x0b\x63\x65llReasons\x12\x1d\n\ncell_kinds\x18\x05 \x03(\tR\tcellKinds\x12\x1b\n\tcell_refs\x18\x06 \x03(\tR\x08\x63\x65llRefs\")\n\nCellSheets\x12\x1b\n\tsheet_ids\x18\x01 \x03(\tR\x08sheetIds\"\xab\x01\n\x10RunQueryResponse\x12\x18\n\x07\x63olumns\x18\x01 \x03(\tR\x07\x63olumns\x12,\n\x04rows\x18\x02 \x03(\x0b\x32\x18.agni.v1.webapi.QueryRowR\x04rows\x12!\n\x0c\x63olumn_kinds\x18\x03 \x03(\tR\x0b\x63olumnKinds\x12\x14\n\x05query\x18\x04 \x01(\tR\x05query\x12\x16\n\x06source\x18\x05 \x01(\tR\x06source\"u\n\x14ListRelationsRequest\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x03 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\"\xba\x01\n\x0cRelationInfo\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n\x04\x61rgs\x18\x02 \x03(\tR\x04\x61rgs\x12\x18\n\x07summary\x18\x03 \x01(\tR\x07summary\x12\x12\n\x04kind\x18\x04 \x01(\tR\x04kind\x12\x16\n\x06\x64\x65tail\x18\x05 \x01(\tR\x06\x64\x65tail\x12\x1c\n\tsignature\x18\x06 \x01(\tR\tsignature\x12\x1e\n\ndefinition\x18\x07 \x03(\tR\ndefinition\"\x97\x02\n\rRelationEntry\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x1d\n\nentry_kind\x18\x02 \x01(\tR\tentryKind\x12\x1c\n\tsignature\x18\x03 \x01(\tR\tsignature\x12\x10\n\x03\x64oc\x18\x04 \x01(\tR\x03\x64oc\x12\x16\n\x06\x64\x65tail\x18\x05 \x01(\tR\x06\x64\x65tail\x12\x16\n\x06module\x18\x06 \x01(\tR\x06module\x12\x1e\n\ndefinition\x18\x07 \x03(\tR\ndefinition\x12\x1a\n\x08inferred\x18\x08 \x03(\tR\x08inferred\x12\x37\n\x07members\x18\t \x03(\x0b\x32\x1d.agni.v1.webapi.RelationEntryR\x07members\"T\n\x0c\x45xampleQuery\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n\x05query\x18\x02 \x01(\tR\x05query\x12\x18\n\x07teaches\x18\x03 \x01(\tR\x07teaches\"Q\n\x0b\x45ntityQuery\x12\x12\n\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n\x05query\x18\x02 \x01(\tR\x05query\x12\x18\n\x07teaches\x18\x03 \x01(\tR\x07teaches\"=\n\x0bSearchQuery\x12\x14\n\x05query\x18\x01 \x01(\tR\x05query\x12\x18\n\x07teaches\x18\x02 \x01(\tR\x07teaches\"\xc6\x02\n\x15ListRelationsResponse\x12:\n\trelations\x18\x01 \x03(\x0b\x32\x1c.agni.v1.webapi.RelationInfoR\trelations\x12\x38\n\x08\x65xamples\x18\x02 \x03(\x0b\x32\x1c.agni.v1.webapi.ExampleQueryR\x08\x65xamples\x12\x42\n\x0e\x65ntity_queries\x18\x03 \x03(\x0b\x32\x1b.agni.v1.webapi.EntityQueryR\rentityQueries\x12>\n\x0csearch_query\x18\x04 \x01(\x0b\x32\x1b.agni.v1.webapi.SearchQueryR\x0bsearchQuery\x12\x33\n\x05\x65ntry\x18\x05 \x01(\x0b\x32\x1d.agni.v1.webapi.RelationEntryR\x05\x65ntry\"r\n\x08QuerySet\x12\x14\n\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n\x08preamble\x18\x02 \x01(\tR\x08preamble\x12\x34\n\x07queries\x18\x03 \x03(\x0b\x32\x1a.agni.v1.webapi.NamedQueryR\x07queries\"X\n\nNamedQuery\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05query\x18\x02 \x01(\tR\x05query\x12 \n\x0b\x64\x65scription\x18\x03 \x01(\tR\x0b\x64\x65scription\"\xc2\x01\n\x11RunQueriesRequest\x12*\n\x03set\x18\x01 \x01(\x0b\x32\x18.agni.v1.webapi.QuerySetR\x03set\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x03 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\"\x9a\x01\n\x12RunQueriesResponse\x12\x14\n\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n\x08preamble\x18\x02 \x01(\tR\x08preamble\x12\x16\n\x06source\x18\x03 \x01(\tR\x06source\x12:\n\x07results\x18\x04 \x03(\x0b\x32 .agni.v1.webapi.NamedQueryResultR\x07results\"\x98\x01\n\x10NamedQueryResult\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\x12\x38\n\x06result\x18\x03 \x01(\x0b\x32 .agni.v1.webapi.RunQueryResponseR\x06result\x12\x14\n\x05\x65rror\x18\x04 \x01(\tR\x05\x65rror2\x90\x02\n\x0cQueryService\x12M\n\x08RunQuery\x12\x1f.agni.v1.webapi.RunQueryRequest\x1a .agni.v1.webapi.RunQueryResponse\x12S\n\nRunQueries\x12!.agni.v1.webapi.RunQueriesRequest\x1a\".agni.v1.webapi.RunQueriesResponse\x12\\\n\rListRelations\x12$.agni.v1.webapi.ListRelationsRequest\x1a%.agni.v1.webapi.ListRelationsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1a\x61gni/v1/webapi/query.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/checks/checks.proto\x1a\x1b\x61gni/v1/webapi/checks.proto\"\xcb\x01\n\x0fRunQueryRequest\x12\x14\n\x05query\x18\x01 \x01(\tR\x05query\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x1b\n\tboard_uri\x18\x03 \x01(\tR\x08\x62oardUri\x12\x10\n\x03uri\x18\x04 \x01(\tR\x03uri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\x12\x1f\n\x0bwork_budget\x18\x06 \x01(\x03R\nworkBudget\"\xf0\x01\n\x08QueryRow\x12\x14\n\x05\x63\x65lls\x18\x01 \x03(\tR\x05\x63\x65lls\x12\x14\n\x05\x63ites\x18\x02 \x03(\tR\x05\x63ites\x12;\n\x0b\x63\x65ll_sheets\x18\x03 \x03(\x0b\x32\x1a.agni.v1.webapi.CellSheetsR\ncellSheets\x12?\n\x0c\x63\x65ll_reasons\x18\x04 \x03(\x0e\x32\x1c.agni.v1.checks.LocateReasonR\x0b\x63\x65llReasons\x12\x1d\n\ncell_kinds\x18\x05 \x03(\tR\tcellKinds\x12\x1b\n\tcell_refs\x18\x06 \x03(\tR\x08\x63\x65llRefs\")\n\nCellSheets\x12\x1b\n\tsheet_ids\x18\x01 \x03(\tR\x08sheetIds\"\xbf\x01\n\x10RunQueryResponse\x12\x18\n\x07\x63olumns\x18\x01 \x03(\tR\x07\x63olumns\x12,\n\x04rows\x18\x02 \x03(\x0b\x32\x18.agni.v1.webapi.QueryRowR\x04rows\x12!\n\x0c\x63olumn_kinds\x18\x03 \x03(\tR\x0b\x63olumnKinds\x12\x14\n\x05query\x18\x04 \x01(\tR\x05query\x12\x16\n\x06source\x18\x05 \x01(\tR\x06source\x12\x12\n\x04work\x18\x06 \x01(\x03R\x04work\"u\n\x14ListRelationsRequest\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x03 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\"\xba\x01\n\x0cRelationInfo\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n\x04\x61rgs\x18\x02 \x03(\tR\x04\x61rgs\x12\x18\n\x07summary\x18\x03 \x01(\tR\x07summary\x12\x12\n\x04kind\x18\x04 \x01(\tR\x04kind\x12\x16\n\x06\x64\x65tail\x18\x05 \x01(\tR\x06\x64\x65tail\x12\x1c\n\tsignature\x18\x06 \x01(\tR\tsignature\x12\x1e\n\ndefinition\x18\x07 \x03(\tR\ndefinition\"\x97\x02\n\rRelationEntry\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x1d\n\nentry_kind\x18\x02 \x01(\tR\tentryKind\x12\x1c\n\tsignature\x18\x03 \x01(\tR\tsignature\x12\x10\n\x03\x64oc\x18\x04 \x01(\tR\x03\x64oc\x12\x16\n\x06\x64\x65tail\x18\x05 \x01(\tR\x06\x64\x65tail\x12\x16\n\x06module\x18\x06 \x01(\tR\x06module\x12\x1e\n\ndefinition\x18\x07 \x03(\tR\ndefinition\x12\x1a\n\x08inferred\x18\x08 \x03(\tR\x08inferred\x12\x37\n\x07members\x18\t \x03(\x0b\x32\x1d.agni.v1.webapi.RelationEntryR\x07members\"T\n\x0c\x45xampleQuery\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n\x05query\x18\x02 \x01(\tR\x05query\x12\x18\n\x07teaches\x18\x03 \x01(\tR\x07teaches\"Q\n\x0b\x45ntityQuery\x12\x12\n\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n\x05query\x18\x02 \x01(\tR\x05query\x12\x18\n\x07teaches\x18\x03 \x01(\tR\x07teaches\"=\n\x0bSearchQuery\x12\x14\n\x05query\x18\x01 \x01(\tR\x05query\x12\x18\n\x07teaches\x18\x02 \x01(\tR\x07teaches\"\xc6\x02\n\x15ListRelationsResponse\x12:\n\trelations\x18\x01 \x03(\x0b\x32\x1c.agni.v1.webapi.RelationInfoR\trelations\x12\x38\n\x08\x65xamples\x18\x02 \x03(\x0b\x32\x1c.agni.v1.webapi.ExampleQueryR\x08\x65xamples\x12\x42\n\x0e\x65ntity_queries\x18\x03 \x03(\x0b\x32\x1b.agni.v1.webapi.EntityQueryR\rentityQueries\x12>\n\x0csearch_query\x18\x04 \x01(\x0b\x32\x1b.agni.v1.webapi.SearchQueryR\x0bsearchQuery\x12\x33\n\x05\x65ntry\x18\x05 \x01(\x0b\x32\x1d.agni.v1.webapi.RelationEntryR\x05\x65ntry\"r\n\x08QuerySet\x12\x14\n\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n\x08preamble\x18\x02 \x01(\tR\x08preamble\x12\x34\n\x07queries\x18\x03 \x03(\x0b\x32\x1a.agni.v1.webapi.NamedQueryR\x07queries\"X\n\nNamedQuery\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05query\x18\x02 \x01(\tR\x05query\x12 \n\x0b\x64\x65scription\x18\x03 \x01(\tR\x0b\x64\x65scription\"\xe3\x01\n\x11RunQueriesRequest\x12*\n\x03set\x18\x01 \x01(\x0b\x32\x18.agni.v1.webapi.QuerySetR\x03set\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x03 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\x12\x1f\n\x0bwork_budget\x18\x06 \x01(\x03R\nworkBudget\"\x9a\x01\n\x12RunQueriesResponse\x12\x14\n\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n\x08preamble\x18\x02 \x01(\tR\x08preamble\x12\x16\n\x06source\x18\x03 \x01(\tR\x06source\x12:\n\x07results\x18\x04 \x03(\x0b\x32 .agni.v1.webapi.NamedQueryResultR\x07results\"\x98\x01\n\x10NamedQueryResult\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\x12\x38\n\x06result\x18\x03 \x01(\x0b\x32 .agni.v1.webapi.RunQueryResponseR\x06result\x12\x14\n\x05\x65rror\x18\x04 \x01(\tR\x05\x65rror2\x90\x02\n\x0cQueryService\x12M\n\x08RunQuery\x12\x1f.agni.v1.webapi.RunQueryRequest\x1a .agni.v1.webapi.RunQueryResponse\x12S\n\nRunQueries\x12!.agni.v1.webapi.RunQueriesRequest\x1a\".agni.v1.webapi.RunQueriesResponse\x12\\\n\rListRelations\x12$.agni.v1.webapi.ListRelationsRequest\x1a%.agni.v1.webapi.ListRelationsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,37 +35,37 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_RUNQUERYREQUEST']._serialized_start=105
-  _globals['_RUNQUERYREQUEST']._serialized_end=275
-  _globals['_QUERYROW']._serialized_start=278
-  _globals['_QUERYROW']._serialized_end=518
-  _globals['_CELLSHEETS']._serialized_start=520
-  _globals['_CELLSHEETS']._serialized_end=561
-  _globals['_RUNQUERYRESPONSE']._serialized_start=564
-  _globals['_RUNQUERYRESPONSE']._serialized_end=735
-  _globals['_LISTRELATIONSREQUEST']._serialized_start=737
-  _globals['_LISTRELATIONSREQUEST']._serialized_end=854
-  _globals['_RELATIONINFO']._serialized_start=857
-  _globals['_RELATIONINFO']._serialized_end=1043
-  _globals['_RELATIONENTRY']._serialized_start=1046
-  _globals['_RELATIONENTRY']._serialized_end=1325
-  _globals['_EXAMPLEQUERY']._serialized_start=1327
-  _globals['_EXAMPLEQUERY']._serialized_end=1411
-  _globals['_ENTITYQUERY']._serialized_start=1413
-  _globals['_ENTITYQUERY']._serialized_end=1494
-  _globals['_SEARCHQUERY']._serialized_start=1496
-  _globals['_SEARCHQUERY']._serialized_end=1557
-  _globals['_LISTRELATIONSRESPONSE']._serialized_start=1560
-  _globals['_LISTRELATIONSRESPONSE']._serialized_end=1886
-  _globals['_QUERYSET']._serialized_start=1888
-  _globals['_QUERYSET']._serialized_end=2002
-  _globals['_NAMEDQUERY']._serialized_start=2004
-  _globals['_NAMEDQUERY']._serialized_end=2092
-  _globals['_RUNQUERIESREQUEST']._serialized_start=2095
-  _globals['_RUNQUERIESREQUEST']._serialized_end=2289
-  _globals['_RUNQUERIESRESPONSE']._serialized_start=2292
-  _globals['_RUNQUERIESRESPONSE']._serialized_end=2446
-  _globals['_NAMEDQUERYRESULT']._serialized_start=2449
-  _globals['_NAMEDQUERYRESULT']._serialized_end=2601
-  _globals['_QUERYSERVICE']._serialized_start=2604
-  _globals['_QUERYSERVICE']._serialized_end=2876
+  _globals['_RUNQUERYREQUEST']._serialized_end=308
+  _globals['_QUERYROW']._serialized_start=311
+  _globals['_QUERYROW']._serialized_end=551
+  _globals['_CELLSHEETS']._serialized_start=553
+  _globals['_CELLSHEETS']._serialized_end=594
+  _globals['_RUNQUERYRESPONSE']._serialized_start=597
+  _globals['_RUNQUERYRESPONSE']._serialized_end=788
+  _globals['_LISTRELATIONSREQUEST']._serialized_start=790
+  _globals['_LISTRELATIONSREQUEST']._serialized_end=907
+  _globals['_RELATIONINFO']._serialized_start=910
+  _globals['_RELATIONINFO']._serialized_end=1096
+  _globals['_RELATIONENTRY']._serialized_start=1099
+  _globals['_RELATIONENTRY']._serialized_end=1378
+  _globals['_EXAMPLEQUERY']._serialized_start=1380
+  _globals['_EXAMPLEQUERY']._serialized_end=1464
+  _globals['_ENTITYQUERY']._serialized_start=1466
+  _globals['_ENTITYQUERY']._serialized_end=1547
+  _globals['_SEARCHQUERY']._serialized_start=1549
+  _globals['_SEARCHQUERY']._serialized_end=1610
+  _globals['_LISTRELATIONSRESPONSE']._serialized_start=1613
+  _globals['_LISTRELATIONSRESPONSE']._serialized_end=1939
+  _globals['_QUERYSET']._serialized_start=1941
+  _globals['_QUERYSET']._serialized_end=2055
+  _globals['_NAMEDQUERY']._serialized_start=2057
+  _globals['_NAMEDQUERY']._serialized_end=2145
+  _globals['_RUNQUERIESREQUEST']._serialized_start=2148
+  _globals['_RUNQUERIESREQUEST']._serialized_end=2375
+  _globals['_RUNQUERIESRESPONSE']._serialized_start=2378
+  _globals['_RUNQUERIESRESPONSE']._serialized_end=2532
+  _globals['_NAMEDQUERYRESULT']._serialized_start=2535
+  _globals['_NAMEDQUERYRESULT']._serialized_end=2687
+  _globals['_QUERYSERVICE']._serialized_start=2690
+  _globals['_QUERYSERVICE']._serialized_end=2962
 # @@protoc_insertion_point(module_scope)

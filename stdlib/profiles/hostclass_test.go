@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -71,7 +72,7 @@ func TestHostClassIdentifiesHostInAllReaders(t *testing.T) {
 		t.Fatal("hostIncompleteRule compiled to nothing for a class-bound profile")
 	}
 	var got []string
-	for _, f := range r.Findings(m) {
+	for _, f := range r.Findings(context.Background(), m) {
 		got = append(got, check.EntityRef(f.Subject))
 	}
 	if len(got) != 1 || got[0] != "U1" {
@@ -90,7 +91,7 @@ func TestHostClassSilentWithoutParams(t *testing.T) {
 		t.Error("HostDeclared must be false with no params: the datasheet evidence is absent")
 	}
 	if r := flashProfile.hostIncompleteRule(); r != nil {
-		if f := r.Findings(m); len(f) != 0 {
+		if f := r.Findings(context.Background(), m); len(f) != 0 {
 			t.Errorf("want no findings without a seeded param set, got %+v", f)
 		}
 	}

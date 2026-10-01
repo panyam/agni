@@ -1,6 +1,7 @@
 package review
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -161,19 +162,26 @@ func (p RunParams) ratifiedFloor() float64 {
 // composed catalog (so overlay profiles from --profile-path are in scope) and resolving each to an
 // Outcome. Rules whose fact tier is absent are not-applicable rather than run, and so is a profile
 // item whose interface Present reports absent.
-func Run(p RunParams) Report {
+//
+// It returns ctx's error when the caller has gone (agni issue 795), checked after every item, rather
+// than a report whose unrun items would read as answered.
+func Run(ctx context.Context, p RunParams) (Report, error) {
 	rep := Report{Manifest: p.Manifest.Name, Design: p.Design}
 	for _, a := range p.Manifest.Areas {
 		ar := AreaResult{Area: a}
 		for _, it := range a.Items {
-			ar.Items = append(ar.Items, runItem(p, it))
+			res := runItem(ctx, p, it)
+			if err := ctx.Err(); err != nil {
+				return Report{}, err
+			}
+			ar.Items = append(ar.Items, res)
 		}
 		rep.Areas = append(rep.Areas, ar)
 	}
-	return rep
+	return rep, nil
 }
 
-func runItem(p RunParams, it Item) ItemResult {
+func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 	m, cat, present := p.Model, p.Catalog, p.Present
 	// A present: binding is never not-applicable (the component-class tier exists on any netlist), so it
 	// resolves ahead of the paths below.
@@ -244,7 +252,12 @@ func runItem(p RunParams, it Item) ItemResult {
 	if len(avail) == 0 {
 		return ItemResult{Item: it, Outcome: NotApplicable, Note: reason}
 	}
-	fs := check.Run(m, avail)
+	fs, err := check.Run(ctx, m, avail)
+	if err != nil {
+		// Only a cancelled context fails check.Run, and Run returns that error after this item, so this
+		// result is never reported.
+		return ItemResult{Item: it, Outcome: Inconclusive, Note: err.Error()}
+	}
 	// A scoped binding keeps only findings for the named interfaces (their UNION), meaning a net-subject
 	// finding on one of their nets (WS3-058) or a component-subject finding on one of their parts
 	// (WS3-083).
@@ -508,7 +521,7 @@ func uncompiled(it Item, err error) *check.Rule {
 		Name:     name,
 		Severity: "warning",
 		Summary:  it.Title,
-		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(context.Context, check.Model) []check.Finding {
 			return []check.Finding{{Inconclusive: true, Message: fmt.Sprintf("%s could not compile: %v", name, err)}}
 		}),
 	}

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -61,7 +62,7 @@ func fetDesign(railName, regRef string) *ir.Design {
 // citation (the FET's), because a naming convention is not a document.
 func TestFetVdssBelowRailFromNetName(t *testing.T) {
 	m := check.NewModel(fetDesign("+60V", ""), check.WithParamProvider(param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)}))
-	fs := fetVdssBelowRail.Findings(m)
+	fs := fetVdssBelowRail.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding (50V FET on a 60V rail), got %d: %+v", len(fs), fs)
 	}
@@ -85,7 +86,7 @@ func TestFetVdssBelowRailFromDatasheet(t *testing.T) {
 		"ACME-FET": fetSpec("ACME-FET", 50),
 		"ACME-REG": regSpec("ACME-REG", 60, "hand", 1),
 	}))
-	fs := fetVdssBelowRail.Findings(m)
+	fs := fetVdssBelowRail.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -107,7 +108,7 @@ func TestFetVdssBelowRailFromDatasheet(t *testing.T) {
 // direction, which a sign error would invert while every other assertion still passed.
 func TestFetVdssWithinRating(t *testing.T) {
 	m := check.NewModel(fetDesign("+12V", ""), check.WithParamProvider(param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)}))
-	if fs := fetVdssBelowRail.Findings(m); len(fs) != 0 {
+	if fs := fetVdssBelowRail.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("50V FET on a 12V rail must be silent, got %+v", fs)
 	}
 }
@@ -121,7 +122,7 @@ func TestFetVdssWithinRating(t *testing.T) {
 // being skipped one step earlier and proved nothing about the unknown-voltage path.
 func TestFetVdssUnknownRailVoltage(t *testing.T) {
 	m := check.NewModel(fetDesign("VBUS", ""), check.WithParamProvider(param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)}))
-	if fs := fetVdssBelowRail.Findings(m); len(fs) != 0 {
+	if fs := fetVdssBelowRail.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("unknown rail voltage must yield no finding, got %+v", fs)
 	}
 }
@@ -131,7 +132,7 @@ func TestFetVdssUnknownRailVoltage(t *testing.T) {
 // letting it read clean.
 func TestFetVdssSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(fetDesign("+60V", ""))
-	if fs := fetVdssBelowRail.Findings(m); len(fs) != 0 {
+	if fs := fetVdssBelowRail.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("want no findings with no seeded params, got %+v", fs)
 	}
 	if ok, reason := check.Available(fetVdssBelowRail, m); ok || reason == "" {
@@ -149,7 +150,7 @@ func TestFetVdssIgnoresGround(t *testing.T) {
 		Connections: []*ir.Connection{{ComponentRef: "Q1", PinRef: "2"}},
 	})
 	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)}))
-	fs := fetVdssBelowRail.Findings(m)
+	fs := fetVdssBelowRail.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want exactly 1 finding (the +60V rail, not GND), got %d: %+v", len(fs), fs)
 	}
@@ -177,7 +178,7 @@ func TestFetVdssClaimsOnlySwitchingParts(t *testing.T) {
 		}
 	}
 	d := rail(&ir.Connection{ComponentRef: "C1", PinRef: "1"}, &ir.Connection{ComponentRef: "Q1", PinRef: "1"})
-	vs := fetVdssBelowRail.Eval(check.NewModel(d))
+	vs := fetVdssBelowRail.Eval(context.Background(), check.NewModel(d))
 
 	for _, v := range vs {
 		if v.Subjects[0].Ref == "C1" {

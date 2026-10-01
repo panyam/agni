@@ -460,7 +460,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 		Name: "every-net", Severity: "info", Summary: "fires per net (test source)",
 		Reads: []string{"net.names"},
 		Tags:  map[string]string{check.KeyCategory: check.CategoryNaming},
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(ctx context.Context, m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, n := range m.Nets() {
 				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.Name}, Message: "seen"})

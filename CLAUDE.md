@@ -558,6 +558,16 @@ no-route too, since the two nets that fail to join are drawn somewhere and that 
 someone goes looking for; empty then means drawn nowhere rather than nobody looked. The CLI takes
 the sheet off the response rather than choosing, which is C32 at one more call site.
 
+**A rule's `Eval` takes the caller's context, and a run stops when the context is done** (agni 795).
+`check.Run`, `RunVerdicts` and `review.Run` return `ctx.Err()` rather than the findings so far, which
+would read as a clean remainder; `RunBackground` is the context-free form for tests and one-shot
+tools. Every datalog evaluation reads its WORK BUDGET off the same context through
+`query.EvalOptions(ctx)` (agni 792), so a new `Eval` call site that omits those options escapes a
+served budget silently. `agni serve --query-budget` enforces one, OFF by default, and
+`--query-budget-warn` logs each costly query with a suggested budget; a request's `work_budget`
+narrows the server's and never raises it. A stopped query is `resource_exhausted` and a stopped rule
+one inconclusive finding.
+
 **A rule proves a PASS with entities, not only with prose, and there are two mechanisms.** A Go-walk
 requirement returns its hops (`check.PullUpVerdict` emits every resistor and net as ordered context
 with a role). A query-backed one needs `Domain.Evidence`, a third goal run over the passing set whose

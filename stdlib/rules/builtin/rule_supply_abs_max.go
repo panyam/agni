@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -27,7 +28,7 @@ var supplyExceedsAbsMax = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("supply-exceeds-abs-max"),
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		return aliasSupplyVerdicts(m, check.SupplyAbsMaxLimits, mostRestrictiveMax,
 			"absolute-maximum supply", "absolute maximum",
 			func(p *parampb.Parameter) check.Bound { return check.Bound{Max: p.Value.Max} },

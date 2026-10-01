@@ -55,7 +55,11 @@ type CheckDesignRequest struct {
 	//
 	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
 	// how two views of one design are checked against each other.
-	AsNamed       bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	AsNamed bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+	// a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+	// deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
+	WorkBudget    int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -123,6 +127,13 @@ func (x *CheckDesignRequest) GetAsNamed() bool {
 		return x.AsNamed
 	}
 	return false
+}
+
+func (x *CheckDesignRequest) GetWorkBudget() int64 {
+	if x != nil {
+		return x.WorkBudget
+	}
+	return 0
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
@@ -1344,13 +1355,15 @@ var File_agni_v1_webapi_checks_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/naming.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\xad\x01\n" +
+	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/naming.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\xce\x01\n" +
 	"\x12CheckDesignRequest\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n" +
 	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
-	"\bas_named\x18\x05 \x01(\bR\aasNamed\"z\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\x12\x1f\n" +
+	"\vwork_budget\x18\x06 \x01(\x03R\n" +
+	"workBudget\"z\n" +
 	"\rOverlayConfig\x126\n" +
 	"\x06config\x18\x04 \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12%\n" +
 	"\x0eignore_project\x18\x03 \x01(\bR\rignoreProjectJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03\"\xb6\x01\n" +

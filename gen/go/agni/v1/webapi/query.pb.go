@@ -63,7 +63,11 @@ type RunQueryRequest struct {
 	//
 	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
 	// how two views of one design are checked against each other.
-	AsNamed       bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	AsNamed bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+	// a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+	// deployment's own budget, never raise it, and zero leaves that budget as it is. A query past its budget fails with RESOURCE_EXHAUSTED, naming the budget.
+	WorkBudget    int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -131,6 +135,13 @@ func (x *RunQueryRequest) GetAsNamed() bool {
 		return x.AsNamed
 	}
 	return false
+}
+
+func (x *RunQueryRequest) GetWorkBudget() int64 {
+	if x != nil {
+		return x.WorkBudget
+	}
+	return 0
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
@@ -321,8 +332,11 @@ type RunQueryResponse struct {
 	//
 	// The panel ignores them, since it sent the request and already knows. That is the ordinary cost
 	// of a self-describing response and it is one string each.
-	Query         string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
-	Source        string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
+	Query  string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	Source string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
+	// work is what answering this query cost, in the units a work budget counts, so a deployment can
+	// see which queries are expensive and choose a budget from evidence (agni issue 792).
+	Work          int64 `protobuf:"varint,6,opt,name=work,proto3" json:"work,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -390,6 +404,13 @@ func (x *RunQueryResponse) GetSource() string {
 		return x.Source
 	}
 	return ""
+}
+
+func (x *RunQueryResponse) GetWork() int64 {
+	if x != nil {
+		return x.Work
+	}
+	return 0
 }
 
 type ListRelationsRequest struct {
@@ -1098,10 +1119,14 @@ type RunQueriesRequest struct {
 	Set   *QuerySet              `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
 	// uri, overlay, board_uri and as_named mean what they mean on RunQueryRequest, and apply to the one
 	// read every query in the set shares.
-	Uri           string         `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
-	Overlay       *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
-	BoardUri      string         `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
-	AsNamed       bool           `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	Uri      string         `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	Overlay  *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	BoardUri string         `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
+	AsNamed  bool           `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+	// a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+	// deployment's own budget, never raise it, and zero leaves that budget as it is. Each query in the set has the whole budget; one past it reports that in its own result.
+	WorkBudget    int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1169,6 +1194,13 @@ func (x *RunQueriesRequest) GetAsNamed() bool {
 		return x.AsNamed
 	}
 	return false
+}
+
+func (x *RunQueriesRequest) GetWorkBudget() int64 {
+	if x != nil {
+		return x.WorkBudget
+	}
+	return 0
 }
 
 type RunQueriesResponse struct {
@@ -1317,13 +1349,15 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xaa\x01\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xcb\x01\n" +
 	"\x0fRunQueryRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
 	"\tboard_uri\x18\x03 \x01(\tR\bboardUri\x12\x10\n" +
 	"\x03uri\x18\x04 \x01(\tR\x03uri\x12\x19\n" +
-	"\bas_named\x18\x05 \x01(\bR\aasNamed\"\xf0\x01\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\x12\x1f\n" +
+	"\vwork_budget\x18\x06 \x01(\x03R\n" +
+	"workBudget\"\xf0\x01\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x14\n" +
 	"\x05cites\x18\x02 \x03(\tR\x05cites\x12;\n" +
@@ -1335,13 +1369,14 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\tcell_refs\x18\x06 \x03(\tR\bcellRefs\")\n" +
 	"\n" +
 	"CellSheets\x12\x1b\n" +
-	"\tsheet_ids\x18\x01 \x03(\tR\bsheetIds\"\xab\x01\n" +
+	"\tsheet_ids\x18\x01 \x03(\tR\bsheetIds\"\xbf\x01\n" +
 	"\x10RunQueryResponse\x12\x18\n" +
 	"\acolumns\x18\x01 \x03(\tR\acolumns\x12,\n" +
 	"\x04rows\x18\x02 \x03(\v2\x18.agni.v1.webapi.QueryRowR\x04rows\x12!\n" +
 	"\fcolumn_kinds\x18\x03 \x03(\tR\vcolumnKinds\x12\x14\n" +
 	"\x05query\x18\x04 \x01(\tR\x05query\x12\x16\n" +
-	"\x06source\x18\x05 \x01(\tR\x06source\"u\n" +
+	"\x06source\x18\x05 \x01(\tR\x06source\x12\x12\n" +
+	"\x04work\x18\x06 \x01(\x03R\x04work\"u\n" +
 	"\x14ListRelationsRequest\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\x127\n" +
@@ -1394,13 +1429,15 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"NamedQuery\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\"\xc2\x01\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\"\xe3\x01\n" +
 	"\x11RunQueriesRequest\x12*\n" +
 	"\x03set\x18\x01 \x01(\v2\x18.agni.v1.webapi.QuerySetR\x03set\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\x127\n" +
 	"\aoverlay\x18\x03 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
 	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
-	"\bas_named\x18\x05 \x01(\bR\aasNamed\"\x9a\x01\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\x12\x1f\n" +
+	"\vwork_budget\x18\x06 \x01(\x03R\n" +
+	"workBudget\"\x9a\x01\n" +
 	"\x12RunQueriesResponse\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n" +
 	"\bpreamble\x18\x02 \x01(\tR\bpreamble\x12\x16\n" +

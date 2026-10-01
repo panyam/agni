@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -140,7 +141,7 @@ func TestEvalFailureIsInconclusiveNotClean(t *testing.T) {
 		t.Fatalf("construction rejected it, so the eval path is untested: %v", err)
 	}
 
-	fs := rule.Findings(check.NewModel(chainDesign()))
+	fs := rule.Findings(context.Background(), check.NewModel(chainDesign()))
 	if len(fs) != 1 {
 		t.Fatalf("findings = %d, want one inconclusive; a rule that could not run must not report a clean pass", len(fs))
 	}

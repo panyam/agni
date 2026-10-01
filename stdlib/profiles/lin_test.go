@@ -35,14 +35,14 @@ func linBroken() *ir.Design {
 }
 
 func TestLINSilent(t *testing.T) {
-	if fs := check.Run(check.NewModel(linGood()), Compile(LIN)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(linGood()), Compile(LIN)); len(fs) != 0 {
 		t.Fatalf("good LIN bus: want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
 
 func TestLINFires(t *testing.T) {
 	got := map[string]check.Finding{}
-	for _, f := range check.Run(check.NewModel(linBroken()), Compile(LIN)) {
+	for _, f := range check.RunBackground(check.NewModel(linBroken()), Compile(LIN)) {
 		got[f.Rule] = f
 	}
 	if len(got) != 3 {
@@ -88,7 +88,7 @@ func TestLINHostWhollyAbsent(t *testing.T) {
 		Nets:       []*ir.Net{net("GND", "U2.9", "U1.9")},
 	}
 	got := 0
-	for _, f := range check.Run(check.NewModel(d), Compile(LIN)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(LIN)) {
 		if f.Rule == "lin-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}

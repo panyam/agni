@@ -10,6 +10,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -164,7 +165,9 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err != nil {
 		return nil, err
 	}
-	rep, cat, err := s.runOne(ctx, netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
+	// The budget reaches every checklist query through ctx (agni issue 792); an item past it reads
+	// inconclusive, naming the budget, and the others still answer.
+	rep, cat, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +335,7 @@ func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact
 		return review.Report{}, nil, err
 	}
 	present, scope, compScope := reviewClosures(m, s.byName)
-	return review.Run(review.RunParams{
+	rep, err := review.Run(ctx, review.RunParams{
 		Model: m, Catalog: cat, Manifest: man, Design: designURI.String(),
 		Present: present, Scope: scope, CompScope: compScope, RatifiedFloor: floor,
 		// intent.Emits narrows the intent/ prefix to the compiler's name space, so a pre-bound intent
@@ -340,7 +343,11 @@ func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact
 		// Injected to keep `review` decoupled from `intent`.
 		IntentRuleKnown: intent.Emits,
 		Vocabulary:      vocab,
-	}), cat, nil
+	})
+	if err != nil {
+		return review.Report{}, nil, err
+	}
+	return rep, cat, nil
 }
 
 // reviewClosures builds the presence and scope closures a review run needs over a design's Model and

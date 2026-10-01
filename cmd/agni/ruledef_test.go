@@ -51,8 +51,8 @@ func conformanceModels(t *testing.T) map[string]check.Model {
 func assertSameFindings(t *testing.T, name string, want, got *check.Rule, models map[string]check.Model) {
 	t.Helper()
 	for fixture, m := range models {
-		w := check.Run(m, []*check.Rule{want})
-		g := check.Run(m, []*check.Rule{got})
+		w := check.RunBackground(m, []*check.Rule{want})
+		g := check.RunBackground(m, []*check.Rule{got})
 		if !reflect.DeepEqual(w, g) {
 			t.Errorf("%s on %s: findings differ after a round trip\n original: %+v\n decoded:  %+v", name, fixture, w, g)
 		}

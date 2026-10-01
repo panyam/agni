@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -49,7 +50,7 @@ var wireNoJunction = &check.Rule{
 // happens to sit at the meet. The second is correct in KiCad and far easier to delete by accident, so
 // a reviewer checking a T-tap wants to know which they have. The segment count separates an ordinary T
 // from a crossing.
-func wireNoJunctionVerdicts(m check.Model) []check.Verdict {
+func wireNoJunctionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, e := range m.NoJunctionEndpoints() {
 		v := check.Verdict{

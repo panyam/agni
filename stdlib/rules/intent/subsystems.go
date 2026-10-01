@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -21,7 +22,7 @@ func subsystemRule(s Subsystem) *check.Rule {
 		Remedy:              intentRemedy(docKeySubsystem),
 		Reads:               []string{"component.class", "component.mpn"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return subsystemVerdicts(m, s) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return subsystemVerdicts(m, s) },
 		StatesConsideredSet: true,
 	}
 }

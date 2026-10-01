@@ -1,6 +1,7 @@
 package datalog
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"strings"
@@ -90,8 +91,8 @@ func TestCrystalDatalogParity(t *testing.T) {
 	if goRule == nil {
 		t.Fatal(`built-in rule "crystal-load-caps" not found in the built-in catalog`)
 	}
-	want := findingKeys(goRule.Findings(m))
-	got := findingKeys(crystalLoadCapsDL.Findings(m))
+	want := findingKeys(goRule.Findings(context.Background(), m))
+	got := findingKeys(crystalLoadCapsDL.Findings(context.Background(), m))
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("datalog twin diverges from Go rule\n  go : %v\n  dl : %v", want, got)
@@ -136,8 +137,8 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 		name string
 		fs   []check.Finding
 	}{
-		{"go", goRule.Findings(m)},
-		{"dl", crystalLoadCapsDL.Findings(m)},
+		{"go", goRule.Findings(context.Background(), m)},
+		{"dl", crystalLoadCapsDL.Findings(context.Background(), m)},
 	} {
 		name, fs := tw.name, tw.fs
 		t.Run(name, func(t *testing.T) {

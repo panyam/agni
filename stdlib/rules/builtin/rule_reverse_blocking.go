@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -36,7 +37,7 @@ var reverseBlockingAbsent = &check.Rule{
 // is in the way (see docsite/content/build/check-rule.md#five-outcomes-and-the-three-that-are-not-a-pass).
 // A connector net reaching NO power input gets no verdict, since counting it would claim every
 // signal pin on every connector as reverse-protected (agni issue 391).
-func reverseBlockingVerdicts(m check.Model) []check.Verdict {
+func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {

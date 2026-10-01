@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -35,7 +36,7 @@ func TestExtensionComposesReaderAndRule(t *testing.T) {
 	}
 
 	// End to end: the extension's rule runs over the extension's format and fires on X1.
-	findings := check.Run(check.NewModel(d), check.DefaultCatalog().Rules())
+	findings := check.RunBackground(check.NewModel(d), check.DefaultCatalog().Rules())
 	var acme []check.Finding
 	for _, f := range findings {
 		if f.Rule == "acme/no-experimental-refdes" {
@@ -76,11 +77,11 @@ func TestExtensionDatalogPinRule(t *testing.T) {
 
 	var got []string
 	// Findings, not Eval. Eval returns VERDICTS, and Verdict shares Subject/Kind/Pin/NetID with
-	// Finding, so `for _, f := range r.Eval(m)` reading f.Subject compiles and silently counts
+	// Finding, so `for _, f := range r.Eval(context.Background(), m)` reading f.Subject compiles and silently counts
 	// passes as failures. It happens to be right today only because a datalog rule is still wrapped
 	// in FailuresOnly and emits nothing but failures; it would start lying the moment a datalog
 	// rule states a considered set.
-	for _, f := range r.Findings(m) {
+	for _, f := range r.Findings(context.Background(), m) {
 		got = append(got, check.EntityRef(f.Subject))
 	}
 	// VCC carries U1's declared VDD power pin and X1. GND carries only ground-role pins, so the

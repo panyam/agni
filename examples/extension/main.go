@@ -13,6 +13,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -62,7 +63,12 @@ func run(path string) error {
 
 	// The engine's catalog is the built-ins PLUS every registered source, so the acme/ rule runs
 	// alongside the engine's own checks.
-	findings := check.Run(check.NewModel(d), engine.Catalog().Rules())
+	// Run takes a context so a long check stops when its caller does; a command line has none to
+	// cancel. It returns an error only when that context is done.
+	findings, err := check.Run(context.Background(), check.NewModel(d), engine.Catalog().Rules())
+	if err != nil {
+		return err
+	}
 	if len(findings) == 0 {
 		fmt.Println("no findings")
 		return nil
