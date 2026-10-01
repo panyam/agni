@@ -1,6 +1,7 @@
 package lib_test
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -102,11 +103,11 @@ func TestModulesThatReadEachOtherRegisterTogether(t *testing.T) {
 		ms = append(ms, ns.Module{Path: m.Path, Language: datalog.LanguageName, Text: m.Text})
 	}
 	// The process default already holds the library, registered last because it imports everything
-	// else this binary registers, so compose from everything before it.
+	// else this binary registers: its modules, then its docs. Compose from everything before both.
 	var without []facts.Option
-	without = append(without, base[:len(base)-1]...)
+	without = append(without, base[:len(base)-2]...)
 	if r, err := facts.NewRegistry(without...); err != nil || len(r.Derived()) != 0 {
-		t.Fatalf("dropping the last registration did not drop exactly the library (err %v)", err)
+		t.Fatalf("dropping the last two registrations did not drop exactly the library (err %v)", err)
 	}
 	if _, err := facts.NewRegistry(append(without, facts.WithModules(ms...))...); err != nil {
 		t.Fatalf("the library composed as one batch was refused: %v", err)
@@ -121,5 +122,65 @@ func TestABrokenModuleFailsComposition(t *testing.T) {
 	bad := ns.Module{Path: "net", Language: datalog.LanguageName, Text: `broken(?n: net) :- net.no_such_relation(?n);`}
 	if _, err := facts.NewRegistry(append(facts.Registered(), facts.WithModules(bad))...); err == nil {
 		t.Error("a module reading a relation nobody registered composed; it must fail at load")
+	}
+}
+
+// TestEveryMemberHasItsDoc holds the library to its reference pages in both directions: a member with
+// no doc ships with no page, and a doc naming no member is a page for something that does not exist.
+func TestEveryMemberHasItsDoc(t *testing.T) {
+	docs := lib.Docs()
+	derived := facts.DefaultRegistry().Derived()
+	if len(derived) < 4 {
+		t.Fatalf("%d members registered, want the library's four at least", len(derived))
+	}
+	members := map[string]bool{}
+	for _, d := range derived {
+		members[d.Name] = true
+		doc, ok := docs[d.Name]
+		if !ok {
+			t.Errorf("%s has no docs/%s.md", d.Name, d.Name)
+			continue
+		}
+		if !strings.HasPrefix(doc, "## "+d.Name+"\n") {
+			t.Errorf("docs/%s.md does not open with \"## %s\"", d.Name, d.Name)
+		}
+		if got := facts.DefaultRegistry().Doc(d.Name); got != doc {
+			t.Errorf("Registry.Doc(%q) does not serve docs/%s.md", d.Name, d.Name)
+		}
+	}
+	for name := range docs {
+		if !members[name] {
+			t.Errorf("docs/%s.md names no library member", name)
+		}
+	}
+}
+
+// TestDocQueriesValidate checks every query a member's page shows, so a page cannot teach a query
+// that does not run.
+func TestDocQueriesValidate(t *testing.T) {
+	fence := regexp.MustCompile("(?s)```\n(.*?)\n```")
+	n := 0
+	for name, doc := range lib.Docs() {
+		for _, m := range fence.FindAllStringSubmatch(doc, -1) {
+			n++
+			q, err := query.Parse(m[1])
+			if err != nil {
+				t.Errorf("docs/%s.md: %q does not parse: %v", name, m[1], err)
+				continue
+			}
+			if err := query.Validate(q, facts.DefaultRegistry()); err != nil {
+				t.Errorf("docs/%s.md: %q does not validate: %v", name, m[1], err)
+			}
+		}
+	}
+	if n < 8 {
+		t.Errorf("found %d example queries across the docs, want two per member at least", n)
+	}
+}
+
+func TestADocForNothingFailsComposition(t *testing.T) {
+	stray := facts.WithDocs(map[string]string{"net.no_such_member": "## net.no_such_member\n"})
+	if _, err := facts.NewRegistry(append(facts.Registered(), stray)...); err == nil {
+		t.Error("a doc for a path nothing defines composed; it must fail at load")
 	}
 }

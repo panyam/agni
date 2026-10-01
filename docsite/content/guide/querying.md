@@ -372,10 +372,10 @@ component.probed_one(?part, ?probed, ?unprobed), component.mpn(?part, ?mpn) => ?
 
 | Member | What it answers |
 |---|---|
-| `net.has_test_point(net)` | a net at least one test point sits on |
-| `component.two_terminal(part, a, b)` | a part on exactly two nets, the nets in name order so each part answers once |
-| `component.probed_both(part)` | a two-terminal part with a test point on both nets, so an in-circuit tester can measure it |
-| `component.probed_one(part, probed, unprobed)` | a two-terminal part probed on one net only, naming the net that is missing a test point |
+| [`net.has_test_point(net)`](../../reference/relations/net.has_test_point/) | a net at least one test point sits on |
+| [`component.two_terminal(part, a, b)`](../../reference/relations/component.two_terminal/) | a part on exactly two nets, the nets in name order so each part answers once |
+| [`component.probed_both(part)`](../../reference/relations/component.probed_both/) | a two-terminal part with a test point on both nets, so an in-circuit tester can measure it |
+| [`component.probed_one(part, probed, unprobed)`](../../reference/relations/component.probed_one/) | a two-terminal part probed on one net only, naming the net that is missing a test point |
 
 `agni query --relations` prints everything a query can call, module by module, with each member's
 argument types. Give it a module to list one (`agni query --relations net`), or a member to read its
@@ -395,8 +395,11 @@ component.probed_both(r: component)
     probed_both(?r: component) :- two_terminal(?r, ?a, ?b), net.has_test_point(?a), net.has_test_point(?b)
 ```
 
-The library lives in `stdlib/lib`, one file per module. A question only one report asks belongs in
-that report's query instead, as a rule ahead of its goal or in a query set's preamble.
+Each member's page says what it counts and leaves out, why the question matters on a board, and how
+it is defined. The library lives in `stdlib/lib`, one file per module, and
+[Adding a library member](../../build/library-member/) covers when a question belongs there. A
+question only one report asks belongs in that report's query instead, as a rule ahead of its goal or
+in a query set's preamble.
 
 ### Ask many questions at once (query sets)
 

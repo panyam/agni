@@ -75,6 +75,17 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`param.unit(mpn, symbol, unit)`](param.unit/) | the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params) |
 | [`part.audience(mpn, who)`](part.audience/) | a team/license entitled to see a part's datasheet data (record-only, needs --params) |
 
+## derived
+
+Defined in Datalog over the relations above rather than projected from the design, in the shipped library under `stdlib/lib`. A query calls them the same way. [Adding a library member](../../build/library-member/) explains how they are built.
+
+| Relation | Summary |
+|---|---|
+| [`component.probed_both(r)`](component.probed_both/) | A two-terminal part with a test point on both of its nets, so it can be measured in circuit. |
+| [`component.probed_one(r, probed, unprobed)`](component.probed_one/) | A two-terminal part with a test point on exactly one of its nets, naming the probed net and then the other, which is where a missing test point would go. |
+| [`component.two_terminal(r, a, b)`](component.two_terminal/) | A part on exactly two nets, with the nets in name order (?a < ?b) so each part answers once. The parts an in-circuit test measures across two nodes: resistors, capacitors, inductors, diodes. |
+| [`net.has_test_point(n)`](net.has_test_point/) | A net at least one test point sits on, so a probe can land on it during bring-up or in-circuit test. |
+
 ## predicate
 
 | Relation | Summary |
@@ -87,13 +98,4 @@ The relations a datalog query joins over. Each documented relation links to its 
 | `str.match(string, regex)` | reports whether the string matches an unanchored regular expression |
 | `str.prefix(string, prefix)` | reports whether a string starts with a prefix |
 | `str.suffix(string, suffix)` | reports whether a string ends with a suffix |
-
-## derived
-
-| Relation | Summary |
-|---|---|
-| `component.probed_both(r)` | A two-terminal part with a test point on both of its nets, so it can be measured in circuit. |
-| `component.probed_one(r, probed, unprobed)` | A two-terminal part with a test point on exactly one of its nets, naming the probed net and then the other, which is where a missing test point would go. |
-| `component.two_terminal(r, a, b)` | A part on exactly two nets, with the nets in name order (?a < ?b) so each part answers once. The parts an in-circuit test measures across two nodes: resistors, capacitors, inductors, diodes. |
-| `net.has_test_point(n)` | A net at least one test point sits on, so a probe can land on it during bring-up or in-circuit test. |
 
