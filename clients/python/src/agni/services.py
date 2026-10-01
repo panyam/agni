@@ -14,10 +14,11 @@ from google.protobuf import message_factory
 from google.protobuf.message import Message
 
 # Imported for their side effect of registering descriptors in the default pool. The list is every
-# webapi module that declares a service; test_services.py fails when a new one is missing here.
+# webapi module that declares a service; test_services.py fails when a new one is missing here. The
+# datasheet workbench's DatasheetService is the producer's API, in agni.v1.dsapi, and not part of the
+# engine's (C34).
 from agni.v1.webapi import (  # noqa: F401
     checks_pb2,
-    datasheet_pb2,
     design_pb2,
     diff_pb2,
     project_pb2,
@@ -30,7 +31,6 @@ PACKAGE = "agni.v1.webapi"
 
 _MODULES = (
     checks_pb2,
-    datasheet_pb2,
     design_pb2,
     diff_pb2,
     project_pb2,

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
@@ -76,7 +76,7 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 // TestUnitVocabulariesAgree is a drift tripwire between the two layers that own a unit vocabulary.
 //
 // core/classify parses a component's value TEXT off a design and normalizes it to an SI base unit;
-// datasheet/param converts a seeded parameter's printed unit to the same base. They are deliberately
+// core/param converts a seeded parameter's printed unit to the same base. They are deliberately
 // SEPARATE tables, because IEC 60062's RKM code reads M as mega and is case-insensitive on k and u,
 // which is correct for a schematic value field and inverts three orders of magnitude on a printed unit
 // symbol. The datasheet tier also imports nothing from core (C17), so there is no import to hold them
@@ -88,7 +88,7 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 // guards. This test lives in core/check because it is the one package that imports both layers.
 func TestUnitVocabulariesAgree(t *testing.T) {
 	if param.UnitOhm != classify.UnitOhm {
-		t.Errorf("ohm symbol diverged: datasheet/param has %q (%U), core/classify has %q (%U)",
+		t.Errorf("ohm symbol diverged: core/param has %q (%U), core/classify has %q (%U)",
 			param.UnitOhm, []rune(param.UnitOhm), classify.UnitOhm, []rune(classify.UnitOhm))
 	}
 	// Every base unit classify normalizes a design value to must survive a round trip through the

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/mounts"
 )
 
 // stubProducer writes a minimal valid doc-IR to its -o path (invoked as `<script> <pdf> -o <out>`,

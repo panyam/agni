@@ -3,7 +3,7 @@ package check
 import (
 	"testing"
 
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 

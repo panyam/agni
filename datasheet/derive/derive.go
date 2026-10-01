@@ -23,7 +23,7 @@ import (
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/datasheet/doc"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 // Version is the derive stage's toolchain pin, recorded in every RunManifest. Bump

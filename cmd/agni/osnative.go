@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
+	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 )
 

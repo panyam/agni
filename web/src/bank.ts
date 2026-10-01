@@ -31,7 +31,7 @@ import {
   AnnotationSetSchema,
   RegionAnnotationSchema,
   type AnnotationSet,
-} from "./gen/agni/v1/webapi/datasheet_pb.js";
+} from "./gen/agni/v1/dsapi/datasheet_pb.js";
 import type { Region, RegionType } from "./regions.js";
 
 // docId derives a source document's STABLE identity from its corpus path, the file stem

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"

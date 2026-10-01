@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/panyam/agni/artifact"
 
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 // ErrConflict is the optimistic-concurrency failure, a SavePartSpec whose base_version no longer
@@ -59,8 +59,8 @@ type DocExtractor interface {
 // Get returns an empty slice (not an error) when nobody has annotated yet. author is a
 // client-supplied coordination namespace, not an authenticated identity.
 type AnnotationStore interface {
-	Get(ctx context.Context, uri artifact.URI) ([]*webapi.AnnotationSet, error)
-	Save(ctx context.Context, uri artifact.URI, author string, set *webapi.AnnotationSet) error
+	Get(ctx context.Context, uri artifact.URI) ([]*dsapi.AnnotationSet, error)
+	Save(ctx context.Context, uri artifact.URI, author string, set *dsapi.AnnotationSet) error
 }
 
 // DatasheetService serves a datasheet's doc-IR and its saved PartSpec to the extraction workbench
@@ -85,7 +85,7 @@ func NewDatasheetService(loader DocLoader, store PartSpecStore, extractor DocExt
 // derived doc-IR yet yields extracted=false and no document, and the workbench then shows the PDF
 // with an empty region overlay. A load or parse failure is classified as an invalid argument, while
 // an unknown mount or containment violation keeps its loader classification.
-func (s *DatasheetService) GetDocument(ctx context.Context, req *webapi.GetDocumentRequest) (*webapi.GetDocumentResponse, error) {
+func (s *DatasheetService) GetDocument(ctx context.Context, req *dsapi.GetDocumentRequest) (*dsapi.GetDocumentResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -95,16 +95,16 @@ func (s *DatasheetService) GetDocument(ctx context.Context, req *webapi.GetDocum
 		return nil, classifyLoadErr(err)
 	}
 	if d == nil {
-		return &webapi.GetDocumentResponse{Extracted: false, ExtractAvailable: s.extractor.Available()}, nil
+		return &dsapi.GetDocumentResponse{Extracted: false, ExtractAvailable: s.extractor.Available()}, nil
 	}
-	return &webapi.GetDocumentResponse{Extracted: true, Document: d, ExtractAvailable: s.extractor.Available()}, nil
+	return &dsapi.GetDocumentResponse{Extracted: true, Document: d, ExtractAvailable: s.extractor.Available()}, nil
 }
 
 // ExtractDocIR runs the configured doc-IR producer over the datasheet and returns the produced
 // doc-IR (the "first pass" the workbench then shows for review). A server with no producer
 // configured rejects it as ErrExtractNotEnabled (FailedPrecondition). A producer run or parse
 // failure is a server-side error (Internal), and a bad URI keeps its classification.
-func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *webapi.ExtractDocIRRequest) (*webapi.ExtractDocIRResponse, error) {
+func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *dsapi.ExtractDocIRRequest) (*dsapi.ExtractDocIRResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -119,12 +119,12 @@ func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *webapi.Extract
 		}
 		return nil, fmt.Errorf("%w: doc-IR extraction failed: %s", ErrInternal, err)
 	}
-	return &webapi.ExtractDocIRResponse{Document: d}, nil
+	return &dsapi.ExtractDocIRResponse{Document: d}, nil
 }
 
 // GetPartSpec loads the datasheet's saved PartSpec and its version token. Absence is found=false
 // with an empty version (a normal first-open state), not an error.
-func (s *DatasheetService) GetPartSpec(ctx context.Context, req *webapi.GetPartSpecRequest) (*webapi.GetPartSpecResponse, error) {
+func (s *DatasheetService) GetPartSpec(ctx context.Context, req *dsapi.GetPartSpecRequest) (*dsapi.GetPartSpecResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -133,12 +133,12 @@ func (s *DatasheetService) GetPartSpec(ctx context.Context, req *webapi.GetPartS
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	return &webapi.GetPartSpecResponse{Found: found, Spec: spec, Version: version}, nil
+	return &dsapi.GetPartSpecResponse{Found: found, Spec: spec, Version: version}, nil
 }
 
 // SavePartSpec persists the PartSpec with optimistic concurrency. A version mismatch surfaces as
 // ErrConflict (mapped to Aborted so the client refetches); an absent spec is an invalid argument.
-func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePartSpecRequest) (*webapi.SavePartSpecResponse, error) {
+func (s *DatasheetService) SavePartSpec(ctx context.Context, req *dsapi.SavePartSpecRequest) (*dsapi.SavePartSpecResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -162,34 +162,34 @@ func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePar
 	}
 	// Judged AFTER the write and reported rather than enforced. The editor (web/src/transcribe.tsx)
 	// renders these rather than keeping its own copy of the rules.
-	return &webapi.SavePartSpecResponse{Version: version, Problems: validationProblems(req.GetSpec())}, nil
+	return &dsapi.SavePartSpecResponse{Version: version, Problems: validationProblems(req.GetSpec())}, nil
 }
 
 // validationProblems renders param's classified findings onto the wire type. The mapping is total,
 // so a kind this does not recognize travels as UNSPECIFIED and still shows its message rather than
 // vanishing from the editor.
-func validationProblems(spec *parampb.PartSpec) []*webapi.ValidationProblem {
+func validationProblems(spec *parampb.PartSpec) []*dsapi.ValidationProblem {
 	found := param.Problems(spec)
 	if len(found) == 0 {
 		return nil
 	}
-	out := make([]*webapi.ValidationProblem, 0, len(found))
+	out := make([]*dsapi.ValidationProblem, 0, len(found))
 	for _, p := range found {
-		kind := webapi.ValidationProblem_KIND_UNSPECIFIED
+		kind := dsapi.ValidationProblem_KIND_UNSPECIFIED
 		switch p.Kind {
 		case param.ProblemStructural:
-			kind = webapi.ValidationProblem_KIND_STRUCTURAL
+			kind = dsapi.ValidationProblem_KIND_STRUCTURAL
 		case param.ProblemCompleteness:
-			kind = webapi.ValidationProblem_KIND_COMPLETENESS
+			kind = dsapi.ValidationProblem_KIND_COMPLETENESS
 		}
-		out = append(out, &webapi.ValidationProblem{Kind: kind, Message: p.Message})
+		out = append(out, &dsapi.ValidationProblem{Kind: kind, Message: p.Message})
 	}
 	return out
 }
 
 // GetAnnotations returns the region-annotation overlay for a datasheet as the union of every
 // author's overlay. An empty union (nobody has annotated) is a normal state, not an error.
-func (s *DatasheetService) GetAnnotations(ctx context.Context, req *webapi.GetAnnotationsRequest) (*webapi.GetAnnotationsResponse, error) {
+func (s *DatasheetService) GetAnnotations(ctx context.Context, req *dsapi.GetAnnotationsRequest) (*dsapi.GetAnnotationsResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -198,13 +198,13 @@ func (s *DatasheetService) GetAnnotations(ctx context.Context, req *webapi.GetAn
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	return &webapi.GetAnnotationsResponse{Sets: sets}, nil
+	return &dsapi.GetAnnotationsResponse{Sets: sets}, nil
 }
 
 // SaveAnnotations persists one author's overlay, replacing that author's prior overlay for the
 // datasheet. There is no optimistic concurrency: each author owns their own file. An absent set or
 // an empty author is an invalid argument (the author names the file and cannot be inferred).
-func (s *DatasheetService) SaveAnnotations(ctx context.Context, req *webapi.SaveAnnotationsRequest) (*webapi.SaveAnnotationsResponse, error) {
+func (s *DatasheetService) SaveAnnotations(ctx context.Context, req *dsapi.SaveAnnotationsRequest) (*dsapi.SaveAnnotationsResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -219,5 +219,5 @@ func (s *DatasheetService) SaveAnnotations(ctx context.Context, req *webapi.Save
 	if err := s.annotations.Save(ctx, u, set.GetAuthor(), set); err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	return &webapi.SaveAnnotationsResponse{}, nil
+	return &dsapi.SaveAnnotationsResponse{}, nil
 }

@@ -5,7 +5,7 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { Document } from "./gen/agni/v1/doc/doc_pb.js";
 import type { PartSpec, Parameter, Pin, PinRelation } from "./gen/agni/v1/param/param_pb.js";
-import type { ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
+import type { ValidationProblem } from "./gen/agni/v1/dsapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
 import type { PdfSource, PDFDocumentProxy, RenderedPage } from "./pdfsource.js";
 import {

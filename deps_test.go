@@ -14,6 +14,7 @@ var embeddingSurface = []string{
 	"github.com/panyam/agni",
 	"github.com/panyam/agni/service",
 	"github.com/panyam/agni/artifact",
+	"github.com/panyam/agni/mounts",
 }
 
 // TestEmbeddingSurfaceIsImportable is C13's "importable" clause as a test rather than a command in a
@@ -197,7 +198,7 @@ func depsOfTier(t *testing.T, pattern, want string) []string {
 	return got
 }
 
-// C34: the engine depends on the datasheet tier through its CONTRACT (datasheet/param and
+// C34: the engine depends on the datasheet tier through its CONTRACT (core/param and
 // param.proto) and never through the extraction pipeline, which is one producer of PartSpecs among
 // several (agni issue 744).
 const self = "github.com/panyam/agni/"
@@ -223,7 +224,7 @@ var datasheetProducerProtos = []string{
 var producerHosts = []string{
 	self + "cmd/agni",   // `agni derive`, and serve's DatasheetService wiring and OS adapters
 	self + "tools/",     // datasheetstatus and the pdf2doc validator
-	self + "datasheet/", // the producer packages themselves (datasheet/param is checked below)
+	self + "datasheet/", // the producer packages themselves
 }
 
 // enginePackages is every package in this module that is neither a producer host nor generated
@@ -240,8 +241,7 @@ func enginePackages(t *testing.T) []string {
 		if strings.HasPrefix(p, self+"gen/") {
 			continue
 		}
-		hosted := slices.ContainsFunc(producerHosts, func(h string) bool { return strings.HasPrefix(p, h) })
-		if hosted && p != self+"datasheet/param" {
+		if slices.ContainsFunc(producerHosts, func(h string) bool { return strings.HasPrefix(p, h) }) {
 			continue
 		}
 		engine = append(engine, p)
@@ -253,8 +253,8 @@ func enginePackages(t *testing.T) []string {
 // extraction pipeline, directly or transitively.
 func TestEngineNamesNoDatasheetProducer(t *testing.T) {
 	engine := enginePackages(t)
-	if !slices.Contains(engine, self+"datasheet/param") || !slices.Contains(engine, self+"core/check") {
-		t.Fatalf("the engine set is missing datasheet/param or core/check, so this check proves nothing: %v", engine)
+	if !slices.Contains(engine, self+"core/param") || !slices.Contains(engine, self+"core/check") {
+		t.Fatalf("the engine set is missing core/param or core/check, so this check proves nothing: %v", engine)
 	}
 	out, err := exec.Command("go", append([]string{"list", "-deps"}, engine...)...).Output()
 	if err != nil {
@@ -262,7 +262,7 @@ func TestEngineNamesNoDatasheetProducer(t *testing.T) {
 	}
 	for _, dep := range strings.Fields(string(out)) {
 		if slices.Contains(datasheetProducer, dep) {
-			t.Errorf("the engine depends on %s (C34): the engine reads PartSpecs through datasheet/param "+
+			t.Errorf("the engine depends on %s (C34): the engine reads PartSpecs through core/param "+
 				"and never the pipeline that produces them. Run `go list -deps` to find the importer", dep)
 		}
 	}
@@ -285,12 +285,11 @@ func TestDatasheetProducerIsVisibleFromItsHost(t *testing.T) {
 }
 
 // producerProtoImporters is the RATCHET for C34's proto half. These engine packages import a
-// producer proto today, and each is removed by #744: DatasheetService lives in service, and
-// datasheet.proto shares agni.v1.webapi with the engine's own services. A new importer fails, and so
-// does an entry here that stopped importing, so the list shrinks when the split lands.
+// producer proto today, and #744 removes each: DatasheetService still lives in service. A new
+// importer fails, and so does an entry here that stopped importing, so the list shrinks as the split
+// lands.
 var producerProtoImporters = map[string]string{
-	self + "service":               "service/datasheet.go is DatasheetService, which #744 moves out",
-	self + "gen/go/agni/v1/webapi": "datasheet.proto is in agni.v1.webapi; #744 gives it its own package",
+	self + "service": "service/datasheet.go is DatasheetService, which #744 moves out",
 }
 
 func TestEngineReachesProducerProtosOnlyThroughDatasheetService(t *testing.T) {

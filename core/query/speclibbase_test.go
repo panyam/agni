@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 // NewSpecLibBase queries the whole seeded corpus with no design. The datasheet relations range over

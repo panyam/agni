@@ -9,7 +9,7 @@ import (
 	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 func runPinFixture(t *testing.T) (*parampb.PartSpec, *derivepb.RunManifest) {
@@ -69,7 +69,7 @@ func TestPinTableDerivesPackagesFromHeaderCells(t *testing.T) {
 func TestGoldenAgreementWithHandEncodedPins(t *testing.T) {
 	derived, _ := runPinFixture(t)
 
-	fh, err := os.Open(filepath.Join("..", "param", "testdata", "txb0104.textproto"))
+	fh, err := os.Open(filepath.Join("..", "..", "core", "param", "testdata", "txb0104.textproto"))
 	if err != nil {
 		t.Fatal(err)
 	}

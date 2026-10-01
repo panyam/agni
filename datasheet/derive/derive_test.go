@@ -11,7 +11,7 @@ import (
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/datasheet/doc"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 func loadDocFixture(t *testing.T, name string) *docpb.Document {
@@ -176,7 +176,7 @@ func TestRunConditionCoverage(t *testing.T) {
 // here (the hand encoding lifts footnote defaults into conditions; v0 does not).
 func TestGoldenAgreementWithHandEncoded(t *testing.T) {
 	spec, _ := runFixture(t)
-	fh, err := os.Open(filepath.Join("..", "param", "testdata", "bss138.textproto"))
+	fh, err := os.Open(filepath.Join("..", "..", "core", "param", "testdata", "bss138.textproto"))
 	if err != nil {
 		t.Fatal(err)
 	}

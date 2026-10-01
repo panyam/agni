@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/mounts"
 	goal "github.com/panyam/goapplib"
 )
 

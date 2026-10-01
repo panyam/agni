@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/facts"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"

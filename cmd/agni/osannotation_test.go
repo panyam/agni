@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mounts"
+	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
+	"github.com/panyam/agni/mounts"
 )
 
 func TestAnnotationsDirAndSafeAuthor(t *testing.T) {
@@ -30,8 +30,8 @@ func TestOsAnnotationStoreUnion(t *testing.T) {
 	dir := t.TempDir()
 	st := &osAnnotationStore{mounts: []mounts.Mount{{Name: "m", Root: dir}}}
 	ctx := context.Background()
-	region := func(id, typ string) []*webapi.RegionAnnotation {
-		return []*webapi.RegionAnnotation{{RegionId: id, Type: typ}}
+	region := func(id, typ string) []*dsapi.RegionAnnotation {
+		return []*dsapi.RegionAnnotation{{RegionId: id, Type: typ}}
 	}
 
 	// An absent overlay reads as an empty union, not an error.
@@ -41,10 +41,10 @@ func TestOsAnnotationStoreUnion(t *testing.T) {
 	}
 
 	// Two authors annotate the same datasheet.
-	if err := st.Save(ctx, mustURI("m", "d.pdf"), "alice", &webapi.AnnotationSet{DocId: "d", Author: "alice", Annotations: region("p1.t1", "table")}); err != nil {
+	if err := st.Save(ctx, mustURI("m", "d.pdf"), "alice", &dsapi.AnnotationSet{DocId: "d", Author: "alice", Annotations: region("p1.t1", "table")}); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.Save(ctx, mustURI("m", "d.pdf"), "bob", &webapi.AnnotationSet{DocId: "d", Author: "bob", Annotations: region("p2.f1", "schematic")}); err != nil {
+	if err := st.Save(ctx, mustURI("m", "d.pdf"), "bob", &dsapi.AnnotationSet{DocId: "d", Author: "bob", Annotations: region("p2.f1", "schematic")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -58,7 +58,7 @@ func TestOsAnnotationStoreUnion(t *testing.T) {
 	}
 
 	// An author overwrites ONLY its own file (no CAS); the other author's overlay is untouched.
-	if err := st.Save(ctx, mustURI("m", "d.pdf"), "alice", &webapi.AnnotationSet{DocId: "d", Author: "alice", Annotations: region("p3.t2", "chart")}); err != nil {
+	if err := st.Save(ctx, mustURI("m", "d.pdf"), "alice", &dsapi.AnnotationSet{DocId: "d", Author: "alice", Annotations: region("p3.t2", "chart")}); err != nil {
 		t.Fatal(err)
 	}
 	sets, _ = st.Get(ctx, mustURI("m", "d.pdf"))

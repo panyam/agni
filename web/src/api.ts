@@ -8,7 +8,7 @@ import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
-import { DatasheetService } from "./gen/agni/v1/webapi/datasheet_pb.js";
+import { DatasheetService } from "./gen/agni/v1/dsapi/datasheet_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 

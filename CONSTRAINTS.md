@@ -305,7 +305,7 @@ Connect today (`internal/server`, wrap/unwrap plus one sentinel-to-code table), 
 or a real gRPC server later as siblings. The services take their I/O concerns as **injected
 ports** and never touch `os`/`syscall/js` directly. One is a filesystem/opener interface for reading
 mounted designs and resolving secondary files (KiCad sibling schematics, xschem/gEDA
-`--symbol-path`), and a persistence port for the datasheet/parameter store comes later. `cmd/agni` (and any
+`--symbol-path`), and a persistence port for the core/parameter store comes later. `cmd/agni` (and any
 other entrypoint: a WASM build, a cloud function) is thin wiring that constructs the platform
 adapter and hands the services to a transport. Protos split **per service concern**
 (`workspace.proto`, `design.proto`, `checks.proto`, `diff.proto`, ...), never a per-transport
@@ -697,7 +697,7 @@ model as having brought isolation with it. Auth is deliberately deferred; see
 ## C24: A datasheet parameter is compared in SI base units, converted in one place
 **Rule:** Any code that COMPARES a seeded datasheet parameter's value against anything reads the
 row through `param.InBaseUnit` and gates on the CONVERTED row's unit. No package outside
-`datasheet/param` reads a raw `Parameter.Unit`, and no rule or extractor contains a scale factor.
+`core/param` reads a raw `Parameter.Unit`, and no rule or extractor contains a scale factor.
 A unit the conversion table does not recognize is skipped, never scaled by a guess or assumed to
 be the base unit. Storage is unaffected: a `PartSpec` keeps every row exactly as the datasheet
 printed it, and only the value handed to a comparison is reduced.
@@ -726,13 +726,13 @@ same bug to whichever call site forgot it, silently.
 sweep rather than a clean one, the shape `hack/ir_model_baseline.txt` uses for C19. The naive sweep
 for `.Unit != "` does NOT work and must not be substituted: the extractors legitimately compare
 `q.Unit` on the converted row, so the invariant that actually discriminates is about the RAW row's
-unit. But that invariant is "never COMPARED outside `datasheet/param`", and no grep can tell a
+unit. But that invariant is "never COMPARED outside `core/param`", and no grep can tell a
 comparison from a display, which is why the plain command returned two hits on a clean tree from the
 day `param.unit` and `agni params` shipped. Both read the printed unit to PUBLISH it, which is what
 that relation and that table are for. The two sites are allowlisted in the test, and a new
 one is one of two things: if it compares, it is the bug this constraint exists for and it converts
-through `datasheet/param` first; if it displays, it joins the allowlist, and that addition is the
-review moment. `datasheet/param` itself is skipped rather than allowlisted, because it IS the one
+through `core/param` first; if it displays, it joins the allowlist, and that addition is the
+review moment. `core/param` itself is skipped rather than allowlisted, because it IS the one
 place: it is where the conversion happens and what every other tier compares through. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
@@ -1101,7 +1101,7 @@ example modules are outside the sweep because they cannot import `internal/`, so
 is forced by the module boundary. Which ones matter is agni issue 380's question.
 
 ## C34: The engine depends on the datasheet tier through its contract, never through the producer
-**Rule:** The engine's datasheet input is the PartSpec contract: `datasheet/param` and
+**Rule:** The engine's datasheet input is the PartSpec contract: `core/param` and
 `param.proto`. The extraction pipeline that produces PartSpecs (`datasheet/doc`, `datasheet/derive`,
 `datasheet/docindex`, `datasheet/candidate`, and their protos) is one producer among several, beside a
 hand-written textproto and any future vendor feed or parts database. No engine package imports it,
@@ -1119,7 +1119,7 @@ directory is in scope at once. `TestDatasheetProducerIsVisibleFromItsHost` is it
 every listed path resolves, and `cmd/agni` is seen to depend on the producer.
 `TestEngineReachesProducerProtosOnlyThroughDatasheetService` is a ratchet on the proto half, and fails
 on a new importer and on an allowlist entry that stopped importing.
-**Outstanding violation:** the engine still imports one producer proto, `agni.v1.doc`, in two places.
-`DatasheetService` lives in `service` (`service/datasheet.go`), and `datasheet.proto` shares the
-`agni.v1.webapi` package with the engine's own services. Both are on the ratchet's allowlist and both
-move with agni issue 744.
+**Outstanding violation:** the engine still imports one producer proto, `agni.v1.doc`, in one place:
+`DatasheetService` lives in `service` (`service/datasheet.go`). It is the ratchet's only allowlist
+entry, and it moves with agni issue 744. Its API already has its own proto package, `agni.v1.dsapi`,
+so the engine's `agni.v1.webapi` carries no producer message.
