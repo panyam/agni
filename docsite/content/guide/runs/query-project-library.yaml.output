@@ -1,0 +1,5 @@
+#agni-run b038d1821b4a8f8f
+n               provenance
+PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
+
+1 result(s)
