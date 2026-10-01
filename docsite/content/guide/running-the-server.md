@@ -206,8 +206,8 @@ a run per commit will grow the volume until you delete runs yourself.
 The datasheets workbench has an image of its own, `ghcr.io/panyam/agnids`, published by every release
 from the same tag as `agni`'s. It carries `agnids`, the workbench, and the docling environment behind
 the "Extract (first pass)" action, with docling's models already inside, so Extract works on a host
-with no outbound network. That environment is why the image is about 2.5GB where `agni`'s is a
-fraction of that, and why the two are separate.
+with no outbound network. That environment is why the image is about 2.6GB where `agni`'s is about
+230MB, and why the two are separate.
 
 ```
 docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:latest
