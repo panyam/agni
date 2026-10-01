@@ -13,12 +13,14 @@ import (
 	"github.com/panyam/agni/datasheet/dsservice"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	"github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi/dsapiconnect"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/gen/go/agni/v1/param/paramconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
 
 // toConnectErr maps the datasheet service's errors to Connect codes. It covers only what this
-// service returns: the engine's shared sentinels it reuses, and its own two.
+// service returns: the engine's shared sentinels it reuses, and its own.
 func toConnectErr(err error) error {
 	switch {
 	case errors.Is(err, service.ErrNotFound):
@@ -27,6 +29,10 @@ func toConnectErr(err error) error {
 		return connect.NewError(connect.CodeAborted, err)
 	case errors.Is(err, dsservice.ErrExtractNotEnabled):
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agnids serve with --pdf2doc", err))
+	case errors.Is(err, dsservice.ErrNoCorpus):
+		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agnids serve with --corpus <dir>", err))
+	case errors.Is(err, dsservice.ErrCorpusNotReady):
+		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, service.ErrInternal):
 		return connect.NewError(connect.CodeInternal, err)
 	default: // ErrInvalidPath, ErrInvalidArgument, and anything unclassified
@@ -84,4 +90,22 @@ func (a *Datasheet) ListMounts(ctx context.Context, req *connect.Request[webapi.
 
 func (a *Datasheet) ListDir(ctx context.Context, req *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
 	return unary(ctx, req, a.svc.ListDir)
+}
+
+// PartSpec adapts dsservice.PartSpecService to the contract's generated PartSpecService handler, the
+// read side `agni serve --params-url` calls (agni issue 749).
+type PartSpec struct {
+	paramconnect.UnimplementedPartSpecServiceHandler
+	svc *dsservice.PartSpecService
+}
+
+// NewPartSpec wraps svc for Connect.
+func NewPartSpec(svc *dsservice.PartSpecService) *PartSpec { return &PartSpec{svc: svc} }
+
+func (a *PartSpec) BatchGetPartSpecs(ctx context.Context, req *connect.Request[parampb.BatchGetPartSpecsRequest]) (*connect.Response[parampb.BatchGetPartSpecsResponse], error) {
+	return unary(ctx, req, a.svc.BatchGetPartSpecs)
+}
+
+func (a *PartSpec) GetGeneration(ctx context.Context, req *connect.Request[parampb.GetGenerationRequest]) (*connect.Response[parampb.GetGenerationResponse], error) {
+	return unary(ctx, req, a.svc.GetGeneration)
 }

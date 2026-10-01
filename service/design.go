@@ -29,6 +29,8 @@ const faithfulLayout = formats.LayoutFaithful
 //	ErrInvalidArgument -> invalid argument (unloadable design, unsupported operation)
 //	ErrNative*         -> the native-render gate codes (declared below)
 //	ErrInternal        -> internal (an unexpected failure in an otherwise-gated path)
+//	ErrUnavailable     -> unavailable (a service this one depends on could not be reached, such as
+//	                      the PartSpec service behind --params-url)
 //
 // An unclassified error reaching a transport is treated as an invalid argument, the common
 // case for load/parse failures.
@@ -36,6 +38,7 @@ var (
 	ErrNotFound        = errors.New("not found")
 	ErrInvalidArgument = errors.New("invalid argument")
 	ErrInternal        = errors.New("internal error")
+	ErrUnavailable     = errors.New("unavailable")
 )
 
 // Loader materializes a design's read model from an artifact.URI. The server adapter (osLoader in

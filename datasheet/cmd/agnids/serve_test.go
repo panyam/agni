@@ -54,7 +54,7 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := newWorkbenchMux(ms, filepath.Join("..", "..", "web"), nil, "")
+	mux := newWorkbenchMux(ms, filepath.Join("..", "..", "web"), nil, "", nil)
 	do := func(method, path, body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
 		if body != "" {
@@ -97,7 +97,7 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 // heading links home only when --viewer-url says where the viewer is.
 func TestWorkbenchHeadingLinksTheViewerOnlyWhenConfigured(t *testing.T) {
 	page := func(viewer string) string {
-		mux := newWorkbenchMux(nil, filepath.Join("..", "..", "web"), nil, viewer)
+		mux := newWorkbenchMux(nil, filepath.Join("..", "..", "web"), nil, viewer, nil)
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest("GET", "/datasheets/", nil))
 		if rec.Code != 200 {

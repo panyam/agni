@@ -86,7 +86,9 @@ Its web assets are its own, `datasheet/web`, built by `make ui`, so a workbench 
 part of the viewer's `web/`. From a checkout, `make dsserve DATASHEET_DIR=~/datasheets` runs it. The
 two link to each other only when told where the other is: `agni serve --datasheets-url
 http://host:8090` shows the landing page's Datasheets card, and `agnids serve --viewer-url
-http://host:8080` makes the workbench's heading link home.
+http://host:8080` makes the workbench's heading link home. The same service can also serve a
+published corpus of PartSpecs with `--corpus <dir>`, which `agni serve --params-url http://host:8090`
+reads in place of a `--params` directory (see [Datasheets](../datasheets/#serving-a-shared-corpus)).
 
 Two ways to avoid typing it every time:
 

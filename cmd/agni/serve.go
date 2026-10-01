@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	skhttp "github.com/panyam/servicekit/http"
 	"github.com/spf13/cobra"
@@ -25,6 +26,7 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/native"
+	"github.com/panyam/agni/internal/paramclient"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/mounts"
@@ -41,13 +43,18 @@ import (
 //
 // Routing is server-owned (CONSTRAINTS C11) and the API is proto-defined over Connect (C2), so
 // one contract drives the Go server and the TS client.
+// paramsMaxAge is how long a --params-url corpus's generation is trusted before it is asked again, so
+// a spec published there reaches a request within this long and the service is not asked on every
+// request.
+const paramsMaxAge = 5 * time.Second
+
 func serveCmd() *cobra.Command {
 	var addr string
 	var mountRoot string
 	var nativeTools []string
 	var datasheetsURL string
 	var theme string
-	var paramsDir, profilePath, intentPath, conventions string
+	var paramsDir, paramsURL, profilePath, intentPath, conventions string
 	var reviewStorePath string
 	var webDir string
 	c := &cobra.Command{
@@ -62,7 +69,7 @@ func serveCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runViewer(cmd, viewerOpts{
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
-				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir,
+				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, intentPath: intentPath, conventions: conventions,
 				reviewStorePath: reviewStorePath,
 			})
@@ -80,6 +87,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&datasheetsURL, "datasheets-url", "", "where the datasheets workbench is served, e.g. http://host:8090 for a running `agnids serve`; the landing page links its Datasheets card and datasheet recents there, and hides both when this is empty")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
+	c.Flags().StringVar(&paramsURL, "params-url", "", "a PartSpecService to read published PartSpecs from instead of a directory, e.g. http://host:8090 for an `agnids serve --corpus`; each request fetches its design's parts in one batch, and a spec published there reaches the next request. Not with --params. A project's own params/ still wins over it")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
@@ -99,6 +107,7 @@ type viewerOpts struct {
 	nativeTools []string
 	theme       string
 	paramsDir   string
+	paramsURL   string
 	profilePath string
 	intentPath  string
 	conventions string
@@ -180,12 +189,24 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// Absent --params leaves it nil, so the params RPC returns no joined specs and never an
 	// error, like the CLI's --params (main.go readModelWithParams).
 	var specs param.ParamProvider
+	if paramsDir != "" && o.paramsURL != "" {
+		return fmt.Errorf("--params and --params-url both name the server-wide corpus; pass one")
+	}
 	if paramsDir != "" {
 		set, err := param.LoadSet(os.DirFS(paramsDir))
 		if err != nil {
 			return fmt.Errorf("--params %q: %w", paramsDir, err)
 		}
 		specs = set
+	}
+	if o.paramsURL != "" {
+		// Asked once before the listener opens, so a wrong URL fails at startup by name rather than as
+		// an unavailable error on the first check someone runs.
+		remote := paramclient.New(strings.TrimSuffix(o.paramsURL, "/"))
+		if _, err := remote.Generation(cmd.Context()); err != nil {
+			return fmt.Errorf("--params-url %q: %w", o.paramsURL, err)
+		}
+		specs = param.NewRemote(remote, paramsMaxAge)
 	}
 
 	mux := http.NewServeMux()

@@ -68,6 +68,18 @@ func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.
 	if !boardURI.IsZero() && bg == nil {
 		return nil, fmt.Errorf("%w: board_uri %q carries no board geometry", ErrInvalidArgument, boardURI)
 	}
+	// A corpus reached over a network fetches the design's parts here, where a failure can be an
+	// error. Its Lookup cannot report one, and a nil from it reads as "not seeded", which would make
+	// every datasheet rule skip the part silently (agni issue 749).
+	if p, ok := specs.(param.Prefetcher); ok {
+		mpns := make([]string, 0, len(d.GetComponents()))
+		for _, c := range d.GetComponents() {
+			mpns = append(mpns, c.GetMpn())
+		}
+		if err := p.Prefetch(ctx, mpns); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+	}
 	// The read's lexicon also reaches the MODEL, so name matches that hold no net (spec name FFIs,
 	// pin-role derivation) use the vocabulary the design was stamped with.
 	mopts := []check.ModelOption{check.WithBoard(bg), check.WithParamProvider(specs)}

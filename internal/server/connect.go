@@ -33,6 +33,8 @@ func toConnectErr(err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, service.ErrReviewStoreNotConfigured):
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --review-store <dir>", err))
+	case errors.Is(err, service.ErrUnavailable):
+		return connect.NewError(connect.CodeUnavailable, err)
 	case errors.Is(err, service.ErrInternal):
 		return connect.NewError(connect.CodeInternal, err)
 	default: // ErrInvalidPath, ErrInvalidArgument, and anything unclassified
