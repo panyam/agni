@@ -150,7 +150,7 @@ func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 func TestBaseReuseAcrossRuleBearingQueries(t *testing.T) {
 	b := NewBase(check.NewModel(benchDesign(50)))
 	first := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n); d(?x,?y) => ?x`)
-	second := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n), prefix(?a,"R1"); d(?x,?y) => ?x`)
+	second := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n), str.prefix(?a,"R1"); d(?x,?y) => ?x`)
 	again := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n); d(?x,?y) => ?x`)
 	if len(second) >= len(first) {
 		t.Fatalf("setup: the narrowed query returned %d rows, not fewer than %d", len(second), len(first))

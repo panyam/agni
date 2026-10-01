@@ -103,12 +103,12 @@ var builtinSchema = map[string][]facts.Field{
 
 // builtinCatalog is the human-facing metadata for the built-in relations: the picker's name, arg
 // labels, one-line summary and kind. TestCatalogMatchesSchema fails on a schema relation with no
-// catalog entry or a mismatched arity. The computed predicates (reaches, the string filters) are in
-// query's builtinPredicates.
+// catalog entry or a mismatched arity. The computed predicates register elsewhere, net.reaches and
+// net.route in walk.go and the str.* string tests with the vocabulary itself.
 var builtinCatalog = []facts.RelationInfo{
 	{Name: "component.mpn", Args: []string{"ref_des", "mpn"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the design-side part identity (manufacturer part number)", Kind: facts.KindNetlist},
 	{Name: "component.net", Args: []string{"ref_des", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "net": {Entity: check.KindNet}}, Summary: "a component sits on a net", Kind: facts.KindNetlist},
-	{Name: "entity", Args: []string{"name", "kind"}, ArgKinds: map[string]facts.ArgKind{"name": {KindArg: "kind"}}, Summary: "a thing exists in the design under this name, with kind one of component/net/bus. The relation to start a name search from, since every other one ranges over an association and so misses whatever it does not reach (a part with no connections, a net with nothing on it)", Kind: facts.KindNetlist},
+	{Name: "entity", Args: []string{"name", "kind"}, ArgKinds: map[string]facts.ArgKind{"name": {KindArg: "kind"}, "kind": {ValidOptions: []string{check.KindComponent, check.KindNet, check.KindBus}}}, Summary: "a thing exists in the design under this name, with kind one of component/net/bus. The relation to start a name search from, since every other one ranges over an association and so misses whatever it does not reach (a part with no connections, a net with nothing on it)", Kind: facts.KindNetlist},
 	{Name: "net.max_voltage", Args: []string{"net", "volts"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net's declared rail voltage", Kind: facts.KindNetlist},
 	{Name: "net.nominal_voltage", Args: []string{"net", "volts"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level, and a regulator internal (_FB, _SW, _BOOT) is on neither because the number in its name is another net's voltage", Kind: facts.KindNetlist},
 	{Name: "net.signal_level", Args: []string{"net", "volts"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the signalling level a NON-RAIL net's name declares, the other half of net.nominal_voltage. A house convention that encodes a level into a signal net's name lands here rather than being read as a rail nominal; a regulator internal is on neither relation", Kind: facts.KindNetlist},

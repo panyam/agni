@@ -375,9 +375,10 @@ graph-structured and the core queries are transitive closures, and because a dec
 what, not how, so the evaluator behind it is swappable. The shipped fragment is conjunction and
 comparison, a built-in bounded transitive closure, stratified negation, aggregation (count, min,
 max, sum, list, each optionally `distinct`, with `having` filtering the groups), string predicates
-(contains, prefix, suffix), and user-defined recursive rules evaluated to a stratified fixpoint. An
-overlay can register its own relations and pure filter predicates, so a private house database
-becomes a first-class query relation with no change to the evaluator.
+(`str.contains`, `str.prefix`, `str.suffix`, `str.glob`, `str.match`), and user-defined recursive
+rules evaluated to a stratified fixpoint. An overlay can register its own relations and predicates,
+filters or generators over the design, so a private house database becomes a first-class query
+relation with no change to the evaluator.
 
 The datalog engine imports only the Go standard library, so it builds for WebAssembly as well as
 running on the server. The command form prints answers with provenance:

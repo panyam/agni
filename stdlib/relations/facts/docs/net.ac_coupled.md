@@ -57,5 +57,5 @@ net.ac_coupled(?n), component.net(?r, ?n) => ?n, ?r
 High-speed pairs that are NOT coupled, the shape a link-integrity review asks about:
 
 ```
-component.net(?r, ?n), suffix(?n, "_TXP"), not net.ac_coupled(?n) => ?n, ?r
+component.net(?r, ?n), str.suffix(?n, "_TXP"), not net.ac_coupled(?n) => ?n, ?r
 ```

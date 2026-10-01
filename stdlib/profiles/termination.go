@@ -56,9 +56,9 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 	// in_use) are generated from the profile's signal list, so they are appended as AST rather than
 	// inlined into this text.
 	tq := query.MustParse(fmt.Sprintf(
-		`terminated(?h) :- component.net(?r, ?h), suffix(?h, %q), net.reaches(?h, ?l), suffix(?l, %q);
+		`terminated(?h) :- component.net(?r, ?h), str.suffix(?h, %q), net.reaches(?h, ?l), str.suffix(?l, %q);
 		 any_term("x") :- terminated(?h);
-		 unterminated(?h) :- component.net(?r, ?h), suffix(?h, %q), in_use(?iu), not any_term("x");
+		 unterminated(?h) :- component.net(?r, ?h), str.suffix(?h, %q), in_use(?iu), not any_term("x");
 		 unterminated(?h) => ?h`, high, low, high))
 	tq.Rules = append(p.presenceRules(), tq.Rules...)
 	// The considered set: the high-side nets of a bus the presence gate says is in use, which is
@@ -69,7 +69,7 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 	// with two buses and one terminator reports both as terminated. That limit is the rule's own and
 	// predates the considered set, which only makes it visible on the coverage line.
 	dq := query.MustParse(fmt.Sprintf(
-		`term_scope(?h) :- component.net(?r, ?h), suffix(?h, %q), in_use(?iu);
+		`term_scope(?h) :- component.net(?r, ?h), str.suffix(?h, %q), in_use(?iu);
 		 term_scope(?h) => ?h`, high))
 	dq.Rules = append(append([]query.Rule{}, tq.Rules...), dq.Rules...)
 	return query.MustRuleFromQuery(query.FindingQuery{

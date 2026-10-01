@@ -13,6 +13,11 @@ const (
 	datalogEngine = "github.com/panyam/jaala/datalog"
 )
 
+// vocabulary is jaala's namespace contract: the tree of names, their signatures and the value types,
+// with no parser or evaluator. The fact layer registers into it (agni issue 751), which C29 allows
+// because naming things is not answering questions about them.
+const vocabulary = "github.com/panyam/jaala/ns"
+
 func isEngine(dep string) bool { return dep == queryEngine || dep == datalogEngine }
 
 // TestCoreNamesNoQueryEngine is C29 as a test rather than a command in a document.
@@ -48,6 +53,29 @@ func TestQueryEngineReachesTheDatalogEngine(t *testing.T) {
 		}
 	}
 	t.Errorf("%s does not depend on %s; the engine paths these sweeps look for are stale", queryEngine, datalogEngine)
+}
+
+// TestTheVocabularyIsNoEngine is why C29 can admit jaala/ns. The fact layer imports it, so if it ever
+// imported the evaluator, every package under core/ would reach one through the fact layer and the
+// sweep above would report them all at once, naming the wrong culprit. This names the right one.
+func TestTheVocabularyIsNoEngine(t *testing.T) {
+	for _, dep := range deps(t, vocabulary) {
+		if isEngine(dep) {
+			t.Errorf("%s depends on %s; the namespace contract must not carry an evaluator", vocabulary, dep)
+		}
+	}
+}
+
+// TestFactLayerReachesTheVocabulary is the positive control for TestTheVocabularyIsNoEngine. It passes
+// by finding nothing, so it proves something only while the fact layer really does import the path
+// it checks.
+func TestFactLayerReachesTheVocabulary(t *testing.T) {
+	for _, dep := range deps(t, "github.com/panyam/agni/core/facts") {
+		if dep == vocabulary {
+			return
+		}
+	}
+	t.Errorf("core/facts does not depend on %s; the vocabulary path checked here is stale", vocabulary)
 }
 
 // TestRelationCatalogNamesNoQueryEngine is the other half. The shipped relation catalog is DATA

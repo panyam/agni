@@ -931,13 +931,20 @@ Rationale in [Decisions](DECISIONS.md), "A recorded locator is renamed once at r
 **Rule:** Relations, the tuple they project into, and the registry they install themselves in live in
 `core/facts`, which imports `core/check` and nothing that answers queries. A query engine depends on
 the fact layer, never the reverse. `stdlib/relations`, the shipped netlist/board/datasheet relation
-catalog, imports `core/facts` only. A RELATION is data derived from the Model and registers with
-`facts.RegisterRelation`; a PREDICATE, a join strategy, and a query language belong to whichever
-engine computes them (`core/query` is agni's adapter over the Datalog engine in
-`github.com/panyam/jaala/datalog`, and `query.RegisterPredicate` is its extension point). A DERIVED relation,
-defined in a query language over other relations, belongs to its engine the same way; one that a Go
-rule or a Spec needs is promoted to a base relation rather than read across engines (DECISIONS,
-"The Datalog engine lives in jaala"). An engine claims its predicate vocabulary with `facts.Reserve`. **No package under `core/` outside
+catalog, imports `core/facts` only. Every name a query can call registers in `core/facts` at a PATH
+of one vocabulary, jaala's `ns.Vocabulary` (agni issue 751). `jaala/ns` holds names, signatures and
+values with no parser or evaluator, so importing it names things without answering anything about
+them, and it is the one part of jaala the fact layer may import. A RELATION is data derived from the
+Model (`facts.RegisterRelation`). A PREDICATE is an `ns.Builtin`, a filter or a generator reaching the
+design through `facts.EnvOf` (`facts.RegisterPredicate`). A MODULE of derived relations is text in a
+language some engine registered (`facts.RegisterModule`, `facts.RegisterLanguage`), and the fact
+layer stores it without reading it. The vocabulary applies the tree's two rules as each name
+arrives, so a path has one definer and a segment is a module or a member whichever side registered
+first. A join strategy, a parser and an evaluator belong to whichever engine computes them
+(`core/query` is agni's adapter over `github.com/panyam/jaala/datalog`, which registers its language
+and builds a fact base per design over the one vocabulary). A DERIVED relation belongs to the engine
+that reads its language; one that a Go rule or a Spec needs is promoted to a base relation rather
+than read across engines (DECISIONS, "The Datalog engine lives in jaala"). **No package under `core/` outside
 `core/query` may name a query syntax at all**: `core/review` compiles a manifest's inline query
 through a registered `QueryCompiler` returning a `*check.Rule`, which is the same neutral currency
 `check.RegisterSource` trades in.
@@ -948,9 +955,11 @@ for per-entity questions and Go for the rest), and a shape that owns the fact tu
 other shapes second-class and the tuple's limits everyone's limits. Authoring a relation must not
 require picking an engine. This is the query-side twin of C17's downward-only layering and of the
 `check.RegisterSource` posture that already keeps the rule catalog engine-neutral (C14, C18).
-**Verify:** `go test ./core/facts/ -run 'NoQueryEngine|ReachesTheDatalogEngine'`, which sweeps every
-package under `core/...` and the relation catalog for either engine path, with a positive control
-that the adapter really does reach the engine. It is a TEST rather than a command in this document because the
+**Verify:** `go test ./core/facts/ -run 'NoQueryEngine|ReachesTheDatalogEngine|VocabularyIsNoEngine|ReachesTheVocabulary|TreeRulesHoldAcrossEveryKind'`,
+which sweeps every package under `core/...` and the relation catalog for either engine path, with a
+positive control that the adapter really does reach the engine; holds `jaala/ns` itself free of the
+evaluator, with a positive control that the fact layer really imports it; and holds the tree's two
+rules across relations, predicates and modules. It is a TEST rather than a command in this document because the
 first draft of this constraint was a command, and it went stale within three PRs of being written:
 both halves of a violation compile and pass, so nothing surfaces one until someone re-reads the rule.
 The shape is `core/model/deps_test.go`'s, for the same reason.

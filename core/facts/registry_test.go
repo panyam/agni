@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/jaala/ns"
 )
 
 func rel(name string) Option {
@@ -43,8 +44,8 @@ func TestInstalledSeparatesEmptyFromAbsent(t *testing.T) {
 // to look in both directions to cover the same ground.
 func TestCompositionIsOrderIndependent(t *testing.T) {
 	for name, opts := range map[string][]Option{
-		"reserve then relation": {Reserving("test-engine", "test.clash"), rel("test.clash")},
-		"relation then reserve": {rel("test.clash"), Reserving("test-engine", "test.clash")},
+		"predicate then relation": {WithPredicate("test.clash", always), rel("test.clash")},
+		"relation then predicate": {rel("test.clash"), WithPredicate("test.clash", always)},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := NewRegistry(opts...)
@@ -55,6 +56,56 @@ func TestCompositionIsOrderIndependent(t *testing.T) {
 				t.Errorf("error %v does not name the colliding relation", err)
 			}
 		})
+	}
+}
+
+// always is a filter predicate that keeps every binding.
+var always = ns.Filter(1, func([]ns.Value) (bool, error) { return true, nil })
+
+// TestTreeRulesHoldAcrossEveryKind pins that the vocabulary's two rules (one definer per path; a
+// segment is a module or a member) reach agni's composition for every kind of name it registers,
+// including the string tests the engine contract ships, so a relation cannot take str.contains.
+func TestTreeRulesHoldAcrossEveryKind(t *testing.T) {
+	cases := map[string][]Option{
+		"relation and predicate":       {rel("test.f"), WithPredicate("test.f", always)},
+		"two predicates":               {WithPredicate("test.f", always), WithPredicate("test.f", always)},
+		"relation and standard filter": {rel("str.contains")},
+		"member and module prefix":     {rel("test"), rel("test.child")},
+		"module in no known language":  {WithModule("lib", "no-such-language", "a(?x) :- b(?x);")},
+	}
+	for name, opts := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := NewRegistry(opts...); err == nil {
+				t.Error("composed; want the vocabulary to refuse it")
+			}
+		})
+	}
+	if _, err := NewRegistry(rel("test.a"), rel("test.b"), WithPredicate("test.f", always)); err != nil {
+		t.Errorf("a well-formed tree was refused: %v", err)
+	}
+}
+
+// TestPredicatesListsEveryPredicateOnce pins the catalog's view of the vocabulary: the standard string
+// tests and a registered predicate are both listed, each as a predicate, and a relation is not.
+func TestPredicatesListsEveryPredicateOnce(t *testing.T) {
+	reg, err := NewRegistry(rel("test.r"), WithPredicate("test.f", always))
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]int{}
+	for _, p := range reg.Predicates() {
+		seen[p.Name]++
+		if p.Kind != KindPredicate {
+			t.Errorf("%s listed as %q, want %q", p.Name, p.Kind, KindPredicate)
+		}
+	}
+	for _, want := range []string{"test.f", "str.contains", "str.glob", "absent"} {
+		if seen[want] != 1 {
+			t.Errorf("%s listed %d times, want once", want, seen[want])
+		}
+	}
+	if seen["test.r"] != 0 {
+		t.Error("a relation is listed as a predicate")
 	}
 }
 

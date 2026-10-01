@@ -41,8 +41,14 @@ func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
 		},
 		{
 			name:  "rule head redefining a fact relation",
-			query: `net.rail(?n) :- component.net(?r, ?n); net.rail(?n) => ?n`,
+			query: `entity(?n, ?k) :- component.net(?n, ?k); entity(?n, ?k) => ?n`,
 			wants: "redefines a fact relation",
+		},
+		{
+			// A query defines only its own bare relations; a shared one belongs to a module (agni 751).
+			name:  "rule head naming a qualified path",
+			query: `net.rail(?n) :- component.net(?r, ?n); net.rail(?n) => ?n`,
+			wants: "qualified path",
 		},
 		{
 			name:  "unknown aggregate",
@@ -104,14 +110,14 @@ func TestValidateNeedsNoDesign(t *testing.T) {
 	}
 }
 
-// evalFailingQuery validates but cannot be solved, because `contains` needs its argument bound, and no
-// relation binds ?loose. Validation does not catch it because binding ORDER is what the solver
-// establishes, and reproducing that here would mean reimplementing solve.
+// evalFailingQuery validates but cannot be solved, because `str.contains` needs its argument bound,
+// and no relation binds ?loose. Validation does not catch it because binding ORDER is what the
+// solver establishes, and reproducing that here would mean reimplementing solve.
 //
 // That gap is why the eval-time half of agni issue 540 matters. Construction catches the queries an
 // author gets wrong most often, and this one still slips through to the evaluator, so what the
 // evaluator does with a failure is not academic.
-const evalFailingQuery = `component.net(?r, ?n), contains(?loose, "x") => ?r`
+const evalFailingQuery = `component.net(?r, ?n), str.contains(?loose, "x") => ?r`
 
 // TestEvalFailureIsInconclusiveNotClean: a rule whose query cannot be evaluated reports that it could
 // not decide. It used to return no findings, which every consumer reads as a design with no defects.

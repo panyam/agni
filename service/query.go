@@ -7,7 +7,6 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -323,197 +322,37 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 }
 
 // columnKinds derives each answer column's entity kind for the panel's click-to-locate (WS9-038):
-// "component" (a ref_des), "net", "bus", or "" (a scalar or unresolved column). It reads what each
-// relation DECLARES about its arguments (facts.RelationInfo.ArgKinds), never its arg labels (agni
-// issue 548). An aggregate or constant column stays scalar even when it reduces an entity variable,
-// since count(?ref) is a number.
+// "component" (a ref_des), "net", "bus", or "" (a scalar or unresolved column). The engine reads it
+// from what each relation and predicate DECLARES about its arguments, never their labels (agni issue
+// 548), and follows derived relations into their bodies (agni issue 654). An aggregate column stays
+// scalar even when it reduces an entity variable, since count(?ref) is a number.
 //
 // kindVars[i] names the variable whose per-row binding types column i, for a relation like
 // `entity(?name, ?kind)` whose answer set mixes components, nets and buses (agni issue 338). It is
-// "" for an ordinary column, and where it is set, kinds[i] is "".
+// "" for an ordinary column, and where it is set, kinds[i] is "". refs[i] is the term locating a
+// column whose entity is found only through another, such as a pin through its component.
+//
+// A query the engine cannot type answers with plain columns rather than failing, since typing only
+// decides which cells are clickable.
 func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []query.Term) {
-	decls := catalogArgDecls()
-	terms := q.Select
-	if len(terms) == 0 {
-		for _, col := range q.Columns() {
-			terms = append(terms, query.Term{Var: col})
-		}
+	n := len(q.Select)
+	if n == 0 {
+		n = len(q.Columns())
 	}
-	kinds = make([]string, len(terms))
-	kindVars = make([]query.Var, len(terms))
-	refs = make([]query.Term, len(terms))
-	for i, t := range terms {
-		if t.Agg == nil && t.Var != "" {
-			kinds[i], kindVars[i], refs[i] = varKind(t.Var, q.Goal, decls, q.Rules, nil)
+	kinds = make([]string, n)
+	kindVars = make([]query.Var, n)
+	refs = make([]query.Term, n)
+	cks, err := query.ColumnKinds(q)
+	if err != nil {
+		return kinds, kindVars, refs
+	}
+	for i, ck := range cks {
+		if i >= n {
+			break
 		}
+		kinds[i], kindVars[i], refs[i] = ck.Kind, ck.KindFrom, ck.Owner
 	}
 	return kinds, kindVars, refs
-}
-
-// varKind returns the entity kind a variable resolves to, or the variable whose per-row binding
-// carries it. It walks the positive body atoms and takes the first entity-yielding binding, so a
-// variable used as a net in one atom and a scalar in another is a net; a variable bound only in
-// scalar positions is a scalar.
-//
-// A variable the catalog cannot type is followed into the USER RULES that bind it (agni issue 654),
-// so a derived relation keeps the kind its body established. That walk has three properties, each
-// wrong in the obvious implementation:
-//
-//   - It follows MORE THAN ONE HOP, since a rule defined through another rule is ordinary. `seen`
-//     bounds it, because a rule set may be recursive.
-//   - Rules that DISAGREE about a head position yield a scalar rather than the first one written,
-//     which would be wrong for half the rows.
-//   - A rule wrapping `entity(?name, ?kind)` stays scalar, because a head argument has no per-row
-//     identity to carry kindVars through.
-//
-// Every branch reads a DECLARATION, never the catalog's arg labels (agni issue 548).
-func varKind(col query.Var, body query.Body, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Var, query.Term) {
-	for _, lit := range body.Literals {
-		a := lit.Pos
-		if a == nil {
-			continue
-		}
-		d, ok := decls[a.Relation]
-		if !ok {
-			continue
-		}
-		for j, term := range a.Args {
-			if j >= len(d.labels) || term.Var != col {
-				continue
-			}
-			k, ok := d.kinds[d.labels[j]]
-			if !ok {
-				continue // the relation declares this argument as a scalar
-			}
-			// A polymorphic column takes its kind from the VALUE another column binds, per row.
-			if k.KindArg != "" {
-				if arg, ok := argAt(a, d.labels, k.KindArg); ok {
-					switch {
-					case arg.Var != "":
-						return "", arg.Var, query.Term{}
-					case arg.Const != nil:
-						// A constant types the column statically, so "find a net by name" gives a
-						// plain net column. A value outside entityKind's vocabulary stays a scalar.
-						if ek := entityKind(arg.Const.S); ek != "" {
-							return ek, "", query.Term{}
-						}
-					}
-				}
-				continue
-			}
-			// A pin is locatable only through its owning component. A declared owner argument the
-			// relation lacks means the declaration is wrong, and the column stays untyped.
-			if k.OwnerArg != "" {
-				if ref, ok := argAt(a, d.labels, k.OwnerArg); ok {
-					return k.Entity, "", ref
-				}
-				continue
-			}
-			return k.Entity, "", query.Term{}
-		}
-	}
-	return kindThroughRules(col, body, decls, rules, seen)
-}
-
-// kindThroughRules resolves a variable the catalog could not type by following the user rules that
-// define the relations binding it. It runs only after the catalog walk fails, so a variable the
-// catalog can type is unaffected.
-func kindThroughRules(col query.Var, body query.Body, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Var, query.Term) {
-	if len(rules) == 0 {
-		return "", "", query.Term{}
-	}
-	for _, lit := range body.Literals {
-		a := lit.Pos
-		if a == nil || seen[a.Relation] {
-			continue
-		}
-		for j, term := range a.Args {
-			if term.Var != col {
-				continue
-			}
-			kind, ref, ok := headKind(a.Relation, j, decls, rules, seen)
-			if ok && kind != "" {
-				return kind, "", ref
-			}
-		}
-	}
-	return "", "", query.Term{}
-}
-
-// headKind types argument j of a derived relation by asking every rule that defines it, and returns a
-// kind only when they agree. A rule binding the position to a per-row kind (kindVars) counts as
-// DISAGREEMENT, so the column is a scalar.
-func headKind(rel string, j int, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Term, bool) {
-	next := make(map[string]bool, len(seen)+1)
-	for k := range seen {
-		next[k] = true
-	}
-	next[rel] = true
-
-	var kind string
-	var ref query.Term
-	found := false
-	for _, r := range rules {
-		if r.Head.Relation != rel || j >= len(r.Head.Args) {
-			continue
-		}
-		hv := r.Head.Args[j].Var
-		if hv == "" {
-			return "", query.Term{}, false // a constant head argument types nothing
-		}
-		// A rule reaching back into one already being resolved ABSTAINS rather than vetoing, so a
-		// transitive closure is typed by its base case instead of collapsing to a scalar.
-		if bodyTouches(r.Body, next) {
-			continue
-		}
-		k, kv, rf := varKind(hv, r.Body, decls, rules, next)
-		if k == "" || kv != "" {
-			return "", query.Term{}, false // untypeable or per-row, so the head is scalar
-		}
-		if found && k != kind {
-			return "", query.Term{}, false // two rules, two kinds: scalar rather than first-wins
-		}
-		kind, ref, found = k, rf, true
-	}
-	return kind, ref, found
-}
-
-// bodyTouches reports whether any positive literal names a relation currently being resolved, which
-// is how a cycle is recognised without walking into it.
-func bodyTouches(body query.Body, seen map[string]bool) bool {
-	for _, lit := range body.Literals {
-		if lit.Pos != nil && seen[lit.Pos.Relation] {
-			return true
-		}
-	}
-	return false
-}
-
-// relArgDecl is one relation's argument labels and what they denote.
-type relArgDecl struct {
-	labels []string
-	kinds  map[string]facts.ArgKind
-}
-
-// catalogArgDecls indexes the relation catalog by name. A relation with no declared argument kinds
-// still appears, so a column of a known relation types as a scalar rather than as unknown.
-func catalogArgDecls() map[string]relArgDecl {
-	m := make(map[string]relArgDecl, len(query.Catalog()))
-	for _, ri := range query.Catalog() {
-		m[ri.Name] = relArgDecl{labels: ri.Args, kinds: ri.ArgKinds}
-	}
-	return m
-}
-
-// argAt returns the atom's argument at the position the catalog labels `label`, and whether the
-// relation declares one at all.
-func argAt(a *query.Atom, labels []string, label string) (query.Term, bool) {
-	for j, l := range labels {
-		if l == label && j < len(a.Args) {
-			return a.Args[j], true
-		}
-	}
-	return query.Term{}, false
 }
 
 // termValue resolves a term against one answer row. A constant yields itself and a variable yields
@@ -530,7 +369,7 @@ func termValue(t query.Term, bind map[query.Var]query.Value) string {
 
 // entityKind passes through the kinds a POLYMORPHIC column can take and rejects everything else.
 // The vocabulary is check's. Pins stay out because entity() does not enumerate them; a pin cell is
-// clickable through a pin column and its cell_refs instead (see varKind).
+// clickable through a pin column and its cell_refs instead (see columnKinds).
 func entityKind(s string) string {
 	switch s {
 	case check.KindComponent, check.KindNet, check.KindBus:

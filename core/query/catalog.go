@@ -3,7 +3,6 @@ package query
 import (
 	"sort"
 
-	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 )
 
@@ -25,35 +24,18 @@ const (
 // KindOrder is the display order of the kind groups, most-common first.
 var KindOrder = facts.KindOrder
 
-// builtinPredicates is the human-facing metadata for this engine's COMPUTED built-in predicates:
-// reaches and route (Model-driven generators) and the string filters. These are evaluator
-// primitives, not fact-base relations, so their metadata lives here rather than with the relations
-// (facts.Relations). TestCatalogMatchesSchema asserts arg counts against the schema, so a predicate
-// added without a catalog entry, or with a mismatched arity, fails CI.
-var builtinPredicates = []RelationInfo{
-	{Name: "net.reaches", Args: []string{"from", "net", "hops?"}, ArgKinds: map[string]facts.ArgKind{"from": {Entity: check.KindNet}, "net": {Entity: check.KindNet}}, Summary: "transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two", Kind: KindPredicate},
-	{Name: "net.route", Args: []string{"from", "net", "path"}, ArgKinds: map[string]facts.ArgKind{"from": {Entity: check.KindNet}, "net": {Entity: check.KindNet}}, Summary: "the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one", Kind: KindPredicate},
-	{Name: "contains", Args: []string{"string", "substring"}, Summary: "the string contains the substring", Kind: KindPredicate},
-	{Name: "prefix", Args: []string{"string", "prefix"}, Summary: "the string starts with the prefix", Kind: KindPredicate},
-	{Name: "suffix", Args: []string{"string", "suffix"}, Summary: "the string ends with the suffix", Kind: KindPredicate},
-	{Name: "glob", Args: []string{"string", "pattern"}, Summary: "the whole string matches a shell-style glob (* any run, ? one char)", Kind: KindPredicate},
-	{Name: "match", Args: []string{"string", "regex"}, Summary: "the string matches an (unanchored) regular expression", Kind: KindPredicate},
-	{Name: "absent", Args: []string{"value"}, Summary: "the field carried no value at all, which is different from an empty string and from zero (a datasheet row stating only a maximum leaves its minimum absent); `not absent(?x)` reads \"this row states one\"", Kind: KindPredicate},
-}
-
-// Catalog returns this engine's discoverable construct set: every fact-base relation (built-in and
-// overlay-registered, from facts.Relations) plus the predicates the evaluator computes. The result is
+// Catalog returns this engine's discoverable construct set: every fact-base relation and every
+// predicate in the fact layer's vocabulary, the engine's own string tests included. The result is
 // sorted by kind (KindOrder) then name, so a caller renders a stable grouped list without re-sorting.
-// Overlay predicates (RegisterPredicate) are not listed, since they carry no arg-label metadata to
-// build a template from.
 func Catalog() []RelationInfo { return CatalogFrom(facts.DefaultRegistry()) }
 
 // CatalogFrom is Catalog over an explicit relation vocabulary.
 func CatalogFrom(reg *facts.Registry) []RelationInfo {
 	rels := reg.Relations()
-	out := make([]RelationInfo, 0, len(rels)+len(builtinPredicates))
+	preds := reg.Predicates()
+	out := make([]RelationInfo, 0, len(rels)+len(preds))
 	out = append(out, rels...)
-	out = append(out, builtinPredicates...)
+	out = append(out, preds...)
 	// A predicate's reference markdown resolves through the same doc registry a relation's does, so a
 	// documented predicate lists with its Detail and an undocumented one still lists with its Summary.
 	for i := range out {

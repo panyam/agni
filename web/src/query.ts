@@ -129,7 +129,7 @@ export function cellKind(result: QueryResult, row: QueryRowItem, i: number): str
 
 // SearchItem is the served find-by-name template (agni issue 338), holding the datalog a search
 // fills and the concept it leaves behind. It is served rather than written here because it names
-// `entity` and `match`, both defined in Go.
+// `entity` and `str.match`, both defined in Go.
 export interface SearchItem {
   query: string;
   teaches: string;

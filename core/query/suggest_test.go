@@ -12,7 +12,7 @@ func TestSuggestRelation(t *testing.T) {
 		{"compnent.net", "component.net"},     // one dropped letter
 		{"net.max_volage", "net.max_voltage"}, // one dropped letter
 		{"net.reches", "net.reaches"},         // transposition-ish
-		{"contans", "contains"},
+		{"str.contans", "str.contains"},
 		{"xyzzy", ""},      // unrelated -> no misleading suggestion
 		{"components", ""}, // close to nothing within threshold
 	}

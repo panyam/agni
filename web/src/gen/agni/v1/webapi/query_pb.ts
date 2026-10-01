@@ -390,7 +390,7 @@ export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
  * (agni issue 338). {term} sits INSIDE its string literal, as the entity presets' placeholders do,
  * so the template parses as written.
  *
- * It is served for the same reason the entity presets are. It names `entity` and `match`, both
+ * It is served for the same reason the entity presets are. It names `entity` and `str.match`, both
  * defined on this side, and a client-held copy would be the one caller nothing checks.
  *
  * @generated from message agni.v1.webapi.SearchQuery
