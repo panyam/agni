@@ -13,12 +13,14 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 ## Open, ranked
 
-1. **The datasheet workstream: #749 next.** #744 is done: the producer is its own Go module with
-   `agnids`, its own buf module, its own web package (`datasheet/web`, sharing only plain TS in
-   `web-shared/`) and its own image (`ghcr.io/panyam/agnids`). The storage design for #749 is the
-   latest comment on #744. #786 (`make setup` prefetches the wrong cache) is small and can ride with
-   it. The first release after #744 publishes `agnids` for the first time, so confirm an anonymous
-   pull of it then.
+1. **The datasheet workstream: #749 PR 2.** PR 1 put promotion and the corpus index in the
+   datasheet module (`datasheet/corpus`, `agnids promote`, `agnids index [--check]`). PR 2 is the
+   engine's read side through the contract: a `GetPartSpec(mpn)` rpc in the ROOT protos, served by
+   agnids from its index, and `agni serve --params-url` with a caching provider that re-reads when
+   the index generation moves. A project's own `params/` keeps `LoadSet`. Measured: `LoadSet` costs
+   about 0.6s and 48MB per 10k small specs, linear. #786 (`make setup` prefetches the wrong cache) is
+   small and can ride along. The first release after #744 publishes `agnids` for the first time, so
+   confirm an anonymous pull of it then.
 2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.
