@@ -5,7 +5,7 @@ import {
   paramsForRegion, pinsForRegion, relationsForRegion, derivePinId, fmtRelation, docRevisionNote,
   type NewParamFields, type NewPinFields, type NewRelationFields,
 } from "./bank.js";
-import { ValidationProblem_Kind, type ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
+import { ValidationProblem_Kind, type ValidationProblem } from "./gen/agni/v1/dsapi/datasheet_pb.js";
 
 // The pin functions the editor offers. UNSPECIFIED IS INCLUDED here, unlike LIMIT_LABELS below,
 // because a pin table may have no type column, and refusing such a pin would lose its numbering.

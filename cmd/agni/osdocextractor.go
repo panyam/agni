@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
-	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/mounts"
 )
 
 // osDocExtractor is the OS-backed service.DocExtractor. It shells out to the doc-IR producer named

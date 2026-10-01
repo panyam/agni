@@ -116,7 +116,7 @@ Two shapes are worth copying when you write one. A graph or single-writer check 
 CONTROL, so a pattern that matched nothing fails instead of reading as clean, and that keeps a
 check alive through a rename that would otherwise make it vacuous. And when the invariant is
 narrower than anything a sweep can express, use a RATCHET with an allowlist rather than weakening it.
-C24 wants "the raw unit is never COMPARED outside `datasheet/param`", but no sweep can tell a comparison
+C24 wants "the raw unit is never COMPARED outside `core/param`", but no sweep can tell a comparison
 from a display, so the two display sites are listed in the test and a new one is a deliberate
 addition. That addition is where a reviewer sees it.
 

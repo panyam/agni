@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 // A stale citation has to name BOTH revisions, because that is the difference between a report

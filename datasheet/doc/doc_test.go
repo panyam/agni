@@ -11,7 +11,7 @@ import (
 
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 func cloneTable(t *docpb.Table) *docpb.Table {
@@ -77,7 +77,7 @@ func TestQueryHelpers(t *testing.T) {
 // fixture (page + table label) must resolve to a region in this document's doc-IR.
 func TestParamProvenanceResolves(t *testing.T) {
 	d := readFixture(t, "bss138-docir.textproto")
-	pf, err := os.Open(filepath.Join("..", "param", "testdata", "bss138.textproto"))
+	pf, err := os.Open(filepath.Join("..", "..", "core", "param", "testdata", "bss138.textproto"))
 	if err != nil {
 		t.Fatalf("open param fixture: %v", err)
 	}

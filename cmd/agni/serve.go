@@ -20,14 +20,15 @@ import (
 	"github.com/panyam/agni"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/render"
-	"github.com/panyam/agni/datasheet/param"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/gen/go/agni/v1/dsapi/dsapiconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
@@ -253,7 +254,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	mux.Handle(ckPath, ckHandler)
 	diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
 	mux.Handle(diffPath, diffHandler)
-	dtPath, dtHandler := webapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
+	dtPath, dtHandler := dsapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
 	mux.Handle(dtPath, dtHandler)
 	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)))
 	mux.Handle(qPath, qHandler)

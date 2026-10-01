@@ -6,7 +6,7 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 )
 

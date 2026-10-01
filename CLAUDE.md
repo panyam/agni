@@ -79,9 +79,11 @@ under **`readers/`** (`readers/edif`, `readers/kicad`, `readers/ipc2581`, `reade
 `readers/geda`, `readers/telesis`, plus `readers/formats`, the registry/Loader). The shipped rule
 catalog, fact relations, profiles, and intent under **`stdlib/`** (`stdlib/rules/builtin/rule_*.go`,
 `stdlib/rules/datalog`, `stdlib/rules/intent`, `stdlib/relations`, `stdlib/profiles`). The
-datasheet stack under **`datasheet/`** (`param`, `doc`, `derive`). The embedding surface under
-**`service/`** (the transport-neutral service impls and their ports) and **`artifact/`** (the
-`mount://` URI those ports speak). Plus `cmd/agni/`, `internal/`, `intake/`, `census/`, `protos/` +
+datasheet contract in **`core/param`** (the PartSpec the engine reads) and the extraction pipeline
+that produces it under **`datasheet/`** (`doc`, `derive`, `docindex`, `candidate`), which C34 keeps
+the engine from importing and agni issue 744 is moving into a module of its own. The embedding
+surface under **`service/`** (the transport-neutral service impls and their ports), **`artifact/`**
+(the `mount://` URI those ports speak) and **`mounts/`** (the named roots and the containment join). Plus `cmd/agni/`, `internal/`, `intake/`, `census/`, `protos/` +
 `gen/`, `docsite/`, `web/`, `hack/`, `tools/`, and `clients/python` (the typed Python client, its
 generated messages committed under `src/agni/v1`).
 

@@ -44,7 +44,7 @@ the open-core boundary.
   `Detail`.
 - `readers/` holds the format readers plus `readers/formats`, the registry and loader that own all
   file I/O so the core never opens a file.
-- `datasheet/` is the parameter and document stack: `datasheet/param`, `datasheet/doc`, and
+- `datasheet/` is the parameter and document stack: `core/param`, `datasheet/doc`, and
   `datasheet/derive`.
 - `cmd/` is the CLI, `protos/` and `gen/` are the schema and its generated code, `internal/`
   holds engine-private helpers, and `docsite/` is this documentation site, a separate module.

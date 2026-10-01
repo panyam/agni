@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/intake"
 	"github.com/spf13/cobra"
 )

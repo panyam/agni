@@ -16,7 +16,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/profiles"
 )

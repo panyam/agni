@@ -238,7 +238,7 @@ func drcBoard() *geom.BoardGeometry {
 
 // dualSupplySpec hand-builds the shape the pin tier exists for, two supply terminals with DIFFERENT
 // recommended windows, plus a group-bound row covering both I/O pins and a part-wide row bound to
-// nothing. Mirrors the real TXB0104 encoding in datasheet/param/testdata without depending on it,
+// nothing. Mirrors the real TXB0104 encoding in core/param/testdata without depending on it,
 // so a change to that fixture cannot silently reshape these assertions.
 func dualSupplySpec(mpn string) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }

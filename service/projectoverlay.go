@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )

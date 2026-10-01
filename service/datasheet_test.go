@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 // fakeDocLoader is a DocLoader whose result is fixed per test, so GetDocument's classification and
@@ -58,16 +58,16 @@ func (f *fakeDocExtractor) Extract(context.Context, artifact.URI) (*docpb.Docume
 // fakeAnnotationStore stands in for the OS annotation store; `sets` is what Get returns (the union),
 // and `saved`/`author` capture the last SaveAnnotations for assertions.
 type fakeAnnotationStore struct {
-	sets   []*webapi.AnnotationSet
-	saved  *webapi.AnnotationSet
+	sets   []*dsapi.AnnotationSet
+	saved  *dsapi.AnnotationSet
 	author string
 }
 
-func (f *fakeAnnotationStore) Get(context.Context, artifact.URI) ([]*webapi.AnnotationSet, error) {
+func (f *fakeAnnotationStore) Get(context.Context, artifact.URI) ([]*dsapi.AnnotationSet, error) {
 	return f.sets, nil
 }
 
-func (f *fakeAnnotationStore) Save(_ context.Context, _ artifact.URI, author string, set *webapi.AnnotationSet) error {
+func (f *fakeAnnotationStore) Save(_ context.Context, _ artifact.URI, author string, set *dsapi.AnnotationSet) error {
 	f.author = author
 	f.saved = set
 	return nil
@@ -81,7 +81,7 @@ func newDS(l DocLoader) *DatasheetService {
 func TestGetDocumentExtracted(t *testing.T) {
 	doc := &docpb.Document{ContentHash: "sha256:abc", Producer: "hand", PageCount: 1}
 	svc := newDS(&fakeDocLoader{doc: doc})
-	resp, err := svc.GetDocument(context.Background(), &webapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
+	resp, err := svc.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatalf("GetDocument: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestGetDocumentExtracted(t *testing.T) {
 
 func TestGetDocumentNotExtracted(t *testing.T) {
 	svc := newDS(&fakeDocLoader{doc: nil})
-	resp, err := svc.GetDocument(context.Background(), &webapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
+	resp, err := svc.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatalf("GetDocument: %v", err)
 	}
@@ -110,12 +110,12 @@ func TestGetDocumentNotExtracted(t *testing.T) {
 func TestGetDocumentClassifiesErrors(t *testing.T) {
 	// An unclassified loader error (a parse failure) maps to ErrInvalidArgument for the transport.
 	parseErr := newDS(&fakeDocLoader{err: errors.New("bad textproto")})
-	if _, err := parseErr.GetDocument(context.Background(), &webapi.GetDocumentRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := parseErr.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("parse error => %v, want ErrInvalidArgument", err)
 	}
 	// An already-classified error (unknown mount) keeps its classification.
 	notFound := newDS(&fakeDocLoader{err: ErrNotFound})
-	if _, err := notFound.GetDocument(context.Background(), &webapi.GetDocumentRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrNotFound) {
+	if _, err := notFound.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrNotFound) {
 		t.Errorf("not-found => %v, want ErrNotFound", err)
 	}
 }
@@ -123,7 +123,7 @@ func TestGetDocumentClassifiesErrors(t *testing.T) {
 func TestGetPartSpecFound(t *testing.T) {
 	store := &fakePartSpecStore{spec: &parampb.PartSpec{Mpn: "LM1117"}, found: true}
 	svc := NewDatasheetService(&fakeDocLoader{}, store, &fakeDocExtractor{}, &fakeAnnotationStore{})
-	resp, err := svc.GetPartSpec(context.Background(), &webapi.GetPartSpecRequest{Uri: "mount://m/d.pdf"})
+	resp, err := svc.GetPartSpec(context.Background(), &dsapi.GetPartSpecRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatalf("GetPartSpec: %v", err)
 	}
@@ -135,13 +135,13 @@ func TestGetPartSpecFound(t *testing.T) {
 func TestSavePartSpecConflictAndValidation(t *testing.T) {
 	// A store conflict propagates as ErrConflict (the transport maps it to Aborted, "refetch").
 	conflict := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{saveErr: ErrConflict}, &fakeDocExtractor{}, &fakeAnnotationStore{})
-	_, err := conflict.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: &parampb.PartSpec{Mpn: "X"}})
+	_, err := conflict.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: &parampb.PartSpec{Mpn: "X"}})
 	if !errors.Is(err, ErrConflict) {
 		t.Errorf("store conflict => %v, want ErrConflict", err)
 	}
 	// A nil spec is rejected before touching the store.
 	empty := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
-	if _, err := empty.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d"}); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := empty.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("nil spec => %v, want ErrInvalidArgument", err)
 	}
 }
@@ -149,13 +149,13 @@ func TestSavePartSpecConflictAndValidation(t *testing.T) {
 func TestExtractDocIRGated(t *testing.T) {
 	// No producer configured -> ErrExtractNotEnabled (transport maps it to FailedPrecondition).
 	off := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{available: false}, &fakeAnnotationStore{})
-	if _, err := off.ExtractDocIR(context.Background(), &webapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrExtractNotEnabled) {
+	if _, err := off.ExtractDocIR(context.Background(), &dsapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrExtractNotEnabled) {
 		t.Errorf("disabled => %v, want ErrExtractNotEnabled", err)
 	}
 	// Configured -> returns the produced doc-IR.
 	produced := &docpb.Document{ContentHash: "sha256:x", Producer: "docling"}
 	on := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{available: true, doc: produced}, &fakeAnnotationStore{})
-	resp, err := on.ExtractDocIR(context.Background(), &webapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"})
+	resp, err := on.ExtractDocIR(context.Background(), &dsapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"})
 	if err != nil || resp.GetDocument().GetContentHash() != "sha256:x" {
 		t.Fatalf("extract: resp=%v err=%v", resp, err)
 	}
@@ -163,12 +163,12 @@ func TestExtractDocIRGated(t *testing.T) {
 
 func TestGetDocumentReportsExtractAvailable(t *testing.T) {
 	on := NewDatasheetService(&fakeDocLoader{doc: nil}, &fakePartSpecStore{}, &fakeDocExtractor{available: true}, &fakeAnnotationStore{})
-	resp, _ := on.GetDocument(context.Background(), &webapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
+	resp, _ := on.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
 	if !resp.ExtractAvailable {
 		t.Error("extract_available should be true when a producer is configured")
 	}
 	off := newDS(&fakeDocLoader{doc: nil}) // newDS uses a disabled extractor
-	resp2, _ := off.GetDocument(context.Background(), &webapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
+	resp2, _ := off.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
 	if resp2.ExtractAvailable {
 		t.Error("extract_available should be false with no producer")
 	}
@@ -177,11 +177,11 @@ func TestGetDocumentReportsExtractAvailable(t *testing.T) {
 func TestSaveAnnotationsValidation(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	// A nil set is rejected before the store.
-	if _, err := svc.SaveAnnotations(context.Background(), &webapi.SaveAnnotationsRequest{Uri: "mount://m/d"}); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := svc.SaveAnnotations(context.Background(), &dsapi.SaveAnnotationsRequest{Uri: "mount://m/d"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("nil set => %v, want ErrInvalidArgument", err)
 	}
 	// An empty author is rejected, because the author names the file and cannot be inferred.
-	req := &webapi.SaveAnnotationsRequest{Set: &webapi.AnnotationSet{DocId: "LM1117"}}
+	req := &dsapi.SaveAnnotationsRequest{Set: &dsapi.AnnotationSet{DocId: "LM1117"}}
 	if _, err := svc.SaveAnnotations(context.Background(), req); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("empty author => %v, want ErrInvalidArgument", err)
 	}
@@ -190,16 +190,16 @@ func TestSaveAnnotationsValidation(t *testing.T) {
 func TestSaveAndGetAnnotations(t *testing.T) {
 	store := &fakeAnnotationStore{}
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, store)
-	set := &webapi.AnnotationSet{DocId: "LM1117", Author: "alice", Annotations: []*webapi.RegionAnnotation{{RegionId: "p4.t1", Type: "table"}}}
-	if _, err := svc.SaveAnnotations(context.Background(), &webapi.SaveAnnotationsRequest{Uri: "mount://m/d.pdf", Set: set}); err != nil {
+	set := &dsapi.AnnotationSet{DocId: "LM1117", Author: "alice", Annotations: []*dsapi.RegionAnnotation{{RegionId: "p4.t1", Type: "table"}}}
+	if _, err := svc.SaveAnnotations(context.Background(), &dsapi.SaveAnnotationsRequest{Uri: "mount://m/d.pdf", Set: set}); err != nil {
 		t.Fatalf("SaveAnnotations: %v", err)
 	}
 	if store.author != "alice" || store.saved.GetAnnotations()[0].GetRegionId() != "p4.t1" {
 		t.Errorf("store got author=%q saved=%v", store.author, store.saved)
 	}
 	// GetAnnotations returns the union the store provides (one set per author).
-	store.sets = []*webapi.AnnotationSet{{Author: "alice"}, {Author: "bob"}}
-	resp, err := svc.GetAnnotations(context.Background(), &webapi.GetAnnotationsRequest{Uri: "mount://m/d.pdf"})
+	store.sets = []*dsapi.AnnotationSet{{Author: "alice"}, {Author: "bob"}}
+	resp, err := svc.GetAnnotations(context.Background(), &dsapi.GetAnnotationsRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatalf("GetAnnotations: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestSaveAndGetAnnotations(t *testing.T) {
 func TestSavePartSpecRecordsWhateverTheAuthorHas(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	save := func(spec *parampb.PartSpec) error {
-		_, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: spec})
+		_, err := svc.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: spec})
 		return err
 	}
 
@@ -252,7 +252,7 @@ func TestSavePartSpecRecordsWhateverTheAuthorHas(t *testing.T) {
 // ordinary state of unfinished work.
 func TestSavePartSpecReportsClassifiedProblems(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
-	resp, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{
+	resp, err := svc.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{
 		Uri: "mount://m/d",
 		Spec: &parampb.PartSpec{ // no mpn (incomplete) AND a duplicate pin id (incoherent)
 			Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
@@ -262,19 +262,19 @@ func TestSavePartSpecReportsClassifiedProblems(t *testing.T) {
 	if err != nil {
 		t.Fatalf("save must succeed regardless of problems: %v", err)
 	}
-	byKind := map[webapi.ValidationProblem_Kind][]string{}
+	byKind := map[dsapi.ValidationProblem_Kind][]string{}
 	for _, p := range resp.GetProblems() {
 		byKind[p.GetKind()] = append(byKind[p.GetKind()], p.GetMessage())
 	}
-	if got := strings.Join(byKind[webapi.ValidationProblem_KIND_STRUCTURAL], " "); !strings.Contains(got, "duplicate pin id") {
+	if got := strings.Join(byKind[dsapi.ValidationProblem_KIND_STRUCTURAL], " "); !strings.Contains(got, "duplicate pin id") {
 		t.Errorf("structural problems = %q, want the duplicate pin id", got)
 	}
-	if got := strings.Join(byKind[webapi.ValidationProblem_KIND_COMPLETENESS], " "); !strings.Contains(got, "mpn") {
+	if got := strings.Join(byKind[dsapi.ValidationProblem_KIND_COMPLETENESS], " "); !strings.Contains(got, "mpn") {
 		t.Errorf("completeness problems = %q, want the missing mpn", got)
 	}
 	// A spec good enough to load reports nothing, so the editor shows an empty panel rather than
 	// having to filter noise.
-	clean, _ := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: cleanSpec()})
+	clean, _ := svc.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: cleanSpec()})
 	if n := len(clean.GetProblems()); n != 0 {
 		t.Errorf("a corpus-ready spec reports %d problems, want 0: %v", n, clean.GetProblems())
 	}
