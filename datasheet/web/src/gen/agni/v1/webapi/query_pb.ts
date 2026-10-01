@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkilwEKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDIrQBCghRdWVyeVJvdxINCgVjZWxscxgBIAMoCRINCgVjaXRlcxgCIAMoCRIvCgtjZWxsX3NoZWV0cxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLkNlbGxTaGVldHMSMgoMY2VsbF9yZWFzb25zGAQgAygOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uEhIKCmNlbGxfa2luZHMYBSADKAkSEQoJY2VsbF9yZWZzGAYgAygJIh8KCkNlbGxTaGVldHMSEQoJc2hlZXRfaWRzGAEgAygJIo4BChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAyJhChRMaXN0UmVsYXRpb25zUmVxdWVzdBIMCgRwYXRoGAEgASgJEgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyKAAQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCXNpZ25hdHVyZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJIscBCg1SZWxhdGlvbkVudHJ5EgwKBHBhdGgYASABKAkSEgoKZW50cnlfa2luZBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkSCwoDZG9jGAQgASgJEg4KBmRldGFpbBgFIAEoCRIOCgZtb2R1bGUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCRIQCghpbmZlcnJlZBgIIAMoCRIuCgdtZW1iZXJzGAkgAygLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSI9CgxFeGFtcGxlUXVlcnkSDQoFbGFiZWwYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSI7CgtFbnRpdHlRdWVyeRIMCgRraW5kGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkiLQoLU2VhcmNoUXVlcnkSDQoFcXVlcnkYASABKAkSDwoHdGVhY2hlcxgCIAEoCSKOAgoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEi8KCXJlbGF0aW9ucxgBIAMoCzIcLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uSW5mbxIuCghleGFtcGxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLkV4YW1wbGVRdWVyeRIzCg5lbnRpdHlfcXVlcmllcxgDIAMoCzIbLmFnbmkudjEud2ViYXBpLkVudGl0eVF1ZXJ5EjEKDHNlYXJjaF9xdWVyeRgEIAEoCzIbLmFnbmkudjEud2ViYXBpLlNlYXJjaFF1ZXJ5EiwKBWVudHJ5GAUgASgLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSJYCghRdWVyeVNldBINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIrCgdxdWVyaWVzGAMgAygLMhouYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeSI+CgpOYW1lZFF1ZXJ5EgwKBG5hbWUYASABKAkSDQoFcXVlcnkYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkisQEKEVJ1blF1ZXJpZXNSZXF1ZXN0EiUKA3NldBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5U2V0EgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYBCABKAkSEAoIYXNfbmFtZWQYBSABKAgSEwoLd29ya19idWRnZXQYBiABKAMieAoSUnVuUXVlcmllc1Jlc3BvbnNlEg0KBXRpdGxlGAEgASgJEhAKCHByZWFtYmxlGAIgASgJEg4KBnNvdXJjZRgDIAEoCRIxCgdyZXN1bHRzGAQgAygLMiAuYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeVJlc3VsdCJ2ChBOYW1lZFF1ZXJ5UmVzdWx0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSMAoGcmVzdWx0GAMgASgLMiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRINCgVlcnJvchgEIAEoCTKQAgoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJTCgpSdW5RdWVyaWVzEiEuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVzcG9uc2USXAoNTGlzdFJlbGF0aW9ucxIkLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkipQIKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEj8KCGJpbmRpbmdzGAcgAygLMi0uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0LkJpbmRpbmdzRW50cnkaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASK0AQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSDQoFY2l0ZXMYAiADKAkSLwoLY2VsbF9zaGVldHMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5DZWxsU2hlZXRzEjIKDGNlbGxfcmVhc29ucxgEIAMoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbhISCgpjZWxsX2tpbmRzGAUgAygJEhEKCWNlbGxfcmVmcxgGIAMoCSIfCgpDZWxsU2hlZXRzEhEKCXNoZWV0X2lkcxgBIAMoCSKdAgoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkSDQoFcXVlcnkYBCABKAkSDgoGc291cmNlGAUgASgJEgwKBHdvcmsYBiABKAMSQAoIYmluZGluZ3MYByADKAsyLi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlLkJpbmRpbmdzRW50cnkaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASI2CgpRdWVyeVZhbHVlEg4KBHRleHQYASABKAlIABIQCgZudW1iZXIYAiABKAFIAEIGCgRraW5kImEKFExpc3RSZWxhdGlvbnNSZXF1ZXN0EgwKBHBhdGgYASABKAkSCwoDdXJpGAIgASgJEi4KB292ZXJsYXkYAyABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnIoABCgxSZWxhdGlvbkluZm8SDAoEbmFtZRgBIAEoCRIMCgRhcmdzGAIgAygJEg8KB3N1bW1hcnkYAyABKAkSDAoEa2luZBgEIAEoCRIOCgZkZXRhaWwYBSABKAkSEQoJc2lnbmF0dXJlGAYgASgJEhIKCmRlZmluaXRpb24YByADKAkixwEKDVJlbGF0aW9uRW50cnkSDAoEcGF0aBgBIAEoCRISCgplbnRyeV9raW5kGAIgASgJEhEKCXNpZ25hdHVyZRgDIAEoCRILCgNkb2MYBCABKAkSDgoGZGV0YWlsGAUgASgJEg4KBm1vZHVsZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJEhAKCGluZmVycmVkGAggAygJEi4KB21lbWJlcnMYCSADKAsyHS5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkVudHJ5Ij0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIkoKC0VudGl0eVF1ZXJ5EgwKBGtpbmQYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCRINCgViaW5kcxgEIAMoCSJMCgtTZWFyY2hRdWVyeRINCgVxdWVyeRgBIAEoCRIPCgd0ZWFjaGVzGAIgASgJEgwKBGJpbmQYAyABKAkSDwoHcGF0dGVybhgEIAEoCSKOAgoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEi8KCXJlbGF0aW9ucxgBIAMoCzIcLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uSW5mbxIuCghleGFtcGxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLkV4YW1wbGVRdWVyeRIzCg5lbnRpdHlfcXVlcmllcxgDIAMoCzIbLmFnbmkudjEud2ViYXBpLkVudGl0eVF1ZXJ5EjEKDHNlYXJjaF9xdWVyeRgEIAEoCzIbLmFnbmkudjEud2ViYXBpLlNlYXJjaFF1ZXJ5EiwKBWVudHJ5GAUgASgLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSJYCghRdWVyeVNldBINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIrCgdxdWVyaWVzGAMgAygLMhouYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeSLHAQoKTmFtZWRRdWVyeRIMCgRuYW1lGAEgASgJEg0KBXF1ZXJ5GAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEjoKCGJpbmRpbmdzGAQgAygLMiguYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeS5CaW5kaW5nc0VudHJ5GksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEisQEKEVJ1blF1ZXJpZXNSZXF1ZXN0EiUKA3NldBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5U2V0EgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYBCABKAkSEAoIYXNfbmFtZWQYBSABKAgSEwoLd29ya19idWRnZXQYBiABKAMieAoSUnVuUXVlcmllc1Jlc3BvbnNlEg0KBXRpdGxlGAEgASgJEhAKCHByZWFtYmxlGAIgASgJEg4KBnNvdXJjZRgDIAEoCRIxCgdyZXN1bHRzGAQgAygLMiAuYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeVJlc3VsdCJ2ChBOYW1lZFF1ZXJ5UmVzdWx0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSMAoGcmVzdWx0GAMgASgLMiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRINCgVlcnJvchgEIAEoCTKQAgoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJTCgpSdW5RdWVyaWVzEiEuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVzcG9uc2USXAoNTGlzdFJlbGF0aW9ucxIkLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -92,6 +92,17 @@ export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
    * @generated from field: int64 work_budget = 6;
    */
   workBudget: bigint;
+
+  /**
+   * bindings give goal variables values from the caller, keyed by the variable's name without its
+   * `?` (agni issue 793). A bound variable answers exactly as the same value written into the goal as
+   * a constant, so a caller asking about one net or part sends the same query text every time and the
+   * value as data, with nothing to escape or splice. A binding naming a variable the goal does not use
+   * is refused as an invalid argument. Rules are unaffected: their variables are their own.
+   *
+   * @generated from field: map<string, agni.v1.webapi.QueryValue> bindings = 7;
+   */
+  bindings: { [key: string]: QueryValue };
 };
 
 /**
@@ -260,6 +271,14 @@ export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
    * @generated from field: int64 work = 6;
    */
   work: bigint;
+
+  /**
+   * bindings echo the request's, so an answer to a parameterized query still states the whole
+   * question it answers.
+   *
+   * @generated from field: map<string, agni.v1.webapi.QueryValue> bindings = 7;
+   */
+  bindings: { [key: string]: QueryValue };
 };
 
 /**
@@ -268,6 +287,39 @@ export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
  */
 export const RunQueryResponseSchema: GenMessage<RunQueryResponse> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 3);
+
+/**
+ * QueryValue is a value bound to a query variable. It is typed because the engine compares a number
+ * and a string differently, and a binding must mean what the same constant written into the query
+ * would: `3.3` is a number and `"3.3"` a string.
+ *
+ * @generated from message agni.v1.webapi.QueryValue
+ */
+export type QueryValue = Message<"agni.v1.webapi.QueryValue"> & {
+  /**
+   * @generated from oneof agni.v1.webapi.QueryValue.kind
+   */
+  kind: {
+    /**
+     * @generated from field: string text = 1;
+     */
+    value: string;
+    case: "text";
+  } | {
+    /**
+     * @generated from field: double number = 2;
+     */
+    value: number;
+    case: "number";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message agni.v1.webapi.QueryValue.
+ * Use `create(QueryValueSchema)` to create a new message.
+ */
+export const QueryValueSchema: GenMessage<QueryValue> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 4);
 
 /**
  * @generated from message agni.v1.webapi.ListRelationsRequest
@@ -307,7 +359,7 @@ export type ListRelationsRequest = Message<"agni.v1.webapi.ListRelationsRequest"
  * Use `create(ListRelationsRequestSchema)` to create a new message.
  */
 export const ListRelationsRequestSchema: GenMessage<ListRelationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 4);
+  messageDesc(file_agni_v1_webapi_query, 5);
 
 /**
  * RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
@@ -369,7 +421,7 @@ export type RelationInfo = Message<"agni.v1.webapi.RelationInfo"> & {
  * Use `create(RelationInfoSchema)` to create a new message.
  */
 export const RelationInfoSchema: GenMessage<RelationInfo> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 5);
+  messageDesc(file_agni_v1_webapi_query, 6);
 
 /**
  * RelationEntry is one place in the namespace tree, for drill-down: a module listing what it holds,
@@ -447,7 +499,7 @@ export type RelationEntry = Message<"agni.v1.webapi.RelationEntry"> & {
  * Use `create(RelationEntrySchema)` to create a new message.
  */
 export const RelationEntrySchema: GenMessage<RelationEntry> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 6);
+  messageDesc(file_agni_v1_webapi_query, 7);
 
 /**
  * ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
@@ -478,7 +530,7 @@ export type ExampleQuery = Message<"agni.v1.webapi.ExampleQuery"> & {
  * Use `create(ExampleQuerySchema)` to create a new message.
  */
 export const ExampleQuerySchema: GenMessage<ExampleQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 7);
+  messageDesc(file_agni_v1_webapi_query, 8);
 
 /**
  * EntityQuery is the preset a viewer runs when the reader CLICKS an entity in the drawing: the
@@ -500,8 +552,7 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
   kind: string;
 
   /**
-   * query carries {ref}, {pin}, {net}, {bus} placeholders INSIDE their string literals ("{ref}"), so
-   * the template parses as written and the client substitutes without having to add quoting.
+   * query is the same text for every click: the picked entity reaches it through binds.
    *
    * @generated from field: string query = 2;
    */
@@ -514,6 +565,15 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
    * @generated from field: string teaches = 3;
    */
   teaches: string;
+
+  /**
+   * binds names the variables the client binds from the picked selection (agni issue 793), each
+   * also the selection field that fills it: ref, pin, net or bus. It is explicit because one
+   * preset's input is another's output (the pin preset answers ?net, the net preset asks about one).
+   *
+   * @generated from field: repeated string binds = 4;
+   */
+  binds: string[];
 };
 
 /**
@@ -521,12 +581,13 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
  * Use `create(EntityQuerySchema)` to create a new message.
  */
 export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 8);
+  messageDesc(file_agni_v1_webapi_query, 9);
 
 /**
- * SearchQuery is the template the panel's search mode fills: find a design's entities by name
- * (agni issue 338). {term} sits INSIDE its string literal, as the entity presets' placeholders do,
- * so the template parses as written.
+ * SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
+ * issue 338). The client binds the variable `bind` names to `pattern` with {term} replaced by the
+ * reader's escaped text (agni issue 793), so the query text never changes and the (?i) that makes
+ * the search case-insensitive is written here, once.
  *
  * It is served for the same reason the entity presets are. It names `entity` and `str.match`, both
  * defined on this side, and a client-held copy would be the one caller nothing checks.
@@ -546,6 +607,20 @@ export type SearchQuery = Message<"agni.v1.webapi.SearchQuery"> & {
    * @generated from field: string teaches = 2;
    */
   teaches: string;
+
+  /**
+   * bind names the variable the client binds, without its `?`.
+   *
+   * @generated from field: string bind = 3;
+   */
+  bind: string;
+
+  /**
+   * pattern is the regex bound to it, with {term} standing for the reader's escaped text.
+   *
+   * @generated from field: string pattern = 4;
+   */
+  pattern: string;
 };
 
 /**
@@ -553,7 +628,7 @@ export type SearchQuery = Message<"agni.v1.webapi.SearchQuery"> & {
  * Use `create(SearchQuerySchema)` to create a new message.
  */
 export const SearchQuerySchema: GenMessage<SearchQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 9);
+  messageDesc(file_agni_v1_webapi_query, 10);
 
 /**
  * @generated from message agni.v1.webapi.ListRelationsResponse
@@ -603,7 +678,7 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
  * Use `create(ListRelationsResponseSchema)` to create a new message.
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 10);
+  messageDesc(file_agni_v1_webapi_query, 11);
 
 /**
  * QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values
@@ -638,7 +713,7 @@ export type QuerySet = Message<"agni.v1.webapi.QuerySet"> & {
  * Use `create(QuerySetSchema)` to create a new message.
  */
 export const QuerySetSchema: GenMessage<QuerySet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 11);
+  messageDesc(file_agni_v1_webapi_query, 12);
 
 /**
  * NamedQuery is one entry of a QuerySet. name is unique within the set and identifies the entry's
@@ -665,6 +740,13 @@ export type NamedQuery = Message<"agni.v1.webapi.NamedQuery"> & {
    * @generated from field: string description = 3;
    */
   description: string;
+
+  /**
+   * bindings mean what they mean on RunQueryRequest, for this query alone.
+   *
+   * @generated from field: map<string, agni.v1.webapi.QueryValue> bindings = 4;
+   */
+  bindings: { [key: string]: QueryValue };
 };
 
 /**
@@ -672,7 +754,7 @@ export type NamedQuery = Message<"agni.v1.webapi.NamedQuery"> & {
  * Use `create(NamedQuerySchema)` to create a new message.
  */
 export const NamedQuerySchema: GenMessage<NamedQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 12);
+  messageDesc(file_agni_v1_webapi_query, 13);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesRequest
@@ -721,7 +803,7 @@ export type RunQueriesRequest = Message<"agni.v1.webapi.RunQueriesRequest"> & {
  * Use `create(RunQueriesRequestSchema)` to create a new message.
  */
 export const RunQueriesRequestSchema: GenMessage<RunQueriesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 13);
+  messageDesc(file_agni_v1_webapi_query, 14);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesResponse
@@ -759,7 +841,7 @@ export type RunQueriesResponse = Message<"agni.v1.webapi.RunQueriesResponse"> & 
  * Use `create(RunQueriesResponseSchema)` to create a new message.
  */
 export const RunQueriesResponseSchema: GenMessage<RunQueriesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 14);
+  messageDesc(file_agni_v1_webapi_query, 15);
 
 /**
  * NamedQueryResult is one query's answer, or why it has none. Exactly one of result and error is set.
@@ -796,7 +878,7 @@ export type NamedQueryResult = Message<"agni.v1.webapi.NamedQueryResult"> & {
  * Use `create(NamedQueryResultSchema)` to create a new message.
  */
 export const NamedQueryResultSchema: GenMessage<NamedQueryResult> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 15);
+  messageDesc(file_agni_v1_webapi_query, 16);
 
 /**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004

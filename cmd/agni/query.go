@@ -36,6 +36,7 @@ func queryCmd() *cobra.Command {
 	var relDesign string
 	var libDirs []string
 	var budget int64
+	var bindArgs []string
 	c := &cobra.Command{
 		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
@@ -112,6 +113,13 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				printExamples(cmd.OutOrStdout())
 				return nil
 			}
+			bind, err := parseBindings(bindArgs)
+			if err != nil {
+				return err
+			}
+			if len(bind) > 0 && setPath != "" {
+				return fmt.Errorf("--bind applies to one query; a set binds each query's variables under its own bind:")
+			}
 			if specLib {
 				specs, err := param.LoadSet(os.DirFS(paramsDir))
 				if err != nil {
@@ -121,11 +129,16 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if err != nil {
 					return err
 				}
-				rows, err := query.Default.Eval(cmd.Context(), q, query.NewSpecLibBase(specs), query.EvalOptions(cmd.Context())...)
+				opts := query.EvalOptions(cmd.Context())
+				if len(bind) > 0 {
+					opts = append(opts, query.Bind(bind))
+				}
+				rows, err := query.Default.Eval(cmd.Context(), q, query.NewSpecLibBase(specs), opts...)
 				if err != nil {
 					return err
 				}
 				resp := respFromRows(q, rows, args[0], filepath.Base(paramsDir))
+				resp.Bindings = service.BindingsProto(bind)
 				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)))
 			}
 			// A design query goes through the in-process QueryService (WS9-048), the same service and
@@ -166,6 +179,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
 				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
+				Bindings: service.BindingsProto(bind),
 			})
 			if err != nil {
 				return err
@@ -183,6 +197,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	outFileFlag(c, &outPath)
 	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
+	c.Flags().StringArrayVar(&bindArgs, "bind", nil, "give a query variable a value, as name=value (repeatable): `--bind n=GND` asks the query with ?n bound to GND, exactly as if \"GND\" were written in its place. A value that parses as a number binds a number; quote it (n=\"3\") to bind text. A name the query does not use is an error")
 	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons plus generator rows), as `agni serve --query-budget` does. 0, the default, sets none")
 	c.Flags().StringArrayVar(&libDirs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the query, beside any the design's project carries. Repeatable")
 	c.Flags().StringVar(&relDesign, "design", "", "with --relations, a design whose project's own library (lib/) joins the catalog, so its members list beside the shipped ones")
@@ -394,7 +409,7 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 		if r.GetResult() != nil {
 			sec.Table = tableFromProto(r.GetResult(), "", r.GetResult().GetQuery(), "")
 		} else {
-			sec.Table = rpt.Table{Query: set.Queries[i].Query}
+			sec.Table = rpt.Table{Query: set.Queries[i].Query, Bindings: query.FormatBindings(set.Queries[i].Bind)}
 		}
 		ts.Sections = append(ts.Sections, sec)
 	}
@@ -415,8 +430,9 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 // SOURCE IS THE DESIGN'S URI, NEVER THE HOST PATH. A view gets committed and pasted into tickets,
 // so a host path publishes the machine that ran it. agni issue 501 fixed that leak in
 // provenance.source_file, and a new output format has to keep the rule itself.
-func tableFromProto(resp *webapi.RunQueryResponse, title, query, source string) rpt.Table {
-	t := rpt.Table{Title: title, Query: query, Source: source, Columns: resp.GetColumns()}
+func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source string) rpt.Table {
+	t := rpt.Table{Title: title, Query: queryText, Source: source, Columns: resp.GetColumns(),
+		Bindings: query.FormatBindings(service.BindingsFromProto(resp.GetBindings()))}
 	for _, r := range resp.GetRows() {
 		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: r.GetCites()})
 	}
@@ -470,4 +486,20 @@ func addLibraries(cfg *webapi.AnalysisConfig, dirs []string) error {
 		}
 	}
 	return nil
+}
+
+// parseBindings reads each --bind name=value into the values the query is asked with.
+func parseBindings(args []string) (map[string]query.Value, error) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+	out := map[string]query.Value{}
+	for _, a := range args {
+		name, v, err := query.ParseBinding(a)
+		if err != nil {
+			return nil, fmt.Errorf("--bind: %w", err)
+		}
+		out[name] = v
+	}
+	return out, nil
 }

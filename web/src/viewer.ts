@@ -270,7 +270,9 @@ export class ViewerPresenter {
   // the service. A parse error or an unloadable design comes back as InvalidArgument, whose message
   // the panel shows inline rather than as a toast. The busy flag rides in the pushed result so the
   // panel disables Run while a query runs.
-  async runQuery(text: string): Promise<void> {
+  //
+  // bindings are the values the query's variables are bound to (agni issue 793), sent as text.
+  async runQuery(text: string, bindings: Record<string, string> = {}): Promise<void> {
     if (!this.views.query || !this.query) return;
     if (!this.mount || !this.path) {
       this.views.query.setState(errorResult("Open a design first."));
@@ -281,7 +283,8 @@ export class ViewerPresenter {
       // The overlay goes here too, because the vocabulary bar names the convention the answers on
       // screen were computed under, and a Query panel answering under the server's would contradict
       // it (WS3-113).
-      const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay() });
+      const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, { kind: { case: "text" as const, value } }]));
+      const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay(), bindings: wire });
       this.views.query.setState(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
       this.views.query.setState(errorResult(e instanceof Error ? e.message : String(e)));

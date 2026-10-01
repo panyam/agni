@@ -93,9 +93,7 @@ func TableSetMarkdown(w io.Writer, s TableSet) error {
 			return bw.err
 		}
 		if sec.Error != "" {
-			if sec.Table.Query != "" {
-				bw.printf("```\n%s\n```\n\n", sec.Table.Query)
-			}
+			writeQuery(bw, sec.Table.Query, sec.Table.Bindings)
 			bw.printf("**Could not answer:** %s\n\n", mdEscape(sec.Error))
 			continue
 		}
@@ -118,7 +116,7 @@ func TableSetHTML(w io.Writer, s TableSet) error {
 		t := sec.body()
 		v.Sections = append(v.Sections, tableSetSectionView{
 			Name: sec.Name, Description: sec.Description, Error: sec.Error,
-			Query: t.Query, Header: t.header(), Body: t.bodyRows(),
+			Query: t.Query, Bindings: t.Bindings, Header: t.header(), Body: t.bodyRows(),
 		})
 	}
 	if err := tm.Execute(w, v); err != nil {
@@ -136,6 +134,7 @@ type tableSetView struct {
 
 type tableSetSectionView struct {
 	Name, Description, Error, Query string
+	Bindings                        []string
 	Header                          []string
 	Body                            [][]string
 }

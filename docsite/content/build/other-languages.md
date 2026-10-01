@@ -48,6 +48,17 @@ agni serve --mount tut=examples/tutorial-project
 read off the generated descriptors. The named methods (`check_design`, `run_query`, `diff_designs`,
 `trace_design` and others) are the same calls with type hints.
 
+A query's variables are bound with `agni.bindings`, which types each value, so a `str` binds text and
+an `int` or `float` a number:
+
+```python
+client.run_query(uri="mount://tut/designs/gateway", query="component.net(?ref, ?net) => ?net",
+                 bindings=agni.bindings({"ref": "U1"}))
+```
+
+The query text stays the same for every part, and the value needs no escaping. Over the CLI transport
+the bindings travel as `--bind`, and a set's per-query bindings as the set file's `bind:` maps.
+
 ## Choosing a transport
 
 **The CLI transport** needs no server and ships as one binary. Every call starts a process and reads

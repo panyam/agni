@@ -8,6 +8,7 @@ from agni.client import Client
 from agni.errors import AgniError, CliUnsupported
 from agni.tables import rows_as_dicts, set_sheets, tables_to_xlsx, to_rows
 from agni.transport import CLI_COMMANDS, CLI_ONLY, CliTransport, ConnectTransport, parse
+from agni.values import bindings
 
 __all__ = [
     "AgniError",
@@ -17,6 +18,7 @@ __all__ = [
     "CliUnsupported",
     "Client",
     "ConnectTransport",
+    "bindings",
     "parse",
     "rows_as_dicts",
     "set_sheets",

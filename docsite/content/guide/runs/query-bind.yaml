@@ -1,0 +1,4 @@
+# One question asked about a given part, the part bound rather than written into the query.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'component.net(?ref, ?net), net.pin_count(?net, ?fanout) => ?net, ?fanout' --bind ref=U1

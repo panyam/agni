@@ -60,7 +60,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery())
+	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), BindingsFromProto(req.GetBindings()))
 	if err != nil {
 		if stopped(err) {
 			return nil, err
@@ -119,7 +119,7 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 			res.Error = err.Error()
 			continue
 		}
-		resp, err := s.answer(ctx, d, q, nq.Query)
+		resp, err := s.answer(ctx, d, q, nq.Query, nq.Bind)
 		if err != nil {
 			if stopped(err) {
 				return nil, err
@@ -136,16 +136,50 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 func QuerySetFromProto(p *webapi.QuerySet) query.QuerySet {
 	s := query.QuerySet{Title: p.GetTitle(), Preamble: p.GetPreamble()}
 	for _, q := range p.GetQueries() {
-		s.Queries = append(s.Queries, query.NamedQuery{Name: q.GetName(), Query: q.GetQuery(), Description: q.GetDescription()})
+		s.Queries = append(s.Queries, query.NamedQuery{Name: q.GetName(), Query: q.GetQuery(), Description: q.GetDescription(), Bind: BindingsFromProto(q.GetBindings())})
 	}
 	return s
+}
+
+// BindingsFromProto converts a request's bindings to the values the engine binds (agni issue 793). A
+// value that sets neither field binds the empty text, as `""` written in the query would.
+func BindingsFromProto(m map[string]*webapi.QueryValue) map[string]query.Value {
+	if len(m) == 0 {
+		return nil
+	}
+	out := make(map[string]query.Value, len(m))
+	for k, v := range m {
+		if n, ok := v.GetKind().(*webapi.QueryValue_Number); ok {
+			out[k] = query.Number(n.Number)
+		} else {
+			out[k] = query.Text(v.GetText())
+		}
+	}
+	return out
+}
+
+// BindingsProto converts bound values to their wire form: a value carrying a number is a number,
+// any other is text.
+func BindingsProto(m map[string]query.Value) map[string]*webapi.QueryValue {
+	if len(m) == 0 {
+		return nil
+	}
+	out := make(map[string]*webapi.QueryValue, len(m))
+	for k, v := range m {
+		if v.Num != nil {
+			out[k] = &webapi.QueryValue{Kind: &webapi.QueryValue_Number{Number: *v.Num}}
+		} else {
+			out[k] = &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: v.S}}
+		}
+	}
+	return out
 }
 
 // QuerySetProto converts a query set to its wire form, for a caller that read one from a file.
 func QuerySetProto(s query.QuerySet) *webapi.QuerySet {
 	p := &webapi.QuerySet{Title: s.Title, Preamble: s.Preamble}
 	for _, q := range s.Queries {
-		p.Queries = append(p.Queries, &webapi.NamedQuery{Name: q.Name, Query: q.Query, Description: q.Description})
+		p.Queries = append(p.Queries, &webapi.NamedQuery{Name: q.Name, Query: q.Query, Description: q.Description, Bindings: BindingsProto(q.Bind)})
 	}
 	return p
 }
@@ -218,11 +252,15 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 // answer evaluates one query over a read and assembles its response, echoing queryText as the
 // response's query. An error is the evaluator's (a malformed or unanswerable query), and the caller
 // decides what it means for the call.
-func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string) (*webapi.RunQueryResponse, error) {
+func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind map[string]query.Value) (*webapi.RunQueryResponse, error) {
 	// Work is measured on this read's own fact base, so it is this query's alone, and reported so a
 	// deployment can see what its queries cost before it sets a budget (agni issue 792).
 	before := d.base.Work()
-	rows, err := s.eval.Eval(ctx, q, d.base, query.EvalOptions(ctx)...)
+	opts := query.EvalOptions(ctx)
+	if len(bind) > 0 {
+		opts = append(opts, query.Bind(bind))
+	}
+	rows, err := s.eval.Eval(ctx, q, d.base, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +271,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	// cannot describe a different run than the one that produced these rows.
 	resp := &webapi.RunQueryResponse{
 		Columns: make([]string, len(cols)), ColumnKinds: kinds,
-		Query: queryText, Source: d.source, Work: work,
+		Query: queryText, Source: d.source, Work: work, Bindings: BindingsProto(bind),
 	}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
@@ -458,13 +496,13 @@ func (s *QueryService) ListRelations(ctx context.Context, req *webapi.ListRelati
 		resp.Relations = append(resp.Relations, info)
 	}
 	for _, e := range query.EntityQueries() {
-		resp.EntityQueries = append(resp.EntityQueries, &webapi.EntityQuery{Kind: e.Kind, Query: e.Query, Teaches: e.Teaches})
+		resp.EntityQueries = append(resp.EntityQueries, &webapi.EntityQuery{Kind: e.Kind, Query: e.Query, Teaches: e.Teaches, Binds: e.Binds})
 	}
 	for _, e := range query.Examples() {
 		resp.Examples = append(resp.Examples, &webapi.ExampleQuery{Label: e.Label, Query: e.Query, Teaches: e.Teaches})
 	}
 	sq := query.Search()
-	resp.SearchQuery = &webapi.SearchQuery{Query: sq.Query, Teaches: sq.Teaches}
+	resp.SearchQuery = &webapi.SearchQuery{Query: sq.Query, Teaches: sq.Teaches, Bind: sq.Bind, Pattern: sq.Pattern}
 	return resp, nil
 }
 

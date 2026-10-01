@@ -16,6 +16,7 @@
 </div>
 
 {{if .Query}}<pre class="q">{{.Query}}</pre>{{end}}
+{{if .Bindings}}<p class="sub">Bound: {{range $i, $b := .Bindings}}{{if $i}}, {{end}}<code>{{$b}}</code>{{end}}</p>{{end}}
 
 {{if .Body}}
 <table>

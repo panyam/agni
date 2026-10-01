@@ -20,6 +20,10 @@ type Table struct {
 	// Query is the datalog that produced the rows, carried so an exported view states the question
 	// it answers and can be re-run.
 	Query string
+	// Bindings are the values the query's variables were bound to, each formatted `?n = "GND"`
+	// (agni issue 793). A parameterized view prints them under the query, since the query text alone
+	// no longer states the whole question.
+	Bindings []string
 	// Source names the design the query ran against. Rendered in the subtitle, not in a cell.
 	Source string
 	// Columns are the projected column names, in the query's own order. Provenance is NOT among
@@ -99,9 +103,7 @@ func TableMarkdown(w io.Writer, t Table) error {
 	if t.Source != "" {
 		bw.printf("*%s*\n\n", mdEscape(t.Source))
 	}
-	if t.Query != "" {
-		bw.printf("```\n%s\n```\n\n", t.Query)
-	}
+	writeQuery(bw, t.Query, t.Bindings)
 	if len(t.Rows) == 0 {
 		bw.printf("No rows matched.\n")
 		return bw.err
@@ -172,4 +174,18 @@ func (e *errWriter) printf(format string, args ...any) {
 		return
 	}
 	_, e.err = fmt.Fprintf(e.w, format, args...)
+}
+
+// writeQuery prints a query in a fence and, under it, the values its variables were bound to.
+func writeQuery(bw *errWriter, query string, bindings []string) {
+	if query != "" {
+		bw.printf("```\n%s\n```\n\n", query)
+	}
+	if len(bindings) > 0 {
+		quoted := make([]string, len(bindings))
+		for i, b := range bindings {
+			quoted[i] = "`" + b + "`"
+		}
+		bw.printf("Bound: %s\n\n", strings.Join(quoted, ", "))
+	}
 }

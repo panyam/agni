@@ -91,7 +91,7 @@ const REPLIES: Record<string, unknown> = {
     examples: [],
     // Without these a click highlights and asks nothing, so their absence here would make the click
     // test below fail for the right reason.
-    entityQueries: [{ kind: "net", query: 'component.net(?ref, "{net}") => ?ref', teaches: "join" }],
+    entityQueries: [{ kind: "net", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] }],
   },
 };
 
@@ -307,10 +307,13 @@ describe("clicking the drawing asks a question about what was clicked", () => {
       host!.dispatchEvent(new MouseEvent("mousedown", { clientX: 400, clientY: 300, bubbles: true }));
       window.dispatchEvent(new MouseEvent("mouseup", { clientX: 400, clientY: 300, bubbles: true }));
 
-      // The query panel's textarea holds the generated query, and it names the net that was clicked.
+      // The query panel holds the served preset, and its binding chip names the net that was clicked
+      // (agni issue 793).
       await vi.waitFor(() => {
         const box = document.querySelector<HTMLTextAreaElement>('[data-component="query"] textarea');
-        expect(box?.value ?? "").toContain("PMIC_CORE_3V3");
+        expect(box?.value ?? "").toContain("?net");
+        const bound = document.querySelector<HTMLInputElement>('[data-component="query"] .query-binding-value');
+        expect(bound?.value ?? "").toBe("PMIC_CORE_3V3");
       }, 3000);
       // And the panel names what was picked, which is where the next hop is offered from. main.ts
       // pushing the selection is a separate call from the one that writes the query, so it is a

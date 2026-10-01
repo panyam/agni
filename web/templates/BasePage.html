@@ -334,6 +334,14 @@
     .query-term { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
     .query-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
     .query-actions { display: flex; align-items: center; gap: 8px; }
+    /* Bound values (agni issue 793): one chip per variable a search or a click bound, under the
+       query they belong to, each value editable and removable. */
+    .query-bindings { display: flex; flex-wrap: wrap; gap: 4px; }
+    .query-binding { display: inline-flex; align-items: center; gap: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; padding: 1px 2px 1px 6px; border: 1px solid #c9d3e0; background: #eef3fa; border-radius: 10px; }
+    .query-binding-name { color: #445; }
+    .query-binding-value { font: inherit; width: 14ch; padding: 1px 4px; border: 1px solid #d5dbe3; border-radius: 3px; background: #fff; }
+    .query-binding-remove { font: inherit; border: 0; background: none; color: #778; cursor: pointer; padding: 0 4px; }
+    .query-binding-remove:hover { color: #222; }
     .query-run { font: inherit; font-size: 12px; padding: 3px 12px; border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; }
     .query-run:hover:not(:disabled) { background: #e0e0e0; }
     .query-run:disabled { color: #aaa; cursor: not-allowed; }

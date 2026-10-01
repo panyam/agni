@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { askLabel, bestOf, fillEntityQuery, labelFor, pickAt, sameSelection, selectionFromCell, selectionFromElement, type Selection } from "./selection.js";
+import { askLabel, bestOf, entityBindings, labelFor, pickAt, sameSelection, selectionFromCell, selectionFromElement, type Selection } from "./selection.js";
 
 function el(attrs: Record<string, string>): Element {
   const e = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
@@ -71,28 +71,25 @@ describe("pickAt", () => {
   });
 });
 
-describe("filling a served preset", () => {
-  // The templates live on the server, beside the relations they name, so what is tested here is the
-  // substitution, the client's half of the job.
-  it("substitutes a pin's ref and designator", () => {
-    const q = fillEntityQuery(`pin.net("{ref}", "{pin}", ?net) => ?net`, { kind: "pin", ref: "U7", pin: "12" });
-    expect(q).toBe(`pin.net("U7", "12", ?net) => ?net`);
+describe("binding a served preset", () => {
+  // The presets live on the server, beside the relations they name, so what is tested here is the
+  // client's half of the job: turning what was clicked into the values the preset binds.
+  it("binds a pin's ref and designator", () => {
+    expect(entityBindings(["ref", "pin"], { kind: "pin", ref: "U7", pin: "12" })).toEqual({ ref: "U7", pin: "12" });
   });
 
-  it("substitutes every occurrence, not just the first", () => {
-    const q = fillEntityQuery(`component.net(?r, "{net}"), pin.net(?r, ?p, "{net}") => ?r, ?p`, { kind: "net", net: "SDA" });
-    expect(q).toBe(`component.net(?r, "SDA"), pin.net(?r, ?p, "SDA") => ?r, ?p`);
+  it("binds only what the preset names, so one preset's output stays free", () => {
+    expect(entityBindings(["net"], { kind: "net", net: "SDA", ref: "U1" })).toEqual({ net: "SDA" });
   });
 
-  // The grammar has no escape sequence, so a quote in a designator cannot be represented. Splicing
-  // one in would end the string literal early and produce a query that means something else.
-  it("strips a quote rather than splicing it into a string literal", () => {
-    const q = fillEntityQuery(`component.net("{ref}", ?n) => ?n`, { kind: "component", ref: `R"1` });
-    expect(q).toBe(`component.net("R1", ?n) => ?n`);
+  // A value is bound as itself (agni issue 793), so a quote in a designator reaches the query
+  // exactly, where splicing it into a string literal could only strip it.
+  it("keeps a quote in a designator", () => {
+    expect(entityBindings(["ref"], { kind: "component", ref: `R"1` })).toEqual({ ref: `R"1` });
   });
 
-  it("leaves a placeholder the selection cannot fill as an empty literal", () => {
-    expect(fillEntityQuery(`bus("{bus}", ?m) => ?m`, { kind: "net", net: "N" })).toBe(`bus("", ?m) => ?m`);
+  it("binds a field the selection does not carry to the empty text", () => {
+    expect(entityBindings(["bus"], { kind: "net", net: "N" })).toEqual({ bus: "" });
   });
 });
 

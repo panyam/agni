@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cellKind, fillSearchQuery, groupRelations, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { bindingsInUse, cellKind, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
 
 describe("resultFromResponse", () => {
   it("carries column kinds and resolves each navigable cell's sheet badges via the resolver", () => {
@@ -110,20 +110,45 @@ describe("searchPattern", () => {
     expect(searchPattern("3.3V")).toBe("3\\.3V");
   });
 
-  it("drops a double quote, which the query grammar cannot represent at all", () => {
-    expect(searchPattern('A"B')).toBe("AB");
+  // The pattern is bound as a value (agni issue 793), so a quote no longer ends a string literal and
+  // a name carrying one can be searched for.
+  it("keeps a double quote, since the pattern is bound rather than spliced into the query", () => {
+    expect(searchPattern('A"B')).toBe('A"B');
   });
 });
 
-describe("fillSearchQuery", () => {
-  it("substitutes the escaped term into the served template", () => {
-    expect(fillSearchQuery('entity(?name, ?kind), str.match(?name, "(?i){term}")', "CAN")).toBe(
-      'entity(?name, ?kind), str.match(?name, "(?i)CAN")',
-    );
+describe("searchBindings", () => {
+  const search = { query: "entity(?name, ?kind), str.match(?name, ?pattern) => ?name, ?kind", teaches: "", bind: "pattern", pattern: "(?i){term}" };
+
+  it("binds the served pattern with the escaped term in place of {term}", () => {
+    expect(searchBindings(search, "CAN")).toEqual({ pattern: "(?i)CAN" });
   });
 
-  it("escapes before substituting, so a typed metacharacter cannot reach the regex as syntax", () => {
-    expect(fillSearchQuery('str.match(?name, "(?i){term}")', "VDD+")).toBe('str.match(?name, "(?i)VDD\\+")');
+  it("escapes before filling, so a typed metacharacter cannot reach the regex as syntax", () => {
+    expect(searchBindings(search, "VDD+")).toEqual({ pattern: "(?i)VDD\\+" });
+  });
+
+  // A string replacement reads $& as "the match", which would put {term} itself into the pattern.
+  it("fills a term containing $& literally", () => {
+    expect(searchBindings(search, "A$&B")).toEqual({ pattern: "(?i)A\\$&B" });
+  });
+});
+
+describe("bindingsInUse", () => {
+  it("keeps only the bindings whose variable the query still names", () => {
+    const b = { ref: "U1", net: "GND" };
+    expect(bindingsInUse("component.net(?ref, ?n) => ?n", b)).toEqual({ ref: "U1" });
+    expect(bindingsInUse("component.net(?r, ?n) => ?n", b)).toEqual({});
+  });
+
+  it("matches the whole variable name, not a prefix of a longer one", () => {
+    expect(bindingsInUse("component.net(?refdes, ?n)", { ref: "U1" })).toEqual({});
+  });
+});
+
+describe("formatBinding", () => {
+  it("spells the value as the query would write the constant", () => {
+    expect(formatBinding("ref", 'R"1')).toBe('?ref = "R\\"1"');
   });
 });
 

@@ -91,6 +91,12 @@ message RunQueryRequest {
   // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
   // deployment's own budget, never raise it, and zero leaves that budget as it is. A query past its budget fails with RESOURCE_EXHAUSTED, naming the budget.
   int64 work_budget = 6;
+  // bindings give goal variables values from the caller, keyed by the variable's name without its
+  // `?` (agni issue 793). A bound variable answers exactly as the same value written into the goal as
+  // a constant, so a caller asking about one net or part sends the same query text every time and the
+  // value as data, with nothing to escape or splice. A binding naming a variable the goal does not use
+  // is refused as an invalid argument. Rules are unaffected: their variables are their own.
+  map<string, QueryValue> bindings = 7;
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
@@ -170,6 +176,19 @@ message RunQueryResponse {
   // work is what answering this query cost, in the units a work budget counts, so a deployment can
   // see which queries are expensive and choose a budget from evidence (agni issue 792).
   int64 work = 6;
+  // bindings echo the request's, so an answer to a parameterized query still states the whole
+  // question it answers.
+  map<string, QueryValue> bindings = 7;
+}
+
+// QueryValue is a value bound to a query variable. It is typed because the engine compares a number
+// and a string differently, and a binding must mean what the same constant written into the query
+// would: `3.3` is a number and `"3.3"` a string.
+message QueryValue {
+  oneof kind {
+    string text = 1;
+    double number = 2;
+  }
 }
 
 message ListRelationsRequest {
@@ -252,17 +271,21 @@ message ExampleQuery {
 message EntityQuery {
   // kind is the picked entity's kind: "pin", "component", "net" or "bus".
   string kind = 1;
-  // query carries {ref}, {pin}, {net}, {bus} placeholders INSIDE their string literals ("{ref}"), so
-  // the template parses as written and the client substitutes without having to add quoting.
+  // query is the same text for every click: the picked entity reaches it through binds.
   string query = 2;
   // teaches is the one concept this preset introduces, so a click that answers a question also
   // shows the reader a piece of the language.
   string teaches = 3;
+  // binds names the variables the client binds from the picked selection (agni issue 793), each
+  // also the selection field that fills it: ref, pin, net or bus. It is explicit because one
+  // preset's input is another's output (the pin preset answers ?net, the net preset asks about one).
+  repeated string binds = 4;
 }
 
-// SearchQuery is the template the panel's search mode fills: find a design's entities by name
-// (agni issue 338). {term} sits INSIDE its string literal, as the entity presets' placeholders do,
-// so the template parses as written.
+// SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
+// issue 338). The client binds the variable `bind` names to `pattern` with {term} replaced by the
+// reader's escaped text (agni issue 793), so the query text never changes and the (?i) that makes
+// the search case-insensitive is written here, once.
 //
 // It is served for the same reason the entity presets are. It names `entity` and `str.match`, both
 // defined on this side, and a client-held copy would be the one caller nothing checks.
@@ -271,6 +294,10 @@ message SearchQuery {
   // teaches is the concept a search leaves behind, since what the reader gets back is an editable
   // datalog query rather than a search box's opinion.
   string teaches = 2;
+  // bind names the variable the client binds, without its `?`.
+  string bind = 3;
+  // pattern is the regex bound to it, with {term} standing for the reader's escaped text.
+  string pattern = 4;
 }
 
 message ListRelationsResponse {
@@ -308,6 +335,8 @@ message NamedQuery {
   string query = 2;
   // description is carried into a rendered report for the reader.
   string description = 3;
+  // bindings mean what they mean on RunQueryRequest, for this query alone.
+  map<string, QueryValue> bindings = 4;
 }
 
 message RunQueriesRequest {

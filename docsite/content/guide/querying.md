@@ -189,7 +189,8 @@ Pins are not in `entity`, because a pin is named by two things rather than one. 
 name box searches `entity`, so it will not turn one up.
 
 In the web viewer this has a front door. The query panel has a **Find by name** mode: type part of a
-name, and it writes the same query into the box, runs it, and hands you back the query. Each hit is
+name, and it writes the same query into the box with your text bound to its `?pattern`, runs it, and
+hands you back the query and the binding. Each hit is
 clickable, whatever sort of thing it turns out to be, so a search lands you on the drawing and leaves
 a sentence you can edit into a better question.
 
@@ -418,6 +419,29 @@ The members exist only inside that project. `agni query --relations house --desi
 them with their definitions, and [Adding a library member](../../build/library-member/#a-projects-own-library)
 covers the rules a project library follows.
 
+### Ask the same question about different things (bindings)
+
+A script that asks about one part, then another, should not build a new query string each time. Write
+the query once with a variable where the part goes, and bind the variable to a value with
+`--bind name=value`:
+
+{{ agniRun "content/guide/runs/query-bind.yaml" }}
+
+A bound variable answers exactly as the same value written into the query as a constant, so the run
+above is `component.net("U1", ?net), ...` without the quoting. A value that parses as a number binds a
+number, so `--bind v=3.3` compares as `3.3` would; quote it (`--bind 'n="3"'`) to bind the text.
+`--bind` repeats, one per variable. Naming a variable the query does not use is an error, so a typo
+fails rather than leaving the variable free and widening the question.
+
+Bindings are what a program sends rather than text it builds, so a value needs no escaping and a
+name holding a quote is asked about exactly. Over the API they are `RunQueryRequest.bindings`, and
+the Python client builds them with `agni.bindings({"ref": "U1"})`. The `--format markdown` and `html`
+views print them under the query, because the query text alone no longer states the whole question.
+
+One limit comes from the engine. A variable that appears only inside a `not` is refused even when it
+is bound (panyam/jaala#61). Give it something positive to range over first, as in
+`net.name(?n), not net.rail(?n)`.
+
 ### Ask many questions at once (query sets)
 
 An audit is usually a workbook rather than a single question: which nets have no test point, how
@@ -441,7 +465,9 @@ queries:
 {{ agniRun "content/guide/runs/query-set.yaml" }}
 
 The preamble holds rules only; each query brings its own goal, and each may also carry a
-`description` the rendered report shows. `--format markdown` and `--format html` write the whole set
+`description` the rendered report shows and a `bind:` map of values for its own variables
+(`bind: {ref: U1}`), which mean what `--bind` means for one query. YAML types each value, so `3.3` is
+a number and `"3"` is text. `--format markdown` and `--format html` write the whole set
 as one document with a section per query, and `--format json` writes the `RunQueriesResponse` wire
 message. csv is refused, because one csv file holds one table.
 
@@ -536,6 +562,12 @@ and a query and a check in the same session then answer under the same vocabular
 
 Datasheet (`param.max`) facts are not yet wired into the viewer. A query over `param.max` returns nothing
 there, and datasheet joins stay on the CLI for now.
+
+A search or a click on the drawing fills the box with a query whose variables are bound to what you
+searched for or clicked. The values show as chips under the box, one per variable, so the query
+stays the same sentence whatever you picked. Edit a chip's value to ask about something else, or
+remove it to leave the variable free and widen the question. Editing a bound variable out of the
+query drops its chip.
 
 You do not have to memorize the vocabulary. Below the query box the panel lists every relation as a
 **click-to-insert chip**, grouped by kind (Netlist, Board, Datasheet, Predicates, and any extension

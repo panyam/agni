@@ -702,10 +702,11 @@ func TestExamplesEvaluate(t *testing.T) {
 // The click-to-ask presets get the same guard as the examples, and need it more, because nobody
 // reads a preset before it runs. A reader clicks a pin and whatever the server handed the browser
 // is what executes, so a relation renamed out from under a preset has to fail here rather than in
-// someone's viewer. Substituting a real entity from the fixture is what makes this an EVALUATION
-// rather than a second parse check.
+// someone's viewer. Binding a real entity from the fixture is what makes this an EVALUATION rather
+// than a second parse check. Each answer is also compared with the same query with the values
+// written in as constants, which is what a binding promises to mean (agni issue 793).
 func TestEntityQueriesEvaluate(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project")}, nil, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
 	if err != nil {
 		t.Fatal(err)
@@ -713,16 +714,47 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 	if len(resp.GetEntityQueries()) == 0 {
 		t.Fatal("no entity presets served, so a click in the viewer would do nothing")
 	}
-	// Values from queryDesign(): a component, one of its pins, and a net they sit on.
-	fill := strings.NewReplacer("{ref}", "R1", "{pin}", "1", "{net}", "N1", "{bus}", "N1")
+	// Values from the tutorial board: a part, one of its pins, and the net that pin sits on. The
+	// board has no bus, so the bus preset is evaluated and answers nothing.
+	const uri = "mount://m/designs/gateway/gateway.edn"
+	values := map[string]string{"ref": "U1", "pin": "1", "net": "PMIC_MAIN_12V0", "bus": "DATA"}
 	for _, e := range resp.GetEntityQueries() {
-		q := fill.Replace(e.GetQuery())
-		if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Uri: "mount://m/x.edn", Query: q,
-		}); err != nil {
-			t.Errorf("preset for %q failed to evaluate: %v\n  query: %s", e.GetKind(), err, q)
+		if len(e.GetBinds()) == 0 {
+			t.Errorf("preset for %q binds nothing, so every click asks the same question", e.GetKind())
+		}
+		bind := map[string]*webapi.QueryValue{}
+		written := e.GetQuery()
+		for _, v := range e.GetBinds() {
+			bind[v] = &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: values[v]}}
+			written = strings.ReplaceAll(written, "?"+v+",", `"`+values[v]+`",`)
+			written = strings.ReplaceAll(written, "?"+v+")", `"`+values[v]+`")`)
+		}
+		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: e.GetQuery(), Bindings: bind})
+		if err != nil {
+			t.Errorf("preset for %q failed to evaluate: %v\n  query: %s", e.GetKind(), err, e.GetQuery())
+			continue
+		}
+		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: written})
+		if err != nil {
+			t.Fatalf("the preset with its values written in (%s): %v", written, err)
+		}
+		if e.GetKind() != "bus" && len(got.GetRows()) == 0 {
+			t.Errorf("preset for %q answered no rows on the fixture, so the comparison below proves nothing", e.GetKind())
+		}
+		if g, w := rowCells(got), rowCells(want); g != w {
+			t.Errorf("preset for %q: bound answer %s differs from the written-in answer %s", e.GetKind(), g, w)
 		}
 	}
+}
+
+// rowCells is a response's rows as one comparable string.
+func rowCells(r *webapi.RunQueryResponse) string {
+	var rows []string
+	for _, row := range r.GetRows() {
+		rows = append(rows, strings.Join(row.GetCells(), "|"))
+	}
+	sort.Strings(rows)
+	return strings.Join(rows, "; ")
 }
 
 // guard: the malformed-query message reaches the caller (the panel shows it inline).

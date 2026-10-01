@@ -96,24 +96,22 @@ export function pickAt(doc: Document, clientX: number, clientY: number): Selecti
   return bestOf(seen);
 }
 
-// fillEntityQuery substitutes a selection into a preset the SERVER wrote (query.EntityQueries).
+// entityBindings gives a preset the SERVER wrote (query.EntityQueries) the values of what was
+// clicked. The preset names the variables to bind (binds), each also the selection field that fills
+// it, and the query text stays as written (agni issue 793).
 //
 // The templates name relations defined in Go, so they live beside them, where each preset gets a
 // parse check and an evaluate-against-a-real-design check. A client copy would be the one caller
 // nothing checks, so renaming a relation would turn the server's tests red while every click in the
 // viewer produced a query that errors. This file only turns what was clicked into values.
 //
-// Quotes are stripped rather than escaped because the query grammar has no escape sequence (a
-// string literal is '"' { char } '"'). A designator carrying a quote cannot be represented, and
-// splicing one in would end the literal early and change what the query means. Stripping yields a
-// query that finds nothing.
-export function fillEntityQuery(template: string, sel: Selection): string {
-  const lit = (v: string | undefined): string => (v ?? "").replace(/"/g, "");
-  return template
-    .replace(/\{ref\}/g, lit(sel.ref))
-    .replace(/\{pin\}/g, lit(sel.pin))
-    .replace(/\{net\}/g, lit(sel.net))
-    .replace(/\{bus\}/g, lit(sel.busId));
+// A value is bound as itself, so a designator carrying a quote is asked about exactly. Splicing it
+// into a string literal, which has no escape sequence, could only strip it.
+export function entityBindings(binds: readonly string[], sel: Selection): Record<string, string> {
+  const field: Record<string, string | undefined> = { ref: sel.ref, pin: sel.pin, net: sel.net, bus: sel.busId };
+  const out: Record<string, string> = {};
+  for (const v of binds) out[v] = field[v] ?? "";
+  return out;
 }
 
 // labelFor is the one-line human name for a selection, for a status line or a panel heading.
