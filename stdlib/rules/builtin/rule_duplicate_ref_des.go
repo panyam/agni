@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -47,7 +48,7 @@ var duplicateRefDes = &check.Rule{
 // what this rule has always reported. Passes follow in design order, deduplicated by designator,
 // because the subject is the DESIGNATOR rather than the placement. A verdict is keyed by
 // (rule, kind, ref), so a second verdict about the same ref-des would be a duplicate identity.
-func duplicateRefDesVerdicts(m check.Model) []check.Verdict {
+func duplicateRefDesVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	collided := map[string]bool{}
 	out := make([]check.Verdict, 0, len(m.Components()))
 	for _, c := range m.RefDesCollisions() {

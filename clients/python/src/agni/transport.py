@@ -132,6 +132,9 @@ def _only(req: Message, allowed: Sequence[str]) -> None:
 
 def _read_flags(req: Message) -> List[str]:
     out: List[str] = []
+    budget = getattr(req, "work_budget", 0)
+    if budget:
+        out += ["--budget", str(budget)]
     board = getattr(req, "board_uri", "")
     if board:
         out += ["--board-path", board]
@@ -197,13 +200,13 @@ def _write_library(req: Message, root: str) -> List[str]:
 
 
 def _query_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "query", "board_uri", "as_named", "overlay"))
+    _only(req, ("uri", "query", "board_uri", "as_named", "overlay", "work_budget"))
     _library_only(req)
     return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req)
 
 
 def _query_set_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "set", "board_uri", "as_named", "overlay"))
+    _only(req, ("uri", "set", "board_uri", "as_named", "overlay", "work_budget"))
     _library_only(req)
     return ["query", req.uri, "--set", "-", "--format", "json"] + _read_flags(req)
 

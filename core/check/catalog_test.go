@@ -1,6 +1,7 @@
 package check
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/param"
@@ -89,7 +90,7 @@ func testRule(name string) *Rule {
 	return &Rule{
 		Name: name, Severity: "info", Summary: "t", Reads: []string{"net.names"},
 		Tags: map[string]string{KeyCategory: CategoryNaming},
-		Eval: FailuresOnly(func(Model) []Finding { return nil }),
+		Eval: FailuresOnly(func(context.Context, Model) []Finding { return nil }),
 	}
 }
 

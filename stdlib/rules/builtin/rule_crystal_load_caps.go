@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -60,7 +61,7 @@ type clockPart struct {
 // recognizable, as with an oscillator on a real EDIF corpus whose Vcc net was neither flagged nor
 // rail-named. A part failing that count is one the rule declined to classify, so it reports
 // NotConsidered rather than a pass.
-func crystalLoadCapsVerdicts(m check.Model) []check.Verdict {
+func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	parts := map[string]*clockPart{}
 	var order []string
 	for _, c := range m.Components() {

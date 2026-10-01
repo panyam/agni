@@ -36,6 +36,9 @@ var (
 	ErrNotFound        = errors.New("not found")
 	ErrInvalidArgument = errors.New("invalid argument")
 	ErrInternal        = errors.New("internal error")
+	// ErrResourceExhausted is a query that stopped at its work budget (agni issue 792): it may well
+	// be a good question, but it costs more than this deployment or this request allows.
+	ErrResourceExhausted = errors.New("resource exhausted")
 )
 
 // Loader materializes a design's read model from an artifact.URI. The server adapter (osLoader in

@@ -302,6 +302,7 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--set <file>` | answer a query set instead of one query: named queries sharing a `preamble` of rules, all over ONE read of the design (see [Ask many questions at once](../querying/#ask-many-questions-at-once-query-sets)). Takes the design alone, no query argument; `-` reads the set from stdin. `json` is the `RunQueriesResponse`, `markdown`/`html`/`text` one document with a section per query, and `csv` is refused. Every answer is written, then the command exits non-zero if any query could not be answered |
 | `--title <name>` | name the view (or replace a set's title), used as the heading in `--format markdown` and `html` |
 | `--lib <dir>` | a directory of derived-relation modules laid out as a project's `lib/` (`<module.path>.dl`, optional `docs/<member.path>.md`), sent with the query beside any library the design's project carries (see [Adding a library member](../../build/library-member/#sending-a-library-with-a-request)). Repeatable. Also read by `--relations`, so the catalog lists the modules' members |
+| `--budget <work>` | stop a query once it has done this much work and report it as over budget rather than answer late. 0, the default, sets none. `--format json` reports the work an answer cost as `work`, which is how to choose one (see [Running the server](../running-the-server/#a-work-budget-for-served-queries)) |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default). A view is a thing to hand to someone, so it wants a filename rather than a redirect. The written-file note goes to stderr |
 
 ### `trace <file>`
@@ -375,6 +376,8 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--theme <name>` | render palette: `default` or `dark` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 | `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
+| `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
+| `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |
 
 ### `healthcheck`
 

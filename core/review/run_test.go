@@ -1,6 +1,7 @@
 package review
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ func TestProfileAbsentNotApplicable(t *testing.T) {
 		{ID: "x", Title: "CAN bus", Binding: Binding{Profile: "CAN"}},
 	}}}}
 	out := func(present PresenceFunc) Outcome {
-		return Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present}).Areas[0].Items[0].Outcome
+		return runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present}).Areas[0].Items[0].Outcome
 	}
 	if got := out(func(string) (Presence, bool) { return IfaceAbsent, true }); got != NotApplicable {
 		t.Errorf("absent interface: want not-applicable, got %s", got)
@@ -44,7 +45,7 @@ func TestHostUnsatisfiedNotAutomated(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "x", Title: "LIN bus", Binding: Binding{Profile: "CAN"}},
 	}}}}
-	got := Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d",
+	got := runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d",
 		Present: func(string) (Presence, bool) { return IfaceHostUnsatisfied, true }}).Areas[0].Items[0]
 	if got.Outcome != NotAutomated {
 		t.Errorf("host-unsatisfied interface: want not-automated, got %s", got.Outcome)
@@ -64,7 +65,7 @@ func TestAbsentInterfaceWithoutRulesNotApplicable(t *testing.T) {
 		{ID: "x", Title: "Wi-Fi present?", Binding: Binding{Profile: "WiFiBT"}},
 	}}}}
 	out := func(present PresenceFunc) Outcome {
-		return Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present}).Areas[0].Items[0].Outcome
+		return runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present}).Areas[0].Items[0].Outcome
 	}
 	// known + absent: the module is not on this board -> not-applicable (the WS3-068 fix).
 	if got := out(func(string) (Presence, bool) { return IfaceAbsent, true }); got != NotApplicable {
@@ -126,7 +127,7 @@ func TestDatasheetQueryNeedsData(t *testing.T) {
 			return nil
 		})
 		m := check.NewModel(d, check.WithParamProvider(provider))
-		return Run(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man(q), Design: "d"}).Areas[0].Items[0]
+		return runBackground(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man(q), Design: "d"}).Areas[0].Items[0]
 	}
 	if got := run(clean, "IOUT"); got.Outcome != Pass {
 		t.Errorf("symbol seeded, clean query: got %s, want pass", got.Outcome)
@@ -152,7 +153,7 @@ func TestIntentPrebindNamespaceSafety(t *testing.T) {
 	// mimics intent.Emits for the two names under test (the real predicate is unit-tested in the intent pkg)
 	known := func(name string) bool { return name == "intent/module-missing" }
 	run := func(rule string, k func(string) bool) Outcome {
-		return Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(),
+		return runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(),
 			Manifest: man(rule), Design: "d", IntentRuleKnown: k}).Areas[0].Items[0].Outcome
 	}
 	if got := run("intent/power-sequence", known); got != NotAutomated {
@@ -178,7 +179,7 @@ func TestCapabilityGatedNotApplicable(t *testing.T) {
 		}}}}
 	}
 	run := func(man Manifest, d *ir.Design) ItemResult {
-		return Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
+		return runBackground(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
 	cases := []struct {
 		rule        string
@@ -265,13 +266,13 @@ func TestPresentBinding(t *testing.T) {
 	}}}}
 
 	// A design carrying a debug connector -> pass, no findings.
-	rep := Run(RunParams{Model: check.NewModel(debugDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"})
+	rep := runBackground(RunParams{Model: check.NewModel(debugDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"})
 	if got := rep.Areas[0].Items[0]; got.Outcome != Pass || len(got.Findings) != 0 {
 		t.Fatalf("with a test_connector: want pass/no-findings, got %s / %+v", got.Outcome, got.Findings)
 	}
 
 	// A design with no debug connector -> fail with exactly one design-level finding.
-	rep = Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"})
+	rep = runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"})
 	got := rep.Areas[0].Items[0]
 	if got.Outcome != Fail || len(got.Findings) != 1 {
 		t.Fatalf("without a test_connector: want fail/one-finding, got %s / %+v", got.Outcome, got.Findings)
@@ -302,7 +303,7 @@ func TestPresentBindingHasClass(t *testing.T) {
 		man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 			{ID: cl, Title: cl + " present", Binding: Binding{Present: &PresentBinding{Class: cl}}},
 		}}}}
-		got := Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
+		got := runBackground(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
 		if got.Outcome != Pass {
 			t.Errorf("present:{class:%s}: want pass (HasClass matches a non-most-specific tag), got %s / %+v", cl, got.Outcome, got.Findings)
 		}
@@ -311,7 +312,7 @@ func TestPresentBindingHasClass(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "cap", Title: "cap present", Binding: Binding{Present: &PresentBinding{Class: "capacitor"}}},
 	}}}}
-	if got := Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]; got.Outcome != Fail {
+	if got := runBackground(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]; got.Outcome != Fail {
 		t.Errorf("present:{class:capacitor} on a design with none: want fail, got %s", got.Outcome)
 	}
 }
@@ -329,7 +330,7 @@ func TestRunOutcomes(t *testing.T) {
 		{ID: "ghost", Title: "future rule", Binding: Binding{Rule: "does-not-exist-yet"}},
 	}}}}
 
-	rep := Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"})
+	rep := runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"})
 	got := map[string]Outcome{}
 	for _, a := range rep.Areas {
 		for _, it := range a.Items {
@@ -358,7 +359,7 @@ func TestReportRendersNote(t *testing.T) {
 		{ID: "fail", Title: "single pin", Note: "should not show for a fail",
 			Binding: Binding{Rule: "single-pin-net"}},
 	}}}}
-	md := RenderMarkdown(Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}))
+	md := RenderMarkdown(runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}))
 	if !strings.Contains(md, "needs a datasheet param rule (WS3-036)") {
 		t.Errorf("not-automated note should render:\n%s", md)
 	}
@@ -376,7 +377,7 @@ func TestCoverageRollup(t *testing.T) {
 		{ID: "auto", Title: "manual"},
 		{ID: "ghost", Title: "future", Binding: Binding{Rule: "nope"}},
 	}}}}
-	md := RenderCoverageMarkdown(Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}))
+	md := RenderCoverageMarkdown(runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}))
 	for _, want := range []string{
 		// 2 covered, but only 1 ANSWERED, because the not-applicable item has a rule and no inputs.
 		// That is the gap between the two axes.
@@ -454,7 +455,7 @@ func TestScopedBindingFiltersAndPresence(t *testing.T) {
 		}
 		return map[string]bool{}
 	}
-	rep := Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present, Scope: scope})
+	rep := runBackground(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present, Scope: scope})
 	items := map[string]ItemResult{}
 	for _, it := range rep.Areas[0].Items {
 		items[it.Item.ID] = it
@@ -515,7 +516,7 @@ func TestComponentScopedBinding(t *testing.T) {
 		}
 		return map[string]bool{}
 	}
-	rep := Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present, CompScope: compScope})
+	rep := runBackground(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", Present: present, CompScope: compScope})
 	items := map[string]ItemResult{}
 	for _, it := range rep.Areas[0].Items {
 		items[it.Item.ID] = it
@@ -538,7 +539,7 @@ func reqRule(profile, requirement string, subjects ...string) *check.Rule {
 		Severity: "warning",
 		Summary:  requirement,
 		Tags:     map[string]string{profileTagName: profile, profileTagRequirement: requirement},
-		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(context.Context, check.Model) []check.Finding {
 			var fs []check.Finding
 			for _, s := range subjects {
 				fs = append(fs, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: s}, Rule: requirement, Message: requirement})
@@ -584,7 +585,7 @@ func TestProfileRequirementSelector(t *testing.T) {
 		}
 		return IfaceAbsent, false
 	}
-	rep := Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: cat, Manifest: man, Design: "d", Present: present})
+	rep := runBackground(RunParams{Model: check.NewModel(oneDesign()), Catalog: cat, Manifest: man, Design: "d", Present: present})
 	items := map[string]ItemResult{}
 	for _, it := range rep.Areas[0].Items {
 		items[it.Item.ID] = it
@@ -780,7 +781,7 @@ func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
 		{ID: "x", Title: "iface", Binding: Binding{Rule: "single-pin-net", Scope: ScopeBinding{Profiles: []string{"IF"}}}},
 	}}}}
 	run := func(d *ir.Design) ItemResult {
-		return Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man,
+		return runBackground(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man,
 			Design: "d", Present: unmatched}).Areas[0].Items[0]
 	}
 	got := run(clean)
@@ -815,13 +816,13 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	silent := &check.Rule{
 		Name: "sizing", Severity: "error", Summary: "s",
 		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
-		Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil }),
+		Eval: check.FailuresOnly(func(context.Context, check.Model) []check.Finding { return nil }),
 	}
 	// The same rule, firing, to prove a real defect is never masked as needs-data.
 	loud := &check.Rule{
 		Name: "sizing", Severity: "error", Summary: "s",
 		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
-		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(context.Context, check.Model) []check.Finding {
 			return []check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Message: "over budget"}}
 		}),
 	}
@@ -837,7 +838,7 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 		})
 		m := check.NewModel(d, check.WithParamProvider(provider))
 		cat := check.CatalogWith(check.NewSource("sz", []*check.Rule{r}))
-		return Run(RunParams{Model: m, Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
+		return runBackground(RunParams{Model: m, Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
 	if got := run(silent, "IOUT"); got.Outcome != Pass {
 		t.Errorf("symbol seeded, rule silent: got (%s, %q), want pass", got.Outcome, got.Note)
@@ -850,7 +851,7 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	}
 	// A rule that declares NO symbols is unaffected, because the gate applies only where a
 	// datasheet dependency is declared, so every existing netlist-rule item keeps its behavior.
-	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil })}
+	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: check.FailuresOnly(func(context.Context, check.Model) []check.Finding { return nil })}
 	if got := run(plain, "VDD"); got.Outcome != Pass {
 		t.Errorf("rule with no declared symbols: got %s, want pass (gate must not over-reach)", got.Outcome)
 	}
@@ -877,7 +878,7 @@ func TestInconclusiveNeverReadsPass(t *testing.T) {
 			Name:     "probe",
 			Severity: "warning",
 			Summary:  "s",
-			Eval:     check.FailuresOnly(func(check.Model) []check.Finding { return []check.Finding{f} }),
+			Eval:     check.FailuresOnly(func(context.Context, check.Model) []check.Finding { return []check.Finding{f} }),
 		}
 	}
 	run := func(r *check.Rule) ItemResult {
@@ -888,7 +889,7 @@ func TestInconclusiveNeverReadsPass(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return Run(RunParams{Model: check.NewModel(d), Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
+		return runBackground(RunParams{Model: check.NewModel(d), Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
 
 	undecided := run(ruleEmitting(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "RST"}, Message: "cannot tell", Inconclusive: true}))
@@ -945,7 +946,7 @@ func TestNeedsDataCarriesUnmetDependencies(t *testing.T) {
 			}
 			return nil
 		})
-		return Run(RunParams{Model: check.NewModel(d, check.WithParamProvider(provider)),
+		return runBackground(RunParams{Model: check.NewModel(d, check.WithParamProvider(provider)),
 			Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
 
@@ -967,4 +968,13 @@ func TestNeedsDataCarriesUnmetDependencies(t *testing.T) {
 	if seeded := run("IOUT"); seeded.Outcome == NeedsData || len(seeded.Unmet) != 0 {
 		t.Errorf("a seeded symbol must leave no gap: outcome %q, unmet %+v", seeded.Outcome, seeded.Unmet)
 	}
+}
+
+// runBackground is Run for a test, which has no context to cancel and so no error to handle.
+func runBackground(p RunParams) Report {
+	rep, err := Run(context.Background(), p)
+	if err != nil {
+		panic(err) // a background context is never done
+	}
+	return rep
 }

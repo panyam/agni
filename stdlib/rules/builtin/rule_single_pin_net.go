@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -35,7 +36,7 @@ var singlePinNet = &check.Rule{
 //
 // The witness carries the count as a Term on every branch, including the exemption, so the statement
 // changes when the count does (docsite/content/build/evidence.md).
-func singlePinNetVerdicts(m check.Model) []check.Verdict {
+func singlePinNetVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		count := len(n.Connections)

@@ -9,18 +9,20 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class RunQueryRequest(_message.Message):
-    __slots__ = ("query", "overlay", "board_uri", "uri", "as_named")
+    __slots__ = ("query", "overlay", "board_uri", "uri", "as_named", "work_budget")
     QUERY_FIELD_NUMBER: _ClassVar[int]
     OVERLAY_FIELD_NUMBER: _ClassVar[int]
     BOARD_URI_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     query: str
     overlay: _checks_pb2_1.OverlayConfig
     board_uri: str
     uri: str
     as_named: bool
-    def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    work_budget: int
+    def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ...) -> None: ...
 
 class QueryRow(_message.Message):
     __slots__ = ("cells", "cites", "cell_sheets", "cell_reasons", "cell_kinds", "cell_refs")
@@ -45,18 +47,20 @@ class CellSheets(_message.Message):
     def __init__(self, sheet_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class RunQueryResponse(_message.Message):
-    __slots__ = ("columns", "rows", "column_kinds", "query", "source")
+    __slots__ = ("columns", "rows", "column_kinds", "query", "source", "work")
     COLUMNS_FIELD_NUMBER: _ClassVar[int]
     ROWS_FIELD_NUMBER: _ClassVar[int]
     COLUMN_KINDS_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
+    WORK_FIELD_NUMBER: _ClassVar[int]
     columns: _containers.RepeatedScalarFieldContainer[str]
     rows: _containers.RepeatedCompositeFieldContainer[QueryRow]
     column_kinds: _containers.RepeatedScalarFieldContainer[str]
     query: str
     source: str
-    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
+    work: int
+    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ...) -> None: ...
 
 class ListRelationsRequest(_message.Message):
     __slots__ = ("path", "uri", "overlay")
@@ -171,18 +175,20 @@ class NamedQuery(_message.Message):
     def __init__(self, name: _Optional[str] = ..., query: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
 
 class RunQueriesRequest(_message.Message):
-    __slots__ = ("set", "uri", "overlay", "board_uri", "as_named")
+    __slots__ = ("set", "uri", "overlay", "board_uri", "as_named", "work_budget")
     SET_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     OVERLAY_FIELD_NUMBER: _ClassVar[int]
     BOARD_URI_FIELD_NUMBER: _ClassVar[int]
     AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     set: QuerySet
     uri: str
     overlay: _checks_pb2_1.OverlayConfig
     board_uri: str
     as_named: bool
-    def __init__(self, set: _Optional[_Union[QuerySet, _Mapping]] = ..., uri: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    work_budget: int
+    def __init__(self, set: _Optional[_Union[QuerySet, _Mapping]] = ..., uri: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ...) -> None: ...
 
 class RunQueriesResponse(_message.Message):
     __slots__ = ("title", "preamble", "source", "results")

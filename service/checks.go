@@ -9,6 +9,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/query"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -167,9 +168,22 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	runnable, skipped := partitionAvailable(rules, m)
 	// Verdicts come from the SAME runnable set as the findings. A skipped rule contributes no
 	// verdicts, since it considered nothing.
+	// The request's context reaches every rule, so a check nobody is waiting for stops and says so
+	// (agni issue 795) rather than finishing the catalog.
+	// A deployment's budget, narrowed by the request's, reaches every query-backed rule through ctx
+	// (agni issue 792); a rule past it reports itself inconclusive and the others still answer.
+	ctx = query.NarrowBudget(ctx, req.GetWorkBudget())
+	findings, err := check.Run(ctx, m, runnable)
+	if err != nil {
+		return nil, err
+	}
+	verdicts, err := check.RunVerdicts(ctx, m, runnable)
+	if err != nil {
+		return nil, err
+	}
 	resp := &webapi.CheckDesignResponse{
-		Findings: FindingProtos(check.Run(m, runnable)),
-		Verdicts: VerdictProtos(check.RunVerdicts(m, runnable)),
+		Findings: FindingProtos(findings),
+		Verdicts: VerdictProtos(verdicts),
 		Skipped:  skipped,
 	}
 	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...), m)

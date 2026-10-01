@@ -21,11 +21,11 @@ func protDesign(rail, d1class string) *ir.Design {
 
 func TestOVPPassesWhenTVSOnRail(t *testing.T) {
 	decl := declOf(t, "name: I\nprotections:\n  - {rail: VBATT01, kind: ovp}")
-	if fs := check.Run(check.NewModel(protDesign("VBATT01", "tvs")), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(protDesign("VBATT01", "tvs")), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a TVS on the declared rail should pass, got %+v", fs)
 	}
 	// zener also clamps.
-	if fs := check.Run(check.NewModel(protDesign("VBATT01", "zener")), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(protDesign("VBATT01", "zener")), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a zener on the declared rail should pass, got %+v", fs)
 	}
 }
@@ -33,7 +33,7 @@ func TestOVPPassesWhenTVSOnRail(t *testing.T) {
 func TestOVPFiresWhenNoClampOnRail(t *testing.T) {
 	decl := declOf(t, "name: I\nprotections:\n  - {rail: VBATT01, kind: ovp}")
 	// A resistor on the rail is not a clamp -> fire.
-	fs := check.Run(check.NewModel(protDesign("VBATT01", "resistor")), Compile(decl))
+	fs := check.RunBackground(check.NewModel(protDesign("VBATT01", "resistor")), Compile(decl))
 	if len(fs) != 1 || fs[0].Rule != "protection-ovp" || check.EntityRef(fs[0].Subject) != "VBATT01" {
 		t.Fatalf("want one ovp finding on VBATT01, got %+v", fs)
 	}
@@ -44,7 +44,7 @@ func TestOVPNetScoped(t *testing.T) {
 	decl := declOf(t, "name: I\nprotections:\n  - {rail: VBATT01, kind: ovp}")
 	d := protDesign("SOME_OTHER_NET", "tvs")
 	d.Nets = append(d.Nets, &ir.Net{Name: "VBATT01"}) // declared rail exists but has no TVS
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 1 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 1 {
 		t.Errorf("a TVS on another net must not satisfy the declared rail, got %+v", fs)
 	}
 }
@@ -59,7 +59,7 @@ func TestDischargePassesWithBleeder(t *testing.T) {
 			{Name: "GND", Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "2"}}},
 		},
 	}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a bleeder resistor rail->GND should pass, got %+v", fs)
 	}
 }
@@ -74,7 +74,7 @@ func TestDischargeFiresWithoutBleeder(t *testing.T) {
 			{Name: "SIG", Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "2"}}},
 		},
 	}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 1 || fs[0].Rule != "protection-discharge" {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 1 || fs[0].Rule != "protection-discharge" {
 		t.Fatalf("want one discharge finding (no rail->GND resistor), got %+v", fs)
 	}
 }

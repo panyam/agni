@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -21,7 +22,7 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 		Remedy:              intentRemedy("property-" + kind),
 		Reads:               []string{"component.net", "component.class", "net.ground", "net.rail"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return propertyVerdicts(m, ps, kind) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return propertyVerdicts(m, ps, kind) },
 		StatesConsideredSet: true,
 	}
 }

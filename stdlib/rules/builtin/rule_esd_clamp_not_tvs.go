@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"github.com/panyam/agni/core/check"
 )
 
@@ -37,7 +38,7 @@ var esdClampNotTVS = &check.Rule{
 //
 // The question this rule asks is narrow (is the transient protection a Zener where the review wants
 // a TVS), so its passes are narrow too, and each names the device it credits.
-func esdClampNotTVSVerdicts(m check.Model) []check.Verdict {
+func esdClampNotTVSVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		if !check.ExternalSignalNet(m, n) {

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -43,7 +44,7 @@ var powerInputNotDriven = &check.Rule{
 // The EXTERNAL exemption is NotConsidered for the same reason it is in floating-input, since the feed
 // may be on a sheet this read did not open. The power-flag exemption is a genuine PASS, because a
 // power flag is the designer stating the net is driven.
-func powerInputNotDrivenVerdicts(m check.Model) []check.Verdict {
+func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	typesPowerOut := m.FormatTypesPowerOut()
 
 	var out []check.Verdict

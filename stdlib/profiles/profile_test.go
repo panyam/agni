@@ -59,14 +59,14 @@ func spinorBroken() *ir.Design {
 }
 
 func TestSPINORSilent(t *testing.T) {
-	if fs := check.Run(check.NewModel(spinorGood()), Compile(SPINOR)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(spinorGood()), Compile(SPINOR)); len(fs) != 0 {
 		t.Fatalf("good SPI-NOR bus: want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
 
 func TestSPINORFires(t *testing.T) {
 	got := map[string]check.Finding{}
-	for _, f := range check.Run(check.NewModel(spinorBroken()), Compile(SPINOR)) {
+	for _, f := range check.RunBackground(check.NewModel(spinorBroken()), Compile(SPINOR)) {
 		got[f.Rule] = f
 	}
 	if len(got) != 3 {
@@ -177,7 +177,7 @@ func TestHostIncomplete(t *testing.T) {
 			net("+3V3", "R1.2", "U2.7"),
 		},
 	}
-	fs := check.Run(check.NewModel(d), Compile(SPINOR))
+	fs := check.RunBackground(check.NewModel(d), Compile(SPINOR))
 	if len(fs) != 1 {
 		t.Fatalf("want exactly 1 finding (host-incomplete IO2, convention suppressed), got %d: %+v", len(fs), fs)
 	}
@@ -194,7 +194,7 @@ func TestHostWhollyAbsent(t *testing.T) {
 		Nets:       []*ir.Net{net("GND", "U2.1", "U1.1")},
 	}
 	got := 0
-	for _, f := range check.Run(check.NewModel(d), Compile(SPINOR)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(SPINOR)) {
 		if f.Rule == "spi_nor-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}

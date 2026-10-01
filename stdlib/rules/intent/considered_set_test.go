@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
@@ -14,7 +15,7 @@ func verdictsFor(t *testing.T, decl Declaration, m check.Model, rule string) []c
 	var out []check.Verdict
 	for _, r := range Compile(decl) {
 		if r.Name == rule {
-			out = append(out, r.Eval(m)...)
+			out = append(out, r.Eval(context.Background(), m)...)
 		}
 	}
 	return out
@@ -48,7 +49,7 @@ modules:
 	}
 	// And the findings do not move. The failing half is what `check` has always reported.
 	absent := check.NewModel(&ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}})
-	if fs := check.Run(absent, Compile(decl)); len(fs) != 1 {
+	if fs := check.RunBackground(absent, Compile(decl)); len(fs) != 1 {
 		t.Errorf("want the one absent-module finding, got %d: %+v", len(fs), fs)
 	}
 }

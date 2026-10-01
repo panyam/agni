@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -60,7 +61,7 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 //
 // The SOURCE side is scope rather than an outcome. A part that states no output voltage is not a
 // source, so it yields no verdict at all.
-func regulatorOutputVerdicts(m check.Model) []check.Verdict {
+func regulatorOutputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, src := range m.Components() {
 		srcSpec := m.PartSpec(src.RefDes)

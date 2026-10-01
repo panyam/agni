@@ -35,6 +35,7 @@ func queryCmd() *cobra.Command {
 	var setPath string
 	var relDesign string
 	var libDirs []string
+	var budget int64
 	c := &cobra.Command{
 		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
@@ -93,6 +94,9 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				return err
 			}
 			defer closeOut()
+			// A budget rides the command's context to every query it evaluates, as a server's does
+			// (agni issue 792). None by default: a local run's caller is the person waiting.
+			cmd.SetContext(query.WithBudget(cmd.Context(), budget))
 			if showRelations {
 				path := ""
 				if len(args) == 1 {
@@ -117,7 +121,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if err != nil {
 					return err
 				}
-				rows, err := query.Default.Eval(cmd.Context(), q, query.NewSpecLibBase(specs))
+				rows, err := query.Default.Eval(cmd.Context(), q, query.NewSpecLibBase(specs), query.EvalOptions(cmd.Context())...)
 				if err != nil {
 					return err
 				}
@@ -179,6 +183,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	outFileFlag(c, &outPath)
 	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
+	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons plus generator rows), as `agni serve --query-budget` does. 0, the default, sets none")
 	c.Flags().StringArrayVar(&libDirs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the query, beside any the design's project carries. Repeatable")
 	c.Flags().StringVar(&relDesign, "design", "", "with --relations, a design whose project's own library (lib/) joins the catalog, so its members list beside the shipped ones")
 	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations and no member path, also print each member's full reference doc")

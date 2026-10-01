@@ -109,6 +109,10 @@ message CheckDesignRequest {
   // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
   // how two views of one design are checked against each other.
   bool as_named = 5;
+  // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
+  // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+  // deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
+  int64 work_budget = 6;
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped

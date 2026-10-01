@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -29,7 +30,7 @@ func ioMapCoverageRule(d Declaration) *check.Rule {
 		Remedy:              intentRemedy(RuleIOMapCoverage),
 		Reads:               []string{"on_net"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return ioMapCoverageVerdicts(m, d) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return ioMapCoverageVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }

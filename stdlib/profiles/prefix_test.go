@@ -33,12 +33,12 @@ func TestSignalPrefixDiscriminatesForeignAnchor(t *testing.T) {
 	d := check.NewModel(foreignSerdesOnly())
 	// Suffix-only, the _TXP anchor latches onto the foreign serdes and reports PCIe's other signals
 	// "missing", the false positive. (Guards that the prefix is what fixes it, not the design.)
-	if fs := check.Run(d, Compile(pcieLike(""))); len(fs) == 0 {
+	if fs := check.RunBackground(d, Compile(pcieLike(""))); len(fs) == 0 {
 		t.Fatal("suffix-only profile: expected an over-match false positive on the foreign serdes, got none")
 	}
 	// Prefixed, the anchor requires the PCIE_ prefix too, so no PCIE_ nets means the profile is not
 	// in use and reports nothing on the unrelated serdes.
-	if fs := check.Run(d, Compile(pcieLike("PCIE_"))); len(fs) != 0 {
+	if fs := check.RunBackground(d, Compile(pcieLike("PCIE_"))); len(fs) != 0 {
 		t.Fatalf("prefixed profile: want 0 findings on a design with no PCIe, got %d: %+v", len(fs), fs)
 	}
 }

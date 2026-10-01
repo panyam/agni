@@ -32,6 +32,10 @@ func TestToConnectErr(t *testing.T) {
 		{service.ErrNativeNotEnabled, connect.CodeFailedPrecondition},
 		{service.ErrNativeNotFound, connect.CodeFailedPrecondition},
 		{fmt.Errorf("%w: exec blew up", service.ErrInternal), connect.CodeInternal},
+		// A request that stopped rather than failed (agni issues 792, 795).
+		{fmt.Errorf("query: evaluation stopped: %w", context.Canceled), connect.CodeCanceled},
+		{fmt.Errorf("query: evaluation stopped: %w", context.DeadlineExceeded), connect.CodeDeadlineExceeded},
+		{fmt.Errorf("%w: work passed its budget of 5", service.ErrResourceExhausted), connect.CodeResourceExhausted},
 		{errors.New("unclassified"), connect.CodeInvalidArgument},
 	}
 	for _, c := range cases {

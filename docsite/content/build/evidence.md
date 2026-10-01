@@ -256,7 +256,7 @@ returning findings to returning verdicts, every
 kept building and quietly started counting passes as failures. Two tests were already wrong this way
 and passed only by accident, because their rules were still wrapped in `check.FailuresOnly`. To
 find this, ask of every call site the compiler did NOT complain about whether the meaning
-survived. Use `Rule.Findings(m)` where a test means violations.
+survived. Use `Rule.Findings(ctx, m)` where a test means violations.
 
 **3. `scrollTop` is always 0 under jsdom, so a scroll assertion passes with the bug present.** jsdom has
 no layout engine, so nothing scrolls and nothing has a size. A panel that threw the reader back to the

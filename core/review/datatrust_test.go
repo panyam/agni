@@ -63,7 +63,7 @@ func TestStaleVerificationIsNotRatified(t *testing.T) {
 		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
 	}}}}
 	outcome := func(m check.Model) Outcome {
-		return Run(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", RatifiedFloor: 0.9}).Areas[0].Items[0].Outcome
+		return runBackground(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", RatifiedFloor: 0.9}).Areas[0].Items[0].Outcome
 	}
 
 	// Verified against the revision the corpus holds, so a trustworthy fail. checkedRev is verified
@@ -102,7 +102,7 @@ func TestUnverifiedDataIsJudgedOnConfidenceAsBefore(t *testing.T) {
 		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
 	}}}}
 	movedOn := func(s *parampb.PartSpec) { s.Docs[0].ContentHash = "sha256:relC" }
-	got := Run(RunParams{
+	got := runBackground(RunParams{
 		Model: supplyModel("hand", 1.0, movedOn), Catalog: check.DefaultCatalog(),
 		Manifest: man, Design: "d", RatifiedFloor: 0.9,
 	}).Areas[0].Items[0].Outcome
@@ -119,7 +119,7 @@ func TestProvisionalFromMockData(t *testing.T) {
 		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
 	}}}}
 	outcome := func(m check.Model, floor float64) Outcome {
-		return Run(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", RatifiedFloor: floor}).Areas[0].Items[0].Outcome
+		return runBackground(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", RatifiedFloor: floor}).Areas[0].Items[0].Outcome
 	}
 	if got := outcome(supplyModel("mock", 0.3), 0); got != Provisional {
 		t.Errorf("mock-seeded fail: want provisional, got %s", got)
@@ -143,7 +143,7 @@ func TestComputedNAByDeviceClass(t *testing.T) {
 	}}
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{item}}}}
 	run := func(d *ir.Design) ItemResult {
-		return Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
+		return runBackground(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
 	// No clock part at all -> computed-n/a, not a silent pass.
 	noClock := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}}}
@@ -173,7 +173,7 @@ func TestNeedsDesignIntent(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "arch", Title: "expected modules present", Binding: Binding{Rule: "intent/module-missing"}},
 	}}}}
-	r := Run(RunParams{Model: check.NewModel(&ir.Design{}), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
+	r := runBackground(RunParams{Model: check.NewModel(&ir.Design{}), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
 	if r.Outcome != NeedsDesignIntent {
 		t.Errorf("intent-bound item, no declaration: want needs-design-intent, got %s", r.Outcome)
 	}
@@ -181,7 +181,7 @@ func TestNeedsDesignIntent(t *testing.T) {
 	man2 := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "x", Title: "some future check", Binding: Binding{Rule: "not-a-real-rule"}},
 	}}}}
-	if got := Run(RunParams{Model: check.NewModel(&ir.Design{}), Catalog: check.DefaultCatalog(), Manifest: man2, Design: "d"}).Areas[0].Items[0].Outcome; got != NotAutomated {
+	if got := runBackground(RunParams{Model: check.NewModel(&ir.Design{}), Catalog: check.DefaultCatalog(), Manifest: man2, Design: "d"}).Areas[0].Items[0].Outcome; got != NotAutomated {
 		t.Errorf("non-intent unshipped rule: want not-automated, got %s", got)
 	}
 }

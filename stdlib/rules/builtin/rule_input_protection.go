@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -39,7 +40,7 @@ var inputProtection = &check.Rule{
 // that one exists. The failure names the exposed rail rather than the connector again. On a board
 // with a protected 5 V path and a bare 3V3 path off one connector, the finding is about the 3V3 path,
 // and the walk already knows which one it is.
-func inputProtectionVerdicts(m check.Model) []check.Verdict {
+func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		if m.IsGroundNet(n) {

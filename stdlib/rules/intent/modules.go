@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -22,7 +23,7 @@ func moduleMissingRule(d Declaration) *check.Rule {
 		Remedy:              intentRemedy(RuleModuleMissing),
 		Reads:               []string{"component.class", "component.mpn"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return modulePresenceVerdicts(m, d) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return modulePresenceVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }
@@ -57,7 +58,7 @@ func moduleCountRule(d Declaration) *check.Rule {
 		Remedy:              intentRemedy(RuleModuleCount),
 		Reads:               []string{"component.class", "component.mpn"},
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return moduleCountVerdicts(m, d) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return moduleCountVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }

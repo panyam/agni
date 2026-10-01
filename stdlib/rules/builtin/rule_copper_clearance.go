@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -57,7 +58,7 @@ var copperClearance = &check.Rule{
 //
 // A net with no track segments therefore appears in no pair. This rule compares SEGMENTS, so a net
 // present only as vias and pads was never measured.
-func copperClearanceVerdicts(m check.Model) []check.Verdict {
+func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	type flatSeg struct {
 		net string
 		s   check.BoardSeg

@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 
+	"connectrpc.com/connect"
 	skhttp "github.com/panyam/servicekit/http"
 	"github.com/spf13/cobra"
 
@@ -41,6 +42,11 @@ import (
 //
 // Routing is server-owned (CONSTRAINTS C11) and the API is proto-defined over Connect (C2), so
 // one contract drives the Go server and the TS client.
+// defaultQueryBudgetWarn is ten times the costliest query agni ships as an example, measured on the
+// largest public sample board (1,123 parts): about one million work units for a three-relation
+// connector join. Nothing shipped comes near it, and a runaway query passes it early.
+const defaultQueryBudgetWarn = 10_000_000
+
 func serveCmd() *cobra.Command {
 	var addr string
 	var mountRoot string
@@ -50,6 +56,7 @@ func serveCmd() *cobra.Command {
 	var paramsDir, profilePath, intentPath, conventions string
 	var reviewStorePath string
 	var webDir string
+	var queryBudget, queryBudgetWarn int64
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -65,6 +72,7 @@ func serveCmd() *cobra.Command {
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir,
 				profilePath: profilePath, intentPath: intentPath, conventions: conventions,
 				reviewStorePath: reviewStorePath,
+				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
 			})
 		},
 	}
@@ -76,6 +84,8 @@ func serveCmd() *cobra.Command {
 			envWebDir+". An installed binary run from a design directory has no relative answer, which is "+
 			"what the last two are for")
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
+	c.Flags().Int64Var(&queryBudget, "query-budget", 0, "cap each query's work, in the units a fact base counts (comparisons plus generator rows), for queries and query-backed rules alike; a request may ask for less but never more. 0 enforces nothing, so a deployment can watch what its queries cost first (see --query-budget-warn)")
+	c.Flags().Int64Var(&queryBudgetWarn, "query-budget-warn", defaultQueryBudgetWarn, "log each query whose work passes this, with a suggested --query-budget; 0 logs nothing")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
 	c.Flags().StringVar(&datasheetsURL, "datasheets-url", "", "where the datasheets workbench is served, e.g. http://host:8090 for a running `agnids serve`; the landing page links its Datasheets card and datasheet recents there, and hides both when this is empty")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
@@ -104,6 +114,9 @@ type viewerOpts struct {
 	conventions string
 
 	reviewStorePath string
+	// budget is the work budget every query the server evaluates runs under, and the threshold above
+	// which a query's cost is logged (agni issue 792).
+	budget server.Budget
 	// listener, when non-nil, is a listener the caller already BOUND, and the server serves on it
 	// instead of binding addr itself. `--server self` holds the port from the moment the flag is
 	// parsed, so a taken port fails before the command does its work and nothing can take the port
@@ -251,15 +264,23 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if err != nil {
 		return err
 	}
-	ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc))
+	// Every service that evaluates queries runs under the deployment's budget and reports what its
+	// queries cost (agni issue 792). Without --query-budget nothing is enforced, and the log says so once.
+	budget := o.budget
+	budget.Log = func(format string, args ...any) { fmt.Fprintf(cmd.ErrOrStderr(), format+"\n", args...) }
+	if budget.Enforce <= 0 {
+		budget.Log("note: no query budget is enforced; queries costing more than %d work units are logged with a suggested cap. Pass --query-budget N to enforce one.", budget.Warn)
+	}
+	budgeted := connect.WithInterceptors(budget.Interceptor())
+	ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc), budgeted)
 	mux.Handle(ckPath, ckHandler)
 	diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
 	mux.Handle(diffPath, diffHandler)
-	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)))
+	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)), budgeted)
 	mux.Handle(qPath, qHandler)
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog.
-	rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc))
+	rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc), budgeted)
 	mux.Handle(rvPath, rvHandler)
 	if assets.viewer {
 		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))

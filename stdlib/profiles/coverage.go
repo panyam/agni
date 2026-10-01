@@ -38,7 +38,7 @@ type InterfaceCoverage struct {
 // declares the interface via its host attribute. It uses the same signal matcher (matcher.go) and the
 // same check.PullUpReachesRail the profile rules decide on, so the panel and the findings cannot
 // drift; see InUse in present.go for why they must agree.
-func Coverage(p Profile, m check.Model) *InterfaceCoverage {
+func Coverage(ctx context.Context, p Profile, m check.Model) *InterfaceCoverage {
 	base := query.NewBase(m)
 	nets := make([]*ir.Net, len(p.Signals))
 	present := 0
@@ -53,7 +53,7 @@ func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 			}
 		}
 	}
-	if present < 2 && !hostDeclares(base, p) {
+	if present < 2 && !hostDeclares(ctx, base, p) {
 		return nil
 	}
 	cov := &InterfaceCoverage{Profile: p.Name, Anchor: anchor}
@@ -106,12 +106,12 @@ func reachesRail(m check.Model, net string) bool {
 // hostDeclares reports whether a component declares this interface via its host attribute
 // (interface=<name>), the WS3-042 host binding, which detects an interface independently of the
 // in-use gate.
-func hostDeclares(base *query.Base, p Profile) bool {
+func hostDeclares(ctx context.Context, base *query.Base, p Profile) bool {
 	if !p.HasHost() {
 		return false
 	}
 	q := query.Build(p.hostRules(),
 		[]query.Literal{query.Pos(query.Rel("host", query.V("ref")))}, query.V("ref"))
-	rows, err := query.Default.Eval(context.Background(), q, base)
+	rows, err := query.Default.Eval(ctx, q, base, query.EvalOptions(ctx)...)
 	return err == nil && len(rows) > 0
 }

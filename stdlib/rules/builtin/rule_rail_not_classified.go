@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -103,7 +104,7 @@ var railNotClassified = &check.Rule{
 // channels to agree, a voltage in the name AND a pin the part declares a power input, because
 // `..._3V3` is a legitimate name for a signal that swings at 3.3 V as well as for a rail.
 // eachRailCandidate says why the missing channel is reported rather than dropped.
-func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
+func railNotClassifiedVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	eachRailCandidate(m, func(rc railCandidate) {
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: rc.net.GetName(), NetID: rc.net.GetId()}}}

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"sort"
 	"testing"
 
@@ -51,7 +52,7 @@ func pullupCountFixture() *ir.Design {
 func findingsFor(t *testing.T, rule *check.Rule, d *ir.Design) map[string]check.Finding {
 	t.Helper()
 	out := map[string]check.Finding{}
-	for _, v := range rule.Eval(check.NewModel(d)) {
+	for _, v := range rule.Eval(context.Background(), check.NewModel(d)) {
 		if v.Finding != nil {
 			out[check.EntityRef(v.Finding.Subject)] = *v.Finding
 		}
@@ -62,7 +63,7 @@ func findingsFor(t *testing.T, rule *check.Rule, d *ir.Design) map[string]check.
 func subjectsFor(t *testing.T, rule *check.Rule, d *ir.Design) []string {
 	t.Helper()
 	var out []string
-	for _, v := range rule.Eval(check.NewModel(d)) {
+	for _, v := range rule.Eval(context.Background(), check.NewModel(d)) {
 		out = append(out, check.EntityRef(v.Subjects[0]))
 	}
 	sort.Strings(out)
@@ -132,7 +133,7 @@ func TestBothRulesStateWhatTheyLookedAt(t *testing.T) {
 // A pass proves itself with the parts it counted, which is what makes a clean bus checkable rather
 // than merely unreported.
 func TestAPassNamesThePullUpItFound(t *testing.T) {
-	for _, v := range i2cRedundantPullUp.Eval(check.NewModel(pullupCountFixture())) {
+	for _, v := range i2cRedundantPullUp.Eval(context.Background(), check.NewModel(pullupCountFixture())) {
 		if check.EntityRef(v.Subjects[0]) != "SCL1" {
 			continue
 		}

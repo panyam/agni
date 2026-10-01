@@ -51,14 +51,14 @@ func emmcBroken() *ir.Design {
 }
 
 func TestEMMCSilent(t *testing.T) {
-	if fs := check.Run(check.NewModel(emmcGood()), Compile(EMMC)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(emmcGood()), Compile(EMMC)); len(fs) != 0 {
 		t.Fatalf("good eMMC bus: want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
 
 func TestEMMCFires(t *testing.T) {
 	got := map[string]check.Finding{}
-	for _, f := range check.Run(check.NewModel(emmcBroken()), Compile(EMMC)) {
+	for _, f := range check.RunBackground(check.NewModel(emmcBroken()), Compile(EMMC)) {
 		got[f.Rule] = f
 	}
 	if len(got) != 3 {
@@ -118,7 +118,7 @@ func TestEMMCHostIncomplete(t *testing.T) {
 			net("+3V3", "R1.2", "U2.12"),
 		},
 	}
-	fs := check.Run(check.NewModel(d), Compile(EMMC))
+	fs := check.RunBackground(check.NewModel(d), Compile(EMMC))
 	if len(fs) != 1 {
 		t.Fatalf("want exactly 1 finding (host-incomplete DAT4, convention suppressed), got %d: %+v", len(fs), fs)
 	}
@@ -136,7 +136,7 @@ func TestEMMCHostWhollyAbsent(t *testing.T) {
 		Nets:       []*ir.Net{net("GND", "U2.1", "U1.1")},
 	}
 	got := 0
-	for _, f := range check.Run(check.NewModel(d), Compile(EMMC)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(EMMC)) {
 		if f.Rule == "emmc-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}
@@ -192,7 +192,7 @@ func TestEMMCPullupSeesAWideRail(t *testing.T) {
 			t.Fatalf("fixture is not exercising the guard: +3V3 has %d connections, need > 16", len(n.Connections))
 		}
 	}
-	for _, f := range check.Run(check.NewModel(d), Compile(EMMC)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(EMMC)) {
 		if strings.Contains(f.Rule, "missing-pullup") {
 			t.Errorf("CMD is pulled up to +3V3 through R1, but the rule reports %+v", f)
 		}

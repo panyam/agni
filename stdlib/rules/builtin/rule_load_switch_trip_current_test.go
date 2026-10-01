@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -119,7 +120,7 @@ func passFetSpec(rdsOhms float64, idAmps ...float64) *parampb.PartSpec {
 }
 
 func runLoadSwitchRule(d *ir.Design, set param.ParamSet) []check.Finding {
-	return loadSwitchTripAboveFetRating.Findings(check.NewModel(d, check.WithParamProvider(set)))
+	return loadSwitchTripAboveFetRating.Findings(context.Background(), check.NewModel(d, check.WithParamProvider(set)))
 }
 
 // TestLoadSwitchTripAboveFetRatingFires covers 50mV across a 10mOhm shunt, which trips at 5A, above
@@ -270,7 +271,7 @@ func TestLoadSwitchFetWithNoDrainRatingIsSilent(t *testing.T) {
 // rather than clean.
 func TestLoadSwitchSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(loadSwitchBoard(0.01))
-	if fs := loadSwitchTripAboveFetRating.Findings(m); len(fs) != 0 {
+	if fs := loadSwitchTripAboveFetRating.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("want no findings with no seeded params, got %+v", fs)
 	}
 	if ok, reason := check.Available(loadSwitchTripAboveFetRating, m); ok || reason == "" {

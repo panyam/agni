@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -37,7 +38,7 @@ func loadSwitchTripBelowBudgetRule(d Declaration) *check.Rule {
 		},
 		ParamSymbols:        check.OcpThresholdSymbols(),
 		Tags:                intentTags(),
-		Eval:                func(m check.Model) []check.Verdict { return evalLoadSwitchTrip(m, d.RailBudgets) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return evalLoadSwitchTrip(m, d.RailBudgets) },
 		StatesConsideredSet: true,
 	}
 }

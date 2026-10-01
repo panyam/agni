@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -50,7 +51,7 @@ var unannotatedComponents = &check.Rule{
 //
 // Failures come first, in the reader's order, so the findings projection stays byte-identical to
 // what this rule has always reported.
-func unannotatedComponentsVerdicts(m check.Model) []check.Verdict {
+func unannotatedComponentsVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, u := range m.UnannotatedComponents() {
 		var prov *ir.Provenance

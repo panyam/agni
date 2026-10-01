@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -103,7 +104,7 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 		// The device and every net the group straps. The encoded value belongs to all the bits
 		// together, so no single net can stand for the group (#404).
 		SubjectShape:        strapShape(len(g.Nets)),
-		Eval:                func(m check.Model) []check.Verdict { return strapGroupVerdicts(m, g) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return strapGroupVerdicts(m, g) },
 		StatesConsideredSet: true,
 	}
 }
@@ -218,7 +219,7 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 		// do these two devices strap to the same number. Three devices sharing an address are three
 		// yes answers, so pairs give a fixed shape without inventing a subject kind.
 		SubjectShape:        []string{check.KindComponent, check.KindComponent},
-		Eval:                func(m check.Model) []check.Verdict { return strapCollisionVerdicts(m, groups) },
+		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return strapCollisionVerdicts(m, groups) },
 		StatesConsideredSet: true,
 	}
 }

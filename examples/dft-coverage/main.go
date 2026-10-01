@@ -143,7 +143,7 @@ func main() {
 		m := check.NewModel(d)
 		byOutcome := map[check.Outcome]int{}
 		var undecided []string
-		for _, v := range check.RunVerdicts(m, check.BuiltinRules()) {
+		for _, v := range check.RunVerdictsBackground(m, check.BuiltinRules()) {
 			byOutcome[v.Outcome]++
 			// Reason is populated for NotConsidered alone, in the rule author's words. A findings list
 			// has no way to express it.

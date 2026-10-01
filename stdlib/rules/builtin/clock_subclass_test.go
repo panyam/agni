@@ -48,7 +48,7 @@ func TestDatasheetSubtypesClockFamily(t *testing.T) {
 	if bare.HasClass("Y1", check.ClassCeramicResonator) {
 		t.Error("bare Y1 must not be a ceramic_resonator without a datasheet")
 	}
-	if got := check.Run(bare, []*check.Rule{crystalLoadCaps}); len(got) != 2 {
+	if got := check.RunBackground(bare, []*check.Rule{crystalLoadCaps}); len(got) != 2 {
 		t.Fatalf("bare clock part with no load caps: want 2 findings (XIN, XOUT), got %d: %v", len(got), got)
 	}
 
@@ -61,7 +61,7 @@ func TestDatasheetSubtypesClockFamily(t *testing.T) {
 	if !seeded.HasClass("Y1", check.ClassClock) {
 		t.Error("seeded Y1 should still carry the clock family tag")
 	}
-	if got := check.Run(seeded, []*check.Rule{crystalLoadCaps}); len(got) != 0 {
+	if got := check.RunBackground(seeded, []*check.Rule{crystalLoadCaps}); len(got) != 0 {
 		t.Errorf("a datasheet-declared ceramic resonator must be excluded from crystal-load-caps, got %v", got)
 	}
 }

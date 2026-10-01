@@ -38,14 +38,14 @@ func canBroken() *ir.Design {
 }
 
 func TestCANSilent(t *testing.T) {
-	if fs := check.Run(check.NewModel(canGood()), Compile(CAN)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(canGood()), Compile(CAN)); len(fs) != 0 {
 		t.Fatalf("good CAN bus: want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
 
 func TestCANFires(t *testing.T) {
 	got := map[string]check.Finding{}
-	for _, f := range check.Run(check.NewModel(canBroken()), Compile(CAN)) {
+	for _, f := range check.RunBackground(check.NewModel(canBroken()), Compile(CAN)) {
 		got[f.Rule] = f
 	}
 	if len(got) != 3 {
@@ -66,7 +66,7 @@ func TestCANFires(t *testing.T) {
 // resistor bridging the pair the bus is unterminated. Guards the reaches-not-component-on-both design.
 func TestCANTransceiverIsNotTermination(t *testing.T) {
 	fired := false
-	for _, f := range check.Run(check.NewModel(canBroken()), Compile(CAN)) {
+	for _, f := range check.RunBackground(check.NewModel(canBroken()), Compile(CAN)) {
 		if f.Rule == "can-termination-missing" {
 			fired = true
 		}
@@ -106,7 +106,7 @@ func TestCANHostWhollyAbsent(t *testing.T) {
 		Nets:       []*ir.Net{net("GND", "U2.9", "U1.9")},
 	}
 	got := 0
-	for _, f := range check.Run(check.NewModel(d), Compile(CAN)) {
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(CAN)) {
 		if f.Rule == "can-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}
@@ -132,7 +132,7 @@ func TestCANHostVerdictsAreSeparatelyAddressable(t *testing.T) {
 	ids := map[string]int{}
 	signals := map[string]bool{}
 	fails := 0
-	for _, v := range check.RunVerdicts(check.NewModel(d), Compile(CAN)) {
+	for _, v := range check.RunVerdictsBackground(check.NewModel(d), Compile(CAN)) {
 		if v.Rule != "can-host-incomplete" {
 			continue
 		}
@@ -167,7 +167,7 @@ func TestCANHostVerdictsAreSeparatelyAddressable(t *testing.T) {
 // considered set backs this silence with verdicts rather than leaving it indistinguishable
 // from a rule that never ran. Every pass must carry a witness.
 func TestCANGoodBoardPassesAreWitnessed(t *testing.T) {
-	vs := check.RunVerdicts(check.NewModel(canGood()), Compile(CAN))
+	vs := check.RunVerdictsBackground(check.NewModel(canGood()), Compile(CAN))
 	passes := 0
 	for _, v := range vs {
 		if v.Outcome != check.Pass {

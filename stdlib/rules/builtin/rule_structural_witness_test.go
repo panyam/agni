@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -41,10 +42,10 @@ func outcomes(vs []check.Verdict) map[string]check.Outcome {
 // THE PROPERTY for single-pin-net. The connection count is the fact, so the witness must move with
 // it. A witness that ignored the topology would say the same thing for a two-pin net as for a stub.
 func TestSinglePinNetWitnessTracksTheCount(t *testing.T) {
-	stub := singlePinNetVerdicts(check.NewModel(&ir.Design{
+	stub := singlePinNetVerdicts(context.Background(), check.NewModel(&ir.Design{
 		Components: comps("U1", "R1"), Nets: []*ir.Net{tnet("SIG", "U1.1")},
 	}))
-	wired := singlePinNetVerdicts(check.NewModel(&ir.Design{
+	wired := singlePinNetVerdicts(context.Background(), check.NewModel(&ir.Design{
 		Components: comps("U1", "R1"), Nets: []*ir.Net{tnet("SIG", "U1.1", "R1.1")},
 	}))
 
@@ -74,7 +75,7 @@ func TestSinglePinNetWitnessTracksTheCount(t *testing.T) {
 // conversion exists for. Before it, a deliberate stub and a net the rule never saw were the same
 // nothing downstream.
 func TestIntentionalNoConnectPassesRatherThanVanishing(t *testing.T) {
-	vs := singlePinNetVerdicts(check.NewModel(&ir.Design{
+	vs := singlePinNetVerdicts(context.Background(), check.NewModel(&ir.Design{
 		Components: comps("U1"), Nets: []*ir.Net{tnet("unconnected-(U1-Pad1)", "U1.1")},
 	}))
 	v := verdictOf(t, vs, "unconnected-(U1-Pad1)", "")
@@ -89,7 +90,7 @@ func TestIntentionalNoConnectPassesRatherThanVanishing(t *testing.T) {
 // THE PROPERTY for unconnected-component, plus the NotConsidered case. An empty ref-des is not a
 // clean part but a part the rule cannot judge, and the two must not report the same.
 func TestUnconnectedComponentSeparatesCannotJudgeFromClean(t *testing.T) {
-	vs := unconnectedComponentVerdicts(check.NewModel(&ir.Design{
+	vs := unconnectedComponentVerdicts(context.Background(), check.NewModel(&ir.Design{
 		Components: []*ir.Component{
 			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "R9", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -135,7 +136,7 @@ func TestUnconnectedPinSeparatesDeclaredOpenFromUndeclared(t *testing.T) {
 		}},
 		Nets: []*ir.Net{tnet("SIG", "U1.1")},
 	}
-	vs := unconnectedPinVerdicts(check.NewModel(d))
+	vs := unconnectedPinVerdicts(context.Background(), check.NewModel(d))
 	if len(vs) != 4 {
 		t.Fatalf("every pin is a subject, want 4 verdicts, got %d", len(vs))
 	}

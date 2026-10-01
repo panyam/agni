@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -51,7 +52,7 @@ func crystalFixture() *ir.Design {
 }
 
 func TestCrystalLoadCaps(t *testing.T) {
-	fs := crystalLoadCaps.Findings(check.NewModel(crystalFixture()))
+	fs := crystalLoadCaps.Findings(context.Background(), check.NewModel(crystalFixture()))
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "Y1" || fs[0].Subject.Kind != check.KindComponent {
 		t.Fatalf("findings = %+v, want exactly one KindComponent finding on Y1", fs)
 	}

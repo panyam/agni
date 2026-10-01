@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestSubjectShapeHolds(t *testing.T) {
 		{"parityFixture", check.NewModel(specParityFixture())},
 	} {
 		for _, r := range rulesByName() {
-			for _, v := range r.Eval(tc.m) {
+			for _, v := range r.Eval(context.Background(), tc.m) {
 				if len(v.Subjects) == 0 {
 					t.Errorf("%s/%s: a verdict with no subject has no identity", tc.name, r.Name)
 					continue
@@ -61,7 +62,7 @@ func TestFindingSubjectComesFromTheVerdictsTuple(t *testing.T) {
 	var checked int
 	for _, tc := range []check.Model{check.NewModel(ruleFixture()), check.NewModel(specParityFixture())} {
 		for _, r := range rulesByName() {
-			for _, v := range r.Eval(tc) {
+			for _, v := range r.Eval(context.Background(), tc) {
 				if v.Finding == nil {
 					continue
 				}
@@ -101,7 +102,7 @@ func TestVerdictIDsAreUniqueWithinARun(t *testing.T) {
 		{"parityFixture", check.NewModel(specParityFixture())},
 	} {
 		seen := map[string]string{}
-		for _, v := range check.RunVerdicts(tc.m, rules) {
+		for _, v := range check.RunVerdictsBackground(tc.m, rules) {
 			id := check.VerdictID(v)
 			if prev, dup := seen[id]; dup {
 				t.Errorf("%s: id %q names two verdicts (%q and %q)", tc.name, id, prev, v.Witness.Statement)

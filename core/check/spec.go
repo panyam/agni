@@ -1,6 +1,7 @@
 package check
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"slices"
@@ -469,8 +470,8 @@ type evalEnv struct {
 // (Rule and Severity are stamped by Run, same as a Go Eval). The spec must be valid; use
 // Validate (or bind through Rule, which validates) before evaluating specs from an
 // untrusted source.
-func (s *Spec) Eval(m Model) []Finding {
-	return VerdictsToFindings(s.Verdicts(m))
+func (s *Spec) Eval(ctx context.Context, m Model) []Finding {
+	return VerdictsToFindings(s.Verdicts(ctx, m))
 }
 
 // Verdicts is the interpreter as a MAPPER, emitting one verdict per element of Over that the
@@ -482,10 +483,16 @@ func (s *Spec) Eval(m Model) []Finding {
 // A PASS NAMES THE CLAUSE THAT DECIDED IT. Where is a violation condition, so a pass refutes it
 // and the witness names the conjunct that did. "The condition did not hold" would read the same
 // on every passing subject, which docsite/content/build/evidence.md calls decoration.
-func (s *Spec) Verdicts(m Model) []Verdict {
+//
+// It stops early when ctx is done, returning what it has; the runner that called it then reports the
+// cancellation rather than these verdicts, so a partial list is never read as complete.
+func (s *Spec) Verdicts(ctx context.Context, m Model) []Verdict {
 	over := specOvers[s.Over]
 	out := []Verdict{}
 	for _, e := range over.elems(m) {
+		if ctx.Err() != nil {
+			return out
+		}
 		ents := map[string]any{over.scope: e}
 		if over.bind != nil {
 			over.bind(e, ents)

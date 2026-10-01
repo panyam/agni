@@ -24,7 +24,7 @@ func TestPowerInStampFlipsConnectivityRule(t *testing.T) {
 	}
 
 	// Before the stamp, the VDD pin reads INPUT, so the rule is silent (the EDIF gap PR2 closes).
-	if fs := check.Run(check.NewModel(mk()), []*check.Rule{powerInputNotDriven}); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(mk()), []*check.Rule{powerInputNotDriven}); len(fs) != 0 {
 		t.Fatalf("pre-stamp (INPUT pin): want silent, got %v", fs)
 	}
 
@@ -33,7 +33,7 @@ func TestPowerInStampFlipsConnectivityRule(t *testing.T) {
 	d := mk()
 	d.SourceFormat = "kicad-sch"
 	classify.StampPowerInPins(d)
-	if fs := check.Run(check.NewModel(d), []*check.Rule{powerInputNotDriven}); len(fs) != 1 {
+	if fs := check.RunBackground(check.NewModel(d), []*check.Rule{powerInputNotDriven}); len(fs) != 1 {
 		t.Fatalf("post-stamp (POWER_IN pin): want 1 finding, got %v", fs)
 	}
 }
@@ -53,10 +53,10 @@ func TestPowerInputNotDrivenGatedByFormat(t *testing.T) {
 			Nets:       []*ir.Net{{Name: "VDD", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
 		}
 	}
-	if fs := check.Run(check.NewModel(mk("edif-2.0.0")), []*check.Rule{powerInputNotDriven}); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(mk("edif-2.0.0")), []*check.Rule{powerInputNotDriven}); len(fs) != 0 {
 		t.Errorf("edif (no power-out typing): rule must be gated off, got %v", fs)
 	}
-	if fs := check.Run(check.NewModel(mk("kicad-sch")), []*check.Rule{powerInputNotDriven}); len(fs) != 1 {
+	if fs := check.RunBackground(check.NewModel(mk("kicad-sch")), []*check.Rule{powerInputNotDriven}); len(fs) != 1 {
 		t.Errorf("kicad (types power-out): undriven power_in must fire, got %v", fs)
 	}
 }

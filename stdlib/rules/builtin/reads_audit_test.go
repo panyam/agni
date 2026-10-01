@@ -44,7 +44,7 @@ func auditModel() *check.RecordingModel {
 // tiersRead runs one rule and reports the gated tiers it reached for.
 func tiersRead(m *check.RecordingModel, r *check.Rule) []check.FactTier {
 	m.Reset()
-	check.Run(m, []*check.Rule{r})
+	check.RunBackground(m, []*check.Rule{r})
 	return m.Read()
 }
 

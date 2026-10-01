@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"math"
 
@@ -371,7 +372,7 @@ var pinTrackingViolated = &check.Rule{
 	// The two pins the relation binds, subject then reference. The order matters (see
 	// trackingVerdicts).
 	SubjectShape: []string{check.KindPin, check.KindPin},
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		// UNSPECIFIED lands here rather than on the advisory rule so an unstated modality cannot
 		// pass in silence; trackingVerdicts reports it inconclusive rather than as an error.
 		return trackingVerdicts(m, func(md parampb.Modality) bool {
@@ -400,7 +401,7 @@ var pinTrackingAdvisory = &check.Rule{
 	// The two pins the relation binds, subject then reference. The order matters (see
 	// trackingVerdicts).
 	SubjectShape: []string{check.KindPin, check.KindPin},
-	Eval: func(m check.Model) []check.Verdict {
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		return trackingVerdicts(m, func(md parampb.Modality) bool {
 			return md == parampb.Modality_MODALITY_RECOMMENDED
 		})

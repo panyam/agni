@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -30,7 +31,7 @@ func esdFindings(t *testing.T, d *ir.Design) []check.Finding {
 	if r == nil {
 		t.Fatal("esdRule(CAN) returned nil; CAN declares signals, so it must compile")
 	}
-	return r.Findings(check.NewModel(d))
+	return r.Findings(context.Background(), check.NewModel(d))
 }
 
 // TestESDRequirementScopedToExposedLines (WS3-061): the requirement reports the connector-facing line
@@ -88,7 +89,7 @@ func TestESDRequirementMatchesCoreRule(t *testing.T) {
 
 	inScope := func(subject string) bool { return strings.HasPrefix(subject, "BUS_") }
 	coreSet := map[string]bool{}
-	for _, f := range core.Findings(m) {
+	for _, f := range core.Findings(context.Background(), m) {
 		if inScope(check.EntityRef(f.Subject)) {
 			coreSet[check.EntityRef(f.Subject)] = true
 		}
@@ -145,7 +146,7 @@ func esdVerdicts(t *testing.T, d *ir.Design) []check.Verdict {
 	if r == nil {
 		t.Fatal("esdRule(CAN) returned nil")
 	}
-	return r.Eval(check.NewModel(d))
+	return r.Eval(context.Background(), check.NewModel(d))
 }
 
 // A query-backed requirement proved a path in prose and discarded the entities, so its PASS said a

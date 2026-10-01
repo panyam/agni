@@ -81,7 +81,11 @@ named source and register it:
 ```go
 package myrules
 
-import "github.com/panyam/agni/core/check"
+import (
+    "context"
+
+    "github.com/panyam/agni/core/check"
+)
 
 func init() {
     check.RegisterSource(check.NewSource("myco", []*check.Rule{noExperimentalRefDes}))
@@ -93,7 +97,7 @@ var noExperimentalRefDes = &check.Rule{
     Summary:  "house rule: an X-prefixed ref-des is experimental, not for production",
     Reads:    []string{"component.ref_des"},
     Tags:     map[string]string{check.KeyCategory: "house-style"},
-    Eval: func(m check.Model) []check.Finding {
+    Eval: check.FailuresOnly(func(ctx context.Context, m check.Model) []check.Finding {
         var out []check.Finding
         for _, c := range m.Components() {
             if len(c.RefDes) > 0 && c.RefDes[0] == 'X' {
@@ -102,7 +106,7 @@ var noExperimentalRefDes = &check.Rule{
             }
         }
         return out
-    },
+    }),
 }
 ```
 
@@ -187,6 +191,7 @@ then compose with `agni.New`:
 package main
 
 import (
+    "context"
     "log"
 
     "github.com/panyam/agni"
@@ -211,7 +216,10 @@ func main() {
         log.Println("note:", w)
     }
     d, _ := (&formats.Loader{}).ReadDesign("design.myfmt")
-    findings := check.Run(check.NewModel(d), engine.Catalog().Rules())
+    findings, err := check.Run(context.Background(), check.NewModel(d), engine.Catalog().Rules())
+    if err != nil {
+        log.Fatal(err)
+    }
     // ... report findings
 }
 ```

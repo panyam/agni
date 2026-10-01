@@ -35,6 +35,14 @@ func toConnectErr(err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --review-store <dir>", err))
 	case errors.Is(err, service.ErrInternal):
 		return connect.NewError(connect.CodeInternal, err)
+	// A request whose caller went away, or whose deadline passed, stopped rather than failed, and a
+	// client retrying on INVALID_ARGUMENT would never succeed (agni issues 792, 795).
+	case errors.Is(err, context.Canceled):
+		return connect.NewError(connect.CodeCanceled, err)
+	case errors.Is(err, context.DeadlineExceeded):
+		return connect.NewError(connect.CodeDeadlineExceeded, err)
+	case errors.Is(err, service.ErrResourceExhausted):
+		return connect.NewError(connect.CodeResourceExhausted, err)
 	default: // ErrInvalidPath, ErrInvalidArgument, and anything unclassified
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	}

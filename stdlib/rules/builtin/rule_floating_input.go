@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -42,7 +43,7 @@ var floatingInput = &check.Rule{
 //
 // Any other net with a pin that is neither an input nor a no-connect passes. The pass witness counts
 // those pins, so retyping the driver as an input drops the count to zero and flips the verdict.
-func floatingInputVerdicts(m check.Model) []check.Verdict {
+func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		// A diode/LED/TVS terminal is typed INPUT by some libraries but is not a logic input, so it

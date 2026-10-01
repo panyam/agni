@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -43,7 +44,7 @@ var unconnectedPin = &check.Rule{
 // not-applicable where the format cannot express a no-connect, and the run reports it in its skipped
 // list, so a considered set here would duplicate that and could disagree with it. The nil return
 // covers a caller reaching EvalVerdicts directly.
-func unconnectedPinVerdicts(m check.Model) []check.Verdict {
+func unconnectedPinVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	if !m.HasNoConnectChannel() {
 		return nil
 	}

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -21,7 +22,7 @@ func anet(name string, aliases ...string) *ir.Net {
 func fireSubjects(t *testing.T, r *check.Rule, nets ...*ir.Net) map[string]string {
 	t.Helper()
 	got := map[string]string{}
-	for _, f := range r.Findings(check.NewModel(&ir.Design{Nets: nets})) {
+	for _, f := range r.Findings(context.Background(), check.NewModel(&ir.Design{Nets: nets})) {
 		got[check.EntityRef(f.Subject)] = f.Message
 	}
 	return got
@@ -30,7 +31,7 @@ func fireSubjects(t *testing.T, r *check.Rule, nets ...*ir.Net) map[string]strin
 // TestDuplicateNetName checks that two nets stating one name both fire, that stub and empty names
 // never collide, and that a unique name is quiet.
 func TestDuplicateNetName(t *testing.T) {
-	fs := duplicateNetName.Findings(check.NewModel(&ir.Design{Nets: []*ir.Net{
+	fs := duplicateNetName.Findings(context.Background(), check.NewModel(&ir.Design{Nets: []*ir.Net{
 		tnet("VCC", "U1.1"), tnet("VCC", "U2.1"), // same explicit name, two nets -> both fire
 		tnet("SIG", "U3.1"),                      // unique -> silent
 		tnet("N$1", "U4.1"), tnet("N$1", "U5.1"), // stub names are per-net inventions -> silent

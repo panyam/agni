@@ -203,9 +203,6 @@ func (fq FindingQuery) vocabulary() *facts.Registry {
 	return facts.DefaultRegistry()
 }
 
-// buildRule evaluates under context.Background(), because check.Rule.Eval takes no context, so a
-// check or review run is not cancelled by its caller going away the way a served query is (agni issue
-// 795).
 func buildRule(fq FindingQuery) *check.Rule {
 	q := fq.Query
 	r := fq.Rule
@@ -231,8 +228,8 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// A datalog goal yields the rows that MATCHED, so without a declared Domain the subjects the rule
 	// passed over are not in the answer and the only accurate report is failures-only.
 	if fq.Domain == nil {
-		r.Eval = check.FailuresOnly(func(m check.Model) []check.Finding {
-			rows, err := Default.Eval(context.Background(), q, NewBaseFrom(fq.vocabulary(), m))
+		r.Eval = check.FailuresOnly(func(ctx context.Context, m check.Model) []check.Finding {
+			rows, err := Default.Eval(ctx, q, NewBaseFrom(fq.vocabulary(), m), EvalOptions(ctx)...)
 			if err != nil {
 				// Construction validated this query, so this is the ENGINE failing on a design. An
 				// inconclusive finding says the rule could not decide, where nil would read as a clean
@@ -251,11 +248,11 @@ func buildRule(fq FindingQuery) *check.Rule {
 	r.SubjectShape = fq.subjectShape()
 	// The failing verdicts are built here rather than through check.FailuresOnly, because that adapter
 	// sees only the Finding, whose subject is singular, and the subject tuple has to come from the ROW.
-	r.Eval = func(m check.Model) []check.Verdict {
+	r.Eval = func(ctx context.Context, m check.Model) []check.Verdict {
 		base := NewBaseFrom(fq.vocabulary(), m)
 		var vs []check.Verdict
 		failed := map[string]bool{}
-		rows, err := Default.Eval(context.Background(), q, base)
+		rows, err := Default.Eval(ctx, q, base, EvalOptions(ctx)...)
 		if err != nil {
 			// The failing half never ran, so any considered set would report every subject as passing
 			// on evidence never gathered. One inconclusive verdict says the rule could not decide
@@ -287,7 +284,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 				Finding:  &f,
 			})
 		}
-		drows, err := Default.Eval(context.Background(), fq.Domain.Query, base)
+		drows, err := Default.Eval(ctx, fq.Domain.Query, base, EvalOptions(ctx)...)
 		if err != nil {
 			// Keep the findings. A defect must never disappear because the coverage half failed, even
 			// though the rule then reports fewer passes than it examined.
@@ -298,7 +295,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 		// means no evidence rather than an error, so a pass loses its chips and not itself.
 		evidence := map[string][]check.ContextSubject{}
 		if fq.Domain.Evidence != nil {
-			if erows, err := Default.Eval(context.Background(), *fq.Domain.Evidence, base); err == nil {
+			if erows, err := Default.Eval(ctx, *fq.Domain.Evidence, base, EvalOptions(ctx)...); err == nil {
 				for _, row := range erows {
 					subjects := fq.tuple(row)
 					if len(subjects) == 0 {

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"strings"
@@ -148,7 +149,7 @@ func TestSpecParity(t *testing.T) {
 				t.Errorf("Specs[%q] names no registered rule (orphan twin)", name)
 				continue
 			}
-			got, want := spec.Eval(m), r.Findings(m)
+			got, want := spec.Eval(context.Background(), m), r.Findings(context.Background(), m)
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("%s/%s: spec findings diverge\n spec: %+v\n   go: %+v", tc.name, name, got, want)
 			}
@@ -200,7 +201,7 @@ func TestSpecRule(t *testing.T) {
 	if !reflect.DeepEqual(r.Primitives, []string{"count", "select"}) {
 		t.Errorf("derived primitives = %v", r.Primitives)
 	}
-	fs := r.Findings(check.NewModel(&ir.Design{Nets: []*ir.Net{tnet("EMPTY"), tnet("OK", "R1.1")}}))
+	fs := r.Findings(context.Background(), check.NewModel(&ir.Design{Nets: []*ir.Net{tnet("EMPTY"), tnet("OK", "R1.1")}}))
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "EMPTY" || fs[0].Message != `net "EMPTY" has no connections` {
 		t.Errorf("eval = %+v", fs)
 	}
@@ -259,7 +260,7 @@ func TestSpecScopeRestore(t *testing.T) {
 	}
 	m := check.NewModel(specParityFixture())
 	var subjects []string
-	for _, f := range s.Eval(m) {
+	for _, f := range s.Eval(context.Background(), m) {
 		subjects = append(subjects, check.EntityRef(f.Subject))
 	}
 	if !reflect.DeepEqual(subjects, []string{"CONFLICT"}) {

@@ -13,6 +13,7 @@
 package profiles
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"strings"
@@ -520,10 +521,10 @@ func (p Profile) pullupRule() *check.Rule {
 //
 // GATED ON InUse, as the datalog form was, so a profile whose signals are not on this board
 // contributes no verdicts.
-func (p Profile) pullupVerdicts(pullups []Signal) func(check.Model) []check.Verdict {
+func (p Profile) pullupVerdicts(pullups []Signal) func(context.Context, check.Model) []check.Verdict {
 	rule := p.lname() + "-missing-pullup"
 	name := p.Name
-	return func(m check.Model) []check.Verdict {
+	return func(ctx context.Context, m check.Model) []check.Verdict {
 		if !InUse(m, p) {
 			return nil
 		}

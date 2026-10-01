@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -26,7 +27,7 @@ func verdictForNet(t *testing.T, vs []check.Verdict, net string) check.Verdict {
 
 func pullUpVerdicts(t *testing.T, refs []string, nets ...*ir.Net) []check.Verdict {
 	t.Helper()
-	return i2cPullUpVerdicts(check.NewModel(&ir.Design{Components: comps(refs...), Nets: nets}))
+	return i2cPullUpVerdicts(context.Background(), check.NewModel(&ir.Design{Components: comps(refs...), Nets: nets}))
 }
 
 // THE PROPERTY. A pass must name the resistor and the rail it rests on, and changing either must

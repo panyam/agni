@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"github.com/panyam/agni/core/classify"
 	"strings"
 	"testing"
@@ -88,7 +89,7 @@ func regModel(t *testing.T, d *ir.Design, vout, absMax float64) check.Model {
 // part, because that is the one a reviewer opens the datasheet for.
 func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 	m := regModel(t, railDesign(""), 5.0, 3.6)
-	fs := regulatorOutputExceedsAbsMax.Findings(m)
+	fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding (5V regulator into a 3.6V abs-max part), got %d: %+v", len(fs), fs)
 	}
@@ -118,7 +119,7 @@ func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 // every other assertion still passed.
 func TestRegulatorOutputWithinRating(t *testing.T) {
 	m := regModel(t, railDesign(""), 3.3, 3.6)
-	if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 0 {
+	if fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("3.3V into a 3.6V abs-max part must be silent, got %+v", fs)
 	}
 }
@@ -131,7 +132,7 @@ func TestRegulatorOutputAcrossSeriesElement(t *testing.T) {
 	d.Components[2].Sections = []*ir.ComponentSection{{Attributes: map[string]string{"kind": "ferrite"}}}
 	d.Components[2].DeviceClasses = classify.Tags("ferrite")
 	m := regModel(t, d, 5.0, 3.6)
-	if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 1 {
+	if fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m); len(fs) != 1 {
 		t.Errorf("want the finding to survive one series crossing, got %d: %+v", len(fs), fs)
 	}
 }
@@ -141,7 +142,7 @@ func TestRegulatorOutputAcrossSeriesElement(t *testing.T) {
 // which is what makes an unseeded design read unevaluable rather than clean (the WS3-097 posture).
 func TestRegulatorOutputSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(railDesign(""))
-	if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 0 {
+	if fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m); len(fs) != 0 {
 		t.Errorf("want no findings with no seeded params, got %+v", fs)
 	}
 	if ok, reason := check.Available(regulatorOutputExceedsAbsMax, m); ok || reason == "" {
@@ -161,7 +162,7 @@ func TestRegulatorOutputOneSidedSeed(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			m := check.NewModel(railDesign(""), check.WithParamProvider(c.set))
-			if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 0 {
+			if fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m); len(fs) != 0 {
 				t.Errorf("want no findings, got %+v", fs)
 			}
 		})
@@ -179,7 +180,7 @@ func TestRegulatorOutputOneSidedSeed(t *testing.T) {
 // them, so a panel's chips read like the sentence above them.
 func TestRegulatorOutputCarriesBothEntitiesAsContext(t *testing.T) {
 	m := regModel(t, railDesign(""), 5.0, 3.6)
-	fs := regulatorOutputExceedsAbsMax.Findings(m)
+	fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d", len(fs))
 	}

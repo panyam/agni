@@ -24,7 +24,7 @@ func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.Get
 	}
 	resp := &webapi.GetInterfaceCoverageResponse{}
 	for _, p := range profiles.Profiles {
-		cov := profiles.Coverage(p, m)
+		cov := profiles.Coverage(ctx, p, m)
 		if cov == nil {
 			continue
 		}

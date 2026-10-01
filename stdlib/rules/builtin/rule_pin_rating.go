@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
@@ -224,7 +225,7 @@ func pinContext(ev pinEvent) []check.ContextSubject {
 }
 
 // pinAbsMaxVerdicts decides every pin-bound supply terminal against its own absolute-maximum row.
-func pinAbsMaxVerdicts(m check.Model) []check.Verdict {
+func pinAbsMaxVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return pinLimitVerdicts(m, "pin-exceeds-abs-max",
 		parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, "absolute-maximum", "absolute maximum",
 		func(r *parampb.Parameter) check.Bound { return check.Bound{Max: r.Value.Max} },
@@ -236,7 +237,7 @@ func pinAbsMaxVerdicts(m check.Model) []check.Verdict {
 }
 
 // pinRecommendedVerdicts decides every pin-bound supply terminal against its own recommended range.
-func pinRecommendedVerdicts(m check.Model) []check.Verdict {
+func pinRecommendedVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return pinLimitVerdicts(m, "pin-out-of-recommended",
 		parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, "recommended-operating", "recommended range",
 		func(r *parampb.Parameter) check.Bound { return check.Bound{Min: r.Value.Min, Max: r.Value.Max} },

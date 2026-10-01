@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
@@ -33,7 +34,7 @@ func decouplingDesign(extra ...*ir.Connection) *ir.Design {
 
 func decouplingFires(t *testing.T, d *ir.Design) bool {
 	t.Helper()
-	return len(decouplingPresent.Findings(check.NewModel(d))) > 0
+	return len(decouplingPresent.Findings(context.Background(), check.NewModel(d))) > 0
 }
 
 // The positive control, and it comes first because every silence assertion below is worthless

@@ -32,7 +32,7 @@ modules:
 		{RefDes: "U1", DeviceClasses: classify.Tags("soc")},
 		{RefDes: "R1", DeviceClasses: classify.Tags("resistor")},
 	}}
-	fs := check.Run(check.NewModel(d), Compile(decl))
+	fs := check.RunBackground(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (the absent CAN transceiver), got %d: %+v", len(fs), fs)
 	}
@@ -49,7 +49,7 @@ func TestModulePresentPasses(t *testing.T) {
 	// The classifier tags a TVS as both tvs and diode; HasClass matches a family parent, so a module
 	// declared as "diode" would match a tvs. Here the exact class matches directly.
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a present module must not fire, got %+v", fs)
 	}
 }
@@ -58,7 +58,7 @@ func TestModuleMatchesByFamilyTag(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: any diode, class: diode}")
 	// A component classed tvs carries the diode family tag, so a diode-declared module matches it.
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")}}}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("family-tag match should pass, got %+v", fs)
 	}
 }
@@ -70,7 +70,7 @@ func TestModuleCountFiresOnTooFew(t *testing.T) {
 		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
 		{RefDes: "R1", DeviceClasses: classify.Tags("resistor")},
 	}}
-	fs := check.Run(check.NewModel(d), Compile(decl))
+	fs := check.RunBackground(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (the count mismatch), got %d: %+v", len(fs), fs)
 	}
@@ -88,7 +88,7 @@ func TestModuleCountFiresOnTooMany(t *testing.T) {
 		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
 		{RefDes: "U2", DeviceClasses: classify.Tags("can")},
 	}}
-	fs := check.Run(check.NewModel(d), Compile(decl))
+	fs := check.RunBackground(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 || fs[0].Rule != RuleModuleCount {
 		t.Fatalf("want one module-count finding, got %+v", fs)
 	}
@@ -103,7 +103,7 @@ func TestModuleCountPassesOnExact(t *testing.T) {
 		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
 		{RefDes: "U2", DeviceClasses: classify.Tags("can")},
 	}}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("exact count must not fire, got %+v", fs)
 	}
 }
@@ -132,13 +132,13 @@ func TestModuleMatchesByMPN(t *testing.T) {
 	other := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U2", Mpn: "MX25L128"},
 	}}
-	if fs := check.Run(check.NewModel(other), Compile(decl)); len(fs) != 1 {
+	if fs := check.RunBackground(check.NewModel(other), Compile(decl)); len(fs) != 1 {
 		t.Errorf("MPN module should be unmatched when no part carries its MPN, got %+v", fs)
 	}
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U2", Mpn: "W25Q128"},
 	}}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
+	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("MPN module should match on a model built with no provider, got %+v", fs)
 	}
 }

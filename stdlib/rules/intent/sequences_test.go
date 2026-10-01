@@ -36,7 +36,7 @@ func net(name string, refs ...string) *ir.Net {
 
 func runSeq(t *testing.T, decl Declaration, d *ir.Design) []check.Finding {
 	t.Helper()
-	return check.Run(check.NewModel(d), Compile(decl))
+	return check.RunBackground(check.NewModel(d), Compile(decl))
 }
 
 // TestSequenceSameNetChainIsSilent covers a declaration that names ONE net as both the earlier stage's

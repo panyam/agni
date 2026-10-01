@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -49,7 +50,7 @@ func drcFindings(t *testing.T) map[string][]string {
 	m := check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))
 	got := map[string][]string{}
 	for _, r := range []*check.Rule{trackWidth, holeSize, annularWidth, copperClearance} {
-		for _, f := range r.Findings(m) {
+		for _, f := range r.Findings(context.Background(), m) {
 			if f.Subject.Kind != check.KindNet {
 				t.Errorf("%s: finding kind = %q, want net", r.Name, f.Subject.Kind)
 			}
@@ -74,7 +75,7 @@ func TestBoardDRCRules(t *testing.T) {
 
 func TestCopperClearanceMessageNamesBothNets(t *testing.T) {
 	m := check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))
-	fs := copperClearance.Findings(m)
+	fs := copperClearance.Findings(context.Background(), m)
 	if len(fs) != 1 {
 		t.Fatalf("findings = %+v", fs)
 	}
@@ -89,7 +90,7 @@ func TestCopperClearanceMessageNamesBothNets(t *testing.T) {
 func TestBoardRulesSilentWithoutBoard(t *testing.T) {
 	m := check.NewModel(ruleFixture())
 	for _, r := range []*check.Rule{trackWidth, holeSize, annularWidth, copperClearance} {
-		if fs := r.Findings(m); len(fs) != 0 {
+		if fs := r.Findings(context.Background(), m); len(fs) != 0 {
 			t.Errorf("%s fired %d finding(s) with no board tier", r.Name, len(fs))
 		}
 	}

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"testing"
@@ -32,7 +33,7 @@ func TestWireNoJunctionStatesConsideredSet(t *testing.T) {
 		&ir.DanglingEndpoint{X: 30, Y: 40},
 	)
 	m := check.NewModel(d)
-	vs := wireNoJunction.Eval(m)
+	vs := wireNoJunction.Eval(context.Background(), m)
 	if len(vs) != 2 {
 		t.Fatalf("verdicts = %d, want 2 (one per tap the reader examined)", len(vs))
 	}
@@ -50,7 +51,7 @@ func TestWireNoJunctionStatesConsideredSet(t *testing.T) {
 	if byOutcome[check.Fail] != "30,40" {
 		t.Errorf("fail subject = %q, want the silent tap", byOutcome[check.Fail])
 	}
-	fs := wireNoJunction.Findings(m)
+	fs := wireNoJunction.Findings(context.Background(), m)
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "30,40" {
 		t.Errorf("findings = %+v, want the silent tap only, unchanged by the pass verdict", fs)
 	}
@@ -63,7 +64,7 @@ func TestWireNoJunctionStatesConsideredSet(t *testing.T) {
 // checkable against the drawing.
 func TestWireNoJunctionPassNamesTheJoin(t *testing.T) {
 	statement := func(j *ir.JoinedTap) string {
-		vs := wireNoJunction.Eval(check.NewModel(tapDesign([]*ir.JoinedTap{j})))
+		vs := wireNoJunction.Eval(context.Background(), check.NewModel(tapDesign([]*ir.JoinedTap{j})))
 		if len(vs) != 1 || vs[0].Witness == nil {
 			t.Fatalf("verdicts = %+v, want one carrying a witness", vs)
 		}
@@ -108,7 +109,7 @@ func TestWireNoJunctionGatedWhenNobodyLooked(t *testing.T) {
 // did not have, and it has to state the consequence rather than repeat the finding message, since
 // the two sit side by side in the verdict output.
 func TestWireNoJunctionFailWitnessSaysWhatIsWrong(t *testing.T) {
-	vs := wireNoJunction.Eval(check.NewModel(tapDesign(nil, &ir.DanglingEndpoint{X: 5, Y: 6})))
+	vs := wireNoJunction.Eval(context.Background(), check.NewModel(tapDesign(nil, &ir.DanglingEndpoint{X: 5, Y: 6})))
 	if len(vs) != 1 || vs[0].Witness == nil {
 		t.Fatalf("verdicts = %+v, want one carrying a witness", vs)
 	}
@@ -123,7 +124,7 @@ func TestWireNoJunctionFailWitnessSaysWhatIsWrong(t *testing.T) {
 // TestWireNoJunctionSegmentsInTerms keeps the count machine-readable, not only in prose, since the
 // CSV form is what a reviewer filters.
 func TestWireNoJunctionSegmentsInTerms(t *testing.T) {
-	vs := wireNoJunction.Eval(check.NewModel(tapDesign([]*ir.JoinedTap{{X: 1, Y: 1, JoinKind: "junction", Segments: 4}})))
+	vs := wireNoJunction.Eval(context.Background(), check.NewModel(tapDesign([]*ir.JoinedTap{{X: 1, Y: 1, JoinKind: "junction", Segments: 4}})))
 	var got string
 	for _, term := range vs[0].Witness.Terms {
 		if term.Label == "wire ends" {

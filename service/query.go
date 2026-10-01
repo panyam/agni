@@ -60,14 +60,23 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.answer(ctx, d, q, req.GetQuery())
+	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery())
 	if err != nil {
 		if stopped(err) {
 			return nil, err
 		}
+		if overBudget(err) {
+			return nil, fmt.Errorf("%w: %s", ErrResourceExhausted, err)
+		}
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	return resp, nil
+}
+
+// overBudget reports whether an evaluation stopped at its work budget.
+func overBudget(err error) bool {
+	var be *query.BudgetExceeded
+	return errors.As(err, &be)
 }
 
 // stopped reports whether an evaluation ended because its caller's context was cancelled or timed
@@ -100,6 +109,7 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 	if err != nil {
 		return nil, err
 	}
+	ctx = query.NarrowBudget(ctx, req.GetWorkBudget())
 	out := &webapi.RunQueriesResponse{Title: set.Title, Preamble: set.Preamble, Source: req.GetUri()}
 	for i, nq := range set.Queries {
 		res := &webapi.NamedQueryResult{Name: nq.Name, Description: nq.Description}
@@ -209,17 +219,21 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 // response's query. An error is the evaluator's (a malformed or unanswerable query), and the caller
 // decides what it means for the call.
 func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string) (*webapi.RunQueryResponse, error) {
-	rows, err := s.eval.Eval(ctx, q, d.base)
+	// Work is measured on this read's own fact base, so it is this query's alone, and reported so a
+	// deployment can see what its queries cost before it sets a budget (agni issue 792).
+	before := d.base.Work()
+	rows, err := s.eval.Eval(ctx, q, d.base, query.EvalOptions(ctx)...)
 	if err != nil {
 		return nil, err
 	}
+	work := d.base.Work() - before
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKindsIn(d.reg, q)
 	// Query and Source come from the request rather than being re-derived, so a saved response
 	// cannot describe a different run than the one that produced these rows.
 	resp := &webapi.RunQueryResponse{
 		Columns: make([]string, len(cols)), ColumnKinds: kinds,
-		Query: queryText, Source: d.source,
+		Query: queryText, Source: d.source, Work: work,
 	}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
