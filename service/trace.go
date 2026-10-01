@@ -112,7 +112,7 @@ func traceOutcomeFromProto(o webapi.TraceOutcome) check.TraceOutcome {
 // cannot disagree. A design with no netlist is an ERROR rather than an empty trace, because an empty
 // answer is indistinguishable from "these two pins are not connected".
 func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}

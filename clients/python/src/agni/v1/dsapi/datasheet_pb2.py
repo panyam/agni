@@ -24,9 +24,10 @@ _sym_db = _symbol_database.Default()
 
 from agni.v1.doc import doc_pb2 as agni_dot_v1_dot_doc_dot_doc__pb2
 from agni.v1.param import param_pb2 as agni_dot_v1_dot_param_dot_param__pb2
+from agni.v1.webapi import workspace_pb2 as agni_dot_v1_dot_webapi_dot_workspace__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1d\x61gni/v1/dsapi/datasheet.proto\x12\ragni.v1.dsapi\x1a\x15\x61gni/v1/doc/doc.proto\x1a\x19\x61gni/v1/param/param.proto\"&\n\x12GetDocumentRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\x93\x01\n\x13GetDocumentResponse\x12\x1c\n\textracted\x18\x01 \x01(\x08R\textracted\x12\x31\n\x08\x64ocument\x18\x02 \x01(\x0b\x32\x15.agni.v1.doc.DocumentR\x08\x64ocument\x12+\n\x11\x65xtract_available\x18\x03 \x01(\x08R\x10\x65xtractAvailable\"\'\n\x13\x45xtractDocIRRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"I\n\x14\x45xtractDocIRResponse\x12\x31\n\x08\x64ocument\x18\x01 \x01(\x0b\x32\x15.agni.v1.doc.DocumentR\x08\x64ocument\"&\n\x12GetPartSpecRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"r\n\x13GetPartSpecResponse\x12\x14\n\x05\x66ound\x18\x01 \x01(\x08R\x05\x66ound\x12+\n\x04spec\x18\x02 \x01(\x0b\x32\x17.agni.v1.param.PartSpecR\x04spec\x12\x18\n\x07version\x18\x03 \x01(\tR\x07version\"w\n\x13SavePartSpecRequest\x12+\n\x04spec\x18\x01 \x01(\x0b\x32\x17.agni.v1.param.PartSpecR\x04spec\x12!\n\x0c\x62\x61se_version\x18\x02 \x01(\tR\x0b\x62\x61seVersion\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\"n\n\x14SavePartSpecResponse\x12\x18\n\x07version\x18\x01 \x01(\tR\x07version\x12<\n\x08problems\x18\x02 \x03(\x0b\x32 .agni.v1.dsapi.ValidationProblemR\x08problems\"\xb2\x01\n\x11ValidationProblem\x12\x39\n\x04kind\x18\x01 \x01(\x0e\x32%.agni.v1.dsapi.ValidationProblem.KindR\x04kind\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message\"H\n\x04Kind\x12\x14\n\x10KIND_UNSPECIFIED\x10\x00\x12\x13\n\x0fKIND_STRUCTURAL\x10\x01\x12\x15\n\x11KIND_COMPLETENESS\x10\x02\"\x93\x02\n\x10RegionAnnotation\x12\x1b\n\tregion_id\x18\x01 \x01(\tR\x08regionId\x12\x12\n\x04type\x18\x02 \x01(\tR\x04type\x12*\n\x04\x62\x62ox\x18\x03 \x01(\x0b\x32\x11.agni.v1.doc.BBoxH\x00R\x04\x62\x62ox\x88\x01\x01\x12\x12\n\x04page\x18\x04 \x01(\x05R\x04page\x12\x12\n\x04kind\x18\x05 \x01(\tR\x04kind\x12\x14\n\x05label\x18\x06 \x01(\tR\x05label\x12;\n\x0c\x64raft_params\x18\x07 \x03(\x0b\x32\x18.agni.v1.param.ParameterR\x0b\x64raftParams\x12\x1e\n\nconfidence\x18\x08 \x01(\x01R\nconfidenceB\x07\n\x05_bbox\"\x81\x01\n\rAnnotationSet\x12\x15\n\x06\x64oc_id\x18\x01 \x01(\tR\x05\x64ocId\x12\x16\n\x06\x61uthor\x18\x02 \x01(\tR\x06\x61uthor\x12\x41\n\x0b\x61nnotations\x18\x03 \x03(\x0b\x32\x1f.agni.v1.dsapi.RegionAnnotationR\x0b\x61nnotations\")\n\x15GetAnnotationsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"J\n\x16GetAnnotationsResponse\x12\x30\n\x04sets\x18\x01 \x03(\x0b\x32\x1c.agni.v1.dsapi.AnnotationSetR\x04sets\"Z\n\x16SaveAnnotationsRequest\x12.\n\x03set\x18\x01 \x01(\x0b\x32\x1c.agni.v1.dsapi.AnnotationSetR\x03set\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\"\x19\n\x17SaveAnnotationsResponse2\xb1\x04\n\x10\x44\x61tasheetService\x12T\n\x0bGetDocument\x12!.agni.v1.dsapi.GetDocumentRequest\x1a\".agni.v1.dsapi.GetDocumentResponse\x12T\n\x0bGetPartSpec\x12!.agni.v1.dsapi.GetPartSpecRequest\x1a\".agni.v1.dsapi.GetPartSpecResponse\x12W\n\x0cSavePartSpec\x12\".agni.v1.dsapi.SavePartSpecRequest\x1a#.agni.v1.dsapi.SavePartSpecResponse\x12W\n\x0c\x45xtractDocIR\x12\".agni.v1.dsapi.ExtractDocIRRequest\x1a#.agni.v1.dsapi.ExtractDocIRResponse\x12]\n\x0eGetAnnotations\x12$.agni.v1.dsapi.GetAnnotationsRequest\x1a%.agni.v1.dsapi.GetAnnotationsResponse\x12`\n\x0fSaveAnnotations\x12%.agni.v1.dsapi.SaveAnnotationsRequest\x1a&.agni.v1.dsapi.SaveAnnotationsResponseB-Z+github.com/panyam/agni/gen/go/agni/v1/dsapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1d\x61gni/v1/dsapi/datasheet.proto\x12\ragni.v1.dsapi\x1a\x15\x61gni/v1/doc/doc.proto\x1a\x19\x61gni/v1/param/param.proto\x1a\x1e\x61gni/v1/webapi/workspace.proto\"&\n\x12GetDocumentRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\x93\x01\n\x13GetDocumentResponse\x12\x1c\n\textracted\x18\x01 \x01(\x08R\textracted\x12\x31\n\x08\x64ocument\x18\x02 \x01(\x0b\x32\x15.agni.v1.doc.DocumentR\x08\x64ocument\x12+\n\x11\x65xtract_available\x18\x03 \x01(\x08R\x10\x65xtractAvailable\"\'\n\x13\x45xtractDocIRRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"I\n\x14\x45xtractDocIRResponse\x12\x31\n\x08\x64ocument\x18\x01 \x01(\x0b\x32\x15.agni.v1.doc.DocumentR\x08\x64ocument\"&\n\x12GetPartSpecRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"r\n\x13GetPartSpecResponse\x12\x14\n\x05\x66ound\x18\x01 \x01(\x08R\x05\x66ound\x12+\n\x04spec\x18\x02 \x01(\x0b\x32\x17.agni.v1.param.PartSpecR\x04spec\x12\x18\n\x07version\x18\x03 \x01(\tR\x07version\"w\n\x13SavePartSpecRequest\x12+\n\x04spec\x18\x01 \x01(\x0b\x32\x17.agni.v1.param.PartSpecR\x04spec\x12!\n\x0c\x62\x61se_version\x18\x02 \x01(\tR\x0b\x62\x61seVersion\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\"n\n\x14SavePartSpecResponse\x12\x18\n\x07version\x18\x01 \x01(\tR\x07version\x12<\n\x08problems\x18\x02 \x03(\x0b\x32 .agni.v1.dsapi.ValidationProblemR\x08problems\"\xb2\x01\n\x11ValidationProblem\x12\x39\n\x04kind\x18\x01 \x01(\x0e\x32%.agni.v1.dsapi.ValidationProblem.KindR\x04kind\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message\"H\n\x04Kind\x12\x14\n\x10KIND_UNSPECIFIED\x10\x00\x12\x13\n\x0fKIND_STRUCTURAL\x10\x01\x12\x15\n\x11KIND_COMPLETENESS\x10\x02\"\x93\x02\n\x10RegionAnnotation\x12\x1b\n\tregion_id\x18\x01 \x01(\tR\x08regionId\x12\x12\n\x04type\x18\x02 \x01(\tR\x04type\x12*\n\x04\x62\x62ox\x18\x03 \x01(\x0b\x32\x11.agni.v1.doc.BBoxH\x00R\x04\x62\x62ox\x88\x01\x01\x12\x12\n\x04page\x18\x04 \x01(\x05R\x04page\x12\x12\n\x04kind\x18\x05 \x01(\tR\x04kind\x12\x14\n\x05label\x18\x06 \x01(\tR\x05label\x12;\n\x0c\x64raft_params\x18\x07 \x03(\x0b\x32\x18.agni.v1.param.ParameterR\x0b\x64raftParams\x12\x1e\n\nconfidence\x18\x08 \x01(\x01R\nconfidenceB\x07\n\x05_bbox\"\x81\x01\n\rAnnotationSet\x12\x15\n\x06\x64oc_id\x18\x01 \x01(\tR\x05\x64ocId\x12\x16\n\x06\x61uthor\x18\x02 \x01(\tR\x06\x61uthor\x12\x41\n\x0b\x61nnotations\x18\x03 \x03(\x0b\x32\x1f.agni.v1.dsapi.RegionAnnotationR\x0b\x61nnotations\")\n\x15GetAnnotationsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"J\n\x16GetAnnotationsResponse\x12\x30\n\x04sets\x18\x01 \x03(\x0b\x32\x1c.agni.v1.dsapi.AnnotationSetR\x04sets\"Z\n\x16SaveAnnotationsRequest\x12.\n\x03set\x18\x01 \x01(\x0b\x32\x1c.agni.v1.dsapi.AnnotationSetR\x03set\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\"\x19\n\x17SaveAnnotationsResponse2\xd2\x05\n\x10\x44\x61tasheetService\x12S\n\nListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12J\n\x07ListDir\x12\x1e.agni.v1.webapi.ListDirRequest\x1a\x1f.agni.v1.webapi.ListDirResponse\x12T\n\x0bGetDocument\x12!.agni.v1.dsapi.GetDocumentRequest\x1a\".agni.v1.dsapi.GetDocumentResponse\x12T\n\x0bGetPartSpec\x12!.agni.v1.dsapi.GetPartSpecRequest\x1a\".agni.v1.dsapi.GetPartSpecResponse\x12W\n\x0cSavePartSpec\x12\".agni.v1.dsapi.SavePartSpecRequest\x1a#.agni.v1.dsapi.SavePartSpecResponse\x12W\n\x0c\x45xtractDocIR\x12\".agni.v1.dsapi.ExtractDocIRRequest\x1a#.agni.v1.dsapi.ExtractDocIRResponse\x12]\n\x0eGetAnnotations\x12$.agni.v1.dsapi.GetAnnotationsRequest\x1a%.agni.v1.dsapi.GetAnnotationsResponse\x12`\n\x0fSaveAnnotations\x12%.agni.v1.dsapi.SaveAnnotationsRequest\x1a&.agni.v1.dsapi.SaveAnnotationsResponseB-Z+github.com/panyam/agni/gen/go/agni/v1/dsapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,38 +35,38 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agni.v1.dsapi.datasheet_pb2
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z+github.com/panyam/agni/gen/go/agni/v1/dsapi'
-  _globals['_GETDOCUMENTREQUEST']._serialized_start=98
-  _globals['_GETDOCUMENTREQUEST']._serialized_end=136
-  _globals['_GETDOCUMENTRESPONSE']._serialized_start=139
-  _globals['_GETDOCUMENTRESPONSE']._serialized_end=286
-  _globals['_EXTRACTDOCIRREQUEST']._serialized_start=288
-  _globals['_EXTRACTDOCIRREQUEST']._serialized_end=327
-  _globals['_EXTRACTDOCIRRESPONSE']._serialized_start=329
-  _globals['_EXTRACTDOCIRRESPONSE']._serialized_end=402
-  _globals['_GETPARTSPECREQUEST']._serialized_start=404
-  _globals['_GETPARTSPECREQUEST']._serialized_end=442
-  _globals['_GETPARTSPECRESPONSE']._serialized_start=444
-  _globals['_GETPARTSPECRESPONSE']._serialized_end=558
-  _globals['_SAVEPARTSPECREQUEST']._serialized_start=560
-  _globals['_SAVEPARTSPECREQUEST']._serialized_end=679
-  _globals['_SAVEPARTSPECRESPONSE']._serialized_start=681
-  _globals['_SAVEPARTSPECRESPONSE']._serialized_end=791
-  _globals['_VALIDATIONPROBLEM']._serialized_start=794
-  _globals['_VALIDATIONPROBLEM']._serialized_end=972
-  _globals['_VALIDATIONPROBLEM_KIND']._serialized_start=900
-  _globals['_VALIDATIONPROBLEM_KIND']._serialized_end=972
-  _globals['_REGIONANNOTATION']._serialized_start=975
-  _globals['_REGIONANNOTATION']._serialized_end=1250
-  _globals['_ANNOTATIONSET']._serialized_start=1253
-  _globals['_ANNOTATIONSET']._serialized_end=1382
-  _globals['_GETANNOTATIONSREQUEST']._serialized_start=1384
-  _globals['_GETANNOTATIONSREQUEST']._serialized_end=1425
-  _globals['_GETANNOTATIONSRESPONSE']._serialized_start=1427
-  _globals['_GETANNOTATIONSRESPONSE']._serialized_end=1501
-  _globals['_SAVEANNOTATIONSREQUEST']._serialized_start=1503
-  _globals['_SAVEANNOTATIONSREQUEST']._serialized_end=1593
-  _globals['_SAVEANNOTATIONSRESPONSE']._serialized_start=1595
-  _globals['_SAVEANNOTATIONSRESPONSE']._serialized_end=1620
-  _globals['_DATASHEETSERVICE']._serialized_start=1623
-  _globals['_DATASHEETSERVICE']._serialized_end=2184
+  _globals['_GETDOCUMENTREQUEST']._serialized_start=130
+  _globals['_GETDOCUMENTREQUEST']._serialized_end=168
+  _globals['_GETDOCUMENTRESPONSE']._serialized_start=171
+  _globals['_GETDOCUMENTRESPONSE']._serialized_end=318
+  _globals['_EXTRACTDOCIRREQUEST']._serialized_start=320
+  _globals['_EXTRACTDOCIRREQUEST']._serialized_end=359
+  _globals['_EXTRACTDOCIRRESPONSE']._serialized_start=361
+  _globals['_EXTRACTDOCIRRESPONSE']._serialized_end=434
+  _globals['_GETPARTSPECREQUEST']._serialized_start=436
+  _globals['_GETPARTSPECREQUEST']._serialized_end=474
+  _globals['_GETPARTSPECRESPONSE']._serialized_start=476
+  _globals['_GETPARTSPECRESPONSE']._serialized_end=590
+  _globals['_SAVEPARTSPECREQUEST']._serialized_start=592
+  _globals['_SAVEPARTSPECREQUEST']._serialized_end=711
+  _globals['_SAVEPARTSPECRESPONSE']._serialized_start=713
+  _globals['_SAVEPARTSPECRESPONSE']._serialized_end=823
+  _globals['_VALIDATIONPROBLEM']._serialized_start=826
+  _globals['_VALIDATIONPROBLEM']._serialized_end=1004
+  _globals['_VALIDATIONPROBLEM_KIND']._serialized_start=932
+  _globals['_VALIDATIONPROBLEM_KIND']._serialized_end=1004
+  _globals['_REGIONANNOTATION']._serialized_start=1007
+  _globals['_REGIONANNOTATION']._serialized_end=1282
+  _globals['_ANNOTATIONSET']._serialized_start=1285
+  _globals['_ANNOTATIONSET']._serialized_end=1414
+  _globals['_GETANNOTATIONSREQUEST']._serialized_start=1416
+  _globals['_GETANNOTATIONSREQUEST']._serialized_end=1457
+  _globals['_GETANNOTATIONSRESPONSE']._serialized_start=1459
+  _globals['_GETANNOTATIONSRESPONSE']._serialized_end=1533
+  _globals['_SAVEANNOTATIONSREQUEST']._serialized_start=1535
+  _globals['_SAVEANNOTATIONSREQUEST']._serialized_end=1625
+  _globals['_SAVEANNOTATIONSRESPONSE']._serialized_start=1627
+  _globals['_SAVEANNOTATIONSRESPONSE']._serialized_end=1652
+  _globals['_DATASHEETSERVICE']._serialized_start=1655
+  _globals['_DATASHEETSERVICE']._serialized_end=2377
 # @@protoc_insertion_point(module_scope)

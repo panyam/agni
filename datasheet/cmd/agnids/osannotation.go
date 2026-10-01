@@ -23,7 +23,7 @@ import (
 // directory union (WS13-011).
 const annotationsDirSuffix = ".annotations"
 
-// osAnnotationStore is the OS-backed service.AnnotationStore, writing per-author region-annotation
+// osAnnotationStore is the OS-backed dsservice.AnnotationStore, writing per-author region-annotation
 // overlays under the mount. It follows osPartSpecStore's I/O discipline (mounts.Resolve containment,
 // per-file lock, protojson) except that there is NO compare-and-swap, since each author owns their
 // file, and Get UNIONS every author's file for one datasheet. Anyone who mounts the folder sees every

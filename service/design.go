@@ -88,7 +88,7 @@ const boardSheetID = "board"
 func (s *DesignService) boardFor(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
 	b, err := s.loader.Board(ctx, uri)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	if b == nil {
 		return nil, fmt.Errorf("%w: no board geometry for this file", ErrNotFound)
@@ -158,9 +158,11 @@ func (s *DesignService) readOptions(ctx context.Context, uri artifact.URI) ([]Re
 	return ov.ReadOptions(), nil
 }
 
-// classifyLoadErr keeps an already-classified loader error (unknown mount, containment) and
-// wraps anything else, such as a resolve or parse failure, as an invalid argument.
-func classifyLoadErr(err error) error {
+// ClassifyLoadErr keeps an already-classified loader error (unknown mount, containment) and
+// wraps anything else, such as a resolve or parse failure, as an invalid argument. Exported for a
+// service in another module, the datasheet service (agni issue 744), so its errors map to the same
+// sentinels.
+func ClassifyLoadErr(err error) error {
 	if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
 		return err
 	}
@@ -202,7 +204,7 @@ func layoutForFile(path, requested string) string {
 // sheets. Netlist formats also carry IR counts; a geometry-only .eds does not, so its name comes
 // from the geometry's design ref and its counts stay zero.
 func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -214,15 +216,15 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	if err != nil {
 		return nil, err
 	}
-	gu, err := artifactURI(src.GeometryURI)
+	gu, err := ParseArtifactURI(src.GeometryURI)
 	if err != nil {
 		return nil, err
 	}
-	nu, err := artifactURI(src.NetlistURI)
+	nu, err := ParseArtifactURI(src.NetlistURI)
 	if err != nil {
 		return nil, err
 	}
-	bu, err := artifactURI(src.BoardURI)
+	bu, err := ParseArtifactURI(src.BoardURI)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +235,7 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	}
 	g, err := s.loader.Geometry(ctx, gu, layout, false, opts...)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	resp := &webapi.GetDesignResponse{
 		Layout:           layout,
@@ -290,7 +292,7 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 // source. A resolve error (unknown mount / escaping path) is returned; a file with no netlist has
 // nothing to classify, so that returns an empty report rather than an error.
 func (s *DesignService) GetLayoutReport(ctx context.Context, req *webapi.GetLayoutReportRequest) (*webapi.GetLayoutReportResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +354,7 @@ func ReportProto(r *graph.ConversionReport) *webapi.ConversionReport { return re
 // tool). A bad selector classifies as ErrNotFound; an unexpected native-render failure (past the
 // ErrNative* gates) as ErrInternal.
 func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetRequest) (*webapi.GetSheetResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -391,13 +393,13 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	if err != nil {
 		return nil, err
 	}
-	gu, err := artifactURI(gsrc.GeometryURI)
+	gu, err := ParseArtifactURI(gsrc.GeometryURI)
 	if err != nil {
 		return nil, err
 	}
 	g, err := s.loader.Geometry(ctx, gu, layoutForFile(gu.Path, requested), faithful, opts...)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	sel := req.GetSheet()
 	if sel == "" {
@@ -442,7 +444,7 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 // describes the same geometry as the base render it stacks on. NATIVE (a golden shell-out with
 // no overlay concept) classifies as ErrInvalidArgument.
 func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.HighlightSheetRequest) (*webapi.HighlightSheetResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -476,13 +478,13 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	if err != nil {
 		return nil, err
 	}
-	hu, err := artifactURI(hsrc.GeometryURI)
+	hu, err := ParseArtifactURI(hsrc.GeometryURI)
 	if err != nil {
 		return nil, err
 	}
 	g, err := s.loader.Geometry(ctx, hu, layoutForFile(hu.Path, req.GetLayout()), faithful, opts...)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	sel := req.GetSheet()
 	if sel == "" {
@@ -580,11 +582,12 @@ func anyNetIDSpec(specs []*geom.HighlightSpec) bool {
 	return false
 }
 
-// artifactURI parses a request's artifact URI, classifying a malformed one for the transport.
+// ParseArtifactURI parses a request's artifact URI, classifying a malformed one for the transport.
 // Every rpc naming an artifact goes through here, and a parsed URI cannot name a location outside
 // its mount, so containment is a property of the type and the adapters below the ports do not
-// re-check it (#179 replaced 26 separate containment checks).
-func artifactURI(s string) (artifact.URI, error) {
+// re-check it (#179 replaced 26 separate containment checks). Exported for the same reason as
+// ClassifyLoadErr.
+func ParseArtifactURI(s string) (artifact.URI, error) {
 	u, err := artifact.Parse(s)
 	if err != nil {
 		return artifact.URI{}, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
@@ -592,12 +595,12 @@ func artifactURI(s string) (artifact.URI, error) {
 	return u, nil
 }
 
-// optionalArtifactURI is artifactURI for a field whose absence is legal (a board export a design may
+// optionalArtifactURI is ParseArtifactURI for a field whose absence is legal (a board export a design may
 // not have). An empty string yields the zero URI and no error; anything else must still parse, so a
 // typo is not silently read as "not supplied".
 func optionalArtifactURI(s string) (artifact.URI, error) {
 	if s == "" {
 		return artifact.URI{}, nil
 	}
-	return artifactURI(s)
+	return ParseArtifactURI(s)
 }

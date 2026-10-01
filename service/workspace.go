@@ -187,7 +187,7 @@ func (s *WorkspaceService) hasOpenableFile(ctx context.Context, u artifact.URI, 
 // ErrInvalidPath, and anything else from the adapter (unknown mount, missing directory) is wrapped
 // as ErrNotFound.
 func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirRequest) (*webapi.ListDirResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}

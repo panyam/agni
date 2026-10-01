@@ -55,7 +55,7 @@ func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI,
 func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
 	d, err := loader.Design(ctx, uri, opts...)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	boardFrom := uri
 	if !boardURI.IsZero() {
@@ -63,7 +63,7 @@ func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.
 	}
 	bg, err := loader.Board(ctx, boardFrom)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	if !boardURI.IsZero() && bg == nil {
 		return nil, fmt.Errorf("%w: board_uri %q carries no board geometry", ErrInvalidArgument, boardURI)

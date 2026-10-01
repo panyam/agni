@@ -14,7 +14,7 @@ import (
 // compile to, so the coverage panel and the findings never disagree. A design with no detected
 // interface yields an empty list rather than an error, since the rules are silent there too.
 func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.GetInterfaceCoverageRequest) (*webapi.GetInterfaceCoverageResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}

@@ -43,7 +43,7 @@ func NewQueryService(loader Loader, specs param.ParamProvider, projects *Project
 // malformed query are both invalid arguments, so the panel shows the parse error inline. A query
 // that matches nothing returns an empty row set, not an error.
 func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest) (*webapi.RunQueryResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 // A set that is unusable as a whole is an invalid argument, and a design that cannot be read fails
 // the call as it would fail RunQuery.
 func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesRequest) (*webapi.RunQueriesResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}

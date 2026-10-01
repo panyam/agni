@@ -39,7 +39,7 @@ func CheckReportProto(source string, fs []check.Finding, rules []*check.Rule) *c
 // renders the one canonical report shape. Findings carry the same sheet annotation as
 // CheckDesign's (WS9-024), so the report panel shares the sheet-navigation join.
 func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckReportRequest) (*webapi.GetCheckReportResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}

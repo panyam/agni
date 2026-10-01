@@ -1,5 +1,5 @@
-// Entry point for the landing page ("/"), the fourth page beside the viewer's main.ts, the browse
-// page, and the datasheets workbench.
+// Entry point for the landing page ("/"), the third page beside the viewer's main.ts and the browse
+// page.
 //
 // The page holds no state of its own. The two destinations are plain server-rendered links that work
 // without JavaScript, and the two islands below are shortcuts past them, so a failure in either
@@ -15,7 +15,9 @@ class LandingRoot extends BaseComponent {
     const projectsEl = document.getElementById("landing-projects");
     if (recentsEl) {
       // One clock read for the whole render, so every row ages against the same instant.
-      children.push(recentsIsland(recentsEl, this._eventBus, Date.now()));
+      // Where the datasheets workbench is served, set by `agni serve --datasheets-url`; empty hides
+      // datasheet recents, since the workbench is a separate service (agni issue 744).
+      children.push(recentsIsland(recentsEl, this._eventBus, Date.now(), recentsEl.dataset.datasheetsUrl ?? ""));
     }
     if (projectsEl) children.push(projectsIsland(projectsEl, this._eventBus));
     return children;

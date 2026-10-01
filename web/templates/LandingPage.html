@@ -38,15 +38,17 @@
       <div class="ld-card-title">Designs</div>
       <div class="ld-card-sub">Browse the mounted folders and open a schematic or board</div>
     </a>
-    <a class="ld-card" id="ld-datasheets" href="/datasheets/">
+    {{ if .DatasheetsURL }}
+    <a class="ld-card" id="ld-datasheets" href="{{ .DatasheetsURL }}/datasheets/">
       <div class="ld-card-title">Datasheets</div>
       <div class="ld-card-sub">Transcribe part parameters from vendor documents</div>
     </a>
+    {{ end }}
   </div>
 
   <!-- Two islands, each free to render nothing: recents are empty on a first visit, and projects
        are empty for a deployment with no descriptors under its mounts. -->
-  <div id="landing-recents" data-component="landing-recents"></div>
+  <div id="landing-recents" data-component="landing-recents" data-datasheets-url="{{ .DatasheetsURL }}"></div>
   <div id="landing-projects" data-component="landing-projects"></div>
 </div>
 {{ end }}

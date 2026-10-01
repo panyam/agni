@@ -1,4 +1,4 @@
-package main
+package mounts
 
 import (
 	"context"
@@ -6,20 +6,23 @@ import (
 	"os"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 )
 
-// osWorkspace is the OS-backed service.Workspace. It resolves a URI to a host path with
-// mounts.Resolve, which keeps it inside the mount root, and lists it with os.ReadDir.
-type osWorkspace struct {
-	mounts []mounts.Mount
+// Workspace is the OS-backed service.Workspace over a mount table. It resolves a URI to a host path
+// with Resolve, which keeps it inside the mount root, and lists it with os.ReadDir. Both the engine's
+// server and the datasheet service list folders through it (agni issue 744).
+type Workspace struct {
+	ms []Mount
 }
 
+// NewWorkspace lists folders inside ms, the mount table a server was started with.
+func NewWorkspace(ms []Mount) *Workspace { return &Workspace{ms: ms} }
+
 // Mounts returns the configured mounts as the port's runtime-neutral MountInfo.
-func (w *osWorkspace) Mounts() []service.MountInfo {
-	out := make([]service.MountInfo, 0, len(w.mounts))
-	for _, m := range w.mounts {
+func (w *Workspace) Mounts() []service.MountInfo {
+	out := make([]service.MountInfo, 0, len(w.ms))
+	for _, m := range w.ms {
 		out = append(out, service.MountInfo{Name: m.Name, Root: m.Root})
 	}
 	return out
@@ -28,8 +31,8 @@ func (w *osWorkspace) Mounts() []service.MountInfo {
 // ListDir resolves the URI and reads one directory level. The service maps an error wrapping
 // service.ErrInvalidPath to InvalidArgument and any other, including an unknown mount or a missing
 // directory, to NotFound.
-func (w *osWorkspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
-	abs, err := mounts.Resolve(w.mounts, uri)
+func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
+	abs, err := Resolve(w.ms, uri)
 	if err != nil {
 		return nil, err
 	}

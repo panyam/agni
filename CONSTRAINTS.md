@@ -1103,23 +1103,20 @@ is forced by the module boundary. Which ones matter is agni issue 380's question
 ## C34: The engine depends on the datasheet tier through its contract, never through the producer
 **Rule:** The engine's datasheet input is the PartSpec contract: `core/param` and
 `param.proto`. The extraction pipeline that produces PartSpecs (`datasheet/doc`, `datasheet/derive`,
-`datasheet/docindex`, `datasheet/candidate`, and their protos) is one producer among several, beside a
-hand-written textproto and any future vendor feed or parts database. No engine package imports it,
-directly or transitively. Only the producer's hosts may, which today are `cmd/agni` (the `derive`
-command and the workbench server's wiring) and `tools/`.
+`datasheet/docindex`, `datasheet/candidate`, their protos, and the producer's API `agni.v1.dsapi`) is
+one producer among several, beside a hand-written textproto and any future vendor feed or parts
+database. It is its own Go module, `datasheet/`, downstream of the engine, with its own binary
+`agnids`. No package of the engine module imports it, directly or transitively.
 **Why:** This is C29 and C30 applied to component knowledge. A rule reads a part's absolute maximum
 from a PartSpec and must not care whether a person, our extractor or a vendor wrote it, so the engine
 must not privilege the extractor any more than the rule catalog privileges datalog. The producer also
 deploys differently from the engine: it writes into mounts, needs the docling environment, and handles
-vendor PDFs that C16 keeps inside one deployment. Agni issue 744 moves it into a module of its own, and
-this rule is what keeps that move mechanical. It held when it was written, and nothing enforced it.
-**Verify:** `TestEngineNamesNoDatasheetProducer` (`deps_test.go`) runs `go list -deps` over every
-package in the module except the producer and its hosts, derived from `go list ./...` so a new
-directory is in scope at once. `TestDatasheetProducerIsVisibleFromItsHost` is its positive control:
-every listed path resolves, and `cmd/agni` is seen to depend on the producer.
-`TestEngineReachesProducerProtosOnlyThroughDatasheetService` is a ratchet on the proto half, and fails
-on a new importer and on an allowlist entry that stopped importing.
-**Outstanding violation:** the engine still imports one producer proto, `agni.v1.doc`, in one place:
-`DatasheetService` lives in `service` (`service/datasheet.go`). It is the ratchet's only allowlist
-entry, and it moves with agni issue 744. Its API already has its own proto package, `agni.v1.dsapi`,
-so the engine's `agni.v1.webapi` carries no producer message.
+vendor PDFs that C16 keeps inside one deployment, which is why it is a separate service.
+**Verify:** since agni issue 744 the rule is mostly structural. An engine package cannot import a
+module the root `go.mod` does not require, and `TestEngineModuleRequiresNoExtension` (C18) fails if
+it ever requires one inside this repo. `TestDatasheetIsItsOwnModule` (`deps_test.go`) holds that
+`datasheet/go.mod` declares the module and that no root package lives under `datasheet/`.
+`TestEngineImportsNoProducerProto` holds that no package of the root module imports a producer
+message, which the producer protos still generated into the root's `gen/` could otherwise allow.
+`TestDatasheetProducerIsVisibleFromItsHost` is the positive control: inside the datasheet module,
+`agnids` depends on the pipeline and on a producer proto, so the names both checks look for are real.

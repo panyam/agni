@@ -1,6 +1,4 @@
 core/check:NewModel
-core/check:NewModelWithBoard
-core/check:NewModelWithParams
 core/check:RunDesign
 core/classify:PartIndex
 core/classify:Stamp

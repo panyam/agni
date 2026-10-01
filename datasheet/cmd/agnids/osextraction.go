@@ -14,9 +14,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/datasheet/dsservice"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/mounts"
-	"github.com/panyam/agni/service"
 )
 
 // partSpecSuffix is the sibling a datasheet's shared PartSpec is written to: LM1117.pdf pairs with
@@ -24,7 +24,7 @@ import (
 // unvalidated, and never read by param.LoadSet. `agni params promote` validates it into a corpus.
 const partSpecSuffix = ".partspec.json"
 
-// osPartSpecStore is the OS-backed service.PartSpecStore, reading and writing a datasheet's shared
+// osPartSpecStore is the OS-backed dsservice.PartSpecStore, reading and writing a datasheet's shared
 // PartSpec as a sibling file in the mount (CONSTRAINTS C1/C13). Save is compare-and-swap under a
 // per-file lock, and the version is the sibling's content hash. This is the one write path the
 // workspace exposes, contained to the sibling by mounts.Resolve. The lock is per PROCESS, so two
@@ -73,7 +73,7 @@ func (s *osPartSpecStore) Get(ctx context.Context, uri artifact.URI) (*parampb.P
 
 // Save writes the PartSpec sibling with compare-and-swap: under the per-file lock it reads the
 // current version, requires it to equal baseVersion (empty means "expected absent"), then writes.
-// A mismatch is service.ErrConflict. The returned version is the hash of the bytes written, which
+// A mismatch is dsservice.ErrConflict. The returned version is the hash of the bytes written, which
 // a subsequent Get reproduces from the same file bytes.
 func (s *osPartSpecStore) Save(ctx context.Context, uri artifact.URI, spec *parampb.PartSpec, baseVersion string) (string, error) {
 	abs, err := resolveSibling(s.mounts, uri, partSpecSibling)
@@ -91,7 +91,7 @@ func (s *osPartSpecStore) Save(ctx context.Context, uri artifact.URI, spec *para
 		return "", err
 	}
 	if cur != baseVersion {
-		return "", service.ErrConflict
+		return "", dsservice.ErrConflict
 	}
 
 	out, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(spec)
