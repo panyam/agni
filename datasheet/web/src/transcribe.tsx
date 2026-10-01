@@ -46,6 +46,13 @@ export interface TranscribeHandlers {
   draftMpn: () => string;
   suggestedMpn: () => string;
   startDraft: (mpn: string) => void;
+  // citingDrafts is the MPNs of the drafts citing this datasheet; selectDraft switches to one,
+  // newDraft starts another (a family datasheet feeds one per part), and publish validates the open
+  // draft into the published corpus.
+  citingDrafts: () => string[];
+  selectDraft: (mpn: string) => void;
+  newDraft: () => void;
+  publish: () => void;
   region: () => Region | null;
   regionType: () => RegionType;
   deletableRegion: () => boolean;
@@ -305,6 +312,23 @@ export function TranscribePanel(props: TranscribeHandlers) {
   let startEl: HTMLInputElement | undefined;
   return (
     <div class="tx-panel">
+      <Show when={props.citingDrafts().length > 0}>
+        <div class="tx-drafts">
+          <h3>Drafts</h3>
+          <For each={props.citingDrafts()}>
+            {(mpn) => (
+              <button class={mpn === props.draftMpn() ? "tx-draft active" : "tx-draft"} onClick={() => props.selectDraft(mpn)}>
+                {mpn}
+              </button>
+            )}
+          </For>
+          <Show when={props.draftMpn()}>
+            <button class="tx-draft" title="start a draft for another part this datasheet covers" onClick={() => props.newDraft()}>
+              New draft
+            </button>
+          </Show>
+        </div>
+      </Show>
       <div class="tx-meta">
         <h3>Datasheet</h3>
         {/* The document's own identity, as the vendor prints it. It is seeded from the doc-IR title,
@@ -341,6 +365,9 @@ export function TranscribePanel(props: TranscribeHandlers) {
             MPN
             <input value={props.draftMpn()} readOnly />
           </label>
+          <button class="tx-publish" title="validate this draft and make it the published spec checks read" onClick={() => props.publish()}>
+            Publish {props.draftMpn()}
+          </button>
         </Show>
         <label class="tx-field">Manufacturer<input value={props.spec().manufacturer} onInput={(e) => props.setMeta({ manufacturer: e.currentTarget.value })} /></label>
         <label class="tx-field">Device class<input placeholder="ldo" value={props.spec().deviceClass} onInput={(e) => props.setMeta({ deviceClass: e.currentTarget.value })} /></label>
