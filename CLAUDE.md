@@ -707,4 +707,13 @@ Plain declarative prose. No em-dashes, no marketing cadence, no hype adjectives,
 "The result: X" constructions. Write separate sentences instead. No colon-definitions in prose, nav
 lists, headings, or bold noun-phrase labels; fold the explanation into the clause rather than
 swapping the colon for a period. None of the words honest, load-bearing, or seam. This applies to
-the docsite, commit messages, and PR bodies.
+the docsite, commit messages, PR bodies, and code comments. The one colon label the gate REQUIRES is a
+reader package's `// Fidelity: ...` line, because `TestC6EveryReaderDeclaresFidelity` greps for the
+literal, so a comment pass that folds it into a sentence turns the gate red.
+
+**Prove a comment-only change by comparing code with the comments stripped, not by reading the
+diff.** A sweep over hundreds of files hides one edited code line easily. For Go, compare the
+`go/scanner` token streams of each file and `git show <base>:<file>` with comments skipped; for
+TypeScript, print both through the compiler API's printer with `removeComments`. Give the check a
+positive control (a deliberate `var _ = 0`), since one that only adds whitespace changes no token
+and proves nothing. PR #754 verified every changed Go and TypeScript file this way.
