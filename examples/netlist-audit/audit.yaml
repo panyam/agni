@@ -3,20 +3,11 @@
 #
 #   agni query <design> --set audit.yaml --format markdown
 #
-# The preamble names the derived relations the tables share, so each query reads as the question it
-# asks. Pass/fail questions (is every I2C line pulled up?) are checks, not tables: run them with
-# `agni check`.
+# The tables call the shipped library (stdlib/lib) for what they share, such as net.has_test_point
+# and component.probed_both, so the set needs no preamble and each query reads as the question it
+# asks. `agni query --relations component.probed_both` prints a member's definition. Pass/fail
+# questions (is every I2C line pulled up?) are checks, not tables: run them with `agni check`.
 title: Netlist audit
-preamble: |
-  has_tp(?n) :- component.net(?tp, ?n), component.class(?tp, "test_point");
-  passive(?r) :- component.class(?r, "resistor");
-  passive(?r) :- component.class(?r, "capacitor");
-  passive(?r) :- component.class(?r, "diode");
-  two_net(?r, ?a, ?b) :- passive(?r), component.net_count(?r, 2), component.net(?r, ?a), component.net(?r, ?b), ?a < ?b;
-  both(?r) :- two_net(?r, ?a, ?b), has_tp(?a), has_tp(?b);
-  one(?r, ?a, ?b) :- two_net(?r, ?a, ?b), has_tp(?a), not has_tp(?b);
-  one(?r, ?b, ?a) :- two_net(?r, ?a, ?b), has_tp(?b), not has_tp(?a);
-  mpn_both(?m) :- component.mpn(?r, ?m), both(?r);
 queries:
   - name: Parts on nets
     description: Every part and the nets it lands on.
@@ -29,15 +20,18 @@ queries:
     description: Nets carrying a test point, and which ones.
     query: component.net(?tp, ?net), component.class(?tp, "test_point") => ?net, count(distinct ?tp), list(distinct ?tp)
   - name: Nets with no test point
-    query: entity(?net, "net"), not has_tp(?net) => ?net
+    query: entity(?net, "net"), not net.has_test_point(?net) => ?net
   - name: Ground test points
     description: Compare against your house ratio, for example one per 30 nets.
     query: net.ground(?net), component.net(?tp, ?net), component.class(?tp, "test_point") => count(distinct ?tp)
-  - name: Passives probed on both nets
-    query: both(?part), component.mpn(?part, ?mpn) => ?mpn, ?part
-  - name: Passives probed on one net
+  - name: Two-terminal parts probed on both nets
+    description: Parts an in-circuit tester can measure across their two nets.
+    query: component.probed_both(?part), component.mpn(?part, ?mpn) => ?mpn, ?part
+  - name: Two-terminal parts probed on one net
     description: The probed net, then the one with no test point.
-    query: one(?part, ?probed, ?unprobed), component.mpn(?part, ?mpn) => ?mpn, ?part, ?probed, ?unprobed
+    query: component.probed_one(?part, ?probed, ?unprobed), component.mpn(?part, ?mpn) => ?mpn, ?part, ?probed, ?unprobed
   - name: MPNs never probed on both nets
-    description: Part numbers where no placed part has a test point on both of its nets.
-    query: passive(?part), component.mpn(?part, ?mpn), not mpn_both(?mpn) => ?mpn, list(distinct ?part)
+    description: Part numbers where no placed two-terminal part has a test point on both of its nets.
+    query: |
+      mpn_probed(?m) :- component.mpn(?r, ?m), component.probed_both(?r);
+      component.two_terminal(?part, ?a, ?b), component.mpn(?part, ?mpn), not mpn_probed(?mpn) => ?mpn, list(distinct ?part)

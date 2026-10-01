@@ -39,9 +39,7 @@ func TestNoCatalogSaysSo(t *testing.T) {
 // TestUnknownRelationStillSuggests pins the other side. With a catalog installed, a mistyped name
 // still gets its typo hint rather than the missing-catalog message.
 func TestUnknownRelationStillSuggests(t *testing.T) {
-	// A typo inside a module the catalog has. (A bare name that spells a path with "_" for "." gets no
-	// hint from the engine today: panyam/jaala#15.)
-	q := MustParse(`compnent.net(?r,?n) => ?r`)
+	q := MustParse(`component_on_net(?r,?n) => ?r`)
 	_, err := Naive{}.Eval(q, NewBase(check.NewModel(chainDesign())))
 	if err == nil {
 		t.Fatal("a mistyped relation must error")

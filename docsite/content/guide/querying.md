@@ -360,6 +360,44 @@ The defined relation keeps `?r` and drops `?other`, so its tuples are already on
 and a plain `count` matches `count(distinct ?r)`. Drop `?r` from the head too and you are counting
 nets, not parts, which is the mistake this idiom is easiest to make.
 
+### Use the shipped library (derived relations)
+
+Some questions come up often enough that agni ships them as relations of their own, defined in
+Datalog over the base relations rather than projected from the design in Go. They sit in the same
+modules as the relations they extend, so a query calls them the same way:
+
+```
+component.probed_one(?part, ?probed, ?unprobed), component.mpn(?part, ?mpn) => ?mpn, ?part, ?unprobed
+```
+
+| Member | What it answers |
+|---|---|
+| `net.has_test_point(net)` | a net at least one test point sits on |
+| `component.two_terminal(part, a, b)` | a part on exactly two nets, the nets in name order so each part answers once |
+| `component.probed_both(part)` | a two-terminal part with a test point on both nets, so an in-circuit tester can measure it |
+| `component.probed_one(part, probed, unprobed)` | a two-terminal part probed on one net only, naming the net that is missing a test point |
+
+`agni query --relations` prints everything a query can call, module by module, with each member's
+argument types. Give it a module to list one (`agni query --relations net`), or a member to read its
+definition:
+
+```
+agni query --relations component.probed_both
+```
+
+```
+component.probed_both(r: component)
+  derived, defined in module component
+
+  A two-terminal part with a test point on both of its nets, so it can be measured in circuit.
+
+  defined as
+    probed_both(?r: component) :- two_terminal(?r, ?a, ?b), net.has_test_point(?a), net.has_test_point(?b)
+```
+
+The library lives in `stdlib/lib`, one file per module. A question only one report asks belongs in
+that report's query instead, as a rule ahead of its goal or in a query set's preamble.
+
 ### Ask many questions at once (query sets)
 
 An audit is usually a workbook rather than a single question: which nets have no test point, how
@@ -389,7 +427,8 @@ message. csv is refused, because one csv file holds one table.
 
 A query that cannot be answered, a misspelled relation for instance, is reported under its own name
 and the rest still answer. The command then exits non-zero, after writing everything, so a script
-sees both the answers and the gap. `examples/netlist-audit` is a full audit written this way.
+sees both the answers and the gap. `examples/netlist-audit` is a full audit written this way, and
+it needs no preamble at all, because what its tables share is in the shipped library (below).
 
 A set holds TABLES. A question with a pass or fail answer belongs in a check or a review checklist,
 whose verdicts also say what passed and why.

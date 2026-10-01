@@ -133,7 +133,20 @@ func WithPredicate(path string, b ns.Builtin) Option {
 // WithLanguage. The fact layer stores the text and never parses it; the language reports what the
 // module defines.
 func WithModule(path, lang, text string) Option {
-	return func(bd *builder) { bd.modules = append(bd.modules, ns.Module{Path: path, Language: lang, Text: text}) }
+	return WithModules(ns.Module{Path: path, Language: lang, Text: text})
+}
+
+// WithModules adds several modules as one option, for a library whose modules read each other.
+// Composition checks what every module reads against the whole vocabulary, so modules that refer
+// across one another must arrive together; added one option at a time, the first would be checked
+// before the member it reads exists. Each module's Members field is ignored, since the language
+// reports them.
+func WithModules(ms ...ns.Module) Option {
+	return func(bd *builder) {
+		for _, m := range ms {
+			bd.modules = append(bd.modules, ns.Module{Path: m.Path, Language: m.Language, Text: m.Text})
+		}
+	}
 }
 
 // WithLanguage makes a module language available to the vocabulary. An engine registers its own.
@@ -252,7 +265,15 @@ func (r *Registry) Vocabulary() *ns.Vocabulary { return r.vocab }
 
 // Predicates returns a catalog entry per predicate in the vocabulary, the standard ones included,
 // sorted by path.
-func (r *Registry) Predicates() []RelationInfo {
+func (r *Registry) Predicates() []RelationInfo { return r.membersOf(ns.EntryPredicate, KindPredicate) }
+
+// Derived returns a catalog entry per derived relation a module defines, with its signature as the
+// modules' language worked it out and its definition, sorted by path. Empty when no module is
+// registered, or when the modules do not check, which NewRegistry has already reported.
+func (r *Registry) Derived() []RelationInfo { return r.membersOf(ns.EntryDerived, KindDerived) }
+
+// membersOf walks the vocabulary's tree and returns a catalog entry for every member of one kind.
+func (r *Registry) membersOf(want ns.EntryKind, kind string) []RelationInfo {
 	var out []RelationInfo
 	var walk func(module string)
 	walk = func(module string) {
@@ -264,8 +285,8 @@ func (r *Registry) Predicates() []RelationInfo {
 			switch e.Kind {
 			case ns.EntryModule:
 				walk(e.Path)
-			case ns.EntryPredicate:
-				info := RelationInfo{Name: e.Path, Summary: e.Doc, Kind: KindPredicate}
+			case want:
+				info := RelationInfo{Name: e.Path, Summary: e.Doc, Kind: kind, Definition: e.Definition}
 				for _, a := range e.Args {
 					info.Args = append(info.Args, a.Name)
 					if k := argKindOf(a.ArgType); k.Entity != "" || k.KindArg != "" || k.OwnerArg != "" || len(k.ValidOptions) > 0 {
@@ -424,8 +445,9 @@ func RegisterRelation(name string, fields []Field, project Projector) {
 // RegisterPredicate adds a predicate to the process default at path. Call it once at init.
 func RegisterPredicate(path string, b ns.Builtin) { addOption(WithPredicate(path, b)) }
 
-// RegisterModule adds a module of derived relations to the process default. Call it once at init.
-func RegisterModule(path, lang, text string) { addOption(WithModule(path, lang, text)) }
+// RegisterModules adds a library of derived-relation modules to the process default, all at once so
+// they may read each other in any order (see WithModules). Call it once at init per library.
+func RegisterModules(ms ...ns.Module) { addOption(WithModules(ms...)) }
 
 // RegisterLanguage makes a module language available in the process default. An engine calls it once
 // at init for its own language.

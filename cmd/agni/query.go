@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -32,7 +33,7 @@ func queryCmd() *cobra.Command {
 	var format, title string
 	var setPath string
 	c := &cobra.Command{
-		Use:   "query <file> <query> | query <file> --set <queries.yaml>",
+		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
 		Long: `Run an ad-hoc datalog query over the design's fact relations and print each answer with
 its provenance. Relations:
@@ -47,8 +48,8 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 
   agni query board.kicad_sch --params seed/ \
     'component.mpn(?r,?m), param.max(?m,"VIN",?vmax), component.net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?vmax, ?n, ?rail'`,
-		// --examples and --relations take no arguments, --speclib and --set take one, and a design
-		// query takes <file> and <query>.
+		// --examples takes no arguments, --relations an optional path, --speclib and --set take one,
+		// and a design query takes <file> and <query>.
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Validated here rather than at render time, so a misspelled format fails before a
 			// nine-megabyte netlist is parsed.
@@ -57,8 +58,14 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			default:
 				return fmt.Errorf("unknown --format %q: want text, csv, json, markdown, or html", format)
 			}
-			if showExamples || showRelations {
+			if showExamples {
 				return nil
+			}
+			if showRelations {
+				if format != "text" && format != "json" {
+					return fmt.Errorf("--relations writes text or json, not %s", format)
+				}
+				return cobra.MaximumNArgs(1)(cmd, args)
 			}
 			if setPath != "" {
 				if specLib {
@@ -84,8 +91,11 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			}
 			defer closeOut()
 			if showRelations {
-				printRelations(cmd.OutOrStdout(), verbose)
-				return nil
+				path := ""
+				if len(args) == 1 {
+					path = args[0]
+				}
+				return printRelations(cmd.Context(), cmd.OutOrStdout(), path, format, verbose)
 			}
 			if showExamples {
 				printExamples(cmd.OutOrStdout())
@@ -154,36 +164,116 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().StringVar(&boardPath, "board-path", "", "a separate board-geometry export (.kicad_pcb / IPC-2581) to attach, so the board.* relations have facts to range over; without it they are empty")
 	c.Flags().BoolVar(&specLib, "speclib", false, "query the whole seeded datasheet corpus (--params) with no <file>: the param/part.audience relations range over the whole spec library, not one design's parts")
 	c.Flags().BoolVar(&showExamples, "examples", false, "print starter queries (the concept ladder the web panel shows) and exit")
-	c.Flags().BoolVar(&showRelations, "relations", false, "print the queryable relation catalog (grouped by kind) and exit")
+	c.Flags().BoolVar(&showRelations, "relations", false, "print the namespace tree of everything a query can call and exit. A path argument narrows it: a module (`net`) lists its members, a member (`net.has_test_point`) prints its signature, kind, doc and, for a derived relation, its definition")
 	c.Flags().StringVar(&format, "format", "text", "output format: text (the aligned terminal table), csv (spreadsheet-safe, header row, table only), json (rows with their citations kept apart), markdown or html (a VIEW: the question above its answer, ready to hand to someone). markdown and html carry the query; csv deliberately does not, because its first row has to be the header")
 	outFileFlag(c, &outPath)
 	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
-	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations, also print each relation's full reference doc")
+	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations and no member path, also print each member's full reference doc")
 	return c
 }
 
-// printRelations writes the queryable relation catalog (WS14-005), the set the web panel's picker
-// shows, grouped by kind in the catalog's stable order. Each entry is the relation template and its
-// one-line summary. With verbose, the relation's Detail markdown follows, as the panel's
-// click-to-inspect shows it.
-func printRelations(w io.Writer, verbose bool) {
-	var kind string
-	for _, r := range query.Catalog() {
-		if r.Kind != kind {
-			kind = r.Kind
-			fmt.Fprintf(w, "\n[%s]\n", kind)
+// printRelations writes what sits at path in the namespace tree, through the same ListRelations rpc
+// the viewer's picker asks (agni issue 751), so the two cannot describe a member differently. The
+// root prints every module with its members' signatures and one-line docs, a module prints its own
+// members, and a member prints everything the rpc carries. --format json writes the rpc's
+// ListRelationsResponse for the path (C31); for the root that is the entry, not the flat catalog.
+func printRelations(ctx context.Context, w io.Writer, path, format string, verbose bool) error {
+	svc := service.NewQueryService(nil, nil, nil)
+	describe := func(p string) (*webapi.RelationEntry, error) {
+		if p == "" {
+			p = "."
 		}
-		args := ""
-		if len(r.Args) > 0 {
-			args = "(?" + strings.Join(r.Args, ", ?") + ")"
+		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p})
+		if err != nil {
+			return nil, err
 		}
-		fmt.Fprintf(w, "  %s%s\n      %s\n", r.Name, args, r.Summary)
-		if verbose && r.Detail != "" {
-			for _, line := range strings.Split(strings.TrimRight(r.Detail, "\n"), "\n") {
-				fmt.Fprintf(w, "      %s\n", line)
+		return resp.GetEntry(), nil
+	}
+	e, err := describe(path)
+	if err != nil {
+		return err
+	}
+	if format == "json" {
+		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(&webapi.ListRelationsResponse{Entry: e})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(w, string(b))
+		return err
+	}
+	if e.GetEntryKind() != "module" {
+		printMember(w, e)
+		return nil
+	}
+	var walk func(mod *webapi.RelationEntry, recurse bool) error
+	walk = func(mod *webapi.RelationEntry, recurse bool) error {
+		var subs []*webapi.RelationEntry
+		header := false
+		for _, m := range mod.GetMembers() {
+			if m.GetEntryKind() == "module" {
+				subs = append(subs, m)
+				continue
 			}
-			fmt.Fprintln(w)
+			if !header {
+				name := mod.GetPath()
+				if name == "" {
+					name = "(root)"
+				}
+				fmt.Fprintf(w, "\n[%s]\n", name)
+				header = true
+			}
+			fmt.Fprintf(w, "  %s  %s\n      %s\n", m.GetSignature(), m.GetEntryKind(), m.GetDoc())
+			if verbose && m.GetDetail() != "" {
+				for _, line := range strings.Split(strings.TrimRight(m.GetDetail(), "\n"), "\n") {
+					fmt.Fprintf(w, "      %s\n", line)
+				}
+				fmt.Fprintln(w)
+			}
+		}
+		for _, sub := range subs {
+			if !recurse {
+				fmt.Fprintf(w, "  %s  module (agni query --relations %s)\n", sub.GetPath(), sub.GetPath())
+				continue
+			}
+			full, err := describe(sub.GetPath())
+			if err != nil {
+				return err
+			}
+			if err := walk(full, true); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return walk(e, path == "")
+}
+
+// printMember writes one member: its signature and kind, which argument types were inferred rather
+// than declared, its doc, a derived relation's definition, and its reference page when it has one.
+func printMember(w io.Writer, e *webapi.RelationEntry) {
+	fmt.Fprintln(w, e.GetSignature())
+	kind := e.GetEntryKind()
+	if e.GetModule() != "" {
+		kind += ", defined in module " + e.GetModule()
+	}
+	fmt.Fprintf(w, "  %s\n", kind)
+	if inf := e.GetInferred(); len(inf) > 0 {
+		fmt.Fprintf(w, "  inferred from the rules: %s\n", strings.Join(inf, ", "))
+	}
+	if d := e.GetDoc(); d != "" {
+		fmt.Fprintf(w, "\n  %s\n", d)
+	}
+	if def := e.GetDefinition(); len(def) > 0 {
+		fmt.Fprintln(w, "\n  defined as")
+		for _, clause := range def {
+			fmt.Fprintf(w, "    %s\n", clause)
+		}
+	}
+	if d := e.GetDetail(); d != "" {
+		fmt.Fprintln(w)
+		for _, line := range strings.Split(strings.TrimRight(d, "\n"), "\n") {
+			fmt.Fprintf(w, "  %s\n", line)
 		}
 	}
 }

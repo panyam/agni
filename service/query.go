@@ -7,11 +7,13 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/jaala/ns"
 )
 
 // QueryService evaluates ad-hoc datalog queries over a design's fact base (WS3-029) for the web
@@ -379,19 +381,34 @@ func entityKind(s string) string {
 }
 
 // ListRelations returns the queryable relation catalog (WS9-037) for the panel's relation picker:
-// the built-in relations and predicates plus any overlay-registered relations, pre-sorted by kind
-// then name (query.Catalog). It loads no design, so it never fails on a bad path and the client can
-// fetch it once at startup.
-func (s *QueryService) ListRelations(_ context.Context, _ *webapi.ListRelationsRequest) (*webapi.ListRelationsResponse, error) {
+// the built-in relations, the shipped library's derived relations and the predicates, plus any
+// overlay-registered relations, pre-sorted by kind then name (query.Catalog). It loads no design, so
+// it never fails on a bad path and the client can fetch it once at startup.
+//
+// A request naming a path answers that one place in the namespace tree instead (describeEntry), and
+// an unknown path is ErrInvalidArgument carrying the engine's suggestion.
+func (s *QueryService) ListRelations(_ context.Context, req *webapi.ListRelationsRequest) (*webapi.ListRelationsResponse, error) {
+	if p := req.GetPath(); p != "" {
+		e, err := describeEntry(p)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+		}
+		return &webapi.ListRelationsResponse{Entry: e}, nil
+	}
 	resp := &webapi.ListRelationsResponse{}
 	for _, r := range query.Catalog() {
-		resp.Relations = append(resp.Relations, &webapi.RelationInfo{
-			Name:    r.Name,
-			Args:    r.Args,
-			Summary: r.Summary,
-			Kind:    r.Kind,
-			Detail:  r.Detail,
-		})
+		info := &webapi.RelationInfo{
+			Name:       r.Name,
+			Args:       r.Args,
+			Summary:    r.Summary,
+			Kind:       r.Kind,
+			Detail:     r.Detail,
+			Definition: r.Definition,
+		}
+		if e, err := query.Describe(r.Name); err == nil {
+			info.Signature = e.Signature()
+		}
+		resp.Relations = append(resp.Relations, info)
 	}
 	for _, e := range query.EntityQueries() {
 		resp.EntityQueries = append(resp.EntityQueries, &webapi.EntityQuery{Kind: e.Kind, Query: e.Query, Teaches: e.Teaches})
@@ -418,6 +435,51 @@ func portableCites(cites []string, designPath string) []string {
 			out[i] = c[j:]
 		} else {
 			out[i] = c
+		}
+	}
+	return out
+}
+
+// describeEntry is one place in the namespace tree as the wire carries it, with a module's direct
+// children described one level deep. The CLI's `--relations <path>` prints this same message, so the
+// two surfaces cannot describe a member differently.
+func describeEntry(path string) (*webapi.RelationEntry, error) {
+	if path == "." {
+		path = "" // the wire's spelling of the root, since an empty path asks for the flat catalog
+	}
+	e, err := query.Describe(path)
+	if err != nil {
+		return nil, err
+	}
+	out := entryProto(e)
+	for _, m := range e.Members {
+		c, err := query.Describe(m)
+		if err != nil {
+			return nil, err
+		}
+		out.Members = append(out.Members, entryProto(c))
+	}
+	return out, nil
+}
+
+// entryProto converts one entry without its members. A member's reference markdown is attached
+// where one exists, as the flat catalog attaches it.
+func entryProto(e query.Entry) *webapi.RelationEntry {
+	out := &webapi.RelationEntry{
+		Path:       e.Path,
+		EntryKind:  string(e.Kind),
+		Doc:        e.Doc,
+		Module:     e.Module,
+		Definition: e.Definition,
+	}
+	if e.Kind == ns.EntryModule {
+		return out
+	}
+	out.Signature = e.Signature()
+	out.Detail = facts.DefaultRegistry().Doc(e.Path)
+	for _, a := range e.Args {
+		if a.Inferred {
+			out.Inferred = append(out.Inferred, a.Name)
 		}
 	}
 	return out

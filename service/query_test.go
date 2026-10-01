@@ -595,6 +595,76 @@ func TestListRelationsReturnsCatalog(t *testing.T) {
 	}
 }
 
+// TestListRelationsCarriesTheLibrary pins that a derived member lists beside the base relations, with
+// the typed signature and the definition a reader drills into (agni issue 751).
+func TestListRelationsCarriesTheLibrary(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil)
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tp *webapi.RelationInfo
+	for _, r := range resp.GetRelations() {
+		if r.GetName() == "net.has_test_point" {
+			tp = r
+		}
+	}
+	if tp == nil {
+		t.Fatal("net.has_test_point missing from the catalog; the shipped library did not list")
+	}
+	if tp.GetKind() != "derived" {
+		t.Errorf("net.has_test_point kind = %q, want derived", tp.GetKind())
+	}
+	if got := tp.GetSignature(); got != "net.has_test_point(n: net)" {
+		t.Errorf("signature = %q, want net.has_test_point(n: net)", got)
+	}
+	if len(tp.GetDefinition()) != 1 || !strings.Contains(tp.GetDefinition()[0], "component.class(?tp, \"test_point\")") {
+		t.Errorf("definition = %q, want its one clause", tp.GetDefinition())
+	}
+}
+
+// TestListRelationsDescribesAPath covers the three places a drill-down can name, and the error for a
+// place that does not exist.
+func TestListRelationsDescribesAPath(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil)
+	ask := func(path string) *webapi.RelationEntry {
+		t.Helper()
+		resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{Path: path})
+		if err != nil {
+			t.Fatalf("ListRelations(%q): %v", path, err)
+		}
+		if len(resp.GetRelations()) != 0 {
+			t.Errorf("ListRelations(%q) also returned the flat catalog", path)
+		}
+		return resp.GetEntry()
+	}
+	member := ask("component.probed_one")
+	if member.GetEntryKind() != "derived" || member.GetModule() != "component" || len(member.GetDefinition()) != 2 {
+		t.Errorf("component.probed_one = kind %q module %q with %d clauses, want derived in component with 2", member.GetEntryKind(), member.GetModule(), len(member.GetDefinition()))
+	}
+	if member.GetDoc() == "" || !strings.HasPrefix(member.GetSignature(), "component.probed_one(r: component") {
+		t.Errorf("component.probed_one doc %q signature %q", member.GetDoc(), member.GetSignature())
+	}
+	paths := func(e *webapi.RelationEntry) map[string]string {
+		out := map[string]string{}
+		for _, m := range e.GetMembers() {
+			out[m.GetPath()] = m.GetEntryKind()
+		}
+		return out
+	}
+	net := ask("net")
+	if got := paths(net); net.GetEntryKind() != "module" || got["net.has_test_point"] != "derived" || got["net.pin_count"] != "base" || got["net.reaches"] != "predicate" {
+		t.Errorf("net = %q holding %v, want a module holding a derived, a base and a predicate member", net.GetEntryKind(), got)
+	}
+	if got := paths(ask(".")); got["net"] != "module" || got["entity"] != "base" || got["str"] != "module" {
+		t.Errorf("root holds %v, want the net and str modules and the entity relation", got)
+	}
+	_, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{Path: "net.has_testpoint"})
+	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "net.has_test_point") {
+		t.Errorf("unknown path error = %v, want invalid argument suggesting net.has_test_point", err)
+	}
+}
+
 func TestListRelationsIncludesExamples(t *testing.T) {
 	svc := NewQueryService(fakeLoader{}, nil, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})

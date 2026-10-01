@@ -19,6 +19,7 @@ import (
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/examples/common"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	_ "github.com/panyam/agni/stdlib/lib"       // register the derived relations the audit calls
 	_ "github.com/panyam/agni/stdlib/relations" // register the fact relations the audit reads
 	"github.com/panyam/demokit"
 )
@@ -47,7 +48,7 @@ func main() {
 		if err != nil {
 			return demokit.Errf("audit.yaml: %v", err)
 		}
-		fmt.Printf("%q holds %d queries sharing %d preamble rules:\n", set.Title, len(set.Queries), strings.Count(set.Preamble, ":-"))
+		fmt.Printf("%q holds %d queries:\n", set.Title, len(set.Queries))
 		for _, q := range set.Queries {
 			fmt.Printf("  - %s\n", q.Name)
 		}
