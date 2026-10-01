@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package agni.v1.derive;
 
-option go_package = "github.com/panyam/agni/gen/go/agni/v1/derive";
+option go_package = "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive";
 
 // The derivation layer's three data artifacts (docs/24-derivation.md): the pieces of
 // PartSpec = f(document, toolchain, recipes, patches) that are DATA rather than code.

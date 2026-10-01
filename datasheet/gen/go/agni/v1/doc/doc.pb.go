@@ -742,7 +742,7 @@ const file_agni_v1_doc_doc_proto_rawDesc = "" +
 	"\n" +
 	"confidence\x18\x04 \x01(\x01R\n" +
 	"confidence\x12!\n" +
-	"\fcontent_hash\x18\x05 \x01(\tR\vcontentHashB+Z)github.com/panyam/agni/gen/go/agni/v1/docb\x06proto3"
+	"\fcontent_hash\x18\x05 \x01(\tR\vcontentHashB5Z3github.com/panyam/agni/datasheet/gen/go/agni/v1/docb\x06proto3"
 
 var (
 	file_agni_v1_doc_doc_proto_rawDescOnce sync.Once

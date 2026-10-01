@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
+	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	http "net/http"
 	strings "strings"

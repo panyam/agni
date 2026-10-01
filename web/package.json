@@ -6,7 +6,7 @@
   "packageManager": "pnpm@12.5.1",
   "description": "WebGL2 browser renderer for a packed schematic sheet (tier-2 PackedSheet)",
   "scripts": {
-    "gen": "buf generate ../protos --template buf.gen.web.yaml",
+    "gen": "buf generate .. --template buf.gen.web.yaml",
     "typecheck": "tsc --noEmit",
     "build": "node build.mjs",
     "test": "vitest run",

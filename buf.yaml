@@ -1,0 +1,15 @@
+version: v2
+# The buf workspace: the engine's protos and the datasheet producer's (agni issue 744). The
+# producer's protos import param.proto and webapi/workspace.proto from the engine's module, and the
+# workspace is what resolves those imports; no engine proto imports a producer one (C34).
+modules:
+  - path: protos
+  - path: datasheet/protos
+lint:
+  use:
+    - STANDARD
+  except:
+    - FIELD_NOT_REQUIRED
+breaking:
+  use:
+    - FILE

@@ -686,7 +686,7 @@ const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\rPinColumnAxis\x12\x1f\n" +
 	"\x1bPIN_COLUMN_AXIS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17PIN_COLUMN_AXIS_PACKAGE\x10\x01\x12\x1b\n" +
-	"\x17PIN_COLUMN_AXIS_VARIANT\x10\x02B.Z,github.com/panyam/agni/gen/go/agni/v1/deriveb\x06proto3"
+	"\x17PIN_COLUMN_AXIS_VARIANT\x10\x02B8Z6github.com/panyam/agni/datasheet/gen/go/agni/v1/deriveb\x06proto3"
 
 var (
 	file_agni_v1_derive_derive_proto_rawDescOnce sync.Once
