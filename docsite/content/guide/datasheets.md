@@ -63,22 +63,23 @@ small per-part files this page loads.
 
 ### Publishing a workbench draft
 
-The datasheets workbench (`agnids serve`) saves what you transcribe as `<stem>.partspec.json` beside
-the datasheet, and saves it without validating, so a half-finished transcription is never lost. That
-file is a DRAFT, and no check reads one: `--params` and a project's `params/` load `*.textproto` only,
-even when a draft sits in the same directory.
+The datasheets workbench (`agnids serve --corpus <dir>`) keeps what you transcribe as a DRAFT for one
+part number, in the corpus store beside the published specs. Opening a datasheet lists the drafts that
+cite it. A new one starts from an MPN the workbench suggests from the file name, and nothing is
+saved until you confirm or edit it. After that, every edit saves, without validating, so a
+half-finished transcription is never lost. No check reads a draft.
 
-`agnids promote` is the step that publishes a draft. It validates it, refuses a draft that fails
-(listing every problem), and refuses when another file in the corpus already seeds the same MPN,
-since one MPN in two files fails every load. Otherwise it writes `<mpn>.textproto`, with any
-character outside `A-Za-z0-9._-` replaced by `_`, and its text is the same from every build. A draft
-promoted before is written over its own earlier file and reported as `updated`.
+Publishing is the step between the two. It validates the draft, refuses one that fails (listing every
+problem), and refuses when another published file already seeds the same MPN, since one MPN in two
+files fails every load. Otherwise it writes `<mpn>.textproto`, with any character outside
+`A-Za-z0-9._-` replaced by `_`, and its text is the same from every build. Publishing an MPN again
+replaces its earlier published spec, and the draft stays, as the start of the next edit.
 
 ```
-agnids promote datasheets/ti/LM1117.partspec.json --to params/
+agnids publish LM1117 --corpus params/
 ```
 
-Promotion also records the spec in the corpus's index, `corpus.index.json`, which maps each MPN to
+Publishing also records the spec in the corpus's index, `corpus.index.json`, which maps each MPN to
 its file and a hash of what was validated, under a generation that advances on every change. The
 files stay the source of truth. After editing a published spec by hand, rebuild it, and let a
 corpus repository's CI catch an edit that skipped the rebuild:
@@ -88,12 +89,21 @@ agnids index params/
 agnids index params/ --check
 ```
 
+Drafts saved before they were keyed by MPN sit beside each datasheet as `<stem>.partspec.json`.
+`agnids migrate-drafts` moves each one that names an MPN into the store, citing its datasheet, leaves
+the empty ones the workbench seeded for every datasheet browsed, and overwrites nothing:
+
+```
+agnids migrate-drafts --mount ds=~/datasheets --corpus params/ --dry-run
+```
+
 ### Serving a shared corpus
 
 A project's own `params/` is read straight from disk, which suits the few dozen parts a project
 seeds. A corpus shared across projects is served instead: `agnids serve --corpus <dir>` answers
 lookups from its index, reading only the parts asked for, and `agni serve --params-url` reads through
-it.
+it. It indexes the corpus at start when the index is missing or stale, and serves the API alone when
+there is no workbench build, so a deployment that only publishes specs needs none.
 
 ```
 agnids serve --addr :8090 --corpus params/
@@ -103,9 +113,9 @@ agni serve --mount boards=~/boards --params-url http://localhost:8090
 Each request fetches its design's parts in one batch. A spec promoted into the corpus while both run
 reaches requests within a few seconds, with no restart, because the server re-checks the index
 generation. If the corpus cannot be reached, a check fails with an error naming it rather than
-treating every part as unseeded. A served corpus must be indexed, and one whose index no longer
-matches its files is refused until `agnids index` is run over it, because serving a file the index did
-not validate would hand out a spec nobody checked.
+treating every part as unseeded. A file edited behind a running server's index is refused until
+`agnids index` is run over it, or the server restarts, because serving a file the index did not
+validate would hand out a spec nobody checked.
 
 A project's own `params/` still replaces the shared corpus for that project's designs, as it replaces
 `--params`.

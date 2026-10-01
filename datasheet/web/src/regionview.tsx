@@ -5,7 +5,7 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { Document } from "./gen/agni/v1/doc/doc_pb.js";
 import type { PartSpec, Parameter, Pin, PinRelation } from "./gen/agni/v1/param/param_pb.js";
-import type { ValidationProblem } from "./gen/agni/v1/dsapi/datasheet_pb.js";
+import type { Draft, ValidationProblem } from "./gen/agni/v1/dsapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
 import type { PdfSource, PDFDocumentProxy, RenderedPage } from "./pdfsource.js";
 import {
@@ -38,6 +38,7 @@ import {
 } from "./regions.js";
 import {
   emptySpec,
+  suggestMpn,
   docId,
   loadUiState,
   saveUiState,
@@ -67,6 +68,18 @@ import {
   type NewRelationFields,
 } from "./bank.js";
 import { TranscribePanel } from "./transcribe.js";
+
+// listDrafts finds the drafts citing a datasheet. A server with no corpus keeps no drafts, which is
+// reported as noCorpus so the workbench can say why nothing will save, rather than failing the load.
+async function listDrafts(documentUri: string): Promise<{ drafts: Draft[]; noCorpus: boolean }> {
+  try {
+    const resp = await datasheetClient().listDrafts({ documentUri });
+    return { drafts: resp.drafts, noCorpus: false };
+  } catch (e) {
+    if (e instanceof ConnectError && e.code === Code.FailedPrecondition) return { drafts: [], noCorpus: true };
+    throw e;
+  }
+}
 
 // RegionViewState is what the tree pushes to the workbench: which datasheet to open.
 export interface RegionViewState {
@@ -156,6 +169,13 @@ function Workbench(props: {
 
   let spec: PartSpec | null = null;
   let version = "";
+  // A draft is keyed by its MPN (agni issue 749). draftMpn is empty until one exists for this
+  // datasheet, and nothing is saved until then. docUris are the datasheets the draft cites, so
+  // opening any of them finds it again. suggestion is the MPN a new draft offers, guessed from the
+  // file name and never saved unconfirmed.
+  let draftMpn = "";
+  let docUris: string[] = [];
+  let suggestion = "";
   let userRegions: Region[] = [];
   let types: Record<string, RegionType> = {};
   // otherRegions are OTHER authors' user-drawn boxes, shown read-only (compose); the author id
@@ -186,19 +206,30 @@ function Workbench(props: {
     },
     async (s: { mount: string; path: string; k: number }) => {
       const client = datasheetClient();
-      const [doc, docResp, part, ann] = await Promise.all([
+      const uri = artifactUri(s.mount, s.path);
+      const [doc, docResp, drafts, ann] = await Promise.all([
         props.pdf.loadPdf(props.pdf.rawDatasheetUrl(s.mount, s.path)),
-        client.getDocument({ uri: artifactUri(s.mount, s.path) }),
-        client.getPartSpec({ uri: artifactUri(s.mount, s.path) }),
-        client.getAnnotations({ uri: artifactUri(s.mount, s.path) }),
+        client.getDocument({ uri }),
+        listDrafts(uri),
+        client.getAnnotations({ uri }),
       ]);
       const docIR = docResp.document as Document | undefined;
       const docHash = docIR?.contentHash ?? "";
-      spec = part.found && part.spec ? part.spec : emptySpec(s.path, docIR?.title || s.path, docHash);
+      const d = drafts.drafts[0];
+      spec = d?.spec ?? emptySpec(s.path, docIR?.title || s.path, docHash);
       // Backfill the revision on an older spec that has none, so a new verification can be
       // invalidated. See adoptDocRevision in bank.ts.
       adoptDocRevision(spec, docHash);
-      version = part.version;
+      version = d?.version ?? "";
+      draftMpn = d?.mpn ?? "";
+      docUris = d ? [...d.documentUris] : [];
+      suggestion = suggestMpn(s.path);
+      let loadNote = "";
+      if (drafts.noCorpus) {
+        loadNote = "Drafts are kept in the corpus, and this server has none, so nothing here will be saved. Start agnids serve with --corpus.";
+      } else if (drafts.drafts.length > 1) {
+        loadNote = `${drafts.drafts.length} drafts cite this datasheet; showing ${draftMpn}.`;
+      }
       // The server overlay is the source of truth for MY set; the localStorage buffer is the
       // fallback (offline / never-saved). Others' drawn boxes render read-only. Reseed the buffer
       // from the loaded state so an immediate local write starts consistent with the server.
@@ -216,7 +247,7 @@ function Workbench(props: {
       setView({ tx: 0, ty: 0, scale: BASE_SCALE });
       needsFit = true;
       setSelected("");
-      setNote("");
+      setNote(loadNote);
       return { extracted: docResp.extracted, doc: docIR, extractAvailable: docResp.extractAvailable };
     },
   );
@@ -315,10 +346,14 @@ function Workbench(props: {
 
   const serverSave = async (): Promise<void> => {
     const s = props.state();
-    if (!s || !spec) return;
+    // No draft yet means nothing to save to: a draft is keyed by its MPN, and the author has not
+    // confirmed one. Edits stay in memory until startDraft.
+    if (!s || !spec || !draftMpn) return;
     const client = datasheetClient();
+    const uri = artifactUri(s.mount, s.path);
+    if (!docUris.includes(uri)) docUris.push(uri);
     try {
-      const resp = await client.savePartSpec({ uri: artifactUri(s.mount, s.path), spec, baseVersion: version });
+      const resp = await client.saveDraft({ draft: { mpn: draftMpn, spec, documentUris: docUris }, baseVersion: version });
       version = resp.version;
       // The client does NOT recompute these. param.Problems in Go is the one implementation, and
       // this renders its answer.
@@ -326,11 +361,14 @@ function Workbench(props: {
       setRev((v) => v + 1);
     } catch (e) {
       if (e instanceof ConnectError && e.code === Code.Aborted) {
-        const resp = await client.getPartSpec({ uri: artifactUri(s.mount, s.path) });
-        spec = resp.found && resp.spec ? resp.spec : spec;
-        version = resp.version;
+        const resp = await client.getDraft({ mpn: draftMpn });
+        if (resp.found && resp.draft) {
+          spec = resp.draft.spec ?? spec;
+          version = resp.draft.version;
+          docUris = [...resp.draft.documentUris];
+        }
         setSelected("");
-        setNote("Reloaded: another save landed for this datasheet.");
+        setNote(`Reloaded: another save landed for ${draftMpn}.`);
         setRev((v) => v + 1);
         if (spec) props.onParamsChange([...spec.parameters]);
       } else {
@@ -339,6 +377,37 @@ function Workbench(props: {
       }
     }
   };
+  // startDraft creates the draft for the MPN the author confirmed, carrying whatever they edited
+  // before confirming. An MPN may already have a draft, transcribed from another datasheet, and then
+  // this datasheet joins it rather than starting a second copy.
+  const startDraft = async (mpn: string): Promise<void> => {
+    const s = props.state();
+    mpn = mpn.trim();
+    if (!s || !spec || !mpn) return;
+    try {
+      const existing = await datasheetClient().getDraft({ mpn });
+      if (existing.found && existing.draft?.spec) {
+        spec = existing.draft.spec;
+        version = existing.draft.version;
+        draftMpn = existing.draft.mpn;
+        docUris = [...existing.draft.documentUris];
+        setNote(`A draft for ${draftMpn} already existed; this datasheet now cites it too.`);
+      } else {
+        spec.mpn = mpn;
+        draftMpn = mpn;
+        version = "";
+        docUris = [];
+      }
+    } catch (e) {
+      console.error("start draft failed", e);
+      setNote(e instanceof ConnectError && e.code === Code.FailedPrecondition ? "Drafts are kept in the corpus; start agnids serve with --corpus." : "Starting the draft failed (see console).");
+      return;
+    }
+    await serverSave();
+    setRev((v) => v + 1);
+    props.onParamsChange([...spec.parameters]);
+  };
+
   // annSave persists THIS author's overlay (drawn boxes + type tags) to the server, best-effort and
   // debounced alongside the PartSpec save. It skips optimistic concurrency because each author owns
   // their own file (WS13-011). localStorage stays the immediate live buffer.
@@ -629,9 +698,21 @@ function Workbench(props: {
         commit();
       }
     },
+    draftMpn: (): string => {
+      rev();
+      return draftMpn;
+    },
+    suggestedMpn: (): string => {
+      rev();
+      return suggestion;
+    },
+    startDraft: (mpn: string): void => {
+      void startDraft(mpn);
+    },
     setMeta: (patch: Partial<{ mpn: string; manufacturer: string; deviceClass: string; docTitle: string }>): void => {
       if (!spec) return;
-      if (patch.mpn !== undefined) spec.mpn = patch.mpn;
+      // A draft's MPN is its key, so it is fixed once the draft exists.
+      if (patch.mpn !== undefined && !draftMpn) spec.mpn = patch.mpn;
       if (patch.manufacturer !== undefined) spec.manufacturer = patch.manufacturer;
       if (patch.deviceClass !== undefined) spec.deviceClass = patch.deviceClass;
       // docTitle is the document's identity as the vendor prints it (number + revision), not a

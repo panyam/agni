@@ -75,7 +75,7 @@ func (x ValidationProblem_Kind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ValidationProblem_Kind.Descriptor instead.
 func (ValidationProblem_Kind) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{8, 0}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{13, 0}
 }
 
 type GetDocumentRequest struct {
@@ -279,28 +279,35 @@ func (x *ExtractDocIRResponse) GetDocument() *doc.Document {
 	return nil
 }
 
-type GetPartSpecRequest struct {
+// Draft is the editing copy of one part's PartSpec.
+type Draft struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// uri names the stored PartSpec.
-	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	// mpn is the draft's key, and the part number it publishes to. It equals spec.mpn.
+	Mpn  string          `protobuf:"bytes,1,opt,name=mpn,proto3" json:"mpn,omitempty"`
+	Spec *param.PartSpec `protobuf:"bytes,2,opt,name=spec,proto3" json:"spec,omitempty"`
+	// document_uris are the datasheets (artifact URIs, mount://...) the draft was transcribed from.
+	DocumentUris []string `protobuf:"bytes,3,rep,name=document_uris,json=documentUris,proto3" json:"document_uris,omitempty"`
+	// version is an opaque token (the stored draft's content hash) the client passes back as
+	// base_version on its next save.
+	Version       string `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetPartSpecRequest) Reset() {
-	*x = GetPartSpecRequest{}
+func (x *Draft) Reset() {
+	*x = Draft{}
 	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetPartSpecRequest) String() string {
+func (x *Draft) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetPartSpecRequest) ProtoMessage() {}
+func (*Draft) ProtoMessage() {}
 
-func (x *GetPartSpecRequest) ProtoReflect() protoreflect.Message {
+func (x *Draft) ProtoReflect() protoreflect.Message {
 	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -312,108 +319,106 @@ func (x *GetPartSpecRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetPartSpecRequest.ProtoReflect.Descriptor instead.
-func (*GetPartSpecRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use Draft.ProtoReflect.Descriptor instead.
+func (*Draft) Descriptor() ([]byte, []int) {
 	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetPartSpecRequest) GetUri() string {
+func (x *Draft) GetMpn() string {
 	if x != nil {
-		return x.Uri
+		return x.Mpn
 	}
 	return ""
 }
 
-type GetPartSpecResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// found is true when a PartSpec has been saved for this datasheet.
-	Found bool `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
-	// spec is the saved PartSpec; unset when found is false.
-	Spec *param.PartSpec `protobuf:"bytes,2,opt,name=spec,proto3" json:"spec,omitempty"`
-	// version is an opaque token (the sibling's content hash) the client passes back as
-	// base_version on the next save. Empty when found is false.
-	Version       string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetPartSpecResponse) Reset() {
-	*x = GetPartSpecResponse{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetPartSpecResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetPartSpecResponse) ProtoMessage() {}
-
-func (x *GetPartSpecResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetPartSpecResponse.ProtoReflect.Descriptor instead.
-func (*GetPartSpecResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *GetPartSpecResponse) GetFound() bool {
-	if x != nil {
-		return x.Found
-	}
-	return false
-}
-
-func (x *GetPartSpecResponse) GetSpec() *param.PartSpec {
+func (x *Draft) GetSpec() *param.PartSpec {
 	if x != nil {
 		return x.Spec
 	}
 	return nil
 }
 
-func (x *GetPartSpecResponse) GetVersion() string {
+func (x *Draft) GetDocumentUris() []string {
+	if x != nil {
+		return x.DocumentUris
+	}
+	return nil
+}
+
+func (x *Draft) GetVersion() string {
 	if x != nil {
 		return x.Version
 	}
 	return ""
 }
 
-type SavePartSpecRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Spec  *param.PartSpec        `protobuf:"bytes,1,opt,name=spec,proto3" json:"spec,omitempty"`
-	// base_version is the version GetPartSpec returned (or "" to assert the sibling does not exist
-	// yet). A mismatch with the current on-disk version fails the save as a conflict.
-	BaseVersion string `protobuf:"bytes,2,opt,name=base_version,json=baseVersion,proto3" json:"base_version,omitempty"`
-	// uri names the PartSpec to write.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+type GetDraftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mpn           string                 `protobuf:"bytes,1,opt,name=mpn,proto3" json:"mpn,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SavePartSpecRequest) Reset() {
-	*x = SavePartSpecRequest{}
+func (x *GetDraftRequest) Reset() {
+	*x = GetDraftRequest{}
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDraftRequest) ProtoMessage() {}
+
+func (x *GetDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDraftRequest.ProtoReflect.Descriptor instead.
+func (*GetDraftRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetDraftRequest) GetMpn() string {
+	if x != nil {
+		return x.Mpn
+	}
+	return ""
+}
+
+type GetDraftResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Found bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
+	// draft is unset when found is false.
+	Draft         *Draft `protobuf:"bytes,2,opt,name=draft,proto3" json:"draft,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDraftResponse) Reset() {
+	*x = GetDraftResponse{}
 	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SavePartSpecRequest) String() string {
+func (x *GetDraftResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SavePartSpecRequest) ProtoMessage() {}
+func (*GetDraftResponse) ProtoMessage() {}
 
-func (x *SavePartSpecRequest) ProtoReflect() protoreflect.Message {
+func (x *GetDraftResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -425,33 +430,171 @@ func (x *SavePartSpecRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SavePartSpecRequest.ProtoReflect.Descriptor instead.
-func (*SavePartSpecRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetDraftResponse.ProtoReflect.Descriptor instead.
+func (*GetDraftResponse) Descriptor() ([]byte, []int) {
 	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *SavePartSpecRequest) GetSpec() *param.PartSpec {
+func (x *GetDraftResponse) GetFound() bool {
 	if x != nil {
-		return x.Spec
+		return x.Found
+	}
+	return false
+}
+
+func (x *GetDraftResponse) GetDraft() *Draft {
+	if x != nil {
+		return x.Draft
 	}
 	return nil
 }
 
-func (x *SavePartSpecRequest) GetBaseVersion() string {
+type ListDraftsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document_uri names a datasheet; every draft citing it is returned.
+	DocumentUri   string `protobuf:"bytes,1,opt,name=document_uri,json=documentUri,proto3" json:"document_uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDraftsRequest) Reset() {
+	*x = ListDraftsRequest{}
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDraftsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDraftsRequest) ProtoMessage() {}
+
+func (x *ListDraftsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDraftsRequest.ProtoReflect.Descriptor instead.
+func (*ListDraftsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListDraftsRequest) GetDocumentUri() string {
+	if x != nil {
+		return x.DocumentUri
+	}
+	return ""
+}
+
+type ListDraftsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// drafts are ordered by MPN.
+	Drafts        []*Draft `protobuf:"bytes,1,rep,name=drafts,proto3" json:"drafts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDraftsResponse) Reset() {
+	*x = ListDraftsResponse{}
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDraftsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDraftsResponse) ProtoMessage() {}
+
+func (x *ListDraftsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDraftsResponse.ProtoReflect.Descriptor instead.
+func (*ListDraftsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListDraftsResponse) GetDrafts() []*Draft {
+	if x != nil {
+		return x.Drafts
+	}
+	return nil
+}
+
+type SaveDraftRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// draft.mpn names the draft; draft.spec.mpn must match it. draft.version is ignored.
+	Draft *Draft `protobuf:"bytes,1,opt,name=draft,proto3" json:"draft,omitempty"`
+	// base_version is the version last read (or "" to assert the draft does not exist yet). A
+	// mismatch with the stored version fails the save as a conflict.
+	BaseVersion   string `protobuf:"bytes,2,opt,name=base_version,json=baseVersion,proto3" json:"base_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveDraftRequest) Reset() {
+	*x = SaveDraftRequest{}
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveDraftRequest) ProtoMessage() {}
+
+func (x *SaveDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveDraftRequest.ProtoReflect.Descriptor instead.
+func (*SaveDraftRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SaveDraftRequest) GetDraft() *Draft {
+	if x != nil {
+		return x.Draft
+	}
+	return nil
+}
+
+func (x *SaveDraftRequest) GetBaseVersion() string {
 	if x != nil {
 		return x.BaseVersion
 	}
 	return ""
 }
 
-func (x *SavePartSpecRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-type SavePartSpecResponse struct {
+type SaveDraftResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// version is the new version after this write; the client keeps it for its next save.
 	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
@@ -464,27 +607,27 @@ type SavePartSpecResponse struct {
 	// edit, so the judgement rides a request that is happening anyway. It is also the reason the
 	// client does not reimplement these rules: one implementation, in Go, reported back.
 	//
-	// Empty means the spec would load into a corpus today.
+	// Empty means the draft would publish today.
 	Problems      []*ValidationProblem `protobuf:"bytes,2,rep,name=problems,proto3" json:"problems,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SavePartSpecResponse) Reset() {
-	*x = SavePartSpecResponse{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[7]
+func (x *SaveDraftResponse) Reset() {
+	*x = SaveDraftResponse{}
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SavePartSpecResponse) String() string {
+func (x *SaveDraftResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SavePartSpecResponse) ProtoMessage() {}
+func (*SaveDraftResponse) ProtoMessage() {}
 
-func (x *SavePartSpecResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[7]
+func (x *SaveDraftResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -495,23 +638,147 @@ func (x *SavePartSpecResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SavePartSpecResponse.ProtoReflect.Descriptor instead.
-func (*SavePartSpecResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{7}
+// Deprecated: Use SaveDraftResponse.ProtoReflect.Descriptor instead.
+func (*SaveDraftResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *SavePartSpecResponse) GetVersion() string {
+func (x *SaveDraftResponse) GetVersion() string {
 	if x != nil {
 		return x.Version
 	}
 	return ""
 }
 
-func (x *SavePartSpecResponse) GetProblems() []*ValidationProblem {
+func (x *SaveDraftResponse) GetProblems() []*ValidationProblem {
 	if x != nil {
 		return x.Problems
 	}
 	return nil
+}
+
+type PublishDraftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mpn           string                 `protobuf:"bytes,1,opt,name=mpn,proto3" json:"mpn,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishDraftRequest) Reset() {
+	*x = PublishDraftRequest{}
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishDraftRequest) ProtoMessage() {}
+
+func (x *PublishDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishDraftRequest.ProtoReflect.Descriptor instead.
+func (*PublishDraftRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *PublishDraftRequest) GetMpn() string {
+	if x != nil {
+		return x.Mpn
+	}
+	return ""
+}
+
+type PublishDraftResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// published is false when the draft did not validate, or when another published file already
+	// seeds its MPN; reason then says which, and problems lists what to fix.
+	Published bool                 `protobuf:"varint,1,opt,name=published,proto3" json:"published,omitempty"`
+	Reason    string               `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	Problems  []*ValidationProblem `protobuf:"bytes,3,rep,name=problems,proto3" json:"problems,omitempty"`
+	// replaced is true when the MPN already had a published spec that this one supersedes.
+	Replaced bool `protobuf:"varint,4,opt,name=replaced,proto3" json:"replaced,omitempty"`
+	// generation is the corpus generation after publishing.
+	Generation    uint64 `protobuf:"varint,5,opt,name=generation,proto3" json:"generation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishDraftResponse) Reset() {
+	*x = PublishDraftResponse{}
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishDraftResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishDraftResponse) ProtoMessage() {}
+
+func (x *PublishDraftResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishDraftResponse.ProtoReflect.Descriptor instead.
+func (*PublishDraftResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PublishDraftResponse) GetPublished() bool {
+	if x != nil {
+		return x.Published
+	}
+	return false
+}
+
+func (x *PublishDraftResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *PublishDraftResponse) GetProblems() []*ValidationProblem {
+	if x != nil {
+		return x.Problems
+	}
+	return nil
+}
+
+func (x *PublishDraftResponse) GetReplaced() bool {
+	if x != nil {
+		return x.Replaced
+	}
+	return false
+}
+
+func (x *PublishDraftResponse) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
 }
 
 // ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two
@@ -529,7 +796,7 @@ type ValidationProblem struct {
 
 func (x *ValidationProblem) Reset() {
 	*x = ValidationProblem{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[8]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -541,7 +808,7 @@ func (x *ValidationProblem) String() string {
 func (*ValidationProblem) ProtoMessage() {}
 
 func (x *ValidationProblem) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[8]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -554,7 +821,7 @@ func (x *ValidationProblem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationProblem.ProtoReflect.Descriptor instead.
 func (*ValidationProblem) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ValidationProblem) GetKind() ValidationProblem_Kind {
@@ -602,7 +869,7 @@ type RegionAnnotation struct {
 
 func (x *RegionAnnotation) Reset() {
 	*x = RegionAnnotation{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[9]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +881,7 @@ func (x *RegionAnnotation) String() string {
 func (*RegionAnnotation) ProtoMessage() {}
 
 func (x *RegionAnnotation) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[9]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +894,7 @@ func (x *RegionAnnotation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegionAnnotation.ProtoReflect.Descriptor instead.
 func (*RegionAnnotation) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RegionAnnotation) GetRegionId() string {
@@ -700,7 +967,7 @@ type AnnotationSet struct {
 
 func (x *AnnotationSet) Reset() {
 	*x = AnnotationSet{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[10]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -712,7 +979,7 @@ func (x *AnnotationSet) String() string {
 func (*AnnotationSet) ProtoMessage() {}
 
 func (x *AnnotationSet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[10]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -725,7 +992,7 @@ func (x *AnnotationSet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnnotationSet.ProtoReflect.Descriptor instead.
 func (*AnnotationSet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *AnnotationSet) GetDocId() string {
@@ -759,7 +1026,7 @@ type GetAnnotationsRequest struct {
 
 func (x *GetAnnotationsRequest) Reset() {
 	*x = GetAnnotationsRequest{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[11]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -771,7 +1038,7 @@ func (x *GetAnnotationsRequest) String() string {
 func (*GetAnnotationsRequest) ProtoMessage() {}
 
 func (x *GetAnnotationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[11]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -784,7 +1051,7 @@ func (x *GetAnnotationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnnotationsRequest.ProtoReflect.Descriptor instead.
 func (*GetAnnotationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetAnnotationsRequest) GetUri() string {
@@ -805,7 +1072,7 @@ type GetAnnotationsResponse struct {
 
 func (x *GetAnnotationsResponse) Reset() {
 	*x = GetAnnotationsResponse{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[12]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -817,7 +1084,7 @@ func (x *GetAnnotationsResponse) String() string {
 func (*GetAnnotationsResponse) ProtoMessage() {}
 
 func (x *GetAnnotationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[12]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -830,7 +1097,7 @@ func (x *GetAnnotationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnnotationsResponse.ProtoReflect.Descriptor instead.
 func (*GetAnnotationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetAnnotationsResponse) GetSets() []*AnnotationSet {
@@ -853,7 +1120,7 @@ type SaveAnnotationsRequest struct {
 
 func (x *SaveAnnotationsRequest) Reset() {
 	*x = SaveAnnotationsRequest{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[13]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -865,7 +1132,7 @@ func (x *SaveAnnotationsRequest) String() string {
 func (*SaveAnnotationsRequest) ProtoMessage() {}
 
 func (x *SaveAnnotationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[13]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -878,7 +1145,7 @@ func (x *SaveAnnotationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveAnnotationsRequest.ProtoReflect.Descriptor instead.
 func (*SaveAnnotationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SaveAnnotationsRequest) GetSet() *AnnotationSet {
@@ -903,7 +1170,7 @@ type SaveAnnotationsResponse struct {
 
 func (x *SaveAnnotationsResponse) Reset() {
 	*x = SaveAnnotationsResponse{}
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[14]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -915,7 +1182,7 @@ func (x *SaveAnnotationsResponse) String() string {
 func (*SaveAnnotationsResponse) ProtoMessage() {}
 
 func (x *SaveAnnotationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[14]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -928,7 +1195,7 @@ func (x *SaveAnnotationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveAnnotationsResponse.ProtoReflect.Descriptor instead.
 func (*SaveAnnotationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{19}
 }
 
 var File_agni_v1_dsapi_datasheet_proto protoreflect.FileDescriptor
@@ -945,20 +1212,37 @@ const file_agni_v1_dsapi_datasheet_proto_rawDesc = "" +
 	"\x13ExtractDocIRRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"I\n" +
 	"\x14ExtractDocIRResponse\x121\n" +
-	"\bdocument\x18\x01 \x01(\v2\x15.agni.v1.doc.DocumentR\bdocument\"&\n" +
-	"\x12GetPartSpecRequest\x12\x10\n" +
-	"\x03uri\x18\x01 \x01(\tR\x03uri\"r\n" +
-	"\x13GetPartSpecResponse\x12\x14\n" +
-	"\x05found\x18\x01 \x01(\bR\x05found\x12+\n" +
-	"\x04spec\x18\x02 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12\x18\n" +
-	"\aversion\x18\x03 \x01(\tR\aversion\"w\n" +
-	"\x13SavePartSpecRequest\x12+\n" +
-	"\x04spec\x18\x01 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12!\n" +
-	"\fbase_version\x18\x02 \x01(\tR\vbaseVersion\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"n\n" +
-	"\x14SavePartSpecResponse\x12\x18\n" +
+	"\bdocument\x18\x01 \x01(\v2\x15.agni.v1.doc.DocumentR\bdocument\"\x85\x01\n" +
+	"\x05Draft\x12\x10\n" +
+	"\x03mpn\x18\x01 \x01(\tR\x03mpn\x12+\n" +
+	"\x04spec\x18\x02 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12#\n" +
+	"\rdocument_uris\x18\x03 \x03(\tR\fdocumentUris\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\"#\n" +
+	"\x0fGetDraftRequest\x12\x10\n" +
+	"\x03mpn\x18\x01 \x01(\tR\x03mpn\"T\n" +
+	"\x10GetDraftResponse\x12\x14\n" +
+	"\x05found\x18\x01 \x01(\bR\x05found\x12*\n" +
+	"\x05draft\x18\x02 \x01(\v2\x14.agni.v1.dsapi.DraftR\x05draft\"6\n" +
+	"\x11ListDraftsRequest\x12!\n" +
+	"\fdocument_uri\x18\x01 \x01(\tR\vdocumentUri\"B\n" +
+	"\x12ListDraftsResponse\x12,\n" +
+	"\x06drafts\x18\x01 \x03(\v2\x14.agni.v1.dsapi.DraftR\x06drafts\"a\n" +
+	"\x10SaveDraftRequest\x12*\n" +
+	"\x05draft\x18\x01 \x01(\v2\x14.agni.v1.dsapi.DraftR\x05draft\x12!\n" +
+	"\fbase_version\x18\x02 \x01(\tR\vbaseVersion\"k\n" +
+	"\x11SaveDraftResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12<\n" +
-	"\bproblems\x18\x02 \x03(\v2 .agni.v1.dsapi.ValidationProblemR\bproblems\"\xb2\x01\n" +
+	"\bproblems\x18\x02 \x03(\v2 .agni.v1.dsapi.ValidationProblemR\bproblems\"'\n" +
+	"\x13PublishDraftRequest\x12\x10\n" +
+	"\x03mpn\x18\x01 \x01(\tR\x03mpn\"\xc6\x01\n" +
+	"\x14PublishDraftResponse\x12\x1c\n" +
+	"\tpublished\x18\x01 \x01(\bR\tpublished\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12<\n" +
+	"\bproblems\x18\x03 \x03(\v2 .agni.v1.dsapi.ValidationProblemR\bproblems\x12\x1a\n" +
+	"\breplaced\x18\x04 \x01(\bR\breplaced\x12\x1e\n" +
+	"\n" +
+	"generation\x18\x05 \x01(\x04R\n" +
+	"generation\"\xb2\x01\n" +
 	"\x11ValidationProblem\x129\n" +
 	"\x04kind\x18\x01 \x01(\x0e2%.agni.v1.dsapi.ValidationProblem.KindR\x04kind\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"H\n" +
@@ -989,14 +1273,17 @@ const file_agni_v1_dsapi_datasheet_proto_rawDesc = "" +
 	"\x16SaveAnnotationsRequest\x12.\n" +
 	"\x03set\x18\x01 \x01(\v2\x1c.agni.v1.dsapi.AnnotationSetR\x03set\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\"\x19\n" +
-	"\x17SaveAnnotationsResponse2\xd2\x05\n" +
+	"\x17SaveAnnotationsResponse2\xec\x06\n" +
 	"\x10DatasheetService\x12S\n" +
 	"\n" +
 	"ListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12J\n" +
 	"\aListDir\x12\x1e.agni.v1.webapi.ListDirRequest\x1a\x1f.agni.v1.webapi.ListDirResponse\x12T\n" +
-	"\vGetDocument\x12!.agni.v1.dsapi.GetDocumentRequest\x1a\".agni.v1.dsapi.GetDocumentResponse\x12T\n" +
-	"\vGetPartSpec\x12!.agni.v1.dsapi.GetPartSpecRequest\x1a\".agni.v1.dsapi.GetPartSpecResponse\x12W\n" +
-	"\fSavePartSpec\x12\".agni.v1.dsapi.SavePartSpecRequest\x1a#.agni.v1.dsapi.SavePartSpecResponse\x12W\n" +
+	"\vGetDocument\x12!.agni.v1.dsapi.GetDocumentRequest\x1a\".agni.v1.dsapi.GetDocumentResponse\x12K\n" +
+	"\bGetDraft\x12\x1e.agni.v1.dsapi.GetDraftRequest\x1a\x1f.agni.v1.dsapi.GetDraftResponse\x12Q\n" +
+	"\n" +
+	"ListDrafts\x12 .agni.v1.dsapi.ListDraftsRequest\x1a!.agni.v1.dsapi.ListDraftsResponse\x12N\n" +
+	"\tSaveDraft\x12\x1f.agni.v1.dsapi.SaveDraftRequest\x1a .agni.v1.dsapi.SaveDraftResponse\x12W\n" +
+	"\fPublishDraft\x12\".agni.v1.dsapi.PublishDraftRequest\x1a#.agni.v1.dsapi.PublishDraftResponse\x12W\n" +
 	"\fExtractDocIR\x12\".agni.v1.dsapi.ExtractDocIRRequest\x1a#.agni.v1.dsapi.ExtractDocIRResponse\x12]\n" +
 	"\x0eGetAnnotations\x12$.agni.v1.dsapi.GetAnnotationsRequest\x1a%.agni.v1.dsapi.GetAnnotationsResponse\x12`\n" +
 	"\x0fSaveAnnotations\x12%.agni.v1.dsapi.SaveAnnotationsRequest\x1a&.agni.v1.dsapi.SaveAnnotationsResponseB7Z5github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapib\x06proto3"
@@ -1014,66 +1301,78 @@ func file_agni_v1_dsapi_datasheet_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_dsapi_datasheet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_dsapi_datasheet_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agni_v1_dsapi_datasheet_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_agni_v1_dsapi_datasheet_proto_goTypes = []any{
 	(ValidationProblem_Kind)(0),       // 0: agni.v1.dsapi.ValidationProblem.Kind
 	(*GetDocumentRequest)(nil),        // 1: agni.v1.dsapi.GetDocumentRequest
 	(*GetDocumentResponse)(nil),       // 2: agni.v1.dsapi.GetDocumentResponse
 	(*ExtractDocIRRequest)(nil),       // 3: agni.v1.dsapi.ExtractDocIRRequest
 	(*ExtractDocIRResponse)(nil),      // 4: agni.v1.dsapi.ExtractDocIRResponse
-	(*GetPartSpecRequest)(nil),        // 5: agni.v1.dsapi.GetPartSpecRequest
-	(*GetPartSpecResponse)(nil),       // 6: agni.v1.dsapi.GetPartSpecResponse
-	(*SavePartSpecRequest)(nil),       // 7: agni.v1.dsapi.SavePartSpecRequest
-	(*SavePartSpecResponse)(nil),      // 8: agni.v1.dsapi.SavePartSpecResponse
-	(*ValidationProblem)(nil),         // 9: agni.v1.dsapi.ValidationProblem
-	(*RegionAnnotation)(nil),          // 10: agni.v1.dsapi.RegionAnnotation
-	(*AnnotationSet)(nil),             // 11: agni.v1.dsapi.AnnotationSet
-	(*GetAnnotationsRequest)(nil),     // 12: agni.v1.dsapi.GetAnnotationsRequest
-	(*GetAnnotationsResponse)(nil),    // 13: agni.v1.dsapi.GetAnnotationsResponse
-	(*SaveAnnotationsRequest)(nil),    // 14: agni.v1.dsapi.SaveAnnotationsRequest
-	(*SaveAnnotationsResponse)(nil),   // 15: agni.v1.dsapi.SaveAnnotationsResponse
-	(*doc.Document)(nil),              // 16: agni.v1.doc.Document
-	(*param.PartSpec)(nil),            // 17: agni.v1.param.PartSpec
-	(*doc.BBox)(nil),                  // 18: agni.v1.doc.BBox
-	(*param.Parameter)(nil),           // 19: agni.v1.param.Parameter
-	(*webapi.ListMountsRequest)(nil),  // 20: agni.v1.webapi.ListMountsRequest
-	(*webapi.ListDirRequest)(nil),     // 21: agni.v1.webapi.ListDirRequest
-	(*webapi.ListMountsResponse)(nil), // 22: agni.v1.webapi.ListMountsResponse
-	(*webapi.ListDirResponse)(nil),    // 23: agni.v1.webapi.ListDirResponse
+	(*Draft)(nil),                     // 5: agni.v1.dsapi.Draft
+	(*GetDraftRequest)(nil),           // 6: agni.v1.dsapi.GetDraftRequest
+	(*GetDraftResponse)(nil),          // 7: agni.v1.dsapi.GetDraftResponse
+	(*ListDraftsRequest)(nil),         // 8: agni.v1.dsapi.ListDraftsRequest
+	(*ListDraftsResponse)(nil),        // 9: agni.v1.dsapi.ListDraftsResponse
+	(*SaveDraftRequest)(nil),          // 10: agni.v1.dsapi.SaveDraftRequest
+	(*SaveDraftResponse)(nil),         // 11: agni.v1.dsapi.SaveDraftResponse
+	(*PublishDraftRequest)(nil),       // 12: agni.v1.dsapi.PublishDraftRequest
+	(*PublishDraftResponse)(nil),      // 13: agni.v1.dsapi.PublishDraftResponse
+	(*ValidationProblem)(nil),         // 14: agni.v1.dsapi.ValidationProblem
+	(*RegionAnnotation)(nil),          // 15: agni.v1.dsapi.RegionAnnotation
+	(*AnnotationSet)(nil),             // 16: agni.v1.dsapi.AnnotationSet
+	(*GetAnnotationsRequest)(nil),     // 17: agni.v1.dsapi.GetAnnotationsRequest
+	(*GetAnnotationsResponse)(nil),    // 18: agni.v1.dsapi.GetAnnotationsResponse
+	(*SaveAnnotationsRequest)(nil),    // 19: agni.v1.dsapi.SaveAnnotationsRequest
+	(*SaveAnnotationsResponse)(nil),   // 20: agni.v1.dsapi.SaveAnnotationsResponse
+	(*doc.Document)(nil),              // 21: agni.v1.doc.Document
+	(*param.PartSpec)(nil),            // 22: agni.v1.param.PartSpec
+	(*doc.BBox)(nil),                  // 23: agni.v1.doc.BBox
+	(*param.Parameter)(nil),           // 24: agni.v1.param.Parameter
+	(*webapi.ListMountsRequest)(nil),  // 25: agni.v1.webapi.ListMountsRequest
+	(*webapi.ListDirRequest)(nil),     // 26: agni.v1.webapi.ListDirRequest
+	(*webapi.ListMountsResponse)(nil), // 27: agni.v1.webapi.ListMountsResponse
+	(*webapi.ListDirResponse)(nil),    // 28: agni.v1.webapi.ListDirResponse
 }
 var file_agni_v1_dsapi_datasheet_proto_depIdxs = []int32{
-	16, // 0: agni.v1.dsapi.GetDocumentResponse.document:type_name -> agni.v1.doc.Document
-	16, // 1: agni.v1.dsapi.ExtractDocIRResponse.document:type_name -> agni.v1.doc.Document
-	17, // 2: agni.v1.dsapi.GetPartSpecResponse.spec:type_name -> agni.v1.param.PartSpec
-	17, // 3: agni.v1.dsapi.SavePartSpecRequest.spec:type_name -> agni.v1.param.PartSpec
-	9,  // 4: agni.v1.dsapi.SavePartSpecResponse.problems:type_name -> agni.v1.dsapi.ValidationProblem
-	0,  // 5: agni.v1.dsapi.ValidationProblem.kind:type_name -> agni.v1.dsapi.ValidationProblem.Kind
-	18, // 6: agni.v1.dsapi.RegionAnnotation.bbox:type_name -> agni.v1.doc.BBox
-	19, // 7: agni.v1.dsapi.RegionAnnotation.draft_params:type_name -> agni.v1.param.Parameter
-	10, // 8: agni.v1.dsapi.AnnotationSet.annotations:type_name -> agni.v1.dsapi.RegionAnnotation
-	11, // 9: agni.v1.dsapi.GetAnnotationsResponse.sets:type_name -> agni.v1.dsapi.AnnotationSet
-	11, // 10: agni.v1.dsapi.SaveAnnotationsRequest.set:type_name -> agni.v1.dsapi.AnnotationSet
-	20, // 11: agni.v1.dsapi.DatasheetService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
-	21, // 12: agni.v1.dsapi.DatasheetService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
-	1,  // 13: agni.v1.dsapi.DatasheetService.GetDocument:input_type -> agni.v1.dsapi.GetDocumentRequest
-	5,  // 14: agni.v1.dsapi.DatasheetService.GetPartSpec:input_type -> agni.v1.dsapi.GetPartSpecRequest
-	7,  // 15: agni.v1.dsapi.DatasheetService.SavePartSpec:input_type -> agni.v1.dsapi.SavePartSpecRequest
-	3,  // 16: agni.v1.dsapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.dsapi.ExtractDocIRRequest
-	12, // 17: agni.v1.dsapi.DatasheetService.GetAnnotations:input_type -> agni.v1.dsapi.GetAnnotationsRequest
-	14, // 18: agni.v1.dsapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.dsapi.SaveAnnotationsRequest
-	22, // 19: agni.v1.dsapi.DatasheetService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
-	23, // 20: agni.v1.dsapi.DatasheetService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
-	2,  // 21: agni.v1.dsapi.DatasheetService.GetDocument:output_type -> agni.v1.dsapi.GetDocumentResponse
-	6,  // 22: agni.v1.dsapi.DatasheetService.GetPartSpec:output_type -> agni.v1.dsapi.GetPartSpecResponse
-	8,  // 23: agni.v1.dsapi.DatasheetService.SavePartSpec:output_type -> agni.v1.dsapi.SavePartSpecResponse
-	4,  // 24: agni.v1.dsapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.dsapi.ExtractDocIRResponse
-	13, // 25: agni.v1.dsapi.DatasheetService.GetAnnotations:output_type -> agni.v1.dsapi.GetAnnotationsResponse
-	15, // 26: agni.v1.dsapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.dsapi.SaveAnnotationsResponse
-	19, // [19:27] is the sub-list for method output_type
-	11, // [11:19] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	21, // 0: agni.v1.dsapi.GetDocumentResponse.document:type_name -> agni.v1.doc.Document
+	21, // 1: agni.v1.dsapi.ExtractDocIRResponse.document:type_name -> agni.v1.doc.Document
+	22, // 2: agni.v1.dsapi.Draft.spec:type_name -> agni.v1.param.PartSpec
+	5,  // 3: agni.v1.dsapi.GetDraftResponse.draft:type_name -> agni.v1.dsapi.Draft
+	5,  // 4: agni.v1.dsapi.ListDraftsResponse.drafts:type_name -> agni.v1.dsapi.Draft
+	5,  // 5: agni.v1.dsapi.SaveDraftRequest.draft:type_name -> agni.v1.dsapi.Draft
+	14, // 6: agni.v1.dsapi.SaveDraftResponse.problems:type_name -> agni.v1.dsapi.ValidationProblem
+	14, // 7: agni.v1.dsapi.PublishDraftResponse.problems:type_name -> agni.v1.dsapi.ValidationProblem
+	0,  // 8: agni.v1.dsapi.ValidationProblem.kind:type_name -> agni.v1.dsapi.ValidationProblem.Kind
+	23, // 9: agni.v1.dsapi.RegionAnnotation.bbox:type_name -> agni.v1.doc.BBox
+	24, // 10: agni.v1.dsapi.RegionAnnotation.draft_params:type_name -> agni.v1.param.Parameter
+	15, // 11: agni.v1.dsapi.AnnotationSet.annotations:type_name -> agni.v1.dsapi.RegionAnnotation
+	16, // 12: agni.v1.dsapi.GetAnnotationsResponse.sets:type_name -> agni.v1.dsapi.AnnotationSet
+	16, // 13: agni.v1.dsapi.SaveAnnotationsRequest.set:type_name -> agni.v1.dsapi.AnnotationSet
+	25, // 14: agni.v1.dsapi.DatasheetService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
+	26, // 15: agni.v1.dsapi.DatasheetService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
+	1,  // 16: agni.v1.dsapi.DatasheetService.GetDocument:input_type -> agni.v1.dsapi.GetDocumentRequest
+	6,  // 17: agni.v1.dsapi.DatasheetService.GetDraft:input_type -> agni.v1.dsapi.GetDraftRequest
+	8,  // 18: agni.v1.dsapi.DatasheetService.ListDrafts:input_type -> agni.v1.dsapi.ListDraftsRequest
+	10, // 19: agni.v1.dsapi.DatasheetService.SaveDraft:input_type -> agni.v1.dsapi.SaveDraftRequest
+	12, // 20: agni.v1.dsapi.DatasheetService.PublishDraft:input_type -> agni.v1.dsapi.PublishDraftRequest
+	3,  // 21: agni.v1.dsapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.dsapi.ExtractDocIRRequest
+	17, // 22: agni.v1.dsapi.DatasheetService.GetAnnotations:input_type -> agni.v1.dsapi.GetAnnotationsRequest
+	19, // 23: agni.v1.dsapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.dsapi.SaveAnnotationsRequest
+	27, // 24: agni.v1.dsapi.DatasheetService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
+	28, // 25: agni.v1.dsapi.DatasheetService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
+	2,  // 26: agni.v1.dsapi.DatasheetService.GetDocument:output_type -> agni.v1.dsapi.GetDocumentResponse
+	7,  // 27: agni.v1.dsapi.DatasheetService.GetDraft:output_type -> agni.v1.dsapi.GetDraftResponse
+	9,  // 28: agni.v1.dsapi.DatasheetService.ListDrafts:output_type -> agni.v1.dsapi.ListDraftsResponse
+	11, // 29: agni.v1.dsapi.DatasheetService.SaveDraft:output_type -> agni.v1.dsapi.SaveDraftResponse
+	13, // 30: agni.v1.dsapi.DatasheetService.PublishDraft:output_type -> agni.v1.dsapi.PublishDraftResponse
+	4,  // 31: agni.v1.dsapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.dsapi.ExtractDocIRResponse
+	18, // 32: agni.v1.dsapi.DatasheetService.GetAnnotations:output_type -> agni.v1.dsapi.GetAnnotationsResponse
+	20, // 33: agni.v1.dsapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.dsapi.SaveAnnotationsResponse
+	24, // [24:34] is the sub-list for method output_type
+	14, // [14:24] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_dsapi_datasheet_proto_init() }
@@ -1081,14 +1380,14 @@ func file_agni_v1_dsapi_datasheet_proto_init() {
 	if File_agni_v1_dsapi_datasheet_proto != nil {
 		return
 	}
-	file_agni_v1_dsapi_datasheet_proto_msgTypes[9].OneofWrappers = []any{}
+	file_agni_v1_dsapi_datasheet_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_dsapi_datasheet_proto_rawDesc), len(file_agni_v1_dsapi_datasheet_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

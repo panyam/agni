@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/param"
@@ -18,7 +19,7 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// ErrConflict is the optimistic-concurrency failure, a SavePartSpec whose base_version no longer
+// ErrConflict is the optimistic-concurrency failure, a SaveDraft whose base_version no longer
 // matches the on-disk version because another writer got there first. A transport maps it to a code
 // the client treats as "refetch and retry" (Connect Aborted), distinct from a bad request.
 var ErrConflict = errors.New("version conflict")
@@ -38,15 +39,38 @@ type DocLoader interface {
 	Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
 }
 
-// PartSpecStore persists and loads a datasheet's shared PartSpec (the manual backend's output).
-// The os-backed adapter (agnids) writes it as a sibling file in the mount. Get returns
-// (nil, "", false, nil) when nothing is saved yet. Save is compare-and-swap, so baseVersion must
-// equal the current on-disk version (empty asserts absence) or it returns ErrConflict. The
-// read/compare/write is atomic per path. version is an opaque content token.
-type PartSpecStore interface {
-	Get(ctx context.Context, uri artifact.URI) (spec *parampb.PartSpec, version string, found bool, err error)
-	Save(ctx context.Context, uri artifact.URI, spec *parampb.PartSpec, baseVersion string) (newVersion string, err error)
+// DraftStore keeps drafts, the editing copies of PartSpecs, and publishes them (agni issue 749). It
+// is the published corpus's store, holding both entity types: drafts by MPN, and the published
+// specs and index the contract's PartSpecService reads. The os-backed adapter (agnids) keeps both in
+// the --corpus directory.
+//
+// Get matches an MPN case-insensitively and returns (nil, false, nil) when there is no draft.
+// ListByDocument returns the drafts citing a datasheet URI, ordered by MPN. Save is compare-and-swap:
+// baseVersion must equal the stored version (empty asserts absence) or it returns ErrConflict, and it
+// returns the new version. Publish validates the draft and makes it the current published spec,
+// returning a *PublishRefused when the draft is not fit to publish.
+type DraftStore interface {
+	Get(ctx context.Context, mpn string) (*dsapi.Draft, bool, error)
+	ListByDocument(ctx context.Context, documentURI string) ([]*dsapi.Draft, error)
+	Save(ctx context.Context, draft *dsapi.Draft, baseVersion string) (newVersion string, err error)
+	Publish(ctx context.Context, mpn string) (*Published, error)
 }
+
+// Published is a successful publication.
+type Published struct {
+	Replaced   bool
+	Generation uint64
+}
+
+// PublishRefused is a draft that was not published: it does not validate, or another published
+// file already seeds its MPN. It is an answer for the author, not a failure of the service, so
+// PublishDraft reports it in its response rather than as an error.
+type PublishRefused struct {
+	Reason   string
+	Problems []param.Problem
+}
+
+func (e *PublishRefused) Error() string { return e.Reason }
 
 // DocExtractor runs the configured doc-IR producer (pdf2doc/docling) over a datasheet, writing the
 // sibling doc-IR and returning it. The os-backed adapter (agnids) shells out to the configured
@@ -77,16 +101,17 @@ type AnnotationStore interface {
 // the viewer's does, and per-user workbench UI state stays in the client (localStorage), never here.
 type DatasheetService struct {
 	loader      DocLoader
-	store       PartSpecStore
+	drafts      DraftStore
 	extractor   DocExtractor
 	annotations AnnotationStore
 	workspace   *service.WorkspaceService
 }
 
-// NewDatasheetService returns a DatasheetService backed by the given doc-IR loader, PartSpec store,
-// doc-IR extractor, per-author annotation store, and folder listing.
-func NewDatasheetService(loader DocLoader, store PartSpecStore, extractor DocExtractor, annotations AnnotationStore, workspace service.Workspace) *DatasheetService {
-	return &DatasheetService{loader: loader, store: store, extractor: extractor, annotations: annotations, workspace: service.NewWorkspaceService(workspace)}
+// NewDatasheetService returns a DatasheetService backed by the given doc-IR loader, draft store,
+// doc-IR extractor, per-author annotation store, and folder listing. drafts may be nil, for a server
+// started without a corpus; the draft rpcs then report ErrNoCorpus.
+func NewDatasheetService(loader DocLoader, drafts DraftStore, extractor DocExtractor, annotations AnnotationStore, workspace service.Workspace) *DatasheetService {
+	return &DatasheetService{loader: loader, drafts: drafts, extractor: extractor, annotations: annotations, workspace: service.NewWorkspaceService(workspace)}
 }
 
 // ListMounts answers as the engine's WorkspaceService.ListMounts does, over this service's mounts.
@@ -140,54 +165,99 @@ func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *dsapi.ExtractD
 	return &dsapi.ExtractDocIRResponse{Document: d}, nil
 }
 
-// GetPartSpec loads the datasheet's saved PartSpec and its version token. Absence is found=false
-// with an empty version (a normal first-open state), not an error.
-func (s *DatasheetService) GetPartSpec(ctx context.Context, req *dsapi.GetPartSpecRequest) (*dsapi.GetPartSpecResponse, error) {
-	u, err := service.ParseArtifactURI(req.GetUri())
+// GetDraft returns the draft for an MPN, or found=false when there is none.
+func (s *DatasheetService) GetDraft(ctx context.Context, req *dsapi.GetDraftRequest) (*dsapi.GetDraftResponse, error) {
+	if s.drafts == nil {
+		return nil, ErrNoCorpus
+	}
+	mpn := strings.TrimSpace(req.GetMpn())
+	if mpn == "" {
+		return nil, fmt.Errorf("%w: GetDraft requires an mpn", service.ErrInvalidArgument)
+	}
+	d, found, err := s.drafts.Get(ctx, mpn)
 	if err != nil {
 		return nil, err
 	}
-	spec, version, found, err := s.store.Get(ctx, u)
-	if err != nil {
-		return nil, service.ClassifyLoadErr(err)
-	}
-	return &dsapi.GetPartSpecResponse{Found: found, Spec: spec, Version: version}, nil
+	return &dsapi.GetDraftResponse{Found: found, Draft: d}, nil
 }
 
-// SavePartSpec persists the PartSpec with optimistic concurrency. A version mismatch surfaces as
-// ErrConflict (mapped to Aborted so the client refetches); an absent spec is an invalid argument.
-func (s *DatasheetService) SavePartSpec(ctx context.Context, req *dsapi.SavePartSpecRequest) (*dsapi.SavePartSpecResponse, error) {
-	u, err := service.ParseArtifactURI(req.GetUri())
+// ListDrafts returns the drafts citing a datasheet.
+func (s *DatasheetService) ListDrafts(ctx context.Context, req *dsapi.ListDraftsRequest) (*dsapi.ListDraftsResponse, error) {
+	if s.drafts == nil {
+		return nil, ErrNoCorpus
+	}
+	if _, err := service.ParseArtifactURI(req.GetDocumentUri()); err != nil {
+		return nil, err
+	}
+	ds, err := s.drafts.ListByDocument(ctx, req.GetDocumentUri())
 	if err != nil {
 		return nil, err
 	}
-	if req.GetSpec() == nil {
-		return nil, fmt.Errorf("%w: SavePartSpec requires a spec", service.ErrInvalidArgument)
+	return &dsapi.ListDraftsResponse{Drafts: ds}, nil
+}
+
+// SaveDraft persists a draft with optimistic concurrency. A version mismatch surfaces as ErrConflict
+// (mapped to Aborted so the client refetches). A draft must name its MPN, and its spec must carry the
+// same one, because the MPN is the draft's key; renaming a draft is not an edit this rpc makes.
+func (s *DatasheetService) SaveDraft(ctx context.Context, req *dsapi.SaveDraftRequest) (*dsapi.SaveDraftResponse, error) {
+	if s.drafts == nil {
+		return nil, ErrNoCorpus
+	}
+	d := req.GetDraft()
+	mpn := strings.TrimSpace(d.GetMpn())
+	if mpn == "" || d.GetSpec() == nil {
+		return nil, fmt.Errorf("%w: SaveDraft requires a draft with an mpn and a spec", service.ErrInvalidArgument)
+	}
+	if !strings.EqualFold(mpn, strings.TrimSpace(d.GetSpec().GetMpn())) {
+		return nil, fmt.Errorf("%w: the draft is keyed by %q but its spec names %q", service.ErrInvalidArgument, mpn, d.GetSpec().GetMpn())
+	}
+	for _, u := range d.GetDocumentUris() {
+		if _, err := service.ParseArtifactURI(u); err != nil {
+			return nil, err
+		}
 	}
 	// NO VALIDATION HERE, DELIBERATELY. Saving records what the author has, and whether it is any
 	// good is reported as status after the write. Rejecting an invalid save would leave a document
-	// its author cannot save and cannot fix through the UI.
-	//
-	// This sibling is <stem>.partspec.json and param.LoadSet reads *.textproto only, so an
-	// incoherent draft cannot reach the corpus by sitting on disk. param.Validate belongs on the
-	// separate step that promotes a spec into a seeded corpus.
-	version, err := s.store.Save(ctx, u, req.GetSpec(), req.GetBaseVersion())
+	// its author cannot save and cannot fix through the UI. Validation is PublishDraft's.
+	version, err := s.drafts.Save(ctx, d, req.GetBaseVersion())
 	if err != nil {
-		if errors.Is(err, ErrConflict) {
-			return nil, err // stays ErrConflict (Aborted), not invalid-argument
-		}
-		return nil, service.ClassifyLoadErr(err)
+		return nil, err
 	}
-	// Judged AFTER the write and reported rather than enforced. The editor (web/src/transcribe.tsx)
-	// renders these rather than keeping its own copy of the rules.
-	return &dsapi.SavePartSpecResponse{Version: version, Problems: validationProblems(req.GetSpec())}, nil
+	// Judged AFTER the write and reported rather than enforced. The editor (transcribe.tsx) renders
+	// these rather than keeping its own copy of the rules.
+	return &dsapi.SaveDraftResponse{Version: version, Problems: validationProblems(d.GetSpec())}, nil
+}
+
+// PublishDraft validates a draft and makes it the current published spec for its MPN. A draft that
+// is not fit to publish is answered with published=false and its problems, not an error.
+func (s *DatasheetService) PublishDraft(ctx context.Context, req *dsapi.PublishDraftRequest) (*dsapi.PublishDraftResponse, error) {
+	if s.drafts == nil {
+		return nil, ErrNoCorpus
+	}
+	mpn := strings.TrimSpace(req.GetMpn())
+	if mpn == "" {
+		return nil, fmt.Errorf("%w: PublishDraft requires an mpn", service.ErrInvalidArgument)
+	}
+	p, err := s.drafts.Publish(ctx, mpn)
+	var refused *PublishRefused
+	if errors.As(err, &refused) {
+		return &dsapi.PublishDraftResponse{Reason: refused.Reason, Problems: toProblems(refused.Problems)}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &dsapi.PublishDraftResponse{Published: true, Replaced: p.Replaced, Generation: p.Generation}, nil
 }
 
 // validationProblems renders param's classified findings onto the wire type. The mapping is total,
 // so a kind this does not recognize travels as UNSPECIFIED and still shows its message rather than
 // vanishing from the editor.
 func validationProblems(spec *parampb.PartSpec) []*dsapi.ValidationProblem {
-	found := param.Problems(spec)
+	return toProblems(param.Problems(spec))
+}
+
+// toProblems converts param's problems to the wire's, classified by kind.
+func toProblems(found []param.Problem) []*dsapi.ValidationProblem {
 	if len(found) == 0 {
 		return nil
 	}

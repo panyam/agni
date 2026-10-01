@@ -3,6 +3,7 @@ import { LimitKind, ConditionCoverage, PinFunction, PinRelationKind, Modality } 
 import type { BBox } from "./gen/agni/v1/doc/doc_pb.js";
 import type { Region } from "./regions.js";
 import {
+  suggestMpn,
   newParameter,
   emptySpec,
   adoptDocRevision,
@@ -49,6 +50,14 @@ const fields = (over: Partial<NewParamFields> = {}): NewParamFields => ({
   unit: "V",
   condition: "",
   ...over,
+});
+
+describe("suggestMpn", () => {
+  it("offers the datasheet's file stem, which the author confirms or edits", () => {
+    expect(suggestMpn("ti/LM1117.pdf")).toBe("LM1117");
+    expect(suggestMpn("ti/lm1117-family.PDF")).toBe("lm1117-family");
+    expect(suggestMpn("datasheet")).toBe("datasheet");
+  });
 });
 
 describe("bank", () => {

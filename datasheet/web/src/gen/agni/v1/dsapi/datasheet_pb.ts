@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/dsapi/datasheet.proto.
  */
 export const file_agni_v1_dsapi_datasheet: GenFile = /*@__PURE__*/
-  fileDesc("Ch1hZ25pL3YxL2RzYXBpL2RhdGFzaGVldC5wcm90bxINYWduaS52MS5kc2FwaSIhChJHZXREb2N1bWVudFJlcXVlc3QSCwoDdXJpGAEgASgJImwKE0dldERvY3VtZW50UmVzcG9uc2USEQoJZXh0cmFjdGVkGAEgASgIEicKCGRvY3VtZW50GAIgASgLMhUuYWduaS52MS5kb2MuRG9jdW1lbnQSGQoRZXh0cmFjdF9hdmFpbGFibGUYAyABKAgiIgoTRXh0cmFjdERvY0lSUmVxdWVzdBILCgN1cmkYASABKAkiPwoURXh0cmFjdERvY0lSUmVzcG9uc2USJwoIZG9jdW1lbnQYASABKAsyFS5hZ25pLnYxLmRvYy5Eb2N1bWVudCIhChJHZXRQYXJ0U3BlY1JlcXVlc3QSCwoDdXJpGAEgASgJIlwKE0dldFBhcnRTcGVjUmVzcG9uc2USDQoFZm91bmQYASABKAgSJQoEc3BlYxgCIAEoCzIXLmFnbmkudjEucGFyYW0uUGFydFNwZWMSDwoHdmVyc2lvbhgDIAEoCSJfChNTYXZlUGFydFNwZWNSZXF1ZXN0EiUKBHNwZWMYASABKAsyFy5hZ25pLnYxLnBhcmFtLlBhcnRTcGVjEhQKDGJhc2VfdmVyc2lvbhgCIAEoCRILCgN1cmkYAyABKAkiWwoUU2F2ZVBhcnRTcGVjUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCRIyCghwcm9ibGVtcxgCIAMoCzIgLmFnbmkudjEuZHNhcGkuVmFsaWRhdGlvblByb2JsZW0iowEKEVZhbGlkYXRpb25Qcm9ibGVtEjMKBGtpbmQYASABKA4yJS5hZ25pLnYxLmRzYXBpLlZhbGlkYXRpb25Qcm9ibGVtLktpbmQSDwoHbWVzc2FnZRgCIAEoCSJICgRLaW5kEhQKEEtJTkRfVU5TUEVDSUZJRUQQABITCg9LSU5EX1NUUlVDVFVSQUwQARIVChFLSU5EX0NPTVBMRVRFTkVTUxACItEBChBSZWdpb25Bbm5vdGF0aW9uEhEKCXJlZ2lvbl9pZBgBIAEoCRIMCgR0eXBlGAIgASgJEiQKBGJib3gYAyABKAsyES5hZ25pLnYxLmRvYy5CQm94SACIAQESDAoEcGFnZRgEIAEoBRIMCgRraW5kGAUgASgJEg0KBWxhYmVsGAYgASgJEi4KDGRyYWZ0X3BhcmFtcxgHIAMoCzIYLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyEhIKCmNvbmZpZGVuY2UYCCABKAFCBwoFX2Jib3giZQoNQW5ub3RhdGlvblNldBIOCgZkb2NfaWQYASABKAkSDgoGYXV0aG9yGAIgASgJEjQKC2Fubm90YXRpb25zGAMgAygLMh8uYWduaS52MS5kc2FwaS5SZWdpb25Bbm5vdGF0aW9uIiQKFUdldEFubm90YXRpb25zUmVxdWVzdBILCgN1cmkYASABKAkiRAoWR2V0QW5ub3RhdGlvbnNSZXNwb25zZRIqCgRzZXRzGAEgAygLMhwuYWduaS52MS5kc2FwaS5Bbm5vdGF0aW9uU2V0IlAKFlNhdmVBbm5vdGF0aW9uc1JlcXVlc3QSKQoDc2V0GAEgASgLMhwuYWduaS52MS5kc2FwaS5Bbm5vdGF0aW9uU2V0EgsKA3VyaRgCIAEoCSIZChdTYXZlQW5ub3RhdGlvbnNSZXNwb25zZTLSBQoQRGF0YXNoZWV0U2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlElQKC0dldERvY3VtZW50EiEuYWduaS52MS5kc2FwaS5HZXREb2N1bWVudFJlcXVlc3QaIi5hZ25pLnYxLmRzYXBpLkdldERvY3VtZW50UmVzcG9uc2USVAoLR2V0UGFydFNwZWMSIS5hZ25pLnYxLmRzYXBpLkdldFBhcnRTcGVjUmVxdWVzdBoiLmFnbmkudjEuZHNhcGkuR2V0UGFydFNwZWNSZXNwb25zZRJXCgxTYXZlUGFydFNwZWMSIi5hZ25pLnYxLmRzYXBpLlNhdmVQYXJ0U3BlY1JlcXVlc3QaIy5hZ25pLnYxLmRzYXBpLlNhdmVQYXJ0U3BlY1Jlc3BvbnNlElcKDEV4dHJhY3REb2NJUhIiLmFnbmkudjEuZHNhcGkuRXh0cmFjdERvY0lSUmVxdWVzdBojLmFnbmkudjEuZHNhcGkuRXh0cmFjdERvY0lSUmVzcG9uc2USXQoOR2V0QW5ub3RhdGlvbnMSJC5hZ25pLnYxLmRzYXBpLkdldEFubm90YXRpb25zUmVxdWVzdBolLmFnbmkudjEuZHNhcGkuR2V0QW5ub3RhdGlvbnNSZXNwb25zZRJgCg9TYXZlQW5ub3RhdGlvbnMSJS5hZ25pLnYxLmRzYXBpLlNhdmVBbm5vdGF0aW9uc1JlcXVlc3QaJi5hZ25pLnYxLmRzYXBpLlNhdmVBbm5vdGF0aW9uc1Jlc3BvbnNlQjdaNWdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZGF0YXNoZWV0L2dlbi9nby9hZ25pL3YxL2RzYXBpYgZwcm90bzM", [file_agni_v1_doc_doc, file_agni_v1_param_param, file_agni_v1_webapi_workspace]);
+  fileDesc("Ch1hZ25pL3YxL2RzYXBpL2RhdGFzaGVldC5wcm90bxINYWduaS52MS5kc2FwaSIhChJHZXREb2N1bWVudFJlcXVlc3QSCwoDdXJpGAEgASgJImwKE0dldERvY3VtZW50UmVzcG9uc2USEQoJZXh0cmFjdGVkGAEgASgIEicKCGRvY3VtZW50GAIgASgLMhUuYWduaS52MS5kb2MuRG9jdW1lbnQSGQoRZXh0cmFjdF9hdmFpbGFibGUYAyABKAgiIgoTRXh0cmFjdERvY0lSUmVxdWVzdBILCgN1cmkYASABKAkiPwoURXh0cmFjdERvY0lSUmVzcG9uc2USJwoIZG9jdW1lbnQYASABKAsyFS5hZ25pLnYxLmRvYy5Eb2N1bWVudCJjCgVEcmFmdBILCgNtcG4YASABKAkSJQoEc3BlYxgCIAEoCzIXLmFnbmkudjEucGFyYW0uUGFydFNwZWMSFQoNZG9jdW1lbnRfdXJpcxgDIAMoCRIPCgd2ZXJzaW9uGAQgASgJIh4KD0dldERyYWZ0UmVxdWVzdBILCgNtcG4YASABKAkiRgoQR2V0RHJhZnRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIjCgVkcmFmdBgCIAEoCzIULmFnbmkudjEuZHNhcGkuRHJhZnQiKQoRTGlzdERyYWZ0c1JlcXVlc3QSFAoMZG9jdW1lbnRfdXJpGAEgASgJIjoKEkxpc3REcmFmdHNSZXNwb25zZRIkCgZkcmFmdHMYASADKAsyFC5hZ25pLnYxLmRzYXBpLkRyYWZ0Ik0KEFNhdmVEcmFmdFJlcXVlc3QSIwoFZHJhZnQYASABKAsyFC5hZ25pLnYxLmRzYXBpLkRyYWZ0EhQKDGJhc2VfdmVyc2lvbhgCIAEoCSJYChFTYXZlRHJhZnRSZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEjIKCHByb2JsZW1zGAIgAygLMiAuYWduaS52MS5kc2FwaS5WYWxpZGF0aW9uUHJvYmxlbSIiChNQdWJsaXNoRHJhZnRSZXF1ZXN0EgsKA21wbhgBIAEoCSKTAQoUUHVibGlzaERyYWZ0UmVzcG9uc2USEQoJcHVibGlzaGVkGAEgASgIEg4KBnJlYXNvbhgCIAEoCRIyCghwcm9ibGVtcxgDIAMoCzIgLmFnbmkudjEuZHNhcGkuVmFsaWRhdGlvblByb2JsZW0SEAoIcmVwbGFjZWQYBCABKAgSEgoKZ2VuZXJhdGlvbhgFIAEoBCKjAQoRVmFsaWRhdGlvblByb2JsZW0SMwoEa2luZBgBIAEoDjIlLmFnbmkudjEuZHNhcGkuVmFsaWRhdGlvblByb2JsZW0uS2luZBIPCgdtZXNzYWdlGAIgASgJIkgKBEtpbmQSFAoQS0lORF9VTlNQRUNJRklFRBAAEhMKD0tJTkRfU1RSVUNUVVJBTBABEhUKEUtJTkRfQ09NUExFVEVORVNTEAIi0QEKEFJlZ2lvbkFubm90YXRpb24SEQoJcmVnaW9uX2lkGAEgASgJEgwKBHR5cGUYAiABKAkSJAoEYmJveBgDIAEoCzIRLmFnbmkudjEuZG9jLkJCb3hIAIgBARIMCgRwYWdlGAQgASgFEgwKBGtpbmQYBSABKAkSDQoFbGFiZWwYBiABKAkSLgoMZHJhZnRfcGFyYW1zGAcgAygLMhguYWduaS52MS5wYXJhbS5QYXJhbWV0ZXISEgoKY29uZmlkZW5jZRgIIAEoAUIHCgVfYmJveCJlCg1Bbm5vdGF0aW9uU2V0Eg4KBmRvY19pZBgBIAEoCRIOCgZhdXRob3IYAiABKAkSNAoLYW5ub3RhdGlvbnMYAyADKAsyHy5hZ25pLnYxLmRzYXBpLlJlZ2lvbkFubm90YXRpb24iJAoVR2V0QW5ub3RhdGlvbnNSZXF1ZXN0EgsKA3VyaRgBIAEoCSJEChZHZXRBbm5vdGF0aW9uc1Jlc3BvbnNlEioKBHNldHMYASADKAsyHC5hZ25pLnYxLmRzYXBpLkFubm90YXRpb25TZXQiUAoWU2F2ZUFubm90YXRpb25zUmVxdWVzdBIpCgNzZXQYASABKAsyHC5hZ25pLnYxLmRzYXBpLkFubm90YXRpb25TZXQSCwoDdXJpGAIgASgJIhkKF1NhdmVBbm5vdGF0aW9uc1Jlc3BvbnNlMuwGChBEYXRhc2hlZXRTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJKCgdMaXN0RGlyEh4uYWduaS52MS53ZWJhcGkuTGlzdERpclJlcXVlc3QaHy5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVzcG9uc2USVAoLR2V0RG9jdW1lbnQSIS5hZ25pLnYxLmRzYXBpLkdldERvY3VtZW50UmVxdWVzdBoiLmFnbmkudjEuZHNhcGkuR2V0RG9jdW1lbnRSZXNwb25zZRJLCghHZXREcmFmdBIeLmFnbmkudjEuZHNhcGkuR2V0RHJhZnRSZXF1ZXN0Gh8uYWduaS52MS5kc2FwaS5HZXREcmFmdFJlc3BvbnNlElEKCkxpc3REcmFmdHMSIC5hZ25pLnYxLmRzYXBpLkxpc3REcmFmdHNSZXF1ZXN0GiEuYWduaS52MS5kc2FwaS5MaXN0RHJhZnRzUmVzcG9uc2USTgoJU2F2ZURyYWZ0Eh8uYWduaS52MS5kc2FwaS5TYXZlRHJhZnRSZXF1ZXN0GiAuYWduaS52MS5kc2FwaS5TYXZlRHJhZnRSZXNwb25zZRJXCgxQdWJsaXNoRHJhZnQSIi5hZ25pLnYxLmRzYXBpLlB1Ymxpc2hEcmFmdFJlcXVlc3QaIy5hZ25pLnYxLmRzYXBpLlB1Ymxpc2hEcmFmdFJlc3BvbnNlElcKDEV4dHJhY3REb2NJUhIiLmFnbmkudjEuZHNhcGkuRXh0cmFjdERvY0lSUmVxdWVzdBojLmFnbmkudjEuZHNhcGkuRXh0cmFjdERvY0lSUmVzcG9uc2USXQoOR2V0QW5ub3RhdGlvbnMSJC5hZ25pLnYxLmRzYXBpLkdldEFubm90YXRpb25zUmVxdWVzdBolLmFnbmkudjEuZHNhcGkuR2V0QW5ub3RhdGlvbnNSZXNwb25zZRJgCg9TYXZlQW5ub3RhdGlvbnMSJS5hZ25pLnYxLmRzYXBpLlNhdmVBbm5vdGF0aW9uc1JlcXVlc3QaJi5hZ25pLnYxLmRzYXBpLlNhdmVBbm5vdGF0aW9uc1Jlc3BvbnNlQjdaNWdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZGF0YXNoZWV0L2dlbi9nby9hZ25pL3YxL2RzYXBpYgZwcm90bzM", [file_agni_v1_doc_doc, file_agni_v1_param_param, file_agni_v1_webapi_workspace]);
 
 /**
  * @generated from message agni.v1.dsapi.GetDocumentRequest
@@ -112,94 +112,156 @@ export const ExtractDocIRResponseSchema: GenMessage<ExtractDocIRResponse> = /*@_
   messageDesc(file_agni_v1_dsapi_datasheet, 3);
 
 /**
- * @generated from message agni.v1.dsapi.GetPartSpecRequest
+ * Draft is the editing copy of one part's PartSpec.
+ *
+ * @generated from message agni.v1.dsapi.Draft
  */
-export type GetPartSpecRequest = Message<"agni.v1.dsapi.GetPartSpecRequest"> & {
+export type Draft = Message<"agni.v1.dsapi.Draft"> & {
   /**
-   * uri names the stored PartSpec.
+   * mpn is the draft's key, and the part number it publishes to. It equals spec.mpn.
    *
-   * @generated from field: string uri = 1;
+   * @generated from field: string mpn = 1;
    */
-  uri: string;
-};
-
-/**
- * Describes the message agni.v1.dsapi.GetPartSpecRequest.
- * Use `create(GetPartSpecRequestSchema)` to create a new message.
- */
-export const GetPartSpecRequestSchema: GenMessage<GetPartSpecRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 4);
-
-/**
- * @generated from message agni.v1.dsapi.GetPartSpecResponse
- */
-export type GetPartSpecResponse = Message<"agni.v1.dsapi.GetPartSpecResponse"> & {
-  /**
-   * found is true when a PartSpec has been saved for this datasheet.
-   *
-   * @generated from field: bool found = 1;
-   */
-  found: boolean;
+  mpn: string;
 
   /**
-   * spec is the saved PartSpec; unset when found is false.
-   *
    * @generated from field: agni.v1.param.PartSpec spec = 2;
    */
   spec?: PartSpec | undefined;
 
   /**
-   * version is an opaque token (the sibling's content hash) the client passes back as
-   * base_version on the next save. Empty when found is false.
+   * document_uris are the datasheets (artifact URIs, mount://...) the draft was transcribed from.
    *
-   * @generated from field: string version = 3;
+   * @generated from field: repeated string document_uris = 3;
+   */
+  documentUris: string[];
+
+  /**
+   * version is an opaque token (the stored draft's content hash) the client passes back as
+   * base_version on its next save.
+   *
+   * @generated from field: string version = 4;
    */
   version: string;
 };
 
 /**
- * Describes the message agni.v1.dsapi.GetPartSpecResponse.
- * Use `create(GetPartSpecResponseSchema)` to create a new message.
+ * Describes the message agni.v1.dsapi.Draft.
+ * Use `create(DraftSchema)` to create a new message.
  */
-export const GetPartSpecResponseSchema: GenMessage<GetPartSpecResponse> = /*@__PURE__*/
+export const DraftSchema: GenMessage<Draft> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 4);
+
+/**
+ * @generated from message agni.v1.dsapi.GetDraftRequest
+ */
+export type GetDraftRequest = Message<"agni.v1.dsapi.GetDraftRequest"> & {
+  /**
+   * @generated from field: string mpn = 1;
+   */
+  mpn: string;
+};
+
+/**
+ * Describes the message agni.v1.dsapi.GetDraftRequest.
+ * Use `create(GetDraftRequestSchema)` to create a new message.
+ */
+export const GetDraftRequestSchema: GenMessage<GetDraftRequest> = /*@__PURE__*/
   messageDesc(file_agni_v1_dsapi_datasheet, 5);
 
 /**
- * @generated from message agni.v1.dsapi.SavePartSpecRequest
+ * @generated from message agni.v1.dsapi.GetDraftResponse
  */
-export type SavePartSpecRequest = Message<"agni.v1.dsapi.SavePartSpecRequest"> & {
+export type GetDraftResponse = Message<"agni.v1.dsapi.GetDraftResponse"> & {
   /**
-   * @generated from field: agni.v1.param.PartSpec spec = 1;
+   * @generated from field: bool found = 1;
    */
-  spec?: PartSpec | undefined;
+  found: boolean;
 
   /**
-   * base_version is the version GetPartSpec returned (or "" to assert the sibling does not exist
-   * yet). A mismatch with the current on-disk version fails the save as a conflict.
+   * draft is unset when found is false.
+   *
+   * @generated from field: agni.v1.dsapi.Draft draft = 2;
+   */
+  draft?: Draft | undefined;
+};
+
+/**
+ * Describes the message agni.v1.dsapi.GetDraftResponse.
+ * Use `create(GetDraftResponseSchema)` to create a new message.
+ */
+export const GetDraftResponseSchema: GenMessage<GetDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 6);
+
+/**
+ * @generated from message agni.v1.dsapi.ListDraftsRequest
+ */
+export type ListDraftsRequest = Message<"agni.v1.dsapi.ListDraftsRequest"> & {
+  /**
+   * document_uri names a datasheet; every draft citing it is returned.
+   *
+   * @generated from field: string document_uri = 1;
+   */
+  documentUri: string;
+};
+
+/**
+ * Describes the message agni.v1.dsapi.ListDraftsRequest.
+ * Use `create(ListDraftsRequestSchema)` to create a new message.
+ */
+export const ListDraftsRequestSchema: GenMessage<ListDraftsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 7);
+
+/**
+ * @generated from message agni.v1.dsapi.ListDraftsResponse
+ */
+export type ListDraftsResponse = Message<"agni.v1.dsapi.ListDraftsResponse"> & {
+  /**
+   * drafts are ordered by MPN.
+   *
+   * @generated from field: repeated agni.v1.dsapi.Draft drafts = 1;
+   */
+  drafts: Draft[];
+};
+
+/**
+ * Describes the message agni.v1.dsapi.ListDraftsResponse.
+ * Use `create(ListDraftsResponseSchema)` to create a new message.
+ */
+export const ListDraftsResponseSchema: GenMessage<ListDraftsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 8);
+
+/**
+ * @generated from message agni.v1.dsapi.SaveDraftRequest
+ */
+export type SaveDraftRequest = Message<"agni.v1.dsapi.SaveDraftRequest"> & {
+  /**
+   * draft.mpn names the draft; draft.spec.mpn must match it. draft.version is ignored.
+   *
+   * @generated from field: agni.v1.dsapi.Draft draft = 1;
+   */
+  draft?: Draft | undefined;
+
+  /**
+   * base_version is the version last read (or "" to assert the draft does not exist yet). A
+   * mismatch with the stored version fails the save as a conflict.
    *
    * @generated from field: string base_version = 2;
    */
   baseVersion: string;
-
-  /**
-   * uri names the PartSpec to write.
-   *
-   * @generated from field: string uri = 3;
-   */
-  uri: string;
 };
 
 /**
- * Describes the message agni.v1.dsapi.SavePartSpecRequest.
- * Use `create(SavePartSpecRequestSchema)` to create a new message.
+ * Describes the message agni.v1.dsapi.SaveDraftRequest.
+ * Use `create(SaveDraftRequestSchema)` to create a new message.
  */
-export const SavePartSpecRequestSchema: GenMessage<SavePartSpecRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 6);
+export const SaveDraftRequestSchema: GenMessage<SaveDraftRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 9);
 
 /**
- * @generated from message agni.v1.dsapi.SavePartSpecResponse
+ * @generated from message agni.v1.dsapi.SaveDraftResponse
  */
-export type SavePartSpecResponse = Message<"agni.v1.dsapi.SavePartSpecResponse"> & {
+export type SaveDraftResponse = Message<"agni.v1.dsapi.SaveDraftResponse"> & {
   /**
    * version is the new version after this write; the client keeps it for its next save.
    *
@@ -217,7 +279,7 @@ export type SavePartSpecResponse = Message<"agni.v1.dsapi.SavePartSpecResponse">
    * edit, so the judgement rides a request that is happening anyway. It is also the reason the
    * client does not reimplement these rules: one implementation, in Go, reported back.
    *
-   * Empty means the spec would load into a corpus today.
+   * Empty means the draft would publish today.
    *
    * @generated from field: repeated agni.v1.dsapi.ValidationProblem problems = 2;
    */
@@ -225,11 +287,72 @@ export type SavePartSpecResponse = Message<"agni.v1.dsapi.SavePartSpecResponse">
 };
 
 /**
- * Describes the message agni.v1.dsapi.SavePartSpecResponse.
- * Use `create(SavePartSpecResponseSchema)` to create a new message.
+ * Describes the message agni.v1.dsapi.SaveDraftResponse.
+ * Use `create(SaveDraftResponseSchema)` to create a new message.
  */
-export const SavePartSpecResponseSchema: GenMessage<SavePartSpecResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 7);
+export const SaveDraftResponseSchema: GenMessage<SaveDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 10);
+
+/**
+ * @generated from message agni.v1.dsapi.PublishDraftRequest
+ */
+export type PublishDraftRequest = Message<"agni.v1.dsapi.PublishDraftRequest"> & {
+  /**
+   * @generated from field: string mpn = 1;
+   */
+  mpn: string;
+};
+
+/**
+ * Describes the message agni.v1.dsapi.PublishDraftRequest.
+ * Use `create(PublishDraftRequestSchema)` to create a new message.
+ */
+export const PublishDraftRequestSchema: GenMessage<PublishDraftRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 11);
+
+/**
+ * @generated from message agni.v1.dsapi.PublishDraftResponse
+ */
+export type PublishDraftResponse = Message<"agni.v1.dsapi.PublishDraftResponse"> & {
+  /**
+   * published is false when the draft did not validate, or when another published file already
+   * seeds its MPN; reason then says which, and problems lists what to fix.
+   *
+   * @generated from field: bool published = 1;
+   */
+  published: boolean;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: repeated agni.v1.dsapi.ValidationProblem problems = 3;
+   */
+  problems: ValidationProblem[];
+
+  /**
+   * replaced is true when the MPN already had a published spec that this one supersedes.
+   *
+   * @generated from field: bool replaced = 4;
+   */
+  replaced: boolean;
+
+  /**
+   * generation is the corpus generation after publishing.
+   *
+   * @generated from field: uint64 generation = 5;
+   */
+  generation: bigint;
+};
+
+/**
+ * Describes the message agni.v1.dsapi.PublishDraftResponse.
+ * Use `create(PublishDraftResponseSchema)` to create a new message.
+ */
+export const PublishDraftResponseSchema: GenMessage<PublishDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_dsapi_datasheet, 12);
 
 /**
  * ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two
@@ -258,7 +381,7 @@ export type ValidationProblem = Message<"agni.v1.dsapi.ValidationProblem"> & {
  * Use `create(ValidationProblemSchema)` to create a new message.
  */
 export const ValidationProblemSchema: GenMessage<ValidationProblem> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 8);
+  messageDesc(file_agni_v1_dsapi_datasheet, 13);
 
 /**
  * @generated from enum agni.v1.dsapi.ValidationProblem.Kind
@@ -291,7 +414,7 @@ export enum ValidationProblem_Kind {
  * Describes the enum agni.v1.dsapi.ValidationProblem.Kind.
  */
 export const ValidationProblem_KindSchema: GenEnum<ValidationProblem_Kind> = /*@__PURE__*/
-  enumDesc(file_agni_v1_dsapi_datasheet, 8, 0);
+  enumDesc(file_agni_v1_dsapi_datasheet, 13, 0);
 
 /**
  * RegionAnnotation is one human judgement about one region of a datasheet: its routing type, its
@@ -366,7 +489,7 @@ export type RegionAnnotation = Message<"agni.v1.dsapi.RegionAnnotation"> & {
  * Use `create(RegionAnnotationSchema)` to create a new message.
  */
 export const RegionAnnotationSchema: GenMessage<RegionAnnotation> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 9);
+  messageDesc(file_agni_v1_dsapi_datasheet, 14);
 
 /**
  * AnnotationSet is ONE author's overlay for ONE datasheet: their drawn/tagged regions. doc_id is
@@ -397,7 +520,7 @@ export type AnnotationSet = Message<"agni.v1.dsapi.AnnotationSet"> & {
  * Use `create(AnnotationSetSchema)` to create a new message.
  */
 export const AnnotationSetSchema: GenMessage<AnnotationSet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 10);
+  messageDesc(file_agni_v1_dsapi_datasheet, 15);
 
 /**
  * @generated from message agni.v1.dsapi.GetAnnotationsRequest
@@ -416,7 +539,7 @@ export type GetAnnotationsRequest = Message<"agni.v1.dsapi.GetAnnotationsRequest
  * Use `create(GetAnnotationsRequestSchema)` to create a new message.
  */
 export const GetAnnotationsRequestSchema: GenMessage<GetAnnotationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 11);
+  messageDesc(file_agni_v1_dsapi_datasheet, 16);
 
 /**
  * @generated from message agni.v1.dsapi.GetAnnotationsResponse
@@ -436,7 +559,7 @@ export type GetAnnotationsResponse = Message<"agni.v1.dsapi.GetAnnotationsRespon
  * Use `create(GetAnnotationsResponseSchema)` to create a new message.
  */
 export const GetAnnotationsResponseSchema: GenMessage<GetAnnotationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 12);
+  messageDesc(file_agni_v1_dsapi_datasheet, 17);
 
 /**
  * @generated from message agni.v1.dsapi.SaveAnnotationsRequest
@@ -463,7 +586,7 @@ export type SaveAnnotationsRequest = Message<"agni.v1.dsapi.SaveAnnotationsReque
  * Use `create(SaveAnnotationsRequestSchema)` to create a new message.
  */
 export const SaveAnnotationsRequestSchema: GenMessage<SaveAnnotationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 13);
+  messageDesc(file_agni_v1_dsapi_datasheet, 18);
 
 /**
  * @generated from message agni.v1.dsapi.SaveAnnotationsResponse
@@ -476,7 +599,7 @@ export type SaveAnnotationsResponse = Message<"agni.v1.dsapi.SaveAnnotationsResp
  * Use `create(SaveAnnotationsResponseSchema)` to create a new message.
  */
 export const SaveAnnotationsResponseSchema: GenMessage<SaveAnnotationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_dsapi_datasheet, 14);
+  messageDesc(file_agni_v1_dsapi_datasheet, 19);
 
 /**
  * DatasheetService serves a datasheet's doc-IR to the extraction workbench. It is the analogue
@@ -523,32 +646,58 @@ export const DatasheetService: GenService<{
     output: typeof GetDocumentResponseSchema;
   },
   /**
-   * GetPartSpec returns the datasheet's saved PartSpec (the <stem>.partspec.json sibling, the
-   * shared working DRAFT, which no check reads until `agnids promote` validates it into a
-   * corpus) plus a version token for optimistic concurrency.
-   * found is false (and version empty) when nothing has been saved yet. One PartSpec is shared
-   * per datasheet across users; the workbench's per-user UI state (drawn regions, type tags) is
-   * NOT here — it lives in each client's localStorage so users do not clobber each other's view.
+   * DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
+   * and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit so
+   * work is never lost, and no check ever reads one: readers see only PUBLISHED specs, through the
+   * contract's PartSpecService. PublishDraft is the one step between the two. Drafts live in the
+   * published corpus's store, so these rpcs need agnids serve --corpus.
    *
-   * @generated from rpc agni.v1.dsapi.DatasheetService.GetPartSpec
+   * GetDraft returns the draft for an MPN, matched case-insensitively. found is false when there
+   * is none, which is a normal state rather than an error.
+   *
+   * @generated from rpc agni.v1.dsapi.DatasheetService.GetDraft
    */
-  getPartSpec: {
+  getDraft: {
     methodKind: "unary";
-    input: typeof GetPartSpecRequestSchema;
-    output: typeof GetPartSpecResponseSchema;
+    input: typeof GetDraftRequestSchema;
+    output: typeof GetDraftResponseSchema;
   },
   /**
-   * SavePartSpec writes the PartSpec sibling with optimistic concurrency: base_version must equal
-   * the current on-disk version (empty base_version asserts "expected absent", a first write), or
-   * the save is rejected as a conflict (Connect Aborted) and the client refetches. The read,
-   * compare, and write are atomic per path within the serve process. Returns the new version.
+   * ListDrafts returns the drafts that cite a datasheet, so opening a document finds the parts
+   * transcribed from it. A family datasheet can be cited by several.
    *
-   * @generated from rpc agni.v1.dsapi.DatasheetService.SavePartSpec
+   * @generated from rpc agni.v1.dsapi.DatasheetService.ListDrafts
    */
-  savePartSpec: {
+  listDrafts: {
     methodKind: "unary";
-    input: typeof SavePartSpecRequestSchema;
-    output: typeof SavePartSpecResponseSchema;
+    input: typeof ListDraftsRequestSchema;
+    output: typeof ListDraftsResponseSchema;
+  },
+  /**
+   * SaveDraft writes a draft with optimistic concurrency: base_version must equal the stored
+   * version (empty asserts the draft does not exist yet, a first save), or the save is rejected as
+   * a conflict (Connect Aborted) and the client refetches. It never refuses a draft for being
+   * incomplete; what is wrong with it comes back as problems.
+   *
+   * @generated from rpc agni.v1.dsapi.DatasheetService.SaveDraft
+   */
+  saveDraft: {
+    methodKind: "unary";
+    input: typeof SaveDraftRequestSchema;
+    output: typeof SaveDraftResponseSchema;
+  },
+  /**
+   * PublishDraft validates a draft and, when it passes, makes it the current published spec for its
+   * MPN, recording it in the corpus index under a new generation. A draft that does not validate is
+   * not published, and the response lists every problem. The draft stays, as the start of the
+   * next edit.
+   *
+   * @generated from rpc agni.v1.dsapi.DatasheetService.PublishDraft
+   */
+  publishDraft: {
+    methodKind: "unary";
+    input: typeof PublishDraftRequestSchema;
+    output: typeof PublishDraftResponseSchema;
   },
   /**
    * ExtractDocIR runs the configured doc-IR producer (pdf2doc/docling) over the datasheet, writes

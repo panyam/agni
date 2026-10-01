@@ -29,6 +29,6 @@ func rootCmd() *cobra.Command {
 		SilenceErrors: true,
 		Version:       version.Version(),
 	}
-	root.AddCommand(serveCmd(), deriveCmd(), promoteCmd(), indexCmd(), opscmd.Version("agnids"), opscmd.Healthcheck("agnids", "localhost:8090"))
+	root.AddCommand(serveCmd(), deriveCmd(), publishCmd(), indexCmd(), migrateDraftsCmd(), opscmd.Version("agnids"), opscmd.Healthcheck("agnids", "localhost:8090"))
 	return root
 }

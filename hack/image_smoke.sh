@@ -15,7 +15,8 @@
 # agnids: serve the workbench over a mounted folder holding the synthetic warm-up PDF, then call
 # ExtractDocIR and require the doc-IR sibling on disk. That exercises everything the image adds over
 # the binary: the bundle, --mount-root, the docling venv and its system libraries, and the models it
-# must find offline. The container runs as the caller's uid so it can write into the mounted folder,
+# must find offline. It also starts a draft, publishes it, and reads it back through PartSpecService,
+# which is the corpus store at /corpus that the default command serves. The container runs as the caller's uid so it can write into the mounted folder,
 # which is also how an operator is told to run it.
 set -euo pipefail
 
@@ -46,10 +47,10 @@ agnids)
 	dir="$(mktemp -d)"
 	name="agnids-smoke-$$"
 	trap 'docker rm -f "$name" >/dev/null 2>&1 || true; rm -rf "$dir"' EXIT
-	mkdir -p "$dir/smoke/PART"
+	mkdir -p "$dir/smoke/PART" "$dir/corpus"
 	cp "$here/datasheet/tools/pdf2doc/testdata/warmup.pdf" "$dir/smoke/PART/part.pdf"
 	docker run -d --name "$name" --user "$(id -u):$(id -g)" -p 127.0.0.1:18090:8090 \
-		-v "$dir/smoke:/datasheets/smoke" "$img" >/dev/null
+		-v "$dir/smoke:/datasheets/smoke" -v "$dir/corpus:/corpus" "$img" >/dev/null
 	for _ in $(seq 1 60); do
 		docker exec "$name" agnids healthcheck >/dev/null 2>&1 && break
 		sleep 1
@@ -65,6 +66,18 @@ agnids)
 	grep -q 'agnids image warm-up page' "$dir/smoke/PART/part.doc.textproto" \
 		|| { echo "::error::doc-IR does not carry the page's text"; exit 1; }
 	echo "agnids: Extract produced $(wc -c <"$dir/smoke/PART/part.doc.textproto") bytes of doc-IR offline"
+	rpc() {
+		curl -sf -X POST -H 'Content-Type: application/json' "http://127.0.0.1:18090/$1" -d "$2" \
+			|| { echo "::error::$1 failed"; docker logs "$name"; exit 1; }
+	}
+	rpc agni.v1.dsapi.DatasheetService/SaveDraft \
+		'{"draft": {"mpn": "SMOKE-1", "spec": {"mpn": "SMOKE-1"}, "documentUris": ["mount://smoke/PART/part.pdf"]}}' >/dev/null
+	pub="$(rpc agni.v1.dsapi.DatasheetService/PublishDraft '{"mpn": "SMOKE-1"}')"
+	# protojson varies its whitespace on purpose, so match with a pattern rather than a literal.
+	grep -Eq '"published": ?true' <<<"$pub" || { echo "::error::PublishDraft did not publish: $pub"; exit 1; }
+	got="$(rpc agni.v1.param.PartSpecService/BatchGetPartSpecs '{"mpns": ["smoke-1"]}')"
+	grep -Eq '"mpn": ?"SMOKE-1"' <<<"$got" || { echo "::error::the published draft was not served: $got"; exit 1; }
+	echo "agnids: a draft saved, published and served back through PartSpecService"
 	;;
 *)
 	echo "image_smoke.sh: unknown kind '$kind' (want agni or agnids)" >&2

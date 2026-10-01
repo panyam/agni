@@ -15,9 +15,10 @@ import { fitInto } from "@agni/web-shared/panzoom.js";
 
 const client = vi.hoisted(() => ({
   getDocument: vi.fn(async () => ({ extracted: false, extractAvailable: false, document: undefined })),
-  getPartSpec: vi.fn(async () => ({ found: false, version: "v1" })),
+  listDrafts: vi.fn(async () => ({ drafts: [] })),
+  getDraft: vi.fn(async () => ({ found: false })),
   getAnnotations: vi.fn(async () => ({ sets: [] })),
-  savePartSpec: vi.fn(async () => ({ version: "v2", problems: [] })),
+  saveDraft: vi.fn(async () => ({ version: "v2", problems: [] })),
   extractDocIR: vi.fn(async () => ({})),
 }));
 vi.mock("./api.js", () => ({ datasheetClient: () => client }));

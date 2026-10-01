@@ -1,12 +1,16 @@
 # The datasheet service: agnids, the extraction workbench it serves, and the Python/docling stack
 # behind the workbench's "Extract (first pass)" action, in one image (agni issue 744).
 #
-#   docker run -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:v0.1.0
+#   docker run -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti -v ~/corpus:/corpus ghcr.io/panyam/agnids:v0.1.0
 #
 # Every subdirectory of /datasheets becomes a mount named after itself (serve --mount-root), as
-# /workspace does in the agni image. The workbench WRITES into those mounts (a PartSpec draft and
-# region annotations beside each PDF, and the doc-IR Extract derives), so mount them read-write and
-# see the USER note below for who owns what gets written.
+# /workspace does in the agni image. The workbench WRITES into those mounts (region annotations
+# beside each PDF, and the doc-IR Extract derives), so mount them read-write and see the USER note
+# below for who owns what gets written.
+#
+# /corpus is the corpus store (agni issue 749): the workbench's drafts, and the published specs that
+# `agni serve --params-url` reads through PartSpecService. Mount a directory there to keep them;
+# without one they live in the container and go with it. agnids indexes it at start.
 #
 # This is a separate image from agni's because it is a separate service. It is deployed apart,
 # against a different store, and nearly all of its size is the docling stack (torch, the layout and
@@ -118,9 +122,13 @@ ENV HF_HOME=/opt/docling/models \
 # Non-root, because the workbench writes into the bind-mounted datasheet folders, and as root those
 # files would land on the operator's host owned by root. Run with `--user $(id -u)` to have them
 # land as your own uid.
+#
+# /corpus is writable by any uid (sticky, as /tmp is), because agnids writes its index there at start
+# and a `--user` run with no volume mounted over it would otherwise fail before serving.
 RUN useradd --system --create-home --uid 10001 agnids \
- && mkdir -p /datasheets \
- && chown agnids:agnids /datasheets
+ && mkdir -p /datasheets /corpus \
+ && chown agnids:agnids /datasheets /corpus \
+ && chmod 1777 /corpus
 USER agnids
 
 WORKDIR /srv/agnids
@@ -131,4 +139,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 ENTRYPOINT ["agnids"]
 CMD ["serve", "--addr", ":8090", "--mount-root", "/datasheets", "--web-dir", "/srv/agnids/web", \
-     "--pdf2doc", "/opt/docling/bin/python /opt/agnids/pdf2doc.py"]
+     "--corpus", "/corpus", "--pdf2doc", "/opt/docling/bin/python /opt/agnids/pdf2doc.py"]

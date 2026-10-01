@@ -43,12 +43,18 @@ const (
 	// DatasheetServiceGetDocumentProcedure is the fully-qualified name of the DatasheetService's
 	// GetDocument RPC.
 	DatasheetServiceGetDocumentProcedure = "/agni.v1.dsapi.DatasheetService/GetDocument"
-	// DatasheetServiceGetPartSpecProcedure is the fully-qualified name of the DatasheetService's
-	// GetPartSpec RPC.
-	DatasheetServiceGetPartSpecProcedure = "/agni.v1.dsapi.DatasheetService/GetPartSpec"
-	// DatasheetServiceSavePartSpecProcedure is the fully-qualified name of the DatasheetService's
-	// SavePartSpec RPC.
-	DatasheetServiceSavePartSpecProcedure = "/agni.v1.dsapi.DatasheetService/SavePartSpec"
+	// DatasheetServiceGetDraftProcedure is the fully-qualified name of the DatasheetService's GetDraft
+	// RPC.
+	DatasheetServiceGetDraftProcedure = "/agni.v1.dsapi.DatasheetService/GetDraft"
+	// DatasheetServiceListDraftsProcedure is the fully-qualified name of the DatasheetService's
+	// ListDrafts RPC.
+	DatasheetServiceListDraftsProcedure = "/agni.v1.dsapi.DatasheetService/ListDrafts"
+	// DatasheetServiceSaveDraftProcedure is the fully-qualified name of the DatasheetService's
+	// SaveDraft RPC.
+	DatasheetServiceSaveDraftProcedure = "/agni.v1.dsapi.DatasheetService/SaveDraft"
+	// DatasheetServicePublishDraftProcedure is the fully-qualified name of the DatasheetService's
+	// PublishDraft RPC.
+	DatasheetServicePublishDraftProcedure = "/agni.v1.dsapi.DatasheetService/PublishDraft"
 	// DatasheetServiceExtractDocIRProcedure is the fully-qualified name of the DatasheetService's
 	// ExtractDocIR RPC.
 	DatasheetServiceExtractDocIRProcedure = "/agni.v1.dsapi.DatasheetService/ExtractDocIR"
@@ -73,18 +79,28 @@ type DatasheetServiceClient interface {
 	// When none has been derived yet, extracted is false and document is unset — a normal state,
 	// not an error.
 	GetDocument(context.Context, *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error)
-	// GetPartSpec returns the datasheet's saved PartSpec (the <stem>.partspec.json sibling, the
-	// shared working DRAFT, which no check reads until `agnids promote` validates it into a
-	// corpus) plus a version token for optimistic concurrency.
-	// found is false (and version empty) when nothing has been saved yet. One PartSpec is shared
-	// per datasheet across users; the workbench's per-user UI state (drawn regions, type tags) is
-	// NOT here — it lives in each client's localStorage so users do not clobber each other's view.
-	GetPartSpec(context.Context, *connect.Request[dsapi.GetPartSpecRequest]) (*connect.Response[dsapi.GetPartSpecResponse], error)
-	// SavePartSpec writes the PartSpec sibling with optimistic concurrency: base_version must equal
-	// the current on-disk version (empty base_version asserts "expected absent", a first write), or
-	// the save is rejected as a conflict (Connect Aborted) and the client refetches. The read,
-	// compare, and write are atomic per path within the serve process. Returns the new version.
-	SavePartSpec(context.Context, *connect.Request[dsapi.SavePartSpecRequest]) (*connect.Response[dsapi.SavePartSpecResponse], error)
+	// DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
+	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit so
+	// work is never lost, and no check ever reads one: readers see only PUBLISHED specs, through the
+	// contract's PartSpecService. PublishDraft is the one step between the two. Drafts live in the
+	// published corpus's store, so these rpcs need agnids serve --corpus.
+	//
+	// GetDraft returns the draft for an MPN, matched case-insensitively. found is false when there
+	// is none, which is a normal state rather than an error.
+	GetDraft(context.Context, *connect.Request[dsapi.GetDraftRequest]) (*connect.Response[dsapi.GetDraftResponse], error)
+	// ListDrafts returns the drafts that cite a datasheet, so opening a document finds the parts
+	// transcribed from it. A family datasheet can be cited by several.
+	ListDrafts(context.Context, *connect.Request[dsapi.ListDraftsRequest]) (*connect.Response[dsapi.ListDraftsResponse], error)
+	// SaveDraft writes a draft with optimistic concurrency: base_version must equal the stored
+	// version (empty asserts the draft does not exist yet, a first save), or the save is rejected as
+	// a conflict (Connect Aborted) and the client refetches. It never refuses a draft for being
+	// incomplete; what is wrong with it comes back as problems.
+	SaveDraft(context.Context, *connect.Request[dsapi.SaveDraftRequest]) (*connect.Response[dsapi.SaveDraftResponse], error)
+	// PublishDraft validates a draft and, when it passes, makes it the current published spec for its
+	// MPN, recording it in the corpus index under a new generation. A draft that does not validate is
+	// not published, and the response lists every problem. The draft stays, as the start of the
+	// next edit.
+	PublishDraft(context.Context, *connect.Request[dsapi.PublishDraftRequest]) (*connect.Response[dsapi.PublishDraftResponse], error)
 	// ExtractDocIR runs the configured doc-IR producer (pdf2doc/docling) over the datasheet, writes
 	// the <stem>.doc.textproto sibling, and returns the produced doc-IR so the workbench can show the
 	// auto-detected regions immediately (the "first pass" the human then reviews). It is gated: a
@@ -136,16 +152,28 @@ func NewDatasheetServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(datasheetServiceMethods.ByName("GetDocument")),
 			connect.WithClientOptions(opts...),
 		),
-		getPartSpec: connect.NewClient[dsapi.GetPartSpecRequest, dsapi.GetPartSpecResponse](
+		getDraft: connect.NewClient[dsapi.GetDraftRequest, dsapi.GetDraftResponse](
 			httpClient,
-			baseURL+DatasheetServiceGetPartSpecProcedure,
-			connect.WithSchema(datasheetServiceMethods.ByName("GetPartSpec")),
+			baseURL+DatasheetServiceGetDraftProcedure,
+			connect.WithSchema(datasheetServiceMethods.ByName("GetDraft")),
 			connect.WithClientOptions(opts...),
 		),
-		savePartSpec: connect.NewClient[dsapi.SavePartSpecRequest, dsapi.SavePartSpecResponse](
+		listDrafts: connect.NewClient[dsapi.ListDraftsRequest, dsapi.ListDraftsResponse](
 			httpClient,
-			baseURL+DatasheetServiceSavePartSpecProcedure,
-			connect.WithSchema(datasheetServiceMethods.ByName("SavePartSpec")),
+			baseURL+DatasheetServiceListDraftsProcedure,
+			connect.WithSchema(datasheetServiceMethods.ByName("ListDrafts")),
+			connect.WithClientOptions(opts...),
+		),
+		saveDraft: connect.NewClient[dsapi.SaveDraftRequest, dsapi.SaveDraftResponse](
+			httpClient,
+			baseURL+DatasheetServiceSaveDraftProcedure,
+			connect.WithSchema(datasheetServiceMethods.ByName("SaveDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		publishDraft: connect.NewClient[dsapi.PublishDraftRequest, dsapi.PublishDraftResponse](
+			httpClient,
+			baseURL+DatasheetServicePublishDraftProcedure,
+			connect.WithSchema(datasheetServiceMethods.ByName("PublishDraft")),
 			connect.WithClientOptions(opts...),
 		),
 		extractDocIR: connect.NewClient[dsapi.ExtractDocIRRequest, dsapi.ExtractDocIRResponse](
@@ -174,8 +202,10 @@ type datasheetServiceClient struct {
 	listMounts      *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
 	listDir         *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
 	getDocument     *connect.Client[dsapi.GetDocumentRequest, dsapi.GetDocumentResponse]
-	getPartSpec     *connect.Client[dsapi.GetPartSpecRequest, dsapi.GetPartSpecResponse]
-	savePartSpec    *connect.Client[dsapi.SavePartSpecRequest, dsapi.SavePartSpecResponse]
+	getDraft        *connect.Client[dsapi.GetDraftRequest, dsapi.GetDraftResponse]
+	listDrafts      *connect.Client[dsapi.ListDraftsRequest, dsapi.ListDraftsResponse]
+	saveDraft       *connect.Client[dsapi.SaveDraftRequest, dsapi.SaveDraftResponse]
+	publishDraft    *connect.Client[dsapi.PublishDraftRequest, dsapi.PublishDraftResponse]
 	extractDocIR    *connect.Client[dsapi.ExtractDocIRRequest, dsapi.ExtractDocIRResponse]
 	getAnnotations  *connect.Client[dsapi.GetAnnotationsRequest, dsapi.GetAnnotationsResponse]
 	saveAnnotations *connect.Client[dsapi.SaveAnnotationsRequest, dsapi.SaveAnnotationsResponse]
@@ -196,14 +226,24 @@ func (c *datasheetServiceClient) GetDocument(ctx context.Context, req *connect.R
 	return c.getDocument.CallUnary(ctx, req)
 }
 
-// GetPartSpec calls agni.v1.dsapi.DatasheetService.GetPartSpec.
-func (c *datasheetServiceClient) GetPartSpec(ctx context.Context, req *connect.Request[dsapi.GetPartSpecRequest]) (*connect.Response[dsapi.GetPartSpecResponse], error) {
-	return c.getPartSpec.CallUnary(ctx, req)
+// GetDraft calls agni.v1.dsapi.DatasheetService.GetDraft.
+func (c *datasheetServiceClient) GetDraft(ctx context.Context, req *connect.Request[dsapi.GetDraftRequest]) (*connect.Response[dsapi.GetDraftResponse], error) {
+	return c.getDraft.CallUnary(ctx, req)
 }
 
-// SavePartSpec calls agni.v1.dsapi.DatasheetService.SavePartSpec.
-func (c *datasheetServiceClient) SavePartSpec(ctx context.Context, req *connect.Request[dsapi.SavePartSpecRequest]) (*connect.Response[dsapi.SavePartSpecResponse], error) {
-	return c.savePartSpec.CallUnary(ctx, req)
+// ListDrafts calls agni.v1.dsapi.DatasheetService.ListDrafts.
+func (c *datasheetServiceClient) ListDrafts(ctx context.Context, req *connect.Request[dsapi.ListDraftsRequest]) (*connect.Response[dsapi.ListDraftsResponse], error) {
+	return c.listDrafts.CallUnary(ctx, req)
+}
+
+// SaveDraft calls agni.v1.dsapi.DatasheetService.SaveDraft.
+func (c *datasheetServiceClient) SaveDraft(ctx context.Context, req *connect.Request[dsapi.SaveDraftRequest]) (*connect.Response[dsapi.SaveDraftResponse], error) {
+	return c.saveDraft.CallUnary(ctx, req)
+}
+
+// PublishDraft calls agni.v1.dsapi.DatasheetService.PublishDraft.
+func (c *datasheetServiceClient) PublishDraft(ctx context.Context, req *connect.Request[dsapi.PublishDraftRequest]) (*connect.Response[dsapi.PublishDraftResponse], error) {
+	return c.publishDraft.CallUnary(ctx, req)
 }
 
 // ExtractDocIR calls agni.v1.dsapi.DatasheetService.ExtractDocIR.
@@ -234,18 +274,28 @@ type DatasheetServiceHandler interface {
 	// When none has been derived yet, extracted is false and document is unset — a normal state,
 	// not an error.
 	GetDocument(context.Context, *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error)
-	// GetPartSpec returns the datasheet's saved PartSpec (the <stem>.partspec.json sibling, the
-	// shared working DRAFT, which no check reads until `agnids promote` validates it into a
-	// corpus) plus a version token for optimistic concurrency.
-	// found is false (and version empty) when nothing has been saved yet. One PartSpec is shared
-	// per datasheet across users; the workbench's per-user UI state (drawn regions, type tags) is
-	// NOT here — it lives in each client's localStorage so users do not clobber each other's view.
-	GetPartSpec(context.Context, *connect.Request[dsapi.GetPartSpecRequest]) (*connect.Response[dsapi.GetPartSpecResponse], error)
-	// SavePartSpec writes the PartSpec sibling with optimistic concurrency: base_version must equal
-	// the current on-disk version (empty base_version asserts "expected absent", a first write), or
-	// the save is rejected as a conflict (Connect Aborted) and the client refetches. The read,
-	// compare, and write are atomic per path within the serve process. Returns the new version.
-	SavePartSpec(context.Context, *connect.Request[dsapi.SavePartSpecRequest]) (*connect.Response[dsapi.SavePartSpecResponse], error)
+	// DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
+	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit so
+	// work is never lost, and no check ever reads one: readers see only PUBLISHED specs, through the
+	// contract's PartSpecService. PublishDraft is the one step between the two. Drafts live in the
+	// published corpus's store, so these rpcs need agnids serve --corpus.
+	//
+	// GetDraft returns the draft for an MPN, matched case-insensitively. found is false when there
+	// is none, which is a normal state rather than an error.
+	GetDraft(context.Context, *connect.Request[dsapi.GetDraftRequest]) (*connect.Response[dsapi.GetDraftResponse], error)
+	// ListDrafts returns the drafts that cite a datasheet, so opening a document finds the parts
+	// transcribed from it. A family datasheet can be cited by several.
+	ListDrafts(context.Context, *connect.Request[dsapi.ListDraftsRequest]) (*connect.Response[dsapi.ListDraftsResponse], error)
+	// SaveDraft writes a draft with optimistic concurrency: base_version must equal the stored
+	// version (empty asserts the draft does not exist yet, a first save), or the save is rejected as
+	// a conflict (Connect Aborted) and the client refetches. It never refuses a draft for being
+	// incomplete; what is wrong with it comes back as problems.
+	SaveDraft(context.Context, *connect.Request[dsapi.SaveDraftRequest]) (*connect.Response[dsapi.SaveDraftResponse], error)
+	// PublishDraft validates a draft and, when it passes, makes it the current published spec for its
+	// MPN, recording it in the corpus index under a new generation. A draft that does not validate is
+	// not published, and the response lists every problem. The draft stays, as the start of the
+	// next edit.
+	PublishDraft(context.Context, *connect.Request[dsapi.PublishDraftRequest]) (*connect.Response[dsapi.PublishDraftResponse], error)
 	// ExtractDocIR runs the configured doc-IR producer (pdf2doc/docling) over the datasheet, writes
 	// the <stem>.doc.textproto sibling, and returns the produced doc-IR so the workbench can show the
 	// auto-detected regions immediately (the "first pass" the human then reviews). It is gated: a
@@ -293,16 +343,28 @@ func NewDatasheetServiceHandler(svc DatasheetServiceHandler, opts ...connect.Han
 		connect.WithSchema(datasheetServiceMethods.ByName("GetDocument")),
 		connect.WithHandlerOptions(opts...),
 	)
-	datasheetServiceGetPartSpecHandler := connect.NewUnaryHandler(
-		DatasheetServiceGetPartSpecProcedure,
-		svc.GetPartSpec,
-		connect.WithSchema(datasheetServiceMethods.ByName("GetPartSpec")),
+	datasheetServiceGetDraftHandler := connect.NewUnaryHandler(
+		DatasheetServiceGetDraftProcedure,
+		svc.GetDraft,
+		connect.WithSchema(datasheetServiceMethods.ByName("GetDraft")),
 		connect.WithHandlerOptions(opts...),
 	)
-	datasheetServiceSavePartSpecHandler := connect.NewUnaryHandler(
-		DatasheetServiceSavePartSpecProcedure,
-		svc.SavePartSpec,
-		connect.WithSchema(datasheetServiceMethods.ByName("SavePartSpec")),
+	datasheetServiceListDraftsHandler := connect.NewUnaryHandler(
+		DatasheetServiceListDraftsProcedure,
+		svc.ListDrafts,
+		connect.WithSchema(datasheetServiceMethods.ByName("ListDrafts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	datasheetServiceSaveDraftHandler := connect.NewUnaryHandler(
+		DatasheetServiceSaveDraftProcedure,
+		svc.SaveDraft,
+		connect.WithSchema(datasheetServiceMethods.ByName("SaveDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	datasheetServicePublishDraftHandler := connect.NewUnaryHandler(
+		DatasheetServicePublishDraftProcedure,
+		svc.PublishDraft,
+		connect.WithSchema(datasheetServiceMethods.ByName("PublishDraft")),
 		connect.WithHandlerOptions(opts...),
 	)
 	datasheetServiceExtractDocIRHandler := connect.NewUnaryHandler(
@@ -331,10 +393,14 @@ func NewDatasheetServiceHandler(svc DatasheetServiceHandler, opts ...connect.Han
 			datasheetServiceListDirHandler.ServeHTTP(w, r)
 		case DatasheetServiceGetDocumentProcedure:
 			datasheetServiceGetDocumentHandler.ServeHTTP(w, r)
-		case DatasheetServiceGetPartSpecProcedure:
-			datasheetServiceGetPartSpecHandler.ServeHTTP(w, r)
-		case DatasheetServiceSavePartSpecProcedure:
-			datasheetServiceSavePartSpecHandler.ServeHTTP(w, r)
+		case DatasheetServiceGetDraftProcedure:
+			datasheetServiceGetDraftHandler.ServeHTTP(w, r)
+		case DatasheetServiceListDraftsProcedure:
+			datasheetServiceListDraftsHandler.ServeHTTP(w, r)
+		case DatasheetServiceSaveDraftProcedure:
+			datasheetServiceSaveDraftHandler.ServeHTTP(w, r)
+		case DatasheetServicePublishDraftProcedure:
+			datasheetServicePublishDraftHandler.ServeHTTP(w, r)
 		case DatasheetServiceExtractDocIRProcedure:
 			datasheetServiceExtractDocIRHandler.ServeHTTP(w, r)
 		case DatasheetServiceGetAnnotationsProcedure:
@@ -362,12 +428,20 @@ func (UnimplementedDatasheetServiceHandler) GetDocument(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.GetDocument is not implemented"))
 }
 
-func (UnimplementedDatasheetServiceHandler) GetPartSpec(context.Context, *connect.Request[dsapi.GetPartSpecRequest]) (*connect.Response[dsapi.GetPartSpecResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.GetPartSpec is not implemented"))
+func (UnimplementedDatasheetServiceHandler) GetDraft(context.Context, *connect.Request[dsapi.GetDraftRequest]) (*connect.Response[dsapi.GetDraftResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.GetDraft is not implemented"))
 }
 
-func (UnimplementedDatasheetServiceHandler) SavePartSpec(context.Context, *connect.Request[dsapi.SavePartSpecRequest]) (*connect.Response[dsapi.SavePartSpecResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.SavePartSpec is not implemented"))
+func (UnimplementedDatasheetServiceHandler) ListDrafts(context.Context, *connect.Request[dsapi.ListDraftsRequest]) (*connect.Response[dsapi.ListDraftsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.ListDrafts is not implemented"))
+}
+
+func (UnimplementedDatasheetServiceHandler) SaveDraft(context.Context, *connect.Request[dsapi.SaveDraftRequest]) (*connect.Response[dsapi.SaveDraftResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.SaveDraft is not implemented"))
+}
+
+func (UnimplementedDatasheetServiceHandler) PublishDraft(context.Context, *connect.Request[dsapi.PublishDraftRequest]) (*connect.Response[dsapi.PublishDraftResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.dsapi.DatasheetService.PublishDraft is not implemented"))
 }
 
 func (UnimplementedDatasheetServiceHandler) ExtractDocIR(context.Context, *connect.Request[dsapi.ExtractDocIRRequest]) (*connect.Response[dsapi.ExtractDocIRResponse], error) {
