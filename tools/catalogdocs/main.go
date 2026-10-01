@@ -64,9 +64,14 @@ var relationKindOrder = []string{
 	query.KindNetlist,
 	query.KindBoard,
 	query.KindDatasheet,
+	query.KindDerived,
 	query.KindPredicate,
 	query.KindExtension,
 }
+
+// libSource is where a library module's file is read on GitHub, for the link a derived member's page
+// carries to its definition.
+const libSource = "https://github.com/panyam/agni/blob/main/stdlib/lib/"
 
 func main() {
 	flag.Parse()
@@ -192,6 +197,13 @@ func genRelations() error {
 			continue
 		}
 		body := prepareDetail(rel.Detail, "relations", images)
+		if rel.Kind == query.KindDerived {
+			def, err := definitionSection(rel.Name)
+			if err != nil {
+				return err
+			}
+			body += def
+		}
 		page := frontMatter(rel.Name, rel.Summary) + body
 		if err := os.WriteFile(filepath.Join(outDir, rel.Name+".md"), []byte(page), 0o644); err != nil {
 			return err
@@ -201,6 +213,37 @@ func genRelations() error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(relationsIndex(rels)), 0o644)
+}
+
+// definitionSection renders a derived member's definition as the engine registered it: the typed
+// signature, which argument types were inferred rather than declared, every clause, and a link to the
+// module file. It is generated rather than written in the member's doc so the page cannot drift from
+// the rules.
+func definitionSection(path string) (string, error) {
+	e, err := query.Describe(path)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	b.WriteString("\n### How it is defined\n\n")
+	fmt.Fprintf(&b, "`%s`, a derived relation in the `%s` module, defined in Datalog in [`stdlib/lib/%s.dl`](%s%s.dl). ", e.Signature(), e.Module, e.Module, libSource, e.Module)
+	var inferred []string
+	for _, a := range e.Args {
+		if a.Inferred {
+			inferred = append(inferred, "`"+a.Name+"`")
+		}
+	}
+	if len(inferred) > 0 {
+		fmt.Fprintf(&b, "The types of %s are inferred from the rules rather than declared. ", strings.Join(inferred, ", "))
+	}
+	b.WriteString("In a clause, a bare name is another member of the same module and a dotted name is a full path.\n\n")
+	b.WriteString("```\n")
+	for _, clause := range e.Definition {
+		b.WriteString(clause + ";\n")
+	}
+	b.WriteString("```\n\n")
+	b.WriteString("`agni query --relations " + path + "` prints the same definition. [Adding a library member](../../../build/library-member/) explains how the library is built.\n")
+	return b.String(), nil
 }
 
 // prepareDetail strips the leading heading and rewrites doc-relative image refs to the docsite
@@ -331,6 +374,9 @@ func relationsIndex(rels []query.RelationInfo) string {
 			title = "other"
 		}
 		b.WriteString("## " + title + "\n\n")
+		if kind == query.KindDerived {
+			b.WriteString("Defined in Datalog over the relations above rather than projected from the design, in the shipped library under `stdlib/lib`. A query calls them the same way. [Adding a library member](../../build/library-member/) explains how they are built.\n\n")
+		}
 		b.WriteString("| Relation | Summary |\n|---|---|\n")
 		for _, r := range byKind[kind] {
 			sig := r.Name

@@ -15,14 +15,17 @@ and negation:
 | step | what it asks | query shape |
 |---|---|---|
 | 2 | what is on the board | `=> ?k, count(?c)` |
-| 3 | which nets a probe can reach | one join, `=> ?net, count(?tp)` |
-| 4 | which parts a tester can measure | two derived relations, `having` |
+| 3 | which nets a probe can reach | `net.has_test_point`, negated over every net |
+| 4 | which parts a tester can measure | `component.probed_both`, `component.probed_one`, negation |
 | 5 | the unmeasurable parts, by part number | negation, `count(distinct)`, `list(distinct)` |
 | 6 | what a coverage report cannot say | `check.RunVerdicts` |
 
 In step 4, measuring a two-terminal part needs BOTH ends reachable, so one end covered measures
-nothing. Three buckets fall out of one pair of derived relations: both ends, one end,
-neither.
+nothing. The three buckets (both ends, one end, neither) come from the shipped library, whose
+members each have a reference page, starting with
+[component.probed_both](https://panyam.github.io/agni/reference/relations/component.probed_both/).
+The walk defines only what it counts as a passive, a resistor or a capacitor, which is narrower than
+the library's two-terminal parts.
 
 Step 5 is where the answer stops being a list. One uncovered part is an oversight; several of one part
 number is a placement habit, which is a different thing to fix.
