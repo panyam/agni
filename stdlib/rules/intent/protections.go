@@ -26,7 +26,7 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 		Detail:              intentDoc("protection-" + kind),
 		Impact:              "a power rail the design was intended to protect (OV clamp / discharge path) lacks the protection device",
 		Remedy:              intentRemedy("protection-" + kind),
-		Reads:               []string{"component-on-net", "component.class", "net.ground"},
+		Reads:               []string{"component.net", "component.class", "net.ground"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return protectionVerdicts(m, ps, kind) },
 		StatesConsideredSet: true,

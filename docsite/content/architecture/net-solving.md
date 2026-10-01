@@ -160,5 +160,5 @@ definition. The start net is never treated as a stop.
 
 Two radii elsewhere are search budgets and are wide on purpose. `agni trace` searches 6 hops by
 default and prints the radius with its answer, since a route eight crossings long is still the
-route. The `reaches` relation searches the whole series neighbourhood (100 hops), because "what is
+route. The `net.reaches` relation searches the whole series neighbourhood (100 hops), because "what is
 connected to what through passives" is a topology question and not a claim about protection.

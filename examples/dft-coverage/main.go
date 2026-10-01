@@ -40,8 +40,8 @@ var walkthroughMD []byte
 // The same string is printed and executed, so the CLI line beside each step is the query that ran.
 const passivePrelude = `passive(?p) :- component.class(?p, "resistor"); ` +
 	`passive(?p) :- component.class(?p, "capacitor"); ` +
-	`covered(?p, ?n) :- passive(?p), component-on-net(?p, ?n), ` +
-	`component.class(?tp, "test_point"), component-on-net(?tp, ?n); `
+	`covered(?p, ?n) :- passive(?p), component.net(?p, ?n), ` +
+	`component.class(?tp, "test_point"), component.net(?tp, ?n); `
 
 func main() {
 	design := common.AskPath("design", "../common/designs/probe-coverage.edn")
@@ -75,7 +75,7 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
-		cli(`agni query <design> 'component.class(?tp, "test_point"), component-on-net(?tp, ?net) => ?net, count(?tp)'`)
+		cli(`agni query <design> 'component.class(?tp, "test_point"), component.net(?tp, ?net) => ?net, count(?tp)'`)
 		probed := probedNets(d)
 		var unprobed []string
 		for _, n := range d.GetNets() {
@@ -235,7 +235,7 @@ func must(rs [][]string, err error) [][]string {
 // probedNets names every net a test point sits on.
 func probedNets(d *ir.Design) map[string]bool {
 	out := map[string]bool{}
-	for _, r := range must(rows(d, `component.class(?tp, "test_point"), component-on-net(?tp, ?net) => ?net`)) {
+	for _, r := range must(rows(d, `component.class(?tp, "test_point"), component.net(?tp, ?net) => ?net`)) {
 		out[r[0]] = true
 	}
 	return out

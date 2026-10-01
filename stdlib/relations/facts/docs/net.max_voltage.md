@@ -46,5 +46,5 @@ net.max_voltage(?n, ?v) => ?n, ?v
 Find the rails above 3 V and the parts sitting on them:
 
 ```
-net.max_voltage(?n, ?v), ?v > 3, component-on-net(?r, ?n) => ?r, ?n, ?v
+net.max_voltage(?n, ?v), ?v > 3, component.net(?r, ?n) => ?r, ?n, ?v
 ```

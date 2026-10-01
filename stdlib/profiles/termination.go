@@ -32,10 +32,10 @@ func validateTermination(params map[string]string) error {
 // terminationRule (WS3-045) fires when an interface is in use but its two designated signal nets are
 // not bridged by a termination element, the missing bus-termination case (CAN's 120Ω resistor across
 // CANH/CANL, the RS-485 pattern). It is the first requirement type added purely as a registered
-// compiler, with NO new engine primitive. The `reaches` walk already crosses 2-net series pass
+// compiler, with NO new engine primitive. The `net.reaches` walk already crosses 2-net series pass
 // elements (R/L/ferrite/fuse) but NOT a multi-pin transceiver, so "the high net reaches the low net
 // through a passive" finds the terminating resistor and ignores the transceiver that legitimately sits
-// on both. A new requirement is new datalog, not new facts (the WS3-034 lesson). Because `reaches` is
+// on both. A new requirement is new datalog, not new facts (the WS3-034 lesson). Because `net.reaches` is
 // transitive it also accepts a split termination (60Ω + 60Ω with a midpoint).
 //
 // Params "high" and "low" name the two bridged net-name suffixes (e.g. "_CANH" / "_CANL"), required
@@ -56,9 +56,9 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 	// in_use) are generated from the profile's signal list, so they are appended as AST rather than
 	// inlined into this text.
 	tq := query.MustParse(fmt.Sprintf(
-		`terminated(?h) :- component-on-net(?r, ?h), suffix(?h, %q), reaches(?h, ?l), suffix(?l, %q);
+		`terminated(?h) :- component.net(?r, ?h), suffix(?h, %q), net.reaches(?h, ?l), suffix(?l, %q);
 		 any_term("x") :- terminated(?h);
-		 unterminated(?h) :- component-on-net(?r, ?h), suffix(?h, %q), in_use(?iu), not any_term("x");
+		 unterminated(?h) :- component.net(?r, ?h), suffix(?h, %q), in_use(?iu), not any_term("x");
 		 unterminated(?h) => ?h`, high, low, high))
 	tq.Rules = append(p.presenceRules(), tq.Rules...)
 	// The considered set: the high-side nets of a bus the presence gate says is in use, which is
@@ -69,7 +69,7 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 	// with two buses and one terminator reports both as terminated. That limit is the rule's own and
 	// predates the considered set, which only makes it visible on the coverage line.
 	dq := query.MustParse(fmt.Sprintf(
-		`term_scope(?h) :- component-on-net(?r, ?h), suffix(?h, %q), in_use(?iu);
+		`term_scope(?h) :- component.net(?r, ?h), suffix(?h, %q), in_use(?iu);
 		 term_scope(?h) => ?h`, high))
 	dq.Rules = append(append([]query.Rule{}, tq.Rules...), dq.Rules...)
 	return query.MustRuleFromQuery(query.FindingQuery{

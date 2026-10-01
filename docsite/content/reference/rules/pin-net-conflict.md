@@ -61,4 +61,4 @@ report each conflict the model collected.
     select P in pin_net_conflicts
       where not ref_des_collided(P) and not ref_des_unannotated(P)
 
-Reads: pin.on_net, ref_des_collision (the suppressions). Tier P.
+Reads: pin.on_net, reader.ref_des_collision (the suppressions). Tier P.

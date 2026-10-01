@@ -3,7 +3,7 @@ package query
 // Entity presets: the query a viewer runs when someone clicks a thing in the drawing.
 //
 // These live in Go rather than in the browser because every one names relations (pin.net,
-// component-on-net, net.pin_count) defined in Go, and a client-side template would break at runtime
+// component.net, net.pin_count) defined in Go, and a client-side template would break at runtime
 // when a relation is renamed with no test going red. Here they share the examples' two guards, the
 // parse check in this package and the evaluate-against-a-real-design check at the RPC layer.
 //
@@ -32,14 +32,14 @@ func EntityQueries() []EntityQuery {
 		},
 		{
 			Kind:    "component",
-			Query:   `component-on-net("{ref}", ?net), net.pin_count(?net, ?fanout) => ?net, ?fanout`,
+			Query:   `component.net("{ref}", ?net), net.pin_count(?net, ?fanout) => ?net, ?fanout`,
 			Teaches: "projection: => picks which columns the answer keeps",
 		},
 		{
 			Kind: "net",
-			// component-on-net answers WHO is on the net and pin.net answers through which terminal;
+			// component.net answers WHO is on the net and pin.net answers through which terminal;
 			// the join turns a list of parts into a wiring list.
-			Query:   `component-on-net(?ref, "{net}"), pin.net(?ref, ?pin, "{net}") => ?ref, ?pin`,
+			Query:   `component.net(?ref, "{net}"), pin.net(?ref, ?pin, "{net}") => ?ref, ?pin`,
 			Teaches: "join: a shared ?ref connects the parts on a net to the pins that land on it",
 		},
 		{

@@ -36,15 +36,15 @@ formulation was a no-op on KiCad for this reason.
 
 It is a datalog rule (`query.RuleFromQuery`, WS3-038), not Go or Spec:
 
-    bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
-    bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
+    bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
+    bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
     bad(?ref, ?pin, ?net) => ?ref, ?pin, ?net
 
 Two rules (power, ground) share one head; each answer row is one finding.
 
 ### Where it stays silent (conservative on purpose)
 
-- The `has_nc_channel` gate keeps it silent on a format that cannot express intentional no-connect,
+- The `design.has_nc_channel` gate keeps it silent on a format that cannot express intentional no-connect,
   so a legitimately single-connection supply pin on such a format is not a false positive.
 - A bare netlist with numeric pin names (some EDIF exports) derives no power/ground
   role, so no pin qualifies and the rule stays silent rather than guessing.

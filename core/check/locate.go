@@ -56,7 +56,7 @@ func LocateReason(m LocateModel, kind, subject string) string {
 
 // HasComponent reports whether ref_des is known to the design, as a listed component (every listed
 // ref has a classSet entry, even an empty one for an unclassified part) or a connection ref. The
-// connection fallback matters because component-on-net derives refs from connectivity, and some
+// connection fallback matters because component.net derives refs from connectivity, and some
 // netlist reads carry connections without a separate component list.
 func (m *irModel) HasComponent(refDes string) bool {
 	if _, listed := m.classSet[refDes]; listed {

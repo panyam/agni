@@ -144,7 +144,7 @@ type designRead struct {
 // read resolves the design's tiers, composes its overlay, and builds the model and fact base once.
 func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, source string, overlay *webapi.OverlayConfig, asNamed bool) (*designRead, error) {
 	// The overlay is composed BEFORE the read because its lexicon has to reach the READ (see
-	// readopt.go), which decides what `rail`, `feedback` and their derivatives answer (WS3-113).
+	// readopt.go), which decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113).
 	// Its RULES half is ignored and no base convention is passed, since a query composes no catalog
 	// and a conventions file carrying rules is still valid for a query.
 	ov, err := s.projects.Overlay(ctx, u, overlay, s.fallback, "")

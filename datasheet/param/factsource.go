@@ -7,9 +7,9 @@ import (
 )
 
 // FactSource is the read-all sibling of ParamProvider.Lookup. It yields the WHOLE seeded spec library,
-// so datalog can query `param(?mpn, ...)` across every seeded part rather than only the parts joined to
-// one design. It is separate from ParamProvider because a keyed remote Lookup is cheap and an
-// enumerate-all may not be, so a backend opts into library-wide datalog by implementing this.
+// so datalog can query `param.max(?mpn, ...)` across every seeded part rather than only the parts
+// joined to one design. It is separate from ParamProvider because a keyed remote Lookup is cheap and
+// an enumerate-all may not be, so a backend opts into library-wide datalog by implementing this.
 type FactSource interface {
 	// AllSpecs returns every seeded PartSpec, ordered by MPN for deterministic query output.
 	AllSpecs() []*parampb.PartSpec

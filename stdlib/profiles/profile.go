@@ -3,8 +3,8 @@
 // datalog program per requirement and wraps each with query.RuleFromQuery (WS3-038), so adding an
 // interface is a data value rather than new code, and one mechanism replaces ~130 near-identical
 // "verify signal X connected" review items (docsite/content/architecture/rules-and-checks.md). The
-// generated datalog uses only the merged pin/net relations (component-on-net, the string/pattern
-// predicates, reaches, rail, net.pin_count).
+// generated datalog uses only the merged pin/net relations (component.net, the string/pattern
+// predicates, net.reaches, net.rail, net.pin_count).
 //
 // A signal is matched by NET NAME through one of the matcher forms in matcher.go (affix, glob, or
 // regex), and the completeness check anchors on a designated always-present signal. A declared host
@@ -333,7 +333,7 @@ func (p Profile) lname() string { return strings.ToLower(strings.ReplaceAll(p.Na
 func (p Profile) presenceRules() []query.Rule {
 	var rules []query.Rule
 	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n")))},
+		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("n")))},
 			netMatch(query.V("n"), s)...)
 		rules = append(rules, query.Def(query.Rel("has_signal", query.Str(s.Name)), body...))
 	}
@@ -381,7 +381,7 @@ func (p Profile) signalMissingRule() *check.Rule {
 		n++
 		// The anchor net is matched by the anchor signal's FULL matcher (suffix + optional prefix), so a
 		// prefix-named interface anchors only on its own nets and not a foreign same-suffix serdes.
-		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("a")))},
+		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("a")))},
 			netMatch(query.V("a"), *anchorSig)...)
 		scope := append(append([]query.Literal{}, body...), query.Pos(query.Rel("in_use", query.V("iu"))))
 		scope = append(scope, guard...)
@@ -430,7 +430,7 @@ func (p Profile) hostIncompleteRule() *check.Rule {
 		present := "present_" + s.Name
 		presentBody := append([]query.Literal{
 			query.Pos(query.Rel("host", query.V("h"))),
-			query.Pos(query.Rel("component-on-net", query.V("h"), query.V("n"))),
+			query.Pos(query.Rel("component.net", query.V("h"), query.V("n"))),
 		}, netMatch(query.V("n"), s)...)
 		rules = append(rules,
 			query.Def(query.Rel(present, query.V("h")), presentBody...),
@@ -529,7 +529,7 @@ func (p Profile) pullupVerdicts(pullups []Signal) func(check.Model) []check.Verd
 		}
 		var out []check.Verdict
 		for _, n := range m.Nets() {
-			// A net with NO connections is not a subject, mirroring the datalog form's component-on-net.
+			// A net with NO connections is not a subject, mirroring the datalog form's component.net.
 			// On a read whose symbols did not resolve the net NAMES survive and the connections do not,
 			// and matching by name alone turned that into four confident findings about buses whose
 			// pins the reader never saw. matchSignalNet applies the same condition for coverage.
@@ -568,7 +568,7 @@ func anySignalMatches(net string, signals []Signal) bool {
 func (p Profile) danglingRule() *check.Rule {
 	rules := p.presenceRules()
 	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n")))},
+		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("n")))},
 			netMatch(query.V("n"), s)...)
 		rules = append(rules, query.Def(query.Rel("sig_net", query.V("n")), body...))
 	}
@@ -610,7 +610,7 @@ func (p Profile) danglingRule() *check.Rule {
 }
 
 // mustBindHeadFirst guards every query a requirement compiler generates. No derived rule may OPEN with
-// an unbound `reaches`, which walks from every net on the board before any filter applies (WS3-114),
+// an unbound `net.reaches`, which walks from every net on the board before any filter applies (WS3-114),
 // and none may be non-injective (WS3-127).
 //
 // It panics because a violation is an authoring mistake in engine code and the compilers run at

@@ -37,11 +37,11 @@ func numDesign() *ir.Design {
 func TestIndexedResultsMatchUnindexed(t *testing.T) {
 	m := check.NewModel(numDesign())
 	for _, text := range []string{
-		`component-on-net(?r, "10") => ?r`,
-		`component-on-net(?r, "10.0") => ?r`,
+		`component.net(?r, "10") => ?r`,
+		`component.net(?r, "10.0") => ?r`,
 		`component.class(?r,?c) => ?r`,
-		`component-on-net(?a,?n), component-on-net(?c,?n), ?a != ?c => ?a, ?c`,
-		`component-on-net(?r,?n) => ?n, count(?r)`,
+		`component.net(?a,?n), component.net(?c,?n), ?a != ?c => ?a, ?c`,
+		`component.net(?r,?n) => ?n, count(?r)`,
 	} {
 		q := mustParse(t, text)
 		indexed, err := (Naive{}).Eval(q, NewBase(m))
@@ -115,8 +115,8 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 			RefDes: fmt.Sprintf("U%d", i+2), Mpn: mpn, Prov: &ir.Provenance{SourceFile: "reg"}})
 	}
 	m := check.NewModelWithParams(d, nil, specs)
-	canonical := runQuery(t, m, `param(?mpn,"VIN",20) => ?mpn`)
-	spelled := runQuery(t, m, `param(?mpn,"VIN",20.0) => ?mpn`)
+	canonical := runQuery(t, m, `param.max(?mpn,"VIN",20) => ?mpn`)
+	spelled := runQuery(t, m, `param.max(?mpn,"VIN",20.0) => ?mpn`)
 	if len(canonical) == 0 {
 		t.Fatal("setup: the canonical spelling matched nothing, so the comparison proves nothing")
 	}
@@ -132,7 +132,7 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 // anything change" flag drives termination.
 func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 	m := check.NewModel(numDesign())
-	rows := runQuery(t, m, `onten(?r) :- component-on-net(?r,"10"); onten(?r) :- component-on-net(?r,"10"); onten(?x) => ?x`)
+	rows := runQuery(t, m, `onten(?r) :- component.net(?r,"10"); onten(?r) :- component.net(?r,"10"); onten(?x) => ?x`)
 	seen := map[string]bool{}
 	for _, r := range rows {
 		k := fmt.Sprint(r.Bind)
@@ -149,9 +149,9 @@ func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 // outlive it. A stale IDB index would hold positions into a previous query's tuple slice.
 func TestBaseReuseAcrossRuleBearingQueries(t *testing.T) {
 	b := NewBase(check.NewModel(benchDesign(50)))
-	first := evalOn(t, b, `d(?a,?n) :- component-on-net(?a,?n); d(?x,?y) => ?x`)
-	second := evalOn(t, b, `d(?a,?n) :- component-on-net(?a,?n), prefix(?a,"R1"); d(?x,?y) => ?x`)
-	again := evalOn(t, b, `d(?a,?n) :- component-on-net(?a,?n); d(?x,?y) => ?x`)
+	first := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n); d(?x,?y) => ?x`)
+	second := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n), prefix(?a,"R1"); d(?x,?y) => ?x`)
+	again := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n); d(?x,?y) => ?x`)
 	if len(second) >= len(first) {
 		t.Fatalf("setup: the narrowed query returned %d rows, not fewer than %d", len(second), len(first))
 	}
@@ -182,17 +182,17 @@ func TestWorkScalesSubQuadratically(t *testing.T) {
 		name string
 		text string
 	}{
-		{"one-atom", `component-on-net(?a,?n) => ?a`},
-		{"two-atom-shared", `component-on-net(?a,?n), component-on-net(?c,?n), ?a != ?c => ?a`},
-		{"three-atom-chain", `component-on-net(?a,?n), component-on-net(?c,?n), component-on-net(?e,?n) => ?a`},
+		{"one-atom", `component.net(?a,?n) => ?a`},
+		{"two-atom-shared", `component.net(?a,?n), component.net(?c,?n), ?a != ?c => ?a`},
+		{"three-atom-chain", `component.net(?a,?n), component.net(?c,?n), component.net(?e,?n) => ?a`},
 		// A cycle in the join graph: a-n, c-n, c-m, a-m closes back on itself. Binary-join plans are
 		// provably suboptimal on cyclic conjunctive queries, which is the case worst-case-optimal
 		// joins exist for. Indexing does not make that go away, so this shape is here to SHOW where
 		// the ceiling is rather than to claim it is gone.
-		{"triangle-cyclic", `component-on-net(?a,?n), component-on-net(?c,?n), component-on-net(?c,?m), component-on-net(?a,?m), ?n != ?m => ?a`},
-		{"negation", `component-on-net(?a,?n), not component.class(?a,"resistor") => ?a`},
-		{"aggregation", `component-on-net(?a,?n) => ?n, count(?a)`},
-		{"recursion", `conn(?a,?b) :- component-on-net(?a,?b); linked(?a,?c) :- conn(?a,?n), conn(?c,?n), ?a != ?c; linked("R1",?x) => ?x`},
+		{"triangle-cyclic", `component.net(?a,?n), component.net(?c,?n), component.net(?c,?m), component.net(?a,?m), ?n != ?m => ?a`},
+		{"negation", `component.net(?a,?n), not component.class(?a,"resistor") => ?a`},
+		{"aggregation", `component.net(?a,?n) => ?n, count(?a)`},
+		{"recursion", `conn(?a,?b) :- component.net(?a,?b); linked(?a,?c) :- conn(?a,?n), conn(?c,?n), ?a != ?c; linked("R1",?x) => ?x`},
 	}
 	for _, s := range shapes {
 		t.Run(s.name, func(t *testing.T) {

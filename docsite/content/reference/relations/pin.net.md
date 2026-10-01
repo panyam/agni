@@ -22,10 +22,10 @@ about the node it sits on (its fan-out, whether it is a rail, whether it is bus-
 A net is a **shared channel aliasing fields of many instances** (see
 [the analogy guide](../../../../docsite/content/reference/analogy.md)). `pin.net` binds one field to
 the channel it aliases, which makes it the member-to-net edge. Rows are 1:1 with connected pins. An unconnected pin has no row at all rather than a row with
-an empty net, so a query that wants unconnected pins asks for a `pin` with no
+an empty net, so a query that wants unconnected pins asks for a `component.pin` with no
 matching `pin.net` rather than testing a net string for emptiness. Because a pin belongs to exactly
 one net by definition, a well-formed read gives at most one `pin.net` row per pin (two would be the
-`pin_net_conflict` integrity break).
+`reader.pin_net_conflict` integrity break).
 
 ### Go projector
 
@@ -44,8 +44,8 @@ Every connected pin and its net:
 pin.net(?r, ?p, ?n) => ?n
 ```
 
-Join to `rail` to find the pins that connect directly to a power or ground rail:
+Join to `net.rail` to find the pins that connect directly to a power or ground rail:
 
 ```
-pin.net(?r, ?p, ?n), rail(?n) => ?r
+pin.net(?r, ?p, ?n), net.rail(?n) => ?r
 ```

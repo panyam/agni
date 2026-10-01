@@ -40,7 +40,7 @@ The one difference is that a relation with **no recorded modality** is handled b
       for R in tracking relations of spec(C) where recommended(R)
         S = terminal(C, subject_pin(R)); T = terminal(C, reference_pin(R))   -- may refuse
         if net(S) == net(T): diff = 0                                        -- connectivity
-        else: require rail(net(S)) and rail(net(T)); diff = nominal(net(S)) - nominal(net(T))
+        else: require net.rail(net(S)) and net.rail(net(T)); diff = nominal(net(S)) - nominal(net(T))
         diff outside bound(R) -> finding
 
 Reads: param.pin, param.pin_relation, net.role, net.nominal_voltage, net.name, on_net. Tier R.

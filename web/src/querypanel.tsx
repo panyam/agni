@@ -435,7 +435,7 @@ function QueryPanel(props: {
           class="query-text"
           rows="3"
           spellcheck={false}
-          placeholder={'component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n'}
+          placeholder={'component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n'}
           value={text()}
           onInput={(e) => setText(e.currentTarget.value)}
           onPointerDown={() => setDrawerOpen(false)}

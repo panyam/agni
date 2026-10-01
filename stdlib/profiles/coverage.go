@@ -74,7 +74,7 @@ func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 }
 
 // matchSignalNet returns the first net satisfying the signal's matcher that carries at least one
-// component connection. That is the net component-on-net(?r,?n) plus netMatch(?n, s) selects, so the
+// component connection. That is the net component.net(?r,?n) plus netMatch(?n, s) selects, so the
 // panel binds the net a finding would name and not a foreign one that merely shares a suffix.
 func matchSignalNet(m check.Model, s Signal) *ir.Net {
 	for _, n := range m.Nets() {
@@ -88,7 +88,7 @@ func matchSignalNet(m check.Model, s Signal) *ir.Net {
 // reachesRail reports whether the net reaches a power rail through a pull-up, by calling the same
 // check.PullUpReachesRail the missing-pullup rule decides on (agni issue 516).
 //
-// Do not replace it with a `reaches(?n, ?rail), rail(?rail)` query. The reach walk refuses a net whose
+// Do not replace it with a `net.reaches(?n, ?rail), net.rail(?rail)` query. The reach walk refuses a net whose
 // fan-out exceeds maxWalkFan (WS3-108), and a rail is nearly always that wide, so a DIRECT pull-up
 // onto a real rail is invisible to it. Measured with a resistor between a signal and a 21-connection
 // rail, that query said false where PullUpReachesRail said true, and the panel scored a clean bus

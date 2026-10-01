@@ -42,8 +42,8 @@ func TestPinNameProjectsTheFunctionalName(t *testing.T) {
 }
 
 // A pin the source did not name yields no row rather than a row holding "". The distinction is
-// what lets a query ask `pin(?r,?p), not pin.name(?r,?p,?_)` and have it mean "the read gave
-// this pin no name" instead of matching every pin whose name happens to be empty.
+// what lets a query ask `component.pin(?r,?p), not pin.name(?r,?p,?_)` and have it mean "the read
+// gave this pin no name" instead of matching every pin whose name happens to be empty.
 //
 // "~" is covered by the same assertion. It is KiCad's spelling of "this pin has no name"
 // and it reaches the IR verbatim, so a projector taking it at face value would publish a pin named

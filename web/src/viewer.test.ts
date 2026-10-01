@@ -802,7 +802,7 @@ describe("ViewerPresenter", () => {
     h.listRules.mockResolvedValueOnce({
       rules: [
         { name: "single-pin-net", severity: "info", summary: "s", reads: [], tags: { category: "connectivity" }, available: true, unavailableReason: "" },
-        { name: "cap-voltage", severity: "error", summary: "s", reads: ["param(mpn, v)"], tags: { category: "datasheet" }, available: false, unavailableReason: "needs datasheet layer" },
+        { name: "cap-voltage", severity: "error", summary: "s", reads: ["param.max(mpn, v)"], tags: { category: "datasheet" }, available: false, unavailableReason: "needs datasheet layer" },
       ],
     });
     await h.presenter.openFile("m", "board.edn");

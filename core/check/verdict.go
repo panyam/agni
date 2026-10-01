@@ -94,7 +94,7 @@ const (
 // rests on, and the datasheet provenance behind them.
 //
 // Terms is an ordered open list rather than a measured/limit pair because a path proof from
-// `reaches` ("SCL -> R7 -> +3V3") uses the same list with the hops as terms.
+// `net.reaches` ("SCL -> R7 -> +3V3") uses the same list with the hops as terms.
 type Witness struct {
 	// Statement is the human rendering, always set. It is the whole witness for a text consumer.
 	Statement string

@@ -226,7 +226,7 @@ var specOvers = map[string]overDef{
 	},
 	"ref_des_collisions": {
 		scope: "collision", kind: KindComponent,
-		reads:   []string{"ref_des_collision"},
+		reads:   []string{"reader.ref_des_collision"},
 		elems:   func(m Model) []any { return anySlice(m.RefDesCollisions()) },
 		subject: func(e any) string { return e.(*ir.RefDesCollision).RefDes },
 		prov: func(e any) *ir.Provenance {
@@ -241,7 +241,7 @@ var specOvers = map[string]overDef{
 	// reports.
 	"pin_net_conflicts": {
 		scope: "pin_conflict", kind: KindPin,
-		reads: []string{"pin.on_net", "ref_des_collision"}, // collision is the suppression input
+		reads: []string{"pin.on_net", "reader.ref_des_collision"}, // collision is the suppression input
 
 		elems:   func(m Model) []any { return anySlice(m.PinNetConflicts()) },
 		subject: func(e any) string { return e.(PinNetConflict).RefDes },
@@ -407,7 +407,7 @@ var specFacts = map[string]factDef{
 		get: func(ev *evalEnv) any { return ev.m.IsConnected(ev.ents["component"].(*ir.Component).RefDes) },
 	},
 	"collision.instance_count": {
-		reads: []string{"ref_des_collision"},
+		reads: []string{"reader.ref_des_collision"},
 		get:   func(ev *evalEnv) any { return len(ev.ents["collision"].(*ir.RefDesCollision).Instances) },
 	},
 }

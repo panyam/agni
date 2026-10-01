@@ -30,7 +30,7 @@ var esdProtection = &check.Rule{
 // esdProtectionVerdicts decides every externally-exposed signal net, which is `ExternalSignalNet`'s
 // scope. A rail, a ground, an intentionally unconnected pad and a net that reaches no connector are
 // not subjects of an ESD rule, so none gets a verdict. That scope is shared with esd-clamp-not-tvs and
-// with the external_signal_net query relation, so all three answer about the same nets.
+// with the net.connector_signal query relation, so all three answer about the same nets.
 //
 // THE ZENER CASE IS NotConsidered. A Zener clamps, slower and at higher energy than an ESD TVS, so
 // the net is neither unprotected (which this rule reports) nor clamped by the right device class

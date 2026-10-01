@@ -42,7 +42,7 @@ states the field, independently per field. The citation records WHICH class supp
 Only a KiCad project read populates this, and only when the project declares class definitions. A
 rule comparing declared against actual finds nothing to compare on every other source and reports
 clean, which a review cannot tell from a genuine pass. Such a rule gates on `check.CapNetClassDefs`,
-queryable as `has_netclass_defs` (and on the board tier for the actual side), so an absent
+queryable as `design.has_netclass_defs` (and on the board tier for the actual side), so an absent
 declaration reads not-applicable.
 
 ### Datalog

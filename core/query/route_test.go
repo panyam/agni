@@ -17,7 +17,7 @@ import (
 // distance zero, and its route is its own name. The two points are one electrical node, which is the
 // strongest form of connected there is and not a degenerate case to filter out.
 func TestRouteBindsTheRouteItWalked(t *testing.T) {
-	rows := runQuery(t, check.NewModel(reachChainDesign()), `route("N0", ?n, ?p) => ?n, ?p`)
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.route("N0", ?n, ?p) => ?n, ?p`)
 	got := map[string]string{}
 	for _, r := range rows {
 		got[r.Bind["n"].S] = r.Bind["p"].S
@@ -33,7 +33,7 @@ func TestRouteBindsTheRouteItWalked(t *testing.T) {
 	}
 	for n, w := range want {
 		if got[n] != w {
-			t.Errorf("route(N0, %s, ?p) bound %q, want %q", n, got[n], w)
+			t.Errorf("net.route(N0, %s, ?p) bound %q, want %q", n, got[n], w)
 		}
 	}
 }
@@ -44,13 +44,13 @@ func TestRouteBindsTheRouteItWalked(t *testing.T) {
 // with an empty string in its path column, which a table renders as a blank cell beside two net
 // names and a reader takes for a route with nothing on it.
 func TestRouteNeverBindsAnEmptyPath(t *testing.T) {
-	rows := runQuery(t, check.NewModel(reachChainDesign()), `route(?a, ?b, ?p) => ?a, ?b, ?p`)
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.route(?a, ?b, ?p) => ?a, ?b, ?p`)
 	if len(rows) == 0 {
 		t.Fatal("no rows: the fixture should route, so this test would pass vacuously")
 	}
 	for _, r := range rows {
 		if r.Bind["p"].S == "" {
-			t.Errorf("route(%s, %s) bound an empty path", r.Bind["a"].S, r.Bind["b"].S)
+			t.Errorf("net.route(%s, %s) bound an empty path", r.Bind["a"].S, r.Bind["b"].S)
 		}
 	}
 }
@@ -73,8 +73,8 @@ func TestRouteAgreesWithReachesOnWhatIsConnected(t *testing.T) {
 		sort.Strings(out)
 		return out
 	}
-	reached := pairs(`reaches(?a, ?b) => ?a, ?b`, "a", "b")
-	routed := pairs(`route(?a, ?b, ?p) => ?a, ?b`, "a", "b")
+	reached := pairs(`net.reaches(?a, ?b) => ?a, ?b`, "a", "b")
+	routed := pairs(`net.route(?a, ?b, ?p) => ?a, ?b`, "a", "b")
 	if strings.Join(reached, ",") != strings.Join(routed, ",") {
 		t.Errorf("route and reaches disagree about what is connected:\n  reaches: %v\n  route:   %v", reached, routed)
 	}
@@ -121,7 +121,7 @@ func railChainDesign() *ir.Design {
 // opening with it is the same non-terminating shape WS3-114 named, and a generator the lint cannot
 // see is a generator that ships without the warning.
 func TestRouteIsLintedAsAGenerator(t *testing.T) {
-	q, err := Parse(`bad(?n) :- route(?a, ?n, ?p); bad(?n) => ?n`)
+	q, err := Parse(`bad(?n) :- net.route(?a, ?n, ?p); bad(?n) => ?n`)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestRouteIsLintedAsAGenerator(t *testing.T) {
 // or three. route does not, because it is a separate predicate so that no spelling binds a path
 // without the caller asking for one.
 func TestRouteArityIsFixed(t *testing.T) {
-	for _, text := range []string{`route(?a, ?b) => ?a`, `route(?a, ?b, ?p, ?q) => ?a`} {
+	for _, text := range []string{`net.route(?a, ?b) => ?a`, `net.route(?a, ?b, ?p, ?q) => ?a`} {
 		q, err := Parse(text)
 		if err != nil {
 			continue // a parse error is a fine way to reject it too

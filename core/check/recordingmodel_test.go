@@ -9,17 +9,17 @@ import (
 
 func TestTierOf(t *testing.T) {
 	for fact, want := range map[string]FactTier{
-		"param.cap_rated_voltage": TierParam,
-		"param(mpn, max_voltage)": TierParam,
-		"component.device_class":  TierParam, // relation name, no "param" prefix
-		"component.esd_rated":     TierParam,
-		"board.track_width":       TierBoard,
-		"pin.electrical_type":     TierConnectivity,
-		"pin.role":                TierConnectivity,
-		"on_net":                  TierConnectivity,
-		"net.names":               "",
-		"component.class":         "",
-		"wire.junction":           "",
+		"param.cap_rated_voltage":     TierParam,
+		"param.max(mpn, max_voltage)": TierParam,
+		"component.device_class":      TierParam, // relation name, no "param" prefix
+		"component.esd_rated":         TierParam,
+		"board.track_width":           TierBoard,
+		"pin.electrical_type":         TierConnectivity,
+		"pin.role":                    TierConnectivity,
+		"on_net":                      TierConnectivity,
+		"net.names":                   "",
+		"component.class":             "",
+		"wire.junction":               "",
 	} {
 		if got := TierOf(fact); got != want {
 			t.Errorf("TierOf(%q) = %q, want %q", fact, got, want)

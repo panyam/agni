@@ -17,4 +17,4 @@ fixture: examples/tutorial-project
 script: |
   mv conventions.yaml conventions-off.yaml
   mv params params-off
-  agni query designs/gateway/gateway.edn 'rail(?n) => ?n'
+  agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n'

@@ -736,7 +736,7 @@ review moment. `datasheet/param` itself is skipped rather than allowlisted, beca
 place: it is where the conversion happens and what every other tier compares through. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
-**This covers the query surface too.** The `param(...)`, `param.range(...)` and `param.typ(...)`
+**This covers the query surface too.** The `param.max(...)`, `param.range(...)` and `param.typ(...)`
 datalog relations project their numbers through the same conversion, so a datalog-authored rule
 compares base units without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
 separately, because a `facts.Row` has no unit column and adding one would be advisory: a rule could

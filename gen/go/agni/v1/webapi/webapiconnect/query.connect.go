@@ -47,7 +47,7 @@ type QueryServiceClient interface {
 	// RunQuery parses and evaluates the query text over the loaded design and returns the projected
 	// columns and answer rows, each row carrying the provenance of the facts that produced it. The
 	// relation vocabulary is the same the CLI documents (net.max_voltage, component.mpn,
-	// component-on-net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
+	// component.net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
 	// relation is empty because the server wires no params dir and datasheet data is deployment-bound
 	// (C16), so a query over `param` returns no rows rather than an error.
 	RunQuery(context.Context, *connect.Request[webapi.RunQueryRequest]) (*connect.Response[webapi.RunQueryResponse], error)
@@ -124,7 +124,7 @@ type QueryServiceHandler interface {
 	// RunQuery parses and evaluates the query text over the loaded design and returns the projected
 	// columns and answer rows, each row carrying the provenance of the facts that produced it. The
 	// relation vocabulary is the same the CLI documents (net.max_voltage, component.mpn,
-	// component-on-net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
+	// component.net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
 	// relation is empty because the server wires no params dir and datasheet data is deployment-bound
 	// (C16), so a query over `param` returns no rows rather than an error.
 	RunQuery(context.Context, *connect.Request[webapi.RunQueryRequest]) (*connect.Response[webapi.RunQueryResponse], error)

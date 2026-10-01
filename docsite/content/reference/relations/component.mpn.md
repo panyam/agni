@@ -21,12 +21,12 @@ list what a design actually orders, or to find the components a datasheet-backed
 ### For software engineers
 
 The part number is the lockfile entry (see [the analogy
-guide](../../../../docsite/content/reference/analogy.md)), so where `component-on-net` and `pin`
-describe the graph structure, `component.mpn` binds a node to a concrete pinned artifact
-(`lodash@4.17.21`). Rows are 1:1 with components that carry a resolved part number, so it is a
-partial projection over `Components()` (unresolved components are simply absent). It is the design
-half of the datasheet join key; the datasheet half is `param(mpn, symbol, max)`, keyed by the same
-string.
+guide](../../../../docsite/content/reference/analogy.md)), so where `component.net` and
+`component.pin` describe the graph structure, `component.mpn` binds a node to a concrete pinned
+artifact (`lodash@4.17.21`). Rows are 1:1 with components that carry a resolved part number, so it
+is a partial projection over `Components()` (unresolved components are simply absent). It is the
+design half of the datasheet join key; the datasheet half is `param.max(mpn, symbol, max)`, keyed by
+the same string.
 
 ### Go projector
 
@@ -55,5 +55,5 @@ Join to the datasheet parameters seeded for that part (the components a datashee
 reach):
 
 ```
-component.mpn(?r, ?m), param(?m, ?sym, ?max) => ?r
+component.mpn(?r, ?m), param.max(?m, ?sym, ?max) => ?r
 ```

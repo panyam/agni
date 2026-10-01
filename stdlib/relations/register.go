@@ -37,7 +37,7 @@ var builtinSchema = map[string][]facts.Field{
 	RelNetNominalVoltage: {facts.FieldSubject, facts.FieldNum},                                                                   // net.nominal_voltage(net, volts)
 	RelNetSignalLevel:    {facts.FieldSubject, facts.FieldNum},                                                                   // net.signal_level(net, volts)
 	RelComponentMPN:      {facts.FieldSubject, facts.FieldValue},                                                                 // component.mpn(ref, mpn)
-	RelParam:             {facts.FieldSubject, facts.FieldObject, facts.FieldNum},                                                // param(mpn, symbol, max)
+	RelParam:             {facts.FieldSubject, facts.FieldObject, facts.FieldNum},                                                // param.max(mpn, symbol, max)
 	RelParamRange:        {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldMin, facts.FieldNum},              // param.range(mpn, symbol, kind, min, max)
 	RelParamTyp:          {facts.FieldSubject, facts.FieldObject, facts.FieldNum},                                                // param.typ(mpn, symbol, typ)
 	RelParamProv:         {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier, facts.FieldConditions}, // param.prov(mpn, symbol, doc, page, section). page is a STRING slot, see RelParamProv
@@ -53,18 +53,18 @@ var builtinSchema = map[string][]facts.Field{
 	// rather than one terminal's own quantity.
 	RelParamPinRelation: {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier, facts.FieldMin, facts.FieldNum}, // param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max)
 	RelPartAudience:     {facts.FieldSubject, facts.FieldObject},                                                                         // part.audience(mpn, who)
-	RelComponentOnNet:   {facts.FieldSubject, facts.FieldObject},                                                                         // component-on-net(ref, net)
+	RelComponentOnNet:   {facts.FieldSubject, facts.FieldObject},                                                                         // component.net(ref, net)
 	// Pin tier (WS3-038), pin-granular relations queryable with no evaluator change.
-	RelPin:               {facts.FieldSubject, facts.FieldObject},                   // pin(ref, pin)
+	RelPin:               {facts.FieldSubject, facts.FieldObject},                   // component.pin(ref, pin)
 	RelPinRole:           {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.role(ref, pin, role)
 	RelPinType:           {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.type(ref, pin, etype)
 	RelPinNet:            {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.net(ref, pin, net)
 	RelPinName:           {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin.name(ref, pin, name)
 	RelNetPinCount:       {facts.FieldSubject, facts.FieldNum},                      // net.pin_count(net, count)
 	RelComponentNetCount: {facts.FieldSubject, facts.FieldNum},                      // component.net_count(ref, count)
-	RelHasNCChannel:      {facts.FieldSubject},                                      // has_nc_channel(present)
-	RelTypesPowerOut:     {facts.FieldSubject},                                      // types_power_out(present)
-	RelRail:              {facts.FieldSubject},                                      // rail(net)
+	RelHasNCChannel:      {facts.FieldSubject},                                      // design.has_nc_channel(present)
+	RelTypesPowerOut:     {facts.FieldSubject},                                      // design.types_power_out(present)
+	RelRail:              {facts.FieldSubject},                                      // net.rail(net)
 	RelFeedback:          {facts.FieldSubject},
 	RelSwitching:         {facts.FieldSubject},
 	RelNetRole:           {facts.FieldSubject, facts.FieldValue},
@@ -79,20 +79,20 @@ var builtinSchema = map[string][]facts.Field{
 	RelComponentDeviceClass:  {facts.FieldSubject, facts.FieldValue},                    // component.device_class(ref, class), WS10-013, datasheet tier
 	RelBus:                   {facts.FieldSubject, facts.FieldValue},                    // bus(label, kind), reader-detected unmodeled bus (WS1-034)
 	RelEntity:                {facts.FieldSubject, facts.FieldValue},                    // entity(name, kind), the enumeration relation, what a name search ranges over
-	RelUnresolvedSymbol:      {facts.FieldSubject, facts.FieldValue},                    // unresolved_symbol(ref_des, symref), a placement that lost its pins (WS1-052)
-	RelRefDesCollision:       {facts.FieldSubject},                                      // ref_des_collision(ref_des), WS3-081
-	RelPinNetConflict:        {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // pin_net_conflict(ref_des, pin, net), WS3-081
+	RelUnresolvedSymbol:      {facts.FieldSubject, facts.FieldValue},                    // reader.unresolved_symbol(ref_des, symref), a placement that lost its pins (WS1-052)
+	RelRefDesCollision:       {facts.FieldSubject},                                      // reader.ref_des_collision(ref_des), WS3-081
+	RelPinNetConflict:        {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // reader.pin_net_conflict(ref_des, pin, net), WS3-081
 	RelNetBusLike:            {facts.FieldSubject},                                      // net.bus_like(net), WS3-080
-	RelExternalSignalNet:     {facts.FieldSubject},                                      // external_signal_net(net), WS3-061
+	RelExternalSignalNet:     {facts.FieldSubject},                                      // net.connector_signal(net), WS3-061
 	RelNetBias:               {facts.FieldSubject, facts.FieldValue},                    // net.bias(net, level), WS3-088
 	RelNetACCoupled:          {facts.FieldSubject},                                      // net.ac_coupled(net), WS3-088
 	RelNetNetClass:           {facts.FieldSubject, facts.FieldValue},                    // net.netclass(net, class), WS3-105
-	RelHasNetClass:           {facts.FieldSubject},                                      // has_netclass(present), WS3-105
+	RelHasNetClass:           {facts.FieldSubject},                                      // design.has_netclass(present), WS3-105
 	RelNetClassClearance:     {facts.FieldSubject, facts.FieldNum},                      // netclass.clearance(class, mm), WS3-111
 	RelNetClassTrackWidth:    {facts.FieldSubject, facts.FieldNum},                      // netclass.track_width(class, mm), WS3-111
 	RelNetClassViaDiameter:   {facts.FieldSubject, facts.FieldNum},                      // netclass.via_diameter(class, mm), WS3-111
 	RelNetClassViaDrill:      {facts.FieldSubject, facts.FieldNum},                      // netclass.via_drill(class, mm), WS3-111
-	RelHasNetClassDefs:       {facts.FieldSubject},                                      // has_netclass_defs(present), WS3-111
+	RelHasNetClassDefs:       {facts.FieldSubject},                                      // design.has_netclass_defs(present), WS3-111
 	RelNetDeclaredTrackWidth: {facts.FieldSubject, facts.FieldNum},                      // net.declared_track_width(net, mm), WS3-111
 	RelNetDeclaredViaDrill:   {facts.FieldSubject, facts.FieldNum},                      // net.declared_via_drill(net, mm), WS3-111
 	// Board tier, queryable with no evaluator change (tier-generality).
@@ -107,7 +107,7 @@ var builtinSchema = map[string][]facts.Field{
 // query's builtinPredicates.
 var builtinCatalog = []facts.RelationInfo{
 	{Name: "component.mpn", Args: []string{"ref_des", "mpn"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the design-side part identity (manufacturer part number)", Kind: facts.KindNetlist},
-	{Name: "component-on-net", Args: []string{"ref_des", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "net": {Entity: check.KindNet}}, Summary: "a component sits on a net", Kind: facts.KindNetlist},
+	{Name: "component.net", Args: []string{"ref_des", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "net": {Entity: check.KindNet}}, Summary: "a component sits on a net", Kind: facts.KindNetlist},
 	{Name: "entity", Args: []string{"name", "kind"}, ArgKinds: map[string]facts.ArgKind{"name": {KindArg: "kind"}}, Summary: "a thing exists in the design under this name, with kind one of component/net/bus. The relation to start a name search from, since every other one ranges over an association and so misses whatever it does not reach (a part with no connections, a net with nothing on it)", Kind: facts.KindNetlist},
 	{Name: "net.max_voltage", Args: []string{"net", "volts"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net's declared rail voltage", Kind: facts.KindNetlist},
 	{Name: "net.nominal_voltage", Args: []string{"net", "volts"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level, and a regulator internal (_FB, _SW, _BOOT) is on neither because the number in its name is another net's voltage", Kind: facts.KindNetlist},
@@ -115,18 +115,18 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "board.layer", Args: []string{"net", "layer"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net appears on a board copper layer", Kind: facts.KindBoard},
 	{Name: "board.track_width", Args: []string{"net", "mm"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a copper track's width on a net (millimetres)", Kind: facts.KindBoard},
 	{Name: "board.via_drill", Args: []string{"net", "mm"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a via's drill diameter on a net (millimetres)", Kind: facts.KindBoard},
-	{Name: "pin", Args: []string{"ref_des", "pin"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a part-type pin of a placed component", Kind: facts.KindNetlist},
+	{Name: "component.pin", Args: []string{"ref_des", "pin"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a part-type pin of a placed component", Kind: facts.KindNetlist},
 	{Name: "pin.role", Args: []string{"ref_des", "pin", "role"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a pin's derived role (power/ground/anode/cathode)", Kind: facts.KindNetlist},
 	{Name: "pin.type", Args: []string{"ref_des", "pin", "etype"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "etype": {ValidOptions: pinTypeValues()}}, Summary: "a pin's electrical type (power_in, input, output, ...)", Kind: facts.KindNetlist},
 	{Name: "pin.name", Args: []string{"ref_des", "pin", "name"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "the part type's functional name for a pin (\"SDA\", \"PTC11\"), the spelling a datasheet and a firmware header use, against the package designator every other pin relation is keyed on; absent when the part type declares none", Kind: facts.KindNetlist},
 	{Name: "pin.net", Args: []string{"ref_des", "pin", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "net": {Entity: check.KindNet}}, Summary: "the net a pin is on (absent if unconnected)", Kind: facts.KindNetlist},
 	{Name: "net.pin_count", Args: []string{"net", "count"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the number of connections on a net", Kind: facts.KindNetlist},
 	{Name: "component.net_count", Args: []string{"ref_des", "count"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the number of distinct nets a component touches (0 for a part wired to nothing)", Kind: facts.KindNetlist},
-	{Name: "has_nc_channel", Args: []string{"present"}, Summary: "one row when the design can express intentional no-connect", Kind: facts.KindNetlist},
-	{Name: "types_power_out", Args: []string{"present"}, Summary: "one row when the source format classifies power-output pins (EDIF/IPC do not, so a driver-absence check is unsound there)", Kind: facts.KindNetlist},
-	{Name: "rail", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a power or ground rail", Kind: facts.KindNetlist},
-	{Name: "feedback", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator feedback / sense node (must not be probed)", Kind: facts.KindNetlist},
-	{Name: "switching", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator power-stage node, the switch node or its bootstrap (must not be probed); the twin of feedback", Kind: facts.KindNetlist},
+	{Name: "design.has_nc_channel", Args: []string{"present"}, Summary: "one row when the design can express intentional no-connect", Kind: facts.KindNetlist},
+	{Name: "design.types_power_out", Args: []string{"present"}, Summary: "one row when the source format classifies power-output pins (EDIF/IPC do not, so a driver-absence check is unsound there)", Kind: facts.KindNetlist},
+	{Name: "net.rail", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a power or ground rail", Kind: facts.KindNetlist},
+	{Name: "net.feedback", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator feedback / sense node (must not be probed)", Kind: facts.KindNetlist},
+	{Name: "net.switching", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a regulator power-stage node, the switch node or its bootstrap (must not be probed); the twin of feedback", Kind: facts.KindNetlist},
 	{Name: "net.role", Args: []string{"net", "role"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}, "role": {ValidOptions: roleValues()}}, Summary: "a role the net carries, derived from its name by the lexicon (rail, ground, feedback, switching, control, gate_drive); one row per role, the net-side twin of component.class", Kind: facts.KindNetlist},
 	{Name: "net.attr", Args: []string{"net", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net-level attribute DECLARED by the source file (external, global, power_driven), the twin of component.attr; a role the engine derived is net.role", Kind: facts.KindNetlist},
 	{Name: "component.attr", Args: []string{"ref_des", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a component-level attribute (e.g. interface, MPN)", Kind: facts.KindNetlist},
@@ -136,23 +136,23 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "net.ground", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a ground rail (name-derived)", Kind: facts.KindNetlist},
 	{Name: "net.external", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net may extend onto an unread sheet (read-gap marker)", Kind: facts.KindNetlist},
 	{Name: "bus", Args: []string{"label", "kind"}, Summary: "a reader-detected bus not yet expanded into member nets (WS1-034)", Kind: facts.KindNetlist},
-	{Name: "unresolved_symbol", Args: []string{"ref_des", "symref"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a placement whose symbol did not resolve, so it carries no pins (WS1-052)", Kind: facts.KindNetlist},
-	{Name: "ref_des_collision", Args: []string{"ref_des"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a reference designator used by more than one part (reader integrity diagnostic)", Kind: facts.KindNetlist},
-	{Name: "pin_net_conflict", Args: []string{"ref_des", "pin", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "net": {Entity: check.KindNet}}, Summary: "a pin the read placed on more than one net; one row per net (reader integrity diagnostic)", Kind: facts.KindNetlist},
+	{Name: "reader.unresolved_symbol", Args: []string{"ref_des", "symref"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a placement whose symbol did not resolve, so it carries no pins (WS1-052)", Kind: facts.KindNetlist},
+	{Name: "reader.ref_des_collision", Args: []string{"ref_des"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a reference designator used by more than one part (reader integrity diagnostic)", Kind: facts.KindNetlist},
+	{Name: "reader.pin_net_conflict", Args: []string{"ref_des", "pin", "net"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}, "net": {Entity: check.KindNet}}, Summary: "a pin the read placed on more than one net; one row per net (reader integrity diagnostic)", Kind: facts.KindNetlist},
 	{Name: "net.bus_like", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a shared-distribution net (ground plane, global rail, or rail-scale fan-out), the series-reach walk's stop predicate", Kind: facts.KindNetlist},
-	{Name: "external_signal_net", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a connector-facing signal net (not a rail, ground, no-connect, or power path), the scope the ESD rules share", Kind: facts.KindNetlist},
+	{Name: "net.connector_signal", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a connector-facing signal net (not a rail, ground, no-connect, or power path), the scope the ESD rules share", Kind: facts.KindNetlist},
 	{Name: "net.bias", Args: []string{"net", "level"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a bias resistor holds the net at a rail (high) or ground (low); absent when unbiased or held by a divider", Kind: facts.KindNetlist},
 	{Name: "net.ac_coupled", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count)", Kind: facts.KindNetlist},
 	{Name: "net.netclass", Args: []string{"net", "class"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role)", Kind: facts.KindNetlist},
-	{Name: "has_netclass", Args: []string{"present"}, Summary: "one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean)", Kind: facts.KindNetlist},
+	{Name: "design.has_netclass", Args: []string{"present"}, Summary: "one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean)", Kind: facts.KindNetlist},
 	{Name: "netclass.clearance", Args: []string{"class", "mm"}, Summary: "the clearance a net class declares its nets should route at (millimetres)", Kind: facts.KindNetlist},
 	{Name: "netclass.track_width", Args: []string{"class", "mm"}, Summary: "the track width a net class declares its nets should route at (millimetres)", Kind: facts.KindNetlist},
 	{Name: "netclass.via_diameter", Args: []string{"class", "mm"}, Summary: "the via diameter a net class declares (millimetres)", Kind: facts.KindNetlist},
 	{Name: "netclass.via_drill", Args: []string{"class", "mm"}, Summary: "the via drill a net class declares (millimetres)", Kind: facts.KindNetlist},
-	{Name: "has_netclass_defs", Args: []string{"present"}, Summary: "one row when the design declares net-class definitions at all (absent it, a declared-vs-actual rule has no limit to compare against and reads clean)", Kind: facts.KindNetlist},
+	{Name: "design.has_netclass_defs", Args: []string{"present"}, Summary: "one row when the design declares net-class definitions at all (absent it, a declared-vs-actual rule has no limit to compare against and reads clean)", Kind: facts.KindNetlist},
 	{Name: "net.declared_track_width", Args: []string{"net", "mm"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the track width a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows)", Kind: facts.KindNetlist},
 	{Name: "net.declared_via_drill", Args: []string{"net", "mm"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the via drill a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows)", Kind: facts.KindNetlist},
-	{Name: "param", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part, in its SI base unit (needs --params)", Kind: facts.KindDatasheet},
+	{Name: "param.max", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part, in its SI base unit (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.range", Args: []string{"mpn", "symbol", "kind", "min", "max"}, Summary: "a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.typ", Args: []string{"mpn", "symbol", "typ"}, Summary: "a datasheet parameter's TYPICAL value in the SI base unit, the third member of the min/typ/max triple. A typical value is what the part usually does, never a guaranteed limit, so it is its own relation rather than a column on param.range (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.prov", Args: []string{"mpn", "symbol", "doc", "page", "section"}, Summary: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from. The page is a locator and binds as a string, not a number (needs --params)", Kind: facts.KindDatasheet},

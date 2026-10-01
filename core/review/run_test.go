@@ -169,7 +169,7 @@ func TestIntentPrebindNamespaceSafety(t *testing.T) {
 
 // TestCapabilityGatedNotApplicable (WS3-096): a rule whose required source-format capability the
 // design lacks reads not-applicable with a reason, not a silent pass; the SAME rule on a format that
-// supplies the capability evaluates live (here, fires). power-input-not-driven needs types_power_out
+// supplies the capability evaluates live (here, fires). power-input-not-driven needs design.types_power_out
 // (EDIF/IPC carry no power_out) and unconnected-pin needs the no-connect channel (EDIF has none).
 func TestCapabilityGatedNotApplicable(t *testing.T) {
 	item := func(rule string) Manifest {

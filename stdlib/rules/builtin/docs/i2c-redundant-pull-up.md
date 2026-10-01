@@ -58,7 +58,7 @@ Enumerate I2C nets; for each, walk out through resistors up to three crossings, 
 distinct resistor whose far side is a rail; fire when there is more than one and they all land on the
 same rail.
 
-A reachability question cannot express this. `reaches` reports a rail as reached however many
+A reachability question cannot express this. `net.reaches` reports a rail as reached however many
 resistors reach it, so a doubled bus and a correct one are the same answer.
 
 ### For software readers

@@ -204,7 +204,7 @@ three siblings for IC pin-mapping against a declared map. The rest, by what each
 
 - Buildable now on the pure netlist: signal-net naming conventions beyond `diff-pair-naming`,
   transmit and receive connection-role compatibility, and the ordering variants of the ESD and
-  protection rules, now that `reaches` binds a hop count.
+  protection rules, now that `net.reaches` binds a hop count.
 - With the parameter layer: logic-level input versus output margin, and passive value versus
   recommendation. These are the Tier-X category, a rule that proves a margin from datasheet data.
 - Touching analysis for an input only: inductor saturation current versus peak current, cap voltage
@@ -225,14 +225,14 @@ rather than inferred.
 
 | Capability | Present when | Missing on | Rule that needs it | Queryable twin |
 |---|---|---|---|---|
-| `types_power_out` | the format types power-OUTPUT pins, so a rail's driver is visible | EDIF (INPUT, OUTPUT and INOUT only) and IPC-2581 (no pin electrical types) | `power-input-not-driven` | `types_power_out`, spec fact `design.types_power_out` |
-| `nc_channel` | the design can mark a pin intentionally open, by a NO_CONNECT pin type or an nc-marker net name | EDIF netlists | `unconnected-pin`, `power-pin-mistyped` | `has_nc_channel`, spec fact `design.nc_channel` |
-| `netclass` | nets carry tool-assigned net-class membership (WS3-105) | EDIF, IPC-2581, a bare `.kicad_sch`, and a KiCad project that declares no classes | any rule scoped by net class | `has_netclass`, spec fact `design.has_netclass` |
-| `netclass_defs` | the design declares what a class routes at, its clearance, track width and via sizes (WS3-111) | everything `netclass` is missing on, plus a project that assigns classes and defines none | `netclass-track-width`, `netclass-via-drill` | `has_netclass_defs` |
+| `design.types_power_out` | the format types power-OUTPUT pins, so a rail's driver is visible | EDIF (INPUT, OUTPUT and INOUT only) and IPC-2581 (no pin electrical types) | `power-input-not-driven` | `design.types_power_out`, also a spec fact |
+| `nc_channel` | the design can mark a pin intentionally open, by a NO_CONNECT pin type or an nc-marker net name | EDIF netlists | `unconnected-pin`, `power-pin-mistyped` | `design.has_nc_channel`, spec fact `design.nc_channel` |
+| `netclass` | nets carry tool-assigned net-class membership (WS3-105) | EDIF, IPC-2581, a bare `.kicad_sch`, and a KiCad project that declares no classes | any rule scoped by net class | `design.has_netclass`, also a spec fact |
+| `netclass_defs` | the design declares what a class routes at, its clearance, track width and via sizes (WS3-111) | everything `netclass` is missing on, plus a project that assigns classes and defines none | `netclass-track-width`, `netclass-via-drill` | `design.has_netclass_defs` |
 | `ref_des_collisions` | the READER looked for duplicate reference designators | EDIF, gEDA, xschem | `duplicate-ref-des` | none, the gate reads `InputDiagnostics.supplied` |
 | `junction_taps` | the READER examined wire ends landing on wire bodies and recorded both halves | every format except KiCad | `wire-no-junction` | none, the gate reads `InputDiagnostics.supplied` |
 
-The six fall into three kinds, and the kind decides where the gate looks. `types_power_out` is a
+The six fall into three kinds, and the kind decides where the gate looks. `design.types_power_out` is a
 property of the format's grammar and is decided from the source format alone. `nc_channel`,
 `netclass` and `netclass_defs` are properties of the design's CONTENT, so a KiCad project with no
 classes lacks `netclass` as surely as an EDIF netlist does. `ref_des_collisions` and
@@ -384,7 +384,7 @@ running on the server. The command form prints answers with provenance:
 
 ```
 $ agni query regulator.fires.kicad_sch --params seed/ \
-    'component.mpn(?r,?m), param(?m,"VIN",?vmax), component-on-net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?m, ?vmax, ?n, ?rail'
+    'component.mpn(?r,?m), param.max(?m,"VIN",?vmax), component.net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?m, ?vmax, ?n, ?rail'
 r   m       vmax  n     rail  provenance
 U1  LM1117  20    +24V  24    …/regulator.fires.kicad_sch ; datasheet "SNOS412Q …" page 4, "7.1 Absolute Maximum Ratings"
 ```
@@ -406,14 +406,14 @@ into queries. Both halves were measured rather than argued.
 
 Plain datalog gives unbounded transitive closure through recursion, but says nothing about distance.
 That is the one hole a circuit question keeps falling into, because protection questions are all
-bounded: a clamp near the pin, a series element within two hops. The fix is shipped. `reaches` takes
+bounded: a clamp near the pin, a series element within two hops. The fix is shipped. `net.reaches` takes
 an optional third argument binding the exact number of crossings, so a radius is written
 
 ```
-reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs")
+net.reaches(?n, ?rn, ?h), ?h <= 2, component.net(?t, ?rn), component.class(?t, "tvs")
 ```
 
-and not `reaches(?n, ?rn, 2)`, which means exactly two crossings and silently skips a part sitting one
+and not `net.reaches(?n, ?rn, 2)`, which means exactly two crossings and silently skips a part sitting one
 away.
 
 **The consequence is that several Go escape hatches are now redundant rather than necessary**, which

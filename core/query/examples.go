@@ -12,12 +12,12 @@ type ExampleQuery struct {
 
 // examples is the concept ladder, in teaching order: each rung adds exactly one idea over the last
 // (projection → filter → join → predicate → recursion). The set is design-independent, but ordered
-// so the first (component-on-net) returns rows on any netlist while later rungs may return none on a
+// so the first (component.net) returns rows on any netlist while later rungs may return none on a
 // design that lacks the data, and that empty answer is itself a lesson (WS14-001).
 var examples = []ExampleQuery{
 	{
 		Label:   "Every part on every net",
-		Query:   "component-on-net(?ref, ?net) => ?ref, ?net",
+		Query:   "component.net(?ref, ?net) => ?ref, ?net",
 		Teaches: "projection: => picks the answer columns",
 	},
 	{
@@ -27,12 +27,12 @@ var examples = []ExampleQuery{
 	},
 	{
 		Label:   "Parts sitting on a rail above 3V",
-		Query:   "component-on-net(?ref, ?net), net.max_voltage(?net, ?v), ?v > 3 => ?ref, ?net, ?v",
+		Query:   "component.net(?ref, ?net), net.max_voltage(?net, ?v), ?v > 3 => ?ref, ?net, ?v",
 		Teaches: "join: a shared ?variable connects two relations",
 	},
 	{
 		Label:   "Parts on USB nets",
-		Query:   `component-on-net(?ref, ?net), contains(?net, "USB") => ?ref, ?net`,
+		Query:   `component.net(?ref, ?net), contains(?net, "USB") => ?ref, ?net`,
 		Teaches: "predicate: a string test over a bound value",
 	},
 	{
@@ -42,17 +42,17 @@ var examples = []ExampleQuery{
 	},
 	{
 		Label:   "Reachable through series pass elements",
-		Query:   "reaches(?from, ?net) => ?from, ?net",
+		Query:   "net.reaches(?from, ?net) => ?from, ?net",
 		Teaches: "recursion: transitive reach through R/L/ferrite/fuse",
 	},
 	{
 		Label:   "Reachable within one series element",
-		Query:   "reaches(?from, ?net, ?hops), ?hops <= 1 => ?from, ?net, ?hops",
+		Query:   "net.reaches(?from, ?net, ?hops), ?hops <= 1 => ?from, ?net, ?hops",
 		Teaches: "distance: ?hops binds the EXACT crossing count, so a radius is a comparison (writing 1 in that slot would mean exactly one hop, skipping the net itself)",
 	},
 	{
 		Label:   "Reachable, with the route it took",
-		Query:   "route(?from, ?net, ?path) => ?from, ?net, ?path",
+		Query:   "net.route(?from, ?net, ?path) => ?from, ?net, ?path",
 		Teaches: "evidence: the same walk as reaches, binding what it crossed (`VBUS -> [R5] -> VBUS_F`), so an answer can be checked without re-asking it",
 	},
 	{
@@ -62,7 +62,7 @@ var examples = []ExampleQuery{
 	},
 	{
 		Label:   "Clock-source terminal nets (excluding ground)",
-		Query:   `component.class(?y, "clock"), component-on-net(?y, ?net), not net.ground(?net) => ?y, ?net`,
+		Query:   `component.class(?y, "clock"), component.net(?y, ?net), not net.ground(?net) => ?y, ?net`,
 		Teaches: "class + negation: pick a device family (clock covers oscillator/crystal/resonator), drop the grounded net",
 	},
 	{
@@ -77,7 +77,7 @@ var examples = []ExampleQuery{
 	},
 	{
 		Label:   "Signal nets clamped by a Zener at a connector",
-		Query:   `component.class(?j, "connector"), component-on-net(?j, ?net), component-on-net(?z, ?net), component.class(?z, "zener") => ?net, ?z`,
+		Query:   `component.class(?j, "connector"), component.net(?j, ?net), component.net(?z, ?net), component.class(?z, "zener") => ?net, ?z`,
 		Teaches: "topology pattern: one net joining two device classes (the shape esd-clamp-not-tvs refines)",
 	},
 	{
@@ -85,12 +85,12 @@ var examples = []ExampleQuery{
 		// all the negation there is, and designs around a limitation that does not exist (agni issue
 		// 522).
 		Label:   "Nets with no test point on them",
-		Query:   `has_test_point(?n) :- component-on-net(?tp, ?n), component.class(?tp, "test_point"); entity(?n, "net"), not has_test_point(?n) => ?n`,
+		Query:   `has_test_point(?n) :- component.net(?tp, ?n), component.class(?tp, "test_point"); entity(?n, "net"), not has_test_point(?n) => ?n`,
 		Teaches: "derived relation: `;` separates clauses and `:-` names one, which is how you negate a PAIR of relations — the shape of every \"X with no related Y\" question",
 	},
 	{
 		Label:   "Rails above a part's recommended maximum",
-		Query:   `component.mpn(?ref, ?mpn), param.range(?mpn, ?sym, "recommended_operating", ?min, ?max), component-on-net(?ref, ?net), net.nominal_voltage(?net, ?v), ?v > ?max => ?ref, ?net, ?v, ?max`,
+		Query:   `component.mpn(?ref, ?mpn), param.range(?mpn, ?sym, "recommended_operating", ?min, ?max), component.net(?ref, ?net), net.nominal_voltage(?net, ?v), ?v > ?max => ?ref, ?net, ?v, ?max`,
 		Teaches: "datasheet range: join a two-sided limit (by kind) against the design's rail voltage (needs --params)",
 	},
 }

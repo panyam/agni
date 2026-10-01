@@ -16,8 +16,8 @@ package facts
 // rather than in any evaluator.
 //
 // Subject is the primary entity (a net name, ref-des, or mpn). Object is the second entity or
-// attribute key (the net for component-on-net, the symbol for param, "" otherwise). Value is the
-// rendered value ("" for a pure link like component-on-net), and Num carries it as a number when the
+// attribute key (the net for component.net, the symbol for param, "" otherwise). Value is the
+// rendered value ("" for a pure link like component.net), and Num carries it as a number when the
 // relation is numeric, so a consumer can range or compare without re-parsing. Min is a SECOND numeric
 // slot, the lower bound of a two-sided range relation (param.range) where Num is the upper bound, and
 // nil for every one-number relation. Conditions holds a param's test conditions ("" otherwise).

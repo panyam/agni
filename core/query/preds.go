@@ -16,17 +16,17 @@ import (
 // It is much wider than check.ProtectionReachHops because a topology question wants distant answers
 // and a protection guard does not. Narrowing this silently shrinks every topology query. A rule that
 // needs a specific radius states it with the third argument (WS3-112). See
-// docsite/content/reference/relations/reaches.md and
+// docsite/content/reference/relations/net.reaches.md and
 // docsite/content/architecture/net-solving.md#how-far-a-walk-crosses-series-parts.
 const topologyReachHops = 100
 
-// relReaches is the built-in transitive relation reaches(from, to) and reaches(from, to, hops), the
-// nets reachable from `from` through series pass elements, bridged to check.Model.Reach. It is a
-// GENERATOR (it binds `to` by enumerating from the Model), which is why overlays get no public
-// generator hook (see RegisterPredicate).
-const relReaches = "reaches"
+// relReaches is the built-in transitive relation net.reaches(from, to) and net.reaches(from, to,
+// hops), the nets reachable from `from` through series pass elements, bridged to check.Model.Reach.
+// It is a GENERATOR (it binds `to` by enumerating from the Model), which is why overlays get no
+// public generator hook (see RegisterPredicate).
+const relReaches = "net.reaches"
 
-// relRoute is the built-in route(from, to, path), the SAME walk reaches makes with the route it
+// relRoute is the built-in net.route(from, to, path), the SAME walk reaches makes with the route it
 // found bound as a value instead of discarded. `path` renders as
 //
 //	VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
@@ -37,8 +37,8 @@ const relReaches = "reaches"
 // It yields exactly the pairs reaches yields, so a route never ENDS on a rail (the walk excludes
 // bus-like nets); `agni trace` is the pin-to-pin form that does. ONE route per pair, the BFS tree
 // path, so of two resistors bridging the same nets it names one. See
-// docsite/content/reference/relations/route.md.
-const relRoute = "route"
+// docsite/content/reference/relations/net.route.md.
+const relRoute = "net.route"
 
 // predicates is every computed predicate a query may call: the engine's standard filters, the two
 // circuit generators, and whatever an overlay registers through RegisterPredicate. It is the one
@@ -87,17 +87,17 @@ func RegisterPredicate(name string, arity int, holds func(args []Value) (bool, e
 
 // GeneratorFirstRules reports the rules that OPEN their body with a value-producing generator whose
 // own input argument is unbound, naming each offender by its head relation. A shipped profile rule
-// opened with `reaches(?n, ?rn, ?h)` and took `agni check` from 13s to not finishing at all on a real
+// opened with `net.reaches(?n, ?rn, ?h)` and took `agni check` from 13s to not finishing at all on a real
 // design (WS3-114). See the engine's documentation for what it does and does not catch.
 func GeneratorFirstRules(q Query) []string { return datalog.GeneratorFirstRules(q, predicates) }
 
-// genReaches binds reaches(from, to) and reaches(from, to, hops). `from` is a bound/const net when
+// genReaches binds net.reaches(from, to) and net.reaches(from, to, hops). `from` is a bound/const net when
 // possible, else every net is a candidate start; `to` binds to each net reachable from it (reflexive,
 // so from==to holds at distance 0).
 //
 // The optional third argument binds the ACTUAL number of series crossings, not a budget. A radius is
-// written reaches(?n,?rn,?h), ?h<=2, and reaches(?n,?rn,2) means exactly two hops, missing anything
-// closer (docsite/content/reference/relations/reaches.md).
+// written net.reaches(?n,?rn,?h), ?h<=2, and net.reaches(?n,?rn,2) means exactly two hops, missing
+// anything closer (docsite/content/reference/relations/net.reaches.md).
 func genReaches(src datalog.Source, args []datalog.Arg, emit func([]Value, []string) error) error {
 	return walk(relReaches, src, args, func(r check.Reach, dst *ir.Net) (Value, bool) {
 		if len(args) <= 2 {
@@ -107,7 +107,7 @@ func genReaches(src datalog.Source, args []datalog.Arg, emit func([]Value, []str
 	}, emit)
 }
 
-// genRoute binds route(from, to, path), the walk genReaches makes with the route rendered into the
+// genRoute binds net.route(from, to, path), the walk genReaches makes with the route rendered into the
 // third argument rather than the distance.
 //
 // A path is bound and never TESTED against, which keeps it safe as a generator output. The value is

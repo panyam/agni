@@ -50,17 +50,17 @@ beforeEach(() => document.body.replaceChildren());
 describe("querypanel", () => {
   it("emits onRun with the trimmed query text when Run is clicked", () => {
     const { el, onRun } = mountPanel();
-    typeQuery(el, "  component-on-net(?r,?n) => ?r  ");
+    typeQuery(el, "  component.net(?r,?n) => ?r  ");
     el.querySelector<HTMLButtonElement>("button.query-run")!.click();
     expect(onRun).toHaveBeenCalledOnce();
-    expect(onRun).toHaveBeenCalledWith("component-on-net(?r,?n) => ?r");
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r");
   });
 
   it("disables Run for an empty query and while a run is loading", () => {
     const { el, push } = mountPanel();
     const btn = () => el.querySelector<HTMLButtonElement>("button.query-run")!;
     expect(btn().disabled).toBe(true); // empty box
-    typeQuery(el, "component-on-net(?r,?n) => ?r");
+    typeQuery(el, "component.net(?r,?n) => ?r");
     expect(btn().disabled).toBe(false);
     push(emptyResult(true)); // loading
     expect(btn().disabled).toBe(true);
@@ -106,8 +106,8 @@ describe("querypanel", () => {
     expect(el.querySelector(".query-relchip")).toBeNull();
     pushRelations([
       rel({ name: "net.max_voltage", kind: "netlist" }),
-      rel({ name: "component-on-net", kind: "netlist" }),
-      rel({ name: "reaches", kind: "predicate" }),
+      rel({ name: "component.net", kind: "netlist" }),
+      rel({ name: "net.reaches", kind: "predicate" }),
     ]);
     const groups = [...el.querySelectorAll(".query-relgroup")].map((g) => ({
       label: g.querySelector(".query-relgroup-name")!.textContent,
@@ -115,8 +115,8 @@ describe("querypanel", () => {
     }));
     // Netlist group before Predicates (kind order); chips alphabetical within the group.
     expect(groups).toEqual([
-      { label: "Netlist", chips: ["component-on-net", "net.max_voltage"] },
-      { label: "Predicates", chips: ["reaches"] },
+      { label: "Netlist", chips: ["component.net", "net.max_voltage"] },
+      { label: "Predicates", chips: ["net.reaches"] },
     ]);
   });
 
@@ -124,7 +124,7 @@ describe("querypanel", () => {
     const { el, pushRelations } = mountPanel();
     pushRelations([
       rel({ name: "net.bus_like", kind: "netlist", detail: "## net.bus_like\n\nA shared node.\n" }),
-      rel({ name: "rail", kind: "netlist", detail: "" }),
+      rel({ name: "net.rail", kind: "netlist", detail: "" }),
     ]);
     // The documented relation gets an info affordance; the undocumented one does not.
     const infos = [...el.querySelectorAll(".query-relinfo")];
@@ -204,20 +204,20 @@ describe("querypanel", () => {
     const { el, onRun, pushExamples } = mountPanel();
     expect(el.querySelector(".query-example")).toBeNull(); // none until the catalog arrives
     pushExamples([
-      { label: "Every part on every net", query: "component-on-net(?r,?n) => ?r, ?n", teaches: "projection" },
+      { label: "Every part on every net", query: "component.net(?r,?n) => ?r, ?n", teaches: "projection" },
       { label: "Rails above 3V", query: "net.max_voltage(?n,?v), ?v > 3 => ?n, ?v", teaches: "filter" },
     ]);
     const chips = [...el.querySelectorAll(".query-example")].map((c) => c.textContent);
     expect(chips).toEqual(["Every part on every net", "Rails above 3V"]);
     el.querySelector<HTMLButtonElement>(".query-example")!.click();
     // Clicking fills the textarea AND runs the query.
-    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("component-on-net(?r,?n) => ?r, ?n");
-    expect(onRun).toHaveBeenCalledWith("component-on-net(?r,?n) => ?r, ?n");
+    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("component.net(?r,?n) => ?r, ?n");
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r, ?n");
   });
 
   it("keeps the helper chrome in a drawer: closed by default, opened by the handle, closed on textarea click", () => {
     const { el, pushExamples } = mountPanel();
-    pushExamples([{ label: "e", query: "component-on-net(?r,?n) => ?r", teaches: "t" }]);
+    pushExamples([{ label: "e", query: "component.net(?r,?n) => ?r", teaches: "t" }]);
     const drawer = () => el.querySelector(".query-drawer")!;
     // Examples live inside the drawer, and the drawer starts closed.
     expect(el.querySelector(".query-drawer .query-example")).not.toBeNull();
@@ -232,7 +232,7 @@ describe("querypanel", () => {
 
   it("running an example closes the drawer so the results are unobscured", () => {
     const { el, pushExamples } = mountPanel();
-    pushExamples([{ label: "e", query: "component-on-net(?r,?n) => ?r", teaches: "t" }]);
+    pushExamples([{ label: "e", query: "component.net(?r,?n) => ?r", teaches: "t" }]);
     el.querySelector<HTMLButtonElement>(".query-drawer-handle")!.click();
     expect(el.querySelector(".query-drawer")!.classList.contains("open")).toBe(true);
     el.querySelector<HTMLButtonElement>(".query-example")!.click();
@@ -288,14 +288,14 @@ describe("querypanel", () => {
 
   it("inserts a relation template at the caret when its chip is clicked", () => {
     const { el, pushRelations } = mountPanel();
-    pushRelations([rel({ name: "component-on-net", args: ["ref_des", "net"] })]);
+    pushRelations([rel({ name: "component.net", args: ["ref_des", "net"] })]);
     const ta = el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
     // Seed some text and place the caret between the two tokens.
     ta.value = "a,  => ?r";
     ta.dispatchEvent(new Event("input", { bubbles: true }));
     ta.setSelectionRange(3, 3); // after "a, "
     el.querySelector<HTMLButtonElement>(".query-relchip")!.click();
-    expect(ta.value).toBe("a, component-on-net(?ref_des, ?net) => ?r");
+    expect(ta.value).toBe("a, component.net(?ref_des, ?net) => ?r");
   });
 });
 
@@ -355,8 +355,8 @@ describe("resizable result columns", () => {
 // kind, so pin → net → parts → other nets is a loop the reader can go round without typing.
 describe("walking from a result row", () => {
   const PRESETS = [
-    { kind: "component", query: 'component-on-net("{ref}", ?net) => ?net', teaches: "projection" },
-    { kind: "net", query: 'component-on-net(?ref, "{net}") => ?ref', teaches: "join" },
+    { kind: "component", query: 'component.net("{ref}", ?net) => ?net', teaches: "projection" },
+    { kind: "net", query: 'component.net(?ref, "{net}") => ?ref', teaches: "join" },
   ];
   const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
   const netCell = (el: HTMLElement) =>
@@ -381,7 +381,7 @@ describe("walking from a result row", () => {
     netCell(el).click();
 
     el.querySelector<HTMLButtonElement>(".query-ask")!.click();
-    const asked = 'component-on-net(?ref, "SDA") => ?ref';
+    const asked = 'component.net(?ref, "SDA") => ?ref';
     expect(onRun).toHaveBeenCalledWith(asked);
     // The query stays in the box, editable, because the hop is meant to teach the sentence that
     // made it.

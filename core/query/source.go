@@ -157,9 +157,9 @@ func NewBaseFrom(reg *facts.Registry, m check.Model) *Base {
 }
 
 // NewSpecLibBase builds a fact base over a whole seeded datasheet corpus with NO design (WS10-010).
-// The datasheet relations (`param`, `part.audience`) project over every PartSpec the FactSource
+// The datasheet relations (`param.max`, `part.audience`) project over every PartSpec the FactSource
 // yields, so `agni query --speclib` searches the spec library rather than one design's parts.
-// Model-dependent relations and predicates (net.*, component.*, reaches) yield nothing.
+// Model-dependent relations and predicates (net.*, component.*, net.reaches) yield nothing.
 func NewSpecLibBase(fs param.FactSource) *Base {
 	return NewSpecLibBaseFrom(facts.DefaultRegistry(), fs)
 }

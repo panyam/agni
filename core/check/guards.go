@@ -208,7 +208,7 @@ func ReachableOfClass(m Model, n *ir.Net, class ComponentClass) string {
 // (input-protection's, WS3-011). esd-protection and esd-clamp-not-tvs split these nets by what
 // protects them (nothing, or a Zener clamp).
 //
-// The external_signal_net query relation projects it too, so a datalog ESD check scopes itself
+// The net.connector_signal query relation projects it too, so a datalog ESD check scopes itself
 // exactly as the Go rules do (WS3-061). It cannot be composed in datalog because its guards read net
 // ATTRIBUTES that have no relation of their own.
 func ExternalSignalNet(m Model, n *ir.Net) bool {

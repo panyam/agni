@@ -38,7 +38,7 @@ func ioMapPinRule(d Declaration) *check.Rule {
 			"wired to a different peripheral than the software expects, which surfaces at bring-up as a " +
 			"peripheral that never responds.",
 		Remedy:              intentRemedy(RuleIOMapPin),
-		Reads:               []string{"pin", "pin.name", "pin.net"},
+		Reads:               []string{"component.pin", "pin.name", "pin.net"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return ioMapPinVerdicts(m, d) },
 		StatesConsideredSet: true,
@@ -74,7 +74,7 @@ func ioMapFarEndRule(d Declaration) *check.Rule {
 			"map says it drives. A net can be on the right pin at one end and land on the wrong part at the " +
 			"other, which no per-net check can see.",
 		Remedy:              intentRemedy(RuleIOMapFarEnd),
-		Reads:               []string{"pin", "pin.name", "pin.net", "reaches"},
+		Reads:               []string{"component.pin", "pin.name", "pin.net", "net.reaches"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return ioMapFarEndVerdicts(m, d) },
 		StatesConsideredSet: true,

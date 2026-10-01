@@ -25,7 +25,7 @@ This is a boolean predicate over the datasheet join (see [the analogy
 guide](../../../../docsite/content/reference/analogy.md)) that resolves the component to its
 part-number stub, reads the ESD rating rows, and admits the ref-des only if a comparable row clears
 the floor. It is keyed by ref-des so a rule joins it against structural relations
-(`component-on-net`, `component.class`, `pin.net`) to ask "an ESD-rated part sitting on this
+(`component.net`, `component.class`, `pin.net`) to ask "an ESD-rated part sitting on this
 signal". Rows are 1:1 with qualifying components; absence is the normal case, not an error.
 
 ### Go projector

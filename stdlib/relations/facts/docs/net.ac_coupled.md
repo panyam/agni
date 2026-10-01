@@ -51,11 +51,11 @@ net.ac_coupled(?n) => ?n
 The parts on them, for a quick read of what a link actually connects:
 
 ```
-net.ac_coupled(?n), component-on-net(?r, ?n) => ?n, ?r
+net.ac_coupled(?n), component.net(?r, ?n) => ?n, ?r
 ```
 
 High-speed pairs that are NOT coupled, the shape a link-integrity review asks about:
 
 ```
-component-on-net(?r, ?n), suffix(?n, "_TXP"), not net.ac_coupled(?n) => ?n, ?r
+component.net(?r, ?n), suffix(?n, "_TXP"), not net.ac_coupled(?n) => ?n, ?r
 ```

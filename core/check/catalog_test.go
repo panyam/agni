@@ -68,7 +68,7 @@ func TestAvailableFromReads(t *testing.T) {
 	if ok, reason := Available(&Rule{Reads: []string{"net.pin_count", "on_net"}}, nil); !ok || reason != "" {
 		t.Errorf("topology-only rule: got (%v, %q), want (true, \"\")", ok, reason)
 	}
-	if ok, reason := Available(&Rule{Reads: []string{"net.names", "param(mpn, max_voltage)"}}, nil); ok || reason == "" {
+	if ok, reason := Available(&Rule{Reads: []string{"net.names", "param.max(mpn, max_voltage)"}}, nil); ok || reason == "" {
 		t.Errorf("datasheet-reading rule: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
 	// A datasheet rule IS applicable once a params tier is attached. The earlier gate returned
@@ -186,7 +186,7 @@ func TestCatalogWithRejectsACollision(t *testing.T) {
 // The two designs below carry the bug, identical empty collision lists with opposite meanings. Before
 // the declaration existed, both read as a pass.
 func TestAvailableRefDesCollisionsCapability(t *testing.T) {
-	rule := &Rule{Reads: []string{"ref_des_collision"}, RequiresCapability: []Capability{CapRefDesCollisions}}
+	rule := &Rule{Reads: []string{"reader.ref_des_collision"}, RequiresCapability: []Capability{CapRefDesCollisions}}
 
 	looked := NewModel(&ir.Design{SourceFormat: "kicad-sch",
 		InputDiagnostics: &ir.InputDiagnostics{Supplied: []string{"ref_des_collisions"}}})

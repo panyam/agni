@@ -33,7 +33,7 @@ the engine used to be able to lose the membership rather than report it.
 ### For software engineers
 
 A filtered projection over `Nets()`, one row per class membership and none for an unclassed net. It
-joins to everything else keyed by net name (`component-on-net`, `pin.net`, `net.max_voltage`), so it
+joins to everything else keyed by net name (`component.net`, `pin.net`, `net.max_voltage`), so it
 composes as a scope filter on any existing question.
 
 **`?net` is NOT unique in this projection.** Membership is a set, so a net in two classes emits two
@@ -88,7 +88,7 @@ The route this relation takes is the capability gate. A netclass-scoped rule dec
 no net-class assignments (only a KiCad project file supplies them)", wherever the design assigns no
 classes. The gate is content-derived, not format-derived, because for a scoped rule "this project
 declares no classes" and "this format has no classes" are the same answer, with nothing in scope
-either way. `has_netclass` is the queryable twin of that capability, so an ad-hoc query can ask whether
+either way. `design.has_netclass` is the queryable twin of that capability, so an ad-hoc query can ask whether
 a class-scoped question is even answerable on this design before trusting its result.
 
 ### Datalog
@@ -103,12 +103,12 @@ Scope an existing question by the project's own class, the way a vendor rule dec
 parts sitting on a high-speed net:
 
 ```
-net.netclass(?net, "HighSpeed"), component-on-net(?ref, ?net) => ?ref, ?net
+net.netclass(?net, "HighSpeed"), component.net(?ref, ?net) => ?ref, ?net
 ```
 
-Guard it with `has_netclass`, so the query states that it only means something on a design that
+Guard it with `design.has_netclass`, so the query states that it only means something on a design that
 assigns classes:
 
 ```
-has_netclass(?_), net.netclass(?net, "HighSpeed"), component-on-net(?ref, ?net) => ?ref, ?net
+design.has_netclass(?_), net.netclass(?net, "HighSpeed"), component.net(?ref, ?net) => ?ref, ?net
 ```

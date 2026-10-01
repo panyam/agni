@@ -54,4 +54,4 @@ report each collision the reader recorded.
 
     select C in ref_des_collisions
 
-Reads: ref_des_collision. Tier P. Site: diagnostic (reader-detected).
+Reads: reader.ref_des_collision. Tier P. Site: diagnostic (reader-detected).

@@ -15,7 +15,7 @@ dead link. Termination is easy to forget precisely because its absence is not im
 
 ### How it is checked
 
-`terminated(?h)` is derived when a high-suffix net (e.g. `_CANH`) `reaches` a low-suffix net
+`terminated(?h)` is derived when a high-suffix net (e.g. `_CANH`) `net.reaches` a low-suffix net
 (`_CANL`) through the series-passive walk. That walk crosses only 2-net R/L/ferrite/fuse elements,
 so it finds the terminating resistor across the pair but does NOT cross the multi-pin transceiver
 that legitimately drives both lines, and because it is transitive it also accepts a split

@@ -91,7 +91,7 @@ const REPLIES: Record<string, unknown> = {
     examples: [],
     // Without these a click highlights and asks nothing, so their absence here would make the click
     // test below fail for the right reason.
-    entityQueries: [{ kind: "net", query: 'component-on-net(?ref, "{net}") => ?ref', teaches: "join" }],
+    entityQueries: [{ kind: "net", query: 'component.net(?ref, "{net}") => ?ref', teaches: "join" }],
   },
 };
 

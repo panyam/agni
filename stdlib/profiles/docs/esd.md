@@ -53,7 +53,7 @@ interface, scoped by the profile's signal naming and gated by the profile's pres
 review item binds `profile: CAN` and reports against that interface alone.
 
 They agree by construction rather than by two hand-written guard stacks kept in sync, because both
-read the same `external_signal_net` scope, and this requirement's three protection clauses are the
+read the same `net.connector_signal` scope, and this requirement's three protection clauses are the
 same three exemptions at the same radius (`check.ProtectionReachHops`, interpolated into the
 generated datalog rather than written as a number).
 

@@ -16,8 +16,8 @@ import (
 // is not power_in, sitting alone on its net. It replaces the withdrawn Spec power-pin-unconnected
 // (PR 217) and does not overlap power-input-not-driven, which needs the power_in type. Keyed on net
 // fan-out (net.pin_count < 2), NOT net membership, because KiCad synthesizes a stub net for every
-// bare pin. Gated by has_nc_channel so it stays silent on formats that cannot express intentional
-// no-connect.
+// bare pin. Gated by design.has_nc_channel so it stays silent on formats that cannot express
+// intentional no-connect.
 var powerPinMistypedQ = query.FindingQuery{
 	Rule: check.Rule{
 		Name:     "power-pin-mistyped",
@@ -34,19 +34,19 @@ var powerPinMistypedQ = query.FindingQuery{
 		Detail: ruleDoc("power-pin-mistyped"),
 	},
 	Query: query.MustParse(`
-		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
-		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
+		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
+		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, design.has_nc_channel(?nc);
 		bad(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
 	// The considered set is every pin the NAME says is a supply or ground, on a format that can
 	// express intentional no-connect. The type test and the fan-out test both drop out, since a
-	// correctly typed pin and a wired pin were both looked at and cleared. has_nc_channel stays
+	// correctly typed pin and a wired pin were both looked at and cleared. design.has_nc_channel stays
 	// because it asks whether the FORMAT can answer at all; without it every pin on an EDIF netlist
 	// would read as verified by a rule that is silent there. See
 	// docsite/content/architecture/rules-and-checks.md#source-format-capabilities.
 	Domain: &query.Domain{
 		Query: query.MustParse(`
-		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  pin.net(?ref, ?pin, ?net), has_nc_channel(?nc);
-		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), pin.net(?ref, ?pin, ?net), has_nc_channel(?nc);
+		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  pin.net(?ref, ?pin, ?net), design.has_nc_channel(?nc);
+		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), pin.net(?ref, ?pin, ?net), design.has_nc_channel(?nc);
 		scope(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
 		Witness: "pin {pin} is named like a power/ground pin and is either typed power_in or wired to a shared net",
 	},

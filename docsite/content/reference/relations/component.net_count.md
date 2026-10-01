@@ -30,18 +30,18 @@ The other two values are worth a look during a review:
 ### For software engineers
 
 This is the degree of each component node in the design graph, counting distinct neighbouring
-nets rather than edges. It is a derived count of `component-on-net`, and for every ref it equals the
-number of distinct `?n` in `component-on-net(ref, ?n)`, and a test holds the two to that. It is
+nets rather than edges. It is a derived count of `component.net`, and for every ref it equals the
+number of distinct `?n` in `component.net(ref, ?n)`, and a test holds the two to that. It is
 total over components, so an absent row means the ref is not in the design, never that it has no
 connections.
 
 It exists because a rule body has no aggregation. "Parts on exactly two nets" otherwise needs
-three copies of `component-on-net` and a negation (agni issue 727).
+three copies of `component.net` and a negation (agni issue 727).
 
 ### Go projector
 
 `componentNetCountFacts` in `stdlib/relations/facts.go` walks `Model.Components()` and then each
-net's connection list, the same source `component-on-net` reads, and emits one row per ref with the
+net's connection list, the same source `component.net` reads, and emits one row per ref with the
 count in the numeric slot. It reads connections rather than part-type pins, so it answers on a bare
 netlist that carries no pin data. A ref that appears in a connection with no component record still
 gets a row, citing nothing because there is no placement to cite. The count is dimensionless.
@@ -58,7 +58,7 @@ Capacitors on exactly two nets, with both nets named. The `?a < ?b` keeps one ro
 than one per ordering:
 
 ```
-component.class(?r, "capacitor"), component.net_count(?r, 2), component-on-net(?r, ?a), component-on-net(?r, ?b), ?a < ?b => ?r, ?a, ?b
+component.class(?r, "capacitor"), component.net_count(?r, 2), component.net(?r, ?a), component.net(?r, ?b), ?a < ?b => ?r, ?a, ?b
 ```
 
 Parts wired to nothing:

@@ -22,7 +22,7 @@ export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
 export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
   /**
    * query is the datalog text, the same surface `agni query` accepts:
-   *   component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
+   *   component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
    *
    * @generated from field: string query = 1;
    */
@@ -267,8 +267,8 @@ export const ListRelationsRequestSchema: GenMessage<ListRelationsRequest> = /*@_
 
 /**
  * RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
- * `args` the labels a template inserts as `?arg` (so `component-on-net` inserts
- * `component-on-net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
+ * `args` the labels a template inserts as `?arg` (so `component.net` inserts
+ * `component.net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
  * ("netlist" | "board" | "datasheet" | "predicate" | "overlay").
  *
  * @generated from message agni.v1.webapi.RelationInfo
@@ -656,7 +656,7 @@ export const QueryService: GenService<{
    * RunQuery parses and evaluates the query text over the loaded design and returns the projected
    * columns and answer rows, each row carrying the provenance of the facts that produced it. The
    * relation vocabulary is the same the CLI documents (net.max_voltage, component.mpn,
-   * component-on-net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
+   * component.net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
    * relation is empty because the server wires no params dir and datasheet data is deployment-bound
    * (C16), so a query over `param` returns no rows rather than an error.
    *

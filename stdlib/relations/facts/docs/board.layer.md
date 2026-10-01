@@ -50,7 +50,7 @@ board.layer(?n, ?layer) => ?n, ?layer
 Which components sit on nets routed on the back copper (join `board.layer` to the netlist tier):
 
 ```
-board.layer(?n, "B.Cu"), component-on-net(?r, ?n) => ?r, ?n
+board.layer(?n, "B.Cu"), component.net(?r, ?n) => ?r, ?n
 ```
 
 Both need a board-bearing design (a `.kicad_pcb` or an IPC-2581 file); on a netlist-only load they

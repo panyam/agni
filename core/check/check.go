@@ -158,7 +158,7 @@ const (
 	// KindSymbol is a symbol REFERENCE that failed to resolve (WS1-052), naming an absent file rather
 	// than anything placed. Its Ref is the reference as the source spelled it (`res.sym`,
 	// `Library:Symbol`). Not KindComponent, because one missing file is one finding however many parts
-	// it cost pins; the affected ref-des live in Message and the unresolved_symbol relation.
+	// it cost pins; the affected ref-des live in Message and the reader.unresolved_symbol relation.
 	KindSymbol = "symbol"
 	// KindSignal is a REQUIREMENT SLOT, the role a profile asks for ("STB", "CANL"), with Ref the
 	// signal name as the profile spells it. It is the one kind that may name something the design
@@ -191,7 +191,7 @@ type Rule struct {
 	Remedy     string
 	Detail     string   // long-form markdown: meaning, rationale, diagram, query structure
 	Primitives []string // query primitives Eval composes
-	Reads      []string // facts the rule reads, in the fact vocabulary (net.pin_count, on_net, param(...))
+	Reads      []string // facts the rule reads, in the fact vocabulary (net.pin_count, on_net, param.max(...))
 	// OptionalReads is the subset of Reads a rule consults only to EXEMPT findings, so their absence
 	// does not make it inapplicable. Available's tier gate skips them. esd-protection, for example,
 	// credits an IC's ESD rating when a datasheet is attached and still runs without --params, unlike
@@ -282,15 +282,15 @@ type Capability string
 const (
 	// CapTypesPowerOut means the source format classifies power-OUTPUT pins. Without it a rail's
 	// driver reads as a plain input and power-input-not-driven cannot conclude "unpowered". The
-	// queryable twin is types_power_out / the design.types_power_out fact.
-	CapTypesPowerOut Capability = "types_power_out"
+	// queryable twin is design.types_power_out / the design.types_power_out fact.
+	CapTypesPowerOut Capability = "design.types_power_out"
 	// CapNoConnectChannel means the design can express an intentional no-connect (a NO_CONNECT-typed
 	// pin or an nc-marker net name). Without it unconnected-pin cannot tell a deliberate open pin from
-	// a forgotten one. The queryable twin is has_nc_channel / design.nc_channel.
+	// a forgotten one. The queryable twin is design.has_nc_channel / design.nc_channel.
 	CapNoConnectChannel Capability = "nc_channel"
 	// CapNetClass means the design carries tool-assigned net-class membership (WS3-105). A rule scoped
 	// by net class selects nothing without it and reports clean. It depends on the design's CONTENT,
-	// not its format grammar. The queryable twin is has_netclass / the design.has_netclass fact.
+	// not its format grammar. The queryable twin is design.has_netclass / the design.has_netclass fact.
 	CapNetClass Capability = "netclass"
 
 	// CapRefDesCollisions means the READER checked this design for ref-des collisions. It is declared
@@ -302,7 +302,7 @@ const (
 	// CapNetClassDefs means the design declares net-class DEFINITIONS, the clearance, track width and
 	// via sizes a class's nets should route at (WS3-111). Separate from CapNetClass because a project
 	// can assign nets to a class it never defines, and a declared-vs-actual rule gated on membership
-	// would then run over zero comparisons and pass. The queryable twin is has_netclass_defs.
+	// would then run over zero comparisons and pass. The queryable twin is design.has_netclass_defs.
 	CapNetClassDefs Capability = "netclass_defs"
 
 	// CapJunctionTaps means the READER examined wire-end-on-wire-body taps and recorded both the joined

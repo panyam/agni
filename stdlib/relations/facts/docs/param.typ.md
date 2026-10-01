@@ -42,7 +42,7 @@ Separating it is also the safer shape on its own terms. A typ sitting between `m
 tuple reads as a bound, and a rule comparing a rail against it would look perfectly ordinary while
 reporting a confident wrong answer. Its own name puts that choice at the call site.
 
-The number is reduced to its SI base unit by `param.InBaseUnit`, the same conversion `param` and
+The number is reduced to its SI base unit by `param.InBaseUnit`, the same conversion `param.max` and
 `param.range` go through, and the row carries `BaseUnit` so an ordering comparison can refuse amps
 against volts. A parameter whose printed unit has no known scale yields a row with no number, so its
 symbol and citation survive.

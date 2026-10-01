@@ -49,7 +49,7 @@ var experimentalOnPowerNet = query.FindingQuery{
 		Tags:     map[string]string{check.KeyCategory: "house-style"},
 	},
 	Query: query.MustParse(`
-		exp_on_power(?net) :- component-on-net(?x, ?net),
+		exp_on_power(?net) :- component.net(?x, ?net),
 		                      prefix(?x, "X"),
 		                      pin.net(?ref, ?pin, ?net),
 		                      pin.role(?ref, ?pin, "power"),

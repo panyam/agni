@@ -7,7 +7,7 @@ description: "the unit a datasheet parameter is PRINTED in; param and param.rang
 
 `param.unit(mpn, symbol, unit)` yields one row per parameter of a datasheet spec that joined to a
 part in the design, carrying the unit the vendor PRINTED that parameter in: `"mV"`, `"mA"`, `"Ohm"`,
-`"kV"`. It is the companion to `param` and `param.range`, whose numbers are reduced to SI base units
+`"kV"`. It is the companion to `param.max` and `param.range`, whose numbers are reduced to SI base units
 so that a comparison can trust them. This relation is where the vendor's own spelling survives.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
@@ -20,7 +20,7 @@ current in milliamps. A modern FET states RDS(on) in milliohms. Those are the or
 unusual ones, and a seeded spec records them exactly as the sheet prints them so a reviewer can check
 a row against the page it came from.
 
-What a QUERY sees is different, and deliberately so. `param` and `param.range` hand you a number in
+What a QUERY sees is different, and deliberately so. `param.max` and `param.range` hand you a number in
 the base unit: volts, amps, ohms. A threshold written against them is therefore written once, in the
 unit the physics is in, and it does not change meaning because one vendor printed millivolts and
 another printed volts. When you want to know what was actually printed, join this relation.
@@ -38,7 +38,7 @@ optional column is advisory and a normalized number is structural (CONSTRAINTS C
 exists so that normalizing loses nothing, since the printed spelling stays queryable and is no longer
 something a numeric comparison can silently get wrong.
 
-**A parameter whose unit the conversion table does not recognize still appears in `param` and
+**A parameter whose unit the conversion table does not recognize still appears in `param.max` and
 `param.range`, with its NUMBER absent.** It keeps its symbol, kind, conditions and citation, because a
 relation that answers "what does this part specify" must not shorten its list silently. Only the
 number goes, since an unknown scale means there is no number to publish.
@@ -53,7 +53,7 @@ datasheet row.
 Select them with the `absent` predicate, which asks whether a field carried a value at all:
 
 ```
-param.unit(?mpn, ?sym, ?unit), param(?mpn, ?sym, ?max), absent(?max) => ?mpn, ?sym, ?unit
+param.unit(?mpn, ?sym, ?unit), param.max(?mpn, ?sym, ?max), absent(?max) => ?mpn, ?sym, ?unit
 ```
 
 `not param.range(...)` does NOT find them, because the row exists and negation asks whether a
@@ -79,5 +79,5 @@ Show a value next to the unit it was printed in, remembering that `?max` is in t
 `?unit` is what the vendor wrote (so an 800 mA row reads as `0.8` next to `mA`):
 
 ```
-param(?mpn, ?sym, ?max), param.unit(?mpn, ?sym, ?unit) => ?mpn, ?sym, ?max, ?unit
+param.max(?mpn, ?sym, ?max), param.unit(?mpn, ?sym, ?unit) => ?mpn, ?sym, ?max, ?unit
 ```

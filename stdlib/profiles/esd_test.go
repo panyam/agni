@@ -70,7 +70,7 @@ func TestESDRequirementSilentWithoutConnector(t *testing.T) {
 // from `rule: esd-protection + scope` to `profile: CAN`. The requirement is scoped and the catalog
 // rule is design-wide, so they are compared on the nets the profile actually claims, and within that
 // scope the two must agree exactly. They are built to agree by construction (one shared
-// external_signal_net scope, the same three exemptions at check.ProtectionReachHops), and this pins
+// net.connector_signal scope, the same three exemptions at check.ProtectionReachHops), and this pins
 // it so a later edit to either side cannot drift them apart silently.
 func TestESDRequirementMatchesCoreRule(t *testing.T) {
 	d := canExposed()

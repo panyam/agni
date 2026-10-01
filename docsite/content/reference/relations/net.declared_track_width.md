@@ -44,7 +44,7 @@ supplied the value (`net_settings:<class>`), so a finding can say where the limi
 
 Only a KiCad project read populates this, and only when the project declares class definitions. A
 rule comparing declared against actual finds nothing to compare on every other source and reports
-clean, which a review cannot tell from a genuine pass. Such a rule gates on `has_netclass_defs` (and
+clean, which a review cannot tell from a genuine pass. Such a rule gates on `design.has_netclass_defs` (and
 on the board tier for the actual side), so an absent declaration reads not-applicable.
 
 ### Datalog

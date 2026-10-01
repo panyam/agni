@@ -121,13 +121,13 @@ func TestCompileRejectsWhatItCannotRun(t *testing.T) {
 func TestUnknownRelationSuggestsTheRealOne(t *testing.T) {
 	_, err := CompileDeck(deck(QueryDef(query.FindingQuery{
 		Rule:       meta("r"),
-		Query:      query.MustParse(`compnent-on-net(?r, ?n) => ?r`),
+		Query:      query.MustParse(`compnent.net(?r, ?n) => ?r`),
 		Kind:       check.KindComponent,
 		SubjectVar: "r",
 		Message:    "m",
 	})))
-	if err == nil || !strings.Contains(err.Error(), "component-on-net") {
-		t.Errorf("error = %v, want a suggestion naming component-on-net", err)
+	if err == nil || !strings.Contains(err.Error(), "component.net") {
+		t.Errorf("error = %v, want a suggestion naming component.net", err)
 	}
 }
 

@@ -15,7 +15,7 @@ var duplicateRefDes = &check.Rule{
 	Impact:     "Two parts sharing a ref-des collapse into one in the BOM and corrupt the net join key: one part is dropped from the build, or connections meant for two parts land on one. It is an annotation slip that silently falsifies both the BOM and the netlist.",
 	Remedy:     "Re-annotate the schematic so each physical part holds its own designator, then re-check the BOM, since whichever part was silently merged is the one to look at first.",
 	Primitives: []string{"select"},
-	Reads:      []string{"ref_des_collision"},
+	Reads:      []string{"reader.ref_des_collision"},
 	// The rule IS the reader's diagnostic, so a reader that does not compute it leaves this rule
 	// with nothing to report, the same output as a clean design. Gating on the capability makes the
 	// rule not-applicable, with a reason, instead of a pass nobody earned (agni issue 309).

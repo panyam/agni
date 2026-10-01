@@ -9,7 +9,7 @@ import (
 )
 
 // canGood has CANH/CANL/TXD/RXD all wired end-to-end, and R1 (a resistor, and the reach walk crosses
-// R-prefixed 2-net parts) bridges CANH↔CANL, so `reaches(CANH, CANL)` holds and the pair is
+// R-prefixed 2-net parts) bridges CANH↔CANL, so `net.reaches(CANH, CANL)` holds and the pair is
 // terminated. No profile finding. (A real terminator named "RT1" is classified by its part-type
 // data; this hand fixture has none, so it uses the R-prefix convention.)
 func canGood() *ir.Design {
@@ -24,7 +24,7 @@ func canGood() *ir.Design {
 	}
 }
 
-// canBroken has no termination resistor (only the multi-pin U1/U2 sit on both bus nets, which `reaches`
+// canBroken has no termination resistor (only the multi-pin U1/U2 sit on both bus nets, which `net.reaches`
 // must NOT count), no RXD net (missing), and TXD on a single-pin net (dangling).
 func canBroken() *ir.Design {
 	return &ir.Design{

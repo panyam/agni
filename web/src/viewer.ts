@@ -893,7 +893,7 @@ export class ViewerPresenter {
     this.verdictCache.clear();
     this.focusedVerdict = "";
     this.skippedCache.clear();
-    // Query results were computed under the previous vocabulary too (`rail` answers differently),
+    // Query results were computed under the previous vocabulary too (`net.rail` answers differently),
     // so leaving them would show two vocabularies at once.
     this.views.query?.setState(emptyResult(false));
     if (this.mount && this.path) await this.loadRules(this.mount, this.path);

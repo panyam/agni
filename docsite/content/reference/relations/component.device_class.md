@@ -27,7 +27,7 @@ the spec rather than a guess. The same value also enriches the part's class set,
 This is a projection over the datasheet join (see [the analogy
 guide](../../../../docsite/content/reference/analogy.md)) that resolves the component to its
 part-number stub and reads the single `device_class` string the spec declares. It is keyed by
-ref-des so a rule joins it against structural relations (`component-on-net`, `pin.net`) to ask "an
+ref-des so a rule joins it against structural relations (`component.net`, `pin.net`) to ask "an
 eFuse sitting on the input rail". Prefer this relation over `component.class` for a datasheet-class
 review item, because it gates to not-applicable without a seeded set, where `component.class` (a
 netlist relation) would silently pass.
@@ -67,5 +67,5 @@ component.device_class(?r, "efuse") => ?r
 The datasheet-classified eFuses sitting on a rail (join the datasheet class to structure):
 
 ```
-component.device_class(?r, "efuse"), component-on-net(?r, ?n), rail(?n) => ?r
+component.device_class(?r, "efuse"), component.net(?r, ?n), net.rail(?n) => ?r
 ```

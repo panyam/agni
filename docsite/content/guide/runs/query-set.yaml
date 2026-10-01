@@ -7,14 +7,14 @@ script: |
   cat > audit.yaml <<'YAML'
   title: Test point audit
   preamble: |
-    has_tp(?n) :- component-on-net(?tp, ?n), component.class(?tp, "test_point");
+    has_tp(?n) :- component.net(?tp, ?n), component.class(?tp, "test_point");
   queries:
     - name: Net count
       query: entity(?net, "net") => count(?net)
     - name: Nets with no test point
       query: entity(?net, "net"), not has_tp(?net) => ?net
     - name: Ground test points
-      query: net.ground(?net), component-on-net(?tp, ?net), component.class(?tp, "test_point") => count(distinct ?tp)
+      query: net.ground(?net), component.net(?tp, ?net), component.class(?tp, "test_point") => count(distinct ?tp)
   YAML
   agni query netlist-audit.tel --set audit.yaml
 show: |

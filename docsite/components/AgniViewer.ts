@@ -9,7 +9,7 @@
 //
 // Usage in a page (front-matter must set `playground: viewer`):
 //   <agni-viewer src="{{.Site.PathPrefix}}/static/designs/demo-board.svg"
-//                caption="Demo board — B.Cu/F.Cu copper"></agni-viewer>
+//                caption="Demo board, B.Cu and F.Cu copper"></agni-viewer>
 
 interface ViewState {
   scale: number;

@@ -10,13 +10,13 @@ import (
 const auditYAML = `
 title: Audit
 preamble: |
-  has_tp(?n) :- component-on-net(?tp,?n), component.class(?tp,"test_point");
+  has_tp(?n) :- component.net(?tp,?n), component.class(?tp,"test_point");
 queries:
   - name: Probed nets
     query: entity(?n,"net"), has_tp(?n) => ?n
     description: nets carrying a test point
   - name: Parts
-    query: component-on-net(?r,?n) => count(distinct ?r)
+    query: component.net(?r,?n) => count(distinct ?r)
 `
 
 func TestParseQuerySetReadsEveryField(t *testing.T) {
