@@ -226,7 +226,7 @@ func TestEsdTestModelGate(t *testing.T) {
 	hbm := esdSpec("DEMO-HBM", 8000)
 	hbm.Parameters[0].Attributes["esd_test_model"] = "hbm"
 	fired := map[string]bool{}
-	for _, fnd := range esdProtection.Findings(check.NewModelWithParams(d, nil, param.ParamSet{"DEMO-HBM": hbm})) {
+	for _, fnd := range esdProtection.Findings(check.NewModel(d, check.WithParamProvider(param.ParamSet{"DEMO-HBM": hbm}))) {
 		fired[check.EntityRef(fnd.Subject)] = true
 	}
 	if !fired["SIG"] {
@@ -249,7 +249,7 @@ func TestEsdIcRating(t *testing.T) {
 	})
 	fired := func(set param.ParamSet) map[string]bool {
 		got := map[string]bool{}
-		for _, f := range esdProtection.Findings(check.NewModelWithParams(d, nil, set)) {
+		for _, f := range esdProtection.Findings(check.NewModel(d, check.WithParamProvider(set))) {
 			got[check.EntityRef(f.Subject)] = true
 		}
 		return got

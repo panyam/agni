@@ -44,7 +44,7 @@ func supplyModel(method string, confidence float64, tweak ...func(*parampb.PartS
 	for _, fn := range tweak {
 		fn(spec)
 	}
-	return check.NewModelWithParams(d, nil, param.ParamSet{"ACME-33": spec})
+	return check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
 }
 
 // --- provisional: a fail on a verification the document has outrun ---

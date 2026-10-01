@@ -9,7 +9,7 @@ import (
 
 // moduleMissingRule fails once per declared module that no design component satisfies. A module matches
 // when ANY component is of its declared class (Model.HasClass, so a family tag matches its specific
-// classes) or carries its exact MPN (Model.ComponentMPN, which resolves only on a params-built model).
+// classes) or carries its exact MPN (Model.ComponentMPN).
 // The finding is a design-level absence, a KindComponent finding with the module label as Subject and
 // no provenance, because an absent module has no source site to cite (the presentResult shape).
 func moduleMissingRule(d Declaration) *check.Rule {

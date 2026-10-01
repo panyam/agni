@@ -36,7 +36,7 @@ net's track segments (deduplicated via a seen-set and sorted). It emits one `boa
 layer)` row per layer.
 
 The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
-design was loaded with board geometry (`NewModelWithBoard`, fed a `.kicad_pcb` or IPC-2581 board
+design was loaded with board geometry (`check.WithBoard`, fed a `.kicad_pcb` or IPC-2581 board
 sidecar). For a query this is silent by construction, so `board.layer` yields zero rows on any design
 without board geometry, the same posture the datasheet tier takes without `--params`. A query
 returning nothing does not mean a net has no layers; it can mean the design carries no board at

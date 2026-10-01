@@ -135,7 +135,7 @@ func main() {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
 		cli("agni check <design> --verdicts")
-		m := check.NewModelWithParams(d, nil, nil)
+		m := check.NewModel(d)
 		byOutcome := map[check.Outcome]int{}
 		var undecided []string
 		for _, v := range check.RunVerdicts(m, check.BuiltinRules()) {
@@ -204,10 +204,9 @@ func rows(d *ir.Design, q string) ([][]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
-	// NewModelWithParams, not NewModel. The params constructor alone fills the model's MPN map, and
-	// component.mpn reads it rather than ir.Component.mpn, so the other way leaves the relation EMPTY
-	// on a design whose parts all carry one. A nil spec provider is fine.
-	got, err := (query.Naive{}).Eval(parsed, query.NewBase(check.NewModelWithParams(d, nil, nil)))
+	// No provider: component.mpn reads the MPN every model joins from the design (agni issue 748), and
+	// only the datasheet relations need specs.
+	got, err := (query.Naive{}).Eval(parsed, query.NewBase(check.NewModel(d)))
 	if err != nil {
 		return nil, fmt.Errorf("eval: %w", err)
 	}

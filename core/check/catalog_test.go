@@ -75,7 +75,7 @@ func TestAvailableFromReads(t *testing.T) {
 	// not-applicable unconditionally, so a seeded ask could never pass/fail in a review even with
 	// --params. m == nil (catalog listing) and a params-less model still gate.
 	pr := &Rule{Reads: []string{"param.supply_abs_max"}}
-	seeded := NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{})
+	seeded := NewModel(supplyDesign("+5V", false, "ACME-33"), WithParamProvider(param.ParamSet{}))
 	if ok, _ := Available(pr, seeded); !ok {
 		t.Error("datasheet rule with a params tier attached: want available")
 	}

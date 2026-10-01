@@ -54,7 +54,7 @@ func TestDatasheetSubtypesClockFamily(t *testing.T) {
 
 	// With the seeded "ceramic resonator", Y1 gains the ceramic_resonator subtype + the clock
 	// family tag, and crystal-load-caps excludes it (integrated caps).
-	seeded := check.NewModelWithParams(clockDesign("RES-1"), nil, param.ParamSet{"RES-1": resonatorSpec("RES-1")})
+	seeded := check.NewModel(clockDesign("RES-1"), check.WithParamProvider(param.ParamSet{"RES-1": resonatorSpec("RES-1")}))
 	if !seeded.HasClass("Y1", check.ClassCeramicResonator) {
 		t.Error("seeded Y1 should carry the ceramic_resonator subtype (normalized from 'ceramic resonator')")
 	}

@@ -284,7 +284,7 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 			continue
 		}
 		if TierOf(fact) == TierParam && (m == nil || !m.HasParams()) {
-			// The params tier is a per-run injection (check --params, NewModelWithParams), not a
+			// The params tier is a per-run injection (check --params, WithParamProvider), not a
 			// property of the design. When one IS attached the rule must run, or a seeded
 			// datasheet ask in a review could never pass or fail.
 			return false, "needs a seeded datasheet parameter set (check --params)"

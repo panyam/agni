@@ -51,7 +51,7 @@ type ncNet struct {
 // ncModel builds a board-bearing model: nets with class membership, class definitions, and copper.
 func ncModel(t *testing.T, nets []*ir.Net, defs []*ir.Constraint, bg *geom.BoardGeometry) check.Model {
 	t.Helper()
-	return check.NewModelWithBoard(&ir.Design{Nets: nets, Constraints: defs}, bg)
+	return check.NewModel(&ir.Design{Nets: nets, Constraints: defs}, check.WithBoard(bg))
 }
 
 // TestNetclassTrackWidthCascade is the regression that motivated the design. VBUS is in HighSpeed

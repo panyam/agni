@@ -70,9 +70,9 @@ func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.
 	}
 	// The read's lexicon also reaches the MODEL, so name matches that hold no net (spec name FFIs,
 	// pin-role derivation) use the vocabulary the design was stamped with.
-	var mopts []check.ModelOption
+	mopts := []check.ModelOption{check.WithBoard(bg), check.WithParamProvider(specs)}
 	if lex := ReadOpts(opts...).Lexicon; lex != nil {
 		mopts = append(mopts, check.WithLexicon(lex))
 	}
-	return check.NewModelWithParams(d, bg, specs, mopts...), nil
+	return check.NewModel(d, mopts...), nil
 }

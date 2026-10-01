@@ -170,7 +170,7 @@ DERIVED-NORMALIZATION and naming the pass; (c) degrade safely when absent (a des
 pass (a hand-authored test IR) leaves it empty and the consumer re-derives as a fallback, never
 treats empty as a fact). Note what (c) asks of a SECOND tier writing the same field: EMPTY is the
 signal to re-derive, so a tier writing its own answer into a set no earlier tier has filled leaves a
-partial set, and the fallback is defeated rather than triggered. `check.NewModelWithParams` runs the
+partial set, and the fallback is defeated rather than triggered. `check.WithParamProvider` runs the
 convention pass first for exactly that reason (agni issue 710).
 First instance: `Component.device_classes` (the classify pass); second:
 `ir.Net.roles` (the WS3-072 naming pass, `classify.StampNetRoles`); third: `Component.value` (the
@@ -441,7 +441,7 @@ slices. The target is a *helper handed the whole design to scan*, not an *analys
 as its input*. A raw `*ir.Design` (or `*ir.Net`/`*ir.Component`) parameter is allowed in three
 categories: (1) **producing** the IR, meaning the readers (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `telesis`,
 `geda`), the `readers/formats` loader, `internal/netgraph` (IR emission); (2) **constructing** the Model or
-**loading** the design, meaning `check`'s `NewModel`/`NewModelWithBoard`/`NewModelWithParams`/`RunDesign`,
+**loading** the design, meaning `check`'s `NewModel` (with its `WithBoard`/`WithParamProvider` options)/`RunDesign`,
 and the `cmd/agni`/`service` loaders that read a file and build the Model; (3) a
 **top-level analysis/transform that takes designs as its input and uses no Model index**, meaning `diff`
 (compares two designs, builds its own by-key match maps), `validate`, and `graph` (netlist→layout).

@@ -139,10 +139,10 @@ func fetSpec(mpn string, rdsOhms float64) *parampb.PartSpec {
 
 // lsModel seeds the ordinary one-switch design.
 func lsModel(d *ir.Design, ocpVolts, rdsOhms float64) check.Model {
-	return check.NewModelWithParams(d, nil, param.ParamSet{
+	return check.NewModel(d, check.WithParamProvider(param.ParamSet{
 		"ACME-HSS":  hssSpec("ACME-HSS", ocpVolts),
 		"ACME-NFET": fetSpec("ACME-NFET", rdsOhms),
-	})
+	}))
 }
 
 // lsDecl is a one-rail declaration carrying only a budget.
@@ -260,11 +260,11 @@ func TestLoadSwitchHighestLimitBinds(t *testing.T) {
 		lsSwitch{n: "1", senseOhms: 0.025, in: "VIN", out: "VOUT", ctrlMPN: "ACME-HSS", fetMPN: "ACME-NFET"},
 		lsSwitch{n: "2", senseOhms: 0.005, in: "VIN", out: "VOUT", ctrlMPN: "ACME-HSS2", fetMPN: "ACME-NFET"},
 	)
-	m := check.NewModelWithParams(d, nil, param.ParamSet{
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{
 		"ACME-HSS":  hssSpec("ACME-HSS", 0.05),  // 2A
 		"ACME-HSS2": hssSpec("ACME-HSS2", 0.05), // 10A
 		"ACME-NFET": fetSpec("ACME-NFET", 0.02),
-	})
+	}))
 	if fs := lsEval(lsDecl("VOUT", 5), m); len(fs) != 0 {
 		t.Errorf("the 10A switch covers the 5A budget, so the rail must be silent, got %+v", fs)
 	}
@@ -403,10 +403,10 @@ func TestLoadSwitchSilentWithoutTheControllerDatasheet(t *testing.T) {
 // threshold, which is the same gap as an unseeded one. Nothing identifies it as a current-limiting
 // part, so no switch resolves and there is no verdict. Skip, never pass.
 func TestLoadSwitchSilentWithoutAThreshold(t *testing.T) {
-	m := check.NewModelWithParams(oneSwitch(0.025), nil, param.ParamSet{
+	m := check.NewModel(oneSwitch(0.025), check.WithParamProvider(param.ParamSet{
 		"ACME-HSS":  {Mpn: "ACME-HSS", Manufacturer: "Acme"},
 		"ACME-NFET": fetSpec("ACME-NFET", 0.02),
-	})
+	}))
 	if fs := lsEval(lsDecl("VOUT", 5), m); len(fs) != 0 {
 		t.Errorf("a controller stating no threshold must yield no verdict, got %+v", fs)
 	}

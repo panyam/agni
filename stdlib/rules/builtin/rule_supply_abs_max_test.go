@@ -71,7 +71,7 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 
 func runSupplyRule(t *testing.T, d *ir.Design, set param.ParamSet) []check.Finding {
 	t.Helper()
-	m := check.NewModelWithParams(d, nil, set)
+	m := check.NewModel(d, check.WithParamProvider(set))
 	return check.Run(m, []*check.Rule{supplyExceedsAbsMax})
 }
 
@@ -196,7 +196,7 @@ func TestParamProviderMockBackend(t *testing.T) {
 		}
 		return nil
 	})
-	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, mock)
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(mock))
 	if fs := check.Run(m, []*check.Rule{supplyExceedsAbsMax}); len(fs) != 1 {
 		t.Fatalf("mock ParamProvider backend: want 1 finding, got %v", fs)
 	}

@@ -104,7 +104,7 @@ const (
 	RelEsdRated = "component.esd_rated" // component.esd_rated(ref_des): part carries a floor-clearing ESD rating. doc: facts/docs/component.esd_rated.md
 
 	// component.device_class is the class the part's DATASHEET declares (PartSpec.device_class),
-	// joined by MPN (WS10-013). Empty without --params. NewModelWithParams also merges it into
+	// joined by MPN (WS10-013). Empty without --params. WithParamProvider also merges it into
 	// component.class's set, so HasClass answers from it too.
 	RelComponentDeviceClass = "component.device_class" // component.device_class(ref_des, class): the datasheet-declared device class. doc: facts/docs/component.device_class.md
 

@@ -77,10 +77,10 @@ func railDesign(beadRef string) *ir.Design {
 
 func regModel(t *testing.T, d *ir.Design, vout, absMax float64) check.Model {
 	t.Helper()
-	return check.NewModelWithParams(d, nil, param.ParamSet{
+	return check.NewModel(d, check.WithParamProvider(param.ParamSet{
 		"ACME-REG": regSpec("ACME-REG", vout, "hand", 1),
 		"ACME-33":  ldoSpec("ACME-33", absMax),
-	})
+	}))
 }
 
 // TestRegulatorOutputExceedsAbsMax is the WS3-028 acceptance. It compares a param on one part against a
@@ -160,7 +160,7 @@ func TestRegulatorOutputOneSidedSeed(t *testing.T) {
 		{"source unseeded", param.ParamSet{"ACME-33": ldoSpec("ACME-33", 3.6)}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			m := check.NewModelWithParams(railDesign(""), nil, c.set)
+			m := check.NewModel(railDesign(""), check.WithParamProvider(c.set))
 			if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 0 {
 				t.Errorf("want no findings, got %+v", fs)
 			}

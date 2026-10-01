@@ -83,7 +83,7 @@ func TestEsdRatedQuery(t *testing.T) {
 		},
 	}
 	set := param.ParamSet{"XCVR": esd("XCVR", 8000), "PLAIN": esd("PLAIN", 500)} // only XCVR clears the floor
-	b := NewBase(check.NewModelWithParams(d, nil, set))
+	b := NewBase(check.NewModel(d, check.WithParamProvider(set)))
 	q, err := Parse(`component.esd_rated(?r), component.net(?r, ?n) => ?n`)
 	if err != nil {
 		t.Fatal(err)
@@ -162,7 +162,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 		Components: []*ir.Component{{RefDes: "U1", Mpn: "BUCKPART", Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets:       []*ir.Net{{Name: "V1", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}},
 	}
-	m := check.NewModelWithParams(d, nil, param.ParamSet{"BUCKPART": spec})
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"BUCKPART": spec}))
 
 	// (1) the relation surfaces the citation columns (doc title / page / section).
 	rows, err := Naive{}.Eval(MustParse(`param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?doc, ?page, ?section`), NewBase(m))

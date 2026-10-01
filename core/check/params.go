@@ -9,29 +9,36 @@ import (
 
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/datasheet/param"
-	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // The params tier of the Model (WS10-003) joins design components to seeded datasheet PartSpecs
 // (agni.v1.param). Rules read the joined spec through the Model, never the raw set. A model built
-// without a seeded set (NewModel, NewModelWithBoard) yields nil for every component, so
-// datasheet-backed rules skip rather than false-pass. Catalog-level gating is Available's "param"
-// read-prefix rule.
+// without a provider yields nil for every component, so datasheet-backed rules skip rather than
+// false-pass. Catalog-level gating is Available's "param" read-prefix rule.
 //
 // The join key is part identity, the ir.BomLine MPN (matched by ref_des) when the design carries a
 // BOM, else the component's mpn field. MPN matching is case-insensitive and nothing fuzzier
 // (param.ParamSet.Lookup).
 
-// NewModelWithParams builds the default Model with the board tier (bg may be nil) and the params tier
-// (specs may be nil) attached. specs is any param.ParamProvider, so a directory-loaded ParamSet, an
-// in-memory mock or a datasheet service all plug in without touching the model or any rule.
-func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamProvider, opts ...ModelOption) Model {
-	m := NewModelWithBoard(d, bg, opts...).(*irModel)
-	m.specs = specs
+// WithParamProvider attaches the params tier. specs is any param.ParamProvider, so a directory-loaded
+// ParamSet, an in-memory mock or a datasheet service all plug in without touching the model or any
+// rule; the model only ever calls Lookup on it. A nil provider is the same as omitting the option.
+//
+// It is the PROVIDER that is optional, not the join key. Every model builds the MPN map, because a part
+// number is a fact about the design (agni issue 748). The map used to exist only on the params
+// constructor, so a model built the other way answered component.mpn with nothing on a design where
+// every component carried one (agni issue 757).
+func WithParamProvider(specs param.ParamProvider) ModelOption {
+	return func(m *irModel) { m.specs = specs }
+}
+
+// buildMPN fills the design-side join key: the BOM line's MPN where a BOM covers the ref_des, else
+// the component's own mpn.
+func (m *irModel) buildMPN() {
 	m.mpn = map[string]string{}
-	for _, line := range d.Bom {
+	for _, line := range m.d.Bom {
 		if line.Mpn == "" {
 			continue
 		}
@@ -39,7 +46,7 @@ func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamP
 			m.mpn[ref] = line.Mpn
 		}
 	}
-	for _, c := range d.Components {
+	for _, c := range m.d.Components {
 		if _, ok := m.mpn[c.RefDes]; ok {
 			continue
 		}
@@ -47,9 +54,16 @@ func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamP
 			m.mpn[c.RefDes] = v
 		}
 	}
+}
+
+// attachParams runs the passes that need a provider: the datasheet class tier and the datasheet net
+// roles. Both are additive, so a model with no provider classifies exactly as before.
+func (m *irModel) attachParams() {
+	if m.specs == nil {
+		return
+	}
 	m.stampClassesFromParams()
 	m.enrichRolesFromParams()
-	return m
 }
 
 // enrichRolesFromParams adds the net roles the DATASHEET establishes, the second evidence tier of C9's
@@ -165,8 +179,8 @@ func (m *irModel) ComponentMPN(refDes string) string { return m.mpn[refDes] }
 
 // PartSpec returns the seeded datasheet spec joined to a component, or nil when the component has no
 // MPN, the MPN is unseeded, or the model was built without a provider. Rules treat nil as skip, never
-// as pass. The nil-provider guard matters because specs is an interface, and NewModel and
-// NewModelWithBoard leave it a nil interface that panics on a method call.
+// as pass. The nil-provider guard matters because specs is an interface, and a model built without
+// WithParamProvider leaves it a nil interface that panics on a method call.
 func (m *irModel) PartSpec(refDes string) *parampb.PartSpec {
 	if m.specs == nil {
 		return nil

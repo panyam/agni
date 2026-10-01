@@ -33,7 +33,7 @@ converted with `nmToMM` and emitted as `board.via_drill(net, mm)` with the numer
 for comparison.
 
 The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
-design was loaded with board geometry (`NewModelWithBoard`, fed a `.kicad_pcb` or IPC-2581 board
+design was loaded with board geometry (`check.WithBoard`, fed a `.kicad_pcb` or IPC-2581 board
 sidecar). For a query this is silent by construction, so `board.via_drill` yields zero rows on any
 design without board geometry, the same posture the datasheet tier takes without `--params`. A
 query returning nothing does not mean every via is large; it can mean the design carries no board

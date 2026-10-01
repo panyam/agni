@@ -88,7 +88,7 @@ func ctxOf(f check.Finding) map[string]check.ContextSubject {
 // question the conversion answers and the thing a later refactor could silently drop.
 func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	t.Run("fet-vdss-below-rail names the rail", func(t *testing.T) {
-		m := check.NewModelWithParams(fetDesign("+60V", ""), nil, param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
+		m := check.NewModel(fetDesign("+60V", ""), check.WithParamProvider(param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)}))
 		fs := fetVdssBelowRail.Findings(m)
 		if len(fs) != 1 {
 			t.Fatalf("want 1 finding, got %d", len(fs))
@@ -160,7 +160,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	t.Run("copper-clearance names the other net in the pair", func(t *testing.T) {
 		// A clearance violation is SYMMETRIC and gets filed under one of the two nets, so before this
 		// the other end had no way back into the drawing.
-		m := check.NewModelWithBoard(&ir.Design{}, drcBoard())
+		m := check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))
 		fs := copperClearance.Findings(m)
 		if len(fs) != 1 {
 			t.Fatalf("want 1 finding, got %d", len(fs))

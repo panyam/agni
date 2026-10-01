@@ -37,7 +37,7 @@ nanometre minimum is converted with `nmToMM` and emitted as `board.track_width(n
 numeric value populated for comparison.
 
 The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
-design was loaded with board geometry (`NewModelWithBoard`, fed a `.kicad_pcb` or IPC-2581 board
+design was loaded with board geometry (`check.WithBoard`, fed a `.kicad_pcb` or IPC-2581 board
 sidecar). For a query this is silent by construction, so `board.track_width` yields zero rows on any
 design without board geometry, the same posture the datasheet tier takes without `--params`. A
 query returning nothing does not mean every track is wide; it can mean the design carries no board

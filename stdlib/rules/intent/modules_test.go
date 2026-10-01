@@ -127,17 +127,18 @@ func TestNegativeCountIsALoadError(t *testing.T) {
 
 func TestModuleMatchesByMPN(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: flash, mpn: W25Q128}")
-	// MPN resolves only on a params-built model; without one, ComponentMPN is empty and the module is
-	// unmatched (fires). With the params-built model (empty specs suffices to build the mpn map from
-	// attributes), it matches.
+	// Every model joins the design's MPNs, with or without a datasheet provider (agni issue 748), so
+	// the module matches on a plain model. A part carrying a DIFFERENT MPN leaves it unmatched (fires).
+	other := &ir.Design{Components: []*ir.Component{
+		{RefDes: "U2", Mpn: "MX25L128"},
+	}}
+	if fs := check.Run(check.NewModel(other), Compile(decl)); len(fs) != 1 {
+		t.Errorf("MPN module should be unmatched when no part carries its MPN, got %+v", fs)
+	}
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U2", Mpn: "W25Q128"},
 	}}
-	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 1 {
-		t.Errorf("MPN module should be unmatched without a params model, got %+v", fs)
-	}
-	pm := check.NewModelWithParams(d, nil, nil)
-	if fs := check.Run(pm, Compile(decl)); len(fs) != 0 {
-		t.Errorf("MPN module should match on a params-built model, got %+v", fs)
+	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 0 {
+		t.Errorf("MPN module should match on a model built with no provider, got %+v", fs)
 	}
 }

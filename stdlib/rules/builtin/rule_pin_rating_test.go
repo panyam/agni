@@ -70,8 +70,7 @@ func xlatDesign(mpn, netA, netB string) *ir.Design {
 
 func xlatModel(t *testing.T, netA, netB string) check.Model {
 	t.Helper()
-	return check.NewModelWithParams(xlatDesign("ACME-XLAT", netA, netB), nil,
-		param.ParamSet{"ACME-XLAT": xlatSpec("ACME-XLAT")})
+	return check.NewModel(xlatDesign("ACME-XLAT", netA, netB), check.WithParamProvider(param.ParamSet{"ACME-XLAT": xlatSpec("ACME-XLAT")}))
 }
 
 // The rule's reason for existing is that 5V on VCCB is WITHIN that terminal's 6.5V absolute maximum
@@ -147,8 +146,7 @@ func TestAliasPathDefersOnlyWhenPinDataExists(t *testing.T) {
 	}
 
 	// The pre-pin-binding shape, with the same rules and unchanged behaviour.
-	noPins := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil,
-		param.ParamSet{"ACME-33": ldoSpec("ACME-33", 3.6)})
+	noPins := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": ldoSpec("ACME-33", 3.6)}))
 	if n := len(supplyExceedsAbsMax.Findings(noPins)); n != 1 {
 		t.Errorf("a spec with no pin data keeps today's behaviour; want 1 alias finding, got %d", n)
 	}
@@ -164,8 +162,7 @@ func TestPinRatingRulesSilentWithoutTheirInputs(t *testing.T) {
 		m    check.Model
 	}{
 		{"no params tier at all", check.NewModel(xlatDesign("ACME-XLAT", "+5V", "+5V"))},
-		{"no seeded spec for the mpn", check.NewModelWithParams(
-			xlatDesign("ACME-XLAT", "+5V", "+5V"), nil, param.ParamSet{})},
+		{"no seeded spec for the mpn", check.NewModel(xlatDesign("ACME-XLAT", "+5V", "+5V"), check.WithParamProvider(param.ParamSet{}))},
 		{"no voltage evidence on the rails", xlatModel(t, "VDD_MAIN", "VDD_AUX")},
 	}
 	for _, tc := range cases {
@@ -188,8 +185,7 @@ func TestPinRatingSkipsAnUnresolvablePin(t *testing.T) {
 	for _, p := range spec.Pins {
 		p.Numbers = nil
 	}
-	m := check.NewModelWithParams(xlatDesign("ACME-XLAT", "+5V", "+5V"), nil,
-		param.ParamSet{"ACME-XLAT": spec})
+	m := check.NewModel(xlatDesign("ACME-XLAT", "+5V", "+5V"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 
 	if n := len(pinExceedsAbsMax.Findings(m)); n != 0 {
 		t.Errorf("an ambiguous pin must be skipped, not guessed; got %d findings", n)

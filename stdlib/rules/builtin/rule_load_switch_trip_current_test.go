@@ -119,7 +119,7 @@ func passFetSpec(rdsOhms float64, idAmps ...float64) *parampb.PartSpec {
 }
 
 func runLoadSwitchRule(d *ir.Design, set param.ParamSet) []check.Finding {
-	return loadSwitchTripAboveFetRating.Findings(check.NewModelWithParams(d, nil, set))
+	return loadSwitchTripAboveFetRating.Findings(check.NewModel(d, check.WithParamProvider(set)))
 }
 
 // TestLoadSwitchTripAboveFetRatingFires covers 50mV across a 10mOhm shunt, which trips at 5A, above
