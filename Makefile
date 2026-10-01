@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -610,9 +610,15 @@ tutorial-runs-check:
 # folder by default and takes an absolute path to one kept anywhere else.
 
 # One-time (idempotent): build the venv, install docling, and PREFETCH its models so the first
-# `make pdf2doc` (or the viewer's Extract button) does not stall on a model download, which is
-# decoupled on purpose. Re-run to refresh docling or repair the env. torch has no wheels for python
-# 3.14, so the venv is built with 3.12; override VENV_PY for another base.
+# `make pdf2doc` (or the workbench's Extract button) does not stall on a model download. Re-run to
+# refresh docling or repair the env. torch has no wheels for python 3.14, so the venv is built with
+# 3.12; override VENV_PY for another base.
+#
+# The prefetch RUNS pdf2doc once over a synthetic page (datasheet-models), because that is the only
+# prefetch that provably fetches what Extract loads. docling's converter reads its models from the
+# Hugging Face cache, and `docling-tools models download` fills a different directory
+# (~/.cache/docling/models, 1.4GB) that this path never reads, so after it an offline Extract failed
+# and an online one downloaded again (agni issue 786). The agnids image prefetches the same way.
 #
 # WHERE THE VENV LIVES is a lookup rather than a fixed path, because the docling dependency set runs
 # to gigabytes and several worktrees of this repo should not each carry one. The search order is
@@ -628,8 +634,15 @@ $(VENV_DIR)/bin/python:
 	$(VENV_DIR)/bin/python -m pip install --upgrade pip
 setup: $(VENV_DIR)/bin/python
 	$(VENV_DIR)/bin/python -m pip install --upgrade docling
-	$(VENV_DIR)/bin/docling-tools models download
+	$(MAKE) datasheet-models
 	@echo "setup: $(VENV_DIR) ready (docling + prefetched models)"
+
+# Fetch the models Extract uses by running pdf2doc once over the synthetic warm-up page, into the
+# Hugging Face cache docling reads. The output is thrown away.
+datasheet-models:
+	@out=$$(mktemp -d) && \
+	$(VENV_DIR)/bin/python datasheet/tools/pdf2doc/pdf2doc.py datasheet/tools/pdf2doc/testdata/warmup.pdf -o $$out/warmup.doc.textproto && \
+	rm -rf $$out
 
 # The python pdf2doc runs under: the venv once setup has built one, else whatever python3 is on the
 # PATH (which works only if docling is installed there).
