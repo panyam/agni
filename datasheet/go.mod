@@ -17,7 +17,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/panyam/gocurrent v0.1.1 // indirect
 	github.com/panyam/goutils v0.1.13 // indirect
-	github.com/panyam/jaala v0.1.10 // indirect
+	github.com/panyam/jaala v0.1.12 // indirect
 	github.com/panyam/templar v0.1.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/sys v0.47.0 // indirect
