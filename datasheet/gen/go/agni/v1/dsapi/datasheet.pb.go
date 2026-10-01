@@ -7,7 +7,7 @@
 package dsapi
 
 import (
-	doc "github.com/panyam/agni/gen/go/agni/v1/doc"
+	doc "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	param "github.com/panyam/agni/gen/go/agni/v1/param"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -999,7 +999,7 @@ const file_agni_v1_dsapi_datasheet_proto_rawDesc = "" +
 	"\fSavePartSpec\x12\".agni.v1.dsapi.SavePartSpecRequest\x1a#.agni.v1.dsapi.SavePartSpecResponse\x12W\n" +
 	"\fExtractDocIR\x12\".agni.v1.dsapi.ExtractDocIRRequest\x1a#.agni.v1.dsapi.ExtractDocIRResponse\x12]\n" +
 	"\x0eGetAnnotations\x12$.agni.v1.dsapi.GetAnnotationsRequest\x1a%.agni.v1.dsapi.GetAnnotationsResponse\x12`\n" +
-	"\x0fSaveAnnotations\x12%.agni.v1.dsapi.SaveAnnotationsRequest\x1a&.agni.v1.dsapi.SaveAnnotationsResponseB-Z+github.com/panyam/agni/gen/go/agni/v1/dsapib\x06proto3"
+	"\x0fSaveAnnotations\x12%.agni.v1.dsapi.SaveAnnotationsRequest\x1a&.agni.v1.dsapi.SaveAnnotationsResponseB7Z5github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapib\x06proto3"
 
 var (
 	file_agni_v1_dsapi_datasheet_proto_rawDescOnce sync.Once

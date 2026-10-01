@@ -11,7 +11,7 @@ import (
 
 	"github.com/panyam/agni/datasheet/dsserver"
 	"github.com/panyam/agni/datasheet/dsservice"
-	"github.com/panyam/agni/gen/go/agni/v1/dsapi/dsapiconnect"
+	"github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi/dsapiconnect"
 	"github.com/panyam/agni/mounts"
 	goal "github.com/panyam/goapplib"
 	skhttp "github.com/panyam/servicekit/http"

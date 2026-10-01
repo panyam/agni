@@ -391,9 +391,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   tests read a board file and a test whose fixture is absent skips rather than fails. One stamp PER
   ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each other's work.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
-  `make proto-check` fails the gate on any of the three being stale. The Python half uses buf's REMOTE
+  `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
   plugins pinned by version, so it needs network, and `pyproject.toml`'s `protobuf>=` floor moves with
-  the plugin version.
+  the plugin version. **The protos are TWO buf modules in one workspace** (the root `buf.yaml`): the
+  engine's `protos/` and the datasheet producer's `datasheet/protos/` (`doc`, `derive`, `candidate`,
+  `dsapi`), which generates into `datasheet/gen/go` and imports `param.proto` and `workspace.proto`
+  through the workspace. `make proto` runs both. The datasheet half is generated from the repo ROOT,
+  because its `go tool` plugins resolve against the go.mod of the directory buf runs in, and only the
+  root go.mod pins them. The TS step reads the whole workspace (the workbench still builds from
+  `web/`), and the Python client reads `protos/` alone, since it is the engine's client.
 - **`render --report` prints to stdout and IGNORES `-o`**, which is the same axis confusion as
   `review --coverage`, since the report replaces the drawing rather than being a format of it, so the
   flag that names the drawing's file has nothing to write. It exits 0 having written nothing.

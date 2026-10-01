@@ -9,8 +9,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
-	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
+	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
+	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package agni.v1.doc;
 
-option go_package = "github.com/panyam/agni/gen/go/agni/v1/doc";
+option go_package = "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc";
 
 // The doc-IR is the intermediate artifact between a source document (a datasheet PDF,
 // an app note) and the parameter-IR (agni.v1.param): the document decomposed into

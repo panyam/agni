@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package agni.v1.dsapi;
 
-option go_package = "github.com/panyam/agni/gen/go/agni/v1/dsapi";
+option go_package = "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi";
 
 import "agni/v1/doc/doc.proto";
 import "agni/v1/param/param.proto";

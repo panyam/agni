@@ -289,7 +289,7 @@ const file_agni_v1_candidate_candidate_proto_rawDesc = "" +
 	"\x06source\x18\x06 \x01(\tR\x06source\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\a \x01(\x01R\n" +
-	"confidenceB1Z/github.com/panyam/agni/gen/go/agni/v1/candidateb\x06proto3"
+	"confidenceB;Z9github.com/panyam/agni/datasheet/gen/go/agni/v1/candidateb\x06proto3"
 
 var (
 	file_agni_v1_candidate_candidate_proto_rawDescOnce sync.Once

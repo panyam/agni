@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
+	derivepb "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive"
 )
 
 func gapsOfKind(m *derivepb.RunManifest, kind string) []*derivepb.Gap {

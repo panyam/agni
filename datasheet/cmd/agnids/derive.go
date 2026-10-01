@@ -8,7 +8,7 @@ import (
 
 	"github.com/panyam/agni/datasheet/derive"
 	"github.com/panyam/agni/datasheet/doc"
-	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
+	derivepb "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive"
 )
 
 // deriveCmd derives a parameter-IR PartSpec from a doc-IR file, the CLI face of the derivation stage

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
-	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	derivepb "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive"
+	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 )
 
 // Document identity: which revision of which document a spec's values were read from.

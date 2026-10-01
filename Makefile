@@ -4,9 +4,13 @@ GO ?= go
 
 all: proto build
 
-# Regenerate Go from the proto IR (run from protos/ where buf config lives).
+# Regenerate Go from the proto IR. Two buf modules share one workspace (the root buf.yaml): the
+# engine's protos/, generated from inside protos/ into gen/go, and the datasheet producer's
+# datasheet/protos (agni issue 744), generated into datasheet/gen/go from the repo ROOT so its
+# `go tool` plugins resolve against the root go.mod that pins them (see datasheet/buf.gen.yaml).
 proto:
 	cd protos && buf generate
+	buf generate datasheet/protos --template datasheet/buf.gen.yaml
 
 # Regenerate the TypeScript half. Separate command, separate config, and the half people forget:
 # additive proto changes leave stale TS building green, so the drift only surfaces on the next
@@ -41,14 +45,20 @@ proto-py:
 proto-check:
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	mkdir -p "$$tmp/protos" "$$tmp/web" "$$tmp/py"; \
+	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/py"; \
 	(cd protos && buf generate -o "$$tmp/protos") || exit 1; \
-	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
+	buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
+	(cd web && buf generate .. --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
 	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
 	fail=0; \
 	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
 		echo "generated Go is stale — run 'make proto' and commit the result:"; \
 		diff -rq gen/go "$$tmp/gen/go" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r datasheet/gen/go "$$tmp/root/datasheet/gen/go" >/dev/null 2>&1; then \
+		echo "generated Go for the datasheet module is stale — run 'make proto' and commit the result:"; \
+		diff -rq datasheet/gen/go "$$tmp/root/datasheet/gen/go" 2>&1 | sed 's/^/  /'; \
 		fail=1; \
 	fi; \
 	if ! diff -r web/src/gen "$$tmp/web/src/gen" >/dev/null 2>&1; then \
