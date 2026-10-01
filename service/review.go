@@ -138,7 +138,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 		return nil, fmt.Errorf("%w: CreateReview needs a manifest (resolve a stored one with GetReviewManifest)", ErrInvalidArgument)
 	}
 	man := ManifestFromProto(req.GetManifest())
-	if err := review.Validate(man); err != nil {
+	if err := review.ValidateStructure(man); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	// Per-request overlay config (WS3-102), composed BEFORE the design is read, because net roles
@@ -147,6 +147,16 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	ov, err := s.projects.Overlay(ctx, designURI, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
+	}
+	// The manifest's inline queries compile against the vocabulary the review runs with, the design's
+	// project library and any library sent with the request included (agni issues 779, 788), so a query
+	// naming a house member validates here exactly as it will run.
+	vocab, err := ov.Registry()
+	if err != nil {
+		return nil, err
+	}
+	if err := review.Validate(man, review.WithVocabulary(vocab)); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	// Tiers from the design's declaration, the same call CheckDesign makes, so a review in the browser
 	// scores against the board the design declares, as the CLI's does (agni issues 646, 656; C32).
@@ -294,7 +304,9 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	if err := review.Validate(man); err != nil {
+	// Structure only: a stored manifest is described with no design in view, so there is no run
+	// vocabulary to compile its queries against. CreateReview compiles them against the one it runs with.
+	if err := review.ValidateStructure(man); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	return &webapi.GetReviewManifestResponse{Manifest: ManifestProto(man)}, nil
@@ -315,6 +327,10 @@ func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact
 	if err != nil {
 		return review.Report{}, nil, err
 	}
+	vocab, err := ov.Registry()
+	if err != nil {
+		return review.Report{}, nil, err
+	}
 	present, scope, compScope := reviewClosures(m, s.byName)
 	return review.Run(review.RunParams{
 		Model: m, Catalog: cat, Manifest: man, Design: designURI.String(),
@@ -323,6 +339,7 @@ func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact
 		// rule that has not shipped reads not-automated rather than needs-design-intent (WS3-098).
 		// Injected to keep `review` decoupled from `intent`.
 		IntentRuleKnown: intent.Emits,
+		Vocabulary:      vocab,
 	}), cat, nil
 }
 

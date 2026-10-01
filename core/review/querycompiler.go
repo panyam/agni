@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 )
 
 // A manifest may bind an item to an INLINE query, a house rule authored in the checklist rather than
@@ -32,6 +33,10 @@ type QueryRequest struct {
 	// ParamSymbol optionally names the datasheet symbol the query checks, so a finding gains a
 	// structured citation. Empty when the item makes no datasheet claim.
 	ParamSymbol string
+	// Vocabulary is the relation vocabulary the query's names resolve against: the shipped one plus
+	// the run's library (agni issue 779). Nil is the process default. It is the fact layer's registry,
+	// not a query engine's, so this package still names no query language (C29).
+	Vocabulary *facts.Registry
 }
 
 // QueryCompiler turns a manifest's inline query into a rule. An engine registers one implementation;

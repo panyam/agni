@@ -1,9 +1,11 @@
 package review
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/param"
 )
 
@@ -138,6 +140,9 @@ type RunParams struct {
 	// not-yet-shipped name a manifest pre-bound (not-automated), which a prefix test cannot. nil treats
 	// every intent/ name as known. The service wires intent.Emits.
 	IntentRuleKnown func(ruleName string) bool
+	// Vocabulary is the relation vocabulary an inline query compiles against: the shipped one plus
+	// the run's library (agni issue 779). Nil is the process default.
+	Vocabulary *facts.Registry
 }
 
 // DefaultRatifiedFloor is the confidence at or above which a datasheet value counts as ratified,
@@ -217,7 +222,7 @@ func runItem(p RunParams, it Item) ItemResult {
 	if classes := it.Binding.AppliesToClass; len(classes) > 0 && !anyComponentHasClass(m, classes) {
 		return ItemResult{Item: it, Outcome: ComputedNA, Note: "no " + strings.Join(classes, "/") + " part on this design"}
 	}
-	rules := resolve(cat, it)
+	rules := resolve(cat, it, p.Vocabulary)
 	if len(rules) == 0 {
 		// An intent-bound item (WS3-084) resolves to zero rules when no declaration was supplied, because
 		// the intent rule is then absent from the catalog. It is COVERED, so it names --intent-path.
@@ -462,13 +467,16 @@ const (
 // resolve turns an item's binding into the catalog rules it selects (or the compiled rule for an
 // inline query). Empty means nothing shipped covers the item. An absent interface still resolves to
 // rules here, and runItem marks it not-applicable before running them (WS3-051).
-func resolve(cat *check.Catalog, it Item) []*check.Rule {
+func resolve(cat *check.Catalog, it Item, vocab *facts.Registry) []*check.Rule {
 	b := it.Binding
 	switch {
 	case b.Query != nil:
-		r, err := compileQuery(it)
+		r, err := compileQuery(it, vocab)
 		if err != nil {
-			return nil // Load validated this already
+			// Validate refuses this before a run, so reaching here means a caller ran without it.
+			// Returning no rule would read as "nothing automates this item", hiding the error, so the
+			// item gets a rule that reports it could not decide.
+			return []*check.Rule{uncompiled(it, err)}
 		}
 		return []*check.Rule{r}
 	case b.Rule != "":
@@ -490,4 +498,18 @@ func resolve(cat *check.Catalog, it Item) []*check.Rule {
 		return cat.Filter(check.Facets{Tags: map[string][]string{k: {v}}})
 	}
 	return nil
+}
+
+// uncompiled is the rule an inline query that does not compile resolves to: one inconclusive finding
+// saying why, so the item reads as undecided rather than as not automated.
+func uncompiled(it Item, err error) *check.Rule {
+	name := "review/" + it.ID
+	return &check.Rule{
+		Name:     name,
+		Severity: "warning",
+		Summary:  it.Title,
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
+			return []check.Finding{{Inconclusive: true, Message: fmt.Sprintf("%s could not compile: %v", name, err)}}
+		}),
+	}
 }

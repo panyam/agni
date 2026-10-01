@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"gopkg.in/yaml.v3"
 )
 
@@ -154,20 +155,59 @@ func Load(r io.Reader) (Manifest, error) {
 	if err := yaml.Unmarshal(b, &m); err != nil {
 		return Manifest{}, fmt.Errorf("review manifest: invalid YAML: %w", err)
 	}
-	if err := Validate(m); err != nil {
+	if err := ValidateStructure(m); err != nil {
 		return Manifest{}, err
 	}
 	return m, nil
 }
 
-// Validate checks a manifest's structure: a name, at least one area, each area named, each item
-// identified with at most one binding, each narrower (scope, requirement) paired with the selector it
-// narrows, and each inline query well-formed, so a malformed query fails up front rather than at run.
+// ValidateOption adjusts what Validate checks a manifest against.
+type ValidateOption func(*validateConfig)
+
+type validateConfig struct{ vocabulary *facts.Registry }
+
+// WithVocabulary checks each inline query against reg rather than the process default, so a query
+// naming the run's own library (a project's lib/, or modules sent with the request) validates as it
+// will run (agni issue 779). Pass the vocabulary the review will run with.
+func WithVocabulary(reg *facts.Registry) ValidateOption {
+	return func(c *validateConfig) { c.vocabulary = reg }
+}
+
+// Validate checks a manifest's structure (ValidateStructure) and compiles each inline query against
+// the vocabulary the review will run with, so a malformed or misspelled query fails before anything
+// runs rather than reading as an empty answer.
 //
 // It is exported separately from Load because a manifest travels as a request VALUE (C22, WS9-050),
-// so a browser form or a test may build one directly. Without it, an item carrying both a rule and a
-// profile would resolve to whichever the runner tested for first.
-func Validate(m Manifest) error {
+// so a browser form or a test may build one directly, and because only the caller knows which
+// vocabulary the run will have. Load cannot: it reads a manifest before any design or project is
+// known.
+func Validate(m Manifest, opts ...ValidateOption) error {
+	var c validateConfig
+	for _, o := range opts {
+		o(&c)
+	}
+	if err := ValidateStructure(m); err != nil {
+		return err
+	}
+	for _, a := range m.Areas {
+		for _, it := range a.Items {
+			if it.Binding.Query == nil {
+				continue
+			}
+			if _, err := compileQuery(it, c.vocabulary); err != nil {
+				return fmt.Errorf("review manifest item %q: %w", it.ID, err)
+			}
+		}
+	}
+	return nil
+}
+
+// ValidateStructure checks what a manifest says without compiling its queries: a name, at least one
+// area, each area named, each item identified with at most one binding, each narrower (scope,
+// requirement) paired with the selector it narrows, and each inline query carrying its required
+// fields. Load uses it, and so does a caller describing a manifest with no run in view. Without it, an
+// item carrying both a rule and a profile would resolve to whichever the runner tested for first.
+func ValidateStructure(m Manifest) error {
 	if strings.TrimSpace(m.Name) == "" {
 		return fmt.Errorf("review manifest: missing required field \"name\"")
 	}
@@ -191,9 +231,9 @@ func Validate(m Manifest) error {
 			if it.Binding.Requirement != "" && it.Binding.Profile == "" {
 				return fmt.Errorf("review manifest item %q: requirement narrows a profile binding, so \"profile\" must be set", it.ID)
 			}
-			if it.Binding.Query != nil {
-				if _, err := compileQuery(it); err != nil {
-					return fmt.Errorf("review manifest item %q: %w", it.ID, err)
+			if q := it.Binding.Query; q != nil {
+				if strings.TrimSpace(q.Match) == "" || strings.TrimSpace(q.Subject) == "" || strings.TrimSpace(q.Message) == "" {
+					return fmt.Errorf("review manifest item %q: a query binding needs \"match\", \"subject\", and \"message\"", it.ID)
 				}
 			}
 			if it.Binding.Present != nil && strings.TrimSpace(it.Binding.Present.Class) == "" {
@@ -204,10 +244,10 @@ func Validate(m Manifest) error {
 	return nil
 }
 
-// compileQuery turns an item's inline QueryBinding into a check.Rule, for both Load's validation and
-// Run's resolution. Requires match/subject/message; kind defaults to component, severity to warning.
-// It never parses the query, which is the registered compiler's business.
-func compileQuery(it Item) (*check.Rule, error) {
+// compileQuery turns an item's inline QueryBinding into a check.Rule against vocab (nil is the process
+// default), for both Validate and Run. Requires match/subject/message; kind defaults to component,
+// severity to warning. It never parses the query, which is the registered compiler's business.
+func compileQuery(it Item, vocab *facts.Registry) (*check.Rule, error) {
 	q := it.Binding.Query
 	if strings.TrimSpace(q.Match) == "" || strings.TrimSpace(q.Subject) == "" || strings.TrimSpace(q.Message) == "" {
 		return nil, fmt.Errorf("a query binding needs \"match\", \"subject\", and \"message\"")
@@ -240,5 +280,6 @@ func compileQuery(it Item) (*check.Rule, error) {
 		Subject:     q.Subject,
 		Message:     q.Message,
 		ParamSymbol: q.ParamSymbol,
+		Vocabulary:  vocab,
 	})
 }

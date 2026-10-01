@@ -20,8 +20,9 @@ import (
 type Compiler struct{}
 
 // CompileQuery parses the manifest's match text and binds the result to the identity and presentation
-// the manifest already fixed. The error names the query rather than the item, because Load wraps it
-// with the item id and doubling that reads as two separate problems.
+// the manifest already fixed, against the vocabulary the review runs with (agni issue 779), so an
+// inline query can name the run's own library. The error names the query rather than the item,
+// because Validate wraps it with the item id and doubling that reads as two separate problems.
 func (Compiler) CompileQuery(req review.QueryRequest) (*check.Rule, error) {
 	prog, err := query.Parse(req.Query)
 	if err != nil {
@@ -36,6 +37,7 @@ func (Compiler) CompileQuery(req review.QueryRequest) (*check.Rule, error) {
 		SubjectVar:  req.Subject,
 		Message:     req.Message,
 		ParamSymbol: req.ParamSymbol,
+		Vocabulary:  req.Vocabulary,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("query does not compile: %w", err)

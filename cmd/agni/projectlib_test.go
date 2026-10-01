@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 )
 
@@ -153,5 +156,83 @@ func TestLibFlagAnswersAsTheInlineRequestDoes(t *testing.T) {
 	}
 	if len(fromCLI) == 0 || strings.Join(fromCLI, " ") != strings.Join(fromService, " ") {
 		t.Errorf("--lib answered %v, the inline request %v; want the same non-empty rows", fromCLI, fromService)
+	}
+}
+
+// TestAChecklistQueryCallsTheProjectLibrary is agni issue 779 end to end, on both surfaces. The
+// tutorial project's house-review.yaml binds P6 to an inline query over its own lib/house.dl, and the item
+// fails on PMIC_MAIN_12V0, the one PMIC rail with no test point, whether `agni review` runs it or a
+// served CreateReview does (C32). Before this the query could not compile, since a rule from a
+// manifest saw only the shipped vocabulary.
+func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
+	cli := runReview(t, gatewayDesign, "--checklist", "../../examples/tutorial-project/house-review.yaml", "--format", "json")
+	if !strings.Contains(cli, `"PMIC rail PMIC_MAIN_12V0 has no test point"`) {
+		t.Errorf("agni review: P6 did not report PMIC_MAIN_12V0:\n%.2000s", cli)
+	}
+
+	ms := []mounts.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}
+	loader := &osLoader{mounts: ms, loader: newLoader()}
+	svc := service.NewReviewService(loader, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{}, "", testProjectResolver(ms))
+	u, err := artifact.Parse("mount://tut/house-review.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	man, err := loader.Manifest(context.Background(), u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rv, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
+		DesignUri: "mount://tut/designs/gateway",
+		Manifest:  service.ManifestProto(man),
+	})
+	if err != nil {
+		t.Fatalf("CreateReview: %v", err)
+	}
+	var found bool
+	for _, a := range rv.GetResults().GetAreas() {
+		for _, it := range a.GetItems() {
+			if it.GetId() != "P6" {
+				continue
+			}
+			found = true
+			if it.GetOutcome() != "fail" || len(it.GetFindings()) != 1 || it.GetFindings()[0].GetSubject().GetRef() != "PMIC_MAIN_12V0" {
+				t.Errorf("served P6 = %s with %d findings, want fail on PMIC_MAIN_12V0", it.GetOutcome(), len(it.GetFindings()))
+			}
+		}
+	}
+	if !found {
+		t.Error("the served review has no P6 item")
+	}
+}
+
+// TestReviewLibFlagReachesAChecklistQuery: `agni review --lib` sends a library with the run (agni
+// issue 788), so a checklist's inline query on a design that belongs to no project can call it.
+// Without the flag the checklist is refused before anything runs, naming the module, rather than
+// running with the item undecided.
+func TestReviewLibFlagReachesAChecklistQuery(t *testing.T) {
+	checklist := filepath.Join(t.TempDir(), "review.yaml")
+	if err := os.WriteFile(checklist, []byte(`name: scratch
+areas:
+  - name: Test access
+    items:
+      - id: "T1"
+        title: every probed net keeps its probe
+        query:
+          match: 'net.has_test_point(?n), not house.pmic_probe_point(?n) => ?n'
+          subject: n
+          kind: net
+          message: '{n} is probed but is no PMIC probe point'
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const design = "../../examples/common/designs/probe-coverage.edn"
+	if _, errOut, err := runReviewCapturing(t, design, "--checklist", checklist); err == nil || !strings.Contains(err.Error()+errOut, `"house"`) {
+		t.Errorf("without --lib: err = %v, want the checklist refused naming house", err)
+	}
+	out := runReview(t, design, "--checklist", checklist, "--lib", "../../examples/tutorial-project/lib", "--format", "json")
+	for _, n := range []string{"FB", "VIN", "VOUT"} {
+		if !strings.Contains(out, n+" is probed but is no PMIC probe point") {
+			t.Errorf("with --lib: no finding for %s:\n%.1500s", n, out)
+		}
 	}
 }

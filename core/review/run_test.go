@@ -686,7 +686,6 @@ func TestLoadValidation(t *testing.T) {
 		"two bindings":           "name: t\nareas: [{name: A, items: [{id: i, rule: r, profile: P}]}]",
 		"present + rule":         "name: t\nareas: [{name: A, items: [{id: i, rule: r, present: {class: test_connector}}]}]",
 		"present no class":       "name: t\nareas: [{name: A, items: [{id: i, present: {class: ''}}]}]",
-		"bad inline query":       "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'garbage(', subject: r, message: m}}]}]",
 		"query missing vars":     "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'component.mpn(?r,\"X\") => ?r'}}]}]",
 		"requirement no profile": "name: t\nareas: [{name: A, items: [{id: i, requirement: esd}]}]",
 		"requirement on a rule":  "name: t\nareas: [{name: A, items: [{id: i, rule: r, requirement: esd}]}]",

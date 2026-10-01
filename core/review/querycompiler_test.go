@@ -51,7 +51,7 @@ func TestNoQueryCompilerIsAnError(t *testing.T) {
 
 	_, err := compileQuery(Item{ID: "i", Binding: Binding{Query: &QueryBinding{
 		Match: `component.mpn(?r,"X") => ?r`, Subject: "r", Message: "m",
-	}}})
+	}}}, nil)
 	if err == nil {
 		t.Fatal("compiling an inline query with no engine registered returned no error")
 	}

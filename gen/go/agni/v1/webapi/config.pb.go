@@ -109,7 +109,7 @@ type AnalysisConfig struct {
 	// query run under this config can call them beside the shipped library, so `lib/net.dl` adds
 	// members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
 	// path, or reading a relation nothing registers, fails the read rather than answering nothing.
-	// Rules compiled from queries do not read them yet (agni issue 779).
+	// A review manifest's inline queries read them too (agni issue 779).
 	LibraryUris []string `protobuf:"bytes,9,rep,name=library_uris,json=libraryUris,proto3" json:"library_uris,omitempty"`
 	// library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller
 	// whose modules live with it rather than on the server: a script calling a shared server, a
