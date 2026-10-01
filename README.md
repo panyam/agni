@@ -147,7 +147,7 @@ growing. Issues and readers for new formats are welcome.
 the pinned sample corpus. `CONTRIBUTING.md` has the details.
 
 ```
-cd web && pnpm install && cd ..   # once
+pnpm install                      # once: the web workspace (web/, web-shared/, datasheet/web/)
 make build                        # web bundle + go build ./...
 make install                      # install the agni CLI to $GOBIN
 make testall                      # the full gate: vet, tests, bundle, web unit tests

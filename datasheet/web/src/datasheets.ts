@@ -9,8 +9,8 @@ import { workbenchIsland, type RegionView } from "./regionview.js";
 import { realPdfSource } from "./pdfrender.js";
 import { paramsPanelIsland } from "./paramspanel.js";
 import type { Parameter } from "./gen/agni/v1/param/param_pb.js";
-import { currentDs, dsToUrl, hasDatasheet, type DsLocation } from "./dsrouter.js";
-import { baseName, noteOpen } from "./recents.js";
+import { currentDs, dsToUrl, hasDatasheet, type DsLocation } from "@agni/web-shared/dsrouter.js";
+import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
 // restoring guards the URL feedback loop, like the viewer's main.ts. While replaying a URL (initial
 // load or back/forward) we load the datasheet but must not push a duplicate history entry.

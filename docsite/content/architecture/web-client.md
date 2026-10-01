@@ -84,7 +84,8 @@ UX, since it can name what is about to be lost rather than asking a generic "are
 
 ## A library that cannot load is a component that cannot be tested
 
-The datasheet workbench (`regionview.tsx`, `transcribe.tsx`) went untested for a long time, and the
+The datasheet workbench (`regionview.tsx`, `transcribe.tsx`, in `datasheet/web/src` since agni issue
+744) went untested for a long time, and the
 reason was one import. `pdfrender.ts` sets pdf.js's worker options and pulls in its canvas module at
 LOAD time, and that module reaches for `DOMMatrix`, which jsdom does not have. Any file importing it
 therefore throws before a single test runs, whatever the test intended to assert. An 885-line

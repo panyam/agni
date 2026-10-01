@@ -2,13 +2,11 @@
 // esbuild does not do, so we run esbuild through esbuild-plugin-solid (babel-preset-solid) to
 // compile JSX into Solid's reactive runtime calls.
 //
-// Three app bundles: the viewer (src/main.ts -> static/app.js), the extraction workbench
-// (src/datasheets.ts -> static/datasheets.js, WS13-006), and the design browser
-// (src/browse.ts -> static/browse.js, WS9-049). They are separate pages with separate entries so
-// each page downloads only what it uses: the workbench's heavier deps (pdf.js) never bloat the
-// viewer bundle, and the browse page carries neither pdf.js nor dockview and the WebGL renderer.
-// The datasheets page also needs the pdf.js worker as a standalone script (static/pdf.worker.js),
-// which pdf.js loads by URL at runtime.
+// Three app bundles: the viewer (src/main.ts -> static/app.js), the design browser
+// (src/browse.ts -> static/browse.js, WS9-049) and the landing page (src/landing.ts). They are
+// separate pages with separate entries so each page downloads only what it uses: the browse page
+// carries neither dockview nor the WebGL renderer. The datasheets workbench, and pdf.js with it, is
+// built from datasheet/web, its own package (agni issue 744).
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import * as esbuild from "esbuild";
@@ -34,7 +32,6 @@ const solidAlias = {
 // The Solid app bundles, one per page. Each must contain exactly one reactive core (asserted below).
 const appBundles = [
   { entry: "src/main.ts", outfile: "static/app.js" },
-  { entry: "src/datasheets.ts", outfile: "static/datasheets.js" },
   { entry: "src/browse.ts", outfile: "static/browse.js" },
   { entry: "src/landing.ts", outfile: "static/landing.js" },
 ];
@@ -49,17 +46,7 @@ const solidBuild = (b) => ({
   logLevel: "info",
 });
 
-// The pdf.js worker, bundled as a standalone same-origin script the region viewer points
-// GlobalWorkerOptions.workerSrc at. No Solid, so it is not subject to the single-core check.
-const workerBuild = {
-  entryPoints: [require.resolve("pdfjs-dist/build/pdf.worker.mjs")],
-  bundle: true,
-  format: "iife",
-  outfile: "static/pdf.worker.js",
-  logLevel: "info",
-};
-
-const builds = [...appBundles.map(solidBuild), workerBuild];
+const builds = appBundles.map(solidBuild);
 
 if (watch) {
   for (const b of builds) {
@@ -71,7 +58,7 @@ if (watch) {
   // Enforce the single-instance invariant the alias exists for: exactly one reactive core in each
   // Solid bundle. A second copy shows up as a second `function createSignal`, and the failure it
   // causes (island setState silently no-ops) is otherwise invisible to tests. Checked per app
-  // bundle so a new page (datasheets.js) is guarded too, not just app.js.
+  // bundle so a new page is guarded too, not just app.js.
   for (const b of appBundles) {
     const cores = (readFileSync(b.outfile, "utf8").match(/function createSignal/g) || []).length;
     if (cores !== 1) {

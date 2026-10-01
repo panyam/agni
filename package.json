@@ -1,0 +1,6 @@
+{
+  "name": "agni-workspace",
+  "private": true,
+  "packageManager": "pnpm@12.5.1",
+  "description": "The pnpm workspace for agni's web code: the viewer (web/), the datasheets workbench (datasheet/web/), and what they share (web-shared/)"
+}

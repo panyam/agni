@@ -69,3 +69,6 @@ tools/samples/
 /clients/python/build/
 /clients/python/src/*.egg-info/
 __pycache__/
+
+# The pnpm workspace root's install (agni issue 744); each member keeps its own node_modules too.
+/node_modules/

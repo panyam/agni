@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { artifactUri, uriPath } from "./uri.js";
+import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView, type DiffState } from "./diffpresenter.js";
 import { DIFF_COLORS } from "./diff.js";
 

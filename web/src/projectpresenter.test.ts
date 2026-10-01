@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ViewerPresenter } from "./viewer.js";
-import { artifactUri } from "./uri.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import { NO_PROJECT_LABEL, PLAIN_LABEL, projectLabel, type ProjectState } from "./project.js";
 
 // A viewer harness wired with a ProjectService whose resolution the test controls. Everything else

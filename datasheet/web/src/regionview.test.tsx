@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { workbenchIsland } from "./regionview.jsx";
 import type { PdfSource, PDFDocumentProxy, RenderedPage } from "./pdfsource.js";
-import { fitInto } from "./panzoom.js";
+import { fitInto } from "@agni/web-shared/panzoom.js";
 
 // The datasheet workbench's first component test. What kept it untested was one dependency. pdf.js
 // rasterizes onto a 2d canvas context, which jsdom does not have, so nothing could render this

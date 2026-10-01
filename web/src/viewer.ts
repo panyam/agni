@@ -1,6 +1,6 @@
 import { Code, ConnectError, type Client } from "@connectrpc/connect";
 import { emptyProject, type ProjectState, type ProjectBarView } from "./project.js";
-import { artifactUri, uriPath } from "./uri.js";
+import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";

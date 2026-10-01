@@ -7,7 +7,7 @@
 // file, sheet and highlight state while a diff is open.
 
 import type { Client } from "@connectrpc/connect";
-import { artifactUri } from "./uri.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
 import { DiffService, type DiffDesignsResponse } from "./gen/agni/v1/webapi/diff_pb.js";
 import {

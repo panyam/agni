@@ -10,9 +10,9 @@ import { createSignal, For, Show } from "solid-js";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland } from "@panyam/tsappkit-solid";
 import { emptyLocation, locationToUrl } from "./router.js";
-import { dsToUrl } from "./dsrouter.js";
-import { uriMount, uriPath } from "./uri.js";
-import { clearRecents, loadRecents, type Recent, type RecentKind } from "./recents.js";
+import { dsToUrl } from "@agni/web-shared/dsrouter.js";
+import { uriMount, uriPath } from "@agni/web-shared/uri.js";
+import { clearRecents, loadRecents, type Recent, type RecentKind } from "@agni/web-shared/recents.js";
 import { projectClient } from "./api.js";
 import type { Design } from "./gen/agni/v1/webapi/project_pb.js";
 

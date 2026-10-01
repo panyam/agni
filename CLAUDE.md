@@ -180,6 +180,14 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench is
   NOT served by `agni` at all since agni 744; it is `agnids serve` (`make dsserve`), and
   `agni serve --datasheets-url <url>` is what makes the landing page link to it.
+- **The web code is ONE pnpm workspace with one lockfile at the root**: `web/` (the viewer),
+  `datasheet/web/` (the workbench `agnids` serves, with pdf.js) and `web-shared/` (plain TS both
+  import as `@agni/web-shared/<name>.js`, with no npm dependency of its own, so neither page pulls
+  the other's libraries in through it). Run `pnpm install` at the ROOT. `make ui`, `make web-test`
+  and `make proto-web` cover all three. The workbench's TS generates from the whole buf workspace
+  and the viewer's from `protos/` alone. The workbench has its OWN `BasePage.html`, holding only the
+  thirteen rules it uses of the viewer's 50KB of styles, so `datasheet/web` deploys on its own; a
+  computed-style comparison of all 86 workbench elements, before and after, was identical.
 - **An unknown key in `agni.yaml` is a hard ERROR, and the file is shared by every lane, every
   released binary and the container image.** So a new key goes in only after every reader on the
   machine understands it. The obvious probe is a trap, because `agni <cmd> --help` short-circuits

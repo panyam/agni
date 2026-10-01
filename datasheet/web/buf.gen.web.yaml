@@ -1,0 +1,10 @@
+version: v2
+# TS codegen for the datasheets workbench (agni issue 744). Its input is the whole buf workspace
+# (`buf generate ../.. --template buf.gen.web.yaml`), because the workbench's API (agni.v1.dsapi)
+# imports engine messages (param, webapi/workspace) as well as the producer's own (doc).
+clean: true
+plugins:
+  - local: node_modules/.bin/protoc-gen-es
+    out: src/gen
+    opt:
+      - target=ts

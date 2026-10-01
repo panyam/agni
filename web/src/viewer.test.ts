@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { artifactUri } from "./uri.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { stubQueryView } from "./testviews.js";
 import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, HighlightShape } from "./highlights.js";

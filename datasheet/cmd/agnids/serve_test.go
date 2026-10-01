@@ -39,8 +39,8 @@ func TestCheckWorkbenchAssets(t *testing.T) {
 	if err := checkWorkbenchAssets(dir); err != nil {
 		t.Errorf("a complete workbench should pass, got %v", err)
 	}
-	if err := checkWorkbenchAssets("../../../web"); err != nil {
-		t.Errorf("the repo's web/ should carry the workbench, got %v", err)
+	if err := checkWorkbenchAssets("../../web"); err != nil {
+		t.Errorf("datasheet/web should carry the workbench, got %v", err)
 	}
 }
 
@@ -54,7 +54,7 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := newWorkbenchMux(ms, filepath.Join("..", "..", "..", "web"), nil)
+	mux := newWorkbenchMux(ms, filepath.Join("..", "..", "web"), nil, "")
 	do := func(method, path, body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
 		if body != "" {
@@ -90,5 +90,25 @@ func TestWorkbenchServesItsWholePage(t *testing.T) {
 	}
 	if h := do("GET", "/healthz", ""); h.Code != 200 {
 		t.Errorf("/healthz = %d", h.Code)
+	}
+}
+
+// The workbench is hosted apart from the viewer, and "/" on agnids is the workbench itself, so the
+// heading links home only when --viewer-url says where the viewer is.
+func TestWorkbenchHeadingLinksTheViewerOnlyWhenConfigured(t *testing.T) {
+	page := func(viewer string) string {
+		mux := newWorkbenchMux(nil, filepath.Join("..", "..", "web"), nil, viewer)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest("GET", "/datasheets/", nil))
+		if rec.Code != 200 {
+			t.Fatalf("GET /datasheets/ = %d", rec.Code)
+		}
+		return rec.Body.String()
+	}
+	if with := page("http://viewer:8080"); !strings.Contains(with, `<a class="ld-home" href="http://viewer:8080/">Agni</a>`) {
+		t.Error("with --viewer-url, the heading does not link to the viewer")
+	}
+	if without := page(""); strings.Contains(without, `class="ld-home"`) || !strings.Contains(without, "Agni / Datasheets") {
+		t.Error("without --viewer-url, the heading should be plain text, since / on agnids is the workbench")
 	}
 }

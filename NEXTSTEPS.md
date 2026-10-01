@@ -13,11 +13,10 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 ## Open, ranked
 
-1. **The datasheet workstream: #744 PR 3b, then PR 4, then #749.** The order and the storage design
-   are the latest comments on #744. The producer is its own module with `agnids`, and its protos are
-   their own buf module in `datasheet/protos`. 3b moves the workbench's web code into `datasheet/web`,
-   with the five modules it shares with the viewer in a `web-shared/` pnpm workspace package, and
-   points the workbench's home link at a configured viewer URL. PR 4 is two container images.
+1. **The datasheet workstream: #744 PR 4, then #749.** The producer is its own Go module with
+   `agnids`, its own buf module, and its own web package (`datasheet/web`, sharing only plain TS in
+   `web-shared/`). PR 4 is two container images: `agni` without docling or pdf2doc, and `agnids` with
+   them and `datasheet/web`. The storage design for #749 is the latest comment on #744.
 2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.
