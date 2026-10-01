@@ -19,19 +19,27 @@
 # which is also how an operator is told to run it.
 set -euo pipefail
 
+# Every command's output is captured WHOLE and trimmed afterwards, never piped into head. Under
+# pipefail, `docker run ... | head -1` fails whenever the container is still writing when head
+# exits: docker takes a broken pipe and exits 1, and whether that happens depends on how the
+# output was chunked. One CI run passed and the next failed on the same commit.
+first_lines() { sed -n "1,${1}p" <<<"$2"; }
+
 kind=${1:?usage: image_smoke.sh agni|agnids <image> [want-version]}
 img=${2:?usage: image_smoke.sh agni|agnids <image> [want-version]}
 want=${3:-}
 
 if [ -n "$want" ]; then
-	got="$(docker run --rm "$img" version | head -1)"
+	out="$(docker run --rm "$img" version)"
+	got="$(first_lines 1 "$out")"
 	echo "reported: $got"
 	[ "$got" = "$kind $want" ] || { echo "::error::$img reports '$got', expected '$kind $want'"; exit 1; }
 fi
 
 case "$kind" in
 agni)
-	docker run --rm "$img" check /workspace/demo/showcase.fires.kicad_pro | head -5
+	out="$(docker run --rm "$img" check /workspace/demo/showcase.fires.kicad_pro)"
+	first_lines 5 "$out"
 	;;
 agnids)
 	here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -49,10 +57,10 @@ agnids)
 	docker exec "$name" agnids healthcheck
 	code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18090/datasheets/)"
 	[ "$code" = 200 ] || { echo "::error::workbench page answered $code"; docker logs "$name"; exit 1; }
-	curl -sf -X POST -H 'Content-Type: application/json' \
+	resp="$(curl -sf -X POST -H 'Content-Type: application/json' \
 		http://127.0.0.1:18090/agni.v1.dsapi.DatasheetService/ExtractDocIR \
-		-d '{"uri":"mount://smoke/PART/part.pdf"}' | head -c 300 || { docker logs "$name"; exit 1; }
-	echo
+		-d '{"uri":"mount://smoke/PART/part.pdf"}')" || { echo "::error::ExtractDocIR failed"; docker logs "$name"; exit 1; }
+	echo "${resp:0:300}"
 	[ -s "$dir/smoke/PART/part.doc.textproto" ] || { echo "::error::Extract wrote no doc-IR"; docker logs "$name"; exit 1; }
 	grep -q 'agnids image warm-up page' "$dir/smoke/PART/part.doc.textproto" \
 		|| { echo "::error::doc-IR does not carry the page's text"; exit 1; }
