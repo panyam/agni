@@ -36,10 +36,10 @@ func TestReviewIndexDropsSupersededBuiltinProfile(t *testing.T) {
 	}
 }
 
-// Two overlay profiles sharing one name never reach the index: they compile to identical rule names,
-// which catalog composition rejects as a duplicate before any of this runs. Pinned because the review
-// index code reads as though it has to handle the case, and a future reader would otherwise be right
-// to wonder what happens. Composition, not the index, is where that is decided.
+// Two overlay profiles sharing one name never reach the index, because they compile to identical rule
+// names, which catalog composition rejects as a duplicate before any of this runs. Pinned because the
+// review index code reads as though it has to handle the case, and a future reader would otherwise be
+// right to wonder what happens. Composition, not the index, is where that is decided.
 func TestTwoOverlayProfilesOfOneNameAreRejectedAtComposition(t *testing.T) {
 	a, err := profiles.Load(strings.NewReader("override: SPI_NOR\nsuffixes: {IO0: _DQ0}\n"))
 	if err != nil {

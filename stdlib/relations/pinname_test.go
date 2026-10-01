@@ -41,11 +41,11 @@ func TestPinNameProjectsTheFunctionalName(t *testing.T) {
 	}
 }
 
-// A pin the source did not name yields no row rather than a row holding "". The distinction is the
-// whole reason a query can ask `pin(?r,?p), not pin.name(?r,?p,?_)` and have it mean "the read gave
+// A pin the source did not name yields no row rather than a row holding "". The distinction is
+// what lets a query ask `pin(?r,?p), not pin.name(?r,?p,?_)` and have it mean "the read gave
 // this pin no name" instead of matching every pin whose name happens to be empty.
 //
-// "~" is covered by the same assertion on purpose. It is KiCad's spelling of "this pin has no name"
+// "~" is covered by the same assertion. It is KiCad's spelling of "this pin has no name"
 // and it reaches the IR verbatim, so a projector taking it at face value would publish a pin named
 // "~" and every downstream comparison would carry it.
 func TestPinNameIsAbsentRatherThanEmpty(t *testing.T) {
@@ -69,7 +69,7 @@ func TestPinNameIsAbsentRatherThanEmpty(t *testing.T) {
 
 // The projector reads Name and never Designator, so a pin carrying one and not the other is still
 // named. No shipped reader produces this today (the EDIF reader falls back Designator <- Name per
-// issue 71), which is exactly why it is worth pinning: the fallback is what makes the two spellings
+// issue 71), and it is still worth pinning. The fallback is what makes the two spellings
 // agree on EDIF, and a projector that quietly keyed off the designator would look correct for as
 // long as that fallback held and go silent the moment a reader stopped applying it.
 func TestPinNameReachesAPinWithNoDesignator(t *testing.T) {

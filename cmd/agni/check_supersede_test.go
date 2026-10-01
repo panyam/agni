@@ -15,7 +15,7 @@ import (
 // severity error while the overlay read the same design clean. Six findings, four of them false, on a
 // design that is correct under its own convention.
 //
-// The asymmetry is the part worth remembering: re-binding the ANCHOR role hides the effect entirely,
+// The asymmetry is worth remembering. Re-binding the ANCHOR role hides the effect entirely,
 // because the core profile then fails to anchor and goes quiet. So the CLOSER a house convention sits
 // to the core one, the more false failures augmenting produced.
 func TestCheckNamingMapSupersedesCoreProfile(t *testing.T) {
@@ -89,8 +89,8 @@ func TestCheckReportsSupersededRules(t *testing.T) {
 	}
 }
 
-// The note is a run diagnostic, not a finding: it must stay out of the serialized findings stream that
-// --format json produces, the same posture warnOverBroadProfiles has.
+// The note is a run diagnostic, not a finding, so it must stay out of the serialized findings
+// stream that --format json produces, the same posture warnOverBroadProfiles has.
 func TestSupersessionNoteIsNotAFinding(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "housespi.yaml"),
@@ -111,9 +111,9 @@ func TestSupersessionNoteIsNotAFinding(t *testing.T) {
 	}
 }
 
-// A PROJECT's own profiles supersede built-ins too, and that went unreported: the note was taken from
-// the catalog the FLAGS built, before withProjectRules composed the project's rules onto it (agni
-// issue 450).
+// A PROJECT's own profiles supersede built-ins too, and that went unreported because the note was
+// taken from the catalog the FLAGS built, before withProjectRules composed the project's rules onto
+// it (agni issue 450).
 //
 // Silence here is the expensive kind. Supersession works by REMOVING rules, and a removed rule
 // produces no output, so a report whose built-in CAN rules were dropped read exactly like one where
@@ -183,9 +183,10 @@ func TestReviewReportsAProjectsOwnSupersessions(t *testing.T) {
 	}
 }
 
-// TestReviewSupersessionNoteIsNotRepeatedPerDesign: the note moved into the per-design loop, which is
-// the only scope where a project has been resolved. Two designs in one project supersede identically,
-// so an un-deduped loop says the same line twice and a rollup over a dozen designs is a wall.
+// TestReviewSupersessionNoteIsNotRepeatedPerDesign guards the per-design loop the note moved into,
+// which is the only scope where a project has been resolved. Two designs in one project supersede
+// identically, so an un-deduped loop says the same line twice and a rollup over a dozen designs is
+// a wall.
 func TestReviewSupersessionNoteIsNotRepeatedPerDesign(t *testing.T) {
 	proj := t.TempDir()
 	writeTutorialLikeProject(t, proj)

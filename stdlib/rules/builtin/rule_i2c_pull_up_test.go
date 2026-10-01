@@ -6,8 +6,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestIsI2CBoundary (WS3-037): SDA/SCL match at a token boundary, not as a substring. The load-bearing
-// case is SPI_SCLK — an SPI clock, not an I2C net — which the old strings.Contains match wrongly caught.
+// TestIsI2CBoundary (WS3-037) checks that SDA/SCL match at a token boundary, not as a substring. The
+// case that matters is SPI_SCLK, an SPI clock and not an I2C net, which the old strings.Contains match
+// wrongly caught.
 func TestIsI2CBoundary(t *testing.T) {
 	cases := map[string]bool{
 		"SDA": true, "SCL": true, "I2C_SCL": true, "SCL0": true, "SDA_1": true, "SENSOR_SDA": true,
@@ -21,8 +22,9 @@ func TestIsI2CBoundary(t *testing.T) {
 	}
 }
 
-// TestI2CPullUpSCLKNotFlagged (WS3-037): the rule fires on a bare SCL with no pull-up but NOT on an
-// SPI_SCLK net (the false positive) — an error-severity finding on every SPI clock line before the fix.
+// TestI2CPullUpSCLKNotFlagged (WS3-037) checks that the rule fires on a bare SCL with no pull-up but
+// NOT on an SPI_SCLK net. That false positive was an error-severity finding on every SPI clock line
+// before the fix.
 func TestI2CPullUpSCLKNotFlagged(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
@@ -56,7 +58,7 @@ func comps(refs ...string) []*ir.Component {
 //
 // The extended-net rows are the reason this is a WALK and not a one-hop test. A bus segment
 // separated from its pull-up by a series isolation or termination resistor is an ordinary topology,
-// and a one-hop rule would have fired on it: a false positive traded for the false pass, which is no
+// and a one-hop rule would have fired on it, trading the false pass for a false positive, which is no
 // improvement on a rule at error severity.
 func TestI2CPullUpTopologies(t *testing.T) {
 	for _, tc := range []struct {

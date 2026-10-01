@@ -80,9 +80,9 @@ func paramsErr(t *testing.T, args ...string) error {
 	return cmd.Execute()
 }
 
-// TestParamsRendersTheRecord: the point of the command is the part of the record the flat relations
-// cannot carry, so the conditions, the pin binding column, the citation and the typical value all
-// have to reach the page.
+// TestParamsRendersTheRecord covers what the command is for, the part of the record the flat
+// relations cannot carry, so the conditions, the pin binding column, the citation and the typical
+// value all have to reach the page.
 func TestParamsRendersTheRecord(t *testing.T) {
 	dir := t.TempDir()
 	seedParams(t, filepath.Join(dir, "p"), staleSpec)
@@ -130,7 +130,7 @@ func TestParamsNamesBothRevisionsForAStaleVerification(t *testing.T) {
 	}
 }
 
-// TestParamsMPNMatchIsCaseInsensitiveButNotFuzzy follows param.ParamSet.Lookup: vendor and BOM
+// TestParamsMPNMatchIsCaseInsensitiveButNotFuzzy follows param.ParamSet.Lookup. Vendor and BOM
 // casing of one MPN differ routinely, while a near-miss MPN is a DIFFERENT PART until a human says
 // otherwise.
 func TestParamsMPNMatchIsCaseInsensitiveButNotFuzzy(t *testing.T) {
@@ -146,8 +146,8 @@ func TestParamsMPNMatchIsCaseInsensitiveButNotFuzzy(t *testing.T) {
 	}
 }
 
-// TestParamsMissIsAnError: an MPN nothing seeds must not print an empty record, which reads as a
-// part with no parameters rather than a part nobody has transcribed.
+// TestParamsMissIsAnError holds that an MPN nothing seeds must not print an empty record, which
+// reads as a part with no parameters rather than a part nobody has transcribed.
 func TestParamsMissIsAnError(t *testing.T) {
 	dir := t.TempDir()
 	seedParams(t, filepath.Join(dir, "p"), staleSpec)
@@ -162,8 +162,8 @@ func TestParamsMissIsAnError(t *testing.T) {
 	}
 }
 
-// TestParamsNeedsACorpus: with neither --params nor --design there is nothing to read, and saying so
-// beats printing an empty record.
+// TestParamsNeedsACorpus covers a run with neither --params nor --design, which has nothing to
+// read, and saying so beats printing an empty record.
 func TestParamsNeedsACorpus(t *testing.T) {
 	t.Chdir(t.TempDir())
 	err := paramsErr(t, "params", "ACME-LDO")
@@ -210,7 +210,7 @@ func TestParamsJSONIsTheRecordItself(t *testing.T) {
 }
 
 // TestParamsProjectCorpusWinsOverTheFlag is the agni issue 474 shape, applied here before it can
-// bite: a command that reads its tier from the flag alone answers about the wrong corpus inside a
+// bite. A command that reads its tier from the flag alone answers about the wrong corpus inside a
 // project. The two corpora seed DIFFERENT numbers for one MPN, so reading the flag produces a
 // visibly wrong answer rather than an identical one.
 func TestParamsProjectCorpusWinsOverTheFlag(t *testing.T) {
@@ -254,8 +254,8 @@ parameters {
 	}
 }
 
-// TestParamsDesignOutsideAProjectFallsBackToTheFlag: the flag is the route for a loose design, so
-// widening to the project path must not close it.
+// TestParamsDesignOutsideAProjectFallsBackToTheFlag keeps the flag as the route for a loose design,
+// which widening to the project path must not close.
 func TestParamsDesignFlagFallsBackToTheCorpusFlag(t *testing.T) {
 	dir := t.TempDir()
 	seedParams(t, filepath.Join(dir, "p"), staleSpec)

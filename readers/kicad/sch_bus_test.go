@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-// TestCollectBuses: the reader records NAMED buses with their member set (WS1-034). The alias fixture
-// yields the bus_alias "DATA" with its explicit members; the resolved fixture yields the range-bus
-// "DATA[1:0]" with the range-expanded members. The bare bus/bus_entry wire geometry is not flagged on
-// its own (the label/alias names the bus).
+// TestCollectBuses checks that the reader records NAMED buses with their member set (WS1-034). The
+// alias fixture yields the bus_alias "DATA" with its explicit members; the resolved fixture yields
+// the range-bus "DATA[1:0]" with the range-expanded members. The bare bus/bus_entry wire geometry
+// is not flagged on its own (the label/alias names the bus).
 func TestCollectBuses(t *testing.T) {
 	cases := []struct {
 		fixture     string

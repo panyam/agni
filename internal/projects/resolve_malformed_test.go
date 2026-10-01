@@ -11,16 +11,16 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// A malformed descriptor is now fatal for the design it governs, so these pin the boundary of that:
-// which failures are the design's own, and which belong to someone else's folder.
+// A malformed descriptor is now fatal for the design it governs, so these pin the boundary between
+// failures that are the design's own and failures that belong to someone else's folder.
 
-// TestResolveDesign_MalformedOwnDescriptor: a design whose OWN design.yaml does not parse returns the
-// parse error. Callers use this to refuse rather than compose against the built-in vocabulary, which
-// answers a different question while looking like an answer.
+// TestResolveDesign_MalformedOwnDescriptor checks that a design whose OWN design.yaml does not
+// parse returns the parse error. Callers use this to refuse rather than compose against the
+// built-in vocabulary, which answers a different question while looking like an answer.
 func TestResolveDesign_MalformedOwnDescriptor(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "proj/project.yaml", "name: gw\n")
-	writeFile(t, root, "proj/designs/board/design.yaml", "name: My Board\nentry: board.edn\n") // spaces: not an id
+	writeFile(t, root, "proj/designs/board/design.yaml", "name: My Board\nentry: board.edn\n") // spaces, so not an id
 	writeFile(t, root, "proj/designs/board/board.edn", "x")
 	s := NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)})
 
@@ -34,8 +34,8 @@ func TestResolveDesign_MalformedOwnDescriptor(t *testing.T) {
 }
 
 // TestResolveDesign_MalformedSiblingIsNotOurProblem is the regression guard for the narrowing. The
-// tolerance being narrowed exists for a real reason — one team's broken folder must not make another
-// team's design unreadable — and only the descriptors on THIS design's path are its own.
+// tolerance being narrowed exists for a real reason (one team's broken folder must not make another
+// team's design unreadable), and only the descriptors on THIS design's path are its own.
 func TestResolveDesign_MalformedSiblingIsNotOurProblem(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "proj/project.yaml", "name: gw\n")
@@ -53,9 +53,9 @@ func TestResolveDesign_MalformedSiblingIsNotOurProblem(t *testing.T) {
 	}
 }
 
-// TestResolveDesign_UnknownMountIsNotFound: an unresolvable mount is ErrNotFound, which callers treat
-// as "no project" rather than as a broken descriptor. Keeping these distinguishable is what lets
-// Overlay refuse one and tolerate the other.
+// TestResolveDesign_UnknownMountIsNotFound checks that an unresolvable mount is ErrNotFound, which
+// callers treat as "no project" rather than as a broken descriptor. Keeping these distinguishable
+// is what lets Overlay refuse one and tolerate the other.
 func TestResolveDesign_UnknownMountIsNotFound(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: os.DirFS(t.TempDir())})
 	_, _, err := s.ResolveDesign(context.Background(), artifact.URI{Mount: "other", Path: "x.edn"})

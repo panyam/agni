@@ -24,8 +24,8 @@ func queryRule(fq query.FindingQuery) *check.Rule { return query.MustRuleFromQue
 
 // conformanceModels loads every conformance fixture into a Model, so a rule can be run against the
 // whole fixture corpus rather than one hand-picked design. It lives at the CLI edge for the same
-// reason TestConformance does: the reader is then in the loop, and a rule is judged on what it does to
-// real parsed designs.
+// reason TestConformance does. The reader is then in the loop, and a rule is judged on what it does
+// to real parsed designs.
 func conformanceModels(t *testing.T) map[string]check.Model {
 	t.Helper()
 	sidecars, err := filepath.Glob(filepath.Join("testdata", "conformance", "*.expect.yaml"))
@@ -63,10 +63,11 @@ func assertSameFindings(t *testing.T, name string, want, got *check.Rule, models
 // half of the checks contract (WS3-103), over the spec-authored rules.
 //
 // Every shipped Spec is encoded, marshalled to bytes, read back, compiled, and run against every
-// conformance fixture; the findings must match exactly. Comparing FINDINGS rather than the decoded AST
-// is the point: two Specs can differ structurally and behave identically, and, far more importantly,
-// they can look identical and behave differently — a literal decoded as the wrong numeric type
-// silently makes every ordering comparison false, which no structural equality check would notice.
+// conformance fixture; the findings must match exactly. It compares FINDINGS rather than the
+// decoded AST because two Specs can differ structurally and behave identically, and, far more
+// importantly, they can look identical and behave differently. A literal decoded as the wrong
+// numeric type silently makes every ordering comparison false, which no structural equality check
+// would notice.
 //
 // The baseline is the spec bound through Spec.Rule, NOT the shipped built-in of the same name. Most
 // built-ins are Go-authored with hand-written Reads and Primitives, and their Spec is a declarative
@@ -112,8 +113,8 @@ func TestSpecRulesRoundTripThroughTheDefinitionContract(t *testing.T) {
 }
 
 // assertMetaSurvives pins the fields a compiled rule needs to behave the same in a catalog: identity,
-// severity, the declared gates, and the derived reads. Reads and Primitives are NOT serialized — they
-// are derived by the compiler from the body — so their surviving the trip is evidence that the body
+// severity, the declared gates, and the derived reads. Reads and Primitives are NOT serialized (the
+// compiler derives them from the body), so their surviving the trip is evidence that the body
 // itself came through intact.
 func assertMetaSurvives(t *testing.T, want, got *check.Rule) {
 	t.Helper()
@@ -138,8 +139,8 @@ func assertMetaSurvives(t *testing.T, want, got *check.Rule) {
 }
 
 // TestDatalogRulesRoundTripThroughTheDefinitionContract is the same acceptance test over the
-// datalog-authored rules. It carries the AST rather than the query text on purpose, so this also pins
-// that the AST survives: a program whose negation, aggregate, or numeric constant were dropped would
+// datalog-authored rules. It carries the AST rather than the query text, so this also pins that the
+// AST survives. A program whose negation, aggregate, or numeric constant were dropped would
 // still parse and still run, and would simply report less.
 func TestDatalogRulesRoundTripThroughTheDefinitionContract(t *testing.T) {
 	models := conformanceModels(t)
@@ -172,7 +173,7 @@ func TestDatalogRulesRoundTripThroughTheDefinitionContract(t *testing.T) {
 
 // TestProfilesRoundTripThroughTheDefinitionContract covers the third source. A profile is the one
 // definition that compiles to MORE than one rule, so this asserts the rule SET matches by name before
-// comparing each rule's findings — a trip that silently dropped a requirement would otherwise look
+// comparing each rule's findings. A trip that silently dropped a requirement would otherwise look
 // clean, and a dropped requirement is a check that no longer exists.
 func TestProfilesRoundTripThroughTheDefinitionContract(t *testing.T) {
 	models := conformanceModels(t)

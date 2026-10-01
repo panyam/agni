@@ -65,7 +65,7 @@ func TestLayoutForFile(t *testing.T) {
 	}
 }
 
-// fakeLoader is an in-memory Loader: it proves the services run with no os (C13). Each
+// fakeLoader is an in-memory Loader, which proves the services run with no os (C13). Each
 // method returns its canned value (or the shared wrapped error). geomErr fails only Geometry,
 // for the "design has a netlist but no resolvable geometry" cases.
 type fakeLoader struct {
@@ -77,7 +77,7 @@ type fakeLoader struct {
 	err     error
 	geomErr error
 	// hash is the canned DesignHash, and hashErr fails it alone. Zero-valued they give the
-	// unhashable case, which is deliberately the DEFAULT: a loader that says nothing about the
+	// unhashable case, and that is the DEFAULT because a loader that says nothing about the
 	// revision is what every test not exercising the link check should present.
 	hash    string
 	hashErr error
@@ -102,7 +102,7 @@ func (f fakeLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, e
 	return f.board, f.err // nil board is normal (netlist-only); a board fixture drives the tier
 }
 func (f fakeLoader) DesignHash(context.Context, artifact.URI) (string, error) {
-	return f.hash, f.hashErr // hashErr alone, not f.err: a design that reads fine can still fail to hash
+	return f.hash, f.hashErr // hashErr alone, not f.err, since a design that reads fine can still fail to hash
 }
 
 // noNative is a NativeRenderer that offers nothing (the common server default in tests).
@@ -114,8 +114,8 @@ func (noNative) Render(context.Context, artifact.URI, int) (string, error) {
 }
 
 func TestCheckDesignOverFakeLoader(t *testing.T) {
-	// SDA is an I2C net with no pull-up resistor, so check.Run flags it. The service does no I/O:
-	// the design is handed in by the (fake) loader.
+	// SDA is an I2C net with no pull-up resistor, so check.Run flags it. The service does no I/O,
+	// since the (fake) loader hands the design in.
 	d := &ir.Design{Nets: []*ir.Net{{
 		Name:        "SDA",
 		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}, {ComponentRef: "U2", PinRef: "5"}},
@@ -143,7 +143,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 }
 
 // TestGetInterfaceCoverage exercises the coverage RPC end to end (handler + adapter path is the
-// server's): an SPI-NOR bus with IO2 absent, IO3 single-pin, and CS unpulled yields the matrix the
+// server's). An SPI-NOR bus with IO2 absent, IO3 single-pin, and CS unpulled yields the matrix the
 // coverage panel renders, one entry per detected interface.
 func TestGetInterfaceCoverage(t *testing.T) {
 	conn := func(ref, pin string) *ir.Connection { return &ir.Connection{ComponentRef: ref, PinRef: pin} }
@@ -263,9 +263,9 @@ func TestCheckDesignSubsetAndSubject(t *testing.T) {
 	}
 }
 
-// TestCheckDesignSheets pins the WS9-024 join: each finding carries the sheet ids where its
-// subject appears in the geometry — a component's from its placements, a net's from its wires
-// on every sheet it spans — so the viewer can navigate to the right sheet before highlighting.
+// TestCheckDesignSheets pins the WS9-024 join. Each finding carries the sheet ids where its
+// subject appears in the geometry (a component's from its placements, a net's from its wires
+// on every sheet it spans), so the viewer can navigate to the right sheet before highlighting.
 // A design whose geometry cannot be resolved degrades to findings with no sheets, never an error.
 func TestCheckDesignSheets(t *testing.T) {
 	// R9 (on no net) trips unconnected-component; SDA trips i2c-pull-up.
@@ -343,16 +343,16 @@ func TestCheckDesignSheets(t *testing.T) {
 	}
 }
 
-// TestCheckDesignNetSheetsFromAttribute pins the WS9-028 net-membership channel: a net that
+// TestCheckDesignNetSheetsFromAttribute pins the WS9-028 net-membership channel. A net that
 // carries AttrSheets (the hierarchy walk's authoritative membership) badges its finding from
-// that attribute, NOT from wire geometry. This is the case WS9-024's wire join could not reach —
-// a wireless sub-sheet net has no wire naming it, so the geometry tally leaves it badge-less. The
+// that attribute, NOT from wire geometry. This is the case WS9-024's wire join could not reach.
+// A wireless sub-sheet net has no wire naming it, so the geometry tally leaves it badge-less. The
 // attribute also OVERRIDES the geometry tally when both exist, so the authoritative membership
 // wins over a partial wire picture.
 func TestCheckDesignNetSheetsFromAttribute(t *testing.T) {
 	// /amp2/CTRL is a one-pin net (trips single-pin-net) carrying membership "/amp2"; SPANNED is a
-	// one-pin net whose attribute says "/a,/b" while geometry only wires it on "/a" — the attribute
-	// must win.
+	// one-pin net whose attribute says "/a,/b" while geometry only wires it on "/a", and the
+	// attribute must win.
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}},
 		Nets: []*ir.Net{
@@ -395,7 +395,7 @@ func TestCheckDesignNetSheetsFromAttribute(t *testing.T) {
 
 // TestHighlightSheet drives the overlay endpoint over the fake loader: PACKED resolves specs to
 // primitive-index groups (joining what GetSheet's PackedSheet would carry), SVG returns a
-// transparent overlay document, and NATIVE — which has no overlay concept — is rejected up front.
+// transparent overlay document, and NATIVE, which has no overlay concept, is rejected up front.
 func TestHighlightSheet(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Symbols: []*geom.SymbolDef{{
@@ -444,7 +444,7 @@ func TestHighlightSheet(t *testing.T) {
 		t.Errorf("svg overlay missing root/spec color: %q", svg)
 	}
 
-	// NATIVE has no overlay: classified invalid-argument for the transport.
+	// NATIVE has no overlay, so it is classified invalid-argument for the transport.
 	if _, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
 		Uri: "mount://m/x.eds", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
 	}); !errors.Is(err, ErrInvalidArgument) {
@@ -452,9 +452,9 @@ func TestHighlightSheet(t *testing.T) {
 	}
 }
 
-// TestSecondSourceFlowsThroughService is the WS3-006 done-when: an embedder source's rules
+// TestSecondSourceFlowsThroughService is the WS3-006 done-when. An embedder source's rules
 // reach ListRules under their namespaced name with the source tag stamped, and the
-// CheckDesign subset runs them by that name — the same seam the built-ins use.
+// CheckDesign subset runs them by that name, the same path the built-ins take.
 func TestSecondSourceFlowsThroughService(t *testing.T) {
 	everyNet := &check.Rule{
 		Name: "every-net", Severity: "info", Summary: "fires per net (test source)",
@@ -504,9 +504,9 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 	}
 }
 
-// boardLoader is a fakeLoader whose file also has a board sidecar (a .kicad_pcb): GetDesign
+// boardLoader is a fakeLoader whose file also has a board sidecar (a .kicad_pcb). GetDesign
 // must list the synthetic board sheet after the drawable ones, and GetSheet/HighlightSheet
-// must answer for it — SVG from BoardSVG, PACKED from PackBoard (WS7-035).
+// must answer for it, SVG from BoardSVG and PACKED from PackBoard (WS7-035).
 type boardLoader struct {
 	fakeLoader
 	board *geom.BoardGeometry
@@ -594,8 +594,8 @@ func TestHighlightSheetBoard(t *testing.T) {
 	}
 }
 
-// TestBoardSheetAbsent: a loader without board geometry (nil, nil — absence is normal)
-// lists no board sheet, and asking for one is ErrNotFound.
+// TestBoardSheetAbsent checks that a loader without board geometry (nil, nil, since absence is
+// normal) lists no board sheet, and that asking for one is ErrNotFound.
 func TestBoardSheetAbsent(t *testing.T) {
 	ld := fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
@@ -611,10 +611,10 @@ func TestBoardSheetAbsent(t *testing.T) {
 	}
 }
 
-// TestHighlightSheetCompanionNameJoin: on a NAME-ONLY canvas (a companion .eds: wires named by net,
-// no per-instance net_id), an id-only net spec (as the web builds for a netlist finding) is resolved
-// to its net NAME via the netlist and matches by name. Without the resolution the id-only spec would
-// paint nothing on such a canvas.
+// TestHighlightSheetCompanionNameJoin checks that on a NAME-ONLY canvas (a companion .eds, whose
+// wires are named by net with no per-instance net_id), an id-only net spec (as the web builds for a
+// netlist finding) is resolved to its net NAME via the netlist and matches by name. Without the
+// resolution the id-only spec would paint nothing on such a canvas.
 func TestHighlightSheetCompanionNameJoin(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{
 		Id:    "P1",
@@ -636,8 +636,8 @@ func TestHighlightSheetCompanionNameJoin(t *testing.T) {
 	}
 }
 
-// TestNameOnlyCanvas: a canvas with named wires but no net_id is name-only (the .eds case); one with
-// any net_id is id-capable (leave it to the id-join); an empty one is neither.
+// TestNameOnlyCanvas checks that a canvas with named wires but no net_id is name-only (the .eds
+// case), one with any net_id is id-capable (leave it to the id-join), and an empty one is neither.
 func TestNameOnlyCanvas(t *testing.T) {
 	nameOnly := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Wires: []*geom.WireGeometry{{Net: "A"}}}}}
 	idCapable := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Wires: []*geom.WireGeometry{{Net: "A", NetId: "h1"}}}}}
@@ -664,9 +664,9 @@ func uriStr(mount, p string) string {
 	return u.String()
 }
 
-// TestGetDesignReportsUndrawnPlacements: a viewer cannot tell a complete sheet from a bodyless one by
-// looking at it, because a render that lost its symbols still draws every reference designator, every
-// wire and the title block. The shortfall has to arrive as data (agni issue 354).
+// TestGetDesignReportsUndrawnPlacements exists because a viewer cannot tell a complete sheet from a
+// bodyless one by looking at it, because a render that lost its symbols still draws every reference
+// designator, every wire and the title block. The shortfall has to arrive as data (agni issue 354).
 func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 	g := twoSheetGeom()
 	g.Undrawn = []*geom.UndrawnPlacement{{RefDes: "U1", CellRef: "MCU", LibraryRef: "Acme", SheetId: "P1"}}
@@ -693,11 +693,11 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 	}
 }
 
-// TestGetDesignReportsContentHash: a verdict link carries the revision the CLI ran against, and the
-// viewer can only check it against something. The hash has to arrive with the DESIGN, before any
-// check has run, because a verdict id is derived from a rule name and a subject ref and resolves
-// against an edited design just as readily. By the time the proof paints it is too late to say so
-// (agni issue 392).
+// TestGetDesignReportsContentHash exists because a verdict link carries the revision the CLI ran
+// against, and the viewer can only check it against something. The hash has to arrive with the
+// DESIGN, before any check has run, because a verdict id is derived from a rule name and a subject
+// ref and resolves against an edited design just as readily. By the time the proof paints it is too
+// late to say so (agni issue 392).
 func TestGetDesignReportsContentHash(t *testing.T) {
 	svc := NewDesignService(fakeLoader{geom: twoSheetGeom(), hash: "sha256:abc"}, noNative{}, render.Style{}, nil)
 	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
@@ -709,10 +709,10 @@ func TestGetDesignReportsContentHash(t *testing.T) {
 	}
 }
 
-// TestGetDesignSurvivesAnUnhashableFile: the hash is provenance, not the design. A loader that cannot
-// hash still read the file, so the sheets must come back and the field must go empty. The response's
-// contract makes that a THIRD state, distinct from a match, so the viewer reports "could not check"
-// rather than waving the link through.
+// TestGetDesignSurvivesAnUnhashableFile pins that the hash is provenance, not the design. A loader
+// that cannot hash still read the file, so the sheets must come back and the field must go empty. The
+// response's contract makes that a THIRD state, distinct from a match, so the viewer reports "could
+// not check" rather than waving the link through.
 func TestGetDesignSurvivesAnUnhashableFile(t *testing.T) {
 	svc := NewDesignService(
 		fakeLoader{geom: twoSheetGeom(), hashErr: errors.New("permission denied")},
@@ -730,10 +730,9 @@ func TestGetDesignSurvivesAnUnhashableFile(t *testing.T) {
 	}
 }
 
-// fullConversionReport sets every field to a distinguishable non-zero value, with TWO components,
-// which is the load-bearing half of a round-trip guard: a zero field survives a conversion that
-// drops it, and a converter that drops everything past the first element round-trips a one-element
-// slice perfectly.
+// fullConversionReport sets every field to a distinguishable non-zero value, with TWO components. A
+// zero field survives a conversion that drops it, and a converter that drops everything past the
+// first element round-trips a one-element slice perfectly.
 func fullConversionReport() *graph.ConversionReport {
 	return &graph.ConversionReport{Components: []graph.ComponentReport{
 		{RefDes: "R1", Symbol: "Device:R", Class: "resistor", Cell: "res", Kind: "glyph"},

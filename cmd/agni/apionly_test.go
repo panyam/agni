@@ -33,7 +33,7 @@ func TestServeWithNothingNamedAndNoWebDirIsAPIOnly(t *testing.T) {
 	}
 }
 
-// Absent is a choice and broken is a mistake: every way of NAMING a web dir still fails loudly when
+// Absent is a choice and broken is a mistake. Every way of NAMING a web dir still fails loudly when
 // the name is wrong, because the operator typed it and wants to hear about the typo.
 func TestServeStillRefusesANamedWebDirThatIsWrong(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "nope")
@@ -76,7 +76,7 @@ func TestServeStillRefusesAnIncompleteCheckout(t *testing.T) {
 	}
 }
 
-// The workbench is optional: a viewer without it still serves, and the reason it is off is kept for
+// The workbench is optional. A viewer without it still serves, and the reason it is off is kept for
 // /datasheets/ to answer with.
 func TestServeWithoutTheWorkbenchStillServesTheViewer(t *testing.T) {
 	clearNamedWebDir(t)

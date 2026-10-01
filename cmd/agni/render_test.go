@@ -59,7 +59,7 @@ func TestBuildRegistry(t *testing.T) {
 }
 
 // A sheet whose id is numeric (e.g. a flat single-sheet .sch) must be selectable by that id, not
-// misread as a positional index. Regression: the viewer requests the id from GetDesign, so an
+// misread as a positional index. In the regression, the viewer requested the id from GetDesign, so an
 // id of "1" was read as index 1 -> out of range -> a blank sheet.
 func TestPickSheetIdBeatsIndex(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "1", Name: "root"}}}
@@ -98,8 +98,9 @@ func TestRenderGeometrySVG(t *testing.T) {
 	}
 }
 
-// TestRenderGeometrySVGHighlight: when specs are passed, the svg path bakes the highlight into
-// the one document (a wider re-stroke of the matched net's wire), unlike the plain svg render.
+// TestRenderGeometrySVGHighlight checks that when specs are passed, the svg path bakes the
+// highlight into the one document (a wider re-stroke of the matched net's wire), unlike the plain
+// svg render.
 func TestRenderGeometrySVGHighlight(t *testing.T) {
 	g, sheet := oneSheetGeom()
 	sheet.Wires = []*geom.WireGeometry{
@@ -219,11 +220,11 @@ func TestWriteReport(t *testing.T) {
 	}
 }
 
-// TestRenderResolvesDeclaredGeometryCompanion: pointing render at a DESIGN draws the schematic the
-// design declares, rather than trying to open the folder as a file.
+// TestRenderResolvesDeclaredGeometryCompanion checks that pointing render at a DESIGN draws the
+// schematic the design declares, rather than trying to open the folder as a file.
 //
 // It failed with `no reader for "" files` before, which is what a directory path looks like to the
-// format registry. The information was never missing: `agni stats` on the same folder already
+// format registry. The information was never missing. `agni stats` on the same folder already
 // reported "sheets from gateway.kicad_sch", because it resolves the descriptor and render did not.
 func TestRenderResolvesDeclaredGeometryCompanion(t *testing.T) {
 	const design = "../../examples/tutorial-project/designs/gateway"
@@ -239,9 +240,8 @@ func TestRenderResolvesDeclaredGeometryCompanion(t *testing.T) {
 }
 
 // TestRenderCmdDrawsADesignFolder is the end-to-end half, and it is the one that matters. The helper
-// test above passes on a build where renderCmd never calls renderSource at all, which is precisely
-// the bug being fixed: the resolution existed elsewhere in the CLI and this command did not reach for
-// it.
+// test above passes on a build where renderCmd never calls renderSource at all, which is the bug
+// being fixed. The resolution existed elsewhere in the CLI and this command did not reach for it.
 func TestRenderCmdDrawsADesignFolder(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "sheet.svg")
 	runCLI(t, renderCmd(), "../../examples/tutorial-project/designs/gateway", "-o", out)
@@ -256,9 +256,9 @@ func TestRenderCmdDrawsADesignFolder(t *testing.T) {
 	}
 }
 
-// TestRenderSourceLeavesALooseFileAlone: the ordinary case, a file belonging to no design, must pass
-// through untouched and without a note. Without this the test above passes on a resolver that
-// redirects everything.
+// TestRenderSourceLeavesALooseFileAlone checks the ordinary case, where a file belonging to no
+// design must pass through untouched and without a note. Without this the test above passes on a
+// resolver that redirects everything.
 func TestRenderSourceLeavesALooseFileAlone(t *testing.T) {
 	const loose = "testdata/conformance/showcase.fires.kicad_sch"
 	got, note := renderSource(loose)

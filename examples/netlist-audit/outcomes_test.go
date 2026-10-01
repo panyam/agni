@@ -7,8 +7,9 @@ import (
 	"github.com/panyam/agni/examples/common"
 )
 
-// TestEveryTableAnswersOnTheFixture: the fixture exists so each table has something in it, which is
-// what makes a table that quietly stops matching show up as a failure rather than as an empty section.
+// TestEveryTableAnswersOnTheFixture relies on a fixture that exists so each table has something in
+// it, which makes a table that quietly stops matching show up as a failure rather than as an empty
+// section.
 func TestEveryTableAnswersOnTheFixture(t *testing.T) {
 	d, err := common.Load("../common/designs/netlist-audit.tel")
 	if err != nil {

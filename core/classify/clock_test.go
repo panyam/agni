@@ -2,9 +2,9 @@ package classify
 
 import "testing"
 
-// TestClockClassesOf: every clock subtype carries the clock FAMILY tag (so a family-level rule reads
-// HasClass(clock)), and the bare family carries only itself. The family is clock, not crystal — an
-// oscillator must NOT carry a crystal tag (WS10-015).
+// TestClockClassesOf checks that every clock subtype carries the clock FAMILY tag (so a
+// family-level rule reads HasClass(clock)), and the bare family carries only itself. The family is
+// clock, not crystal, so an oscillator must NOT carry a crystal tag (WS10-015).
 func TestClockClassesOf(t *testing.T) {
 	cases := []struct {
 		in   ComponentClass
@@ -36,9 +36,10 @@ func TestClockClassesOf(t *testing.T) {
 	}
 }
 
-// TestNormalizeDeviceClass: a free-form vendor device_class string resolves to the canonical class it
-// names (alias table for synonyms, canonical-name set for exact names, identity for an unknown-but-
-// meaningful value), so the datasheet path reaches the same class the keyword path would (WS10-015).
+// TestNormalizeDeviceClass checks that a free-form vendor device_class string resolves to the
+// canonical class it names (alias table for synonyms, canonical-name set for exact names, identity
+// for an unknown-but- meaningful value), so the datasheet path reaches the same class the keyword
+// path would (WS10-015).
 func TestNormalizeDeviceClass(t *testing.T) {
 	cases := []struct {
 		in   string

@@ -53,14 +53,14 @@ func TestParseQuantitySpellings(t *testing.T) {
 	}
 }
 
-// TestParseQuantityIsDecimalExact is the assertion the whole parse strategy exists for, and it is
+// TestParseQuantityIsDecimalExact is the assertion the parse strategy exists for, and it is
 // written around a value where a naive implementation actually DIFFERS.
 //
-// Parsing the mantissa as a float and then scaling ("2.2" -> 2.2, times 1e-12) rounds twice, and the
-// second rounding does not always land where a single exact scaling does. Across 2-3 significant-figure
-// mantissas over the SI prefixes designs use, the two approaches disagree on 1573 of 7920 values, all
-// at small magnitudes: picofarads, where crystal load caps live and where a shipped rule already reads
-// capacitance.
+// Parsing the mantissa as a float and then scaling ("2.2" -> 2.2, times 1e-12) rounds twice, and
+// the second rounding does not always land where a single exact scaling does. Across 2-3
+// significant-figure mantissas over the SI prefixes designs use, the two approaches disagree on
+// 1573 of 7920 values, all at small magnitudes, in picofarads, where crystal load caps live and
+// where a shipped rule already reads capacitance.
 //
 // A test written on 4k7 would pass either way (4700 does not diverge) and would prove nothing, which is
 // why this one is pinned to 2p2 and asserts against the exactly-scaled double rather than a literal.
@@ -80,8 +80,9 @@ func TestParseQuantityIsDecimalExact(t *testing.T) {
 	}
 }
 
-// TestParseQuantitySpellingsAgreeOnOneValue: two spellings of one value must produce the IDENTICAL
-// double, so a diff can compare component values across revisions by equality rather than by tolerance.
+// TestParseQuantitySpellingsAgreeOnOneValue checks that two spellings of one value produce the
+// IDENTICAL double, so a diff can compare component values across revisions by equality rather than
+// by tolerance.
 func TestParseQuantitySpellingsAgreeOnOneValue(t *testing.T) {
 	for _, pair := range [][2]string{
 		{"4k7", "4700"},
@@ -102,8 +103,9 @@ func TestParseQuantitySpellingsAgreeOnOneValue(t *testing.T) {
 	}
 }
 
-// TestParseQuantityUnparsedIsNotZero: "DNP" and "0R05" must not look alike. Zero is a legal resistance,
-// so a failed parse reporting a zero value would make an unfitted part read as a short.
+// TestParseQuantityUnparsedIsNotZero checks that "DNP" and "0R05" do not look alike. Zero is a
+// legal resistance, so a failed parse reporting a zero value would make an unfitted part read as a
+// short.
 func TestParseQuantityUnparsedIsNotZero(t *testing.T) {
 	if _, _, ok := ParseQuantity("DNP"); ok {
 		t.Error("DNP must not parse")

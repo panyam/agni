@@ -52,8 +52,8 @@ const (
 )
 
 // answeredFromJSON reads the answered and fail counts out of `review --format json`'s summary block.
-// Reading the rendered document rather than recomputing from the items is deliberate: it asserts that
-// the number a consumer sees is the same one the gate reads.
+// It reads the rendered document rather than recomputing from the items, so it asserts that the
+// number a consumer sees is the same one the gate reads.
 func answeredFromJSON(t *testing.T, out string) (answered, fail int) {
 	t.Helper()
 	var doc struct {
@@ -75,15 +75,15 @@ func wrapErr(err error) error { return fmt.Errorf("review: %w", err) }
 // TestReviewGateIsOptIn is the compatibility guard, and it is the reason both flags default to off.
 // `agni review` has always exited 0, so a default-on gate would turn every existing pipeline, both
 // tutorial rungs that run it, and the three targets in examples/tutorial-project/Makefile red on a
-// tool upgrade — with no flag anyone could have set in advance to opt out.
+// tool upgrade, with no flag anyone could have set in advance to opt out.
 //
 // can-broken.edn genuinely fails two checklist items, so this is the case a default-on gate would trip.
 func TestReviewGateIsOptIn(t *testing.T) {
 	mustNotGate(t, "--checklist", miniChecklist, brokenDesign)
 }
 
-// TestReviewGateFailOnOutcome: the outcome gate trips on a design whose checklist items fail, and stays
-// quiet on one whose do not.
+// TestReviewGateFailOnOutcome checks that the outcome gate trips on a design whose checklist items
+// fail, and stays quiet on one whose do not.
 func TestReviewGateFailOnOutcome(t *testing.T) {
 	msg := mustGate(t, "--checklist", miniChecklist, "--fail-on-outcome", "fail", brokenDesign)
 	if !strings.Contains(msg, "2 checklist items") {
@@ -97,12 +97,12 @@ func TestReviewGateFailOnOutcome(t *testing.T) {
 // gating on it by default fails CI on data quality rather than on design quality, which teaches a team
 // to switch the gate off. It gates when a team names it.
 //
-// --ratified-floor 1.0 is what manufactures the provisional: it puts the confidence bar above every
+// --ratified-floor 1.0 manufactures the provisional by putting the confidence bar above every
 // seeded value, so a real failing item reports as resting on untrusted data.
 func TestReviewGateProvisionalIsOptIn(t *testing.T) {
 	args := []string{"--checklist", miniChecklist, "--ratified-floor", "1.0", brokenDesign}
-	// Sanity: this configuration really does produce a provisional, or the rest of the test proves
-	// nothing about provisional and merely re-tests the fail gate.
+	// A sanity check that this configuration really does produce a provisional, or the rest of the
+	// test proves nothing about provisional and merely re-tests the fail gate.
 	if out := runReview(t, append([]string{"--format", "json"}, args...)...); !strings.Contains(out, `"provisional"`) {
 		t.Fatalf("fixture produced no provisional outcome; this test cannot say anything:\n%s", out)
 	}
@@ -114,8 +114,9 @@ func TestReviewGateProvisionalIsOptIn(t *testing.T) {
 	}
 }
 
-// TestReviewGateMinAnswered: the floor trips below and passes at the boundary. can-broken answers 3 of
-// its 6 items (1 pass, 2 fail); the other three are not-applicable or not-automated.
+// TestReviewGateMinAnswered checks that the floor trips below the boundary and passes at it.
+// can-broken answers 3 of its 6 items (1 pass, 2 fail); the other three are not-applicable or
+// not-automated.
 func TestReviewGateMinAnswered(t *testing.T) {
 	mustNotGate(t, "--checklist", miniChecklist, "--min-answered", "3", brokenDesign)
 	msg := mustGate(t, "--checklist", miniChecklist, "--min-answered", "4", brokenDesign)
@@ -130,7 +131,7 @@ func TestReviewGateMinAnswered(t *testing.T) {
 //
 // The same design and the same checklist are run twice, differing only in whether the datasheet corpus
 // is attached. The answered count DROPS while the failure count does not rise, so --min-answered trips
-// and --fail-on-outcome fail does not. That gap is the whole reason review needs a gate of its own:
+// and --fail-on-outcome fail does not. Review needs a gate of its own because of that gap, since
 // `check --fail-on` pivots on severity and can only ever see the second number.
 func TestReviewGateSeesWhatSeverityCannot(t *testing.T) {
 	// The rails fixture is chosen because its two datasheet-backed items PASS when the corpus is
@@ -160,13 +161,13 @@ func TestReviewGateSeesWhatSeverityCannot(t *testing.T) {
 	floor := strconv.Itoa(withParams)
 	mustNotGate(t, "--checklist", checklist, "--intent-path", intentDoc, "--params", params, "--min-answered", floor, design)
 	mustGate(t, "--checklist", checklist, "--intent-path", intentDoc, "--min-answered", floor, design)
-	// And the severity-shaped gate stays quiet across both, which is the point.
+	// And the severity-shaped gate stays quiet across both.
 	mustNotGate(t, "--checklist", checklist, "--intent-path", intentDoc, "--fail-on-outcome", "fail", "--min-answered", "0", design)
 }
 
-// TestReviewGateRollup: with several designs the gate reads every one of them, not just the first. A
-// gate that only worked on the single-design path would be a trap for the case most likely to want it
-// (issue 199, design question 4).
+// TestReviewGateRollup checks that with several designs the gate reads every one of them, not just
+// the first. A gate that only worked on the single-design path would be a trap for the case most
+// likely to want it (issue 199, design question 4).
 func TestReviewGateRollup(t *testing.T) {
 	// Ordered clean-first so a gate that only inspected reports[0] would pass and this test would catch
 	// it. The reverse order would pass either way.
@@ -179,7 +180,7 @@ func TestReviewGateRollup(t *testing.T) {
 
 // TestReviewGateAppliesToResultsOut guards the exit path that returned early before the gate existed.
 // A pipeline that gates is also the one archiving its results document, so a gate that worked on two of
-// three code paths would have missed exactly the caller that wanted it.
+// three code paths would have missed the caller that wanted it.
 func TestReviewGateAppliesToResultsOut(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "run.results.json")
 	mustGate(t, "--checklist", miniChecklist, "--fail-on-outcome", "fail", "--results-out", out, brokenDesign)
@@ -190,9 +191,10 @@ func TestReviewGateAppliesToResultsOut(t *testing.T) {
 	}
 }
 
-// TestReviewGateRejectsUnknownOutcome: a typo is an error naming the valid set, never a silently
-// disabled gate. A CI config that quietly stopped gating would report a clean pipeline for as long as
-// nobody looked, which is the same silence-reads-as-coverage failure the outcome vocabulary removes.
+// TestReviewGateRejectsUnknownOutcome checks that a typo is an error naming the valid set, never a
+// silently disabled gate. A CI config that quietly stopped gating would report a clean pipeline for
+// as long as nobody looked, which is the same silence-reads-as-coverage failure the outcome
+// vocabulary removes.
 func TestReviewGateRejectsUnknownOutcome(t *testing.T) {
 	err := reviewGateErr(t, "--checklist", miniChecklist, "--fail-on-outcome", "failed", brokenDesign)
 	if err == nil {
@@ -208,9 +210,9 @@ func TestReviewGateRejectsUnknownOutcome(t *testing.T) {
 	}
 }
 
-// TestCheckGateExitsTwo: `check --fail-on` now returns the same code `review`'s gates do, so one CI
-// script can treat every gate in this CLI alike rather than parsing stderr to tell a red board from a
-// broken tool.
+// TestCheckGateExitsTwo checks that `check --fail-on` returns the same code `review`'s gates do, so
+// one CI script can treat every gate in this CLI alike rather than parsing stderr to tell a red
+// board from a broken tool.
 func TestCheckGateExitsTwo(t *testing.T) {
 	cmd := checkCmd()
 	cmd.SetOut(&bytes.Buffer{})

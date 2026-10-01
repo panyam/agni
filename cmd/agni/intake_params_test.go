@@ -41,9 +41,10 @@ func intakeOut(t *testing.T, args ...string) string {
 	return out.String()
 }
 
-// TestIntakeReadsTheProjectsParams is the issue: check and review compose the params/ a project
-// declares, intake took its corpus from --params alone. Inside a project the datasheet-gap section
-// was absent rather than empty unless you named a directory the project already names.
+// TestIntakeReadsTheProjectsParams reproduces the issue. check and review compose the params/ a
+// project declares, while intake took its corpus from --params alone. Inside a project the
+// datasheet-gap section was absent rather than empty unless you named a directory the project
+// already names.
 func TestIntakeReadsTheProjectsParams(t *testing.T) {
 	proj := t.TempDir()
 	writeProjectWithParams(t, proj)
@@ -58,8 +59,8 @@ func TestIntakeReadsTheProjectsParams(t *testing.T) {
 	}
 }
 
-// TestIntakeParamsFlagStillWorksOutsideAProject: the flag is the route for a loose design, and
-// widening the project path must not have closed it.
+// TestIntakeParamsFlagStillWorksOutsideAProject keeps the flag working as the route for a loose
+// design, which widening the project path must not have closed.
 func TestIntakeParamsFlagStillWorksOutsideAProject(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "p"), 0o755); err != nil {
@@ -81,7 +82,7 @@ func TestIntakeParamsFlagStillWorksOutsideAProject(t *testing.T) {
 	}
 }
 
-// TestIntakeAndCheckAgreeOnTheCorpus: both commands resolve the same design to the same project, so a
+// TestIntakeAndCheckAgreeOnTheCorpus holds both commands to the same project for the same design. A
 // corpus one of them sees and the other does not is the drift this closes. check reads it through the
 // service overlay; intake now reads the same overlay rather than a second resolution of its own.
 func TestIntakeAndCheckAgreeOnTheCorpus(t *testing.T) {

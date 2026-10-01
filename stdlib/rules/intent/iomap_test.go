@@ -79,7 +79,7 @@ func TestIOMapPinPassesWhenTheNetIsWhereTheMapSays(t *testing.T) {
 	}
 }
 
-// The whole point of the rule: a pin assignment that moved without the schematic being redrawn. The
+// The rule exists for a pin assignment that moved without the schematic being redrawn. The
 // design is electrically fine, so nothing else would report it.
 func TestIOMapPinFailsWhenTheNetMoved(t *testing.T) {
 	v := onlyVerdict(t, ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '42'}"), RuleIOMapPin)
@@ -196,8 +196,8 @@ func TestIOMapFarEndPassesAndReportsTheRoute(t *testing.T) {
 	if v.Outcome != check.Pass {
 		t.Fatalf("outcome = %s, reason %q", v.Outcome, v.Reason)
 	}
-	// The route is the evidence: a verdict a reviewer cannot check is worth much less than one they
-	// can, and the series resistor is exactly what they want to see.
+	// The route is the evidence. A verdict a reviewer cannot check is worth much less than one they
+	// can, and the series resistor is what they want to see.
 	if v.Witness == nil || !strings.Contains(v.Witness.Statement, "[R3]") {
 		t.Errorf("the witness should carry the route it walked: %+v", v.Witness)
 	}
@@ -291,9 +291,9 @@ func contains(all []string, want string) bool {
 	return false
 }
 
-// Coverage is the one io-map rule whose considered set is the NETLIST rather than the declaration:
-// which parts of the design the map never spoke about. The fixture has four nets and the map names
-// one, so a run that reported only what it checked would look entirely clean.
+// Coverage is the one io-map rule whose considered set is the NETLIST rather than the declaration,
+// so it reports which parts of the design the map never spoke about. The fixture has four nets and
+// the map names one, so a run that reported only what it checked would look entirely clean.
 func TestIOMapCoverageCountsEveryNet(t *testing.T) {
 	decl := ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}")
 	vs := verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapCoverage)
@@ -355,7 +355,7 @@ func TestIOMapCoverageCountsRailsAndSaysSo(t *testing.T) {
 //
 // BOTH sides are exercised, and that is not belt-and-braces. A first version of this test declared a
 // lowercase net against a fixture whose net names are already canonical, so canonicalizing the
-// DECLARATION alone was enough to pass it: a build that looked the design's raw name up in a
+// DECLARATION alone was enough to pass it. A build that looked the design's raw name up in a
 // canonical index matched anyway and the test stayed green. Each case below fails if the
 // canonicalization on its own side is dropped.
 func TestIOMapCoverageMatchesAcrossSpelling(t *testing.T) {

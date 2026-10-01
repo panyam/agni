@@ -25,7 +25,7 @@ func comps(refs ...string) []*ir.Component {
 	return out
 }
 
-// spinorGood: all six signals wired end-to-end; CS pulled up to +3V3 through R1 (a resistor the
+// spinorGood has all six signals wired end-to-end, with CS pulled up to +3V3 through R1 (a resistor the
 // reach walk crosses). No profile finding.
 func spinorGood() *ir.Design {
 	return &ir.Design{
@@ -42,8 +42,8 @@ func spinorGood() *ir.Design {
 	}
 }
 
-// spinorBroken: IO2 net absent (missing), no pull-up resistor on CS (missing-pullup), and SCLK on a
-// single-pin net (dangling).
+// spinorBroken has the IO2 net absent (missing), no pull-up resistor on CS (missing-pullup), and
+// SCLK on a single-pin net (dangling).
 func spinorBroken() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2"),
@@ -100,7 +100,7 @@ func TestCompileAndRegistered(t *testing.T) {
 	}
 }
 
-// TestCompileStampsRequirement (WS3-115): every rule Compile emits carries the type of the
+// TestCompileStampsRequirement (WS3-115) checks that every rule Compile emits carries the type of the
 // requirement that produced it, which is what lets a review item select one requirement of a profile
 // instead of its whole compiled set. The tag has to be right for a rule whose NAME does not carry the
 // type either (termination compiles to "-termination-missing"), which is why the tag exists at all.
@@ -119,7 +119,8 @@ func TestCompileStampsRequirement(t *testing.T) {
 			t.Errorf("rule %q: requirement tag = %q, want %q", want.rule, got, want.requirement)
 		}
 	}
-	// The profile tag is untouched — the two select together, so stamping one must not clobber the other.
+	// The profile tag is untouched. The two select together, so stamping one must not clobber the
+	// other.
 	for _, r := range Compile(SPINOR) {
 		if r.Tags["profile"] != SPINOR.Name {
 			t.Errorf("rule %q: profile tag = %q, want %q", r.Name, r.Tags["profile"], SPINOR.Name)
@@ -161,7 +162,7 @@ func flashHost(ref string) *ir.Component {
 		Attributes: map[string]string{"interface": "SPI_NOR"}}
 }
 
-// A component declaring interface=SPI_NOR with IO2 absent: the host-anchored path fires ONCE on the
+// With a component declaring interface=SPI_NOR and IO2 absent, the host-anchored path fires ONCE on the
 // host (IO2), and the convention path is suppressed (no double-report); CS is pulled up and all nets
 // are 2-pin, so no other rule fires.
 func TestHostIncomplete(t *testing.T) {
@@ -185,7 +186,7 @@ func TestHostIncomplete(t *testing.T) {
 	}
 }
 
-// A host that declares the interface but is wired to none of its signals: host-anchored completeness
+// When a host declares the interface but is wired to none of its signals, host-anchored completeness
 // flags every required signal (wholly-absent detection the convention path cannot do).
 func TestHostWhollyAbsent(t *testing.T) {
 	d := &ir.Design{

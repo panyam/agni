@@ -139,10 +139,10 @@ func pinCount(s *geom.SymbolDef) int {
 	return len(s.Pins)
 }
 
-// TestStampedClassChoosesTheGlyph is agni issue 701: the glyph comes from the class the ingestion
+// TestStampedClassChoosesTheGlyph is agni issue 701. The glyph comes from the class the ingestion
 // pass stamped, so the picture and the facts cannot disagree about what a part is. Each case is a
 // row of the issue's measured table, and the third field is what the built-in rules alone answered
-// before the stamp was read — the wrong picture this closes.
+// before the stamp was read, the wrong picture this closes.
 func TestStampedClassChoosesTheGlyph(t *testing.T) {
 	reg := DefaultRegistry()
 	cases := []struct {
@@ -172,7 +172,7 @@ func TestStampedClassChoosesTheGlyph(t *testing.T) {
 	}
 }
 
-// TestUserClassRuleBeatsTheStamp keeps the CLI's --class explicit: a user naming a glyph for a
+// TestUserClassRuleBeatsTheStamp keeps the CLI's --class explicit. A user naming a glyph for a
 // symbol is saying what to draw, so it wins over the stamped class as it always won over the rules.
 func TestUserClassRuleBeatsTheStamp(t *testing.T) {
 	reg := DefaultRegistry().With(ClassRule{Class: ClassCapacitor, Symbol: "res*"})
@@ -193,14 +193,14 @@ func TestUserClassRuleBeatsTheStamp(t *testing.T) {
 	}
 }
 
-// TestUnstampedComponentUsesTheRules pins the fallback: a design read by something that never ran
+// TestUnstampedComponentUsesTheRules pins the fallback. A design read by something that never ran
 // the classify pass (a hand-built ir.Design, a test fixture) still classifies by symbol and ref-des.
 func TestUnstampedComponentUsesTheRules(t *testing.T) {
 	reg := DefaultRegistry()
 	if got := reg.Classify(&ir.Component{RefDes: "R1"}, nil); got != ClassResistor {
 		t.Errorf("unstamped R1 = %q, want %q", got, ClassResistor)
 	}
-	// "unknown" is the absence of a class, not a class: it must not shadow the rules.
+	// "unknown" is the absence of a class, not a class, so it must not shadow the rules.
 	c := &ir.Component{RefDes: "R1", DeviceClasses: classify.Tags("unknown")}
 	if got := reg.Classify(c, nil); got != ClassResistor {
 		t.Errorf("unknown-stamped R1 = %q, want the rules' %q", got, ClassResistor)
@@ -225,7 +225,7 @@ func TestEveryStampedClassDraws(t *testing.T) {
 	}
 }
 
-// TestDrawableClassesAcceptAStampedName covers the CLI's --class validation: a class that draws
+// TestDrawableClassesAcceptAStampedName covers the CLI's --class validation. A class that draws
 // through an alias is a class a user may name, because the registry can draw it.
 func TestDrawableClassesAcceptAStampedName(t *testing.T) {
 	have := map[string]bool{}
@@ -241,7 +241,7 @@ func TestDrawableClassesAcceptAStampedName(t *testing.T) {
 
 // TestDatasheetClassChoosesTheGlyph is agni issue 710 at the drawing. The classes a datasheet
 // establishes now reach the IR, so the glyph follows them for the same reason it follows the
-// keyword-derived ones. D1 is the case where the PICTURE moves and not only the label: nothing in a
+// keyword-derived ones. D1 is the case where the PICTURE moves and not only the label. Nothing in a
 // netlist says a part is a suppressor, so it drew as an ordinary rectifier while every rule and query
 // already called it a tvs.
 func TestDatasheetClassChoosesTheGlyph(t *testing.T) {

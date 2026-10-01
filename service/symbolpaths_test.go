@@ -18,11 +18,11 @@ func (r symbolResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCon
 	return out, nil
 }
 
-// TestSymbolPathsReachTheRead is the point of putting symbol libraries in analysis config: they have
+// TestSymbolPathsReachTheRead is why symbol libraries go in analysis config. They have
 // to arrive BEFORE the design is parsed, because an unresolved symbol changes what the design
 // contains rather than what is checked about it.
 //
-// A schematic naming a library nothing resolves reads SHORT — the components it could not resolve are
+// A schematic naming a library nothing resolves reads SHORT. The components it could not resolve are
 // simply absent, every rule then evaluates cleanly over the shortened read, and the run reports fewer
 // findings with no error to explain them. That is why this tier is worth carrying at all.
 func TestSymbolPathsReachTheRead(t *testing.T) {
@@ -40,9 +40,9 @@ func TestSymbolPathsReachTheRead(t *testing.T) {
 	}
 }
 
-// TestSymbolPathsAccumulate: a request naming a library is adding somewhere to look, not replacing
-// where the project already looks. A design that resolved half its symbols would read short in
-// exactly the silent way this tier exists to prevent.
+// TestSymbolPathsAccumulate checks that a request naming a library adds somewhere to look, not
+// replacing where the project already looks. A design that resolved half its symbols would read
+// short in the silent way this tier exists to prevent.
 func TestSymbolPathsAccumulate(t *testing.T) {
 	project := &webapi.Project{
 		Name:   "projects/p",
@@ -58,8 +58,9 @@ func TestSymbolPathsAccumulate(t *testing.T) {
 	}
 }
 
-// TestSymbolPathsNeedAResolver: naming a directory is a ref, so it falls under the same refusal every
-// other ref tier does. Silently reading without the library is the failure this must not have.
+// TestSymbolPathsNeedAResolver covers naming a directory, which is a ref, so it falls under the
+// same refusal every other ref tier does. Silently reading without the library is the failure this
+// must not have.
 func TestSymbolPathsNeedAResolver(t *testing.T) {
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/symbols"}}}
 	if _, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, Overlay{}, ""); err == nil {

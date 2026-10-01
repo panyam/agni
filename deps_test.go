@@ -24,7 +24,7 @@ var embeddingSurface = []string{
 // nothing ran it, which is what #542 fixed by turning it into core/facts/deps_test.go. Repeating the
 // mistake in the PR that cites it would be a poor showing.
 //
-// The failure this catches is quiet in a specific way: moving one of these back under internal/
+// The failure this catches is quiet in a specific way. Moving one of these back under internal/
 // breaks no build in this repo, since every package here is allowed to import it, and every example
 // module keeps compiling too because their module paths are nested under github.com/panyam/agni/.
 // Only a real third-party consumer would notice, and there is none in CI to notice for us.
@@ -56,13 +56,13 @@ var authoringShapes = []string{
 // TestRulePrimitiveNamesNoAuthoringShape is the rule-side twin of C29 (C30).
 //
 // C29 says the fact layer is the primitive and no query engine owns it. The same holds one layer
-// over: check.Rule is the rule primitive, and Go, datalog, an interface profile and an intent
+// over, where check.Rule is the rule primitive, and Go, datalog, an interface profile and an intent
 // declaration are four ways of AUTHORING one. They meet the catalog at check.RuleSource, which is
 // why adding an interface is a data value rather than new code.
 //
 // The direction is what matters, and only one way round is checkable. An authoring shape depending
 // on core/check is correct and every one of them does. core/check depending on an authoring shape is
-// the violation, and it would be a quiet one: it compiles, it passes, and it makes that shape's
+// the violation, and a quiet one, since it compiles, it passes, and it makes that shape's
 // limits everyone's limits. Datalog cannot express a path question at all (#374, #518), so a catalog
 // that assumed datalog would foreclose the rules that need one.
 func TestRulePrimitiveNamesNoAuthoringShape(t *testing.T) {
@@ -78,7 +78,7 @@ func TestRulePrimitiveNamesNoAuthoringShape(t *testing.T) {
 
 // TestAuthoringShapesReachTheCatalogAsRuleSources is the positive half. A shape that stopped
 // compiling to rules would not fail the test above, since that one only watches the arrow's
-// direction, and an authoring shape that reached the catalog some other way is how the seam erodes.
+// direction, and an authoring shape that reached the catalog some other way is how the boundary erodes.
 func TestAuthoringShapesReachTheCatalogAsRuleSources(t *testing.T) {
 	for _, shape := range authoringShapes {
 		if shape == queryEngine {
@@ -159,16 +159,16 @@ func TestContractImportsNoFirstPartyPackage(t *testing.T) {
 	}
 }
 
-// TestEngineModuleRequiresNoExtension is C18: dependencies point extension -> engine.
+// TestEngineModuleRequiresNoExtension is C18, under which dependencies point extension -> engine.
 //
 // The graph half of that rule cannot fail, which is why it is not tested. examples/extension is its
 // own module, so `go list -deps ./...` from the engine can never name it whatever anyone writes in
 // an engine package; an import would fail to compile first. That command sat in CONSTRAINTS.md as
 // C18's headline Verify, reading as enforcement while proving nothing.
 //
-// go.mod is where the arrow could actually reverse, so go.mod is what this reads. A `replace` counts
-// as much as a `require`: it is the edit that makes a local extension resolvable, and it is the one
-// somebody adds while debugging and forgets to remove.
+// go.mod is where the arrow could actually reverse, so go.mod is what this reads. A `replace`
+// counts as much as a `require`, because it is the edit that makes a local extension resolvable,
+// and it is the one somebody adds while debugging and forgets to remove.
 func TestEngineModuleRequiresNoExtension(t *testing.T) {
 	b, err := os.ReadFile("go.mod")
 	if err != nil {
@@ -186,8 +186,8 @@ func TestEngineModuleRequiresNoExtension(t *testing.T) {
 }
 
 // depsOfTier is deps over a PATTERN, with the positive control a pattern needs. A result naming no
-// package under want fails rather than reading as clean: a mistyped pattern, or one the tier was
-// renamed out from under, is exactly the edit that would make a graph check vacuous.
+// package under want fails rather than reading as clean, because a mistyped pattern, or one the
+// tier was renamed out from under, would make a graph check vacuous.
 func depsOfTier(t *testing.T, pattern, want string) []string {
 	t.Helper()
 	got := deps(t, pattern)

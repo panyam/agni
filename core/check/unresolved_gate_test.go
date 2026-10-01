@@ -8,7 +8,7 @@ import (
 )
 
 // designWithUnresolved builds a design carrying one unresolved-symbol diagnostic, the state a read
-// lands in when a symbol library is missing: components present, pins absent.
+// lands in when a symbol library is missing, with components present and pins absent.
 func designWithUnresolved() *ir.Design {
 	return &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "U1"}},
@@ -50,7 +50,7 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 		if !strings.Contains(fs[0].Message, "res.sym") {
 			t.Errorf("reads %v: message %q does not name the unresolved symbol", reads, fs[0].Message)
 		}
-		// The remedy is NOT repeated here: every gated rule emits this message, so the fix lives
+		// The remedy is NOT repeated here. Every gated rule emits this message, so the fix lives
 		// once on symbol-unresolved and each gate finding points at it.
 		if !strings.Contains(fs[0].Message, "symbol-unresolved") {
 			t.Errorf("reads %v: message %q does not point at the rule that explains the cause", reads, fs[0].Message)
@@ -61,9 +61,9 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 	}
 }
 
-// TestUnresolvedGateLeavesOtherRulesAlone: a rule that reads only names, classes or datasheet
-// params is unaffected by a lost symbol, so gating it would convert working checks into noise. The
-// gate has to cost nothing where it buys nothing.
+// TestUnresolvedGateLeavesOtherRulesAlone covers a rule that reads only names, classes or datasheet
+// params. It is unaffected by a lost symbol, so gating it would convert working checks into noise.
+// The gate has to cost nothing where it buys nothing.
 func TestUnresolvedGateLeavesOtherRulesAlone(t *testing.T) {
 	for _, reads := range [][]string{{"net.names"}, {"component.class"}, {"param.esd_rating"}, {"ref_des_collision"}} {
 		fs := Run(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
@@ -73,7 +73,7 @@ func TestUnresolvedGateLeavesOtherRulesAlone(t *testing.T) {
 	}
 }
 
-// TestUnresolvedGateInactiveOnACleanRead: with every symbol resolved the gate must vanish
+// TestUnresolvedGateInactiveOnACleanRead checks that with every symbol resolved the gate vanishes
 // completely. A gate that fired on clean designs would be worse than the silence it replaces.
 func TestUnresolvedGateInactiveOnACleanRead(t *testing.T) {
 	clean := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}}}
@@ -84,7 +84,7 @@ func TestUnresolvedGateInactiveOnACleanRead(t *testing.T) {
 }
 
 // TestUnresolvedGateIsDesignWide pins the deliberate bluntness (and documents what per-subject
-// attribution would change): only R1 lost pins, but a rule reporting on U1 is gated too. The reader
+// attribution would change). Only R1 lost pins, but a rule reporting on U1 is gated too. The reader
 // cannot support a claim that the unflagged parts are unaffected, so the gate does not make one.
 func TestUnresolvedGateIsDesignWide(t *testing.T) {
 	aboutU1 := &Rule{

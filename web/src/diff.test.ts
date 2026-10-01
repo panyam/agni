@@ -30,7 +30,7 @@ const netStatus = {
 };
 
 // specWithComponent / specWithNet find the (single) spec carrying an entity, so assertions
-// key on content — several classes share a color (added/new, removed/deleted, changed/hard),
+// key on content. Several classes share a color (added/new, removed/deleted, changed/hard),
 // so color is not a spec identity.
 type Spec = { color?: string; components?: string[]; nets?: string[] };
 const specWithComponent = (specs: Spec[], ref: string) => specs.find((s) => (s.components ?? []).includes(ref));
@@ -249,7 +249,7 @@ describe("checkAlignment (WS9-007)", () => {
   it("tolerates sub-threshold drift and falls back to frames on thin evidence", () => {
     const drifted = {
       ...aligned.b,
-      C1: { sheet: "b1", x: 903, y: 700 }, // 3 units of a 900 spread — under 1%
+      C1: { sheet: "b1", x: 903, y: 700 }, // 3 units of a 900 spread, under 1%
     } as unknown as Placements;
     expect(checkAlignment(pair, aligned.a, drifted, frame, frame).ok).toBe(true);
     // No shared placements on THIS pair (they live on other sheets) -> frames decide.
@@ -277,7 +277,7 @@ describe("pairSheets", () => {
   });
 
   it("pairs positionally when no names match (revisions renaming their pages)", () => {
-    // The kicad diffdemo pair: one sheet each, titled "… revision A" / "… revision B". A
+    // The kicad diffdemo pair has one sheet each, titled "… revision A" / "… revision B". A
     // strict by-name pairing would offer only one-sided views.
     const a = [sheet("a1", "Demo rev A")];
     const b = [sheet("b1", "Demo rev B"), sheet("b2", "Extra")];

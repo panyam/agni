@@ -20,9 +20,9 @@ func extOpen(t *testing.T) func(string) ([]byte, error) {
 	return func(lib string) ([]byte, error) { return readFixture(t, lib+".kicad_sym"), nil }
 }
 
-// TestExternalSymbolResolution (WS1-016): a schematic with EMPTY lib_symbols resolves
-// part types, typed pins, and net connectivity from an external .kicad_sym — including a
-// derived symbol (extends) inheriting its parent's pins — and reads exactly as before
+// TestExternalSymbolResolution (WS1-016) checks that a schematic with EMPTY lib_symbols resolves
+// part types, typed pins, and net connectivity from an external .kicad_sym, including a
+// derived symbol (extends) inheriting its parent's pins, and reads exactly as before
 // (name-only nets, no pins) when no opener is supplied.
 func TestExternalSymbolResolution(t *testing.T) {
 	bare, err := ReadSchematic(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch")
@@ -59,7 +59,7 @@ func TestExternalSymbolResolution(t *testing.T) {
 	}
 }
 
-// TestExternalSymbolGeometry: the same resolution feeds faithful artwork — resolved defs
+// TestExternalSymbolGeometry checks that the same resolution feeds faithful artwork. Resolved defs
 // key under the QUALIFIED lib_id placements reference, not the library's bare name.
 func TestExternalSymbolGeometry(t *testing.T) {
 	g, err := ReadSchematicGeometryWithSymbols(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch", extOpen(t))
@@ -88,9 +88,9 @@ func TestEmbeddedBeatsExternal(t *testing.T) {
 
 // TestExternalMatchesEmbedded is the reference comparison for WS1-016: resolving a
 // library externally must yield the SAME design as embedding the same symbols in
-// lib_symbols (the well-tested v6 path). kicad-cli cannot serve as the oracle here — in
+// lib_symbols (the well-tested v6 path). kicad-cli cannot serve as the oracle here, because in
 // headless runs it ignores the project sym-lib-table entirely and exports an empty
-// netlist — so the embedded read is the ground truth the external path is held to.
+// netlist, so the embedded read is the ground truth the external path is held to.
 func TestExternalMatchesEmbedded(t *testing.T) {
 	sch := string(readFixture(t, "extlib.kicad_sch"))
 	lib := string(readFixture(t, "ext.kicad_sym"))

@@ -11,7 +11,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// A naming map re-binds a core profile's signals to a project's own suffixes: it inherits the core
+// A naming map re-binds a core profile's signals to a project's own suffixes. It inherits the core
 // structure/requirements and fires on a design named that way, where the core default (looking for
 // the standard suffixes) is silent. This is the structure-vs-naming split (WS3-054).
 func TestNamingMapRemapsSuffixes(t *testing.T) {
@@ -66,7 +66,7 @@ func TestNamingMapErrors(t *testing.T) {
 // declaration parses, validates, and yields the expected rules. The per-profile behavioral suites
 // (TestSPINORFires, TestCANFires, ...) remain the check on what those rules DO.
 //
-// The rule counts are the observable the flip had to preserve: they were captured from the Go-literal
+// The rule counts are the observable the flip had to preserve. They were captured from the Go-literal
 // build and must not move.
 func TestBuiltinsCompileToExpectedRules(t *testing.T) {
 	for _, c := range []struct {
@@ -99,7 +99,7 @@ func TestBuiltinsCompileToExpectedRules(t *testing.T) {
 }
 
 // The embedded built-in YAML round-trips to the expected declaration: Parse(spinorYAML) yields the
-// six SPI-NOR signals with CS as the pulled-up anchor and the four requirements — the same value the
+// six SPI-NOR signals with CS as the pulled-up anchor and the four requirements, the same value the
 // old Go literal held, which the behavioral suite (TestSPINORFires/Silent/...) confirms compiles
 // identically.
 func TestParseBuiltinShape(t *testing.T) {
@@ -171,7 +171,7 @@ requirements:
 	}
 }
 
-// A naming map REPLACES a signal's matcher rather than adding a second form to it: remapping the
+// A naming map REPLACES a signal's matcher rather than adding a second form to it. Remapping the
 // suffix of a glob-matched signal must not leave both declared, which is not a matcher at all.
 func TestNamingMapReplacesPatternMatcher(t *testing.T) {
 	core := Profile{Name: "GlobBus", Signals: []Signal{{Name: "H", Glob: "ETH_SW*_H", Anchor: true}}}
@@ -207,7 +207,7 @@ func TestParseValidationErrors(t *testing.T) {
 		"no signals":    "name: X",
 		"signal fields": "name: X\nsignals: [{name: CLK}]",
 		"two anchors":   "name: X\nsignals: [{name: A, suffix: _A, anchor: true}, {name: B, suffix: _B, anchor: true}]",
-		// WS3-057 matcher validation: a signal declares exactly one sound form.
+		// Per WS3-057 matcher validation, a signal declares exactly one sound form.
 		"two matcher forms": "name: X\nsignals: [{name: A, suffix: _A, glob: 'A*'}]",
 		"bad regex":         "name: X\nsignals: [{name: A, regex: '^ETH_(SW'}]",
 		"universal glob":    "name: X\nsignals: [{name: A, glob: '*'}]",
@@ -248,9 +248,10 @@ func TestLoadDirAndSource(t *testing.T) {
 
 // TestSignalMissingRequiresAnchor (WS3-099): a profile declaring the convention completeness
 // requirement without a usable anchor compiles it to NOTHING, silently. Paired with any requirement
-// that does compile (signal-dangling), the item then runs clean and scores a pass while the check the
-// author asked for never existed — the same false-pass shape, arriving through author error rather
-// than design state. Both entry points reject it: Parse with a teaching error, Compile with a panic.
+// that does compile (signal-dangling), the item then runs clean and scores a pass while the check
+// the author asked for never existed. That is the same false-pass shape, arriving through author
+// error rather than design state. Both entry points reject it: Parse with a teaching error, Compile
+// with a panic.
 func TestSignalMissingRequiresAnchor(t *testing.T) {
 	const noAnchor = `
 name: NOANCHOR
@@ -265,7 +266,8 @@ requirements:
 	} else if !strings.Contains(err.Error(), "anchor") {
 		t.Errorf("want an error naming the anchor, got %v", err)
 	}
-	// An anchor with no OTHER signal is the same silent drop: there is nothing left to report missing.
+	// An anchor with no OTHER signal is the same silent drop, since there is nothing left to report
+	// missing.
 	const anchorOnly = `
 name: ANCHORONLY
 signals:
@@ -311,7 +313,7 @@ requirements:
 
 // A requirement whose params are missing is a customer-authoring error, so it must fail at LOAD with
 // a teaching error rather than panicking deep inside Compile (WS3-047). termination is the built-in
-// with params: it bridges two named net suffixes, and without them its generated datalog would match
+// with params. It bridges two named net suffixes, and without them its generated datalog would match
 // on the empty suffix, i.e. every net.
 func TestLoadTerminationMissingParamTeaches(t *testing.T) {
 	base := "name: MYBUS\nsignals: [{name: H, suffix: _H, anchor: true}, {name: L, suffix: _L}]\n"
@@ -352,7 +354,7 @@ func TestLoadDirRejectsBadRequirementParams(t *testing.T) {
 	}
 }
 
-// A Go-literal profile bypasses Load, so Compile keeps its own gate — the same twin posture the file
+// A Go-literal profile bypasses Load, so Compile keeps its own gate, the same twin posture the file
 // already takes for an unsound matcher and a missing anchor. Removing it in favour of Load alone
 // would leave every built-in unguarded.
 func TestCompilePanicsOnIncompleteRequirementParams(t *testing.T) {
@@ -373,7 +375,7 @@ func TestCompilePanicsOnIncompleteRequirementParams(t *testing.T) {
 }
 
 // An overlay registering its own requirement type can ship a validator with it, so its params get the
-// same load-time teaching error the built-in gets. This is the seam a customer extends through.
+// same load-time teaching error the built-in gets. This is the hook a customer extends through.
 func TestRegisterRequirementWithValidatorRejectsAtLoad(t *testing.T) {
 	RegisterRequirementWithValidator("house-rule",
 		func(p Profile, _ Requirement) *check.Rule { return nil },
@@ -398,7 +400,7 @@ func TestRegisterRequirementWithValidatorRejectsAtLoad(t *testing.T) {
 	}
 }
 
-// Every built-in still loads and validates: CAN is the one that declares termination, so this is the
+// Every built-in still loads and validates. CAN is the one that declares termination, so this is the
 // regression gate that the new check does not reject the profiles that ship.
 func TestBuiltinsPassRequirementValidation(t *testing.T) {
 	for _, p := range Profiles {

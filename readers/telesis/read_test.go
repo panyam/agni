@@ -156,7 +156,7 @@ func TestPropertiesTransposeOntoComponents(t *testing.T) {
 	}
 }
 
-// TestPinTypeBecomesDirection is the reason the property sections are not optional: this block is
+// TestPinTypeBecomesDirection is the reason the property sections are not optional. This block is
 // the only place the format states direction, so skipping it leaves every pin UNSPECIFIED and
 // silently disables every direction-dependent rule.
 func TestPinTypeBecomesDirection(t *testing.T) {
@@ -190,7 +190,7 @@ func TestPinTypeBecomesDirection(t *testing.T) {
 	}
 }
 
-// TestPinTypeCaseIsFolded covers a spelling inconsistency present in a real export: the same value
+// TestPinTypeCaseIsFolded covers a spelling inconsistency present in a real export. The same value
 // appears as both TERMINAL and Terminal. A case-sensitive map drops half those pins to UNSPECIFIED,
 // and worse, treating the pair as a library inconsistency would report noise.
 func TestPinTypeCaseIsFolded(t *testing.T) {
@@ -211,10 +211,10 @@ func TestPinTypeCaseIsFolded(t *testing.T) {
 	}
 }
 
-// TestPinTypeConflictIsRecorded is the other half: a genuine disagreement between two instances of
+// TestPinTypeConflictIsRecorded is the other half. A genuine disagreement between two instances of
 // one part type is kept rather than silently resolved, since a library inconsistency that leaves no
 // trace is unfindable. Pin 2 carries it, so this stays independent of the case-folding case on
-// pin 1: one fixture pin asserting both would let either behaviour mask the other.
+// pin 1, since one fixture pin asserting both would let either behaviour mask the other.
 func TestPinTypeConflictIsRecorded(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 	res := partByName(d, "RES-10K")
@@ -386,7 +386,7 @@ func TestPackageWithExtraFields(t *testing.T) {
 	}
 }
 
-// TestQuotedFieldContainingSeparators checks the scanner respects quoting: a field whose text
+// TestQuotedFieldContainingSeparators checks the scanner respects quoting, so a field whose text
 // contains a bang or a semicolon must not end the head early.
 func TestQuotedFieldContainingSeparators(t *testing.T) {
 	const src = "$PACKAGES\n\n'ODD;NAME!X' ! 'MPN-1' ;  U9\n\n$NETS\n\n'N1' ; U9.1 U9.2\n\n$END\n"
@@ -424,8 +424,8 @@ func TestUnparsedSectionIsRecorded(t *testing.T) {
 			t.Errorf("%s = %q, want it to name %s", UnparsedSectionsAttr, got, want)
 		}
 	}
-	// The read is still good, just not complete: a section the reader does not understand does not
-	// make the connectivity it DID read wrong.
+	// The read is still good, just not complete, because a section the reader does not understand
+	// does not make the connectivity it DID read wrong.
 	if len(d.Components) != 1 || len(d.Nets) != 1 {
 		t.Errorf("components=%d nets=%d; an unparsed section must not cost the rest of the read",
 			len(d.Components), len(d.Nets))

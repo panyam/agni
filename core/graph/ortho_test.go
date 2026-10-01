@@ -13,7 +13,7 @@ func TestOrthogonalStrategyRegistered(t *testing.T) {
 	}
 }
 
-// TestOrthogonalSegmentsAxisAligned is the ticket's core promise: every wire segment in the
+// TestOrthogonalSegmentsAxisAligned is the ticket's core promise, that every wire segment in the
 // assembled geometry runs horizontally or vertically, never diagonally.
 func TestOrthogonalSegmentsAxisAligned(t *testing.T) {
 	g, err := LayoutWith(chain(6), "orthogonal")
@@ -37,7 +37,7 @@ func TestOrthogonalSegmentsAxisAligned(t *testing.T) {
 	}
 }
 
-// TestOrthogonalRoutesConnect: each polyline of a net starts at a member attach point and
+// TestOrthogonalRoutesConnect asserts each polyline of a net starts at a member attach point and
 // ends at the net's shared hub, so the net is electrically contiguous on screen.
 func TestOrthogonalRoutesConnect(t *testing.T) {
 	d := &ir.Design{Name: "star"}
@@ -70,12 +70,12 @@ func TestOrthogonalRoutesConnect(t *testing.T) {
 	}
 }
 
-// TestConnectionDots: every wire attach point (each polyline's pin end) carries a dot shape,
+// TestConnectionDots asserts every wire attach point (each polyline's pin end) carries a dot shape,
 // so a reader can see where a wire actually starts and ends; the hub junction dot for wide
 // nets stays. Applies to every auto-layout route style.
 func TestConnectionDots(t *testing.T) {
 	for _, layout := range []string{"grid", "orthogonal"} {
-		g, err := LayoutWith(chain(3), layout) // two 2-pin nets: previously dotless
+		g, err := LayoutWith(chain(3), layout) // two 2-pin nets, previously dotless
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -96,7 +96,8 @@ func TestConnectionDots(t *testing.T) {
 	}
 }
 
-// TestOrthogonalDeterministic: identical geometry across runs, same promise as every strategy.
+// TestOrthogonalDeterministic asserts identical geometry across runs, the same promise every
+// strategy makes.
 func TestOrthogonalDeterministic(t *testing.T) {
 	a, err := LayoutWith(chain(7), "orthogonal")
 	if err != nil {
@@ -119,12 +120,12 @@ func TestOrthogonalDeterministic(t *testing.T) {
 	}
 }
 
-// TestBendsCounted: an L-shaped route is exactly one bend; the star layouts (straight
+// TestBendsCounted asserts an L-shaped route is exactly one bend; the star layouts (straight
 // spokes) are zero. The metric is the ticket's other deliverable.
 func TestBendsCounted(t *testing.T) {
 	d := &ir.Design{Name: "bend"}
-	// Two components joined by one net; layered puts them on different rows and columns is
-	// not guaranteed, so use three in a triangle of nets to force at least one true L.
+	// Two components joined by one net are not guaranteed to land on different rows and columns,
+	// so use three in a triangle of nets to force at least one true L.
 	for i := 1; i <= 3; i++ {
 		d.Components = append(d.Components, &ir.Component{RefDes: ref(i)})
 	}

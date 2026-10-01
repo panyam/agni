@@ -3,9 +3,9 @@ import { create } from "@bufbuild/protobuf";
 import { TraceSchema, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
 import { emptyTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSheet, traceSubjects } from "./trace.js";
 
-// create(TraceSchema, ...) rather than an object literal: a plain literal standing in for a proto is
-// invisible to `pnpm run typecheck`, which is how a fixture goes structurally wrong while the build
-// stays green (web-client.md).
+// create(TraceSchema, ...) rather than an object literal, because a plain literal standing in for a
+// proto is invisible to `pnpm run typecheck`, which is how a fixture goes structurally wrong while
+// the build stays green (web-client.md).
 function routed() {
   return create(TraceSchema, {
     from: { endpoint: { refDes: "U1", pin: "3" }, pinName: "SDA", net: "SDA" },

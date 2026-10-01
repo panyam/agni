@@ -38,7 +38,7 @@ func TestPivotOrdersWorstFirstAndKeepsAnUnknownSeverityOnTop(t *testing.T) {
 }
 
 // TestPivotIsIdempotentUnderItsOwnFlattening is the property that lets a document written from a
-// report render back to the same report: re-pivoting a report's own findings must reproduce it. If it
+// report render back to the same report. Re-pivoting a report's own findings must reproduce it. If it
 // did not, the flat findings list in a document would be a lossy projection of what the terminal
 // showed, and the two surfaces would silently disagree.
 func TestPivotIsIdempotentUnderItsOwnFlattening(t *testing.T) {
@@ -86,7 +86,7 @@ func TestMarshalParseRoundTrip(t *testing.T) {
 
 // TestParseRejectsAnUnreadableSchema pins that an unknown or absent schema version is an error. A
 // best-effort read of a future document would produce a findings list shorter than the run that made
-// it with nothing to say so, which is the silence-as-coverage failure this whole contract rules out.
+// it with nothing to say so, which is the silence-as-coverage failure this contract rules out.
 func TestParseRejectsAnUnreadableSchema(t *testing.T) {
 	for name, body := range map[string]string{
 		"future": `{"meta":{"schema":"agni.checks.results/v9"}}`,
@@ -99,8 +99,8 @@ func TestParseRejectsAnUnreadableSchema(t *testing.T) {
 	}
 }
 
-// TestParseToleratesAnUnknownField pins the other side of the version rule: an ADDITIVE field is not
-// a breaking change, so a document from a newer build of the same schema still reads.
+// TestParseToleratesAnUnknownField pins the other side of the version rule, that an ADDITIVE field
+// is not a breaking change, so a document from a newer build of the same schema still reads.
 func TestParseToleratesAnUnknownField(t *testing.T) {
 	body := `{"meta":{"schema":"` + Schema + `","producer":"agni"},"somethingNewer":{"x":1}}`
 	doc, err := Parse([]byte(body))

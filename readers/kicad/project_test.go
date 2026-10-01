@@ -54,7 +54,7 @@ func TestReadProject(t *testing.T) {
 	}
 }
 
-// TestProjectResolvesCrossSheet pins the WS1-017 semantics: external means "continues
+// TestProjectResolvesCrossSheet pins the WS1-017 semantics, where external means "continues
 // into something we did NOT read". A schematic-only project whose root has no sub-sheet
 // references was read completely, so its power-symbol nets downgrade external -> global
 // (rules fire; rail-ness stays queryable). The same file read as a bare .kicad_sch keeps

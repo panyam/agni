@@ -29,7 +29,7 @@ func TestReadSchematicGeometry(t *testing.T) {
 		t.Errorf("resistor asset = %v, want KIND_SYMBOL", res.Asset)
 	}
 
-	// R1 placed at "1000 2000 1 0 0": gEDA is Y-up, so no negation, no rotation/mirror.
+	// R1 placed at "1000 2000 1 0 0". gEDA is Y-up, so no negation, no rotation/mirror.
 	r1 := findPlacement(sheet, "R1")
 	if r1 == nil {
 		t.Fatal("no R1 placement")
@@ -47,7 +47,7 @@ func TestReadSchematicGeometry(t *testing.T) {
 }
 
 // Reference and Value are placed at each attribute text's own coordinates from the instance
-// block, with justify/visibility from the source — not stamped at the symbol origin.
+// block, with justify/visibility from the source, not stamped at the symbol origin.
 func TestFieldPlacement(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
 	if err != nil {
@@ -101,7 +101,7 @@ func findPlacement(sheet *geom.SheetGeometry, ref string) *geom.SymbolPlacement 
 	return nil
 }
 
-// TestAnnotationSymbols (WS7-037): the geometry reader draws gEDA annotation symbols (title
+// TestAnnotationSymbols (WS7-037) checks that the geometry reader draws gEDA annotation symbols (title
 // blocks, the A1/A2/A3 SPICE blocks) with their visible attribute text, instead of skipping them.
 func TestAnnotationSymbols(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "annotations.sch")), "annotations.sch", testOpener(t))
@@ -138,8 +138,8 @@ func TestAnnotationSymbols(t *testing.T) {
 }
 
 // TestReadBusGeometry asserts the geometry reader draws a gEDA `U` bus object (WS7-042) as a
-// KIND_BUS wire named by its inline netname — the join key a bus-not-modeled finding highlights it
-// on — and does not leave it as an undistinguished plain-net wire.
+// KIND_BUS wire named by its inline netname (the join key a bus-not-modeled finding highlights it
+// on), and does not leave it as an undistinguished plain-net wire.
 func TestReadBusGeometry(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "bus.sch")), "bus.sch", testOpener(t))
 	if err != nil {
@@ -162,7 +162,7 @@ func TestReadBusGeometry(t *testing.T) {
 	if bus.GetNet() != "DATA[7:0]" {
 		t.Errorf("bus name = %q, want %q (its inline netname)", bus.GetNet(), "DATA[7:0]")
 	}
-	// U 1000 1000 2000 1000 — gEDA is Y-up, so points pass through unscaled.
+	// The fixture line is U 1000 1000 2000 1000. gEDA is Y-up, so points pass through unscaled.
 	if pts := bus.GetPolylines()[0].GetPoints(); len(pts) != 2 ||
 		pts[0].X != 1000 || pts[0].Y != 1000 || pts[1].X != 2000 || pts[1].Y != 1000 {
 		t.Errorf("bus points = %+v, want (1000,1000)->(2000,1000)", pts)

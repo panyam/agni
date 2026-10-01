@@ -51,7 +51,7 @@ func supplyModel(method string, confidence float64, tweak ...func(*parampb.PartS
 
 // A human verification is pinned to the revision it was performed against, so when the vendor ships a
 // new one the confirmation stops being evidence about the document in hand. The value itself is
-// unchanged and its confidence is 1.0, which is exactly what makes this dangerous: every signal that
+// unchanged and its confidence is 1.0, so every signal that
 // existed before the verification record reports a stale value as the most trustworthy data in the
 // system, because a person really did check it once.
 //
@@ -66,9 +66,9 @@ func TestStaleVerificationIsNotRatified(t *testing.T) {
 		return Run(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", RatifiedFloor: 0.9}).Areas[0].Items[0].Outcome
 	}
 
-	// Verified against the revision the corpus holds: a trustworthy fail.
-	// checkedRev is verified against first, then the corpus is moved to specHash: the same sequence a
-	// re-seed produces, and the only one that leaves a verification pinned to a revision nobody holds.
+	// Verified against the revision the corpus holds, so a trustworthy fail. checkedRev is verified
+	// against first, then the corpus is moved to specHash. That is the same sequence a re-seed
+	// produces, and the only one that leaves a verification pinned to a revision nobody holds.
 	verifiedAgainst := func(specHash, checkedHash string) func(*parampb.PartSpec) {
 		return func(s *parampb.PartSpec) {
 			param.MarkVerified(s.Parameters[0], "sri",
@@ -94,7 +94,7 @@ func TestStaleVerificationIsNotRatified(t *testing.T) {
 	}
 }
 
-// The converse, and the reason the fix is additive: a value nobody ever verified is judged exactly as
+// The converse, and the reason the fix is additive. A value nobody ever verified is judged exactly as
 // it was before verification records existed. If this regressed, every hand-seeded fixture in the
 // corpus would drop to Provisional at once.
 func TestUnverifiedDataIsJudgedOnConfidenceAsBefore(t *testing.T) {
@@ -111,9 +111,9 @@ func TestUnverifiedDataIsJudgedOnConfidenceAsBefore(t *testing.T) {
 	}
 }
 
-// TestProvisionalFromMockData: an item whose datasheet rule fires is Provisional when the seed is mock
-// or below the confidence floor (a HITL ratification item, not a trustworthy fail), and a real Fail
-// once the value is ratified (method "hand", high confidence).
+// TestProvisionalFromMockData checks that an item whose datasheet rule fires is Provisional when
+// the seed is mock or below the confidence floor (a HITL ratification item, not a trustworthy
+// fail), and a real Fail once the value is ratified (method "hand", high confidence).
 func TestProvisionalFromMockData(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
@@ -134,8 +134,9 @@ func TestProvisionalFromMockData(t *testing.T) {
 
 // --- computed-n/a: a device-class-gated item whose class is absent ---
 
-// TestComputedNAByDeviceClass: an item that applies_to_class a class no component carries resolves to
-// computed-n/a (the mechanism determined it does not apply); with a matching part it runs normally.
+// TestComputedNAByDeviceClass checks that an item that applies_to_class a class no component
+// carries resolves to computed-n/a (the mechanism determined it does not apply); with a matching
+// part it runs normally.
 func TestComputedNAByDeviceClass(t *testing.T) {
 	item := Item{ID: "clk", Title: "crystal load caps", Binding: Binding{
 		Rule: "crystal-load-caps", AppliesToClass: []string{"crystal", "ceramic_resonator"},
@@ -165,8 +166,9 @@ func TestComputedNAByDeviceClass(t *testing.T) {
 
 // --- needs-design-intent: an intent-bound item with no declaration ---
 
-// TestNeedsDesignIntent: an item bound to an intent/ rule with no --intent-path declaration (so the rule
-// is absent from the catalog) reads needs-design-intent, not the misleading not-automated.
+// TestNeedsDesignIntent checks that an item bound to an intent/ rule with no --intent-path
+// declaration (so the rule is absent from the catalog) reads needs-design-intent, not the
+// misleading not-automated.
 func TestNeedsDesignIntent(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "arch", Title: "expected modules present", Binding: Binding{Rule: "intent/module-missing"}},
@@ -184,8 +186,8 @@ func TestNeedsDesignIntent(t *testing.T) {
 	}
 }
 
-// TestTallyCountsDataTrustStates: the Tally routes the new outcomes into their own buckets and Covered()
-// counts everything but not-automated.
+// TestTallyCountsDataTrustStates checks that the Tally routes the new outcomes into their own
+// buckets and Covered() counts everything but not-automated.
 func TestTallyCountsDataTrustStates(t *testing.T) {
 	var tl Tally
 	for _, o := range []Outcome{Pass, Fail, Provisional, NeedsDesignIntent, ComputedNA, NotApplicable, NotAutomated} {
@@ -200,7 +202,7 @@ func TestTallyCountsDataTrustStates(t *testing.T) {
 }
 
 // TestMultiCitationRatifiedOnlyIfEveryCitationIs pins the semantics WS3-028 forced when
-// Finding.DatasheetProv became a slice: a finding is unratified if ANY of its citations fails the
+// Finding.DatasheetProv became a slice. A finding is unratified if ANY of its citations fails the
 // floor, because the conclusion rests on every value it joined and is only as trustworthy as the
 // weakest one.
 //
@@ -208,7 +210,7 @@ func TestTallyCountsDataTrustStates(t *testing.T) {
 // whose output voltage came from a low-confidence extraction is exactly half-evidenced; rating it a
 // hard Fail on the strength of the good citation alone is the false-fail this axis exists to prevent.
 //
-// Note this quantifier is the OPPOSITE of allUnratified's, deliberately: across findings one
+// Note this quantifier is deliberately the OPPOSITE of allUnratified's. Across findings one
 // trustworthy finding is enough to make an item a real Fail, because they are independent claims.
 func TestMultiCitationRatifiedOnlyIfEveryCitationIs(t *testing.T) {
 	hand := &check.DatasheetCitation{Doc: "A", Method: "hand", Confidence: 1.0}

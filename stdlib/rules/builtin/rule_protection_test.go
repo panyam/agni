@@ -37,8 +37,8 @@ func withAttrs(n *ir.Net, kv ...string) *ir.Net {
 	return n
 }
 
-// TestBulkCap: a named rail (global or power_driven) with no capacitor fires; a rail with a
-// cap, a ground-named rail, an unresolved external rail, and an unnamed net stay quiet.
+// TestBulkCap checks that a named rail (global or power_driven) with no capacitor fires, and that a
+// rail with a cap, a ground-named rail, an unresolved external rail, and an unnamed net stay quiet.
 func TestBulkCap(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -65,8 +65,8 @@ func TestBulkCap(t *testing.T) {
 	}
 }
 
-// TestInputProtection: a net where a connector directly feeds a power-input pin must carry a
-// fuse or TVS; a series fuse splits the net so protected boards are not even selected.
+// TestInputProtection covers a net where a connector directly feeds a power-input pin, which must
+// carry a fuse or TVS; a series fuse splits the net so protected boards are not even selected.
 func TestInputProtection(t *testing.T) {
 	lib := []*ir.PartType{
 		{Name: "REG", Pins: []*ir.Pin{{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN}}},
@@ -97,7 +97,7 @@ func TestInputProtection(t *testing.T) {
 		tnet("VIN_TVS", "J2.2", "D1.1", "U3.1"),   // tvs member -> quiet
 		tnet("GND", "J1.4", "U1.3"),               // ground-named -> quiet
 		tnet("SIG", "J1.2", "U1.9"),               // no power_in -> not selected
-		// Reach cases (WS3-011): the power input sits BEHIND a series element.
+		// Reach cases (WS3-011), where the power input sits BEHIND a series element.
 		tnet("VIN_BEAD", "J3.1", "FB1.1"), // connector -> bead ...
 		tnet("VIN_POST", "FB1.2", "U4.1"), // ... -> power_in, no protector anywhere -> fires
 		tnet("VIN_F", "J4.1", "F2.1"),     // connector -> fuse ...
@@ -118,8 +118,8 @@ func TestInputProtection(t *testing.T) {
 	}
 }
 
-// TestEsdProtection: an external signal net (connector member, no power pins, not a rail)
-// needs a TVS member; protected, rail, ground, and connector-free nets stay quiet.
+// TestEsdProtection checks that an external signal net (connector member, no power pins, not a rail)
+// needs a TVS member, and that protected, rail, ground, and connector-free nets stay quiet.
 func TestEsdProtection(t *testing.T) {
 	lib := []*ir.PartType{
 		{Name: "REG", Pins: []*ir.Pin{{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN}}},
@@ -131,7 +131,8 @@ func TestEsdProtection(t *testing.T) {
 		{RefDes: "D1", Attributes: map[string]string{"Value": "TVS"}, Prov: &ir.Provenance{SourceFile: "t"}},
 	}
 	comps = append(comps, &ir.Component{RefDes: "R9", Prov: &ir.Provenance{SourceFile: "t"}})
-	// A debug connector (WS3-066): a bench interface, not harness exposure, so its lines are not flagged.
+	// A debug connector (WS3-066) is a bench interface, not harness exposure, so its lines are not
+	// flagged.
 	comps = append(comps, &ir.Component{RefDes: "J99", Attributes: map[string]string{"Description": "Debugger"}, Prov: &ir.Provenance{SourceFile: "t"}})
 	d := protDesign(comps, lib, []*ir.Net{
 		tnet("DP", "J1.2", "U1.5"),         // external signal, no tvs -> fires
@@ -142,7 +143,7 @@ func TestEsdProtection(t *testing.T) {
 		tnet("INT", "U1.7", "U1.8"),        // no connector -> not external
 		tnet("VCC", "J1.5", "U1.9"),        // rail-named (directionless source) -> quiet
 		tnet("12V", "J1.6", "U1.10"),       // digit-V rail name -> quiet
-		// Reach case (WS3-011): the clamp sits one series hop behind the connector.
+		// Reach case (WS3-011), where the clamp sits one series hop behind the connector.
 		tnet("DSER", "J1.7", "R9.1"),            // connector -> series R ...
 		tnet("DCLAMP", "R9.2", "U1.11", "D1.2"), // ... -> clamped node -> DSER quiet
 	})
@@ -157,8 +158,8 @@ func TestEsdProtection(t *testing.T) {
 	}
 }
 
-// TestEsdClampNotTVS (WS3-078): esd-protection and esd-clamp-not-tvs partition the unprotected
-// external-signal nets — a bare net is esd-protection, a Zener-clamped net (no TVS) is
+// TestEsdClampNotTVS (WS3-078) checks that esd-protection and esd-clamp-not-tvs partition the
+// unprotected external-signal nets. A bare net is esd-protection, a Zener-clamped net (no TVS) is
 // esd-clamp-not-tvs, a TVS-clamped net is neither, and the two rules never both fire on one net.
 func TestEsdClampNotTVS(t *testing.T) {
 	comps := []*ir.Component{
@@ -193,7 +194,7 @@ func TestEsdClampNotTVS(t *testing.T) {
 }
 
 // esdSpec builds a synthetic transceiver spec declaring an ESD tolerance (unconditional, so it is
-// machine-comparable — the test model lives in the name), at `volts`.
+// machine-comparable; the test model lives in the name), at `volts`.
 func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	return &parampb.PartSpec{
@@ -212,9 +213,9 @@ func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 	}
 }
 
-// TestEsdTestModelGate (WS3-077): the IC-ESD credit honors only a SYSTEM-level (IEC) rating. A handling
-// model (HBM) at the same voltage does NOT credit, and an unstated test model does not either, so a
-// harness input reaching an IC with only a handling rating stays flagged.
+// TestEsdTestModelGate (WS3-077) checks that the IC-ESD credit honors only a SYSTEM-level (IEC)
+// rating. A handling model (HBM) at the same voltage does NOT credit, and an unstated test model
+// does not either, so a harness input reaching an IC with only a handling rating stays flagged.
 func TestEsdTestModelGate(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -233,9 +234,9 @@ func TestEsdTestModelGate(t *testing.T) {
 	}
 }
 
-// TestEsdIcRating (WS3-073): a connector-facing signal reaching an IC whose datasheet declares an ESD
-// rating at or above the credit floor is protected (no finding, IC-integrated ESD); a signal to an
-// unrated part still fires, and a rating below the floor does not credit.
+// TestEsdIcRating (WS3-073) checks that a connector-facing signal reaching an IC whose datasheet
+// declares an ESD rating at or above the credit floor is protected (no finding, IC-integrated ESD);
+// a signal to an unrated part still fires, and a rating below the floor does not credit.
 func TestEsdIcRating(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -265,9 +266,10 @@ func TestEsdIcRating(t *testing.T) {
 	}
 }
 
-// TestEsdAvailableWithoutParams (WS3-073): esd-protection's param read is an optional exemption,
-// so the rule stays applicable (and reports) on a design with no seeded set — the review runner
-// must not mark it not-applicable. A genuine datasheet rule (supply-exceeds-abs-max) still gates.
+// TestEsdAvailableWithoutParams (WS3-073) exists because esd-protection's param read is an optional
+// exemption, so the rule stays applicable (and reports) on a design with no seeded set, and the
+// review runner must not mark it not-applicable. A genuine datasheet rule (supply-exceeds-abs-max)
+// still gates.
 func TestEsdAvailableWithoutParams(t *testing.T) {
 	m := check.NewModel(protDesign([]*ir.Component{{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}}}, nil, nil))
 	if ok, reason := check.Available(esdProtection, m); !ok {

@@ -20,8 +20,9 @@ func regulatorPageWithControlsDesign() *ir.Design {
 	}}
 }
 
-// TestRailNetExcludesEveryRegulatorPinFunction: mode straps, enables and the gate-drive supply are
-// named after the converter they belong to, so they read as rails and are not (agni 680).
+// TestRailNetExcludesEveryRegulatorPinFunction covers mode straps, enables and the gate-drive
+// supply. They are named after the converter they belong to, so they read as rails and are not
+// (agni 680).
 func TestRailNetExcludesEveryRegulatorPinFunction(t *testing.T) {
 	m := NewModel(regulatorPageWithControlsDesign())
 	byName := map[string]*ir.Net{}
@@ -48,7 +49,7 @@ func TestRailNetExcludesEveryRegulatorPinFunction(t *testing.T) {
 	}
 }
 
-// TestControlSuffixNeedsARailTokenToMatter: the answer to "does _EN swallow half the board". A net
+// TestControlSuffixNeedsARailTokenToMatter answers "does _EN swallow half the board". A net
 // with no rail token in its name is not a rail either way, so stamping it control changes nothing.
 func TestControlSuffixNeedsARailTokenToMatter(t *testing.T) {
 	m := NewModel(regulatorPageWithControlsDesign())
@@ -69,9 +70,9 @@ func TestControlSuffixNeedsARailTokenToMatter(t *testing.T) {
 	}
 }
 
-// TestRegulatorInternalHasOneImplementation: IsRailNet and the two voltage relations both subtract
-// this predicate, and it spanned four roles across two packages. Asserting them against each other
-// here is what stops a fifth role being added to one and not the other.
+// TestRegulatorInternalHasOneImplementation pins the predicate IsRailNet and the two voltage
+// relations both subtract, which spanned four roles across two packages. Asserting them against
+// each other here is what stops a fifth role being added to one and not the other.
 func TestRegulatorInternalHasOneImplementation(t *testing.T) {
 	m := NewModel(regulatorPageWithControlsDesign())
 	for _, n := range m.Nets() {

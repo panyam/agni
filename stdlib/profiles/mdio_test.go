@@ -7,8 +7,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// mdioGood: MDIO and MDC both wired, and R1 (a resistor — the pull-up walk crosses R-prefixed 2-net
-// parts) bridges ETH_MDIO to the +3V3 rail. MDC deliberately carries NO pull-up, which is how a
+// mdioGood has MDIO and MDC both wired, and R1 (a resistor, since the pull-up walk crosses R-prefixed
+// 2-net parts) bridges ETH_MDIO to the +3V3 rail. MDC deliberately carries NO pull-up, which is how a
 // correct board is built, so a silent run here is the profile's central claim.
 func mdioGood() *ir.Design {
 	return &ir.Design{
@@ -21,7 +21,7 @@ func mdioGood() *ir.Design {
 	}
 }
 
-// mdioBroken: no resistor anywhere, so MDIO reaches no rail.
+// mdioBroken has no resistor anywhere, so MDIO reaches no rail.
 func mdioBroken() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2"),
@@ -38,7 +38,7 @@ func TestMDIOSilentOnAGoodBus(t *testing.T) {
 	}
 }
 
-// The gap issue 516 opened: a management bus with no pull-up reported nothing at all.
+// Issue 516 opened this gap. A management bus with no pull-up reported nothing at all.
 func TestMDIOMissingPullUpFires(t *testing.T) {
 	var got []check.Finding
 	for _, f := range check.Run(check.NewModel(mdioBroken()), Compile(MDIO)) {

@@ -11,9 +11,10 @@ import (
 	"testing"
 )
 
-// TestQuerySpecLibCLI exercises the --speclib wiring end to end: no <file>, the corpus (--params) is the
-// fact base, and the datasheet relations range over every seeded part (WS10-010). printQueryRows
-// writes to os.Stdout, so capture it via a pipe.
+// TestQuerySpecLibCLI exercises the --speclib wiring end to end: no <file>, the corpus (--params)
+// is the fact base, and the datasheet relations range over every seeded part (WS10-010). The
+// command writes through cmd.OutOrStdout() and this test sets no writer, so capture os.Stdout via a
+// pipe.
 func TestQuerySpecLibCLI(t *testing.T) {
 	old := os.Stdout
 	r, w, _ := os.Pipe()
@@ -30,7 +31,7 @@ func TestQuerySpecLibCLI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query --speclib: %v", err)
 	}
-	// The seeded corpus parts appear with no design loaded — the spec library IS the fact base.
+	// The seeded corpus parts appear with no design loaded, because the spec library IS the fact base.
 	for _, want := range []string{"DEMO-MCU33", "LM1117"} {
 		if !strings.Contains(string(out), want) {
 			t.Errorf("spec library query missing corpus part %q:\n%s", want, out)
@@ -39,8 +40,8 @@ func TestQuerySpecLibCLI(t *testing.T) {
 }
 
 // TestQueryDesignCLI exercises the design-query path now that it is a thin client of QueryService
-// (WS9-048): the CLI builds the service over a local loader, runs the query, and renders the proto
-// rows as the same table as before — columns, a provenance column, and the result count.
+// (WS9-048). The CLI builds the service over a local loader, runs the query, and renders the proto
+// rows as the same table as before, with columns, a provenance column, and the result count.
 func TestQueryDesignCLI(t *testing.T) {
 	cmd := queryCmd()
 	var out bytes.Buffer
@@ -57,10 +58,10 @@ func TestQueryDesignCLI(t *testing.T) {
 	}
 }
 
-// TestQueryNetClassCLI (WS3-105) covers the whole net-class path, which no unit test can: the class
-// lives only in the .kicad_pro net_settings, so it reaches the IR through the PROJECT entry point
+// TestQueryNetClassCLI (WS3-105) covers the whole net-class path, which no unit test can, because the
+// class lives only in the .kicad_pro net_settings, so it reaches the IR through the PROJECT entry point
 // (the loader's AnnotateNetClasses call) and is invisible when the same board is opened as a bare
-// .kicad_sch. Both halves are asserted, because "the schematic read shows no classes" is the exact
+// .kicad_sch. Both halves are asserted, because "the schematic read shows no classes" is the
 // silence the has_netclass marker exists to make visible.
 func TestQueryNetClassCLI(t *testing.T) {
 	run := func(path, q string) string {
@@ -89,7 +90,7 @@ func TestQueryNetClassCLI(t *testing.T) {
 			t.Errorf("project net.netclass query missing multi-class row %q:\n%s", want, s)
 		}
 	}
-	// SCL is in no class, so it must not appear — an unclassed net yields no row at all.
+	// SCL is in no class, so it must not appear. An unclassed net yields no row at all.
 	if strings.Contains(s, "SCL") {
 		t.Errorf("net.netclass listed the unclassed net SCL:\n%s", s)
 	}
@@ -97,7 +98,8 @@ func TestQueryNetClassCLI(t *testing.T) {
 		t.Errorf("project has_netclass: want one row:\n%s", mk)
 	}
 
-	// The same board read as a bare schematic never sees the project file: no classes, no marker.
+	// The same board read as a bare schematic never sees the project file, so it has no classes and
+	// no marker.
 	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "net.netclass(?n, ?c) => ?n, ?c"); !strings.Contains(bare, "no results") {
 		t.Errorf("schematic-only read must yield no net classes:\n%s", bare)
 	}
@@ -115,8 +117,8 @@ func TestQuerySpecLibRequiresParams(t *testing.T) {
 }
 
 // TestQueryNetClassDefsCLI (WS3-111) covers the declared-constraint path end to end, which no unit
-// test can: the definitions live only in the .kicad_pro, so they reach the IR through the PROJECT
-// entry point and are invisible when the same board is opened as a bare .kicad_sch.
+// test can, because the definitions live only in the .kicad_pro, so they reach the IR through the
+// PROJECT entry point and are invisible when the same board is opened as a bare .kicad_sch.
 func TestQueryNetClassDefsCLI(t *testing.T) {
 	run := func(path, q string) string {
 		t.Helper()
@@ -131,15 +133,15 @@ func TestQueryNetClassDefsCLI(t *testing.T) {
 	}
 	const pro = "testdata/conformance/showcase.passes.kicad_pro"
 
-	// The per-class rows are the raw declarations: HighSpeed states a clearance and no width.
+	// The per-class rows are the raw declarations, and HighSpeed's states a clearance and no width.
 	raw := run(pro, `netclass.track_width(?c, ?mm) => ?c, ?mm`)
 	if strings.Contains(raw, "HighSpeed") {
 		t.Errorf("HighSpeed declares no track width and must yield no row:\n%s", raw)
 	}
 
-	// The cascade: USB_D+ is in HighSpeed (priority 1, states no width) and Differential
+	// In the cascade, USB_D+ is in HighSpeed (priority 1, states no width) and Differential
 	// (priority 2, states 0.2). It must resolve to Differential's value, NOT to no value and NOT
-	// to Default's 0.25 — the per-FIELD fall-through is the whole point.
+	// to Default's 0.25, because the fall-through is per FIELD.
 	d := run(pro, `net.declared_track_width(?n, ?mm) => ?n, ?mm`)
 	for _, want := range []string{"USB_D+", "0.2", "net_settings:Differential"} {
 		if !strings.Contains(d, want) {
@@ -177,7 +179,7 @@ func runQuery(t *testing.T, args ...string) string {
 //
 // `rail(?n)` is not a relation the convention adds; it is one whose ANSWER the convention changes,
 // because the lexicon is applied at the design read and net roles are resolved there. On this fixture
-// the built-in vocabulary — start-anchored on VCC/VDD/+3V3 — matches none of the project's
+// the built-in vocabulary, start-anchored on VCC/VDD/+3V3, matches none of the project's
 // function-first rail names, so the engine reports one rail on a board with more. That is a correct
 // answer to a question the project did not ask, and until now there was no way to ask theirs.
 func TestQueryConventionsCLI(t *testing.T) {
@@ -201,10 +203,10 @@ func TestQueryConventionsCLI(t *testing.T) {
 	}
 }
 
-// TestQueryConventionsUnreadableCLI: a missing or malformed config is an error at the edge, never a
-// silent fall back to the built-in vocabulary. Falling back would answer a different question than
-// the one asked and say nothing about it, which on this surface is the whole failure mode: the user
-// is asking what the engine believes, and would be told what it believes under somebody else's words.
+// TestQueryConventionsUnreadableCLI holds that a missing or malformed config is an error at the edge,
+// never a silent fall back to the built-in vocabulary. Falling back would answer a different question
+// than the one asked and say nothing about it. On this surface the user is asking what the engine
+// believes, and would be told what it believes under somebody else's words.
 func TestQueryConventionsUnreadableCLI(t *testing.T) {
 	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
 		cmd := queryCmd()
@@ -216,9 +218,9 @@ func TestQueryConventionsUnreadableCLI(t *testing.T) {
 	}
 }
 
-// TestQueryBoardPathCLI: the board.* relations range over a board tier the netlist does not carry, so
-// without an attached export they are empty — indistinguishable, in a result table, from a board with
-// nothing to report.
+// TestQueryBoardPathCLI covers the board.* relations, which range over a board tier the netlist does
+// not carry, so without an attached export they are empty, indistinguishable in a result table from a
+// board with nothing to report.
 func TestQueryBoardPathCLI(t *testing.T) {
 	design := "testdata/review/can-broken.edn"
 	q := "board.track_width(?n,?w) => ?n, ?w"
@@ -243,8 +245,8 @@ func TestQueryBoardPathCLI(t *testing.T) {
 // hundred-millivolt sanity bound) would have compared 50 against 0.1 and read as wildly over. The
 // same query now yields 0.05, and the threshold means what it says.
 //
-// The companion assertion is the point of the split: param.unit still reports "mV", so normalizing
-// the number did not erase what the vendor printed.
+// The companion assertion covers the other side of the split. param.unit still reports "mV", so
+// normalizing the number did not erase what the vendor printed.
 func TestQuerySpecLibUnitsCLI(t *testing.T) {
 	run := func(q string) string {
 		t.Helper()
@@ -283,7 +285,7 @@ func TestQuerySpecLibUnitsCLI(t *testing.T) {
 	}
 }
 
-// TestQueryAbsentPredicateCLI is the end-to-end payoff of making absence representable: selecting the
+// TestQueryAbsentPredicateCLI is the end-to-end payoff of making absence representable. Selecting the
 // rows a datasheet did not state is now a query rather than an apology in a doc.
 //
 // The conformance controller states V(OCP) as min/typ/max, so it has a lower bound; the MCU's
@@ -308,7 +310,7 @@ func TestQueryAbsentPredicateCLI(t *testing.T) {
 		return string(out)
 	}
 
-	// A one-sided row: absolute maximums are stated as a ceiling with no floor.
+	// A one-sided row, since absolute maximums are stated as a ceiling with no floor.
 	oneSided := run(`param.range(?m, ?s, "absolute_max", ?min, ?max), absent(?min) => ?m, ?s, ?max`)
 	if !strings.Contains(oneSided, "result(s)") || strings.Contains(oneSided, "no results") {
 		t.Errorf("absent(?min) must select the one-sided absolute-max rows:\n%s", oneSided)
@@ -349,9 +351,9 @@ func countResults(t *testing.T, out string) int {
 
 // TestQueryRejectsUnknownFormatBeforeReading is about WHERE the check happens, not that it happens.
 // A misspelled --format must fail before the design is parsed, because the designs this runs on are
-// nine-megabyte netlists and a typo that costs a full read reads as a slow tool. The path given is
-// deliberately one that does not exist: if validation ever moves after the read, this stops
-// reporting the format error and starts reporting a missing file.
+// nine-megabyte netlists and a typo that costs a full read reads as a slow tool. The path given
+// deliberately does not exist, so if validation ever moves after the read, this stops reporting the
+// format error and starts reporting a missing file.
 func TestQueryRejectsUnknownFormatBeforeReading(t *testing.T) {
 	cmd := queryCmd()
 	var out bytes.Buffer
@@ -367,7 +369,7 @@ func TestQueryRejectsUnknownFormatBeforeReading(t *testing.T) {
 	}
 }
 
-// TestQueryFormatsReachTheRenderers is the end-to-end half: each format is wired to its renderer and
+// TestQueryFormatsReachTheRenderers is the end-to-end half. Each format is wired to its renderer and
 // runs over a real design read. The per-format behaviour is asserted in core/report; this asserts the
 // dispatch, which is the part that can silently fall through to text.
 func TestQueryFormatsReachTheRenderers(t *testing.T) {
@@ -395,7 +397,7 @@ func TestQueryFormatsReachTheRenderers(t *testing.T) {
 // TestQueryViewNamesTheMountNotTheHost is the leak guard, stated as the POSITIVE contract because
 // the negative form does not hold under test. A view is committed, mailed and pasted into tickets,
 // so its heading must name the design's mount URI. Asserting merely that no host path appears is
-// vacuous here: the test passes a RELATIVE path, so the buggy version (which echoes the argument)
+// vacuous here. The test passes a RELATIVE path, so the buggy version (which echoes the argument)
 // leaks nothing a substring check can see, and the guard reported green with the bug reinstated.
 // Requiring the mount URI fails on any source that is not one, including a bare argument.
 //
@@ -427,7 +429,7 @@ func TestQueryViewNamesTheMountNotTheHost(t *testing.T) {
 // RunQuery parse one shape.
 //
 // The cites assertion is inherited from the deleted TestTableJSONKeepsCitesApart, which protected the
-// same property of the shape this replaces: provenance stays a per-row LIST rather than being
+// same property of the shape this replaces, that provenance stays a per-row LIST rather than being
 // flattened into a trailing cell the way text and csv need. Deleting the renderer should not delete
 // the claim.
 func TestQueryJSONIsTheWireMessage(t *testing.T) {

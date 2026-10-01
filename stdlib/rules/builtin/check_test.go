@@ -61,7 +61,7 @@ func indexFindings(d *ir.Design) map[string]check.Finding {
 func TestRules(t *testing.T) {
 	f := indexFindings(ruleFixture())
 
-	// single-pin-net: only the real stub; no-connect awareness skips the marker net and the
+	// single-pin-net flags only the real stub; no-connect awareness skips the marker net and the
 	// NO_CONNECT-pinned net.
 	if _, ok := f["single-pin-net|STUB"]; !ok {
 		t.Error("STUB should be flagged single-pin-net")
@@ -73,7 +73,7 @@ func TestRules(t *testing.T) {
 		t.Error("net whose pin is NO_CONNECT must be skipped")
 	}
 
-	// unconnected-component: only R9; U2 is connected via its section pin (section-aware).
+	// unconnected-component flags only R9; U2 is connected via its section pin (section-aware).
 	if _, ok := f["unconnected-component|R9"]; !ok {
 		t.Error("R9 should be flagged unconnected-component")
 	}
@@ -81,7 +81,7 @@ func TestRules(t *testing.T) {
 		t.Error("U2 is connected (section-aware); must not be flagged")
 	}
 
-	// i2c-pull-up: SDA missing a pull-up; SCL has R3.
+	// i2c-pull-up flags SDA, which is missing a pull-up; SCL has R3.
 	if _, ok := f["i2c-pull-up|SDA"]; !ok {
 		t.Error("SDA should be flagged for missing pull-up")
 	}
@@ -105,7 +105,7 @@ func TestRules(t *testing.T) {
 }
 
 // TestFindingKind checks that each finding carries the entity type of its subject, so a consumer
-// can group/highlight by kind without re-guessing: net rules report KindNet, component rules
+// can group/highlight by kind without re-guessing. Net rules report KindNet, component rules
 // KindComponent.
 func TestFindingKind(t *testing.T) {
 	f := indexFindings(ruleFixture())
@@ -127,7 +127,7 @@ type tconn struct {
 }
 
 // dirDesign builds a design where each connection's pin carries a direction, so Model.PinDir
-// resolves it: one part per ref_des, its pins accumulated from the connections. attrs sets each
+// resolves it, with one part per ref_des and its pins accumulated from the connections. attrs sets each
 // named net's attributes (e.g. power_driven, external).
 func dirDesign(nets map[string][]tconn, attrs map[string]map[string]string) *ir.Design {
 	d := &ir.Design{}
@@ -159,8 +159,8 @@ const (
 	dPas   = ir.PinDirection_PIN_DIRECTION_PASSIVE
 )
 
-// TestOutputOutputConflict: two hard drivers on a net fight (flag); one driver, or a bus of
-// bidirectional pins, does not.
+// TestOutputOutputConflict checks that two hard drivers on a net fight (flag), while one driver, or
+// a bus of bidirectional pins, does not.
 func TestOutputOutputConflict(t *testing.T) {
 	f := indexFindings(dirDesign(map[string][]tconn{
 		"FIGHT": {{"U1", "1", dOut}, {"U2", "1", dOut}},                                       // two outputs -> flag
@@ -181,8 +181,8 @@ func TestOutputOutputConflict(t *testing.T) {
 	}
 }
 
-// TestFloatingInput: a net of only inputs floats (flag); an input with a driver or a pull, or a
-// lone input (single-pin-net's job), does not.
+// TestFloatingInput checks that a net of only inputs floats (flag), while an input with a driver or
+// a pull, or a lone input (single-pin-net's job), does not.
 func TestFloatingInput(t *testing.T) {
 	f := indexFindings(dirDesign(map[string][]tconn{
 		"FLOAT":  {{"U1", "1", dIn}, {"U2", "1", dIn}},  // two inputs, no driver -> flag
@@ -200,8 +200,8 @@ func TestFloatingInput(t *testing.T) {
 	}
 }
 
-// TestPowerInputNotDriven: a power-input with no source flags, unless a power source, a power flag,
-// or a cross-sheet continuation could feed it.
+// TestPowerInputNotDriven checks that a power-input with no source flags, unless a power source, a
+// power flag, or a cross-sheet continuation could feed it.
 func TestPowerInputNotDriven(t *testing.T) {
 	f := indexFindings(dirDesign(map[string][]tconn{
 		"DEAD":   {{"U1", "1", dPwrIn}, {"C1", "1", dPas}},                                     // power-in + passive, no source -> flag
@@ -279,7 +279,7 @@ func TestDanglingEndpoint(t *testing.T) {
 	}
 }
 
-// TestDiffPairNaming exercises the differential-pair rule: an orphaned positive member is
+// TestDiffPairNaming exercises the differential-pair rule. An orphaned positive member is
 // flagged, a complete pair is not, and an active-low "_N" net is not mistaken for a diff half
 // (positive-anchored detection). Nets carry two connections so single-pin-net stays quiet.
 func TestDiffPairNaming(t *testing.T) {
@@ -311,7 +311,7 @@ func TestDiffPairNaming(t *testing.T) {
 	}
 }
 
-// TestDiffPairNamingNoConvention: a design where nothing is differential (only _P-suffixed
+// TestDiffPairNamingNoConvention pins that a design where nothing is differential (only _P-suffixed
 // nets, no _N siblings anywhere) must not fire. This is the LGSynth-benchmark profile that
 // sprayed 190 warnings per file before the pair-population gate (WS3-024).
 func TestDiffPairNamingNoConvention(t *testing.T) {

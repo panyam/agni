@@ -69,12 +69,12 @@ func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 	return got
 }
 
-// TestWriteRoundTripsIR is the C6 oracle for the netlist writer: read, write, read, and require the
-// two IRs to match. C6 obliges only a LOSSLESS reader to round-trip byte-for-byte, and this one
-// declares lossy-bounded, so the assertion is at the IR level -- the level every consumer of this
-// package actually reads.
+// TestWriteRoundTripsIR is the C6 oracle for the netlist writer. It reads, writes, reads again, and
+// requires the two IRs to match. C6 obliges only a LOSSLESS reader to round-trip byte-for-byte, and
+// this one declares lossy-bounded, so the assertion is at the IR level, the level every consumer of
+// this package actually reads.
 //
-// Three exclusions, each because the READER already dropped the information before the writer could
+// Four exclusions, each because the READER already dropped the information before the writer could
 // see it. They are listed here rather than quietly normalized away, because the next person to hit
 // one needs to know it is the reader's loss being reported and not a writer bug to go and fix:
 //
@@ -96,12 +96,13 @@ func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 //     the same thing one level down, and is described next.
 //   - PART-TYPE PINS THE NETLIST REFERENCES AND THE INTERFACE DOES NOT DECLARE. Read consumes the
 //     portInstance table that resolved a logical port to its physical pins and keeps only the
-//     resolved pin (WS1-025), so for a source that used one the writer cannot tell that pins 5 and 6
-//     are both the GND port. EDIF resolves a portRef against the interface, so writing those pins
+//     resolved pin (WS1-025), so for a source that used one the writer cannot tell that pins 5 and
+//     6 are both the GND port. EDIF resolves a portRef against the interface, so writing those pins
 //     without declaring them produces a file a conforming reader cannot follow; the writer declares
-//     them, and the re-read reports them as pins. That is the same reader loss the three above are,
-//     surfacing on the cell rather than on the net, so the exclusion is computed by the writer'"'"'s own
-//     rule rather than hand-listed: whatever the nets reference and the interface does not declare.
+//     them, and the re-read reports them as pins. That is the same reader loss as the bullets above,
+//     surfacing on the cell rather than on the net, so the exclusion is computed by the writer's
+//     own rule rather than hand-listed, as whatever the nets reference and the interface does not
+//     declare.
 func TestWriteRoundTripsIR(t *testing.T) {
 	for _, path := range corpus(t) {
 		t.Run(filepath.Base(path), func(t *testing.T) {
@@ -215,7 +216,7 @@ func partsTheNetlistAdds(d *ir.Design) map[string]bool {
 }
 
 // portsTheNetlistAdds names, per part type, the ports the writer has to declare because a net
-// references them and the interface does not. It is the writer'"'"'s undeclaredPorts rule restated over
+// references them and the interface does not. It is the writer's undeclaredPorts rule restated over
 // the SOURCE design, so the exclusion tracks the writer instead of being a list that goes stale.
 func portsTheNetlistAdds(d *ir.Design) map[string]map[string]bool {
 	partOf := map[string]string{}
@@ -285,17 +286,17 @@ func clearSourceFiles(m protoreflect.Message) {
 
 // TestWritePreservesDiffIdentity is the second-order check the first-order one cannot make. An IR
 // comparison is per design; a diff is BETWEEN two, and it keys on identity that survives a
-// revision (net names, ref-des, section part refs) while deliberately ignoring the export-unstable
+// revision (net names, ref-des, section part refs) while ignoring the export-unstable
 // internal ids. A writer could therefore perturb exactly the fields diff keys on and still pass
 // TestWriteRoundTripsIR if it perturbed them the same way on both sides.
 //
-// So: the report between the two committed revisions must equal the report between their
+// So the report between the two committed revisions must equal the report between their
 // round-tripped forms. rev_a and rev_b carry the whole change taxonomy already
 // (TestEDIFDiffRoundTrip pins it), which is what makes them the right pair.
 func TestWritePreservesDiffIdentity(t *testing.T) {
 	a, b := readFile(t, filepath.Join("testdata", "rev_a.edn")), readFile(t, filepath.Join("testdata", "rev_b.edn"))
 	want := diff.Designs(a, b)
-	// The same path strings the originals were read with: provenance carries the source file, diff
+	// The same path strings the originals were read with. Provenance carries the source file, diff
 	// carries provenance into its report, so a round trip read under a different name would differ here
 	// for a reason that has nothing to do with the writer.
 	got := diff.Designs(

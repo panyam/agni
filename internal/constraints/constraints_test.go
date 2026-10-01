@@ -62,10 +62,10 @@ func nonTestSources(t *testing.T, dir string) []string {
 
 // C6: each reader declares its fidelity, in the package doc of the file that owns Read.
 //
-// The declaration is a comment rather than a type because what it has to say is prose: WHICH subset
-// survives the read and what is dropped. A `Fidelity` enum would record the word "lossy-bounded" and
-// none of the bound. This test asserts the line exists, which is the half a machine can check;
-// whether the bound it states is honest is a review question.
+// The declaration is a comment rather than a type because what it has to say is prose, naming WHICH
+// subset survives the read and what is dropped. A `Fidelity` enum would record the word
+// "lossy-bounded" and none of the bound. This test asserts the line exists, which is the half a
+// machine can check; whether the bound it states is true is a review question.
 //
 // It is here because readers/telesis shipped without one in August 2026 and nothing said so. The
 // constraint had carried no Verify at all since it was written.
@@ -139,7 +139,7 @@ func TestC20CheckPathReadsStampedFacts(t *testing.T) {
 //
 // The sweep is narrower than the constraint's prose in two ways, both deliberate. Test files are
 // excluded, because a test asserting that a custom style reaches the output has to name a colour to
-// assert on. And it matches `font-family=` rather than the bare word: the renderers pass
+// assert on. And it matches `font-family=` rather than the bare word, because the renderers pass
 // "font-family" to svg.A as an ATTRIBUTE NAME with style.Font as the value, which is the rule being
 // obeyed rather than broken. The Verify in CONSTRAINTS.md read on the bare word until the audit, and
 // returned two dozen hits on a clean tree.
@@ -173,15 +173,16 @@ var styleLiteral = regexp.MustCompile(`"#[0-9a-fA-F]{3,8}"|font-family=`)
 // This is a ratchet rather than a clean sweep, the shape hack/ir_model_baseline.txt uses for C19,
 // because the invariant a grep can express ("nothing reads p.Unit") is not the invariant that
 // matters ("nothing COMPARES on p.Unit"). Both sites below read the printed unit to PUBLISH it,
-// which is the whole point of the param.unit relation and of what `agni params` prints, and neither
-// compares anything.
+// which is what the param.unit relation and `agni params` exist to do, and neither compares
+// anything.
 //
 // A new site failing here is one of two things. If it compares, it is the bug the constraint
-// exists for: convert through datasheet/param first. If it displays, add it here, and that addition
-// is the review moment the constraint is asking for.
+// exists for, and the fix is to convert through datasheet/param first. If it displays, add it
+// here, and that addition is the review moment the constraint is asking for.
 func TestC24RawUnitIsReadOnlyToDisplay(t *testing.T) {
 	allowed := map[string]bool{
-		// the param.unit relation: what the vendor actually printed, beside the converted number
+		// the param.unit relation, which carries what the vendor actually printed beside the
+		// converted number
 		"stdlib/relations/facts.go": true,
 		// the parameters table `agni params <mpn>` prints
 		"cmd/agni/params.go": true,
@@ -193,7 +194,7 @@ func TestC24RawUnitIsReadOnlyToDisplay(t *testing.T) {
 			t.Fatalf("read %s: %v", f, err)
 		}
 		rel := filepath.ToSlash(mustRel(t, root, f))
-		// datasheet/param IS the one place, so it reads the raw unit by definition: that is where
+		// datasheet/param IS the one place and reads the raw unit by definition, since that is where
 		// the conversion to SI base units happens and what every other tier compares through.
 		if strings.HasPrefix(rel, "datasheet/param/") || allowed[rel] || !rawUnitRead.Match(b) {
 			continue
@@ -210,7 +211,7 @@ var rawUnitRead = regexp.MustCompile(`\bp\.(Unit\b|GetUnit\(\))`)
 // A `mount` + `path` pair, or a bare `*_path` / `*_ref` field, is a locator the caller half-resolves
 // and the callee finishes, which is the shape that let a config mean one thing to the CLI and
 // another to the service. `ref_des` and `cell_refs` are domain names rather than locators and do not
-// match: the rule is about the exact `_path` / `_ref` suffix.
+// match, because the rule is about the exact `_path` / `_ref` suffix.
 func TestC22WebAPICarriesNoLocatorPair(t *testing.T) {
 	root := repoRoot(t)
 	dir := filepath.Join(root, "protos", "agni", "v1", "webapi")
@@ -252,9 +253,9 @@ func TestC25RunConfigHasOneWriter(t *testing.T) {
 // rename has one implementation and one call site per read entry point.
 //
 // Acceptance for the behaviour is TestCheckProvenanceIsMountRelative (cmd/agni), which asserts the
-// shape on both the printed and the STORED document. This guards the structure that makes it hold:
-// a second implementation elsewhere is how a new output format or a new host starts publishing host
-// paths again.
+// shape on both the printed and the STORED document. This guards the structure that makes it hold,
+// since a second implementation elsewhere is how a new output format or a new host starts
+// publishing host paths again.
 func TestC28SourceRenameHasOneImplementation(t *testing.T) {
 	assertSoleWriter(t, "relocateSources", "readers/formats/",
 		"the read-time locator rename has one implementation (C28), so a new output format inherits "+
@@ -281,7 +282,7 @@ func assertSoleWriter(t *testing.T, needle, prefix, why string) {
 		}
 		t.Errorf("%s names %s: %s", rel, needle, why)
 	}
-	// The positive control: a rename or a deletion would otherwise leave this reading as clean.
+	// The positive control. A rename or a deletion would otherwise leave this reading as clean.
 	if found == 0 {
 		t.Errorf("no file under %s names %s, so this check proves nothing", prefix, needle)
 	}

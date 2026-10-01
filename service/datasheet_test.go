@@ -180,7 +180,7 @@ func TestSaveAnnotationsValidation(t *testing.T) {
 	if _, err := svc.SaveAnnotations(context.Background(), &webapi.SaveAnnotationsRequest{Uri: "mount://m/d"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("nil set => %v, want ErrInvalidArgument", err)
 	}
-	// An empty author is rejected: the author names the file and cannot be inferred.
+	// An empty author is rejected, because the author names the file and cannot be inferred.
 	req := &webapi.SaveAnnotationsRequest{Set: &webapi.AnnotationSet{DocId: "LM1117"}}
 	if _, err := svc.SaveAnnotations(context.Background(), req); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("empty author => %v, want ErrInvalidArgument", err)
@@ -209,7 +209,7 @@ func TestSaveAndGetAnnotations(t *testing.T) {
 }
 
 // Saving records what the author has. It is NOT a judgment about whether the spec is any good, so
-// neither incompleteness nor structural incoherence may block a write: a rejected save costs work,
+// neither incompleteness nor structural incoherence may block a write. A rejected save costs work,
 // and every mutation path would otherwise have to preserve an invariant or strand the document.
 //
 // Nothing downstream needs the gate. The sibling is <stem>.partspec.json and param.LoadSet reads
@@ -248,7 +248,7 @@ func TestSavePartSpecRecordsWhateverTheAuthorHas(t *testing.T) {
 }
 
 // The save response is where the editor learns what is wrong, so the two kinds have to arrive
-// distinguishable: structural problems are worth interrupting for, completeness ones are the
+// distinguishable. Structural problems are worth interrupting for, and completeness ones are the
 // ordinary state of unfinished work.
 func TestSavePartSpecReportsClassifiedProblems(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})

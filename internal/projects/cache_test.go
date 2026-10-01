@@ -10,9 +10,9 @@ import (
 )
 
 // The cache is only allowed to exist because it cannot go stale. These tests are that claim, one
-// edit at a time: an operator changes something while the server runs, and the very next request has
+// edit at a time. An operator changes something while the server runs, and the very next request has
 // to see it. A cache that failed any of these would reintroduce the exact failure this workstream
-// was built to remove — a confident answer computed from config the operator has already fixed.
+// was built to remove, a confident answer computed from config the operator has already fixed.
 
 // diskTree writes a project tree to a real directory and returns a store over it, plus the root.
 //
@@ -53,10 +53,10 @@ func writeFile(t *testing.T, root, rel, body string) {
 // touchForward moves a path's mtime a second past both now and whatever it already carried.
 //
 // Past NOW is what defeats the filesystem's resolution. Past the EXISTING stamp is what defeats the
-// clock's: a kernel stamps inodes at its own granularity, about a millisecond on the machine this
-// was written against, and a test does several writes inside one of those. Two nudges computed from
-// `time.Now()` in the same tick then land on the same instant, a cache keyed on mtime is correct to
-// report no change, and the test reads that as a stale cache.
+// clock's, because a kernel stamps inodes at its own granularity, about a millisecond on the
+// machine this was written against, and a test does several writes inside one of those. Two nudges
+// computed from `time.Now()` in the same tick then land on the same instant, a cache keyed on mtime
+// is correct to report no change, and the test reads that as a stale cache.
 func touchForward(t *testing.T, path string) {
 	t.Helper()
 	info, err := os.Stat(path)
@@ -73,8 +73,9 @@ func touchForward(t *testing.T, path string) {
 	}
 }
 
-// TestEditedDescriptorIsSeenImmediately: the entry a design declares is what analysis reads, so
-// serving the previous one after an operator fixed it would send every later run at the wrong file.
+// TestEditedDescriptorIsSeenImmediately exists because the entry a design declares is what analysis
+// reads, so serving the previous one after an operator fixed it would send every later run at the
+// wrong file.
 func TestEditedDescriptorIsSeenImmediately(t *testing.T) {
 	s, root := diskTree(t)
 	ctx := context.Background()
@@ -97,7 +98,7 @@ func TestEditedDescriptorIsSeenImmediately(t *testing.T) {
 	}
 }
 
-// TestEditedConventionsIsSeenImmediately is the edit whose staleness is least visible: the rules
+// TestEditedConventionsIsSeenImmediately is the edit whose staleness is least visible. The rules
 // still run, they just run under the vocabulary from before the fix. Nothing in a findings list says
 // so, which is why the cache keys on every file a load reads rather than on the descriptor alone.
 func TestEditedConventionsIsSeenImmediately(t *testing.T) {
@@ -122,8 +123,9 @@ func TestEditedConventionsIsSeenImmediately(t *testing.T) {
 	}
 }
 
-// TestNewProjectIsSeenImmediately: discovery is keyed on directory mtimes precisely so a descriptor
-// appearing is a change the cache notices. A remembered walk would hide a project until restart.
+// TestNewProjectIsSeenImmediately covers a descriptor appearing. Discovery is keyed on directory
+// mtimes precisely so a descriptor appearing is a change the cache notices. A remembered walk would
+// hide a project until restart.
 func TestNewProjectIsSeenImmediately(t *testing.T) {
 	s, root := diskTree(t)
 	ctx := context.Background()
@@ -142,7 +144,7 @@ func TestNewProjectIsSeenImmediately(t *testing.T) {
 }
 
 // TestNewDesignIsSeenImmediately is the same property one level down, and it is a different code
-// path: designs are discovered under a project's own folder rather than from the tree root.
+// path, because designs are discovered under a project's own folder rather than from the tree root.
 func TestNewDesignIsSeenImmediately(t *testing.T) {
 	s, root := diskTree(t)
 	ctx := context.Background()
@@ -160,9 +162,10 @@ func TestNewDesignIsSeenImmediately(t *testing.T) {
 	}
 }
 
-// TestRemovedProjectIsSeenImmediately: a deleted descriptor has to disappear as readily as an added
-// one appears. A cache that only noticed additions would keep serving a project that is gone, and a
-// client would get NotFound from every call against a name the listing still advertised.
+// TestRemovedProjectIsSeenImmediately pins that a deleted descriptor has to disappear as readily as
+// an added one appears. A cache that only noticed additions would keep serving a project that is
+// gone, and a client would get NotFound from every call against a name the listing still
+// advertised.
 func TestRemovedProjectIsSeenImmediately(t *testing.T) {
 	s, root := diskTree(t)
 	ctx := context.Background()
@@ -188,10 +191,10 @@ func TestRemovedProjectIsSeenImmediately(t *testing.T) {
 	}
 }
 
-// TestCachedValuesAreNotAliased: the store MUTATES what it loads, filling in resource names and
-// rewriting descriptor-relative refs into URIs. Handing out the cached message by pointer would let
-// one request's fill-in become the next request's starting point, and the second call would join a
-// URI onto a URI.
+// TestCachedValuesAreNotAliased exists because the store MUTATES what it loads, filling in resource
+// names and rewriting descriptor-relative refs into URIs. Handing out the cached message by pointer
+// would let one request's fill-in become the next request's starting point, and the second call
+// would join a URI onto a URI.
 func TestCachedValuesAreNotAliased(t *testing.T) {
 	s, _ := diskTree(t)
 	ctx := context.Background()

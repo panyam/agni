@@ -16,8 +16,8 @@ import (
 //
 // The failure mode this guards is silence. `IncludeFile` returns an empty string when the path does
 // not resolve, so a typo, a rename, or a moved file removes the figure from the page and the build
-// still succeeds. Verified by pointing a live include at a missing file: the page rendered with zero
-// SVG in its body and no error anywhere.
+// still succeeds. Verified by pointing a live include at a missing file, and the page rendered with
+// zero SVG in its body and no error anywhere.
 
 var includeFileRe = regexp.MustCompile(`\{\{-?\s*includeFile\s+"([^"]+)"`)
 
@@ -78,7 +78,7 @@ func TestEveryFigureIsIncluded(t *testing.T) {
 	}
 }
 
-// The whole point of the figures directory is that these stay theme-aware. A literal colour reads
+// The figures directory exists so these stay theme-aware. A literal colour reads
 // correctly in whichever theme it was authored in and badly in the other, and the docsite has both.
 func TestFiguresCarryNoColourLiterals(t *testing.T) {
 	entries, err := os.ReadDir(filepath.Join(projectRoot, figuresDir))
@@ -109,14 +109,14 @@ func TestFiguresCarryNoColourLiterals(t *testing.T) {
 //
 // `IncludeFile` splices the file into the page BEFORE the markdown renderer runs, so the SVG is
 // ordinary raw HTML by the time CommonMark sees it, and CommonMark ends an HTML block at the first
-// blank line. Whether the next chunk is passed through again depends on what it starts with: a line
+// blank line. Whether the next chunk is passed through again depends on what it starts with. A line
 // holding nothing but an open tag (`<g fill="...">`) opens a new HTML block and survives, while a
 // line with content after the tag (`<text x="8" y="44">your machine</text>`) does not, and is parsed
 // as a paragraph instead. The renderer then wraps that chunk in `<p>`, which closes the `<svg>`
 // early, and every element after it lands OUTSIDE the figure. The page still builds, the figure
 // still renders, and the elements in the orphaned tail are simply absent.
 //
-// Four figures merged before this test shipped in exactly that state, each missing its closing
+// Four figures merged before this test shipped in that state, each missing its closing
 // caption on the live site. Found by screenshotting a figure and counting the text runs, not by any
 // test, which is why this one exists. `docsite/README.md` carried the opposite advice until then.
 func TestFiguresCarryNoBlankLines(t *testing.T) {

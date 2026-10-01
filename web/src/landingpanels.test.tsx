@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe("openUrl", () => {
   // Each half goes through its own page's URL builder, so these assertions are what pins the two
-  // spaces apart: a datasheet routed into the /designs/ space would open a page that cannot show it.
+  // spaces apart. A datasheet routed into the /designs/ space would open a page that cannot show it.
   it("routes a design to the viewer and a datasheet to the workbench", () => {
     expect(openUrl("design", "m", "boards/a.edn")).toBe("/designs/m/boards/a.edn/view");
     expect(openUrl("datasheet", "m", "vendor/x.pdf")).toBe("/datasheets/files/m/vendor/x.pdf");
@@ -86,7 +86,7 @@ describe("recents island", () => {
     (el.querySelector(".ld-clear") as HTMLButtonElement).click();
     await settle();
     expect(rows(el)).toHaveLength(0);
-    // Cleared in the store too, not just on screen: a reload must not bring it back.
+    // Cleared in the store too, not just on screen, so a reload must not bring it back.
     expect(localStorage.getItem("agni.recents")).toBeNull();
   });
 });
@@ -127,7 +127,7 @@ describe("projects island", () => {
   });
 });
 
-// The wiring bug this guards is the one composition.test.ts was written for: an island that mounts
+// The wiring bug this guards is the one composition.test.ts was written for. An island that mounts
 // into a hole the page does not declare is silently absent, and every unit test still passes. So
 // the ids landing.ts looks up are checked against the SHIPPED template rather than a copy.
 describe("landing page composition", () => {
@@ -138,8 +138,8 @@ describe("landing page composition", () => {
       expect(entry, `landing.ts should mount #${id}`).toContain(`getElementById("${id}")`);
       expect(page, `LandingPage.html should declare #${id}`).toContain(`id="${id}"`);
     }
-    // The page's own bundle, not the viewer's: loading app.js here would drag the renderer and the
-    // dock into the first page anyone visits.
+    // The page's own bundle, not the viewer's, since loading app.js here would drag the renderer
+    // and the dock into the first page anyone visits.
     expect(page).toContain("/static/landing.js");
     expect(page).not.toContain("/static/app.js");
   });

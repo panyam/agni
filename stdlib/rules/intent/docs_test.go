@@ -13,7 +13,7 @@ import (
 // subsystem-<slug>, both protection kinds, every net-property kind, both rail-sizing rules, and
 // sequence-<slug>. TestRuleDocsOneToOne compiles it to tie the RUNTIME
 // rules to their docs (the stronger binding a fully-dynamic source needs over the profiles list-only
-// harness: it catches a builder that forgets to set Detail at all, not only a missing file).
+// harness, since it catches a builder that forgets to set Detail at all, not only a missing file).
 func kitchenSink() Declaration {
 	return Declaration{
 		Name:           "test intent",
@@ -26,12 +26,12 @@ func kitchenSink() Declaration {
 			{Net: "PCIE_TX0_P", Property: PropACCoupled},
 			{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"},
 		},
-		// Both rail-sizing rules: the budgets emit rail-current-capacity, and the factor is what emits
-		// rail-current-margin (it has no default, so omitting it here would leave that doc key unemitted
-		// and fail the one-to-one check below).
+		// Both rail-sizing rules. The budgets emit rail-current-capacity, and the factor is what
+		// emits rail-current-margin (it has no default, so omitting it here would leave that doc
+		// key unemitted and fail the one-to-one check below).
 		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
 		MarginFactor: 1.2,
-		// One IO-map row emits all THREE io-map rules, far-end included: that rule is compiled
+		// One IO-map row emits all THREE io-map rules, far-end included. That rule is compiled
 		// whenever a map is declared rather than only when a row fills its far end, because its
 		// verdicts are what report the denominator.
 		IOMap: []IOAssignment{{Net: "SYS_RESET_N", Device: "U1", Pin: "PTC11"}},
@@ -47,7 +47,7 @@ func kitchenSink() Declaration {
 			},
 		}},
 		// TWO groups on ONE bus, because the collision rule is compiled only when a collision is
-		// expressible: a single group could never clash, so a one-group kitchen sink would leave the
+		// expressible. A single group could never clash, so a one-group kitchen sink would leave the
 		// strap-address-collision doc key unemitted and fail the one-to-one check below.
 		StrapGroups: []StrapGroup{
 			{Name: "PHYAD U12", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1, Bus: "MDIO"},
@@ -61,12 +61,13 @@ func kitchenSink() Declaration {
 // source whose rules are generated (and partly named) per design. It checks four things:
 //   - every docKey has a docs/<key>.md that opens with its own '## <key>' heading;
 //   - every rule a kitchen-sink declaration emits gets its Detail from intentDoc(docKey(name)) and is
-//     non-empty (the runtime tie: a rule shipped without a doc, or with Detail left unset, fails here);
+//     non-empty (the runtime tie, where a rule shipped without a doc, or with Detail left unset, fails here);
 //   - the emitted docKey set equals docKeys (a new rule kind added to Compile without a doc key, or a
 //     doc key never emitted, fails);
 //   - docs/ has no orphan .md and every image a doc references exists.
 //
-// So an intent rule PR without its doc/card fails here, not in review — the WS3-093 harness gap closed.
+// So an intent rule PR without its doc/card fails here, not in review, which closed the WS3-093
+// harness gap.
 func TestRuleDocsOneToOne(t *testing.T) {
 	// docKeys each resolve to a doc that opens with its heading.
 	known := map[string]bool{}
@@ -137,9 +138,9 @@ func TestRuleDocsOneToOne(t *testing.T) {
 	}
 }
 
-// TestRuleDocImageHandler: the read-only route serves an embedded card (200) as SVG but nothing else —
-// the markdown, a missing image, a top-level (non-images/) path, or a non-image path all 404, so the
-// handler never leaks anything but the diagrams (mirrors builtin's handler test).
+// TestRuleDocImageHandler checks that the read-only route serves an embedded card (200) as SVG but
+// nothing else. The markdown, a missing image, a top-level (non-images/) path, or a non-image path
+// all 404, so the handler never leaks anything but the diagrams (mirrors builtin's handler test).
 func TestRuleDocImageHandler(t *testing.T) {
 	h := RuleDocImageHandler()
 	get := func(path string) *httptest.ResponseRecorder {
@@ -161,7 +162,7 @@ func TestRuleDocImageHandler(t *testing.T) {
 	}
 }
 
-// TestDocRules holds intent.DocRules to the doc-key set the docsite catalog generator projects: one
+// TestDocRules holds intent.DocRules to the doc-key set the docsite catalog generator projects, one
 // entry per docKey, each with a non-empty caption and its Detail from intentDoc. A new docKey without
 // a DocRules entry (or a caption) fails here, so the docsite catalog cannot silently drop an intent
 // rule kind.

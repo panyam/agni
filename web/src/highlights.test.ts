@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { DEFAULT_HIGHLIGHT_COLOR, HighlightShape, circleTriangles, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
 import { KIND_LINE_STRIP, type Primitive, type PrimitiveKey } from "./packed.js";
 
-// The fixture mirrors render/highlight_test.go: R1 (rect prim 2, pins 3/4), U1 (rect 5,
-// pin 6), NET1 wire 0, NET2 wire 1 — so the local resolution provably matches the server's
+// The fixture mirrors core/render/highlight_test.go, with R1 (rect prim 2, pins 3/4), U1 (rect 5,
+// pin 6), NET1 wire 0, NET2 wire 1, so the local resolution provably matches the server's
 // HighlightPacked semantics.
 const keys: PrimitiveKey[] = [
   { primitive: 0, refDes: "", net: "NET1", netId: "", pin: "", busId: "" },
@@ -26,7 +26,7 @@ describe("resolveHighlights", () => {
     expect([...groups[0].primitives].sort()).toEqual([1, 2, 3, 4]);
     expect(groups[0].color).toBe("#ff0000");
     expect(groups[0].alpha).toBe(0.5);
-    // U1 pin "1" alone — not U1's body, and not R1's pin "1".
+    // U1 pin "1" alone, not U1's body, and not R1's pin "1".
     expect([...groups[1].primitives]).toEqual([6]);
   });
 
@@ -69,7 +69,7 @@ describe("resolveHighlights", () => {
 });
 
 // Twin of TestHighlightEntityFraming / TestHighlightSVGBoundingShapes in
-// render/highlight_test.go: the same fixture geometry and the same expected constants, so
+// core/render/highlight_test.go, with the same fixture geometry and the same expected constants, so
 // the TS overlay and the Go SVG projection provably frame entities identically.
 describe("entity grouping and framing (WS9-017)", () => {
   it("groups matched primitives per entity, a component's pins joining its entity", () => {
@@ -108,11 +108,11 @@ describe("entity grouping and framing (WS9-017)", () => {
 
   it("frames entities with the twinned padded bounds and circumscribed circle", () => {
     const cases = [
-      // R1 with its pins: 40x20 raw bbox, pad 8.
+      // R1 with its pins, 40x20 raw bbox, pad 8.
       { entity: [2, 3, 4], frame: [292, 392, 348, 428], circle: [320, 410, 30.360679774997898] },
       // NET1: 100x0, pad 10.
       { entity: [0], frame: [90, 90, 210, 110], circle: [150, 100, 60] },
-      // Lone pin: zero-area point, floor pad 8.
+      // Lone pin, zero-area point, floor pad 8.
       { entity: [6], frame: [592, 422, 608, 438], circle: [600, 430, 8] },
     ];
     for (const c of cases) {

@@ -52,8 +52,9 @@ func TestCheckWebAssets(t *testing.T) {
 	}
 }
 
-// TestCheckDatasheetAssets: the workbench (WS13-006) is its own group, so each missing file is named
-// and a build is suggested, and the viewer's check no longer depends on any of it (agni issue 735).
+// TestCheckDatasheetAssets checks that the workbench (WS13-006) is its own group, so each missing
+// file is named and a build is suggested, and that the viewer's check no longer depends on any of
+// it (agni issue 735).
 func TestCheckDatasheetAssets(t *testing.T) {
 	dir := t.TempDir()
 	if err := checkDatasheetAssets(dir); err == nil || !strings.Contains(err.Error(), "DatasheetsPage.html") {
@@ -87,7 +88,7 @@ func touch(t *testing.T, path string) {
 	}
 }
 
-// TestServeRejectsUnknownTheme pins the flag contract: an unknown --theme errors up front
+// TestServeRejectsUnknownTheme pins the flag contract that an unknown --theme errors up front,
 // listing the valid palettes (it used to fall back to the default silently, unlike every
 // other validated enum flag).
 func TestServeRejectsUnknownTheme(t *testing.T) {
@@ -115,8 +116,8 @@ func TestServeTakesNoPositional(t *testing.T) {
 	}
 }
 
-// TestServeWebDirErrorSaysWhatItIsNot: the message is load-bearing. It exists because people pass a
-// design folder here, so it has to name the flag's real subject and point at --mount for the thing
+// TestServeWebDirErrorSaysWhatItIsNot pins the message, which exists because people pass a design
+// folder here, so it has to name the flag's real subject and point at --mount for the thing
 // they actually wanted.
 func TestServeWebDirErrorSaysWhatItIsNot(t *testing.T) {
 	dir := t.TempDir() // a real directory with none of the viewer's assets in it
@@ -132,7 +133,8 @@ func TestServeWebDirErrorSaysWhatItIsNot(t *testing.T) {
 }
 
 // TestHealthHandler asserts the probe answers 200 with a body, and that it is registered on the
-// exact path rather than as a prefix — a "/healthz/" subtree would quietly swallow page routes.
+// exact path rather than as a prefix, since a "/healthz/" subtree would quietly swallow page
+// routes.
 func TestHealthHandler(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle("GET /healthz", healthHandler())
@@ -163,8 +165,8 @@ func TestHealthHandler(t *testing.T) {
 }
 
 // The startup line is the only instruction most people get for reaching the server, so it has to
-// name an address they can actually open. The bug this pins: printing the bind address verbatim
-// turns the default ":8080" into "http://:8080/", which no browser resolves.
+// name an address they can actually open. The bug this pins is that printing the bind address
+// verbatim turns the default ":8080" into "http://:8080/", which no browser resolves.
 func TestServeURLs(t *testing.T) {
 	fixedIPs := func() []string { return []string{"192.168.1.23"} }
 	noIPs := func() []string { return nil }
@@ -232,7 +234,7 @@ func TestServeURLs(t *testing.T) {
 }
 
 // lanIPs reads the real machine, so this asserts the property that holds everywhere rather than a
-// specific address: whatever it returns must be usable in a URL, and must never be a loopback or a
+// specific address. Whatever it returns must be usable in a URL, and must never be a loopback or a
 // self-assigned address, since printing one of those as "on this network" would be a lie.
 func TestLanIPsAreRoutable(t *testing.T) {
 	for _, s := range lanIPs() {
@@ -246,7 +248,7 @@ func TestLanIPsAreRoutable(t *testing.T) {
 	}
 }
 
-// TestServeNarratesOnlyTheEnvironment: a reader should be told once. applyEnvConfig names the
+// TestServeNarratesOnlyTheEnvironment checks that a reader is told once. applyEnvConfig names the
 // agni.yaml it read and the serving line names the resolved directory, so a third line for that case
 // is noise; the environment is the only provenance nothing else reports.
 func TestServeNarratesOnlyTheEnvironment(t *testing.T) {

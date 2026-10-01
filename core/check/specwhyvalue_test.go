@@ -17,14 +17,14 @@ func TestSpecPassWitnessCarriesTheValue(t *testing.T) {
 		want  string // the witness of the passing subject "OK"
 	}{
 		{
-			// The idiom of duplicate-net-name and output-output-conflict: a Let-bound count
+			// The idiom of duplicate-net-name and output-output-conflict is a Let-bound count
 			// against a threshold. The threshold survives, so a reader can see what would fire.
 			name:  "an ordering names the value and the threshold it missed",
 			where: Cmp{L: Fact{Name: "net.pin_count"}, Op: ">=", R: Lit{V: 9}},
 			want:  "passes because net.pin_count is 2, not >= 9",
 		},
 		{
-			// The idiom of label-alias-conflict and power-tap-conflict: a joined-names string
+			// The idiom of label-alias-conflict and power-tap-conflict is a joined-names string
 			// tested for non-emptiness. "!=" false means the two are EQUAL, so there is no unmet
 			// threshold to report and naming one would contradict the value just stated.
 			name:  "non-emptiness reads as the absence it is",
@@ -69,8 +69,9 @@ func TestSpecPassWitnessCarriesTheValue(t *testing.T) {
 // The mirror of the test above, on the branches PR 401 did not reach (agni issue 412).
 //
 // A false Not means its operand HOLDS, and the operand is where the value lives. Rendering the
-// operand's syntax instead produced a statement identical on every passing subject: on the tutorial
-// board's naming rule, 13 consecutive rows reading "net.name_leaf matches /^(PMIC|...)/ holds".
+// operand's syntax instead produced a statement identical on every passing subject. On the tutorial
+// board's naming rule that was 13 consecutive rows reading "net.name_leaf matches /^(PMIC|...)/
+// holds".
 func TestSpecPassWitnessExplainsWhyANegatedTestHeld(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -79,8 +80,8 @@ func TestSpecPassWitnessExplainsWhyANegatedTestHeld(t *testing.T) {
 		want  string
 	}{
 		{
-			// The naming-rule shape: an allow-list is an Or of patterns, and the one that MATCHED is
-			// what a reader wants named, along with the name that matched it.
+			// In the naming-rule shape, an allow-list is an Or of patterns, and the one that
+			// MATCHED is what a reader wants named, along with the name that matched it.
 			name:  "a negated allow-list names the value and the pattern it satisfied",
 			where: Not{X: Or{Xs: []Expr{Match{T: Fact{Name: "net.names"}, Pattern: "^Z"}, Match{T: Fact{Name: "net.names"}, Pattern: "^O"}}}},
 			want:  `passes because net.names is "OK", which matches /^O/`,
@@ -103,8 +104,8 @@ func TestSpecPassWitnessExplainsWhyANegatedTestHeld(t *testing.T) {
 // interpreter can read. That is what lets 12 of the catalog's 14 IsTrue sites state a value without
 // the SpecFunc contract changing at all.
 //
-// The subject here is GND, because the clause has to HOLD for the rule to pass: a spec fires where its
-// Where is true, so a negated call only explains a pass when the call accepted.
+// The subject here is GND, because the clause has to HOLD for the rule to pass. A spec fires where
+// its Where is true, so a negated call only explains a pass when the call accepted.
 func TestSpecPassWitnessNamesWhatACallAccepted(t *testing.T) {
 	where := Not{X: IsTrue{T: Call{Fn: "ground_name", Args: []Term{Fact{Name: "net.names"}}}}}
 	want := `passes because net.names is "GND", which ground_name accepts`
@@ -113,10 +114,10 @@ func TestSpecPassWitnessNamesWhatACallAccepted(t *testing.T) {
 	}
 }
 
-// The residue, pinned so it stays a recorded gap rather than becoming an oversight. An argument-less
-// call takes the whole scope and returns a verdict, so there is nothing here to read and nothing
-// honest to print beyond the fact that it accepted. Closing it needs a SpecFunc able to hand back what
-// it observed, which cap-voltage needs for the same reason (OUT_OF_SCOPE.md).
+// The residue, pinned so it stays a recorded gap rather than becoming an oversight. An
+// argument-less call takes the whole scope and returns a verdict, so there is nothing here to read
+// and nothing to print beyond the fact that it accepted. Closing it needs a SpecFunc able to hand
+// back what it observed, which cap-voltage needs for the same reason (OUT_OF_SCOPE.md).
 func TestSpecPassWitnessAdmitsAnArgumentLessCallStatesNoValue(t *testing.T) {
 	where := Not{X: IsTrue{T: Call{Fn: "intentionally_unconnected"}}}
 	want := "passes because intentionally_unconnected accepts this subject, which states no value it read"
@@ -154,13 +155,13 @@ func passWitnessFor(t *testing.T, let map[string]Term, where Expr, subject strin
 }
 
 // The property behind every case above, asserted over the whole spec catalog rather than one clause
-// at a time: a pass statement must be ABOUT its subject.
+// at a time. A pass statement must be ABOUT its subject.
 //
 // The test is not "no two statements are identical", which would be wrong. `labels is empty` on
-// fifteen nets is fifteen honest readings of the same fact, and a rule whose value genuinely repeats
-// should say so. What must not happen is a statement that CANNOT differ, because it renders the rule's
-// syntax and never reads the design. This checks the weaker, correct thing: every passing statement
-// either carries a value the subject supplied, or admits it read none.
+// fifteen nets is fifteen correct readings of the same fact, and a rule whose value genuinely
+// repeats should say so. What must not happen is a statement that CANNOT differ, because it renders
+// the rule's syntax and never reads the design. This checks the weaker, correct thing, that every
+// passing statement either carries a value the subject supplied, or admits it read none.
 //
 // It is the guard that would have caught the original defect. `net.name_leaf matches /^(PMIC|...)/
 // holds` passes any uniqueness test with one subject and fails this one with any.

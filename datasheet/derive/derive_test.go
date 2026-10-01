@@ -86,8 +86,8 @@ func TestRunEmitsValidatedSpec(t *testing.T) {
 	}
 }
 
-// The title-attachment stage: the raw fixture's tables are untitled (the real
-// producer's shape); their limit kinds can only come from headings attached from
+// In the title-attachment stage the raw fixture's tables are untitled (the real
+// producer's shape), so their limit kinds can only come from headings attached from
 // nearby text blocks.
 func TestRunAttachesTitlesAndClassifies(t *testing.T) {
 	spec, _ := runFixture(t)
@@ -103,7 +103,7 @@ func TestRunAttachesTitlesAndClassifies(t *testing.T) {
 	}
 }
 
-// The patch stage: the raw fixture deliberately mis-encodes VDSS as 500; the patch
+// In the patch stage the raw fixture deliberately mis-encodes VDSS as 500. The patch
 // (keyed by doc + pre-patch table content hash) corrects it to 50, and the manifest
 // records the application.
 func TestRunAppliesPatchLast(t *testing.T) {
@@ -125,8 +125,8 @@ func TestRunAppliesPatchLast(t *testing.T) {
 	}
 }
 
-// Coverage honesty: rows from a table with no test-conditions channel come out
-// UNSPECIFIED (under-specified until a human verifies), never UNCONDITIONAL; rows
+// Coverage accounting. Rows from a table with no test-conditions channel come out
+// UNSPECIFIED (under-specified until a human verifies), never UNCONDITIONAL. Rows
 // with a captured conditions column come out COMPLETE, with unparsed parts kept as
 // raw-only conditions.
 func TestRunConditionCoverage(t *testing.T) {
@@ -169,8 +169,9 @@ func TestRunConditionCoverage(t *testing.T) {
 	}
 }
 
-// The golden gate (docs/17: verified values are the regression corpus): every row of
-// the hand-encoded WS10-001 fixture must have a derived row agreeing on (symbol,
+// The golden gate, because verified values are the regression corpus
+// (docsite/content/architecture/datasheet-layer.md#how-a-partspec-is-derived-from-a-document).
+// Every row of the hand-encoded WS10-001 fixture must have a derived row agreeing on (symbol,
 // kind, min/typ/max, unit). Conditions are compared by the coverage tests above, not
 // here (the hand encoding lifts footnote defaults into conditions; v0 does not).
 func TestGoldenAgreementWithHandEncoded(t *testing.T) {
@@ -224,9 +225,9 @@ func TestRunGapsAndManifest(t *testing.T) {
 	}
 }
 
-// TI-shaped tables carry no Symbol column: the row label is an unlabeled column 0
+// TI-shaped tables carry no Symbol column, so the row label is an unlabeled column 0
 // ("Maximum input voltage (VIN to GND)  |  MIN | MAX | UNIT"). The extractor falls
-// back to column 0 as the parameter name; symbol stays empty, honestly.
+// back to column 0 as the parameter name, and symbol stays empty.
 func TestExtractSymbollessTable(t *testing.T) {
 	d := &docpb.Document{
 		ContentHash: "sha256:test", Producer: "hand", PageCount: 1, Title: "TI SHAPE",
@@ -265,8 +266,8 @@ func TestExtractSymbollessTable(t *testing.T) {
 	}
 }
 
-// A patch may target a position with NO detected cell (real case: docling placed
-// LM1117's abs-max 20 under MIN, leaving MAX empty; correcting means clearing one
+// A patch may target a position with NO detected cell (in one real case docling placed
+// LM1117's abs-max 20 under MIN, leaving MAX empty, so correcting means clearing one
 // cell and writing another). Insert-if-absent plus empty-text-clears make a
 // cell-placement error correctable with two patches.
 func TestPatchInsertsAndClears(t *testing.T) {
@@ -277,11 +278,11 @@ func TestPatchInsertsAndClears(t *testing.T) {
 		// Rewrite of an existing cell (the fixture's mis-encoded 500).
 		{Name: "fix-vdss", DocContentHash: fx.ContentHash, TableContentHash: abs.ContentHash,
 			Row: 1, Col: 2, Text: "50", Note: "page prints 50"},
-		// Insert at a position with NO detected cell: the RDS(on) VGS=10 row has an
+		// Insert at a position with NO detected cell. The RDS(on) VGS=10 row has an
 		// empty Min column in the fixture grid.
 		{Name: "insert-rds-min", DocContentHash: fx.ContentHash, TableContentHash: chr.ContentHash,
 			Row: 2, Col: 3, Text: "0.5", Note: "demonstrates insert-if-absent"},
-		// Clear an existing cell: empty text removes the VGS(th) Min bound.
+		// Clear an existing cell. Empty text removes the VGS(th) Min bound.
 		{Name: "clear-vgsth-min", DocContentHash: fx.ContentHash, TableContentHash: chr.ContentHash,
 			Row: 1, Col: 3, Text: "", Note: "demonstrates clearing"},
 	}

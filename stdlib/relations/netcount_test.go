@@ -38,8 +38,8 @@ func netCounts(t *testing.T, m check.Model) map[string]float64 {
 	return got
 }
 
-// TestComponentNetCountCountsDistinctNets: the count is of NETS, so J1's two pins on A count once,
-// and every component gets a row, so U9 answers 0 rather than being absent.
+// TestComponentNetCountCountsDistinctNets checks that the count is of NETS, so J1's two pins on A
+// count once, and every component gets a row, so U9 answers 0 rather than being absent.
 func TestComponentNetCountCountsDistinctNets(t *testing.T) {
 	got := netCounts(t, check.NewModel(netCountDesign()))
 	want := map[string]float64{"R1": 2, "J1": 1, "U9": 0, "X1": 1}
@@ -58,9 +58,9 @@ func TestComponentNetCountCountsDistinctNets(t *testing.T) {
 	}
 }
 
-// TestComponentNetCountAgreesWithComponentOnNet: for every ref, the count equals the number of
-// distinct nets component-on-net places it on. The relation is a derived count of that one, and a
-// second opinion about connectivity is how two relations start to disagree.
+// TestComponentNetCountAgreesWithComponentOnNet checks that for every ref the count equals the
+// number of distinct nets component-on-net places it on. The relation is a derived count of that
+// one, and a second opinion about connectivity is how two relations start to disagree.
 func TestComponentNetCountAgreesWithComponentOnNet(t *testing.T) {
 	m := check.NewModel(netCountDesign())
 	nets := map[string]map[string]bool{}
@@ -81,7 +81,7 @@ func TestComponentNetCountAgreesWithComponentOnNet(t *testing.T) {
 	}
 }
 
-// TestComponentNetCountCitesTheComponent: a row rests on the placement, so it cites it. A ref with
+// TestComponentNetCountCitesTheComponent checks that a row cites the placement it rests on. A ref with
 // no component record has no placement to cite and cites nothing rather than inventing one.
 func TestComponentNetCountCitesTheComponent(t *testing.T) {
 	rows := factsByRelation(Facts(check.NewModel(netCountDesign())))[RelComponentNetCount]

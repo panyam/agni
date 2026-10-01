@@ -6,13 +6,13 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// THE HONESTY GUARD for the part-converted catalog.
+// THE COVERAGE-CLAIM GUARD for the part-converted catalog.
 //
 // Every rule now returns verdicts, so an unconverted rule's output is a list of Fail verdicts, which
 // is structurally identical to a considered set whose every subject happened to fail. Nothing in the
 // data distinguishes them. If RunVerdicts collected both, `check --verdicts` would present ~55 rules'
 // failure lists as though they were coverage, which is a stronger claim than the run has earned and
-// the exact silence-reads-as-data mistake the verdict work exists to remove.
+// the silence-reads-as-data mistake the verdict work exists to remove.
 //
 // So the claim is a DECLARATION (StatesConsideredSet), and this pins that RunVerdicts honours it.
 func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
@@ -34,8 +34,8 @@ func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 	m := NewModel(&ir.Design{})
 	rules := []*Rule{unconverted, converted}
 
-	// Both rules reach the FINDINGS contract: not stating a considered set is not a reason to drop a
-	// violation, and this is what keeps the migration safe for every existing consumer.
+	// Both rules reach the FINDINGS contract, since not stating a considered set is not a reason to
+	// drop a violation. That keeps the migration safe for every existing consumer.
 	if got := len(Run(m, rules)); got != 2 {
 		t.Errorf("both rules must contribute findings, got %d", got)
 	}
@@ -50,7 +50,7 @@ func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 	if len(vs) != 2 {
 		t.Fatalf("the converted rule's two verdicts must survive, got %d: %+v", len(vs), vs)
 	}
-	// And the pass survives, which is the whole point of the verdict table.
+	// And the pass survives, which a findings table cannot show.
 	var passes int
 	for _, v := range vs {
 		if v.Outcome == Pass {

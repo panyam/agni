@@ -9,9 +9,9 @@ import (
 )
 
 // This file holds pure IR/param/geom fixture builders shared by the check-package tests
-// (facts_test.go, reach_test.go). They build no check types, so the stdlib/rules/builtin
-// package keeps its own copies of the ones its rule tests need — the two sets are independent
-// test fixtures, not a shared contract.
+// (reach_test.go, trace_test.go). They build no check types, so stdlib/rules/builtin,
+// stdlib/rules/datalog and stdlib/relations each keep their own copies of the ones their tests
+// need. The sets are independent test fixtures, not a shared contract.
 
 // tnet builds a net with "refdes.pin" connections.
 func tnet(name string, conns ...string) *ir.Net {
@@ -98,7 +98,7 @@ func capDesign(railNet, mpn string) *ir.Design {
 }
 
 // ldoRecommendedSpec hand-builds a seeded part whose recommended-operating VDD range is
-// [min,max], as a machine-comparable row (structured TA condition — the shape a
+// [min,max], as a machine-comparable row (structured TA condition, the shape a
 // datasheet's Recommended Operating Conditions table yields).
 func ldoRecommendedSpec(mpn string, min, max float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
@@ -126,7 +126,7 @@ func mm(x, y float64) *geom.Point {
 	return &geom.Point{X: int64(x * 1e6), Y: int64(y * 1e6)}
 }
 
-// drcBoard: every violation class once, on its own net, plus clean copper that must not fire.
+// drcBoard builds every violation class once, on its own net, plus clean copper that must not fire.
 func drcBoard() *geom.BoardGeometry {
 	seg := func(x1, y1, x2, y2, wMM float64, layer string) *geom.TrackSegment {
 		return &geom.TrackSegment{A: mm(x1, y1), B: mm(x2, y2), Width: int64(wMM * 1e6), Layer: layer}

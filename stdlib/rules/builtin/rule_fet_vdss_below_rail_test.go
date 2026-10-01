@@ -56,8 +56,8 @@ func fetDesign(railName, regRef string) *ir.Design {
 	return d
 }
 
-// TestFetVdssBelowRailFromNetName: the name-derived path. A 50V FET on a +60V rail is over its
-// breakdown, and with no driving part on the rail the only evidence is the net name — so exactly ONE
+// TestFetVdssBelowRailFromNetName covers the name-derived path. A 50V FET on a +60V rail is over its
+// breakdown, and with no driving part on the rail the only evidence is the net name, so exactly ONE
 // citation (the FET's), because a naming convention is not a document.
 func TestFetVdssBelowRailFromNetName(t *testing.T) {
 	m := check.NewModelWithParams(fetDesign("+60V", ""), nil,
@@ -78,9 +78,9 @@ func TestFetVdssBelowRailFromNetName(t *testing.T) {
 	}
 }
 
-// TestFetVdssBelowRailFromDatasheet: with a regulator on the rail declaring its output, the voltage is
-// a VENDOR value, so it earns a second citation and the message says which part it came from. This is
-// the WS3-028 evidence upgrade applied to a second rule.
+// TestFetVdssBelowRailFromDatasheet checks that, with a regulator on the rail declaring its output,
+// the voltage is a VENDOR value, so it earns a second citation and the message says which part it
+// came from. This is the WS3-028 evidence upgrade applied to a second rule.
 func TestFetVdssBelowRailFromDatasheet(t *testing.T) {
 	m := check.NewModelWithParams(fetDesign("VBUS", "U1"), nil, param.ParamSet{
 		"ACME-FET": fetSpec("ACME-FET", 50),
@@ -104,8 +104,8 @@ func TestFetVdssBelowRailFromDatasheet(t *testing.T) {
 	}
 }
 
-// TestFetVdssWithinRating: a 50V FET on a 12V rail is silent. Guards the comparison direction, which a
-// sign error would invert while every other assertion still passed.
+// TestFetVdssWithinRating checks that a 50V FET on a 12V rail is silent. Guards the comparison
+// direction, which a sign error would invert while every other assertion still passed.
 func TestFetVdssWithinRating(t *testing.T) {
 	m := check.NewModelWithParams(fetDesign("+12V", ""), nil,
 		param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
@@ -114,12 +114,12 @@ func TestFetVdssWithinRating(t *testing.T) {
 	}
 }
 
-// TestFetVdssUnknownRailVoltage: a rail whose name carries no voltage token and which no seeded part
-// drives yields no number, so the rule skips. Silence here is "I could not tell", and the rule must
-// not invent a voltage to compare against.
+// TestFetVdssUnknownRailVoltage checks that a rail whose name carries no voltage token and which no
+// seeded part drives yields no number, so the rule skips. Silence here is "I could not tell", and
+// the rule must not invent a voltage to compare against.
 //
 // VBUS specifically, because it IS a rail by the naming lexicon while carrying no voltage token. An
-// earlier draft used VSYS, which the lexicon does not read as a rail at all — so the test passed by
+// earlier draft used VSYS, which the lexicon does not read as a rail at all, so the test passed by
 // being skipped one step earlier and proved nothing about the unknown-voltage path.
 func TestFetVdssUnknownRailVoltage(t *testing.T) {
 	m := check.NewModelWithParams(fetDesign("VBUS", ""), nil,
@@ -129,8 +129,9 @@ func TestFetVdssUnknownRailVoltage(t *testing.T) {
 	}
 }
 
-// TestFetVdssSilentWithoutParams: the params tier is a per-run injection, so an unseeded design has
-// nothing to compare and Available gates the rule to not-applicable rather than letting it read clean.
+// TestFetVdssSilentWithoutParams exists because the params tier is a per-run injection, so an
+// unseeded design has nothing to compare and Available gates the rule to not-applicable rather than
+// letting it read clean.
 func TestFetVdssSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(fetDesign("+60V", ""))
 	if fs := fetVdssBelowRail.Findings(m); len(fs) != 0 {
@@ -141,9 +142,9 @@ func TestFetVdssSilentWithoutParams(t *testing.T) {
 	}
 }
 
-// TestFetVdssIgnoresGround: ground is a rail by the engine's definition but carries no voltage to
-// compare, so it is excluded explicitly. Without the guard a FET's ground connection would reach the
-// name-derived path and be judged against whatever that returned.
+// TestFetVdssIgnoresGround covers ground, which is a rail by the engine's definition but carries no
+// voltage to compare, so it is excluded explicitly. Without the guard a FET's ground connection
+// would reach the name-derived path and be judged against whatever that returned.
 func TestFetVdssIgnoresGround(t *testing.T) {
 	d := fetDesign("+60V", "")
 	d.Nets = append(d.Nets, &ir.Net{
@@ -161,7 +162,7 @@ func TestFetVdssIgnoresGround(t *testing.T) {
 }
 
 // A rule's considered set must not include subjects the rule is not ABOUT, and this is the rule that
-// got it wrong first. Scoped on nothing, it claimed every part touching a rail: on the tutorial board
+// got it wrong first. Scoped on nothing, it claimed every part touching a rail. On the tutorial board
 // that was 17 verdicts about capacitors, diodes and a connector, on a design carrying no transistor.
 //
 // Reporting a capacitor as a part it could not judge for drain-source breakdown is a coverage claim in
@@ -188,7 +189,7 @@ func TestFetVdssClaimsOnlySwitchingParts(t *testing.T) {
 		}
 	}
 	// And not over-narrowed: a part the design DOES class as a transistor stays a subject even with no
-	// datasheet, because "there is a FET on this rail and nothing states what it can stand" is exactly
+	// datasheet, because "there is a FET on this rail and nothing states what it can stand" is
 	// the coverage gap worth reporting.
 	var sawQ1 bool
 	for _, v := range vs {

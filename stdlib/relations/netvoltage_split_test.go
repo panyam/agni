@@ -8,7 +8,7 @@ import (
 )
 
 // voltageNameDesign places two nets whose names BOTH parse a voltage token, one a rail and one an
-// ordinary signal between two pins. The signal name is the shape agni issue 194 verified: a house
+// ordinary signal between two pins. The signal name is the shape agni issue 194 verified, a house
 // convention encoding endpoints and a level, which token-scans to 3.3 while carrying no rail role.
 func voltageNameDesign() *ir.Design {
 	return &ir.Design{
@@ -34,7 +34,7 @@ func voltageNameDesign() *ir.Design {
 	}
 }
 
-// The issue-194 case: a signal net whose name token-scans to a voltage must NOT appear in a relation
+// In the issue-194 case, a signal net whose name token-scans to a voltage must NOT appear in a relation
 // documented as a rail nominal. Before the split it did, and the number was right while the relation
 // carrying it was not.
 func TestSignalNetLevelIsNotARailNominal(t *testing.T) {
@@ -59,8 +59,8 @@ func TestSignalNetLevelIsNotARailNominal(t *testing.T) {
 	}
 }
 
-// The other half: gating must not cost the relation its actual subject. A named rail still projects
-// a nominal, and does not leak into the signal relation.
+// The other half is that gating must not cost the relation its actual subject. A named rail still
+// projects a nominal, and does not leak into the signal relation.
 func TestRailStillProjectsANominalAndNotALevel(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(voltageNameDesign())))
 
@@ -83,7 +83,7 @@ func TestRailStillProjectsANominalAndNotALevel(t *testing.T) {
 	}
 }
 
-// The two relations partition the nets whose names parse: every such net lands in exactly one. This
+// The two relations partition the nets whose names parse, so every such net lands in exactly one. This
 // is what lets a consumer that wants both ask for both without deduping, and a consumer that wants
 // rails be sure it cannot receive a level.
 func TestNominalAndLevelArePartitioned(t *testing.T) {
@@ -116,10 +116,10 @@ func regulatorInternalDesign() *ir.Design {
 	}
 }
 
-// TestRegulatorInternalIsNeitherRailNorSignal: the third outcome (agni 679). A feedback tap and a
+// TestRegulatorInternalIsNeitherRailNorSignal covers the third outcome (agni 679). A feedback tap and a
 // switch node must project NO voltage row at all.
 //
-// Asserting the absence from BOTH relations is the whole point. The fix that suggests itself is to
+// The assertion that matters is the absence from BOTH relations. The fix that suggests itself is to
 // flip the rail gate, which drops these nets from net.nominal_voltage and lands them in
 // net.signal_level restating the identical wrong number under a relation that claims less. This test
 // fails for that fix as loudly as it does for no fix.
@@ -134,8 +134,8 @@ func TestRegulatorInternalIsNeitherRailNorSignal(t *testing.T) {
 		}
 	}
 
-	// The positive control: the rail those internals serve still projects its nominal. Without it an
-	// implementation that emitted nothing at all would pass the half above.
+	// The positive control is that the rail those internals serve still projects its nominal.
+	// Without it an implementation that emitted nothing at all would pass the half above.
 	found := false
 	for _, f := range byRel[RelNetNominalVoltage] {
 		if f.Subject == "12V_OUT" {

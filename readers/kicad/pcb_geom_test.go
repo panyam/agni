@@ -210,7 +210,7 @@ func TestBoardGeometryLayersOutlineZones(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryKiCad10NetNames: a KiCad 10 board drops the numbered net table and
+// TestBoardGeometryKiCad10NetNames covers a KiCad 10 board, which drops the numbered net table and
 // references copper nets by name only; the copper must still group and join (found on
 // the corpus pic_programmer board, where the numbered-only resolution dropped all 370
 // segments).
@@ -227,8 +227,8 @@ func TestBoardGeometryKiCad10NetNames(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryJoinsNetlistIR is the WS1-006 done-when: the same file read through
-// both readers joins by the stable keys — every placement resolves to an IR component,
+// TestBoardGeometryJoinsNetlistIR is the WS1-006 done-when. The same file read through
+// both readers joins by the stable keys, so every placement resolves to an IR component,
 // every copper net to an IR net, and every connected pad to that component's connection
 // on that net, yielding per-component placement and per-net routed geometry.
 func TestBoardGeometryJoinsNetlistIR(t *testing.T) {
@@ -279,8 +279,8 @@ func TestBoardGeometryJoinsNetlistIR(t *testing.T) {
 	}
 }
 
-// TestPlaceholderFootprintsSkipped (WS1-024): an unannotated footprint is skipped by BOTH
-// readers — a placeholder is annotation state, not an identity, and keying it merges
+// TestPlaceholderFootprintsSkipped (WS1-024) checks that an unannotated footprint is skipped by BOTH
+// readers. A placeholder is annotation state, not an identity, and keying it merges
 // distinct parts' pads onto one component (the corpus cimos board's 26 REF** footprints
 // collapsed to one, tripping pin-net-conflict).
 //

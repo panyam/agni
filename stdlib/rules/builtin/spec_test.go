@@ -34,9 +34,9 @@ func specParityFixture() *ir.Design {
 				{Designator: "3", Direction: ir.PinDirection_PIN_DIRECTION_OUTPUT},
 				{Designator: "4", Direction: ir.PinDirection_PIN_DIRECTION_NO_CONNECT},
 				{Designator: "5", Direction: ir.PinDirection_PIN_DIRECTION_INOUT},
-				// Bare on every placement: unconnected-pin's Go Eval fires on passive pins,
-				// and before dirString mapped PASSIVE the twin read them as "unspecified"
-				// and skipped — the divergence this pin holds the parity gate to.
+				// Bare on every placement. unconnected-pin's Go Eval fires on passive pins,
+				// and before check.DirString mapped PASSIVE the twin read them as "unspecified"
+				// and skipped, which is the divergence this pin holds the parity gate to.
 				{Designator: "6", Direction: ir.PinDirection_PIN_DIRECTION_PASSIVE},
 			}},
 			{Name: "REG", Pins: []*ir.Pin{
@@ -86,7 +86,7 @@ func specParityFixture() *ir.Design {
 			// pin-level shapes: U3 partially wired (bare pins 2,3,5), NC pin wired into a real net
 			tnet("U3_PWR", "U3.1", "REG1.1"),
 			tnet("BADNC", "U3.4", "R1.2"),
-			// virtual power-symbol connections (WS1-014): direction rides the attribute
+			// virtual power-symbol connections (WS1-014), where direction rides the attribute
 			vnet("VRAIL", vconn("#PWR07", "1", "power_in"), conn("U1.1")),
 			vnet("VDRIVE", vconn("#FLG01", "1", "power_out"), vconn("#FLG02", "1", "power_out")),
 		},
@@ -112,7 +112,7 @@ func rulesByName() map[string]*check.Rule {
 	return out
 }
 
-// conn/vconn/vnet build connections for the virtual-power shapes: vconn carries the
+// conn/vconn/vnet build connections for the virtual-power shapes, and vconn carries the
 // WS1-014 direction attribute a power symbol's pin travels on.
 func conn(ref string) *ir.Connection {
 	p := strings.SplitN(ref, ".", 2)
@@ -127,10 +127,10 @@ func vnet(name string, cs ...*ir.Connection) *ir.Net {
 	return &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: "p"}, Connections: cs}
 }
 
-// TestSpecParity holds every declarative twin to its Go Eval: identical findings, in order,
+// TestSpecParity holds every declarative twin to its Go Eval, identical findings in order
 // over both fixture designs. This is the gate that makes flipping a rule to spec-canonical a
-// safe one-line change. It iterates Specs, not Rules: spec-only rules (the matrix rows) have
-// no Go side to compare — their Eval IS the interpreter — and every Specs key must name a
+// safe one-line change. It iterates Specs, not Rules, because spec-only rules (the matrix rows)
+// have no Go side to compare (their Eval IS the interpreter), and every Specs key must name a
 // registered rule (no orphan twins).
 func TestSpecParity(t *testing.T) {
 	byName := rulesByName()
@@ -157,7 +157,7 @@ func TestSpecParity(t *testing.T) {
 }
 
 // TestSpecMetadata asserts each rule's hand-written Reads and Primitives equal its twin's
-// derived ones (as sets): the C14 metadata is now checkable against the body instead of
+// derived ones (as sets), so the C14 metadata is now checkable against the body instead of
 // trusted prose. A failure means either the rule's tags drifted or the twin diverged.
 func TestSpecMetadata(t *testing.T) {
 	byName := rulesByName()
@@ -185,7 +185,7 @@ func sortedCopySet(xs []string) []string {
 	return out
 }
 
-// TestSpecRule covers the constructor path a spec-authored rule (no Go twin) takes: metadata
+// TestSpecRule covers the constructor path a spec-authored rule (no Go twin) takes, with metadata
 // filled from derivation, Eval bound, and a panic on an invalid spec.
 func TestSpecRule(t *testing.T) {
 	s := &check.Spec{
@@ -237,7 +237,7 @@ func TestSpecValidate(t *testing.T) {
 	}
 }
 
-// TestSpecScopeRestore guards eachMember's scope save/restore: a quantifier nested in
+// TestSpecScopeRestore guards eachMember's scope save/restore. A quantifier nested in
 // another quantifier's Where must not leave its member bound when the outer one resumes.
 // CONFLICT has two output pins; the outer count matches members whose direction equals the
 // direction of at least one member (trivially true per member), which evaluates an inner

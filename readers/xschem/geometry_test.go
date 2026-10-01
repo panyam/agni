@@ -65,7 +65,7 @@ func TestGeometryNoOpenerPlaceholder(t *testing.T) {
 }
 
 // Reference and Value are placed at the symbol's @name/@value template positions, transformed by
-// the placement — not stamped on top of each other at the origin.
+// the placement, not stamped on top of each other at the origin.
 func TestFieldPlacement(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
 	if err != nil {
@@ -128,9 +128,9 @@ func shapeKinds(shapes []*geom.Shape) map[geom.Shape_Kind]int {
 	return m
 }
 
-// TestAnnotationSymbols (WS7-037): the geometry reader draws the rendered-annotation symbols —
-// the title block (its @author, the schematic filename, and static text) and the visible SPICE
-// code block (@name plus its multi-line @value split into stacked lines) — while a clutter
+// TestAnnotationSymbols (WS7-037) checks that the geometry reader draws two rendered-annotation
+// symbols, the title block (its @author, the schematic filename, and static text) and the visible
+// SPICE code block (@name plus its multi-line @value split into stacked lines), while a clutter
 // annotation (spice_probe) stays skipped.
 func TestAnnotationSymbols(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "annotations.sch")), "annotations.sch", testOpener(t))
@@ -173,8 +173,8 @@ func TestAnnotationSymbols(t *testing.T) {
 }
 
 // TestReadBusGeometry asserts the geometry reader draws an xschem bus (an `N` wire whose lab is a
-// range name) as a KIND_BUS wire named by that lab (WS7-042) — the join key a bus-not-modeled
-// finding highlights it on — rather than an undistinguished plain wire.
+// range name) as a KIND_BUS wire named by that lab (WS7-042) rather than an undistinguished plain
+// wire. The lab is the join key a bus-not-modeled finding highlights it on.
 func TestReadBusGeometry(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "bus.sch")), "bus.sch", nil)
 	if err != nil {
@@ -205,7 +205,7 @@ func TestReadBusGeometry(t *testing.T) {
 }
 
 // An xschem label symbol (gnd/vdd/ipin/opin/lab_pin) names the net at its origin rather than being a
-// part, and read.go keeps it out of Components for exactly that reason. Its instance name therefore
+// part, and read.go keeps it out of Components for that reason. Its instance name therefore
 // joins to nothing, so carrying it as a ref_des let a viewer select a component that does not exist;
 // the net it names goes in net_anchor instead.
 func TestLabelSymbolCarriesItsNetAnchor(t *testing.T) {

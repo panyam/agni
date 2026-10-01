@@ -9,8 +9,8 @@ import (
 	rpt "github.com/panyam/agni/core/report"
 )
 
-// ruleOf returns the rule heading each line of the grouped text output sits under, which is the whole
-// question agni issue 402 asks: a row that cannot be attributed answers half of "what did you check".
+// ruleOf returns the rule heading each line of the grouped text output sits under. Agni issue 402 asks
+// for that attribution, since a row that cannot be attributed answers half of "what did you check".
 func ruleOf(out string) map[string]string {
 	rules := map[string]string{}
 	current := ""
@@ -84,7 +84,7 @@ func TestVerdictTextMarksAFindingsOnlyRule(t *testing.T) {
 }
 
 // A relation-shaped rule names every entity in its subject, and the terminal must show all of them.
-// This is the regression guard the text format did not have when the subject became a tuple: nothing
+// This is the regression guard the text format did not have when the subject became a tuple. Nothing
 // asserted on this output at all, so the change went in unobserved.
 func TestVerdictTextShowsTheWholeSubjectTuple(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--params", "testdata/conformance/fetparams",

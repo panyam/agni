@@ -82,8 +82,8 @@ func TestQuerySetDocumentsCarryEverySection(t *testing.T) {
 	}
 }
 
-// Both refusals come before the design is read, which a nonexistent design proves: the error has to
-// be about the flags, not the file.
+// Both refusals come before the design is read, which a nonexistent design proves, since the error
+// has to be about the flags, not the file.
 func TestQuerySetRefusesCSVAndSpecLibBeforeReading(t *testing.T) {
 	set := writeSet(t, goodSet)
 	if _, err := runSet(t, "no/such/design.edn", "--set", set, "--format", "csv"); err == nil || !strings.Contains(err.Error(), "csv") {

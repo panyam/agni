@@ -13,8 +13,9 @@ func refRows(n int) [][]string {
 	return out
 }
 
-// TestRefsCapsALongList: pointed at a real board these buckets run to several hundred parts, and an
-// uncapped list buries the lines around it. The count stays exact; only the naming is trimmed.
+// TestRefsCapsALongList exists because, pointed at a real board, these buckets run to several
+// hundred parts and an uncapped list buries the lines around it. The count stays exact; only the
+// naming is trimmed.
 func TestRefsCapsALongList(t *testing.T) {
 	got := refs(refRows(400))
 	if n := strings.Count(got, ",") + 1 - 1; n > refsCap+1 {
@@ -25,8 +26,8 @@ func TestRefsCapsALongList(t *testing.T) {
 	}
 }
 
-// TestRefsLeavesAShortListWhole: the bundled fixture's buckets are small enough to name in full, and
-// truncating those would lose the detail the walkthrough is built on.
+// TestRefsLeavesAShortListWhole names the bundled fixture's buckets in full. They are small enough,
+// and truncating them would lose the detail the walkthrough is built on.
 func TestRefsLeavesAShortListWhole(t *testing.T) {
 	got := refs([][]string{{"R2"}, {"C1"}, {"C2"}})
 	if got != "C1, C2, R2" {

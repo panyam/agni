@@ -18,8 +18,9 @@ func tagged(name string, tags map[string]string) *Rule {
 	return &Rule{Name: name, Tags: tags}
 }
 
-// Without is the exclusion complement of Filter: same Facets grammar, opposite sense. It must not
-// mutate the receiver, since a catalog is shared by every surface composed from it.
+// Without is the exclusion complement of Filter, with the same Facets grammar and the opposite
+// sense. It must not mutate the receiver, since a catalog is shared by every surface composed from
+// it.
 func TestCatalogWithout(t *testing.T) {
 	c, err := NewCatalog(NewSource("acme", []*Rule{
 		tagged("a", map[string]string{"iface": "SPI"}),
@@ -89,7 +90,7 @@ func TestSupersedingSourceReplacesEarlierRules(t *testing.T) {
 
 // A superseded rule leaves the name index too, so Rules and Lookup cannot disagree about what the
 // catalog contains. Nothing in the engine resolves a rule through Lookup today (--rule goes through
-// Filter, over the rule slice), which is exactly why this needs pinning: the first consumer that does
+// Filter, over the rule slice), so this needs pinning. The first consumer that does
 // would otherwise reach a rule the catalog had dropped, and get it back.
 func TestSupersededRuleLeavesTheNameIndex(t *testing.T) {
 	core := NewSource("profile", []*Rule{tagged("spi-missing", map[string]string{"profile": "SPI"})})
@@ -131,8 +132,8 @@ func TestDeclarationMatchingNothingRecordsNothing(t *testing.T) {
 
 // The exemption that makes supersession safe. An overlay profile and the built-in it replaces tag
 // their rules identically, so a declaration matching on tags alone would delete the REPLACEMENT too
-// and leave the interface with no rules. That failure is invisible in a report: the findings simply
-// stop, which reads as a clean pass.
+// and leave the interface with no rules. That failure is invisible in a report, because the
+// findings simply stop, which reads as a clean pass.
 func TestSupersedingSourceNeverDropsItsOwnRules(t *testing.T) {
 	core := NewSource("profile", []*Rule{tagged("spi-missing", map[string]string{"profile": "SPI"})})
 	// Deliberately NOT scoped by source, so only the self-exemption can save the overlay's own rule.

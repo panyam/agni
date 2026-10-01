@@ -49,7 +49,7 @@ func TestGeneratorFirstRules(t *testing.T) {
 // TestGeneratorFirstRulesMissesJoinOrder pins what this lint does NOT do, so nobody reads a clean run
 // as "the join orders are fine". `pulled` opened with component-on-net with both variables unbound, a
 // full EDB scan re-entered per survivor. That was 21s on a real board, not forever, and no syntactic
-// check distinguishes it from a legitimate small-relation lead — that needs a cost-based planner
+// check distinguishes it from a legitimate small-relation lead. That needs a cost-based planner
 // (WS3-031). Recording it here so the gap is documented where someone would look for it.
 func TestGeneratorFirstRulesMissesJoinOrder(t *testing.T) {
 	q, err := Parse(`pulled(?n) :- component-on-net(?pu, ?n), component.class(?pu, "resistor"), component-on-net(?pu, ?rail); pulled(?n) => ?n`)

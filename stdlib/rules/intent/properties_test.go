@@ -41,8 +41,8 @@ func propFindings(t *testing.T, d *ir.Design, p NetProperty) []check.Finding {
 	return propertyRule(p.Property, []NetProperty{p}).Findings(check.NewModel(d))
 }
 
-// TestResetPolarityFiresOnContradiction (WS3-088): a net declared active-low that is biased LOW is
-// held in reset from power-up. That contradiction is the whole check.
+// TestResetPolarityFiresOnContradiction (WS3-088) covers a net declared active-low that is biased
+// LOW, which is held in reset from power-up. That contradiction is what the check looks for.
 func TestResetPolarityFiresOnContradiction(t *testing.T) {
 	fs := propFindings(t, propDesign("SYS_RESET_N", "GND", ""),
 		NetProperty{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"})
@@ -53,7 +53,7 @@ func TestResetPolarityFiresOnContradiction(t *testing.T) {
 		t.Errorf("message should name the contradiction: %s", fs[0].Message)
 	}
 
-	// The mirror image: active-high pulled up is equally held asserted.
+	// In the mirror image, active-high pulled up is equally held asserted.
 	fs = propFindings(t, propDesign("PHY_EN", "+3V3", ""),
 		NetProperty{Net: "PHY_EN", Property: PropResetPolarity, Value: "high"})
 	if len(fs) != 1 {
@@ -61,8 +61,8 @@ func TestResetPolarityFiresOnContradiction(t *testing.T) {
 	}
 }
 
-// TestResetPolarityAgreesSilently: the correct bias produces nothing. Guards the direction, which an
-// inverted comparison would flip while every other assertion still passed.
+// TestResetPolarityAgreesSilently checks that the correct bias produces nothing. Guards the
+// direction, which an inverted comparison would flip while every other assertion still passed.
 func TestResetPolarityAgreesSilently(t *testing.T) {
 	if fs := propFindings(t, propDesign("SYS_RESET_N", "+3V3", ""),
 		NetProperty{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"}); len(fs) != 0 {
@@ -70,15 +70,15 @@ func TestResetPolarityAgreesSilently(t *testing.T) {
 	}
 }
 
-// TestResetPolarityReportsWhatItCannotDecide (agni issue 74): a reset driven by a supervisor with an
-// internal pull carries no bias resistor, so the netlist cannot state its resting level.
+// TestResetPolarityReportsWhatItCannotDecide (agni issue 74) covers a reset driven by a supervisor
+// with an internal pull. It carries no bias resistor, so the netlist cannot state its resting level.
 //
 // This test previously asserted SILENCE, and the rule's doc card, its declaration comment and the
 // test's own name all had to explain that a resulting pass meant "no contradiction found" rather than
 // "polarity confirmed". The rule now says that itself, as an inconclusive finding, so a bound review
 // item reads inconclusive instead of pass and the caveat does not have to survive in prose.
 //
-// The finding must be Inconclusive, not a defect: the design is not wrong, it is unverifiable from
+// The finding must be Inconclusive, not a defect. The design is not wrong, it is unverifiable from
 // this evidence, and failing it would report a non-defect on every correct board whose reset is
 // driven by a part with an internal pull.
 func TestResetPolarityReportsWhatItCannotDecide(t *testing.T) {
@@ -95,11 +95,11 @@ func TestResetPolarityReportsWhatItCannotDecide(t *testing.T) {
 	}
 }
 
-// TestResetPolarityDividerSaysSoSpecifically: check.NetBias answers "neither" for two different
-// designs, and the message must tell them apart. A net with no bias resistor sends a reviewer looking
-// for a driver; a DIVIDER sends them to check a ratio against the part's input thresholds. Reporting
-// "carries no bias" on a board that visibly has two resistors would waste that trip and read as a bug
-// in the tool.
+// TestResetPolarityDividerSaysSoSpecifically exists because check.NetBias answers "neither" for two
+// different designs, and the message must tell them apart. A net with no bias resistor sends a
+// reviewer looking for a driver; a DIVIDER sends them to check a ratio against the part's input
+// thresholds. Reporting "carries no bias" on a board that visibly has two resistors would waste
+// that trip and read as a bug in the tool.
 func TestResetPolarityDividerSaysSoSpecifically(t *testing.T) {
 	d := propDesign("SYS_RESET_N", "GND", "")
 	d.Components = append(d.Components, &ir.Component{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}})
@@ -133,7 +133,7 @@ func TestACCoupledFiresWhenDCConnected(t *testing.T) {
 // TestACCoupledDistinguishesCouplingFromDecoupling is the assertion that makes this rule worth
 // shipping. Both uses are "a capacitor on the net"; the difference is the far side. A cap to ground
 // decouples and the signal does not pass through it, so it must NOT satisfy an AC-coupling
-// declaration — a rule that counted it would pass every net with a bypass cap on it.
+// declaration. A rule that counted it would pass every net with a bypass cap on it.
 func TestACCoupledDistinguishesCouplingFromDecoupling(t *testing.T) {
 	coupling := propFindings(t, propDesign("PCIE_TX0_P", "", "PCIE_TX0_P_C"),
 		NetProperty{Net: "PCIE_TX0_P", Property: PropACCoupled})
@@ -150,9 +150,9 @@ func TestACCoupledDistinguishesCouplingFromDecoupling(t *testing.T) {
 	}
 }
 
-// TestPropertyRuleIgnoresUndeclaredNets: the rule iterates the DECLARATION and probes the design,
-// never the reverse. A design net the intent is silent about is not this rule's business, which is the
-// posture every intent rule shares.
+// TestPropertyRuleIgnoresUndeclaredNets relies on the rule iterating the DECLARATION and probing
+// the design, never the reverse. A design net the intent is silent about is not this rule's
+// business, which is the posture every intent rule shares.
 func TestPropertyRuleIgnoresUndeclaredNets(t *testing.T) {
 	d := propDesign("SOME_OTHER_NET", "GND", "")
 	if fs := propFindings(t, d, NetProperty{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"}); len(fs) != 0 {
@@ -161,7 +161,7 @@ func TestPropertyRuleIgnoresUndeclaredNets(t *testing.T) {
 }
 
 // TestResetPolarityFindsMultiHopBias is the gap that motivated moving these predicates into
-// core/check. A bias resistor does not always sit directly between the net and its rail — it can
+// core/check. A bias resistor does not always sit directly between the net and its rail. It can
 // reach the rail through further passives, and a direct-only check silently misses that.
 //
 // profiles.pullupRule already carried both clauses (WS3-108 forced the second). The first draft of
@@ -190,8 +190,8 @@ func TestResetPolarityFindsMultiHopBias(t *testing.T) {
 	}
 }
 
-// TestStrapFiresOnOppositeBias (WS3-086): a strap declared to latch HIGH that is pulled DOWN comes up
-// in the opposite configuration. That contradiction is the check.
+// TestStrapFiresOnOppositeBias (WS3-086) covers a strap declared to latch HIGH that is pulled DOWN,
+// which comes up in the opposite configuration. That contradiction is the check.
 func TestStrapFiresOnOppositeBias(t *testing.T) {
 	fs := propFindings(t, propDesign("BOOT_MODE0", "GND", ""),
 		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"})
@@ -227,7 +227,7 @@ func TestStrapFiresWhenDeclaredLowButPulledHigh(t *testing.T) {
 	}
 }
 
-// TestStrapSilentWithoutBias pins the limit this rule is honest about. Strap pins carry internal pulls,
+// TestStrapSilentWithoutBias pins a limit this rule states openly. Strap pins carry internal pulls,
 // and the standard datasheet instruction is to fit an external resistor ONLY for the non-default state,
 // so a design declaring the default level with no resistor on the net is correct and common.
 //
@@ -241,9 +241,9 @@ func TestStrapSilentWithoutBias(t *testing.T) {
 	}
 }
 
-// TestStrapDividerIsNeither: some parts read a tri-level strap from a divider, and which level it
-// selects depends on a ratio of two resistances the engine cannot read. Reporting a direction here
-// would be guessing.
+// TestStrapDividerIsNeither exists because some parts read a tri-level strap from a divider, and
+// which level it selects depends on a ratio of two resistances the engine cannot read. Reporting a
+// direction here would be guessing.
 func TestStrapDividerIsNeither(t *testing.T) {
 	d := propDesign("BOOT_MODE0", "GND", "")
 	d.Components = append(d.Components, &ir.Component{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}})
@@ -260,8 +260,8 @@ func TestStrapDividerIsNeither(t *testing.T) {
 }
 
 // strapDesign is propDesign plus a stamped VALUE on the pull resistor. The value has to be set
-// directly rather than as an attribute: check.NewModel re-stamps nothing, so a hand-built design gets
-// its Quantity the way the ingestion pass would have left it.
+// directly rather than as an attribute, because check.NewModel re-stamps nothing, so a hand-built
+// design gets its Quantity the way the ingestion pass would have left it.
 func strapDesign(net, biasTo, input string, ohms float64, unit string) *ir.Design {
 	d := propDesign(net, biasTo, "")
 	for _, c := range d.Components {
@@ -272,8 +272,8 @@ func strapDesign(net, biasTo, input string, ohms float64, unit string) *ir.Desig
 	return d
 }
 
-// TestStrapValueBelowMinimum (WS3-119): a strap pulled the RIGHT way by too strong a resistor. The
-// direction half is satisfied, which is exactly what makes this easy to miss at review.
+// TestStrapValueBelowMinimum (WS3-119) covers a strap pulled the RIGHT way by too strong a resistor.
+// The direction half is satisfied, which makes this easy to miss at review.
 func TestStrapValueBelowMinimum(t *testing.T) {
 	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm),
 		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
@@ -287,7 +287,7 @@ func TestStrapValueBelowMinimum(t *testing.T) {
 	}
 }
 
-// TestStrapValueAboveMaximum: the other end of the band.
+// TestStrapValueAboveMaximum covers the other end of the band.
 func TestStrapValueAboveMaximum(t *testing.T) {
 	fs := propFindings(t, strapDesign("PHYAD1", "GND", "1M", 1e6, check.UnitOhm),
 		NetProperty{Net: "PHYAD1", Property: PropStrap, Value: "low", MinOhms: 1000, MaxOhms: 100000})
@@ -299,7 +299,7 @@ func TestStrapValueAboveMaximum(t *testing.T) {
 	}
 }
 
-// TestStrapValueInsideBandIsSilent: a correct strap produces nothing, both halves passing.
+// TestStrapValueInsideBandIsSilent checks that a correct strap produces nothing, both halves passing.
 func TestStrapValueInsideBandIsSilent(t *testing.T) {
 	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "10k", 10000, check.UnitOhm),
 		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
@@ -308,10 +308,10 @@ func TestStrapValueInsideBandIsSilent(t *testing.T) {
 	}
 }
 
-// TestStrapValueUnreadableIsSilent is the case the ticket calls out by name: UNREADABLE IS NOT
-// ACCEPTABLE, but it is also not a defect. A resistor whose value the parser could not read, or which
-// carries none at all, is skipped rather than guessed — the params-tier posture. Firing here would
-// report a defect on no evidence.
+// TestStrapValueUnreadableIsSilent is the case the ticket calls out by name. UNREADABLE IS NOT
+// ACCEPTABLE, but it is also not a defect. A resistor whose value the parser could not read, or
+// which carries none at all, is skipped rather than guessed, which is the params-tier posture.
+// Firing here would report a defect on no evidence.
 func TestStrapValueUnreadableIsSilent(t *testing.T) {
 	// No value stamped at all (a design read before the value pass, or a part with no value field).
 	none := propFindings(t, propDesign("BOOT_MODE0", "+3V3", ""),
@@ -319,7 +319,7 @@ func TestStrapValueUnreadableIsSilent(t *testing.T) {
 	if len(none) != 0 {
 		t.Errorf("a strap resistor with no value must be silent, not flagged: %+v", none)
 	}
-	// Present-but-unparsed: the source text survived, the number did not.
+	// Present but unparsed, where the source text survived and the number did not.
 	d := propDesign("BOOT_MODE0", "+3V3", "")
 	for _, c := range d.Components {
 		if c.RefDes == "R1" {
@@ -332,8 +332,9 @@ func TestStrapValueUnreadableIsSilent(t *testing.T) {
 	}
 }
 
-// TestStrapValueWrongUnitIsSilent: a stamped value in the wrong unit is not a resistance. Comparing a
-// farad count against an ohm band would be the unlike-units coercion ComponentValueIn exists to refuse.
+// TestStrapValueWrongUnitIsSilent exists because a stamped value in the wrong unit is not a
+// resistance. Comparing a farad count against an ohm band would be the unlike-units coercion
+// ComponentValueIn exists to refuse.
 func TestStrapValueWrongUnitIsSilent(t *testing.T) {
 	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100n", 1e-7, "F"),
 		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
@@ -342,8 +343,8 @@ func TestStrapValueWrongUnitIsSilent(t *testing.T) {
 	}
 }
 
-// TestStrapValueSilentWithoutDeclaredBand: no band declared, no value check. The direction half still
-// runs, which is the degradation the field's doc promises.
+// TestStrapValueSilentWithoutDeclaredBand pins that with no band declared there is no value check.
+// The direction half still runs, which is the degradation the field's doc promises.
 func TestStrapValueSilentWithoutDeclaredBand(t *testing.T) {
 	// 100R would be outside any sensible band, but none was declared.
 	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm),
@@ -359,8 +360,8 @@ func TestStrapValueSilentWithoutDeclaredBand(t *testing.T) {
 	}
 }
 
-// TestStrapValueOnlyOneBoundDeclared: min and max are independent, so a one-sided band checks one side
-// and stays silent on the other.
+// TestStrapValueOnlyOneBoundDeclared relies on min and max being independent, so a one-sided band
+// checks one side and stays silent on the other.
 func TestStrapValueOnlyOneBoundDeclared(t *testing.T) {
 	lowOnly := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm),
 		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000})
@@ -375,7 +376,7 @@ func TestStrapValueOnlyOneBoundDeclared(t *testing.T) {
 	}
 }
 
-// TestStrapValueNoResistorIsSilent: a band is declared but nothing biases the net, so there is no
+// TestStrapValueNoResistorIsSilent covers a band declared where nothing biases the net, so there is no
 // resistor to judge. The direction half already covers "no bias" (silently, for the internal-pull
 // reason), and the value half must not reach for a resistor that is not there.
 func TestStrapValueNoResistorIsSilent(t *testing.T) {
@@ -386,9 +387,10 @@ func TestStrapValueNoResistorIsSilent(t *testing.T) {
 	}
 }
 
-// TestStrapValueDividerIsSilent: a divider's two resistors set the level together, so neither is "the"
-// strap pull. Judging one of them would name an arbitrary part and could flag a correct divider, so
-// the value half declines — the same honesty the direction half applies by reporting neither rail.
+// TestStrapValueDividerIsSilent exists because a divider's two resistors set the level together, so
+// neither is "the" strap pull. Judging one of them would name an arbitrary part and could flag a
+// correct divider, so the value half declines, as the direction half does by reporting neither
+// rail.
 func TestStrapValueDividerIsSilent(t *testing.T) {
 	d := propDesign("BOOT_MODE0", "+3V3", "")
 	// A second resistor to ground makes it a divider.

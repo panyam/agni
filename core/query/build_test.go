@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// The builder produces the SAME AST Parse does for the equivalent text — so switching a generator
+// The builder produces the SAME AST Parse does for the equivalent text, so switching a generator
 // from string-building to the builder is behavior-preserving by construction.
 func TestBuildMatchesParse(t *testing.T) {
 	built := Build(
@@ -22,7 +22,8 @@ func TestBuildMatchesParse(t *testing.T) {
 	}
 }
 
-// Reads returns only the EDB (fact-base) relations, sorted — not IDB heads (hit) or built-ins (suffix).
+// Reads returns only the EDB (fact-base) relations, sorted, and never IDB heads (hit) or built-ins
+// (suffix).
 func TestReads(t *testing.T) {
 	q := MustParse(`hit(?n) :- component-on-net(?r, ?n), net.pin_count(?n, ?c), suffix(?n, "_CS"); hit(?n) => ?n`)
 	got := Reads(q)

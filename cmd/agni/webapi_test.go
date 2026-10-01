@@ -18,7 +18,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 	// Layout: a subdir, two supported files, one unsupported, one dotfile.
 	mustMkdir(t, filepath.Join(root, "sub"))
 	mustWrite(t, filepath.Join(root, "board.edn"))
-	mustWrite(t, filepath.Join(root, "amp.sch")) // xschem/gEDA schematic (regression: was hidden)
+	mustWrite(t, filepath.Join(root, "amp.sch")) // xschem/gEDA schematic (regression, it was hidden)
 	mustWrite(t, filepath.Join(root, "layout.kicad_pcb"))
 	mustWrite(t, filepath.Join(root, "notes.txt"))   // unsupported
 	mustWrite(t, filepath.Join(root, ".hidden.edn")) // dotfile
@@ -72,7 +72,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 		}
 	})
 
-	// Over a real filesystem, not just the in-memory port: "hollow" holds only folders and a file
+	// Over a real filesystem, not just the in-memory port. "hollow" holds only folders and a file
 	// no reader opens, so a design browser asking for pruning never sees it.
 	t.Run("opens drops a subtree with nothing the caller can open", func(t *testing.T) {
 		mustMkdir(t, filepath.Join(root, "hollow", "libs"))
@@ -92,7 +92,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 		}
 	})
 
-	// The kind label over a real filesystem: a PDF is a datasheet, a netlist is a design, a lock file
+	// The kind label over a real filesystem. A PDF is a datasheet, a netlist is a design, a lock file
 	// is neither. The browser trees filter on this rather than re-deriving it from the extension.
 	t.Run("labels each file with the client that opens it", func(t *testing.T) {
 		mustWrite(t, filepath.Join(root, "sub", "part.pdf"))
@@ -119,8 +119,8 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 	})
 
 	// A traversal is refused when the URI is PARSED, not when the adapter joins it, so it classifies
-	// as an invalid argument. The malformed value is sent as a raw string because building it through
-	// the URI constructor is exactly what is now impossible.
+	// as an invalid argument. The malformed value is sent as a raw string because the URI constructor
+	// refuses to build it.
 	t.Run("traversal is refused at the parse", func(t *testing.T) {
 		_, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: "mount://m/../.."})
 		if !errors.Is(err, service.ErrInvalidArgument) {
@@ -161,7 +161,7 @@ func TestWorkspaceServiceListMounts(t *testing.T) {
 	}
 }
 
-// The pruning rule over a real filesystem and real mount roots: "ds" holds a datasheet, which no
+// The pruning rule over a real filesystem and real mount roots. "ds" holds a datasheet, which no
 // design reader opens, so the design tree is served the boards mount alone. A mount root that does
 // not resolve at all is kept rather than counted as empty, since a missing mount is an operator's
 // mistake to see, not something to hide.

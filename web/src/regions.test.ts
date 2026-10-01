@@ -72,9 +72,9 @@ describe("regions", () => {
   });
 
   it("resizeBBox moves the handle's edges, keeps the opposite corner, floors at min size", () => {
-    // se: grow width/height from the top-left anchor.
+    // The se handle grows width/height from the top-left anchor.
     expect(resizeBBox(box(10, 20, 30, 40), "se", 10, 5)).toEqual({ x: 10, y: 20, width: 40, height: 45 });
-    // nw: move the top-left in; bottom-right (40,60) stays fixed.
+    // The nw handle moves the top-left in; bottom-right (40,60) stays fixed.
     expect(resizeBBox(box(10, 20, 30, 40), "nw", 5, 5)).toEqual({ x: 15, y: 25, width: 25, height: 35 });
     // dragging the SE corner onto the NW corner (10,20) collapses width/height, floored at min.
     const collapsed = resizeBBox(box(10, 20, 30, 40), "se", -30, -40);

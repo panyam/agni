@@ -46,7 +46,7 @@ func TestCheckMarkdown(t *testing.T) {
 	}
 }
 
-// TestCheckFailOn covers the CI-gate exit matrix: the run errors exactly when a finding at or
+// TestCheckFailOn covers the CI-gate exit matrix. The run errors exactly when a finding at or
 // above the threshold exists, and the default (no flag) stays exit-0 so existing callers are
 // unaffected. fires.edn has error+warning+info findings; passes.edn has none.
 func TestCheckFailOn(t *testing.T) {
@@ -78,7 +78,7 @@ func TestCheckFailOn(t *testing.T) {
 	}
 }
 
-// TestCheckReportSheets pins WS3-023 for the report path: `check --format report` annotates the
+// TestCheckReportSheets pins WS3-023 for the report path, where `check --format report` annotates the
 // findings nested in the severity report with their sheet membership, via the same
 // service.AnnotateReport the web GetCheckReport RPC uses. The U1 component finding on the
 // multi-sheet sheetnav fixture locates on the root sheet.

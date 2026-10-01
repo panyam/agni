@@ -10,9 +10,9 @@ import (
 )
 
 // This test binary deliberately imports NEITHER stdlib/relations NOR stdlib/rules/builtin, which is
-// what makes the refusals below testable at all: the package under test is in exactly the state an
-// embedder's binary is in when they forget a blank import. internal/composetest is the other half,
-// composing everything and asserting the green path.
+// what makes the refusals below testable at all, because the package under test is in exactly the
+// state an embedder's binary is in when they forget a blank import. internal/composetest is the
+// other half, composing everything and asserting the green path.
 
 func TestNewRefusesWhenNoRelationsAreInstalled(t *testing.T) {
 	_, err := New()

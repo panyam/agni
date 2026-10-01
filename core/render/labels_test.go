@@ -61,7 +61,7 @@ func TestCollectLabels(t *testing.T) {
 }
 
 // TestCollectLabelsUpright is the WebGL-side counterpart to the render layer's readable-text
-// rule: the overlay applies rotationDeg/justify verbatim, so collectLabels must hand it
+// rule. The overlay applies rotationDeg/justify verbatim, so collectLabels must hand it
 // already-upright text. A label whose source orientation is R180 must arrive flipped upright
 // (no upside-down rotation) with its justify swapped, matching the SVG backend.
 func TestCollectLabelsUpright(t *testing.T) {
@@ -85,7 +85,7 @@ func TestCollectLabelsUpright(t *testing.T) {
 	}
 }
 
-// TestCaptionWidth checks the caption-width budget: it is the symbol's drawn BOX rectangle
+// TestCaptionWidth checks the caption-width budget. It is the symbol's drawn BOX rectangle
 // (the box a label like "Net Splitter" is fit inside), not the full bounding box that pin
 // stubs widen, and it falls back to the bounding box when the symbol has no BOX figure. This
 // backs the condense-to-fit that stops the "Net Splitter" caption spilling past its rectangle.

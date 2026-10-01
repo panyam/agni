@@ -50,7 +50,7 @@ func TestRead(t *testing.T) {
 		t.Errorf("GND connections = %v, want [R1.2 U1.4]", got)
 	}
 
-	// Physical tier — the point of this reader.
+	// Physical tier, the point of this reader.
 	if len(d.Footprints) != 2 {
 		t.Errorf("footprints = %d, want 2", len(d.Footprints))
 	}
@@ -135,10 +135,10 @@ func eqSet(got, want []string) bool {
 	return true
 }
 
-// TestDeclaredNetRole covers WS1-051: IPC-2581 states a net's role outright on
+// TestDeclaredNetRole covers WS1-051. IPC-2581 states a net's role outright on
 // LogicalNet/@netClass, so the reader translates that closed enum into the engine's role
-// vocabulary at the edge and leaves the source term beside it. The mapping is deliberately
-// partial — only GROUND and POWER name a role the engine has — and an unmapped term must
+// vocabulary at the edge and leaves the source term beside it. The mapping is partial, since
+// only GROUND and POWER name a role the engine has, and an unmapped term must
 // yield no role rather than a guess.
 func TestDeclaredNetRole(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
@@ -151,7 +151,7 @@ func TestDeclaredNetRole(t *testing.T) {
 	}{
 		{"GND", "GROUND", ir.Role_ROLE_GROUND},
 		{"VCC", "POWER", ir.Role_ROLE_RAIL},
-		{"N$17", "GROUND", ir.Role_ROLE_GROUND},             // the point: the name says nothing
+		{"N$17", "GROUND", ir.Role_ROLE_GROUND},             // the case that matters, since the name says nothing
 		{"SIGNAL_ONLY", "SIGNAL", ir.Role_ROLE_UNSPECIFIED}, // maps to no role; must not invent one
 	} {
 		n := findNet(d, tc.net)
@@ -168,14 +168,14 @@ func TestDeclaredNetRole(t *testing.T) {
 	}
 }
 
-// TestSkippedRefDes (agni issue 311): IPC-2581 is a board format, so it declines an unannotated
+// TestSkippedRefDes (agni issue 311) checks that IPC-2581, as a board format, declines an unannotated
 // component the way the KiCad board reader does rather than recording it as a diagnostic. Only a
 // reader that KEEPS the part owes that, and a REF** on a fabrication artifact is usually a fiducial
 // or a mechanical part rather than something anybody is going to buy.
 //
-// The designator-less component is in the same test because it is the same guard: the geometry pass
+// The designator-less component is in the same test because it is the same guard. The geometry pass
 // already dropped those, so the netlist used to carry components the board had no placement for.
-// The last assertion is the one that matters — the two tiers agree on the component set.
+// The last assertion is the one that matters, that the two tiers agree on the component set.
 func TestSkippedRefDes(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
 	if err != nil {
@@ -196,9 +196,9 @@ func TestSkippedRefDes(t *testing.T) {
 		}
 	}
 	// A connection to a skipped component would claim a pin on a part that is not in the design.
-	// Asserted against the component set rather than against skipRefDes: a test that reaches for
-	// the production predicate to decide what counts as a failure cannot fail when that predicate
-	// is what broke.
+	// Asserted against the component set rather than against skipRefDes, because a test that
+	// reaches for the production predicate to decide what counts as a failure cannot fail when that
+	// predicate is what broke.
 	for _, n := range d.Nets {
 		for _, c := range n.Connections {
 			if !refs[c.ComponentRef] {
@@ -223,10 +223,10 @@ func TestSkippedRefDes(t *testing.T) {
 	}
 }
 
-// TestRefDesCollisions (agni issue 309): a board states one placement per physical part and has no
-// gate construct to group several under one designator, so a repeated refDes is unambiguous. This
-// reader emitted nothing before, and `duplicate-ref-des` therefore read as a clean pass on every
-// IPC-2581 design rather than as a question nobody asked.
+// TestRefDesCollisions (agni issue 309) covers the board case. A board states one placement per
+// physical part and has no gate construct to group several under one designator, so a repeated
+// refDes is unambiguous. This reader emitted nothing before, and `duplicate-ref-des` therefore read
+// as a clean pass on every IPC-2581 design rather than as a question nobody asked.
 func TestRefDesCollisions(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "board_dup_refdes.xml")), "board_dup_refdes.xml")
 	if err != nil {
@@ -241,7 +241,7 @@ func TestRefDesCollisions(t *testing.T) {
 	}
 }
 
-// The clean read is the assertion that would have caught the original bug: an empty list has to
+// The clean read is the assertion that would have caught the original bug. An empty list has to
 // come with the declaration, or it is indistinguishable from a reader that never looked.
 func TestRefDesCollisionsDeclaredOnCleanRead(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")

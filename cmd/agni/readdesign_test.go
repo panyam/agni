@@ -10,8 +10,8 @@ import (
 	"github.com/panyam/agni/internal/projects"
 )
 
-// resolve is the test-side spelling of what every CLI read does: build a resolver from the flag and
-// ask the ProjectService which artifacts to open.
+// resolve is the test-side spelling of what every CLI read does, which is to build a resolver from
+// the flag and ask the ProjectService which artifacts to open.
 func resolve(t *testing.T, path string) (designSource, error) {
 	t.Helper()
 	ws, err := workspace()
@@ -52,9 +52,9 @@ companions:
 	return dir
 }
 
-// TestResolveSourceDirectoryReadsTheDeclaredEntry: naming a design used to be an error, so there was
-// no way to say "this design" rather than "this file". The board tier comes from the declared board
-// companion, so a netlist entry's design still runs the board-tier rules.
+// TestResolveSourceDirectoryReadsTheDeclaredEntry covers naming a design, which used to be an error,
+// so there was no way to say "this design" rather than "this file". The board tier comes from the
+// declared board companion, so a netlist entry's design still runs the board-tier rules.
 func TestResolveSourceDirectoryReadsTheDeclaredEntry(t *testing.T) {
 	dir := designFolder(t)
 	src, err := resolve(t, dir)
@@ -72,8 +72,8 @@ func TestResolveSourceDirectoryReadsTheDeclaredEntry(t *testing.T) {
 	}
 }
 
-// TestResolveSourceCompanionRedirects: a declared companion is a VIEW of the design, so analysis
-// reads the entry, while the companion still supplies the copper it alone carries (C21).
+// TestResolveSourceCompanionRedirects treats a declared companion as a VIEW of the design, so
+// analysis reads the entry, while the companion still supplies the copper it alone carries (C21).
 func TestResolveSourceCompanionRedirects(t *testing.T) {
 	dir := designFolder(t)
 	pcb := filepath.Join(dir, "gateway.kicad_pcb")
@@ -107,8 +107,9 @@ func TestResolveSourceCompanionRedirects(t *testing.T) {
 	}
 }
 
-// TestResolveSourceNoteOnlyNamesUnaskedArtifacts: the note exists to report what was read but not
-// asked for, so listing the very file the caller named makes it noise that trains people to skip it.
+// TestResolveSourceNoteOnlyNamesUnaskedArtifacts covers the note, which exists to report what was
+// read but not asked for, so listing the very file the caller named makes it noise that trains
+// people to skip it.
 // The comparison has to be ref-against-ref; comparing a ref to the typed path never matches and
 // every tier then reads as unasked.
 func TestResolveSourceNoteOnlyNamesUnaskedArtifacts(t *testing.T) {
@@ -124,15 +125,15 @@ func TestResolveSourceNoteOnlyNamesUnaskedArtifacts(t *testing.T) {
 		t.Errorf("note = %q, want the schematic tier, which WAS pulled in unasked", src.Note)
 	}
 	// The descriptor is named by the design's own mount-relative path. For this fixture the mount is
-	// minted at the design folder, so that is just the bare descriptor name — short, and the same
-	// spelling whether the caller typed a path or a URI.
+	// minted at the design folder, so that is just the bare descriptor name, which is short and the
+	// same spelling whether the caller typed a path or a URI.
 	if !strings.Contains(src.Note, projects.DesignDescriptor) {
 		t.Errorf("note = %q, want it to name the descriptor", src.Note)
 	}
 }
 
 // TestResolveSourceLeavesUndeclaredSiblingsAlone is the reason companions are declared per file
-// rather than inferred from "everything beside the entry": a later revision lives in the same folder
+// rather than inferred from "everything beside the entry". A later revision lives in the same folder
 // and IS a legitimate analysis source, so redirecting it would turn a diff of two revisions into a
 // diff of one against itself.
 func TestResolveSourceLeavesUndeclaredSiblingsAlone(t *testing.T) {
@@ -150,8 +151,8 @@ func TestResolveSourceLeavesUndeclaredSiblingsAlone(t *testing.T) {
 	}
 }
 
-// TestResolveSourceAsNamedOptsOut: reading a companion as a netlist is a legitimate diagnostic, so
-// the redirect has an escape (the tutorial project's check-views target uses it).
+// TestResolveSourceAsNamedOptsOut keeps the redirect's escape, because reading a companion as a
+// netlist is a legitimate diagnostic (the tutorial project's check-views target uses it).
 func TestResolveSourceAsNamedOptsOut(t *testing.T) {
 	dir := designFolder(t)
 	sch := filepath.Join(dir, "gateway.kicad_sch")
@@ -167,8 +168,8 @@ func TestResolveSourceAsNamedOptsOut(t *testing.T) {
 	}
 }
 
-// TestResolveSourceNoDescriptorIsUnchanged: every invocation that works today keeps working, and the
-// .eds sibling advice survives where there is no declaration to act on.
+// TestResolveSourceNoDescriptorIsUnchanged checks that every invocation that works today keeps
+// working, and that the .eds sibling advice survives where there is no declaration to act on.
 func TestResolveSourceNoDescriptorIsUnchanged(t *testing.T) {
 	dir := t.TempDir()
 	eds := filepath.Join(dir, "board.eds")
@@ -208,9 +209,9 @@ func TestResolveSourceNoDescriptorIsUnchanged(t *testing.T) {
 	}
 }
 
-// TestResolveSourceRejectsADirectoryWithNoDescriptor: the error names the descriptor it wanted, since
-// handing a directory to a reader can only produce an unsupported-extension message for something
-// that is not a file at all.
+// TestResolveSourceRejectsADirectoryWithNoDescriptor checks that the error names the descriptor it
+// wanted, since handing a directory to a reader can only produce an unsupported-extension message
+// for something that is not a file at all.
 func TestResolveSourceRejectsADirectoryWithNoDescriptor(t *testing.T) {
 	_, err := resolve(t, t.TempDir())
 	if err == nil || !strings.Contains(err.Error(), projects.DesignDescriptor) {
@@ -218,8 +219,9 @@ func TestResolveSourceRejectsADirectoryWithNoDescriptor(t *testing.T) {
 	}
 }
 
-// TestResolveSourceMalformedDescriptorIsAnError: an operator who wrote a design.yaml and got silently
-// ignored would read the resulting default behaviour as the engine agreeing with them.
+// TestResolveSourceMalformedDescriptorIsAnError exists because an operator who wrote a design.yaml
+// and got silently ignored would read the resulting default behaviour as the engine agreeing with
+// them.
 func TestResolveSourceMalformedDescriptorIsAnError(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "a.edn"), "x")
@@ -242,10 +244,10 @@ func TestResolveSourceMissingPathDefersToTheReader(t *testing.T) {
 	}
 }
 
-// TestResolveSourceEntryGetsItsCompanions: naming the entry is naming the design, so the declared
-// companions supply the tiers the entry cannot. Before this the same design read by two names gave
-// two different drawings, because only the FOLDER form consulted companions and the entry's own
-// filename fell through to the auto-layout (the .eds/.edn pairing this exists for).
+// TestResolveSourceEntryGetsItsCompanions holds that naming the entry is naming the design, so the
+// declared companions supply the tiers the entry cannot. Before this the same design read by two
+// names gave two different drawings, because only the FOLDER form consulted companions and the
+// entry's own filename fell through to the auto-layout (the .eds/.edn pairing this exists for).
 func TestResolveSourceEntryGetsItsCompanions(t *testing.T) {
 	dir := designFolder(t)
 	entry := filepath.Join(dir, "gateway.edn")
@@ -264,8 +266,8 @@ func TestResolveSourceEntryGetsItsCompanions(t *testing.T) {
 	}
 }
 
-// TestResolveSourceEntryMatchesTheFolderForm pins the property the bug broke: a design is the same
-// design whether the caller names the folder or the entry inside it.
+// TestResolveSourceEntryMatchesTheFolderForm pins the property the bug broke, that a design is the
+// same design whether the caller names the folder or the entry inside it.
 func TestResolveSourceEntryMatchesTheFolderForm(t *testing.T) {
 	dir := designFolder(t)
 	byFolder, err := resolve(t, dir)
@@ -281,7 +283,7 @@ func TestResolveSourceEntryMatchesTheFolderForm(t *testing.T) {
 	}
 }
 
-// TestResolveSourceEntryAsNamedOptsOut: --as-named means the file alone, so it suppresses the
+// TestResolveSourceEntryAsNamedOptsOut holds --as-named to the file alone, so it suppresses the
 // companion tiers on the entry as well as the companion-to-entry redirect.
 func TestResolveSourceEntryAsNamedOptsOut(t *testing.T) {
 	dir := designFolder(t)
@@ -301,8 +303,8 @@ func TestResolveSourceEntryAsNamedOptsOut(t *testing.T) {
 	}
 }
 
-// TestResolveSourceEntryNoteNamesOnlyTheExtras: the caller got the file they asked for, so the note
-// must not claim a redirect happened; it reports only the companions attached alongside it.
+// TestResolveSourceEntryNoteNamesOnlyTheExtras covers a caller who got the file they asked for, so
+// the note must not claim a redirect happened; it reports only the companions attached alongside it.
 func TestResolveSourceEntryNoteNamesOnlyTheExtras(t *testing.T) {
 	dir := designFolder(t)
 	src, err := resolve(t, filepath.Join(dir, "gateway.edn"))
@@ -317,8 +319,8 @@ func TestResolveSourceEntryNoteNamesOnlyTheExtras(t *testing.T) {
 	}
 }
 
-// TestResolveSourceEntryWithNoCompanionsIsSilent: a design that declares none is the ordinary case,
-// and it must not gain a note saying nothing.
+// TestResolveSourceEntryWithNoCompanionsIsSilent covers a design that declares none, the ordinary
+// case, which must not gain a note saying nothing.
 func TestResolveSourceEntryWithNoCompanionsIsSilent(t *testing.T) {
 	dir := t.TempDir()
 	entry := filepath.Join(dir, "plain.edn")

@@ -124,7 +124,7 @@ func copperStrokeWidths(svg string) []float64 {
 	return out
 }
 
-// TestHighlightBoardSVG: the board face of the highlight contract — a net spec re-strokes
+// TestHighlightBoardSVG: the board face of the highlight contract. A net spec re-strokes
 // its copper and rings its connected pads and vias; a component spec rings all of its pads;
 // a pin spec rings exactly the (ref_des, pad number) land. The overlay is transparent (no
 // background rect) and framed like BoardSVG.
@@ -173,7 +173,7 @@ func TestHighlightBoardSVG(t *testing.T) {
 	}
 }
 
-// TestPackBoard: the packed board reuses the PackedSheet envelope — triangle-kind records
+// TestPackBoard: the packed board reuses the PackedSheet envelope, with triangle-kind records
 // for areas (copper quads, via disks, pads), line strips for the outline, keys joining
 // copper to nets and pads to (ref_des, number, net), and group colors indexed by the board
 // group constants from Style.

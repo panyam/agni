@@ -19,7 +19,7 @@ func TestComponentClass(t *testing.T) {
 		{Name: "FerriteBead"},
 		{Name: "RES_ARRAY", DesignatorPrefix: "R"},
 		{Name: "ABM8_Crystal"},
-		// A 4-pin oscillator part type declaring a Vcc supply pin — the structural oscillator signal
+		// A 4-pin oscillator part type declaring a Vcc supply pin, the structural oscillator signal
 		// (WS10-015). Pin NAMES only; direction is left unset on purpose (EDIF under-types it).
 		{Name: "OSC_4PIN", Pins: []*ir.Pin{
 			{Name: "Vcc", Designator: "4"}, {Name: "OUTPUT", Designator: "3"},
@@ -46,7 +46,8 @@ func TestComponentClass(t *testing.T) {
 		{&ir.Component{RefDes: "P3"}, check.ClassConnector},
 		{&ir.Component{RefDes: "TP7"}, check.ClassTestPoint},
 		// WS10-015: a bare Y-prefix clock source is AMBIGUOUS (oscillator/crystal/resonator), so it
-		// resolves to the clock FAMILY, not the crystal subtype — the subtype needs a specific signal.
+		// resolves to the clock FAMILY, not the crystal subtype, because the subtype needs a
+		// specific signal.
 		{&ir.Component{RefDes: "Y1"}, check.ClassClock},
 		{&ir.Component{RefDes: "U1"}, check.ClassIC},
 		{&ir.Component{RefDes: "IC2"}, check.ClassIC},
@@ -59,15 +60,18 @@ func TestComponentClass(t *testing.T) {
 		{&ir.Component{RefDes: "A1", Sections: sec("RES_ARRAY")}, check.ClassResistor},
 		// KiCad-style Value attribute classifies an otherwise-unknown prefix
 		{&ir.Component{RefDes: "E1", Attributes: map[string]string{"Value": "LED"}}, check.ClassLED},
-		// WS10-015: a "crystal"/"xtal"/"resonator" token marks CLOCK-FAMILY candidacy only (the vendor
-		// label can't be trusted to tell crystal from resonator), so X1 with an ABM8_Crystal part reaches
-		// the clock family, not the crystal subtype — the crystal subtype comes only from a datasheet.
+		// WS10-015: a "crystal"/"xtal"/"resonator" token marks CLOCK-FAMILY candidacy only (the
+		// vendor label can't be trusted to tell crystal from resonator), so X1 with an ABM8_Crystal
+		// part reaches the clock family, not the crystal subtype. The crystal subtype comes only
+		// from a datasheet.
 		{&ir.Component{RefDes: "X1", Sections: sec("ABM8_Crystal")}, check.ClassClock},
-		// WS10-015: an "oscillator" TOKEN is family-only (unusable for subtyping on real vendor data — a
-		// whole library is named "Oscillator"), so a token-only clock part stays at the clock family.
+		// WS10-015: an "oscillator" TOKEN is family-only (unusable for subtyping on real vendor
+		// data, where a whole library is named "Oscillator"), so a token-only clock part stays at
+		// the clock family.
 		{&ir.Component{RefDes: "X3", Attributes: map[string]string{"Description": "50MHz Oscillator"}}, check.ClassClock},
-		// WS10-015: STRUCTURE is the reliable keyword-time oscillator signal — a Y-prefix part whose part
-		// type declares a Vcc supply pin is active (the industrial-board lever, where the reader surfaces the pins).
+		// WS10-015: STRUCTURE is the reliable keyword-time oscillator signal. A Y-prefix part whose
+		// part type declares a Vcc supply pin is active (the industrial-board lever, where the
+		// reader surfaces the pins).
 		{&ir.Component{RefDes: "Y9", Sections: sec("OSC_4PIN")}, check.ClassOscillator},
 		// a supply pin on a NON-clock part (an MCU) must NOT become an oscillator (structure is scoped).
 		{&ir.Component{RefDes: "U7", Sections: sec("OSC_4PIN")}, check.ClassIC},
@@ -102,7 +106,7 @@ func TestComponentClass(t *testing.T) {
 	}
 }
 
-// TestModelReadsStampedDeviceClasses proves the left-shift wiring: when a design carries a
+// TestModelReadsStampedDeviceClasses proves the left-shift wiring. When a design carries a
 // device_classes set (the ingestion pass stamped it, WS3-071), Model.ComponentClass READS the set
 // rather than re-deriving from the ref-des. A resistor-prefixed part stamped {tvs} reads tvs, so the
 // data fact is authoritative; an un-stamped part still falls back to the ref-des derivation.
@@ -120,9 +124,10 @@ func TestModelReadsStampedDeviceClasses(t *testing.T) {
 	}
 }
 
-// TestHasClassFamilyMembership: a TVS carries its diode family tag, so HasClass answers family
-// membership (the isDiodeFamily replacement), while ComponentClass still reports the most-specific
-// class. A test_connector does NOT satisfy HasClass(connector) — the WS3-066 split holds.
+// TestHasClassFamilyMembership checks that a TVS carries its diode family tag, so HasClass answers
+// family membership (the isDiodeFamily replacement), while ComponentClass still reports the
+// most-specific class. A test_connector does NOT satisfy HasClass(connector), so the WS3-066 split
+// holds.
 func TestHasClassFamilyMembership(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "D1", DeviceClasses: classify.Tags(string(check.ClassTVS), string(check.ClassDiode))},
@@ -150,7 +155,7 @@ func TestHasClassFamilyMembership(t *testing.T) {
 	}
 }
 
-// TestDecouplingPresent covers the rule's whole guard set: a cap-less power rail fires; a rail
+// TestDecouplingPresent covers the rule's whole guard set. A cap-less power rail fires, while a rail
 // with a cap, a ground-named net, a cross-sheet rail, and a signal net (no power_in) do not.
 func TestDecouplingPresent(t *testing.T) {
 	d := &ir.Design{
@@ -195,7 +200,7 @@ func TestDecouplingPresent(t *testing.T) {
 }
 
 // TestI2CPullUpSeesNonRDigitResistors is the behavioral acceptance for the component.class
-// fact: a pull-up whose ref-des is not "R + digit" (a resistor network, or a part whose
+// fact. A pull-up whose ref-des is not "R + digit" (a resistor network, or a part whose
 // designator_prefix says resistor) must still satisfy i2c-pull-up.
 func TestI2CPullUpSeesNonRDigitResistors(t *testing.T) {
 	d := &ir.Design{

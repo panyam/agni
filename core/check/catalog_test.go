@@ -38,10 +38,11 @@ func TestAvailableCapability(t *testing.T) {
 	}
 }
 
-// TestAvailableNetClassCapability (WS3-105): a rule SCOPED by net class selects nothing where the
-// design assigns no classes, so it would report clean without ever checking anything. The gate is
-// content-derived, not format-derived — a KiCad project that declares no classes is as unanswerable
-// as an EDIF netlist that cannot declare any, so both must read not-applicable.
+// TestAvailableNetClassCapability (WS3-105) covers a rule SCOPED by net class, which selects
+// nothing where the design assigns no classes, so it would report clean without ever checking
+// anything. The gate is content-derived, not format-derived. A KiCad project that declares no
+// classes is as unanswerable as an EDIF netlist that cannot declare any, so both must read
+// not-applicable.
 func TestAvailableNetClassCapability(t *testing.T) {
 	rule := &Rule{Reads: []string{"net.netclass"}, RequiresCapability: []Capability{CapNetClass}}
 
@@ -70,7 +71,7 @@ func TestAvailableFromReads(t *testing.T) {
 	if ok, reason := Available(&Rule{Reads: []string{"net.names", "param(mpn, max_voltage)"}}, nil); ok || reason == "" {
 		t.Errorf("datasheet-reading rule: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
-	// A datasheet rule IS applicable once a params tier is attached: the earlier gate returned
+	// A datasheet rule IS applicable once a params tier is attached. The earlier gate returned
 	// not-applicable unconditionally, so a seeded ask could never pass/fail in a review even with
 	// --params. m == nil (catalog listing) and a params-less model still gate.
 	pr := &Rule{Reads: []string{"param.supply_abs_max"}}
@@ -110,9 +111,9 @@ func TestCatalogRejections(t *testing.T) {
 	}
 }
 
-// TestCatalogWithKeepsWhatTheBaseCarried is the property WS3-107 turned on: extending a catalog must
-// ADD to it. A *Catalog holds composed rules rather than its inputs, so a caller holding one it did
-// not build cannot rebuild it — and the thing it did instead, recomposing from the standard sources,
+// TestCatalogWithKeepsWhatTheBaseCarried pins that extending a catalog must ADD to it (WS3-107). A
+// *Catalog holds composed rules rather than its inputs, so a caller holding one it did not build
+// cannot rebuild it. The thing it did instead, recomposing from the standard sources,
 // silently discarded whatever else the base carried.
 func TestCatalogWithKeepsWhatTheBaseCarried(t *testing.T) {
 	base, err := NewCatalog(NewSource("alpha", []*Rule{{Name: "a1"}}), NewSource("beta", []*Rule{{Name: "b1"}}))
@@ -177,12 +178,12 @@ func TestCatalogWithRejectsACollision(t *testing.T) {
 	}
 }
 
-// TestAvailableRefDesCollisionsCapability (agni issue 309): a rule whose entire subject is a reader
-// diagnostic has nothing to report when the reader never computed it, and "nothing to report" is
-// exactly what a clean design looks like. So the gate reads the reader's own declaration rather than
-// the emptiness of the list.
+// TestAvailableRefDesCollisionsCapability (agni issue 309) covers a rule whose entire subject is a
+// reader diagnostic. It has nothing to report when the reader never computed it, and "nothing to
+// report" is also what a clean design looks like. So the gate reads the reader's own declaration
+// rather than the emptiness of the list.
 //
-// The two designs below are the whole bug: identical empty collision lists, opposite meanings. Before
+// The two designs below carry the bug, identical empty collision lists with opposite meanings. Before
 // the declaration existed, both read as a pass.
 func TestAvailableRefDesCollisionsCapability(t *testing.T) {
 	rule := &Rule{Reads: []string{"ref_des_collision"}, RequiresCapability: []Capability{CapRefDesCollisions}}
@@ -207,8 +208,8 @@ func TestAvailableRefDesCollisionsCapability(t *testing.T) {
 		t.Error("no diagnostics block at all: want not-applicable")
 	}
 
-	// The catalog listing (m == nil) keeps the rule available, mirroring the other capabilities:
-	// the engine can run it, on a design that supplies the diagnostic.
+	// The catalog listing (m == nil) keeps the rule available, mirroring the other capabilities,
+	// since the engine can run it on a design that supplies the diagnostic.
 	if ok, _ := Available(rule, nil); !ok {
 		t.Error("capability rule at catalog listing (m==nil): want available")
 	}

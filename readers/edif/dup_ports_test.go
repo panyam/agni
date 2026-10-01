@@ -7,10 +7,10 @@ import (
 	"testing"
 )
 
-// TestPortInstanceMapping is the WS1-025 acceptance: connection pin identity resolves
+// TestPortInstanceMapping is the WS1-025 acceptance test. Connection pin identity resolves
 // through the instance's portInstance table to PHYSICAL pin designators. J1's logical
 // GND port fans out to pins 5 and 6 (one portRef, two connections); its SIG port maps to
-// pin 2; the "&1"-style port keeps its stripped name (which equals its designator — the
+// pin 2; the "&1"-style port keeps its stripped name (which equals its designator, the
 // key-stability path for the common case); J2's GND maps independently to its own pin 6
 // without colliding with J1's.
 func TestPortInstanceMapping(t *testing.T) {

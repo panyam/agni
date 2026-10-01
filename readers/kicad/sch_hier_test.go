@@ -52,7 +52,7 @@ func TestReadSchematicHierarchyNets(t *testing.T) {
 		t.Errorf("components = %q, want %q", got, want)
 	}
 	// The hierarchical walk assembles its own InputDiagnostics, so the unannotated diagnostic
-	// has to be wired there too — an unwired one is a silent no-op that reads as a clean design.
+	// has to be wired there too, since an unwired one is a silent no-op that reads as a clean design.
 	un := d.GetInputDiagnostics().GetUnannotatedComponents()
 	if len(un) != 1 || un[0].GetRefDes() != "MH?" || len(un[0].GetInstances()) != 2 {
 		t.Errorf("unannotated components = %+v, want one MH? entry carrying both sheet placements", un)
@@ -138,7 +138,7 @@ func TestReadSchematicHierarchyNets(t *testing.T) {
 	}
 }
 
-// TestReadProjectResolvesWalkedHierarchy: a complete walk is the WS1-017 completeness
+// TestReadProjectResolvesWalkedHierarchy checks that a complete walk is the WS1-017 completeness
 // witness, so the project read downgrades the rail's external marking to global; the
 // bare hierarchy read above keeps it.
 func TestReadProjectResolvesWalkedHierarchy(t *testing.T) {
@@ -158,7 +158,7 @@ func TestReadProjectResolvesWalkedHierarchy(t *testing.T) {
 	t.Fatal("VCC net not found")
 }
 
-// TestReadProjectPartialWalkStaysExternal: a sub-sheet that fails to open leaves the
+// TestReadProjectPartialWalkStaysExternal covers a sub-sheet that fails to open, which leaves the
 // design partial, so external markings must survive.
 func TestReadProjectPartialWalkStaysExternal(t *testing.T) {
 	failOpen := func(string) ([]byte, error) { return nil, fmt.Errorf("gone") }
@@ -200,7 +200,7 @@ func TestLabelBindsMidSpan(t *testing.T) {
 	}
 }
 
-// TestNetNameUnescape: KiCad stores "/" in a net name as {slash} and unescapes on load,
+// TestNetNameUnescape pins that KiCad stores "/" in a net name as {slash} and unescapes on load,
 // so labels in either spelling are one net under the unescaped name.
 func TestNetNameUnescape(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "escapes.kicad_sch")), "escapes.kicad_sch")

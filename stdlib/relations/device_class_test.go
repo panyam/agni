@@ -9,7 +9,7 @@ import (
 )
 
 // efuseSpec is a seeded spec whose datasheet declares device_class "efuse" (the class no ref-des
-// prefix or description keyword on a real industrial EVT export can establish — WS10-013). It carries a
+// prefix or description keyword on a real industrial EVT export can establish; WS10-013). It carries a
 // source doc so the projected fact cites it, and no parameters (the class is a PartSpec-level field).
 func efuseSpec(mpn string) *parampb.PartSpec {
 	return &parampb.PartSpec{
@@ -20,10 +20,11 @@ func efuseSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// TestComponentDeviceClassFact: a seeded, non-empty device_class projects a component.device_class row
-// keyed by ref-des, and the relation is empty when the model is built without a params tier (silent by
-// construction, the whole datasheet tier's posture). The check.Model side of WS10-013 (class-set
-// enrichment, the Available gate) is tested in core/check; this is the projector side.
+// TestComponentDeviceClassFact checks that a seeded, non-empty device_class projects a
+// component.device_class row keyed by ref-des, and the relation is empty when the model is built
+// without a params tier (silent by construction, the whole datasheet tier's posture). The
+// check.Model side of WS10-013 (class-set enrichment, the Available gate) is tested in core/check;
+// this is the projector side.
 func TestComponentDeviceClassFact(t *testing.T) {
 	set := param.ParamSet{"TPS2HB16": efuseSpec("TPS2HB16")}
 	m := check.NewModelWithParams(supplyDesign("+5V", false, "TPS2HB16"), nil, set)

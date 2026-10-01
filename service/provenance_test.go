@@ -2,7 +2,7 @@ package service
 
 import "testing"
 
-// TestOverlayProvenanceUnionsBothSources is the fix for the bug this replaced: a results document's
+// TestOverlayProvenanceUnionsBothSources is the fix for the bug this replaced. A results document's
 // RunConfig was built from the SERVICE's startup config while the run had used the resolved overlay, so
 // a design in a project declaring params/, profiles/ and conventions.yaml scored against all three and
 // recorded none of them.

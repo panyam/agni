@@ -118,8 +118,8 @@ func TestTraceCLIRadiusIsAFlag(t *testing.T) {
 }
 
 // The json is protojson of the WIRE message, the same shape TraceDesign returns, so this decodes
-// into the proto rather than into the Go struct. That is the point of the change: a script reading
-// the CLI and a client reading the rpc now parse one thing.
+// into the proto rather than into the Go struct, so a script reading the CLI and a client reading
+// the rpc parse one thing.
 func TestTraceCLIJSON(t *testing.T) {
 	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1", "--format", "json")
 	if err != nil {

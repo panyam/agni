@@ -129,9 +129,9 @@ func equalSet(a, b []string) bool {
 	return true
 }
 
-// TestDanglingEndpoints (WS1-013): a wire drawn to nothing surfaces as a dangling
-// endpoint. gEDA's netgraph grid is native (round only), so it IS the geometry frame —
-// no unquant, unlike xschem. Emission is gated on full symbol resolution.
+// TestDanglingEndpoints (WS1-013) checks that a wire drawn to nothing surfaces as a dangling
+// endpoint. gEDA's netgraph grid is native (round only), so it IS the geometry frame and
+// needs no unquant, unlike xschem. Emission is gated on full symbol resolution.
 func TestDanglingEndpoints(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dangle.sch")), "dangle.sch", testOpener(t))
 	if err != nil {
@@ -149,8 +149,8 @@ func TestDanglingEndpoints(t *testing.T) {
 	}
 }
 
-// TestDanglingSuppressedOnUnresolved: an opener that cannot resolve resistor.sym drops
-// R1's pins; the gate suppresses the design's dangles rather than emit phantoms.
+// TestDanglingSuppressedOnUnresolved covers an opener that cannot resolve resistor.sym, which
+// drops R1's pins. The gate suppresses the design's dangles rather than emit phantoms.
 func TestDanglingSuppressedOnUnresolved(t *testing.T) {
 	failOpen := func(string) ([]byte, error) { return nil, os.ErrNotExist }
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dangle.sch")), "dangle.sch", failOpen)
@@ -162,9 +162,9 @@ func TestDanglingSuppressedOnUnresolved(t *testing.T) {
 	}
 }
 
-// TestPinDirectionsAndExternal (WS1-021): gEDA pintype maps to pin directions (pwr ->
-// power_in), and a power/ground supply symbol marks its net External — the two changes
-// that make power rules reachable and keep them quiet on tapped rails.
+// TestPinDirectionsAndExternal (WS1-021) checks that gEDA pintype maps to pin directions (pwr ->
+// power_in) and that a power/ground supply symbol marks its net External. Those two changes
+// make power rules reachable and keep them quiet on tapped rails.
 func TestPinDirectionsAndExternal(t *testing.T) {
 	// pwr_untapped: two ICs share a VCC net via pintype=pwr pins, no power symbol.
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "pwr_untapped.sch")), "x.sch", testOpener(t))
@@ -218,9 +218,10 @@ func TestPinDirectionsAndExternal(t *testing.T) {
 	}
 }
 
-// TestNetTaps (WS1-032): a component's net=NAME:pin attributes connect those pins to the named net
-// with no drawn wire. U1 carries TWO net= lines (net=GND:2 and net=PWR:1 — the map-collapse case),
-// and U1 + U2 both tap GND, so GND unites their pin 2s across the design without a wire.
+// TestNetTaps (WS1-032) checks that a component's net=NAME:pin attributes connect those pins to the
+// named net with no drawn wire. U1 carries TWO net= lines (net=GND:2 and net=PWR:1, the
+// map-collapse case), and U1 + U2 both tap GND, so GND unites their pin 2s across the design
+// without a wire.
 func TestNetTaps(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "nettap.sch")), "nettap.sch", testOpener(t))
 	if err != nil {
@@ -234,9 +235,9 @@ func TestNetTaps(t *testing.T) {
 	}
 }
 
-// TestVoltageRailSymbol (WS1-032): a voltage-rail symbol outside the conventional gnd/vcc/vdd/vss
-// set (here 3.3V-plus-1.sym) is recognized as a power symbol, so it is not dropped for lacking a
-// ref-des; its symbol-level net= names the rail and the tap marks it External.
+// TestVoltageRailSymbol (WS1-032) checks that a voltage-rail symbol outside the conventional
+// gnd/vcc/vdd/vss set (here 3.3V-plus-1.sym) is recognized as a power symbol, so it is not dropped
+// for lacking a ref-des; its symbol-level net= names the rail and the tap marks it External.
 func TestVoltageRailSymbol(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "rail.sch")), "rail.sch", testOpener(t))
 	if err != nil {
@@ -259,8 +260,8 @@ func TestVoltageRailSymbol(t *testing.T) {
 	}
 }
 
-// TestSlotting (WS1-032): a multi-gate package (numslots=2, slotdef rows) placed twice with a
-// shared refdes and slot=1/slot=2 folds into ONE Component with a section per gate, and each
+// TestSlotting (WS1-032) checks that a multi-gate package (numslots=2, slotdef rows) placed twice
+// with a shared refdes and slot=1/slot=2 folds into ONE Component with a section per gate, and each
 // gate's drawn pins remap to that slot's physical package pins. Without the remap both gates
 // resolve slot-1's drawn numbers (1,2), so slot-2's terminals mis-key onto U1.1/U1.2 (the
 // pin-net-conflict that fired on gTAG's U20).
@@ -288,10 +289,10 @@ func TestSlotting(t *testing.T) {
 	}
 }
 
-// TestUnannotatedComponents (agni issue 311): gEDA keeps a placeholder-designated part, so it is
-// the layer that has to report one. `<prefix>?` is gEDA's own convention — the symbol libraries in
-// this testdata ship `refdes=R?` and `refdes=U?` as their template value — and the reader kept
-// those silently.
+// TestUnannotatedComponents (agni issue 311) exists because gEDA keeps a placeholder-designated
+// part, so it is the layer that has to report one. `<prefix>?` is gEDA's own convention (the symbol
+// libraries in this testdata ship `refdes=R?` and `refdes=U?` as their template value), and the
+// reader kept those silently.
 //
 // The fixture covers both halves of this reader's grouping fork, because they arrive at the entry
 // differently. Two unslotted `R?` symbols become two ir.Components sharing a designator; two
@@ -316,7 +317,7 @@ func TestUnannotatedComponents(t *testing.T) {
 			t.Errorf("%q carries %d placements, want %d (have %v)", ref, got[ref], n, got)
 		}
 	}
-	// The parts are kept, not dropped: unannotated circuitry is still circuitry.
+	// The parts are kept, not dropped, because unannotated circuitry is still circuitry.
 	if r := refs(d); !equalSet(r, []string{"R?", "R?", "R1", "U?"}) {
 		t.Errorf("components = %v, want the two R? placements, R1 and the folded U?", r)
 	}
@@ -336,9 +337,10 @@ func TestUnannotatedWithoutSymbols(t *testing.T) {
 	}
 }
 
-// TestRefDesCollisions (agni issue 309): gEDA states the gate, so it can tell a duplicated
-// designator from the legitimate multi-gate case, and it now says so. Before this the reader
-// emitted no collision at all and `duplicate-ref-des` read as a clean pass on every gEDA design.
+// TestRefDesCollisions (agni issue 309) exists because gEDA states the gate, so it can tell a
+// duplicated designator from the legitimate multi-gate case, and it now says so. Before this the
+// reader emitted no collision at all and `duplicate-ref-des` read as a clean pass on every gEDA
+// design.
 //
 // The fixture carries both duplicate shapes and both innocent ones, because the rule is only
 // meaningful if it separates them:
@@ -368,7 +370,7 @@ func TestRefDesCollisions(t *testing.T) {
 		}
 	}
 
-	// The declaration is the other half of the fix, and it is what a clean design carries too: it
+	// The declaration is the other half of the fix, and it is what a clean design carries too. It
 	// says the reader LOOKED, so an empty list means "none" rather than "nobody asked".
 	if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "ref_des_collisions") {
 		t.Error("supplied does not name ref_des_collisions, so the rule gates itself off on gEDA")
@@ -376,7 +378,7 @@ func TestRefDesCollisions(t *testing.T) {
 }
 
 // A design with no duplicates still declares that it was checked. This is the assertion that would
-// have caught the original bug: without it, "no collisions" and "never looked" are the same value.
+// have caught the original bug, since without it "no collisions" and "never looked" are the same value.
 func TestRefDesCollisionsDeclaredOnCleanRead(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
 	if err != nil {

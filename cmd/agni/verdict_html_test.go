@@ -16,7 +16,7 @@ func TestHTMLReportOnlyLinksAMountTheOperatorNamed(t *testing.T) {
 	if strings.Contains(loose, "<a href") {
 		t.Error("a locally-minted mount must not produce links; they resolve on nobody's server")
 	}
-	// The report is still a report: it just names subjects as plain text.
+	// The report is still written, and it names subjects as plain text.
 	if !strings.Contains(loose, "agni check") || !strings.Contains(loose, "i2c-pull-up") {
 		t.Error("dropping the links must not drop the report")
 	}
@@ -31,8 +31,8 @@ func TestHTMLReportHasNoLinksWithoutABase(t *testing.T) {
 }
 
 // html is the verdict report and has no findings-only form, so asking for it IS asking for the
-// considered set. It turns --verdicts on rather than refusing: a flag with no alternative is not a
-// choice the reader should have to make twice.
+// considered set. It turns --verdicts on rather than refusing, because a flag with no alternative
+// is not a choice the reader should have to make twice.
 func TestHTMLImpliesVerdicts(t *testing.T) {
 	bare := runCheck(t, "--format", "html", "testdata/conformance/showcase.fires.kicad_sch")
 	explicit := runCheck(t, "--verdicts", "--format", "html", "testdata/conformance/showcase.fires.kicad_sch")

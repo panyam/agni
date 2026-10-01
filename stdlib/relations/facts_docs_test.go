@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// relRe extracts the built-in relation names from their Rel* const declarations in facts.go — the
+// relRe extracts the built-in relation names from their Rel* const declarations in facts.go, the
 // authoritative set of EDB relations (the ones with a Go projector, hence the ones a projector→doc
 // back-link can couple to). Reading the source keeps the harness single-source with the code it
 // guards, the same spirit as docs_test.go reading the registered Rules.
@@ -34,14 +34,15 @@ func builtinRelationNames(t *testing.T) map[string]bool {
 	return names
 }
 
-// predicateDocs are non-EDB relation names that earn a doc but have no check/facts.go projector
-// (they are computed query built-ins, so they carry no projector→doc back-link and are outside the
-// EDB require-all set). reaches is the reach-walk predicate, the recursive counterpart to
-// net.bus_like, and route is the same walk with its path bound as a value. The string predicates (contains/prefix/suffix) are deliberately not documented here
-// (tracked in OUT_OF_SCOPE); add a name to this set when its doc lands.
+// predicateDocs are non-EDB relation names that earn a doc but have no facts.go projector (they are
+// computed query built-ins, so they carry no projector→doc back-link and are outside the EDB
+// require-all set). reaches is the reach-walk predicate, the recursive counterpart to net.bus_like,
+// and route is the same walk with its path bound as a value. The string predicates
+// (contains/prefix/suffix) are deliberately not documented here (tracked in OUT_OF_SCOPE); add a
+// name to this set when its doc lands.
 var predicateDocs = map[string]bool{"reaches": true, "route": true}
 
-// TestRelationDocsBidirectional couples check/facts/docs to the relation set in both directions
+// TestRelationDocsBidirectional couples facts/docs to the relation set in both directions
 // (WS14-005), the docs_test.go analogue for facts, now REQUIRE-ALL: every built-in EDB relation
 // (every Rel* const) must have a doc, so a new relation added without one fails CI (the staged flip
 // from PR 287, once the backfill landed). What is enforced: every EDB relation has a doc; every doc
@@ -123,7 +124,7 @@ func TestRelationDocsBidirectional(t *testing.T) {
 			t.Errorf("relation %q has no doc: write facts/docs/%s.md (require-all)", rel, rel)
 		}
 	}
-	// The allowlisted predicate docs must also be present (they are documented on purpose).
+	// The allowlisted predicate docs must also be present.
 	for pred := range predicateDocs {
 		if !docStems[pred] {
 			t.Errorf("predicate doc facts/docs/%s.md is missing", pred)
@@ -131,8 +132,8 @@ func TestRelationDocsBidirectional(t *testing.T) {
 	}
 }
 
-// TestRelationDocImageHandler: the read-only route serves an embedded schematic card (200) as PNG
-// or SVG but nothing else — the markdown, a missing image, a top-level (non-images/) path, or a
+// TestRelationDocImageHandler checks that the read-only route serves an embedded schematic card (200)
+// as PNG or SVG but nothing else. The markdown, a missing image, a top-level (non-images/) path, or a
 // non-image path all 404, mirroring RuleDocImageHandler (WS14-005).
 func TestRelationDocImageHandler(t *testing.T) {
 	h := RelationDocImageHandler()

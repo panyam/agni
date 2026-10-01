@@ -21,8 +21,8 @@ func twoDesignAgg() Aggregate {
 	return Aggregate{Manifest: "M", Reports: []Report{rep("d1", Pass), rep("d2", Fail)}}
 }
 
-// TestAggregateAutomationIsManifestLevel is the load-bearing invariant: automation (automated /
-// not-automated) is stated ONCE for the manifest, never summed across designs — else "1 automated"
+// TestAggregateAutomationIsManifestLevel pins the central invariant. Automation (automated /
+// not-automated) is stated ONCE for the manifest, never summed across designs, or "1 automated"
 // would read as "2". Pass/fail is per design.
 func TestAggregateAutomationIsManifestLevel(t *testing.T) {
 	s := RenderAggregateMarkdown(twoDesignAgg())
@@ -34,7 +34,7 @@ func TestAggregateAutomationIsManifestLevel(t *testing.T) {
 	}
 	// per-design rows and the per-item matrix with per-design cells
 	for _, want := range []string{
-		// Answered is per design and leads the row: d1 answered item 1 with a pass, d2 with a fail, and
+		// Answered is per design and leads the row. d1 answered item 1 with a pass, d2 with a fail, and
 		// item 2 is not-automated on both, so each design answers 1 of 2.
 		"| `d1` | 1/2 | 1 | 0 | 0 |",
 		"| `d2` | 1/2 | 0 | 1 | 0 |",
@@ -48,7 +48,7 @@ func TestAggregateAutomationIsManifestLevel(t *testing.T) {
 	}
 }
 
-// TestAggregateCoverageHasNoMatrix: the coverage renderer is the summary only.
+// TestAggregateCoverageHasNoMatrix checks that the coverage renderer emits the summary only.
 func TestAggregateCoverageHasNoMatrix(t *testing.T) {
 	s := RenderAggregateCoverageMarkdown(twoDesignAgg())
 	if !strings.Contains(s, "## Per-design outcomes") {
@@ -59,8 +59,8 @@ func TestAggregateCoverageHasNoMatrix(t *testing.T) {
 	}
 }
 
-// TestAggregateJSON: the JSON carries manifest-level automation, per-design summaries, and per-item
-// outcome-by-design.
+// TestAggregateJSON checks that the JSON carries manifest-level automation, per-design summaries,
+// and per-item outcome-by-design.
 func TestAggregateJSON(t *testing.T) {
 	s, err := RenderAggregateJSON(twoDesignAgg())
 	if err != nil {

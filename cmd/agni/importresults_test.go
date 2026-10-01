@@ -14,11 +14,11 @@ import (
 const vendorFixture = "../../core/results/foreign/testdata/erc.json"
 
 // TestImportJoinsToTheDesignAndReportsTheRest is the end-to-end join, run against a REAL design through
-// the reader rather than a hand-built model — the same reason TestConformance lives at the CLI edge.
+// the reader rather than a hand-built model, for the same reason TestConformance lives at the CLI edge.
 //
-// The assertion that matters is the second one: whatever the import cannot attach must be COUNTED. An
+// The second assertion is the one that matters. Whatever the import cannot attach must be COUNTED. An
 // importer that dropped its residue would report fewer problems than the tool found, with nothing to
-// say so, which is the failure this whole contract exists to rule out.
+// say so, and that is the failure this contract exists to rule out.
 func TestImportJoinsToTheDesignAndReportsTheRest(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "imported.json")
 	runCLI(t, importResultsCmd(),
@@ -86,7 +86,7 @@ func TestImportJoinsToTheDesignAndReportsTheRest(t *testing.T) {
 // innocent part is worse than not attaching it at all.
 func TestImportNeverInventsASubject(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "imported.json")
-	// Joined against a DIFFERENT design: the report's entities do not exist here, so every finding
+	// Joined against a DIFFERENT design, where the report's entities do not exist, so every finding
 	// that names one must land in the residue rather than in a subject.
 	runCLI(t, importResultsCmd(),
 		"--design", "testdata/conformance/fires.edn", "-o", out, vendorFixture)
@@ -127,8 +127,8 @@ func TestImportNeverInventsASubject(t *testing.T) {
 	}
 }
 
-// TestImportedDocumentRendersLikeAnyOther pins the payoff of having a document contract: an import is an
-// ordinary results document, so the existing renderer handles it with no special case.
+// TestImportedDocumentRendersLikeAnyOther pins the payoff of having a document contract. An import
+// is an ordinary results document, so the existing renderer handles it with no special case.
 func TestImportedDocumentRendersLikeAnyOther(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "imported.json")
 	runCLI(t, importResultsCmd(),
@@ -142,8 +142,8 @@ func TestImportedDocumentRendersLikeAnyOther(t *testing.T) {
 	}
 }
 
-// TestCompareReportsTheThreeWaySplit is the differential harness end to end: a native run and an
-// imported vendor report over the same design, split by entity.
+// TestCompareReportsTheThreeWaySplit runs the differential harness end to end over a native run and an
+// imported vendor report of the same design, split by entity.
 func TestCompareReportsTheThreeWaySplit(t *testing.T) {
 	dir := t.TempDir()
 	ours := filepath.Join(dir, "ours.json")

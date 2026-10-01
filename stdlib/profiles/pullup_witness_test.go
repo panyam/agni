@@ -8,9 +8,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// directPullUpDesign: U1's CS line is pulled to a WIDE rail by R1 sitting directly on both. Wide
-// matters: the reach walk refuses to enter a net whose fan-out exceeds maxWalkFan (WS3-108), and a
-// real rail is wide, so this is the ordinary case rather than an awkward one.
+// In directPullUpDesign, U1's CS line is pulled to a WIDE rail by R1 sitting directly on both. Wide
+// matters because the reach walk refuses to enter a net whose fan-out exceeds maxWalkFan (WS3-108),
+// and a real rail is wide, so this is the ordinary case rather than an awkward one.
 func directPullUpDesign(csNet string) *ir.Design {
 	comp := func(ref string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}

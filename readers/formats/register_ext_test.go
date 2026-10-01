@@ -1,5 +1,5 @@
 // This file is package formats_test (black-box): it imports the package the way an
-// out-of-module consumer does, so it proves the WS12-003 acceptance — an external caller can
+// out-of-module consumer does, so it proves the WS12-003 acceptance, that an external caller can
 // register a reader and have the extension resolve end to end through every derived surface.
 package formats_test
 
@@ -48,7 +48,7 @@ func TestExternalRegistrationResolvesEndToEnd(t *testing.T) {
 		t.Errorf("NetlistExts = %v, want it to include %s (supported-ext error text)", formats.NetlistExts(), ext)
 	}
 
-	// The dispatch actually runs the registered reader: a zero-value Loader suffices for a
+	// The dispatch actually runs the registered reader. A zero-value Loader suffices for a
 	// reader that opens its own path (this one ignores it and returns the sentinel).
 	got, err := (&formats.Loader{}).ReadDesign("anything.widget")
 	if err != nil {

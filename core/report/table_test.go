@@ -60,8 +60,8 @@ func TestTableCSVKeepsHeaderWhenEmpty(t *testing.T) {
 	}
 }
 
-// TestTableCSVCarriesNoPreamble guards the one asymmetry between csv and the document formats: csv's
-// first row has to be the header, so the title and query that markdown and html carry must not
+// TestTableCSVCarriesNoPreamble guards the one asymmetry between csv and the document formats. In csv
+// the first row has to be the header, so the title and query that markdown and html carry must not
 // appear here.
 func TestTableCSVCarriesNoPreamble(t *testing.T) {
 	var b bytes.Buffer
@@ -93,8 +93,8 @@ func TestTableCSVEscapesFormulaCells(t *testing.T) {
 	}
 }
 
-// TestTableMarkdownSeparatorMatchesHeader catches a malformed table that still LOOKS fine in a diff:
-// a separator row with the wrong number of cells makes the whole table render as paragraph text on
+// TestTableMarkdownSeparatorMatchesHeader catches a malformed table that still LOOKS fine in a diff.
+// A separator row with the wrong number of cells makes the whole table render as paragraph text on
 // GitHub, silently. This shipped broken once during authoring, with a trailing empty column.
 func TestTableMarkdownSeparatorMatchesHeader(t *testing.T) {
 	var b bytes.Buffer
@@ -116,8 +116,8 @@ func TestTableMarkdownSeparatorMatchesHeader(t *testing.T) {
 
 // TestTableMarkdownEscapesCellBreakers covers the two characters that silently corrupt a markdown
 // table. A pipe ends the cell early; a newline ends the ROW, shifting every later cell one column
-// left. Both occur in real data: provenance joins several citations and a net name is whatever the
-// design called it.
+// left. Both occur in real data, since provenance joins several citations and a net name is
+// whatever the design called it.
 func TestTableMarkdownEscapesCellBreakers(t *testing.T) {
 	tbl := sampleTable()
 	tbl.Rows = []TableRow{{Cells: []string{"A|B", "line1\nline2"}, Cites: []string{"c"}}}
@@ -153,7 +153,7 @@ func TestTableMarkdownEmptySaysSo(t *testing.T) {
 	}
 }
 
-// TestTableMarkdownCarriesItsQuestion is the property that makes a view a view: the question is in
+// TestTableMarkdownCarriesItsQuestion pins that the question is in
 // the artifact, so a reader can re-run it, check it, or argue with it.
 func TestTableMarkdownCarriesItsQuestion(t *testing.T) {
 	var b bytes.Buffer

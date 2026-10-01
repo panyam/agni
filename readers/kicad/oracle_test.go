@@ -12,13 +12,13 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// The oracle cross-check: read a schematic OUR way, read the same design's answer from the tool that
-// produced it, and require the two to agree on which pins share a net.
+// The oracle cross-check reads a schematic OUR way, reads the same design's answer from the tool that
+// produced it, and requires the two to agree on which pins share a net.
 //
 // It compares the PARTITION and never the names or the counts, for two reasons that both cost time
-// to learn. Names cannot match: an unnamed net is auto-named by each tool in its own vocabulary
+// to learn. Names cannot match, because an unnamed net is auto-named by each tool in its own vocabulary
 // (`N$37` against `Net-(C104-Pad1)`), and KiCad writes a root-sheet label as `/AN0` where we write
-// `AN0`. Counts hide compensating errors: on StickHub we read 47 nets against KiCad's 47 while
+// `AN0`. Counts hide compensating errors. On StickHub we read 47 nets against KiCad's 47 while
 // disagreeing about 19 of them, because a swapped pin pair moves one connection out of a net and
 // another in (see build/evidence.md on why a matching total is not agreement).
 
@@ -115,12 +115,12 @@ func disagreements(ours, ref map[string]string) []string {
 	return out
 }
 
-// TestBusVectorCrossesSheetBoundary is the regression guard for agni issue 561: a bus VECTOR entering
+// TestBusVectorCrossesSheetBoundary is the regression guard for agni issue 561. A bus VECTOR entering
 // a sub-sheet through a bus sheet pin carries its members with it, so the root's DATA0 tap and the
 // sub-sheet's DATA0 tap are one net. Before the fix each half kept its own sheet's scope, `AN0` and
 // `/inout_user/AN0` never met, and every such signal reported as two single-pin stubs.
 //
-// It red-checks: revert busPinPromotions and both members split.
+// It red-checks, since reverting busPinPromotions splits both members.
 func TestBusVectorCrossesSheetBoundary(t *testing.T) {
 	d, complete, err := ReadSchematicHierarchyNets("hier_busvec_root.kicad_sch",
 		readFixture(t, "hier_busvec_root.kicad_sch"), hierOpen(t))
@@ -160,16 +160,16 @@ func TestBusVectorOffsetRangeMapsByPosition(t *testing.T) {
 
 // TestGroupBusCrossesSheetBoundary is the guard for agni issue 597, the other third of issue 561.
 // A GROUP bus takes its members from a `bus_alias` rather than an index range, and it crosses a sheet
-// boundary the same way a vector does: the root's `I2C0.SDA` tap and the sub-sheet's `I2C7.SDA` tap
+// boundary the same way a vector does, so the root's `I2C0.SDA` tap and the sub-sheet's `I2C7.SDA` tap
 // are one net, named by the parent's prefix.
 //
 // The fixture carries its own control. `I2C8{I2C}` expands the SAME two member names off the SAME
-// alias and crosses nothing, so R3 and R4 must stay off I2C0's nets. That direction is the dangerous
-// one: eight buses share the `I2C` alias on the jetson baseboard, so a promotion that dropped the
-// prefix would short all eight while moving the net count toward KiCad's answer.
+// alias and crosses nothing, so R3 and R4 must stay off I2C0's nets. That direction is the
+// dangerous one, because eight buses share the `I2C` alias on the jetson baseboard, so a promotion
+// that dropped the prefix would short all eight while moving the net count toward KiCad's answer.
 //
-// It red-checks both ways: drop the group branch of busPinPromotions and the crossing halves split;
-// promote without the prefix and the control merges.
+// It red-checks both ways. Drop the group branch of busPinPromotions and the crossing halves split,
+// and promote without the prefix and the control merges.
 func TestGroupBusCrossesSheetBoundary(t *testing.T) {
 	d, complete, err := ReadSchematicHierarchyNets("hier_busgroup_root.kicad_sch",
 		readFixture(t, "hier_busgroup_root.kicad_sch"), hierOpen(t))
@@ -224,7 +224,7 @@ func TestGroupBusNeedsADeclaredAlias(t *testing.T) {
 // TestBusMembersAscending pins the ordering the positional map is built on. kicad-cli joins the
 // child's bit 0 of `B[0..1]` to `A0` of a parent bus spelled `A[3..0]`, not to `A3`, so the members
 // pair off by ascending index whatever direction the range is written in. netgraph.ExpandBusName
-// keeps the WRITTEN direction on purpose, for diagrams, which is why this does not reuse it.
+// keeps the WRITTEN direction for diagrams, which is why this does not reuse it.
 func TestBusMembersAscending(t *testing.T) {
 	cases := []struct {
 		in   string

@@ -15,7 +15,7 @@ import (
 // type carrying the same field.
 //
 // A hand-written visitor covers whichever of these its author remembered. What makes that expensive
-// is the failure direction: a message added later still walks, still writes, and quietly keeps the
+// is the failure direction. A message added later still walks, still writes, and quietly keeps the
 // host path, so the output looks exactly like a correct one.
 func TestRelocateSourcesReachesEveryLocator(t *testing.T) {
 	const abs = "/home/someone/work/board.edn"

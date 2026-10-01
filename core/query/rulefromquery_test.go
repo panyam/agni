@@ -57,7 +57,7 @@ func TestPinRelationsQuery(t *testing.T) {
 	}
 }
 
-// TestEsdRatedQuery (WS3-076): the IC-ESD credit expressed as datalog — component.esd_rated joins
+// TestEsdRatedQuery (WS3-076): the IC-ESD credit expressed as datalog. component.esd_rated joins
 // with component-on-net to name the signals a rated transceiver protects. The relation is empty
 // without --params, so the query is authored against a params-seeded Base.
 func TestEsdRatedQuery(t *testing.T) {
@@ -105,9 +105,9 @@ func TestDiagnosticRelationsQuery(t *testing.T) {
 		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{
 			{RefDes: "U1", Instances: []*ir.Provenance{{NativeId: "a"}, {NativeId: "b"}}},
 		}},
-		// U2 (no collision) has pin 1 claimed by both nets -> pin-net conflict. It must be a DIFFERENT
-		// component from the collided U1: a duplicate designator legitimately spans nets, so the conflict
-		// detector excludes a ref-des that already collided.
+		// U2 (no collision) has pin 1 claimed by both nets -> pin-net conflict. It must be a
+		// DIFFERENT component from the collided U1, because a duplicate designator legitimately
+		// spans nets, so the conflict detector excludes a ref-des that already collided.
 		Components: []*ir.Component{
 			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "U2", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -142,7 +142,7 @@ func TestDiagnosticRelationsQuery(t *testing.T) {
 
 // param.prov exposes a datasheet value's citation as a query relation, and a component-subject
 // datalog rule that declares ParamSymbol carries the FULL citation (doc/page/section/method/
-// confidence) onto its findings via check.DatasheetProvFor — the datalog analogue of the built-in
+// confidence) onto its findings via check.DatasheetProvFor, the datalog analogue of the built-in
 // datasheet rules' dual provenance (WS10-010). Both need a params-seeded Model.
 func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	iout := 1.0
@@ -182,7 +182,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 		t.Fatalf("page should bind as the string \"5\" with no number: %+v", b[Var("page")])
 	}
 
-	// (2) a datalog rule with ParamSymbol attaches the full citation, INCLUDING confidence — the field
+	// (2) a datalog rule with ParamSymbol attaches the full citation, INCLUDING confidence, the field
 	// the report leans on to flag a value that should be verified before it is trusted.
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:        check.Rule{Name: "iout-check", Severity: "warning"},
@@ -248,11 +248,11 @@ func TestMustRuleFromQuery(t *testing.T) {
 
 // TestRuleFromQueryCarriesContext is the authoring half of agni issue 349.
 //
-// The whole reason the bug was a FIELD rather than a convention: the entity the message names is
+// The fix is a FIELD rather than a convention because the entity the message names is
 // already bound in the answer row and was simply thrown away when the Finding was built. Nothing
 // downstream could recover it without parsing prose. Declaring the variable is all it takes.
 //
-// This is the exact power-pin-mistyped shape: a component subject with a message naming both a pin
+// This is the power-pin-mistyped shape, a component subject with a message naming both a pin
 // and a net.
 func TestRuleFromQueryCarriesContext(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
@@ -327,7 +327,7 @@ func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
 
 // TestRuleFromQueryWithoutDomainStatesNothing is the negative control for the whole considered-set
 // mechanism (agni issue 424). Leaving Domain unset must keep the failures-only shape, because that
-// is the case every query rule this bridge has ever compiled is still in: an author who declares
+// is the case every query rule this bridge has ever compiled is still in. An author who declares
 // nothing gets a rule that CLAIMS nothing, and RunVerdicts filters it out rather than counting its
 // failures as its coverage.
 func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
@@ -407,8 +407,8 @@ func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
 // element) needs that element in the verdict tuple, or every row about one subject answers to one
 // id and a reader following a link gets whichever was written last.
 //
-// This is the host-incomplete shape reduced to the pin fixture: two verdicts about U1, distinguished
-// only by the net each concerns.
+// This is the host-incomplete shape reduced to the pin fixture, with two verdicts about U1,
+// distinguished only by the net each concerns.
 func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "comp-pin", Severity: "info"},

@@ -11,7 +11,7 @@ import (
 // The fixtures below are duplicated from the check/builtin-rule test suites (the projector tests
 // moved here with Facts in issue 10, but the hand-built designs and specs are unexported test
 // helpers). Duplicating a proven test builder into the package that needs it is the same call the
-// 2b rule extraction made — a test helper is cheaper to copy than to export.
+// 2b rule extraction made, since a test helper is cheaper to copy than to export.
 
 // tnet builds a net with "refdes.pin" connections.
 func tnet(name string, conns ...string) *ir.Net {
@@ -23,8 +23,8 @@ func tnet(name string, conns ...string) *ir.Net {
 	return n
 }
 
-// capSpec hand-builds a seeded cap: rated voltage as a machine-comparable recommended-operating row
-// (the shape a cap datasheet's ratings table yields).
+// capSpec hand-builds a seeded cap, with the rated voltage as a machine-comparable
+// recommended-operating row (the shape a cap datasheet's ratings table yields).
 func capSpec(mpn string, rated float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	return &parampb.PartSpec{
@@ -155,7 +155,7 @@ func typSpec(mpn, unit string, typ float64) *parampb.PartSpec {
 }
 
 // twoEsdRatingSpec hand-builds a part stating TWO system-level ESD ratings, which is the ordinary
-// shape for a protection part: IEC 61000-4-2 specifies air discharge and contact discharge
+// shape for a protection part. IEC 61000-4-2 specifies air discharge and contact discharge
 // separately and a vendor prints both, on different pages. Modelled on esdSpec, including the
 // esd_test_model attribute that makes a rating system-level (WS3-077).
 func twoEsdRatingSpec(mpn string) *parampb.PartSpec {
@@ -209,8 +209,8 @@ func mm(x, y float64) *geom.Point {
 	return &geom.Point{X: int64(x * 1e6), Y: int64(y * 1e6)}
 }
 
-// drcBoard: every board relation exercised — a sub-floor trace, a small drill, a thin annular ring,
-// and clean copper — reused from the DRC board fixture so the board facts have a real tier to project.
+// drcBoard exercises every board relation (a sub-floor trace, a small drill, a thin annular ring,
+// and clean copper), reused from the DRC board fixture so the board facts have a real tier to project.
 func drcBoard() *geom.BoardGeometry {
 	seg := func(x1, y1, x2, y2, wMM float64, layer string) *geom.TrackSegment {
 		return &geom.TrackSegment{A: mm(x1, y1), B: mm(x2, y2), Width: int64(wMM * 1e6), Layer: layer}
@@ -236,7 +236,7 @@ func drcBoard() *geom.BoardGeometry {
 	}}
 }
 
-// dualSupplySpec hand-builds the shape the pin tier exists for: two supply terminals with DIFFERENT
+// dualSupplySpec hand-builds the shape the pin tier exists for, two supply terminals with DIFFERENT
 // recommended windows, plus a group-bound row covering both I/O pins and a part-wide row bound to
 // nothing. Mirrors the real TXB0104 encoding in datasheet/param/testdata without depending on it,
 // so a change to that fixture cannot silently reshape these assertions.
@@ -270,7 +270,7 @@ func dualSupplySpec(mpn string) *parampb.PartSpec {
 			row("VCCB", parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, 1.65, 5.5, "V", "vccb"),
 			row("VCCA", parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, -0.5, 4.6, "V", "vcca"),
 			row("VO", parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, 0, 3.6, "V", "a1", "b1"),
-			row("TJ", parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, -40, 150, "C"), // part-wide: no binding
+			row("TJ", parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, -40, 150, "C"), // part-wide, no binding
 		},
 	}
 }

@@ -35,7 +35,7 @@ func benchBoard(nSegs, nNets int) *geom.BoardGeometry {
 }
 
 // BenchmarkCopperClearance is the standing evidence for the WS3-004 spatial-index
-// question: the pairwise walk is O(S^2) with a cheap bbox reject. Corpus boards top out
+// question. The pairwise walk is O(S^2) with a cheap bbox reject. Corpus boards top out
 // near 400 segments; the sizes below bracket where the naive walk stops being free.
 func BenchmarkCopperClearance(b *testing.B) {
 	for _, n := range []int{400, 2000, 10000} {

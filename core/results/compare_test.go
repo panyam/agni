@@ -52,8 +52,7 @@ func TestCompareSplitsByEntity(t *testing.T) {
 
 // TestPinFindingKeysToItsComponent pins the granularity choice. One tool flags "R1 pin 2" where the
 // other flags "R1"; treating those as different entities would report a disagreement that is only a
-// difference in reporting granularity, which is exactly the false signal a differential harness must
-// not produce.
+// difference in reporting granularity, a false signal a differential harness must not produce.
 func TestPinFindingKeysToItsComponent(t *testing.T) {
 	c := Compare(doc("agni", true, onPin("r1", "R1", "2")), doc("kicad", false, onComp("k1", "R1")))
 	if len(c.Both) != 1 || len(c.OursOnly) != 0 || len(c.TheirsOnly) != 0 {
@@ -96,10 +95,10 @@ func TestCoOccurrenceIsRankedNotAsserted(t *testing.T) {
 	}
 }
 
-// TestComparisonReportLabelsAMissingCoverageAxis pins the wording that keeps an import honest in a
-// report. "They flagged nothing here" from a flat violation list does not mean what it means from a run
-// that records what it could not check, and a reader comparing two columns will assume it does unless
-// told.
+// TestComparisonReportLabelsAMissingCoverageAxis pins the wording that stops an import overstating
+// itself in a report. "They flagged nothing here" from a flat violation list does not mean what it
+// means from a run that records what it could not check, and a reader comparing two columns will
+// assume it does unless told.
 func TestComparisonReportLabelsAMissingCoverageAxis(t *testing.T) {
 	var b strings.Builder
 	if err := WriteComparison(&b, Compare(doc("agni", true, onComp("r", "U1")), doc("kicad", false, onComp("k", "U1")))); err != nil {
@@ -116,9 +115,9 @@ func TestComparisonReportLabelsAMissingCoverageAxis(t *testing.T) {
 
 // The cross-tool join must see EVERY entity a finding names, not only the one it is filed under.
 //
-// A clearance violation is a distance between two nets and belongs to neither: agni files it under
+// A clearance violation is a distance between two nets and belongs to neither; agni files it under
 // one, and another tool may file the same violation under the other. Joining on the subject alone
-// reported that agreement as a disagreement, which is the opposite of what this comparison is for.
+// reported that agreement as a disagreement.
 func TestEntityJoinSeesContextNotOnlyTheSubject(t *testing.T) {
 	filedUnderA := &checkspb.Finding{
 		Rule:    "copper-clearance",

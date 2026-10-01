@@ -6,11 +6,11 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestPartIndexAliasesNativeId (WS1-045): a section that references its part by the source's NATIVE ID
-// (not the PartType's display name) still resolves, via the id alias PartIndex adds. This is the shape
-// an EDIF `(rename ID "Display")` cell produces — the PartType is named by Display, the section's
-// PartRef is the ID — and without the alias the part's pins were silently dropped. The display-name key
-// still wins, and an empty/equal native id is a no-op.
+// TestPartIndexAliasesNativeId (WS1-045) checks that a section that references its part by the
+// source's NATIVE ID (not the PartType's display name) still resolves, via the id alias PartIndex
+// adds. This is the shape an EDIF `(rename ID "Display")` cell produces, where the PartType is
+// named by Display and the section's PartRef is the ID. Without the alias the part's pins were
+// silently dropped. The display-name key still wins, and an empty/equal native id is a no-op.
 func TestPartIndexAliasesNativeId(t *testing.T) {
 	d := &ir.Design{Libraries: []*ir.PartLibrary{{Name: "Oscillator", Parts: []*ir.PartType{{
 		Name: "OSC.0000C1",                              // display
@@ -33,8 +33,8 @@ func TestPartIndexAliasesNativeId(t *testing.T) {
 	}
 }
 
-// TestPartIndexNativeIdNeverClobbersName (WS1-045): the id alias is a guarded FALLBACK — if one part's
-// native id collides with another part's display name, the real display-name key wins.
+// TestPartIndexNativeIdNeverClobbersName (WS1-045) pins the id alias as a guarded FALLBACK. If one
+// part's native id collides with another part's display name, the real display-name key wins.
 func TestPartIndexNativeIdNeverClobbersName(t *testing.T) {
 	d := &ir.Design{Libraries: []*ir.PartLibrary{{Name: "L", Parts: []*ir.PartType{
 		{Name: "SHARED", Prov: &ir.Provenance{NativeId: "other"}, Pins: []*ir.Pin{{Name: "A"}}},

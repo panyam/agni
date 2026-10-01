@@ -27,7 +27,7 @@ interface TwinCase {
 
 // The SAME fixture core/review's TestTallyTwinFixture reads. Both surfaces derive the tally from item
 // outcomes rather than reading it off the wire, so nothing but a shared set of numbers stops them
-// drifting — and `covered` in particular is what a team reads as "how much of our checklist is
+// drifting, and `covered` in particular is what a team reads as "how much of our checklist is
 // mechanised", so a client that bucketed not-automated differently would report a checklist as
 // answered when nobody had answered it.
 describe("tally — twinned with core/review via tally_twin.json", () => {
@@ -71,7 +71,7 @@ describe("tally", () => {
     const got = tally(["definitely-not-a-verdict"]);
     expect(got.total).toBe(1);
     expect({ ...got, total: 0 }).toEqual(emptyTally());
-    // It is covered, because only not-automated is not: a verdict this build cannot name is still a
+    // It is covered, because only not-automated is not. A verdict this build cannot name is still a
     // verdict the engine produced, and calling it uncovered would understate the checklist.
     expect(covered(got)).toBe(1);
   });
@@ -91,7 +91,7 @@ describe("outcomeClass", () => {
     }
   });
 
-  // The load-bearing one. An outcome this build has never heard of must not be styled as a pass,
+  // The one that matters most. An outcome this build has never heard of must not be styled as a pass,
   // because guessing optimistically about a verdict we cannot interpret is the single guess that can
   // report an unanswered question as answered.
   it("styles an unknown outcome as unknown, never as a pass", () => {
@@ -117,7 +117,7 @@ describe("checklistOptions", () => {
     expect(got[0].ref).toBe("proj/review.yaml");
   });
 
-  // Deciding whether a YAML file is really a checklist means parsing it, which is the server's job:
+  // Deciding whether a YAML file is really a checklist means parsing it, which is the server's job, and
   // GetReviewManifest validates and says so. Offering a file that turns out not to be one costs a
   // clear error; hiding a real one costs a user their own file.
   it("does not try to guess which yaml is a manifest", () => {

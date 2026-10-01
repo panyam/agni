@@ -5,7 +5,7 @@ import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { dsTreeIsland } from "./dstree.jsx";
 
 // The datasheets tree's first tests. It has always been the viewer tree's quieter twin, and the
-// asymmetry is what this file exists to hold: both trees list the same mounts and must reach
+// asymmetry is what this file exists to hold. Both trees list the same mounts and must reach
 // opposite conclusions about which of them are worth showing.
 const fake = vi.hoisted(() => ({
   calls: [] as string[],
@@ -71,15 +71,15 @@ describe("datasheets tree", () => {
     buttonFor(el, "ds")!.click();
     await vi.waitFor(() => expect(buttonFor(el, "txb0104.pdf")).toBeTruthy());
 
-    // A design file is listed by the server and dropped here: it belongs to the other page, and a
-    // row that opened nothing would be worse than its absence.
+    // A design file is listed by the server and dropped here, because it belongs to the other page
+    // and a row that opened nothing would be worse than its absence.
     expect(buttonFor(el, "board.edn")).toBeUndefined();
 
     buttonFor(el, "txb0104.pdf")!.click();
     expect(onSelect).toHaveBeenCalledWith("ds", "txb0104.pdf");
   });
 
-  // The half this tree was missing: it filtered FILES by extension but asked the server to prune
+  // The half this tree was missing. It filtered FILES by extension but asked the server to prune
   // nothing, so a folder of schematics sat in the sidebar with nothing openable under it.
   it("declares DATASHEET on every listing so the server prunes for it", async () => {
     const { el } = mountTree();
@@ -97,8 +97,8 @@ describe("datasheets tree", () => {
     const { el } = mountTree();
     await vi.waitFor(() => expect(note(el)).toBe("2 folders hidden (no datasheets)"));
 
-    // The wording is this page's, not the viewer's: the same sentence about designs would be wrong
-    // here, and a mount hidden from one tree is routinely the one the other is built on.
+    // The wording is this page's, not the viewer's, because the same sentence about designs would
+    // be wrong here, and a mount hidden from one tree is routinely the one the other is built on.
     expect(note(el)).not.toContain("designs");
   });
 

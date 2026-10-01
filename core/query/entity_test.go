@@ -7,7 +7,7 @@ import (
 )
 
 // A preset is runnable UI reached by a click, so a malformed one is a shipped bug that no client
-// test can catch: the browser fills placeholders and runs whatever it was handed.
+// test can catch, because the browser fills placeholders and runs whatever it was handed.
 func TestEntityQueriesParse(t *testing.T) {
 	for _, e := range EntityQueries() {
 		if _, err := Parse(e.Query); err != nil {

@@ -6,7 +6,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// docAt is the document as the corpus held it at some revision: the hash is the invalidation key and
+// docAt is the document as the corpus held it at some revision. The hash is the invalidation key and
 // the title is what a person reads.
 func docAt(hash, title string) *parampb.SourceDoc {
 	return &parampb.SourceDoc{Id: "d", Title: title, ContentHash: hash}
@@ -38,7 +38,7 @@ func TestVerificationStates(t *testing.T) {
 }
 
 // A caller that cannot check must not be told the answer is fine. Folding Unknown into Verified is
-// exactly how a stale fact keeps its badge.
+// how a stale fact keeps its badge.
 func TestUnknownIsNotVerified(t *testing.T) {
 	if VerificationOf(verifiedParam("sha256:a"), "") == Verified {
 		t.Error("with no revision in hand, drift cannot be ruled out and must not be reported as verified")
@@ -74,7 +74,7 @@ func TestMarkVerifiedRefusesAnUnanchoredClaim(t *testing.T) {
 	}
 }
 
-// The snapshot is what makes a stale fact actionable: the corpus overwrites SourceDoc on a re-seed,
+// The snapshot is what makes a stale fact actionable. The corpus overwrites SourceDoc on a re-seed,
 // so the revision that was CHECKED survives only if it was frozen beside the hash it was taken with.
 func TestVerificationSnapshotsTheRevisionItCheckedAgainst(t *testing.T) {
 	spec := &parampb.PartSpec{
@@ -92,20 +92,20 @@ func TestVerificationSnapshotsTheRevisionItCheckedAgainst(t *testing.T) {
 		t.Errorf("revision snapshot = %q, want the title as it stood at verification time", got)
 	}
 
-	// The vendor ships rev L and the corpus re-seeds: BOTH SourceDoc fields are overwritten.
+	// The vendor ships rev L and the corpus re-seeds, overwriting BOTH SourceDoc fields.
 	spec.Docs[0].ContentHash = "sha256:relL"
 	spec.Docs[0].Title = "SCES650L - REVISED MARCH 2026"
 
 	if got := VerificationOfIn(spec, p); got != Stale {
 		t.Fatalf("state = %q, want %q", got, Stale)
 	}
-	// The whole point: a re-confirm task can name both sides.
+	// A re-confirm task can name both sides.
 	if got := p.GetVerification().GetDocRevision(); got != "SCES650K - REVISED JANUARY 2023" {
 		t.Errorf("the re-seed overwrote the snapshot (%q); it must survive the event that makes it interesting", got)
 	}
 }
 
-// A doc_ref naming no document in the spec cannot be verified against: there is nothing to have
+// A doc_ref naming no document in the spec cannot be verified against, because there is nothing to have
 // checked, and inventing an empty anchor would produce a record that can never go stale.
 func TestMarkVerifiedInRefusesAnUnresolvableDocRef(t *testing.T) {
 	spec := &parampb.PartSpec{
@@ -144,7 +144,7 @@ func TestStaleVerificationsAfterARevision(t *testing.T) {
 		t.Errorf("same revision, nothing stale: %d", len(got))
 	}
 
-	// The vendor ships rev L: the corpus re-seeds and the SourceDoc hash moves, which is the whole
+	// The vendor ships rev L, so the corpus re-seeds and the SourceDoc hash moves, which is the whole
 	// invalidation mechanism. Nothing about the verifications themselves changed.
 	moved := specWithDoc("sha256:relL",
 		verifiedParam("sha256:relK"),
@@ -193,8 +193,9 @@ func TestStalenessIsPerDocumentNotPerSpec(t *testing.T) {
 	}
 }
 
-// A value citing a document the spec does not list, or one whose revision the corpus never recorded,
-// cannot be judged. That has to read as unknown: an unresolvable comparison is a missing answer.
+// A value citing a document the spec does not list, or one whose revision the corpus never
+// recorded, cannot be judged. That has to read as unknown, because an unresolvable comparison is a
+// missing answer.
 func TestUnresolvableDocumentIsUnknownNotVerified(t *testing.T) {
 	orphan := specWithDoc("sha256:a", verifiedParam("sha256:a"))
 	orphan.Docs[0].Id = "somethingelse"
@@ -208,7 +209,8 @@ func TestUnresolvableDocumentIsUnknownNotVerified(t *testing.T) {
 	}
 }
 
-// Degrade-safety: a spec seeded before verification existed reads as unverified rather than breaking.
+// For degrade-safety, a spec seeded before verification existed reads as unverified rather than
+// breaking.
 func TestSpecsWithoutVerificationAreUnverified(t *testing.T) {
 	spec := specWithDoc("sha256:a", &parampb.Parameter{Symbol: "VCC"}, &parampb.Parameter{Symbol: "IOUT"})
 	if got := StaleVerifications(spec); len(got) != 0 {

@@ -38,8 +38,8 @@ func TestStressStrategyRegistered(t *testing.T) {
 	}
 }
 
-// TestStressPathEmbedding: on a path graph, drawn distance must grow with graph distance
-// from an endpoint (the shape stress-majorization exists to produce), and no two nodes may
+// TestStressPathEmbedding checks two things. On a path graph, drawn distance must grow with graph
+// distance from an endpoint (the shape stress-majorization exists to produce), and no two nodes may
 // coincide.
 func TestStressPathEmbedding(t *testing.T) {
 	s, err := ByName("stress")
@@ -67,7 +67,7 @@ func TestStressPathEmbedding(t *testing.T) {
 	}
 }
 
-// TestStressDeterministic: two independent runs must produce identical positions (the layout
+// TestStressDeterministic asserts two independent runs produce identical positions (the layout
 // promise every strategy makes; diff stability depends on it).
 func TestStressDeterministic(t *testing.T) {
 	s, _ := ByName("stress")
@@ -80,7 +80,7 @@ func TestStressDeterministic(t *testing.T) {
 	}
 }
 
-// TestStressDisconnectedComponents: two subcircuits with no shared net must both be placed,
+// TestStressDisconnectedComponents asserts two subcircuits with no shared net are both placed,
 // at distinct non-overlapping positions.
 func TestStressDisconnectedComponents(t *testing.T) {
 	d := &ir.Design{Name: "two-islands"}
@@ -106,9 +106,9 @@ func TestStressDisconnectedComponents(t *testing.T) {
 	}
 }
 
-// TestStressOfImprovesOnLayered: the stress layout must score at or below layered on its own
-// objective, and StressOf must be normalized (0 <= s, and well under 1 for a sane layout of a
-// simple graph).
+// TestStressOfImprovesOnLayered checks two things. The stress layout must score at or below layered
+// on its own objective, and StressOf must be normalized (0 <= s, and well under 1 for a sane layout
+// of a simple graph).
 func TestStressOfImprovesOnLayered(t *testing.T) {
 	d := chain(6)
 	stressS, _ := ByName("stress")
@@ -123,8 +123,8 @@ func TestStressOfImprovesOnLayered(t *testing.T) {
 	}
 }
 
-// TestMeasureWithFillsStress: the design-aware Measure companion populates Quality.Stress for
-// ANY strategy (that is the point of the metric: grid and layered get scored too).
+// TestMeasureWithFillsStress asserts the design-aware Measure companion populates Quality.Stress for
+// ANY strategy, so grid and layered get scored too.
 func TestMeasureWithFillsStress(t *testing.T) {
 	d := chain(4)
 	g, err := LayoutWith(d, "grid")

@@ -94,8 +94,7 @@ func TestRuleFromQueryAcceptsAValidQuery(t *testing.T) {
 }
 
 // TestValidateNeedsNoDesign: validation reads the query and the relation vocabulary, never a design.
-// That is what lets a rule be checked where it is BUILT rather than where it first runs, which is the
-// whole reason the construction-time half can exist.
+// That is what lets a rule be checked where it is BUILT rather than where it first runs.
 func TestValidateNeedsNoDesign(t *testing.T) {
 	if err := Validate(MustParse(`component-on-net(?r, ?n), rail(?n) => ?r`), facts.DefaultRegistry()); err != nil {
 		t.Errorf("valid query rejected with no design: %v", err)
@@ -105,7 +104,7 @@ func TestValidateNeedsNoDesign(t *testing.T) {
 	}
 }
 
-// evalFailingQuery validates but cannot be solved: `contains` needs its argument bound, and no
+// evalFailingQuery validates but cannot be solved, because `contains` needs its argument bound, and no
 // relation binds ?loose. Validation does not catch it because binding ORDER is what the solver
 // establishes, and reproducing that here would mean reimplementing solve.
 //

@@ -41,7 +41,7 @@ func TestFailuresLead(t *testing.T) {
 	if got := check.EntityRef(r.Rules[0].Rows[0].Subjects[0]); got != "Z_FAILS" {
 		t.Errorf("the failing row must lead its rule, got %q first", got)
 	}
-	// Alphabetically A_PASSES would win; outcome beats name, deliberately.
+	// Alphabetically A_PASSES would win; outcome beats name.
 	if check.EntityRef(r.Rules[0].Rows[1].Subjects[0]) != "A_PASSES" {
 		t.Errorf("rows = %+v", r.Rules[0].Rows)
 	}
@@ -65,7 +65,7 @@ func TestConvertedRuleDoesNotDoubleCountItsFailures(t *testing.T) {
 
 // THE HONESTY PROPERTY, carried into the report. A rule that reports violations without stating what
 // it examined must be visibly that, or the report presents a failure list as coverage. This is the
-// same claim StatesConsideredSet makes at the seam, and a report is where it would be most
+// same claim StatesConsideredSet makes on the rule definition, and a report is where it would be most
 // convincing and most wrong.
 func TestFindingsOnlyRuleIsLabelledAndNotCountedAsCoverage(t *testing.T) {
 	r := Build(
@@ -127,11 +127,11 @@ func TestNoLinksWithoutABase(t *testing.T) {
 }
 
 // An OPERATOR's rule (from conventions.yaml, profiles/ or intent.yaml) is namespaced and is absent
-// from the catalog the report is handed, so the catalog lookup cannot vouch for it. Its verdicts can:
-// emitting one IS stating a considered set. Before this, every rule a team wrote itself was captioned
-// "absence here is not evidence of correctness" over rows that were exactly that evidence, which is
-// the false-confidence failure this whole layer exists to remove, aimed at the rules they care most
-// about.
+// from the catalog the report is handed, so the catalog lookup cannot vouch for it. Its verdicts
+// can, because emitting one IS stating a considered set. Before this, every rule a team wrote
+// itself was captioned "absence here is not evidence of correctness" over rows that were exactly
+// that evidence, which is the false-confidence failure this layer exists to remove, aimed at the
+// rules they care most about.
 func TestARuleAbsentFromTheCatalogIsVouchedForByItsVerdicts(t *testing.T) {
 	r := Build(
 		[]check.Verdict{
@@ -156,7 +156,7 @@ func TestARuleAbsentFromTheCatalogIsVouchedForByItsVerdicts(t *testing.T) {
 	if strings.Contains(buf.String(), "Absence here is not evidence of correctness") {
 		t.Error("a rule that stated what it examined must not be captioned as if it had not")
 	}
-	// The failure must not be double-counted: it arrived as a verdict AND as a finding.
+	// The failure must not be double-counted, since it arrived as a verdict AND as a finding.
 	if got := strings.Count(buf.String(), "BAD"); got != 1 {
 		t.Errorf("the failing subject should appear once, got %d", got)
 	}
@@ -221,8 +221,9 @@ func TestVerdictURLCarriesTheRule(t *testing.T) {
 // issue 626 the only answer was on a terminal that had long since closed. Both surfaces carry the
 // reason now, because a link means the same thing on both and so does its absence.
 func TestWithheldLinkReasonReachesBothReports(t *testing.T) {
-	// No quotes in the fixture reason on purpose: html/template escapes them, correctly, and a test
-	// asserting the raw sentence would fail against a page that carries it perfectly well.
+	// The fixture reason carries no quotes on purpose, because html/template escapes them,
+	// correctly, and a test asserting the raw sentence would fail against a page that carries it
+	// perfectly well.
 	const why = `the mount was minted for this run rather than declared`
 
 	t.Run("check report", func(t *testing.T) {

@@ -8,10 +8,10 @@ import (
 	"testing"
 )
 
-// TestRuleDocsOneToOne holds the built-in catalog and check/docs to each other
-// (WS3-025): every registered rule's Detail comes from its own docs/<name>.md, every doc
-// file names a registered rule, and every image a doc references is present. The same
-// exhaustiveness discipline as the conformance sidecars: a rule PR without its doc (or a
+// TestRuleDocsOneToOne holds the built-in catalog and this package's docs/ to each other
+// (WS3-025). Every registered rule's Detail comes from its own docs/<name>.md, every doc
+// file names a registered rule, and every image a doc references is present. It is the same
+// exhaustiveness discipline as the conformance sidecars, so a rule PR without its doc (or a
 // doc orphaned by a rename) fails here, not in review.
 func TestRuleDocsOneToOne(t *testing.T) {
 	entries, err := ruleDocs.ReadDir("docs")
@@ -68,9 +68,9 @@ func TestRuleDocsOneToOne(t *testing.T) {
 	}
 }
 
-// TestRuleDocImageHandler: the read-only route serves an embedded diagram (200) as PNG or SVG but
-// nothing else — the markdown, a missing image, a top-level (non-images/) path, or a non-image path
-// all 404, so the handler never leaks anything but the diagrams (WS9-030).
+// TestRuleDocImageHandler checks that the read-only route serves an embedded diagram (200) as PNG
+// or SVG but nothing else. The markdown, a missing image, a top-level (non-images/) path, or a
+// non-image path all 404, so the handler never leaks anything but the diagrams (WS9-030).
 func TestRuleDocImageHandler(t *testing.T) {
 	h := RuleDocImageHandler()
 	get := func(path string) *httptest.ResponseRecorder {

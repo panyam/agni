@@ -12,8 +12,8 @@ import (
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // installs the built-in catalog this parity test reads
 )
 
-// plainComp is a component whose class comes from its ref-des prefix alone (no part data): Y -> crystal,
-// C -> capacitor, U -> ic.
+// plainComp is a component whose class comes from its ref-des prefix alone (no part data), Y ->
+// crystal, C -> capacitor, U -> ic.
 func plainComp(ref string) *ir.Component {
 	return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
 }
@@ -29,7 +29,7 @@ func tnet(name string, conns ...string) *ir.Net {
 }
 
 // crystalParityDesign replicates the check-package crystal guard matrix so the datalog twin is
-// exercised against every branch the Go rule is: Y1 fires (one cap-less terminal), Y3 silent (both
+// exercised against every branch the Go rule is. Y1 fires (one cap-less terminal), Y3 silent (both
 // terminals capped), Y2 skipped (supply rail = active oscillator), Y4 skipped (3 non-ground terminals,
 // unrecognized Vcc), Y5 skipped (cap-less terminal is an external read-gap net), U9 non-crystal.
 func crystalParityDesign() *ir.Design {
@@ -79,9 +79,10 @@ func goRuleByName(name string) *check.Rule {
 	return nil
 }
 
-// TestCrystalDatalogParity (WS3-074): the unregistered datalog twin fires finding-for-finding
-// identically to the built-in Go crystal-load-caps rule over the full guard matrix — the proof the
-// datalog surface (component.class + net.ground + net.external) expresses the rule faithfully.
+// TestCrystalDatalogParity (WS3-074) checks that the unregistered datalog twin fires
+// finding-for-finding identically to the built-in Go crystal-load-caps rule over the full guard
+// matrix. That is the proof the datalog surface (component.class + net.ground + net.external)
+// expresses the rule faithfully.
 func TestCrystalDatalogParity(t *testing.T) {
 	m := check.NewModel(crystalParityDesign())
 
@@ -101,8 +102,8 @@ func TestCrystalDatalogParity(t *testing.T) {
 	}
 }
 
-// TestTwinNotRegistered documents the Approach-A intent (WS3-074): the datalog crystal rule is a
-// parity twin, not a shipped rule — the "dl" source carries no crystal rule, so DefaultCatalog holds
+// TestTwinNotRegistered documents the Approach-A intent (WS3-074). The datalog crystal rule is a
+// parity twin, not a shipped rule, so the "dl" source carries no crystal rule, so DefaultCatalog holds
 // only the built-in one and no duplicate findings can fire.
 func TestTwinNotRegistered(t *testing.T) {
 	for _, r := range check.DefaultCatalog().Rules() {
@@ -120,7 +121,7 @@ func TestTwinNotRegistered(t *testing.T) {
 // two terminals and both sit inside the highlighted symbol, so the drawing could not say which one
 // was at fault either.
 //
-// Asserted on BOTH twins, because a context entity on one and not the other is exactly the drift the
+// Asserted on BOTH twins, because a context entity on one and not the other is the drift the
 // parity test exists to catch, and the parity key (subject|message) cannot see this field.
 func TestCrystalContextNamesTheTerminal(t *testing.T) {
 	m := check.NewModel(crystalParityDesign())
@@ -128,8 +129,9 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 	if goRule == nil {
 		t.Fatal(`built-in rule "crystal-load-caps" not found`)
 	}
-	// Subtests over a SLICE, not a range over a map: a map randomises which twin reports, and the
-	// t.Fatalf below would abort the whole test on the first failure so the other twin never ran.
+	// Subtests over a SLICE, not a range over a map, because a map randomises which twin reports,
+	// and the t.Fatalf below would abort the whole test on the first failure so the other twin
+	// never ran.
 	for _, tw := range []struct {
 		name string
 		fs   []check.Finding
@@ -155,7 +157,7 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 			if ctx[0].Role != "terminal" {
 				t.Errorf("%s: context role = %q, want %q", name, ctx[0].Role, "terminal")
 			}
-			// The whole point: the entity a reader is sent to must be the one the sentence names.
+			// The entity a reader is sent to must be the one the sentence names.
 			if !strings.Contains(fs[0].Message, ctx[0].Ref) {
 				t.Errorf("%s: context %q is not named in the message %q", name, ctx[0].Ref, fs[0].Message)
 			}

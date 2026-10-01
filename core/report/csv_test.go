@@ -2,7 +2,7 @@ package report
 
 import "testing"
 
-// TestSanitizeCellEscapesFormulaCells covers the case that makes escaping non-optional: a spreadsheet
+// TestSanitizeCellEscapesFormulaCells covers the case that makes escaping non-optional. A spreadsheet
 // executes a cell beginning with =, +, - or @ when the file is opened. Net names really do start
 // with + (a rail named +3V3 on the shipped demo board), and a rule message is free prose.
 func TestSanitizeCellEscapesFormulaCells(t *testing.T) {

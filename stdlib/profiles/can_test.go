@@ -8,7 +8,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// canGood: CANH/CANL/TXD/RXD all wired end-to-end, and R1 (a resistor — the reach walk crosses
+// canGood has CANH/CANL/TXD/RXD all wired end-to-end, and R1 (a resistor, and the reach walk crosses
 // R-prefixed 2-net parts) bridges CANH↔CANL, so `reaches(CANH, CANL)` holds and the pair is
 // terminated. No profile finding. (A real terminator named "RT1" is classified by its part-type
 // data; this hand fixture has none, so it uses the R-prefix convention.)
@@ -24,8 +24,8 @@ func canGood() *ir.Design {
 	}
 }
 
-// canBroken: no termination resistor (only the multi-pin U1/U2 sit on both bus nets, which `reaches`
-// must NOT count), RXD net absent (missing), and TXD on a single-pin net (dangling).
+// canBroken has no termination resistor (only the multi-pin U1/U2 sit on both bus nets, which `reaches`
+// must NOT count), no RXD net (missing), and TXD on a single-pin net (dangling).
 func canBroken() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2"),
@@ -62,7 +62,7 @@ func TestCANFires(t *testing.T) {
 	}
 }
 
-// The termination check must not count the transceiver: U1/U2 sit on both CANH and CANL, but with no
+// The termination check must not count the transceiver. U1/U2 sit on both CANH and CANL, but with no
 // resistor bridging the pair the bus is unterminated. Guards the reaches-not-component-on-both design.
 func TestCANTransceiverIsNotTermination(t *testing.T) {
 	fired := false
@@ -98,7 +98,7 @@ func canHost(ref string) *ir.Component {
 		Attributes: map[string]string{"interface": "CAN"}}
 }
 
-// A component declaring interface=CAN wired to none of its signals: host-anchored completeness flags
+// A component declaring interface=CAN wired to none of its signals. Host-anchored completeness flags
 // every one of the four required signals (wholly-absent detection via the declared host).
 func TestCANHostWhollyAbsent(t *testing.T) {
 	d := &ir.Design{
@@ -122,8 +122,8 @@ func TestCANHostWhollyAbsent(t *testing.T) {
 // reader following that link reached whichever row the report wrote last, and a consumer indexing by
 // id silently kept one of four.
 //
-// The finding count above is what makes this worth pinning separately: the rule already emitted four
-// violations, so nothing in the findings contract would have shown the collision.
+// The finding count above is what makes this worth pinning separately, because the rule already
+// emitted four violations, so nothing in the findings contract would have shown the collision.
 func TestCANHostVerdictsAreSeparatelyAddressable(t *testing.T) {
 	d := &ir.Design{
 		Components: append(comps("U1"), canHost("U2")),
@@ -154,7 +154,7 @@ func TestCANHostVerdictsAreSeparatelyAddressable(t *testing.T) {
 	if len(ids) != 4 {
 		t.Fatalf("want 4 distinct verdict ids, got %d: %v", len(ids), ids)
 	}
-	// Named, not merely counted: an implementation that put the same signal in every tuple would
+	// Named, not merely counted. An implementation that put the same signal in every tuple would
 	// still produce four rows and would fail here.
 	for _, want := range []string{"CANH", "CANL", "TXD", "RXD"} {
 		if !signals[want] {
@@ -163,8 +163,8 @@ func TestCANHostVerdictsAreSeparatelyAddressable(t *testing.T) {
 	}
 }
 
-// TestCANGoodBoardPassesAreWitnessed: the good fixture reports no findings, and the point of the
-// considered set is that this silence is now backed by verdicts rather than being indistinguishable
+// TestCANGoodBoardPassesAreWitnessed checks that the good fixture reports no findings, and that the
+// considered set backs this silence with verdicts rather than leaving it indistinguishable
 // from a rule that never ran. Every pass must carry a witness.
 func TestCANGoodBoardPassesAreWitnessed(t *testing.T) {
 	vs := check.RunVerdicts(check.NewModel(canGood()), Compile(CAN))

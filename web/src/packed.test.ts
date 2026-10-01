@@ -148,7 +148,7 @@ describe("decodePackedSheet — hand-built PackedSheet", () => {
     const msg = create(PackedSheetSchema, {
       sheetId: "S",
       primitives: new Uint8Array(pbuf),
-      // Sparse palette: only the bus slot (12) needs a color on a bus sheet.
+      // Sparse palette, where only the bus slot (12) needs a color on a bus sheet.
       groupColors: ["", "", "", "", "", "", "", "", "", "", "", "", "#1a4de0"],
     });
     const sheet = decodePackedSheet(toBinary(PackedSheetSchema, msg));

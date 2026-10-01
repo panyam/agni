@@ -41,7 +41,8 @@ func projectFixture(t *testing.T) string {
 	copyIn("testdata/review/can-broken.edn", "designs/d/board.edn")
 	write("designs/d/design.yaml", "name: d\ntitle: D\nentry: board.edn\n")
 	// A params directory with one seeded spec, so the corpus is genuinely attached rather than merely
-	// declared. Its contents do not matter: RunConfig.params reports that a corpus reached the run.
+	// declared. Its contents do not matter, since RunConfig.params reports only that a corpus reached
+	// the run.
 	copyIn("testdata/intent/params/"+firstEntry(t, "testdata/intent/params"), "params/seed.textproto")
 	return filepath.Join(root, "designs", "d")
 }
@@ -98,7 +99,7 @@ func runConfigOf(t *testing.T, path string) map[string]any {
 }
 
 // TestResultsRunConfigRecordsProjectTiers is the regression this closes, and it is reachable on the
-// shipped tutorial project: a design whose PROJECT declares conventions.yaml and params/ was scored
+// shipped tutorial project. A design whose PROJECT declares conventions.yaml and params/ was scored
 // against both and wrote `"run": {}`.
 //
 // The failure direction is what makes it worth a test. RunConfig exists so a reader can tell a design
@@ -112,8 +113,8 @@ func TestResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	cmd := checkCmd()
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
-	// No --conventions and no --params: every tier below comes from the project's descriptors alone,
-	// which is the case the old code recorded as nothing.
+	// With no --conventions and no --params, every tier below comes from the project's descriptors
+	// alone, which is the case the old code recorded as nothing.
 	cmd.SetArgs([]string{"--results-out", out, design})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("check: %v", err)
@@ -130,7 +131,7 @@ func TestResultsRunConfigRecordsProjectTiers(t *testing.T) {
 
 // TestReviewResultsRunConfigRecordsProjectTiers is the same regression on the review path, which builds
 // its RunConfig inside the service rather than at the CLI edge. Both surfaces had it, so both are
-// pinned: fixing one and leaving the other is how the two documents come to disagree about one run.
+// pinned. Fixing one and leaving the other is how the two documents come to disagree about one run.
 func TestReviewResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	design := projectFixture(t)
 	out := filepath.Join(t.TempDir(), "review.results.json")
@@ -152,7 +153,7 @@ func TestReviewResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	}
 }
 
-// TestCheckProvenanceIsMountRelative pins the SHAPE of provenance.sourceFile: the path a locator
+// TestCheckProvenanceIsMountRelative pins the SHAPE of provenance.sourceFile. The path a locator
 // records is relative to the design's mount, never the absolute path the command was handed.
 //
 // The failure direction is the reason this is a test rather than a nicety. A results document is
@@ -162,7 +163,7 @@ func TestReviewResultsRunConfigRecordsProjectTiers(t *testing.T) {
 // file, and nothing in the document says why. It also publishes a directory layout that a public
 // artifact has no business carrying.
 //
-// Asserted on an absolute argument specifically, because that is the only case that can regress: a
+// Asserted on an absolute argument specifically, because that is the only case that can regress. A
 // relative argument used to come out looking correct by accident.
 func TestCheckProvenanceIsMountRelative(t *testing.T) {
 	dir := projectFixture(t)

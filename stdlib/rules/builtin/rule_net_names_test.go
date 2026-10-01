@@ -27,8 +27,8 @@ func fireSubjects(t *testing.T, r *check.Rule, nets ...*ir.Net) map[string]strin
 	return got
 }
 
-// TestDuplicateNetName: two nets stating one name both fire; stub and empty names never
-// collide; a unique name is quiet.
+// TestDuplicateNetName checks that two nets stating one name both fire, that stub and empty names
+// never collide, and that a unique name is quiet.
 func TestDuplicateNetName(t *testing.T) {
 	fs := duplicateNetName.Findings(check.NewModel(&ir.Design{Nets: []*ir.Net{
 		tnet("VCC", "U1.1"), tnet("VCC", "U2.1"), // same explicit name, two nets -> both fire
@@ -46,8 +46,8 @@ func TestDuplicateNetName(t *testing.T) {
 	}
 }
 
-// TestLabelAliasConflict: two sheet-scoped labels in ONE scope fire; the same leaf name
-// in two different scopes is legitimate hierarchy aliasing; a design-wide name plus a
+// TestLabelAliasConflict checks that two sheet-scoped labels in ONE scope fire. The same leaf name
+// in two different scopes is legitimate hierarchy aliasing, and a design-wide name plus a
 // local nickname is normal.
 func TestLabelAliasConflict(t *testing.T) {
 	got := fireSubjects(t, labelAliasConflict,
@@ -68,13 +68,13 @@ func TestLabelAliasConflict(t *testing.T) {
 	}
 }
 
-// TestPowerTapConflict: two design-wide names on one net fire; one rail plus local
+// TestPowerTapConflict checks that two design-wide names on one net fire and one rail plus local
 // aliases stays quiet.
 func TestPowerTapConflict(t *testing.T) {
 	got := fireSubjects(t, powerTapConflict,
 		anet("+3V3", "0:+3V3", "0:+3.3V"),   // rival rails -> fires
 		anet("VCC", "0:VCC", "1:PWR_LOCAL"), // rail + nickname -> silent
-		anet("GND", "0:GND"),                // hmm: single alias entry never encodes, but be safe
+		anet("GND", "0:GND"),                // a single alias entry never encodes, but be safe
 		anet("SOLO"),
 	)
 	if len(got) != 1 || !strings.Contains(got["+3V3"], "+3.3V, +3V3") {

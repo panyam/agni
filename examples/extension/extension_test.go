@@ -13,7 +13,7 @@ import (
 // extension packages' init, so by the time this test runs the .acme reader and the acme/ rule
 // are registered.
 func TestExtensionComposesReaderAndRule(t *testing.T) {
-	// The reader reached the engine's registry (WS12-003): the extension resolves and loads.
+	// The reader reached the engine's registry (WS12-003), so the extension resolves and loads.
 	if formats.ByExt("x.acme") == nil {
 		t.Fatal(".acme reader not registered with the engine's formats registry")
 	}
@@ -47,9 +47,9 @@ func TestExtensionComposesReaderAndRule(t *testing.T) {
 	}
 }
 
-// TestExtensionDatalogPinRule is the WS3-038 acceptance: a separate module authors a PIN-level rule as
+// TestExtensionDatalogPinRule is the WS3-038 acceptance. A separate module authors a PIN-level rule as
 // DATALOG over the engine's public relations, with no engine change, and it produces findings like
-// any built-in. The Go rule above proves the registration seam; this proves the AUTHORING seam, which
+// any built-in. The Go rule above proves the registration hook; this proves the AUTHORING path, which
 // is the one the open-core story actually rests on.
 func TestExtensionDatalogPinRule(t *testing.T) {
 	d, err := (&formats.Loader{}).ReadDesign("testdata/example.acme")
@@ -58,10 +58,10 @@ func TestExtensionDatalogPinRule(t *testing.T) {
 	}
 	m := check.NewModel(d)
 
-	// The extension's own reader has to declare PART-TYPE pins for any of this to work: the engine's
-	// pin relations project from declared pins, not from net connections. A format that emits only
-	// connections leaves them all empty and a pin rule silently finds nothing, so this guards the
-	// reader half from regressing and taking the rule's evidence with it.
+	// The extension's own reader has to declare PART-TYPE pins for any of this to work, because the
+	// engine's pin relations project from declared pins, not from net connections. A format that
+	// emits only connections leaves them all empty and a pin rule silently finds nothing, so this
+	// guards the reader half from regressing and taking the rule's evidence with it.
 	if len(m.Pins()) == 0 {
 		t.Fatal("the .acme reader declared no part-type pins, so every pin relation is empty")
 	}
@@ -76,16 +76,16 @@ func TestExtensionDatalogPinRule(t *testing.T) {
 
 	var got []string
 	// Findings, not Eval. Eval returns VERDICTS, and Verdict shares Subject/Kind/Pin/NetID with
-	// Finding, so `for _, f := range r.Eval(m)` reading f.Subject compiles and silently counts passes
-	// as failures. It happens to be right today only because a datalog rule is still wrapped in
-	// FailuresOnly and emits nothing but failures; it would start lying the moment that seam states a
-	// considered set.
+	// Finding, so `for _, f := range r.Eval(m)` reading f.Subject compiles and silently counts
+	// passes as failures. It happens to be right today only because a datalog rule is still wrapped
+	// in FailuresOnly and emits nothing but failures; it would start lying the moment a datalog
+	// rule states a considered set.
 	for _, f := range r.Findings(m) {
 		got = append(got, check.EntityRef(f.Subject))
 	}
 	// VCC carries U1's declared VDD power pin and X1. GND carries only ground-role pins, so the
-	// rule must leave it alone — a pin-ROLE discrimination a net-level rule could not make, and
-	// the reason this had to be a pin rule at all.
+	// rule must leave it alone. That is a pin-ROLE discrimination a net-level rule could not make,
+	// and the reason this had to be a pin rule at all.
 	if len(got) != 1 || got[0] != "VCC" {
 		t.Errorf("datalog pin rule findings = %v, want exactly [VCC]", got)
 	}

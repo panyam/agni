@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/examples/common"
 )
 
-// TestMain clears AGNI_EXAMPLE_DESIGN, for the same reason examples/common does: every test here
+// TestMain clears AGNI_EXAMPLE_DESIGN, for the same reason examples/common does. Every test here
 // asserts what the walkthrough does on its BUNDLED fixture, and the variable exists to replace that
 // fixture with someone's own board. Left set, these assert the narration against a design the prose
 // was never written about.

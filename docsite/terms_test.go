@@ -24,7 +24,7 @@ const termsIndex = "content/reference/terms/index.md"
 var tagRe = regexp.MustCompile(`\{\{-?\s*explainable(?:Cap)?\s+"([^"]+)"`)
 
 // contentTags returns every term id referenced from content, keyed by id to the files using it.
-// The glossary index itself is excluded: it documents the syntax, and its example is not a use.
+// The glossary index itself is excluded, since it documents the syntax and its example is not a use.
 func contentTags(t *testing.T) map[string][]string {
 	t.Helper()
 	out := map[string][]string{}
@@ -78,16 +78,16 @@ func TestEveryTermIsUsed(t *testing.T) {
 
 // TestATermIsTaggedAtMostOncePerPage fails when one page tags the same term more than once.
 //
-// The tag is a reading affordance, and a page that tags every occurrence spends it: `pull-up` appears
+// The tag is a reading affordance, and a page that tags every occurrence spends it. `pull-up` appears
 // twenty times in prose outside `learn/`, and twenty dotted underlines in one tutorial reads as damage
 // rather than as help. One tag per term per page is what a reader needs, because the popover is
 // available from that one and the glossary is a click away after it.
 //
-// This checks the COUNT, which is reliable. The other half of the convention, that the tagged mention
-// should be the FIRST one, is documented in docsite/README.md and deliberately not tested: deciding
-// whether an earlier plain-text occurrence "counts" means matching an inflected label through code
-// spans, headings and link text, and a check that fires wrongly on an author costs more than the
-// convention is worth.
+// This checks the COUNT, which is reliable. The other half of the convention, that the tagged
+// mention should be the FIRST one, is documented in docsite/README.md and deliberately not tested,
+// because deciding whether an earlier plain-text occurrence "counts" means matching an inflected
+// label through code spans, headings and link text, and a check that fires wrongly on an author
+// costs more than the convention is worth.
 func TestATermIsTaggedAtMostOncePerPage(t *testing.T) {
 	perFile := map[string]map[string]int{}
 	for id, files := range contentTags(t) {
@@ -139,7 +139,7 @@ func TestEveryTermDeclaresItsFields(t *testing.T) {
 }
 
 // TestGlossaryIndexListsEveryTerm fails when a term exists but the glossary does not link it. The
-// index is hand-maintained on purpose, the same as learn/levels.md: generating it would mean a
+// index is hand-maintained on purpose, the same as learn/levels.md. Generating it would mean a
 // second build step for a file that changes once per term, and this test is the cheaper half of that
 // trade.
 func TestGlossaryIndexListsEveryTerm(t *testing.T) {

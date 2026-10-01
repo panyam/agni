@@ -34,7 +34,7 @@ describe("browseStage", () => {
     expect(h.els.note.style.display).toBe("none");
   });
 
-  // The inverse matters more: a failed load after a successful one must not leave the previous
+  // The inverse matters more. A failed load after a successful one must not leave the previous
   // design's drawing sitting under an error message, which reads as "this design failed to render"
   // while showing a picture of a different design.
   it("hides a previous drawing when a note replaces it", () => {

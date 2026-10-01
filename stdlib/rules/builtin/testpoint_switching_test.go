@@ -7,10 +7,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestTestPointCoverageSkipsRegulatorInternals: the rule asks which RAILS cannot be probed, and a
-// regulator's own plumbing is not a rail. The feedback half has been excluded since WS3-067; the
-// switch node was not, which on one real board produced 20 findings telling a factory test to probe
-// the highest dV/dt node in the design (agni 680).
+// TestTestPointCoverageSkipsRegulatorInternals checks scope. The rule asks which RAILS cannot be
+// probed, and a regulator's own plumbing is not a rail. The feedback half has been excluded since
+// WS3-067; the switch node was not, which on one real board produced 20 findings telling a factory
+// test to probe the highest dV/dt node in the design (agni 680).
 func TestTestPointCoverageSkipsRegulatorInternals(t *testing.T) {
 	d := &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{
@@ -20,7 +20,7 @@ func TestTestPointCoverageSkipsRegulatorInternals(t *testing.T) {
 		Components: []*ir.Component{
 			{RefDes: "REG1", Sections: []*ir.ComponentSection{{PartRef: "REG", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "MCU", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
-			// TP1 is what puts the design in scope at all: has_test_points is design-wide, so
+			// TP1 is what puts the design in scope at all. has_test_points is design-wide, so
 			// without one the rule declines to run and every assertion below passes vacuously.
 			{RefDes: "TP1", Prov: &ir.Provenance{SourceFile: "t"}},
 		},

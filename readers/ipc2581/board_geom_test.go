@@ -16,9 +16,9 @@ func readBoardGeom(t *testing.T, name string) *geom.BoardGeometry {
 	return g
 }
 
-// TestBoardGeometryZonesViaSpansUserPads (WS1-031 D/E/F): a Set-direct Contour becomes a copper
-// Zone (fill), a drill layer's Span sets the via's layer span, and a pad using UserPrimitiveRef
-// resolves to a real size (its user-dictionary bounding box) instead of 0x0.
+// TestBoardGeometryZonesViaSpansUserPads (WS1-031 D/E/F) checks that a Set-direct Contour becomes a
+// copper Zone (fill), a drill layer's Span sets the via's layer span, and a pad using
+// UserPrimitiveRef resolves to a real size (its user-dictionary bounding box) instead of 0x0.
 func TestBoardGeometryZonesViaSpansUserPads(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
 
@@ -56,10 +56,11 @@ func TestBoardGeometryZonesViaSpansUserPads(t *testing.T) {
 	}
 }
 
-// TestBoardGeometrySilkGraphics (WS1-031): a package's Marking silkscreen artwork is composed to
-// board coordinates per placement, so it lands on its part. R1 (R0603, at 3mm,4mm, rotation 0,
-// front) carries the R0603 body Marking; its first point (local -0.5,-0.3 mm) composes to
-// (2.5mm, 3.7mm) on F.SilkS. R2 (same package, rotated 90) also emits one, so two graphics total.
+// TestBoardGeometrySilkGraphics (WS1-031) checks that a package's Marking silkscreen artwork is
+// composed to board coordinates per placement, so it lands on its part. R1 (R0603, at 3mm,4mm,
+// rotation 0, front) carries the R0603 body Marking; its first point (local -0.5,-0.3 mm) composes
+// to (2.5mm, 3.7mm) on F.SilkS. R2 (same package, rotated 90) also emits one, so two graphics
+// total.
 func TestBoardGeometrySilkGraphics(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
 	var r1 *geom.BoardGraphic
@@ -102,7 +103,7 @@ func padByNumber(pl *geom.ComponentPlacement, num string) *geom.Pad {
 	return nil
 }
 
-// TestBoardGeometryPlacementRotationFrame pins the canonical emit contract (WS1-030): IPC-2581
+// TestBoardGeometryPlacementRotationFrame pins the canonical emit contract (WS1-030). IPC-2581
 // is Y-up, so the source Xform rotation is carried verbatim and the back side sets Mirror; pads
 // stay footprint-local and unmodified. The renderer composes rotation and mirror (see the render
 // package's behavioral test that this lands each pin on its copper).
@@ -128,7 +129,7 @@ func TestBoardGeometryPlacementRotationFrame(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryPlacements: placements are emitted sorted by ref_des, in integer nm
+// TestBoardGeometryPlacements checks that placements are emitted sorted by ref_des, in integer nm
 // (unit_nm=1), with side normalized to the contract's KiCad vocabulary and pads resolved
 // through the padstack def/instance indirection.
 func TestBoardGeometryPlacements(t *testing.T) {
@@ -168,8 +169,8 @@ func TestBoardGeometryPlacements(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryLayersOutline: the stackup table keeps IPC-2581's layerFunction verbatim in
-// kind, and the Profile becomes an outline polyline (Y-up, no negation).
+// TestBoardGeometryLayersOutline checks that the stackup table keeps IPC-2581's layerFunction
+// verbatim in kind, and the Profile becomes an outline polyline (Y-up, no negation).
 func TestBoardGeometryLayersOutline(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
 	if len(g.Layers) != 2 || g.Layers[0].Name != "TOP" || g.Layers[0].Kind != "CONDUCTOR" || g.Layers[1].Name != "BOTTOM" {
@@ -187,10 +188,11 @@ func TestBoardGeometryLayersOutline(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryOutlineArc: a Profile arc step (PolyStepCurve) is expanded into chord points
-// in document order (WS1-028), so the outline follows the arc bulge instead of cutting across it.
-// The fixture's top edge is a semicircle whose apex at (5,9) exists only if the curve is emitted;
-// before the fix the arc was dropped and the outline stopped at y=4 with 4 straight points.
+// TestBoardGeometryOutlineArc checks that a Profile arc step (PolyStepCurve) is expanded into chord
+// points in document order (WS1-028), so the outline follows the arc bulge instead of cutting
+// across it. The fixture's top edge is a semicircle whose apex at (5,9) exists only if the curve is
+// emitted; before the fix the arc was dropped and the outline stopped at y=4 with 4 straight
+// points.
 func TestBoardGeometryOutlineArc(t *testing.T) {
 	g := readBoardGeom(t, "board_geom_outline_arc.xml")
 	if g.Outline == nil || len(g.Outline.Paths) != 1 {
@@ -218,7 +220,7 @@ func TestBoardGeometryOutlineArc(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryOutlineArcClockwiseCase guards the Allegro uppercase-casing fix: the arc step
+// TestBoardGeometryOutlineArcClockwiseCase guards the Allegro uppercase-casing fix. The arc step
 // carries clockwise="TRUE", so it must sweep clockwise (the apex dips DOWN to y=-1). A
 // case-sensitive =="true" parse would read it as counter-clockwise and bulge UP to y=9 instead.
 func TestBoardGeometryOutlineArcClockwiseCase(t *testing.T) {
@@ -251,8 +253,8 @@ func TestBoardGeometryOutlineArcClockwiseCase(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryDocumentLayerNotZone guards the zone copper-gate: a Zone is a copper pour, so a
-// Contour on a DOCUMENT (fab) layer must not become one — otherwise off-board fabrication-drawing
+// TestBoardGeometryDocumentLayerNotZone guards the zone copper-gate. A Zone is a copper pour, so a
+// Contour on a DOCUMENT (fab) layer must not become one, otherwise off-board fabrication-drawing
 // bars leak in as copper and balloon the render bounds.
 func TestBoardGeometryDocumentLayerNotZone(t *testing.T) {
 	g := readBoardGeom(t, "board_geom_doc_zone.xml")
@@ -280,7 +282,7 @@ func netCopperByName(g *geom.BoardGeometry, net string) *geom.NetCopper {
 	return nil
 }
 
-// TestBoardGeometryCopper: a routed track becomes width-carrying TrackSegments (its arc step
+// TestBoardGeometryCopper checks that a routed track becomes width-carrying TrackSegments (its arc step
 // approximated as arcSegments chords), and a drilled VIA hole becomes a Via whose annular is
 // the co-located copper pad minus the drill.
 func TestBoardGeometryCopper(t *testing.T) {
@@ -312,7 +314,7 @@ func TestBoardGeometryCopper(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryJoinsNetlistIR is the WS1-006/023 cross-artifact acceptance: the same file
+// TestBoardGeometryJoinsNetlistIR is the WS1-006/023 cross-artifact acceptance. The same file
 // read as netlist (Read) and as board geometry (ReadBoardGeometry) must agree on ref_des and
 // on pin<->pad identity, so a board rule can key one against the other.
 func TestBoardGeometryJoinsNetlistIR(t *testing.T) {

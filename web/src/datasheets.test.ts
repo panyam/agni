@@ -3,17 +3,17 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 import { loadRecents } from "./recents.js";
 
 // The datasheets page's boot, under test for the first time. The three islands are mocked rather
-// than real: the region viewer pulls in pdf.js, which needs a canvas and a worker jsdom does not
-// have, and none of that is what this asserts. What it asserts is the BOOT PATH, which is where the
-// page has a blind spot the viewer's composition.test.ts already covers for main.ts.
+// than real, because the region viewer pulls in pdf.js, which needs a canvas and a worker jsdom
+// does not have, and none of that is what this asserts. What it asserts is the BOOT PATH, which is
+// where the page has a blind spot the viewer's composition.test.ts already covers for main.ts.
 //
-// The bug that prompted it: a deep link restored a datasheet by reaching past `open` to
+// In the bug that prompted it, a deep link restored a datasheet by reaching past `open` to
 // view.load + tree.setState, which was the same sequence right up until `open` gained recording.
 // From then on a datasheet opened by URL never reached the landing page's Recent list, with every
 // unit test green. It was found by looking at a screenshot, which is not a test strategy.
 const calls = vi.hoisted(() => ({ loaded: [] as string[] }));
 
-// A stand-in island: the lifecycle controller initializes whatever performLocalInit returns, so a
+// A stand-in island. The lifecycle controller initializes whatever performLocalInit returns, so a
 // mock has to satisfy LCMComponent even though it does nothing.
 const stubIsland = () => ({
   performLocalInit: () => [],

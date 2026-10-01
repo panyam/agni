@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-// TestNetIDAgreesAcrossNetlistAndGeometry pins the load-bearing WS9 invariant: the netlist read
+// TestNetIDAgreesAcrossNetlistAndGeometry pins a WS9 invariant. The netlist read
 // stamps ir.Net.id and the geometry read stamps WireGeometry.net_id, from two INDEPENDENT
 // netgraph.Build solves over the same inputs. Because the id is a pure function of connectivity, a
-// wire's net_id must equal the ir.Net.id of the net it belongs to — otherwise a per-instance
+// wire's net_id must equal the ir.Net.id of the net it belongs to, otherwise a per-instance
 // highlight would join to the wrong net (or nothing). This is the join no unit test of either side
 // alone can prove.
 func TestNetIDAgreesAcrossNetlistAndGeometry(t *testing.T) {

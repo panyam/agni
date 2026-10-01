@@ -10,9 +10,9 @@ import (
 // A rule's subject ARITY is fixed, and a declared shape is what a person needs to construct an id
 // without running the check first.
 //
-// The undeclared case is the ordinary one and means a 1-tuple. That is checked too, and it is the half
-// that catches a mistake: a rule that grew a second subject element without saying so would produce
-// ids nothing can index, and nothing else in the build would notice.
+// The undeclared case is the ordinary one and means a 1-tuple. That is checked too, and it is the
+// half that catches a mistake, since a rule that grew a second subject element without saying so
+// would produce ids nothing can index, and nothing else in the build would notice.
 func TestSubjectShapeHolds(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -50,10 +50,10 @@ func TestSubjectShapeHolds(t *testing.T) {
 	}
 }
 
-// The tie between the two subject shapes: a Verdict names every entity the rule quantified over, and
+// This ties the two subject shapes together. A Verdict names every entity the rule quantified over, and
 // a Finding names the ONE a reader has to change. The second must be one of the first.
 //
-// Without this they are free to drift, and the drift is invisible: a finding pointing at a part the
+// Without this they are free to drift, and the drift is invisible. A finding pointing at a part the
 // verdict never looked at reads perfectly well and sends the reader somewhere the rule made no claim
 // about. Kind may legitimately differ, since a pin-scoped verdict carries a part-scoped finding, so
 // the check is on the REF.
@@ -83,7 +83,7 @@ func TestFindingSubjectComesFromTheVerdictsTuple(t *testing.T) {
 			}
 		}
 	}
-	// Positive control: a run with no failing verdict asserts nothing, which is the shape this
+	// The positive control. A run with no failing verdict asserts nothing, which is the shape this
 	// catalog treats as the expensive failure.
 	if checked == 0 {
 		t.Fatal("no verdict carried a finding, so this test compared nothing")
@@ -91,7 +91,7 @@ func TestFindingSubjectComesFromTheVerdictsTuple(t *testing.T) {
 }
 
 // Every verdict a run emits must answer to its own name. This is the standing guard over the whole
-// catalog for the property the relation-shaped rules broke: two answers under one id.
+// catalog for the property the relation-shaped rules broke, two answers under one id.
 func TestVerdictIDsAreUniqueWithinARun(t *testing.T) {
 	for _, tc := range []struct {
 		name string

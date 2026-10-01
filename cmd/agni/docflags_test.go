@@ -12,12 +12,12 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// docFlagExceptions are flag-shaped strings a page may name without the CLI defining them, each with
-// the reason. Keep it short: every entry is a place the docs and the tool are allowed to disagree.
-// It holds ANOTHER TOOL'S flags, which is the one category syntax cannot separate from ours: a
-// backticked `--cask` is a real flag and it is brew's. Every entry names the tool, so a reader can
-// tell a deliberate exception from a stale one, and the list stays short because agni's own flags
-// come from the command tree rather than from here.
+// docFlagExceptions are flag-shaped strings a page may name without the CLI defining them, each
+// with the reason. Keep it short, because every entry is a place the docs and the tool are allowed
+// to disagree. It holds ANOTHER TOOL'S flags, which is the one category syntax cannot separate from
+// ours. A backticked `--cask` is a real flag and it is brew's. Every entry names the tool, so a
+// reader can tell a deliberate exception from a stale one, and the list stays short because agni's
+// own flags come from the command tree rather than from here.
 var docFlagExceptions = map[string]string{
 	"--cask":             "brew",
 	"--pages":            "kicad-cli",
@@ -37,7 +37,7 @@ var docFlagExceptions = map[string]string{
 //
 // That test extracts hand-written `agni ...` commands from FENCES and runs them through cobra, so a
 // removed flag inside a fence fails there. It cannot see a flag named in PROSE, and prose is where
-// most of a stale flag lives: nine of the thirteen `--url-base` references that survived its removal
+// most of a stale flag lives. Nine of the thirteen `--url-base` references that survived its removal
 // were sentences, not commands.
 //
 // The flag set comes from walking the command tree, so nothing here is hand-maintained except the
@@ -55,7 +55,7 @@ func TestDocsNameNoFlagTheCLILacks(t *testing.T) {
 	// Inline code because that is how prose names a flag it means. A bare `--o` in an ASCII diagram or
 	// a `--no` at a line wrap is not a claim about the CLI, and requiring the backticks separates the
 	// two without a list.
-	// TWO passes, and the second one matters: a span is found first, then EVERY flag inside it. One
+	// TWO passes. A span is found first, then EVERY flag inside it. One
 	// combined pattern reports only the first flag per span, so `agni check --mount … --url-base …`
 	// matched on --mount, found it known, and cleared the span with the stale flag still in it. That
 	// is the shape of a guard that reports clean because it stopped looking.
@@ -103,8 +103,8 @@ func TestDocsNameNoFlagTheCLILacks(t *testing.T) {
 }
 
 // knownFlags collects every flag name the command tree defines, local and persistent, including
-// hidden ones. A HIDDEN flag counts as known on purpose: hiding it is a decision about `--help`, and
-// a page may still legitimately explain a flag that works.
+// hidden ones. A HIDDEN flag counts as known on purpose, because hiding it is a decision about
+// `--help` and a page may still legitimately explain a flag that works.
 func knownFlags(root *cobra.Command) map[string]bool {
 	out := map[string]bool{}
 	var walk func(*cobra.Command)

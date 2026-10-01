@@ -25,7 +25,7 @@ func projReport() Report {
 	}}}}
 }
 
-// The property an entity-first UI rests on: grouping by subject partitions the findings, so the
+// An entity-first UI rests on this property. Grouping by subject partitions the findings, so the
 // union over every subject is the whole report with nothing duplicated and nothing lost.
 func TestProjectionPartitionsFindings(t *testing.T) {
 	r := projReport()
@@ -85,7 +85,7 @@ func TestUnexaminedEntityStillYieldsAView(t *testing.T) {
 }
 
 // A blocked item has no findings by construction, so it has no subject. It is reported against every
-// entity because the honest reading is that it could not answer for anything, this entity included.
+// entity because it could not answer for anything, this entity included.
 func TestBlockedItemsReachEveryView(t *testing.T) {
 	v := ForSubject(projReport(), Subject{Kind: check.KindNet, Subject: "VBUS"})
 	if len(v.Blocked) != 2 {
@@ -99,8 +99,8 @@ func TestBlockedItemsReachEveryView(t *testing.T) {
 	}
 }
 
-// SubjectsOf reports what the RUN examined, never what the design contains, and the gap between
-// those is exactly why an entity panel cannot stand in for a review pass.
+// SubjectsOf reports what the RUN examined, never what the design contains. That gap is why an
+// entity panel cannot stand in for a review pass.
 func TestSubjectsOfEnumeratesAttentionNotTheDesign(t *testing.T) {
 	got := SubjectsOf(projReport())
 	if len(got) != 4 {

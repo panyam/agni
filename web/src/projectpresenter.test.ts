@@ -16,7 +16,7 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
   const getDesign = vi.fn(async () => ({ layout: "grid", sheets: [{ id: "s1", name: "Top" }], availableLayouts: ["grid"] }));
   const getSheet = vi.fn(async () => ({ content: { case: "svg" as const, value: "<svg/>" } }));
   // The load path walks past resolution into the report and parts reads before it fills the pickers,
-  // so both are stubbed: a throw there aborts the load and the pickers are never pushed at all.
+  // so both are stubbed, because a throw there aborts the load and the pickers are never pushed at all.
   const getLayoutReport = vi.fn(async () => ({ report: undefined }));
   const getComponentParams = vi.fn(async () => ({ components: [] }));
   const listDir = vi.fn(async () => ({ entries: dirEntries }));
@@ -117,7 +117,7 @@ describe("project resolution is visible", () => {
     expect(last(h.onProject).namedIsEntry).toBe(true);
   });
 
-  // A failure must not read as "this design has no project": one is not knowing, the other is knowing
+  // A failure must not read as "this design has no project". One is not knowing, the other is knowing
   // there is none, and they lead a reviewer to opposite conclusions about the findings on screen.
   it("reports a resolution failure rather than showing no-project", async () => {
     const h = harness({});
@@ -138,7 +138,7 @@ describe("the built-in catalog toggle", () => {
 
     await h.presenter.setPlainCatalog(true);
 
-    // Findings from one catalog beside the rule set of another is exactly the drift the toggle exists
+    // Findings from one catalog beside the rule set of another is the drift the toggle exists
     // to make visible, so both are recomposed.
     expect(h.listRules.mock.calls.length).toBeGreaterThan(rulesBefore);
     expect(h.checkDesign.mock.calls.length).toBeGreaterThan(checksBefore);
@@ -171,8 +171,8 @@ describe("the built-in catalog toggle", () => {
 });
 
 // The pickers offer what the project DECLARES, and each offers only its own kind. A shared list was
-// the first shape and it moved the bug rather than fixing it: a checklist chosen as a vocabulary
-// fails on a field the naming schema has never heard of, exactly as an intent file did.
+// the first shape and it moved the bug rather than fixing it. A checklist chosen as a vocabulary
+// fails on a field the naming schema has never heard of, the same way an intent file did.
 describe("the config pickers offer one kind each", () => {
   it("offers the project's conventions to the vocabulary picker", async () => {
     const h = harness(inProject);
@@ -195,9 +195,9 @@ describe("the config pickers offer one kind each", () => {
     expect(refs(h.onReview, "checklists")).not.toContain("profiles");
   });
 
-  // Nothing declared anything, so the picker cannot know what kind a file is. Listing the siblings is
-  // the honest fallback: offering one that turns out to be the wrong kind costs a clear error, where
-  // hiding a real one costs a user their own file.
+  // Nothing declared anything, so the picker cannot know what kind a file is. Listing the siblings
+  // is the safer fallback, because offering one that turns out to be the wrong kind costs a clear
+  // error, where hiding a real one costs a user their own file.
   it("falls back to the design's YAML siblings when there is no project", async () => {
     const h = harness({}, [
       { name: "house.yaml", uri: "mount://m/d/house.yaml", isDir: false },

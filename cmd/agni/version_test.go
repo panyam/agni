@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/internal/version"
 )
 
-// TestVersionCmd pins the property the command exists to have: the version a human is told is the
+// TestVersionCmd pins that the version a human is told is the
 // SAME string internal/version stamps into a results document's provenance. A build that reported
 // one version at the prompt and another into an archived report would be worse than no command,
 // because the report is the artifact someone reads months later and cannot re-derive.
@@ -22,7 +22,7 @@ func TestVersionCmd(t *testing.T) {
 	}
 	got := out.String()
 
-	// Matched exactly, not with Contains: a decorated version ("9.9.9-" + the real one) still
+	// Matched exactly, not with Contains, because a decorated version ("9.9.9-" + the real one) still
 	// contains the real one, so a substring check would pass a command that reports the wrong
 	// build. The first line must BE the version and nothing else.
 	wantFirst := "agni " + version.Version()

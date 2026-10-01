@@ -19,7 +19,7 @@ func runNative(t *testing.T, args ...string) (string, error) {
 	return out.String(), err
 }
 
-// TestNativeOpenPrint: `native open --print` resolves the launch command without running it.
+// TestNativeOpenPrint checks that `native open --print` resolves the launch command without running it.
 func TestNativeOpenPrint(t *testing.T) {
 	pcb := filepath.Join("..", "..", "readers", "kicad", "testdata", "board.kicad_pcb")
 	out, err := runNative(t, "open", "--print", pcb)
@@ -37,8 +37,8 @@ func TestNativeOpenPrint(t *testing.T) {
 	}
 }
 
-// TestNativeUnsupportedFormat: a format with no native tool produces an actionable error, not a
-// crash, for both subcommands.
+// TestNativeUnsupportedFormat checks that a format with no native tool produces an actionable error,
+// not a crash, for both subcommands.
 func TestNativeUnsupportedFormat(t *testing.T) {
 	edn := filepath.Join("..", "..", "readers", "edif", "testdata", "basic.edn")
 	for _, sub := range []string{"render", "open"} {

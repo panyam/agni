@@ -14,7 +14,7 @@ import (
 // TestConformance is the reader -> IR -> check regression gate (WS6-004), driven by expectation
 // sidecars (WS6-006): each fixture in testdata/conformance has a <fixture>.expect.yaml naming the
 // rules that must fire and their exact subjects, so adding a case is adding a fixture + a sidecar,
-// with no edit here. It runs at the CLI edge so the reader is in the loop -- a fixture that should
+// with no edit here. It runs at the CLI edge so the reader is in the loop, and a fixture that should
 // fire but does not is a rule bug or a reader gap (the loop that surfaced WS1-010/WS1-006). Fixtures
 // are our own synthetic files (C10), never fetched corpus material.
 //
@@ -70,7 +70,7 @@ func TestConformance(t *testing.T) {
 }
 
 // TestConformanceSpecParity holds each rule's declarative twin (check.Specs, WS3-003) to its
-// Go Eval over every conformance fixture — the same designs the harness gates, but through
+// Go Eval over every conformance fixture. These are the same designs the harness gates, but through
 // real reader output rather than hand-built IR, so reader-shaped data (attributes, section
 // pin maps, diagnostics) exercises the interpreter too.
 func TestConformanceSpecParity(t *testing.T) {
@@ -88,7 +88,7 @@ func TestConformanceSpecParity(t *testing.T) {
 			for _, r := range check.BuiltinRules() {
 				spec, ok := check.BuiltinSpecs()[r.Name]
 				if !ok {
-					continue // spec-only rule: its Eval is the interpreter, nothing to compare
+					continue // spec-only rule, whose Eval is the interpreter, so nothing to compare
 				}
 				if got, want := spec.Eval(m), r.Findings(m); !reflect.DeepEqual(got, want) {
 					t.Errorf("%s: spec findings diverge\n spec: %+v\n   go: %+v", r.Name, got, want)

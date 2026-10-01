@@ -81,7 +81,7 @@ func TestPackSheet(t *testing.T) {
 }
 
 // TestPackSheetFreeGraphics checks that sheet-level free graphics (junction dots,
-// no-connect markers, notes) — the ones the SVG backend draws from sheet.Shapes — are
+// no-connect markers, notes), the ones the SVG backend draws from sheet.Shapes, are
 // packed into the WebGL path under groupFree, so the WebGL render reaches parity with the
 // SVG oracle. These carry no ref_des/net, so they get no PrimitiveKey.
 // TestPackSheetImages packs sheet-level images into PackedImage, rebased to the same origin as
@@ -227,7 +227,7 @@ func TestPackBusQuads(t *testing.T) {
 }
 
 // TestPackBusKey checks that a bus primitive carries a PrimitiveKey keyed by the bus NAME (WS7-042b),
-// so a bus-not-modeled finding can highlight it — a bus has no net, so without this key the build()
+// so a bus-not-modeled finding can highlight it. A bus has no net, so without this key the build()
 // guard would drop it and the bus would be unpickable. The name rides PrimitiveKey.bus_id, disjoint
 // from a net wire's net key.
 func TestPackBusKey(t *testing.T) {

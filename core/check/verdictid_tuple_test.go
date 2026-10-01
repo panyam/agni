@@ -5,7 +5,7 @@ import "testing"
 // The id must be INJECTIVE over subject tuples, and the delimiters are already inside real refs, so
 // this is not a theoretical property.
 //
-// KindEndpoint's ref is literally "0,0" — a comma sitting in the position the tuple syntax uses as a
+// KindEndpoint's ref is literally "0,0", a comma sitting in the position the tuple syntax uses as a
 // separator. A net name comes from a source file and may carry anything. Without the escape,
 // ("A,B") and ("A", "B") are one string and two different verdicts answer to one name.
 func TestVerdictIDIsInjectiveOverTuples(t *testing.T) {
@@ -22,8 +22,9 @@ func TestVerdictIDIsInjectiveOverTuples(t *testing.T) {
 		// cannot be mistaken for one. A ref containing the whole sequence CAN: unescaped,
 		// ("A,net:B") and ("A", "B") both render as `r:(net:A,net:B)`.
 		{{Kind: KindNet, Ref: "A,net:B"}},
-		// A ref that legitimately carries colons keeps them: kind is a closed vocabulary containing
-		// none of the escaped characters, so the element stays unambiguous without escaping them.
+		// A ref that legitimately carries colons keeps them, because kind is a closed vocabulary
+		// containing none of the escaped characters, so the element stays unambiguous without
+		// escaping them.
 		{{Kind: KindSymbol, Ref: "Library:Symbol"}},
 	}
 	seen := map[string][]Entity{}

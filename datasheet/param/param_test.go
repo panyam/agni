@@ -267,7 +267,7 @@ func TestValidateRejects(t *testing.T) {
 	}
 }
 
-// Pin binding is only worth having if an incoherent one is caught at load: a parameter
+// Pin binding is only worth having if an incoherent one is caught at load. A parameter
 // naming a pin the spec never declares, or a pin numbered into a package that does not
 // exist, would otherwise sit in a corpus until a rule silently resolved nothing.
 func TestValidateRejectsPinBinding(t *testing.T) {
@@ -321,7 +321,7 @@ func TestValidateRejectsPinBinding(t *testing.T) {
 	}
 }
 
-// Degrade-safety (C9): the pin rules must fire only on specs that carry pin data. A spec
+// For degrade-safety (C9), the pin rules must fire only on specs that carry pin data. A spec
 // seeded before pin binding existed validates exactly as it did.
 func TestValidateAcceptsPinlessSpecs(t *testing.T) {
 	for _, name := range []string{"lm1117.textproto", "bss138.textproto"} {
@@ -337,11 +337,11 @@ func TestValidateAcceptsPinlessSpecs(t *testing.T) {
 
 func f64(v float64) *float64 { return &v }
 
-// ValidatePins and Validate ask different questions, and the workbench depends on the difference:
-// a spec being transcribed has no MPN and half-filled parameters, which Validate rightly rejects and
+// ValidatePins and Validate ask different questions, and the workbench depends on the difference.
+// A spec being transcribed has no MPN and half-filled parameters, which Validate rightly rejects and
 // which must not block a save. Nothing ValidatePins checks can be a not-yet-filled-in state.
 func TestStructuralCheckAcceptsWorkInProgressButNotIncoherence(t *testing.T) {
-	// The shape bank.ts emptySpec() produces, plus one hand-added pin: no mpn, no parameters.
+	// The shape bank.ts emptySpec() produces, plus one hand-added pin, with no mpn and no parameters.
 	wip := &parampb.PartSpec{
 		Docs:     []*parampb.SourceDoc{{Id: "ds", Title: "Some datasheet"}},
 		Packages: []*parampb.Package{{Id: "pw", Name: "PW"}},
@@ -401,8 +401,8 @@ func TestStructuralCheckSilentWithoutPinData(t *testing.T) {
 }
 
 // A relation naming a pin the spec never declares, or naming one pin twice, is incoherent at any
-// stage of authoring: there is no editing state in which "VCCA tracks a pin that does not exist" is
-// a step toward a finished document. Same argument as the pin-binding checks above.
+// stage of authoring, since there is no editing state in which "VCCA tracks a pin that does not
+// exist" is a step toward a finished document. Same argument as the pin-binding checks above.
 func TestStructuralCheckRejectsIncoherentRelations(t *testing.T) {
 	cases := []struct {
 		name string
@@ -426,9 +426,9 @@ func TestStructuralCheckRejectsIncoherentRelations(t *testing.T) {
 	}
 }
 
-// The bound is the part an author fills in last, so an unfinished relation must not read as a broken
-// one. This is the same split the workbench depends on everywhere else: saving records, judging is
-// separate.
+// The bound is the part an author fills in last, so an unfinished relation must not read as a
+// broken one. This is the same split the workbench depends on everywhere else, where a save records
+// and judging is separate.
 func TestUnboundedRelationIsIncompleteNotIncoherent(t *testing.T) {
 	spec := relationWIP()
 	spec.Relations = []*parampb.PinRelation{{
@@ -445,7 +445,7 @@ func TestUnboundedRelationIsIncompleteNotIncoherent(t *testing.T) {
 	}
 }
 
-// Completeness mirrors the Parameter rules one for one: an unclassified kind, a reversed bound, and
+// Completeness mirrors the Parameter rules one for one. An unclassified kind, a reversed bound, and
 // missing or unverifiable provenance are all "not finished", never "contradicts itself".
 func TestRelationCompletenessMirrorsParameterRules(t *testing.T) {
 	full := func() *parampb.PinRelation {
@@ -489,8 +489,8 @@ func TestRelationCompletenessMirrorsParameterRules(t *testing.T) {
 }
 
 // The non-zero offset is the case a comparison operator could not have expressed, and it is why the
-// bound is a RangeValue over the difference. Held as an in-memory spec rather than a fixture file:
-// the corpus-vs-fixture line means a fixture carries only the rows its tests need.
+// bound is a RangeValue over the difference. Held as an in-memory spec rather than a fixture file,
+// because the corpus-vs-fixture line means a fixture carries only the rows its tests need.
 func TestNonZeroAndSymmetricBoundsRoundTrip(t *testing.T) {
 	spec := relationWIP()
 	spec.Mpn = "SOME-PART"
@@ -521,7 +521,7 @@ func TestNonZeroAndSymmetricBoundsRoundTrip(t *testing.T) {
 	}
 }
 
-// Degrade-safety (C9) for relations, the same promise packages and pins made: a spec seeded before
+// Degrade-safety (C9) for relations keeps the promise packages and pins made. A spec seeded before
 // they existed validates exactly as it did, and the relation checks stay silent.
 func TestValidateAcceptsRelationlessSpecs(t *testing.T) {
 	for _, name := range []string{"lm1117.textproto", "bss138.textproto", "txb0104.textproto"} {

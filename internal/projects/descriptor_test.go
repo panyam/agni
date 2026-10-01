@@ -33,14 +33,15 @@ companions:
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Errorf("companion refs = %v, want %v normalized and in declared order", got, want)
 	}
-	// The name is NOT set: a bare id is not a resource name, and only the store knows the parent.
+	// The name is NOT set, because a bare id is not a resource name, and only the store knows the
+	// parent.
 	if d.GetName() != "" {
 		t.Errorf("name = %q, want it left to the store", d.GetName())
 	}
 }
 
-// TestParseDesignUntitledFallsBackToID: every consumer degrades the same way, so an untitled design
-// never renders blank.
+// TestParseDesignUntitledFallsBackToID pins that every consumer degrades the same way, so an
+// untitled design never renders blank.
 func TestParseDesignUntitledFallsBackToID(t *testing.T) {
 	_, d, err := ParseDesign(strings.NewReader("name: gateway\nentry: gateway.edn\n"))
 	if err != nil {
@@ -61,7 +62,7 @@ func TestParseDesignRejects(t *testing.T) {
 		{"escaping entry", "name: g\nentry: ../../secrets.edn\n", "stay inside"},
 		{"escaping companion", "name: g\nentry: a.edn\ncompanions: ['../b.kicad_pcb']\n", "stay inside"},
 		{"entry also companion", "name: g\nentry: a.edn\ncompanions: ['./a.edn']\n", "listed twice"},
-		// A misspelled key that silently does nothing is the failure this strictness is for: the
+		// A misspelled key that silently does nothing is the failure this strictness is for. The
 		// operator believes they declared companions and nothing says otherwise.
 		{"unknown field", "name: g\nentry: a.edn\ncompanion: [b.kicad_pcb]\n", "field companion not found"},
 		{"empty", "", "is empty"},

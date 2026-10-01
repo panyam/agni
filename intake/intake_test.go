@@ -11,8 +11,9 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// fixtureDesign: a hand-authored design that classifies by ref-des prefix (no reader needed). It carries
-// a deliberately DISTINCTIVE rail net name so the sanitization test can prove it never reaches the output.
+// fixtureDesign is a hand-authored design that classifies by ref-des prefix (no reader needed). It
+// carries a deliberately DISTINCTIVE rail net name so the sanitization test can prove it never
+// reaches the output.
 func fixtureDesign() *ir.Design {
 	comp := func(ref string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
@@ -31,7 +32,7 @@ func fixtureDesign() *ir.Design {
 	}
 }
 
-// TestBuildClassCensus pins the deterministic counts: each component classifies by its ref-des prefix,
+// TestBuildClassCensus pins the deterministic counts. Each component classifies by its ref-des prefix,
 // and the class census is exact (a diode family tag counts the diode too).
 func TestBuildClassCensus(t *testing.T) {
 	s := Build(check.NewModel(fixtureDesign()))
@@ -49,7 +50,8 @@ func TestBuildClassCensus(t *testing.T) {
 	}
 }
 
-// TestBuildRailNominals: the 3V3-named rail resolves to a 3.3 nominal (GND is not a rail nominal).
+// TestBuildRailNominals checks that the 3V3-named rail resolves to a 3.3 nominal (GND is not a rail
+// nominal).
 func TestBuildRailNominals(t *testing.T) {
 	s := Build(check.NewModel(fixtureDesign()))
 	if len(s.RailNominals) != 1 || s.RailNominals[0] != 3.3 {
@@ -81,9 +83,9 @@ func TestSignalLevelIsNotSummarizedAsARail(t *testing.T) {
 	}
 }
 
-// TestSanitizationNoNetNames is the load-bearing guarantee (WS3-091): a distinctive rail NET NAME in the
-// design must never appear in EITHER rendered form, while its nominal (3.3) must — proving the Skeleton
-// carries the voltage, not the name. Guards against a future field that would leak topology.
+// TestSanitizationNoNetNames is the core guarantee (WS3-091). A distinctive rail NET NAME in the
+// design must never appear in EITHER rendered form, while its nominal (3.3) must, which proves the
+// Skeleton carries the voltage, not the name. Guards against a future field that would leak topology.
 func TestSanitizationNoNetNames(t *testing.T) {
 	s := Build(check.NewModel(fixtureDesign()))
 	js, err := json.Marshal(s)
@@ -104,8 +106,8 @@ func TestSanitizationNoNetNames(t *testing.T) {
 	}
 }
 
-// TestMarkdownAnomalies: an anomaly renders as kind + count + ref-des; the type has no net-name field,
-// so a pin-net conflict can only name the component, never the conflicting nets.
+// TestMarkdownAnomalies checks that an anomaly renders as kind + count + ref-des. The type has no
+// net-name field, so a pin-net conflict can only name the component, never the conflicting nets.
 func TestMarkdownAnomalies(t *testing.T) {
 	md := Markdown(&Skeleton{
 		ClassCount: map[string]int{},
@@ -116,8 +118,9 @@ func TestMarkdownAnomalies(t *testing.T) {
 	}
 }
 
-// TestBuildPartTypes: the BOM collapses per-component rows by (mpn, mfr, value, class), and a
-// manufacturer spelling variant ("Murata" vs "MURATA") stays a SEPARATE row — the AVL-hygiene signal.
+// TestBuildPartTypes checks that the BOM collapses per-component rows by (mpn, mfr, value, class),
+// and that a manufacturer spelling variant ("Murata" vs "MURATA") stays a SEPARATE row, since that
+// is the AVL-hygiene signal.
 func TestBuildPartTypes(t *testing.T) {
 	cap := func(ref, mfr string) *ir.Component {
 		return &ir.Component{RefDes: ref, Attributes: map[string]string{"Manufacturer": mfr}, Prov: &ir.Provenance{SourceFile: "t"}}
@@ -137,8 +140,8 @@ func TestBuildPartTypes(t *testing.T) {
 	}
 }
 
-// mpnDesign carries the same MPN on several components, which is the shape the gap queue got wrong:
-// seeding is per part number, so two placements of one jellybean are one piece of work.
+// mpnDesign carries the same MPN on several components, which is the shape the gap queue got wrong.
+// Seeding is per part number, so two placements of one jellybean are one piece of work.
 func mpnDesign() *ir.Design {
 	comp := func(ref, mpn string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"},
@@ -167,7 +170,7 @@ func TestDatasheetGapsAreDistinctMPNs(t *testing.T) {
 	}
 }
 
-// TestDatasheetGapsAreStablyOrdered guards the set the dedupe introduced: Go randomizes map iteration,
+// TestDatasheetGapsAreStablyOrdered guards the set the dedupe introduced. Go randomizes map iteration,
 // so an unsorted queue would differ between runs and no two reports could be compared.
 func TestDatasheetGapsAreStablyOrdered(t *testing.T) {
 	first := Build(check.NewModelWithParams(mpnDesign(), nil, emptyCorpus)).DatasheetGaps
@@ -179,8 +182,9 @@ func TestDatasheetGapsAreStablyOrdered(t *testing.T) {
 	}
 }
 
-// TestGapSectionDistinguishesEmptyFromAbsent: a corpus that seeds everything and no corpus at all both
-// used to render as no section, so a run that forgot the corpus looked like a fully seeded board.
+// TestGapSectionDistinguishesEmptyFromAbsent exists because a corpus that seeds everything and no
+// corpus at all both used to render as no section, so a run that forgot the corpus looked like a
+// fully seeded board.
 func TestGapSectionDistinguishesEmptyFromAbsent(t *testing.T) {
 	seeded := param.ProviderFunc(func(mpn string) *parampb.PartSpec { return &parampb.PartSpec{Mpn: mpn} })
 	withCorpus := Markdown(Build(check.NewModelWithParams(mpnDesign(), nil, seeded)), false)

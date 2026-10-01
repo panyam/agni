@@ -8,7 +8,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// benchDesign synthesizes a netlist big enough to time the two evaluation paths: nNets nets
+// benchDesign synthesizes a netlist big enough to time the two evaluation paths, nNets nets
 // of 4 typed connections over nNets/2 components, with classes, guard attributes, and
 // naming patterns spread deterministically so every rule does real work.
 func benchDesign(nNets int) *ir.Design {

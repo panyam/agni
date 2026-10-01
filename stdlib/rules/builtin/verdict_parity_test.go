@@ -9,13 +9,13 @@ import (
 
 // TestVerdictParity pins WHICH outcomes reach the findings contract.
 //
-// Its original job is gone and that is a good thing: Eval and Findings were two hand-written bodies
+// Its original job is gone. Eval and Findings were two hand-written bodies
 // that could disagree, and now Findings IS VerdictsToFindings(Eval), so per-rule drift is not a state
 // a rule can be in. What is left is the projection RULE itself, which is a real decision with real
 // consequences (an Inconclusive verdict must still reach a reviewer; a Pass must not).
 //
 // The expectation is therefore still rebuilt HERE rather than by calling VerdictsToFindings, and the
-// reason is sharper than before: Findings() literally is that call, so comparing the two would run
+// reason is sharper than before. Findings() literally is that call, so comparing the two would run
 // one function against itself and pass for any projection, broken ones included. (It did. This test
 // asserted nothing until a red-check caught it.) Restating the rule independently means a change to
 // what projects has to be made deliberately in two places instead of silently in one.
@@ -28,7 +28,7 @@ func TestVerdictParity(t *testing.T) {
 		{"parityFixture", check.NewModel(specParityFixture())},
 		// The positive control for the Inconclusive half of the projection rule below. Neither
 		// fixture above puts a transistor on a power path, so without this the Inconclusive clause
-		// is a branch no case reaches: the test would pass on a build that dropped inconclusive
+		// is a branch no case reaches, and the test would pass on a build that dropped inconclusive
 		// findings entirely, which is the negative-result-without-a-control shape build/evidence.md
 		// warns about.
 		{"unclassifiableTransistor", check.NewModel(revDesign("transistor", false))},
@@ -40,7 +40,7 @@ func TestVerdictParity(t *testing.T) {
 			}
 			converted++
 			// The expectation is rebuilt HERE rather than by calling VerdictsToFindings, because a
-			// converted rule's Eval already IS that call: comparing the two would run one function
+			// converted rule's Eval already IS that call, so comparing the two would run one function
 			// against itself and pass for any projection, broken ones included. (It did. This test
 			// asserted nothing until a red-check caught it.) Restating the rule independently means
 			// a change to what projects has to be made deliberately in both places instead of
@@ -48,7 +48,7 @@ func TestVerdictParity(t *testing.T) {
 			want := []check.Finding{}
 			for _, v := range r.Eval(tc.m) {
 				// Fail AND Inconclusive. An inconclusive verdict is not a defect and must not be
-				// counted as one, but it must still reach a reviewer: a bound review item reading
+				// counted as one, but it must still reach a reviewer. A bound review item reading
 				// silence as a pass is what agni issue 74 cost. reverse-blocking-absent is the rule
 				// that produces one, and stating it here is the second half of the deliberate
 				// two-place change this test exists to force.
@@ -64,8 +64,8 @@ func TestVerdictParity(t *testing.T) {
 					tc.name, r.Name, got, want)
 			}
 		}
-		// Positive control: a test that iterates zero converted rules passes while proving nothing,
-		// which is precisely the shape this catalog treats as the expensive failure.
+		// The positive control. A test that iterates zero converted rules passes while proving nothing,
+		// which is the shape this catalog treats as the expensive failure.
 		if converted == 0 {
 			t.Fatalf("%s: no rule sets EvalVerdicts, so this test asserted nothing", tc.name)
 		}
@@ -78,7 +78,7 @@ func TestVerdictParity(t *testing.T) {
 
 // A rule that states a considered set must answer about SOMETHING on a design its subjects appear
 // in. This is the guard against a conversion that declares StatesConsideredSet over a body returning
-// nil: parity above would hold (nil projects to no findings, and the rule finds none either), and the
+// nil. Parity above would hold (nil projects to no findings, and the rule finds none either), and the
 // considered set would be silently empty.
 func TestConvertedRulesConsiderSomething(t *testing.T) {
 	m := check.NewModel(ruleFixture())
@@ -98,7 +98,7 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 	}
 }
 
-// RunVerdicts is the seam that makes a verdict reachable at all: before it, every verdict died
+// RunVerdicts is the entry point that makes a verdict reachable at all. Before it, every verdict died
 // inside the function that built it and no caller outside these three rules could obtain one.
 func TestRunVerdictsCollectsAcrossRules(t *testing.T) {
 	vs := check.RunVerdicts(check.NewModel(ruleFixture()), rules)

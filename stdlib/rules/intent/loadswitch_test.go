@@ -41,7 +41,7 @@ func lsNet(name string, conns ...*ir.Connection) *ir.Net {
 	return &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: "t"}, Connections: conns}
 }
 
-// lsSwitch describes one controller-based high-side switch to place on a test design: the controller
+// lsSwitch describes one controller-based high-side switch to place on a test design. The controller
 // U<n> drives Q<n>'s gate and senses across R<n>, whose value the design states in ohms. The trip
 // current is the controller's threshold over senseOhms.
 type lsSwitch struct {
@@ -55,10 +55,11 @@ type lsSwitch struct {
 // lsDesign wires one switch per spec. Each switch's shunt sits between two nets the controller also
 // touches, which is the Kelvin-sensing signature the resolver looks for.
 //
-// Nets are merged BY NAME across specs, because a name is a net's identity in every format this reads
-// and two switches fed from one input share that input. Appending a second net called VIN would build
-// a design no reader can produce, and it would quietly weaken the multi-switch test: the rule would
-// resolve the first VIN, see one switch on it, and agree with an assertion about picking between two.
+// Nets are merged BY NAME across specs, because a name is a net's identity in every format this
+// reads and two switches fed from one input share that input. Appending a second net called VIN
+// would build a design no reader can produce, and it would quietly weaken the multi-switch test,
+// since the rule would resolve the first VIN, see one switch on it, and agree with an assertion
+// about picking between two.
 func lsDesign(specs ...lsSwitch) *ir.Design {
 	d := &ir.Design{Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{
 		lsPartType("CTRL", "GATE", "SNSP", "SNSN"),
@@ -88,7 +89,7 @@ func lsDesign(specs ...lsSwitch) *ir.Design {
 	return d
 }
 
-// oneSwitch is the ordinary design under test: one switch between VIN and VOUT.
+// oneSwitch is the ordinary design under test, one switch between VIN and VOUT.
 func oneSwitch(senseOhms float64) *ir.Design {
 	return lsDesign(lsSwitch{n: "1", senseOhms: senseOhms, in: "VIN", out: "VOUT",
 		ctrlMPN: "ACME-HSS", fetMPN: "ACME-NFET"})
@@ -154,7 +155,7 @@ func lsEval(d Declaration, m check.Model) []check.Finding {
 }
 
 // TestLoadSwitchTripBelowBudgetFires is the WS3-085 acceptance for the sizing lower bound. A 50mV
-// threshold across a 25mOhm shunt limits at 2A, on a rail the intent declares draws up to 5A: the
+// threshold across a 25mOhm shunt limits at 2A, on a rail the intent declares draws up to 5A, so the
 // switch opens under the load the design was drawn for.
 //
 // The finding has to name all three inputs. A message carrying only the verdict leaves a reviewer
@@ -194,11 +195,11 @@ func TestLoadSwitchTripAboveBudgetSilent(t *testing.T) {
 // mutation shows.
 //
 // 22mV across a 4.4mOhm shunt is 5A. In float64 the DIVISION lands on 4.999999999999999, so a rail
-// declared at 5.0 reads as under-limited and fires unless below() carries its relative tolerance. The
-// arithmetic has to happen at runtime for the test to mean anything: 0.022/0.0044 written as a constant
-// expression folds at arbitrary precision and is exactly 5, so a check spelled that way would disagree
-// with the running code. Here both sides arrive as float64 values, one from a seeded parameter and one
-// from a stamped component value.
+// declared at 5.0 reads as under-limited and fires unless below() carries its relative tolerance.
+// The arithmetic has to happen at runtime for the test to mean anything, because 0.022/0.0044
+// written as a constant expression folds at arbitrary precision and is exactly 5, so a check
+// spelled that way would disagree with the running code. Here both sides arrive as float64 values,
+// one from a seeded parameter and one from a stamped component value.
 //
 // A pair that happens to round the other way (50mV across 10mOhm is one) would make this test pass with
 // the tolerance deleted, which is the wrong reason to be green.
@@ -213,10 +214,11 @@ func TestLoadSwitchTripAtExactlyTheBudget(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentOnUndeclaredAndAbsentRails holds the direction of the iteration. The rule walks
-// the DECLARATION and probes the design: a rail the design carries but the intent does not budget is not
-// its business, and a budgeted rail the design does not carry is a missing-rail defect the
-// voltage-domain and subsystem forms report, so firing here would report one defect twice.
+// TestLoadSwitchSilentOnUndeclaredAndAbsentRails holds the direction of the iteration. The rule
+// walks the DECLARATION and probes the design. A rail the design carries but the intent does not
+// budget is not its business, and a budgeted rail the design does not carry is a missing-rail
+// defect the voltage-domain and subsystem forms report, so firing here would report one defect
+// twice.
 func TestLoadSwitchSilentOnUndeclaredAndAbsentRails(t *testing.T) {
 	m := lsModel(oneSwitch(0.025), 0.05, 0.02)
 	if fs := lsEval(lsDecl("NOT_A_RAIL", 5), m); len(fs) != 0 {
@@ -227,7 +229,7 @@ func TestLoadSwitchSilentOnUndeclaredAndAbsentRails(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentWhereNoSwitchReachesTheRail: the gate net of the switch is budgeted, which no
+// TestLoadSwitchSilentWhereNoSwitchReachesTheRail budgets the gate net of the switch, which no
 // series path connects to the pass element's power terminals. A rule that associated any switch on the
 // design with any declared rail would fire here, and on every unswitched rail of a board that has one
 // switch somewhere.
@@ -238,10 +240,10 @@ func TestLoadSwitchSilentWhereNoSwitchReachesTheRail(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchBudgetOnTheInputSide: a series element carries the same current on both sides, so a
-// budget declared on the rail feeding the switch is judged by the same limit as one declared on its
-// output. Requiring the output side would make the rule depend on which end an author happened to
-// budget.
+// TestLoadSwitchBudgetOnTheInputSide covers the feed side. A series element carries the same
+// current on both sides, so a budget declared on the rail feeding the switch is judged by the same
+// limit as one declared on its output. Requiring the output side would make the rule depend on
+// which end an author happened to budget.
 func TestLoadSwitchBudgetOnTheInputSide(t *testing.T) {
 	m := lsModel(oneSwitch(0.025), 0.05, 0.02)
 	if fs := lsEval(lsDecl("VIN", 5), m); len(fs) != 1 {
@@ -249,10 +251,10 @@ func TestLoadSwitchBudgetOnTheInputSide(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchHighestLimitBinds: two switches reach one rail and the rule reads the HIGHER limit. The
-// reach radius can pull in a switch that gates a different branch, and reporting the smaller one would
-// be a nuisance-trip finding the design does not have. Every fail must be a genuine defect, so ambiguous
-// evidence takes the reading that does not fire.
+// TestLoadSwitchHighestLimitBinds has two switches reach one rail, and the rule reads the HIGHER
+// limit. The reach radius can pull in a switch that gates a different branch, and reporting the
+// smaller one would be a nuisance-trip finding the design does not have. Every fail must be a
+// genuine defect, so ambiguous evidence takes the reading that does not fire.
 func TestLoadSwitchHighestLimitBinds(t *testing.T) {
 	d := lsDesign(
 		lsSwitch{n: "1", senseOhms: 0.025, in: "VIN", out: "VOUT", ctrlMPN: "ACME-HSS", fetMPN: "ACME-NFET"},
@@ -299,12 +301,12 @@ func beadChain(n int) *ir.Design {
 // TestLoadSwitchAcrossSeriesElement pins the association RADIUS from both sides, which is the pair of
 // errors a single-distance test cannot tell apart.
 //
-// One crossing must be reached: a ferrite between the pass element and the rail is ordinary layout and
-// must not hide the switch. Two must NOT be, and that is the review-integrity half. Voltage does not
-// degrade along a series path, so a radius set wide enough makes every rail on the board look like it
-// is behind every switch, and each of those associations is a fail the design does not have. The rule
-// borrows check.SupplyPathReachHops rather than choosing its own number, so the two sizing rules cannot
-// drift to different answers about what "on this rail" means.
+// One crossing must be reached, because a ferrite between the pass element and the rail is ordinary
+// layout and must not hide the switch. Two must NOT be, and that is the review-integrity half.
+// Voltage does not degrade along a series path, so a radius set wide enough makes every rail on the
+// board look like it is behind every switch, and each of those associations is a fail the design
+// does not have. The rule borrows check.SupplyPathReachHops rather than choosing its own number, so
+// the two sizing rules cannot drift to different answers about what "on this rail" means.
 func TestLoadSwitchAcrossSeriesElement(t *testing.T) {
 	if fs := lsEval(lsDecl("VOUT_FILT1", 5), lsModel(beadChain(1), 0.05, 0.02)); len(fs) != 1 {
 		t.Errorf("want the finding to survive one series crossing, got %d: %+v", len(fs), fs)
@@ -335,8 +337,9 @@ func TestLoadSwitchReportsDissipationAtTheDeclaredCurrent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchWithoutOnResistanceSaysNothing: a pass FET stating no comparable RDS(on) must produce no
-// sizing clause at all. A zero or an omitted figure would read as a FET that dissipates nothing.
+// TestLoadSwitchWithoutOnResistanceSaysNothing checks that a pass FET stating no comparable RDS(on)
+// produces no sizing clause at all. A zero or an omitted figure would read as a FET that
+// dissipates nothing.
 func TestLoadSwitchWithoutOnResistanceSaysNothing(t *testing.T) {
 	fs := lsEval(lsDecl("VOUT", 5), lsModel(oneSwitch(0.025), 0.05, 0))
 	if len(fs) != 1 {
@@ -351,7 +354,7 @@ func TestLoadSwitchWithoutOnResistanceSaysNothing(t *testing.T) {
 }
 
 // TestLoadSwitchWithUnusableOnResistanceSaysNothing is the other half of the sizing clause's refusal.
-// A seeded RDS(on) row is not automatically a usable one: nothing in the parameter layer gates a max
+// A seeded RDS(on) row is not automatically a usable one. Nothing in the parameter layer gates a max
 // bound for finiteness, so a bad extraction can leave a row present and stating infinity. The clause
 // has to drop on the ARITHMETIC refusing, not only on the row being absent, or a reviewer reads
 // "dissipating +InfW" and learns nothing about the part.
@@ -368,10 +371,11 @@ func TestLoadSwitchWithUnusableOnResistanceSaysNothing(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentWithoutTheControllerDatasheet: with nothing seeded there is no threshold, so no
-// switch resolves and there is no limit to compare. It reports the rail as unevaluable rather than
-// clean, and the unevaluable half is the review runner's needs-data gate, which the rule feeds by
-// declaring ParamSymbols. Without that declaration the item would score a pass on a check that never ran.
+// TestLoadSwitchSilentWithoutTheControllerDatasheet covers the unseeded case. With nothing seeded
+// there is no threshold, so no switch resolves and there is no limit to compare. It reports the
+// rail as unevaluable rather than clean, and the unevaluable half is the review runner's needs-data
+// gate, which the rule feeds by declaring ParamSymbols. Without that declaration the item would
+// score a pass on a check that never ran.
 func TestLoadSwitchSilentWithoutTheControllerDatasheet(t *testing.T) {
 	m := check.NewModel(oneSwitch(0.025))
 	r := loadSwitchTripBelowBudgetRule(lsDecl("VOUT", 5))
@@ -395,9 +399,9 @@ func TestLoadSwitchSilentWithoutTheControllerDatasheet(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentWithoutAThreshold: a seeded controller stating no overcurrent threshold is the
-// same gap as an unseeded one. Nothing identifies it as a current-limiting part, so no switch resolves
-// and there is no verdict. Skip, never pass.
+// TestLoadSwitchSilentWithoutAThreshold covers a seeded controller stating no overcurrent
+// threshold, which is the same gap as an unseeded one. Nothing identifies it as a current-limiting
+// part, so no switch resolves and there is no verdict. Skip, never pass.
 func TestLoadSwitchSilentWithoutAThreshold(t *testing.T) {
 	m := check.NewModelWithParams(oneSwitch(0.025), nil, param.ParamSet{
 		"ACME-HSS":  {Mpn: "ACME-HSS", Manufacturer: "Acme"},
@@ -408,9 +412,9 @@ func TestLoadSwitchSilentWithoutAThreshold(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentWithoutTheShuntValue: the trip current is the threshold divided by a resistance
-// the DESIGN states. A shunt whose value the reader never normalized is not evidence of a milliohm
-// part, so the switch does not resolve and the rule says nothing.
+// TestLoadSwitchSilentWithoutTheShuntValue relies on the trip current being the threshold divided
+// by a resistance the DESIGN states. A shunt whose value the reader never normalized is not
+// evidence of a milliohm part, so the switch does not resolve and the rule says nothing.
 func TestLoadSwitchSilentWithoutTheShuntValue(t *testing.T) {
 	d := oneSwitch(0.025)
 	for _, c := range d.Components {
@@ -423,9 +427,9 @@ func TestLoadSwitchSilentWithoutTheShuntValue(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchRuleCompiledWithBudgets: the rule reads rail_budgets and nothing else from the
-// declaration, so it compiles exactly when a budget is declared. A declaration about something else must
-// not drag a silently-passing sizing rule into the catalog.
+// TestLoadSwitchRuleCompiledWithBudgets relies on the rule reading rail_budgets and nothing else
+// from the declaration, so it compiles exactly when a budget is declared. A declaration about
+// something else must not drag a silently-passing sizing rule into the catalog.
 func TestLoadSwitchRuleCompiledWithBudgets(t *testing.T) {
 	names := func(d Declaration) map[string]bool {
 		out := map[string]bool{}
@@ -437,7 +441,7 @@ func TestLoadSwitchRuleCompiledWithBudgets(t *testing.T) {
 	if !names(lsDecl("VOUT", 5))[RuleLoadSwitchTripBelowBudget] {
 		t.Error("a declared rail budget must compile the load-switch sizing rule")
 	}
-	// No margin factor is declared above, so this rule must NOT inherit the margin rule's gate: the
+	// No margin factor is declared above, so this rule must NOT inherit the margin rule's gate. The
 	// lower bound is a protection threshold against a declared draw, not house headroom policy.
 	if names(lsDecl("VOUT", 5))[RuleRailCurrentMargin] {
 		t.Error("no margin_factor must still leave the margin rule uncompiled")

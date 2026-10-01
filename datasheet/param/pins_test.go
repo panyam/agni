@@ -8,7 +8,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// The multi-supply case the pin-binding contract exists for: VCCA and VCCB are two
+// The multi-supply case the pin-binding contract exists for. VCCA and VCCB are two
 // terminals with genuinely different ranges, and each recommended-operating row binds to
 // its own pin. Without the binding both rows answer for one "supply" concept.
 func TestTXB0104MultiSupplyPinsStayDistinct(t *testing.T) {
@@ -39,7 +39,7 @@ func TestTXB0104MultiSupplyPinsStayDistinct(t *testing.T) {
 	}
 }
 
-// A row may bind to a GROUP of terminals: the continuous-current limit is stated once for the two
+// A row may bind to a GROUP of terminals. The continuous-current limit is stated once for the two
 // supplies and ground together, so each of the three has to find it.
 func TestTXB0104GroupBinding(t *testing.T) {
 	spec := readFixture(t, "txb0104.textproto")
@@ -79,7 +79,7 @@ func TestPartWideRowsCarryNoBinding(t *testing.T) {
 	}
 }
 
-// The repackaging case, from the real pinout: number 11 is the B3 data I/O in the TSSOP-14
+// The repackaging case, from the real pinout. Number 11 is the B3 data I/O in the TSSOP-14
 // and the VCCB supply in the UQFN-12. Both readings are recorded, so a number-keyed join
 // has to say which package it means.
 func TestSameNumberIsDifferentPinsInDifferentPackages(t *testing.T) {
@@ -98,7 +98,7 @@ func TestSameNumberIsDifferentPinsInDifferentPackages(t *testing.T) {
 	}
 }
 
-// The name channel survives repackaging: VCCB is "VCCB" in every body, whatever number it
+// The name channel survives repackaging, since VCCB is "VCCB" in every body, whatever number it
 // carries there.
 func TestNameSurvivesRepackaging(t *testing.T) {
 	spec := readFixture(t, "txb0104.textproto")
@@ -220,7 +220,7 @@ func TestResolvePin(t *testing.T) {
 	}
 }
 
-// Degrade-safety (C9): a spec with no pin data must not resolve to a guess. Every
+// For degrade-safety (C9), a spec with no pin data must not resolve to a guess. Every
 // pre-pin-binding spec in the corpus is in this state, so the answer has to be a
 // distinguishable "no pin data", letting a caller fall back to the part-level path rather
 // than treating the miss as a failed lookup.
@@ -256,7 +256,7 @@ func TestPinParameters(t *testing.T) {
 	if got := PinParameters(spec, "gnd"); len(got) != 1 || got[0].Symbol != "I" {
 		t.Errorf("gnd: want just the group current row, got %+v", got)
 	}
-	// Part-wide rows belong to no pin: an empty binding must NOT read as "every pin", or a caller
+	// Part-wide rows belong to no pin. An empty binding must NOT read as "every pin", or a caller
 	// would credit a die-level rating as a terminal's own limit.
 	for _, p := range PinParameters(spec, "gnd") {
 		if len(p.PinRefs) == 0 {
@@ -312,7 +312,7 @@ func TestPinRelations(t *testing.T) {
 	}
 
 	// The bound is on subject MINUS reference, so the direction is the part a caller must read
-	// rather than assume: VCCA - VCCB <= 0 says VCCA is the one held down.
+	// rather than assume. VCCA - VCCB <= 0 says VCCA is the one held down.
 	rel := subject[0]
 	if rel.GetSubjectPinRef() != "vcca" || rel.GetReferencePinRef() != "vccb" {
 		t.Errorf("direction: got %q vs %q, want vcca vs vccb", rel.GetSubjectPinRef(), rel.GetReferencePinRef())

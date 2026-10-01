@@ -12,13 +12,13 @@ func comp(ref, part string) *ir.Component {
 		Sections: []*ir.ComponentSection{{PartRef: part, LibraryRef: "lib"}}}
 }
 
-// mistypedFixture: U1's "VDD" pin is named like a supply but typed PASSIVE and left alone on a net
-// (fires). Its "GND" pin is correctly typed power_in (left to power-input-not-driven, not this
-// rule). Pin "3" is NO_CONNECT, enabling the has_nc_channel gate.
+// mistypedFixture covers three pins. U1's "VDD" pin is named like a supply but typed PASSIVE and
+// left alone on a net (fires). Its "GND" pin is correctly typed power_in (left to
+// power-input-not-driven, not this rule). Pin "3" is NO_CONNECT, enabling the has_nc_channel gate.
 //
 // Pin "4" is a SIGNAL pin alone on its own net, and it is here for the considered-set test rather
 // than the finding tests. Without it the fixture cannot tell a domain scoped to supply-named pins
-// apart from one that sweeps in every pin on the part: the NO_CONNECT pin sits on no net, so it
+// apart from one that sweeps in every pin on the part, because the NO_CONNECT pin sits on no net, so it
 // drops out of both for a reason that has nothing to do with its role.
 func mistypedFixture() *ir.Design {
 	mcu := &ir.PartType{Name: "MCU", Pins: []*ir.Pin{
@@ -45,7 +45,7 @@ func TestPowerPinMistyped_Fires(t *testing.T) {
 	}
 }
 
-// A correctly-typed power pin (power_in) and a mistyped-but-CONNECTED pin both stay silent — the
+// A correctly-typed power pin (power_in) and a mistyped-but-CONNECTED pin both stay silent. The
 // rule fires only where name≠type AND the pin is alone on its net.
 func TestPowerPinMistyped_Silent(t *testing.T) {
 	mcu := &ir.PartType{Name: "MCU", Pins: []*ir.Pin{
@@ -81,9 +81,9 @@ func TestRegistered(t *testing.T) {
 	}
 }
 
-// TestPowerPinMistyped_StatesConsideredSet (agni issue 424): the rule reports what it EXAMINED, not
-// only what it faulted. On the fires fixture that is both name-derived supply pins: VDD, which is
-// mistyped and alone, and GND, which is correctly typed and therefore a pass.
+// TestPowerPinMistyped_StatesConsideredSet (agni issue 424) checks that the rule reports what it
+// EXAMINED, not only what it faulted. On the fires fixture that is both name-derived supply pins,
+// VDD, which is mistyped and alone, and GND, which is correctly typed and therefore a pass.
 //
 // The GND pin is the assertion that matters. It is the pin the rule looked at and cleared, and before
 // this it left exactly the same trace as a pin the rule never reached.
@@ -116,13 +116,14 @@ func TestPowerPinMistyped_StatesConsideredSet(t *testing.T) {
 	}
 }
 
-// TestPowerPinMistyped_FormatGateKeepsItOutOfTheSet: on a format that cannot express intentional
-// no-connect the rule is structurally silent, and its considered set must be EMPTY rather than
-// full of passes. Reporting every supply pin as verified by a rule that cannot run there is the
-// false-pass shape the capability gate exists to prevent, arriving through the coverage half.
+// TestPowerPinMistyped_FormatGateKeepsItOutOfTheSet covers the format gate. On a format that cannot
+// express intentional no-connect the rule is structurally silent, and its considered set must be
+// EMPTY rather than full of passes. Reporting every supply pin as verified by a rule that cannot
+// run there is the false-pass shape the capability gate exists to prevent, arriving through the
+// coverage half.
 func TestPowerPinMistyped_FormatGateKeepsItOutOfTheSet(t *testing.T) {
 	d := mistypedFixture()
-	// Drop the NO_CONNECT pin: has_nc_channel goes false and the rule can conclude nothing.
+	// Dropping the NO_CONNECT pin makes has_nc_channel go false, and the rule can conclude nothing.
 	pins := d.Libraries[0].Parts[0].Pins
 	d.Libraries[0].Parts[0].Pins = append(pins[:2:2], pins[3])
 	if vs := powerPinMistyped.Eval(check.NewModel(d)); len(vs) != 0 {

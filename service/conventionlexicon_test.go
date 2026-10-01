@@ -29,15 +29,15 @@ lexicon:
       patterns: ["^DRNE$"]
 `
 
-// TestConventionLexiconSurvivesOverlay pins the end-to-end property that every path except serve's
-// startup install depends on: a vocabulary an operator writes in conventions.yaml reaches the
-// lexicon the design is READ with. `agni check`, `agni review` and `agni query` all compose their
-// convention through ConventionProto -> AnalysisConfig -> ComposeOverlay, and a project's own
+// TestConventionLexiconSurvivesOverlay pins that a vocabulary an operator writes in
+// conventions.yaml reaches the lexicon the design is READ with, which every path except serve's
+// startup install depends on. `agni check`, `agni review` and `agni query` all compose their
+// convention through naming.Parse -> AnalysisConfig -> ComposeOverlay, and a project's own
 // conventions.yaml takes the same route via internal/projects. Anything the wire form cannot carry
 // is dropped silently on all of them, and BuildRoleVocab then falls back to the built-in names, so
 // an operator who asked for their vocabulary reads a report written against the defaults.
 //
-// The assertion is deliberately behavioural (does the vocabulary classify the name) rather than
+// The assertion is behavioural (does the vocabulary classify the name) rather than
 // structural (does the proto have the field), so it keeps its meaning if the config schema is
 // reshaped underneath it.
 func TestConventionLexiconSurvivesOverlay(t *testing.T) {

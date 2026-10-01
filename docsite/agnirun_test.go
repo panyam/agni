@@ -11,8 +11,8 @@ import (
 
 const spec = "content/tutorials/runs/coverage-rollup.yaml"
 
-// TestAgniRunCapturesAndCaches is the prototype's acceptance: it runs, it commits the capture, and a
-// second call reuses it rather than re-running the engine.
+// TestAgniRunCapturesAndCaches is the prototype's acceptance test. It runs, it commits the capture,
+// and a second call reuses it rather than re-running the engine.
 func TestAgniRunCapturesAndCaches(t *testing.T) {
 	_ = os.Remove(spec + outputSuffix)
 	first := AgniRun(spec)
@@ -27,8 +27,9 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 		t.Errorf("capture should carry a stamp and the body, got stamp=%q", stamp)
 	}
 
-	// A second call must be a CACHE HIT. Proven by corrupting the body: if the run happened again the
-	// corruption would be overwritten, and it is the reuse that keeps a docs build hermetic.
+	// A second call must be a CACHE HIT. Proven by corrupting the body, since if the run happened
+	// again the corruption would be overwritten, and it is the reuse that keeps a docs build
+	// hermetic.
 	if err := os.WriteFile(spec+outputSuffix, []byte(stampPrefix+stamp+"\nSENTINEL\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +37,7 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 		t.Errorf("a fresh capture must be reused, not regenerated:\n%s", got)
 	}
 
-	// A stamp mismatch — what an edited fixture or spec produces — regenerates.
+	// A stamp mismatch, which an edited fixture or spec produces, regenerates.
 	if err := os.WriteFile(spec+outputSuffix, []byte(stampPrefix+"stale\nSENTINEL\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +46,7 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 	}
 }
 
-// TestAgniRunIsolatesTheFixture guards the hazard that bit by hand: rung 11 walks a reader through
+// TestAgniRunIsolatesTheFixture guards a hazard that bit by hand. Rung 11 walks a reader through
 // `mv params params-old`, and a run against the real fixture renamed the checked-in directory.
 func TestAgniRunIsolatesTheFixture(t *testing.T) {
 	tmp := t.TempDir() + "/destructive.yaml"
@@ -71,7 +72,7 @@ func TestAgniRunIsolatesTheFixture(t *testing.T) {
 }
 
 // TestCaptureRulesAreDeclarative covers the three fields that replaced shell plumbing. They are worth
-// testing directly because their whole justification is that the fragile mechanics live in Go, where
+// testing directly because their justification is that the fragile mechanics live in Go, where
 // they CAN be tested, instead of being re-derived in every spec.
 func TestCaptureRulesAreDeclarative(t *testing.T) {
 	base := runSpec{Script: "echo out; echo err 1>&2; exit 3"}
@@ -102,8 +103,8 @@ func TestCaptureRulesAreDeclarative(t *testing.T) {
 }
 
 // TestMatchingNothingIsAnError is the guard that makes a shape-based filter safe to rely on. A filter
-// that stops matching has to say so: rendering an empty block is how a page ends up teaching from a
-// blank space, which is the failure this whole mechanism exists to remove.
+// that stops matching has to say so, because rendering an empty block is how a page ends up teaching
+// from a blank space.
 func TestMatchingNothingIsAnError(t *testing.T) {
 	_, err := execute(runSpec{Script: "echo hello", Match: "^goodbye"})
 	if err == nil {
@@ -114,7 +115,7 @@ func TestMatchingNothingIsAnError(t *testing.T) {
 	}
 }
 
-// TestUnknownCaptureIsRejected: a typo must not silently fall back to stdout.
+// TestUnknownCaptureIsRejected holds that a typo must not silently fall back to stdout.
 func TestUnknownCaptureIsRejected(t *testing.T) {
 	if _, err := execute(runSpec{Script: "echo x", Capture: "stdrr"}); err == nil {
 		t.Error("an unknown capture must be rejected")
@@ -185,14 +186,14 @@ func TestInputHashChangesWithTrackedContent(t *testing.T) {
 }
 
 // A fixture git cannot list is an error rather than a silent fall back to walking the directory.
-// Falling back would restore the exact bug this file is about, and it would do it invisibly: the
+// Falling back would restore the bug this file is about, invisibly, since the
 // stamp would start depending on the working tree again with nothing to say so.
 func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
 	if _, err := inputHash([]byte("spec"), "no/such/fixture"); err == nil {
 		t.Error("a fixture that does not exist must be an error")
 	}
 
-	// The case that actually distinguishes the two implementations: a fixture that EXISTS on disk and
+	// This case distinguishes the two implementations, a fixture that EXISTS on disk and
 	// is tracked by nothing. Walking it produces a confident hash over files no other checkout has;
 	// listing it produces nothing, and answering with a hash of no content would be a stamp that looks
 	// stable and means nothing. A fixture nobody committed is a mistake, so say so.
@@ -211,7 +212,7 @@ func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
 
 // A fetched fixture has nothing tracked, so its stamp has to cover something else, or naming a board
 // as the fixture stamps identically to naming none (agni issue 682). It covers the samples pin, and
-// needs no corpus on disk to do so: the fixture below does not exist.
+// needs no corpus on disk to do so, since the fixture below does not exist.
 func TestInputHashCoversAFetchedFixtureByItsPin(t *testing.T) {
 	pin := filepath.Join(t.TempDir(), "samples.pin")
 	if err := os.WriteFile(pin, []byte("VERSION v1\n"), 0o644); err != nil {
@@ -304,8 +305,8 @@ func TestStepsCaptureSeparately(t *testing.T) {
 	}
 }
 
-// Steps share the scratch directory but not a shell, which is the whole reason a step can be its own
-// process: rung 11 writes a results document in one step and re-renders it in the next.
+// Steps share the scratch directory but not a shell, which is what lets a step be its own
+// process. Rung 11 writes a results document in one step and re-renders it in the next.
 func TestAStepReadsWhatAnEarlierStepWrote(t *testing.T) {
 	got, err := execute(runSpec{Steps: []runStep{
 		{Script: "echo stored > artifact.txt"},
@@ -336,7 +337,7 @@ func TestAnEmptyCaptureIsNotAMatchFailure(t *testing.T) {
 	if len(got) != 2 || got[0] != "" || got[1] != "kept\n" {
 		t.Errorf("got %q, want [\"\" \"kept\\n\"]", got)
 	}
-	// The positive control: the guard must still fire on a step that printed something the filter
+	// As the positive control, the guard must still fire on a step that printed something the filter
 	// then rejected entirely, which is the regression it exists to catch.
 	if _, err := execute(runSpec{Match: "^kept", Steps: []runStep{{Script: "echo nothing-matches"}}}); err == nil {
 		t.Error("a filter selecting nothing from a NON-empty capture must still be an error")
@@ -411,7 +412,7 @@ func TestScriptAndStepsAreMutuallyExclusive(t *testing.T) {
 // TestInputHashRejectsUntrackedFixtureFiles is the other side of TestInputHashIgnoresUntrackedFiles,
 // and the two only make sense together. A gitignored file is generated output nobody commits, so it
 // must not move the stamp. A file git neither tracks nor ignores is a fixture somebody has not
-// committed yet, and it moves the stamp the moment they do: the gate passes locally and fails in CI
+// committed yet, and it moves the stamp the moment they do, so the gate passes locally and fails in CI
 // on a tree whose content never changed (agni issue 588).
 func TestInputHashRejectsUntrackedFixtureFiles(t *testing.T) {
 	const fixture = "readers/kicad/testdata"

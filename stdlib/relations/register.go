@@ -28,7 +28,7 @@ func init() {
 	})
 }
 
-// builtinSchema is each built-in relation's positional argument layout over FactRow, so a flat tuple
+// builtinSchema is each built-in relation's positional argument layout over facts.Row, so a flat tuple
 // is queried as reln(arg0, arg1, ...). It lives here to keep the relation shapes beside the
 // projectors that fill them. Relations the evaluator computes rather than looks up (reaches) are NOT
 // here.
