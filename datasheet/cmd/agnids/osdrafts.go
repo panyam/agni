@@ -2,15 +2,11 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -24,14 +20,6 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/service"
 )
-
-// draftsDir is where the corpus keeps drafts, beside the published specs it is the store for. param's
-// corpus walk reads *.textproto only, so a draft here never seeds a check and never enters the index.
-const draftsDir = "drafts"
-
-// draftSuffix is a draft file's extension: protojson of a dsapi.Draft, with its version left out,
-// since the version is the file's own content hash.
-const draftSuffix = ".draft.json"
 
 // osDraftStore is the OS-backed dsservice.DraftStore over a corpus directory (agni issue 749). It
 // holds both entity types: drafts under drafts/, keyed by MPN, and the published specs and index
@@ -53,35 +41,24 @@ func (s *osDraftStore) lockFor(abs string) *sync.Mutex {
 	return m.(*sync.Mutex)
 }
 
-// draftPath is the file a draft for mpn lives in: the MPN upper-cased, since a draft is keyed
-// case-insensitively as LoadSet matches, then made file-safe as a published spec's name is. The MPN
-// inside the file is what keys it.
+// draftPath is the host path of the draft for mpn, laid out as corpus.DraftFile says.
 func (s *osDraftStore) draftPath(mpn string) string {
-	name := strings.TrimSuffix(corpus.SpecFileName(strings.ToUpper(strings.TrimSpace(mpn))), ".textproto") + draftSuffix
-	return filepath.Join(s.dir, draftsDir, name)
+	return filepath.Join(s.dir, filepath.FromSlash(corpus.DraftFile(mpn)))
 }
 
-// read loads the draft file at abs, or reports found=false when there is none.
-func readDraft(abs string) (*dsapi.Draft, bool, error) {
-	data, err := os.ReadFile(abs)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, false, nil
-	}
+// readDraft reads the draft at a host path.
+func (s *osDraftStore) readDraft(abs string) (*dsapi.Draft, bool, error) {
+	rel, err := filepath.Rel(s.dir, abs)
 	if err != nil {
 		return nil, false, err
 	}
-	d := &dsapi.Draft{}
-	if err := protojson.Unmarshal(data, d); err != nil {
-		return nil, false, fmt.Errorf("%s: %w", abs, err)
-	}
-	d.Version = versionOf(data)
-	return d, true, nil
+	return corpus.ReadDraft(os.DirFS(s.dir), filepath.ToSlash(rel))
 }
 
 // Get implements dsservice.DraftStore. Two MPNs can share a file name once unsafe characters are
 // replaced ("A/B" and "A_B"), so a file holding a different MPN is not this one's draft.
 func (s *osDraftStore) Get(_ context.Context, mpn string) (*dsapi.Draft, bool, error) {
-	d, found, err := readDraft(s.draftPath(mpn))
+	d, found, err := s.readDraft(s.draftPath(mpn))
 	if err != nil || !found || !strings.EqualFold(d.GetMpn(), mpn) {
 		return nil, false, err
 	}
@@ -90,27 +67,16 @@ func (s *osDraftStore) Get(_ context.Context, mpn string) (*dsapi.Draft, bool, e
 
 // ListByDocument implements dsservice.DraftStore.
 func (s *osDraftStore) ListByDocument(_ context.Context, documentURI string) ([]*dsapi.Draft, error) {
-	entries, err := os.ReadDir(filepath.Join(s.dir, draftsDir))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
+	all, err := corpus.Drafts(os.DirFS(s.dir))
 	if err != nil {
 		return nil, err
 	}
 	var out []*dsapi.Draft
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), draftSuffix) {
-			continue
-		}
-		d, found, err := readDraft(filepath.Join(s.dir, draftsDir, e.Name()))
-		if err != nil {
-			return nil, err
-		}
-		if found && slices.Contains(d.GetDocumentUris(), documentURI) {
+	for _, d := range all {
+		if slices.Contains(d.GetDocumentUris(), documentURI) {
 			out = append(out, d)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return strings.ToUpper(out[i].GetMpn()) < strings.ToUpper(out[j].GetMpn()) })
 	return out, nil
 }
 
@@ -122,7 +88,7 @@ func (s *osDraftStore) Save(_ context.Context, d *dsapi.Draft, baseVersion strin
 	lock.Lock()
 	defer lock.Unlock()
 
-	cur, found, err := readDraft(abs)
+	cur, found, err := s.readDraft(abs)
 	if err != nil {
 		return "", err
 	}
@@ -148,7 +114,7 @@ func (s *osDraftStore) Save(_ context.Context, d *dsapi.Draft, baseVersion strin
 	if err := writeAtomic(abs, out); err != nil {
 		return "", err
 	}
-	return versionOf(out), nil
+	return corpus.VersionOf(out), nil
 }
 
 // Publish implements dsservice.DraftStore.
@@ -204,11 +170,4 @@ func publishSpec(dir string, spec *parampb.PartSpec) (*corpus.Promoted, error) {
 		return nil, fmt.Errorf("%s was written but the index was not, so run `agnids index %s`: %w", dst, dir, err)
 	}
 	return p, nil
-}
-
-// versionOf is a stored file's version token, its content hash, as SaveDraft's compare-and-swap
-// passes it back.
-func versionOf(b []byte) string {
-	h := sha256.Sum256(b)
-	return "sha256:" + hex.EncodeToString(h[:])
 }
