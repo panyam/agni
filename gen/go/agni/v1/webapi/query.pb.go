@@ -650,7 +650,7 @@ func (x *EntityQuery) GetTeaches() string {
 // (agni issue 338). {term} sits INSIDE its string literal, as the entity presets' placeholders do,
 // so the template parses as written.
 //
-// It is served for the same reason the entity presets are. It names `entity` and `match`, both
+// It is served for the same reason the entity presets are. It names `entity` and `str.match`, both
 // defined on this side, and a client-held copy would be the one caller nothing checks.
 type SearchQuery struct {
 	state protoimpl.MessageState `protogen:"open.v1"`

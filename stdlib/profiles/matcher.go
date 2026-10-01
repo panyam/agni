@@ -33,16 +33,16 @@ import (
 func netMatch(v query.Term, s Signal) []query.Literal {
 	switch {
 	case s.Glob != "":
-		return []query.Literal{query.Pos(query.Rel("glob", v, query.Str(s.Glob)))}
+		return []query.Literal{query.Pos(query.Rel("str.glob", v, query.Str(s.Glob)))}
 	case s.Regex != "":
-		return []query.Literal{query.Pos(query.Rel("match", v, query.Str(s.Regex)))}
+		return []query.Literal{query.Pos(query.Rel("str.match", v, query.Str(s.Regex)))}
 	}
 	var lits []query.Literal
 	if s.Suffix != "" {
-		lits = append(lits, query.Pos(query.Rel("suffix", v, query.Str(s.Suffix))))
+		lits = append(lits, query.Pos(query.Rel("str.suffix", v, query.Str(s.Suffix))))
 	}
 	if s.Prefix != "" {
-		lits = append(lits, query.Pos(query.Rel("prefix", v, query.Str(s.Prefix))))
+		lits = append(lits, query.Pos(query.Rel("str.prefix", v, query.Str(s.Prefix))))
 	}
 	return lits
 }

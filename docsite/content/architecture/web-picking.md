@@ -108,7 +108,7 @@ The panel's "Find by name" mode takes a term, fills the served template
 query mode so the reader ends up looking at the sentence that answered them. The template ranges over
 `entity(?name, ?kind)` because every other relation ranges over an ASSOCIATION, so a search built on
 one silently cannot find a part with no connections or a net with nothing on it. It matches with
-`match` and `(?i)` rather than `contains`, so case does not have to be guessed at and a reader who
+`str.match` and `(?i)` rather than `str.contains`, so case does not have to be guessed at and a reader who
 wants `^U` can write it. The client regex-escapes the typed term (`searchPattern`, mirroring Go's
 `regexp.QuoteMeta`), because `VDD+` and `DATA[7:0]` are ordinary names here.
 

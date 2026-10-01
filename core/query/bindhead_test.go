@@ -31,7 +31,7 @@ func TestGeneratorFirstRules(t *testing.T) {
 		want: []string{"far"},
 	}, {
 		name: "a filter cannot enumerate, so leading with one is not this bug",
-		text: `named(?n) :- net.rail(?n), prefix(?n, "V"); named(?n) => ?n`,
+		text: `named(?n) :- net.rail(?n), str.prefix(?n, "V"); named(?n) => ?n`,
 		want: nil,
 	}} {
 		t.Run(c.name, func(t *testing.T) {

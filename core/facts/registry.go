@@ -8,6 +8,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/jaala/ns"
 )
 
 // Globals for REGISTRATION, values for USE.
@@ -65,7 +66,7 @@ type Registry struct {
 	schema    map[string][]Field // every relation, built-in and extension alike
 	extension []Relation         // in composition order, so a merge is deterministic
 	builtin   BuiltinFacts
-	reserved  map[string]string // predicate name -> the engine that claimed it
+	vocab     *ns.Vocabulary // every queryable name at its path: relations, predicates, modules
 }
 
 // An Option contributes to a Registry under construction. The three kinds mirror the three ways a
@@ -77,7 +78,9 @@ type builder struct {
 	builtin    BuiltinFacts
 	hasBuiltin bool
 	extension  []Relation
-	reserved   map[string]string
+	predicates []namedBuiltin
+	modules    []ns.Module
+	languages  []ns.Language
 	errs       []error
 }
 
@@ -113,32 +116,39 @@ func WithRelation(name string, fields []Field, project Projector) Option {
 	}
 }
 
-// Reserving claims names for an engine's own computed predicates (core/query's reaches and the string
-// filters), so a relation cannot shadow one. who names the claimant, for the error message.
-//
-// Order does not matter. Collisions are swept once after every option applies, so a predicate and a
-// relation clash whichever registered first, which matters because an engine and a relation catalog
-// are independent imports with no controllable init order.
-func Reserving(who string, names ...string) Option {
-	return func(b *builder) {
-		for _, n := range names {
-			if prev, ok := b.reserved[n]; ok && prev != who {
-				b.err(fmt.Errorf("predicate %q claimed by both %s and %s", n, prev, who))
-				continue
-			}
-			b.reserved[n] = who
-		}
-	}
+// namedBuiltin is a predicate waiting to join the vocabulary at its path.
+type namedBuiltin struct {
+	path string
+	b    ns.Builtin
+}
+
+// WithPredicate adds a predicate at path: a filter or a generator over the fact base's Source, which
+// reaches the design through EnvOf. A generator must emit only values drawn from the design, since
+// evaluation terminates only while nothing invents values.
+func WithPredicate(path string, b ns.Builtin) Option {
+	return func(bd *builder) { bd.predicates = append(bd.predicates, namedBuiltin{path, b}) }
+}
+
+// WithModule adds a module of derived relations, text in a language some engine registered with
+// WithLanguage. The fact layer stores the text and never parses it; the language reports what the
+// module defines.
+func WithModule(path, lang, text string) Option {
+	return func(bd *builder) { bd.modules = append(bd.modules, ns.Module{Path: path, Language: lang, Text: text}) }
+}
+
+// WithLanguage makes a module language available to the vocabulary. An engine registers its own.
+func WithLanguage(l ns.Language) Option {
+	return func(bd *builder) { bd.languages = append(bd.languages, l) }
 }
 
 // NewRegistry composes a Registry from the given options. It reports every problem it found rather
 // than only the first, so a caller fixing a composition sees the whole list.
 func NewRegistry(opts ...Option) (*Registry, error) {
-	b := &builder{reserved: map[string]string{}}
+	b := &builder{}
 	for _, o := range opts {
 		o(b)
 	}
-	r := &Registry{schema: map[string][]Field{}, builtin: b.builtin, reserved: b.reserved}
+	r := &Registry{schema: map[string][]Field{}, builtin: b.builtin}
 	for name, f := range b.builtin.Schema {
 		r.schema[name] = append([]Field(nil), f...)
 	}
@@ -150,21 +160,149 @@ func NewRegistry(opts ...Option) (*Registry, error) {
 		r.schema[rel.Name] = rel.Fields
 		r.extension = append(r.extension, rel)
 	}
-	// One collision sweep after everything is in, sorted so the error reads the same on every run.
-	var clashes []string
-	for name := range r.schema {
-		if who, ok := r.reserved[name]; ok {
-			clashes = append(clashes, fmt.Sprintf("relation %q collides with a predicate reserved by %s", name, who))
-		}
-	}
-	sort.Strings(clashes)
-	for _, c := range clashes {
-		b.err(errors.New(c))
-	}
+	v, errs := r.compose(b)
+	r.vocab = v
+	b.errs = append(b.errs, errs...)
 	if len(b.errs) > 0 {
 		return nil, fmt.Errorf("facts: %w", errors.Join(b.errs...))
 	}
 	return r, nil
+}
+
+// compose builds the vocabulary: languages first, so modules can be read; then every relation in
+// catalog order, typed from its catalog entry; the standard predicates; the registered predicates;
+// then the modules. The vocabulary applies the namespace tree's rules as each name arrives (one
+// definer per path; a segment is a module or a member), so a clash is reported whichever side
+// registered first.
+func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
+	var errs []error
+	v, err := ns.NewVocabulary(noCatalog{})
+	if err != nil {
+		return nil, []error{err}
+	}
+	for _, l := range b.languages {
+		if err := v.AddLanguage(l); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	added := map[string]bool{}
+	addRel := func(name string) {
+		if added[name] {
+			return
+		}
+		added[name] = true
+		s := ns.Schema{Arity: len(r.schema[name])}
+		if info, ok := r.InfoOf(name); ok {
+			s.Labels, s.Types, s.Doc = info.Args, ArgTypes(info.Args, info.ArgKinds), info.Summary
+		}
+		if err := v.AddRelation(name, s); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	for _, info := range r.builtin.Catalog {
+		if r.IsRelation(info.Name) {
+			addRel(info.Name)
+		}
+	}
+	rest := make([]string, 0, len(r.schema))
+	for name := range r.schema {
+		rest = append(rest, name)
+	}
+	sort.Strings(rest)
+	for _, name := range rest {
+		addRel(name)
+	}
+	if err := ns.StandardPredicates(v); err != nil {
+		errs = append(errs, err)
+	}
+	for _, p := range b.predicates {
+		if err := v.AddPredicate(p.path, p.b); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	for _, m := range b.modules {
+		if err := v.AddModule(m.Path, m.Language, m.Text); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(b.modules) > 0 && len(errs) == 0 {
+		if err := v.Check(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return v, errs
+}
+
+// noCatalog is the Source an empty vocabulary starts from. It serves nothing and exists to say, in an
+// unknown-name error, which import installs the relations, because a binary missing that import
+// otherwise reads as a query that named something the design lacks (C29).
+type noCatalog struct{}
+
+func (noCatalog) Schema(string) (ns.Schema, bool) { return ns.Schema{}, false }
+func (noCatalog) Tuples(string) []ns.Tuple        { return nil }
+func (noCatalog) Relations() []string             { return nil }
+func (noCatalog) NoVocabularyHint() string {
+	return "no fact relations are installed (import a relation catalog, e.g. stdlib/relations)"
+}
+
+// Vocabulary is every name a query can call, at its path: the relations, the predicates and the
+// modules. It is composed once with the registry and only read afterwards, so an engine can check it
+// once and share it across every query.
+func (r *Registry) Vocabulary() *ns.Vocabulary { return r.vocab }
+
+// Predicates returns a catalog entry per predicate in the vocabulary, the standard ones included,
+// sorted by path.
+func (r *Registry) Predicates() []RelationInfo {
+	var out []RelationInfo
+	var walk func(module string)
+	walk = func(module string) {
+		entries, err := r.vocab.Members(module)
+		if err != nil {
+			return
+		}
+		for _, e := range entries {
+			switch e.Kind {
+			case ns.EntryModule:
+				walk(e.Path)
+			case ns.EntryPredicate:
+				info := RelationInfo{Name: e.Path, Summary: e.Doc, Kind: KindPredicate}
+				for _, a := range e.Args {
+					info.Args = append(info.Args, a.Name)
+					if k := argKindOf(a.ArgType); k.Entity != "" || k.KindArg != "" || k.OwnerArg != "" || len(k.ValidOptions) > 0 {
+						if info.ArgKinds == nil {
+							info.ArgKinds = map[string]ArgKind{}
+						}
+						info.ArgKinds[a.Name] = k
+					}
+				}
+				out = append(out, info)
+			}
+		}
+	}
+	if r.vocab != nil {
+		walk("")
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// ArgTypes maps a catalog entry's per-argument declarations onto the vocabulary's signature, position
+// by position: an entity kind, a kind taken per row from another argument, an owner argument, and a
+// closed vocabulary of values.
+func ArgTypes(labels []string, kinds map[string]ArgKind) []ns.ArgType {
+	if len(kinds) == 0 {
+		return nil
+	}
+	out := make([]ns.ArgType, len(labels))
+	for i, l := range labels {
+		k := kinds[l]
+		out[i] = ns.ArgType{Kind: k.Entity, KindFrom: k.KindArg, Owner: k.OwnerArg, Domain: k.ValidOptions}
+	}
+	return out
+}
+
+func argKindOf(t ns.ArgType) ArgKind {
+	return ArgKind{Entity: t.Kind, KindArg: t.KindFrom, OwnerArg: t.Owner, ValidOptions: t.Domain}
 }
 
 // SchemaOf resolves a relation's positional layout. An extension relation resolves exactly like a
@@ -283,8 +421,15 @@ func RegisterRelation(name string, fields []Field, project Projector) {
 	addOption(WithRelation(name, fields, project))
 }
 
-// Reserve claims names for an engine's computed predicates in the process default.
-func Reserve(who string, names ...string) { addOption(Reserving(who, names...)) }
+// RegisterPredicate adds a predicate to the process default at path. Call it once at init.
+func RegisterPredicate(path string, b ns.Builtin) { addOption(WithPredicate(path, b)) }
+
+// RegisterModule adds a module of derived relations to the process default. Call it once at init.
+func RegisterModule(path, lang, text string) { addOption(WithModule(path, lang, text)) }
+
+// RegisterLanguage makes a module language available in the process default. An engine calls it once
+// at init for its own language.
+func RegisterLanguage(l ns.Language) { addOption(WithLanguage(l)) }
 
 // addOption composes the option with everything registered so far and panics if that fails, before
 // appending. The buffer is APPEND-ONLY, so an admitted bad registration would poison every later
@@ -304,7 +449,33 @@ func addOption(o Option) {
 // DefaultRegistry composes everything registered at init. It panics on a composition error, because a
 // duplicate or shadowing relation is a programming error that must fail loudly at load rather than
 // silently at query time. check.DefaultCatalog has the same contract.
-func DefaultRegistry() *Registry { return RegistryWith() }
+//
+// The composed registry is cached until something new registers. The registration buffer only grows
+// and a Registry is never changed once built, so the cache cannot go stale unnoticed, and every caller
+// shares one vocabulary, which an engine checks once rather than per query.
+func DefaultRegistry() *Registry {
+	regMu.Lock()
+	if defaultCache.r != nil && defaultCache.n == len(registered) {
+		r := defaultCache.r
+		regMu.Unlock()
+		return r
+	}
+	n := len(registered)
+	regMu.Unlock()
+	r := RegistryWith()
+	regMu.Lock()
+	if n == len(registered) {
+		defaultCache.r, defaultCache.n = r, n
+	}
+	regMu.Unlock()
+	return r
+}
+
+// defaultCache is DefaultRegistry's last composition and the buffer length it was composed from.
+var defaultCache struct {
+	n int
+	r *Registry
+}
 
 // RegistryWith composes the registered options followed by the caller's extras, under the same
 // checks. An embedder uses it to add relations explicitly rather than through global registration.

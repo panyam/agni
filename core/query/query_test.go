@@ -13,6 +13,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/jaala/ns"
 )
 
 // boardGeom is a two-net board: SIG routed thin (0.08mm), PWR wide (0.5mm).
@@ -427,16 +428,16 @@ func TestStringPredicates(t *testing.T) {
 			t.Errorf("%s => %+v, want only %s", text, rows, wantRef)
 		}
 	}
-	one(`component.mpn(?r,?m), contains(?m,"LM") => ?r`, "U1")
-	one(`component.mpn(?r,?m), prefix(?m,"REG") => ?r`, "U2")
-	one(`component.mpn(?r,?m), suffix(?m,"1117") => ?r`, "U1")
-	one(`component.mpn(?r,?m), not contains(?m,"LM") => ?r`, "U2") // negated string predicate
+	one(`component.mpn(?r,?m), str.contains(?m,"LM") => ?r`, "U1")
+	one(`component.mpn(?r,?m), str.prefix(?m,"REG") => ?r`, "U2")
+	one(`component.mpn(?r,?m), str.suffix(?m,"1117") => ?r`, "U1")
+	one(`component.mpn(?r,?m), not str.contains(?m,"LM") => ?r`, "U2") // negated string predicate
 }
 
 // TestStringPredicateUnbound (WS3-029 fast-follow): a string predicate whose value is not bound by
 // a relation errors clearly (it filters, it cannot enumerate every string).
 func TestStringPredicateUnbound(t *testing.T) {
-	if _, err := (Naive{}).Eval(mustParse(t, `contains(?x,"LM") => ?x`), NewBase(check.NewModel(&ir.Design{}))); err == nil {
+	if _, err := (Naive{}).Eval(mustParse(t, `str.contains(?x,"LM") => ?x`), NewBase(check.NewModel(&ir.Design{}))); err == nil {
 		t.Error("contains on an unbound variable succeeded; want an error")
 	}
 }
@@ -569,63 +570,53 @@ func TestRulesDoNotLeakAcrossQueries(t *testing.T) {
 	}
 }
 
-// withCleanRegistry snapshots this package's predicate set, restoring it after the test so a
-// registered predicate does not leak into the next one. RegisterPredicate adds to that set, so it is
-// cloned (not aliased) before the test writes to it; the clone keeps the standard
-// reaches/contains/prefix/suffix entries.
-//
-// Relations need no equivalent, because a test composes its own facts.Registry and passes it to
-// NewBaseFrom, so it never writes to the process default and has nothing to restore.
-func withCleanRegistry(t *testing.T) {
-	t.Helper()
-	orig := predicates
-	predicates = orig.Clone()
-	t.Cleanup(func() { predicates = orig })
-}
+// oddLen is an overlay's filter predicate, odd_len(?s), true when the string's length is odd.
+var oddLen = ns.Filter(1, func(args []Value) (bool, error) { return len(args[0].S)%2 == 1, nil })
 
-// TestRegisterPredicate (predicate-interface): an overlay filter predicate registered with
-// RegisterPredicate is a first-class query citizen. It filters in the goal and `not` ranges over it,
-// both derived from the one boolean so they can never disagree.
-func TestRegisterPredicate(t *testing.T) {
-	withCleanRegistry(t)
-	// odd_len(?s): true when the string length is odd. A pure filter over the argument value.
-	RegisterPredicate("odd_len", 1, func(args []Value) (bool, error) { return len(args[0].S)%2 == 1, nil })
+// TestRegisteredPredicateFiltersAndNegates (predicate-interface): an overlay's filter predicate,
+// registered at a path in the fact layer's vocabulary, is a first-class query citizen. It filters in
+// the goal and `not` ranges over it, both derived from the one boolean so they can never disagree.
+//
+// The test composes its own registry, so it never writes to the process default and has nothing to
+// restore.
+func TestRegisteredPredicateFiltersAndNegates(t *testing.T) {
+	reg := facts.RegistryWith(facts.WithPredicate("odd_len", oddLen))
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "d"}}, {RefDes: "R22", Prov: &ir.Provenance{SourceFile: "d"}}},
 		Nets:       []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "R22", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "d"}}},
 	}
 	m := check.NewModel(d)
-	pos := runQuery(t, m, `component.net(?r,?n), odd_len(?r) => ?r`) // R22 (len 3), not U1 (len 2)
+	pos := runQueryOn(t, reg, m, `component.net(?r,?n), odd_len(?r) => ?r`) // R22 (len 3), not U1 (len 2)
 	if len(pos) != 1 || pos[0].Bind["r"].S != "R22" {
 		t.Errorf("odd_len filter = %+v, want only R22", pos)
 	}
-	neg := runQuery(t, m, `component.net(?r,?n), not odd_len(?r) => ?r`) // U1
+	neg := runQueryOn(t, reg, m, `component.net(?r,?n), not odd_len(?r) => ?r`) // U1
 	if len(neg) != 1 || neg[0].Bind["r"].S != "U1" {
 		t.Errorf("not odd_len = %+v, want only U1", neg)
 	}
 }
 
-// TestRegisterPredicateRejects (predicate-interface): a misregistration fails loudly at load.
-func TestRegisterPredicateRejects(t *testing.T) {
-	cases := map[string]func(){
-		"empty name":       func() { RegisterPredicate("", 1, func([]Value) (bool, error) { return true, nil }) },
-		"zero arity":       func() { RegisterPredicate("p", 0, func([]Value) (bool, error) { return true, nil }) },
-		"nil predicate":    func() { RegisterPredicate("p", 1, nil) },
-		"collide built-in": func() { RegisterPredicate("contains", 2, func([]Value) (bool, error) { return true, nil }) },
-		"collide EDB": func() {
-			RegisterPredicate("component.net", 2, func([]Value) (bool, error) { return true, nil })
-		},
-		"collide reaches": func() { RegisterPredicate("net.reaches", 2, func([]Value) (bool, error) { return true, nil }) },
+// TestPredicateRegistrationRejects (predicate-interface): a misregistration fails composition, which
+// facts.RegisterPredicate turns into a panic at load.
+func TestPredicateRegistrationRejects(t *testing.T) {
+	ok := func([]Value) (bool, error) { return true, nil }
+	cases := map[string]struct {
+		path string
+		b    ns.Builtin
+	}{
+		"empty name":        {"", ns.Filter(1, ok)},
+		"zero arity":        {"p", ns.Filter(0, ok)},
+		"nil predicate":     {"p", ns.Builtin{Arity: 1}},
+		"collide standard":  {"str.contains", ns.Filter(2, ok)},
+		"collide relation":  {"component.net", ns.Filter(2, ok)},
+		"collide reaches":   {"net.reaches", ns.Filter(2, ok)},
+		"module and member": {"net", ns.Filter(1, ok)},
 	}
-	for name, register := range cases {
+	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			withCleanRegistry(t)
-			defer func() {
-				if recover() == nil {
-					t.Errorf("RegisterPredicate(%s) did not panic; want a load-time rejection", name)
-				}
-			}()
-			register()
+			if _, err := facts.NewRegistry(append(facts.Registered(), facts.WithPredicate(c.path, c.b))...); err == nil {
+				t.Errorf("composing %s produced no error; want a load-time rejection", name)
+			}
 		})
 	}
 }
@@ -781,7 +772,6 @@ func TestBusRelation(t *testing.T) {
 		t.Errorf("bus(?label, \"bus_alias\") = %v, want just DATA", aliases)
 	}
 }
-
 
 // TestUnanchoredNegationErrors is agni issue 522's first half. A negated atom sharing no variable
 // with the rest of the query has nothing to range over per row, so it collapses to a design-wide

@@ -52,6 +52,7 @@ modules (agni issue 751). A query saved before the move names them the old way a
 | `external_signal_net` | `net.connector_signal` |
 | `has_nc_channel`, `types_power_out`, `has_netclass`, `has_netclass_defs` | `design.` plus the same name |
 | `pin_net_conflict`, `ref_des_collision`, `unresolved_symbol` | `reader.` plus the same name |
+| `contains`, `prefix`, `suffix`, `glob`, `match` | `str.` plus the same name |
 
 ## Writing a query
 
@@ -111,10 +112,10 @@ paired rows survive.
 ### 4. Parts on USB nets (*predicate*)
 
 ```
-component.net(?ref, ?net), contains(?net, "USB") => ?ref, ?net
+component.net(?ref, ?net), str.contains(?net, "USB") => ?ref, ?net
 ```
 
-`contains` is a test over an already-bound value, SQL's `LIKE '%USB%'`. `prefix`/`suffix` are the
+`str.contains` is a test over an already-bound value, SQL's `LIKE '%USB%'`. `str.prefix`/`str.suffix` are the
 anchored variants.
 
 ### 5. Reachable through series pass elements (*recursion*)
@@ -159,8 +160,8 @@ cannot find a part that sits on no net, because such a part has no row there.
 
 {{ agniRun "content/guide/runs/query-entity-by-kind.yaml" }}
 
-The string predicates (`contains`, `prefix`, `suffix`, `glob`, `match`) decide how the name is
-matched. A leading wildcard is the case `prefix` cannot express, which is how you find every net
+The string predicates (`str.contains`, `str.prefix`, `str.suffix`, `str.glob`, `str.match`) decide how
+the name is matched. A leading wildcard is the case `str.prefix` cannot express, which is how you find every net
 named for the rail it carries whichever block named it:
 
 {{ agniRun "content/guide/runs/query-entity-by-glob.yaml" }}

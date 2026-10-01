@@ -1420,6 +1420,50 @@ knows. That would mean the boundary is in the wrong place, and the fix is to wid
 
 ---
 
+## Every queryable name has a path in one vocabulary, and the fact layer composes it
+
+A follow-up to the entry above, from agni issue 751. Every name a query can call now has a PATH:
+`net.pin_count`, `component.pin`, `str.contains`, `net.reaches`. A dot separates a module from its
+member, a segment is one or the other and never both, and a path has one definer. agni's relations
+were renamed to fit (agni PR 752), and the string tests moved under `str` here.
+
+**The vocabulary is jaala's `ns` package, and `core/facts` registers straight into it.** The first
+cut of this work copied the tree into agni (its own value type, predicate type, module record and an
+implementation of the two rules) to keep C29's fact layer free of any jaala import, and converted
+between the copy and the engine's types per fact base. Two implementations of one rule set drift,
+and they would disagree outright once names resolve through imports, which only the engine can do.
+So jaala split its vocabulary from its engine (panyam/jaala#16, v0.1.3). `jaala/ns` holds names,
+signatures and values with no parser or evaluator; `jaala/datalog` imports it. C29 now admits
+`jaala/ns` and still forbids the evaluator, and a test holds `ns` free of one.
+
+Four things moved with that.
+
+- `core/facts` composes one `ns.Vocabulary` per registry, with the relations typed from their
+  catalog entries, the standard string tests, every registered predicate and every module. A clash
+  is refused at load whichever side registered first. `facts.Reserve` is gone, since a name the
+  engine provides is now simply registered.
+- `net.reaches` and `net.route` left `core/query` for `stdlib/relations`. They are walks over a
+  `check.Model` and read nothing an engine owns. A generator reaches the design through the `Source`
+  it is handed (`facts.EnvOf`), with a memo so the net index is built once per fact base rather than
+  once per binding.
+- `query.RegisterPredicate` is gone, and with it the rule that an overlay could register only a
+  filter. An overlay registers an `ns.Builtin` with `facts.RegisterPredicate`, and a generator takes
+  on the obligation the engine states for it: emit only values drawn from the design, because
+  evaluation terminates only while nothing invents values.
+- `core/query` builds a fact base per design with `datalog.NewBase(vocabulary, source)`, so the
+  vocabulary is composed and checked once and shared by every query.
+
+**Column typing moved into the engine.** The rules agni settled for inferring a column's kind through
+derived relations (agni issue 654) are jaala's `ColumnKinds` now, and `service/query.go` maps its
+answer. The golden snapshot of every column's kind changed only in the five string tests' paths.
+`entity`'s `kind` argument is closed over `component`, `net` and `bus`, which is what lets the engine
+type `entity(?n, "net")` as a net and refuse `entity(?n, "pin")` rather than answer nothing.
+
+**Reopen if** a second engine arrives and needs a value or signature `ns` cannot express. `ns` is
+then the contract to widen, in jaala, rather than something to wrap here.
+
+---
+
 ## The fact tuple's slot pressure is a datasheet problem, not a tuple problem
 
 `facts.Row` (was `query.FactRow`) is a fixed flat struct that gained two fields in the nine days after

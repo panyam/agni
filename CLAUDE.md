@@ -89,8 +89,13 @@ Notes written before this layout landed name the old directories. **Grep the SYM
 not the directory.**
 
 **The Datalog engine is a separate module, `github.com/panyam/jaala/datalog`** (agni issue 731), and
-`core/query` is agni's adapter over it: the `Source` projecting a Model through the fact registry,
-`net.reaches`/`net.route` as generators, `RuleFromQuery`, the wire form and the catalog. A language change
+`core/query` is agni's adapter over it: the `Source` projecting a Model through the fact registry, a
+fact base per design over one vocabulary, `RuleFromQuery`, the wire form and the catalog. **Every
+queryable name registers in `core/facts` at a path of jaala's `ns.Vocabulary`** (agni issue 751):
+`facts.RegisterRelation`, `facts.RegisterPredicate` (an `ns.Builtin`, such as the `net.reaches`
+generator in `stdlib/relations`, which reaches the design through `facts.EnvOf`) and
+`facts.RegisterModule`. `jaala/ns` holds names and signatures with no evaluator, which is why C29
+lets the fact layer import it and nothing more of jaala. A language change
 (parser, evaluator, index, aggregation) is a jaala PR and a tag first, then a `go get` here. Its
 issues live on panyam/jaala.
 
@@ -549,8 +554,9 @@ The six net vocabularies and when to narrow one are in `guide/naming-conventions
 voltage relations stopped being exhaustive is in DECISIONS.md.
 
 **A variable's entity kind survives a DERIVED relation, and the three rules of that walk are worth
-knowing before you widen it.** `varKind` types a projected variable from the catalog relations in the
-goal and then follows user rules into their bodies, so a bucket built with negation is clickable
+knowing before you widen it.** The engine's `ColumnKinds` (jaala, which `service/query.go` maps since
+agni 751) types a projected variable from the catalog relations in the goal and then follows user
+rules into their bodies, so a bucket built with negation is clickable
 without repeating a catalog atom to re-establish a kind the rule already knew (agni 654). It follows
 more than one hop. Rules that DISAGREE about a head position yield a scalar rather than the first one
 written, because a column typed from whichever rule came first is wrong for half the rows. A rule
