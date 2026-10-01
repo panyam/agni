@@ -58,10 +58,15 @@ type QueryServiceClient interface {
 	// answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
 	// goal) and a design that cannot be read are errors for the call.
 	RunQueries(context.Context, *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error)
-	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
-	// predicates plus any overlay-registered relations, each with its argument labels, a one-line
-	// summary, and a kind for grouping. The catalog is static per service build (it does not depend
-	// on a loaded design), so the client fetches it once to populate the panel's relation picker.
+	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations, the
+	// derived relations the shipped library defines, the predicates, and any overlay-registered
+	// relations, each with its argument labels, a one-line summary, and a kind for grouping. The
+	// catalog is static per service build (it does not depend on a loaded design), so the client
+	// fetches it once to populate the panel's relation picker.
+	//
+	// With a path set it answers one place in the namespace tree instead (agni issue 751): a module
+	// and its members, or one member with its signature and, for a derived relation, its definition.
+	// `agni query --relations <path>` prints the same answer.
 	ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error)
 }
 
@@ -135,10 +140,15 @@ type QueryServiceHandler interface {
 	// answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
 	// goal) and a design that cannot be read are errors for the call.
 	RunQueries(context.Context, *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error)
-	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
-	// predicates plus any overlay-registered relations, each with its argument labels, a one-line
-	// summary, and a kind for grouping. The catalog is static per service build (it does not depend
-	// on a loaded design), so the client fetches it once to populate the panel's relation picker.
+	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations, the
+	// derived relations the shipped library defines, the predicates, and any overlay-registered
+	// relations, each with its argument labels, a one-line summary, and a kind for grouping. The
+	// catalog is static per service build (it does not depend on a loaded design), so the client
+	// fetches it once to populate the panel's relation picker.
+	//
+	// With a path set it answers one place in the namespace tree instead (agni issue 751): a module
+	// and its members, or one member with its signature and, for a derived relation, its definition.
+	// `agni query --relations <path>` prints the same answer.
 	ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error)
 }
 

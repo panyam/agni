@@ -8,7 +8,11 @@ package service
 //
 // reviewquery is the same story one layer up: core/review holds no query language (C29), so a
 // manifest's inline query binding needs the datalog bridge registered or it fails to compile at Load.
+//
+// lib is the shipped derived-relation library, imported so the column-kind snapshot covers its
+// members as the binary serves them.
 import (
+	_ "github.com/panyam/agni/stdlib/lib"
 	_ "github.com/panyam/agni/stdlib/relations"
 	_ "github.com/panyam/agni/stdlib/reviewquery"
 )

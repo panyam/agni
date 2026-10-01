@@ -11,24 +11,26 @@ actors:
 ## What this shows
 
 A netlist review usually ends in a workbook rather than a single answer: every part and its nets,
-every part number, test points per net, which passives a tester can measure. Each of those is a
+every part number, test points per net, which two-terminal parts a tester can measure. Each of those is a
 query. Asked one at a time, each one reads the whole design again, and the questions live in
 whatever script happens to call them.
 
-A query set keeps them in one file, `audit.yaml`, with the derived relations they share written once
-at the top. `agni query --set` answers all of them from a single read of the design.
+A query set keeps them in one file, `audit.yaml`. The relations the tables share, such as
+`net.has_test_point` and `component.probed_both`, come from the shipped library, so the file holds
+only the questions. `agni query --set` answers all of them from a single read of the design.
 
 ## Pick a design {#pick}
 
 > The bundled fixture is `../common/designs/netlist-audit.tel`, a small synthetic board where every
-> table has something in it: a test point on ground, passives probed on both nets, and some probed
+> table has something in it: a test point on ground, two-terminal parts probed on both nets, and some probed
 > on only one. Setting `AGNI_EXAMPLE_DESIGN` points this at a board this repo cannot carry.
 
 ## The set {#the-set}
 
-> The preamble defines what the tables share: `has_tp` (a net carrying a test point), `passive`,
-> `two_net` (a passive on exactly two nets, via `component.net_count`), and the `both` and `one`
-> buckets. Each query then reads as the question it asks.
+> The set has no preamble. What the tables share is in the shipped library: `net.has_test_point`,
+> `component.two_terminal` (a part on exactly two nets), and `component.probed_both` and
+> `component.probed_one` built from those two. `agni query --relations component.probed_one` prints
+> any of them with its definition. Each query then reads as the question it asks.
 
 ## One read, every table {#answer}
 

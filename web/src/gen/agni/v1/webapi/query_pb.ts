@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkiggEKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIIrQBCghRdWVyeVJvdxINCgVjZWxscxgBIAMoCRINCgVjaXRlcxgCIAMoCRIvCgtjZWxsX3NoZWV0cxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLkNlbGxTaGVldHMSMgoMY2VsbF9yZWFzb25zGAQgAygOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uEhIKCmNlbGxfa2luZHMYBSADKAkSEQoJY2VsbF9yZWZzGAYgAygJIh8KCkNlbGxTaGVldHMSEQoJc2hlZXRfaWRzGAEgAygJIoABChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkiFgoUTGlzdFJlbGF0aW9uc1JlcXVlc3QiWQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJIj0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIjsKC0VudGl0eVF1ZXJ5EgwKBGtpbmQYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSItCgtTZWFyY2hRdWVyeRINCgVxdWVyeRgBIAEoCRIPCgd0ZWFjaGVzGAIgASgJIuABChVMaXN0UmVsYXRpb25zUmVzcG9uc2USLwoJcmVsYXRpb25zGAEgAygLMhwuYWduaS52MS53ZWJhcGkuUmVsYXRpb25JbmZvEi4KCGV4YW1wbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuRXhhbXBsZVF1ZXJ5EjMKDmVudGl0eV9xdWVyaWVzGAMgAygLMhsuYWduaS52MS53ZWJhcGkuRW50aXR5UXVlcnkSMQoMc2VhcmNoX3F1ZXJ5GAQgASgLMhsuYWduaS52MS53ZWJhcGkuU2VhcmNoUXVlcnkiWAoIUXVlcnlTZXQSDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSKwoHcXVlcmllcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkiPgoKTmFtZWRRdWVyeRIMCgRuYW1lGAEgASgJEg0KBXF1ZXJ5GAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJIpwBChFSdW5RdWVyaWVzUmVxdWVzdBIlCgNzZXQYASABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBILCgN1cmkYAiABKAkSLgoHb3ZlcmxheRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSEQoJYm9hcmRfdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIIngKElJ1blF1ZXJpZXNSZXNwb25zZRINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIOCgZzb3VyY2UYAyABKAkSMQoHcmVzdWx0cxgEIAMoCzIgLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnlSZXN1bHQidgoQTmFtZWRRdWVyeVJlc3VsdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEjAKBnJlc3VsdBgDIAEoCzIgLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USDQoFZXJyb3IYBCABKAkykAIKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USUwoKUnVuUXVlcmllcxIhLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1Jlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkiggEKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIIrQBCghRdWVyeVJvdxINCgVjZWxscxgBIAMoCRINCgVjaXRlcxgCIAMoCRIvCgtjZWxsX3NoZWV0cxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLkNlbGxTaGVldHMSMgoMY2VsbF9yZWFzb25zGAQgAygOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uEhIKCmNlbGxfa2luZHMYBSADKAkSEQoJY2VsbF9yZWZzGAYgAygJIh8KCkNlbGxTaGVldHMSEQoJc2hlZXRfaWRzGAEgAygJIoABChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkiJAoUTGlzdFJlbGF0aW9uc1JlcXVlc3QSDAoEcGF0aBgBIAEoCSKAAQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCXNpZ25hdHVyZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJIscBCg1SZWxhdGlvbkVudHJ5EgwKBHBhdGgYASABKAkSEgoKZW50cnlfa2luZBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkSCwoDZG9jGAQgASgJEg4KBmRldGFpbBgFIAEoCRIOCgZtb2R1bGUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCRIQCghpbmZlcnJlZBgIIAMoCRIuCgdtZW1iZXJzGAkgAygLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSI9CgxFeGFtcGxlUXVlcnkSDQoFbGFiZWwYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSI7CgtFbnRpdHlRdWVyeRIMCgRraW5kGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkiLQoLU2VhcmNoUXVlcnkSDQoFcXVlcnkYASABKAkSDwoHdGVhY2hlcxgCIAEoCSKOAgoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEi8KCXJlbGF0aW9ucxgBIAMoCzIcLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uSW5mbxIuCghleGFtcGxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLkV4YW1wbGVRdWVyeRIzCg5lbnRpdHlfcXVlcmllcxgDIAMoCzIbLmFnbmkudjEud2ViYXBpLkVudGl0eVF1ZXJ5EjEKDHNlYXJjaF9xdWVyeRgEIAEoCzIbLmFnbmkudjEud2ViYXBpLlNlYXJjaFF1ZXJ5EiwKBWVudHJ5GAUgASgLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSJYCghRdWVyeVNldBINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIrCgdxdWVyaWVzGAMgAygLMhouYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeSI+CgpOYW1lZFF1ZXJ5EgwKBG5hbWUYASABKAkSDQoFcXVlcnkYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkinAEKEVJ1blF1ZXJpZXNSZXF1ZXN0EiUKA3NldBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5U2V0EgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYBCABKAkSEAoIYXNfbmFtZWQYBSABKAgieAoSUnVuUXVlcmllc1Jlc3BvbnNlEg0KBXRpdGxlGAEgASgJEhAKCHByZWFtYmxlGAIgASgJEg4KBnNvdXJjZRgDIAEoCRIxCgdyZXN1bHRzGAQgAygLMiAuYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeVJlc3VsdCJ2ChBOYW1lZFF1ZXJ5UmVzdWx0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSMAoGcmVzdWx0GAMgASgLMiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRINCgVlcnJvchgEIAEoCTKQAgoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJTCgpSdW5RdWVyaWVzEiEuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVzcG9uc2USXAoNTGlzdFJlbGF0aW9ucxIkLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -256,6 +256,15 @@ export const RunQueryResponseSchema: GenMessage<RunQueryResponse> = /*@__PURE__*
  * @generated from message agni.v1.webapi.ListRelationsRequest
  */
 export type ListRelationsRequest = Message<"agni.v1.webapi.ListRelationsRequest"> & {
+  /**
+   * path names a place in the namespace tree to describe in `entry`: "net" a module,
+   * "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
+   * before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
+   * with the suggestion a query would get.
+   *
+   * @generated from field: string path = 1;
+   */
+  path: string;
 };
 
 /**
@@ -269,7 +278,7 @@ export const ListRelationsRequestSchema: GenMessage<ListRelationsRequest> = /*@_
  * RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
  * `args` the labels a template inserts as `?arg` (so `component.net` inserts
  * `component.net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
- * ("netlist" | "board" | "datasheet" | "predicate" | "overlay").
+ * ("netlist" | "board" | "datasheet" | "derived" | "predicate" | "extension").
  *
  * @generated from message agni.v1.webapi.RelationInfo
  */
@@ -302,6 +311,22 @@ export type RelationInfo = Message<"agni.v1.webapi.RelationInfo"> & {
    * @generated from field: string detail = 5;
    */
   detail: string;
+
+  /**
+   * signature renders the member as a rule head declaring its argument types, such as
+   * `component.two_terminal(r: component, a: net, b: net)`.
+   *
+   * @generated from field: string signature = 6;
+   */
+  signature: string;
+
+  /**
+   * definition is a derived relation's clauses as its module defines them, one per clause. Empty
+   * for every other kind.
+   *
+   * @generated from field: repeated string definition = 7;
+   */
+  definition: string[];
 };
 
 /**
@@ -310,6 +335,84 @@ export type RelationInfo = Message<"agni.v1.webapi.RelationInfo"> & {
  */
 export const RelationInfoSchema: GenMessage<RelationInfo> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 5);
+
+/**
+ * RelationEntry is one place in the namespace tree, for drill-down: a module listing what it holds,
+ * or a member with what a reader needs to call it.
+ *
+ * @generated from message agni.v1.webapi.RelationEntry
+ */
+export type RelationEntry = Message<"agni.v1.webapi.RelationEntry"> & {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * entry_kind is "module", "base", "predicate" or "derived".
+   *
+   * @generated from field: string entry_kind = 2;
+   */
+  entryKind: string;
+
+  /**
+   * signature is a member's rule head with its argument types; empty for a module.
+   *
+   * @generated from field: string signature = 3;
+   */
+  signature: string;
+
+  /**
+   * doc is the member's one-line description.
+   *
+   * @generated from field: string doc = 4;
+   */
+  doc: string;
+
+  /**
+   * detail is the member's reference markdown, as on RelationInfo, or "".
+   *
+   * @generated from field: string detail = 5;
+   */
+  detail: string;
+
+  /**
+   * module is the module a derived relation is defined in.
+   *
+   * @generated from field: string module = 6;
+   */
+  module: string;
+
+  /**
+   * definition is a derived relation's clauses, one per clause.
+   *
+   * @generated from field: repeated string definition = 7;
+   */
+  definition: string[];
+
+  /**
+   * inferred names the arguments whose types the engine worked out from the rules rather than
+   * reading from a declaration, so a reader can tell which types the author stated.
+   *
+   * @generated from field: repeated string inferred = 8;
+   */
+  inferred: string[];
+
+  /**
+   * members are a module's direct children, each a member or a nested module, described one level
+   * deep (their own members are not filled).
+   *
+   * @generated from field: repeated agni.v1.webapi.RelationEntry members = 9;
+   */
+  members: RelationEntry[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.RelationEntry.
+ * Use `create(RelationEntrySchema)` to create a new message.
+ */
+export const RelationEntrySchema: GenMessage<RelationEntry> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 6);
 
 /**
  * ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
@@ -340,7 +443,7 @@ export type ExampleQuery = Message<"agni.v1.webapi.ExampleQuery"> & {
  * Use `create(ExampleQuerySchema)` to create a new message.
  */
 export const ExampleQuerySchema: GenMessage<ExampleQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 6);
+  messageDesc(file_agni_v1_webapi_query, 7);
 
 /**
  * EntityQuery is the preset a viewer runs when the reader CLICKS an entity in the drawing: the
@@ -383,7 +486,7 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
  * Use `create(EntityQuerySchema)` to create a new message.
  */
 export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 7);
+  messageDesc(file_agni_v1_webapi_query, 8);
 
 /**
  * SearchQuery is the template the panel's search mode fills: find a design's entities by name
@@ -415,7 +518,7 @@ export type SearchQuery = Message<"agni.v1.webapi.SearchQuery"> & {
  * Use `create(SearchQuerySchema)` to create a new message.
  */
 export const SearchQuerySchema: GenMessage<SearchQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 8);
+  messageDesc(file_agni_v1_webapi_query, 9);
 
 /**
  * @generated from message agni.v1.webapi.ListRelationsResponse
@@ -450,6 +553,14 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
    * @generated from field: agni.v1.webapi.SearchQuery search_query = 4;
    */
   searchQuery?: SearchQuery | undefined;
+
+  /**
+   * entry answers a request naming a path. When it is set the other fields are empty, since a
+   * drill-down asks about one place rather than for the whole picker.
+   *
+   * @generated from field: agni.v1.webapi.RelationEntry entry = 5;
+   */
+  entry?: RelationEntry | undefined;
 };
 
 /**
@@ -457,7 +568,7 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
  * Use `create(ListRelationsResponseSchema)` to create a new message.
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 9);
+  messageDesc(file_agni_v1_webapi_query, 10);
 
 /**
  * QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values
@@ -492,7 +603,7 @@ export type QuerySet = Message<"agni.v1.webapi.QuerySet"> & {
  * Use `create(QuerySetSchema)` to create a new message.
  */
 export const QuerySetSchema: GenMessage<QuerySet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 10);
+  messageDesc(file_agni_v1_webapi_query, 11);
 
 /**
  * NamedQuery is one entry of a QuerySet. name is unique within the set and identifies the entry's
@@ -526,7 +637,7 @@ export type NamedQuery = Message<"agni.v1.webapi.NamedQuery"> & {
  * Use `create(NamedQuerySchema)` to create a new message.
  */
 export const NamedQuerySchema: GenMessage<NamedQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 11);
+  messageDesc(file_agni_v1_webapi_query, 12);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesRequest
@@ -566,7 +677,7 @@ export type RunQueriesRequest = Message<"agni.v1.webapi.RunQueriesRequest"> & {
  * Use `create(RunQueriesRequestSchema)` to create a new message.
  */
 export const RunQueriesRequestSchema: GenMessage<RunQueriesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 12);
+  messageDesc(file_agni_v1_webapi_query, 13);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesResponse
@@ -604,7 +715,7 @@ export type RunQueriesResponse = Message<"agni.v1.webapi.RunQueriesResponse"> & 
  * Use `create(RunQueriesResponseSchema)` to create a new message.
  */
 export const RunQueriesResponseSchema: GenMessage<RunQueriesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 13);
+  messageDesc(file_agni_v1_webapi_query, 14);
 
 /**
  * NamedQueryResult is one query's answer, or why it has none. Exactly one of result and error is set.
@@ -641,7 +752,7 @@ export type NamedQueryResult = Message<"agni.v1.webapi.NamedQueryResult"> & {
  * Use `create(NamedQueryResultSchema)` to create a new message.
  */
 export const NamedQueryResultSchema: GenMessage<NamedQueryResult> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 14);
+  messageDesc(file_agni_v1_webapi_query, 15);
 
 /**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004
@@ -683,10 +794,15 @@ export const QueryService: GenService<{
     output: typeof RunQueriesResponseSchema;
   },
   /**
-   * ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
-   * predicates plus any overlay-registered relations, each with its argument labels, a one-line
-   * summary, and a kind for grouping. The catalog is static per service build (it does not depend
-   * on a loaded design), so the client fetches it once to populate the panel's relation picker.
+   * ListRelations returns the queryable relation catalog (WS9-037): the built-in relations, the
+   * derived relations the shipped library defines, the predicates, and any overlay-registered
+   * relations, each with its argument labels, a one-line summary, and a kind for grouping. The
+   * catalog is static per service build (it does not depend on a loaded design), so the client
+   * fetches it once to populate the panel's relation picker.
+   *
+   * With a path set it answers one place in the namespace tree instead (agni issue 751): a module
+   * and its members, or one member with its signature and, for a derived relation, its definition.
+   * `agni query --relations <path>` prints the same answer.
    *
    * @generated from rpc agni.v1.webapi.QueryService.ListRelations
    */

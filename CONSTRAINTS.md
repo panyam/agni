@@ -937,7 +937,7 @@ values with no parser or evaluator, so importing it names things without answeri
 them, and it is the one part of jaala the fact layer may import. A RELATION is data derived from the
 Model (`facts.RegisterRelation`). A PREDICATE is an `ns.Builtin`, a filter or a generator reaching the
 design through `facts.EnvOf` (`facts.RegisterPredicate`). A MODULE of derived relations is text in a
-language some engine registered (`facts.RegisterModule`, `facts.RegisterLanguage`), and the fact
+language some engine registered (`facts.RegisterModules`, `facts.RegisterLanguage`), and the fact
 layer stores it without reading it. The vocabulary applies the tree's two rules as each name
 arrives, so a path has one definer and a segment is a module or a member whichever side registered
 first. A join strategy, a parser and an evaluator belong to whichever engine computes them

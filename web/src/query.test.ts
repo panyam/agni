@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cellKind, fillSearchQuery, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { cellKind, fillSearchQuery, groupRelations, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
 
 describe("resultFromResponse", () => {
   it("carries column kinds and resolves each navigable cell's sheet badges via the resolver", () => {
@@ -124,5 +124,18 @@ describe("fillSearchQuery", () => {
 
   it("escapes before substituting, so a typed metacharacter cannot reach the regex as syntax", () => {
     expect(fillSearchQuery('str.match(?name, "(?i){term}")', "VDD+")).toBe('str.match(?name, "(?i)VDD\\+")');
+  });
+});
+
+describe("groupRelations", () => {
+  it("groups the shipped library's derived members under Library, after the base tiers and before the predicates", () => {
+    const item = (name: string, kind: string) => ({ name, kind, args: [], summary: "", detail: "" });
+    const groups = groupRelations([
+      item("str.contains", "predicate"),
+      item("net.has_test_point", "derived"),
+      item("component.net", "netlist"),
+    ]);
+    expect(groups.map((g) => g.label)).toEqual(["Netlist", "Library", "Predicates"]);
+    expect(groups[1].items.map((r) => r.name)).toEqual(["net.has_test_point"]);
   });
 });
