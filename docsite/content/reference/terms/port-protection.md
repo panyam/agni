@@ -9,7 +9,7 @@ Anything leaving the board through a connector is exposed. A cable is an antenna
 touching the connector is a static discharge of a few kilovolts arriving at a pin rated for a few
 volts.
 
-Protection is whatever is placed at the connector to absorb that before it reaches anything expensive:
+Protection is whatever is placed at the connector to absorb that before it reaches anything expensive, such as
 a TVS diode or diode array for the discharge, a common-mode choke or ferrite for the interference.
 
 ```mermaid
@@ -27,5 +27,5 @@ distinguishes the two.
 That is why it is declared in a profile rather than inferred, the same as
 [termination](../termination/).
 
-**Where the course teaches it:**
-[chapter 10](../../../learn/10-interfaces-and-what-they-require/), a bus as a contract.
+The course teaches it in [chapter 10](../../../learn/10-interfaces-and-what-they-require/), which
+treats a bus as a contract.

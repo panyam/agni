@@ -81,8 +81,8 @@ Nothing to configure, which is worth stating because the widely repeated advice 
 GHCR package pushed by a workflow living in the repository it belongs to is linked to that repository
 and takes its visibility, so publishing from this public repo yields a publicly pullable image.  The
 workflow's verify step authenticates as the workflow, so it proves the image runs and reports its tag
-but says nothing about whether a stranger can pull it.  The only honest test of that is an anonymous
-pull from a logged-out client.
+but says nothing about whether a stranger can pull it.  Only an anonymous pull from a
+logged-out client tests that.
 
 ## Checklist
 

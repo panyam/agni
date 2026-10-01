@@ -48,8 +48,7 @@ one rail merge two supplies nobody meant to merge, which is
 [`power-tap-conflict`](../../rules/power-tap-conflict/). The zero-volt member of the family is
 [ground](../ground/), and it gets its own vocabulary and its own handling.
 
-**Where the course teaches it:**
-[chapter 1](../../../learn/01-what-a-board-is-made-of/) shows how to spot one from what a resistor
-connects to, and
-[chapter 8](../../../learn/08-the-power-tree/#a-board-is-fed-by-a-cascade-ee6) puts the whole set of
-them into a tree.
+The course teaches it in [chapter 1](../../../learn/01-what-a-board-is-made-of/), which shows how
+to spot one from what a resistor connects to, and in
+[chapter 8](../../../learn/08-the-power-tree/#a-board-is-fed-by-a-cascade-ee6), which puts the whole
+set of them into a tree.

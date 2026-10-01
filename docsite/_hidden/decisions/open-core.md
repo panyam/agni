@@ -1,12 +1,12 @@
 ---
-title: "Open core: engine and overlay"
+title: "Open core, engine and overlay"
 description: "Why Agni ships a public Apache-2.0 engine and keeps private work in a separate overlay that depends on it."
 ---
 
 Agni is open-core. `github.com/panyam/agni` is the public engine, licensed Apache-2.0. A
 separate, private **overlay** depends on it and adds what a company will not release. This
 page records the split: who each side is for, what lives where, why the license is Apache and
-not GPL, and the two seams an overlay uses to extend the engine without forking it.
+not GPL, and the two registries an overlay uses to extend the engine without forking it.
 
 ## Two personas
 
@@ -45,16 +45,16 @@ readers, rules, and data. Apache-2.0 permits the static link without that obliga
 overlay can stay closed while still building on the public engine. The permissive license is
 what makes the two-persona model work.
 
-## The two extension seams
+## The two extension registries
 
 An overlay contributes only through two public registries. It never edits the engine.
 
-- **Readers, via `formats.Register`.** Register a `formats.Format` (the extension, a UI label,
-  and the `Design`/`Geometry`/`Board` reader funcs). The extension then resolves through the CLI
+- **Readers** register through `formats.Register`, which takes a `formats.Format` (the extension, a
+  UI label, and the `Design`/`Geometry`/`Board` reader funcs). The extension then resolves through the CLI
   reader dispatch, the file-tree label, and the supported-extension list. One table, one code
   path, and the built-ins register the same way.
-- **Rules, via `check.RegisterSource`.** Register a named `check.RuleSource` and its rules
-  appear in `ListRules` and run in `CheckDesign`, namespaced `<source>/<rule>` so a private rule
+- **Rules** register through `check.RegisterSource`, which takes a named `check.RuleSource`, and
+  its rules appear in `ListRules` and run in `CheckDesign`, namespaced `<source>/<rule>` so a private rule
   can never shadow a built-in. The engine's `DefaultCatalog()` composes the built-ins plus every
   registered source.
 

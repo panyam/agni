@@ -23,7 +23,7 @@ interchangeably in conversation, which is where the confusion starts.
 | bond pad | A metal contact on the die's top surface. One electrical terminal of the circuit. |
 | bond wire | A wire thinner than a hair, running from a bond pad out to a lead. |
 | lead | The metal leg that solders to the board. Also called a pin, a leg, or a terminal. |
-| package | The moulded body plus its lead frame: the whole black rectangle you can pick up. |
+| package | The moulded body plus its lead frame, the whole black rectangle you can pick up. |
 
 The die is the part. The package is how it was shipped. A vendor sells the same die in a handful of
 packages, because a phone needs the small one and a lab instrument wants the one you can solder by
@@ -73,18 +73,18 @@ name channel resolves most cases and needs the number to settle the rest.
 
 ## One pad, several legs
 
-A terminal on the die can reach more than one leg of the same package. This is not a labelling
-convenience. Three physical reasons drive it, roughly in order of how often they decide the matter.
+A terminal on the die can reach more than one leg of the same package, and three physical reasons
+drive it, roughly in order of how often they decide the matter.
 
-**Current.** A bond wire and a lead can only carry so much before the resistance and the heating
+The first is current. A bond wire and a lead can only carry so much before the resistance and the heating
 become the circuit's problem. A part drawing several amps fans its supply and
 {{ explainable "ground" }} out across several legs in parallel.
 
-**Heat.** The legs are the die's main escape route for heat, out into the board's copper. More
+Heat is the second. The legs are the die's main escape route for heat, out into the board's copper. More
 ground legs means a better thermal path. The exposed metal pad on the underside of a QFN is that
 idea taken as far as it goes.
 
-**Inductance.** At high switching speeds, several short return paths behave better than one long
+The third is inductance. At high switching speeds, several short return paths behave better than one long
 one. It costs a leg and buys real margin.
 
 <figure>

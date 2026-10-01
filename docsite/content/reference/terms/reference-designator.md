@@ -33,6 +33,6 @@ designator deliberately.
 
 A part with no designator yet is *unannotated*, which is normal mid-design and a problem at handoff.
 
-**Where the course teaches it:** nowhere yet. The course names parts as `R1` and `U3` from
+The course does not teach it yet. It names parts as `R1` and `U3` from
 [chapter 1](../../../learn/01-what-a-board-is-made-of/) onward without ever saying what the label is,
 which is why this page exists.

@@ -24,8 +24,8 @@ counterpart to `net.bus_like`, which names the nets the walk refuses to enter wh
 datalog argument binds by equality, putting a bare number in that slot means *exactly* that distance:
 
 ```
-reaches(?n, ?rn, 2)           # exactly 2 crossings — SKIPS a part sitting 1 away
-reaches(?n, ?rn, ?h), ?h <= 2 # within 2 crossings — what a protection question means
+reaches(?n, ?rn, 2)           # exactly 2 crossings, so it SKIPS a part sitting 1 away
+reaches(?n, ?rn, ?h), ?h <= 2 # within 2 crossings, which is what a protection question means
 ```
 
 The first line reads like a radius and is almost never what a query means. Use the

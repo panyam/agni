@@ -8,10 +8,10 @@ Reference for studying the format. Pairs with `readers/edif/reader.go` and
 
 ## What EDIF is
 
-EDIF = Electronic Design Interchange Format. A vendor-neutral text format for exchanging
+EDIF, the Electronic Design Interchange Format, is a vendor-neutral text format for exchanging
 electronic designs ({{ explainable "netlist" "netlists" }}, schematics, and more), standardized as
-EIA-548. Versions: 2.0.0 (1988, by far the most common for netlist and schematic interchange),
-3.0.0, 4.0.0. The files Agni targets are 2.0.0.
+EIA-548. It has three versions, 2.0.0 (1988, by far the most common for netlist and schematic
+interchange), 3.0.0 and 4.0.0. The files Agni targets are 2.0.0.
 
 It is open and sanctioned, so reading it is a legally clean ingestion path. It is an EXPORT
 format. The authoritative design lives in the native tool database, so EDIF can already be lossy
@@ -20,8 +20,8 @@ relative to that (see [Ingestion and IR](../../architecture/ingestion-and-ir/)).
 The reference files here are exported by Siemens/Mentor xDX Designer, `edifVersion 2 0 0`,
 `edifLevel 0`. Two views:
 
-- `.edn` netlist (10MB): connectivity. This is what the netlist reader parses.
-- `.eds` schematic (62MB): adds geometry/graphics. This feeds the geometry sidecar.
+- The `.edn` netlist (10MB) carries connectivity, and is what the netlist reader parses.
+- The `.eds` schematic (62MB) adds geometry and graphics, and feeds the geometry sidecar.
 
 ### Versions
 
@@ -43,16 +43,16 @@ rewrite.
 
 ## Syntax in 60 seconds
 
-- **S-expressions.** Everything is `(keyword args...)`, nested with parentheses, LISP-like,
+- Everything is an **S-expression**, `(keyword args...)`, nested with parentheses, LISP-like,
   ASCII.
-- **Atoms:** keywords (`net`, `instance`), identifiers, integers, and `"quoted strings"`.
+- **Atoms** are keywords (`net`, `instance`), identifiers, integers, and `"quoted strings"`.
 - **Identifiers** must start with a letter or `&` and contain letters/digits/underscore, up to
   255 chars. They cannot start with a digit or contain spaces or dashes.
-- **The rename trick.** To carry a name that is not a valid identifier (e.g. `2525913-1`,
+- **A rename carries a name EDIF cannot spell.** To carry a name that is not a valid identifier (e.g. `2525913-1`,
   `Sync Exclude`, `$17I12086`), EDIF writes `(rename &validid "Display")`. The `&validid` is the
   machine identifier used in all cross-references, and the quoted string is the human name. This
   is why `&25259130551` and `&04417I12086` appear everywhere.
-- **Escapes:** non-ASCII in strings via `%int%`, comments via `(comment "...")`.
+- **Escapes** write non-ASCII in strings as `%int%`, and comments as `(comment "...")`.
 
 ## Document structure
 
@@ -85,10 +85,11 @@ occur there.
         ...))))
 ```
 
-- **cell** = component/part TYPE, not a placed instance.
-- **cellType GENERIC**, **viewType NETLIST** (vs SCHEMATIC/GRAPHIC).
-- **interface** = external pins (`port`), each with a `direction` and a pin `designator` (pin
-  number). The interface's `designator "J?"` is the ref-des prefix.
+- A **cell** is a component or part TYPE, not a placed instance.
+- A netlist cell carries **cellType GENERIC** and **viewType NETLIST** (as against SCHEMATIC or
+  GRAPHIC).
+- The **interface** lists the external pins (`port`), each with a `direction` and a pin
+  `designator` (pin number). The interface's `designator "J?"` is the ref-des prefix.
 
 ### Instances (placed components)
 
@@ -100,12 +101,12 @@ occur there.
   (property Description (string "Test Point 1mm") (owner "Siemens")))
 ```
 
-- **instance** = a placed component. Its `(rename &id ...)` gives the internal id used by net
+- An **instance** is a placed component. Its `(rename &id ...)` gives the internal id used by net
   cross-references.
-- **viewRef -> cellRef -> libraryRef** points at the part type in a library.
-- **designator "TP9224"** = the {{ explainable "reference-designator" }}, or ref-des.
-- **property** = attributes (Value, Description, Status, DXDB_LIBNAME, ...). Value forms:
-  `(string "..")`, `(integer N)`, `(boolean (true))`.
+- The chain **viewRef -> cellRef -> libraryRef** points at the part type in a library.
+- **designator "TP9224"** is the {{ explainable "reference-designator" }}, or ref-des.
+- A **property** is an attribute (Value, Description, Status, DXDB_LIBNAME, ...), and its value is
+  written as `(string "..")`, `(integer N)` or `(boolean (true))`.
 
 ### Nets (connectivity)
 
@@ -117,8 +118,8 @@ occur there.
     ...))
 ```
 
-- **net** = an electrical node. `(joined ...)` lists the pins tied together.
-- **portRef PIN (instanceRef INST)** = pin PIN on instance INST. INST is the instance's internal
+- A **net** is an electrical node, and `(joined ...)` lists the pins tied together.
+- **portRef PIN (instanceRef INST)** names pin PIN on instance INST. INST is the instance's internal
   `&id`, so to get the ref-des you resolve INST to the instance whose `(rename &INST ...)` matches,
   then read its `(designator ...)`.
 
@@ -134,9 +135,9 @@ the IR stores comes from the instance's own `designator`.
 |---|---|
 | **`designator` is overloaded** | Component ref-des (in instance), pin number (in port/portInstance) and ref-des PREFIX (in cell interface) all use `designator`. |
 | **Cross-references use the `&` internal id, not the display name** | `instanceRef`/`portRef`/`viewRef`/`cellRef`/`libraryRef` all reference the machine id. Human names come from the paired `(rename ...)`. |
-| **Multi-section components: ref-des is NOT unique per instance** | One physical component is often several `(instance ...)` nodes sharing a ref-des, each a section or bank of pins: connector J1906 into A/B/C banks, multi-gate ICs, relays with coil plus contacts. Sections may share a cell (homogeneous) or use different cells (heterogeneous). Group by ref-des to reason about a physical part, which is why a naive "duplicate ref-des" check is wrong. |
+| **A multi-section component repeats its ref-des across instances** | One physical component is often several `(instance ...)` nodes sharing a ref-des, each a section or bank of pins, as with connector J1906 split into A/B/C banks, multi-gate ICs, or relays with coil plus contacts. Sections may share a cell (homogeneous) or use different cells (heterogeneous). Group by ref-des to reason about a physical part, which is why a naive "duplicate ref-des" check is wrong. |
 | **NETLIST vs SCHEMATIC views** | The `.edn` carries connectivity only. Geometry (symbol shapes, coordinates, routing) lives in the `.eds` SCHEMATIC view, out of scope for the netlist reader. See the [schematic primer](../edif-schematic-primer/). |
-| **`edifLevel 0`** | Static: no parameters, no expressions. Simpler to parse. |
+| **`edifLevel 0`** | Static, with no parameters and no expressions, so simpler to parse. |
 
 ## How we map EDIF -> the IR
 
@@ -157,7 +158,7 @@ The EDIF form comes first, the IR shape it becomes follows the arrow.
 - `(rename &id "display")`
   → `Provenance{ source_id=&id }`, with the display name used as the name
 
-**Fidelity:** lossy-bounded (netlist subset). The reader keeps components, part refs, properties,
+The read is lossy-bounded, a netlist subset. The reader keeps components, part refs, properties,
 pins, and connectivity. It drops graphics, technology, status and timestamps, and most non-netlist
 metadata.
 
@@ -165,9 +166,9 @@ metadata.
 
 Point these at your own `.edn` export (real design data stays outside the repo). Useful greps:
 
-- Instances: `grep -c '(instance ' file`
-- Nets: `grep -c '(joined' file` (each joined = one net's connectivity)
-- A component's sections: `grep -n '(designator "J1")' file`
+- `grep -c '(instance ' file` counts instances.
+- `grep -c '(joined' file` counts nets, since each `joined` is one net's connectivity.
+- `grep -n '(designator "J1")' file` lists a component's sections.
 
 ## Further reading
 

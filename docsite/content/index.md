@@ -49,7 +49,7 @@ hideTitle: true
 </a>
 <a href="{{.Site.PathPrefix}}/architecture/" class="section-card">
 <h3>Understand it</h3>
-<p>How the pieces fit: the IR, net solving, geometry, diff, rules, the datasheet layer, and the web app.</p>
+<p>How the IR, net solving, geometry, diff, rules, the datasheet layer and the web app fit together.</p>
 </a>
 <a href="{{.Site.PathPrefix}}/demos/" class="section-card">
 <h3>Demos</h3>

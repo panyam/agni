@@ -21,7 +21,7 @@ ones the live wasm engine will drive later; only the data source changes.
 ### A board layout
 
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/demo-board.svg"
-             caption="Demo board — front/back copper, zones, vias"></agni-viewer>
+             caption="Demo board with front and back copper, zones and vias"></agni-viewer>
 
 ### A faithful schematic
 
@@ -37,6 +37,6 @@ compiled to WebAssembly, with a small set of seeded designs preloaded into an in
 virtual filesystem. The same service calls the web app makes over the network resolve against
 the wasm engine locally instead.
 
-The site scaffolding leaves the seam for it: a front-matter flag (`playground: viewer`)
+The site scaffolding already has the hook for it. A front-matter flag (`playground: viewer`)
 selects a component bundle, built by the same esbuild toolchain the web app uses, which
 hydrates the inline `<agni-viewer>` tags on the page.

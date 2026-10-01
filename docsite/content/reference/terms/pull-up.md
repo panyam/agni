@@ -33,6 +33,6 @@ it from the bus capacitance and clock rate instead.
 
 The mirror image is a [pull-down](../pull-down/), to ground rather than to a rail.
 
-**Where the course teaches it:**
-[chapter 1](../../../learn/01-what-a-board-is-made-of/) reads one off a query, and
-[chapter 4](../../../learn/04-pull-ups-and-undefined-states/) is the whole chapter about them.
+The course teaches it in [chapter 1](../../../learn/01-what-a-board-is-made-of/), which reads one
+off a query, and in [chapter 4](../../../learn/04-pull-ups-and-undefined-states/), the whole chapter
+about them.

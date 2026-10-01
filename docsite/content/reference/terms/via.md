@@ -29,7 +29,7 @@ Three rules read a via, and they answer to two different authorities.
 drill and the ring against the loosest mainstream fabrication floor, so a finding means the board may
 not be manufacturable at all. [`netclass-via-drill`](../../rules/netclass-via-drill/) compares the same
 drill against the size the net's own class declared, so a finding there means the board is buildable
-and is not what the design asked for. That distinction runs through the geometric rules generally:
+and is not what the design asked for. The same distinction runs through the geometric rules generally.
 [`track-width`](../../rules/track-width/) and [`copper-clearance`](../../rules/copper-clearance/) ask
 what a process can hold, while [`netclass-track-width`](../../rules/netclass-track-width/) asks what
 the project said it wanted.
@@ -42,8 +42,8 @@ geometry sidecar does not carry yet.
 None of this is visible in a netlist. Two revisions can agree on every connection and disagree on every
 via, because the graph does not know the copper has a position or a width.
 
-**Where the course teaches it:**
-[chapter 12](../../../learn/12-when-the-copper-matters/) is the whole chapter, and
+The course teaches it in [chapter 12](../../../learn/12-when-the-copper-matters/), which is the whole
+chapter about it, and
 [What geometry can answer](../../../learn/12-when-the-copper-matters/#what-geometry-can-answer-ee7)
 runs the three geometric rules over a board.
 [A fourth kind of authority](../../../learn/12-when-the-copper-matters/#a-fourth-kind-of-authority-ee7)

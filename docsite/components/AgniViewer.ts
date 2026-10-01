@@ -3,9 +3,9 @@
 //
 // This is the Tier-1 proof-of-pattern: the SVG is baked at build time (an
 // `agni render` golden), so the widget needs no engine. The SAME tag and mount
-// contract is what the Tier-2 wasm backend plugs into later — it swaps the
-// static `src` fetch for a live GetSheet/HighlightSheet call, the pan/zoom
-// shell is unchanged.
+// contract is what the Tier-2 wasm backend plugs into later. It swaps the
+// static `src` fetch for a live GetSheet/HighlightSheet call and leaves the
+// pan/zoom shell unchanged.
 //
 // Usage in a page (front-matter must set `playground: viewer`):
 //   <agni-viewer src="{{.Site.PathPrefix}}/static/designs/demo-board.svg"

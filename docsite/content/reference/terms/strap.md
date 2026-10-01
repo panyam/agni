@@ -35,7 +35,7 @@ every resistor is present and correctly valued, and the bus goes unreliable in a
 noise or marginal timing rather than as a wiring fault. Nothing on the page showing the first PHY says
 anything about the second.
 
-Rules that read it. [`intent-property-strap`](../../rules/intent-property-strap/) catches one net
+Three rules read it. [`intent-property-strap`](../../rules/intent-property-strap/) catches one net
 biased to the opposite level from the one it is declared to latch.
 [`intent-strap-group`](../../rules/intent-strap-group/) reads several nets together and compares the
 number they encode against the declared one.
@@ -44,7 +44,7 @@ two devices on one declared bus strapping to the same address. All three need a 
 nothing in a netlist marks a resistor as a strap rather than as a pull-up, and nothing states which
 pin is the high bit.
 
-**Where the course teaches it:**
+The course teaches it in
 [What a part reads on the way up](../../../learn/09-sequencing-and-straps/#what-a-part-reads-on-the-way-up-ee6)
 in chapter 9, which reaches straps by way of the [power tree](../power-tree/) and the order its rails
 come up in.

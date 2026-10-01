@@ -5,7 +5,7 @@ summary: "The pattern of copper pads on the board that one part solders onto, to
 level: EE1
 ---
 
-Every part on a board lands on a patch of copper shaped for it. That patch is the footprint: one pad
+Every part on a board lands on a patch of copper shaped for it. That patch is the footprint, one pad
 per leg, in the right places and at the right size, plus the outline printed on the silkscreen and the
 area around it that nothing else may occupy.
 
@@ -38,8 +38,8 @@ placeholder like `R?`, and a part with no name has no line on the BOM and no foo
 which merges two footprints the layout cannot tell apart.
 [`unconnected-component`](../../rules/unconnected-component/) catches the part wired to nothing, which
 still occupies its footprint's area and still costs a line on the BOM.
-[`symbol-unresolved`](../../rules/symbol-unresolved/) is the schematic-side version: a symbol file that
-did not open leaves a placement with a designator and no pins at all.
+[`symbol-unresolved`](../../rules/symbol-unresolved/) is the schematic-side version, where a symbol
+file that did not open leaves a placement with a designator and no pins at all.
 
 A [test point](../test-point/) is the smallest footprint there is, one pad with no part above it.
 
@@ -48,7 +48,7 @@ IR](../../../architecture/ingestion-and-ir/), which is provisional. The `Footpri
 no reader fills it in yet. What the board readers do produce is the geometry a footprint places, the
 pads and the silkscreen and the courtyard, keyed back to the part by its designator.
 
-**Where the course teaches it:** nowhere yet. The word appears once, inside
+The course does not teach it yet. The word appears once, inside
 [The decision procedure](../../../learn/01-what-a-board-is-made-of/#the-decision-procedure-ee3), where
 a resistor between two signals might be "a footprint nobody stuffed", and the course never says what
 one is.

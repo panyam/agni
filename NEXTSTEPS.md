@@ -1,7 +1,7 @@
 # Next steps
 
 The ranked list of what to pick up next, checked in so every checkout sees the same one. Each item
-is a pointer: the reasoning, measurements and plan live on the issue. Anything here is a claim to check
+is a pointer, and the reasoning, measurements and plan live on the issue. Anything here is a claim to check
 against the tree and the issue before acting on it.
 
 **Keep it short and keep it public.** When an item closes, delete it. When you learn something
@@ -13,32 +13,33 @@ Last pruned 2026-09-30, at `3d7b8c4a` (PR 740).
 
 ## Open, ranked
 
-1. **#729: named query sets answered over one read.** Unblocked by #731, which moved the engine to
+1. **#729, named query sets answered over one read.** Unblocked by #731, which moved the engine to
    `panyam/jaala`. Its engine half (N queries over one fact base) belongs in jaala, the file format,
    `agni query --set`, the wire message and the example here. See the sequencing comment on the issue.
-2. **#564: move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
+2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.
-3. **#724: restore rung 13's total.** #646 closed, so the CLI and the panel should now agree. Re-run
+3. **#724, restore rung 13's total.** #646 closed, so the CLI and the panel should now agree. Re-run
    both before editing anything. This is small and can ride with #564.
-4. **#702: `PinsByName` compares pin names outside `core/ident`.** Decide first whether
+4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
-5. **#390, PR 1: the server caches check results.** Unblocked by PR 723 (`Overlay.Identity()`).
+5. **#390 PR 1, the server caches check results.** Unblocked by PR 723 (`Overlay.Identity()`).
    **The key in the issue body is wrong.** Read the corrections comment before writing any code.
-6. **#356: the run-wide highlight floods big boards.** Unblocked since #348.
-7. **#485: review report links are built from findings, not verdicts.**
-8. **#634: `agni query` has no viewer link and no `--server`.**
+6. **#356, the run-wide highlight floods big boards.** Unblocked since #348.
+7. **#485, review report links are built from findings, not verdicts.**
+8. **#634, `agni query` has no viewer link and no `--server`.**
 
-**Later:** #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380, #456,
-#374, #716, #739 (read a Datalog-derived relation from Go). The query language roadmap lives on
-panyam/jaala: modules (#3) and aggregation inside rules (#4) come first, since they retire the
+Later work is #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380, #456,
+#374, #716 and #739 (read a Datalog-derived relation from Go). The query language roadmap lives on
+panyam/jaala, where modules (#3) and aggregation inside rules (#4) come first, since they retire the
 self-join and pasted-preamble workarounds.
 
-**Waiting on input:** #718 (EDIF descends into sub-cells). The only hierarchical netlist anywhere is the
+Issue #718 (EDIF descends into sub-cells) is waiting on input. The only hierarchical netlist anywhere is the
 synthetic `readers/edif/testdata/hier.edn`. Do not start it until there is a real multi-cell netlist
 to test against.
 
-**Gated:** #677 (only the "declare a NEW class" half, gated on the class registry), #667, #681, #523.
+Four items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #667,
+#681 and #523.
 
 ## Worth knowing before the next change
 

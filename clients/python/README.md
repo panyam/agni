@@ -15,8 +15,8 @@ c = Client(CliTransport("agni", mounts={"tut": "examples/tutorial-project"}))
 resp = c.run_query(uri="mount://tut/designs/gateway", query='component.class(?c, "resistor") => ?c')
 ```
 
-The guide is `docsite/content/build/other-languages.md`: choosing a transport, which rpcs the CLI
-covers, where the two differ today, and writing tables to xlsx.
+The guide, `docsite/content/build/other-languages.md`, covers choosing a transport, which rpcs the
+CLI covers, where the two differ today, and writing tables to xlsx.
 
 - `examples/audit_workbook.py` writes a five-sheet audit workbook of the tutorial board, asking its
   four tables as one query set (`run_queries`) so the design is read once.

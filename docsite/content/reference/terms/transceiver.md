@@ -24,6 +24,5 @@ spec.
 Because it faces the outside world, a transceiver is usually the part that also carries the bus's
 [protection](../port-protection/), or sits directly behind it.
 
-**Where the course teaches it:**
-[chapter 10](../../../learn/10-interfaces-and-what-they-require/), what an interface requires beyond
-two wires.
+The course teaches it in [chapter 10](../../../learn/10-interfaces-and-what-they-require/), which
+covers what an interface requires beyond two wires.
