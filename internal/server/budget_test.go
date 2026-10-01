@@ -61,4 +61,11 @@ func TestTheInterceptorLogsAQueryStoppedByTheBudget(t *testing.T) {
 	if len(logged) != 1 || !strings.Contains(logged[0], "expensive(?x)") || !strings.Contains(logged[0], "budget of 500") {
 		t.Errorf("logged %q, want the stopped query named with the budget", logged)
 	}
+	narrowed := func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {
+		return nil, fmt.Errorf("%w: work passed its budget of 100", service.ErrResourceExhausted)
+	}
+	_, logged = interceptOnce(t, Budget{}, &webapi.RunQueryRequest{Query: "q(?x) => ?x"}, narrowed)
+	if len(logged) != 1 || !strings.Contains(logged[0], "budget of 100") || strings.Contains(logged[0], "budget of 0") {
+		t.Errorf("a budget the request set, with none enforced: logged %q, want the request's budget of 100", logged)
+	}
 }

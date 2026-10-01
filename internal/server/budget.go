@@ -37,7 +37,13 @@ func (b Budget) Interceptor() connect.UnaryInterceptorFunc {
 			}
 			name := req.Spec().Procedure
 			if errors.Is(err, service.ErrResourceExhausted) {
-				b.Log("query budget: %s stopped at its budget of %d work units: %s", name, b.Enforce, queryText(req))
+				// The error names the budget that applied, which is the request's when it narrowed the
+				// server's, so it is logged rather than b.Enforce.
+				msg := err.Error()
+				if ce := new(connect.Error); errors.As(err, &ce) {
+					msg = ce.Message()
+				}
+				b.Log("query budget: %s stopped, %s: %s", name, msg, queryText(req))
 			}
 			if err == nil && b.Warn > 0 {
 				for _, c := range queryCosts(resp) {

@@ -272,9 +272,10 @@ No budget is enforced by default, because the right number depends on the boards
 serves. Instead the server logs every query costing more than `--query-budget-warn` (10,000,000
 units by default) with the query and a budget ten times its cost, so a deployment can watch what
 its users ask before choosing one.
+This line is from the tutorial project's board with `--query-budget-warn 100`:
 
 ```
-query cost: /agni.v1.webapi.QueryService/RunQuery spent 12408113 work units, over the 10000000 warning threshold; no budget is enforced, and --query-budget 124081130 would allow ten times this cost: net.reaches(?a, ?b) => ?a, ?b
+query cost: /agni.v1.webapi.QueryService/RunQuery spent 394 work units, over the 100 warning threshold; no budget is enforced, and --query-budget 3940 would allow ten times this cost: component.net(?a, ?n), component.net(?b, ?n) => ?a, ?b
 ```
 
 One unit is one tuple a rule derives or one fact a lookup reads, so the number grows with the
