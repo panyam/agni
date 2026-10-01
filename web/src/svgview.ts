@@ -3,7 +3,7 @@
 // toward the cursor). The navigation math comes from panzoom.ts, which every Agni viewport
 // shares. It is a plain view adapter with no framework or presenter coupling, and the presenter
 // only calls setSvg / show / hide.
-import { wheelZoomFactor, zoomAbout, panBy } from "./panzoom.js";
+import { wheelZoomFactor, zoomAbout, panBy } from "@agni/web-shared/panzoom.js";
 import { pickAt, type Selection } from "./selection.js";
 
 // CLICK_SLOP_PX is how far the cursor may travel between press and release and still count as a

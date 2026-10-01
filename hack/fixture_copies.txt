@@ -135,3 +135,14 @@ cmd/agni/testdata/intent/params-no-ocp/demo-nfet-40.textproto
 # static asset changes two page URLs and belongs in a docsite change, not this one.
 docsite/static/images/analogy/reach-walk.svg
 docsite/static/images/querying/reach-walk.svg
+
+# ---------------------------------------------------------------------------------------------
+# The vitest config of the two Solid packages in the pnpm workspace (agni issue 744).
+#
+# The viewer (web/) and the datasheets workbench (datasheet/web/) both render Solid islands under
+# test, and both need the same two settings for the same reason: Solid's JSX transform, and inlining
+# solid-js so the tests and the components share one reactive core (the bug web/build.mjs explains).
+# A shared config package would be one more workspace member for nine lines; declaring the pair means
+# a change to one that misses the other turns the gate red.
+datasheet/web/vitest.config.ts
+web/vitest.config.ts

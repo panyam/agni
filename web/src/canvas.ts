@@ -1,7 +1,7 @@
 import { BaseComponent } from "@panyam/tsappkit";
 import { toRenderable, type DecodedSheet } from "./packed.js";
 import { Camera, boundsOfVertices, type CameraView } from "./camera.js";
-import { wheelZoomFactor } from "./panzoom.js";
+import { wheelZoomFactor } from "@agni/web-shared/panzoom.js";
 import { hexToRgba, Renderer } from "./webgl.js";
 import { TextOverlay } from "./textoverlay.js";
 import {

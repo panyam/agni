@@ -1,12 +1,17 @@
 import { createEffect, createSignal, For, Show, type Accessor } from "solid-js";
-import { artifactUri, uriPath } from "./uri.js";
+import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import type { Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { FileKind, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { DatasheetService } from "./gen/agni/v1/dsapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
-import { DATASHEET_OPENS, hiddenNote } from "./treeprune.js";
+import { hiddenNote } from "@agni/web-shared/treeprune.js";
+
+// DATASHEET_OPENS is what this tree passes as `opens`, one constant so the request and the view
+// filter cannot drift: a tree that asked the server to prune by one kind and filtered rows by another
+// would hide folders it then showed files from.
+const DATASHEET_OPENS = [FileKind.DATASHEET];
 
 type DsClient = Client<typeof DatasheetService>;
 

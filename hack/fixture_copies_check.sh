@@ -34,7 +34,7 @@ MANIFEST="hack/fixture_copies.txt"
 #
 # A go.sum is a lockfile, never a fixture. A nested module's (an example, the datasheet module) is
 # identical to the root's whenever their dependency graphs coincide, which is what a lockfile is for.
-EXCLUDE='^(docsite/static/images/catalog/|gen/|site/|web/src/gen/|node_modules/|\.git/)|(^|/)go\.sum$'
+EXCLUDE='^(docsite/static/images/catalog/|gen/|site/|web/src/gen/|datasheet/gen/|datasheet/web/src/gen/|node_modules/|\.git/)|(^|/)go\.sum$'
 
 # Cross-directory duplicates in the tree, as `hash<TAB>path` sorted by hash. Files under 40 bytes are
 # skipped: `{}` and a bare newline collide across the tree and say nothing.

@@ -15,8 +15,12 @@ proto:
 # Regenerate the TypeScript half. Separate command, separate config, and the half people forget:
 # additive proto changes leave stale TS building green, so the drift only surfaces on the next
 # regen. proto-check below is what makes forgetting it fail instead.
+# Two TS outputs since agni issue 744: the viewer's (web/src/gen, from the engine's protos alone)
+# and the datasheets workbench's (datasheet/web/src/gen, from the whole buf workspace, because its
+# API imports engine messages).
 proto-web:
 	cd web && pnpm run gen
+	cd datasheet/web && pnpm run gen
 
 # Regenerate the Python half (agni issue 728) into the client package. Its template writes into the
 # package's own src/, which also holds hand-written code, so it cannot use buf's `clean` and removes
@@ -45,10 +49,11 @@ proto-py:
 proto-check:
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/py"; \
+	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/dsweb" "$$tmp/py"; \
 	(cd protos && buf generate -o "$$tmp/protos") || exit 1; \
 	buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
-	(cd web && buf generate .. --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
+	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
+	(cd datasheet/web && buf generate ../.. --template buf.gen.web.yaml -o "$$tmp/dsweb") || exit 1; \
 	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
 	fail=0; \
 	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
@@ -59,6 +64,11 @@ proto-check:
 	if ! diff -r datasheet/gen/go "$$tmp/root/datasheet/gen/go" >/dev/null 2>&1; then \
 		echo "generated Go for the datasheet module is stale — run 'make proto' and commit the result:"; \
 		diff -rq datasheet/gen/go "$$tmp/root/datasheet/gen/go" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r datasheet/web/src/gen "$$tmp/dsweb/src/gen" >/dev/null 2>&1; then \
+		echo "generated TypeScript for the datasheets workbench is stale — run 'make proto-web' and commit the result:"; \
+		diff -rq datasheet/web/src/gen "$$tmp/dsweb/src/gen" 2>&1 | sed 's/^/  /'; \
 		fail=1; \
 	fi; \
 	if ! diff -r web/src/gen "$$tmp/web/src/gen" >/dev/null 2>&1; then \
@@ -176,9 +186,12 @@ python-venv: $(PY_VENV)/.installed
 python-test: agni python-venv
 	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
 
-# Web unit tests: TypeScript typecheck + the vitest suite. No browser, no server.
+# Web unit tests: TypeScript typecheck + the vitest suite, in each of the three workspace packages
+# (the viewer, the datasheets workbench, and what they share). No browser, no server.
 web-test:
+	cd web-shared && pnpm run typecheck && pnpm test
 	cd web && pnpm run typecheck && pnpm test
+	cd datasheet/web && pnpm run typecheck && pnpm test
 
 # Browser tests (agni issue 323): the handful of assertions that need real layout, run against a
 # real Chromium driving a real server. Part of testall since PR 629, so a machine running the gate
@@ -291,11 +304,12 @@ serve: ui
 
 # The datasheets workbench is agnids, built from the datasheet module (agni issue 744), so it serves
 # separately from the viewer. It mounts DATASHEET_DIR as `ds`, reads the workbench assets out of this
-# checkout's web/, and passes PDF2DOC so Extract works once `make setup` has built the docling venv.
+# checkout's datasheet/web/, and passes PDF2DOC so Extract works once `make setup` has built the
+# docling venv. VIEWER_URL links the workbench's heading back to a running viewer.
 #   make dsserve DATASHEET_DIR=/path/to/datasheets
 DS_ADDR ?= :8090
 dsserve: ui
-	cd datasheet && $(GO) run ./cmd/agnids serve --addr $(DS_ADDR) --web-dir $(CURDIR)/web --mount ds=$(abspath $(DATASHEET_DIR)) $(PDF2DOC_FLAG)
+	cd datasheet && $(GO) run ./cmd/agnids serve --addr $(DS_ADDR) --web-dir $(CURDIR)/datasheet/web --mount ds=$(abspath $(DATASHEET_DIR)) $(PDF2DOC_FLAG) $(if $(strip $(VIEWER_URL)),--viewer-url $(VIEWER_URL))
 
 # Build the datasheet service binary beside bin/agni.
 agnids:
@@ -320,15 +334,17 @@ ghserve:
 ghbuild:
 	$(MAKE) -C docsite build
 
-# Install the web viewer's node dependencies. Run once before the first build (or after
+# Install the node dependencies of the whole pnpm workspace (the root pnpm-workspace.yaml: web/,
+# web-shared/, datasheet/web/), into one lockfile. Run once before the first build (or after
 # dependency changes); ui and web-test assume it has run.
 web-install:
-	cd web && pnpm install
+	pnpm install
 
-# Build the browser bundle (esbuild + Solid via web/build.mjs) into web/static/. Run
-# web-install once first (or after dependency changes).
+# Build the browser bundles (esbuild + Solid): the viewer's into web/static/ and the datasheets
+# workbench's into datasheet/web/static/. Run web-install once first (or after dependency changes).
 ui:
 	cd web && pnpm build
+	cd datasheet/web && pnpm build
 
 # Native-tools container (Dockerfile.nattools): a Linux/X11 tool host with kicad-cli, xschem,
 # Lepton, and agni, reached over SSH. The agni SERVER runs on the host; this is only the tools.

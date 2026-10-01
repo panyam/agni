@@ -8,7 +8,6 @@ import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
-import { DatasheetService } from "./gen/agni/v1/dsapi/datasheet_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 
@@ -44,12 +43,6 @@ export function diffClient(baseUrl?: string): Client<typeof DiffService> {
 // the config that project supplies).
 export function projectClient(baseUrl?: string): Client<typeof ProjectService> {
   return createClient(ProjectService, newTransport(baseUrl));
-}
-
-// datasheetClient returns a typed client for DatasheetService (a datasheet's doc-IR for the
-// extraction workbench, WS13-006).
-export function datasheetClient(baseUrl?: string): Client<typeof DatasheetService> {
-  return createClient(DatasheetService, newTransport(baseUrl));
 }
 
 // queryClient returns a typed client for QueryService (ad-hoc datalog queries over a design's

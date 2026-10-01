@@ -1,0 +1,33 @@
+{
+  "name": "agni-datasheets-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The datasheets workbench, the page agnids serves (agni issue 744). Built apart from the viewer so pdf.js and the workbench's code stay out of the viewer's bundle and the workbench can be hosted on its own.",
+  "scripts": {
+    "gen": "buf generate ../.. --template buf.gen.web.yaml",
+    "typecheck": "tsc --noEmit",
+    "build": "node build.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agni/web-shared": "workspace:*",
+    "@bufbuild/protobuf": "^2.2.3",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-web": "^2.0.0",
+    "@panyam/tsappkit": "^0.0.5",
+    "@panyam/tsappkit-solid": "^0.0.1",
+    "pdfjs-dist": "^6.2.108",
+    "solid-js": "^1.9.14"
+  },
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "^2.2.3",
+    "@types/node": "^26.1.0",
+    "esbuild": "^0.28.1",
+    "esbuild-plugin-solid": "^0.6.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.6.0",
+    "vite-plugin-solid": "^2.11.12",
+    "vitest": "^5.0.0"
+  }
+}

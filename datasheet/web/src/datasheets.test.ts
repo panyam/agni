@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll } from "vitest";
-import { loadRecents } from "./recents.js";
+import { loadRecents } from "@agni/web-shared/recents.js";
 
 // The datasheets page's boot, under test for the first time. The three islands are mocked rather
 // than real, because the region viewer pulls in pdf.js, which needs a canvas and a worker jsdom

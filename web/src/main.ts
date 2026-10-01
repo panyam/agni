@@ -37,7 +37,7 @@ import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
 import { staleLinkStrip } from "./stalelink.js";
 import { fillEntityQuery } from "./selection.js";
-import { baseName, noteOpen } from "./recents.js";
+import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
 // restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
 // The presenter's location callback still fires then, and must not push a history entry for it.

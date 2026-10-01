@@ -3,10 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.5.1",
   "description": "WebGL2 browser renderer for a packed schematic sheet (tier-2 PackedSheet)",
   "scripts": {
-    "gen": "buf generate .. --template buf.gen.web.yaml",
+    "gen": "buf generate ../protos --template buf.gen.web.yaml",
     "typecheck": "tsc --noEmit",
     "build": "node build.mjs",
     "test": "vitest run",
@@ -14,6 +13,7 @@
     "test:browser": "vitest run -c vitest.browser.config.ts"
   },
   "dependencies": {
+    "@agni/web-shared": "workspace:*",
     "@bufbuild/protobuf": "^2.2.3",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-web": "^2.0.0",
@@ -21,7 +21,6 @@
     "@panyam/tsappkit-solid": "^0.0.1",
     "dockview-core": "^1.17.2",
     "marked": "^18.0.6",
-    "pdfjs-dist": "^6.2.108",
     "solid-js": "^1.9.14"
   },
   "devDependencies": {

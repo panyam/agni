@@ -91,8 +91,10 @@ There are four server-rendered shells, each with its own bundle, so a page downl
 | `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: WebGL canvas, checks, query, diff |
 
 The extraction workbench, `DatasheetsPage` at `/datasheets/files/<mount>/<path>` with its own bundle
-`datasheets.js`, is served by `agnids` rather than `agni serve` (agni issue 744). Its bundle is still
-built from this `web/` tree, and the landing page links it only when `agni serve --datasheets-url`
+`datasheets.js`, is served by `agnids` rather than `agni serve` (agni issue 744), and is built from its
+own package, `datasheet/web`, in the pnpm workspace beside this `web/`. The two share only the plain
+TS modules in `web-shared/` (URIs, recents, pan and zoom maths, the workbench's URL format, and the
+pruned-mount note), and the landing page links the workbench only when `agni serve --datasheets-url`
 names where it runs.
 
 The `/designs/` space holds two pages behind one pattern, split by the trailing `/view`, because a

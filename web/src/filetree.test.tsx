@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { artifactUri, uriPath } from "./uri.js";
+import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { fileTreeIsland } from "./filetree.jsx";
 import type { SheetsState } from "./sheets.js";

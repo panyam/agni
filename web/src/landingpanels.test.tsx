@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ago, openUrl, projectsIsland, recentsIsland } from "./landingpanels.jsx";
-import { noteOpen } from "./recents.js";
+import { noteOpen } from "@agni/web-shared/recents.js";
 
 const fake = vi.hoisted(() => ({
   projects: [] as { name: string; title: string }[],

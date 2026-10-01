@@ -1,3 +1,11 @@
+# The pnpm workspace (agni issue 744): the viewer, the datasheets workbench, which is the datasheet
+# service's page and is hosted apart from the viewer, and the TS modules both import. One lockfile at
+# the root, one install.
+packages:
+  - web
+  - web-shared
+  - datasheet/web
+
 # esbuild ships its platform binary as an optional dependency and its postinstall links and verifies
 # it. pnpm refuses to run a dependency's build script until the repo declares a decision about it, so
 # an undeclared esbuild is a hard ERR_PNPM_IGNORED_BUILDS on pnpm 12 and a warning on pnpm 10. The two

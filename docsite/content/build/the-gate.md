@@ -251,11 +251,12 @@ flowchart TB
     class X bad;
 ```
 
-**`pnpm install` is per clone**, and this has bitten four times. After merging main, `cd web && pnpm
-install` if web deps changed. A plain re-install can be INSUFFICIENT, because a partially-populated
+**`pnpm install` is per clone**, and this has bitten four times. After merging main, run `pnpm install`
+at the repo root if web deps changed; the web code is one pnpm workspace (`web/`, `web-shared/`,
+`datasheet/web/`) with one lockfile there. A plain re-install can be INSUFFICIENT, because a partially-populated
 `node_modules` survives it and the bundle dies deep inside a transitive dep, which reads as a code bug
 rather than a toolchain one. **When the second error differs from the first**, stop re-installing and
-go to `rm -rf web/node_modules && pnpm install`. Match on the SHAPE, a failure inside a dep you did
+go to `rm -rf node_modules */node_modules datasheet/web/node_modules && pnpm install`. Match on the SHAPE, a failure inside a dep you did
 not touch right after a checkout switch or a fresh clone, not on the message.
 
 ## A red gate that is none of your business

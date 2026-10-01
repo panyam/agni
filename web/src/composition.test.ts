@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { loadRecents } from "./recents.js";
+import { loadRecents } from "@agni/web-shared/recents.js";
 import { join } from "node:path";
 
 // The composition root, under test at last (agni issue 136).

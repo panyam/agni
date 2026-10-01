@@ -1,5 +1,5 @@
 import { createEffect, createResource, createSignal, onCleanup, For, Show } from "solid-js";
-import { artifactUri } from "./uri.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { Code, ConnectError } from "@connectrpc/connect";
@@ -15,7 +15,7 @@ import {
   fitInto,
   clampScale,
   type PanZoom,
-} from "./panzoom.js";
+} from "@agni/web-shared/panzoom.js";
 import {
   classifyPointerDown,
   selectionAfterPointerDown,
