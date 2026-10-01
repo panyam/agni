@@ -145,7 +145,7 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
    * query run under this config can call them beside the shipped library, so `lib/net.dl` adds
    * members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
    * path, or reading a relation nothing registers, fails the read rather than answering nothing.
-   * Rules compiled from queries do not read them yet (agni issue 779).
+   * A review manifest's inline queries read them too (agni issue 779).
    *
    * @generated from field: repeated string library_uris = 9;
    */

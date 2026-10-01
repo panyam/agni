@@ -151,6 +151,11 @@ func run(design, checklist *common.PathInput) (review.Report, error) {
 	if err != nil {
 		return review.Report{}, fmt.Errorf("checklist %s: %w", checklist.Path(), err)
 	}
+	// Load checks structure; Validate compiles the inline queries against the vocabulary the run uses,
+	// here the shipped one, so a broken query is an error rather than an undecided item.
+	if err := review.Validate(man); err != nil {
+		return review.Report{}, fmt.Errorf("checklist %s: %w", checklist.Path(), err)
+	}
 	// No provider: component.mpn reads the MPN every model joins from the design, and only the
 	// datasheet relations need specs.
 	//

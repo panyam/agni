@@ -111,8 +111,10 @@ calls it, and `agni query --relations house --design <design>` lists it. Four ru
   Answering without the library would read as a design with none of what the query asks for.
 - **Outside the project the members do not exist**, so one team's vocabulary never reaches another
   team's design.
-- **Rules do not read a project's library yet.** A project's profiles and checklist still see the
-  shipped vocabulary only (agni issue 779).
+- **A checklist's inline queries read it too** (agni issue 779). A `query:` item in `review.yaml`
+  compiles against the vocabulary the review runs with, so the tutorial project's item P6 calls
+  `house.pmic_rail`. Interface profiles do not, because their queries are generated from the
+  profile's own fields and never name a library member.
 
 The tier is discovered like `profiles/`, so a project declares nothing to get it, and `lib: ""` in
 `project.yaml` turns it off with the directory in place.
@@ -142,6 +144,27 @@ client.run_query(
     overlay={"config": {"library_modules": [{"path": "house", "text": open("lib/house.dl").read()}]}},
 )
 ```
+
+## Calling the library from a checklist
+
+A review manifest's `query:` item compiles against the vocabulary the review runs with, the shipped
+library, the design's project library and any library sent with the request together. The tutorial
+project's checklist does this in item P6:
+
+```yaml
+- id: "P6"
+  title: every rail the PMIC drives has a test point
+  query:
+    match: 'house.pmic_rail(?n), not house.pmic_probe_point(?n) => ?n'
+    subject: n
+    kind: net
+    message: 'PMIC rail {n} has no test point'
+```
+
+`agni review` and a served `CreateReview` agree on it, failing on `PMIC_MAIN_12V0`, and
+`agni review --lib <dir>` sends a library for a design that belongs to no project. A manifest's
+queries are checked when a review is created rather than when the file is read, since that is the
+first moment the library is known. A misspelled member is still refused before anything runs.
 
 ## Reading the library from a shipped rule
 

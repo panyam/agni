@@ -752,6 +752,7 @@ func reviewCmd() *cobra.Command {
 	var ratifiedFloor float64
 	var failOnOutcome string
 	var minAnswered int
+	var reviewLibs []string
 	cmd := &cobra.Command{
 		Use:   "review <file>...",
 		Short: "Run a review checklist (manifest) over one or more designs and report per-item outcomes",
@@ -804,13 +805,18 @@ func reviewCmd() *cobra.Command {
 			}
 			// The supersession note is written per design in the loop below, against the catalog the
 			// run composes rather than this flag-built one (agni issue 450).
-			overlay := &webapi.OverlayConfig{}
+			overlay := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{}}
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
 					return err
 				}
-				overlay.Config = &webapi.AnalysisConfig{Conventions: cfg}
+				overlay.Config.Conventions = cfg
+			}
+			// --lib rides the request as values, as it does for `query` (agni issues 779, 788), so an
+			// inline checklist query can name its members.
+			if err := addLibraries(overlay.Config, reviewLibs); err != nil {
+				return err
 			}
 			var specs param.ParamProvider
 			if paramsDir != "" {
@@ -949,6 +955,7 @@ func reviewCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&checklist, "checklist", "", "review manifest (YAML) declaring review areas and their checklist items")
+	cmd.Flags().StringArrayVar(&reviewLibs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the run, beside any the design's project carries, so a checklist's inline query can call them. Repeatable")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations added to the catalog")
 	cmd.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration (expected modules, voltage domains); its rules join the catalog so intent-bound items resolve")

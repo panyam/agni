@@ -4,7 +4,8 @@
 # An item is bound to the engine in one of four ways, and all four appear below:
 #   rule:    a catalog rule decides the item (built-in, house, profile, or intent)
 #   profile: an interface profile decides it, and the item reads n/a when the interface is absent
-#   query:   an inline datalog query decides it, for a question no shipped rule asks
+#   query:   an inline datalog query decides it, for a question no shipped rule asks, and it may call
+#            this project's own library in lib/
 #   note:    nothing automated decides it, and the note says who does
 #
 # The point of the not-automated verdicts is that a question nobody answered must not score as a
@@ -31,6 +32,17 @@ areas:
       - id: "P5"
         title: every rail is probeable during bring-up
         rule: test-point-coverage
+      - id: "P6"
+        title: every rail the PMIC drives has a test point
+        description: >-
+          This team's question, answered by its own library (lib/house.dl): house.pmic_rail names
+          the PMIC's rails by the team's PMIC_ convention, and house.pmic_probe_point the ones a
+          probe can reach. The query matches the rails with no test point, the violation.
+        query:
+          match: 'house.pmic_rail(?n), not house.pmic_probe_point(?n) => ?n'
+          subject: n
+          kind: net
+          message: 'PMIC rail {n} has no test point'
 
   - name: Interfaces
     items:

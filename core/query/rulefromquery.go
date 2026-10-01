@@ -20,8 +20,13 @@ import (
 // placeholders are filled from each answer row. If Rule.Reads is empty it is derived from the query
 // (the EDB relations it reads), so check.Available gates it correctly.
 type FindingQuery struct {
-	Rule       check.Rule
-	Query      Query
+	Rule  check.Rule
+	Query Query
+	// Vocabulary is what the query's names resolve against: the shipped relations and library, plus
+	// whatever library the run carries, a project's lib/ or modules sent with the request (agni issues
+	// 779, 788). The rule validates, declares what it reads, and evaluates against it. Nil is the
+	// process default, which is right for a query written into this repo.
+	Vocabulary *facts.Registry
 	Kind       string // check.KindNet | check.KindComponent | check.KindPin
 	SubjectVar string // projected variable name (no leading ?) bound to Finding.Subject
 	PinVar     string // projected variable name bound to Finding.Pin (KindPin only; "" otherwise)
@@ -119,7 +124,7 @@ var placeholderRe = regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
 // Use it where the query came from a person (a review manifest, a wire RuleDef, an overlay). For a
 // query written into this repo as code, use MustRuleFromQuery.
 func RuleFromQuery(fq FindingQuery) (*check.Rule, error) {
-	if err := Validate(fq.Query, facts.DefaultRegistry()); err != nil {
+	if err := Validate(fq.Query, fq.vocabulary()); err != nil {
 		return nil, err
 	}
 	if err := fq.checkProjects(fq.Query, "query"); err != nil {
@@ -185,11 +190,23 @@ func evalFailed(rule string, err error) check.Finding {
 }
 
 // buildRule is RuleFromQuery's construction half, after validation has passed.
+// vocabulary is the registry the rule's names resolve against, the process default when none is set.
+//
+// The default is looked up each time, never captured when the rule is built: built-in rules compile
+// in package init() before any relation catalog has registered (agni issue 540), so a captured default
+// would be an empty registry and every such rule would report it could not decide.
+func (fq FindingQuery) vocabulary() *facts.Registry {
+	if fq.Vocabulary != nil {
+		return fq.Vocabulary
+	}
+	return facts.DefaultRegistry()
+}
+
 func buildRule(fq FindingQuery) *check.Rule {
 	q := fq.Query
 	r := fq.Rule
 	if len(r.Reads) == 0 {
-		r.Reads = Reads(q)
+		r.Reads = ReadsFrom(fq.vocabulary(), q)
 	}
 	// findingFor projects one answer row onto the violation it reports. It is shared by both eval
 	// shapes below so the finding a rule emits cannot depend on whether its author declared a domain.
@@ -211,7 +228,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// passed over are not in the answer and the only accurate report is failures-only.
 	if fq.Domain == nil {
 		r.Eval = check.FailuresOnly(func(m check.Model) []check.Finding {
-			rows, err := Default.Eval(q, NewBase(m))
+			rows, err := Default.Eval(q, NewBaseFrom(fq.vocabulary(), m))
 			if err != nil {
 				// Construction validated this query, so this is the ENGINE failing on a design. An
 				// inconclusive finding says the rule could not decide, where nil would read as a clean
@@ -231,7 +248,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// The failing verdicts are built here rather than through check.FailuresOnly, because that adapter
 	// sees only the Finding, whose subject is singular, and the subject tuple has to come from the ROW.
 	r.Eval = func(m check.Model) []check.Verdict {
-		base := NewBase(m)
+		base := NewBaseFrom(fq.vocabulary(), m)
 		var vs []check.Verdict
 		failed := map[string]bool{}
 		rows, err := Default.Eval(q, base)

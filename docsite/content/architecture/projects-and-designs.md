@@ -335,4 +335,7 @@ them with the shipped vocabulary once per distinct library, and `QueryService.re
 design's fact base over the result, so every query surface sees the project's members and no other
 project's design can. A module that does not compose fails the read rather than answering without it,
 because a query naming a member that silently vanished would read as a design with none of what it
-asks for. Rules compiled from queries do not read a project's library yet (agni issue 779).
+asks for. A review manifest's inline queries compile against the same vocabulary (agni issue 779):
+`review.Load` checks only a manifest's structure, because it runs before any project is known, and
+`CreateReview` compiles each query against `Overlay.Registry` before the review runs, so a misspelled
+member is still refused before anything is checked.

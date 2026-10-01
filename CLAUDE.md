@@ -203,8 +203,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **A project DISCOVERS its analysis tiers, so a flag naming one is redundant and dropping the flag
   does not turn it off.** `internal/projects/descriptor.go` defaults `conventions.yaml`, `profiles`,
   `params`, `review.yaml` and `lib`, and `FSStore` composes each one it finds. `lib/` is the
-  project's own derived relations, which every QUERY surface reads through `Overlay.Registry` and
-  rules do not read yet (agni 773, 779). That has two consequences, and
+  project's own derived relations, which every query surface and a review manifest's inline queries
+  read through `Overlay.Registry` (agni 773, 779). That has two consequences, and
   each has cost a bug. Before adding a tier flag to a command, check whether the name is already
   defaulted, because `--profile-path` naming the project's own directory double-loaded every
   profile rule (issue 450) and `--params` naming its own is merely redundant. And to reach a tier's
