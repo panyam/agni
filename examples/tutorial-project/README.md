@@ -29,6 +29,7 @@ This is the shape a real review project takes. Two kinds of file live here.
 |---|---|
 | `project.yaml` | the project's name, which is what makes this folder a project rather than a folder |
 | `review.yaml` | the checklist: the questions this team asks of every board |
+| `house-review.yaml` | a second checklist whose inline query calls this project's own library in `lib/` |
 | `conventions.yaml` | house naming: which net names are rails, and what a legal name looks like |
 | `profiles/` | interface declarations, one per bus this team designs with |
 | `params/` | datasheet parameter sets, one per part worth checking against its limits |

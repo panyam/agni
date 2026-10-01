@@ -160,12 +160,12 @@ func TestLibFlagAnswersAsTheInlineRequestDoes(t *testing.T) {
 }
 
 // TestAChecklistQueryCallsTheProjectLibrary is agni issue 779 end to end, on both surfaces. The
-// tutorial project's review.yaml binds P6 to an inline query over its own lib/house.dl, and the item
+// tutorial project's house-review.yaml binds P6 to an inline query over its own lib/house.dl, and the item
 // fails on PMIC_MAIN_12V0, the one PMIC rail with no test point, whether `agni review` runs it or a
 // served CreateReview does (C32). Before this the query could not compile, since a rule from a
 // manifest saw only the shipped vocabulary.
 func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
-	cli := runReview(t, gatewayDesign, "--format", "json")
+	cli := runReview(t, gatewayDesign, "--checklist", "../../examples/tutorial-project/house-review.yaml", "--format", "json")
 	if !strings.Contains(cli, `"PMIC rail PMIC_MAIN_12V0 has no test point"`) {
 		t.Errorf("agni review: P6 did not report PMIC_MAIN_12V0:\n%.2000s", cli)
 	}
@@ -173,7 +173,7 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 	ms := []mounts.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}
 	loader := &osLoader{mounts: ms, loader: newLoader()}
 	svc := service.NewReviewService(loader, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{}, "", testProjectResolver(ms))
-	u, err := artifact.Parse("mount://tut/review.yaml")
+	u, err := artifact.Parse("mount://tut/house-review.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
