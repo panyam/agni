@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 // Outcome is how one checklist item resolved on a design, along TWO axes (WS10-014). COVERAGE asks

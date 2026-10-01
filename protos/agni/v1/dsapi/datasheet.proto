@@ -1,13 +1,14 @@
 syntax = "proto3";
 
-package agni.v1.webapi;
+package agni.v1.dsapi;
 
-option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/dsapi";
 
 import "agni/v1/doc/doc.proto";
 import "agni/v1/param/param.proto";
 
-// This file: DatasheetService, the read side of the extraction workbench (the /datasheets
+// This file: DatasheetService, the datasheet PRODUCER's API, in a package of its own rather than
+// agni.v1.webapi so the engine's API carries no producer message (C34, agni issue 744). It is the read side of the extraction workbench (the /datasheets
 // page, WS13-006). A datasheet PDF is listed by the shared WorkspaceService (filtered to PDFs
 // on the client) and rendered in the browser; this service returns the pre-derived doc-IR
 // (pages, tables, figures, text, each with a bbox) that the workbench overlays as selectable

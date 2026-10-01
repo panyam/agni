@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: agni/v1/webapi/datasheet.proto
+// source: agni/v1/dsapi/datasheet.proto
 
-package webapi
+package dsapi
 
 import (
 	doc "github.com/panyam/agni/gen/go/agni/v1/doc"
@@ -61,11 +61,11 @@ func (x ValidationProblem_Kind) String() string {
 }
 
 func (ValidationProblem_Kind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_datasheet_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_dsapi_datasheet_proto_enumTypes[0].Descriptor()
 }
 
 func (ValidationProblem_Kind) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_datasheet_proto_enumTypes[0]
+	return &file_agni_v1_dsapi_datasheet_proto_enumTypes[0]
 }
 
 func (x ValidationProblem_Kind) Number() protoreflect.EnumNumber {
@@ -74,7 +74,7 @@ func (x ValidationProblem_Kind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ValidationProblem_Kind.Descriptor instead.
 func (ValidationProblem_Kind) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{8, 0}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{8, 0}
 }
 
 type GetDocumentRequest struct {
@@ -87,7 +87,7 @@ type GetDocumentRequest struct {
 
 func (x *GetDocumentRequest) Reset() {
 	*x = GetDocumentRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[0]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -99,7 +99,7 @@ func (x *GetDocumentRequest) String() string {
 func (*GetDocumentRequest) ProtoMessage() {}
 
 func (x *GetDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[0]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -112,7 +112,7 @@ func (x *GetDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDocumentRequest.ProtoReflect.Descriptor instead.
 func (*GetDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *GetDocumentRequest) GetUri() string {
@@ -139,7 +139,7 @@ type GetDocumentResponse struct {
 
 func (x *GetDocumentResponse) Reset() {
 	*x = GetDocumentResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[1]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -151,7 +151,7 @@ func (x *GetDocumentResponse) String() string {
 func (*GetDocumentResponse) ProtoMessage() {}
 
 func (x *GetDocumentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[1]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -164,7 +164,7 @@ func (x *GetDocumentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDocumentResponse.ProtoReflect.Descriptor instead.
 func (*GetDocumentResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetDocumentResponse) GetExtracted() bool {
@@ -198,7 +198,7 @@ type ExtractDocIRRequest struct {
 
 func (x *ExtractDocIRRequest) Reset() {
 	*x = ExtractDocIRRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[2]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -210,7 +210,7 @@ func (x *ExtractDocIRRequest) String() string {
 func (*ExtractDocIRRequest) ProtoMessage() {}
 
 func (x *ExtractDocIRRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[2]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -223,7 +223,7 @@ func (x *ExtractDocIRRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExtractDocIRRequest.ProtoReflect.Descriptor instead.
 func (*ExtractDocIRRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ExtractDocIRRequest) GetUri() string {
@@ -243,7 +243,7 @@ type ExtractDocIRResponse struct {
 
 func (x *ExtractDocIRResponse) Reset() {
 	*x = ExtractDocIRResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[3]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -255,7 +255,7 @@ func (x *ExtractDocIRResponse) String() string {
 func (*ExtractDocIRResponse) ProtoMessage() {}
 
 func (x *ExtractDocIRResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[3]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +268,7 @@ func (x *ExtractDocIRResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExtractDocIRResponse.ProtoReflect.Descriptor instead.
 func (*ExtractDocIRResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ExtractDocIRResponse) GetDocument() *doc.Document {
@@ -288,7 +288,7 @@ type GetPartSpecRequest struct {
 
 func (x *GetPartSpecRequest) Reset() {
 	*x = GetPartSpecRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[4]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -300,7 +300,7 @@ func (x *GetPartSpecRequest) String() string {
 func (*GetPartSpecRequest) ProtoMessage() {}
 
 func (x *GetPartSpecRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[4]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -313,7 +313,7 @@ func (x *GetPartSpecRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPartSpecRequest.ProtoReflect.Descriptor instead.
 func (*GetPartSpecRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetPartSpecRequest) GetUri() string {
@@ -338,7 +338,7 @@ type GetPartSpecResponse struct {
 
 func (x *GetPartSpecResponse) Reset() {
 	*x = GetPartSpecResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[5]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -350,7 +350,7 @@ func (x *GetPartSpecResponse) String() string {
 func (*GetPartSpecResponse) ProtoMessage() {}
 
 func (x *GetPartSpecResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[5]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -363,7 +363,7 @@ func (x *GetPartSpecResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPartSpecResponse.ProtoReflect.Descriptor instead.
 func (*GetPartSpecResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetPartSpecResponse) GetFound() bool {
@@ -401,7 +401,7 @@ type SavePartSpecRequest struct {
 
 func (x *SavePartSpecRequest) Reset() {
 	*x = SavePartSpecRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[6]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -413,7 +413,7 @@ func (x *SavePartSpecRequest) String() string {
 func (*SavePartSpecRequest) ProtoMessage() {}
 
 func (x *SavePartSpecRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[6]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -426,7 +426,7 @@ func (x *SavePartSpecRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePartSpecRequest.ProtoReflect.Descriptor instead.
 func (*SavePartSpecRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SavePartSpecRequest) GetSpec() *param.PartSpec {
@@ -471,7 +471,7 @@ type SavePartSpecResponse struct {
 
 func (x *SavePartSpecResponse) Reset() {
 	*x = SavePartSpecResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[7]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -483,7 +483,7 @@ func (x *SavePartSpecResponse) String() string {
 func (*SavePartSpecResponse) ProtoMessage() {}
 
 func (x *SavePartSpecResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[7]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -496,7 +496,7 @@ func (x *SavePartSpecResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePartSpecResponse.ProtoReflect.Descriptor instead.
 func (*SavePartSpecResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SavePartSpecResponse) GetVersion() string {
@@ -518,7 +518,7 @@ func (x *SavePartSpecResponse) GetProblems() []*ValidationProblem {
 // ordinary state of unfinished work and is better shown as progress toward being publishable.
 type ValidationProblem struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Kind  ValidationProblem_Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=agni.v1.webapi.ValidationProblem_Kind" json:"kind,omitempty"`
+	Kind  ValidationProblem_Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=agni.v1.dsapi.ValidationProblem_Kind" json:"kind,omitempty"`
 	// Human-readable, already naming its subject ("vcca: duplicate pin id"). Not a code: these are
 	// shown to the person who just typed the thing, not dispatched on.
 	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
@@ -528,7 +528,7 @@ type ValidationProblem struct {
 
 func (x *ValidationProblem) Reset() {
 	*x = ValidationProblem{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[8]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -540,7 +540,7 @@ func (x *ValidationProblem) String() string {
 func (*ValidationProblem) ProtoMessage() {}
 
 func (x *ValidationProblem) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[8]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -553,7 +553,7 @@ func (x *ValidationProblem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationProblem.ProtoReflect.Descriptor instead.
 func (*ValidationProblem) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ValidationProblem) GetKind() ValidationProblem_Kind {
@@ -601,7 +601,7 @@ type RegionAnnotation struct {
 
 func (x *RegionAnnotation) Reset() {
 	*x = RegionAnnotation{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[9]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -613,7 +613,7 @@ func (x *RegionAnnotation) String() string {
 func (*RegionAnnotation) ProtoMessage() {}
 
 func (x *RegionAnnotation) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[9]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -626,7 +626,7 @@ func (x *RegionAnnotation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegionAnnotation.ProtoReflect.Descriptor instead.
 func (*RegionAnnotation) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RegionAnnotation) GetRegionId() string {
@@ -699,7 +699,7 @@ type AnnotationSet struct {
 
 func (x *AnnotationSet) Reset() {
 	*x = AnnotationSet{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[10]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -711,7 +711,7 @@ func (x *AnnotationSet) String() string {
 func (*AnnotationSet) ProtoMessage() {}
 
 func (x *AnnotationSet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[10]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -724,7 +724,7 @@ func (x *AnnotationSet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnnotationSet.ProtoReflect.Descriptor instead.
 func (*AnnotationSet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AnnotationSet) GetDocId() string {
@@ -758,7 +758,7 @@ type GetAnnotationsRequest struct {
 
 func (x *GetAnnotationsRequest) Reset() {
 	*x = GetAnnotationsRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[11]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -770,7 +770,7 @@ func (x *GetAnnotationsRequest) String() string {
 func (*GetAnnotationsRequest) ProtoMessage() {}
 
 func (x *GetAnnotationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[11]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -783,7 +783,7 @@ func (x *GetAnnotationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnnotationsRequest.ProtoReflect.Descriptor instead.
 func (*GetAnnotationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetAnnotationsRequest) GetUri() string {
@@ -804,7 +804,7 @@ type GetAnnotationsResponse struct {
 
 func (x *GetAnnotationsResponse) Reset() {
 	*x = GetAnnotationsResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[12]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -816,7 +816,7 @@ func (x *GetAnnotationsResponse) String() string {
 func (*GetAnnotationsResponse) ProtoMessage() {}
 
 func (x *GetAnnotationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[12]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -829,7 +829,7 @@ func (x *GetAnnotationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnnotationsResponse.ProtoReflect.Descriptor instead.
 func (*GetAnnotationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetAnnotationsResponse) GetSets() []*AnnotationSet {
@@ -852,7 +852,7 @@ type SaveAnnotationsRequest struct {
 
 func (x *SaveAnnotationsRequest) Reset() {
 	*x = SaveAnnotationsRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[13]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -864,7 +864,7 @@ func (x *SaveAnnotationsRequest) String() string {
 func (*SaveAnnotationsRequest) ProtoMessage() {}
 
 func (x *SaveAnnotationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[13]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -877,7 +877,7 @@ func (x *SaveAnnotationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveAnnotationsRequest.ProtoReflect.Descriptor instead.
 func (*SaveAnnotationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SaveAnnotationsRequest) GetSet() *AnnotationSet {
@@ -902,7 +902,7 @@ type SaveAnnotationsResponse struct {
 
 func (x *SaveAnnotationsResponse) Reset() {
 	*x = SaveAnnotationsResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[14]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -914,7 +914,7 @@ func (x *SaveAnnotationsResponse) String() string {
 func (*SaveAnnotationsResponse) ProtoMessage() {}
 
 func (x *SaveAnnotationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[14]
+	mi := &file_agni_v1_dsapi_datasheet_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -927,14 +927,14 @@ func (x *SaveAnnotationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveAnnotationsResponse.ProtoReflect.Descriptor instead.
 func (*SaveAnnotationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_dsapi_datasheet_proto_rawDescGZIP(), []int{14}
 }
 
-var File_agni_v1_webapi_datasheet_proto protoreflect.FileDescriptor
+var File_agni_v1_dsapi_datasheet_proto protoreflect.FileDescriptor
 
-const file_agni_v1_webapi_datasheet_proto_rawDesc = "" +
+const file_agni_v1_dsapi_datasheet_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/datasheet.proto\x12\x0eagni.v1.webapi\x1a\x15agni/v1/doc/doc.proto\x1a\x19agni/v1/param/param.proto\"&\n" +
+	"\x1dagni/v1/dsapi/datasheet.proto\x12\ragni.v1.dsapi\x1a\x15agni/v1/doc/doc.proto\x1a\x19agni/v1/param/param.proto\"&\n" +
 	"\x12GetDocumentRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"\x93\x01\n" +
 	"\x13GetDocumentResponse\x12\x1c\n" +
@@ -954,12 +954,12 @@ const file_agni_v1_webapi_datasheet_proto_rawDesc = "" +
 	"\x13SavePartSpecRequest\x12+\n" +
 	"\x04spec\x18\x01 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12!\n" +
 	"\fbase_version\x18\x02 \x01(\tR\vbaseVersion\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"o\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"n\n" +
 	"\x14SavePartSpecResponse\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion\x12=\n" +
-	"\bproblems\x18\x02 \x03(\v2!.agni.v1.webapi.ValidationProblemR\bproblems\"\xb3\x01\n" +
-	"\x11ValidationProblem\x12:\n" +
-	"\x04kind\x18\x01 \x01(\x0e2&.agni.v1.webapi.ValidationProblem.KindR\x04kind\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12<\n" +
+	"\bproblems\x18\x02 \x03(\v2 .agni.v1.dsapi.ValidationProblemR\bproblems\"\xb2\x01\n" +
+	"\x11ValidationProblem\x129\n" +
+	"\x04kind\x18\x01 \x01(\x0e2%.agni.v1.dsapi.ValidationProblem.KindR\x04kind\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"H\n" +
 	"\x04Kind\x12\x14\n" +
 	"\x10KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
@@ -976,87 +976,87 @@ const file_agni_v1_webapi_datasheet_proto_rawDesc = "" +
 	"\n" +
 	"confidence\x18\b \x01(\x01R\n" +
 	"confidenceB\a\n" +
-	"\x05_bbox\"\x82\x01\n" +
+	"\x05_bbox\"\x81\x01\n" +
 	"\rAnnotationSet\x12\x15\n" +
 	"\x06doc_id\x18\x01 \x01(\tR\x05docId\x12\x16\n" +
-	"\x06author\x18\x02 \x01(\tR\x06author\x12B\n" +
-	"\vannotations\x18\x03 \x03(\v2 .agni.v1.webapi.RegionAnnotationR\vannotations\")\n" +
+	"\x06author\x18\x02 \x01(\tR\x06author\x12A\n" +
+	"\vannotations\x18\x03 \x03(\v2\x1f.agni.v1.dsapi.RegionAnnotationR\vannotations\")\n" +
 	"\x15GetAnnotationsRequest\x12\x10\n" +
-	"\x03uri\x18\x01 \x01(\tR\x03uri\"K\n" +
-	"\x16GetAnnotationsResponse\x121\n" +
-	"\x04sets\x18\x01 \x03(\v2\x1d.agni.v1.webapi.AnnotationSetR\x04sets\"[\n" +
-	"\x16SaveAnnotationsRequest\x12/\n" +
-	"\x03set\x18\x01 \x01(\v2\x1d.agni.v1.webapi.AnnotationSetR\x03set\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"J\n" +
+	"\x16GetAnnotationsResponse\x120\n" +
+	"\x04sets\x18\x01 \x03(\v2\x1c.agni.v1.dsapi.AnnotationSetR\x04sets\"Z\n" +
+	"\x16SaveAnnotationsRequest\x12.\n" +
+	"\x03set\x18\x01 \x01(\v2\x1c.agni.v1.dsapi.AnnotationSetR\x03set\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\"\x19\n" +
-	"\x17SaveAnnotationsResponse2\xbd\x04\n" +
-	"\x10DatasheetService\x12V\n" +
-	"\vGetDocument\x12\".agni.v1.webapi.GetDocumentRequest\x1a#.agni.v1.webapi.GetDocumentResponse\x12V\n" +
-	"\vGetPartSpec\x12\".agni.v1.webapi.GetPartSpecRequest\x1a#.agni.v1.webapi.GetPartSpecResponse\x12Y\n" +
-	"\fSavePartSpec\x12#.agni.v1.webapi.SavePartSpecRequest\x1a$.agni.v1.webapi.SavePartSpecResponse\x12Y\n" +
-	"\fExtractDocIR\x12#.agni.v1.webapi.ExtractDocIRRequest\x1a$.agni.v1.webapi.ExtractDocIRResponse\x12_\n" +
-	"\x0eGetAnnotations\x12%.agni.v1.webapi.GetAnnotationsRequest\x1a&.agni.v1.webapi.GetAnnotationsResponse\x12b\n" +
-	"\x0fSaveAnnotations\x12&.agni.v1.webapi.SaveAnnotationsRequest\x1a'.agni.v1.webapi.SaveAnnotationsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x17SaveAnnotationsResponse2\xb1\x04\n" +
+	"\x10DatasheetService\x12T\n" +
+	"\vGetDocument\x12!.agni.v1.dsapi.GetDocumentRequest\x1a\".agni.v1.dsapi.GetDocumentResponse\x12T\n" +
+	"\vGetPartSpec\x12!.agni.v1.dsapi.GetPartSpecRequest\x1a\".agni.v1.dsapi.GetPartSpecResponse\x12W\n" +
+	"\fSavePartSpec\x12\".agni.v1.dsapi.SavePartSpecRequest\x1a#.agni.v1.dsapi.SavePartSpecResponse\x12W\n" +
+	"\fExtractDocIR\x12\".agni.v1.dsapi.ExtractDocIRRequest\x1a#.agni.v1.dsapi.ExtractDocIRResponse\x12]\n" +
+	"\x0eGetAnnotations\x12$.agni.v1.dsapi.GetAnnotationsRequest\x1a%.agni.v1.dsapi.GetAnnotationsResponse\x12`\n" +
+	"\x0fSaveAnnotations\x12%.agni.v1.dsapi.SaveAnnotationsRequest\x1a&.agni.v1.dsapi.SaveAnnotationsResponseB-Z+github.com/panyam/agni/gen/go/agni/v1/dsapib\x06proto3"
 
 var (
-	file_agni_v1_webapi_datasheet_proto_rawDescOnce sync.Once
-	file_agni_v1_webapi_datasheet_proto_rawDescData []byte
+	file_agni_v1_dsapi_datasheet_proto_rawDescOnce sync.Once
+	file_agni_v1_dsapi_datasheet_proto_rawDescData []byte
 )
 
-func file_agni_v1_webapi_datasheet_proto_rawDescGZIP() []byte {
-	file_agni_v1_webapi_datasheet_proto_rawDescOnce.Do(func() {
-		file_agni_v1_webapi_datasheet_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_datasheet_proto_rawDesc), len(file_agni_v1_webapi_datasheet_proto_rawDesc)))
+func file_agni_v1_dsapi_datasheet_proto_rawDescGZIP() []byte {
+	file_agni_v1_dsapi_datasheet_proto_rawDescOnce.Do(func() {
+		file_agni_v1_dsapi_datasheet_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agni_v1_dsapi_datasheet_proto_rawDesc), len(file_agni_v1_dsapi_datasheet_proto_rawDesc)))
 	})
-	return file_agni_v1_webapi_datasheet_proto_rawDescData
+	return file_agni_v1_dsapi_datasheet_proto_rawDescData
 }
 
-var file_agni_v1_webapi_datasheet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_webapi_datasheet_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
-var file_agni_v1_webapi_datasheet_proto_goTypes = []any{
-	(ValidationProblem_Kind)(0),     // 0: agni.v1.webapi.ValidationProblem.Kind
-	(*GetDocumentRequest)(nil),      // 1: agni.v1.webapi.GetDocumentRequest
-	(*GetDocumentResponse)(nil),     // 2: agni.v1.webapi.GetDocumentResponse
-	(*ExtractDocIRRequest)(nil),     // 3: agni.v1.webapi.ExtractDocIRRequest
-	(*ExtractDocIRResponse)(nil),    // 4: agni.v1.webapi.ExtractDocIRResponse
-	(*GetPartSpecRequest)(nil),      // 5: agni.v1.webapi.GetPartSpecRequest
-	(*GetPartSpecResponse)(nil),     // 6: agni.v1.webapi.GetPartSpecResponse
-	(*SavePartSpecRequest)(nil),     // 7: agni.v1.webapi.SavePartSpecRequest
-	(*SavePartSpecResponse)(nil),    // 8: agni.v1.webapi.SavePartSpecResponse
-	(*ValidationProblem)(nil),       // 9: agni.v1.webapi.ValidationProblem
-	(*RegionAnnotation)(nil),        // 10: agni.v1.webapi.RegionAnnotation
-	(*AnnotationSet)(nil),           // 11: agni.v1.webapi.AnnotationSet
-	(*GetAnnotationsRequest)(nil),   // 12: agni.v1.webapi.GetAnnotationsRequest
-	(*GetAnnotationsResponse)(nil),  // 13: agni.v1.webapi.GetAnnotationsResponse
-	(*SaveAnnotationsRequest)(nil),  // 14: agni.v1.webapi.SaveAnnotationsRequest
-	(*SaveAnnotationsResponse)(nil), // 15: agni.v1.webapi.SaveAnnotationsResponse
+var file_agni_v1_dsapi_datasheet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_agni_v1_dsapi_datasheet_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agni_v1_dsapi_datasheet_proto_goTypes = []any{
+	(ValidationProblem_Kind)(0),     // 0: agni.v1.dsapi.ValidationProblem.Kind
+	(*GetDocumentRequest)(nil),      // 1: agni.v1.dsapi.GetDocumentRequest
+	(*GetDocumentResponse)(nil),     // 2: agni.v1.dsapi.GetDocumentResponse
+	(*ExtractDocIRRequest)(nil),     // 3: agni.v1.dsapi.ExtractDocIRRequest
+	(*ExtractDocIRResponse)(nil),    // 4: agni.v1.dsapi.ExtractDocIRResponse
+	(*GetPartSpecRequest)(nil),      // 5: agni.v1.dsapi.GetPartSpecRequest
+	(*GetPartSpecResponse)(nil),     // 6: agni.v1.dsapi.GetPartSpecResponse
+	(*SavePartSpecRequest)(nil),     // 7: agni.v1.dsapi.SavePartSpecRequest
+	(*SavePartSpecResponse)(nil),    // 8: agni.v1.dsapi.SavePartSpecResponse
+	(*ValidationProblem)(nil),       // 9: agni.v1.dsapi.ValidationProblem
+	(*RegionAnnotation)(nil),        // 10: agni.v1.dsapi.RegionAnnotation
+	(*AnnotationSet)(nil),           // 11: agni.v1.dsapi.AnnotationSet
+	(*GetAnnotationsRequest)(nil),   // 12: agni.v1.dsapi.GetAnnotationsRequest
+	(*GetAnnotationsResponse)(nil),  // 13: agni.v1.dsapi.GetAnnotationsResponse
+	(*SaveAnnotationsRequest)(nil),  // 14: agni.v1.dsapi.SaveAnnotationsRequest
+	(*SaveAnnotationsResponse)(nil), // 15: agni.v1.dsapi.SaveAnnotationsResponse
 	(*doc.Document)(nil),            // 16: agni.v1.doc.Document
 	(*param.PartSpec)(nil),          // 17: agni.v1.param.PartSpec
 	(*doc.BBox)(nil),                // 18: agni.v1.doc.BBox
 	(*param.Parameter)(nil),         // 19: agni.v1.param.Parameter
 }
-var file_agni_v1_webapi_datasheet_proto_depIdxs = []int32{
-	16, // 0: agni.v1.webapi.GetDocumentResponse.document:type_name -> agni.v1.doc.Document
-	16, // 1: agni.v1.webapi.ExtractDocIRResponse.document:type_name -> agni.v1.doc.Document
-	17, // 2: agni.v1.webapi.GetPartSpecResponse.spec:type_name -> agni.v1.param.PartSpec
-	17, // 3: agni.v1.webapi.SavePartSpecRequest.spec:type_name -> agni.v1.param.PartSpec
-	9,  // 4: agni.v1.webapi.SavePartSpecResponse.problems:type_name -> agni.v1.webapi.ValidationProblem
-	0,  // 5: agni.v1.webapi.ValidationProblem.kind:type_name -> agni.v1.webapi.ValidationProblem.Kind
-	18, // 6: agni.v1.webapi.RegionAnnotation.bbox:type_name -> agni.v1.doc.BBox
-	19, // 7: agni.v1.webapi.RegionAnnotation.draft_params:type_name -> agni.v1.param.Parameter
-	10, // 8: agni.v1.webapi.AnnotationSet.annotations:type_name -> agni.v1.webapi.RegionAnnotation
-	11, // 9: agni.v1.webapi.GetAnnotationsResponse.sets:type_name -> agni.v1.webapi.AnnotationSet
-	11, // 10: agni.v1.webapi.SaveAnnotationsRequest.set:type_name -> agni.v1.webapi.AnnotationSet
-	1,  // 11: agni.v1.webapi.DatasheetService.GetDocument:input_type -> agni.v1.webapi.GetDocumentRequest
-	5,  // 12: agni.v1.webapi.DatasheetService.GetPartSpec:input_type -> agni.v1.webapi.GetPartSpecRequest
-	7,  // 13: agni.v1.webapi.DatasheetService.SavePartSpec:input_type -> agni.v1.webapi.SavePartSpecRequest
-	3,  // 14: agni.v1.webapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.webapi.ExtractDocIRRequest
-	12, // 15: agni.v1.webapi.DatasheetService.GetAnnotations:input_type -> agni.v1.webapi.GetAnnotationsRequest
-	14, // 16: agni.v1.webapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.webapi.SaveAnnotationsRequest
-	2,  // 17: agni.v1.webapi.DatasheetService.GetDocument:output_type -> agni.v1.webapi.GetDocumentResponse
-	6,  // 18: agni.v1.webapi.DatasheetService.GetPartSpec:output_type -> agni.v1.webapi.GetPartSpecResponse
-	8,  // 19: agni.v1.webapi.DatasheetService.SavePartSpec:output_type -> agni.v1.webapi.SavePartSpecResponse
-	4,  // 20: agni.v1.webapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.webapi.ExtractDocIRResponse
-	13, // 21: agni.v1.webapi.DatasheetService.GetAnnotations:output_type -> agni.v1.webapi.GetAnnotationsResponse
-	15, // 22: agni.v1.webapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.webapi.SaveAnnotationsResponse
+var file_agni_v1_dsapi_datasheet_proto_depIdxs = []int32{
+	16, // 0: agni.v1.dsapi.GetDocumentResponse.document:type_name -> agni.v1.doc.Document
+	16, // 1: agni.v1.dsapi.ExtractDocIRResponse.document:type_name -> agni.v1.doc.Document
+	17, // 2: agni.v1.dsapi.GetPartSpecResponse.spec:type_name -> agni.v1.param.PartSpec
+	17, // 3: agni.v1.dsapi.SavePartSpecRequest.spec:type_name -> agni.v1.param.PartSpec
+	9,  // 4: agni.v1.dsapi.SavePartSpecResponse.problems:type_name -> agni.v1.dsapi.ValidationProblem
+	0,  // 5: agni.v1.dsapi.ValidationProblem.kind:type_name -> agni.v1.dsapi.ValidationProblem.Kind
+	18, // 6: agni.v1.dsapi.RegionAnnotation.bbox:type_name -> agni.v1.doc.BBox
+	19, // 7: agni.v1.dsapi.RegionAnnotation.draft_params:type_name -> agni.v1.param.Parameter
+	10, // 8: agni.v1.dsapi.AnnotationSet.annotations:type_name -> agni.v1.dsapi.RegionAnnotation
+	11, // 9: agni.v1.dsapi.GetAnnotationsResponse.sets:type_name -> agni.v1.dsapi.AnnotationSet
+	11, // 10: agni.v1.dsapi.SaveAnnotationsRequest.set:type_name -> agni.v1.dsapi.AnnotationSet
+	1,  // 11: agni.v1.dsapi.DatasheetService.GetDocument:input_type -> agni.v1.dsapi.GetDocumentRequest
+	5,  // 12: agni.v1.dsapi.DatasheetService.GetPartSpec:input_type -> agni.v1.dsapi.GetPartSpecRequest
+	7,  // 13: agni.v1.dsapi.DatasheetService.SavePartSpec:input_type -> agni.v1.dsapi.SavePartSpecRequest
+	3,  // 14: agni.v1.dsapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.dsapi.ExtractDocIRRequest
+	12, // 15: agni.v1.dsapi.DatasheetService.GetAnnotations:input_type -> agni.v1.dsapi.GetAnnotationsRequest
+	14, // 16: agni.v1.dsapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.dsapi.SaveAnnotationsRequest
+	2,  // 17: agni.v1.dsapi.DatasheetService.GetDocument:output_type -> agni.v1.dsapi.GetDocumentResponse
+	6,  // 18: agni.v1.dsapi.DatasheetService.GetPartSpec:output_type -> agni.v1.dsapi.GetPartSpecResponse
+	8,  // 19: agni.v1.dsapi.DatasheetService.SavePartSpec:output_type -> agni.v1.dsapi.SavePartSpecResponse
+	4,  // 20: agni.v1.dsapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.dsapi.ExtractDocIRResponse
+	13, // 21: agni.v1.dsapi.DatasheetService.GetAnnotations:output_type -> agni.v1.dsapi.GetAnnotationsResponse
+	15, // 22: agni.v1.dsapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.dsapi.SaveAnnotationsResponse
 	17, // [17:23] is the sub-list for method output_type
 	11, // [11:17] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -1064,28 +1064,28 @@ var file_agni_v1_webapi_datasheet_proto_depIdxs = []int32{
 	0,  // [0:11] is the sub-list for field type_name
 }
 
-func init() { file_agni_v1_webapi_datasheet_proto_init() }
-func file_agni_v1_webapi_datasheet_proto_init() {
-	if File_agni_v1_webapi_datasheet_proto != nil {
+func init() { file_agni_v1_dsapi_datasheet_proto_init() }
+func file_agni_v1_dsapi_datasheet_proto_init() {
+	if File_agni_v1_dsapi_datasheet_proto != nil {
 		return
 	}
-	file_agni_v1_webapi_datasheet_proto_msgTypes[9].OneofWrappers = []any{}
+	file_agni_v1_dsapi_datasheet_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_datasheet_proto_rawDesc), len(file_agni_v1_webapi_datasheet_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_dsapi_datasheet_proto_rawDesc), len(file_agni_v1_dsapi_datasheet_proto_rawDesc)),
 			NumEnums:      1,
 			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_agni_v1_webapi_datasheet_proto_goTypes,
-		DependencyIndexes: file_agni_v1_webapi_datasheet_proto_depIdxs,
-		EnumInfos:         file_agni_v1_webapi_datasheet_proto_enumTypes,
-		MessageInfos:      file_agni_v1_webapi_datasheet_proto_msgTypes,
+		GoTypes:           file_agni_v1_dsapi_datasheet_proto_goTypes,
+		DependencyIndexes: file_agni_v1_dsapi_datasheet_proto_depIdxs,
+		EnumInfos:         file_agni_v1_dsapi_datasheet_proto_enumTypes,
+		MessageInfos:      file_agni_v1_dsapi_datasheet_proto_msgTypes,
 	}.Build()
-	File_agni_v1_webapi_datasheet_proto = out.File
-	file_agni_v1_webapi_datasheet_proto_goTypes = nil
-	file_agni_v1_webapi_datasheet_proto_depIdxs = nil
+	File_agni_v1_dsapi_datasheet_proto = out.File
+	file_agni_v1_dsapi_datasheet_proto_goTypes = nil
+	file_agni_v1_dsapi_datasheet_proto_depIdxs = nil
 }

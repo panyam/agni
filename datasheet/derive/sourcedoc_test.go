@@ -3,7 +3,7 @@ package derive
 import (
 	"testing"
 
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 // The seeder is the only producer of SourceDoc.content_hash, and everything downstream that can tell

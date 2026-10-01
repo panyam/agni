@@ -21,6 +21,12 @@ Each contract has one schema and many producers, the pattern [ingestion](../inge
 uses for format readers. `datasheet/derive` produces specs offline, but nothing populates the
 parameter schema in production yet, and hand-encoded fixtures validate it today.
 
+The engine reads the parameter contract and nothing else in this layer. Rules, relations and reviews
+see a PartSpec through `core/param` and never import the document contract, the derivation or
+the workbench behind them, so a spec someone typed and a spec the extractor derived are the same
+input. C34 holds that line with a dependency test, ahead of moving the extraction side into a module
+of its own (agni issue 744).
+
 ## The parameter contract
 
 "RDS(on) = 3.5 Ω" is not a fact about a part. The fact is "RDS(on) max 3.5 Ω at VGS = 10 V,
@@ -47,7 +53,7 @@ zero confidence is invalid by construction. Hand-encoded rows use `method: "hand
 inside their own boundary.
 
 **A FIXTURE IS NOT A CORPUS, and the difference is size.** A fixture carries the few rows its tests
-need, cited, in `datasheet/param/testdata/`, so `make testall` passes on a clean clone. A seeded
+need, cited, in `core/param/testdata/`, so `make testall` passes on a clean clone. A seeded
 corpus is the part's actual parameter set and lives OUTSIDE this repo with its source PDFs.
 Transcribing a whole vendor table because it demonstrates better is how a fixture drifts into being
 an extracted parameter document, which is how `txb0104.textproto` reached 389 lines before it was
@@ -186,7 +192,7 @@ ordinary spelling for a sub-amp regulator, so a spec transcribed as printed hit 
 anything unusual, and five rule families were silently passing designs with genuine defects.
 
 Conversion became safe by happening in one place rather than by being cautious, so one table lives in
-`datasheet/param` beside `UnderSpecified` and `MachineComparable` and every extractor reads through
+`core/param` beside `UnderSpecified` and `MachineComparable` and every extractor reads through
 it. Storage is unchanged, since the spec keeps the printed row and the extractor returns a converted copy,
 mirroring `ir.Quantity`'s split on the design side.
 

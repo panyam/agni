@@ -12,6 +12,8 @@ import (
 
 	"connectrpc.com/connect"
 
+	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
+	"github.com/panyam/agni/gen/go/agni/v1/dsapi/dsapiconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/service"
@@ -123,14 +125,14 @@ func (a *Design) TraceDesign(ctx context.Context, req *connect.Request[webapi.Tr
 // Datasheet adapts service.DatasheetService to the generated Connect handler interface (the
 // extraction workbench's read side, WS13-006).
 type Datasheet struct {
-	webapiconnect.UnimplementedDatasheetServiceHandler
+	dsapiconnect.UnimplementedDatasheetServiceHandler
 	svc *service.DatasheetService
 }
 
 // NewDatasheet wraps svc for Connect.
 func NewDatasheet(svc *service.DatasheetService) *Datasheet { return &Datasheet{svc: svc} }
 
-func (a *Datasheet) GetDocument(ctx context.Context, req *connect.Request[webapi.GetDocumentRequest]) (*connect.Response[webapi.GetDocumentResponse], error) {
+func (a *Datasheet) GetDocument(ctx context.Context, req *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error) {
 	resp, err := a.svc.GetDocument(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -138,7 +140,7 @@ func (a *Datasheet) GetDocument(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Datasheet) GetPartSpec(ctx context.Context, req *connect.Request[webapi.GetPartSpecRequest]) (*connect.Response[webapi.GetPartSpecResponse], error) {
+func (a *Datasheet) GetPartSpec(ctx context.Context, req *connect.Request[dsapi.GetPartSpecRequest]) (*connect.Response[dsapi.GetPartSpecResponse], error) {
 	resp, err := a.svc.GetPartSpec(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -146,7 +148,7 @@ func (a *Datasheet) GetPartSpec(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Datasheet) SavePartSpec(ctx context.Context, req *connect.Request[webapi.SavePartSpecRequest]) (*connect.Response[webapi.SavePartSpecResponse], error) {
+func (a *Datasheet) SavePartSpec(ctx context.Context, req *connect.Request[dsapi.SavePartSpecRequest]) (*connect.Response[dsapi.SavePartSpecResponse], error) {
 	resp, err := a.svc.SavePartSpec(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -154,7 +156,7 @@ func (a *Datasheet) SavePartSpec(ctx context.Context, req *connect.Request[webap
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Datasheet) ExtractDocIR(ctx context.Context, req *connect.Request[webapi.ExtractDocIRRequest]) (*connect.Response[webapi.ExtractDocIRResponse], error) {
+func (a *Datasheet) ExtractDocIR(ctx context.Context, req *connect.Request[dsapi.ExtractDocIRRequest]) (*connect.Response[dsapi.ExtractDocIRResponse], error) {
 	resp, err := a.svc.ExtractDocIR(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -162,7 +164,7 @@ func (a *Datasheet) ExtractDocIR(ctx context.Context, req *connect.Request[webap
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Datasheet) GetAnnotations(ctx context.Context, req *connect.Request[webapi.GetAnnotationsRequest]) (*connect.Response[webapi.GetAnnotationsResponse], error) {
+func (a *Datasheet) GetAnnotations(ctx context.Context, req *connect.Request[dsapi.GetAnnotationsRequest]) (*connect.Response[dsapi.GetAnnotationsResponse], error) {
 	resp, err := a.svc.GetAnnotations(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -170,7 +172,7 @@ func (a *Datasheet) GetAnnotations(ctx context.Context, req *connect.Request[web
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Datasheet) SaveAnnotations(ctx context.Context, req *connect.Request[webapi.SaveAnnotationsRequest]) (*connect.Response[webapi.SaveAnnotationsResponse], error) {
+func (a *Datasheet) SaveAnnotations(ctx context.Context, req *connect.Request[dsapi.SaveAnnotationsRequest]) (*connect.Response[dsapi.SaveAnnotationsResponse], error) {
 	resp, err := a.svc.SaveAnnotations(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)

@@ -15,9 +15,10 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 1. **The datasheet workstream: #744, then #749.** The order and the storage design (blob store for
    raw files, an indexed metadata store derived from it and rebuildable, draft and published as states)
-   are the latest comments on #744. #744 starts with its dependency constraint (the engine never
-   imports `doc`, `derive`, `docindex` or `candidate`), before any move. `agni params promote` (#209's
-   CLI half) and the single `check.NewModel` (#748) have landed.
+   are the latest comments on #744, which also carries the agreed four-PR sequence. PR 1 (prep) moved
+   `param` to `core/param`, made `mounts` public and gave `DatasheetService` its own proto package
+   (`agni.v1.dsapi`); C34's ratchet now names one place still to move, `DatasheetService` in
+   `service`. Next is PR 2: `datasheet/` becomes its own module with `datasheet/cmd/agnids`.
 2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.

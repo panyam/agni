@@ -168,7 +168,7 @@ func TestC12RenderLayerHasNoStyleLiterals(t *testing.T) {
 var styleLiteral = regexp.MustCompile(`"#[0-9a-fA-F]{3,8}"|font-family=`)
 
 // C24: a datasheet parameter is compared in SI base units, converted in one place, so the RAW unit a
-// vendor printed is read only inside datasheet/param.
+// vendor printed is read only inside core/param.
 //
 // This is a ratchet rather than a clean sweep, the shape hack/ir_model_baseline.txt uses for C19,
 // because the invariant a grep can express ("nothing reads p.Unit") is not the invariant that
@@ -177,7 +177,7 @@ var styleLiteral = regexp.MustCompile(`"#[0-9a-fA-F]{3,8}"|font-family=`)
 // anything.
 //
 // A new site failing here is one of two things. If it compares, it is the bug the constraint
-// exists for, and the fix is to convert through datasheet/param first. If it displays, add it
+// exists for, and the fix is to convert through core/param first. If it displays, add it
 // here, and that addition is the review moment the constraint is asking for.
 func TestC24RawUnitIsReadOnlyToDisplay(t *testing.T) {
 	allowed := map[string]bool{
@@ -194,13 +194,13 @@ func TestC24RawUnitIsReadOnlyToDisplay(t *testing.T) {
 			t.Fatalf("read %s: %v", f, err)
 		}
 		rel := filepath.ToSlash(mustRel(t, root, f))
-		// datasheet/param IS the one place and reads the raw unit by definition, since that is where
+		// core/param IS the one place and reads the raw unit by definition, since that is where
 		// the conversion to SI base units happens and what every other tier compares through.
-		if strings.HasPrefix(rel, "datasheet/param/") || allowed[rel] || !rawUnitRead.Match(b) {
+		if strings.HasPrefix(rel, "core/param/") || allowed[rel] || !rawUnitRead.Match(b) {
 			continue
 		}
 		t.Errorf("%s reads a parameter's printed unit (C24). A COMPARISON converts through "+
-			"datasheet/param first; a DISPLAY belongs in this test's allowlist.", rel)
+			"core/param first; a DISPLAY belongs in this test's allowlist.", rel)
 	}
 }
 

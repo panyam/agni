@@ -13,8 +13,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mounts"
+	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
+	"github.com/panyam/agni/mounts"
 )
 
 // annotationsDirSuffix names the per-datasheet directory holding one region-annotation file per
@@ -66,7 +66,7 @@ func safeAuthor(author string) string {
 
 // Get returns every author's overlay for the datasheet, ordered by author for a stable union. A
 // datasheet nobody has annotated (the directory does not exist) is (nil, nil), a normal state.
-func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*webapi.AnnotationSet, error) {
+func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*dsapi.AnnotationSet, error) {
 	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*webap
 		}
 		return nil, err
 	}
-	var sets []*webapi.AnnotationSet
+	var sets []*dsapi.AnnotationSet
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
 			continue
@@ -87,7 +87,7 @@ func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*webap
 		if err != nil {
 			return nil, err
 		}
-		set := &webapi.AnnotationSet{}
+		set := &dsapi.AnnotationSet{}
 		if err := protojson.Unmarshal(data, set); err != nil {
 			return nil, err
 		}
@@ -100,7 +100,7 @@ func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*webap
 // Save writes one author's overlay, creating the annotation directory on first write and
 // overwriting just that author's file. The per-file lock only serializes one author's concurrent
 // writes, and there is no compare-and-swap.
-func (s *osAnnotationStore) Save(ctx context.Context, uri artifact.URI, author string, set *webapi.AnnotationSet) error {
+func (s *osAnnotationStore) Save(ctx context.Context, uri artifact.URI, author string, set *dsapi.AnnotationSet) error {
 	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
 	if err != nil {
 		return err

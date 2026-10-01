@@ -1,7 +1,8 @@
 // Package mounts is the containment boundary of the web tier, the named root folders the server
 // exposes plus the join that keeps every client-supplied path inside its mount. Mounts are checked
 // against the filesystem at parse time. It lives outside cmd/agni so any entrypoint hosting the
-// serve services reuses the same boundary.
+// serve services reuses the same boundary, and outside internal/ because one of those entrypoints,
+// the datasheet service, is in a module of its own (agni issue 744).
 package mounts
 
 import (

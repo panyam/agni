@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/mounts"
 )
 
 // resolveSibling resolves a file DERIVED from another artifact's path (a datasheet's doc-IR beside

@@ -14,6 +14,7 @@ var embeddingSurface = []string{
 	"github.com/panyam/agni",
 	"github.com/panyam/agni/service",
 	"github.com/panyam/agni/artifact",
+	"github.com/panyam/agni/mounts",
 }
 
 // TestEmbeddingSurfaceIsImportable is C13's "importable" clause as a test rather than a command in a
@@ -195,4 +196,127 @@ func depsOfTier(t *testing.T, pattern, want string) []string {
 		t.Fatalf("go list -deps %s named no package under %s, so this check proves nothing", pattern, want)
 	}
 	return got
+}
+
+// C34: the engine depends on the datasheet tier through its CONTRACT (core/param and
+// param.proto) and never through the extraction pipeline, which is one producer of PartSpecs among
+// several (agni issue 744).
+const self = "github.com/panyam/agni/"
+
+// datasheetProducer is the extraction pipeline: a PDF's doc-IR, derivation from it, retrieval over
+// it, and proposed facts. The engine reads what it produces, a PartSpec, and none of how.
+var datasheetProducer = []string{
+	self + "datasheet/doc",
+	self + "datasheet/derive",
+	self + "datasheet/docindex",
+	self + "datasheet/candidate",
+}
+
+// datasheetProducerProtos are the producer's generated messages.
+var datasheetProducerProtos = []string{
+	self + "gen/go/agni/v1/doc",
+	self + "gen/go/agni/v1/derive",
+	self + "gen/go/agni/v1/candidate",
+}
+
+// producerHosts may import the producer, because they host its commands and its server until #744
+// moves them into a module of their own. The list is meant to end up empty.
+var producerHosts = []string{
+	self + "cmd/agni",   // `agni derive`, and serve's DatasheetService wiring and OS adapters
+	self + "tools/",     // datasheetstatus and the pdf2doc validator
+	self + "datasheet/", // the producer packages themselves
+}
+
+// enginePackages is every package in this module that is neither a producer host nor generated
+// code. Derived from `go list ./...` rather than a list of tiers, so a new top-level directory is in
+// scope the day it is created.
+func enginePackages(t *testing.T) []string {
+	t.Helper()
+	out, err := exec.Command("go", "list", "./...").Output()
+	if err != nil {
+		t.Fatalf("go list ./...: %v", err)
+	}
+	var engine []string
+	for _, p := range strings.Fields(string(out)) {
+		if strings.HasPrefix(p, self+"gen/") {
+			continue
+		}
+		if slices.ContainsFunc(producerHosts, func(h string) bool { return strings.HasPrefix(p, h) }) {
+			continue
+		}
+		engine = append(engine, p)
+	}
+	return engine
+}
+
+// TestEngineNamesNoDatasheetProducer is C34's package half: nothing in the engine reaches the
+// extraction pipeline, directly or transitively.
+func TestEngineNamesNoDatasheetProducer(t *testing.T) {
+	engine := enginePackages(t)
+	if !slices.Contains(engine, self+"core/param") || !slices.Contains(engine, self+"core/check") {
+		t.Fatalf("the engine set is missing core/param or core/check, so this check proves nothing: %v", engine)
+	}
+	out, err := exec.Command("go", append([]string{"list", "-deps"}, engine...)...).Output()
+	if err != nil {
+		t.Fatalf("go list -deps over the engine: %v", err)
+	}
+	for _, dep := range strings.Fields(string(out)) {
+		if slices.Contains(datasheetProducer, dep) {
+			t.Errorf("the engine depends on %s (C34): the engine reads PartSpecs through core/param "+
+				"and never the pipeline that produces them. Run `go list -deps` to find the importer", dep)
+		}
+	}
+}
+
+// TestDatasheetProducerIsVisibleFromItsHost is the positive control for the two C34 checks. A
+// mistyped or renamed path in either list would let them pass over a package that no longer exists,
+// so every listed path must resolve, and the CLI, which hosts the producer, must be seen to depend on
+// it.
+func TestDatasheetProducerIsVisibleFromItsHost(t *testing.T) {
+	for _, p := range append(slices.Clone(datasheetProducer), datasheetProducerProtos...) {
+		if !packageExists(t, p) {
+			t.Errorf("%s does not exist, so C34 checks for a package nothing can import", p)
+		}
+	}
+	got := deps(t, self+"cmd/agni")
+	if !slices.ContainsFunc(datasheetProducer, func(p string) bool { return slices.Contains(got, p) }) {
+		t.Errorf("cmd/agni depends on none of %v, so the engine check cannot be seen to work", datasheetProducer)
+	}
+}
+
+// producerProtoImporters is the RATCHET for C34's proto half. These engine packages import a
+// producer proto today, and #744 removes each: DatasheetService still lives in service. A new
+// importer fails, and so does an entry here that stopped importing, so the list shrinks as the split
+// lands.
+var producerProtoImporters = map[string]string{
+	self + "service": "service/datasheet.go is DatasheetService, which #744 moves out",
+}
+
+func TestEngineReachesProducerProtosOnlyThroughDatasheetService(t *testing.T) {
+	pkgs := append(enginePackages(t), self+"gen/go/agni/v1/webapi")
+	args := append([]string{"list", "-f", "{{.ImportPath}} {{join .Imports \" \"}}"}, pkgs...)
+	out, err := exec.Command("go", args...).Output()
+	if err != nil {
+		t.Fatalf("go list -f: %v", err)
+	}
+	importers := map[string]bool{}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		f := strings.Fields(line)
+		for _, imp := range f[1:] {
+			if slices.Contains(datasheetProducerProtos, imp) {
+				importers[f[0]] = true
+			}
+		}
+	}
+	for p := range importers {
+		if _, ok := producerProtoImporters[p]; !ok {
+			t.Errorf("%s imports a datasheet producer proto (C34). The engine reads param.proto only; "+
+				"a producer message belongs to the producer", p)
+		}
+	}
+	for p, why := range producerProtoImporters {
+		if !importers[p] {
+			t.Errorf("%s no longer imports a producer proto, so its allowlist entry (%s) is stale: delete it", p, why)
+		}
+	}
 }

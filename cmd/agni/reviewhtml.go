@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/core/review"
-	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/mounts"
 )
 
 // buildChecklist maps one review run onto the shared report model.

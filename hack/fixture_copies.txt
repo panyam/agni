@@ -118,7 +118,7 @@ examples/common/designs/mixer.kicad_pcb
 # ---------------------------------------------------------------------------------------------
 # A seeded datasheet parameter, in the package that parses it and in the corpus a CLI run composes.
 cmd/agni/testdata/conformance/fetparams/bss138.textproto
-datasheet/param/testdata/bss138.textproto
+core/param/testdata/bss138.textproto
 
 # Two corpora that differ by ONE spec, so the shared members are copies. `params-no-ocp` exists to
 # show what an intent rule reports when the parameter it needs is absent, which means every other

@@ -11,7 +11,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
-	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/mounts"
 )
 
 // docSiblingSuffix is the extension of a datasheet's doc-IR sibling, so LM1117.pdf pairs with

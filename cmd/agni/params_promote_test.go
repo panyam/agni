@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/param"
 )
 
 // promoteProject copies the tutorial project and turns U2's seeded spec into a workbench DRAFT in the

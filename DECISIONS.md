@@ -96,7 +96,7 @@ tracked as its own issue.
 
 ## Datasheet units are converted at READ time, in one table, and not shared with `core/classify`
 
-**Question.** Three questions that arrive together whenever someone meets `datasheet/param/unit.go`.
+**Question.** Three questions that arrive together whenever someone meets `core/param/unit.go`.
 Why convert units at all, when the whole parameter layer's posture was that unlike units are
 under-specified? Why convert when an extractor READS a row rather than normalizing once when a spec
 is SEEDED, which is what C20's left-shift rule would suggest? And why is there a second unit table
@@ -418,7 +418,7 @@ not strand the document.
 
 **The argument for refusing rested on a false premise.** It was
 justified by "an incoherent spec on disk breaks `param.LoadSet` for the whole corpus". It cannot,
-because `LoadSet` reads `*.textproto` (`datasheet/param/set.go`) and the workbench writes
+because `LoadSet` reads `*.textproto` (`core/param/set.go`) and the workbench writes
 `<stem>.partspec.json`. A draft cannot reach a corpus by sitting on disk, so there was nothing on the
 other side of the trade. Check the premise before designing around it.
 

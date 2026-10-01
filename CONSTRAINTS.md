@@ -9,7 +9,7 @@ Enforceable architectural rules for this project. Background and rationale in
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
 that to being true, because a rule with nothing to run is not enforceable, and C6 went unchecked
-that way. A Verify is one of two things. Nineteen are TESTS the gate runs, so a violation
+that way. A Verify is one of two things. Twenty are TESTS the gate runs, so a violation
 turns CI red. Thirteen are REVIEW questions, and each says what a reviewer should ask instead. That second
 number is the one to watch, because C32 joined the review column knowing its test was missing
 rather than by deciding a machine could not answer it, and left again once the test existed. So a
@@ -305,7 +305,7 @@ Connect today (`internal/server`, wrap/unwrap plus one sentinel-to-code table), 
 or a real gRPC server later as siblings. The services take their I/O concerns as **injected
 ports** and never touch `os`/`syscall/js` directly. One is a filesystem/opener interface for reading
 mounted designs and resolving secondary files (KiCad sibling schematics, xschem/gEDA
-`--symbol-path`), and a persistence port for the datasheet/parameter store comes later. `cmd/agni` (and any
+`--symbol-path`), and a persistence port for the core/parameter store comes later. `cmd/agni` (and any
 other entrypoint: a WASM build, a cloud function) is thin wiring that constructs the platform
 adapter and hands the services to a transport. Protos split **per service concern**
 (`workspace.proto`, `design.proto`, `checks.proto`, `diff.proto`, ...), never a per-transport
@@ -697,7 +697,7 @@ model as having brought isolation with it. Auth is deliberately deferred; see
 ## C24: A datasheet parameter is compared in SI base units, converted in one place
 **Rule:** Any code that COMPARES a seeded datasheet parameter's value against anything reads the
 row through `param.InBaseUnit` and gates on the CONVERTED row's unit. No package outside
-`datasheet/param` reads a raw `Parameter.Unit`, and no rule or extractor contains a scale factor.
+`core/param` reads a raw `Parameter.Unit`, and no rule or extractor contains a scale factor.
 A unit the conversion table does not recognize is skipped, never scaled by a guess or assumed to
 be the base unit. Storage is unaffected: a `PartSpec` keeps every row exactly as the datasheet
 printed it, and only the value handed to a comparison is reduced.
@@ -726,13 +726,13 @@ same bug to whichever call site forgot it, silently.
 sweep rather than a clean one, the shape `hack/ir_model_baseline.txt` uses for C19. The naive sweep
 for `.Unit != "` does NOT work and must not be substituted: the extractors legitimately compare
 `q.Unit` on the converted row, so the invariant that actually discriminates is about the RAW row's
-unit. But that invariant is "never COMPARED outside `datasheet/param`", and no grep can tell a
+unit. But that invariant is "never COMPARED outside `core/param`", and no grep can tell a
 comparison from a display, which is why the plain command returned two hits on a clean tree from the
 day `param.unit` and `agni params` shipped. Both read the printed unit to PUBLISH it, which is what
 that relation and that table are for. The two sites are allowlisted in the test, and a new
 one is one of two things: if it compares, it is the bug this constraint exists for and it converts
-through `datasheet/param` first; if it displays, it joins the allowlist, and that addition is the
-review moment. `datasheet/param` itself is skipped rather than allowlisted, because it IS the one
+through `core/param` first; if it displays, it joins the allowlist, and that addition is the
+review moment. `core/param` itself is skipped rather than allowlisted, because it IS the one
 place: it is where the conversion happens and what every other tier compares through. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
@@ -1099,3 +1099,27 @@ The sweep fires at the COPY, which is the one moment the two are identical. It c
 that have since diverged, so "does this already exist somewhere" stays a review question. The
 example modules are outside the sweep because they cannot import `internal/`, so a duplicate there
 is forced by the module boundary. Which ones matter is agni issue 380's question.
+
+## C34: The engine depends on the datasheet tier through its contract, never through the producer
+**Rule:** The engine's datasheet input is the PartSpec contract: `core/param` and
+`param.proto`. The extraction pipeline that produces PartSpecs (`datasheet/doc`, `datasheet/derive`,
+`datasheet/docindex`, `datasheet/candidate`, and their protos) is one producer among several, beside a
+hand-written textproto and any future vendor feed or parts database. No engine package imports it,
+directly or transitively. Only the producer's hosts may, which today are `cmd/agni` (the `derive`
+command and the workbench server's wiring) and `tools/`.
+**Why:** This is C29 and C30 applied to component knowledge. A rule reads a part's absolute maximum
+from a PartSpec and must not care whether a person, our extractor or a vendor wrote it, so the engine
+must not privilege the extractor any more than the rule catalog privileges datalog. The producer also
+deploys differently from the engine: it writes into mounts, needs the docling environment, and handles
+vendor PDFs that C16 keeps inside one deployment. Agni issue 744 moves it into a module of its own, and
+this rule is what keeps that move mechanical. It held when it was written, and nothing enforced it.
+**Verify:** `TestEngineNamesNoDatasheetProducer` (`deps_test.go`) runs `go list -deps` over every
+package in the module except the producer and its hosts, derived from `go list ./...` so a new
+directory is in scope at once. `TestDatasheetProducerIsVisibleFromItsHost` is its positive control:
+every listed path resolves, and `cmd/agni` is seen to depend on the producer.
+`TestEngineReachesProducerProtosOnlyThroughDatasheetService` is a ratchet on the proto half, and fails
+on a new importer and on an allowlist entry that stopped importing.
+**Outstanding violation:** the engine still imports one producer proto, `agni.v1.doc`, in one place:
+`DatasheetService` lives in `service` (`service/datasheet.go`). It is the ratchet's only allowlist
+entry, and it moves with agni issue 744. Its API already has its own proto package, `agni.v1.dsapi`,
+so the engine's `agni.v1.webapi` carries no producer message.
