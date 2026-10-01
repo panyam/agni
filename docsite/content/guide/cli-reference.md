@@ -250,29 +250,6 @@ agni params LM1117 --design designs/gateway/gateway.kicad_sch
 agni params LM1117 --params seed/ --format json
 ```
 
-### `params promote <draft>`
-
-Move a PartSpec the datasheets workbench saved into a seeded corpus, where checks and queries read it.
-
-The workbench saves its work as `<stem>.partspec.json` beside the datasheet, and saves it without
-validating, so a half-finished transcription is never lost. That file is a DRAFT, and no check reads
-one: `--params` and a project's `params/` load `*.textproto` only, even when a draft sits in the same
-directory. Promotion is the step that validates. It refuses a draft that fails, listing every problem,
-and refuses when another file in the corpus already seeds the same MPN, since one MPN in two files
-fails every load. A draft promoted before is written over its own earlier file and reported as
-`updated`.
-
-The file written is `<mpn>.textproto`, with any character outside `A-Za-z0-9._-` replaced by `_`, and
-its text is the same whichever build of agni wrote it.
-
-| flag | what it does |
-|---|---|
-| `--to <dir>` | the corpus directory to write into (required) |
-
-```
-agni params promote datasheets/ti/LM1117.partspec.json --to params/
-```
-
 ### `results <file>`
 
 Render a check-result document written earlier by `check --results-out` or `review --results-out`.
@@ -374,6 +351,8 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--web-dir <dir>` | the viewer's OWN assets, not designs (default `web`; then `web_dir` in the nearest `agni.yaml`, then `AGNI_WEB_DIR`) |
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
 | `--theme <name>` | render palette: `default` or `dark` |
+| `--params <dir>` | a directory of published PartSpecs every design is checked against, unless its project has its own `params/` |
+| `--params-url <url>` | read published PartSpecs from a datasheet service instead, such as `agnids serve --corpus` (see [Datasheets](../datasheets/#serving-a-shared-corpus)); not with `--params` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 | `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
@@ -486,8 +465,9 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 ## Advanced and developer commands
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
-(reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, in the
-datasheets service, a separate binary built from the `datasheet/` module. `validate` is
+(reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, and
+publishing a workbench draft is [`agnids promote`](../datasheets/#publishing-a-workbench-draft), both in
+the datasheets service, a separate binary built from the `datasheet/` module. `validate` is
 worth knowing as a user, because pointed at a folder of exports it reports which of them this tool can
 actually read. The rest sit closer to the engine and are covered in the developer docs.
 

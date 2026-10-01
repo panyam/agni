@@ -61,6 +61,55 @@ extracts specs from a PDF automatically, which is a separate tool covered in
 [the datasheet layer](../../architecture/datasheet-layer/). Either way the result is the same
 small per-part files this page loads.
 
+### Publishing a workbench draft
+
+The datasheets workbench (`agnids serve`) saves what you transcribe as `<stem>.partspec.json` beside
+the datasheet, and saves it without validating, so a half-finished transcription is never lost. That
+file is a DRAFT, and no check reads one: `--params` and a project's `params/` load `*.textproto` only,
+even when a draft sits in the same directory.
+
+`agnids promote` is the step that publishes a draft. It validates it, refuses a draft that fails
+(listing every problem), and refuses when another file in the corpus already seeds the same MPN,
+since one MPN in two files fails every load. Otherwise it writes `<mpn>.textproto`, with any
+character outside `A-Za-z0-9._-` replaced by `_`, and its text is the same from every build. A draft
+promoted before is written over its own earlier file and reported as `updated`.
+
+```
+agnids promote datasheets/ti/LM1117.partspec.json --to params/
+```
+
+Promotion also records the spec in the corpus's index, `corpus.index.json`, which maps each MPN to
+its file and a hash of what was validated, under a generation that advances on every change. The
+files stay the source of truth. After editing a published spec by hand, rebuild it, and let a
+corpus repository's CI catch an edit that skipped the rebuild:
+
+```
+agnids index params/
+agnids index params/ --check
+```
+
+### Serving a shared corpus
+
+A project's own `params/` is read straight from disk, which suits the few dozen parts a project
+seeds. A corpus shared across projects is served instead: `agnids serve --corpus <dir>` answers
+lookups from its index, reading only the parts asked for, and `agni serve --params-url` reads through
+it.
+
+```
+agnids serve --addr :8090 --corpus params/
+agni serve --mount boards=~/boards --params-url http://localhost:8090
+```
+
+Each request fetches its design's parts in one batch. A spec promoted into the corpus while both run
+reaches requests within a few seconds, with no restart, because the server re-checks the index
+generation. If the corpus cannot be reached, a check fails with an error naming it rather than
+treating every part as unseeded. A served corpus must be indexed, and one whose index no longer
+matches its files is refused until `agnids index` is run over it, because serving a file the index did
+not validate would hand out a spec nobody checked.
+
+A project's own `params/` still replaces the shared corpus for that project's designs, as it replaces
+`--params`.
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/) walks the general report-reading flow these

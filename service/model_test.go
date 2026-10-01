@@ -100,3 +100,39 @@ func testURI(t *testing.T, mount, p string) artifact.URI {
 	}
 	return u
 }
+
+// prefetchSpy is a Prefetcher that records what it was asked to fetch and can fail.
+type prefetchSpy struct {
+	asked []string
+	err   error
+}
+
+func (p *prefetchSpy) Lookup(mpn string) *parampb.PartSpec {
+	if mpn == "U-SEEDED" {
+		return &parampb.PartSpec{Mpn: mpn}
+	}
+	return nil
+}
+
+func (p *prefetchSpy) Prefetch(_ context.Context, mpns []string) error {
+	p.asked = append(p.asked, mpns...)
+	return p.err
+}
+
+// A remote corpus is fetched for the design's parts before the model is built, and an unreachable one
+// fails the request as unavailable instead of every part reading as unseeded (agni issue 749).
+func TestBuildModelPrefetchesARemoteCorpus(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", Mpn: "U-SEEDED"}, {RefDes: "R1", Mpn: "RC0603"}}}
+	spy := &prefetchSpy{}
+	if _, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), artifact.URI{}, spy); err != nil {
+		t.Fatal(err)
+	}
+	if len(spy.asked) != 2 || spy.asked[0] != "U-SEEDED" || spy.asked[1] != "RC0603" {
+		t.Errorf("Prefetch asked for %v, want the design's two MPNs", spy.asked)
+	}
+	spy = &prefetchSpy{err: errors.New("connection refused")}
+	_, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), artifact.URI{}, spy)
+	if !errors.Is(err, ErrUnavailable) {
+		t.Errorf("an unreachable corpus gave %v, want ErrUnavailable", err)
+	}
+}

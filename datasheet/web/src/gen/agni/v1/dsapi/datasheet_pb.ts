@@ -524,7 +524,7 @@ export const DatasheetService: GenService<{
   },
   /**
    * GetPartSpec returns the datasheet's saved PartSpec (the <stem>.partspec.json sibling, the
-   * shared working DRAFT, which no check reads until `agni params promote` validates it into a
+   * shared working DRAFT, which no check reads until `agnids promote` validates it into a
    * corpus) plus a version token for optimistic concurrency.
    * found is false (and version empty) when nothing has been saved yet. One PartSpec is shared
    * per datasheet across users; the workbench's per-user UI state (drawn regions, type tags) is

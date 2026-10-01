@@ -29,6 +29,9 @@ const faithfulLayout = formats.LayoutFaithful
 //	ErrInvalidArgument -> invalid argument (unloadable design, unsupported operation)
 //	ErrNative*         -> the native-render gate codes (declared below)
 //	ErrInternal        -> internal (an unexpected failure in an otherwise-gated path)
+//	ErrUnavailable     -> unavailable (a service this one depends on could not be reached, such as
+//	                      the PartSpec service behind --params-url)
+//	ErrResourceExhausted -> resource exhausted (a query stopped at its work budget)
 //
 // An unclassified error reaching a transport is treated as an invalid argument, the common
 // case for load/parse failures.
@@ -39,6 +42,7 @@ var (
 	// ErrResourceExhausted is a query that stopped at its work budget (agni issue 792): it may well
 	// be a good question, but it costs more than this deployment or this request allows.
 	ErrResourceExhausted = errors.New("resource exhausted")
+	ErrUnavailable       = errors.New("unavailable")
 )
 
 // Loader materializes a design's read model from an artifact.URI. The server adapter (osLoader in

@@ -13,12 +13,15 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 ## Open, ranked
 
-1. **The datasheet workstream: #749 next.** #744 is done: the producer is its own Go module with
-   `agnids`, its own buf module, its own web package (`datasheet/web`, sharing only plain TS in
-   `web-shared/`) and its own image (`ghcr.io/panyam/agnids`). The storage design for #749 is the
-   latest comment on #744. #786 (`make setup` prefetches the wrong cache) is small and can ride with
-   it. The first release after #744 publishes `agnids` for the first time, so confirm an anonymous
-   pull of it then.
+1. **The datasheet workstream: drafts by MPN (#749 step 2).** Step 1 put the read side in place:
+   `PartSpecService` in the root protos, `agnids serve --corpus`, `agni serve --params-url` over a
+   caching `param.Remote` that prefetches per request. Next is the editing side: `dsapi`'s
+   `GetPartSpec`/`SavePartSpec` become `GetDraft`/`SaveDraft`/`PublishDraft`, keyed by MPN and citing
+   their documents, FS drafts at `drafts/<MPN>.partspec.json`, the workbench lists a document's
+   drafts, and `agnids promote` calls `PublishDraft`, with a one-off migration of per-document drafts.
+   Open question, not yet decided: should a project's `params/` win per MPN over a shared corpus
+   rather than wholesale (`Overlay.SpecsOr`). #786 can ride along. The first release after #744
+   publishes `agnids` for the first time, so confirm an anonymous pull of it then.
 2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.

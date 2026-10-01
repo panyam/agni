@@ -1,6 +1,7 @@
 package param
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"strings"
@@ -48,14 +49,33 @@ func (s ParamSet) Lookup(mpn string) *parampb.PartSpec {
 // files claiming the same MPN, fail the whole load with the offending file named, so a
 // bad spec never silently shrinks the corpus.
 func LoadSet(fsys fs.FS) (ParamSet, error) {
-	set, _, err := loadSet(fsys)
-	return set, err
+	files, err := LoadCorpus(fsys)
+	if err != nil {
+		return nil, err
+	}
+	set := make(ParamSet, len(files))
+	for _, f := range files {
+		set[strings.ToUpper(f.Spec.Mpn)] = f.Spec
+	}
+	return set, nil
 }
 
-// loadSet is LoadSet that also reports which file each MPN came from, keyed like the set, so a
-// promotion can name the file an existing spec lives in.
-func loadSet(fsys fs.FS) (ParamSet, map[string]string, error) {
-	set := ParamSet{}
+// SeededFile is one corpus file as LoadCorpus read it: the spec, its path within the corpus, and the
+// bytes it was parsed from, so a caller that keeps an index of the corpus can hash exactly what was
+// validated rather than reading the file a second time.
+type SeededFile struct {
+	Spec *parampb.PartSpec
+	File string
+	Data []byte
+}
+
+// LoadCorpus is the walk LoadSet makes, keeping each file. It applies the same rules, all-or-nothing:
+// only *.textproto is read (a workbench draft is .partspec.json and never seeds anything), every file
+// must parse and Validate, and two files claiming one MPN fail the load. Files come back in walk
+// order, which is lexical by path. The datasheet service's corpus index is built from it, so the
+// index and every eager load agree on what the corpus holds.
+func LoadCorpus(fsys fs.FS) ([]SeededFile, error) {
+	var files []SeededFile
 	from := map[string]string{}
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -64,12 +84,11 @@ func loadSet(fsys fs.FS) (ParamSet, map[string]string, error) {
 		if d.IsDir() || !strings.HasSuffix(path, ".textproto") {
 			return nil
 		}
-		f, err := fsys.Open(path)
+		data, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			return err
 		}
-		defer f.Close()
-		spec, err := Load(f)
+		spec, err := Load(bytes.NewReader(data))
 		if err != nil {
 			return fmt.Errorf("%s: %w", path, err)
 		}
@@ -80,11 +99,12 @@ func loadSet(fsys fs.FS) (ParamSet, map[string]string, error) {
 		if prev, dup := from[key]; dup {
 			return fmt.Errorf("%s: duplicate spec for mpn %q (already loaded from %s)", path, spec.Mpn, prev)
 		}
-		set[key], from[key] = spec, path
+		from[key] = path
+		files = append(files, SeededFile{Spec: spec, File: path, Data: data})
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return set, from, nil
+	return files, nil
 }
