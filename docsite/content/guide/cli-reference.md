@@ -250,29 +250,6 @@ agni params LM1117 --design designs/gateway/gateway.kicad_sch
 agni params LM1117 --params seed/ --format json
 ```
 
-### `params promote <draft>`
-
-Move a PartSpec the datasheets workbench saved into a seeded corpus, where checks and queries read it.
-
-The workbench saves its work as `<stem>.partspec.json` beside the datasheet, and saves it without
-validating, so a half-finished transcription is never lost. That file is a DRAFT, and no check reads
-one: `--params` and a project's `params/` load `*.textproto` only, even when a draft sits in the same
-directory. Promotion is the step that validates. It refuses a draft that fails, listing every problem,
-and refuses when another file in the corpus already seeds the same MPN, since one MPN in two files
-fails every load. A draft promoted before is written over its own earlier file and reported as
-`updated`.
-
-The file written is `<mpn>.textproto`, with any character outside `A-Za-z0-9._-` replaced by `_`, and
-its text is the same whichever build of agni wrote it.
-
-| flag | what it does |
-|---|---|
-| `--to <dir>` | the corpus directory to write into (required) |
-
-```
-agni params promote datasheets/ti/LM1117.partspec.json --to params/
-```
-
 ### `results <file>`
 
 Render a check-result document written earlier by `check --results-out` or `review --results-out`.
@@ -483,8 +460,9 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 ## Advanced and developer commands
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
-(reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, in the
-datasheets service, a separate binary built from the `datasheet/` module. `validate` is
+(reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, and
+publishing a workbench draft is [`agnids promote`](../datasheets/#publishing-a-workbench-draft), both in
+the datasheets service, a separate binary built from the `datasheet/` module. `validate` is
 worth knowing as a user, because pointed at a folder of exports it reports which of them this tool can
 actually read. The rest sit closer to the engine and are covered in the developer docs.
 

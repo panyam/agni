@@ -127,8 +127,11 @@ rather than an original. The rest of the workbench is described in [Web app](../
 
 That file is a DRAFT. It is saved without validation, so work is never lost, and no check reads it:
 `param.LoadSet` loads `*.textproto` only, even from a directory holding drafts. A draft reaches the
-engine through [`agni params promote`](../../guide/cli-reference/#params-promote-draft), which runs
-`param.Validate`, refuses a draft that fails, and writes `<mpn>.textproto` into the corpus.
+engine through [`agnids promote`](../../guide/datasheets/#publishing-a-workbench-draft), which runs
+`param.Validate`, refuses a draft that fails, writes `<mpn>.textproto` into the corpus, and records it
+in the corpus's index. Promotion and the index belong to the datasheet service (`datasheet/corpus`),
+because publishing a spec is the producer's step, while the engine only reads specs through
+`core/param` (C34).
 
 </details>
 

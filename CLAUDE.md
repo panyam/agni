@@ -297,10 +297,14 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   revisions, though staleness is decided on the content hash and NEVER on the printed one, so the
   two strings are for the reader (`DECISIONS.md`, "A document revision is recorded for the reader,
   and never compared"). **A workbench `.partspec.json` is a DRAFT that no check reads**, saved
-  unvalidated on purpose; `agni params promote <draft> --to <params>` validates it into
+  unvalidated on purpose; `agnids promote <draft> --to <params>` validates it into
   `<mpn>.textproto` (agni 209, 747). Reading drafts in `LoadSet` looks like the fix and is the bug:
   the workbench seeds an empty one for every document browsed, and one invalid file fails the whole
-  all-or-nothing load.
+  all-or-nothing load. **Promotion and the corpus index belong to the datasheet service**
+  (`datasheet/corpus`, agni 749): promote writes `corpus.index.json` (MPN, file, hash, a generation)
+  beside the specs, `agnids index [--check]` rebuilds or verifies it, and both build from
+  `param.LoadCorpus`, the walk `LoadSet` makes, so the index and every eager load agree. The files
+  are the source of truth; no check reads the index.
 - **`emit --format edif` writes for a reader that is NOT ours, and that is a stricter target than the
   round trip.** Our reader resolves references after parsing the whole file, accepts any atom as an
   identifier, and reads a port reference as a pin designator when nothing maps it, so a writer leaning

@@ -21,7 +21,7 @@ import (
 
 // partSpecSuffix is the sibling a datasheet's shared PartSpec is written to: LM1117.pdf pairs with
 // LM1117.partspec.json (protojson, visible to anyone who mounts the folder). It is a DRAFT: saved
-// unvalidated, and never read by param.LoadSet. `agni params promote` validates it into a corpus.
+// unvalidated, and never read by param.LoadSet. `agnids promote` validates it into a corpus.
 const partSpecSuffix = ".partspec.json"
 
 // osPartSpecStore is the OS-backed dsservice.PartSpecStore, reading and writing a datasheet's shared
