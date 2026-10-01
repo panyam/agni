@@ -104,8 +104,15 @@ type AnalysisConfig struct {
 	// A design's own symbol library and a team's shared one are both ordinary cases, so a Project and a
 	// Design may each declare some and they accumulate rather than replace.
 	SymbolPathUris []string `protobuf:"bytes,8,rep,name=symbol_path_uris,json=symbolPathUris,proto3" json:"symbol_path_uris,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// library_uris are directories of the project's own derived relations (agni issue 773), one
+	// Datalog module per `<module.path>.dl` file, with optional pages in `docs/<member.path>.md`. A
+	// query run under this config can call them beside the shipped library, so `lib/net.dl` adds
+	// members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
+	// path, or reading a relation nothing registers, fails the read rather than answering nothing.
+	// Rules compiled from queries do not read them yet (agni issue 779).
+	LibraryUris   []string `protobuf:"bytes,9,rep,name=library_uris,json=libraryUris,proto3" json:"library_uris,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AnalysisConfig) Reset() {
@@ -194,11 +201,18 @@ func (x *AnalysisConfig) GetSymbolPathUris() []string {
 	return nil
 }
 
+func (x *AnalysisConfig) GetLibraryUris() []string {
+	if x != nil {
+		return x.LibraryUris
+	}
+	return nil
+}
+
 var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/config/naming.proto\"\xc7\x02\n" +
+	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/config/naming.proto\"\xea\x02\n" +
 	"\x0eAnalysisConfig\x12B\n" +
 	"\vconventions\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\x12'\n" +
 	"\x0fconventions_uri\x18\x02 \x01(\tR\x0econventionsUri\x12!\n" +
@@ -209,7 +223,8 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
 	"intent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n" +
 	"\aextends\x18\a \x01(\tR\aextends\x12(\n" +
-	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUrisB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUris\x12!\n" +
+	"\flibrary_uris\x18\t \x03(\tR\vlibraryUrisB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_config_proto_rawDescOnce sync.Once

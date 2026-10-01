@@ -131,7 +131,7 @@ func (id *overlayID) inherit(label string, o Overlay) {
 // overlay can carry rather than comparing against a zero struct, because the unexported bookkeeping
 // fields are not part of what it contributes.
 func (o Overlay) isZero() bool {
-	return o.Lexicon == nil && len(o.Sources) == 0 && o.Specs == nil && len(o.SymbolPaths) == 0
+	return o.Lexicon == nil && len(o.Sources) == 0 && o.Specs == nil && len(o.SymbolPaths) == 0 && len(o.Library) == 0
 }
 
 // Identity returns a value that differs whenever anything this overlay was composed FROM differs,

@@ -1,6 +1,6 @@
 # What makes this folder a PROJECT: a name, and the fact that the config beside it (conventions.yaml,
-# profiles/, params/, review.yaml) belongs to every design under designs/ rather than to any one of
-# them.
+# profiles/, params/, review.yaml, lib/) belongs to every design under designs/ rather than to any one
+# of them.
 #
 # The name is the project's identity, not its folder. `agni serve` addresses this project as
 # `projects/gateway` and the board below it as `projects/gateway/designs/gateway`, so renaming the

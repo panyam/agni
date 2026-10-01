@@ -46,6 +46,9 @@ type projectYAML struct {
 	Params      *string `yaml:"params"`
 	Symbols     *string `yaml:"symbols"`
 	Checklist   *string `yaml:"checklist"`
+	// Lib is the project's own library of derived relations, a directory of `.dl` modules (agni
+	// issue 773).
+	Lib *string `yaml:"lib"`
 }
 
 type designYAML struct {
@@ -62,7 +65,7 @@ type designYAML struct {
 }
 
 // The conventional config names used when a descriptor declares none, matching the layout of
-// `examples/tutorial-project`. The first five belong to `project.yaml` (symbols to both descriptors),
+// `examples/tutorial-project`. The first six belong to `project.yaml` (symbols to both descriptors),
 // intent to `design.yaml`. FSStore composes each tier it finds.
 const (
 	defaultConventions = "conventions.yaml"
@@ -70,6 +73,7 @@ const (
 	defaultParams      = "params"
 	defaultSymbols     = "symbols"
 	defaultChecklist   = "review.yaml"
+	defaultLib         = "lib"
 	defaultIntent      = "intent.yaml"
 )
 
@@ -82,6 +86,7 @@ type ProjectConfigNames struct {
 	Params      string
 	Checklist   string
 	Symbols     string
+	Lib         string
 }
 
 // configNames resolves a project descriptor's declarations against the defaults.
@@ -103,6 +108,7 @@ func (y projectYAML) configNames() ProjectConfigNames {
 		Params:      pick(y.Params, defaultParams),
 		Checklist:   pick(y.Checklist, defaultChecklist),
 		Symbols:     pick(y.Symbols, defaultSymbols),
+		Lib:         pick(y.Lib, defaultLib),
 	}
 }
 
@@ -128,7 +134,7 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfi
 		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
 	}
 	names = y.configNames()
-	for field, rel := range map[string]string{"conventions": names.Conventions, "profiles": names.Profiles, "params": names.Params, "checklist": names.Checklist, "symbols": names.Symbols} {
+	for field, rel := range map[string]string{"conventions": names.Conventions, "profiles": names.Profiles, "params": names.Params, "checklist": names.Checklist, "symbols": names.Symbols, "lib": names.Lib} {
 		if rel == "" {
 			continue
 		}
@@ -280,7 +286,7 @@ func WriteProjectExtending(w io.Writer, header, id, title, extends string, names
 	if names != nil {
 		y.Conventions, y.Profiles = &names.Conventions, &names.Profiles
 		y.Params, y.Checklist = &names.Params, &names.Checklist
-		y.Symbols = &names.Symbols
+		y.Symbols, y.Lib = &names.Symbols, &names.Lib
 	}
 	return writeDescriptor(w, header, y)
 }

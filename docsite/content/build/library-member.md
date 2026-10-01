@@ -92,6 +92,31 @@ rather than failing some later query. That makes order matter between modules th
 would be refused before `net.dl` arrived. `stdlib/lib` registers every module in one call,
 `facts.RegisterModules`, and its docs after them with `facts.RegisterDocs`.
 
+## A project's own library
+
+A team's question that no other team asks belongs in its project rather than in agni. A `lib/`
+directory beside `project.yaml` is laid out the same way as `stdlib/lib`: one module per
+`<module.path>.dl` file, and optional pages in `lib/docs/<member.path>.md`. A project member can join
+a shipped module (`lib/net.dl` adds to `net`) or start its own (`lib/house.dl` starts `house`), and
+it reads the shipped relations and library like any query does.
+
+The tutorial project carries one, `examples/tutorial-project/lib/house.dl`, which defines
+`house.pmic_rail` from that team's `PMIC_` naming convention. A query on any design in the project
+calls it, and `agni query --relations house --design <design>` lists it. Four rules hold.
+
+- **A project member cannot replace a shipped one.** Defining a path agni already defines fails the
+  read and names the file and the path, since a member that quietly meant something else in one
+  project would make the same query answer two ways.
+- **A module that does not compose fails the read**, naming the library directory and the module.
+  Answering without the library would read as a design with none of what the query asks for.
+- **Outside the project the members do not exist**, so one team's vocabulary never reaches another
+  team's design.
+- **Rules do not read a project's library yet.** A project's profiles and checklist still see the
+  shipped vocabulary only (agni issue 779).
+
+The tier is discovered like `profiles/`, so a project declares nothing to get it, and `lib: ""` in
+`project.yaml` turns it off with the directory in place.
+
 ## Reading the library from a shipped rule
 
 No shipped rule reads the library yet, and the first one has a trap waiting. Rules in

@@ -32,6 +32,7 @@ func queryCmd() *cobra.Command {
 	var specLib bool
 	var format, title string
 	var setPath string
+	var relDesign string
 	c := &cobra.Command{
 		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
@@ -95,7 +96,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if len(args) == 1 {
 					path = args[0]
 				}
-				return printRelations(cmd.Context(), cmd.OutOrStdout(), path, format, verbose)
+				return printRelations(cmd.Context(), cmd.OutOrStdout(), path, relDesign, format, verbose)
 			}
 			if showExamples {
 				printExamples(cmd.OutOrStdout())
@@ -169,22 +170,28 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	outFileFlag(c, &outPath)
 	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
+	c.Flags().StringVar(&relDesign, "design", "", "with --relations, a design whose project's own library (lib/) joins the catalog, so its members list beside the shipped ones")
 	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations and no member path, also print each member's full reference doc")
 	return c
 }
 
 // printRelations writes what sits at path in the namespace tree, through the same ListRelations rpc
-// the viewer's picker asks (agni issue 751), so the two cannot describe a member differently. The
+// the viewer's picker asks (agni issue 751), so the two cannot describe a member differently. A
+// design, when named, joins its project's own library to the tree (agni issue 773). The
 // root prints every module with its members' signatures and one-line docs, a module prints its own
 // members, and a member prints everything the rpc carries. --format json writes the rpc's
 // ListRelationsResponse for the path (C31); for the root that is the entry, not the flat catalog.
-func printRelations(ctx context.Context, w io.Writer, path, format string, verbose bool) error {
-	svc := service.NewQueryService(nil, nil, nil)
+func printRelations(ctx context.Context, w io.Writer, path, design, format string, verbose bool) error {
+	svc := service.NewQueryService(nil, nil, cliProjects())
+	uri, err := cliArgURI(design)
+	if err != nil {
+		return err
+	}
 	describe := func(p string) (*webapi.RelationEntry, error) {
 		if p == "" {
 			p = "."
 		}
-		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p})
+		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p, Uri: uri})
 		if err != nil {
 			return nil, err
 		}

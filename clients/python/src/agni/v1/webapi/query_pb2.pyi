@@ -59,10 +59,12 @@ class RunQueryResponse(_message.Message):
     def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
 
 class ListRelationsRequest(_message.Message):
-    __slots__ = ("path",)
+    __slots__ = ("path", "uri")
     PATH_FIELD_NUMBER: _ClassVar[int]
+    URI_FIELD_NUMBER: _ClassVar[int]
     path: str
-    def __init__(self, path: _Optional[str] = ...) -> None: ...
+    uri: str
+    def __init__(self, path: _Optional[str] = ..., uri: _Optional[str] = ...) -> None: ...
 
 class RelationInfo(_message.Message):
     __slots__ = ("name", "args", "summary", "kind", "detail", "signature", "definition")

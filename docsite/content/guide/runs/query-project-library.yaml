@@ -1,0 +1,5 @@
+# A project's own library. house.pmic_rail and house.pmic_probe_point are defined in the tutorial
+# project's lib/house.dl, so any design in that project can call them.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'house.pmic_rail(?n), not house.pmic_probe_point(?n) => ?n'

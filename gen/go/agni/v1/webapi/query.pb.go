@@ -398,7 +398,11 @@ type ListRelationsRequest struct {
 	// "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
 	// before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
 	// with the suggestion a query would get.
-	Path          string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	// uri, when set, names a design whose project's own library joins the catalog (agni issue 773), so
+	// its members list and describe beside the shipped ones. Empty answers for the shipped vocabulary
+	// alone. A project library that does not compose is an error rather than a catalog without it.
+	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -436,6 +440,13 @@ func (*ListRelationsRequest) Descriptor() ([]byte, []int) {
 func (x *ListRelationsRequest) GetPath() string {
 	if x != nil {
 		return x.Path
+	}
+	return ""
+}
+
+func (x *ListRelationsRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
 	}
 	return ""
 }
@@ -1319,9 +1330,10 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x04rows\x18\x02 \x03(\v2\x18.agni.v1.webapi.QueryRowR\x04rows\x12!\n" +
 	"\fcolumn_kinds\x18\x03 \x03(\tR\vcolumnKinds\x12\x14\n" +
 	"\x05query\x18\x04 \x01(\tR\x05query\x12\x16\n" +
-	"\x06source\x18\x05 \x01(\tR\x06source\"*\n" +
+	"\x06source\x18\x05 \x01(\tR\x06source\"<\n" +
 	"\x14ListRelationsRequest\x12\x12\n" +
-	"\x04path\x18\x01 \x01(\tR\x04path\"\xba\x01\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x10\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xba\x01\n" +
 	"\fRelationInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04args\x18\x02 \x03(\tR\x04args\x12\x18\n" +

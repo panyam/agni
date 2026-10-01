@@ -401,6 +401,17 @@ it is defined. The library lives in `stdlib/lib`, one file per module, and
 question only one report asks belongs in that report's query instead, as a rule ahead of its goal or
 in a query set's preamble.
 
+A project can carry its own library too, in a `lib/` directory beside `project.yaml`, laid out the
+same way. The tutorial project's `lib/house.dl` names the rails its PMIC drives after that team's
+`PMIC_` convention, and a query on its board calls them like any other relation. Of the three, one has
+no test point:
+
+{{ agniRun "content/guide/runs/query-project-library.yaml" }}
+
+The members exist only inside that project. `agni query --relations house --design <design>` lists
+them with their definitions, and [Adding a library member](../../build/library-member/#a-projects-own-library)
+covers the rules a project library follows.
+
 ### Ask many questions at once (query sets)
 
 An audit is usually a workbook rather than a single question: which nets have no test point, how

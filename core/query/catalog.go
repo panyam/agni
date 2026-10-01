@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/panyam/agni/core/facts"
+	"github.com/panyam/jaala/datalog"
 	"github.com/panyam/jaala/ns"
 )
 
@@ -72,4 +73,19 @@ func Describe(path string) (Entry, error) { return DescribeFrom(facts.DefaultReg
 // DescribeFrom is Describe over an explicit vocabulary.
 func DescribeFrom(reg *facts.Registry, path string) (Entry, error) {
 	return reg.Vocabulary().Lookup(path)
+}
+
+// ModuleMembers reports the public members a Datalog module's text defines, by bare name, so a host
+// can check a module's paths against a vocabulary before composing it. An error is a module that does
+// not parse, or that the language refuses on its own terms.
+func ModuleMembers(text string) ([]string, error) {
+	decls, err := datalog.Language.Members(text)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, len(decls))
+	for i, d := range decls {
+		out[i] = d.Name
+	}
+	return out, nil
 }

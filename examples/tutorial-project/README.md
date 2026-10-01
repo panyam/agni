@@ -32,6 +32,7 @@ This is the shape a real review project takes. Two kinds of file live here.
 | `conventions.yaml` | house naming: which net names are rails, and what a legal name looks like |
 | `profiles/` | interface declarations, one per bus this team designs with |
 | `params/` | datasheet parameter sets, one per part worth checking against its limits |
+| `lib/` | this team's own derived relations, one Datalog module per `.dl` file, such as `house.pmic_rail` |
 | `reports/<design>/` | the outcome of a run on one design, written by `make report` |
 
 **Per-design**, one set per folder under `designs/`:

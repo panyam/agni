@@ -253,3 +253,33 @@ func TestFSStoreConventionsUriAbsentWhenUndeclared(t *testing.T) {
 		t.Errorf("conventions uri = %q, want empty for a project that declares none", got)
 	}
 }
+
+// TestFSStoreDiscoversALibraryAndHonoursAnOptOut covers the lib/ tier (agni issue 773): a project
+// with a lib/ directory carries it as a library URI with nothing declared, and an empty `lib:`
+// declaration turns it off with the directory still in place, the way every discovered tier is
+// turned off.
+func TestFSStoreDiscoversALibraryAndHonoursAnOptOut(t *testing.T) {
+	for name, c := range map[string]struct {
+		descriptor string
+		want       []string
+	}{
+		"discovered": {"name: p\n", []string{"mount://m/lib"}},
+		"declared":   {"name: p\nlib: lib\n", []string{"mount://m/lib"}},
+		"opted out":  {"name: p\nlib: \"\"\n", nil},
+		"elsewhere":  {"name: p\nlib: shared/dl\n", nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
+				"project.yaml": c.descriptor,
+				"lib/house.dl": "x(?n: net) :- net.rail(?n);\n",
+			})})
+			p, err := s.Project(context.Background(), "projects/p")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := p.GetConfig().GetLibraryUris(); strings.Join(got, ",") != strings.Join(c.want, ",") {
+				t.Errorf("library uris = %v, want %v", got, c.want)
+			}
+		})
+	}
+}

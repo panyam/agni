@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from agni.v1.config import naming_pb2 as agni_dot_v1_dot_config_dot_naming__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/config.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/config/naming.proto\"\xc7\x02\n\x0e\x41nalysisConfig\x12\x42\n\x0b\x63onventions\x18\x01 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\x0b\x63onventions\x12\'\n\x0f\x63onventions_uri\x18\x02 \x01(\tR\x0e\x63onventionsUri\x12!\n\x0cprofile_uris\x18\x03 \x03(\tR\x0bprofileUris\x12\x1d\n\nparam_uris\x18\x04 \x03(\tR\tparamUris\x12#\n\rchecklist_uri\x18\x05 \x01(\tR\x0c\x63hecklistUri\x12\x1d\n\nintent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n\x07\x65xtends\x18\x07 \x01(\tR\x07\x65xtends\x12(\n\x10symbol_path_uris\x18\x08 \x03(\tR\x0esymbolPathUrisB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/config.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/config/naming.proto\"\xea\x02\n\x0e\x41nalysisConfig\x12\x42\n\x0b\x63onventions\x18\x01 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\x0b\x63onventions\x12\'\n\x0f\x63onventions_uri\x18\x02 \x01(\tR\x0e\x63onventionsUri\x12!\n\x0cprofile_uris\x18\x03 \x03(\tR\x0bprofileUris\x12\x1d\n\nparam_uris\x18\x04 \x03(\tR\tparamUris\x12#\n\rchecklist_uri\x18\x05 \x01(\tR\x0c\x63hecklistUri\x12\x1d\n\nintent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n\x07\x65xtends\x18\x07 \x01(\tR\x07\x65xtends\x12(\n\x10symbol_path_uris\x18\x08 \x03(\tR\x0esymbolPathUris\x12!\n\x0clibrary_uris\x18\t \x03(\tR\x0blibraryUrisB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,5 +34,5 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_ANALYSISCONFIG']._serialized_start=77
-  _globals['_ANALYSISCONFIG']._serialized_end=404
+  _globals['_ANALYSISCONFIG']._serialized_end=439
 # @@protoc_insertion_point(module_scope)

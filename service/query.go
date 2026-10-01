@@ -133,6 +133,7 @@ type designRead struct {
 	source string
 	model  check.Model
 	base   *query.Base
+	reg    *facts.Registry // the vocabulary base answers over, the project's library included
 	ov     Overlay
 	gu     artifact.URI
 
@@ -164,7 +165,14 @@ func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, sourc
 	if err != nil {
 		return nil, err
 	}
-	return &designRead{u: u, source: source, model: model, base: query.NewBase(model), ov: ov, gu: gu}, nil
+	// The project's own library joins the vocabulary here, so every query surface that reads through
+	// this function sees it (agni issue 773). A library that does not compose fails the read rather
+	// than answering without it.
+	reg, err := ov.Registry()
+	if err != nil {
+		return nil, err
+	}
+	return &designRead{u: u, source: source, model: model, base: query.NewBaseFrom(reg, model), reg: reg, ov: ov, gu: gu}, nil
 }
 
 // geometry loads the schematic geometry on first use and returns the sheet index and the entities it
@@ -191,7 +199,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		return nil, err
 	}
 	cols := q.Columns()
-	kinds, kindVars, refTerms := columnKinds(q)
+	kinds, kindVars, refTerms := columnKindsIn(d.reg, q)
 	// Query and Source come from the request rather than being re-derived, so a saved response
 	// cannot describe a different run than the one that produced these rows.
 	resp := &webapi.RunQueryResponse{
@@ -337,6 +345,12 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 // A query the engine cannot type answers with plain columns rather than failing, since typing only
 // decides which cells are clickable.
 func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []query.Term) {
+	return columnKindsIn(facts.DefaultRegistry(), q)
+}
+
+// columnKindsIn is columnKinds over an explicit vocabulary, the one a design's read composed with its
+// project's own library, so a project member's columns type as clickable as a shipped one's.
+func columnKindsIn(reg *facts.Registry, q query.Query) (kinds []string, kindVars []query.Var, refs []query.Term) {
 	n := len(q.Select)
 	if n == 0 {
 		n = len(q.Columns())
@@ -344,7 +358,7 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 	kinds = make([]string, n)
 	kindVars = make([]query.Var, n)
 	refs = make([]query.Term, n)
-	cks, err := query.ColumnKinds(q)
+	cks, err := query.ColumnKindsFrom(reg, q)
 	if err != nil {
 		return kinds, kindVars, refs
 	}
@@ -387,16 +401,20 @@ func entityKind(s string) string {
 //
 // A request naming a path answers that one place in the namespace tree instead (describeEntry), and
 // an unknown path is ErrInvalidArgument carrying the engine's suggestion.
-func (s *QueryService) ListRelations(_ context.Context, req *webapi.ListRelationsRequest) (*webapi.ListRelationsResponse, error) {
+func (s *QueryService) ListRelations(ctx context.Context, req *webapi.ListRelationsRequest) (*webapi.ListRelationsResponse, error) {
+	reg, err := s.catalogRegistry(ctx, req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	if p := req.GetPath(); p != "" {
-		e, err := describeEntry(p)
+		e, err := describeEntry(reg, p)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 		}
 		return &webapi.ListRelationsResponse{Entry: e}, nil
 	}
 	resp := &webapi.ListRelationsResponse{}
-	for _, r := range query.Catalog() {
+	for _, r := range query.CatalogFrom(reg) {
 		info := &webapi.RelationInfo{
 			Name:       r.Name,
 			Args:       r.Args,
@@ -405,7 +423,7 @@ func (s *QueryService) ListRelations(_ context.Context, req *webapi.ListRelation
 			Detail:     r.Detail,
 			Definition: r.Definition,
 		}
-		if e, err := query.Describe(r.Name); err == nil {
+		if e, err := query.DescribeFrom(reg, r.Name); err == nil {
 			info.Signature = e.Signature()
 		}
 		resp.Relations = append(resp.Relations, info)
@@ -440,31 +458,49 @@ func portableCites(cites []string, designPath string) []string {
 	return out
 }
 
-// describeEntry is one place in the namespace tree as the wire carries it, with a module's direct
-// children described one level deep. The CLI's `--relations <path>` prints this same message, so the
-// two surfaces cannot describe a member differently.
-func describeEntry(path string) (*webapi.RelationEntry, error) {
-	if path == "." {
-		path = "" // the wire's spelling of the root, since an empty path asks for the flat catalog
-	}
-	e, err := query.Describe(path)
+// catalogRegistry is the vocabulary a catalog request describes: the shipped one, or with a design
+// named, that design's project's library joined to it, resolved exactly as a query on that design
+// would resolve it.
+func (s *QueryService) catalogRegistry(ctx context.Context, uri string) (*facts.Registry, error) {
+	u, err := optionalArtifactURI(uri)
 	if err != nil {
 		return nil, err
 	}
-	out := entryProto(e)
+	if u.IsZero() {
+		return facts.DefaultRegistry(), nil
+	}
+	ov, err := s.projects.Overlay(ctx, u, nil, s.fallback, "")
+	if err != nil {
+		return nil, err
+	}
+	return ov.Registry()
+}
+
+// describeEntry is one place in the namespace tree as the wire carries it, with a module's direct
+// children described one level deep. The CLI's `--relations <path>` prints this same message, so the
+// two surfaces cannot describe a member differently.
+func describeEntry(reg *facts.Registry, path string) (*webapi.RelationEntry, error) {
+	if path == "." {
+		path = "" // the wire's spelling of the root, since an empty path asks for the flat catalog
+	}
+	e, err := query.DescribeFrom(reg, path)
+	if err != nil {
+		return nil, err
+	}
+	out := entryProto(reg, e)
 	for _, m := range e.Members {
-		c, err := query.Describe(m)
+		c, err := query.DescribeFrom(reg, m)
 		if err != nil {
 			return nil, err
 		}
-		out.Members = append(out.Members, entryProto(c))
+		out.Members = append(out.Members, entryProto(reg, c))
 	}
 	return out, nil
 }
 
 // entryProto converts one entry without its members. A member's reference markdown is attached
 // where one exists, as the flat catalog attaches it.
-func entryProto(e query.Entry) *webapi.RelationEntry {
+func entryProto(reg *facts.Registry, e query.Entry) *webapi.RelationEntry {
 	out := &webapi.RelationEntry{
 		Path:       e.Path,
 		EntryKind:  string(e.Kind),
@@ -476,7 +512,7 @@ func entryProto(e query.Entry) *webapi.RelationEntry {
 		return out
 	}
 	out.Signature = e.Signature()
-	out.Detail = facts.DefaultRegistry().Doc(e.Path)
+	out.Detail = reg.Doc(e.Path)
 	for _, a := range e.Args {
 		if a.Inferred {
 			out.Inferred = append(out.Inferred, a.Name)

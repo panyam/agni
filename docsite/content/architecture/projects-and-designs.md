@@ -327,3 +327,12 @@ finding the engine's opinion or my project's" is a question a reviewer will ask.
 A design that resolves to no project is a normal state, not a failure. It gets the plain viewer and
 the built-in catalog, and since a design with no project has no project
 config to apply, it cannot be checked against another project's rules.
+
+**A project's own library of derived relations resolves through the same edge** (agni issue 773).
+`lib/` beside `project.yaml` is discovered like `profiles/`, travels as `library_uris`, and is read
+by the config resolver into module texts on `ResolvedConfig.Library`. `Overlay.Registry` composes
+them with the shipped vocabulary once per distinct library, and `QueryService.read` builds each
+design's fact base over the result, so every query surface sees the project's members and no other
+project's design can. A module that does not compose fails the read rather than answering without it,
+because a query naming a member that silently vanished would read as a design with none of what it
+asks for. Rules compiled from queries do not read a project's library yet (agni issue 779).

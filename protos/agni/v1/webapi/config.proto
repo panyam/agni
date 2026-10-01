@@ -88,4 +88,11 @@ message AnalysisConfig {
   // A design's own symbol library and a team's shared one are both ordinary cases, so a Project and a
   // Design may each declare some and they accumulate rather than replace.
   repeated string symbol_path_uris = 8;
+  // library_uris are directories of the project's own derived relations (agni issue 773), one
+  // Datalog module per `<module.path>.dl` file, with optional pages in `docs/<member.path>.md`. A
+  // query run under this config can call them beside the shipped library, so `lib/net.dl` adds
+  // members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
+  // path, or reading a relation nothing registers, fails the read rather than answering nothing.
+  // Rules compiled from queries do not read them yet (agni issue 779).
+  repeated string library_uris = 9;
 }
