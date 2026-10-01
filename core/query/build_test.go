@@ -11,12 +11,12 @@ func TestBuildMatchesParse(t *testing.T) {
 	built := Build(
 		[]Rule{Def(Rel("hit", V("n")),
 			Pos(Rel("component.net", V("r"), V("n"))),
-			Pos(Rel("suffix", V("n"), Str("_CS"))),
+			Pos(Rel("str.suffix", V("n"), Str("_CS"))),
 			Neg(Rel("net.rail", V("n"))),
 			Cmp(V("n"), "!=", Str("GND")))},
 		[]Literal{Pos(Rel("hit", V("n")))},
 		V("n"))
-	parsed := MustParse(`hit(?n) :- component.net(?r, ?n), suffix(?n, "_CS"), not net.rail(?n), ?n != "GND"; hit(?n) => ?n`)
+	parsed := MustParse(`hit(?n) :- component.net(?r, ?n), str.suffix(?n, "_CS"), not net.rail(?n), ?n != "GND"; hit(?n) => ?n`)
 	if !reflect.DeepEqual(built, parsed) {
 		t.Fatalf("built AST != parsed AST:\n built  = %#v\n parsed = %#v", built, parsed)
 	}
@@ -25,7 +25,7 @@ func TestBuildMatchesParse(t *testing.T) {
 // Reads returns only the EDB (fact-base) relations, sorted, and never IDB heads (hit) or built-ins
 // (suffix).
 func TestReads(t *testing.T) {
-	q := MustParse(`hit(?n) :- component.net(?r, ?n), net.pin_count(?n, ?c), suffix(?n, "_CS"); hit(?n) => ?n`)
+	q := MustParse(`hit(?n) :- component.net(?r, ?n), net.pin_count(?n, ?c), str.suffix(?n, "_CS"); hit(?n) => ?n`)
 	got := Reads(q)
 	want := []string{"component.net", "net.pin_count"}
 	if !reflect.DeepEqual(got, want) {

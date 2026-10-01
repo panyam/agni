@@ -33,8 +33,8 @@ import (
 // first. A toy fixture never notices. On a real board that is the whole runtime, and it is how a
 // shipped profile rule made `agni check` non-terminating (WS3-114). Copy the ordering habit too.
 //
-// `prefix` is an engine built-in string predicate, so the extension registers no relation or
-// predicate of its own.
+// `str.prefix` is one of the standard string predicates every vocabulary holds, so the extension
+// registers no relation or predicate of its own.
 //
 // The `?ref != ?x` clause matters. Datalog matches by homomorphism, so without it the two variables
 // may bind the SAME component and an experimental part's own power pin satisfies the rule against
@@ -50,7 +50,7 @@ var experimentalOnPowerNet = query.FindingQuery{
 	},
 	Query: query.MustParse(`
 		exp_on_power(?net) :- component.net(?x, ?net),
-		                      prefix(?x, "X"),
+		                      str.prefix(?x, "X"),
 		                      pin.net(?ref, ?pin, ?net),
 		                      pin.role(?ref, ?pin, "power"),
 		                      ?ref != ?x;

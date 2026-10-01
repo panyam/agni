@@ -72,14 +72,14 @@ entity(?name, ?kind) => ?name, ?kind
 Find things by a fragment of their name, the shape a search box runs:
 
 ```
-entity(?name, ?kind), contains(?name, "CAN") => ?name, ?kind
+entity(?name, ?kind), str.contains(?name, "CAN") => ?name, ?kind
 ```
 
 Reference designators under a prefix, or a glob over net names:
 
 ```
-entity(?name, "component"), prefix(?name, "U") => ?name
-entity(?name, "net"), glob(?name, "*_CLK") => ?name
+entity(?name, "component"), str.prefix(?name, "U") => ?name
+entity(?name, "net"), str.glob(?name, "*_CLK") => ?name
 ```
 
 The isolated cases a connection relation cannot reach. Parts on no net at all:

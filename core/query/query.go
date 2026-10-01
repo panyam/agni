@@ -9,10 +9,12 @@
 //
 //   - a Source projecting a check.Model through a facts.Registry, so every relation the fact layer
 //     registers is queryable (source.go);
-//   - the circuit predicates reaches and route, generators over check.Model.Reach (preds.go);
-//   - the registration hook for an overlay's filter predicates (RegisterPredicate);
 //   - agni's own uses of queries: RuleFromQuery, the wire form, the catalog, and the teaching
 //     examples.
+//
+// Every name a query calls (relations, predicates, modules) is registered in the fact layer's
+// vocabulary (facts.Registry.Vocabulary), so this package adds no names of its own. The circuit walks
+// net.reaches and net.route live with the relations, in stdlib/relations.
 //
 // The types are aliases for the engine's, so a Query built here is the engine's Query and nothing
 // converts at the boundary.
@@ -22,7 +24,10 @@
 // client-side in the browser.
 package query
 
-import "github.com/panyam/jaala/datalog"
+import (
+	"github.com/panyam/jaala/datalog"
+	"github.com/panyam/jaala/ns"
+)
 
 // The query IR. See the engine's documentation for each; they are aliases, not copies.
 type (
@@ -34,7 +39,7 @@ type (
 	Compare   = datalog.Compare
 	Term      = datalog.Term
 	Var       = datalog.Var
-	Value     = datalog.Value
+	Value     = ns.Value
 	Aggregate = datalog.Aggregate
 	Row       = datalog.Row
 	// Base is a design's queryable fact base. Build one with NewBase.
@@ -83,9 +88,9 @@ func MustParse(s string) Query { return datalog.MustParse(s) }
 // relation bind the same value with nothing separating them. See the engine's documentation.
 func NonInjectiveRules(q Query) []string { return datalog.NonInjectiveRules(q) }
 
-// CompileGlob compiles a shell-style glob the way the glob predicate does, for a Go caller that must
-// match the same pattern the same way.
-var CompileGlob = datalog.CompileGlob
+// CompileGlob compiles a shell-style glob the way the str.glob predicate does, for a Go caller that
+// must match the same pattern the same way.
+var CompileGlob = ns.CompileGlob
 
-// CompilePattern compiles a regular expression the way the match predicate does.
-var CompilePattern = datalog.CompilePattern
+// CompilePattern compiles a regular expression the way the str.match predicate does.
+var CompilePattern = ns.CompilePattern

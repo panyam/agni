@@ -10,9 +10,9 @@ import (
 // TestCatalogMatchesSchema is the drift guard. Every EDB relation and predicate has a catalog entry
 // with the right arity, and no catalog entry names a construct that does not exist. A relation added
 // to the fact schema (or a predicate to builtins) without a catalog row fails here, so a new relation
-// cannot ship undiscoverable. The relation half is registered with core/facts by stdlib/relations
-// (imported for the test binary via relations_register_test.go) and the predicate half is query's own
-// builtinPredicates; this test spans both, since Catalog does.
+// cannot ship undiscoverable. Both halves are registered with core/facts, the relations and the
+// circuit walks by stdlib/relations (imported for the test binary via relations_register_test.go) and
+// the string tests by the vocabulary itself; this test spans both, since Catalog does.
 func TestCatalogMatchesSchema(t *testing.T) {
 	byName := map[string]RelationInfo{}
 	for _, r := range Catalog() {
@@ -33,15 +33,15 @@ func TestCatalogMatchesSchema(t *testing.T) {
 		}
 	}
 	// Every built-in predicate is catalogued.
-	for _, name := range predicates.Names() {
-		if _, ok := byName[name]; !ok {
-			t.Errorf("built-in predicate %q has no catalog entry", name)
+	for _, p := range facts.DefaultRegistry().Predicates() {
+		if _, ok := byName[p.Name]; !ok {
+			t.Errorf("predicate %q has no catalog entry", p.Name)
 		}
 	}
 	// No catalog row names a nonexistent built-in construct.
 	for name, info := range byName {
 		isEDB := facts.DefaultRegistry().IsRelation(name)
-		isPred := predicates.Has(name)
+		_, isPred := facts.DefaultRegistry().Vocabulary().Predicate(name)
 		if !isEDB && !isPred {
 			t.Errorf("catalog entry %q (kind %s) is neither an EDB relation nor a predicate", name, info.Kind)
 		}

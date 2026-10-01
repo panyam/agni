@@ -3,14 +3,15 @@ package query
 // The find-by-name template is the query the viewer runs when someone TYPES a name instead of
 // clicking a thing on the drawing.
 //
-// It lives in Go beside the entity presets and the examples, because it names `entity` and `match`,
-// both defined in Go, so a copy held in the browser would go unchecked. Here it gets this package's
-// parse check and the RPC layer's evaluate-against-a-real-design check.
+// It lives in Go beside the entity presets and the examples, because it names `entity` and
+// `str.match`, both defined in Go, so a copy held in the browser would go unchecked. Here it gets
+// this package's parse check and the RPC layer's evaluate-against-a-real-design check.
 //
 // It uses `entity` because every other relation ranges over an association, so a search built on
 // one cannot find a part with no connections or a net with nothing on it
-// (docsite/content/guide/querying.md#find-something-by-name). It uses `match` rather than `contains`
-// so the search is case-insensitive via `(?i)` and a reader can type a pattern such as `^U`.
+// (docsite/content/guide/querying.md#find-something-by-name). It uses `str.match` rather than
+// `str.contains` so the search is case-insensitive via `(?i)` and a reader can type a pattern such
+// as `^U`.
 //
 // The caller substitutes {term} with the reader's text, regex-escaped (see the web client's
 // searchPattern). Escaping is the caller's job because only the caller knows whether the text is a
@@ -28,7 +29,7 @@ type SearchQuery struct {
 // and the bus label together.
 func Search() SearchQuery {
 	return SearchQuery{
-		Query:   `entity(?name, ?kind), match(?name, "(?i){term}")`,
+		Query:   `entity(?name, ?kind), str.match(?name, "(?i){term}")`,
 		Teaches: "entity(?name, ?kind) enumerates what a design NAMES, so a search finds the parts and nets that no connection reaches",
 	}
 }

@@ -32,12 +32,12 @@ var examples = []ExampleQuery{
 	},
 	{
 		Label:   "Parts on USB nets",
-		Query:   `component.net(?ref, ?net), contains(?net, "USB") => ?ref, ?net`,
+		Query:   `component.net(?ref, ?net), str.contains(?net, "USB") => ?ref, ?net`,
 		Teaches: "predicate: a string test over a bound value",
 	},
 	{
 		Label:   "Anything named like this",
-		Query:   `entity(?name, ?kind), contains(?name, "USB") => ?name, ?kind`,
+		Query:   `entity(?name, ?kind), str.contains(?name, "USB") => ?name, ?kind`,
 		Teaches: "enumeration: entity ranges over what EXISTS, so a name search also finds what nothing is joined to",
 	},
 	{

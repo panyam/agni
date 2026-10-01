@@ -2,108 +2,64 @@ package query
 
 import (
 	"strconv"
-	"sync"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/datasheet/param"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/jaala/datalog"
+	"github.com/panyam/jaala/ns"
 )
 
 // modelSource is the engine's view of one design, the rows a facts.Registry projects from a
 // check.Model served as positional tuples. Below it everything is a facts.Row with named slots, and
 // above it everything is a Datalog tuple.
 //
-// model and netByName are nil for a spec-library base and a validation base, which have no design,
-// so the circuit predicates read nothing through them.
+// What each relation IS (its arity, labels and types) is the registry's vocabulary, so Schema reads it
+// from there and this type only serves rows. env carries the design to the generators registered in
+// the fact layer (facts.EnvOf); its Model is nil for a spec-library base and a validation base, which
+// have no design, so the circuit walks read nothing through it.
 type modelSource struct {
-	reg       *facts.Registry
-	model     check.Model
-	netByName map[string]*ir.Net
-	rows      map[string][]facts.Row
-
-	schemaMu sync.RWMutex
-	schemas  map[string]datalog.Schema
-
-	relsOnce sync.Once
-	rels     []string
+	reg   *facts.Registry
+	vocab *ns.Vocabulary
+	env   *facts.Env
+	rows  map[string][]facts.Row
 }
 
-func newModelSource(reg *facts.Registry) *modelSource {
-	return &modelSource{
-		reg:       reg,
-		netByName: map[string]*ir.Net{},
-		rows:      map[string][]facts.Row{},
-		schemas:   map[string]datalog.Schema{},
-	}
+func newModelSource(reg *facts.Registry, m check.Model) *modelSource {
+	return &modelSource{reg: reg, vocab: reg.Vocabulary(), env: facts.NewEnv(m), rows: map[string][]facts.Row{}}
 }
 
-// Schema implements datalog.Source. The arity is the relation's field layout; the labels and closed
-// vocabularies come from its catalog entry, which is what lets the engine refuse a constant such as
-// net.role(?n, "swiching") rather than answer "no results" (agni 696). A relation whose catalog entry
-// declares no argument kinds gets no labels, so its constants go unchecked.
-func (s *modelSource) Schema(rel string) (datalog.Schema, bool) {
-	s.schemaMu.RLock()
-	sc, ok := s.schemas[rel]
-	s.schemaMu.RUnlock()
-	if ok {
-		return sc, true
+// Schema implements ns.Source with the vocabulary's own schema, so the Source and the vocabulary
+// cannot disagree about a relation's shape.
+func (s *modelSource) Schema(rel string) (ns.Schema, bool) {
+	if !s.reg.IsRelation(rel) {
+		return ns.Schema{}, false
 	}
-	fields, ok := s.reg.SchemaOf(rel)
-	if !ok {
-		return datalog.Schema{}, false
-	}
-	sc = datalog.Schema{Arity: len(fields)}
-	if info, ok := s.reg.InfoOf(rel); ok && len(info.ArgKinds) > 0 {
-		sc.Labels = info.Args
-		sc.Domains = make([][]string, len(info.Args))
-		for i, label := range info.Args {
-			sc.Domains[i] = info.ArgKinds[label].ValidOptions
-		}
-	}
-	s.schemaMu.Lock()
-	s.schemas[rel] = sc
-	s.schemaMu.Unlock()
-	return sc, true
+	return s.vocab.Schema(rel)
 }
 
-// Tuples implements datalog.Source, reading each row's slots in the relation's declared order.
-func (s *modelSource) Tuples(rel string) []datalog.Tuple {
+// Tuples implements ns.Source, reading each row's slots in the relation's declared order.
+func (s *modelSource) Tuples(rel string) []ns.Tuple {
 	fields, _ := s.reg.SchemaOf(rel)
 	rows := s.rows[rel]
-	out := make([]datalog.Tuple, len(rows))
+	out := make([]ns.Tuple, len(rows))
 	for i, f := range rows {
 		vals := make([]Value, len(fields))
 		for j, fld := range fields {
 			vals[j] = fieldValue(f, fld)
 		}
-		out[i] = datalog.Tuple{Vals: vals, Cites: f.Cites}
+		out[i] = ns.Tuple{Vals: vals, Cites: f.Cites}
 	}
 	return out
 }
 
-// Relations implements datalog.Source, returning the catalog's names in display order, the order a
-// did-you-mean hint breaks ties in. Empty when no relation catalog is installed, so the engine reports
-// that rather than guessing at a typo (C29).
-func (s *modelSource) Relations() []string {
-	s.relsOnce.Do(func() {
-		if !s.reg.Installed() {
-			return
-		}
-		cat := CatalogFrom(s.reg)
-		s.rels = make([]string, len(cat))
-		for i, r := range cat {
-			s.rels[i] = r.Name
-		}
-	})
-	return s.rels
-}
+// Relations implements ns.Source with the vocabulary's base relations, in the order a did-you-mean
+// hint breaks ties in.
+func (s *modelSource) Relations() []string { return s.vocab.BaseRelations() }
 
-// NoVocabularyHint implements datalog.NoVocabularyHinter.
-func (s *modelSource) NoVocabularyHint() string {
-	return "no fact relations are installed (import a relation catalog, e.g. stdlib/relations)"
-}
+// FactsEnv implements facts.EnvSource, which is how a generator registered in the fact layer reaches
+// the design.
+func (s *modelSource) FactsEnv() *facts.Env { return s.env }
 
 // fieldValue reads one fact Row field as a query Value (string + optional number). The numeric
 // field carries both so a bound term serves equality and comparison alike.
@@ -145,15 +101,11 @@ func NewBase(m check.Model) *Base { return NewBaseFrom(facts.DefaultRegistry(), 
 // NewBaseFrom projects a Model into its fact base over the given relation vocabulary and indexes it
 // for querying. The registry is captured, so what this base can answer is fixed at construction.
 func NewBaseFrom(reg *facts.Registry, m check.Model) *Base {
-	s := newModelSource(reg)
-	s.model = m
+	s := newModelSource(reg, m)
 	for _, f := range reg.Rows(m) {
 		s.rows[f.Relation] = append(s.rows[f.Relation], f)
 	}
-	for _, n := range m.Nets() {
-		s.netByName[n.Name] = n
-	}
-	return datalog.NewBase(s, predicates)
+	return mustBase(s)
 }
 
 // NewSpecLibBase builds a fact base over a whole seeded datasheet corpus with NO design (WS10-010).
@@ -166,12 +118,17 @@ func NewSpecLibBase(fs param.FactSource) *Base {
 
 // NewSpecLibBaseFrom is NewSpecLibBase over an explicit relation vocabulary.
 func NewSpecLibBaseFrom(reg *facts.Registry, fs param.FactSource) *Base {
-	s := newModelSource(reg)
+	s := newModelSource(reg, nil)
 	for _, f := range reg.SpecLibRows(fs.AllSpecs()) {
 		s.rows[f.Relation] = append(s.rows[f.Relation], f)
 	}
-	return datalog.NewBase(s, predicates)
+	return mustBase(s)
 }
+
+// mustBase pairs the registry's vocabulary with s. The engine refuses a Source that does not serve
+// every base relation of the vocabulary, and both halves here come from one registry, so a refusal
+// is a programming error in this file.
+func mustBase(s *modelSource) *Base { return datalog.MustBase(s.vocab, s) }
 
 // Validate reports why a query cannot run, reading only the query and the relation vocabulary it
 // would run against. No design, no rows.
@@ -181,7 +138,7 @@ func NewSpecLibBaseFrom(reg *facts.Registry, fs param.FactSource) *Base {
 // needs no vocabulary, because stdlib/profiles compiles its built-in profiles in an init() that runs
 // before any relation catalog has registered.
 func Validate(q Query, reg *facts.Registry) error {
-	return datalog.Validate(q, newModelSource(reg), predicates)
+	return datalog.Validate(q, reg.Vocabulary())
 }
 
 // Reads returns the fact-base relations a query references, sorted and deduped. A query-backed rule
@@ -190,11 +147,25 @@ func Reads(q Query) []string { return ReadsFrom(facts.DefaultRegistry(), q) }
 
 // ReadsFrom is Reads over an explicit relation vocabulary, for a caller composing its own.
 func ReadsFrom(reg *facts.Registry, q Query) []string {
-	return datalog.Reads(q, newModelSource(reg))
+	return datalog.Reads(q, reg.Vocabulary())
 }
 
-// didYouMean is the engine's unknown-relation hint over a relation vocabulary, for the checks in this
+// ColumnKind says what one answer column denotes. See the engine's documentation.
+type ColumnKind = datalog.ColumnKind
+
+// ColumnKinds reports what each answer column of q denotes over the process-default vocabulary, read
+// from the signatures its relations and predicates declare and inferred through the query's rules.
+func ColumnKinds(q Query) ([]ColumnKind, error) {
+	return ColumnKindsFrom(facts.DefaultRegistry(), q)
+}
+
+// ColumnKindsFrom is ColumnKinds over an explicit relation vocabulary.
+func ColumnKindsFrom(reg *facts.Registry, q Query) ([]ColumnKind, error) {
+	return datalog.ColumnKinds(q, reg.Vocabulary())
+}
+
+// didYouMean is the engine's unknown-name hint over a relation vocabulary, for the checks in this
 // package that name relations outside an evaluation.
 func didYouMean(reg *facts.Registry, rel string) string {
-	return datalog.DidYouMean(newModelSource(reg), predicates, rel)
+	return ns.DidYouMean(reg.Vocabulary(), rel)
 }

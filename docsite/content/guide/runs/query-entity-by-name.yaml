@@ -4,4 +4,4 @@
 # board whose names mean something to a team, and CAN1_* is the family a reader can see the point of.
 fixture: examples/tutorial-project
 script: |
-  agni query designs/gateway/gateway.edn 'entity(?name, ?kind), contains(?name, "CAN") => ?name, ?kind'
+  agni query designs/gateway/gateway.edn 'entity(?name, ?kind), str.contains(?name, "CAN") => ?name, ?kind'

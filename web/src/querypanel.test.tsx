@@ -415,7 +415,7 @@ describe("walking from a result row", () => {
 // such a result in the first place.
 describe("querypanel search", () => {
   const SEARCH = {
-    query: 'entity(?name, ?kind), match(?name, "(?i){term}")',
+    query: 'entity(?name, ?kind), str.match(?name, "(?i){term}")',
     teaches: "entity(?name, ?kind) enumerates what a design names",
   };
   // one row per kind, each typed by the row rather than by the column, which is what a search over
@@ -457,7 +457,7 @@ describe("querypanel search", () => {
     typeTerm(el, "  CAN  ");
     el.querySelector<HTMLButtonElement>(".query-run")!.click();
 
-    const want = 'entity(?name, ?kind), match(?name, "(?i)CAN")';
+    const want = 'entity(?name, ?kind), str.match(?name, "(?i)CAN")';
     expect(onRun).toHaveBeenCalledWith(want);
     // Back in query mode with the sentence that answered visible and editable, which is the whole
     // reason search is a mode on this panel rather than a widget of its own.

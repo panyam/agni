@@ -117,12 +117,12 @@ describe("searchPattern", () => {
 
 describe("fillSearchQuery", () => {
   it("substitutes the escaped term into the served template", () => {
-    expect(fillSearchQuery('entity(?name, ?kind), match(?name, "(?i){term}")', "CAN")).toBe(
-      'entity(?name, ?kind), match(?name, "(?i)CAN")',
+    expect(fillSearchQuery('entity(?name, ?kind), str.match(?name, "(?i){term}")', "CAN")).toBe(
+      'entity(?name, ?kind), str.match(?name, "(?i)CAN")',
     );
   });
 
   it("escapes before substituting, so a typed metacharacter cannot reach the regex as syntax", () => {
-    expect(fillSearchQuery('match(?name, "(?i){term}")', "VDD+")).toBe('match(?name, "(?i)VDD\\+")');
+    expect(fillSearchQuery('str.match(?name, "(?i){term}")', "VDD+")).toBe('str.match(?name, "(?i)VDD\\+")');
   });
 });
