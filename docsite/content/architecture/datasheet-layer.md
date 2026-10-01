@@ -21,6 +21,12 @@ Each contract has one schema and many producers, the pattern [ingestion](../inge
 uses for format readers. `datasheet/derive` produces specs offline, but nothing populates the
 parameter schema in production yet, and hand-encoded fixtures validate it today.
 
+The engine reads the parameter contract and nothing else in this layer. Rules, relations and reviews
+see a PartSpec through `datasheet/param` and never import the document contract, the derivation or
+the workbench behind them, so a spec someone typed and a spec the extractor derived are the same
+input. C34 holds that line with a dependency test, ahead of moving the extraction side into a module
+of its own (agni issue 744).
+
 ## The parameter contract
 
 "RDS(on) = 3.5 Ω" is not a fact about a part. The fact is "RDS(on) max 3.5 Ω at VGS = 10 V,

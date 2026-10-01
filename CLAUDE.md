@@ -656,13 +656,13 @@ all exit 0.**
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds the enforceable rules (C1 to C33). Read it before proposing changes, and **push
+`CONSTRAINTS.md` holds the enforceable rules (C1 to C34). Read it before proposing changes, and **push
 back when a request would violate one**: quote the constraint by name, explain the conflict, and ask
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a
 constraint, and if the direction was wrong, suggest capturing it as one.
 
-**A new rule owes a TEST, never a command typed into the document.** Nineteen are enforced by the gate
+**A new rule owes a TEST, never a command typed into the document.** Twenty are enforced by the gate
 and thirteen are review questions that say so (`CONSTRAINTS.md`'s header keeps the count). Which of
 the three homes a test goes in follows from what it reads: the package graph or the module in the
 root `deps_test.go`, one package's own rule beside that package (`service/transport_guard_test.go`,

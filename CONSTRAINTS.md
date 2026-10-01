@@ -9,7 +9,7 @@ Enforceable architectural rules for this project. Background and rationale in
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
 that to being true, because a rule with nothing to run is not enforceable, and C6 went unchecked
-that way. A Verify is one of two things. Nineteen are TESTS the gate runs, so a violation
+that way. A Verify is one of two things. Twenty are TESTS the gate runs, so a violation
 turns CI red. Thirteen are REVIEW questions, and each says what a reviewer should ask instead. That second
 number is the one to watch, because C32 joined the review column knowing its test was missing
 rather than by deciding a machine could not answer it, and left again once the test existed. So a
@@ -1090,3 +1090,27 @@ The sweep fires at the COPY, which is the one moment the two are identical. It c
 that have since diverged, so "does this already exist somewhere" stays a review question. The
 example modules are outside the sweep because they cannot import `internal/`, so a duplicate there
 is forced by the module boundary. Which ones matter is agni issue 380's question.
+
+## C34: The engine depends on the datasheet tier through its contract, never through the producer
+**Rule:** The engine's datasheet input is the PartSpec contract: `datasheet/param` and
+`param.proto`. The extraction pipeline that produces PartSpecs (`datasheet/doc`, `datasheet/derive`,
+`datasheet/docindex`, `datasheet/candidate`, and their protos) is one producer among several, beside a
+hand-written textproto and any future vendor feed or parts database. No engine package imports it,
+directly or transitively. Only the producer's hosts may, which today are `cmd/agni` (the `derive`
+command and the workbench server's wiring) and `tools/`.
+**Why:** This is C29 and C30 applied to component knowledge. A rule reads a part's absolute maximum
+from a PartSpec and must not care whether a person, our extractor or a vendor wrote it, so the engine
+must not privilege the extractor any more than the rule catalog privileges datalog. The producer also
+deploys differently from the engine: it writes into mounts, needs the docling environment, and handles
+vendor PDFs that C16 keeps inside one deployment. Agni issue 744 moves it into a module of its own, and
+this rule is what keeps that move mechanical. It held when it was written, and nothing enforced it.
+**Verify:** `TestEngineNamesNoDatasheetProducer` (`deps_test.go`) runs `go list -deps` over every
+package in the module except the producer and its hosts, derived from `go list ./...` so a new
+directory is in scope at once. `TestDatasheetProducerIsVisibleFromItsHost` is its positive control:
+every listed path resolves, and `cmd/agni` is seen to depend on the producer.
+`TestEngineReachesProducerProtosOnlyThroughDatasheetService` is a ratchet on the proto half, and fails
+on a new importer and on an allowlist entry that stopped importing.
+**Outstanding violation:** the engine still imports one producer proto, `agni.v1.doc`, in two places.
+`DatasheetService` lives in `service` (`service/datasheet.go`), and `datasheet.proto` shares the
+`agni.v1.webapi` package with the engine's own services. Both are on the ratchet's allowlist and both
+move with agni issue 744.
