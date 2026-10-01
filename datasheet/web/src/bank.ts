@@ -64,6 +64,15 @@ export function emptySpec(path: string, docTitle: string, contentHash: string): 
   });
 }
 
+// suggestMpn guesses the part number a datasheet is for from its file name, as the starting value a
+// new draft offers (agni issue 749): ti/LM1117.pdf suggests LM1117. It is only ever a suggestion,
+// since a draft is keyed by its MPN and nothing is saved until the author confirms or edits it, and a
+// family datasheet is often named for none of its parts.
+export function suggestMpn(path: string): string {
+  const base = path.split("/").pop() ?? "";
+  return base.replace(/\.pdf$/i, "").trim();
+}
+
 // adoptDocRevision records the revision the corpus now holds on the spec's first SourceDoc,
 // reporting whether it changed anything.
 //

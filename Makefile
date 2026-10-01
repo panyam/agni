@@ -308,10 +308,17 @@ serve: ui
 # separately from the viewer. It mounts DATASHEET_DIR as `ds`, reads the workbench assets out of this
 # checkout's datasheet/web/, and passes PDF2DOC so Extract works once `make setup` has built the
 # docling venv. VIEWER_URL links the workbench's heading back to a running viewer.
+#
+# CORPUS_DIR is the corpus store: the workbench's drafts and the published specs, which `agni serve
+# --params-url http://localhost:8090` reads (agni issue 749). A fresh one is created on first use,
+# and agnids indexes it at start.
 #   make dsserve DATASHEET_DIR=/path/to/datasheets
+#   make dsserve DATASHEET_DIR=/path/to/datasheets CORPUS_DIR=/path/to/corpus
 DS_ADDR ?= :8090
+CORPUS_DIR ?= $(DATASHEET_DIR)/corpus
 dsserve: ui
-	cd datasheet && $(GO) run ./cmd/agnids serve --addr $(DS_ADDR) --web-dir $(CURDIR)/datasheet/web --mount ds=$(abspath $(DATASHEET_DIR)) $(PDF2DOC_FLAG) $(if $(strip $(VIEWER_URL)),--viewer-url $(VIEWER_URL))
+	mkdir -p $(abspath $(CORPUS_DIR))
+	cd datasheet && $(GO) run ./cmd/agnids serve --addr $(DS_ADDR) --web-dir $(CURDIR)/datasheet/web --mount ds=$(abspath $(DATASHEET_DIR)) --corpus $(abspath $(CORPUS_DIR)) $(PDF2DOC_FLAG) $(if $(strip $(VIEWER_URL)),--viewer-url $(VIEWER_URL))
 
 # Build the datasheet service binary beside bin/agni.
 agnids:

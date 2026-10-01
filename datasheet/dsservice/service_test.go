@@ -9,6 +9,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/panyam/agni/core/param"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
@@ -39,24 +40,40 @@ func (f *fakeDocLoader) Document(context.Context, artifact.URI) (*docpb.Document
 	return f.doc, f.err
 }
 
-// fakePartSpecStore stands in for the OS store; saveErr lets a test drive the conflict path.
-type fakePartSpecStore struct {
-	spec    *parampb.PartSpec
-	found   bool
-	saveErr error
-	saved   *parampb.PartSpec
+// fakeDraftStore stands in for the OS store; saveErr drives the conflict path and publishErr the
+// publish outcomes.
+type fakeDraftStore struct {
+	draft      *dsapi.Draft
+	found      bool
+	saveErr    error
+	saved      *dsapi.Draft
+	publishErr error
 }
 
-func (f *fakePartSpecStore) Get(context.Context, artifact.URI) (*parampb.PartSpec, string, bool, error) {
-	return f.spec, "v1", f.found, nil
+func (f *fakeDraftStore) Get(context.Context, string) (*dsapi.Draft, bool, error) {
+	return f.draft, f.found, nil
 }
 
-func (f *fakePartSpecStore) Save(_ context.Context, _ artifact.URI, spec *parampb.PartSpec, _ string) (string, error) {
+func (f *fakeDraftStore) ListByDocument(context.Context, string) ([]*dsapi.Draft, error) {
+	if f.draft == nil {
+		return nil, nil
+	}
+	return []*dsapi.Draft{f.draft}, nil
+}
+
+func (f *fakeDraftStore) Save(_ context.Context, d *dsapi.Draft, _ string) (string, error) {
 	if f.saveErr != nil {
 		return "", f.saveErr
 	}
-	f.saved = spec
+	f.saved = d
 	return "v2", nil
+}
+
+func (f *fakeDraftStore) Publish(context.Context, string) (*Published, error) {
+	if f.publishErr != nil {
+		return nil, f.publishErr
+	}
+	return &Published{Generation: 7}, nil
 }
 
 // fakeDocExtractor stands in for the OS extractor; `available` drives the gate, `doc`/`err` the run.
@@ -91,7 +108,7 @@ func (f *fakeAnnotationStore) Save(_ context.Context, _ artifact.URI, author str
 
 // newDS builds a DatasheetService with throwaway store/extractor for the GetDocument-focused tests.
 func newDS(l DocLoader) *DatasheetService {
-	return NewDatasheetService(l, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	return NewDatasheetService(l, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
 }
 
 func TestGetDocumentExtracted(t *testing.T) {
@@ -136,41 +153,89 @@ func TestGetDocumentClassifiesErrors(t *testing.T) {
 	}
 }
 
-func TestGetPartSpecFound(t *testing.T) {
-	store := &fakePartSpecStore{spec: &parampb.PartSpec{Mpn: "LM1117"}, found: true}
+func TestGetDraftFound(t *testing.T) {
+	store := &fakeDraftStore{draft: &dsapi.Draft{Mpn: "LM1117", Spec: &parampb.PartSpec{Mpn: "LM1117"}, Version: "v1"}, found: true}
 	svc := NewDatasheetService(&fakeDocLoader{}, store, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
-	resp, err := svc.GetPartSpec(context.Background(), &dsapi.GetPartSpecRequest{Uri: "mount://m/d.pdf"})
+	resp, err := svc.GetDraft(context.Background(), &dsapi.GetDraftRequest{Mpn: "LM1117"})
 	if err != nil {
-		t.Fatalf("GetPartSpec: %v", err)
+		t.Fatalf("GetDraft: %v", err)
 	}
-	if !resp.Found || resp.GetSpec().GetMpn() != "LM1117" || resp.Version != "v1" {
-		t.Errorf("got found=%v spec=%v version=%q", resp.Found, resp.GetSpec(), resp.Version)
+	if !resp.Found || resp.GetDraft().GetMpn() != "LM1117" || resp.GetDraft().GetVersion() != "v1" {
+		t.Errorf("got %v", resp)
 	}
 }
 
-func TestSavePartSpecConflictAndValidation(t *testing.T) {
+func TestSaveDraftConflictAndShape(t *testing.T) {
+	ctx := context.Background()
+	draft := func(key, specMPN string) *dsapi.SaveDraftRequest {
+		return &dsapi.SaveDraftRequest{Draft: &dsapi.Draft{Mpn: key, Spec: &parampb.PartSpec{Mpn: specMPN}, DocumentUris: []string{"mount://m/d.pdf"}}}
+	}
 	// A store conflict propagates as ErrConflict (the transport maps it to Aborted, "refetch").
-	conflict := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{saveErr: ErrConflict}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
-	_, err := conflict.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: &parampb.PartSpec{Mpn: "X"}})
-	if !errors.Is(err, ErrConflict) {
+	conflict := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{saveErr: ErrConflict}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	if _, err := conflict.SaveDraft(ctx, draft("X", "X")); !errors.Is(err, ErrConflict) {
 		t.Errorf("store conflict => %v, want ErrConflict", err)
 	}
-	// A nil spec is rejected before touching the store.
-	empty := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
-	if _, err := empty.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d"}); !errors.Is(err, service.ErrInvalidArgument) {
-		t.Errorf("nil spec => %v, want service.ErrInvalidArgument", err)
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	for name, req := range map[string]*dsapi.SaveDraftRequest{
+		"no draft":                     {},
+		"no mpn":                       draft("", ""),
+		"a spec naming another MPN":    draft("LM1117", "LM317"),
+		"a document that is not a URI": {Draft: &dsapi.Draft{Mpn: "X", Spec: &parampb.PartSpec{Mpn: "X"}, DocumentUris: []string{"not a uri"}}},
+	} {
+		if _, err := svc.SaveDraft(ctx, req); err == nil {
+			t.Errorf("%s: saved, want a refusal", name)
+		}
+	}
+	// The key matches the spec case-insensitively, as every MPN comparison does.
+	if _, err := svc.SaveDraft(ctx, draft("lm1117", "LM1117")); err != nil {
+		t.Errorf("a case difference between key and spec was refused: %v", err)
+	}
+}
+
+// Every draft rpc on a server with no corpus says so, rather than reading as no drafts.
+func TestDraftRPCsNeedACorpus(t *testing.T) {
+	ctx := context.Background()
+	svc := NewDatasheetService(&fakeDocLoader{}, nil, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	_, e1 := svc.GetDraft(ctx, &dsapi.GetDraftRequest{Mpn: "X"})
+	_, e2 := svc.ListDrafts(ctx, &dsapi.ListDraftsRequest{DocumentUri: "mount://m/d.pdf"})
+	_, e3 := svc.SaveDraft(ctx, &dsapi.SaveDraftRequest{})
+	_, e4 := svc.PublishDraft(ctx, &dsapi.PublishDraftRequest{Mpn: "X"})
+	for i, err := range []error{e1, e2, e3, e4} {
+		if !errors.Is(err, ErrNoCorpus) {
+			t.Errorf("rpc %d without a corpus = %v, want ErrNoCorpus", i+1, err)
+		}
+	}
+}
+
+// A refused publish is an answer for the author, carried in the response with its problems, not a
+// transport error; a store failure is still an error.
+func TestPublishDraftReportsARefusal(t *testing.T) {
+	ctx := context.Background()
+	refused := &PublishRefused{Reason: "not ready", Problems: []param.Problem{{Kind: param.ProblemCompleteness, Message: "no provenance"}}}
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{publishErr: refused}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	resp, err := svc.PublishDraft(ctx, &dsapi.PublishDraftRequest{Mpn: "X"})
+	if err != nil || resp.GetPublished() || resp.GetReason() != "not ready" || len(resp.GetProblems()) != 1 {
+		t.Errorf("refusal = %v, %v", resp, err)
+	}
+	ok := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	if resp, err := ok.PublishDraft(ctx, &dsapi.PublishDraftRequest{Mpn: "X"}); err != nil || !resp.GetPublished() || resp.GetGeneration() != 7 {
+		t.Errorf("publish = %v, %v", resp, err)
+	}
+	failing := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{publishErr: errors.New("disk full")}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	if _, err := failing.PublishDraft(ctx, &dsapi.PublishDraftRequest{Mpn: "X"}); err == nil {
+		t.Error("a store failure was answered as a refusal")
 	}
 }
 
 func TestExtractDocIRGated(t *testing.T) {
 	// No producer configured -> ErrExtractNotEnabled (transport maps it to FailedPrecondition).
-	off := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{available: false}, &fakeAnnotationStore{}, fakeWorkspace{})
+	off := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{available: false}, &fakeAnnotationStore{}, fakeWorkspace{})
 	if _, err := off.ExtractDocIR(context.Background(), &dsapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrExtractNotEnabled) {
 		t.Errorf("disabled => %v, want ErrExtractNotEnabled", err)
 	}
 	// Configured -> returns the produced doc-IR.
 	produced := &docpb.Document{ContentHash: "sha256:x", Producer: "docling"}
-	on := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{available: true, doc: produced}, &fakeAnnotationStore{}, fakeWorkspace{})
+	on := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{available: true, doc: produced}, &fakeAnnotationStore{}, fakeWorkspace{})
 	resp, err := on.ExtractDocIR(context.Background(), &dsapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"})
 	if err != nil || resp.GetDocument().GetContentHash() != "sha256:x" {
 		t.Fatalf("extract: resp=%v err=%v", resp, err)
@@ -178,7 +243,7 @@ func TestExtractDocIRGated(t *testing.T) {
 }
 
 func TestGetDocumentReportsExtractAvailable(t *testing.T) {
-	on := NewDatasheetService(&fakeDocLoader{doc: nil}, &fakePartSpecStore{}, &fakeDocExtractor{available: true}, &fakeAnnotationStore{}, fakeWorkspace{})
+	on := NewDatasheetService(&fakeDocLoader{doc: nil}, &fakeDraftStore{}, &fakeDocExtractor{available: true}, &fakeAnnotationStore{}, fakeWorkspace{})
 	resp, _ := on.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
 	if !resp.ExtractAvailable {
 		t.Error("extract_available should be true when a producer is configured")
@@ -191,7 +256,7 @@ func TestGetDocumentReportsExtractAvailable(t *testing.T) {
 }
 
 func TestSaveAnnotationsValidation(t *testing.T) {
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
 	// A nil set is rejected before the store.
 	if _, err := svc.SaveAnnotations(context.Background(), &dsapi.SaveAnnotationsRequest{Uri: "mount://m/d"}); !errors.Is(err, service.ErrInvalidArgument) {
 		t.Errorf("nil set => %v, want service.ErrInvalidArgument", err)
@@ -205,7 +270,7 @@ func TestSaveAnnotationsValidation(t *testing.T) {
 
 func TestSaveAndGetAnnotations(t *testing.T) {
 	store := &fakeAnnotationStore{}
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, store, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, store, fakeWorkspace{})
 	set := &dsapi.AnnotationSet{DocId: "LM1117", Author: "alice", Annotations: []*dsapi.RegionAnnotation{{RegionId: "p4.t1", Type: "table"}}}
 	if _, err := svc.SaveAnnotations(context.Background(), &dsapi.SaveAnnotationsRequest{Uri: "mount://m/d.pdf", Set: set}); err != nil {
 		t.Fatalf("SaveAnnotations: %v", err)
@@ -231,14 +296,15 @@ func TestSaveAndGetAnnotations(t *testing.T) {
 // Nothing downstream needs the gate. The sibling is <stem>.partspec.json and param.LoadSet reads
 // *.textproto, so a draft cannot reach the corpus by sitting on disk; promotion is a separate step
 // and that is where param.Validate belongs.
-func TestSavePartSpecRecordsWhateverTheAuthorHas(t *testing.T) {
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+func TestSaveDraftRecordsWhateverTheAuthorHas(t *testing.T) {
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
 	save := func(spec *parampb.PartSpec) error {
-		_, err := svc.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: spec})
+		spec.Mpn = "D1" // the key; everything else is whatever the author has so far
+		_, err := svc.SaveDraft(context.Background(), &dsapi.SaveDraftRequest{Draft: &dsapi.Draft{Mpn: "D1", Spec: spec}})
 		return err
 	}
 
-	// No mpn, no parameters: the ordinary state of a datasheet someone has started transcribing.
+	// No parameters: the ordinary state of a datasheet someone has started transcribing.
 	if err := save(&parampb.PartSpec{
 		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
 		Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}},
@@ -266,15 +332,17 @@ func TestSavePartSpecRecordsWhateverTheAuthorHas(t *testing.T) {
 // The save response is where the editor learns what is wrong, so the two kinds have to arrive
 // distinguishable. Structural problems are worth interrupting for, and completeness ones are the
 // ordinary state of unfinished work.
-func TestSavePartSpecReportsClassifiedProblems(t *testing.T) {
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
-	resp, err := svc.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{
-		Uri: "mount://m/d",
-		Spec: &parampb.PartSpec{ // no mpn (incomplete) AND a duplicate pin id (incoherent)
-			Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
-			Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}, {Id: "vcc", Name: "VCC2"}},
+func TestSaveDraftReportsClassifiedProblems(t *testing.T) {
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	resp, err := svc.SaveDraft(context.Background(), &dsapi.SaveDraftRequest{Draft: &dsapi.Draft{
+		Mpn: "D1",
+		Spec: &parampb.PartSpec{ // a row with no provenance (incomplete) AND a duplicate pin id (incoherent)
+			Mpn:        "D1",
+			Docs:       []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
+			Pins:       []*parampb.Pin{{Id: "vcc", Name: "VCC"}, {Id: "vcc", Name: "VCC2"}},
+			Parameters: []*parampb.Parameter{{Symbol: "VIN"}},
 		},
-	})
+	}})
 	if err != nil {
 		t.Fatalf("save must succeed regardless of problems: %v", err)
 	}
@@ -285,12 +353,12 @@ func TestSavePartSpecReportsClassifiedProblems(t *testing.T) {
 	if got := strings.Join(byKind[dsapi.ValidationProblem_KIND_STRUCTURAL], " "); !strings.Contains(got, "duplicate pin id") {
 		t.Errorf("structural problems = %q, want the duplicate pin id", got)
 	}
-	if got := strings.Join(byKind[dsapi.ValidationProblem_KIND_COMPLETENESS], " "); !strings.Contains(got, "mpn") {
-		t.Errorf("completeness problems = %q, want the missing mpn", got)
+	if got := byKind[dsapi.ValidationProblem_KIND_COMPLETENESS]; len(got) == 0 {
+		t.Errorf("no completeness problems for a row with no limit kind or provenance")
 	}
 	// A spec good enough to load reports nothing, so the editor shows an empty panel rather than
 	// having to filter noise.
-	clean, _ := svc.SavePartSpec(context.Background(), &dsapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: cleanSpec()})
+	clean, _ := svc.SaveDraft(context.Background(), &dsapi.SaveDraftRequest{Draft: &dsapi.Draft{Mpn: "ACME-1", Spec: cleanSpec()}})
 	if n := len(clean.GetProblems()); n != 0 {
 		t.Errorf("a corpus-ready spec reports %d problems, want 0: %v", n, clean.GetProblems())
 	}
@@ -317,7 +385,7 @@ func cleanSpec() *parampb.PartSpec {
 // with the engine's WorkspaceService (agni issue 744).
 func TestFolderTreeAnswersAsWorkspaceServiceDoes(t *testing.T) {
 	ctx := context.Background()
-	ds := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	ds := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
 	ws := service.NewWorkspaceService(fakeWorkspace{})
 
 	gotM, err := ds.ListMounts(ctx, &webapi.ListMountsRequest{})

@@ -212,24 +212,26 @@ with no outbound network. That environment is why the image is about 2.6GB where
 230MB, and why the two are separate.
 
 ```
-docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:latest
+docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti -v ~/corpus:/corpus ghcr.io/panyam/agnids:latest
 ```
 
 Every subdirectory of `/datasheets` becomes a mount named after itself, as `/workspace` does in the
-`agni` image. Mount them read-write, since the workbench saves into them. To link the workbench's
+`agni` image. Mount them read-write, since the workbench saves annotations and extracted doc-IR into
+them. `/corpus` is the corpus store, holding the workbench's drafts and the published specs that
+`agni serve --params-url` reads, so mount a directory there to keep them. To link the workbench's
 heading back to a viewer, pass the whole command, because arguments after the image replace its
 default rather than adding to it:
 
 ```
 docker run -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:latest \
-  serve --addr :8090 --mount-root /datasheets --web-dir /srv/agnids/web \
+  serve --addr :8090 --mount-root /datasheets --web-dir /srv/agnids/web --corpus /corpus \
   --pdf2doc "/opt/docling/bin/python /opt/agnids/pdf2doc.py" --viewer-url http://host:8080
 ```
 
 ## Writes and file ownership
 
-The datasheets workbench (`agnids`) writes back into a mount, so saving a PartSpec or an annotation,
-or running Extract, lands a file in your bind-mounted folder. The `agni` image writes only to a
+The datasheets workbench (`agnids`) writes back into what you mount: an annotation or an extracted
+doc-IR lands beside its datasheet, and a draft or a published spec lands in the corpus store. The `agni` image writes only to a
 `--review-store`. Both containers run as a non-root user (uid 10001), so those files are never
 written as root.
 

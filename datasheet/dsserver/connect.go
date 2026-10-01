@@ -64,12 +64,20 @@ func (a *Datasheet) GetDocument(ctx context.Context, req *connect.Request[dsapi.
 	return unary(ctx, req, a.svc.GetDocument)
 }
 
-func (a *Datasheet) GetPartSpec(ctx context.Context, req *connect.Request[dsapi.GetPartSpecRequest]) (*connect.Response[dsapi.GetPartSpecResponse], error) {
-	return unary(ctx, req, a.svc.GetPartSpec)
+func (a *Datasheet) GetDraft(ctx context.Context, req *connect.Request[dsapi.GetDraftRequest]) (*connect.Response[dsapi.GetDraftResponse], error) {
+	return unary(ctx, req, a.svc.GetDraft)
 }
 
-func (a *Datasheet) SavePartSpec(ctx context.Context, req *connect.Request[dsapi.SavePartSpecRequest]) (*connect.Response[dsapi.SavePartSpecResponse], error) {
-	return unary(ctx, req, a.svc.SavePartSpec)
+func (a *Datasheet) ListDrafts(ctx context.Context, req *connect.Request[dsapi.ListDraftsRequest]) (*connect.Response[dsapi.ListDraftsResponse], error) {
+	return unary(ctx, req, a.svc.ListDrafts)
+}
+
+func (a *Datasheet) SaveDraft(ctx context.Context, req *connect.Request[dsapi.SaveDraftRequest]) (*connect.Response[dsapi.SaveDraftResponse], error) {
+	return unary(ctx, req, a.svc.SaveDraft)
+}
+
+func (a *Datasheet) PublishDraft(ctx context.Context, req *connect.Request[dsapi.PublishDraftRequest]) (*connect.Response[dsapi.PublishDraftResponse], error) {
+	return unary(ctx, req, a.svc.PublishDraft)
 }
 
 func (a *Datasheet) ExtractDocIR(ctx context.Context, req *connect.Request[dsapi.ExtractDocIRRequest]) (*connect.Response[dsapi.ExtractDocIRResponse], error) {

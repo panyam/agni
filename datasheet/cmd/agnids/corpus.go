@@ -10,78 +10,68 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/datasheet/corpus"
+	"github.com/panyam/agni/datasheet/dsservice"
 )
 
-// promoteCmd moves a workbench DRAFT into a published corpus and updates the corpus's index (agni
-// issues 747, 749).
-//
-// The workbench saves an unvalidated <stem>.partspec.json on purpose, and LoadSet never reads one, so
-// until a draft is promoted no check sees it. This is the step that validates. corpus.Promote decides
-// and this writes the spec, re-loads the corpus and restores what was there if it no longer loads, so
-// a promotion cannot leave a corpus that fails every check, and only then writes the index.
-func promoteCmd() *cobra.Command {
-	var to string
+// publishCmd publishes a draft from the corpus's store by MPN (agni issues 747, 749), the scripted
+// form of the workbench's PublishDraft. It validates the draft, refuses one that fails (listing every
+// problem) or whose MPN another published file already seeds, and otherwise writes <mpn>.textproto
+// and the index. The draft stays, as the start of the next edit.
+func publishCmd() *cobra.Command {
+	var dir string
 	c := &cobra.Command{
-		Use:   "promote <draft.partspec.json>",
-		Short: "Validate a workbench draft, write it into a corpus as <mpn>.textproto, and update the index",
-		Long: `Promote a PartSpec draft the datasheets workbench saved into a published corpus, where checks
-and queries read it, and record it in the corpus's index (` + corpus.IndexFile + `).
+		Use:   "publish <mpn>",
+		Short: "Validate a draft and make it the published spec for its MPN",
+		Long: `Publish the draft for an MPN from a corpus's store, where the workbench saves drafts, into
+the same corpus's published specs, where checks and PartSpecService read them, and record it in the
+index (` + corpus.IndexFile + `).
 
-A draft is saved without validation so work is never lost, and no check reads one. Promotion runs
+A draft is saved without validation so work is never lost, and no check reads one. Publishing runs
 param.Validate and refuses a draft that fails it, listing every problem. It also refuses when another
-file in the corpus already seeds the same MPN, since one MPN in two files fails every load. A draft
-promoted before is written over its own earlier file.
+published file already seeds the same MPN, since one MPN in two files fails every load. Publishing
+an MPN again replaces its earlier published spec.
 
-  agnids promote datasheets/ti/LM1117.partspec.json --to params/`,
+  agnids publish LM1117 --corpus params/`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if to == "" {
-				return fmt.Errorf("--to <params dir> is required: promotion writes into a corpus")
-			}
-			draft, err := os.ReadFile(args[0])
-			if err != nil {
+			if err := requireDir("--corpus", dir); err != nil {
 				return err
 			}
-			if fi, err := os.Stat(to); err != nil || !fi.IsDir() {
-				return fmt.Errorf("--to %q is not a directory", to)
-			}
-			fsys := os.DirFS(to)
-			prev, err := readIndex(fsys)
-			if err != nil {
-				return err
-			}
-			p, err := corpus.Promote(draft, fsys, prev)
-			if err != nil {
-				return err
-			}
-			dst := filepath.Join(to, filepath.FromSlash(p.File))
-			prevText, prevErr := os.ReadFile(dst) // a replaced file is restored, a new one removed
-			if err := writeAtomic(dst, p.Text); err != nil {
-				return err
-			}
-			if _, err := param.LoadSet(fsys); err != nil {
-				if prevErr == nil {
-					_ = writeAtomic(dst, prevText)
-				} else {
-					_ = os.Remove(dst)
+			p, err := newOSDraftStore(dir).Publish(cmd.Context(), args[0])
+			var refused *dsservice.PublishRefused
+			if errors.As(err, &refused) {
+				var b strings.Builder
+				b.WriteString(refused.Reason)
+				for _, pr := range refused.Problems {
+					fmt.Fprintf(&b, "\n  [%s] %s", pr.Kind, pr.Message)
 				}
-				return fmt.Errorf("the corpus stopped loading after writing %s, so it was put back: %w", dst, err)
+				return errors.New(b.String())
 			}
-			if err := writeIndex(to, p.Index); err != nil {
-				return fmt.Errorf("%s was written but the index was not, so run `agnids index %s`: %w", dst, to, err)
+			if err != nil {
+				return err
 			}
-			verb := "promoted"
-			if p.Replaces {
-				verb = "updated"
+			verb := "published"
+			if p.Replaced {
+				verb = "republished"
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s %s to %s (%d parameters, %d pins); index generation %d\n", verb, p.Spec.GetMpn(), dst, len(p.Spec.GetParameters()), len(p.Spec.GetPins()), p.Index.Generation)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s %s; index generation %d\n", verb, args[0], p.Generation)
 			return nil
 		},
 	}
-	c.Flags().StringVar(&to, "to", "", "the params corpus directory to write into (required)")
+	c.Flags().StringVar(&dir, "corpus", "", "the corpus directory holding the draft and the published specs (required)")
 	return c
+}
+
+// requireDir reports a flag that is unset or does not name a directory.
+func requireDir(flag, dir string) error {
+	if dir == "" {
+		return fmt.Errorf("%s <dir> is required", flag)
+	}
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return fmt.Errorf("%s %q is not a directory", flag, dir)
+	}
+	return nil
 }
 
 // indexCmd rebuilds a corpus's index from its files, which are the source of truth. It is what to run

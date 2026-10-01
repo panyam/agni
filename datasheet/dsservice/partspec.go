@@ -8,8 +8,9 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// ErrNoCorpus is returned by PartSpecService on a server started without a published corpus
-// (--corpus). A transport maps it to FailedPrecondition, since the operator must name one.
+// ErrNoCorpus is returned by PartSpecService and the draft rpcs on a server started without a
+// published corpus (--corpus), which is where drafts are kept too. A transport maps it to
+// FailedPrecondition, since the operator must name one.
 var ErrNoCorpus = errors.New("no published corpus is served")
 
 // ErrCorpusNotReady is a corpus that exists but cannot be served as it stands: it has no index, or the

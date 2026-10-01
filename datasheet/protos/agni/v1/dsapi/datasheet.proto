@@ -37,19 +37,31 @@ service DatasheetService {
   // not an error.
   rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
 
-  // GetPartSpec returns the datasheet's saved PartSpec (the <stem>.partspec.json sibling, the
-  // shared working DRAFT, which no check reads until `agnids promote` validates it into a
-  // corpus) plus a version token for optimistic concurrency.
-  // found is false (and version empty) when nothing has been saved yet. One PartSpec is shared
-  // per datasheet across users; the workbench's per-user UI state (drawn regions, type tags) is
-  // NOT here — it lives in each client's localStorage so users do not clobber each other's view.
-  rpc GetPartSpec(GetPartSpecRequest) returns (GetPartSpecResponse);
+  // DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
+  // and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit so
+  // work is never lost, and no check ever reads one: readers see only PUBLISHED specs, through the
+  // contract's PartSpecService. PublishDraft is the one step between the two. Drafts live in the
+  // published corpus's store, so these rpcs need agnids serve --corpus.
+  //
+  // GetDraft returns the draft for an MPN, matched case-insensitively. found is false when there
+  // is none, which is a normal state rather than an error.
+  rpc GetDraft(GetDraftRequest) returns (GetDraftResponse);
 
-  // SavePartSpec writes the PartSpec sibling with optimistic concurrency: base_version must equal
-  // the current on-disk version (empty base_version asserts "expected absent", a first write), or
-  // the save is rejected as a conflict (Connect Aborted) and the client refetches. The read,
-  // compare, and write are atomic per path within the serve process. Returns the new version.
-  rpc SavePartSpec(SavePartSpecRequest) returns (SavePartSpecResponse);
+  // ListDrafts returns the drafts that cite a datasheet, so opening a document finds the parts
+  // transcribed from it. A family datasheet can be cited by several.
+  rpc ListDrafts(ListDraftsRequest) returns (ListDraftsResponse);
+
+  // SaveDraft writes a draft with optimistic concurrency: base_version must equal the stored
+  // version (empty asserts the draft does not exist yet, a first save), or the save is rejected as
+  // a conflict (Connect Aborted) and the client refetches. It never refuses a draft for being
+  // incomplete; what is wrong with it comes back as problems.
+  rpc SaveDraft(SaveDraftRequest) returns (SaveDraftResponse);
+
+  // PublishDraft validates a draft and, when it passes, makes it the current published spec for its
+  // MPN, recording it in the corpus index under a new generation. A draft that does not validate is
+  // not published, and the response lists every problem. The draft stays, as the start of the
+  // next edit.
+  rpc PublishDraft(PublishDraftRequest) returns (PublishDraftResponse);
 
   // ExtractDocIR runs the configured doc-IR producer (pdf2doc/docling) over the datasheet, writes
   // the <stem>.doc.textproto sibling, and returns the produced doc-IR so the workbench can show the
@@ -102,31 +114,47 @@ message ExtractDocIRResponse {
   agni.v1.doc.Document document = 1;
 }
 
-message GetPartSpecRequest {
-  // uri names the stored PartSpec.
-  string uri = 1;
-}
-
-message GetPartSpecResponse {
-  // found is true when a PartSpec has been saved for this datasheet.
-  bool found = 1;
-  // spec is the saved PartSpec; unset when found is false.
+// Draft is the editing copy of one part's PartSpec.
+message Draft {
+  // mpn is the draft's key, and the part number it publishes to. It equals spec.mpn.
+  string mpn = 1;
   agni.v1.param.PartSpec spec = 2;
-  // version is an opaque token (the sibling's content hash) the client passes back as
-  // base_version on the next save. Empty when found is false.
-  string version = 3;
+  // document_uris are the datasheets (artifact URIs, mount://...) the draft was transcribed from.
+  repeated string document_uris = 3;
+  // version is an opaque token (the stored draft's content hash) the client passes back as
+  // base_version on its next save.
+  string version = 4;
 }
 
-message SavePartSpecRequest {
-  agni.v1.param.PartSpec spec = 1;
-  // base_version is the version GetPartSpec returned (or "" to assert the sibling does not exist
-  // yet). A mismatch with the current on-disk version fails the save as a conflict.
+message GetDraftRequest {
+  string mpn = 1;
+}
+
+message GetDraftResponse {
+  bool found = 1;
+  // draft is unset when found is false.
+  Draft draft = 2;
+}
+
+message ListDraftsRequest {
+  // document_uri names a datasheet; every draft citing it is returned.
+  string document_uri = 1;
+}
+
+message ListDraftsResponse {
+  // drafts are ordered by MPN.
+  repeated Draft drafts = 1;
+}
+
+message SaveDraftRequest {
+  // draft.mpn names the draft; draft.spec.mpn must match it. draft.version is ignored.
+  Draft draft = 1;
+  // base_version is the version last read (or "" to assert the draft does not exist yet). A
+  // mismatch with the stored version fails the save as a conflict.
   string base_version = 2;
-  // uri names the PartSpec to write.
-  string uri = 3;
 }
 
-message SavePartSpecResponse {
+message SaveDraftResponse {
   // version is the new version after this write; the client keeps it for its next save.
   string version = 1;
 
@@ -139,8 +167,24 @@ message SavePartSpecResponse {
   // edit, so the judgement rides a request that is happening anyway. It is also the reason the
   // client does not reimplement these rules: one implementation, in Go, reported back.
   //
-  // Empty means the spec would load into a corpus today.
+  // Empty means the draft would publish today.
   repeated ValidationProblem problems = 2;
+}
+
+message PublishDraftRequest {
+  string mpn = 1;
+}
+
+message PublishDraftResponse {
+  // published is false when the draft did not validate, or when another published file already
+  // seeds its MPN; reason then says which, and problems lists what to fix.
+  bool published = 1;
+  string reason = 2;
+  repeated ValidationProblem problems = 3;
+  // replaced is true when the MPN already had a published spec that this one supersedes.
+  bool replaced = 4;
+  // generation is the corpus generation after publishing.
+  uint64 generation = 5;
 }
 
 // ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two

@@ -41,6 +41,11 @@ const MODALITY_LABELS: [Modality, string][] = [
 // the bank state. The accessors are reactive (they re-read on any bank edit); the mutators persist.
 export interface TranscribeHandlers {
   spec: () => PartSpec;
+  // draftMpn is the MPN the draft is keyed by, or empty before one exists; suggestedMpn is what a new
+  // draft offers; startDraft creates it. Nothing is saved before startDraft (agni issue 749).
+  draftMpn: () => string;
+  suggestedMpn: () => string;
+  startDraft: (mpn: string) => void;
   region: () => Region | null;
   regionType: () => RegionType;
   deletableRegion: () => boolean;
@@ -297,6 +302,7 @@ function PackageList(props: { spec: () => PartSpec; onAdd: (id: string, name: st
 // where its extraction lands (WS13-002/003) rather than a table editor, so the tag is captured but
 // no wrong-shaped transcription is offered.
 export function TranscribePanel(props: TranscribeHandlers) {
+  let startEl: HTMLInputElement | undefined;
   return (
     <div class="tx-panel">
       <div class="tx-meta">
@@ -315,7 +321,27 @@ export function TranscribePanel(props: TranscribeHandlers) {
           />
         </label>
         <div class="tx-docrev">{docRevisionNote(props.spec().docs[0]?.contentHash ?? "")}</div>
-        <label class="tx-field">MPN<input placeholder="LM1117" value={props.spec().mpn} onInput={(e) => props.setMeta({ mpn: e.currentTarget.value })} /></label>
+        {/* A draft is keyed by its MPN, so the field is fixed once the draft exists. Before that it
+            is the start of one: the suggestion is only a guess from the file name, and nothing is
+            saved until the author confirms or edits it. */}
+        <Show
+          when={props.draftMpn()}
+          fallback={
+            <div class="tx-start">
+              <label class="tx-field">
+                MPN
+                <input placeholder="LM1117" value={props.suggestedMpn()} ref={startEl} />
+              </label>
+              <button onClick={() => props.startDraft(startEl?.value ?? "")}>Start draft</button>
+              <div class="tx-docrev">Nothing is saved until you start a draft for a part number.</div>
+            </div>
+          }
+        >
+          <label class="tx-field" title="a draft is keyed by its MPN">
+            MPN
+            <input value={props.draftMpn()} readOnly />
+          </label>
+        </Show>
         <label class="tx-field">Manufacturer<input value={props.spec().manufacturer} onInput={(e) => props.setMeta({ manufacturer: e.currentTarget.value })} /></label>
         <label class="tx-field">Device class<input placeholder="ldo" value={props.spec().deviceClass} onInput={(e) => props.setMeta({ deviceClass: e.currentTarget.value })} /></label>
         <PackageList spec={props.spec} onAdd={props.addPackage} onDelete={props.deletePackage} />

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -41,17 +42,33 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := checkWorkbenchAssets(webDir); err != nil {
-				return err
+			// With NO web dir named and no default one present, serve the API alone, as `agni serve`
+			// does (agni 735): a deployment that only publishes a corpus for --params-url has no
+			// workbench to show. A dir that was named, or a default one that exists, must hold a built
+			// workbench, because then a broken one is a mistake to hear about.
+			if !cmd.Flags().Changed("web-dir") {
+				if _, err := os.Stat(webDir); errors.Is(err, os.ErrNotExist) {
+					fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and %s is absent, so this serves the API without the workbench\n", webDir)
+					webDir = ""
+				}
+			}
+			if webDir != "" {
+				if err := checkWorkbenchAssets(webDir); err != nil {
+					return err
+				}
 			}
 			var store param.Fetcher
 			if corpusDir != "" {
-				if store, err = openCorpus(corpusDir); err != nil {
+				if store, err = openCorpus(corpusDir, cmd.ErrOrStderr()); err != nil {
 					return fmt.Errorf("--corpus %q: %w", corpusDir, err)
 				}
 			}
-			mux := newWorkbenchMux(ms, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"), store)
-			fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at http://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, displayAddr(addr), len(ms))
+			mux := newWorkbenchMux(ms, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"), corpusDir, store)
+			if webDir == "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheet API at http://%s/ with %d mount(s) (Ctrl-C to stop)\n", displayAddr(addr), len(ms))
+			} else {
+				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at http://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, displayAddr(addr), len(ms))
+			}
 			return skhttp.ListenAndServeGraceful(&http.Server{Addr: addr, Handler: mux})
 		},
 	}
@@ -60,7 +77,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().StringVar(&webDir, "web-dir", "datasheet/web", "directory holding the workbench's built assets (templates/DatasheetsPage.html, static/datasheets.js, static/pdf.worker.js); the default is where a repo checkout keeps them, after `make ui`")
 	c.Flags().StringVar(&viewerURL, "viewer-url", "", "where the viewer (`agni serve`) is served, e.g. http://host:8080; the workbench's heading links home there, and is plain text when this is empty")
-	c.Flags().StringVar(&corpusDir, "corpus", "", "a published PartSpec corpus (a directory `agnids promote` writes into, with its corpus.index.json) to serve over PartSpecService, which `agni serve --params-url` reads; empty serves none")
+	c.Flags().StringVar(&corpusDir, "corpus", "", "the corpus store: published PartSpecs with their corpus.index.json, served over PartSpecService for `agni serve --params-url`, and the workbench's drafts under drafts/. It is indexed at start when the index is missing or stale. Empty serves neither, and the workbench cannot save")
 	c.Flags().StringVar(&pdf2doc, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 datasheet/tools/pdf2doc/pdf2doc.py\"; empty disables the workbench's Extract (first pass) action")
 	return c
 }
@@ -68,9 +85,15 @@ func serveCmd() *cobra.Command {
 // newWorkbenchMux routes everything agnids serves: the DatasheetService API, the raw PDFs the
 // workbench renders, its static bundle, the page itself, and a liveness probe. It is separate from
 // serveCmd so a test can drive the real routes without a listener.
-func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerURL string, corpusStore param.Fetcher) *http.ServeMux {
+func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerURL string, corpusDir string, corpusStore param.Fetcher) *http.ServeMux {
 	mux := http.NewServeMux()
-	svc := dsservice.NewDatasheetService(&osDocLoader{mounts: ms}, &osPartSpecStore{mounts: ms},
+	// Drafts live in the published corpus's store, so a server with no --corpus has none, and the
+	// draft rpcs say to start it with one.
+	var drafts dsservice.DraftStore
+	if corpusDir != "" {
+		drafts = newOSDraftStore(corpusDir)
+	}
+	svc := dsservice.NewDatasheetService(&osDocLoader{mounts: ms}, drafts,
 		&osDocExtractor{mounts: ms, cmd: pdf2doc}, &osAnnotationStore{mounts: ms}, mounts.NewWorkspace(ms))
 	path, handler := dsapiconnect.NewDatasheetServiceHandler(dsserver.NewDatasheet(svc))
 	mux.Handle(path, handler)
@@ -81,10 +104,13 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerU
 	// The workbench renders the source PDF with pdf.js, so its raw bytes are served from the mounts.
 	// The prefix is more specific than the page's, so ServeMux routes it here.
 	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(ms)))
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(webDir, "static")))))
-	app := goal.NewApp(&dsApp{viewerURL: viewerURL}, goal.SetupTemplates(filepath.Join(webDir, "templates")))
-	goal.Register[*DatasheetsPage](app, mux, "/datasheets/")
-	mux.Handle("GET /{$}", http.RedirectHandler("/datasheets/", http.StatusFound))
+	// An empty webDir is the API alone: no page, no bundle, no redirect to a page that is not there.
+	if webDir != "" {
+		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(webDir, "static")))))
+		app := goal.NewApp(&dsApp{viewerURL: viewerURL}, goal.SetupTemplates(filepath.Join(webDir, "templates")))
+		goal.Register[*DatasheetsPage](app, mux, "/datasheets/")
+		mux.Handle("GET /{$}", http.RedirectHandler("/datasheets/", http.StatusFound))
+	}
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprintln(w, "ok")
@@ -92,14 +118,33 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerU
 	return mux
 }
 
-// openCorpus opens the published corpus at dir for PartSpecService. Its errors that mean "this corpus
-// cannot be served as it stands" (no index, an index that no longer matches its files) are classified
-// as dsservice.ErrCorpusNotReady, so a caller is told what to run rather than given a bad request.
-func openCorpus(dir string) (param.Fetcher, error) {
+// openCorpus opens the published corpus at dir for PartSpecService. It refreshes the index first,
+// writing it when it is missing or no longer matches the files: the index is derived and can always
+// be rebuilt, so a fresh corpus (a new volume, a new directory) needs no separate step, and a hand
+// edit made while the server was down is picked up at start. A corpus that does not validate fails
+// here, by name. While the server runs, a file edited behind the index is refused rather than
+// re-indexed, and the errors that mean so are classified as dsservice.ErrCorpusNotReady, so a
+// caller is told what to run rather than given a bad request.
+func openCorpus(dir string, notes io.Writer) (param.Fetcher, error) {
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
 		return nil, fmt.Errorf("not a directory")
 	}
-	r, err := corpus.NewReader(os.DirFS(dir))
+	fsys := os.DirFS(dir)
+	prev, err := readIndex(fsys)
+	if err != nil {
+		return nil, err
+	}
+	next, changed, err := corpus.Refresh(fsys, prev)
+	if err != nil {
+		return nil, err
+	}
+	if changed {
+		if err := writeIndex(dir, next); err != nil {
+			return nil, err
+		}
+		fmt.Fprintf(notes, "note: indexed the corpus at start: %d specs, generation %d\n", len(next.Entries), next.Generation)
+	}
+	r, err := corpus.NewReader(fsys)
 	if err != nil {
 		return nil, err
 	}

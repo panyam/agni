@@ -70,7 +70,7 @@ type SeededFile struct {
 }
 
 // LoadCorpus is the walk LoadSet makes, keeping each file. It applies the same rules, all-or-nothing:
-// only *.textproto is read (a workbench draft is .partspec.json and never seeds anything), every file
+// only *.textproto is read (a workbench draft is never one, so it never seeds anything), every file
 // must parse and Validate, and two files claiming one MPN fail the load. Files come back in walk
 // order, which is lexical by path. The datasheet service's corpus index is built from it, so the
 // index and every eager load agree on what the corpus holds.

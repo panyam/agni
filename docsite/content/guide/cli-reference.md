@@ -466,7 +466,7 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
 (reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, and
-publishing a workbench draft is [`agnids promote`](../datasheets/#publishing-a-workbench-draft), both in
+publishing a workbench draft is [`agnids publish`](../datasheets/#publishing-a-workbench-draft), both in
 the datasheets service, a separate binary built from the `datasheet/` module. `validate` is
 worth knowing as a user, because pointed at a folder of exports it reports which of them this tool can
 actually read. The rest sit closer to the engine and are covered in the developer docs.

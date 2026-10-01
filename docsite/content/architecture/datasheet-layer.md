@@ -121,17 +121,19 @@ confirmation nothing can invalidate is not. And `SourceDoc.title` is editable in
 because producers fill it with a PART number ("LM1117") rather than the document number the field is
 specified to carry, and a snapshot of a part number reads identically before and after a reissue.
 
-Browsing a corpus in the workbench WRITES a `.partspec.json` beside every document you open,
-because a document with no saved spec gets one seeded and persisted, so point it at a scratch copy
-rather than an original. The rest of the workbench is described in [Web app](../web-app/).
+What the workbench saves is a DRAFT, keyed by the MPN it is for and citing the datasheets it was
+transcribed from, so a family datasheet can feed one draft per part. Drafts live in the corpus store
+(`agnids serve --corpus`) beside the published specs, and opening a datasheet lists the drafts that
+cite it. Nothing is written until the author confirms an MPN, so browsing writes nothing. The rest of
+the workbench is described in [Web app](../web-app/).
 
-That file is a DRAFT. It is saved without validation, so work is never lost, and no check reads it:
-`param.LoadSet` loads `*.textproto` only, even from a directory holding drafts. A draft reaches the
-engine through [`agnids promote`](../../guide/datasheets/#publishing-a-workbench-draft), which runs
-`param.Validate`, refuses a draft that fails, writes `<mpn>.textproto` into the corpus, and records it
-in the corpus's index. Promotion and the index belong to the datasheet service (`datasheet/corpus`),
-because publishing a spec is the producer's step, while the engine only reads specs through
-`core/param` (C34).
+A draft is saved without validation, so work is never lost, and no check reads it: `param.LoadSet`
+loads `*.textproto` only, and drafts are `drafts/<MPN>.draft.json`. A draft reaches the engine
+through [publishing](../../guide/datasheets/#publishing-a-workbench-draft), `PublishDraft` or
+`agnids publish`, which runs `param.Validate`, refuses a draft that fails, writes `<mpn>.textproto`
+into the corpus, and records it in the corpus's index. The draft stays, as the start of the next edit.
+Publishing and the index belong to the datasheet service (`datasheet/corpus`), because publishing a
+spec is the producer's step, while the engine only reads specs through `core/param` (C34).
 
 </details>
 

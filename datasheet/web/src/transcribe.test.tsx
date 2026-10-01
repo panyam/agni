@@ -32,6 +32,9 @@ function mountPanel(over: Partial<TranscribeHandlers> = {}) {
   };
   const handlers: TranscribeHandlers = {
     spec: () => spec(),
+    draftMpn: () => "ACME-1",
+    suggestedMpn: () => "",
+    startDraft: vi.fn(),
     region: () => region(),
     regionType: () => "table",
     deletableRegion: () => true,
@@ -158,5 +161,29 @@ describe("relation editor", () => {
 
     buttonNamed(el, "Add relation")!.click();
     expect(calls.addRelation).not.toHaveBeenCalled();
+  });
+});
+
+// A draft is keyed by its MPN (agni issue 749). Before one exists the panel offers to start it with a
+// suggested MPN the author can edit, and hands over what they confirmed; once it exists the MPN is
+// shown and fixed.
+describe("draft start", () => {
+  it("offers the suggestion and starts the draft with what the author typed", () => {
+    const startDraft = vi.fn();
+    const { el } = mountPanel({ draftMpn: () => "", suggestedMpn: () => "LM1117", startDraft });
+    const input = fieldNamed(el, "MPN");
+    expect(input?.value).toBe("LM1117");
+    input!.value = "LM1117-3.3";
+    const button = [...el.querySelectorAll("button")].find((b) => b.textContent === "Start draft");
+    button!.click();
+    expect(startDraft).toHaveBeenCalledWith("LM1117-3.3");
+  });
+
+  it("shows a started draft's MPN read-only, with no start button", () => {
+    const { el } = mountPanel({ draftMpn: () => "LM1117" });
+    const input = fieldNamed(el, "MPN");
+    expect(input?.value).toBe("LM1117");
+    expect(input?.readOnly).toBe(true);
+    expect([...el.querySelectorAll("button")].some((b) => b.textContent === "Start draft")).toBe(false);
   });
 });

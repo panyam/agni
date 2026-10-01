@@ -69,6 +69,11 @@ func Promote(draft []byte, corpus fs.FS, prev *Index) (*Promoted, error) {
 	if err := protojson.Unmarshal(draft, spec); err != nil {
 		return nil, &PromoteError{Reason: fmt.Sprintf("the draft is not a PartSpec: %v", err)}
 	}
+	return PromoteSpec(spec, corpus, prev)
+}
+
+// PromoteSpec is Promote for a draft already parsed, as a store holding drafts as messages has it.
+func PromoteSpec(spec *parampb.PartSpec, corpus fs.FS, prev *Index) (*Promoted, error) {
 	if probs := param.Problems(spec); len(probs) > 0 {
 		what := "the draft (it names no mpn)"
 		if spec.GetMpn() != "" {

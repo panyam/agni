@@ -46,7 +46,8 @@ documents are independent concerns with independent cadences.
 `DatasheetService` is not in this table, because it is the datasheet producer's API (`agni.v1.dsapi`)
 rather than the engine's, and `agnids` serves it rather than `agni serve` (C34, agni issue 744). It
 carries the workbench's whole surface: the doc-IR and running the configured `--pdf2doc` producer
-(`GetDocument`, `ExtractDocIR`), the shared PartSpec draft (`GetPartSpec`, `SavePartSpec`), the
+(`GetDocument`, `ExtractDocIR`), the drafts keyed by MPN (`GetDraft`, `ListDrafts`, `SaveDraft`,
+`PublishDraft`, which need `agnids serve --corpus`), the
 per-author annotations (`GetAnnotations`, `SaveAnnotations`), and the folder tree (`ListMounts`,
 `ListDir`, which take the engine's workspace messages and answer exactly as `WorkspaceService` does).
 
