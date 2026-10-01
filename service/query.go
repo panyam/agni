@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -61,9 +62,20 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	}
 	resp, err := s.answer(ctx, d, q, req.GetQuery())
 	if err != nil {
+		if stopped(err) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	return resp, nil
+}
+
+// stopped reports whether an evaluation ended because its caller's context was cancelled or timed
+// out. The engine checks the context it is handed, and so do the walks, so a query nobody is waiting
+// for stops; reporting that as the caller's mistake (ErrInvalidArgument) would misdescribe it, and in
+// a set it would be repeated for every query left.
+func stopped(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // RunQueries answers every query of a set over one read of the design (agni issue 729). Each
@@ -99,6 +111,9 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 		}
 		resp, err := s.answer(ctx, d, q, nq.Query)
 		if err != nil {
+			if stopped(err) {
+				return nil, err
+			}
 			res.Error = err.Error()
 			continue
 		}
@@ -194,7 +209,7 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 // response's query. An error is the evaluator's (a malformed or unanswerable query), and the caller
 // decides what it means for the call.
 func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string) (*webapi.RunQueryResponse, error) {
-	rows, err := s.eval.Eval(q, d.base)
+	rows, err := s.eval.Eval(ctx, q, d.base)
 	if err != nil {
 		return nil, err
 	}

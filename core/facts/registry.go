@@ -11,6 +11,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/jaala/ns"
+	"github.com/panyam/jaala/stdlib"
 )
 
 // Globals for REGISTRATION, values for USE.
@@ -140,7 +141,8 @@ func WithModule(path, lang, text string) Option {
 	return WithModules(ns.Module{Path: path, Language: lang, Text: text})
 }
 
-// WithModules adds several modules as one option, for a library whose modules read each other.
+// WithModules adds several modules as one option, for a library whose modules read each other. A
+// module's Origin, the file it was read from, is what an error about it names.
 // Composition checks what every module reads against the whole vocabulary, so modules that refer
 // across one another must arrive together; added one option at a time, the first would be checked
 // before the member it reads exists. Each module's Members field is ignored, since the language
@@ -148,7 +150,7 @@ func WithModule(path, lang, text string) Option {
 func WithModules(ms ...ns.Module) Option {
 	return func(bd *builder) {
 		for _, m := range ms {
-			bd.modules = append(bd.modules, ns.Module{Path: m.Path, Language: m.Language, Text: m.Text})
+			bd.modules = append(bd.modules, ns.Module{Path: m.Path, Language: m.Language, Text: m.Text, Origin: m.Origin})
 		}
 	}
 }
@@ -248,7 +250,7 @@ func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
 	for _, name := range rest {
 		addRel(name)
 	}
-	if err := ns.StandardPredicates(v); err != nil {
+	if err := stdlib.Register(v); err != nil {
 		errs = append(errs, err)
 	}
 	for _, p := range b.predicates {
@@ -257,13 +259,13 @@ func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
 		}
 	}
 	for _, m := range b.modules {
-		if err := v.AddModule(m.Path, m.Language, m.Text); err != nil {
-			errs = append(errs, err)
+		if err := v.AddModule(m.Path, m.Language, m.Text, m.Origin); err != nil {
+			errs = append(errs, withOrigin(err))
 		}
 	}
 	if len(b.modules) > 0 && len(errs) == 0 {
 		if err := v.Check(); err != nil {
-			errs = append(errs, err)
+			errs = append(errs, withOrigin(err))
 		}
 	}
 	for _, path := range slices.Sorted(maps.Keys(b.docs)) {
@@ -273,6 +275,18 @@ func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
 	}
 	r.docs = b.docs
 	return v, errs
+}
+
+// withOrigin names the file a module error is about. The vocabulary reports a failure one module is
+// responsible for as an *ns.ModuleError carrying the module's origin, with a message that names only
+// the module's path, which several modules can share; the origin is what tells a reader which file
+// to fix.
+func withOrigin(err error) error {
+	var me *ns.ModuleError
+	if errors.As(err, &me) && me.Origin != "" {
+		return fmt.Errorf("%s: %w", me.Origin, err)
+	}
+	return err
 }
 
 // noCatalog is the Source an empty vocabulary starts from. It serves nothing and exists to say, in an

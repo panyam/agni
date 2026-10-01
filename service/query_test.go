@@ -963,3 +963,27 @@ func TestColumnKindsSurvivesARecursiveRule(t *testing.T) {
 		t.Fatal("columnKinds did not terminate on a recursive rule set")
 	}
 }
+
+// TestACancelledQueryStopsAsCancelled covers cancellation reaching a query (jaala v0.1.9 passes the
+// context through Eval and into the walks). A query whose caller has gone stops, and says so: it is
+// not the caller's mistake, so it must not come back as ErrInvalidArgument, and a set stops at it
+// rather than recording the same cancellation against every query left.
+func TestACancelledQueryStopsAsCancelled(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := svc.RunQuery(ctx, &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: "net.reaches(?a, ?b) => ?a, ?b"})
+	if !errors.Is(err, context.Canceled) || errors.Is(err, ErrInvalidArgument) {
+		t.Errorf("RunQuery with a cancelled context: err = %v, want context.Canceled and not invalid argument", err)
+	}
+	set := &webapi.QuerySet{Title: "t", Queries: []*webapi.NamedQuery{
+		{Name: "a", Query: "net.reaches(?a, ?b) => ?a, ?b"},
+		{Name: "b", Query: "component.net(?r, ?n) => ?r"},
+	}}
+	if _, err := svc.RunQueries(ctx, &webapi.RunQueriesRequest{Uri: "mount://m/x.edn", Set: set}); !errors.Is(err, context.Canceled) {
+		t.Errorf("RunQueries with a cancelled context: err = %v, want context.Canceled", err)
+	}
+	if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: "net.reaches(?a, ?b) => ?a, ?b"}); err != nil {
+		t.Errorf("the same query with a live context failed, so the cancelled run proves nothing: %v", err)
+	}
+}

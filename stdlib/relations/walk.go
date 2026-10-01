@@ -1,6 +1,7 @@
 package relations
 
 import (
+	"context"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -73,8 +74,8 @@ func init() {
 // The optional third argument binds the ACTUAL number of series crossings, not a budget. A radius is
 // written net.reaches(?n,?rn,?h), ?h<=2, and net.reaches(?n,?rn,2) means exactly two hops, missing
 // anything closer (docsite/content/reference/relations/net.reaches.md).
-func genReaches(src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) error) error {
-	return walk(RelReaches, src, args, func(r check.Reach, dst *ir.Net) (ns.Value, bool) {
+func genReaches(ctx context.Context, src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) error) error {
+	return walk(ctx, RelReaches, src, args, func(r check.Reach, dst *ir.Net) (ns.Value, bool) {
 		if len(args) <= 2 {
 			return ns.Value{}, false
 		}
@@ -88,8 +89,8 @@ func genReaches(src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) er
 // A path is bound and never TESTED against, which keeps it safe as a generator output. The value is
 // drawn from the walk, so the strings it can produce are bounded by the design, as the net names in
 // the first two arguments are, and evaluation stays finite.
-func genRoute(src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) error) error {
-	return walk(RelRoute, src, args, func(r check.Reach, dst *ir.Net) (ns.Value, bool) {
+func genRoute(ctx context.Context, src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) error) error {
+	return walk(ctx, RelRoute, src, args, func(r check.Reach, dst *ir.Net) (ns.Value, bool) {
 		return ns.Value{S: r.RouteLine(dst)}, true
 	}, emit)
 }
@@ -103,7 +104,7 @@ func genRoute(src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) erro
 //
 // The name index is built once per fact base (Env.Memo) rather than per call, because the walk runs
 // once per binding of the atom calling it and a per-call index would make it quadratic.
-func walk(rel string, src ns.Source, args []ns.Arg, third func(r check.Reach, dst *ir.Net) (ns.Value, bool), emit func([]ns.Value, []string) error) error {
+func walk(ctx context.Context, rel string, src ns.Source, args []ns.Arg, third func(r check.Reach, dst *ir.Net) (ns.Value, bool), emit func([]ns.Value, []string) error) error {
 	env := facts.EnvOf(src)
 	if env == nil || env.Model == nil {
 		return nil // spec library mode: no design topology, so the walk yields nothing
@@ -126,6 +127,11 @@ func walk(rel string, src ns.Source, args []ns.Arg, third func(r check.Reach, ds
 	for name, start := range starts {
 		if start == nil {
 			continue
+		}
+		// A query's context reaches the walk, so a cancelled or timed-out query stops between start
+		// nets rather than finishing an all-pairs walk nobody is waiting for.
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		cites[0] = rel + " from " + name
 		r := m.Reach(start, topologyReachHops)

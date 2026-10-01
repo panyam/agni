@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestNoCatalogSaysSo(t *testing.T) {
 	}
 
 	q := MustParse(`component.net(?r,?n) => ?r`)
-	_, err = Naive{}.Eval(q, NewBaseFrom(bare, check.NewModel(chainDesign())))
+	_, err = Naive{}.Eval(context.Background(), q, NewBaseFrom(bare, check.NewModel(chainDesign())))
 	if err == nil {
 		t.Fatal("evaluating against an uninstalled fact base returned no error; a rule reads that as a clean pass")
 	}
@@ -40,7 +41,7 @@ func TestNoCatalogSaysSo(t *testing.T) {
 // still gets its typo hint rather than the missing-catalog message.
 func TestUnknownRelationStillSuggests(t *testing.T) {
 	q := MustParse(`component_on_net(?r,?n) => ?r`)
-	_, err := Naive{}.Eval(q, NewBase(check.NewModel(chainDesign())))
+	_, err := Naive{}.Eval(context.Background(), q, NewBase(check.NewModel(chainDesign())))
 	if err == nil {
 		t.Fatal("a mistyped relation must error")
 	}

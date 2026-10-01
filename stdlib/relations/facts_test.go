@@ -1,6 +1,7 @@
 package relations
 
 import (
+	"context"
 	"reflect"
 	"slices"
 	"sort"
@@ -1226,7 +1227,7 @@ func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
 	base := query.NewBase(m)
 
-	rows, err := (query.Naive{}).Eval(
+	rows, err := (query.Naive{}).Eval(context.Background(),
 		query.MustParse(`param.pin(?mpn, "vccb", ?name, ?fn) => ?mpn, ?name, ?fn`), base)
 	if err != nil {
 		t.Fatalf("param.pin query errored: %v", err)
@@ -1242,7 +1243,7 @@ func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 	}
 
 	// Six positional args, and the two that share the widened tuple must not cross.
-	rows, err = (query.Naive{}).Eval(
+	rows, err = (query.Naive{}).Eval(context.Background(),
 		query.MustParse(`param.pin_range(?mpn, "vccb", ?sym, "recommended_operating", ?min, ?max) => ?sym, ?min, ?max`), base)
 	if err != nil {
 		t.Fatalf("param.pin_range query errored: %v", err)
@@ -1262,7 +1263,7 @@ func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 
 	// The kind must actually discriminate, so filtering to absolute_max returns the other row, not
 	// this one.
-	rows, err = (query.Naive{}).Eval(
+	rows, err = (query.Naive{}).Eval(context.Background(),
 		query.MustParse(`param.pin_range(?mpn, "vcca", ?sym, "absolute_max", ?min, ?max) => ?max`), base)
 	if err != nil {
 		t.Fatalf("param.pin_range absolute_max query errored: %v", err)

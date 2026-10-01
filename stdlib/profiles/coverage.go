@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"context"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -111,6 +112,6 @@ func hostDeclares(base *query.Base, p Profile) bool {
 	}
 	q := query.Build(p.hostRules(),
 		[]query.Literal{query.Pos(query.Rel("host", query.V("ref")))}, query.V("ref"))
-	rows, err := query.Default.Eval(q, base)
+	rows, err := query.Default.Eval(context.Background(), q, base)
 	return err == nil && len(rows) > 0
 }

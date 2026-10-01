@@ -62,10 +62,10 @@ func TestABrokenProjectModuleNamesItsFile(t *testing.T) {
 		"house.dl": "broken(?n: net) :- net.no_such_relation(?n);\n",
 	})
 	err := runQueryErr(t, "designs/board", "entity(?n, \"net\") => ?n")
-	// The module is named by its path, which is its file's name, and the directory it was read from
-	// by agni, so together they locate lib/house.dl (panyam/jaala#30 would name the file outright).
-	if err == nil || !strings.Contains(err.Error(), "no_such_relation") || !strings.Contains(err.Error(), `module "house"`) || !strings.Contains(err.Error(), "/lib") {
-		t.Errorf("err = %v, want the broken module refused, naming its module and library directory", err)
+	// The vocabulary reports which module failed and where it came from (panyam/jaala#30, v0.1.8),
+	// so the error names the file to fix, not only the module path several files could share.
+	if err == nil || !strings.Contains(err.Error(), "no_such_relation") || !strings.Contains(err.Error(), "/lib/house.dl") {
+		t.Errorf("err = %v, want the broken module refused, naming lib/house.dl", err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -42,7 +43,7 @@ func TestPinRelationsQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rows, err := Naive{}.Eval(q, b)
+	rows, err := Naive{}.Eval(context.Background(), q, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func TestEsdRatedQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rows, err := Naive{}.Eval(q, b)
+	rows, err := Naive{}.Eval(context.Background(), q, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +120,7 @@ func TestDiagnosticRelationsQuery(t *testing.T) {
 	}
 	b := NewBase(check.NewModel(d))
 
-	rc, err := Naive{}.Eval(MustParse(`reader.ref_des_collision(?r) => ?r`), b)
+	rc, err := Naive{}.Eval(context.Background(), MustParse(`reader.ref_des_collision(?r) => ?r`), b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +128,7 @@ func TestDiagnosticRelationsQuery(t *testing.T) {
 		t.Fatalf("reader.ref_des_collision = %+v, want one (U1)", rc)
 	}
 
-	pc, err := Naive{}.Eval(MustParse(`reader.pin_net_conflict(?r, ?p, ?net) => ?net`), b)
+	pc, err := Naive{}.Eval(context.Background(), MustParse(`reader.pin_net_conflict(?r, ?p, ?net) => ?net`), b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +166,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"BUCKPART": spec}))
 
 	// (1) the relation surfaces the citation columns (doc title / page / section).
-	rows, err := Naive{}.Eval(MustParse(`param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?doc, ?page, ?section`), NewBase(m))
+	rows, err := Naive{}.Eval(context.Background(), MustParse(`param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?doc, ?page, ?section`), NewBase(m))
 	if err != nil {
 		t.Fatal(err)
 	}

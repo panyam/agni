@@ -1,6 +1,7 @@
 package relations_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -41,7 +42,7 @@ func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 		Nets: []*ir.Net{{Name: "N1", Prov: &ir.Provenance{SourceFile: "t"},
 			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}},
 	}
-	rows, err := (query.Naive{}).Eval(query.MustParse(`component.net(?r,?n) => ?r, ?n`), query.NewBase(check.NewModel(d)))
+	rows, err := (query.Naive{}).Eval(context.Background(), query.MustParse(`component.net(?r,?n) => ?r, ?n`), query.NewBase(check.NewModel(d)))
 	if err != nil {
 		t.Fatalf("query over a built-in relation errored: %v", err)
 	}

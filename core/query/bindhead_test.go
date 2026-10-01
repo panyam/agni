@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -58,7 +59,7 @@ func TestTheDefaultEvaluatorPlansAnUnboundWalk(t *testing.T) {
 		guardFirst := io + `esd_ok(?n) :- io(?n), ` + walk + `, component.net(?t, ?rn), component.class(?t, "tvs"); esd_ok(?n) => ?n`
 		cost := func(ev Evaluator, text string) (int64, int) {
 			b := NewBase(m)
-			rows, err := ev.Eval(MustParse(text), b)
+			rows, err := ev.Eval(context.Background(), MustParse(text), b)
 			if err != nil {
 				t.Fatalf("%s: %v", text, err)
 			}

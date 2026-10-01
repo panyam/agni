@@ -85,6 +85,10 @@ A signal is found by net name, and declares exactly one of these:
 | `glob` | `glob: ETH_SW*_A_H` | the identity is in the head of the name and the tail is not distinctive. |
 | `regex` | `regex: ^ETH_SW\d+_P\d+_.*_H$` | multi-instance naming a glob cannot express. RE2, not auto-anchored, so anchor it yourself. |
 
+A `glob` follows the same SQLite GLOB rules as `str.glob` in a query: `*` and `?` as usual, and
+`[...]` a character class, so a literal `[` in a net name is written `[[]` (see
+[Querying](../querying/#find-something-by-name)).
+
 Prefix and suffix are conjunctive and count as one form together. Declaring two forms on one
 signal is an error, because a signal that can be found two ways has no single convention to
 enforce.
