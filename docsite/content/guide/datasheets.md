@@ -80,14 +80,35 @@ agnids promote datasheets/ti/LM1117.partspec.json --to params/
 
 Promotion also records the spec in the corpus's index, `corpus.index.json`, which maps each MPN to
 its file and a hash of what was validated, under a generation that advances on every change. The
-files stay the source of truth and checks never read the index. It is how the datasheet service will
-answer a lookup without reading the whole corpus (agni issue 749). After editing a published spec by
-hand, rebuild it, and let a corpus repository's CI catch an edit that skipped the rebuild:
+files stay the source of truth. After editing a published spec by hand, rebuild it, and let a
+corpus repository's CI catch an edit that skipped the rebuild:
 
 ```
 agnids index params/
 agnids index params/ --check
 ```
+
+### Serving a shared corpus
+
+A project's own `params/` is read straight from disk, which suits the few dozen parts a project
+seeds. A corpus shared across projects is served instead: `agnids serve --corpus <dir>` answers
+lookups from its index, reading only the parts asked for, and `agni serve --params-url` reads through
+it.
+
+```
+agnids serve --addr :8090 --corpus params/
+agni serve --mount boards=~/boards --params-url http://localhost:8090
+```
+
+Each request fetches its design's parts in one batch. A spec promoted into the corpus while both run
+reaches requests within a few seconds, with no restart, because the server re-checks the index
+generation. If the corpus cannot be reached, a check fails with an error naming it rather than
+treating every part as unseeded. A served corpus must be indexed, and one whose index no longer
+matches its files is refused until `agnids index` is run over it, because serving a file the index did
+not validate would hand out a spec nobody checked.
+
+A project's own `params/` still replaces the shared corpus for that project's designs, as it replaces
+`--params`.
 
 ## Where to go next
 

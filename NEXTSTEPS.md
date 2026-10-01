@@ -13,14 +13,15 @@ Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
 
 ## Open, ranked
 
-1. **The datasheet workstream: #749 PR 2.** PR 1 put promotion and the corpus index in the
-   datasheet module (`datasheet/corpus`, `agnids promote`, `agnids index [--check]`). PR 2 is the
-   engine's read side through the contract: a `GetPartSpec(mpn)` rpc in the ROOT protos, served by
-   agnids from its index, and `agni serve --params-url` with a caching provider that re-reads when
-   the index generation moves. A project's own `params/` keeps `LoadSet`. Measured: `LoadSet` costs
-   about 0.6s and 48MB per 10k small specs, linear. #786 (`make setup` prefetches the wrong cache) is
-   small and can ride along. The first release after #744 publishes `agnids` for the first time, so
-   confirm an anonymous pull of it then.
+1. **The datasheet workstream: drafts by MPN (#749 step 2).** Step 1 put the read side in place:
+   `PartSpecService` in the root protos, `agnids serve --corpus`, `agni serve --params-url` over a
+   caching `param.Remote` that prefetches per request. Next is the editing side: `dsapi`'s
+   `GetPartSpec`/`SavePartSpec` become `GetDraft`/`SaveDraft`/`PublishDraft`, keyed by MPN and citing
+   their documents, FS drafts at `drafts/<MPN>.partspec.json`, the workbench lists a document's
+   drafts, and `agnids promote` calls `PublishDraft`, with a one-off migration of per-document drafts.
+   Open question, not yet decided: should a project's `params/` win per MPN over a shared corpus
+   rather than wholesale (`Overlay.SpecsOr`). #786 can ride along. The first release after #744
+   publishes `agnids` for the first time, so confirm an anonymous pull of it then.
 2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
    deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
    The per-rung plan is the latest comment on the issue.

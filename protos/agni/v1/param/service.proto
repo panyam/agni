@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package agni.v1.param;
+
+import "agni/v1/param/param.proto";
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/param";
+
+// PartSpecService is the READ side of a published PartSpec corpus, and part of the engine's contract
+// beside PartSpec itself (agni issue 749). It answers which spec is CURRENT for a part number and
+// nothing else. Drafts, publishing and history belong to whoever keeps the corpus (the datasheet
+// service's own API) and never appear here, so a reader can only ever see a published, validated
+// spec.
+//
+// The engine consumes it through param.ParamProvider. A design asks about a few hundred part numbers
+// at once, so the lookup is batched, and every answer carries the corpus generation, which a caching
+// reader compares to learn that what it holds is stale.
+service PartSpecService {
+  // BatchGetPartSpecs returns the current spec for each part number that has one. A part number
+  // with no published spec is simply absent from the answer, which is not an error, because most
+  // parts on a board are never seeded. Matching is case-insensitive and never fuzzy, as
+  // param.ParamSet.Lookup matches.
+  rpc BatchGetPartSpecs(BatchGetPartSpecsRequest) returns (BatchGetPartSpecsResponse);
+
+  // GetGeneration returns the corpus generation alone, so a cache can check it is current without
+  // fetching any spec.
+  rpc GetGeneration(GetGenerationRequest) returns (GetGenerationResponse);
+}
+
+message BatchGetPartSpecsRequest {
+  repeated string mpns = 1;
+}
+
+message BatchGetPartSpecsResponse {
+  // specs holds one current spec per requested part number that has one, in no particular order;
+  // each is keyed by its own mpn field.
+  repeated PartSpec specs = 1;
+  // generation is the corpus generation the answer was read at. It advances whenever anything in the
+  // corpus changes and never goes backwards.
+  uint64 generation = 2;
+}
+
+message GetGenerationRequest {}
+
+message GetGenerationResponse {
+  uint64 generation = 1;
+}

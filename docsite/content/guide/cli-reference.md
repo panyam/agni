@@ -350,6 +350,8 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--web-dir <dir>` | the viewer's OWN assets, not designs (default `web`; then `web_dir` in the nearest `agni.yaml`, then `AGNI_WEB_DIR`) |
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
 | `--theme <name>` | render palette: `default` or `dark` |
+| `--params <dir>` | a directory of published PartSpecs every design is checked against, unless its project has its own `params/` |
+| `--params-url <url>` | read published PartSpecs from a datasheet service instead, such as `agnids serve --corpus` (see [Datasheets](../datasheets/#serving-a-shared-corpus)); not with `--params` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 | `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
 

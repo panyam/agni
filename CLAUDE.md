@@ -305,7 +305,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   (`datasheet/corpus`, agni 749): promote writes `corpus.index.json` (MPN, file, hash, a generation)
   beside the specs, `agnids index [--check]` rebuilds or verifies it, and both build from
   `param.LoadCorpus`, the walk `LoadSet` makes, so the index and every eager load agree. The files
-  are the source of truth; no check reads the index.
+  are the source of truth; no check reads the index. **The engine reaches a SHARED corpus only
+  through the contract's `PartSpecService`** (`protos/agni/v1/param/service.proto`): `agnids serve
+  --corpus` answers it from the index, and `agni serve --params-url` reads it through `param.Remote`.
+  `Lookup` returns no error, so a remote provider is a `param.Prefetcher` and `service.BuildModel`
+  fetches the design's MPNs there, where an unreachable corpus is `ErrUnavailable` instead of every
+  part reading as unseeded. A new model-building path that skips `Prefetch` gets no datasheet tier.
 - **`emit --format edif` writes for a reader that is NOT ours, and that is a stricter target than the
   round trip.** Our reader resolves references after parsing the whole file, accepts any atom as an
   identifier, and reads a port reference as a pin designator when nothing maps it, so a writer leaning

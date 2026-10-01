@@ -30,6 +30,7 @@ var docFlagExceptions = map[string]string{
 	"--dump":             "hack/fixture_copies_check.sh",
 	"--noEmit":           "tsc",
 	"--pdf2doc":          "agnids, the datasheet service built from the datasheet module (agni issue 744)",
+	"--corpus":           "agnids, the datasheet service, a separate binary: it names the published corpus `agnids serve` answers PartSpecService from (agni issue 749)",
 	"--no":               "a line-wrapped flag of another tool, not a flag in itself",
 }
 
