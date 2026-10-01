@@ -438,10 +438,6 @@ name holding a quote is asked about exactly. Over the API they are `RunQueryRequ
 the Python client builds them with `agni.bindings({"ref": "U1"})`. The `--format markdown` and `html`
 views print them under the query, because the query text alone no longer states the whole question.
 
-One limit comes from the engine. A variable that appears only inside a `not` is refused even when it
-is bound (panyam/jaala#61). Give it something positive to range over first, as in
-`net.name(?n), not net.rail(?n)`.
-
 ### Ask many questions at once (query sets)
 
 An audit is usually a workbook rather than a single question: which nets have no test point, how
