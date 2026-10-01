@@ -329,7 +329,7 @@ func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjec
 // catalog rather than another project's config. Making that ordinary case an error would teach
 // callers to ignore the failure path.
 func (s *ProjectService) ResolveDesign(ctx context.Context, req *webapi.ResolveDesignRequest) (*webapi.ResolveDesignResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}

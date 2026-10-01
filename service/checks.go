@@ -63,7 +63,7 @@ func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamPro
 // It validates before returning, so a malformed config is reported once, here, naming what is wrong,
 // rather than on every run that sends it.
 func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetNamingConventionRequest) (*webapi.GetNamingConventionResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetN
 	}
 	cfg, err := s.conventions.Convention(ctx, u)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	// Compile both halves now. naming.Load only parses, and a bad pattern or an unknown component
 	// class would otherwise fail on every later request that sends this config.
@@ -133,7 +133,7 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 // catalog. Each finding's sheets locate its subject in the design's geometry (WS9-024), and a
 // design with no resolvable geometry gets findings without sheets rather than an error.
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
@@ -181,13 +181,13 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 // `fires` entries come first, then the `pending` ones, which the client reconciles against
 // CheckDesign.
 func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpectationsRequest) (*webapi.GetExpectationsResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
 	e, err := s.loader.Expectations(ctx, u)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	resp := &webapi.GetExpectationsResponse{HasSidecar: e != nil}
 	if e != nil {
@@ -200,7 +200,7 @@ func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpec
 // MPN resolves to a seeded PartSpec with that spec's parameters. A nil provider or an unseeded design
 // yields an empty list rather than an error. The join needs no board, so none is passed.
 func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetComponentParamsRequest) (*webapi.GetComponentParamsResponse, error) {
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}

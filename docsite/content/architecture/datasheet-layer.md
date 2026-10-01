@@ -337,7 +337,7 @@ access (`TableByID`), grid access (`CellAt`, where a merged cell appears once at
 full-text source (`PageText`), and `FindTableForProv` to resolve a locator back to a table. **Tier 2**
 is deferred to the extraction store, so "not extracted yet" is searchable rather than a dead end.
 
-Running `tools/pdf2doc` (docling 2.x) over two real datasheets taught three things. Structure is
+Running `datasheet/tools/pdf2doc` (docling 2.x) over two real datasheets taught three things. Structure is
 solid, with every table validating for grid consistency and hash match, including a 32x8 table. Table
 titles come back empty, because datasheet tables are headed rather than captioned, so title
 attachment is recipe-layer work. And symbol text needs normalization, since subscripts arrive

@@ -13,7 +13,7 @@ import (
 	"github.com/panyam/agni/mounts"
 )
 
-// osDocExtractor is the OS-backed service.DocExtractor. It shells out to the doc-IR producer named
+// osDocExtractor is the OS-backed dsservice.DocExtractor. It shells out to the doc-IR producer named
 // by --pdf2doc (pdf2doc/docling) to write a datasheet's <stem>.doc.textproto sibling, and an empty
 // command disables extraction. Docling is external and CI-excluded, so the engine never bundles it.
 // It runs the configured argv with the resolved PDF and output paths appended, in-boundary, so the

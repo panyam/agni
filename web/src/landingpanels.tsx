@@ -17,9 +17,12 @@ import { projectClient } from "./api.js";
 import type { Design } from "./gen/agni/v1/webapi/project_pb.js";
 
 // openUrl is where an artifact reopens, by kind. Both halves go through their page's own URL
-// builder rather than assembling a path here, so this cannot drift from what those pages parse.
-export function openUrl(kind: RecentKind, mount: string, path: string): string {
-  return kind === "datasheet" ? dsToUrl({ mount, path }) : locationToUrl({ ...emptyLocation(), mount, path });
+// builder rather than assembling a path here, so this cannot drift from what those pages parse. A
+// datasheet reopens on the datasheets workbench, a separate service at datasheetsUrl (agni issue 744).
+export function openUrl(kind: RecentKind, mount: string, path: string, datasheetsUrl = ""): string {
+  return kind === "datasheet"
+    ? datasheetsUrl + dsToUrl({ mount, path })
+    : locationToUrl({ ...emptyLocation(), mount, path });
 }
 
 // ago words an age the way someone reading a list scans it. Coarse, because the question is "was
@@ -34,10 +37,10 @@ export function ago(then: number, now: number): string {
   return days === 1 ? "yesterday" : `${days}d ago`;
 }
 
-function RecentRow(props: { entry: Recent; now: number }) {
+function RecentRow(props: { entry: Recent; now: number; datasheetsUrl: string }) {
   return (
     <li class="ld-row">
-      <a class="ld-link" href={openUrl(props.entry.kind, props.entry.mount, props.entry.path)}>
+      <a class="ld-link" href={openUrl(props.entry.kind, props.entry.mount, props.entry.path, props.datasheetsUrl)}>
         <span class="ld-label">{props.entry.label}</span>
         <span class="ld-where">
           {props.entry.mount}/{props.entry.path}
@@ -49,8 +52,11 @@ function RecentRow(props: { entry: Recent; now: number }) {
   );
 }
 
-function Recents(props: { now: number }) {
-  const [entries, setEntries] = createSignal<Recent[]>(loadRecents());
+// Recents lists what this browser opened. A datasheet entry shows only when the server names where
+// the workbench is served, since without that it would link to a page this server does not have.
+function Recents(props: { now: number; datasheetsUrl: string }) {
+  const visible = (rs: Recent[]) => rs.filter((r) => r.kind !== "datasheet" || props.datasheetsUrl !== "");
+  const [entries, setEntries] = createSignal<Recent[]>(visible(loadRecents()));
   return (
     <section class="ld-section">
       <h2>
@@ -69,10 +75,14 @@ function Recents(props: { now: number }) {
       </h2>
       <Show
         when={entries().length > 0}
-        fallback={<p class="ld-empty">Nothing opened yet. Start from Designs or Datasheets above.</p>}
+        fallback={
+          <p class="ld-empty">
+            Nothing opened yet. Start from Designs{props.datasheetsUrl ? " or Datasheets" : ""} above.
+          </p>
+        }
       >
         <ul class="ld-list">
-          <For each={entries()}>{(e) => <RecentRow entry={e} now={props.now} />}</For>
+          <For each={entries()}>{(e) => <RecentRow entry={e} now={props.now} datasheetsUrl={props.datasheetsUrl} />}</For>
         </ul>
       </Show>
     </section>
@@ -138,8 +148,8 @@ function Projects() {
 
 // recentsIsland mounts the Recent list. `now` is passed in rather than read here so the page owns
 // the one clock read and a test states the age it is asserting.
-export function recentsIsland(el: HTMLElement, eventBus: EventBus | null, now: number): SolidIsland {
-  return new SolidIsland("landing-recents", el, () => <Recents now={now} />, eventBus);
+export function recentsIsland(el: HTMLElement, eventBus: EventBus | null, now: number, datasheetsUrl = ""): SolidIsland {
+  return new SolidIsland("landing-recents", el, () => <Recents now={now} datasheetsUrl={datasheetsUrl} />, eventBus);
 }
 
 // projectsIsland mounts the declared-designs list, which renders nothing when the server has no

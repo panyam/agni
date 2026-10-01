@@ -23,7 +23,6 @@ import (
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/render"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
-	"github.com/panyam/agni/gen/go/agni/v1/dsapi/dsapiconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/projects"
@@ -46,7 +45,7 @@ func serveCmd() *cobra.Command {
 	var addr string
 	var mountRoot string
 	var nativeTools []string
-	var pdf2docCmd string
+	var datasheetsURL string
 	var theme string
 	var paramsDir, profilePath, intentPath, conventions string
 	var reviewStorePath string
@@ -63,7 +62,7 @@ func serveCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runViewer(cmd, viewerOpts{
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
-				pdf2docCmd: pdf2docCmd, theme: theme, paramsDir: paramsDir,
+				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir,
 				profilePath: profilePath, intentPath: intentPath, conventions: conventions,
 				reviewStorePath: reviewStorePath,
 			})
@@ -78,7 +77,7 @@ func serveCmd() *cobra.Command {
 			"what the last two are for")
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
-	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")
+	c.Flags().StringVar(&datasheetsURL, "datasheets-url", "", "where the datasheets workbench is served, e.g. http://host:8090 for a running `agnids serve`; the landing page links its Datasheets card and datasheet recents there, and hides both when this is empty")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
@@ -98,7 +97,6 @@ type viewerOpts struct {
 	webDir      string
 	mountRoot   string
 	nativeTools []string
-	pdf2docCmd  string
 	theme       string
 	paramsDir   string
 	profilePath string
@@ -121,12 +119,15 @@ type viewerOpts struct {
 	// requireViewer refuses to start without the viewer's assets, for `open`, which exists to show a
 	// page. `serve` leaves it false and may run the API alone (resolveServeAssets).
 	requireViewer bool
+
+	// datasheetsURL is where the datasheets workbench is served, for the landing page's links.
+	datasheetsURL string
 }
 
 // runViewer builds and runs the viewer server for both `serve` and `open`.
 func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	addr, webDir, mountRoot := o.addr, o.webDir, o.mountRoot
-	nativeTools, pdf2docCmd, theme := o.nativeTools, o.pdf2docCmd, o.theme
+	nativeTools, theme := o.nativeTools, o.theme
 	paramsDir, profilePath, intentPath, conventions := o.paramsDir, o.profilePath, o.intentPath, o.conventions
 	reviewStorePath := o.reviewStorePath
 	if theme == "" {
@@ -144,7 +145,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		if err != nil {
 			return err
 		}
-		assets = webAssets{dir: dir, source: source, viewer: true, datasheetsErr: checkDatasheetAssets(dir)}
+		assets = webAssets{dir: dir, source: source, viewer: true}
 	} else {
 		var err error
 		if assets, err = resolveServeAssets(webDir, os.Getenv); err != nil {
@@ -203,7 +204,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		enabledNative[t] = true
 	}
 	nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
-	wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(&osWorkspace{mounts: mounts})))
+	wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(osWorkspace(mounts))))
 	mux.Handle(wsPath, wsHandler)
 	// ProjectService (agni issue 170) resolves the project/design descriptors in the mounts and
 	// needs no flag. A mount with no descriptors resolves to nothing, so one project's config never
@@ -254,8 +255,6 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	mux.Handle(ckPath, ckHandler)
 	diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
 	mux.Handle(diffPath, diffHandler)
-	dtPath, dtHandler := dsapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
-	mux.Handle(dtPath, dtHandler)
 	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)))
 	mux.Handle(qPath, qHandler)
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
@@ -274,20 +273,13 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// The per-relation fact-doc cards (WS14-005), read-only and image-only like the rule docs, so
 	// the query panel resolves a relation Detail's image refs.
 	mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
-	// The datasheets workbench renders the source PDF with pdf.js, so its raw bytes are served
-	// from the mounts. The prefix is more specific than the /datasheets/ page, so ServeMux routes
-	// /datasheets/raw/... here.
-	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(mounts)))
 	mux.Handle("GET /healthz", healthHandler())
 	switch {
 	case !assets.viewer:
-		mux.Handle("/", apiOnlyHandler([]string{wsPath, prPath, dsPath, ckPath, diffPath, dtPath, qPath, rvPath}))
+		mux.Handle("/", apiOnlyHandler([]string{wsPath, prPath, dsPath, ckPath, diffPath, qPath, rvPath}))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
 	default:
-		if assets.datasheetsErr != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "note: %v\n", assets.datasheetsErr)
-		}
-		registerPages(newPageApp(dir, &serveApp{mounts: mounts}), mux, assets.datasheetsErr)
+		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/")}), mux)
 	}
 
 	srv := &http.Server{Addr: addr, Handler: mux}
@@ -465,22 +457,18 @@ func healthHandler() http.Handler {
 	})
 }
 
-// webAssets is what a resolved --web-dir can serve. The viewer group (landing, browse and design
-// pages) and the datasheets workbench are separate because the workbench carries the pdf.js bundle,
-// about two thirds of the compressed assets, and is a tool for building a parameter corpus rather
-// than for looking at a board (agni issue 735).
+// webAssets is what a resolved --web-dir can serve: the viewer's pages, or nothing at all. The
+// datasheets workbench is not here; it is the datasheet module's agnids (agni issue 744).
 type webAssets struct {
 	dir    string
 	source string // where dir came from, as resolveWebDir reports it
 	// viewer is false only for API-only serving, when nothing named a web dir and the default is absent.
 	viewer bool
-	// datasheetsErr says why the workbench is not served, and is nil when it is.
-	datasheetsErr error
 }
 
 // resolveWebAssets resolves --web-dir through its fallback chain and requires the VIEWER to be
 // servable from what it found. It returns the directory and where the value came from, so a caller
-// can narrate the provenance. The datasheets workbench is not required here; see resolveServeAssets.
+// can narrate the provenance.
 //
 // `--server self` calls it BEFORE the command it wraps does its work, so a run that cannot serve
 // fails while its artifact is still unwritten, as a taken port does (agni issue 637).
@@ -513,7 +501,7 @@ func resolveServeAssets(flag string, getenv func(string) string) (webAssets, err
 	if err != nil {
 		return webAssets{}, err
 	}
-	return webAssets{dir: dir, source: source, viewer: true, datasheetsErr: checkDatasheetAssets(dir)}, nil
+	return webAssets{dir: dir, source: source, viewer: true}, nil
 }
 
 // checkWebAssets verifies dir holds the viewer (its templates plus the built esbuild bundle) before
@@ -534,18 +522,6 @@ func checkWebAssets(dir string) error {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "static", "browse.js")); err != nil {
 		return fmt.Errorf("%q has no static/browse.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
-	}
-	return nil
-}
-
-// checkDatasheetAssets reports whether the extraction workbench (WS13-006) can be served: its page,
-// its bundle, and the standalone pdf.js worker the page loads. A missing one leaves the rest of the
-// viewer serving, and /datasheets/ answers with this error rather than a broken page.
-func checkDatasheetAssets(dir string) error {
-	for _, f := range []string{"templates/DatasheetsPage.html", "static/datasheets.js", "static/pdf.worker.js"} {
-		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(f))); err != nil {
-			return fmt.Errorf("%q has no %s, so the datasheets workbench is off: build it with `cd %s && pnpm build`", dir, f, dir)
-		}
 	}
 	return nil
 }
@@ -572,13 +548,6 @@ func apiOnlyHandler(services []string) http.Handler {
 			w.WriteHeader(http.StatusNotFound)
 		}
 		io.WriteString(w, body)
-	})
-}
-
-// unavailableHandler answers a page space whose assets are absent, naming what is missing.
-func unavailableHandler(err error) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, err.Error(), http.StatusNotFound)
 	})
 }
 
@@ -638,3 +607,7 @@ func themeNames() []string {
 	sort.Strings(names)
 	return names
 }
+
+// osWorkspace is the OS-backed listing over a mount table. It is a function rather than a call at the
+// use site because runViewer's local mount table shadows the mounts package there.
+func osWorkspace(ms []mounts.Mount) service.Workspace { return mounts.NewWorkspace(ms) }

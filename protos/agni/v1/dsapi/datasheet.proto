@@ -6,6 +6,7 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/dsapi";
 
 import "agni/v1/doc/doc.proto";
 import "agni/v1/param/param.proto";
+import "agni/v1/webapi/workspace.proto";
 
 // This file: DatasheetService, the datasheet PRODUCER's API, in a package of its own rather than
 // agni.v1.webapi so the engine's API carries no producer message (C34, agni issue 744). It is the read side of the extraction workbench (the /datasheets
@@ -23,6 +24,13 @@ import "agni/v1/param/param.proto";
 // shared WorkspaceService (mounts are the security boundary); this service only resolves and
 // returns doc-IR for a named datasheet.
 service DatasheetService {
+  // ListMounts and ListDir are the workbench's folder tree. They take and return the engine's own
+  // workspace messages and answer exactly as WorkspaceService does, because the datasheet service
+  // lists through the same mounts.Workspace; they are here so the datasheet service serves its whole
+  // page from its own API when it is hosted apart from the engine (agni issue 744).
+  rpc ListMounts(agni.v1.webapi.ListMountsRequest) returns (agni.v1.webapi.ListMountsResponse);
+  rpc ListDir(agni.v1.webapi.ListDirRequest) returns (agni.v1.webapi.ListDirResponse);
+
   // GetDocument returns the doc-IR for the datasheet at (mount, path). path names the source
   // document (the PDF the browser renders); the server resolves the datasheet's sibling doc-IR.
   // When none has been derived yet, extracted is false and document is unset — a normal state,
@@ -30,7 +38,8 @@ service DatasheetService {
   rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
 
   // GetPartSpec returns the datasheet's saved PartSpec (the <stem>.partspec.json sibling, the
-  // shared, param.LoadSet-ready extraction) plus a version token for optimistic concurrency.
+  // shared working DRAFT, which no check reads until `agni params promote` validates it into a
+  // corpus) plus a version token for optimistic concurrency.
   // found is false (and version empty) when nothing has been saved yet. One PartSpec is shared
   // per datasheet across users; the workbench's per-user UI state (drawn regions, type tags) is
   // NOT here — it lives in each client's localStorage so users do not clobber each other's view.

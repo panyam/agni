@@ -24,7 +24,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 	mustWrite(t, filepath.Join(root, ".hidden.edn")) // dotfile
 	mustWrite(t, filepath.Join(root, "sub", "inner.xml"))
 
-	svc := service.NewWorkspaceService(&osWorkspace{mounts: []mounts.Mount{{Name: "m", Root: root}}})
+	svc := service.NewWorkspaceService(mounts.NewWorkspace([]mounts.Mount{{Name: "m", Root: root}}))
 	list := func(mount, path string) (*webapi.ListDirResponse, error) {
 		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr(mount, path)})
 		if err != nil {
@@ -150,7 +150,7 @@ func mustWrite(t *testing.T, p string) {
 }
 
 func TestWorkspaceServiceListMounts(t *testing.T) {
-	svc := service.NewWorkspaceService(&osWorkspace{mounts: []mounts.Mount{{Name: "a", Root: "/x"}, {Name: "b", Root: "/y"}}})
+	svc := service.NewWorkspaceService(mounts.NewWorkspace([]mounts.Mount{{Name: "a", Root: "/x"}, {Name: "b", Root: "/y"}}))
 	resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{})
 	if err != nil {
 		t.Fatalf("ListMounts errored: %v", err)
@@ -172,11 +172,11 @@ func TestWorkspaceServiceListMountsPrunesEmptyMounts(t *testing.T) {
 	mustMkdir(t, filepath.Join(root, "ds"))
 	mustWrite(t, filepath.Join(root, "ds", "txb0104.pdf"))
 
-	svc := service.NewWorkspaceService(&osWorkspace{mounts: []mounts.Mount{
+	svc := service.NewWorkspaceService(mounts.NewWorkspace([]mounts.Mount{
 		{Name: "boards", Root: filepath.Join(root, "boards")},
 		{Name: "ds", Root: filepath.Join(root, "ds")},
 		{Name: "gone", Root: filepath.Join(root, "no-such-dir")},
-	}})
+	}))
 	resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DESIGN}})
 	if err != nil {
 		t.Fatal(err)

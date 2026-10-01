@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/panyam/agni/datasheet/dsservice"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/mounts"
-	"github.com/panyam/agni/service"
 )
 
 func TestPartSpecSibling(t *testing.T) {
@@ -30,7 +30,7 @@ func TestOsPartSpecStoreCAS(t *testing.T) {
 	}
 
 	// A first write must assert absence (empty base); a non-empty base conflicts.
-	if _, err := st.Save(ctx, mustURI("m", "d.pdf"), &parampb.PartSpec{Mpn: "LM1117"}, "stale"); !errors.Is(err, service.ErrConflict) {
+	if _, err := st.Save(ctx, mustURI("m", "d.pdf"), &parampb.PartSpec{Mpn: "LM1117"}, "stale"); !errors.Is(err, dsservice.ErrConflict) {
 		t.Fatalf("first write with non-empty base should conflict, got %v", err)
 	}
 	v1, err := st.Save(ctx, mustURI("m", "d.pdf"), &parampb.PartSpec{Mpn: "LM1117"}, "")
@@ -45,7 +45,7 @@ func TestOsPartSpecStoreCAS(t *testing.T) {
 	}
 
 	// The file now exists, so an empty base (asserting absence) conflicts; the current base wins.
-	if _, err := st.Save(ctx, mustURI("m", "d.pdf"), &parampb.PartSpec{Mpn: "X"}, ""); !errors.Is(err, service.ErrConflict) {
+	if _, err := st.Save(ctx, mustURI("m", "d.pdf"), &parampb.PartSpec{Mpn: "X"}, ""); !errors.Is(err, dsservice.ErrConflict) {
 		t.Fatalf("empty base against an existing file should conflict, got %v", err)
 	}
 	v2, err := st.Save(ctx, mustURI("m", "d.pdf"), &parampb.PartSpec{Mpn: "LM1117I"}, v1)

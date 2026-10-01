@@ -16,7 +16,7 @@ const fake = vi.hoisted(() => ({
   dirs: {} as Record<string, unknown[]>,
 }));
 vi.mock("./api.js", () => ({
-  workspaceClient: () => ({
+  datasheetClient: () => ({
     listMounts: async ({ opens }: { opens?: FileKind[] } = {}) => {
       fake.mountOpens.push(opens);
       return { mounts: fake.mounts, prunedMounts: fake.prunedMounts };

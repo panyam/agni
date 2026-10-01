@@ -19,7 +19,7 @@ import (
 // reads it, since no Go PDF->doc-IR producer exists (WS13-006).
 const docSiblingSuffix = ".doc.textproto"
 
-// osDocLoader is the OS-backed service.DocLoader. It resolves a datasheet's source path to its
+// osDocLoader is the OS-backed dsservice.DocLoader. It resolves a datasheet's source path to its
 // sibling doc-IR file under the mount and parses it with doc.Load. A datasheet with no sibling yet
 // is not an error, and the service reports it as extracted=false.
 type osDocLoader struct {

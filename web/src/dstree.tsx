@@ -3,11 +3,12 @@ import { artifactUri, uriPath } from "./uri.js";
 import type { Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
-import { FileKind, WorkspaceService, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
-import { workspaceClient } from "./api.js";
+import { FileKind, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { DatasheetService } from "./gen/agni/v1/dsapi/datasheet_pb.js";
+import { datasheetClient } from "./api.js";
 import { DATASHEET_OPENS, hiddenNote } from "./treeprune.js";
 
-type WsClient = Client<typeof WorkspaceService>;
+type DsClient = Client<typeof DatasheetService>;
 
 // DsTreeState is the open datasheet the tree highlights (mount + mount-relative path), pushed by
 // the boot code so a deep-link restore highlights and reveals the datasheet without a click.
@@ -22,7 +23,7 @@ export interface DsTreeView {
 }
 
 interface Ctx {
-  client: WsClient;
+  client: DsClient;
   active: Accessor<DsTreeState>;
   onSelect: (mount: string, path: string) => void;
 }
@@ -144,7 +145,7 @@ export function dsTreeIsland(
   onSelect: (mount: string, path: string) => void,
 ): { island: SolidIsland; view: DsTreeView } {
   const [active, setActive] = signalView<DsTreeState>({ mount: "", path: "" });
-  const ctx: Ctx = { client: workspaceClient(), active, onSelect };
+  const ctx: Ctx = { client: datasheetClient(), active, onSelect };
   const island = new SolidIsland("ds-tree", el, () => <DatasheetTree ctx={ctx} />, eventBus);
   return { island, view: { setState: setActive } };
 }

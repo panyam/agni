@@ -29,6 +29,7 @@ var docFlagExceptions = map[string]string{
 	"--exclude-standard": "git ls-files",
 	"--dump":             "hack/fixture_copies_check.sh",
 	"--noEmit":           "tsc",
+	"--pdf2doc":          "agnids, the datasheet service built from the datasheet module (agni issue 744)",
 	"--no":               "a line-wrapped flag of another tool, not a flag in itself",
 }
 

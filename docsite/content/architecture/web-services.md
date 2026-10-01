@@ -42,9 +42,13 @@ documents are independent concerns with independent cadences.
 | Project | GetProject, ListProjects | the declared projects visible across the server's mounts |
 | Project | GetDesign, ListDesigns | a declared design's identity and which file around it is which (a different question from Design.GetDesign) |
 | Project | ResolveDesign | whether a file belongs to a declared design, and which; resolving to nothing is a normal answer |
-| Datasheet | GetDocument, ExtractDocIR | the doc-IR for a datasheet, and running the configured `--pdf2doc` producer to derive it |
-| Datasheet | GetPartSpec, SavePartSpec | the datasheet's shared PartSpec, saved with optimistic concurrency |
-| Datasheet | GetAnnotations, SaveAnnotations | the per-author region annotations, read as the union of every author's overlay |
+
+`DatasheetService` is not in this table, because it is the datasheet producer's API (`agni.v1.dsapi`)
+rather than the engine's, and `agnids` serves it rather than `agni serve` (C34, agni issue 744). It
+carries the workbench's whole surface: the doc-IR and running the configured `--pdf2doc` producer
+(`GetDocument`, `ExtractDocIR`), the shared PartSpec draft (`GetPartSpec`, `SavePartSpec`), the
+per-author annotations (`GetAnnotations`, `SaveAnnotations`), and the folder tree (`ListMounts`,
+`ListDir`, which take the engine's workspace messages and answer exactly as `WorkspaceService` does).
 
 A few contract details bite if missed.
 
