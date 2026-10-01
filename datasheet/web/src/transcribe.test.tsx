@@ -35,6 +35,10 @@ function mountPanel(over: Partial<TranscribeHandlers> = {}) {
     draftMpn: () => "ACME-1",
     suggestedMpn: () => "",
     startDraft: vi.fn(),
+    citingDrafts: () => [],
+    selectDraft: vi.fn(),
+    newDraft: vi.fn(),
+    publish: vi.fn(),
     region: () => region(),
     regionType: () => "table",
     deletableRegion: () => true,
@@ -185,5 +189,36 @@ describe("draft start", () => {
     expect(input?.value).toBe("LM1117");
     expect(input?.readOnly).toBe(true);
     expect([...el.querySelectorAll("button")].some((b) => b.textContent === "Start draft")).toBe(false);
+  });
+});
+
+// The draft list (agni issue 749): every draft citing the datasheet is one click away, a family
+// datasheet can start another, and the open draft publishes by its MPN.
+describe("draft list", () => {
+  it("lists the drafts citing the datasheet, marks the open one, and switches on a click", () => {
+    const selectDraft = vi.fn();
+    const { el } = mountPanel({ draftMpn: () => "LM1117-3.3", citingDrafts: () => ["LM1117-3.3", "LM1117-5.0"], selectDraft });
+    const chips = [...el.querySelectorAll<HTMLButtonElement>("button.tx-draft")];
+    expect(chips.map((b) => b.textContent?.trim())).toEqual(["LM1117-3.3", "LM1117-5.0", "New draft"]);
+    expect(chips[0].classList.contains("active")).toBe(true);
+    chips[1].click();
+    expect(selectDraft).toHaveBeenCalledWith("LM1117-5.0");
+  });
+
+  it("starts another draft for the same datasheet", () => {
+    const newDraft = vi.fn();
+    const { el } = mountPanel({ citingDrafts: () => ["LM1117-3.3"], newDraft });
+    [...el.querySelectorAll("button")].find((b) => b.textContent?.trim() === "New draft")!.click();
+    expect(newDraft).toHaveBeenCalled();
+  });
+
+  it("publishes the open draft, and offers no publish before a draft exists", () => {
+    const publish = vi.fn();
+    const { el } = mountPanel({ draftMpn: () => "ACME-1", publish });
+    const button = [...el.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Publish ACME-1");
+    button!.click();
+    expect(publish).toHaveBeenCalled();
+    const none = mountPanel({ draftMpn: () => "" });
+    expect([...none.el.querySelectorAll("button")].some((b) => b.textContent?.startsWith("Publish"))).toBe(false);
   });
 });

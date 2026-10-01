@@ -176,6 +176,10 @@ function Workbench(props: {
   let draftMpn = "";
   let docUris: string[] = [];
   let suggestion = "";
+  // citing is the MPNs of every draft citing this datasheet, for the panel's draft list. A family
+  // datasheet is cited by one draft per part. blank makes the empty spec a new draft starts from.
+  let citing: string[] = [];
+  let blank: () => PartSpec = () => emptySpec("", "", "");
   let userRegions: Region[] = [];
   let types: Record<string, RegionType> = {};
   // otherRegions are OTHER authors' user-drawn boxes, shown read-only (compose); the author id
@@ -216,7 +220,9 @@ function Workbench(props: {
       const docIR = docResp.document as Document | undefined;
       const docHash = docIR?.contentHash ?? "";
       const d = drafts.drafts[0];
-      spec = d?.spec ?? emptySpec(s.path, docIR?.title || s.path, docHash);
+      blank = () => emptySpec(s.path, docIR?.title || s.path, docHash);
+      citing = drafts.drafts.map((x) => x.mpn);
+      spec = d?.spec ?? blank();
       // Backfill the revision on an older spec that has none, so a new verification can be
       // invalidated. See adoptDocRevision in bank.ts.
       adoptDocRevision(spec, docHash);
@@ -227,8 +233,6 @@ function Workbench(props: {
       let loadNote = "";
       if (drafts.noCorpus) {
         loadNote = "Drafts are kept in the corpus, and this server has none, so nothing here will be saved. Start agnids serve with --corpus.";
-      } else if (drafts.drafts.length > 1) {
-        loadNote = `${drafts.drafts.length} drafts cite this datasheet; showing ${draftMpn}.`;
       }
       // The server overlay is the source of truth for MY set; the localStorage buffer is the
       // fallback (offline / never-saved). Others' drawn boxes render read-only. Reseed the buffer
@@ -404,8 +408,74 @@ function Workbench(props: {
       return;
     }
     await serverSave();
+    citing = (await listDrafts(artifactUri(s.mount, s.path))).drafts.map((x) => x.mpn);
     setRev((v) => v + 1);
     props.onParamsChange([...spec.parameters]);
+  };
+
+  // flushSave runs a pending debounced save now, so switching drafts or publishing never drops the
+  // last edit or publishes something other than what is on screen.
+  const flushSave = async (): Promise<void> => {
+    if (!saveTimer) return;
+    clearTimeout(saveTimer);
+    saveTimer = undefined;
+    void annSave();
+    await serverSave();
+  };
+
+  // showDraft makes a loaded draft (or none, for a new one) the one the panel edits.
+  const showDraft = (d: Draft | null): void => {
+    spec = d?.spec ?? blank();
+    version = d?.version ?? "";
+    draftMpn = d?.mpn ?? "";
+    docUris = d ? [...d.documentUris] : [];
+    setSelected("");
+    setProblems([]);
+    setRev((v) => v + 1);
+    props.onParamsChange([...spec.parameters]);
+  };
+
+  // selectDraft switches the panel to another draft citing this datasheet, read fresh so a save
+  // that landed since the list was loaded is not lost.
+  const selectDraft = async (mpn: string): Promise<void> => {
+    if (mpn === draftMpn) return;
+    await flushSave();
+    try {
+      const r = await datasheetClient().getDraft({ mpn });
+      showDraft(r.found && r.draft ? r.draft : null);
+      setNote(r.found ? "" : `The draft for ${mpn} is gone.`);
+    } catch (e) {
+      console.error("select draft failed", e);
+      setNote("Opening the draft failed (see console).");
+    }
+  };
+
+  // newDraft clears the panel to start another draft from this datasheet, as a family datasheet
+  // needs one per part. Nothing is saved until the start bar's MPN is confirmed.
+  const newDraft = async (): Promise<void> => {
+    await flushSave();
+    showDraft(null);
+    setNote("");
+  };
+
+  // publish validates the draft on the server and, when it passes, makes it the published spec for
+  // its MPN. A refusal lists its problems in the panel; nothing is published then.
+  const publish = async (): Promise<void> => {
+    if (!draftMpn) return;
+    await flushSave();
+    try {
+      const r = await datasheetClient().publishDraft({ mpn: draftMpn });
+      if (r.published) {
+        setNote(`Published ${draftMpn}${r.replaced ? ", replacing its earlier spec" : ""}; corpus generation ${r.generation}.`);
+      } else {
+        setProblems(r.problems);
+        setNote(`Not published: ${r.reason}`);
+      }
+      setRev((v) => v + 1);
+    } catch (e) {
+      console.error("publish failed", e);
+      setNote("Publishing failed (see console).");
+    }
   };
 
   // annSave persists THIS author's overlay (drawn boxes + type tags) to the server, best-effort and
@@ -708,6 +778,19 @@ function Workbench(props: {
     },
     startDraft: (mpn: string): void => {
       void startDraft(mpn);
+    },
+    citingDrafts: (): string[] => {
+      rev();
+      return citing;
+    },
+    selectDraft: (mpn: string): void => {
+      void selectDraft(mpn);
+    },
+    newDraft: (): void => {
+      void newDraft();
+    },
+    publish: (): void => {
+      void publish();
     },
     setMeta: (patch: Partial<{ mpn: string; manufacturer: string; deviceClass: string; docTitle: string }>): void => {
       if (!spec) return;

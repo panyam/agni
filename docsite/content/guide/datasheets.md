@@ -65,11 +65,13 @@ small per-part files this page loads.
 
 The datasheets workbench (`agnids serve --corpus <dir>`) keeps what you transcribe as a DRAFT for one
 part number, in the corpus store beside the published specs. Opening a datasheet lists the drafts that
-cite it. A new one starts from an MPN the workbench suggests from the file name, and nothing is
-saved until you confirm or edit it. After that, every edit saves, without validating, so a
-half-finished transcription is never lost. No check reads a draft.
+cite it, one click apart, and New draft starts another, since a family datasheet covers several
+parts. A new draft starts from an MPN the workbench suggests from the file name, and nothing is saved
+until you confirm or edit it. After that, every edit saves, without validating, so a half-finished
+transcription is never lost. No check reads a draft.
 
-Publishing is the step between the two. It validates the draft, refuses one that fails (listing every
+Publishing is the step between the two, the workbench's Publish button or `agnids publish`. It
+validates the draft, refuses one that fails (listing every
 problem), and refuses when another published file already seeds the same MPN, since one MPN in two
 files fails every load. Otherwise it writes `<mpn>.textproto`, with any character outside
 `A-Za-z0-9._-` replaced by `_`, and its text is the same from every build. Publishing an MPN again
