@@ -44,9 +44,12 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       // The conformance fixtures, for the one design in the tree whose check run reports an
       // INCONCLUSIVE finding (agni issue 350).
       "--mount", "conformance=cmd/agni/testdata/conformance",
+      // Named explicitly because a flag wins outright over agni.yaml. Without it a developer whose
+      // ~/.config/agni/agni.yaml names a web_dir (another checkout's, say) runs these tests against
+      // THAT viewer, which passes or fails for reasons unrelated to this tree.
+      "--web-dir", "web",
     ],
-    // cwd is the repo root, so serve's default --web-dir ("web") resolves without a flag. This used
-    // to pass "web" positionally, which was the same value by another route.
+    // cwd is the repo root, so "web" is this checkout's own built viewer.
     cwd: repoRoot,
     base,
     health: base,
