@@ -193,8 +193,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   workbench and the docling stack). `make image` and `make dsimage` build them. The `images` workflow
   builds and smoke-tests both on a PR that touches what they are made from, through
   `hack/image_smoke.sh`, which `release` also runs against what it published. The agnids image
-  prefetches its models by RUNNING pdf2doc over a synthetic page, because docling reads the Hugging
-  Face cache and `docling-tools models download` fills a different one (agni 786).
+  prefetches its models by RUNNING pdf2doc over a synthetic page, and so does `make setup`
+  (`datasheet-models`), because docling reads the Hugging Face cache and `docling-tools models
+  download` fills a different one (agni 786).
 - **The web code is ONE pnpm workspace with one lockfile at the root**: `web/` (the viewer),
   `datasheet/web/` (the workbench `agnids` serves, with pdf.js) and `web-shared/` (plain TS both
   import as `@agni/web-shared/<name>.js`, with no npm dependency of its own, so neither page pulls
