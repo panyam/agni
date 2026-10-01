@@ -29,7 +29,7 @@ import (
 	"strings"
 	"unicode"
 
-	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 )
 
 // Hit is one passage the index matched, located precisely enough to highlight. Every hit names the

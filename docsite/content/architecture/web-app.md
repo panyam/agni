@@ -89,7 +89,11 @@ There are four server-rendered shells, each with its own bundle, so a page downl
 | `/` | `LandingPage` | `landing.js` | Where am I going: the destinations, this browser's recents, and the designs the server's projects declare. Also the catch-all, so an unmatched URL offers choices instead of 404ing |
 | `/designs/<mount>/<dir>/` | `BrowsePage` | `browse.js` | The design tree plus a read-only first-sheet preview |
 | `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: WebGL canvas, checks, query, diff |
-| `/datasheets/files/<mount>/<path>` | `DatasheetsPage` | `datasheets.js` | The extraction workbench, its own tree included |
+
+The extraction workbench, `DatasheetsPage` at `/datasheets/files/<mount>/<path>` with its own bundle
+`datasheets.js`, is served by `agnids` rather than `agni serve` (agni issue 744). Its bundle is still
+built from this `web/` tree, and the landing page links it only when `agni serve --datasheets-url`
+names where it runs.
 
 The `/designs/` space holds two pages behind one pattern, split by the trailing `/view`, because a
 `ServeMux` pattern's `{path...}` wildcard must be its last segment. `/files/` is the retired

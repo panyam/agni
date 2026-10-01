@@ -162,17 +162,17 @@ func (r *ProjectResolver) TierURIs(ctx context.Context, u artifact.URI, boardOve
 	if err != nil {
 		return u, boardOverride, u, err
 	}
-	if netlist, err = artifactURI(src.NetlistURI); err != nil {
+	if netlist, err = ParseArtifactURI(src.NetlistURI); err != nil {
 		return u, boardOverride, u, err
 	}
-	if geometry, err = artifactURI(src.GeometryURI); err != nil {
+	if geometry, err = ParseArtifactURI(src.GeometryURI); err != nil {
 		return u, boardOverride, u, err
 	}
 	board = boardOverride
 	if board.IsZero() && src.BoardURI != src.NetlistURI {
 		// Only when the design declared a SEPARATE board. Otherwise stay zero so BuildModel reads
 		// the netlist artifact for copper when it carries any and errors on a non-board override.
-		if board, err = artifactURI(src.BoardURI); err != nil {
+		if board, err = ParseArtifactURI(src.BoardURI); err != nil {
 			return u, boardOverride, u, err
 		}
 	}

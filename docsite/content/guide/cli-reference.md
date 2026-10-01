@@ -482,7 +482,8 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 ## Advanced and developer commands
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
-(reader-health smoke over many files), `census`, and `derive` (datasheet extraction). `validate` is
+(reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, in the
+datasheets service, a separate binary built from the `datasheet/` module. `validate` is
 worth knowing as a user, because pointed at a folder of exports it reports which of them this tool can
 actually read. The rest sit closer to the engine and are covered in the developer docs.
 

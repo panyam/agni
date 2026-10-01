@@ -12,8 +12,6 @@ import (
 
 	"connectrpc.com/connect"
 
-	dsapi "github.com/panyam/agni/gen/go/agni/v1/dsapi"
-	"github.com/panyam/agni/gen/go/agni/v1/dsapi/dsapiconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/service"
@@ -33,10 +31,6 @@ func toConnectErr(err error) error {
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --enable-native", err))
 	case errors.Is(err, service.ErrNativeNotFound):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
-	case errors.Is(err, service.ErrConflict):
-		return connect.NewError(connect.CodeAborted, err)
-	case errors.Is(err, service.ErrExtractNotEnabled):
-		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --pdf2doc", err))
 	case errors.Is(err, service.ErrReviewStoreNotConfigured):
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --review-store <dir>", err))
 	case errors.Is(err, service.ErrInternal):
@@ -116,64 +110,6 @@ func (a *Design) GetLayoutReport(ctx context.Context, req *connect.Request[webap
 
 func (a *Design) TraceDesign(ctx context.Context, req *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
 	resp, err := a.svc.TraceDesign(ctx, req.Msg)
-	if err != nil {
-		return nil, toConnectErr(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-// Datasheet adapts service.DatasheetService to the generated Connect handler interface (the
-// extraction workbench's read side, WS13-006).
-type Datasheet struct {
-	dsapiconnect.UnimplementedDatasheetServiceHandler
-	svc *service.DatasheetService
-}
-
-// NewDatasheet wraps svc for Connect.
-func NewDatasheet(svc *service.DatasheetService) *Datasheet { return &Datasheet{svc: svc} }
-
-func (a *Datasheet) GetDocument(ctx context.Context, req *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error) {
-	resp, err := a.svc.GetDocument(ctx, req.Msg)
-	if err != nil {
-		return nil, toConnectErr(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (a *Datasheet) GetPartSpec(ctx context.Context, req *connect.Request[dsapi.GetPartSpecRequest]) (*connect.Response[dsapi.GetPartSpecResponse], error) {
-	resp, err := a.svc.GetPartSpec(ctx, req.Msg)
-	if err != nil {
-		return nil, toConnectErr(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (a *Datasheet) SavePartSpec(ctx context.Context, req *connect.Request[dsapi.SavePartSpecRequest]) (*connect.Response[dsapi.SavePartSpecResponse], error) {
-	resp, err := a.svc.SavePartSpec(ctx, req.Msg)
-	if err != nil {
-		return nil, toConnectErr(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (a *Datasheet) ExtractDocIR(ctx context.Context, req *connect.Request[dsapi.ExtractDocIRRequest]) (*connect.Response[dsapi.ExtractDocIRResponse], error) {
-	resp, err := a.svc.ExtractDocIR(ctx, req.Msg)
-	if err != nil {
-		return nil, toConnectErr(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (a *Datasheet) GetAnnotations(ctx context.Context, req *connect.Request[dsapi.GetAnnotationsRequest]) (*connect.Response[dsapi.GetAnnotationsResponse], error) {
-	resp, err := a.svc.GetAnnotations(ctx, req.Msg)
-	if err != nil {
-		return nil, toConnectErr(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (a *Datasheet) SaveAnnotations(ctx context.Context, req *connect.Request[dsapi.SaveAnnotationsRequest]) (*connect.Response[dsapi.SaveAnnotationsResponse], error) {
-	resp, err := a.svc.SaveAnnotations(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}

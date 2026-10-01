@@ -74,9 +74,17 @@ through the flag, an `agni.yaml` or the environment still has to exist and hold 
 `./web` holding templates without its bundle (a checkout that has not run `make ui`) still stops the
 run, because either one is a mistake you want to hear about.
 
-The datasheets workbench is optional within a web dir. Its page, its bundle and the pdf.js worker
-are about two thirds of the built assets, and a web dir without them serves the rest of the viewer,
-with `/datasheets/` answering a note naming the missing file.
+The datasheets workbench is a separate service, `agnids`, built from the `datasheet/` module. It has
+its own mounts, writes into them, and is where the docling environment lives, so it deploys apart
+from the viewer:
+
+```
+agnids serve --addr :8090 --mount ds=~/datasheets --web-dir /path/to/agni/web
+```
+
+From a checkout, `make dsserve DATASHEET_DIR=~/datasheets` runs it. `agni serve --datasheets-url
+http://host:8090` points the landing page's Datasheets card at it, and without that flag the card is
+hidden, since this server has no workbench of its own.
 
 Two ways to avoid typing it every time:
 
@@ -193,8 +201,8 @@ a run per commit will grow the volume until you delete runs yourself.
 
 ## Writes and file ownership
 
-The datasheets workbench writes back into a mount, so saving a PartSpec or an annotation lands a file
-in your bind-mounted folder. The container runs as a non-root user (uid 10001) so those files are
+The datasheets workbench (`agnids`) writes back into a mount, so saving a PartSpec or an annotation
+lands a file in your bind-mounted folder. The container runs as a non-root user (uid 10001) so those files are
 never written as root.
 
 On **Docker Desktop** (macOS, Windows) that is the whole story. Its file-sharing layer maps
@@ -215,13 +223,14 @@ large and neither is needed to read, check, diff, or query a design.
 
 - `agni native render/open` makes native golden renders by driving the format's own tool (`kicad-cli`,
   xschem, Lepton). See [native verification](../../build/native-verification/).
-- Datasheet extraction, the `/datasheets` workbench's "Extract (first pass)" action, shells out
-  to a doc-IR producer configured with `--pdf2doc`. Transcribing parameters by hand and reading an
-  already-extracted doc-IR both work without it.
+- Datasheet extraction, the workbench's "Extract (first pass)" action, shells out to a doc-IR
+  producer configured with `agnids serve --pdf2doc`. The workbench is a separate binary, `agnids`,
+  and transcribing parameters by hand and reading an already-extracted doc-IR both work without
+  the producer.
 
 ## A shared deployment
 
 Everything above assumes one engineer, one machine. There is no authentication, no per-user
-scoping, and no session isolation, so anyone who can reach the port sees every mount and can write
-through the datasheets workbench. That is the right trade for localhost and the wrong one for a
+scoping, and no session isolation, so anyone who can reach the port sees every mount, and anyone who
+can reach `agnids` can write through the datasheets workbench. That is the right trade for localhost and the wrong one for a
 shared host. Put it behind something that authenticates before you expose it.

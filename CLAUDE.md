@@ -79,9 +79,12 @@ under **`readers/`** (`readers/edif`, `readers/kicad`, `readers/ipc2581`, `reade
 `readers/geda`, `readers/telesis`, plus `readers/formats`, the registry/Loader). The shipped rule
 catalog, fact relations, profiles, and intent under **`stdlib/`** (`stdlib/rules/builtin/rule_*.go`,
 `stdlib/rules/datalog`, `stdlib/rules/intent`, `stdlib/relations`, `stdlib/profiles`). The
-datasheet contract in **`core/param`** (the PartSpec the engine reads) and the extraction pipeline
-that produces it under **`datasheet/`** (`doc`, `derive`, `docindex`, `candidate`), which C34 keeps
-the engine from importing and agni issue 744 is moving into a module of its own. The embedding
+datasheet contract in **`core/param`** (the PartSpec the engine reads), and the extraction pipeline
+that produces it in **`datasheet/`, a Go module of its own** (`github.com/panyam/agni/datasheet`,
+agni issue 744): `doc`, `derive`, `docindex`, `candidate`, the transport-neutral `dsservice`, its
+Connect adapter `dsserver`, and the **`agnids`** binary (`datasheet/cmd/agnids`: `serve` for the
+workbench, `derive`). It depends on the root, never the reverse, which C34 and C18 hold. Its tests
+run in `make datasheet-test`, because `go test ./...` from the root never reaches a nested module. The embedding
 surface under **`service/`** (the transport-neutral service impls and their ports), **`artifact/`**
 (the `mount://` URI those ports speak) and **`mounts/`** (the named roots and the containment join). Plus `cmd/agni/`, `internal/`, `intake/`, `census/`, `protos/` +
 `gen/`, `docsite/`, `web/`, `hack/`, `tools/`, and `clients/python` (the typed Python client, its
@@ -179,9 +182,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **`agni serve` with NOTHING naming a web dir and no `./web` serves the API alone** (agni 735),
   which is what a `go install` binary has, since the built JS is not in the Go module. An absent dir
   is a choice and a broken one is a mistake, so a NAMED dir that is wrong, or a `./web` without its
-  bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench
-  (`DatasheetsPage`, `datasheets.js`, `pdf.worker.js`) is a separate optional group, and
-  `/datasheets/` answers a note naming the missing file when it is absent.
+  bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench is
+  NOT served by `agni` at all since agni 744; it is `agnids serve` (`make dsserve`), and
+  `agni serve --datasheets-url <url>` is what makes the landing page link to it.
 - **An unknown key in `agni.yaml` is a hard ERROR, and the file is shared by every lane, every
   released binary and the container image.** So a new key goes in only after every reader on the
   machine understands it. The obvious probe is a trap, because `agni <cmd> --help` short-circuits
@@ -207,7 +210,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - `make natrender FILE=... OUT=...` and `make natopen FILE=...` drive the native tools over the
   `natup` container. Both take paths INSIDE it, so they must fall under a `NATIVE_DOCKER_MOUNTS` dir.
 - `make setup` builds the docling venv the datasheet tooling runs in, then `make pdf2doc`,
-  `make pdf2doc-all`, and `make datasheets-status` work over `DATASHEET_DIR`. The venv is found by
+  `make pdf2doc-all`, `make datasheets-status` and `make dsserve` work over `DATASHEET_DIR`. The
+  tools live in `datasheet/tools/`, so those targets `cd datasheet` first. The venv is found by
   lookup (repo-local `.venv`, then the parent directory's), so worktrees sharing a root share one
   env instead of each carrying gigabytes of torch.
 - `make -C docsite preview PAGE=learn/03-why-every-chip-needs-capacitors` folds one built page into a
@@ -392,9 +396,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   tests read a board file and a test whose fixture is absent skips rather than fails. One stamp PER
   ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each other's work.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
-  `make proto-check` fails the gate on any of the three being stale. The Python half uses buf's REMOTE
+  `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
   plugins pinned by version, so it needs network, and `pyproject.toml`'s `protobuf>=` floor moves with
-  the plugin version.
+  the plugin version. **The protos are TWO buf modules in one workspace** (the root `buf.yaml`): the
+  engine's `protos/` and the datasheet producer's `datasheet/protos/` (`doc`, `derive`, `candidate`,
+  `dsapi`), which generates into `datasheet/gen/go` and imports `param.proto` and `workspace.proto`
+  through the workspace. `make proto` runs both. The datasheet half is generated from the repo ROOT,
+  because its `go tool` plugins resolve against the go.mod of the directory buf runs in, and only the
+  root go.mod pins them. The TS step reads the whole workspace (the workbench still builds from
+  `web/`), and the Python client reads `protos/` alone, since it is the engine's client.
 - **`render --report` prints to stdout and IGNORES `-o`**, which is the same axis confusion as
   `review --coverage`, since the report replaces the drawing rather than being a format of it, so the
   flag that names the drawing's file has nothing to write. It exits 0 having written nothing.

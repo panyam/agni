@@ -9,10 +9,11 @@ import (
 	goal "github.com/panyam/goapplib"
 )
 
-// serveApp is the goapplib application context for `agni serve`. It carries the configured
-// mounts so pages (and later, page data loaders) can reach them.
+// serveApp is the goapplib application context for `agni serve`. It carries the configured mounts,
+// and where the datasheets workbench is served when it is hosted at all (--datasheets-url).
 type serveApp struct {
-	mounts []mounts.Mount
+	mounts        []mounts.Mount
+	datasheetsURL string
 }
 
 // ViewerPage is the server-rendered work page of the web viewer. Its template
@@ -46,23 +47,6 @@ func (p *BrowsePage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[
 	return nil, false
 }
 
-// DatasheetsPage is the server-rendered shell of the extraction workbench (WS13-006), a separate
-// page because it serves the once-per-component author (load a datasheet, select and correct
-// regions) rather than someone reading a schematic. Its template (web/templates/DatasheetsPage.html)
-// renders a datasheet-tree sidebar and the region viewer hole, and its own bundle
-// (static/datasheets.js) keeps the viewer bundle lean. goapplib maps this type to
-// DatasheetsPage.html by name.
-type DatasheetsPage struct {
-	Title string
-}
-
-// Load populates the workbench page before render. The shell is static, since a datasheet's doc-IR
-// and source PDF arrive over the Connect API and the raw endpoint.
-func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
-	p.Title = "Agni datasheets"
-	return nil, false
-}
-
 // LandingPage is the server-rendered shell of "/", the page that routes rather than browses (#318).
 // The shell carries the destinations as plain links, so it works with no JavaScript, plus two island
 // holes for what this browser opened lately and the designs the server's projects declare by name.
@@ -70,6 +54,9 @@ func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.
 // anyone loads. goapplib maps this type to LandingPage.html by name.
 type LandingPage struct {
 	Title string
+	// DatasheetsURL is the workbench's base URL, and the card and datasheet recents render only when
+	// it is set, since the workbench is a separate service (agni issue 744).
+	DatasheetsURL string
 }
 
 // Load populates the landing page before render. Nothing is fetched here, since the recents are
@@ -77,6 +64,7 @@ type LandingPage struct {
 // keeps the shell identical for every visitor and cacheable.
 func (p *LandingPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
 	p.Title = "Agni"
+	p.DatasheetsURL = app.Context.datasheetsURL
 	return nil, false
 }
 
@@ -139,21 +127,10 @@ func designsRouter(browse, work http.Handler) http.Handler {
 //
 // "/" is the landing page and also the catch-all, so a URL matching no other pattern lands on a page
 // offering the destinations rather than on an empty file tree (#318).
-//
-// datasheetsErr is non-nil when the workbench's assets are absent, and /datasheets/ then answers with
-// it instead of a page that would fail to load its bundle (agni issue 735).
-func registerPages(app *goal.App[*serveApp], mux *http.ServeMux, datasheetsErr error) {
+func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	browse := pageHandler[*BrowsePage](app)
 	mux.Handle("/", pageHandler[*LandingPage](app))
 	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app)))
 	// The retired /files/ space (WS9-049) redirects rather than 404s, so shared links keep resolving.
 	mux.HandleFunc("/files/", redirectLegacyFiles)
-	// The extraction workbench (WS13-006) is its own page space. Like the viewer, the shell is
-	// identical for every path and per-datasheet state lives in the URL (/datasheets/files/<mount>/
-	// <path>), so a refresh or shared link reopens the datasheet.
-	if datasheetsErr != nil {
-		mux.Handle("/datasheets/", unavailableHandler(datasheetsErr))
-		return
-	}
-	goal.Register[*DatasheetsPage](app, mux, "/datasheets/")
 }

@@ -1,12 +1,16 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
-# Regenerate Go from the proto IR (run from protos/ where buf config lives).
+# Regenerate Go from the proto IR. Two buf modules share one workspace (the root buf.yaml): the
+# engine's protos/, generated from inside protos/ into gen/go, and the datasheet producer's
+# datasheet/protos (agni issue 744), generated into datasheet/gen/go from the repo ROOT so its
+# `go tool` plugins resolve against the root go.mod that pins them (see datasheet/buf.gen.yaml).
 proto:
 	cd protos && buf generate
+	buf generate datasheet/protos --template datasheet/buf.gen.yaml
 
 # Regenerate the TypeScript half. Separate command, separate config, and the half people forget:
 # additive proto changes leave stale TS building green, so the drift only surfaces on the next
@@ -41,14 +45,20 @@ proto-py:
 proto-check:
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	mkdir -p "$$tmp/protos" "$$tmp/web" "$$tmp/py"; \
+	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/py"; \
 	(cd protos && buf generate -o "$$tmp/protos") || exit 1; \
-	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
+	buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
+	(cd web && buf generate .. --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
 	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
 	fail=0; \
 	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
 		echo "generated Go is stale — run 'make proto' and commit the result:"; \
 		diff -rq gen/go "$$tmp/gen/go" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r datasheet/gen/go "$$tmp/root/datasheet/gen/go" >/dev/null 2>&1; then \
+		echo "generated Go for the datasheet module is stale — run 'make proto' and commit the result:"; \
+		diff -rq datasheet/gen/go "$$tmp/root/datasheet/gen/go" 2>&1 | sed 's/^/  /'; \
 		fail=1; \
 	fi; \
 	if ! diff -r web/src/gen "$$tmp/web/src/gen" >/dev/null 2>&1; then \
@@ -219,7 +229,7 @@ catalog-docs-check: catalog-docs
 # browser-test came back in on 2026-09-08 once the demo work was done, which is what the note that
 # took it out said to do. It was worth re-timing rather than trusting that note: the reason given was
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
-testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test datasheet-test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
@@ -233,15 +243,16 @@ EXTRA_MOUNTS ?=
 #   make serve NATIVE_TOOLS=kicad-cli
 NATIVE_TOOLS ?=
 NATIVE_FLAGS := $(foreach t,$(NATIVE_TOOLS),--enable-native $(t))
-# PDF2DOC configures the doc-IR producer the /datasheets "Extract (first pass)" action shells out
-# to (invoked as "<PDF2DOC> <pdf> -o <sibling>"). Empty disables extraction, which is what you get
+# PDF2DOC configures the doc-IR producer the datasheets workbench's "Extract (first pass)" action
+# shells out to (invoked as "<PDF2DOC> <pdf> -o <sibling>"). The workbench is agnids, so it is
+# `make dsserve` that passes it. Empty disables extraction, which is what you get
 # until `make setup` has built the docling venv: the default below turns the button on exactly when
 # there is an interpreter that can serve it, rather than wiring up a command that fails on click.
 # Absolute, because the value outlives this make and is run by the server process. Override with a
 # command of your own, or with PDF2DOC= to leave the action off.
-#   make serve PDF2DOC="python3 tools/pdf2doc/pdf2doc.py"
+#   make dsserve PDF2DOC="python3 datasheet/tools/pdf2doc/pdf2doc.py"
 # PDF2DOC_PY and the rest of the datasheet tooling are defined in their own section further down.
-PDF2DOC ?= $(if $(wildcard $(PDF2DOC_PY)),$(abspath $(PDF2DOC_PY)) $(abspath tools/pdf2doc/pdf2doc.py))
+PDF2DOC ?= $(if $(wildcard $(PDF2DOC_PY)),$(abspath $(PDF2DOC_PY)) $(abspath datasheet/tools/pdf2doc/pdf2doc.py))
 # Recursive, not `:=`, because PDF2DOC above reads a variable defined later in this file.
 PDF2DOC_FLAG = $(if $(strip $(PDF2DOC)),--pdf2doc '$(PDF2DOC)')
 # SYMBOL_PATH points --symbol-path at an xschem/gEDA symbol library dir (repeatable flag,
@@ -270,8 +281,25 @@ OVERLAY_FLAGS ?=
 # no default is a Review panel that is empty on every design until someone finds out why.
 REVIEW_STORE ?= $(HOME)/.agni/reviews
 REVIEW_FLAGS := $(if $(strip $(REVIEW_STORE)),--review-store $(REVIEW_STORE))
+# DATASHEETS_URL is where the datasheets workbench (agnids, `make dsserve`) is served, so the viewer's
+# landing page links its Datasheets card there. Empty hides the card.
+#   make serve DATASHEETS_URL=http://localhost:8090
+DATASHEETS_URL ?=
+DATASHEETS_FLAG := $(if $(strip $(DATASHEETS_URL)),--datasheets-url $(DATASHEETS_URL))
 serve: ui
-	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS)
+	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS) $(DATASHEETS_FLAG)
+
+# The datasheets workbench is agnids, built from the datasheet module (agni issue 744), so it serves
+# separately from the viewer. It mounts DATASHEET_DIR as `ds`, reads the workbench assets out of this
+# checkout's web/, and passes PDF2DOC so Extract works once `make setup` has built the docling venv.
+#   make dsserve DATASHEET_DIR=/path/to/datasheets
+DS_ADDR ?= :8090
+dsserve: ui
+	cd datasheet && $(GO) run ./cmd/agnids serve --addr $(DS_ADDR) --web-dir $(CURDIR)/web --mount ds=$(abspath $(DATASHEET_DIR)) $(PDF2DOC_FLAG)
+
+# Build the datasheet service binary beside bin/agni.
+agnids:
+	cd datasheet && $(GO) build -o $(CURDIR)/bin/agnids ./cmd/agnids
 
 # One-command self-contained demo. Builds the web bundle and serves the viewer with only the
 # shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
@@ -357,6 +385,11 @@ docsite-test:
 	@cd docsite && go test ./...
 
 EXAMPLE_MODS := $(dir $(wildcard examples/*/go.mod))
+# The datasheet module (agni issue 744) is its own module downstream of this one, so `go test ./...`
+# from the root never reaches it.
+datasheet-test:
+	cd datasheet && $(GO) vet ./... && $(GO) test ./...
+
 examples-test:
 	@for d in $(EXAMPLE_MODS); do \
 		echo "== $$d =="; \
@@ -534,7 +567,7 @@ tutorial-runs-check:
 # Datasheet tooling
 # =============================================================================
 #
-# tools/pdf2doc derives doc-IR from a datasheet PDF. It is prototype Python, never in CI, and needs
+# datasheet/tools/pdf2doc derives doc-IR from a datasheet PDF. It is prototype Python, never in CI, and needs
 # docling, so it runs out of a venv `make setup` builds rather than the engine toolchain.
 #
 # The corpus it sweeps is a folder of parts laid out as <vendor>/<PART>/, each part dir holding its
@@ -570,12 +603,12 @@ PDF2DOC_PY ?= $(if $(wildcard $(VENV_DIR)/bin/python),$(VENV_DIR)/bin/python,pyt
 DATASHEET_DIR ?= datasheets
 
 # Derive doc-IR from one PDF and validate it against the contract. OUT is conventionally the PDF's
-# sibling <stem>.doc.textproto, which is where the viewer's /datasheets workbench looks for it.
+# sibling <stem>.doc.textproto, which is where the datasheets workbench (agnids) looks for it.
 #   make pdf2doc PDF=datasheets/ti/LM1117/LM1117.pdf OUT=datasheets/ti/LM1117/LM1117.doc.textproto
 pdf2doc:
 	@[ -n "$(PDF)" ] && [ -n "$(OUT)" ] || { echo "usage: make pdf2doc PDF=<file.pdf> OUT=<file.doc.textproto>"; exit 2; }
-	$(PDF2DOC_PY) tools/pdf2doc/pdf2doc.py $(PDF) -o $(OUT)
-	$(GO) run ./tools/pdf2doc/validate $(OUT)
+	$(PDF2DOC_PY) datasheet/tools/pdf2doc/pdf2doc.py $(PDF) -o $(OUT)
+	cd datasheet && $(GO) run ./tools/pdf2doc/validate $(abspath $(OUT))
 
 # Report-only extraction status: per part, whether each PDF has a fresh, stale, or absent doc-IR and
 # whether a part-level PartSpec exists. Reads doc-IR content_hash + producer, and writes nothing.
@@ -586,14 +619,14 @@ pdf2doc:
 # best-effort: docling missing means the flag is omitted and only hash freshness gets reported.
 datasheets-status:
 	@v=$$($(PDF2DOC_PY) -c "import importlib.metadata as m; print(m.version('docling'))" 2>/dev/null); \
-	$(GO) run ./tools/datasheetstatus $${v:+--toolchain docling/$$v} $(DATASHEET_DIR)
+	cd datasheet && $(GO) run ./tools/datasheetstatus $${v:+--toolchain docling/$$v} $(abspath $(DATASHEET_DIR))
 
 # Run pdf2doc on exactly the PDFs the walker flags as not-extracted or stale-source (fresh ones are
 # skipped; a stale-toolchain refresh stays a deliberate `make pdf2doc PDF=... OUT=...`). Each PDF's
 # doc-IR is written to its sibling <stem>.doc.textproto in the same part dir.
 pdf2doc-all:
-	@$(GO) run ./tools/datasheetstatus --list $(DATASHEET_DIR) | while read -r pdf; do \
+	@cd datasheet && $(GO) run ./tools/datasheetstatus --list $(abspath $(DATASHEET_DIR)) | while read -r pdf; do \
 		out="$${pdf%.pdf}.doc.textproto"; \
 		echo "pdf2doc: $$pdf -> $$out"; \
-		$(PDF2DOC_PY) tools/pdf2doc/pdf2doc.py "$$pdf" -o "$$out"; \
+		$(PDF2DOC_PY) $(CURDIR)/datasheet/tools/pdf2doc/pdf2doc.py "$$pdf" -o "$$out"; \
 	done

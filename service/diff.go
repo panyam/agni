@@ -58,11 +58,11 @@ func (s *DiffService) readOptions(ctx context.Context, uri artifact.URI) ([]Read
 // (unknown mount -> ErrNotFound, escaping path or parse failure -> invalid argument); there
 // is no partial diff.
 func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRequest) (*webapi.DiffDesignsResponse, error) {
-	aURI, err := artifactURI(req.GetAUri())
+	aURI, err := ParseArtifactURI(req.GetAUri())
 	if err != nil {
 		return nil, err
 	}
-	bURI, err := artifactURI(req.GetBUri())
+	bURI, err := ParseArtifactURI(req.GetBUri())
 	if err != nil {
 		return nil, err
 	}
@@ -77,11 +77,11 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	}
 	a, err := s.loader.Design(ctx, aURI, aOpts...)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	b, err := s.loader.Design(ctx, bURI, bOpts...)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	resp := DiffResponseProto(diff.Designs(a, b))
 	gA := BuildGeometry(ctx, s.loader, aURI, aOpts...)

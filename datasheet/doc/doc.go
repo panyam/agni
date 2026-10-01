@@ -17,7 +17,7 @@ import (
 
 	"google.golang.org/protobuf/encoding/prototext"
 
-	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 )
 
 // Load parses one Document in textproto form, the fixture and hand-authoring

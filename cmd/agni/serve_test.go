@@ -52,31 +52,6 @@ func TestCheckWebAssets(t *testing.T) {
 	}
 }
 
-// TestCheckDatasheetAssets checks that the workbench (WS13-006) is its own group, so each missing
-// file is named and a build is suggested, and that the viewer's check no longer depends on any of
-// it (agni issue 735).
-func TestCheckDatasheetAssets(t *testing.T) {
-	dir := t.TempDir()
-	if err := checkDatasheetAssets(dir); err == nil || !strings.Contains(err.Error(), "DatasheetsPage.html") {
-		t.Errorf("missing datasheets page should name DatasheetsPage.html, got %v", err)
-	}
-	touch(t, filepath.Join(dir, "templates", "DatasheetsPage.html"))
-	if err := checkDatasheetAssets(dir); err == nil || !strings.Contains(err.Error(), "datasheets.js") || !strings.Contains(err.Error(), "pnpm build") {
-		t.Errorf("missing datasheets bundle should name datasheets.js and hint pnpm build, got %v", err)
-	}
-	touch(t, filepath.Join(dir, "static", "datasheets.js"))
-	if err := checkDatasheetAssets(dir); err == nil || !strings.Contains(err.Error(), "pdf.worker.js") {
-		t.Errorf("missing pdf.js worker should name pdf.worker.js, got %v", err)
-	}
-	touch(t, filepath.Join(dir, "static", "pdf.worker.js"))
-	if err := checkDatasheetAssets(dir); err != nil {
-		t.Errorf("a complete workbench should pass, got %v", err)
-	}
-	if err := checkDatasheetAssets("../../web"); err != nil {
-		t.Errorf("repo web/ should carry the workbench, got %v", err)
-	}
-}
-
 // touch writes an empty file, creating parent directories.
 func touch(t *testing.T, path string) {
 	t.Helper()

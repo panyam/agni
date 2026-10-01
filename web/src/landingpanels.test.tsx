@@ -44,7 +44,7 @@ describe("openUrl", () => {
   // spaces apart. A datasheet routed into the /designs/ space would open a page that cannot show it.
   it("routes a design to the viewer and a datasheet to the workbench", () => {
     expect(openUrl("design", "m", "boards/a.edn")).toBe("/designs/m/boards/a.edn/view");
-    expect(openUrl("datasheet", "m", "vendor/x.pdf")).toBe("/datasheets/files/m/vendor/x.pdf");
+    expect(openUrl("datasheet", "m", "vendor/x.pdf", "http://ds:8090")).toBe("http://ds:8090/datasheets/files/m/vendor/x.pdf");
   });
 });
 
@@ -71,11 +71,22 @@ describe("recents island", () => {
     noteOpen({ kind: "design", mount: "m", path: "boards/a.edn", label: "a.edn" }, 1000);
     noteOpen({ kind: "datasheet", mount: "ds", path: "vendor/x.pdf", label: "x.pdf" }, 2000);
 
-    const el = mount((e) => recentsIsland(e, null, 2000));
+    const el = mount((e) => recentsIsland(e, null, 2000, "http://ds:8090"));
     await settle();
-    expect(links(el)).toEqual(["/datasheets/files/ds/vendor/x.pdf", "/designs/m/boards/a.edn/view"]);
+    expect(links(el)).toEqual(["http://ds:8090/datasheets/files/ds/vendor/x.pdf", "/designs/m/boards/a.edn/view"]);
     expect(rows(el)[0]).toContain("x.pdf");
     expect(rows(el)[0]).toContain("just now");
+  });
+
+  // The workbench is a separate service, so with no --datasheets-url a datasheet entry would link to a
+  // page this server does not have (agni issue 744).
+  it("hides datasheet recents when no workbench is configured", async () => {
+    noteOpen({ kind: "design", mount: "m", path: "boards/a.edn", label: "a.edn" }, 1000);
+    noteOpen({ kind: "datasheet", mount: "ds", path: "vendor/x.pdf", label: "x.pdf" }, 2000);
+
+    const el = mount((e) => recentsIsland(e, null, 2000));
+    await settle();
+    expect(links(el)).toEqual(["/designs/m/boards/a.edn/view"]);
   });
 
   it("clears the list from the page", async () => {

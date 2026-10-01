@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -76,23 +75,6 @@ func TestServeStillRefusesAnIncompleteCheckout(t *testing.T) {
 	}
 }
 
-// The workbench is optional. A viewer without it still serves, and the reason it is off is kept for
-// /datasheets/ to answer with.
-func TestServeWithoutTheWorkbenchStillServesTheViewer(t *testing.T) {
-	clearNamedWebDir(t)
-	dir := webAssetsDir(t) // carries no pdf.worker.js
-	got, err := resolveServeAssets(dir, noEnv)
-	if err != nil {
-		t.Fatalf("a complete viewer without the workbench was refused: %v", err)
-	}
-	if !got.viewer {
-		t.Error("the viewer group is present and was not served")
-	}
-	if got.datasheetsErr == nil || !strings.Contains(got.datasheetsErr.Error(), "pdf.worker.js") {
-		t.Errorf("the missing workbench file should be named, got %v", got.datasheetsErr)
-	}
-}
-
 // `open` exists to show one design's page, so it keeps refusing without the viewer, before it binds.
 func TestOpenStillRequiresTheViewer(t *testing.T) {
 	clearNamedWebDir(t)
@@ -141,23 +123,5 @@ func TestAPIOnlyRootSaysWhatIsServed(t *testing.T) {
 				t.Errorf("GET %s does not mention %q:\n%s", tc.path, want, body)
 			}
 		}
-	}
-}
-
-// With the workbench off, /datasheets/ names why, and the rest of the viewer is unaffected.
-func TestPagesWithoutTheWorkbench(t *testing.T) {
-	mux := http.NewServeMux()
-	why := errors.New(`"web" has no static/pdf.worker.js, so the datasheets workbench is off`)
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, why)
-
-	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequest("GET", "/datasheets/", nil))
-	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "pdf.worker.js") {
-		t.Errorf("GET /datasheets/ = %d %q, want a 404 naming the missing file", rec.Code, rec.Body.String())
-	}
-	rec = httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
-	if rec.Code != http.StatusOK {
-		t.Errorf("GET / = %d with the workbench off, want the landing page", rec.Code)
 	}
 }

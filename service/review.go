@@ -119,7 +119,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err != nil {
 		return nil, err
 	}
-	designURI, err := artifactURI(req.GetDesignUri())
+	designURI, err := ParseArtifactURI(req.GetDesignUri())
 	if err != nil {
 		return nil, err
 	}
@@ -286,13 +286,13 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 	if req.GetUri() == "" {
 		return nil, fmt.Errorf("%w: GetReviewManifest needs a uri", ErrInvalidArgument)
 	}
-	u, err := artifactURI(req.GetUri())
+	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
 	}
 	man, err := s.loader.Manifest(ctx, u)
 	if err != nil {
-		return nil, classifyLoadErr(err)
+		return nil, ClassifyLoadErr(err)
 	}
 	if err := review.Validate(man); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
