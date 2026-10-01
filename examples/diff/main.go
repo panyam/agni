@@ -1,5 +1,5 @@
-// Command diff is the diff rung of the Agni examples ladder: compare two revisions of a
-// design and read the semantic change taxonomy. It is the walkthrough form of `agni diff`.
+// Command diff is the diff rung of the Agni examples ladder, which compares two revisions of a
+// design and reads the semantic change taxonomy. It is the walkthrough form of `agni diff`.
 // The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only
 // binds the steps that run engine code.
 //
@@ -23,7 +23,6 @@ var walkthroughMD []byte
 const diffLimit = 40
 
 func main() {
-	// Two shared path inputs: the old and new revisions, each defaulting to a bundled fixture.
 	oldRev := common.AskPath("old", "../common/designs/rev-a.edn")
 	newRev := common.AskPath("new", "../common/designs/rev-b.edn")
 

@@ -9,11 +9,12 @@ import (
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
-// TestFirstImageHandlerComposesSources checks the /rule-docs/ composition (WS3-093): a request for a
-// built-in card and a request for an intent card both resolve 200 through the one handler, and a card
-// in neither source 404s. This is the runtime path the web uses to render an intent rule's schematic
-// card, so it must serve both embed FSes from the single namespace — a built-in-only handler (the
-// pre-WS3-093 wiring) would 404 the intent card and the panel would show "no card yet".
+// TestFirstImageHandlerComposesSources checks the /rule-docs/ composition (WS3-093). A request for
+// a built-in card and a request for an intent card both resolve 200 through the one handler, and a
+// card in neither source 404s. This is the runtime path the web uses to render an intent rule's
+// schematic card, so it must serve both embed FSes from the single namespace. A built-in-only
+// handler (the pre-WS3-093 wiring) would 404 the intent card and the panel would show "no card
+// yet".
 func TestFirstImageHandlerComposesSources(t *testing.T) {
 	h := firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())
 	get := func(path string) *httptest.ResponseRecorder {

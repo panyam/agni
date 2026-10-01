@@ -17,7 +17,7 @@ const outFileFixture = "testdata/conformance/fires.edn"
 
 // runWithOut executes a command capturing what it would have printed, and returns that alongside the
 // file -o was pointed at. Both are returned on every call because the interesting assertion is about
-// the RELATIONSHIP: what lands in the file must have left stdout.
+// the RELATIONSHIP, that what lands in the file must have left stdout.
 func runWithOut(t *testing.T, cmd *cobra.Command, args ...string) (stdout, file string) {
 	t.Helper()
 	p := filepath.Join(t.TempDir(), "out.txt")
@@ -35,11 +35,11 @@ func runWithOut(t *testing.T, cmd *cobra.Command, args ...string) (stdout, file 
 	return buf.String(), string(b)
 }
 
-// TestOutFileDivertsEveryFormat is the assertion the flag exists for: the artifact goes to the file
+// TestOutFileDivertsEveryFormat is the assertion the flag exists for. The artifact goes to the file
 // and stdout is left clean, whatever --format was asked for.
 //
 // Every format is a row because the implementation redirects the COMMAND rather than each write site,
-// and the failure mode of getting that wrong is per-format: one format keeps writing to the real
+// and the failure mode of getting that wrong is per-format, where one format keeps writing to the real
 // stdout and its file comes back empty. Red-checks by dropping the cmd.SetOut in redirectOut.
 func TestOutFileDivertsEveryFormat(t *testing.T) {
 	for _, format := range []string{"text", "json", "csv", "markdown", "html"} {
@@ -83,7 +83,7 @@ func TestOutFileDefaultsToStdout(t *testing.T) {
 
 // TestOutFileIsNotResultsOut keeps the two apart. They write different artifacts to different paths
 // and a reader could reasonably assume one supersedes the other, so this asserts both land and that
-// what they contain differs: --results-out is the check-result DOCUMENT (JSON with a meta.schema that
+// what they contain differs. --results-out is the check-result DOCUMENT (JSON with a meta.schema that
 // `agni results` re-renders), and -o is the rendered --format output.
 func TestOutFileIsNotResultsOut(t *testing.T) {
 	dir := t.TempDir()
@@ -121,7 +121,7 @@ func TestOutFileIsNotResultsOut(t *testing.T) {
 	}
 }
 
-// TestQueryWritesItsViewToAFile: query is the command whose own help calls markdown and html "a VIEW
+// TestQueryWritesItsViewToAFile covers query, whose own help calls markdown and html "a VIEW
 // ... ready to hand to someone", so it wants a file more than any of the others and was missed when
 // the flag first landed. The shared helper means this is a wiring test rather than a second
 // implementation, which is why one format is enough here and check sweeps them all.
@@ -147,7 +147,7 @@ func TestQueryWritesItsViewToAFile(t *testing.T) {
 	}
 }
 
-// TestOutFileNoteGoesToStderr keeps `-o` composable with a pipe: the human line about the write must
+// TestOutFileNoteGoesToStderr keeps `-o` composable with a pipe, so the human line about the write must
 // not land in whatever reads stdout next. Matches render, which has said this since it shipped.
 func TestOutFileNoteGoesToStderr(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "out.txt")
@@ -167,8 +167,9 @@ func TestOutFileNoteGoesToStderr(t *testing.T) {
 	}
 }
 
-// TestOutFileUnwritablePathErrors: a path that cannot be created fails the run rather than silently
-// falling back to stdout, which would leave the operator with an artifact they cannot find.
+// TestOutFileUnwritablePathErrors checks that a path that cannot be created fails the run rather
+// than silently falling back to stdout, which would leave the operator with an artifact they cannot
+// find.
 func TestOutFileUnwritablePathErrors(t *testing.T) {
 	cmd := checkCmd()
 	cmd.SetOut(&bytes.Buffer{})
@@ -179,10 +180,10 @@ func TestOutFileUnwritablePathErrors(t *testing.T) {
 	}
 }
 
-// TestOutFileNoteIsAbsolute: the note names a path the reader can act on. A relative `-o` is
+// TestOutFileNoteIsAbsolute holds the note to a path the reader can act on. A relative `-o` is
 // resolved before it is printed, because a terminal linkifies an absolute path into a click and a
-// relative one only means something to someone standing where the command ran. A report is the case
-// that motivates it: written from wherever the design is, opened from a browser somewhere else.
+// relative one only means something to someone standing where the command ran. A report motivates
+// it, since one is written from wherever the design is and opened from a browser somewhere else.
 func TestOutFileNoteIsAbsolute(t *testing.T) {
 	dir := t.TempDir()
 	wd, err := os.Getwd()

@@ -13,10 +13,9 @@ import (
 
 // importResultsCmd reads another tool's check report into a results document (WS3-104).
 //
-// It is a separate command rather than a `formats` reader because a results file describes a design it
-// does not contain: it cannot answer "give me the netlist", which is the question every registry
-// capability answers. What comes out is an ordinary check-result document, so `agni results` renders it
-// with no special case — the payoff of having a document contract at all.
+// It is a command rather than a `formats` reader because a results file describes a design it does
+// not contain, so it cannot answer "give me the netlist" as every registry capability must. The output
+// is an ordinary check-result document, and `agni results` renders it with no special case.
 func importResultsCmd() *cobra.Command {
 	var design, out string
 	cmd := &cobra.Command{
@@ -64,9 +63,9 @@ func importResultsCmd() *cobra.Command {
 	return cmd
 }
 
-// writeImportSummary prints what was imported and, more importantly, what was not attached. It goes to
-// stdout on every run rather than behind a verbose flag: the residue is the honest part of an import,
-// and a summary nobody sees is the same as no summary.
+// writeImportSummary prints what was imported and what could not be attached. It goes to stdout on
+// every run rather than behind a verbose flag, because the unattached residue is what a reader needs
+// to judge the import.
 func writeImportSummary(w io.Writer, doc *checkspb.CheckResults) error {
 	s := doc.GetImportSummary()
 	fmt.Fprintf(w, "%s %s — %d finding(s) from %s\n",

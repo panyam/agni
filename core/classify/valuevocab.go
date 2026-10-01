@@ -6,36 +6,30 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// ValueVocab is the CONVENTION half of reading a component's value, kept out of the parser on purpose
-// (WS3-118).
+// ValueVocab is the CONVENTION half of reading a component's value, kept out of the parser (WS3-118).
 //
-// ParseQuantity implements the part of the notation that is actually specified: IEC 60062's RKM code
-// and the SI prefixes. What no specification covers is what unit a BARE number carries, because that
-// depends on the component's class and on house habit. A bare "100" on a resistor is 100 Ω by universal
-// convention; on a capacitor it could be farads, microfarads or picofarads depending on the era and the
-// tool that wrote it.
+// ParseQuantity implements the part of the notation that is specified: IEC 60062's RKM code and the
+// SI prefixes. No specification says what unit a BARE number carries, because that depends on the
+// component's class and on house habit. A bare "100" on a resistor is 100 Ω by universal convention;
+// on a capacitor it could be farads, microfarads or picofarads depending on the era and the tool that
+// wrote it. So it is a naming convention, declared through --conventions like the rail and ground
+// patterns in RoleVocab.
 //
-// That is a naming convention, so it lives in a vocabulary surfaced through --conventions, the same
-// reason rail and ground name patterns live in RoleVocab instead of in rule text. A house that spells
-// bare capacitor values in microfarads declares it rather than arguing with the parser.
-//
-// The DEFAULT deliberately covers resistors only. Bare capacitor and inductor values are rare and
-// genuinely ambiguous, and guessing one would put a number three or six orders of magnitude out into a
-// field that reads as authoritative. An unset class yields an empty unit, which is the honest "number
-// known, unit not" state Quantity exists to represent.
+// The DEFAULT covers resistors only. Guessing a bare capacitor or inductor unit would put a number
+// three or six orders of magnitude out into a field that reads as authoritative. An unset class
+// yields an empty unit, the "number known, unit not" state Quantity exists to represent.
 type ValueVocab struct {
 	// dimension is the unit a class's value is measured in, applied whenever the NOTATION stated no
-	// unit. This is not a guess: a capacitor's value is a capacitance, so "10u" on one is 10 uF and
-	// nothing else. Without it the feature would be useless for capacitors and inductors, which is
-	// most passives, since almost nobody writes the F or the H.
+	// unit. It is not a guess, since a capacitor's value is a capacitance and "10u" on one is 10 uF.
+	// Almost nobody writes the F or the H, so without it most passives would get no unit.
 	dimension map[ComponentClass]string
-	// bareUnit is the narrower and genuinely uncertain case: a value with NO multiplier prefix either,
-	// where the magnitude is unstated and the old conventions disagree.
+	// bareUnit is the narrower, uncertain case of a value with NO multiplier prefix either, where the
+	// magnitude is unstated and historic conventions disagree.
 	bareUnit map[ComponentClass]string
 }
 
-// DefaultValueVocab returns the built-in bare-number conventions: a resistor's bare value is ohms, and
-// nothing else is assumed. See the ValueVocab doc for why the default is this narrow.
+// DefaultValueVocab returns the built-in bare-number conventions. A resistor's bare value is ohms and
+// nothing else is assumed; the ValueVocab doc says why the default is this narrow.
 func DefaultValueVocab() *ValueVocab {
 	return &ValueVocab{
 		dimension: map[ComponentClass]string{
@@ -44,14 +38,12 @@ func DefaultValueVocab() *ValueVocab {
 			ClassInductor:  "H",
 			ClassFerrite:   UnitOhm, // a bead is specified by its impedance at a frequency
 		},
-		// Only the resistor. A bare "100" on a capacitor could be farads, microfarads or picofarads
-		// depending on the era and the tool, and being six orders of magnitude out in a field that
-		// reads as authoritative is worse than declining to answer.
+		// Only the resistor (see the ValueVocab doc).
 		bareUnit: map[ComponentClass]string{ClassResistor: UnitOhm},
 	}
 }
 
-// BuildValueVocab returns a vocabulary from declared conventions: a map of device-class name to the SI
+// BuildValueVocab returns a vocabulary from declared conventions, a map of device-class name to the SI
 // BASE unit a bare number on that class means ("ohm"/"farad"/"henry" are accepted alongside the
 // symbols). An empty or nil config yields the defaults. A class the config names replaces the default
 // for that class; classes it does not name keep theirs.
@@ -60,7 +52,7 @@ func BuildValueVocab(bareUnits map[string]string) *ValueVocab {
 	for cls, unit := range bareUnits {
 		u := canonicalUnit(unit)
 		if u == "" {
-			continue // an unreadable unit is skipped, never guessed: the params-tier posture
+			continue // an unreadable unit is skipped, never guessed, as in the params tier
 		}
 		// A declared convention settles the ambiguous bare case AND confirms the dimension, since a
 		// house saying "a bare capacitor value is in farads" has told us both.
@@ -85,7 +77,7 @@ func canonicalUnit(s string) string {
 
 // UnitFor returns the unit a value on this component class is measured in when the notation stated
 // none. prefixed says whether the value carried a multiplier ("10u" yes, "100" no), which selects
-// between the two cases the ValueVocab doc describes. Empty is a real answer, not a failure.
+// between the dimension and bareUnit cases. Empty is a real answer, not a failure.
 func (v *ValueVocab) UnitFor(class ComponentClass, prefixed bool) string {
 	if v == nil {
 		v = DefaultValueVocab()
@@ -101,14 +93,12 @@ func (v *ValueVocab) UnitFor(class ComponentClass, prefixed bool) string {
 // with the SOURCE spelling and normalizes only MPN, so its value key is whatever the exporting tool
 // wrote.
 //
-// The match is case-insensitive, which covers Value/VALUE/value in one rule rather than three entries.
-// The remaining aliases are the spellings seen elsewhere in this repo's readers. A wider EDIF alias hunt
-// is deliberately NOT guessed here: the public corpus is FPGA netlists carrying no board parts, so there
-// is no evidence to build it from, and a wrong alias would populate values from the wrong property.
+// The match is case-insensitive, so Value/VALUE/value need one entry. The remaining aliases are the
+// spellings seen in this repo's readers. No wider EDIF aliases are guessed, because the public corpus
+// is FPGA netlists with no board parts and a wrong alias would read values from the wrong property.
 var valueAttrKeys = []string{"value", "val", "partvalue", "component_value"}
 
-// valueTextOf returns the value text a component carries and the attribute key it came from, or ""
-// when it carries none. Checked in valueAttrKeys order so an explicit "Value" wins a looser alias.
+// valueTextOf returns the value text a component carries, or "" when it carries none. Checked in valueAttrKeys order so an explicit "Value" wins a looser alias.
 func valueTextOf(c *ir.Component) string {
 	for _, want := range valueAttrKeys {
 		for k, v := range c.GetAttributes() {
@@ -121,14 +111,12 @@ func valueTextOf(c *ir.Component) string {
 }
 
 // StampValues fills each component's value Quantity from whatever attribute its format spelled the
-// value in (WS3-118). The loader calls it after readers finish, so every format is normalized by the
-// same pass and a rule reads a NUMBER rather than re-parsing text per format. Idempotent: it recomputes
-// and overwrites, so a re-stamp after a re-read is safe.
+// value in (WS3-118), so a rule reads a NUMBER rather than re-parsing text per format. It is idempotent,
+// recomputing and overwriting.
 //
-// A component with no value attribute gets NO Quantity (nil), which is distinct from one whose value
-// text could not be parsed: that gets a Quantity carrying the input with the number absent. "No value
-// stated" and "a value stated that we failed to read" are different facts, and only the second is a gap
-// worth reporting.
+// A component with no value attribute gets NO Quantity (nil). One whose value text could not be parsed
+// gets a Quantity carrying the input with the number absent, and only that second case is a gap worth
+// reporting.
 func (l *Lexicon) StampValues(d *ir.Design) {
 	vocab := l.value()
 	for _, c := range d.GetComponents() {
@@ -151,6 +139,5 @@ func (l *Lexicon) StampValues(d *ir.Design) {
 	}
 }
 
-// StampValues runs the value pass with the process-level lexicon. See (*Lexicon).StampValues for the
-// contract; this is the package-level form, matching Stamp and StampNetRoles.
+// StampValues is the process-level form of (*Lexicon).StampValues, which carries the contract.
 func StampValues(d *ir.Design) { ActiveLexicon().StampValues(d) }

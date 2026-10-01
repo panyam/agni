@@ -24,24 +24,19 @@ var bulkCap = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// bulkCapVerdicts decides every NAMED power rail, and that set is the considered set. The naming
-// test is what makes a rail a rail here: a net the design declares global or drives with a power
-// flag is a distribution rail somebody chose to name, where an ordinary signal net is not, and only
-// the first has a bulk reservoir to be missing. A signal net therefore yields no verdict, and
-// neither does a ground, which is the return path rather than the reservoir.
+// bulkCapVerdicts decides every NAMED power rail, and that set is the considered set. A net counts
+// as named when the design declares it global or drives it with a power flag, so an ordinary signal
+// net yields no verdict. Neither does a ground, which is the return path rather than the reservoir.
 //
-// This rule and decoupling-present ask the same shape of question about overlapping sets, and the
-// verdicts make the difference legible for the first time: decoupling-present is about rails that
-// reach a supply PIN, this one about rails the design NAMES. A rail can be a subject of one and not
-// the other, and before the considered set neither would have said so.
-//
-// The pass NAMES the capacitor, so the evidence points somewhere a reviewer can go and look.
+// decoupling-present asks the same question about rails that reach a supply PIN, where this one asks
+// about rails the design NAMES, so a rail can be a subject of one and not the other (#400). A pass
+// names the capacitor, so a reviewer can go and look at it.
 func bulkCapVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
 		named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
 		if !named || m.IsGroundNet(n) {
-			continue // not a named distribution rail, or the return path rather than the reservoir
+			continue
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
@@ -70,7 +65,7 @@ func bulkCapVerdicts(m check.Model) []check.Verdict {
 	return out
 }
 
-// bulkCapSpec is the rule's declarative twin (WS3-003).
+// bulkCapSpec is the rule's declarative twin.
 var bulkCapSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{

@@ -8,7 +8,7 @@ the geometry sidecar work. This page studies the `.eds` SCHEMATIC export the way
 primer studied the `.edn`, so the geometry sidecar proto and reader can be designed against
 ground truth.
 
-Source file: a 62MB real-world `.eds` SCHEMATIC export (proprietary, kept outside the repo),
+The source file is a 62MB real-world `.eds` SCHEMATIC export (proprietary, kept outside the repo),
 `edifVersion 2 0 0`, `edifLevel 0`, exported by Siemens xDX Designer.
 
 ## 1. What a schematic is (the concepts)
@@ -24,7 +24,7 @@ A schematic is the human-facing **drawing** of a design. It encodes the same con
 | **Placement / instance** | A symbol dropped on a sheet at some position/rotation, standing for one physical part. | `(instance ...)` inside a page |
 | **Ref-des** | The {{ explainable "reference-designator" }} of a placement (`R12`, `J1900`). Names the physical part and joins the drawing to the netlist. | `(designator (stringDisplay "J1900" ...))` |
 | **Wire / net segment** | A drawn line (polyline) connecting pins. Belongs to a net. | `(figure NET (path (pointList ...)))` |
-| **Net** | An electrical node: all the pins and wires at the same potential. | `(net ... (joined ...))` |
+| **Net** | An electrical node, all the pins and wires at the same potential. | `(net ... (joined ...))` |
 | **Junction / dot** | A filled dot where wires that cross are electrically joined. | `(dot (pt ...))` |
 | **Off-page connector** | A tag that continues a net onto another sheet without a drawn wire. | `(offPageConnector ...)` |
 | **Label / annotation** | Free text on the sheet (net names, notes, table titles, block names). | `(annotate (stringDisplay ...))` |
@@ -70,7 +70,7 @@ re-derived from the `.eds`. The two are joined by key at render time.
 | **Page size** | `(pageSize (rectangle (pt 0 0) (pt 86360000 55880000)))`, so 863.6 mm by 558.8 mm for this design. |
 | **Bounding boxes** | `(boundingBox (rectangle (pt) (pt)))` appears on symbols and sheets, and is the natural key for the spatial index and for viewport culling. |
 
-**float32 precision trap (renderer).** `float32` represents integers exactly only up to
+**The renderer cannot upload these coordinates as `float32`.** `float32` represents integers exactly only up to
 2^24 = 16,777,216, and coordinates here reach ~8.6e7. Uploading raw units as `float32` GPU
 attributes loses precision and misaligns wires. Keep int32 through storage, where the full range
 fits comfortably (~8.6e7 against a limit of ~2.1e9), and either use integer vertex attributes
@@ -168,7 +168,7 @@ This is what the sidecar proto models. Everything else (section 6) is dropped or
 
 - `viewRef -> cellRef -> libraryRef` selects the symbol to draw. Note `cellRef` may be a bare
   atom or a `(name X (display ...))` form. Handle both.
-- `transform` = `(origin (pt X Y))` plus an `(orientation ...)` (section 7). Rare
+- `transform` is `(origin (pt X Y))` plus an `(orientation ...)` (section 7). Rare
   `(scaleX ...)`/`(scaleY ...)` also appear (7 each in this file).
 - `(designator (stringDisplay "J1900" ...))` is the ref-des. Unlike the netlist, it wraps a
   `stringDisplay` (it carries its own on-sheet label position).
@@ -207,8 +207,8 @@ back to the IR net.
 
 ## 6. Everything else in the file (beyond geometry)
 
-The `.eds` carries a lot that does **not** go in the geometry sidecar. Cataloged so the
-deliberate drops are known (fidelity is lossy-bounded, a render subset):
+The `.eds` carries a lot that does **not** go in the geometry sidecar. It is cataloged here so the
+deliberate drops are known, since fidelity is lossy-bounded to a render subset.
 
 | Category | Constructs | Why we drop / defer it |
 |---|---|---|
@@ -220,7 +220,7 @@ deliberate drops are known (fidelity is lossy-bounded, a render subset):
 | **Back-annotation** | `viewMap`, `instanceBackAnnotate`, `portBackAnnotate` | Data pushed back from other tools (print order, sheet totals, pin types). Not render geometry. |
 | **Opaque extras** | `userData` | Vendor-specific flags (e.g. `visibleName`). Keep opaque if at all. |
 
-**Note on connectivity in the `.eds`:** it is present and consistent with the `.edn`, so in
+Connectivity in the `.eds` is present and consistent with the `.edn`, so in
 principle the schematic alone could feed both the IR and the geometry. We keep the split
 (connectivity from `.edn`, geometry from `.eds`) because the `.edn` is 6x smaller and the netlist
 reader already parses it, and because the sidecar architecture wants geometry to be independently
@@ -228,8 +228,8 @@ sourced (see [Ingestion and IR](../../architecture/ingestion-and-ir/)).
 
 ## 7. Orientation semantics
 
-`transform` orientation codes (counts in this file), applied to symbol-local coordinates before
-translating by `origin`:
+The `transform` orientation codes follow, with their counts in this file. Each applies to
+symbol-local coordinates before translating by `origin`.
 
 | Code | Meaning | Count |
 |---|---|---|
@@ -284,8 +284,9 @@ names from a page-level `(portImplementation (name X (display ...)))`.
 
 ## 9. Grammar sketch (the schematic subset we read)
 
-EBNF-ish, restricted to the render subset. `ID` = identifier or `(rename &id "disp")`, `INT` =
-integer, `STR` = quoted string. Constructs not listed are skipped by the reader.
+The grammar is EBNF-ish and restricted to the render subset. `ID` is an identifier or
+`(rename &id "disp")`, `INT` an integer, and `STR` a quoted string. Constructs not listed are
+skipped by the reader.
 
 ```
 schematic     = "(edif" NAME header library+ design ")"

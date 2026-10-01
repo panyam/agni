@@ -10,31 +10,29 @@ import (
 // itself. Zero value is disabled, so a caller that passes nothing gets the exact-signature
 // behaviour and nothing else.
 //
-// These are a value rather than ambient state (C22) because "mostly the same net" is house style
-// and board style at once. A dense board with heavy test point coverage wants different numbers
-// from a small module, and the engine has no way to know which it is looking at.
+// These are a value rather than ambient state (C22), because a dense board with heavy test point
+// coverage wants different numbers from a small module.
 //
 // The thresholds come in significant/all pairs. Significant counts only endpoints whose component
-// is not in InsignificantClasses, which is what makes the pass insensitive to probe churn: a test
-// point added or dropped is routine and should not cost a net its identity, while a device pin
-// moving should.
+// is not in InsignificantClasses, which makes the pass insensitive to probe churn. The knob table
+// is in docsite/content/architecture/semantic-diff.md#near-matches-off-by-default.
 type RenameOptions struct {
 	// Enabled gates the whole pass. False reproduces the exact-signature output exactly.
 	Enabled bool
 	// MinOldCoverage is the fraction of the OLD net's endpoints that must survive into the
 	// candidate. Lower catches heavier rewires and starts pairing nets that merely overlap.
 	MinOldCoverage float64
-	// MinOldCoverageSignificant is the same fraction over significant endpoints only. This is the
-	// threshold doing most of the work, because it is the one probe churn cannot move.
+	// MinOldCoverageSignificant is the same fraction over significant endpoints only. It does most
+	// of the work, because probe churn cannot move it.
 	MinOldCoverageSignificant float64
 	// MinNewCoverage is the fraction of the NEW net made up of old endpoints. It guards the
-	// asymmetric case: a large net that happens to contain all of a small one is not its rename.
+	// asymmetric case, where a large net containing all of a small one is not its rename.
 	MinNewCoverage float64
 	// MinNewCoverageSignificant is that guard over significant endpoints.
 	MinNewCoverageSignificant float64
 	// MaxAddedSignificantFloor is how many significant endpoints a net may GAIN and still read as
-	// itself, when half its old significant count is smaller. The floor is what lets a two-endpoint
-	// net become four.
+	// itself, when half its old significant count is smaller. The floor lets a two-endpoint net
+	// become four.
 	MaxAddedSignificantFloor int
 	// MinSignificantEndpoints is the floor below which no near-match is attempted. A net with one
 	// significant endpoint has no shape to match on.
@@ -47,12 +45,10 @@ type RenameOptions struct {
 
 // DefaultRenameOptions returns the calibrated thresholds, with Enabled false.
 //
-// The numbers are not invented. They are the settled values of an in-house netlist comparison tool
-// that has run against real revision pairs for years, and both failure directions were observed
-// while arriving at them: looser values mis-paired unrelated power rails, and tighter values missed
-// obvious renames where a single decoupling capacitor had been added or removed. Treat them as a
-// calibrated starting point on OTHER boards rather than a proven one on yours, and produce a
-// precision number before trusting the pass on a corpus that matters.
+// They are the settled values of a netlist comparison tool run against real revision pairs for
+// years. Looser values mis-paired unrelated power rails and tighter ones missed renames where one
+// decoupling capacitor was added or removed. Produce a precision number before trusting them on a
+// corpus that matters.
 func DefaultRenameOptions() RenameOptions {
 	return RenameOptions{
 		MinOldCoverage:            0.70,
@@ -67,11 +63,8 @@ func DefaultRenameOptions() RenameOptions {
 
 // renameScore ranks one candidate pairing. Comparison is LEXICOGRAPHIC over the fields in
 // declaration order, so a stronger significant-coverage always beats a weaker one however the later
-// fields fall, and sizeDelta only ever settles a tie among otherwise indistinguishable candidates.
-//
-// A scalar score would have to weight these against each other, and there is no defensible exchange
-// rate between "80% of the old net survived" and "the new net is two endpoints bigger". Ordering
-// them says which question is asked first instead of pretending the answers are commensurable.
+// fields fall, and sizeDelta only settles a tie. Not a weighted scalar, since there is no sensible
+// exchange rate between coverage and size difference.
 type renameScore struct {
 	oldCovSignificant  float64
 	oldCov             float64
@@ -113,9 +106,8 @@ func significantOf(conns map[string]bool, insignificant map[string]bool, comps m
 // insignificantEndpoint reports whether an endpoint's component carries an insignificant class.
 //
 // It reads ir.Component.DeviceClasses, the normalized set stamped once at ingestion, rather than
-// matching a ref-des prefix. A board whose probes are not spelled "TP" is the case a prefix rule
-// gets wrong, and it gets it wrong SILENTLY: every probe counts as a device pin, so probe churn
-// starts costing nets their identity and the pass simply recovers fewer renames.
+// matching a ref-des prefix. A prefix rule fails SILENTLY on a board whose probes are not spelled
+// "TP", and the pass then recovers fewer renames.
 func insignificantEndpoint(endpoint string, insignificant map[string]bool, comps map[string]*ir.Component) bool {
 	ref := endpoint
 	for i := len(endpoint) - 1; i >= 0; i-- {
@@ -154,10 +146,8 @@ func intersectionSize(a, b map[string]bool) int {
 // NetRenamedApprox per pairing plus the names it consumed.
 //
 // It runs only on what the exact-signature pass could not place, and it is a separate ranked
-// assignment rather than a loosened version of that pass. The distinction is the whole design. A
-// wrong pairing claims a net kept its identity across a revision when it did not, and every
-// downstream reading of the diff inherits that claim, so the two passes must not be able to trade
-// precision for recall with each other.
+// assignment rather than a loosened version of that pass, so the two cannot trade precision for
+// recall with each other. A wrong pairing claims a net kept its identity when it did not.
 //
 // Cost tracks shared endpoints rather than the product of the two leftover sets, because candidates
 // are generated by inverting the endpoint index instead of scoring every pair.
@@ -214,9 +204,7 @@ func nearRenames(deleted, added []string, an, bn map[string]*netInfo, aComps, bC
 		}
 	}
 
-	// Best-first, with the names as tie-breaks so a run is reproducible. Two candidates that score
-	// identically must not pair differently between runs, or the diff of two fixed revisions stops
-	// being a function of those revisions.
+	// Best-first, with the names as tie-breaks so two fixed revisions always pair the same way.
 	sort.Slice(cands, func(i, j int) bool {
 		if cands[i].score != cands[j].score {
 			return cands[i].score.better(cands[j].score)
@@ -260,9 +248,9 @@ func nearRenames(deleted, added []string, an, bn map[string]*netInfo, aComps, bC
 
 // requiredOverlap is the significant-endpoint overlap a candidate must clear to be SCORED at all.
 //
-// It is derived from MinOldCoverageSignificant rather than being its own constant, because the two
-// have to agree: a prefilter stricter than the threshold drops candidates that would have passed,
-// and the knob then appears not to work. Deriving it means moving the threshold moves both.
+// It is derived from MinOldCoverageSignificant rather than being its own constant, because a
+// prefilter stricter than the threshold drops candidates that would have passed and the knob then
+// appears not to work.
 func requiredOverlap(oldSignificant int, opts RenameOptions) int {
 	n := int(float64(oldSignificant)*opts.MinOldCoverageSignificant + 0.999999)
 	if n < opts.MinSignificantEndpoints {
@@ -272,7 +260,7 @@ func requiredOverlap(oldSignificant int, opts RenameOptions) int {
 }
 
 // scoreRename returns the ranking score for one candidate pairing, or false when the pairing fails
-// any threshold. Every rejection is a threshold, so a caller cannot end up with a partial score.
+// any threshold.
 func scoreRename(oldConns, newConns, oldSig, newSig map[string]bool, opts RenameOptions) (renameScore, bool) {
 	if len(oldConns) == 0 || len(newConns) == 0 {
 		return renameScore{}, false

@@ -14,8 +14,8 @@ import (
 )
 
 // ReadBoardGeometry parses an IPC-2581 interchange file into the board-geometry sidecar
-// (geom.BoardGeometry), the second producer of that contract after KiCad (WS1-006/023). The
-// caller owns file I/O (CONSTRAINTS C1); sourceFile is recorded in provenance only.
+// (geom.BoardGeometry), the second producer of that contract after KiCad (WS1-006/023).
+// sourceFile is recorded in provenance only (C1).
 //
 // Fidelity: lossy-bounded (C6). This producer carries the board outline (Profile), the layer
 // stackup table, component placements with their pads (resolved through the padstack
@@ -43,7 +43,7 @@ func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, err
 }
 
 // ipcGeomFile is the geometry subset of the IPC-2581 tree, kept separate from the netlist
-// reader's ipcFile (C7/C8: the netlist IR and the geometry sidecar decode independently).
+// reader's ipcFile, because the netlist IR and the geometry sidecar decode independently (C7/C8).
 type ipcGeomFile struct {
 	XMLName   xml.Name         `xml:"IPC-2581"`
 	Dicts     []dictStd        `xml:"Content>DictionaryStandard"`
@@ -56,7 +56,7 @@ type ipcGeomFile struct {
 	Features  []layerFeatureEl `xml:"Ecad>CadData>Step>LayerFeature"`
 }
 
-// dictStd is a standard-primitive dictionary: a units tag plus the shape definitions that
+// dictStd is a standard-primitive dictionary, holding a units tag and the shape definitions
 // pads reference by id (the padstack def half of the def/instance split).
 type dictStd struct {
 	Units   string       `xml:"units,attr"`
@@ -71,7 +71,7 @@ type entryStdEl struct {
 	Cont   *contourEl `xml:"Contour"`
 }
 
-// dictUser is a user-primitive dictionary: pad shapes IPC has no standard element for (custom
+// dictUser is a user-primitive dictionary of pad shapes IPC has no standard element for (custom
 // contacts, stroke artwork), each a UserSpecial of one or more Contour polygons. Pads reference
 // them by <UserPrimitiveRef>. It carries its own units, which may differ from the standard dict.
 type dictUser struct {
@@ -188,7 +188,7 @@ type xformEl struct {
 	Rotation string `xml:"rotation,attr"`
 }
 
-// primShape is a resolved standard primitive: a contract shape word and its size.
+// primShape is a resolved standard primitive, a contract shape word plus its size.
 type primShape struct {
 	shape string
 	sizeX int64
@@ -200,8 +200,8 @@ func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 	g := &geom.BoardGeometry{UnitNm: 1, Prov: &geom.Provenance{SourceFile: src}}
 
 	for i, l := range f.Layers {
-		// kind keeps IPC-2581's layerFunction verbatim, same discipline as KiCad's kind word
-		// (C9: BoardLayer carries no stackup material/thickness until a consumer earns it).
+		// kind keeps IPC-2581's layerFunction verbatim, same discipline as KiCad's kind word.
+		// BoardLayer carries no stackup material/thickness until a consumer needs it (C9).
 		g.Layers = append(g.Layers, &geom.BoardLayer{Number: int32(i), Name: l.Name, Kind: l.Function})
 	}
 
@@ -292,8 +292,8 @@ func (f *ipcGeomFile) primitives(nmPerUnit float64) map[string]primShape {
 			}
 		}
 	}
-	// User-primitive dictionaries: a pad referencing one of these via UserPrimitiveRef would
-	// otherwise resolve to a zero-size shape. Each entry's extent is the bounding box over all its
+	// Resolve the user-primitive dictionaries too, or a pad referencing one via UserPrimitiveRef
+	// resolves to a zero-size shape. Each entry's extent is the bounding box over all its
 	// UserSpecial contours, measured in the DICTIONARY's own units (which may differ from the file's).
 	for _, d := range f.UserDicts {
 		uNm := unitToNm(d.Units)
@@ -349,7 +349,7 @@ func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string
 		side := normalizeSide(c.LayerRef)
 		// IPC-2581 is Y-up like the canonical geom frame, so the source Xform rotation is
 		// carried verbatim; the back side is flagged for the renderer to mirror (WS1-030).
-		// Pads stay footprint-local and unmodified — the renderer composes rotation and mirror.
+		// Pads stay footprint-local and unmodified, since the renderer composes rotation and mirror.
 		pl := &geom.ComponentPlacement{
 			RefDes:      c.RefDes,
 			At:          ptNm(c.Location, nmPerUnit),

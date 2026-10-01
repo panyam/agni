@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// declaringStore resolves every ref to one design: a netlist entry with a schematic companion, the
-// shape that broke. A nil design models a ref belonging to no declared design, which is the ordinary
-// case for a mounted folder and must read exactly what it names.
+// declaringStore resolves every ref to one design, a netlist entry with a schematic companion,
+// which is the shape that broke. A nil design models a ref belonging to no declared design, which
+// is the ordinary case for a mounted folder and must read exactly what it names.
 type declaringStore struct {
 	ProjectStore
 	design *webapi.Design
@@ -37,9 +37,10 @@ func mustURI(t *testing.T, s string) artifact.URI {
 	return u
 }
 
-// The three spellings of one design must resolve to the same tiers. They did not: the served path
-// never called SourcesFor, so a netlist entry yielded no faithful geometry and the design fell back
-// to an auto-layout while the CLI drew the companion's sheets (agni issue 656, constraint C32).
+// The three spellings of one design must resolve to the same tiers. They did not, because the
+// served path never called SourcesFor, so a netlist entry yielded no faithful geometry and the
+// design fell back to an auto-layout while the CLI drew the companion's sheets (agni issue 656,
+// constraint C32).
 func TestSourcesAgreeAcrossEverySpelling(t *testing.T) {
 	r := &ProjectResolver{Store: declaringStore{design: withCompanion()}}
 	for _, spelling := range []string{"mount://m/d", "mount://m/d/board.edn", "mount://m/d/board.eds"} {
@@ -58,9 +59,9 @@ func TestSourcesAgreeAcrossEverySpelling(t *testing.T) {
 	}
 }
 
-// THE POSITIVE CONTROL. Both surfaces resolving nothing is exactly the failure mode this guards, so
+// THE POSITIVE CONTROL. Both surfaces resolving nothing is the failure mode this guards, so
 // an assertion that only checks agreement passes on a design where nothing is attached. This pins
-// the other direction: with no design, every tier is the ref, and the test above would fail here.
+// the other direction. With no design, every tier is the ref, and the test above would fail here.
 func TestSourcesLeaveAnUndeclaredRefAlone(t *testing.T) {
 	r := &ProjectResolver{Store: declaringStore{design: nil}}
 	ref := "mount://m/loose/board.edn"
@@ -74,15 +75,16 @@ func TestSourcesLeaveAnUndeclaredRefAlone(t *testing.T) {
 	if got.FromDeclaration {
 		t.Error("nothing was declared, so no declaration was applied")
 	}
-	// The control proper: if resolution silently stopped working, the test above would report the ref
-	// in every tier too, and only this assertion separates "read as named" from "resolved nothing".
+	// This is the control proper. If resolution silently stopped working, the test above would
+	// report the ref in every tier too, and only this assertion separates "read as named" from
+	// "resolved nothing".
 	if got.GeometryURI == "mount://m/d/board.eds" {
 		t.Fatal("a loose ref resolved to another design's companion")
 	}
 }
 
 // as_named is the CLI's opt-out and has to survive the wire, because the CLI is itself a client of
-// these services: resolving unconditionally here silently overrode it, which TestCheckBoardPath
+// these services. Resolving unconditionally here silently overrode it, which TestCheckBoardPath
 // caught by finding board rules firing on a netlist read as-named.
 func TestSourcesHonourAsNamed(t *testing.T) {
 	r := &ProjectResolver{Store: declaringStore{design: withCompanion()}}

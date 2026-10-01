@@ -7,7 +7,7 @@ import (
 
 // fullQuery is a VALID datalog program touching every node and every field the wire form carries.
 //
-// Validity is a constraint, not a convenience: QueryFromProto runs ValidateRelations, so a program
+// Validity is a constraint, not a convenience. QueryFromProto runs ValidateRelations, so a program
 // naming a relation that resolves to nothing fails on decode and never reaches the comparison. The
 // program therefore defines its own relation (big_net) and otherwise names catalog ones.
 //
@@ -58,9 +58,9 @@ func fullQuery() Query {
 // contract (WS3-103), per C26. Nothing called QueryProto from a test before this.
 //
 // Going Query -> proto -> Query under deep equality means a conversion that forgets a field cannot
-// pass. Asserting on the proto would not: a field the conversion never writes is absent from both
-// sides of that comparison, so the two agree about nothing being there. This is the guard whose
-// absence let Profile.HostClass ship broken in the profiles half of the same contract.
+// pass. Asserting on the proto would not, because a field the conversion never writes is absent
+// from both sides of that comparison, so the two agree about nothing being there. This is the guard
+// whose absence let Profile.HostClass ship broken in the profiles half of the same contract.
 func TestQueryProtoRoundTrip(t *testing.T) {
 	want := fullQuery()
 	got, err := QueryFromProto(QueryProto(want))

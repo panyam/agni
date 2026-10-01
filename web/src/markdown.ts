@@ -1,23 +1,19 @@
-// Markdown rendering for rule prose (WS9-020). The catalog's Detail travels as markdown
-// (check.Rule.Detail); rendering it is a view concern, so the client owns the conversion. The
-// content is authored in-repo (the rule catalog, or an integrator's injected rules), not user
-// input, so the output is trusted and not sanitized.
+// Markdown rendering for rule prose (check.Rule.Detail, WS9-020). The output is not sanitized,
+// because the source is the rule catalog or an integrator's injected rules, never user input.
 import { marked } from "marked";
 
-// RULE_DOC_IMAGE_BASE is where the server serves the rule-doc explainer diagrams (WS9-030). A rule's
-// Detail markdown references them by bare filename (e.g. ![reach cases](reach-cases.png)), authored
-// relative to the doc; the panels resolve those against this route so the diagrams show inline.
+// RULE_DOC_IMAGE_BASE is the server route for rule-doc diagrams (WS9-030). Detail markdown names
+// them by bare filename, e.g. ![reach cases](reach-cases.png), and they resolve against this route.
 const RULE_DOC_IMAGE_BASE = "/rule-docs/";
 
-// A src is already resolvable when it has a scheme (http:, data:) or is root-absolute; only a
-// relative filename needs the rule-doc base prepended.
+// isResolved is true for a src with a scheme (http:, data:) or a root-absolute path.
 function isResolved(src: string): boolean {
   return /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith("/");
 }
 
-// Rewrite each relative image href to the rule-doc route BEFORE rendering, so the default renderer
-// emits the resolved <img src>. walkTokens mutates the parsed token, which is version-robust across
-// marked's renderer signatures. Registered once at module load (marked.use is global).
+// Rewrite relative image hrefs to the rule-doc route BEFORE rendering. walkTokens mutates the
+// parsed token, which survives changes to marked's renderer signatures. marked.use is global, so
+// this registers once at module load and applies to every marked caller.
 marked.use({
   walkTokens(token) {
     if (token.type === "image" && token.href && !isResolved(token.href)) {
@@ -26,9 +22,8 @@ marked.use({
   },
 });
 
-// renderMarkdown converts markdown source to an HTML string for an innerHTML sink. Empty in,
-// empty out, so callers can gate the surrounding element on the source. Relative image refs
-// resolve to the rule-doc route (WS9-030).
+// renderMarkdown converts markdown to an HTML string for an innerHTML sink. Empty in, empty out,
+// so callers can gate the surrounding element on the source.
 export function renderMarkdown(md: string): string {
   if (!md) return "";
   return marked.parse(md, { async: false });

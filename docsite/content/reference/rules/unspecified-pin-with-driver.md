@@ -16,7 +16,7 @@ all.
 ### Why engineers want it
 
 It is the "unspecified" column of the ERC connection matrix (KiCad
-warns on unspecified against everything). An untyped pin is a library gap: the matrix cannot
+warns on unspecified against everything). An untyped pin is a library gap, since the matrix cannot
 say whether the pairing is legal, and the place that matters most is a driven net, where the
 untyped pin might itself be a fighting driver or a supply pin shorted to a signal.
 
@@ -35,8 +35,8 @@ KiCad passive pin is typed and never fires this (the resistor-on-every-driven-ne
 positive that kept this row out of the catalog until PASSIVE entered the direction
 vocabulary), and a pin the read never saw a symbol for (a board footprint's pads, a
 sub-sheet component in a root-only hierarchy read) is a read gap, not an authoring gap, and
-is skipped via pin.declared. Gated on a driver being present: a wholly untyped read (a bare
-EDIF netlist with no direction data) has no drivers in evidence and stays silent by
+is skipped via pin.declared. The rule is gated on a driver being present, so a wholly untyped read (a
+bare EDIF netlist with no direction data) has no drivers in evidence and stays silent by
 construction. Cross-sheet (external) nets are skipped. Virtual power-symbol pins carry
 power types by construction and are excluded as subjects.
 

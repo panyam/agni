@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-// Net.ID is a deterministic hash of the connection set: two electrically-distinct nets that share a
+// Net.ID is a deterministic hash of the connection set. Two electrically-distinct nets that share a
 // NAME (the duplicate-net-name case) get distinct ids, a net with the same connectivity hashes the
 // same across two solves, and a pinless net has an empty id (nothing to hash, falls back to name).
 func TestNetID(t *testing.T) {
-	// Three separate two-pin clusters, all labelled "DUP" — connect-by-name would merge same-label
+	// Three separate two-pin clusters, all labelled "DUP". Connect-by-name would merge same-label
 	// clusters, so keep each on its own label ("DUP1".."DUP3") to stay electrically distinct, which
 	// is the real duplicate-net-name shape (distinct nets a human named the same).
 	build := func() []Net {
@@ -202,7 +202,7 @@ func TestBuildDangling(t *testing.T) {
 	}
 }
 
-// A node carrying two labels aliases them: every cluster under EITHER name folds into one
+// A node carrying two labels aliases them, so every cluster under EITHER name folds into one
 // net. Before label-union, merging used only each node's single chosen name, so the
 // two-label node joined one group and abandoned the other (the hierarchy walk relies on a
 // local-labelled node still folding into the rail its power tap names).
@@ -231,7 +231,7 @@ func TestBuildLabelAliasUnion(t *testing.T) {
 	}
 }
 
-// Anchor.Rank picks the net's name: the lowest rank wins regardless of input order, and
+// Anchor.Rank picks the net's name. The lowest rank wins regardless of input order, and
 // equal ranks keep first-appearance order (the existing behavior, since every legacy
 // caller leaves Rank at zero). The hierarchy walk names a hier-joined net by its rank-1
 // path name, never by the rank-2 synthetic join label.
@@ -248,7 +248,7 @@ func TestBuildAnchorRank(t *testing.T) {
 	}
 }
 
-// TestBuildAliases: a net reports EVERY distinct label that landed on it, with rank, so
+// TestBuildAliases checks that a net reports EVERY distinct label that landed on it, with rank, so
 // naming-conflict rules can see what the naming pass collapsed. Single-labeled and
 // unnamed nets carry no alias list.
 func TestBuildAliases(t *testing.T) {
@@ -292,8 +292,8 @@ func TestBuildAliases(t *testing.T) {
 	}
 }
 
-// TestBuildWireNets: Build's third return maps each identified wire (by Id) to its solved
-// net name — a labeled wire to the label, an unlabeled pinned wire to its N$ stub — and
+// TestBuildWireNets checks that Build's third return maps each identified wire (by Id) to its
+// solved net name (a labeled wire to the label, an unlabeled pinned wire to its N$ stub) and
 // omits wires with no id or on drawing-noise nodes.
 func TestBuildWireNets(t *testing.T) {
 	wires := []Wire{

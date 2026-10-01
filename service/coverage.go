@@ -9,10 +9,10 @@ import (
 )
 
 // GetInterfaceCoverage projects the built-in interface profiles onto the loaded design's coverage
-// matrix (WS9-041): one entry per DETECTED interface, each required signal with its matched net and
-// state. It reuses profiles.Coverage, which runs the same datalog the profile rules compile to, so
-// the coverage panel and the findings never disagree. A design with no detected interface yields an
-// empty list (not an error) — silent by construction, matching the rules.
+// matrix (WS9-041), with one entry per DETECTED interface listing each required signal, its matched
+// net and its state. It reuses profiles.Coverage, which runs the same datalog the profile rules
+// compile to, so the coverage panel and the findings never disagree. A design with no detected
+// interface yields an empty list rather than an error, since the rules are silent there too.
 func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.GetInterfaceCoverageRequest) (*webapi.GetInterfaceCoverageResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {

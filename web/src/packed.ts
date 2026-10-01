@@ -19,8 +19,8 @@ export const DEFAULT_FONT_STACK = "Arial, 'Liberation Sans', Helvetica, sans-ser
 export const KIND_LINE_STRIP = 1;
 export const KIND_LINE_LOOP = 2;
 export const KIND_POINTS = 3;
-// Filled areas as a triangle list (WS7-035): boards forced it in (copper at true width,
-// pads, via barrels), but the kind is generic.
+// Filled areas as a triangle list (WS7-035). Boards need it for copper at true width, pads and via
+// barrels, but the kind is generic.
 export const KIND_TRIANGLES = 4;
 
 // Primitive groups. Colors are chosen per group in webgl.ts.
@@ -31,7 +31,7 @@ export const GROUP_PIN = 2;
 export const GROUP_FREE = 3;
 // Synthesized worksheet furniture: page frame, zone-ruler ticks, title-block box/dividers.
 export const GROUP_FRAME = 4;
-// Board strata (WS7-035), mirroring render/packboard.go: the packed board reuses this
+// Board strata (WS7-035), mirroring core/render/packboard.go. The packed board reuses this
 // envelope with these groups, so layer visibility is group visibility.
 export const GROUP_BOARD_EDGE = 5;
 export const GROUP_BOARD_COPPER_FRONT = 6;
@@ -40,8 +40,8 @@ export const GROUP_BOARD_COPPER_INNER = 8;
 export const GROUP_BOARD_THROUGH = 9;
 export const GROUP_BOARD_HOLE = 10;
 export const GROUP_BOARD_SILK = 11;
-// Bus trunk/entry (WS7-042), mirroring render/pack.go groupBus: after the board strata in the
-// shared flat group space, drawn as true-width triangle quads (GL can't stroke >1px).
+// Bus trunk/entry (WS7-042), mirroring core/render/pack.go groupBus. It sits after the board
+// strata in the shared flat group space and draws as true-width triangle quads (GL can't stroke >1px).
 export const GROUP_BUS = 12;
 
 // Width of one packed primitive record in bytes.

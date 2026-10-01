@@ -11,7 +11,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// memWorkspace is an in-memory Workspace: it proves WorkspaceService runs with no os (C13). It
+// memWorkspace is an in-memory Workspace that proves WorkspaceService runs with no os (C13). It
 // keys entries by "mount\x00rel", rejects a rel containing ".." as ErrInvalidPath (mimicking
 // containment), and returns a plain error for a missing dir (the service maps that to NotFound).
 type memWorkspace struct {
@@ -86,9 +86,9 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 }
 
 // A browser can only ever show a folder holding nothing it opens as empty, so Opens leaves it out.
-// "Empty" is measured over the whole subtree, not one level: a folder of folders of library files is
-// as useless to open as a folder with nothing in it. And it is measured against the CALLER's kinds,
-// which is why the same fixture prunes differently for the two trees below.
+// "Empty" is measured over the whole subtree, not one level, because a folder of folders of library
+// files is as useless to open as a folder with nothing in it. And it is measured against the
+// CALLER's kinds, which is why the same fixture prunes differently for the two trees below.
 func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 	svc := NewWorkspaceService(&memWorkspace{
 		mounts: []MountInfo{{Name: "m", Root: "/x"}},
@@ -126,7 +126,7 @@ func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 		}
 	})
 
-	// "Empty" is per-client, which is what Opens states: the datasheets tree opens the PDF under
+	// "Empty" is per-client, which is what Opens states. The datasheets tree opens the PDF under
 	// docs/, so for THAT client docs/ is the folder with something in it and boards/ is the empty
 	// one. Same tree, same walk, opposite answer.
 	t.Run("prunes by the caller's kinds, not by design format", func(t *testing.T) {
@@ -157,7 +157,7 @@ func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 	})
 }
 
-// A subtree the walk cannot settle keeps its folder: a folder wrongly shown costs a click, one
+// A subtree the walk cannot settle keeps its folder, because a folder wrongly shown costs a click, one
 // wrongly hidden costs a design. Here the design sits below the depth bound, so the walk runs out
 // before finding it and the folder stays.
 func TestWorkspaceServiceListDirKeepsDirsBeyondPruneDepth(t *testing.T) {
@@ -180,7 +180,7 @@ func TestWorkspaceServiceListDirKeepsDirsBeyondPruneDepth(t *testing.T) {
 	}
 }
 
-// A mount is a root the same rule applies to: one serving only datasheets or only library files is
+// A mount is a root the same rule applies to. One serving only datasheets or only library files is
 // somewhere the design tree can never show anything, so PruneEmptyMounts leaves it out. The count
 // comes back so the sidebar can account for the absence instead of quietly being shorter.
 func TestListMountsPrunesEmptyMounts(t *testing.T) {
@@ -208,8 +208,8 @@ func TestListMountsPrunesEmptyMounts(t *testing.T) {
 		}
 	})
 
-	// The mirror: the datasheets tree asks the same question about the same mounts and gets the
-	// other answer, which is the whole point of the kinds being in the request.
+	// The mirror. The datasheets tree asks the same question about the same mounts and gets the
+	// other answer, which is why the kinds are in the request.
 	t.Run("a datasheets client keeps the mount of PDFs and prunes the boards", func(t *testing.T) {
 		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{
 			Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DATASHEET},

@@ -150,12 +150,12 @@ it("says which selected rules could not run, and why", () => {
   expect(text).toContain("could not run");
   expect(text).toContain("track-width");
   expect(text).toContain("design carries no board geometry");
-  // And it still says there were no findings: the two statements are both true and neither replaces
-  // the other.
+  // And it still says there were no findings, because the two statements are both true and neither
+  // replaces the other.
   expect(text).toContain("No findings.");
 });
 
-// Shown even when findings exist, because it qualifies them: two findings from ten rules, six of
+// Shown even when findings exist, because it qualifies them. Two findings from ten rules, six of
 // which never ran, is not the same claim as two findings from ten.
 it("reports skipped rules alongside findings", () => {
   const { el } = mountPanel({
@@ -167,10 +167,10 @@ it("reports skipped rules alongside findings", () => {
 
 // The entities a finding's message NAMES but is not ABOUT (agni issue 349).
 //
-// crystal-load-caps is the case this was filed for: the finding reads "crystal terminal net XOUT1 has
+// crystal-load-caps is the case this was filed for. The finding reads "crystal terminal net XOUT1 has
 // no load capacitor" and its subject is the crystal Y1, so clicking it sent the reader to a part the
 // sentence never mentioned. The net was bound in the rule's query and thrown away when the finding was
-// built, so no client-side cleverness could recover it: the panel had nothing to render.
+// built, so no client-side cleverness could recover it, and the panel had nothing to render.
 describe("context chips", () => {
   const withContext = (over: Partial<FindingItem> = {}) =>
     f({
@@ -191,8 +191,8 @@ describe("context chips", () => {
   });
 
   it("locates the context entity, not the finding's subject", () => {
-    // The whole bug. Clicking must reach XOUT1, and it must go through the ENTITY locate path: a
-    // context entity is not a finding, so a lookup by finding subject would find nothing.
+    // This is the bug. Clicking must reach XOUT1, and it must go through the ENTITY locate path,
+    // because a context entity is not a finding, so a lookup by finding subject would find nothing.
     const m = mountPanel({ findings: [withContext()] });
     (m.el.querySelector(".check-context") as HTMLButtonElement).click();
     expect(m.onLocateContext).toHaveBeenCalledWith("net", "XOUT1", "");
@@ -251,7 +251,7 @@ describe("selecting a finding keeps the rows it already rendered", () => {
   });
 
   it("still marks the newly selected row", () => {
-    // The control: keeping the DOM must not cost the selection styling, which is what a reader uses
+    // The control. Keeping the DOM must not cost the selection styling, which is what a reader uses
     // to see which finding they are on.
     const m = mountPanel({ findings: many });
     m.panel.view.setState(state({ findings: many, selected: "N4" }));
@@ -341,7 +341,7 @@ describe("arriving on a verdict link", () => {
   });
 });
 
-// agni issue 350: the same finding read "unresolved" beside a selection in the query panel and
+// In agni issue 350, the same finding read "unresolved" beside a selection in the query panel and
 // "error" in this panel three inches away.
 describe("an inconclusive row in the checks panel", () => {
   const undecided = f({ rule: "esd-protection", severity: "error", subject: "U3", inconclusive: true, message: "no datasheet for U3" });

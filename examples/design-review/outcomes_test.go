@@ -8,7 +8,7 @@ import (
 	"github.com/panyam/agni/examples/common"
 )
 
-// TestMain clears the two path variables for the same reason examples/common does: they replace the
+// TestMain clears the two path variables for the same reason examples/common does. They replace the
 // bundled defaults these tests assert against, so a developer who exports either to drive the walk
 // over their own board could not run the gate, and the failure would print their path into the log.
 func TestMain(m *testing.M) {
@@ -17,9 +17,9 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// The walkthrough's whole argument is that a checklist reports what it could NOT answer, and the
+// The walkthrough's argument is that a checklist reports what it could NOT answer, and the
 // bundled checklist is sized so each of those states occurs. Prose cannot be checked by building, so
-// this holds the claim: change the fixture or the checklist and a narration that no longer matches
+// this holds the claim. Change the fixture or the checklist and a narration that no longer matches
 // fails here rather than teaching the wrong lesson quietly.
 func TestBundledChecklistShowsEveryOutcomeItNarrates(t *testing.T) {
 	rep, err := run(

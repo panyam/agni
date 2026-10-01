@@ -4,8 +4,9 @@
 
 A bus on the schematic (a gEDA `U` segment, a KiCad `bus` / `bus_alias`, an
 xschem `NAME[n:0]` label, or an EDIF `array` port) whose member signals are NOT all resolved into
-distinct nets. The bus names a set of members (a range `DATA[7:0]` expands to `DATA0..DATA7`, or a
-`bus_alias` lists them); the finding fires when one or more of those members is not a net in the read.
+distinct nets. The bus names a set of members (a range `DATA[7:0]` expands to `DATA0..DATA7`, and
+KiCad spells it `DATA[0..7]`, or a `bus_alias` lists them); the finding fires when one or more of
+those members is not a net in the read, or when the reader could not determine the members at all.
 
 ### Why engineers want it
 
@@ -22,7 +23,7 @@ a rule misfires or a diff lies. Info severity because the cause is the reader, n
 
 ![a bus whose members each resolve to a net is fine; one whose members are unresolved is flagged](images/bus-not-modeled.svg)
 
-### The one subtlety
+### Members are matched by name
 
 Resolution is checked by member NAME. A flat sheet's member labels are bare
 (`DATA0`), so they match the bus's expanded members and the bus reads as resolved. A hierarchy read
@@ -33,10 +34,10 @@ a flat bussed sheet produces exactly the member nets, so the rule stays silent o
 
 ### Scope note
 
-Detection + resolution-checking is where this rule stops. Actually EXPANDING a bus
+The rule detects a bus and checks its members, and stops there. Actually EXPANDING a bus
 across a sheet boundary (a hierarchical bus port) into crossing member nets is the remaining WS1-034
 work; until then this rule flags those cases rather than silently mis-reading them. Drawing the bus
-trunk on the canvas is a separate concern (WS7-042).
+trunk is the renderer's job (WS7-042).
 
 ### Query structure
 

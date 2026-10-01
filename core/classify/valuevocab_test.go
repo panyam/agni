@@ -14,8 +14,8 @@ func compWithValue(ref, val string, classes ...string) *ir.Component {
 	return c
 }
 
-// TestStampValuesFillsQuantity: the pass turns each format's value text into a number once at
-// ingestion, so a rule reads a Quantity rather than re-parsing a vendor string.
+// TestStampValuesFillsQuantity checks that the pass turns each format's value text into a number
+// once at ingestion, so a rule reads a Quantity rather than re-parsing a vendor string.
 func TestStampValuesFillsQuantity(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		compWithValue("R1", "4k7", string(ClassResistor)),
@@ -30,8 +30,8 @@ func TestStampValuesFillsQuantity(t *testing.T) {
 	}
 }
 
-// TestStampValuesBareNumberNeedsTheClassConvention is the whole reason ValueVocab exists rather than the
-// parser deciding. The SAME text "100" means ohms on a resistor and nothing determinate on a capacitor,
+// TestStampValuesBareNumberNeedsTheClassConvention is why ValueVocab exists rather than the parser
+// deciding. The SAME text "100" means ohms on a resistor and nothing determinate on a capacitor,
 // because only the first is a universal convention.
 func TestStampValuesBareNumberNeedsTheClassConvention(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
@@ -56,9 +56,10 @@ func TestStampValuesBareNumberNeedsTheClassConvention(t *testing.T) {
 // with no ambiguity at all, so the class settles it. Only a value with no prefix EITHER is genuinely
 // uncertain.
 //
-// Getting this wrong is not a corner case: almost nobody writes the F or the H, so collapsing it into
-// the bare-number rule leaves every capacitor and inductor with an empty unit, which ComponentValueIn
-// then rejects. The feature would report nothing for most passives on a real board.
+// Getting this wrong is not a corner case, because almost nobody writes the F or the H, so
+// collapsing it into the bare-number rule leaves every capacitor and inductor with an empty unit,
+// which ComponentValueIn then rejects. The feature would report nothing for most passives on a real
+// board.
 func TestStampValuesPrefixedValueTakesTheClassDimension(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		compWithValue("C1", "10u", string(ClassCapacitor)),
@@ -77,8 +78,8 @@ func TestStampValuesPrefixedValueTakesTheClassDimension(t *testing.T) {
 	}
 }
 
-// TestStampValuesDeclaredConventionFillsTheGap: a house that spells bare capacitor values in microfarads
-// says so through the vocabulary, and the parser is untouched.
+// TestStampValuesDeclaredConventionFillsTheGap checks that a house that spells bare capacitor
+// values in microfarads says so through the vocabulary, and the parser is untouched.
 func TestStampValuesDeclaredConventionFillsTheGap(t *testing.T) {
 	lex := &Lexicon{Value: BuildValueVocab(map[string]string{"capacitor": "F"})}
 	d := &ir.Design{Components: []*ir.Component{compWithValue("C1", "100", string(ClassCapacitor))}}
@@ -88,8 +89,9 @@ func TestStampValuesDeclaredConventionFillsTheGap(t *testing.T) {
 	}
 }
 
-// TestStampValuesUnparsedKeepsTheInput: "no value stated" and "a value stated we could not read" are
-// different facts. Only the second is a gap worth reporting, so they must not collapse.
+// TestStampValuesUnparsedKeepsTheInput keeps "no value stated" and "a value stated we could not
+// read" apart, because they are different facts. Only the second is a gap worth reporting, so they
+// must not collapse.
 func TestStampValuesUnparsedKeepsTheInput(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		compWithValue("R1", "DNP", string(ClassResistor)),
@@ -108,7 +110,8 @@ func TestStampValuesUnparsedKeepsTheInput(t *testing.T) {
 	}
 }
 
-// TestStampValuesIsIdempotent: a re-stamp after a re-read must not accumulate or drift, matching Stamp.
+// TestStampValuesIsIdempotent checks that a re-stamp after a re-read does not accumulate or drift,
+// matching Stamp.
 func TestStampValuesIsIdempotent(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{compWithValue("R1", "4k7", string(ClassResistor))}}
 	StampValues(d)

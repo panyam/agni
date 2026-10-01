@@ -21,7 +21,7 @@ what a part off the middle of the distribution actually does at room temperature
 promise about the part on your bench.
 
 That distinction is why this is a separate relation rather than another column. A typical quiescent
-current tells you what the board will draw in the usual case, which is exactly what you want when
+current tells you what the board will draw in the usual case, which is the number to use when
 sizing a battery or estimating thermals. It is the wrong number to design a protection threshold
 against, because a part at the edge of the distribution is still in spec and still ruins the
 calculation. Reach for `param.range` when you need a guarantee, and for this when you need an
@@ -36,8 +36,8 @@ nothing could bind or compare it. Nothing documented that it was gone (agni issu
 The obvious repair is a third numeric slot on the row, and it is the wrong one. The tuple is shared
 by 44 graph-tier relations that need nothing of the sort, and the datasheet record has thirteen
 fields and four repeated parts, so no arity fixes it. The relational answer to a wide record is a
-KEY rather than a wide tuple: several narrow relations sharing `(mpn, symbol)`, joined when a query
-wants more than one of them. `param.unit` was already that shape, adopted under CONSTRAINTS C24 for a
+KEY rather than a wide tuple, meaning several narrow relations sharing `(mpn, symbol)` that a query
+joins when it wants more than one of them. `param.unit` was already that shape, adopted under CONSTRAINTS C24 for a
 safety reason rather than to conserve a slot. See `DECISIONS.md`, "The datasheet tier is normalized
 into narrow relations, never flattened into a wider tuple".
 
@@ -45,7 +45,7 @@ Separating it is also the safer shape on its own terms. A typ sitting between `m
 tuple reads as a bound, and a rule comparing a rail against it would look perfectly ordinary while
 reporting a confident wrong answer. Its own name puts that choice at the call site.
 
-The number is reduced to its SI base unit by `param.InBaseUnit`, the same conversion `param` and
+The number is reduced to its SI base unit by `param.InBaseUnit`, the same conversion `param.max` and
 `param.range` go through, and the row carries `BaseUnit` so an ordering comparison can refuse amps
 against volts. A parameter whose printed unit has no known scale yields a row with no number, so its
 symbol and citation survive.
@@ -66,7 +66,7 @@ Needs `--params`. Every typical value in the joined parts:
 param.typ(?mpn, ?sym, ?typ) => ?mpn, ?sym, ?typ
 ```
 
-The typ beside the window it sits inside, which is the join that shows what the relation is for. A
+The typ beside the window it sits inside. A
 part whose typical value sits near one edge of its own guaranteed range is worth a second look:
 
 ```

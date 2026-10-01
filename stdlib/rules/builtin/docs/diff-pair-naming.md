@@ -25,7 +25,7 @@ Detection anchors on the positive member. A lone "_N" suffix
 is ambiguous with active-low signals (RESET_N, WE_N), so treating every "_N" as an orphaned
 pair half would fire on the most common real naming convention. A positive suffix does not
 carry that ambiguity. The cost is that a stray negative with no positive is not reported, which
-is acceptable for a first rule.
+is the accepted cost of the positive anchor.
 
 ### Only when the design uses the convention
 
@@ -37,12 +37,12 @@ this gate every one of them is a finding. Requiring pair-population evidence tak
 designs to zero while a real board, which does declare complete pairs, still surfaces its
 broken ones.
 
-The cost is a design whose only differential pair is itself broken (one `X_P`, no `X_N`, and
-nothing else paired) stays silent. That is the same weak-signal case, so the trade is
-deliberate. An operator who wants a stricter policy can add a naming convention via
+The cost is a design whose only differential pair is itself broken (one `X_P`, no `X_N`, and nothing
+else paired) reports not-considered rather than a finding. That is the same weak-signal case, so the
+trade is deliberate. An operator who wants a stricter policy can add a naming convention via
 `--conventions`.
 
-For software readers: this is the difference between "the string ends in `_P`" and "this
+For a software reader, this is the difference between "the string ends in `_P`" and "this
 codebase uses a `_P`/`_N` pairing convention that this one member violates." The second is
 only a bug if the convention is in use.
 

@@ -27,7 +27,7 @@ func numDesign() *ir.Design {
 	return d
 }
 
-// The index buckets by value, and valueEq is NOT transitive: {S:"10.0",Num:10} equals
+// The index buckets by value, and valueEq is NOT transitive. {S:"10.0",Num:10} equals
 // {S:"10",Num:10} numerically, which equals {S:"10",Num:nil} by string, while the first and last are
 // unequal. A keying scheme that canonicalised numbers would merge all three and change what the
 // query means; one that keyed on the string alone would lose the numeric match.
@@ -37,11 +37,11 @@ func numDesign() *ir.Design {
 func TestIndexedResultsMatchUnindexed(t *testing.T) {
 	m := check.NewModel(numDesign())
 	for _, text := range []string{
-		`component-on-net(?r, "10") => ?r`,
-		`component-on-net(?r, "10.0") => ?r`,
+		`component.net(?r, "10") => ?r`,
+		`component.net(?r, "10.0") => ?r`,
 		`component.class(?r,?c) => ?r`,
-		`component-on-net(?a,?n), component-on-net(?c,?n), ?a != ?c => ?a, ?c`,
-		`component-on-net(?r,?n) => ?n, count(?r)`,
+		`component.net(?a,?n), component.net(?c,?n), ?a != ?c => ?a, ?c`,
+		`component.net(?r,?n) => ?n, count(?r)`,
 	} {
 		q := mustParse(t, text)
 		indexed, err := (Naive{}).Eval(q, NewBase(m))
@@ -64,7 +64,7 @@ func TestIndexedResultsMatchUnindexed(t *testing.T) {
 	}
 }
 
-// newUnindexedBase is the equivalence oracle: the same fact base with no index cache, which sends
+// newUnindexedBase is the equivalence oracle, the same fact base with no index cache, which sends
 // every probe down the original full-scan path. Comparing against it is what makes "indexing changed
 // nothing" an assertion rather than a hope.
 func newUnindexedBase(m check.Model) *Base {
@@ -98,7 +98,7 @@ func rowValueKey(r Row) string {
 // query produces {S:"20.0", Num:20}. valueEq calls those equal (both numeric); a bucket keyed on the
 // string alone would not, and the row would vanish with no error anywhere.
 //
-// Asserting both spellings return the same row is what makes the second key in valueKeys load-bearing
+// Asserting both spellings return the same row shows the second key in valueKeys is needed
 // rather than defensive decoration.
 func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 	// param facts project per PLACED part, so the design needs enough seeded components to push the
@@ -115,8 +115,8 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 			RefDes: fmt.Sprintf("U%d", i+2), Mpn: mpn, Prov: &ir.Provenance{SourceFile: "reg"}})
 	}
 	m := check.NewModelWithParams(d, nil, specs)
-	canonical := runQuery(t, m, `param(?mpn,"VIN",20) => ?mpn`)
-	spelled := runQuery(t, m, `param(?mpn,"VIN",20.0) => ?mpn`)
+	canonical := runQuery(t, m, `param.max(?mpn,"VIN",20) => ?mpn`)
+	spelled := runQuery(t, m, `param.max(?mpn,"VIN",20.0) => ?mpn`)
 	if len(canonical) == 0 {
 		t.Fatal("setup: the canonical spelling matched nothing, so the comparison proves nothing")
 	}
@@ -128,11 +128,11 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 
 // A derived tuple that is valsEqual to one already stored must still deduplicate once the dedup set
 // is a hash bucket. The three spellings of ten are the case that would slip through a keying scheme
-// where insert and probe disagree, and a duplicate here is not cosmetic: the fixpoint's "did
+// where insert and probe disagree, and a duplicate here is not cosmetic, because the fixpoint's "did
 // anything change" flag drives termination.
 func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 	m := check.NewModel(numDesign())
-	rows := runQuery(t, m, `onten(?r) :- component-on-net(?r,"10"); onten(?r) :- component-on-net(?r,"10"); onten(?x) => ?x`)
+	rows := runQuery(t, m, `onten(?r) :- component.net(?r,"10"); onten(?r) :- component.net(?r,"10"); onten(?x) => ?x`)
 	seen := map[string]bool{}
 	for _, r := range rows {
 		k := fmt.Sprint(r.Bind)
@@ -144,14 +144,14 @@ func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 }
 
 // One Base serving several rule-bearing queries in turn is a real pattern (the profile coverage pass
-// does it), and both index caches have to behave under it: the EDB index is shared on purpose
+// does it), and both index caches have to behave under it. The EDB index is shared
 // because facts are immutable, while a derived relation belongs to one query and its index must not
 // outlive it. A stale IDB index would hold positions into a previous query's tuple slice.
 func TestBaseReuseAcrossRuleBearingQueries(t *testing.T) {
 	b := NewBase(check.NewModel(benchDesign(50)))
-	first := evalOn(t, b, `d(?a,?n) :- component-on-net(?a,?n); d(?x,?y) => ?x`)
-	second := evalOn(t, b, `d(?a,?n) :- component-on-net(?a,?n), prefix(?a,"R1"); d(?x,?y) => ?x`)
-	again := evalOn(t, b, `d(?a,?n) :- component-on-net(?a,?n); d(?x,?y) => ?x`)
+	first := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n); d(?x,?y) => ?x`)
+	second := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n), prefix(?a,"R1"); d(?x,?y) => ?x`)
+	again := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n); d(?x,?y) => ?x`)
 	if len(second) >= len(first) {
 		t.Fatalf("setup: the narrowed query returned %d rows, not fewer than %d", len(second), len(first))
 	}
@@ -172,27 +172,27 @@ func evalOn(t *testing.T, b *Base, text string) []Row {
 
 // Work counts candidate comparisons, so a shape that is linear in the fact base must not grow
 // quadratically in it. Asserting the RATIO rather than a duration is what makes this a complexity
-// test: it is deterministic, identical on every machine, and it fails the moment a scan returns.
+// test. It is deterministic, identical on every machine, and it fails the moment a scan returns.
 //
-// The evaluator's own doc comment used to assert this property in prose ("naïve join is sufficient
-// because one design's fact base is small") with nothing enforcing it, which is exactly how a
+// The evaluator's own doc comment asserts this property in prose ("naïve join is sufficient
+// because one design's fact base is small"), and with nothing enforcing it a
 // two-atom join came to take 15.7 seconds on a real board.
 func TestWorkScalesSubQuadratically(t *testing.T) {
 	shapes := []struct {
 		name string
 		text string
 	}{
-		{"one-atom", `component-on-net(?a,?n) => ?a`},
-		{"two-atom-shared", `component-on-net(?a,?n), component-on-net(?c,?n), ?a != ?c => ?a`},
-		{"three-atom-chain", `component-on-net(?a,?n), component-on-net(?c,?n), component-on-net(?e,?n) => ?a`},
+		{"one-atom", `component.net(?a,?n) => ?a`},
+		{"two-atom-shared", `component.net(?a,?n), component.net(?c,?n), ?a != ?c => ?a`},
+		{"three-atom-chain", `component.net(?a,?n), component.net(?c,?n), component.net(?e,?n) => ?a`},
 		// A cycle in the join graph: a-n, c-n, c-m, a-m closes back on itself. Binary-join plans are
 		// provably suboptimal on cyclic conjunctive queries, which is the case worst-case-optimal
 		// joins exist for. Indexing does not make that go away, so this shape is here to SHOW where
 		// the ceiling is rather than to claim it is gone.
-		{"triangle-cyclic", `component-on-net(?a,?n), component-on-net(?c,?n), component-on-net(?c,?m), component-on-net(?a,?m), ?n != ?m => ?a`},
-		{"negation", `component-on-net(?a,?n), not component.class(?a,"resistor") => ?a`},
-		{"aggregation", `component-on-net(?a,?n) => ?n, count(?a)`},
-		{"recursion", `conn(?a,?b) :- component-on-net(?a,?b); linked(?a,?c) :- conn(?a,?n), conn(?c,?n), ?a != ?c; linked("R1",?x) => ?x`},
+		{"triangle-cyclic", `component.net(?a,?n), component.net(?c,?n), component.net(?c,?m), component.net(?a,?m), ?n != ?m => ?a`},
+		{"negation", `component.net(?a,?n), not component.class(?a,"resistor") => ?a`},
+		{"aggregation", `component.net(?a,?n) => ?n, count(?a)`},
+		{"recursion", `conn(?a,?b) :- component.net(?a,?b); linked(?a,?c) :- conn(?a,?n), conn(?c,?n), ?a != ?c; linked("R1",?x) => ?x`},
 	}
 	for _, s := range shapes {
 		t.Run(s.name, func(t *testing.T) {

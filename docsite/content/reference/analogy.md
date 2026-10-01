@@ -9,112 +9,112 @@ definitions a linter can check. This page expands that mapping one concept at a 
 each thing means in an actual circuit and where it lives in the schemas. The architecture pages
 carry the design rationale. This page is for orientation.
 
-It maps STRUCTURE and deliberately says nothing about engineering judgement: it will tell you a `Net`
-is a shared channel, not why an engineer put a resistor on one. For that, [learn the domain](../../learn/)
+It maps STRUCTURE and deliberately says nothing about engineering judgement, so it will tell you a
+`Net` is a shared channel but not why an engineer put a resistor on one. For that, [learn the domain](../../learn/)
 is the companion section.
 
 The master table:
 
 | Hardware / the schema | Software analogy |
 |---|---|
-| [`PartLibrary`](#modules-and-classes-partlibrary-and-parttype) | a package/module you import |
-| [`PartType`](#modules-and-classes-partlibrary-and-parttype) | a class declaration: members (pins) and their types (directions) |
-| [`Component`](#instances-component) | an instance whose ref des is the variable name |
-| [`ComponentSection`](#partial-views-componentsection) | partial views of one instance |
-| [`Net`](#aliasing-net) | a shared channel aliasing fields of many instances |
-| [Net solving](#name-resolution-net-solving) | name resolution + linking |
-| [Protection walk (`Reach`)](#the-protection-walk-reach) | graph reachability across middleware that splits a channel |
-| [Reused hierarchical sheet](#templates-the-reused-sheet) | a module instantiated N times, with name mangling |
-| [MPN](#the-lockfile-mpn-and-bomline) | an exact pinned artifact (`lodash@4.17.21`) |
-| [`BomLine`](#the-lockfile-mpn-and-bomline) | the lockfile |
-| [Datasheet](#vendor-docs-as-type-stubs-partspec) | vendor prose documentation for a closed-source dependency |
-| [`PartSpec`](#vendor-docs-as-type-stubs-partspec) | the hand- or machine-written `.d.ts` type stub for that dependency |
-| [`LimitKind`](#limits-as-contract-tiers-limitkind) | UB boundary / SLA envelope / benchmark numbers |
-| [The validation join](#the-type-checker-the-validation-join) | type-checking call sites against dependency stubs via the lockfile |
-| [doc-IR](#codegen-doc-ir-and-derive) | the parsed AST of the vendor docs |
-| [derive, recipes, patches, manifests](#codegen-doc-ir-and-derive) | the codegen tool, its config, pinned overrides, and its lockfile |
-| [Geometry sidecar](#source-maps-and-blame-geometry-and-provenance) | source maps |
-| [Provenance](#source-maps-and-blame-geometry-and-provenance) | blame / debug symbols |
+| [`PartLibrary`](#partlibrary-and-parttype-as-modules-and-classes) | a package/module you import |
+| [`PartType`](#partlibrary-and-parttype-as-modules-and-classes) | a class declaration, with members (pins) and their types (directions) |
+| [`Component`](#component-as-an-instance) | an instance whose ref des is the variable name |
+| [`ComponentSection`](#componentsection-as-a-partial-view) | partial views of one instance |
+| [`Net`](#net-as-aliasing) | a shared channel aliasing fields of many instances |
+| [Net solving](#net-solving-as-name-resolution) | name resolution + linking |
+| [Protection walk (`Reach`)](#reach-and-the-protection-walk) | graph reachability across middleware that splits a channel |
+| [Reused hierarchical sheet](#the-reused-sheet-as-a-template) | a module instantiated N times, with name mangling |
+| [MPN](#mpn-and-bomline-as-the-lockfile) | an exact pinned artifact (`lodash@4.17.21`) |
+| [`BomLine`](#mpn-and-bomline-as-the-lockfile) | the lockfile |
+| [Datasheet](#partspec-as-a-type-stub-for-vendor-docs) | vendor prose documentation for a closed-source dependency |
+| [`PartSpec`](#partspec-as-a-type-stub-for-vendor-docs) | the hand- or machine-written `.d.ts` type stub for that dependency |
+| [`LimitKind`](#limitkind-and-contract-tiers) | UB boundary / SLA envelope / benchmark numbers |
+| [The validation join](#the-validation-join-as-a-type-checker) | type-checking call sites against dependency stubs via the lockfile |
+| [doc-IR](#doc-ir-and-derive-as-codegen) | the parsed AST of the vendor docs |
+| [derive, recipes, patches, manifests](#doc-ir-and-derive-as-codegen) | the codegen tool, its config, pinned overrides, and its lockfile |
+| [Geometry sidecar](#geometry-and-provenance-as-source-maps-and-blame) | source maps |
+| [Provenance](#geometry-and-provenance-as-source-maps-and-blame) | blame / debug symbols |
 
-## Modules and classes: `PartLibrary` and `PartType`
+## `PartLibrary` and `PartType` as modules and classes
 
-**Software.** `import Device` brings in a package. `Device.R` is a class it declares, with two
+In software, `import Device` brings in a package. `Device.R` is a class it declares, with two
 members (pins 1 and 2), each typed `passive`. The class says nothing about any particular
 resistor in your program, and nothing about which physical artifact will eventually satisfy it.
 
-**Circuit.** The schematic's symbol library. A KiCad `lib_symbols` entry or an EDIF cell holds
+On a circuit, this is the schematic's symbol library. A KiCad `lib_symbols` entry or an EDIF cell holds
 the drawn body, the pin list, each pin's electrical type (input, output, power_in...), and the
 designator prefix ("R" for resistors). Every resistor you place comes from this one definition.
 
-**Schema.** `ir.PartLibrary` holding `ir.PartType`s. Pins are `ir.Pin` with an
+In the schema, an `ir.PartLibrary` holds `ir.PartType`s. Pins are `ir.Pin` with an
 `ir.PinDirection`. Readers fill these from the design file itself (v6+ KiCad files embed their
 libraries, like vendoring your dependencies).
 
 ![class and instance]({{.Site.PathPrefix}}/static/images/analogy/class-instance.svg)
 
-## Instances: `Component`
+## `Component` as an instance
 
-**Software.** `r1 := Device.R(value: "10k")`. The variable name is the
+In software, this is `r1 := Device.R(value: "10k")`, and the variable name is the
 {{ explainable "reference-designator" }}.
 Constructor arguments and fields are the instance attributes (Value, MPN/Manufacturer). Twenty
 resistors are twenty instances of one class.
 
-**Circuit.** A placed part: R1 near the connector, R2 in the feedback path. Identity is the ref
-des, not the position. The same R1 exists in the schematic, the layout, and the BOM.
+On a circuit, it is a placed part, such as R1 near the connector or R2 in the feedback path.
+Identity is the ref des, not the position. The same R1 exists in the schematic, the layout, and the BOM.
 
-**Schema.** `ir.Component` with `RefDes`, `Attributes`, and `Sections` referencing the
+In the schema, it is an `ir.Component` with `RefDes`, `Attributes`, and `Sections` referencing the
 `PartType` by name. The checks quantify over Components, the way an analyzer walks call sites,
 not declarations.
 
-## Partial views: `ComponentSection`
+## `ComponentSection` as a partial view
 
-**Software.** One object whose interface is used at several distinct sites: think of
-destructuring a struct's fields across two files, or a partial class. There is still exactly one
+In software, this is one object whose interface is used at several distinct sites, as when a
+struct's fields are destructured across two files, or a partial class. There is still exactly one
 identity.
 
-**Circuit.** A dual op-amp: one physical TL072 drawn as two triangles, U1A on this half of the
+On a circuit, a dual op-amp is one physical TL072 drawn as two triangles, U1A on this half of the
 sheet and U1B on that one. One package on the board, one BOM line, two drawn units.
 
-**Schema.** One `ir.Component` ("U1") with two `ComponentSection`s (unit indexes 0 and 1). A
+In the schema, it is one `ir.Component` ("U1") with two `ComponentSection`s (unit indexes 0 and 1). A
 repeated unit index is a genuine bug and trips the `duplicate-ref-des` diagnostics. Distinct
 units never do.
 
 ![multi-unit]({{.Site.PathPrefix}}/static/images/analogy/multi-unit.svg)
 
-## Aliasing: `Net`
+## `Net` as aliasing
 
-**Software.** Not a function call. A net is a shared channel, or many variables aliasing one
+In software, a net is not a function call. It is a shared channel, or many variables aliasing one
 memory cell. Everything attached to "+5V" IS the same electrical node. There is no caller and no
 callee, no direction on the edge itself.
 
-**Circuit.** The +5V {{ explainable "rail" }}, where the regulator's output pin, the MCU's VDD pin
+On a circuit, the +5V {{ explainable "rail" }} is a net, where the regulator's output pin, the MCU's VDD pin
 and a {{ explainable "decoupling-capacitor" "decoupling cap" }} are all tied together.
 Directionality lives on the pins. The regulator's pin is `power_out`, the MCU's is `power_in`.
 Those are the type annotations the connectivity rules dispatch on, and a missing direction means
 skip rather than guess.
 
-**Schema.** `ir.Net` with `Connections` (component ref + pin ref). Pin directions come from the
-`PartType`.
+In the schema, it is an `ir.Net` with `Connections` (component ref + pin ref). Pin directions come
+from the `PartType`.
 
 ![net aliasing]({{.Site.PathPrefix}}/static/images/analogy/net-aliasing.svg)
 
-## Name resolution: net solving
+## Net solving as name resolution
 
-**Software.** Compilation's front half. The source (wires, labels, junctions, geometry) contains
+In software, net solving is compilation's front half. The source (wires, labels, junctions, geometry) contains
 only implicit references, and the solver builds the symbol table of which tokens denote the same
 thing. Two labels "+5V" on different wires are two mentions of one symbol. The solver unifies
 them, exactly like a linker unifying external symbols by name.
 
-**Circuit.** KiCad stores no {{ explainable "netlist" }}. Connectivity is the drawing. A wire
+On a circuit, KiCad stores no {{ explainable "netlist" }}. Connectivity is the drawing. A wire
 endpoint on a pin's connect point binds. A label names the node. Same-named power symbols merge
 across the sheet. Getting these binding rules right is a language-semantics problem, so they are
 pinned against the reference implementation (`kicad-cli`), the way a compiler pins against a
 conformance suite. The full binding rules are in
 [Net solving and hierarchy](../../architecture/net-solving/).
 
-## The protection walk: `Reach`
+## `Reach` and the protection walk
 
-**Software.** Some questions are not about one node but about a path. Is there an auth middleware
+In software, some questions are not about one node but about a path. Is there an auth middleware
 anywhere between the public handler and the database call? Neither endpoint can answer that. You
 walk the call graph between them. `Reach` is that walk. A two-terminal series part (a resistor,
 inductor, {{ explainable "ferrite-bead" }}, or fuse) is inline middleware. It splits one logical
@@ -138,55 +138,55 @@ global and treating everything it touches as local.
 
 </details>
 
-**Circuit.** Protection and presence rules are reachability questions. A fuse sits somewhere
+On a circuit, protection and presence rules are reachability questions. A fuse sits somewhere
 between the connector and the regulator. An ESD clamp hangs off a net on the power-entry path.
 The series element that splits the net is exactly what a per-net check cannot see past, which is
 why the walk exists.
 
-**Schema.** `check.Model.Reach`/`Between` over the netlist IR. The crossable classes are
+In the schema, the walk is `check.Model.Reach`/`Between` over the netlist IR. The crossable classes are
 resistor, inductor, ferrite, and fuse. The stops are {{ explainable "ground" }}, global, and high
 fan-out.
 
 ![the protection walk]({{.Site.PathPrefix}}/static/images/analogy/reach-walk.svg)
 
-## Templates: the reused sheet
+## The reused sheet as a template
 
-**Software.** Real templates (C++ or generics) specialize at compile time, and each
+In software, real templates (C++ or generics) specialize at compile time, and each
 instantiation is a new type. The hardware analog is not the parameterized part. A `Device:R`
 with `Value: 10k` is just a constructor argument, and no specialization happens. The true
 template is the **reused hierarchical sheet**. One `amp.kicad_sch` source instantiated twice
 produces two complete copies of everything inside, with per-instance qualified names (`/amp1/IN`,
 `/amp2/IN`). That is name mangling, letter for letter.
 
-**Circuit.** A stereo preamp drawn once and instantiated per channel. A motor driver repeated
-four times. Each instance has its own components (the walk resolves per-instance reference
+On a circuit, it is a stereo preamp drawn once and instantiated per channel, or a motor driver
+repeated four times. Each instance has its own components (the walk resolves per-instance reference
 designators) and its own local nets.
 
-**Schema.** `ir.Sheet` references plus the multi-sheet hierarchy walk. Qualified net names follow
+In the schema, it is `ir.Sheet` references plus the multi-sheet hierarchy walk. Qualified net names follow
 KiCad's own convention so they match board-file names.
 
 ![hierarchy template]({{.Site.PathPrefix}}/static/images/analogy/hierarchy-template.svg)
 
-## The lockfile: MPN and `BomLine`
+## MPN and `BomLine` as the lockfile
 
-**Software.** Your code says `import leftpad`. The lockfile says `leftpad@1.3.0, sha512-...`.
+In software, your code says `import leftpad`. The lockfile says `leftpad@1.3.0, sha512-...`.
 The MPN is that exact pinned artifact. "BSS138" names one orderable product with one datasheet,
 not "some N-FET". `BomLine` (or the MPN attribute on a component) is the lockfile entry binding
 your variable to it.
 
-**Circuit.** The BOM says R1 will be built as Yageo RC0603FR-0710KL. Two designs can place
+On a circuit, the BOM says R1 will be built as Yageo RC0603FR-0710KL. Two designs can place
 identical schematics and ship different physical parts, and only the BOM knows. This is also the
 moment of real specialization (see Templates). Choosing the MPN is link-time binding of the
 abstract symbol to a concrete implementation.
 
-**Schema.** `ir.BomLine{ref_des, mpn, manufacturer}`. The KiCad reader carries `MPN` and
+In the schema, the entry is `ir.BomLine{ref_des, mpn, manufacturer}`. The KiCad reader carries `MPN` and
 `Manufacturer` symbol properties into component attributes as the no-BOM fallback. The join is
 case-insensitive on MPN and nothing fuzzier. A near-miss MPN is a different part until a human
 says otherwise.
 
-## Vendor docs as type stubs: `PartSpec`
+## `PartSpec` as a type stub for vendor docs
 
-**Software.** The dependency is closed-source (you will never see the die), and the vendor
+In software terms, the dependency is closed-source (you will never see the die), and the vendor
 publishes prose documentation. A `PartSpec` is the `.d.ts` stub someone wrote for it. It carries
 machine-readable claims about the artifact's limits and behavior, written against one pinned doc
 revision (`SourceDoc`), with every claim linking back to the prose it came from (page, table,
@@ -194,55 +194,57 @@ extraction method, confidence). Like DefinitelyTyped, stubs start hand-written (
 graduate to generated (derive). A stub no one has verified is not trusted, because it can look
 authoritative without being so.
 
-**Circuit.** "Absolute-maximum VDD is 4.6 V (page 3, Absolute Maximum Ratings, TA = 25 °C)." A
-parameter is never a bare scalar. It is a min/typ/max range valid under stated test conditions,
+On a circuit, a datasheet line reads "Absolute-maximum VDD is 4.6 V (page 3, Absolute Maximum
+Ratings, TA = 25 °C)." A parameter is never a bare scalar. It is a min/typ/max range valid under stated test conditions,
 at a stated limit kind.
 
-**Schema.** `param.PartSpec` / `Parameter` / `Condition` / `ParamProvenance` (see the
-[datasheet layer](../../architecture/datasheet-layer/)). The honesty predicates are part of the
-contract. `UnderSpecified` means the conditions are not trustworthy, so skip. `MachineComparable`
+In the schema, the stub is `param.PartSpec` / `Parameter` / `Condition` / `ParamProvenance` (see the
+[datasheet layer](../../architecture/datasheet-layer/)). The predicates that say how far to trust a
+spec are part of the contract. `UnderSpecified` means the conditions are not trustworthy, so skip. `MachineComparable`
 means a text-only condition should go to a human rather than an automatic comparison.
 
-## Limits as contract tiers: `LimitKind`
+## `LimitKind` and contract tiers
 
-**Software.**
+In software terms, the three limit kinds are three tiers of a contract.
+
 - **Absolute-max is the undefined-behavior boundary.** Past it, the vendor promises nothing.
   Like indexing past the end of an array, damage may be immediate or latent.
-- **Recommended-operating is the supported envelope.** The SLA. Inside it, the product behaves
-  as documented.
-- **Characteristic is published benchmark numbers.** Measured behavior under a stated config,
+- **Recommended-operating is the supported envelope.** It is the SLA, and inside it the product
+  behaves as documented.
+- **Characteristic is published benchmark numbers.** It is measured behavior under a stated config,
   and like any benchmark, the number is meaningless without the config (the test conditions).
 
-**Circuit.** Take the LM1117. Operate VIN up to 15 V (recommended), never exceed 20 V (absolute
+On a circuit, take the LM1117. Operate VIN up to 15 V (recommended), never exceed 20 V (absolute
 max), expect ~1.2 V dropout at 800 mA and 25 °C (characteristic).
 
 ![limit kinds]({{.Site.PathPrefix}}/static/images/analogy/limits-axis.svg)
 
-## The type checker: the validation join
+## The validation join as a type checker
 
-**Software.** With stubs (PartSpecs), a lockfile (BOM/MPN), and call sites (Components), checking
+In software terms, with stubs (PartSpecs), a lockfile (BOM/MPN), and call sites (Components), checking
 becomes linting. Resolve each call site through the lockfile to its stub and verify usage against
 the declared types. If a dependency has no stub, the check is skipped rather than silently
 passed. A missing stub means the usage is unchecked, not that it is correct.
 
-**Circuit.** Consider `supply-exceeds-abs-max`. A power-input pin on a rail whose name says
+On a circuit, consider `supply-exceeds-abs-max`. A power-input pin on a rail whose name says
 "+5V", joined to a part whose stub says absolute-max supply is 4.6 V, is a finding that cites
 both ends, the schematic location and the datasheet page.
 
-**Schema.** The check Model's params tier (`check.NewModelWithParams`, `Model.PartSpec`), the
+In the schema, the join is the check Model's params tier (`check.NewModelWithParams`, `Model.PartSpec`), the
 supply-symbol alias map (vendor spellings live in the model layer, never in rule text), and the
 rule itself. An empty `param.ParamSet` yields no findings by construction, so a missing tier is
 silent rather than a false pass.
 
 ![the join]({{.Site.PathPrefix}}/static/images/analogy/lockfile-join.svg)
 
-## Codegen: doc-IR and derive
+## doc-IR and derive as codegen
 
-**Software.** Generating stubs from vendor docs is a compiler pipeline:
+In software terms, generating stubs from vendor docs is a compiler pipeline with five parts.
+
 - **doc-IR** is the parsed AST of the documentation, tables, cells, figures, text, with
   positions (see the [datasheet layer](../../architecture/datasheet-layer/)). N parsers produce
   it, and nothing downstream re-reads the PDF.
-- **derive** is the generator: deterministic, versioned, reproducible (see the
+- **derive** is the generator, and it is deterministic, versioned and reproducible (see the
   [datasheet layer](../../architecture/datasheet-layer/)).
 - **recipes** are the generator's per-vendor config ("in TI sheets, this heading means
   absolute-max"), data in git, reviewed like code.
@@ -252,24 +254,24 @@ silent rather than a false pass.
   gap (what it saw and did not extract) is enumerated, so a gap is recorded rather than passing
   as coverage.
 
-**Circuit.** A real run. Docling parsed the BSS138 sheet and derive emitted 30 parameters with
+On a circuit, take a real run. Docling parsed the BSS138 sheet and derive emitted 30 parameters with
 page citations. On the LM1117 sheet the parser mis-placed one value into the wrong column, and a
 two-patch pair (clear plus insert) corrects it permanently.
 
 ![derivation pipeline]({{.Site.PathPrefix}}/static/images/analogy/derive-pipeline.svg)
 
-## Source maps and blame: geometry and provenance
+## Geometry and provenance as source maps and blame
 
-**Software.** The geometry sidecar is a source map. It maps the same program to where things are
+In software terms, the geometry sidecar is a source map. It maps the same program to where things are
 drawn, kept out of the semantic schema and joined by keys. The renderer consumes it and the
 analyzers never do. Provenance is blame and debug symbols. Every IR node, finding, and extracted
 parameter can answer which file and line (or page and table) it came from, and that answer makes a
 finding verifiable rather than asserted.
 
-**Circuit.** Click a finding, land on the exact wire in the schematic. Click a datasheet-backed
-limit, land on the exact table in the PDF.
+On a circuit, clicking a finding lands on the exact wire in the schematic, and clicking a
+datasheet-backed limit lands on the exact table in the PDF.
 
-**Schema.** `geom.SchematicGeometry` joined by ref_des/net/provenance keys (see
+In the schema, the sidecar is `geom.SchematicGeometry` joined by ref_des/net/provenance keys (see
 [Geometry and rendering](../../architecture/geometry-and-rendering/)). `ir.Provenance` and
 `param.ParamProvenance` carry the source keys.
 

@@ -94,7 +94,7 @@ func TestPinTrackingNameTierComparesTwoRails(t *testing.T) {
 	}
 }
 
-// The same two rails the other way round satisfy the bound. This is the direction test: the bound is
+// The same two rails the other way round satisfy the bound. This is the direction test. The bound is
 // on subject MINUS reference, so swapping the rails must flip the verdict rather than keep it.
 func TestPinTrackingRespectsSubtractionOrder(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED), "+1V8", "+3V3")
@@ -202,7 +202,7 @@ func TestPinTrackingNameTierRequiresBothNetsToBeRails(t *testing.T) {
 	}
 }
 
-// The other side of that, and the point of the datasheet evidence tier: a net whose NAME reads as a
+// The other side of that is the datasheet evidence tier. A net whose NAME reads as a
 // signal is a rail anyway when it feeds a terminal the vendor types as a power input. The name is a
 // claim about spelling; the pin function is evidence about the circuit, and it wins.
 func TestPinTrackingDatasheetEvidenceBeatsASignalLookingName(t *testing.T) {
@@ -218,7 +218,7 @@ func TestPinTrackingDatasheetEvidenceBeatsASignalLookingName(t *testing.T) {
 	}
 }
 
-// Skip-not-false-pass across every missing input, and the degrade-safe case that matters most: a
+// Skip-not-false-pass across every missing input, and the degrade-safe case that matters most, where a
 // spec with no relations behaves exactly as it did before these rules existed.
 func TestPinTrackingSilentWithoutItsInputs(t *testing.T) {
 	rel := tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED)

@@ -3,7 +3,8 @@
 ### What it is
 
 `net.signal_level(net, volts)` yields the voltage a **non-rail** net's name declares. It is the other
-half of `net.nominal_voltage`: the same name-derived number, over the nets that are not rails.
+half of `net.nominal_voltage`, carrying the same name-derived number over the nets that are not
+rails.
 
 The two are disjoint, and since agni 679 they are not exhaustive. A net carrying the rail role (which
 includes ground) goes to `net.nominal_voltage`; every other net whose name carries a voltage token
@@ -12,9 +13,9 @@ in either relation.
 
 **A regulator internal is the third case and yields no row either.** `12V_FB` and `12V_SW` are named
 after the rail they serve rather than after what they carry, so the number is a different net's
-voltage: not a rail nominal, and not a signalling level. Dropping them from the rail side alone would
-have landed them here restating the same wrong number under a relation that claims less, so both
-projectors exclude them.
+voltage and is neither a rail nominal nor a signalling level. Dropping them from the rail side alone
+would have landed them here restating the same wrong number under a relation that claims less, so
+both projectors exclude them.
 
 ### Why the split exists
 
@@ -23,7 +24,7 @@ projectors exclude them.
 levels were landing in a relation that means "rail nominal". The number was right and the relation
 carrying it was not.
 
-A verified instance: a net named `U3_12_U7_4_3V3` yielded a nominal of 3.3 while classifying as
+In one verified instance, a net named `U3_12_U7_4_3V3` yielded a nominal of 3.3 while classifying as
 neither rail nor ground. A query asking for rail voltages got a signal net back, and a rule
 quantifying over rails could not state that it meant rails.
 
@@ -51,8 +52,9 @@ are the worked example.
 ### Go projector
 
 `netSignalLevelFacts` in `stdlib/relations/facts.go` iterates `Model.Nets()`, skips any net carrying
-the rail role, and emits one row per remaining net whose name parses, with `Num` set to the voltage
-and a citation to the net's IR provenance. Netlist-tier: it needs no `--params`.
+the rail role or classed as a regulator internal (`Model.IsRegulatorInternalNet`), and emits one row
+per remaining net whose name parses, with `Num` set to the voltage and a citation to the net's IR
+provenance. The relation is netlist-tier and needs no `--params`.
 
 ### Datalog
 

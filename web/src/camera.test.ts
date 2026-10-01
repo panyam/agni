@@ -22,10 +22,10 @@ describe("Camera view snapshot", () => {
   });
 });
 
-// geom is Y-up (EDIF; see transform.go / svg.go), and WebGL NDC is also Y-up (clip y=+1 is
-// the top of the canvas). So a higher world-Y must map toward the top of the screen, matching
-// the SVG oracle. Guards against re-introducing the inverted flip that rendered WebGL
-// upside-down relative to SVG.
+// geom is Y-up (EDIF; see internal/geomath/transform.go and core/render/svg.go), and WebGL NDC is
+// also Y-up (clip y=+1 is the top of the canvas). So a higher world-Y must map toward the top of
+// the screen, matching the SVG oracle. Guards against re-introducing the inverted flip that
+// rendered WebGL upside-down relative to SVG.
 describe("Camera Y orientation (Y-up, matches SVG)", () => {
   const cam = new Camera(bounds);
   cam.setViewport(640, 480);

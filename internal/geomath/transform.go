@@ -1,13 +1,12 @@
-// Package geomath is the shared geometry math for the geom sidecar: mapping symbol-local
-// coordinates into sheet (world) coordinates under a placement Transform. World space is
-// Y-up, int64 source units; the application order is scale, then mirror, then rotate
-// (CCW), then translate, matching the EDIF orientation semantics in
-// docs/edif-schematic-primer.md §7 and the format-neutral Transform contract in docs/16.
+// Package geomath is the shared geometry math for the geom sidecar, mapping symbol-local
+// coordinates into sheet (world) coordinates under a placement Transform. World space is Y-up in
+// int64 source units. The application order is scale, then mirror, then rotate (CCW), then
+// translate, matching section 7 of docsite/content/reference/edif-schematic-primer.md and the
+// Transform message in docsite/content/architecture/geometry-and-rendering.md#proto-contract-sketch.
 //
-// Both producers and consumers of geometry depend on it: readers that compute pin
-// world positions for connectivity (kicad) and the renderers that draw placements
-// (render). Sharing one implementation is what guarantees pins land where symbols are
-// drawn — readers must never reach into the presentation tier for it (CONSTRAINTS C17).
+// Readers computing pin world positions for connectivity (kicad) and core/render drawing
+// placements both use it, so pins land where symbols are drawn. Readers must not import the
+// presentation tier for it (CONSTRAINTS C17).
 package geomath
 
 import (
@@ -16,11 +15,9 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// ApplyTransform maps a symbol-local point into sheet (world) coordinates (see the
-// package doc for the application order and coordinate conventions).
-//
-// A pin's absolute connect location is ApplyTransform(placement.Transform, pin.Loc); this
-// is what makes pins land on wire endpoints (primer §7).
+// ApplyTransform maps a symbol-local point into sheet (world) coordinates, in the order the
+// package doc gives. A pin's absolute connect location is ApplyTransform(placement.Transform,
+// pin.Loc). A nil point returns nil and a nil transform is the identity.
 func ApplyTransform(t *geom.Transform, p *geom.Point) *geom.Point {
 	if p == nil {
 		return nil
@@ -37,8 +34,7 @@ func ApplyTransform(t *geom.Transform, p *geom.Point) *geom.Point {
 		}
 		x, y = x*sx, y*sy
 
-		// Mirror, applied before rotation. mirror_x = mirror across the X axis (flip Y);
-		// mirror_y = mirror across the Y axis (flip X).
+		// Mirror before rotation. mirror_x flips Y (across the X axis), mirror_y flips X.
 		if t.MirrorX {
 			y = -y
 		}
@@ -56,7 +52,6 @@ func ApplyTransform(t *geom.Transform, p *geom.Point) *geom.Point {
 			x, y = y, -x
 		}
 
-		// Translate by placement origin.
 		if t.Origin != nil {
 			x += float64(t.Origin.X)
 			y += float64(t.Origin.Y)
@@ -99,16 +94,14 @@ func roundInt64(v float64) int64 {
 	return int64(math.Round(v))
 }
 
-// ComposePlacement maps a footprint-local offset into board (world) coordinates under a
-// board placement: world = at + M(R(rotationDeg) * offset), where R rotates CCW and M
-// mirrors X iff the placement is on the back side (mirror is applied AFTER the rotation, so
-// a back part is its front footprint rotated then reflected). rotationDeg is already in the
-// canonical Y-up frame (a Y-down source negates it on import), so no source remapping
-// happens here — this is the pure composer every board producer and the board renderer
-// share, and sharing it is what pins a footprint's pads and its silkscreen text to the same
-// spot. offset is in the reader's Y-flipped source-unit frame (pcbPoint). A nil at yields
-// the origin; a nil offset yields at unchanged. Truncates to int64 (not rounds) to match the
-// board renderer's long-standing pad placement byte-for-byte.
+// ComposePlacement maps a footprint-local offset into board (world) coordinates as
+// world = at + M(R(rotationDeg) * offset). R rotates CCW and M mirrors X iff the part is on the
+// back side, applied AFTER the rotation, so a back part is its front footprint rotated then
+// reflected. rotationDeg is already in the canonical Y-up frame (a Y-down source negates it on
+// import) and offset is in the reader's Y-flipped source-unit frame (pcbPoint). Every board
+// producer and the board renderer share it, which keeps a footprint's pads and silkscreen text
+// together. A nil at yields the origin and a nil offset yields at unchanged. It truncates to int64
+// rather than rounding, to match the board renderer's pad placement byte-for-byte.
 func ComposePlacement(at *geom.Point, rotationDeg float64, mirror bool, offset *geom.Point) *geom.Point {
 	if at == nil {
 		return &geom.Point{}

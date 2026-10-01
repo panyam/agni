@@ -16,7 +16,7 @@ at ingestion, not read from the design file; the attributes a file declares are 
 
 A role is what the engine thinks a net IS, worked out from what it is called. `12V_OUT` reads as a
 rail. `12V_SW` reads as a rail by its prefix and a switch node by its suffix, and the second reading
-is the one that matters, because a switch node is not a 12V supply.
+decides how rules treat it, because a switch node is not a 12V supply.
 
 Four of the six roles exist to say "this is named after a rail and is not one":
 
@@ -59,9 +59,9 @@ The nets that are named after a rail without being one:
 net.role(?n, ?r), ?r != "rail", ?r != "ground" => ?n, ?r
 ```
 
-### Not the same as `rail`
+### Not the same as `net.rail`
 
-`rail(?n)` is `Model.IsPowerRail`, which holds for a net that is asserted-driven OR global OR a ground
-OR carries the rail role. So `rail(?n)` is a CONCLUSION and `net.role(?n, "rail")` is what the lexicon
-STAMPED, and the two are different sets on any real board. `feedback(?n)` and `switching(?n)` are
+`net.rail(?n)` is `Model.IsPowerRail`, which holds for a net that is asserted-driven OR global OR a ground
+OR carries the rail role. So `net.rail(?n)` is a CONCLUSION and `net.role(?n, "rail")` is what the lexicon
+STAMPED, and the two are different sets on any real board. `net.feedback(?n)` and `net.switching(?n)` are
 exact shorthands for their `net.role` rows and may be used interchangeably with them.

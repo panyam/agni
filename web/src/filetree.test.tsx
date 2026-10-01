@@ -39,7 +39,7 @@ const file = (name: string, path: string, format = "edif") => ({
   isDir: false,
   format,
   // The tree filters on the server's kind label, not on format, so a fixture needs one. An
-  // unreadable file gets UNSPECIFIED, which is exactly what the hiding test asserts is dropped.
+  // unreadable file gets UNSPECIFIED, which is what the hiding test asserts is dropped.
   kind: format ? FileKind.DESIGN : FileKind.UNSPECIFIED,
 });
 
@@ -100,8 +100,8 @@ describe("filetree island", () => {
     await vi.waitFor(() => expect(buttonFor(el, "top.edn")).toBeTruthy());
     expect(handlers.onDirSelect).toHaveBeenCalledWith("m", "");
 
-    // A file with no reader is hidden entirely (2026-07-14: filtered as noise; reversal of
-    // the earlier show-greyed behavior).
+    // A file with no reader is hidden entirely (filtered as noise since 2026-07-14,
+    // reversing the earlier show-greyed behavior).
     expect(buttonFor(el, "notes.txt")).toBeUndefined();
 
     // The folder half of the same rule is the server's to answer, since one level of listing
@@ -110,7 +110,7 @@ describe("filetree island", () => {
     expect(fake.opens.length).toBeGreaterThan(0);
     expect(fake.opens.every((o) => o?.length === 1 && o[0] === FileKind.DESIGN)).toBe(true);
 
-    // Collapse and re-expand: the level is cached, not refetched.
+    // Collapse and re-expand. The level is cached, not refetched.
     buttonFor(el, "m")!.click();
     buttonFor(el, "m")!.click();
     await settle();
@@ -122,8 +122,8 @@ describe("filetree island", () => {
   });
 
   // A mount root gets the same treatment as a folder inside one, so a mount serving only
-  // datasheets does not root a branch with nothing under it. The count is what keeps the pruning
-  // honest: an operator who configured a mount can see it was hidden rather than lost.
+  // datasheets does not root a branch with nothing under it. The count means an operator
+  // who configured a mount can see it was hidden rather than lost.
   it("prunes empty mount roots and accounts for what it hid", async () => {
     fake.mounts = [];
     fake.prunedMounts = 2;

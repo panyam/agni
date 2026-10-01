@@ -31,6 +31,6 @@ format. If it needs something the reader normalized away, it is an input diagnos
 caught while the file is being parsed. The
 [rules and checks page](../../../architecture/rules-and-checks/) works through that split.
 
-**Where the course teaches it:**
-[chapter 2](../../../learn/02-the-drawing-is-not-the-circuit/#the-drawing-is-a-rendering-ee2) opens on
-the distinction and spends the rest of the chapter on the ways a drawing and its netlist disagree.
+The course teaches it in
+[chapter 2](../../../learn/02-the-drawing-is-not-the-circuit/#the-drawing-is-a-rendering-ee2), which
+opens on the distinction and spends the rest of the chapter on the ways a drawing and its netlist disagree.

@@ -8,7 +8,7 @@ import (
 )
 
 // efuseSpec is a seeded spec whose datasheet declares device_class "efuse" (the class no ref-des
-// prefix or description keyword on a real export can establish — WS10-013). It carries a
+// prefix or description keyword on a real export can establish; WS10-013). It carries a
 // source doc so the projected fact cites it, and no parameters (the class is a PartSpec-level field).
 func efuseSpec(mpn string) *parampb.PartSpec {
 	return &parampb.PartSpec{
@@ -21,11 +21,12 @@ func efuseSpec(mpn string) *parampb.PartSpec {
 
 // The component.device_class PROJECTION test (that a seeded class projects a fact) moved to
 // stdlib/relations with the Facts projector (issue 10); the tests below exercise the check.Model
-// side of WS10-013 — class-set enrichment and the Available gate — which stay in check.
+// side of WS10-013 (class-set enrichment and the Available gate), which stays in check.
 
-// TestDeviceClassEnrichesClassSet (WS10-013 Phase 2): a seeded device_class is merged into the
-// component's device_classes SET, so HasClass answers from the datasheet — but only when a params tier
-// is attached, and the keyword-derived most-specific class is left unchanged (additive, not promoted).
+// TestDeviceClassEnrichesClassSet (WS10-013 Phase 2) checks that a seeded device_class is merged
+// into the component's device_classes SET, so HasClass answers from the datasheet. That happens
+// only when a params tier is attached, and the keyword-derived most-specific class is left
+// unchanged (additive, not promoted).
 func TestDeviceClassEnrichesClassSet(t *testing.T) {
 	set := param.ParamSet{"TPS2HB16": efuseSpec("TPS2HB16")}
 	m := NewModelWithParams(supplyDesign("+5V", false, "TPS2HB16"), nil, set)
@@ -48,9 +49,9 @@ func TestDeviceClassEnrichesClassSet(t *testing.T) {
 	}
 }
 
-// TestDeviceClassRelationAvailability: a rule reading component.device_class is not-applicable without
-// a seeded params set (so a review item bound to it reads not-automated, not a hollow pass), and
-// applicable once a params tier is attached — the same gate the param(...) reads get.
+// TestDeviceClassRelationAvailability checks that a rule reading component.device_class is
+// not-applicable without a seeded params set (so a review item bound to it reads not-automated, not a
+// hollow pass), and applicable once a params tier is attached, the same gate the param.max(...) reads get.
 func TestDeviceClassRelationAvailability(t *testing.T) {
 	r := &Rule{Reads: []string{"component.device_class"}}
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {
@@ -62,9 +63,9 @@ func TestDeviceClassRelationAvailability(t *testing.T) {
 	}
 }
 
-// TestEsdRatedRelationAvailability (WS3-087): component.esd_rated is a datasheet-tier relation whose
-// name is not param-prefixed, so it must gate to not-applicable without --params exactly like
-// component.device_class — else a datalog rule reading it silently passes on an unseeded design.
+// TestEsdRatedRelationAvailability (WS3-087) covers component.esd_rated, a datasheet-tier relation
+// whose name is not param-prefixed. It must gate to not-applicable without --params the same way
+// component.device_class does, or a datalog rule reading it silently passes on an unseeded design.
 func TestEsdRatedRelationAvailability(t *testing.T) {
 	r := &Rule{Reads: []string{"component.esd_rated"}}
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {

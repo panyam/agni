@@ -32,7 +32,7 @@ func intentDoc(key string) string {
 	return string(b)
 }
 
-// docKeySubsystem is the single doc key shared by every intent/subsystem-<slug> rule: subsystem rule
+// docKeySubsystem is the single doc key shared by every intent/subsystem-<slug> rule. Subsystem rule
 // names are per-design (derived from the declared subsystem name), so they cannot each own a doc file;
 // the family doc explains the shared source-and-nets check they all run.
 const docKeySubsystem = "subsystem"
@@ -45,7 +45,7 @@ const docKeySequence = "sequence"
 // group runs the identical decode.
 const docKeyStrapGroup = "strap-group"
 
-// docKeys is the canonical set of intent rule-doc keys: every kind Compile can emit maps to exactly one
+// docKeys is the canonical set of intent rule-doc keys. Every kind Compile can emit maps to exactly one
 // entry here, and each has a docs/<key>.md. It is the harness's expectation set (docs_test.go holds
 // docKeys, the emitted rules, and the docs/ directory to each other), so a new intent rule kind added
 // to Compile without its doc key + doc file fails CI.
@@ -71,7 +71,7 @@ var docKeys = []string{
 	RuleIOMapCoverage,                   // io-map-coverage
 }
 
-// docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
+// docKey maps a Rule.Name to its doc key. It is identity for the fixed-name rules (module-missing,
 // module-count, voltage-domain-mismatch, protection-<kind>), and each dynamically-named family
 // collapses to its family key. It is the inverse of the rule builders' wiring (each sets Detail:
 // intentDoc(<its key>)), and the harness uses it to tie an emitted rule back to its doc.
@@ -90,7 +90,7 @@ func docKey(ruleName string) string {
 
 // docSummaries is the one-line catalog caption for each intent rule KIND, shown in the docsite
 // reference index (tools/catalogdocs). It is a doc caption, distinct from the runtime Rule.Summary a
-// finding carries: the runtime summaries for the per-kind protection and per-instance subsystem rules
+// finding carries, because the runtime summaries for the per-kind protection and per-instance subsystem rules
 // embed a design-specific kind/name, so a generic page needs a name-free caption. Every docKey has an
 // entry (DocRules would emit an empty caption otherwise; TestDocRules holds them 1:1).
 var docSummaries = map[string]string{
@@ -118,7 +118,7 @@ var docSummaries = map[string]string{
 // docRemedies is what to DO about each intent rule KIND, in the imperative (check.Rule.Remedy).
 //
 // It is keyed by docKey rather than written at each rule builder because an intent rule is generated
-// per-declaration while its remedy is not: the fix for a missing OV clamp is the same sentence on
+// per-declaration while its remedy is not. The fix for a missing OV clamp is the same sentence on
 // every rail that declares one. Keying it here gives the runtime rule and the docsite exemplar one
 // source instead of two copies to drift apart. Every docKey has an entry, held 1:1 by TestDocRules.
 var docRemedies = map[string]string{
@@ -169,12 +169,9 @@ func DocRules() []*check.Rule {
 
 // RuleDocImageHandler serves the intent rule docs' embedded schematic-card images (the diagram a
 // docs/<kind>.md references) as a read-only static route, so the web rules/checks panels resolve the
-// relative image refs in an intent rule's Detail. Same shape as builtin.RuleDocImageHandler. Only .svg
-// and .png are served; any other path (the markdown itself, a directory, a traversal attempt) is 404.
-// Images come from the embed FS alone, no filesystem access, which keeps the core free of file I/O.
-// Mount it under a prefix (the handler sees the prefix-stripped, relative path, e.g.
-// "images/protection-ovp.svg"). SVG's content-type is set explicitly because Go's mime table resolves
-// .svg only from the host's mime files, which CI/WASM may lack.
+// relative image refs in an intent rule's Detail. The contract is builtin.RuleDocImageHandler's: .svg
+// and .png only, 404 for anything else including the markdown, mounted under a prefix (e.g.
+// "images/protection-ovp.svg"), and an explicit SVG content-type.
 func RuleDocImageHandler() http.Handler {
 	sub, err := fs.Sub(ruleDocs, "docs")
 	if err != nil {

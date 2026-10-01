@@ -9,7 +9,7 @@ A small capacitor from a supply pin to ground, fitted as close to that pin as th
 a local charge reservoir. The regulator handles the average current a chip draws, and the capacitor
 handles the gulp the chip takes when its outputs all switch within a nanosecond of each other.
 
-The load-bearing word is *local*. Copper has inductance, roughly 1nH per millimetre, and inductance
+The word that matters is *local*. Copper has inductance, roughly 1nH per millimetre, and inductance
 resists a *change* in current. The relation is `V = L · di/dt`. Fifty millimetres of trace is about 50nH, so a demand
 that rises by 100mA over 10ns drops half a volt along the way. On a 3.3V part that is a 15% sag,
 arriving exactly when the chip is busiest and gone again in nanoseconds.
@@ -39,7 +39,7 @@ A netlist check can prove the capacitor is present. Only geometry can say whethe
 capacitor on the correct net placed 20mm away does not decouple anything, because the loop it forms
 with the chip has enough inductance to defeat it at the frequencies it was fitted for.
 
-**Where the course teaches it:**
-[chapter 3](../../../learn/03-why-every-chip-needs-capacitors/) is the whole chapter, from
+The course teaches it across the whole of
+[chapter 3](../../../learn/03-why-every-chip-needs-capacitors/), from
 [the role](../../../learn/03-why-every-chip-needs-capacitors/#the-role-ee3) through to
 [the copper](../../../learn/03-why-every-chip-needs-capacitors/#the-copper-ee7).

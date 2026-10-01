@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestValueStampedOnRealRead is the end-to-end check that the value pass actually reaches a rule: a
+// TestValueStampedOnRealRead is the end-to-end check that the value pass actually reaches a rule. A
 // committed KiCad fixture, read through the real loader, must come back with a machine-comparable
 // number rather than the vendor's text.
 //
@@ -42,8 +42,9 @@ func TestValueStampedOnRealRead(t *testing.T) {
 // TestUnresolvedSetImpliesResolvedSet is the wiring guard for the next format reader (agni issue
 // 418). A reader that records what FAILED to resolve without recording what did leaves
 // symbol-unresolved holding a failure list, and a rule holding only failures can only report
-// failures: its silence on a clean design becomes indistinguishable from silence on a design nobody
-// looked at. That is precisely the coverage claim the considered set exists to make checkable.
+// failures, and its silence on a clean design becomes indistinguishable from silence on a design
+// nobody looked at. That is precisely the coverage claim the considered set exists to make
+// checkable.
 //
 // It runs over the fixtures rather than over the reader registry because the omission is a property
 // of a real read. A reader could declare the diagnostic in one code path and forget it in another,
@@ -74,8 +75,8 @@ func TestUnresolvedSetImpliesResolvedSet(t *testing.T) {
 				"over them cannot state what it examined", f, len(diag.GetUnresolvedSymbols()))
 		}
 	}
-	// A positive control (build/evidence.md): with no fixture declaring the diagnostic the loop above
-	// passes by never testing anything.
+	// A positive control (build/evidence.md). With no fixture declaring the diagnostic, the loop
+	// above passes by never testing anything.
 	if declared == 0 {
 		t.Fatal("no fixture declared resolved_symbols, so the check above proved nothing")
 	}

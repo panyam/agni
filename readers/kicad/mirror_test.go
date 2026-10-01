@@ -45,7 +45,7 @@ const mirrorProbe = `(kicad_sch
 // The four mirrored 90 and 270 rows are agni issue 577. KiCad applies the rotation and THEN the
 // mirror, geomath.ApplyTransform applies the mirror and then the rotation, and a reflection does not
 // commute with a quarter turn, so a symbol placed mirrored at 90 or 270 had its two pins swapped onto
-// each other's nets. Everything else already agreed, which is why the defect survived: it needs both
+// each other's nets. Everything else already agreed, which is why the defect survived. It needs both
 // a mirror and an odd quarter turn, and it moves one connection out of a net and another in, so the
 // net COUNT does not change. On StickHub that was 19 of 47 nets wrong with 47 nets reported.
 func TestMirroredPinPlacement(t *testing.T) {

@@ -12,9 +12,8 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// designsFS holds the synthetic sample designs the examples read. They are hand-authored
-// fixtures, not real customer boards, so every example runs hermetically (no external files
-// to fetch) and this repo stays shareable: no proprietary netlist ever ships here.
+// designsFS holds the synthetic sample designs the examples read. They are hand-authored, never a
+// real board, so every example runs with no external files and no proprietary netlist ships here.
 //
 //go:embed designs
 var designsFS embed.FS
@@ -23,10 +22,8 @@ var designsFS embed.FS
 // "two-resistors.edn" for a loose file, "i2c-sensor/i2c-sensor.edn" for one inside a declared
 // design.
 //
-// It WALKS the tree rather than reading one directory. A fixture that carries a design.yaml lives in
-// its own folder beside the companions it declares, and a listing that skipped directories reported
-// every such file as absent: the demo project's netlist and board have been invisible here since they
-// were added.
+// It WALKS the tree rather than reading one directory, because a fixture that carries a design.yaml
+// lives in its own folder beside the companions it declares (#609).
 func Designs() []string {
 	var names []string
 	err := fs.WalkDir(designsFS, "designs", func(path string, d fs.DirEntry, err error) error {
@@ -45,10 +42,10 @@ func Designs() []string {
 	return names
 }
 
-// isDesignFile reports whether a bundled file is something a reader opens, which is what this
-// listing is FOR: a walkthrough offering a choice must not offer a design.yaml, and a caller
-// iterating every bundled format must not be handed a descriptor to parse. The set mirrors
-// readByExt plus the .eds schematic geometry ReadSchematicFixture opens.
+// isDesignFile reports whether a bundled file is something a reader opens, so a walkthrough never
+// offers a design.yaml and a caller iterating every format is never handed a descriptor to parse.
+// The set is the registered reader extensions (readers/formats/registry.go) the bundled fixtures
+// use, including the .eds that ReadSchematicFixture opens.
 func isDesignFile(p string) bool {
 	switch strings.ToLower(path.Ext(p)) {
 	case ".edn", ".eds", ".tel", ".kicad_pcb", ".kicad_sch", ".xml", ".cvg":
@@ -57,12 +54,9 @@ func isDesignFile(p string) bool {
 	return false
 }
 
-// fixturePath resolves name against the embedded tree. It accepts either form a caller has: the
-// relative path Designs reports, or a bare base name.
-//
-// The base-name form is kept working deliberately. It is what a walkthrough's default and a prose
-// sentence both reach for, and resolving it here is what let i2c-sensor.edn move into a declared
-// design without five examples having to learn where it went.
+// fixturePath resolves name against the embedded tree, as either the relative path Designs reports
+// or a bare base name. Walkthrough defaults and sidecar prose use the base name, so a fixture can
+// move into a declared design folder without every example changing.
 func fixturePath(name string) (string, error) {
 	if _, err := fs.Stat(designsFS, "designs/"+name); err == nil {
 		return "designs/" + name, nil
@@ -78,9 +72,8 @@ func fixturePath(name string) (string, error) {
 }
 
 // ReadFixture decodes a bundled design into the IR through the same formats.Loader an on-disk
-// read uses, so a fixture and a file of the same design produce the same IR. Loader.FS is the
-// embedded case: it makes every path an fs.ValidPath name, which the embed FS already is.
-// name is either the path Designs reports or a bare base name.
+// read uses, so a fixture and a file of the same design produce the same IR. name is either the
+// path Designs reports or a bare base name.
 func ReadFixture(name string) (*ir.Design, error) {
 	p, err := fixturePath(name)
 	if err != nil {

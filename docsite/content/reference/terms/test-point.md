@@ -17,17 +17,17 @@ flowchart TB
     TP -.->|"a probe, or a<br/>bed-of-nails pin"| M["is this rail<br/>actually at 3.3V?"]
 ```
 
-The question it answers is the first one anybody asks of a board that does not work: which rails came
-up. Without a reachable point, answering that means finding a component leg to balance a probe on,
+The question it answers is the first one anybody asks of a board that does not work, which is which
+rails came up. Without a reachable point, answering that means finding a component leg to balance a probe on,
 which is slow on a bench and impossible on a production fixture.
 
 That is why [`test-point-coverage`](../../rules/test-point-coverage/) asks whether every rail carries
 one. The rule only fires on a board that places test points **somewhere**, since a design with no
 test-point convention is not wrong, it just has a different one.
 
-For a software reader: a test point is a metrics endpoint, and the rule reads as "critical paths must
+For a software reader, a test point is a metrics endpoint, and the rule reads as "critical paths must
 emit telemetry".
 
-**Where the course teaches it:** nowhere yet. `test point` appears once in
+The course does not teach it yet. `test point` appears once in
 [chapter 1](../../../learn/01-what-a-board-is-made-of/), inside a list of the part kinds a board
 contains, and is never explained.

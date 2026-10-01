@@ -21,7 +21,7 @@ func verdictsFor(t *testing.T, decl Declaration, m check.Model, rule string) []c
 }
 
 // An intent rule's considered set is the DECLARATION, which is what makes these the conversions worth
-// having: the rule already knows exactly what it was asked to look for, so it can say "both declared
+// having. The rule already knows what it was asked to look for, so it can say "both declared
 // modules are here" where before it said nothing, which is what a declaration nobody wrote says too.
 func TestIntentRuleStatesWhatItWasAskedToLookFor(t *testing.T) {
 	decl := declOf(t, `
@@ -46,7 +46,7 @@ modules:
 			t.Errorf("%s: a pass with no witness is the silence this conversion removes", check.SubjectRefs(v))
 		}
 	}
-	// And the findings do not move: the failing half is what `check` has always reported.
+	// And the findings do not move. The failing half is what `check` has always reported.
 	absent := check.NewModel(&ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}})
 	if fs := check.Run(absent, Compile(decl)); len(fs) != 1 {
 		t.Errorf("want the one absent-module finding, got %d: %+v", len(fs), fs)
@@ -79,7 +79,7 @@ modules:
 
 // A rail whose NAME states no voltage is neither a match nor a mismatch. The rule compares a
 // name-derived nominal against the declared one, so a rail called VBUS supplies nothing to compare,
-// and it took the same silent path a correctly-named rail took: a domain declared over rails nobody
+// and it took the same silent path a correctly-named rail took, so a domain declared over rails nobody
 // named for their voltage reported total agreement.
 func TestVoltageDomainSeparatesAgreementFromNothingToCompare(t *testing.T) {
 	decl := declOf(t, `

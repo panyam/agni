@@ -6,7 +6,8 @@ import (
 )
 
 // The search template is runnable UI reached by typing, so a malformed one is a shipped bug no
-// client test can catch: the browser substitutes the reader's term and runs whatever it was handed.
+// client test can catch, because the browser substitutes the reader's term and runs whatever it was
+// handed.
 func TestSearchQueryParses(t *testing.T) {
 	s := Search()
 	if _, err := Parse(s.Query); err != nil {
@@ -35,7 +36,7 @@ func TestSearchQueryPlaceholderIsQuoted(t *testing.T) {
 
 // A search that ranged over an association would silently miss a part with no connections, which is
 // the blind spot entity() was added to close. Pin the relation so a well-meaning rewrite to
-// component-on-net goes red here rather than in a review nobody runs.
+// component.net goes red here rather than in a review nobody runs.
 func TestSearchQueryRangesOverEntity(t *testing.T) {
 	q, err := Parse(strings.ReplaceAll(Search().Query, "{term}", "CAN"))
 	if err != nil {
@@ -53,7 +54,7 @@ func TestSearchQueryRangesOverEntity(t *testing.T) {
 }
 
 // The term is matched case-insensitively. A search box that only matches case is one a newcomer
-// tries twice and abandons, and (?i) is the whole of how this template says otherwise.
+// tries twice and abandons, and (?i) is the only thing in this template that says otherwise.
 func TestSearchQueryIsCaseInsensitive(t *testing.T) {
 	if !strings.Contains(Search().Query, "(?i)") {
 		t.Errorf("search template is case-sensitive: %s", Search().Query)

@@ -15,7 +15,7 @@ func blockedItem(id string, deps ...check.UnmetDependency) ItemResult {
 	return ItemResult{Item: Item{ID: id}, Outcome: NeedsData, Unmet: deps}
 }
 
-// The prioritisation signal a per-item view structurally cannot show: an item lists the facts IT
+// A per-item view structurally cannot show this prioritisation signal. An item lists the facts IT
 // needs, and only a rollup knows which fact the most items are waiting on.
 func TestWorkListRanksByHowMuchAFactUnblocks(t *testing.T) {
 	r := wlReport("d",

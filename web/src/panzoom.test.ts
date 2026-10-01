@@ -17,7 +17,7 @@ describe("wheelZoomFactor", () => {
   });
 
   it("is scale-free: equal and opposite deltas cancel exactly", () => {
-    // The whole reason the curve is exponential rather than a fixed step per notch. A user who
+    // Why the curve is exponential rather than a fixed step per notch. A user who
     // overshoots and comes back the same distance lands where they started, at any zoom level.
     expect(wheelZoomFactor(-120) * wheelZoomFactor(120)).toBeCloseTo(1, 12);
   });
@@ -82,7 +82,7 @@ describe("clampScale", () => {
 
 describe("fitInto", () => {
   it("contains the content and centers it", () => {
-    // 600x800 content in a 900x400 host: height is the tighter axis.
+    // 600x800 content in a 900x400 host, so height is the tighter axis.
     const v = fitInto(600, 800, 900, 400, { margin: 0 });
     expect(v.scale).toBeCloseTo(0.5, 10);
     expect(v.tx).toBeCloseTo((900 - 300) / 2, 10);

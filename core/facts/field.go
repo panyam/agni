@@ -6,13 +6,13 @@ package facts
 type Field int
 
 const (
-	FieldSubject    Field = iota // Row.Subject — the primary entity (net, ref-des, mpn)
-	FieldObject                  // Row.Object — the second entity or attribute key
-	FieldValue                   // Row.Value — the rendered string value
-	FieldNum                     // Row.Num — the numeric value (for range/compare)
-	FieldConditions              // Row.Conditions — a parameter's test conditions
-	FieldMin                     // Row.Min — the SECOND numeric slot (a two-sided range's lower bound)
-	FieldQualifier               // Row.Qualifier — the SECOND string slot (a discriminator when Value is spent)
+	FieldSubject    Field = iota // Row.Subject, the primary entity (net, ref-des, mpn)
+	FieldObject                  // Row.Object, the second entity or attribute key
+	FieldValue                   // Row.Value, the rendered string value
+	FieldNum                     // Row.Num, the numeric value (for range/compare)
+	FieldConditions              // Row.Conditions, a parameter's test conditions
+	FieldMin                     // Row.Min, the SECOND numeric slot (a two-sided range's lower bound)
+	FieldQualifier               // Row.Qualifier, the SECOND string slot (a discriminator when Value is spent)
 )
 
 // Label names a field for a synthesized template argument, used where a relation registers a layout

@@ -15,7 +15,7 @@ func nets(names ...string) []*ir.Net {
 	return out
 }
 
-// TestInUseHonoursPrefix is the WS3-090 core: InUse matches the rules' netMatch (suffix AND prefix),
+// TestInUseHonoursPrefix is the WS3-090 core. InUse matches the rules' netMatch (suffix AND prefix),
 // so a prefix-discriminated profile is NOT in use just because foreign nets share a bare suffix. The
 // old suffix-only presence read these as "present", which false-passed an absent interface.
 func TestInUseHonoursPrefix(t *testing.T) {
@@ -37,8 +37,8 @@ func TestInUseHonoursPrefix(t *testing.T) {
 	}
 }
 
-// TestInUseSuffixOnlyUnchanged: a profile with no prefix still matches by suffix, so the fix does not
-// regress suffix-based profiles (the common case).
+// TestInUseSuffixOnlyUnchanged checks that a profile with no prefix still matches by suffix, so the
+// fix does not regress suffix-based profiles (the common case).
 func TestInUseSuffixOnlyUnchanged(t *testing.T) {
 	can := Profile{Name: "CAN", Signals: []Signal{{Name: "H", Suffix: "_CANH"}, {Name: "L", Suffix: "_CANL"}}}
 	if !InUse(check.NewModel(&ir.Design{Nets: nets("CAN_CANH", "CAN_CANL")}), can) {
@@ -49,8 +49,8 @@ func TestInUseSuffixOnlyUnchanged(t *testing.T) {
 	}
 }
 
-// TestHostDeclared: true only when a component carries the host attribute; false with no annotation and
-// for a profile with no host binding.
+// TestHostDeclared checks that HostDeclared is true only when a component carries the host attribute,
+// and false with no annotation and for a profile with no host binding.
 func TestHostDeclared(t *testing.T) {
 	lin := Profile{Name: "LIN", HostAttrKey: "interface", HostAttrVal: "LIN_HOUSE",
 		Signals: []Signal{{Name: "TX", Suffix: "_TX"}}}
@@ -67,17 +67,19 @@ func TestHostDeclared(t *testing.T) {
 	}
 }
 
-// TestAnchoredRequiresAnchorNet is the WS3-099 core: InUse clears on two NON-anchor signals while the
-// anchor net is absent, so InUse alone does not mean the convention completeness rule can evaluate —
-// signalMissingRule hangs on the anchor net existing. Anchored is the missing half of that gate.
+// TestAnchoredRequiresAnchorNet is the WS3-099 core. InUse clears on two NON-anchor signals while
+// the anchor net is absent, so InUse alone does not mean the convention completeness rule can
+// evaluate, because signalMissingRule hangs on the anchor net existing. Anchored is the missing
+// half of that gate.
 func TestAnchoredRequiresAnchorNet(t *testing.T) {
 	pcie := Profile{Name: "PCIe", Signals: []Signal{
 		{Name: "PETP", Suffix: "_PETP", Anchor: true},
 		{Name: "REFCLKP", Suffix: "_REFCLKP"},
 		{Name: "REFCLKN", Suffix: "_REFCLKN"},
 	}}
-	// Two non-anchor signals match and the anchor does not: in use, but the completeness rule has
-	// nothing to hang on. This is the shape that scored a clean pass while checking nothing.
+	// Two non-anchor signals match and the anchor does not, so it is in use but the completeness
+	// rule has nothing to hang on. This is the shape that scored a clean pass while checking
+	// nothing.
 	partial := check.NewModel(&ir.Design{Nets: nets("PCIE_NAD_REFCLKP", "PCIE_NAD_REFCLKN")})
 	if !InUse(partial, pcie) {
 		t.Error("two matching non-anchor signals should still read as in use (InUse keeps its meaning)")
@@ -90,7 +92,7 @@ func TestAnchoredRequiresAnchorNet(t *testing.T) {
 		t.Error("a present anchor net should read as anchored")
 	}
 	// A profile declaring no anchor generates no convention completeness rule at all, so there is
-	// nothing for a missing anchor to block: vacuously anchored, never the unmatched verdict.
+	// nothing for a missing anchor to block. It is vacuously anchored, never the unmatched verdict.
 	noAnchor := Profile{Name: "X", Signals: []Signal{{Name: "A", Suffix: "_A"}, {Name: "B", Suffix: "_B"}}}
 	if !Anchored(check.NewModel(&ir.Design{Nets: nets("FOO_A")}), noAnchor) {
 		t.Error("a profile with no declared anchor is vacuously anchored")

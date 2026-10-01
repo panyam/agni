@@ -62,7 +62,7 @@ func TestCreateReviewReadsTheDeclaredBoard(t *testing.T) {
 		want    string
 	}{
 		{"declared board attached", false, board},
-		// The opt-out the CLI's --as-named sends: read exactly what was named, which carries no board.
+		// The opt-out the CLI's --as-named sends reads exactly what was named, which carries no board.
 		{"as named reads the entry alone", true, "mount://m/d/board.edn"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

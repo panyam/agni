@@ -37,7 +37,7 @@ func TestReadSchematicHierarchy(t *testing.T) {
 	}
 }
 
-// TestSubSheetBoxOnParent asserts each (sheet ...) instance draws its box on the PARENT page:
+// TestSubSheetBoxOnParent asserts each (sheet ...) instance draws its box on the PARENT page as
 // a RECT at (at)/(size) plus a "Sheetname" label, independent of following the Sheetfile into
 // the child (WS7-022). KiCad draws hier.kicad_sch/Hier Root with a "Sub A" rectangle.
 func TestSubSheetBoxOnParent(t *testing.T) {
@@ -131,7 +131,7 @@ func TestReadSchematicGeometryTransform(t *testing.T) {
 	if u1 == nil {
 		t.Fatal("placement U1 not found")
 	}
-	// KiCad angle 90 -> geom 270: the Y-down->Y-up conversion inverts rotation direction.
+	// KiCad angle 90 -> geom 270, because the Y-down->Y-up conversion inverts rotation direction.
 	if u1.Transform.RotationDeg != 270 {
 		t.Errorf("U1 rotation = %d, want 270 (KiCad 90 negated for Y-up)", u1.Transform.RotationDeg)
 	}
@@ -239,7 +239,7 @@ func TestReadSchematicGeometryPinLegs(t *testing.T) {
 	}
 	// Two pins -> two leg polylines. The top pin (at 0 3.81 270)(length 1.27) legs INTO the
 	// body: end y = 3.81 - 1.27 = 2.54mm, the rectangle's top edge. A flipped direction would
-	// put it at 5.08mm (sticking outward) — this is the direction check.
+	// put it at 5.08mm (sticking outward), so this is the direction check.
 	legs := 0
 	var topLeg *geom.Shape
 	for _, s := range r.Shapes {
@@ -346,8 +346,8 @@ func label(sh *geom.SheetGeometry, text string) *geom.Label {
 	return nil
 }
 
-// TestWireNetNames (WS1-022): the geometry reader stamps each wire with its solved net
-// name — a labeled wire gets the label, an unlabeled pinned wire gets its N$ stub — so
+// TestWireNetNames (WS1-022) checks that the geometry reader stamps each wire with its solved net
+// name (a labeled wire gets the label, an unlabeled pinned wire gets its N$ stub), so
 // the viewer can highlight/badge KiCad wires by net.
 func TestWireNetNames(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "wirenet.kicad_sch")), "wirenet.kicad_sch")
@@ -377,7 +377,7 @@ func TestWireNetNames(t *testing.T) {
 	}
 }
 
-// TestWireNetNamesHierarchy (WS1-022): in a hierarchy the combined solve qualifies
+// TestWireNetNamesHierarchy (WS1-022) checks that in a hierarchy the combined solve qualifies
 // sub-sheet local names ("/amp1/SIG"), matching the netlist read exactly, so a
 // sub-sheet's labeled wires carry the qualified name a net-subject finding would use.
 func TestWireNetNamesHierarchy(t *testing.T) {
@@ -402,7 +402,7 @@ func TestWireNetNamesHierarchy(t *testing.T) {
 	}
 }
 
-// TestReadBusGeometry asserts the geometry reader draws KiCad bus constructs (WS7-042): a `bus`
+// TestReadBusGeometry asserts the geometry reader draws KiCad bus constructs (WS7-042). A `bus`
 // trunk and a `bus_entry` stub become WireGeometry tagged KIND_BUS / KIND_BUS_ENTRY, carrying the
 // KiCad uuid on Prov.SourceId (the WS7-042b highlight join key) and no net, while a plain wire
 // stays an untagged (KIND_UNSPECIFIED) wire. bus_alias is a declaration and is not drawn.
@@ -418,7 +418,7 @@ func TestReadBusGeometry(t *testing.T) {
 	for _, w := range g.Sheets[0].Wires {
 		byKind[w.GetKind()] = w
 	}
-	// One plain wire, one bus trunk, one bus entry — three drawable wires, no more (the bus_alias
+	// One plain wire, one bus trunk and one bus entry make three drawable wires, no more (the bus_alias
 	// must not add geometry).
 	if got := len(g.Sheets[0].Wires); got != 3 {
 		t.Fatalf("drawn wires = %d, want 3 (wire + bus + bus_entry)", got)
@@ -463,7 +463,7 @@ func TestReadBusGeometry(t *testing.T) {
 }
 
 // A #-prefixed symbol (#PWR, #FLG) is drawn but is not a component, and the geometry used to blank
-// its reference and stop there — leaving the glyph anonymous, so the thing that NAMES a rail was the
+// its reference and stop there, leaving the glyph anonymous, so the thing that NAMES a rail was the
 // one thing on a sheet nothing could address. Its Value is the net name (the same fact sch_nets.go
 // turns into a rank-0 anchor), so it carries that as net_anchor instead.
 func TestPowerSymbolCarriesItsNetAnchor(t *testing.T) {

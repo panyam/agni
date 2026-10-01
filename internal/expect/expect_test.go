@@ -32,8 +32,8 @@ pending:
 	}
 }
 
-// TestLoadEmpty: a sidecar with an empty fires map is a valid "no findings expected" (fires is
-// non-nil so a caller can range it safely).
+// TestLoadEmpty checks that a sidecar with an empty fires map is a valid "no findings expected"
+// (fires is non-nil so a caller can range it safely).
 func TestLoadEmpty(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "d.expect.yaml")
@@ -49,7 +49,7 @@ func TestLoadEmpty(t *testing.T) {
 	}
 }
 
-// TestLoadWhyLongForm: an entry may be a mapping ({subjects, why}) instead of a bare subject
+// TestLoadWhyLongForm checks that an entry may be a mapping ({subjects, why}) instead of a bare subject
 // list, so a fixture can narrate its intent (WS6-008); short and long forms mix freely.
 func TestLoadWhyLongForm(t *testing.T) {
 	dir := t.TempDir()

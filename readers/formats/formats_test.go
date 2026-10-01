@@ -12,8 +12,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestSymbolOpenerRecursive: a --symbol-path pointed at a library ROOT resolves a symbol that
-// lives in a subdirectory (gEDA/Lepton libs categorize symbols into analog/, power/, ...), and
+// TestSymbolOpenerRecursive checks that a --symbol-path pointed at a library ROOT resolves a symbol
+// that lives in a subdirectory (gEDA/Lepton libs categorize symbols into analog/, power/, ...), and
 // a top-level file in an earlier dir still wins over a subtree match.
 func TestSymbolOpenerRecursive(t *testing.T) {
 	root := t.TempDir()
@@ -80,7 +80,7 @@ func TestRegistryConsistency(t *testing.T) {
 	}
 }
 
-// TestKicadProjectNetClass covers WS1-037: net-class membership lives only in the .kicad_pro
+// TestKicadProjectNetClass covers WS1-037. Net-class membership lives only in the .kicad_pro
 // net_settings (not the sch/pcb), so a project read stamps ir.Net.net_classes. It also covers the
 // WS1-050 cardinality end to end: SIG is named by an explicit assignment AND matched by two
 // patterns, and all three memberships must survive the loader, not just whichever resolved first.
@@ -129,8 +129,8 @@ func TestUnknownExtensionErrorListsAll(t *testing.T) {
 	if err == nil {
 		t.Fatal("want an error for an unknown extension")
 	}
-	// The exact generated list: substring checks would pass ".sch" via ".kicad_sch", which
-	// is precisely the drift the old hand-written message had.
+	// The exact generated list, because substring checks would pass ".sch" via ".kicad_sch",
+	// which is the drift the old hand-written message had.
 	want := "(have: " + strings.Join(NetlistExts(), ", ") + ")"
 	if !strings.Contains(err.Error(), want) || !strings.Contains(want, ", .sch,") {
 		t.Errorf("unknown-extension error = %v, want it to carry %q including a bare .sch entry", err, want)
@@ -138,7 +138,7 @@ func TestUnknownExtensionErrorListsAll(t *testing.T) {
 }
 
 // TestReadDesignStampsDeviceClasses proves the ingestion classify pass runs inside ReadDesign
-// (WS3-071): a design read through the Loader carries the normalized device_classes set with no
+// (WS3-071). A design read through the Loader carries the normalized device_classes set with no
 // separate call, so every format is classified at the same edge. basic.edn's R1/R2 read as resistors
 // and U1 as an IC.
 func TestReadDesignStampsDeviceClasses(t *testing.T) {
@@ -183,9 +183,9 @@ func TestResolveGeometryRouting(t *testing.T) {
 	}
 }
 
-// An EDIF schematic (.eds) is dual-capability: its schematic view carries explicit netlist
+// An EDIF schematic (.eds) is dual-capability. Its schematic view carries explicit netlist
 // connectivity, so ReadDesign yields a netlist (queryable/checkable/diffable) AND the same file
-// renders faithfully — the "query any format that carries a netlist" property, wired in the
+// renders faithfully. That is the "query any format that carries a netlist" property, wired in the
 // registry rather than gated by extension.
 func TestEdsIsDualCapability(t *testing.T) {
 	l := &Loader{}
@@ -201,8 +201,8 @@ func TestEdsIsDualCapability(t *testing.T) {
 	}
 }
 
-// TestResolveGeometryFaithfulSymbols covers partial-faithful mode (WS7-031): an auto-layout that
-// draws the design's own symbols when they exist, and a helpful error when the format has none.
+// TestResolveGeometryFaithfulSymbols covers partial-faithful mode (WS7-031), an auto-layout that
+// draws the design's own symbols when they exist and falls back to glyphs when the format has none.
 func TestResolveGeometryFaithfulSymbols(t *testing.T) {
 	l := &Loader{}
 	g, err := l.ResolveGeometry("../kicad/testdata/geom.kicad_sch", "grid", nil, SymbolsFaithful)
@@ -242,9 +242,9 @@ func sheetCount(g *geom.SchematicGeometry) int {
 
 // TestIPCDeclaredNetRoleEndToEnd covers WS1-051 through the whole ingestion path: the ipc2581
 // reader translates LogicalNet/@netClass into the role vocabulary, the loader's shared
-// StampNetRoles pass unions it with the naming lexicon, and the result reaches ir.Net.roles —
-// which is what every ground/rail-scoped rule reads. N$17 is the case that only works because the
-// source declared it: no naming convention can recover a role from that name.
+// StampNetRoles pass unions it with the naming lexicon, and the result reaches ir.Net.roles,
+// which every ground/rail-scoped rule reads. N$17 is the case that only works because the
+// source declared it, since no naming convention can recover a role from that name.
 func TestIPCDeclaredNetRoleEndToEnd(t *testing.T) {
 	d, err := (&Loader{}).ReadDesign("../ipc2581/testdata/board.xml")
 	if err != nil {

@@ -29,8 +29,8 @@ describe("projectLabel", () => {
     expect(projectLabel(state())).toBe(NO_PROJECT_LABEL);
   });
 
-  // The two produce identical findings and mean different things: one is a choice, the other is a
-  // fact about the design. Spelling them the same would hide the choice.
+  // The two produce identical findings and mean different things, since one is a choice and the
+  // other is a fact about the design. Spelling them the same would hide the choice.
   it("distinguishes the built-in catalog by choice from having no project", () => {
     const chosen = projectLabel(state({ project: "projects/gateway", plain: true }));
     expect(chosen).toBe(PLAIN_LABEL);
@@ -54,8 +54,8 @@ describe("isOverridden", () => {
 });
 
 describe("canGoPlain", () => {
-  // Offering the toggle here would imply a difference that does not exist: a design with no project
-  // is already running the built-in catalog.
+  // Offering the toggle here would imply a difference that does not exist, because a design with no
+  // project is already running the built-in catalog.
   it("is meaningless for a design with no project", () => {
     expect(canGoPlain(state())).toBe(false);
   });
@@ -66,7 +66,7 @@ describe("canGoPlain", () => {
 });
 
 describe("entryNotice", () => {
-  // The served viewer shows the file it was asked for. A silent swap has no browser equivalent: the
+  // The served viewer shows the file it was asked for. A silent swap has no browser equivalent, as the
   // user picked a file in a tree and would be looking at a different one with nothing to say so.
   it("says so when the open file is a companion rather than the entry", () => {
     const s = state({ entry: "mount://m/d/gateway.edn", namedIsEntry: false });

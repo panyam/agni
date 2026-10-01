@@ -11,7 +11,7 @@ import (
 )
 
 // ldoRecommendedSpec hand-builds a seeded part whose recommended-operating VDD range is
-// [min,max], as a machine-comparable row (structured TA condition — the shape a
+// [min,max], as a machine-comparable row (a structured TA condition, the shape a
 // datasheet's Recommended Operating Conditions table yields).
 func ldoRecommendedSpec(mpn string, min, max float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
@@ -124,8 +124,8 @@ func TestRailNominalSkipsNotFalsePasses(t *testing.T) {
 	mut("text-only condition", func(s *parampb.PartSpec) {
 		s.Parameters[0].Conditions = []*parampb.Condition{{Symbol: "TA", Raw: "over operating range"}}
 	})
-	// Two recommended supply rows: the pin-to-supply mapping is ambiguous, so the whole
-	// part is skipped rather than risk a false over/under finding — even though +5V would
+	// With two recommended supply rows the pin-to-supply mapping is ambiguous, so the whole
+	// part is skipped rather than risk a false over/under finding, even though +5V would
 	// sit inside the second (VDDA 4.5..5.5) row.
 	mut("ambiguous multi-supply", func(s *parampb.PartSpec) {
 		f := func(v float64) *float64 { return &v }
@@ -169,7 +169,7 @@ func TestRailNominalReadsMillivoltRows(t *testing.T) {
 	}
 }
 
-// TestRailNominalGating pins the catalog-level behavior: a param-prefixed read gates the
+// TestRailNominalGating pins the catalog-level behavior. A param-prefixed read gates the
 // rule to not-applicable without a seeded set, so a review item bound to it reads n/a
 // (not a hollow pass) until params are supplied.
 func TestRailNominalGating(t *testing.T) {

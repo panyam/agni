@@ -12,14 +12,14 @@ import (
 
 // TestProjectLexiconReachesTheRead is the assertion nothing made.
 //
-// A project's naming convention carries two halves that land in different places: its RULES extend
+// A project's naming convention carries two halves that land in different places. Its RULES extend
 // the catalog, and its LEXICON has to reach the design READ, because net roles are resolved once at
 // ingestion. Every existing test covers the first, or covers the second for a convention supplied on
 // a REQUEST. None asserted that a design belonging to a project is read under that project's
 // vocabulary, which is the half that decides what a rail is.
 func TestProjectLexiconReachesTheRead(t *testing.T) {
 	const design = "../../examples/tutorial-project/designs/gateway/gateway.edn"
-	out := runCLI(t, queryCmd(), design, "rail(?n) => ?n")
+	out := runCLI(t, queryCmd(), design, "net.rail(?n) => ?n")
 	for _, want := range []string{"PMIC_MAIN_12V0", "PMIC_CORE_3V3", "PMIC_IO_1V8"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("%s is a rail under the project's declared vocabulary, but the read did not see it:\n%s", want, out)
@@ -27,7 +27,7 @@ func TestProjectLexiconReachesTheRead(t *testing.T) {
 	}
 }
 
-// TestReadDesignResolvesProjectConfig covers the commands that never touch a service: stats, diff,
+// TestReadDesignResolvesProjectConfig covers the commands that never touch a service. stats, diff,
 // emit, render, intake and profilediag all read through readDesign, which built its loader with no
 // options at all. So every one of them read under the BUILT-IN naming vocabulary however their
 // project was configured, and saw none of its declared symbol libraries (agni issue 228).
@@ -41,7 +41,7 @@ func TestReadDesignResolvesProjectConfig(t *testing.T) {
 		t.Fatalf("readDesign: %v", err)
 	}
 	// The tutorial project names rails function-first, which the start-anchored built-in vocabulary
-	// does not match. Its conventions.yaml says so: without that file the only rail is GND.
+	// does not match. Its conventions.yaml says so, and without that file the only rail is GND.
 	var rails int
 	for _, n := range d.GetNets() {
 		for _, r := range n.GetRoles() {
@@ -56,11 +56,11 @@ func TestReadDesignResolvesProjectConfig(t *testing.T) {
 }
 
 // TestReadDesignResolvesSymbolPaths is the other half, and the acceptance criterion agni issue 229
-// left unmet: a design's declared symbol library reaches a read that no service mediates, so the
+// left unmet. A design's declared symbol library reaches a read that no service mediates, so the
 // tutorial project's own Makefile no longer passes --symbol-path.
 //
-// A schematic whose external library does not resolve reads SHORT rather than failing, so the count
-// is the assertion: `libraries` is 0 without the library and 1 with it.
+// A schematic whose external library does not resolve reads SHORT rather than failing, so the
+// assertion is on the count. `libraries` is 0 without the library and 1 with it.
 func TestReadDesignResolvesSymbolPaths(t *testing.T) {
 	// as-named reads exactly the schematic rather than the netlist its design.yaml declares as the
 	// entry. Set directly because it is a ROOT persistent flag.
@@ -78,8 +78,8 @@ func TestReadDesignResolvesSymbolPaths(t *testing.T) {
 }
 
 // TestStatsOutputIsCapturable is the test agni issue 253 existed to make possible, and it doubles as
-// the observable half of issue 228: `stats` on a schematic reports the library its design declares,
-// with no --symbol-path.
+// the observable half of issue 228, since `stats` on a schematic reports the library its design
+// declares, with no --symbol-path.
 //
 // Before, `stats` printed with fmt.Printf, so a caller setting cmd.SetOut got an empty buffer while
 // the text still reached the process stdout. An assertion then failed with the expected string
@@ -113,8 +113,8 @@ func TestStatsOutputIsCapturable(t *testing.T) {
 // Asserted on the drawn ENTITY KEYS rather than on the shape count, because the keys are what the
 // failure destroys. An unresolved symbol keeps its placement's reference designator and loses its
 // pins, so the sheet still draws all 19 ref-des labels from the annotation pass and draws no bodies.
-// Counting elements would call that "a smaller drawing"; counting keys calls it what it is, which is
-// a sheet where nothing can be clicked.
+// Counting elements would call that "a smaller drawing"; counting keys calls it a sheet where nothing
+// can be clicked.
 func TestRenderResolvesProjectSymbolLibrary(t *testing.T) {
 	const design = "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch"
 	out := filepath.Join(t.TempDir(), "sheet.svg")
@@ -140,10 +140,10 @@ func TestRenderResolvesProjectSymbolLibrary(t *testing.T) {
 //
 // A render that lost its symbols does not look broken. Every reference designator, every wire and the
 // title block still draw, so the sheet reads as complete and only the component bodies are missing.
-// Nothing on the page says so, and the honest reading of a sheet showing C1 that will not respond to a
+// Nothing on the page says so, and the natural reading of a sheet showing C1 that will not respond to a
 // click is "the tool knows nothing about C1", which is false.
 //
-// Asserted on stderr rather than the SVG: the note is deliberately not IN the drawing, so that a
+// Asserted on stderr rather than the SVG, because the note is kept out of the drawing so that a
 // redirected document stays clean.
 func TestRenderNotesWhatItCouldNotDraw(t *testing.T) {
 	// The same schematic, away from the symbol library its project declares. This is what a checkout

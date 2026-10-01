@@ -62,6 +62,14 @@ class Client:
     def run_query(self, request: Optional[query_pb2.RunQueryRequest] = None, **fields) -> query_pb2.RunQueryResponse:
         return self.call("QueryService", "RunQuery", request, **fields)  # type: ignore[return-value]
 
+    def run_queries(self, request: Optional[query_pb2.RunQueriesRequest] = None, **fields) -> query_pb2.RunQueriesResponse:
+        """Answer a named list of queries over one read of the design.
+
+        A query that could not be answered carries ``error`` rather than ``result``; the call itself
+        succeeds, so check each result. ``agni.set_sheets`` turns the response into workbook sheets.
+        """
+        return self.call("QueryService", "RunQueries", request, **fields)  # type: ignore[return-value]
+
     def list_relations(self, request: Optional[query_pb2.ListRelationsRequest] = None, **fields) -> query_pb2.ListRelationsResponse:
         return self.call("QueryService", "ListRelations", request, **fields)  # type: ignore[return-value]
 

@@ -1,10 +1,9 @@
 // The reader-facing side of "this drawing is incomplete" (agni issue 354).
 //
-// A render that could not resolve a symbol does not look broken. The placement contributes no shapes,
-// so it disappears along with the entity keys that make it pickable, while the annotation pass still
-// draws its reference designator. The sheet then shows every ref des, every wire and the title block,
-// and every component on it is silently unclickable. Nothing on screen says so, and the honest reading
-// of a sheet showing C1 that will not respond to a click is "agni knows nothing about C1".
+// A placement whose symbol did not resolve contributes no shapes, so it loses the entity keys that
+// make it pickable, while the annotation pass still draws its reference designator. The sheet shows
+// every ref des, every wire and the title block, and those components are silently unclickable. A
+// reader seeing C1 ignore a click concludes "agni knows nothing about C1".
 
 // UndrawnPlacement is the client shape of geom.UndrawnPlacement: the placement, and the symbol it
 // asked for and did not get.
@@ -28,8 +27,7 @@ export interface UndrawnNote {
 //
 // Grouped by the missing symbol reference rather than listed per placement, because one missing
 // library commonly costs every part drawn from it and forty identical entries bury that single cause.
-// The count is the blast radius, which is what tells a reader whether the drawing in front of them is
-// worth reading at all.
+// The count tells a reader how much of the drawing is missing.
 export function undrawnNote(undrawn: UndrawnPlacement[] | undefined): UndrawnNote | null {
   if (!undrawn || undrawn.length === 0) return null;
   const byRef = new Map<string, number>();

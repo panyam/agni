@@ -22,8 +22,8 @@ import (
 // CategoryIntegrity because a firing means fix the CONFIG, not the design. Full rationale in
 // docs/rail-not-classified.md.
 
-// railCandidate is a net whose NAME declares a voltage: the first of the rule's two channels, before
-// the second one is consulted.
+// railCandidate is a net whose NAME declares a voltage, the first of the rule's two channels, with
+// the second channel's evidence attached.
 type railCandidate struct {
 	net       *ir.Net
 	volts     float64
@@ -37,15 +37,14 @@ type railCandidate struct {
 }
 
 // eachRailCandidate walks the nets whose NAME declares a voltage and yields one per net, with the
-// second channel's count attached rather than applied as a filter. Ground is excluded: a ground net
-// carries a role of its own, so it is not a subject of a rail-classification question.
+// second channel's count attached rather than applied as a filter. Ground is excluded, since a ground
+// net carries a role of its own and is not a subject of a rail-classification question.
 //
-// THE COUNT TRAVELS INSTEAD OF GATING, which is the difference the considered set needs. A net naming
-// a voltage that types NO power-input pin is not a net the rule cleared; it is a net whose second
-// channel is missing, and the caller reports that rather than dropping it. On a source format that
-// cannot type power pins at all the second channel is absent everywhere, so this rule was a silent
-// no-op on those formats and nothing said so — the exact case the two-channel section of
-// docsite/content/build/check-rule.md warns has to be checked.
+// THE COUNT TRAVELS INSTEAD OF GATING. A net naming a voltage that types NO power-input pin is missing
+// its second channel, and the caller reports that rather than dropping it. On a source format that
+// cannot type power pins at all the second channel is absent everywhere, so gating would make the
+// rule a silent no-op there. The two-channel section of docsite/content/build/check-rule.md covers
+// this case.
 func eachRailCandidate(m check.Model, yield func(railCandidate)) {
 	for _, n := range m.Nets() {
 		if m.IsGroundNet(n) {
@@ -53,7 +52,7 @@ func eachRailCandidate(m check.Model, yield func(railCandidate)) {
 		}
 		volts, ok := check.NominalVoltageFromName(n.GetName())
 		if !ok {
-			continue // the first channel is absent: the name says nothing about a voltage
+			continue // the first channel is absent, since the name says nothing about a voltage
 		}
 		c := railCandidate{net: n, volts: volts, railRole: m.IsRailNet(n)}
 		for _, conn := range n.GetConnections() {
@@ -93,22 +92,17 @@ var railNotClassified = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// railNotClassifiedVerdicts decides every net whose name declares a voltage, and the three answers it
-// can give are the reason this rule is worth converting at all.
+// railNotClassifiedVerdicts decides every net whose name declares a voltage.
 //
-// A net the role stamp already calls a rail PASSES, and the pass is the useful half here: this rule
-// exists to report that the analysis is running with less than it should, so "the rail rules can see
-// this net" is exactly what a reader wants counted. Before, a project that declared its lexicon
-// correctly got silence, which is what a project with no lexicon at all also got once its rails were
-// invisible for a different reason.
+// A net the role stamp already calls a rail PASSES. This rule reports that the analysis is running
+// with less than it should, so "the rail rules can see this net" is what a reader wants counted.
+// Without the pass, a project with a correct lexicon would get the same silence as one whose rails
+// are invisible.
 //
 // A net that names a voltage but types NO power-input pin is NotConsidered. The rule needs two
-// channels to agree — a voltage in the name AND a pin the part declares a power input — because
-// `..._3V3` is a legitimate name for a signal that swings at 3.3 V as well as for a rail. Where the
-// second channel is missing the rule has not judged the net, and on a source format that cannot type
-// power pins it is missing on every net, which turns the rule into a no-op that nothing announced.
-// That is the case the two-channel section of the authoring doc says to check for, and this is the
-// check.
+// channels to agree, a voltage in the name AND a pin the part declares a power input, because
+// `..._3V3` is a legitimate name for a signal that swings at 3.3 V as well as for a rail.
+// eachRailCandidate says why the missing channel is reported rather than dropped.
 func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	eachRailCandidate(m, func(rc railCandidate) {
@@ -148,8 +142,8 @@ func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
 				Message: fmt.Sprintf(
 					"net %q declares %gV in its name and feeds %d supply pin(s) (e.g. %s), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in a --conventions lexicon",
 					rc.net.GetName(), rc.volts, rc.supplies, rc.supplyPin),
-				// The supply pin the message offers as evidence. The subject is the net, so the pin
-				// that makes it look like a rail was named in prose and reachable nowhere
+				// The supply pin the message offers as evidence. The subject is the net, so without
+				// this the pin that makes it look like a rail is named in prose and reachable nowhere
 				// (agni issue 349).
 				Context: []check.ContextSubject{
 					{Entity: check.Entity{Kind: check.KindPin, Ref: rc.supplyRef, Pin: rc.supplyPinNo}, Role: "supply-pin"},

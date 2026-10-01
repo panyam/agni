@@ -6,19 +6,15 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// Quality scores a produced layout with numbers we can compare across layout algorithms on
-// the same design, so "is this layout better" is a measurement, not an opinion. It reads the
-// finished geometry, so it is layout-agnostic: it scores the grid placeholder today and any
-// real algorithm (layered, force-directed) later, unchanged.
+// Quality scores a produced layout with numbers comparable across layout algorithms on the same
+// design. It reads the finished geometry, so it works for every strategy unchanged.
 //
-// Crossings is the headline readability metric and is scale-invariant. TotalEdgeLen is a
-// companion (shorter, tighter layouts usually read better) but is in layout units, so it is
-// only comparable between layouts of the *same* design, not across designs.
+// Crossings is the headline readability metric and is scale-invariant. TotalEdgeLen is in layout
+// units, so it is only comparable between layouts of the *same* design.
 //
-// Stress is the gap between drawn distance and graph-theoretic distance (Kruskal's
-// normalized, scale-invariant stress-1; see StressOf). Measure cannot compute it from
-// geometry alone (graph distances live in the design), so it is zero from Measure and
-// populated by MeasureWith.
+// Stress is the gap between drawn distance and graph-theoretic distance (Kruskal's normalized
+// stress-1, see StressOf). Graph distances live in the design, so Measure leaves it zero and
+// MeasureWith fills it.
 type Quality struct {
 	Nodes        int     // placed component nodes
 	Nets         int     // drawn net hyperedges
@@ -33,9 +29,8 @@ type Quality struct {
 // proper-intersection test.
 type segment struct{ ax, ay, bx, by int64 }
 
-// Measure scores the layout on sheet 0. Crossing detection is O(segments^2): fine as a
-// diagnostic on the grid placeholder, and the cost is worth flagging before it runs on a
-// large board with a real layout.
+// Measure scores the layout on sheet 0. Crossing detection is O(segments^2), so it is slow on a large
+// board.
 func Measure(g *geom.SchematicGeometry) Quality {
 	sheet := g.Sheets[0]
 	q := Quality{Nodes: len(sheet.Placements), Nets: len(sheet.Wires)}
@@ -74,10 +69,9 @@ func bendsAt(a, b, c *geom.Point) bool {
 	return orient(a.X, a.Y, b.X, b.Y, c.X, c.Y) != 0
 }
 
-// properCross reports whether two segments cross at an interior point of both. Segments that
-// only touch at a shared endpoint (as every edge of one net's star does at the centroid, and
-// every edge leaving one node does at that node) do not count, which is the point: those are
-// not readability-harming crossings.
+// properCross reports whether two segments cross at an interior point of both. Segments that only
+// touch at a shared endpoint (every edge of one net's star at the centroid, every edge leaving one
+// node at that node) do not count, since those do not harm readability.
 func properCross(s, t segment) bool {
 	d1 := orient(t.ax, t.ay, t.bx, t.by, s.ax, s.ay)
 	d2 := orient(t.ax, t.ay, t.bx, t.by, s.bx, s.by)
@@ -93,12 +87,10 @@ func orient(ax, ay, bx, by, cx, cy int64) int64 {
 }
 
 // GroundTruthResidual scores how closely an auto-layout reproduces a set of ground-truth node
-// positions (e.g. a design's real schematic placement), as the normalized Procrustes residual.
-// It matches nodes by key (ref_des), fits auto onto truth allowing translation + uniform scale
-// + rotation, and returns the residual in [0,1]: 0 = same arrangement up to a similarity
-// transform, 1 = unrelated. Being similarity-invariant, it measures the relative arrangement
-// (which layout best mirrors how the engineer placed things), not absolute coordinates.
-// Returns -1 when fewer than two nodes match or a set is degenerate (nothing to align).
+// positions (e.g. a design's real schematic placement), as the normalized Procrustes residual. It
+// matches nodes by ref_des, fits auto onto truth under translation, uniform scale and rotation, and
+// returns the residual in [0,1], where 0 is the same arrangement up to a similarity transform and 1
+// is unrelated. It returns -1 when fewer than two nodes match or a set is degenerate.
 func GroundTruthResidual(auto, truth map[string]*geom.Point) float64 {
 	type pair struct{ ax, ay, tx, ty float64 }
 	var ps []pair

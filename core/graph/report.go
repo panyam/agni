@@ -25,22 +25,22 @@ type Explainer interface {
 	Explain(ref string, c *ir.Component, parts map[string]*ir.PartType) Choice
 }
 
-// Explain implements Explainer for the Registry: the component's class and the cell it was drawn
-// with. The two can name different things and the report says both: a thermistor is drawn with the
-// resistor glyph and is still reported as a thermistor.
+// Explain implements Explainer for the Registry, giving the component's class and the cell it was
+// drawn with. The two can differ and the report says both, so a thermistor drawn with the resistor
+// glyph is still reported as a thermistor.
 func (r *Registry) Explain(_ string, c *ir.Component, parts map[string]*ir.PartType) Choice {
 	class, g := r.choose(c, parts)
 	return Choice{Cell: g.GetCellRef(), Class: class}
 }
 
-// Explain implements Explainer for the FaithfulSource: a provided symbol when the sidecar covers
-// the ref, else the base source's choice marked as a fallback (the "unresolved" signal).
+// Explain implements Explainer for the FaithfulSource. It reports a provided symbol when the sidecar
+// covers the ref, else the base source's choice marked as a fallback (the "unresolved" signal).
 func (f *FaithfulSource) Explain(ref string, c *ir.Component, parts map[string]*ir.PartType) Choice {
 	if s := f.byRef[ref]; s != nil && !s.GetAsset().GetPlaceholder() {
 		return Choice{Cell: s.CellRef, Provided: true}
 	}
-	// No provided symbol for this ref, or only a placeholder box (the .sym did not resolve): the
-	// drawn node falls back to the base source, and the report flags it to pass --symbol-path.
+	// No provided symbol for this ref, or only a placeholder box because the .sym did not resolve.
+	// The report flags it so the user passes --symbol-path.
 	ch := explain(f.base, ref, c, parts)
 	ch.Fallback = true
 	return ch
@@ -64,7 +64,7 @@ const nodeCellPrefix = "__node"
 const (
 	KindProvided   = "provided"   // the design's own symbol
 	KindGlyph      = "glyph"      // a classified synthetic glyph
-	KindBox        = "box"        // the generic box: no device glyph for this class
+	KindBox        = "box"        // the generic box, no device glyph for this class
 	KindUnresolved = "unresolved" // provided symbols requested, but none for this ref (fell back)
 )
 
@@ -130,13 +130,12 @@ func (r *ConversionReport) RefsByKind(kind string) []string {
 	return out
 }
 
-// kindOf maps a Choice to a report kind: a provided symbol wins, then a fallback is unresolved
+// kindOf maps a Choice to a report kind. A provided symbol wins, then a fallback is unresolved
 // (the actionable "no provided symbol" case), then the box (no device glyph), else a glyph.
 //
-// The box is decided on the drawn CELL and not on the class, because the two stopped agreeing when
-// the glyph started coming from the stamped class (agni issue 701): a component can now carry a
-// class the registry has no glyph for, which is a box that knows what it is. Reading the class
-// would have reported that as a glyph.
+// The box is decided on the drawn CELL and not on the class, because a stamped class can have no
+// glyph and still draws the box (agni issue 701). See
+// docsite/content/architecture/geometry-and-rendering.md#auto-layout-node-drawing.
 func kindOf(ch Choice) string {
 	switch {
 	case ch.Provided:

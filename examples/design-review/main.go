@@ -1,12 +1,10 @@
-// Command design-review is the review rung of the Agni examples ladder: a team's schematic-review
-// checklist, run against a board, with every item resolving to an outcome including the ones nothing
-// can answer.
+// Command design-review is the review rung of the Agni examples ladder. It runs a team's
+// schematic-review checklist against a board, and every item resolves to an outcome, including the
+// ones nothing can answer.
 //
-// It is the walk that COMPOSES the others. A checklist item binds to a rule (rung 3), to a query over
-// the fact relations (rung 11), or to nothing at all, so this is where those surfaces stop being
-// separate features and become answers to questions someone wrote down. The last step is the reason
-// it exists: a report that only shows what it could answer is indistinguishable from one that asked
-// less.
+// It COMPOSES the other walks, since a checklist item binds to a rule (rung 3), to a query over the
+// fact relations (rung 11), or to nothing at all. The last step lists the unanswered items, because a
+// report showing only what it could answer looks the same as one that asked less.
 //
 // The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds the
 // steps that run engine code.
@@ -36,7 +34,7 @@ var walkthroughMD []byte
 
 // checklistYAML is bundled rather than read from disk, so the walk runs from any directory with no
 // arguments. AGNI_EXAMPLE_REVIEW replaces it with a path, the way AGNI_EXAMPLE_DESIGN replaces the
-// design: a team's checklist is as unshippable here as their board.
+// design.
 //
 //go:embed checklist.yaml
 var checklistYAML []byte
@@ -121,9 +119,8 @@ func main() {
 		if err != nil {
 			return demokit.Errf("%v", err)
 		}
-		// Three reasons an item is unanswered, and only one is a gap in the tool. Printing them
-		// together is the point of the step: a coverage number that folded them into "not passing"
-		// would say the same thing about a missing rule and a missing declaration.
+		// Three reasons an item is unanswered, and only one is a gap in the tool. Folding them into
+		// "not passing" would report a missing rule and a missing declaration the same way.
 		for _, it := range items(rep) {
 			switch it.Outcome {
 			case review.NotApplicable:
@@ -143,9 +140,8 @@ func main() {
 	demo.Execute()
 }
 
-// run reads the design and the checklist and evaluates one against the other. Re-run per step rather
-// than cached, matching the other walkthroughs: a step reads what it needs, so a reader can run one
-// in isolation and the narration never depends on an earlier step having happened.
+// run reads the design and the checklist and evaluates one against the other. Each step calls it
+// rather than caching, so a step runs in isolation, as in the other walkthroughs.
 func run(design, checklist *common.PathInput) (review.Report, error) {
 	d, err := design.Load()
 	if err != nil {
@@ -155,14 +151,13 @@ func run(design, checklist *common.PathInput) (review.Report, error) {
 	if err != nil {
 		return review.Report{}, fmt.Errorf("checklist %s: %w", checklist.Path(), err)
 	}
-	// NewModelWithParams, not NewModel: component.mpn reads the map the params constructor fills, so
-	// the house-rule query below would find no part numbers on a design whose parts all carry one. A
-	// nil provider is fine; only the datasheet relations need a real one.
+	// NewModelWithParams, not NewModel, because component.mpn reads the map only the params
+	// constructor fills. A nil provider is fine; only the datasheet relations need a real one.
+	//
 	// The BUILT-IN catalog, with no project overlay. A project's own interface profiles, design
-	// intent and naming conventions each answer items this cannot, so the covered count here is lower
-	// than  reports on the same two files (123 of 302 against 76, on one real board).
-	// Composing an overlay is the CLI's job and takes a project descriptor; the walkthrough is about
-	// what a checklist REPORTS, and it reports the same shape either way.
+	// intent and naming conventions answer items this cannot, so the covered count here is lower
+	// than the CLI reports on the same two files (123 of 302 against 76, on one real board).
+	// Composing an overlay takes a project descriptor and is the CLI's job.
 	return review.Run(review.RunParams{
 		Model:    check.NewModelWithParams(d, nil, nil),
 		Catalog:  check.DefaultCatalog(),
@@ -172,7 +167,8 @@ func run(design, checklist *common.PathInput) (review.Report, error) {
 }
 
 // manifestText prefers the file the reader named and falls back to the bundled copy, the same
-// disk-first rule PathInput.Load applies to a design.
+// disk-first rule PathInput.Load applies to a design. Any read error, not only a missing file, falls
+// back.
 func manifestText(checklist *common.PathInput) string {
 	if b, err := os.ReadFile(checklist.Path()); err == nil {
 		return string(b)
@@ -219,6 +215,5 @@ func sortedKeys(m map[string]int) []string {
 	return out
 }
 
-// cli prints the command a reader can paste into a second terminal, so nothing the walkthrough shows
-// is reachable only from Go.
+// cli prints the command a reader can paste into a second terminal to reproduce the step.
 func cli(line string) { fmt.Printf("$ %s\n\n", line) }

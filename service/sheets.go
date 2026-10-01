@@ -9,10 +9,10 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// NetSource is the slice of the design Model these annotate helpers actually read: the netlist's
-// nets, for the AttrSheets membership (WS9-028). Declared here, at the point of use, rather than
-// taking the whole check.Model — a consumer depends only on what it needs, and any Model satisfies
-// it structurally (WS1-044). It also keeps these helpers off the raw *ir.Design (C19).
+// NetSource is the slice of the design Model these annotate helpers read, the netlist's nets for
+// the AttrSheets membership (WS9-028). Declared at the point of use rather than taking the whole
+// check.Model, which satisfies it structurally (WS1-044). It also keeps these helpers off the raw
+// *ir.Design (C19).
 type NetSource interface {
 	Nets() []*ir.Net
 }
@@ -20,12 +20,11 @@ type NetSource interface {
 // LocateSource is NetSource plus the three questions needed to EXPLAIN a subject that will not
 // highlight: is this ref a real component, is this name a real net, and is that net a power rail.
 //
-// Required rather than probed for with a type assertion. A caller that cannot answer them would
-// otherwise silently get the old silence back, and silence is exactly the bug: LOCATE_REASON_
-// UNSPECIFIED means "the entity IS drawn — expected to highlight", so leaving it on an undrawn
-// subject tells the viewer to say nothing. A compile error is the honest way to find out.
+// Required rather than probed for with a type assertion, so a caller that cannot answer them fails
+// to compile. LOCATE_REASON_UNSPECIFIED means "the entity IS drawn and should highlight", so
+// leaving it on an undrawn subject tells the viewer to say nothing.
 //
-// check.Model satisfies it, which is what both production callers already pass.
+// check.Model satisfies it, and both production callers pass one.
 type LocateSource interface {
 	NetSource
 	check.LocateModel
@@ -42,10 +41,10 @@ type sheetIndex struct {
 }
 
 // netKey is the per-instance join key for a net: its deterministic id (ir.Net.id) when present,
-// else its name. Keying on the id, not the name, is what lets two electrically-distinct nets that
-// share a name resolve to their OWN sheets instead of both getting the union — the WS9 de-inflation.
-// A pinless net has no id and falls back to name (its old behavior). The finding's Subject, the wire
-// geometry, and the AttrSheets channel all key through this, so they join.
+// else its name. Keying on the id lets two electrically-distinct nets that share a name resolve to
+// their OWN sheets instead of both getting the union (WS9). A pinless net has no id and keys by
+// name. The finding's Subject, the wire geometry, and the AttrSheets channel all key through this,
+// so they join.
 func netKey(id, name string) string {
 	if id != "" {
 		return id
@@ -58,11 +57,11 @@ func netKey(id, name string) string {
 // single entry (sheets are visited one at a time, so "last appended id" is the dedupe check).
 //
 // The design supplies the AUTHORITATIVE net membership when it has it (the hierarchy walk's
-// AttrSheets, WS9-028): a sub-sheet's wireless single-pin net has no wire geometry to join, so
-// the geometry pass alone leaves it badge-less. The netlist attribute overrides the geometry-wire
-// tally per net; a net the design does not mark falls back to its wires (faithful single-sheet
-// exports, formats without the attribute). Components and pins stay geometry-only — placements
-// always exist, so that join never had the wireless gap.
+// AttrSheets, WS9-028), because a sub-sheet's wireless single-pin net has no wire geometry to join
+// and the geometry pass alone leaves it badge-less. The netlist attribute overrides the
+// geometry-wire tally per net, and a net the design does not mark falls back to its wires (faithful
+// single-sheet exports, formats without the attribute). Components and pins stay geometry-only,
+// since placements always exist.
 func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
 	ix := sheetIndex{comps: map[string][]string{}, nets: map[string][]string{}, buses: map[string][]string{}}
 	appendOnce := func(m map[string][]string, key, sheetID string) {
@@ -86,25 +85,23 @@ func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
 				appendOnce(ix.buses, w.GetNet(), sh.GetId())
 				continue
 			}
-			// Index a wire under BOTH its name (the name-based callers: the diff panel keys by net
-			// name) and its per-instance id (the findings path, which supplies the id to get ITS
-			// sheets, not the union of every same-named net). netKey collapses to the name when
-			// there is no id, so a format without ids indexes exactly as before.
+			// Index a wire under BOTH its name (the diff panel keys by net name) and its per-instance
+			// id (the findings path, which supplies the id to get ITS sheets rather than the union of
+			// every same-named net). A format without ids indexes by name alone.
 			appendOnce(ix.nets, w.GetNet(), sh.GetId())
 			if w.GetNetId() != "" {
 				appendOnce(ix.nets, w.GetNetId(), sh.GetId())
 			}
 		}
 	}
-	// A nil source is the geometry-only path (annotateDiffSheets passes it): the netlist
-	// AttrSheets channel is simply absent, same as the old nil-*ir.Design whose getter returned
-	// no nets. Guarding the interface avoids a nil-method call.
+	// A nil source is the geometry-only path, with no netlist AttrSheets channel. Guarding the
+	// interface avoids a nil-method call.
 	if m != nil {
 		for _, n := range m.Nets() {
 			if ids := netgraph.ParseSheets(n.GetAttributes()[netgraph.AttrSheets]); len(ids) > 0 {
-				ix.nets[n.GetName()] = ids // name key: the diff panel's name-based lookup (old behavior)
+				ix.nets[n.GetName()] = ids // name key, for the diff panel's name-based lookup
 				if id := n.GetId(); id != "" {
-					ix.nets[id] = ids // id key: the finding's per-instance lookup
+					ix.nets[id] = ids // id key, for the finding's per-instance lookup
 				}
 			}
 		}
@@ -127,8 +124,7 @@ func (ix sheetIndex) sheetsFor(s *checkspb.Subject) []string {
 
 // locateReasonProto maps a check locate code to its wire enum. The two vocabularies are declared
 // separately (core states netlist facts, the proto states what a viewer shows), and this is the one
-// place they meet, so the query path and the findings path cannot translate the same code
-// differently.
+// place they meet, so the query path and the findings path translate a code the same way.
 func locateReasonProto(code string) checkspb.LocateReason {
 	switch code {
 	case check.LocateVirtual:
@@ -143,14 +139,12 @@ func locateReasonProto(code string) checkspb.LocateReason {
 }
 
 // AnnotateSheets fills each finding's sheets in place. It is a post-pass over FindingProto's
-// output rather than a FindingProto parameter, so the one canonical conversion (shared with the
-// CLI's `check --format json`, which calls this with nil geometry for the net channel alone)
-// keeps its shape and a caller without either source skips the pass. Geometry supplies
-// component/pin badges (and net badges for formats whose wires carry names); the design supplies
-// the authoritative net membership (AttrSheets, WS9-028) that covers the wireless sub-sheet nets
-// geometry misses. Both nil is a no-op (findings keep empty sheets — the pre-WS9-024 behavior the
-// viewer already handles); a net-only channel (design set, geometry nil) still annotates net
-// subjects.
+// output rather than a FindingProto parameter, so the canonical conversion keeps its shape and a
+// caller without either source skips the pass. Geometry supplies component and pin badges (and net
+// badges for formats whose wires carry names), and the design supplies the authoritative net
+// membership (AttrSheets, WS9-028) that covers the wireless sub-sheet nets geometry misses. Both nil
+// is a no-op and findings keep empty sheets, which the viewer handles. A net-only channel (design
+// set, geometry nil) still annotates net subjects.
 func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource) {
 	if g == nil && len(m.Nets()) == 0 {
 		return
@@ -158,23 +152,19 @@ func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m L
 	ix := indexSheets(g, m)
 	for _, f := range findings {
 		f.Sheets = ix.sheetsFor(f.GetSubject())
-		// A bus finding that maps to no drawn bus (a bus_alias, an EDIF array, a hierarchical bus
-		// port with no wire on the shown sheet) has nothing to highlight; flag WHY so the viewer can
-		// say so instead of silently doing nothing (WS7-042c). A drawn bus keeps its sheets and the
-		// default UNSPECIFIED reason, so it highlights as before.
 		if len(f.Sheets) > 0 {
-			continue // it is drawn somewhere; UNSPECIFIED is the truth and the viewer highlights
+			continue // drawn somewhere, so UNSPECIFIED is correct and the viewer highlights
 		}
-		// Nothing to locate. Say WHY, for every kind rather than only for buses.
-		//
-		// A bus keeps its own reason because a bus is not in the netlist at all, so the general
-		// classifier would call it NOT_IN_DESIGN, which is true of every bus and useless.
+		// Nothing to locate, so say WHY. A bus that maps to no drawn bus (a bus_alias, an EDIF array,
+		// a hierarchical bus port with no wire on the shown sheet) gets its own reason (WS7-042c),
+		// because a bus is never in the netlist and the general classifier would call every one
+		// NOT_IN_DESIGN.
 		if f.GetSubject().GetKind() == check.KindBus {
 			f.LocateReason = checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
 			continue
 		}
 		// With no source there is nothing to ask, so the subject stays UNSPECIFIED rather than being
-		// guessed at (the nil-source path this function has always supported).
+		// guessed at.
 		if m == nil {
 			continue
 		}
@@ -185,15 +175,13 @@ func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m L
 // AnnotateTraceSheets fills a trace's per-net and per-endpoint sheet ids, the same way
 // AnnotateSheets fills a finding's.
 //
-// PER NET rather than one sheet for the answer, because a route crossing three sheets is exactly
-// when a reader wants to choose which to open, and the panel already renders a list of badges for a
-// finding and for a query cell. A trace was the third consumer of this index and the only one that
-// never asked, so a route drew on the design's first sheet whatever it crossed (agni issue 657).
+// PER NET rather than one sheet for the answer, because a route crossing three sheets is when a
+// reader wants to choose which to open, and the panel already renders a list of badges for a
+// finding and for a query cell (agni issue 657).
 //
 // Both outcomes are annotated. On a no-route the two endpoints' nets are still drawn somewhere, and
-// that is the picture a reader goes looking for the moment they read that the pins do not join, so a
-// field filled only on success would go silent exactly where the question is sharpest. Empty sheet
-// ids then mean the net is drawn nowhere, rather than that nobody looked.
+// that is the picture a reader wants once they learn the pins do not join. Empty sheet ids mean the
+// net is drawn nowhere, rather than that nobody looked.
 func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSource) {
 	if t == nil || (g == nil && len(m.Nets()) == 0) {
 		return
@@ -209,9 +197,8 @@ func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSou
 		n.SheetIds = netSheets(n.GetName())
 	}
 	// An endpoint resolves by its PLACEMENT, not by its net. A trace endpoint is a pin on a part, and
-	// where that part is drawn is what a reader wants to open; the net it sits on may be drawn on
-	// several sheets it does not appear on, which is how a route first landed on a sheet carrying the
-	// middle net and none of the parts. This is the same lookup a pin finding uses.
+	// where that part is drawn is what a reader wants to open. The net it sits on may be drawn on
+	// sheets the part does not appear on (agni issue 657). This is the same lookup a pin finding uses.
 	//
 	// Falling back to the net keeps an endpoint whose part is not placed (an unresolved symbol) from
 	// going blank when its net is drawn somewhere.

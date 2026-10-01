@@ -6,15 +6,14 @@ import (
 )
 
 // A matcher that is merely too LOOSE cannot be caught at load time. validateSignalMatcher (WS3-057)
-// rejects the definitionally universal patterns — no form, several forms, one that will not compile,
-// one that matches the empty net name — because those are wrong against every design. An unanchored
-// regex "_H" is different: it is a legitimate pattern that happens to claim every _H net on THIS
-// board, Ethernet and CAN alike. Deciding that needs the design, and a profile is loaded once and
-// applied to many, so the judgement belongs here rather than in Parse or Compile (WS3-101).
+// rejects the definitionally universal patterns (no form, several forms, one that will not compile,
+// one that matches the empty net name), because those are wrong against every design. An unanchored
+// regex "_H" is a legitimate pattern that happens to claim every _H net on THIS board, Ethernet and
+// CAN alike. Deciding that needs the design, and a profile is loaded once and applied to many, so the
+// judgement belongs here rather than in Parse or Compile (WS3-101).
 //
-// These thresholds are deliberately permissive. A config warning that cries wolf gets ignored, and
-// then it is worse than absent, so the bar is "no interface could plausibly look like this" rather
-// than "this looks suspicious".
+// These thresholds are permissive. A config warning that cries wolf gets ignored, so the bar is "no
+// interface could plausibly look like this" rather than "this looks suspicious".
 const (
 	// overBroadShare is the fraction of a design's nets one signal may claim before the matcher is
 	// reported. It is a SHARE rather than a count because designs differ by orders of magnitude and a
@@ -30,17 +29,17 @@ const (
 	overBroadFloor = 8
 )
 
-// Diagnose reports config-quality problems with profile p as applied to a design's net names: a
-// matcher claiming an implausible share of the board, and two of the profile's own signals resolving
-// to the same net. It returns human-readable lines, empty when the profile looks sound.
+// Diagnose reports config-quality problems with profile p as applied to a design's net names. It
+// flags a matcher claiming an implausible share of the board, and two of the profile's own signals
+// resolving to the same net. It returns human-readable lines, empty when the profile looks sound.
 //
 // These are NOT design findings, and must never be reported as any. An over-broad matcher is a
-// mistake in the profile the author wrote, not a defect in the board being checked; emitting it as a
-// Finding would put a config problem into a design report and score it against the design.
+// mistake in the profile the author wrote, so emitting it as a Finding would put a config problem
+// into a design report and score it against the design.
 //
-// It takes net NAMES rather than a check.Model because names are all it reads. That keeps it a pure
-// function over its actual input — testable without building a design, and callable from a surface
-// that has read a design but not built a model, which is where the CLI sits.
+// It takes net NAMES rather than a check.Model because names are all it reads. That makes it
+// testable without building a design, and callable from a surface that has read a design but not
+// built a model, which is where the CLI sits.
 func Diagnose(netNames []string, p Profile) []string {
 	if len(netNames) == 0 {
 		return nil
@@ -73,10 +72,10 @@ func overBroadSignals(netNames []string, p Profile) []string {
 }
 
 // collidingSignals reports a net matched by two DIFFERENT roles of the same profile. Unlike the share
-// test this needs no threshold: a profile that cannot tell its own roles apart on a net is broken
-// there by definition, and whichever rule runs first will claim it. Only the first colliding net per
-// role pair is named, since one example is enough to locate the mistake and a wide matcher would
-// otherwise print hundreds.
+// test this needs no threshold, because a profile that cannot tell its own roles apart on a net is
+// broken there by definition, and whichever rule runs first will claim it. Only the first colliding
+// net per role pair is named, since one example is enough to locate the mistake and a wide matcher
+// would otherwise print hundreds.
 func collidingSignals(netNames []string, p Profile) []string {
 	type pair struct{ a, b string }
 	first := map[pair]string{}

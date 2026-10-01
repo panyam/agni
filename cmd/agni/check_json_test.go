@@ -75,7 +75,7 @@ func TestCheckJSONEmpty(t *testing.T) {
 	}
 }
 
-// TestCheckConventionsFlag: --conventions composes an operator naming config into the
+// TestCheckConventionsFlag checks that --conventions composes an operator naming config into the
 // catalog for one run; its rules appear under the config's namespace and fire like any
 // built-in.
 func TestCheckConventionsFlag(t *testing.T) {
@@ -128,8 +128,8 @@ func TestCheckConventionsFlag(t *testing.T) {
 	}
 }
 
-// sheetFinding is the finding subset the sheet-annotation tests read (WS3-023): the subject and
-// the sheets it locates on. Shared by the JSON and report acceptance tests.
+// sheetFinding is the finding subset the sheet-annotation tests read (WS3-023), meaning the subject
+// and the sheets it locates on. Shared by the JSON and report acceptance tests.
 type sheetFinding struct {
 	Subject struct {
 		Kind string `json:"kind"`
@@ -141,7 +141,7 @@ type sheetFinding struct {
 // TestCheckJSONSheets pins WS3-023 + WS9-048: `check --format json` carries each finding's sheet
 // membership. On the multi-sheet sheetnav fixture the U1 duplicate-ref-des finding (a component
 // subject) locates on the root sheet via faithful geometry. A bare netlist has no faithful sheets,
-// so it renders via auto-layout and its findings locate on the single auto-layout sheet "graph" —
+// so it renders via auto-layout and its findings locate on the single auto-layout sheet "graph",
 // the same place the web viewer draws them, now that the CLI shares the service's layout-based
 // annotation (before the thin-client conversion the CLI used faithful-only geometry and these were
 // empty).
@@ -184,10 +184,10 @@ func TestCheckJSONSheets(t *testing.T) {
 	}
 }
 
-// TestRegulatorOutputAbsMaxConformance is WS3-028's end-to-end acceptance: the connection-aware rule
-// running through the CLI on a committed fixture, with BOTH datasheets on the wire. The unit tests
-// cover the comparison; this covers the whole path, including that the plural citation field survives
-// the proto round trip that a unit test never exercises.
+// TestRegulatorOutputAbsMaxConformance is WS3-028's end-to-end acceptance, which runs the
+// connection-aware rule through the CLI on a committed fixture with BOTH datasheets on the wire.
+// The unit tests cover the comparison; this covers the whole path, including that the plural
+// citation field survives the proto round trip that a unit test never exercises.
 func TestRegulatorOutputAbsMaxConformance(t *testing.T) {
 	cmd := checkCmd()
 	var out bytes.Buffer
@@ -229,9 +229,9 @@ func TestRegulatorOutputAbsMaxConformance(t *testing.T) {
 }
 
 // TestFetVdssConformance is WS3-116's end-to-end, and it runs against the REAL seeded BSS138 rather
-// than a synthetic fixture spec: a 50V part on a 60V rail. Unlike the WS3-028 conformance test, the
-// rail's voltage here comes from the net NAME, so exactly one citation should ride the wire — the
-// FET's. A regression that cited a nonexistent second source would still look plausible in the
+// than a synthetic fixture spec, a 50V part on a 60V rail. Unlike the WS3-028 conformance test, the
+// rail's voltage here comes from the net NAME, so exactly one citation (the FET's) should ride the
+// wire. A regression that cited a nonexistent second source would still look plausible in the
 // message, so the count is the assertion that catches it.
 func TestFetVdssConformance(t *testing.T) {
 	cmd := checkCmd()

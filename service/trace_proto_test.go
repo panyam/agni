@@ -12,12 +12,12 @@ import (
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// fullTrace sets EVERY field to a distinguishable non-zero value, which is the load-bearing half of
-// a round-trip guard: a field left at its zero value round-trips cleanly through a conversion that
-// drops it, so a sparse fixture reports success while covering nothing.
+// fullTrace sets EVERY field to a distinguishable non-zero value, which is the half of a round-trip
+// guard that does the work. A field left at its zero value round-trips cleanly through a conversion
+// that drops it, so a sparse fixture reports success while covering nothing.
 //
 // Every repeated field carries TWO elements for the same reason one level in. A converter that drops
-// everything past the first element round-trips a one-element slice perfectly, over exactly the bug
+// everything past the first element round-trips a one-element slice perfectly, over the bug
 // the guard exists to catch.
 func fullTrace() check.Trace {
 	return check.Trace{
@@ -145,7 +145,7 @@ func TestTraceDesignServesTheSameAnswerAsTheWalk(t *testing.T) {
 	}
 }
 
-// traceServiceFixture: U1.1 -> R1 -> U2.1, one series crossing, which is enough for the served
+// traceServiceFixture is U1.1 -> R1 -> U2.1, one series crossing, which is enough for the served
 // answer and the walk's own answer to be compared field by field.
 func traceServiceFixture() *ir.Design {
 	net := func(name string, conns ...[2]string) *ir.Net {

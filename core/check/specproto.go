@@ -7,20 +7,20 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
-// This file is the Spec half of the rule-definition contract (WS3-103): a Spec is already a value, so
-// giving it a wire form is a mapping rather than a redesign. It lives beside the AST it converts so
-// that adding a node to the closed vocabulary and forgetting its wire form is a compile error here,
-// not a silent drop at the far end of a package boundary.
+// This file is the Spec half of the rule-definition contract (WS3-103). It lives beside the AST it
+// converts, so a node added to the closed vocabulary gets its wire form in the same package, and a
+// missing case panics on first encode rather than dropping silently across a package boundary.
 //
-// The conversion is deliberately total in one direction and validating in the other. Encoding a Spec
-// this package built cannot fail: the AST is closed and every node has a case. Decoding CAN fail,
-// because the bytes came from somewhere else — so SpecFromProto builds the value and then runs the
-// same Validate that binding a hand-written Spec runs, which is what catches an unknown fact, an
-// unbound var, an unregistered FFI name, or a pattern that will not compile.
+// The conversion is total in one direction and validating in the other. Encoding a Spec this package
+// built cannot fail, because the AST is closed and every node has a case. Decoding CAN fail, because
+// the bytes came from somewhere else, so SpecFromProto builds the value and then runs the same
+// Validate that binding a hand-written Spec runs. That catches an unknown fact, an unbound var, an
+// unregistered FFI name, or a pattern that will not compile.
 
 // SpecProto encodes a Spec as its wire form. It panics on a Term or Expr outside the closed
-// vocabulary, which can only happen if a node type was added without a case here — a programming
-// error, caught the first time anything encodes it, rather than a silently truncated definition.
+// vocabulary, which can only happen if a node type was added without a case here. That is a
+// programming error, caught the first time anything encodes it, rather than a silently truncated
+// definition.
 func SpecProto(s Spec) *checkspb.SpecBody {
 	out := &checkspb.SpecBody{Over: s.Over, Message: s.Message}
 	if len(s.Let) > 0 {
@@ -39,7 +39,7 @@ func SpecProto(s Spec) *checkspb.SpecBody {
 }
 
 // SpecFromProto decodes a Spec and validates it against this build's vocabulary. The error names what
-// it did not recognize, because a definition that cannot compile has to say so when it is read: a
+// it did not recognize, because a definition that cannot compile has to say so when it is read. A
 // rule that silently fails to exist is indistinguishable from one that ran and found nothing.
 func SpecFromProto(p *checkspb.SpecBody) (Spec, error) {
 	s := Spec{Over: p.GetOver(), Message: p.GetMessage()}
@@ -143,9 +143,9 @@ func termFromProto(p *checkspb.SpecTerm) (Term, error) {
 	return nil, fmt.Errorf("spec term is empty (no variant set)")
 }
 
-// litFromProto decodes an integer literal as a Go int, not int64: the facts a Cmp orders against
-// (net.pin_count, segment.width) are ints, and the comparison is type-exact, so an int64 here would
-// make every ordering silently false rather than wrong-looking.
+// litFromProto decodes an integer literal as a Go int, not int64, because the facts a Cmp orders
+// against (net.pin_count, segment.width) are ints and the comparison is type-exact. An int64 here
+// would make every ordering silently false.
 func litFromProto(p *checkspb.SpecLit) (Term, error) {
 	switch v := p.GetValue().(type) {
 	case *checkspb.SpecLit_S:
@@ -266,9 +266,9 @@ func exprListFromProto(p *checkspb.SpecExprList) ([]Expr, error) {
 	return out, nil
 }
 
-// RuleMetaProto encodes a rule's identity, prose, and declared gates. Reads and Primitives are
-// deliberately not carried: both are derived from the rule's body by its compiler, so serializing them
-// would let a definition assert reads that disagree with what it actually does.
+// RuleMetaProto encodes a rule's identity, prose, and declared gates. Reads and Primitives are not
+// carried, because both are derived from the rule's body by its compiler, and serializing them would
+// let a definition assert reads that disagree with what it actually does.
 func RuleMetaProto(r Rule) *checkspb.RuleMeta {
 	m := &checkspb.RuleMeta{
 		Name:          r.Name,

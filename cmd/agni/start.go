@@ -18,11 +18,10 @@ import (
 
 // startCmd scaffolds a project around an existing design file.
 //
-// It is a CLI-side scaffolder and deliberately NOT a service rpc. ProjectService is read-only on
-// purpose (C23's declared-identity case): a server mutating an operator's mount raises ownership,
-// concurrency and provenance questions that nothing here needs answered. Writing two descriptors into
-// a folder the operator named on the command line is a different act, and it stays on this side of
-// that line.
+// It is a CLI-side scaffolder and NOT a service rpc, because ProjectService is read-only (C23's
+// declared-identity case, docsite/content/architecture/projects-and-designs.md#read-only-on-purpose).
+// Writing descriptors into a folder the operator named on the command line raises none of the
+// ownership, concurrency and provenance questions a server mutating a mount would.
 func startCmd() *cobra.Command {
 	var name, title string
 	c := &cobra.Command{
@@ -51,15 +50,15 @@ func startCmd() *cobra.Command {
 	return c
 }
 
-// idUnsafe matches every run of characters an AIP resource id may not carry. See projects.WriteProject
-// for why the id shape is narrow: it becomes a path segment in "projects/{p}/designs/{d}".
+// idUnsafe matches every run of characters an AIP resource id may not carry. The id becomes a path
+// segment in "projects/{p}/designs/{d}"; see projects.WriteProject.
 var idUnsafe = regexp.MustCompile(`[^a-z0-9._-]+`)
 
 // deriveID turns a folder or file name into a legal resource id, or "" when nothing usable survives.
 //
 // It sanitizes rather than rejecting, because the common case is a folder named "Sample Board" and
 // failing on it would send an operator to --name to type almost the same string back. The result is
-// printed, so a silent rename is not silent.
+// printed, so the rename is visible.
 func deriveID(s string) string {
 	id := idUnsafe.ReplaceAllString(strings.ToLower(s), "-")
 	id = strings.Trim(id, "-._")
@@ -72,16 +71,13 @@ func deriveID(s string) string {
 // companionsOf returns the sibling files that are VIEWS of the named design: same stem, different
 // extension, and carrying geometry or a board.
 //
-// The two halves of that rule each prevent a specific wrong answer. Same-stem is what keeps a later
-// revision out: `gateway-rev-b.edn` beside `gateway.edn` is a legitimate analysis source in its own
-// right, and declaring it a companion would turn a diff of two revisions into a diff of one against
-// itself — which is exactly why the descriptor format declares companions file by file rather than
-// inferring them from "everything beside the entry".
+// Same stem keeps a later revision out. `gateway-rev-b.edn` beside `gateway.edn` is an analysis
+// source of its own, and declaring it a companion would turn a diff of two revisions into a diff of
+// one against itself (docsite/content/architecture/projects-and-designs.md#the-netlist-is-the-source-the-rest-are-views).
 //
-// Carrying geometry or a board is what keeps a second ENCODING out. A `.edf` beside a `.edn` is
-// another netlist, not a view; declaring it would be inert at best and misleading at worst. The test
-// is asked of the format registry rather than of a list of extensions here, so a reader added later
-// is classified by what it can do.
+// Carrying geometry or a board keeps a second ENCODING out, since a `.edf` beside a `.edn` is another
+// netlist and not a view. The test asks the format registry rather than a list of extensions, so a
+// reader added later is classified by what it can do.
 func companionsOf(designPath string) ([]string, error) {
 	dir := filepath.Dir(designPath)
 	base := filepath.Base(designPath)
@@ -245,11 +241,9 @@ func copyFile(src, dst string) error {
 	return os.WriteFile(dst, b, 0o644)
 }
 
-// report tells the operator what was created and, load-bearingly, what was COPIED and from where.
-//
-// The copy is the one thing about this command that can surprise someone later: the project owns its
-// own copy of the design from here on, so editing the original leaves the project checking a stale
-// file with nothing to say so.
+// report tells the operator what was created and what was COPIED from where. The copy is what can
+// surprise someone later, because the project owns its copy from here on and editing the original
+// leaves the project checking a stale file with nothing to say so.
 func report(w io.Writer, root, projectID, designID, entry string, companions []string, adopted bool) {
 	rel := func(p ...string) string {
 		return filepath.Join(append([]string{filepath.Base(root)}, p...)...)
@@ -282,9 +276,8 @@ The config files are found by their conventional names (conventions.yaml, profil
 review.yaml), so none of them is declared here. Declare one only to depart from that: a
 conventions file shared with another project, a differently-named checklist, or "" to opt out.`
 
-// designHeader records where the copied files came from. It is a COMMENT rather than a field because
-// Design has no place for provenance, and adding one to carry a scaffolder's note would be a schema
-// change made for a message.
+// designHeader records where the copied files came from. It is a COMMENT because Design has no
+// provenance field, and adding one for a scaffolder's note would be a schema change.
 func designHeader(origin string) string {
 	return `Generated by ` + "`agni start`" + ` from ` + origin + `.
 
@@ -297,9 +290,9 @@ folder and is a legitimate analysis source of its own, so anything inferred from
 beside the entry" would turn a diff of two revisions into a diff of one against itself.`
 }
 
-// conventionsStub is a VALID naming config, not an empty file. A project declaring a config tier that
-// fails to load is an error rather than a skip (osProjectConfig), so a stub that did not parse would
-// make every command on the scaffolded project fail at the config it was supposed to give them.
+// conventionsStub returns a VALID naming config rather than an empty file. A config tier that fails
+// to load is an error (osProjectConfig), so a stub that did not parse would fail every command on the
+// scaffolded project.
 func conventionsStub(projectID string) string {
 	return `# Your team's naming vocabulary, composed into every run on this project.
 #
@@ -330,9 +323,9 @@ name: ` + projectID + `
 // checklistAreas is the seeded checklist's shape: one area per rule CATEGORY the shipped catalog
 // carries, so a first run answers something real rather than reporting an empty checklist.
 //
-// A tag binding is used rather than a rule binding on purpose. It survives the catalog growing: a rule
-// added to a category later joins the item that already covers it, where an item naming one rule would
-// silently stay as narrow as the day it was written.
+// Items bind by tag rather than by rule so they survive the catalog growing. A rule added to a
+// category later joins the item that already covers it, where an item naming one rule would silently
+// stay as narrow as the day it was written.
 var checklistAreas = []struct {
 	category, area, title string
 }{

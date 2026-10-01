@@ -13,7 +13,7 @@ import (
 //   - Y3 passive crystal, both terminals have a cap -> silent.
 //   - Y2 active oscillator (a non-ground power rail on a pin) -> skipped even with no caps.
 //   - Y4 active oscillator whose Vcc net reads as neither a rail nor ground (the real EDIF
-//     corpus case: an OUTPUT/Vcc/Standby oscillator, 3 non-ground terminals) -> skipped by the
+//     corpus case, an OUTPUT/Vcc/Standby oscillator with 3 non-ground terminals) -> skipped by the
 //     "exactly two terminals" gate, so no false positive even without a recognizable rail.
 //   - Y5 passive crystal whose cap-less terminal is an unresolved external net -> skipped.
 //   - U9 is not a crystal, so its cap-less net is never a subject.

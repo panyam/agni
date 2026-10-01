@@ -59,13 +59,13 @@ func writeFile(t *testing.T, name, body string) string {
 // serveRuleServices call serve's startup makes. That is what the web check panel and ListRules
 // populate from.
 //
-// Going through serveRuleServices rather than composing a catalog here is deliberate: an earlier
+// It goes through serveRuleServices rather than composing a catalog here because an earlier
 // version of this helper built its own catalog and handed it to NewCheckService, which meant a
 // mutation replacing serve's catalog with a bare DefaultCatalog survived every test in this file.
 //
-// It skips naming.ApplyLexicon, which serve also does at startup: the lexicon is a process global,
-// and installing it here would leak one test's vocabulary into the next while testing nothing this
-// file is about.
+// It skips naming.ApplyLexicon, which serve also does at startup, because the lexicon is a process
+// global and installing it here would leak one test's vocabulary into the next while testing
+// nothing this file is about.
 func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath string) []string {
 	t.Helper()
 	var cfg *configpb.NamingConvention
@@ -93,7 +93,7 @@ func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath strin
 
 // WS3-048: an overlay profile passed to `agni serve --profile-path` must reach the CHECK surface, not
 // only the review one. Before this, serve handed the CheckService a bare DefaultCatalog, so a
-// customer's profile fired on the CLI and was invisible in the viewer — which is exactly where the
+// customer's profile fired on the CLI and was invisible in the viewer, where the
 // interface-aware view presents it.
 func TestServeCheckCatalogIncludesOverlayProfiles(t *testing.T) {
 	names := servedRuleNames(t, writeProfileDir(t, overlayProfileYAML), "", "")
@@ -101,7 +101,8 @@ func TestServeCheckCatalogIncludesOverlayProfiles(t *testing.T) {
 	if !slicesContains(names, want) {
 		t.Fatalf("served check catalog should advertise %q, got %d rules: %v", want, len(names), names)
 	}
-	// The built-ins must still be there: composing the overlay ADDS a source, it does not replace one.
+	// The built-ins must still be there, because composing the overlay ADDS a source and does not
+	// replace one.
 	if !slicesContains(names, "single-pin-net") {
 		t.Errorf("overlay composition dropped the built-ins: %v", names)
 	}
@@ -128,11 +129,12 @@ func TestServeCheckCatalogIncludesConventionRules(t *testing.T) {
 	}
 }
 
-// The regression that matters most: serve REBUILT its review catalog when --conventions carried rules
-// (check.CatalogWith(src)), which silently dropped the profile and intent sources composed just above
-// it. So the combination an operator is most likely to run — house conventions plus their own
-// interface profiles — was the one that lost both tiers, with nothing in the output to say so. This is
-// the startup-side twin of the service-layer bug WS3-107 fixed.
+// This pins the regression that matters most, where serve REBUILT its review catalog when
+// --conventions carried rules (check.CatalogWith(src)), which silently dropped the profile and
+// intent sources composed just above it. So the combination an operator is most likely to run
+// (house conventions plus their own interface profiles) was the one that lost both tiers, with
+// nothing in the output to say so. This is the startup-side twin of the service-layer bug WS3-107
+// fixed.
 func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 	names := servedRuleNames(t,
 		writeProfileDir(t, overlayProfileYAML),
@@ -153,11 +155,11 @@ func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 // The REVIEW half of the same guarantee, end to end through the served ReviewService.
 //
 // The check-surface tests above all read ListRules, so they cannot see a catalog that reached one
-// service and not the other: mutation testing confirmed that starving only the ReviewService survived
-// every one of them. This runs an actual review through the service serve hands to CreateReview, over the
-// same fixtures as the CLI-side TestReviewOverlayTiersCoexist, and asserts all three overlay tiers
-// arrive. Both fixtures are authored to FAIL rather than pass, because a pass is also what a vanished
-// tier would produce on a design with nothing wrong.
+// service and not the other, and mutation testing confirmed that starving only the ReviewService
+// survived every one of them. This runs an actual review through the service serve hands to
+// CreateReview, over the same fixtures as the CLI-side TestReviewOverlayTiersCoexist, and asserts
+// all three overlay tiers arrive. Both fixtures are authored to FAIL rather than pass, because a
+// pass is also what a vanished tier would produce on a design with nothing wrong.
 func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	cfg, err := naming.Load("testdata/review/conventions.yaml")
 	if err != nil {
@@ -250,14 +252,15 @@ func slicesContains(s []string, v string) bool {
 // WS3-124: a request that carries its own naming convention REPLACES the server's startup one rather
 // than stacking on it, end to end through the wiring serve actually builds.
 //
-// This goes through serveRuleServices for the same reason servedRuleNames does: the base convention's
-// NAME has to reach the services, and a test that composed an Overlay by hand would pass while the
-// production wiring forgot to thread it. That is the exact failure mode WS3-109 was written about.
+// This goes through serveRuleServices for the same reason servedRuleNames does. The base
+// convention's NAME has to reach the services, and a test that composed an Overlay by hand would
+// pass while the production wiring forgot to thread it. That is the failure mode WS3-109 was
+// written about.
 //
-// The stacking behaviour was defensible in isolation and wrong in context: the flag help says a
-// request "may name its own instead", the serve.go comment says it overrides, and the LEXICON half of
-// the same config already overrode because it travels with the read. One config whose halves compose
-// differently is what let the WS3-102 bug hide.
+// The stacking behaviour was defensible in isolation and wrong in context. The flag help says a
+// request's own config "REPLACES this one for that request", the serve.go comment says it
+// overrides, and the LEXICON half of the same config already overrode because it travels with the
+// read. One config whose halves compose differently is what let the WS3-102 bug hide.
 func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 	house, err := naming.Load("testdata/review/conventions.yaml")
 	if err != nil {

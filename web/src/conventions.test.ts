@@ -38,7 +38,7 @@ describe("activeLabel", () => {
 });
 
 describe("isOverridden", () => {
-  // This drives the bar's styling, and the styling is the point: a request convention REPLACES the
+  // This drives the bar's styling, which matters because a request convention REPLACES the
   // server's, so rules can stop running, and a rule that stops running produces no findings. In a
   // findings list that is indistinguishable from a design that got fixed.
   it("is false under the server's convention and true under a request's", () => {
@@ -60,7 +60,7 @@ describe("conventionError", () => {
   // the message says anything. A fixture written from the wire response alone would miss the first
   // one and the stripping would silently not fire in the browser.
   //
-  // EXPECT_YAML is reachable from a stock checkout: the conformance fixtures ship .expect.yaml
+  // EXPECT_YAML is reachable from a stock checkout, because the conformance fixtures ship .expect.yaml
   // siblings, so every entry the picker offers beside one of those designs is a file that cannot
   // resolve. INTENT_YAML is the shape an overlay hits, where a design-intent file sits beside the
   // design it describes.
@@ -76,7 +76,7 @@ describe("conventionError", () => {
     "[invalid_argument] invalid argument: naming config: yaml: unmarshal errors:\n" +
     "  line 2: field entry not found in type naming.Config";
 
-  // The bug this replaced: the bar rendered the fixed string "could not apply" and put the server's
+  // In the bug this replaced, the bar rendered the fixed string "could not apply" and put the server's
   // message in a title attribute. The summary has to carry the part that identifies the file as the
   // wrong kind, because the picker offers no other clue which files are naming configs.
   it("names the offending field, not just that something failed", () => {
@@ -93,7 +93,7 @@ describe("conventionError", () => {
   });
 
   // Both status prefixes name the code rather than the problem, and the reader can see something
-  // failed from the chip being on screen at all. Asserting on BOTH is the point: stripping only the
+  // failed from the chip being on screen at all. The test asserts on BOTH, because stripping only the
   // server's half left "[invalid_argument] " in front of every message in the real UI, which is what
   // the browser capture caught and the wire-only fixture did not.
   it("drops both status prefixes, Connect's and the server's", () => {

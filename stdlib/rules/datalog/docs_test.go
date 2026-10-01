@@ -6,10 +6,11 @@ import (
 	"testing"
 )
 
-// TestRuleDocsOneToOne holds the "dl" source's rules and datalogrules/docs to each other, the same
-// discipline check/docs_test enforces for the built-ins: every rule's Detail comes from its own
-// docs/<name>.md, every doc names a registered rule, and every image a doc references is present.
-// A datalog rule PR without its doc (or a doc orphaned by a rename) fails here, not in review.
+// TestRuleDocsOneToOne holds the "dl" source's rules and stdlib/rules/datalog/docs to each other,
+// the same discipline stdlib/rules/builtin/docs_test.go enforces for the built-ins. Every rule's
+// Detail comes from its own docs/<name>.md, every doc names a registered rule, and every image a
+// doc references is present. A datalog rule PR without its doc (or a doc orphaned by a rename)
+// fails here, not in review.
 func TestRuleDocsOneToOne(t *testing.T) {
 	entries, err := ruleDocs.ReadDir("docs")
 	if err != nil {

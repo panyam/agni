@@ -13,31 +13,26 @@ import (
 
 // verdictCSVColumns is the column set of `check --verdicts --format csv`, in emitted order.
 //
-// A SEPARATE TABLE from check --format csv rather than extra rows in it. That header is fixed so a
-// downstream sheet or script can bind to it, and a findings table means "one row per violation": add
-// passing rows and every consumer that counts rows starts counting passes as defects. The two answer
-// different questions and a reader has to be able to tell which one they are holding.
+// It is a SEPARATE TABLE from check --format csv rather than extra rows in it. A findings table means
+// one row per violation, so passing rows added there would be counted as defects by every consumer
+// that counts rows.
 //
-// The two entity columns are the point of the table. `context` carries what to HIGHLIGHT, as
-// role=ref pairs a viewer can resolve, and `terms` carries the VALUES the statement rests on. A term
-// is a bare string with no kind, so it is not clickable and never pretends to be; that split is why
-// a path proof puts its hops in context and carries no terms at all.
+// `context` carries what to HIGHLIGHT, as role=ref pairs a viewer can resolve, and `terms` carries
+// the VALUES the statement rests on. A term is a bare string with no kind and is not clickable, so a
+// path proof puts its hops in context and carries no terms.
 //
-// Datasheet citations are deliberately absent, the same call check --format csv makes: a citation is
-// a document, a page and a section per entry, and squashing a repeated struct into a cell produces
-// something no reader can parse and no writer can round-trip. A consumer that needs them wants json.
+// Datasheet citations are absent for the reason checkCSVColumns gives. A consumer that needs them
+// wants json.
 var verdictCSVColumns = []string{
 	"verdict_id",
 	// url opens this verdict's proof in a running viewer, and is EMPTY unless the operator named one
-	// with --server and the design is one the server could resolve. A blank cell is the correct
-	// answer for a loose file rather than a gap: a link assembled from a guessed address resolves on
-	// nobody's server, which reads as a broken tool rather than a mismatched setup (agni issue 392).
+	// with --server and the design is one the server could resolve. A loose file gets a blank cell,
+	// because a link built from a guessed address resolves on nobody's server (agni issue 392).
 	"url",
 	"rule",
 	"outcome",
-	// One column for the whole subject tuple, as kind:ref pairs. Most rules put one entity here; a
-	// rule whose question is a relation puts two or three, and splitting them back into kind/subject/
-	// pin columns would need a column set that changes per rule, which is not a table.
+	// One column for the whole subject tuple, as kind:ref pairs. A relation rule puts two or three
+	// entities here, and separate kind/subject/pin columns would need a column set per rule.
 	"subjects",
 	"statement",
 	"context",
@@ -45,9 +40,8 @@ var verdictCSVColumns = []string{
 	"reason",
 }
 
-// writeVerdictCSV emits one row per verdict, in the order the run produced them (rule, then subject,
-// matching check.RunVerdicts and therefore the findings table's axis). Like the findings writer this
-// does not re-sort, so the csv and the json describe one run in one order.
+// writeVerdictCSV emits one row per verdict in run order (rule, then subject, as check.RunVerdicts
+// produces them). It does not re-sort, so the csv and the json describe one run in one order.
 func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report) error {
 	c := rpt.NewCSVWriter(w)
 	c.Header(verdictCSVColumns)
@@ -73,7 +67,7 @@ func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report) error
 }
 
 // termsCell flattens a witness's values to one pipe-separated cell of label=value pairs, the same
-// shape contextCell uses for entities so a reader learns one convention rather than two.
+// shape contextCell uses for entities.
 func termsCell(ts []*checkspb.WitnessTerm) string {
 	if len(ts) == 0 {
 		return ""
@@ -85,9 +79,8 @@ func termsCell(ts []*checkspb.WitnessTerm) string {
 	return strings.Join(parts, "|")
 }
 
-// outcomeCell renders the enum as the lower-case word the Go vocabulary uses, so the column reads as
-// prose rather than as OUTCOME_NOT_CONSIDERED. An unrecognised value renders as "unspecified" and
-// never as a blank, because a blank outcome cell would read as "nothing to report".
+// outcomeCell renders the enum as the lower-case word the Go vocabulary uses. An unrecognised value
+// renders as "unspecified" and never as a blank, since a blank cell would read as "nothing to report".
 func outcomeCell(o checkspb.Outcome) string {
 	switch o {
 	case checkspb.Outcome_OUTCOME_PASS:
@@ -105,9 +98,9 @@ func outcomeCell(o checkspb.Outcome) string {
 	}
 }
 
-// subjectsCell renders a verdict's tuple for the csv as kind:ref pairs, pipe-separated, matching the
-// context column's shape so the two read the same way. The kinds stay in: a relation is commonly
-// heterogeneous (a part and a rail), and a reader of two bare refs cannot tell which is which.
+// subjectsCell renders a verdict's tuple as pipe-separated kind:ref pairs, the context column's
+// shape. The kinds stay in because a relation is commonly heterogeneous (a part and a rail), and two
+// bare refs do not say which is which.
 func subjectsCell(ss []*checkspb.Subject) string {
 	parts := make([]string, 0, len(ss))
 	for _, s := range ss {
@@ -116,8 +109,8 @@ func subjectsCell(ss []*checkspb.Subject) string {
 	return strings.Join(parts, "|")
 }
 
-// subjectRefCell is one entity's spelling: a pin reads as U12.7, everything else as its ref. It
-// matches the form VerdictID uses so a line and its id are recognisably the same entity.
+// subjectRefCell spells one entity the way VerdictID does, so a pin reads as U12.7 and everything
+// else as its ref.
 func subjectRefCell(s *checkspb.Subject) string {
 	if s.GetPin() != "" {
 		return s.GetRef() + "." + s.GetPin()
@@ -128,10 +121,9 @@ func subjectRefCell(s *checkspb.Subject) string {
 // writeVerdictJSON emits the verdicts as the wire form, so a consumer that needs the datasheet
 // citations the csv omits has them without a second run.
 //
-// A bare ARRAY rather than an envelope message. CheckResults is the results-document schema and has
-// no verdicts field; adding one so this function had something to marshal would put a field in a
-// persisted contract to serve a print statement, and the document's shape is a decision to make when
-// something actually stores a considered set.
+// It is a bare ARRAY rather than an envelope message. CheckResults is the persisted results-document
+// schema and has no verdicts field, and adding one for a print statement would change that contract
+// before anything stores a considered set.
 func writeVerdictJSON(w io.Writer, vs []*checkspb.Verdict) error {
 	mo := protojson.MarshalOptions{Multiline: true, Indent: "    "}
 	if _, err := io.WriteString(w, "[\n"); err != nil {

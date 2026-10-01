@@ -1,17 +1,16 @@
 // Package ident compares identifiers that name the same thing in two documents that spell it
 // differently: a pin map against a netlist, a selected function against a vendor's pin table.
 //
-// It exists because that comparison is where the false warnings come from. We reproduced a shipped
+// That comparison is where false warnings come from (agni issue 517). We reproduced a shipped
 // in-house checker against a large production board, and EVERY warning that run produced was a
-// string-comparison artifact rather than a design defect. The pin was legal in all of them. The two
-// strings naming it disagreed. A checker whose warnings are all noise is a checker people turn off,
-// so the comparison is the load-bearing part rather than a detail of the rule that calls it.
+// string-comparison artifact rather than a design defect. The pin was legal in all of them and the
+// two strings naming it disagreed.
 //
 // ONE canonical form, defined once, applied to BOTH sides. That tool carried two normalizers with
 // opposite conventions (one stripped leading zeros, PTA00 to PTA0; the other padded to two digits,
-// PTE7 to PTE07), on the same field in the same codebase. It worked only because each was used on its
-// own side of a comparison. Everything here goes through Canonical, and a caller that reaches past it
-// to compare raw strings is the bug this package exists to prevent.
+// PTE7 to PTE07) on the same field, and it worked only because each ran on its own side of a
+// comparison. Everything here goes through Canonical, and a caller comparing raw strings brings
+// that bug back.
 package ident
 
 import (
@@ -23,24 +22,22 @@ import (
 )
 
 // Match is how closely two identifiers agree. The three positive answers are kept apart because a
-// reviewer does something different about each, and collapsing them to a bool is what turns a
-// checker into one that is either noisy or silently permissive.
+// reviewer does something different about each, and a bool would make a checker either noisy or
+// silently permissive.
 type Match string
 
 const (
-	// Exact: the two strings are byte-identical. Nothing was done to reach this.
+	// Exact means the two strings are byte-identical. Nothing was done to reach this.
 	Exact Match = "exact"
-	// Normalized: equal once both sides were canonicalized. A real match, and the Note says what
-	// differed, because "these differ only by a character you cannot see" is the sentence that gets
-	// a map fixed where a bare mismatch gets the tool switched off.
+	// Normalized means equal once both sides were canonicalized. It is a real match, and Note says
+	// what differed ("these differ only by a character you cannot see") so the author can fix the map.
 	Normalized Match = "normalized"
-	// Fuzzy: equal only after factoring out tokens one side carries and the other does not. It must
-	// be REPORTED rather than passed silently. Vendor tables are internally inconsistent (one IOMUX
-	// sheet listed GMAC0_MII_RMII_RGMII_TXD[0] and GMAC0_MII_RGMII_TXD2 on the same pin), so an
-	// author cannot be asked to guess which spelling a checker prefers, and a tool cannot claim the
-	// two are the same thing without saying it inferred that.
+	// Fuzzy means equal only after factoring out tokens one side carries and the other does not. It
+	// must be REPORTED rather than passed silently, because the tool inferred the match. Vendor tables
+	// are inconsistent with themselves (see tokenSubsequence), so an author cannot be asked to guess
+	// which spelling a checker prefers.
 	Fuzzy Match = "fuzzy"
-	// None: no reading of either string makes them agree.
+	// None means no reading of either string makes them agree.
 	None Match = "none"
 )
 
@@ -51,24 +48,23 @@ type Result struct {
 	// Note says what had to be done to reach a Normalized or Fuzzy match, phrased for the person
 	// reading the finding. Empty for Exact and None.
 	Note string
-	// A and B are the alternatives that actually matched, which is not always the strings passed in:
-	// either side may be a multi-valued cell, and naming the half that matched is the difference
-	// between a reviewer confirming the answer and re-deriving it.
+	// A and B are the alternatives that actually matched, which is not always the strings passed in.
+	// Either side may be a multi-valued cell, and naming the half that matched lets a reviewer confirm
+	// the answer without re-deriving it.
 	A, B string
 }
 
-// formatRunes are the invisible characters that survive every defence people write for them.
+// hasFormatRunes reports whether s holds a format character (category Cf), the invisible
+// characters that survive every defence people write for them.
 //
-// The trap is worth stating because the obvious guard does not work. That in-house tool normalized
-// with `re.sub(r'\s+', ”, s.upper())`, which looks like it handles this. U+200B ZERO WIDTH SPACE is
-// a FORMAT character (category Cf), not whitespace, so `\s` does not match it in Python, in
-// JavaScript, or in Go, where `\s` is ASCII-only and narrower still. The strip written to make the
-// comparison tolerant walks straight past the one character that breaks it.
+// The obvious guard does not work. That in-house tool normalized with `re.sub(r'\s+', ”, s.upper())`.
+// U+200B ZERO WIDTH SPACE is a FORMAT character, not whitespace, so `\s` does not match it in
+// Python, in JavaScript, or in Go, where `\s` is ASCII-only and narrower still.
 //
 // The whole Cf category is stripped rather than a named list. The four observed in real documents
-// are U+200B, U+200C, U+200D and U+FEFF, and the bidi marks alongside them in that category are the
-// same hazard for the same reason. U+00A0 NBSP is NOT here: it is a space separator, so NFKC turns
-// it into an ordinary space and the whitespace stage removes it.
+// are U+200B, U+200C, U+200D and U+FEFF, and the bidi marks in that category are the same hazard.
+// U+00A0 NBSP is NOT here because it is a space separator, so NFKC turns it into an ordinary space
+// and the whitespace stage removes it.
 func hasFormatRunes(s string) bool {
 	return strings.IndexFunc(s, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0
 }
@@ -94,10 +90,9 @@ func stripSpace(s string) string {
 // canonIndex rewrites an identifier's trailing index into one spelling: brackets removed and leading
 // zeros dropped, so PTE07, PTE7 and TXD[1] against TXD1 all settle.
 //
-// Leading zeros are DROPPED rather than padded to a fixed width, and that is the deliberate half. A
-// width is a guess about the largest index a part family will ever reach, and the two normalizers we
-// found disagreed precisely because one of them had guessed. Dropping is the unique minimal form and
-// guesses nothing.
+// Leading zeros are DROPPED rather than padded to a fixed width. A width is a guess about the largest
+// index a part family will ever reach, and the two normalizers we found disagreed because one of
+// them had guessed. Dropping is the unique minimal form.
 //
 // A trailing group that is not all digits is left alone. `DATA[1:0]` is a bus range rather than an
 // index, and xschem and gEDA both write that form, so rewriting it would collapse two different
@@ -134,13 +129,13 @@ func allDigits(s string) bool {
 // Canonical is the one canonical form of an identifier, and the only spelling anything in this
 // package compares.
 //
-// The stages run in this order and each one has a reason to be where it is. NFKC first, so a
+// The stage order matters. NFKC first, so a
 // fullwidth digit lifted out of a PDF becomes the ASCII one and a non-breaking space becomes an
 // ordinary space that the whitespace stage can then remove. Format characters next, since they
 // survive NFKC untouched. Upper case after that, because vendor tables mix camel-case and upper-case
-// spellings of one peripheral freely. Whitespace removed rather than collapsed, because a space
-// inside an identifier is noise: a multi-valued cell is split by Alternatives BEFORE this runs, so
-// no separator depends on the whitespace surviving. The index last, once the digits are ASCII.
+// spellings of one peripheral freely. Whitespace removed rather than collapsed, because a
+// multi-valued cell is split by Alternatives BEFORE this runs, so no separator depends on the
+// whitespace surviving. The index last, once the digits are ASCII.
 func Canonical(s string) string {
 	s = norm.NFKC.String(s)
 	s = stripFormatRunes(s)
@@ -149,24 +144,22 @@ func Canonical(s string) string {
 	return canonIndex(s)
 }
 
-// altSeparators are the ways a document writes several names in one cell. All four were observed in
-// real pin maps and vendor tables, the newline inside a single spreadsheet cell included.
+// altSeparators are the ways a document writes several names in one cell. All three were observed
+// in real pin maps and vendor tables, the newline inside a single spreadsheet cell included.
 var altSeparators = []string{"\n", "/", ","}
 
 // Alternatives splits a cell that may name several functions into the ones it names, always keeping
 // the WHOLE cell as the first alternative.
 //
-// Keeping the whole string is what makes this safe on a name that legitimately contains a separator.
-// `R/W` is an ordinary pin name (read/write), and so are `CS/` and `WR/`; a splitter that only
-// returned the halves would compare `R` against a table and match the wrong thing while losing the
-// name that was actually written. Returning both readings and letting the caller report WHICH one
-// matched keeps that decidable.
+// Keeping the whole string makes this safe on a name that legitimately contains a separator.
+// `R/W` is an ordinary pin name (read/write), and a splitter returning only the halves would compare
+// `R` against a table and lose the name that was actually written. The caller reports WHICH reading
+// matched.
 //
-// Both sides of a comparison are split by this same function, which is the fix for the largest class
-// of false warning we measured. That tool's three match branches all looked for a separator in the
-// AVAILABLE function name and never in the SELECTED one, so a map cell reading `GPIO[34] / WKPU[8]`
-// could not match a table listing `GPIO[34]` and `WKPU[8]` on separate rows, even though both halves
-// are legal on that pin.
+// Both sides of a comparison are split by this same function, which fixes the largest class of
+// false warning we measured. That tool looked for a separator only in the AVAILABLE function name,
+// so a map cell reading `GPIO[34] / WKPU[8]` could not match a table listing `GPIO[34]` and
+// `WKPU[8]` on separate rows, though both halves are legal on that pin.
 func Alternatives(s string) []string {
 	out := []string{strings.TrimSpace(s)}
 	parts := []string{s}
@@ -195,8 +188,8 @@ func Alternatives(s string) []string {
 // then a token-subsequence match. The first that succeeds wins, so a pair that agrees exactly is
 // never reported as having needed normalizing.
 //
-// Every alternative on the left is tried against every alternative on the right, which is the whole
-// point of splitting both sides. The result names the pair that matched.
+// Every alternative on the left is tried against every alternative on the right, and the result
+// names the pair that matched.
 func Compare(a, b string) Result {
 	if a == b {
 		return Result{Match: Exact, A: a, B: b}
@@ -217,10 +210,8 @@ func Compare(a, b string) Result {
 			}
 		}
 	}
-	// Tokens are split here rather than beside the canonical forms, because only this pass needs
-	// them and it is reached only when both passes above failed. Splitting them eagerly cost four
-	// allocations on every normalized match, which is the ordinary case: most map rows name one pin
-	// and settle in the pass above.
+	// Tokens are split lazily because only this pass needs them. Splitting eagerly cost four
+	// allocations on every normalized match, the ordinary case, since most map rows name one pin.
 	tokA, tokB := tokensOf(altsA), tokensOf(altsB)
 	for i, x := range altsA {
 		for j, y := range altsB {
@@ -237,26 +228,17 @@ func Compare(a, b string) Result {
 // reading is one alternative of a cell with the derived forms the comparison loops need, computed
 // once rather than per pair.
 //
-// Compare walks every alternative on the left against every alternative on the right, so anything
-// derived inside those loops was recomputed n x m times for n + m distinct inputs. On a cell naming
-// three functions a side that is sixty-four canonicalizations where eight would do.
+// Compare's loops are n x m for n + m distinct inputs, so on a cell naming three functions a side
+// this is eight canonicalizations instead of sixty-four (#660). It costs one slice per side, so a
+// single-valued comparison, which is most map rows, went from 20 allocations to 22 while the
+// three-a-side cell went from 168 to 50. Trust the allocation counts over ns/op, which swings by a
+// factor of two between runs on one machine. The two extra allocations buy one match ladder instead
+// of a second short-circuit path, which would be the two-normalizers defect again.
 //
-// IT IS NOT A FREE WIN and the benchmarks say so. Holding the derived forms costs one slice per
-// side, so a single-valued comparison, which is most map rows, went from 20 allocations to 22 while
-// the three-a-side cell went from 168 to 50. Read the allocation counts rather than the timings
-// there: ns/op on this benchmark swings by a factor of two between runs on one machine, and the
-// allocation counts do not move at all. Two allocations is the price of one match ladder instead of
-// a second short-circuit path beside it, and a duplicated ladder is exactly the two-normalizers
-// defect this package exists to prevent.
-//
-// A CALLER COMPARING MANY AGAINST MANY should not reach for Compare in a nested loop at all. This
-// hoist makes one call cheaper and leaves the caller's own n x m intact: two hundred map rows
-// against sixteen hundred nets is 320,000 calls however fast each one is. Canonical is the shared
-// key, so build a map keyed on it once and look each candidate up, which is O(n + m) and turns the
-// question into a lookup. Compare is for deciding one pair and explaining the answer.
-//
-// The hoist itself is pure. Canonical has no state and no side effect, so every reading the loops
-// see is the value they computed for themselves before.
+// A CALLER COMPARING MANY AGAINST MANY should not reach for Compare in a nested loop at all. Two
+// hundred map rows against sixteen hundred nets is 320,000 calls however fast each one is. Build a
+// map keyed on Canonical once and look each candidate up, which is O(n + m). Compare is for deciding
+// one pair and explaining the answer.
 type reading struct {
 	raw       string
 	canonical string
@@ -299,9 +281,8 @@ func alternativeNote(a, b, x, y string) string {
 // differences names every normalization that actually altered one of the two strings, so the note
 // says what the reader cannot see rather than only that something was done.
 //
-// It reports what was APPLIED rather than trying to single out one decisive step, because two
-// spellings usually differ in more than one way at once and naming only the last stage would leave a
-// reader hunting for a case difference that was never the problem.
+// It reports what was APPLIED rather than one decisive step, because two spellings usually differ
+// in more than one way at once.
 func differences(x, y string) string {
 	var why []string
 	if hasFormatRunes(x) || hasFormatRunes(y) {
@@ -341,18 +322,16 @@ func joinNotes(parts ...string) string {
 // tokenSubsequence reports whether the shorter identifier's underscore-separated tokens appear in
 // order within the longer's, naming the tokens the longer one carries extra.
 //
-// This is the structural answer to a vendor table that is inconsistent with itself. One IOMUX sheet
-// listed GMAC0_MII_RMII_RGMII_TXD[0] and GMAC0_MII_RGMII_TXD2 on the same pin, two spellings of one
-// signal family differing by an inserted interface-mode token. The map author followed the second
-// pattern and got flagged.
+// It answers a vendor table that is inconsistent with itself. One IOMUX sheet listed
+// GMAC0_MII_RMII_RGMII_TXD[0] and GMAC0_MII_RGMII_TXD2 on the same pin, two spellings of one signal
+// family differing by an inserted interface-mode token.
 //
-// It is deliberately STRUCTURAL and names no vendor vocabulary. Hard-coding MII, RMII and RGMII as
-// optional would put one vendor's interface tokens in a shared library and would miss the next
-// vendor's equivalent.
+// It is STRUCTURAL and names no vendor vocabulary. Hard-coding MII, RMII and RGMII as optional would
+// put one vendor's tokens in a shared library and miss the next vendor's equivalent.
 //
-// Both ends must match, which is what stops the rule widening into nonsense. Without that anchor
-// TXD1 is a subsequence of GMAC0_MII_RGMII_TXD1 and every signal on the pin would match every other.
-// A single token is never fuzzy-matched for the same reason: there is nothing to anchor.
+// Both ends must match. Without that anchor TXD1 is a subsequence of GMAC0_MII_RGMII_TXD1 and every
+// signal on the pin would match every other. A single token is never fuzzy-matched, since there is
+// nothing to anchor.
 func tokenSubsequence(x, y []string) ([]string, bool) {
 	a, b := x, y
 	if len(a) > len(b) {

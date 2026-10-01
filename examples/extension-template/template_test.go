@@ -7,8 +7,8 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// TestTemplateComposes is the template's smoke test: it proves the scaffold builds into a
-// working overlay — the custom reader and rule are registered with the engine. Once you fill
+// TestTemplateComposes is the template's smoke test. It proves the scaffold builds into a
+// working overlay, with the custom reader and rule registered with the engine. Once you fill
 // in myfmt/ and myrules/, extend this to assert your reader loads a fixture and your rule fires.
 func TestTemplateComposes(t *testing.T) {
 	if formats.ByExt("x.myfmt") == nil {

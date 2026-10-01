@@ -11,7 +11,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// perArtifactHash answers a distinct digest per artifact, which is what a real loader does: two
+// perArtifactHash answers a distinct digest per artifact, as a real loader does, so two
 // different files hash to two different values. fakeLoader's canned hash is the same string whatever
 // it is asked about, so under it a caller hashing the WRONG artifact is indistinguishable from one
 // hashing the right artifact. That is why this bug survived a suite that already had a hash fixture.
@@ -22,7 +22,7 @@ func (perArtifactHash) DesignHash(_ context.Context, u artifact.URI) (string, er
 }
 
 // The three spellings of one design must report ONE revision identity, for the same reason they must
-// resolve to one set of tiers (agni issue 656, constraint C32): they analyse the same bytes.
+// resolve to one set of tiers (agni issue 656, constraint C32), since they analyse the same bytes.
 //
 // TestSourcesAgreeAcrossEverySpelling is the tier half of this and the hash half was left behind.
 // GetDesign resolves the netlist tier and then hands DesignHash the REQUEST instead, so asking by

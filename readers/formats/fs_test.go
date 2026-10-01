@@ -14,9 +14,9 @@ import (
 )
 
 // mountFS builds an in-memory fs.FS from real on-disk fixtures, keyed by the name the FS read
-// will use. Every FS name here is deliberately one that does NOT exist relative to the test's
+// will use. Every FS name here is one that does NOT exist relative to the test's
 // working directory, so any read that still reaches the host filesystem fails outright instead of
-// quietly succeeding — that is what makes the parity tests below evidence of the seam rather than
+// quietly succeeding. That makes the parity tests below evidence of the FS path rather than
 // evidence that both reads found the same file on disk.
 func mountFS(t *testing.T, files map[string]string) fstest.MapFS {
 	t.Helper()
@@ -36,7 +36,7 @@ func mountFS(t *testing.T, files map[string]string) fstest.MapFS {
 
 // summarize renders the parts of a Design that must not depend on WHERE the bytes came from:
 // components with their stamped classes, and every net with its sorted pin membership and
-// tool-assigned classes. Provenance is deliberately excluded — a read is stamped with the name it
+// tool-assigned classes. Provenance is excluded because a read is stamped with the name it
 // was asked for, so the two reads legitimately differ there (TestReadDesignFSProvenance covers
 // that separately).
 func summarize(d *ir.Design) string {
@@ -68,7 +68,7 @@ func summarize(d *ir.Design) string {
 	return b.String()
 }
 
-// TestReadDesignFSParity is the core WS1-049 acceptance: the same bytes read through an fs.FS
+// TestReadDesignFSParity is the core WS1-049 acceptance. The same bytes read through an fs.FS
 // produce the same design as an on-disk read, for every registered netlist format including both
 // sniffed extensions (.sch picks its dialect by header, .xml must see an IPC-2581 root). The FS
 // names are unreachable on disk, so this also proves no read silently fell back to os.
@@ -78,9 +78,9 @@ func TestReadDesignFSParity(t *testing.T) {
 		disk   string
 		fsName string
 		// siblings are the files the design resolves BESIDE itself, mounted in the same FS
-		// directory: an xschem/gEDA schematic gets its pins from .sym artwork in its own dir, so
+		// directory. An xschem/gEDA schematic gets its pins from .sym artwork in its own dir, so
 		// mounting the schematic alone would compare a pin-bearing disk read against a pin-less FS
-		// one and blame the seam for a missing fixture.
+		// one and blame the FS read for a missing fixture.
 		siblings []string
 	}{
 		{name: "edif netlist", disk: "../edif/testdata/basic.edn", fsName: "designs/basic.edn"},
@@ -119,9 +119,9 @@ func TestReadDesignFSParity(t *testing.T) {
 	}
 }
 
-// TestReadDesignFSNoOSFallback pins the negative: with an FS installed, a name that exists ON DISK
+// TestReadDesignFSNoOSFallback pins the negative. With an FS installed, a name that exists ON DISK
 // but not in the FS must fail. Without it, a missed call site would keep reading from the host and
-// every parity test above would still pass, which is exactly the bug this seam exists to prevent.
+// every parity test above would still pass.
 func TestReadDesignFSNoOSFallback(t *testing.T) {
 	const onDisk = "../edif/testdata/basic.edn"
 	if _, err := (&Loader{}).ReadDesign(onDisk); err != nil {
@@ -134,7 +134,7 @@ func TestReadDesignFSNoOSFallback(t *testing.T) {
 }
 
 // TestReadDesignFSStampsRunOnFSReads proves the FS entry reaches the SAME post-read pass sequence
-// as the path entry, not a parallel one: the classify/net-role stamps are what a rule reads, and a
+// as the path entry, not a parallel one. The classify/net-role stamps are what a rule reads, and a
 // second entry point that skipped them would produce a design that looks fine and checks wrong.
 // basic.edn's R1/R2 classify as resistors, and VCC/GND carry rail/ground roles.
 func TestReadDesignFSStampsRunOnFSReads(t *testing.T) {
@@ -165,9 +165,9 @@ func TestReadDesignFSStampsRunOnFSReads(t *testing.T) {
 	}
 }
 
-// TestReadDesignFSProvenance: a read is stamped with the name it was ASKED for, so an FS read
-// carries the FS name rather than anything host-shaped. A consumer joining findings back to a file
-// (the web mount+path key) depends on this being the caller's own name space.
+// TestReadDesignFSProvenance checks that a read is stamped with the name it was ASKED for, so an FS
+// read carries the FS name rather than anything host-shaped. A consumer joining findings back to a
+// file (the web mount+path key) depends on this being the caller's own name space.
 func TestReadDesignFSProvenance(t *testing.T) {
 	l := &Loader{FS: mountFS(t, map[string]string{"designs/basic.edn": "../edif/testdata/basic.edn"})}
 	d, err := l.ReadDesign("designs/basic.edn")
@@ -180,7 +180,7 @@ func TestReadDesignFSProvenance(t *testing.T) {
 }
 
 // TestKicadHierarchyOverFS is the multi-file case, and the reason this ticket wanted an fs.FS
-// rather than a bytes entry point: a KiCad root resolves its sub-sheet through the loader's sheet
+// rather than a bytes entry point. A KiCad root resolves its sub-sheet through the loader's sheet
 // opener, so the whole tree has to live in the same name space. Sibling resolution is relative to
 // the root's directory, here a nested one, so it also pins that the FS join is not accidentally
 // anchored at the FS root.
@@ -202,8 +202,8 @@ func TestKicadHierarchyOverFS(t *testing.T) {
 	}
 }
 
-// TestKicadHierarchyOverFSDegradesLikeOS: an FS missing the sub-sheet must fail exactly the way a
-// disk read missing it fails — the root still reads, the sub-sheet's components are simply absent.
+// TestKicadHierarchyOverFSDegradesLikeOS checks that an FS missing the sub-sheet fails the same way
+// a disk read missing it fails. The root still reads, and the sub-sheet's components are absent.
 // The parity is the assertion. A host that supplies an incomplete FS gets the same partial read
 // (and the same completeness signal) as one with an incomplete directory, rather than a new
 // failure mode nobody has rules for.
@@ -231,10 +231,10 @@ func TestKicadHierarchyOverFSDegradesLikeOS(t *testing.T) {
 	}
 }
 
-// TestKicadSymbolLibOverFS covers the other multi-file resolver: an external .kicad_sym reached
+// TestKicadSymbolLibOverFS covers the other multi-file resolver, an external .kicad_sym reached
 // through the project's own sym-lib-table (${KIPRJMOD} = the schematic's directory). Symbols carry
-// the pins, so a lib that fails to resolve reads as a pin-less design — the parity check is what
-// keeps that failure mode from arriving only on FS hosts.
+// the pins, so a lib that fails to resolve reads as a pin-less design. The parity check keeps that
+// failure mode from arriving only on FS hosts.
 func TestKicadSymbolLibOverFS(t *testing.T) {
 	onDisk, err := (&Loader{}).ReadDesign("../kicad/testdata/extlib.kicad_sch")
 	if err != nil {
@@ -261,9 +261,10 @@ func TestKicadSymbolLibOverFS(t *testing.T) {
 	}
 }
 
-// TestSymbolPathOverFS: --symbol-path entries resolve in the loader's name space too, including
-// the recursive subtree search a gEDA/Lepton library root needs. An xschem/gEDA schematic gets its
-// pins from .sym artwork, so this is the same pin-bearing dependency as the KiCad case above.
+// TestSymbolPathOverFS checks that --symbol-path entries resolve in the loader's name space too,
+// including the recursive subtree search a gEDA/Lepton library root needs. An xschem/gEDA schematic
+// gets its pins from .sym artwork, so this is the same pin-bearing dependency as the KiCad case
+// above.
 func TestSymbolPathOverFS(t *testing.T) {
 	onDisk, err := (&Loader{SymbolPaths: []string{"../xschem/testdata"}}).ReadDesign("../xschem/testdata/divider.sch")
 	if err != nil {
@@ -321,7 +322,8 @@ func TestKicadProjectOverFS(t *testing.T) {
 	}
 }
 
-// TestGeometryAndBoardOverFS: the geometry and board sidecar entries take the same seam, so a
+// TestGeometryAndBoardOverFS checks that the geometry and board sidecar entries take the same fs.FS
+// path, so a
 // host with no filesystem can DRAW a design, not just netlist it.
 func TestGeometryAndBoardOverFS(t *testing.T) {
 	l := &Loader{FS: mountFS(t, map[string]string{

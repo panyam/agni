@@ -18,7 +18,7 @@ import (
 )
 
 // newDesignSvc builds a DesignService over the os-backed adapters for the given mounts (no native
-// tools enabled, default render style) — the same composition serve.go wires.
+// tools enabled, default render style), the same composition serve.go wires.
 func newDesignSvc(mounts []mounts.Mount) *service.DesignService {
 	return newDesignSvcNative(mounts, nil)
 }
@@ -26,9 +26,9 @@ func newDesignSvc(mounts []mounts.Mount) *service.DesignService {
 // newDesignSvcNative is newDesignSvc with a native-tool allowlist, for the native-gate tests.
 func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service.DesignService {
 	return service.NewDesignService(
-		// loader: newLoader() matches serve.go. Leaving it nil was survivable only because the edif
-		// fixtures resolve no external symbol library, so the nil reader was never dereferenced; a
-		// kicad schematic with a sym-lib reference panics on it.
+		// The loader's newLoader() matches serve.go. Leaving it nil was survivable only because the
+		// edif fixtures resolve no external symbol library, so the nil reader was never
+		// dereferenced; a kicad schematic with a sym-lib reference panics on it.
 		&osLoader{mounts: mounts, loader: newLoader()},
 		&osNative{mounts: mounts, enabled: enabled, cache: native.NewCache()},
 		render.Style{},
@@ -72,7 +72,7 @@ func TestDesignServiceGetDesign(t *testing.T) {
 	get := func(path string) (*webapi.GetDesignResponse, error) {
 		return svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: uriStr("t", path)})
 	}
-	// A malformed URI arrives as a STRING from the wire, so it is sent verbatim rather than built:
+	// A malformed URI arrives as a STRING from the wire, so it is sent verbatim rather than built.
 	// uriStr would reject it before the service ever saw it, which is the guarantee, not the test.
 	getRaw := func(uri string) (*webapi.GetDesignResponse, error) {
 		return svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: uri})
@@ -115,8 +115,8 @@ func TestDesignServiceGetDesign(t *testing.T) {
 	})
 
 	// A traversal is now refused when the URI is PARSED rather than when the path is joined, so it
-	// classifies as an invalid argument. That is the whole point of the typed URI: the check happens
-	// once, at the edge, and no adapter below it can be reached with an escaping value.
+	// classifies as an invalid argument. With the typed URI the check happens once, at the edge, and
+	// no adapter below it can be reached with an escaping value.
 	t.Run("traversal is refused at the parse", func(t *testing.T) {
 		_, err := getRaw("mount://t/../../secret")
 		if !errors.Is(err, service.ErrInvalidArgument) {
@@ -179,7 +179,7 @@ func TestDesignServiceCheckDesign(t *testing.T) {
 	})
 
 	t.Run("an EDIF schematic (.eds) checks via its netlist, not an invalid-argument dead end", func(t *testing.T) {
-		edif := newCheckSvc(edifFixtureMounts(t)) // sample.eds: an EDIF schematic view carries a netlist
+		edif := newCheckSvc(edifFixtureMounts(t)) // sample.eds, an EDIF schematic view, carries a netlist
 		_, err := edif.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://t/sample.eds"})
 		if err != nil {
 			t.Fatalf("a .eds now carries a netlist and should check, got %v", err)
@@ -187,7 +187,7 @@ func TestDesignServiceCheckDesign(t *testing.T) {
 	})
 }
 
-// TestDesignServiceGetCheckReport pins the report pivot on the wire: sections come worst
+// TestDesignServiceGetCheckReport pins the report pivot on the wire. Sections come worst
 // severity first with correct counts, findings group by rule, and each group carries the
 // catalog Summary. The conformance fires.edn yields one finding each of error/warning/info,
 // exercising the full ordering through the same loader path CheckDesign uses.
@@ -337,7 +337,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 	})
 }
 
-// TestDesignServiceGetLayoutReport covers the report RPC (WS7-029b): every component is classified with
+// TestDesignServiceGetLayoutReport covers the report RPC (WS7-029b). Every component is classified with
 // a kind, and because KiCad symbols are inline, a faithful request resolves them all as provided.
 func TestDesignServiceGetLayoutReport(t *testing.T) {
 	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
@@ -470,7 +470,7 @@ func TestDesignServiceKicadHierarchy(t *testing.T) {
 }
 
 // TestLayoutAxis covers the layout axis end to end through GetDesign; the pure availableLayouts /
-// layoutForFile helpers moved to internal/service and are unit-tested there.
+// layoutForFile helpers live in service/design.go and are unit-tested there.
 func TestLayoutAxis(t *testing.T) {
 	t.Run("GetDesign reports available_layouts and grid re-derives", func(t *testing.T) {
 		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
@@ -535,9 +535,9 @@ func TestDesignServiceGetSheet(t *testing.T) {
 	})
 }
 
-// tutorialMounts mounts examples/tutorial-project, the shipped fixture that declares a project and a
-// design and needs no flags to do it: design.yaml names the entry and its companions, and a design's
-// symbol library defaults to `symbols` beside the descriptor.
+// tutorialMounts mounts examples/tutorial-project, the shipped fixture that declares a project and
+// a design and needs no flags to do it, because design.yaml names the entry and its companions and
+// a design's symbol library defaults to `symbols` beside the descriptor.
 func tutorialMounts(t *testing.T) []mounts.Mount {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "tutorial-project"))
@@ -548,7 +548,7 @@ func tutorialMounts(t *testing.T) []mounts.Mount {
 }
 
 // TestServedSheetResolvesProjectSymbolLibrary is agni issue 347 at the surface a reader actually
-// meets: the served document.
+// meets, the served document.
 //
 // The CLI twin (TestRenderResolvesProjectSymbolLibrary) covers `agni render`. This covers `agni
 // serve`, which reaches geometry through DesignService rather than through the render command, and
@@ -576,7 +576,7 @@ func TestServedSheetResolvesProjectSymbolLibrary(t *testing.T) {
 	if n := strings.Count(svg, `data-kind="pin"`); n == 0 {
 		t.Error("a served faithful sheet must carry per-pin pick targets; got none")
 	}
-	// The control: ref-des labels come from the annotation pass and draw whether or not a symbol
+	// The control. Ref-des labels come from the annotation pass and draw whether or not a symbol
 	// resolved, which is what made the degraded render look complete. If they ever stop drawing, the
 	// assertions above are measuring something other than what they claim.
 	if !strings.Contains(svg, "C1") {

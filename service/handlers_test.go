@@ -51,7 +51,7 @@ func TestGetDesignFaithful(t *testing.T) {
 		t.Errorf("counts = %d/%d, want 0/0 (this .eds schematic has no netlist instances)", m.GetComponentCount(), m.GetNetCount())
 	}
 	// .eds is dual-capability (netlist + faithful geometry), so it offers the netlist auto-layouts
-	// alongside faithful — capability comes from the registry, not this fixture's (empty) instances.
+	// alongside faithful. Capability comes from the registry, not this fixture's (empty) instances.
 	if !slicesEqual(m.GetAvailableLayouts(), []string{"faithful", "force", "grid", "layered", "orthogonal", "stress"}) {
 		t.Errorf("available layouts = %v, want faithful + the netlist set", m.GetAvailableLayouts())
 	}
@@ -87,8 +87,8 @@ func TestGetDesignAutoLayoutCountsFromIR(t *testing.T) {
 	}
 }
 
-// TestGetDesignCarriesUnexpandedHierarchy: the counts beside it cover the top level alone when a read
-// left blocks out, so the wire says so rather than the CLI alone (agni issue 707).
+// TestGetDesignCarriesUnexpandedHierarchy exists because the counts beside it cover the top level
+// alone when a read left blocks out, so the wire says so rather than the CLI alone (agni issue 707).
 func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1"}},

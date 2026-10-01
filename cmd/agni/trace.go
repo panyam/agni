@@ -17,12 +17,8 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// traceCmd walks from one pin to another through series pass elements and prints what it crossed.
-//
-// The engine has been able to answer whether two points are connected for a long time; what it could
-// not do is show the route, so a reviewer had no way to check the answer (agni issue 518). Every
-// walk held the path and discarded it on the way out. This is the smallest surface over the walk
-// that now returns it.
+// traceCmd walks from one pin to another through series pass elements and prints what it crossed,
+// so a reviewer can check a connectivity answer against its route (agni issue 518).
 func traceCmd() *cobra.Command {
 	var from, to, format, renderOut, serverVal, traceOutPath string
 	var srvSpec serverSpec
@@ -37,9 +33,8 @@ func traceCmd() *cobra.Command {
 			"route but is never passed through.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Before redirectOut, so a --server this process cannot honour refuses the run while the
-			// output file is still uncreated. Creating it first meant a refused run still announced
-			// "wrote <file>" over an empty one (agni issue 637).
+			// Before redirectOut, so a --server this process cannot honour refuses the run before the
+			// output file exists (agni issue 637).
 			var err error
 			if srvSpec, err = resolveServer(serverVal); err != nil {
 				return err
@@ -60,13 +55,10 @@ func traceCmd() *cobra.Command {
 			if format != "text" && format != "json" {
 				return fmt.Errorf("--format %s: want text or json", format)
 			}
-			// Thin client of the in-process DesignService, the shape `check` and `query` already
-			// take (WS9-048). The CLI supplies an os-backed loader and the service does the walk, so
-			// the answer a terminal prints and the answer the viewer draws come from ONE
-			// implementation rather than from two call sites that agree today.
+			// Thin client of the in-process DesignService, like `check` and `query` (WS9-048), so the
+			// terminal and the viewer get their answer from ONE implementation.
 			//
-			// nil for the native renderer: TraceDesign never reaches it, and passing a real one would
-			// mean building the shell-out platform effect for a command that cannot use it.
+			// The native renderer is nil because TraceDesign never reaches it.
 			ll := &localLoader{loader: newLoader()}
 			svc := service.NewDesignService(ll, nil, render.Style{}, cliProjects())
 			uri, err := cliArgURI(args[0])
@@ -84,48 +76,40 @@ func traceCmd() *cobra.Command {
 			}
 			t := service.TraceFromProto(resp.GetTrace())
 
-			// A LINK IS A PROMISE, decided by the one helper `check` also uses, so the two commands
-			// cannot drift on when a link is safe to make. It is printed whatever the outcome was:
-			// "these two pins do not join" is a thing worth sending someone, and a link that only
-			// survived a route would quietly drop half the answers people argue about.
+			// Whether a link is safe to make is decided by viewerLinkMeta, the helper `check` also
+			// uses. The link is printed for every outcome, since "these two pins do not join" is
+			// worth sending someone too.
 			//
-			// The guard is an EARLY-OUT, not the refusal. Withholding lives in viewerLinkMeta and
-			// TraceURL, both of which yield nothing without a server, so removing this line changes
-			// no output; what it saves is the design resolution and the content hash that
-			// viewerLinkMeta computes for a run that asked for no links. Worth knowing before reading
-			// it as the thing that keeps a link honest.
+			// The guard is only an EARLY-OUT that skips the design resolution and content hash for a
+			// run that asked for no links. viewerLinkMeta and TraceURL already yield nothing without
+			// a server, so the refusal lives there.
 			//
-			// IT GUARDS THE RESOLVED SPEC, not a flag variable. #633 replaced --url-base with --server
-			// and left this reading the old variable, so `trace --server <url>` skipped the block
-			// entirely: no link, and no reason either, while the deprecated alias still worked. That is
-			// the shape an early-out turns into when the thing it reads stops being set (agni issue 636).
+			// IT GUARDS THE RESOLVED SPEC, not a flag variable. Reading a flag variable here meant
+			// `trace --server <url>` printed no link and no reason once #633 replaced --url-base with
+			// --server (agni issue 636).
 			if srvSpec.url != "" {
 				meta := viewerLinkMeta(cmd, cmd.Context(), ll, string(uri), srvSpec)
 				if u := rpt.TraceURL(meta, a.String(), b.String(), hops); u != "" {
 					defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
 				}
 			}
-			// An endpoint that names nothing is a failed QUESTION, not an answer about the design,
-			// so it exits non-zero. A no-route is an answer and exits clean: a script asking whether
-			// two pins are joined must be able to tell "they are not" from "you named a pin that
-			// does not exist", which is the confusion issue 518 says must not happen.
+			// An endpoint that names nothing is a failed QUESTION and exits non-zero. A no-route is
+			// an answer and exits clean, so a script can tell "they are not joined" from "you named
+			// a pin that does not exist" (issue 518).
 			if t.Outcome == check.TraceUnresolved && format == "text" {
 				return fmt.Errorf("cannot trace: %s", t.Reason)
 			}
-			// --render draws the answer, and it draws a no-route and an unresolved endpoint too,
-			// which is the point: a picture of the two nets that do NOT join is the thing a reader
-			// was going to go looking for anyway. traceSpecs decides what counts as a subject; the
-			// drawing itself is the shared path every command uses.
+			// --render draws every outcome, a no-route and an unresolved endpoint included.
+			// traceSpecs picks the subjects, and renderSubjects is the drawing path every command
+			// shares.
 			if renderOut != "" {
 				if err := renderSubjects(cmd.ErrOrStderr(), args[0], renderOut, traceSheet(resp.GetTrace()), traceSpecs(t)); err != nil {
 					return err
 				}
 			}
 			if format == "json" {
-				// protojson of the WIRE message, matching how check, diff, validate and params emit
-				// theirs, so a script reading this CLI and a client reading TraceDesign parse one
-				// shape. EmitUnpopulated keeps empty lists and zero fields present, so a no-route is
-				// still a well-formed object rather than fields that appear and vanish per run.
+				// protojson of the WIRE message (C31). EmitUnpopulated keeps empty lists and zero
+				// fields present, so a no-route has the same fields as a route.
 				b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.
 					Marshal(resp.GetTrace())
 				if err != nil {
@@ -160,10 +144,9 @@ func traceCmd() *cobra.Command {
 	return cmd
 }
 
-// The route reads in one colour and the parts crossed in another, so a reader can tell the wire the
-// signal travels on from the part it travels through. The endpoint colour is deliberately the odd
-// one out: it marks what was ASKED rather than what was found, which is what makes a no-route
-// drawing legible.
+// The route and the parts crossed get different colours, so a reader can tell the wire from the part
+// the signal passes through. The endpoint colour marks what was ASKED rather than what was found,
+// which keeps a no-route drawing legible.
 const (
 	traceRouteColor    = "#2563eb"
 	traceCrossColor    = "#e11d48"
@@ -265,17 +248,12 @@ func classNote(class string) string {
 	return " (" + strings.ReplaceAll(class, "_", " ") + ")"
 }
 
-// traceSpecs turns a trace into the entities a drawing should point at: the nets it passed through,
-// the parts it crossed, and the two endpoint pins.
+// traceSpecs turns a trace into the entities a drawing should point at, which are the nets it passed
+// through, the parts it crossed, and the two endpoint pins.
 //
-// It draws the answer whatever the answer was. A route gets its nets and crossings; a no-route gets
-// the two nets that fail to join, which is the picture a reader goes looking for the moment they
-// read the words. An unresolved endpoint gets whichever end DID resolve, because half an answer
-// located is more use than none, and the text beside it already says the other end named nothing.
-//
-// This is the typed half of the render path, and it lives here rather than in subjectrender.go for
-// the reason findingSpecs lives beside the review renderer: deciding what counts as a subject of an
-// answer is a claim about that answer, and it belongs where someone reviewing the answer will read it.
+// A route gets its nets and crossings, a no-route gets the two nets that fail to join, and an
+// unresolved endpoint gets whichever end DID resolve. It sits beside the command rather than in
+// subjectrender.go for the reason findingSpecs sits beside the review renderer.
 func traceSpecs(t check.Trace) []*geom.HighlightSpec {
 	var specs []*geom.HighlightSpec
 	netSpec := func(name, color string) *geom.HighlightSpec {
@@ -295,8 +273,7 @@ func traceSpecs(t check.Trace) []*geom.HighlightSpec {
 			})
 		}
 	default:
-		// Both ends, in the colour that says they are the question rather than the answer. An
-		// endpoint that did not resolve carries no net, so it contributes nothing.
+		// An endpoint that did not resolve carries no net, so it contributes nothing.
 		for _, e := range []check.TraceEnd{t.From, t.To} {
 			if e.Net != "" {
 				specs = append(specs, netSpec(e.Net, traceEndpointColor))
@@ -313,15 +290,12 @@ func traceSpecs(t check.Trace) []*geom.HighlightSpec {
 	return specs
 }
 
-// traceSheet is the sheet a rendered trace should open on: the sheet the FROM endpoint's net is
-// drawn on, else the first net of the route that is drawn anywhere, else "" for the caller's default.
+// traceSheet is the sheet a rendered trace should open on. That is the FROM endpoint's sheet, else
+// the first route net drawn anywhere, else "" for the caller's default. From wins because the reader
+// named that pin first.
 //
-// The server decides where each net lives and this only chooses among what it was told, which is the
-// point: the CLI used to pick the design's first sheet on its own, and one surface deciding where a
-// route lives is what C32 asks for.
-//
-// From rather than to, because the reader named that pin first and a route reads in that direction.
-// One SVG can only show one sheet; the viewer offers every sheet of every net as a badge.
+// The server decides where each net lives and this only chooses among what it returned (C32, agni
+// issue 657). One SVG shows one sheet, while the viewer offers every sheet of every net as a badge.
 func traceSheet(p *webapi.Trace) string {
 	if ids := p.GetFrom().GetSheetIds(); len(ids) > 0 {
 		return ids[0]

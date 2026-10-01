@@ -17,9 +17,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// dirReviewLoader reads its checklist from a real directory, so a test can EDIT the manifest between
-// a create and a get. That is the only way to exercise what the snapshot exists for: with a manifest
-// value alone there is no file to go stale.
+// dirReviewLoader reads its checklist from a real directory, so a test can EDIT the manifest
+// between a create and a get. That is the only way to exercise what the snapshot exists for, since
+// with a manifest value alone there is no file to go stale.
 type dirReviewLoader struct{ dir string }
 
 func (l dirReviewLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
@@ -53,14 +53,14 @@ func dirReviewSvc(t *testing.T, store ReviewStore) (*ReviewService, string) {
 	return NewReviewService(dirReviewLoader{dir: dir}, store, check.DefaultCatalog(), nil, nil, testReviewEnv, "", nil), dir
 }
 
-// TestStoredRunKeepsTheChecklistItScored is the test this whole feature exists to make possible.
+// TestStoredRunKeepsTheChecklistItScored is the test this feature exists to make possible.
 //
-// A run is created against a checklist, and the checklist file is then EDITED: an item is removed and
-// another's title is rewritten. Refetching the stored run must still describe what was actually asked
-// at the time, not what the file says now.
+// A run is created against a checklist, and the checklist file is then EDITED, so an item is
+// removed and another's title is rewritten. Refetching the stored run must still describe what was
+// actually asked at the time, not what the file says now.
 //
 // Before the snapshot, a document recorded only the manifest's NAME, so re-rendering an archived run
-// meant re-reading whatever that name resolves to today. The failure is quiet and total: last
+// meant re-reading whatever that name resolves to today. The failure is quiet and total. Last
 // quarter's review renders against this quarter's checklist, with every outcome intact and the
 // questions swapped underneath it. That is worse than losing the run.
 func TestStoredRunKeepsTheChecklistItScored(t *testing.T) {
@@ -85,7 +85,7 @@ areas:
 		t.Fatalf("CreateReview: %v", err)
 	}
 
-	// The checklist changes after the run: P2 is dropped and P1 is reworded.
+	// The checklist changes after the run. P2 is dropped and P1 is reworded.
 	writeManifest(t, dir, "review.yaml", `
 name: gateway review
 areas:
@@ -118,10 +118,11 @@ areas:
 	}
 }
 
-// TestCreateReviewRecordsProvenance: a stored run carries what a reader needs to trust it later, and
-// each field here is one a consumer would otherwise have to guess. The design hash is the revision
-// identity a later diff joins on; the catalog snapshot is the difference between a clean design and a
-// run that checked nothing; RunConfig.params says whether a datasheet-backed item COULD have resolved.
+// TestCreateReviewRecordsProvenance checks that a stored run carries what a reader needs to trust
+// it later, and each field here is one a consumer would otherwise have to guess. The design hash is
+// the revision identity a later diff joins on; the catalog snapshot is the difference between a
+// clean design and a run that checked nothing; RunConfig.params says whether a datasheet-backed
+// item COULD have resolved.
 func TestCreateReviewRecordsProvenance(t *testing.T) {
 	svc, dir := dirReviewSvc(t, NewMemReviewStore())
 	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
@@ -203,9 +204,10 @@ func TestReviewResourceLifecycle(t *testing.T) {
 	}
 }
 
-// TestListReviewsPaging: a page carries at most page_size, the token resumes AFTER the last item
-// without repeating or skipping it, and the final page reports no token. A token is only emitted when
-// there is genuinely something after it, so a client never follows one into an empty page.
+// TestListReviewsPaging checks that a page carries at most page_size, the token resumes AFTER the
+// last item without repeating or skipping it, and the final page reports no token. A token is only
+// emitted when there is genuinely something after it, so a client never follows one into an empty
+// page.
 func TestListReviewsPaging(t *testing.T) {
 	svc, dir := dirReviewSvc(t, NewMemReviewStore())
 	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
@@ -251,9 +253,9 @@ func TestListReviewsPaging(t *testing.T) {
 	}
 }
 
-// TestReviewResourcesNeedAStore: without a configured store every resource method reports it, and the
-// message names the flag. A create that ran the whole sweep and silently dropped the result would cost
-// the most and leave the least.
+// TestReviewResourcesNeedAStore checks that without a configured store every resource method
+// reports it, and the message names the flag. A create that ran the whole sweep and silently
+// dropped the result would cost the most and leave the least.
 func TestReviewResourcesNeedAStore(t *testing.T) {
 	svc := NewReviewService(dirReviewLoader{dir: t.TempDir()}, nil, check.DefaultCatalog(), nil, nil, testReviewEnv, "", nil)
 	ctx := context.Background()
@@ -290,9 +292,10 @@ func TestReviewResourcesNeedAStore(t *testing.T) {
 	}
 }
 
-// TestParseReviewFilter: the supported filter parses with or without quotes, and anything else is
-// REJECTED. Silently ignoring an unsupported filter is the dangerous case, because a client that
-// believed it had narrowed to its own board would read another board's verdicts as its own.
+// TestParseReviewFilter checks that the supported filter parses with or without quotes, and
+// anything else is REJECTED. Silently ignoring an unsupported filter is the dangerous case, because
+// a client that believed it had narrowed to its own board would read another board's verdicts as
+// its own.
 func TestParseReviewFilter(t *testing.T) {
 	ok := map[string]string{
 		``:                   "",
@@ -317,7 +320,7 @@ func TestParseReviewFilter(t *testing.T) {
 	}
 }
 
-// TestReviewNameRoundTrip: a name survives the id boundary, and a name that could steer a
+// TestReviewNameRoundTrip checks that a name survives the id boundary, and a name that could steer a
 // filesystem-backed store out of its directory is rejected rather than resolved.
 func TestReviewNameRoundTrip(t *testing.T) {
 	if parent, id, ok := SplitReviewName(ReviewName("", "abc")); !ok || id != "abc" || parent != "" {
@@ -347,8 +350,8 @@ func names(list *webapi.ListReviewsResponse) []string {
 	return out
 }
 
-// TestRunsNestUnderTheirProject is what this shape is for: a project's runs list under that project,
-// and a run made against a design in no project is still creatable and still listable.
+// TestRunsNestUnderTheirProject covers what this shape is for. A project's runs list under that
+// project, and a run made against a design in no project is still creatable and still listable.
 //
 // The second half matters as much as the first. A design that belongs to no project is the ORDINARY
 // state of a mounted folder, so "I reviewed a loose file" must not become an error, and its run must
@@ -372,7 +375,7 @@ func TestRunsNestUnderTheirProject(t *testing.T) {
 		t.Errorf("unparented name = %q, want the flat form: a run with no project has no parent", loose)
 	}
 
-	// Narrowed to the project: only its own runs.
+	// Narrowed to the project, only its own runs come back.
 	_, got, _, err := st.List(ctx, "projects/gateway", 0, "", "")
 	if err != nil {
 		t.Fatal(err)
@@ -382,7 +385,7 @@ func TestRunsNestUnderTheirProject(t *testing.T) {
 	}
 
 	// Empty parent lists EVERYTHING, which is what keeps the two name shapes from costing a client an
-	// extra call: a viewer asking "what runs exist" asks once.
+	// extra call. A viewer asking "what runs exist" asks once.
 	_, all, _, err := st.List(ctx, "", 0, "", "")
 	if err != nil {
 		t.Fatal(err)
@@ -402,8 +405,8 @@ func TestRunsNestUnderTheirProject(t *testing.T) {
 	}
 }
 
-// nestDoc is the smallest document a store will accept: the nesting tests care about where a run is
-// filed, not what it found.
+// nestDoc is the smallest document a store will accept, since the nesting tests care about where a
+// run is filed, not what it found.
 func nestDoc(design string) *checkspb.CheckResults {
 	return &checkspb.CheckResults{
 		Meta:   &checkspb.ResultsMeta{ProducerVersion: "test"},

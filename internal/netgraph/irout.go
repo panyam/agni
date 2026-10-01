@@ -7,40 +7,33 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Net fact attributes (ir.Net.attributes keys) emitted and resolved here. They are FACTS
-// (annotations the check layer reads), kept in the open attributes map rather than typed
-// Net fields: C9 admits a typed semantic field only when a second format populates it, and
-// the fact vocabulary is deliberately open (it grows with analysis layers; WS3-004 designs
-// the typed fact-base properly). The constants make producers and consumers typo-safe
-// without closing the schema.
+// Net fact attributes (ir.Net.attributes keys) emitted and resolved here. They are FACTS the check
+// layer reads, kept in the open attributes map rather than typed Net fields because C9 admits a
+// typed field only once a second format populates it (WS3-004 designs the typed fact base). The
+// constants keep producers and consumers typo-safe without closing the schema.
 const (
 	// AttrPowerDriven marks a net asserted as fed (a PWR_FLAG or equivalent directive).
 	AttrPowerDriven = "power_driven"
-	// AttrExternal marks a net that continues into something the read did NOT cover: a
-	// by-name connection mechanism (global label, power symbol) whose other ends may live
-	// in unread files. It is about READ SCOPE, not sheet membership: a net spanning ten
-	// sheets of a completely-read design carries no marking ("which sheets does this net
-	// touch" is derivable topology, not a fact to stamp).
+	// AttrExternal marks a net that continues into something the read did NOT cover, a by-name
+	// connection (global label, power symbol) whose other ends may live in unread files. It is
+	// about READ SCOPE, not sheet membership, so a net spanning ten sheets of a completely-read
+	// design carries no marking.
 	AttrExternal = "external"
 	// AttrGlobal marks a named rail on a completely-read design (AttrExternal, resolved).
 	AttrGlobal = "global"
-	// AttrAliases carries every distinct label a net arrived with, when there is more than
-	// one: "rank:name" entries joined by the US separator (names contain commas and
-	// slashes; \x1f does not occur in EDA names). Rank is the label's Anchor.Rank — for
-	// KiCad, 0 = design-wide (global label / power rail), 1 = sheet-scoped. The naming
-	// pass collapses aliases to one Net.Name; the conflict rules (duplicate labels, rival
-	// rail taps) read this to see what was collapsed. Parse with ParseAliases.
+	// AttrAliases carries every distinct label a net arrived with, when there is more than one,
+	// as "rank:name" entries joined by the US separator (names contain commas and slashes, and
+	// \x1f does not occur in EDA names). Rank is the label's Anchor.Rank, which for KiCad is 0
+	// for design-wide (global label, power rail) and 1 for sheet-scoped. The naming pass
+	// collapses aliases to one Net.Name, and the conflict rules (duplicate labels, rival rail
+	// taps) read this to see what was collapsed. Parse with ParseAliases.
 	AttrAliases = "aliases"
 	// AttrSheets lists the sheet instance ids a net touches, in sheet order, joined by the US
-	// separator (a KiCad Sheetname may contain a comma; \x1f does not occur in EDA names).
-	// This is the one membership fact the solver DOES stamp, and it is a deliberate exception
-	// to AttrExternal's "membership is derivable topology" note (WS9-028): it is NOT cheaply
-	// derivable downstream — a wireless single-pin net on a sub-sheet has no wire geometry to
-	// join, so the finding-panel badge (which sheet does this net's violation live on?) has no
-	// other source. Only a multi-sheet read populates it (the hierarchy walk knows each
-	// connection point's sheet band); a single-sheet design carries no marking, so the badge
-	// layer, which hides badges below two sheets, sees the same "nothing to stamp" as before.
-	// Parse with ParseSheets.
+	// separator (a KiCad Sheetname may contain a comma). It is the one membership fact the
+	// solver stamps (WS9-028), because a wireless single-pin net on a sub-sheet has no wire
+	// geometry to join, so the finding-panel sheet badge has no other source. Only a
+	// multi-sheet read populates it, from the hierarchy walk's sheet bands. Parse with
+	// ParseSheets.
 	AttrSheets = "sheets"
 )
 
@@ -53,7 +46,7 @@ const (
 )
 
 // ParseSheets decodes an AttrSheets value into its ordered sheet ids. Empty or absent decodes
-// to nil (a single-sheet design, or any non-hierarchical read, carries no attribute).
+// to nil, as for any single-sheet or non-hierarchical read.
 func ParseSheets(v string) []string {
 	if v == "" {
 		return nil
@@ -61,9 +54,8 @@ func ParseSheets(v string) []string {
 	return strings.Split(v, sheetSep)
 }
 
-// EncodeSheets joins sheet ids into an AttrSheets value; empty in, empty out (the caller then
-// stamps nothing). Exported so the hierarchy reader, which owns the band->sheet decode, writes
-// the same encoding ParseSheets reads.
+// EncodeSheets joins sheet ids into an AttrSheets value, empty for none (the caller then stamps
+// nothing). The hierarchy reader uses it so it writes the encoding ParseSheets reads.
 func EncodeSheets(ids []string) string {
 	return strings.Join(ids, sheetSep)
 }
@@ -97,17 +89,10 @@ func encodeAliases(as []Alias) string {
 	return strings.Join(parts, aliasSep)
 }
 
-// IRNets maps assembled nets onto the IR wire form, the one place a solver Net becomes an
-// ir.Net (previously each reader carried its own copy, and two of the three dropped the
-// solver's flags). Driven/External surface as the power_driven / external attributes the
-// check rules read; a reader whose anchors never set those flags emits no attributes, same
-// as before. Nets with no connections are kept (a labeled wire whose pins did not resolve
-// still names a net); a reader whose source tool omits pinless nets filters before calling.
 // StampNetIDs fills ir.Net.id (WS9) for every net that lacks one, hashing its connection set the
-// same way the solver does (hashPairs), so a reader that builds ir.Net DIRECTLY — EDIF declares its
-// nets, it does not run the geometry solver — gets the same format-neutral per-instance identity a
-// netgraph-based reader gets from IRNets. Idempotent: a net whose id is already set (a netgraph
-// reader) is left alone, and re-running produces the same ids. A pinless net keeps its empty id.
+// same way the solver does (hashPairs). A reader that builds ir.Net directly, as EDIF does, gets
+// the same per-instance identity a netgraph-based reader gets from IRNets. It is idempotent and
+// leaves a set id alone. A pinless net keeps its empty id.
 func StampNetIDs(d *ir.Design) {
 	for _, n := range d.GetNets() {
 		if n.GetId() != "" {
@@ -121,6 +106,11 @@ func StampNetIDs(d *ir.Design) {
 	}
 }
 
+// IRNets maps assembled nets onto the IR wire form, the one place a solver Net becomes an ir.Net.
+// Driven, External and multiple Aliases surface as the power_driven, external and aliases
+// attributes the check rules read, and a net with none of them carries no attributes. Nets with no
+// connections are kept, since a labeled wire whose pins did not resolve still names a net. A reader
+// whose source tool omits pinless nets filters before calling.
 func IRNets(nets []Net, src string) []*ir.Net {
 	var out []*ir.Net
 	for _, n := range nets {
@@ -149,16 +139,12 @@ func IRNets(nets []Net, src string) []*ir.Net {
 	return out
 }
 
-// ResolveExternal downgrades external to global on every net of a completely-read
-// design (WS1-017). external, emitted above from the solver's External flag, means
-// "this net continues into something we did NOT read"; when a reader knows its read
-// covered the whole design (e.g. a KiCad .kicad_pro whose root has no unread sub-sheets),
-// the marking is stale and would guard rules (decoupling-present, power-input-not-driven,
-// floating-input) off exactly the rails they exist for. The global attribute keeps "is a
-// named rail" queryable. The pass is format-neutral and lives here, beside the emission,
-// so the attribute's whole lifecycle is one file; only the completeness JUDGMENT stays in
-// each reader, because only the reader knows what its source references versus what was
-// actually opened.
+// ResolveExternal downgrades external to global on every net of a completely-read design
+// (WS1-017). Once a read covered the whole design (a KiCad .kicad_pro whose root has no unread
+// sub-sheets), external is stale and would guard rules such as decoupling-present off the rails
+// they exist for, while global keeps "is a named rail" queryable. Only the completeness judgment
+// stays in each reader, since only the reader knows what its source references versus what it
+// opened. See docsite/content/architecture/net-solving.md#the-hierarchy-walk.
 func ResolveExternal(d *ir.Design) {
 	for _, n := range d.Nets {
 		if n.Attributes[AttrExternal] == "true" {

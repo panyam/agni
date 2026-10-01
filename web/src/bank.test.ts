@@ -244,7 +244,7 @@ describe("bank pin authoring", () => {
   // The editor's own guard, mirroring the structural half of param.Validate so the author sees a
   // problem before saving rather than as a rejected write.
   
-  // The two-NC-pins case, which is the real TXB0104 shape: a part prints one name on several
+  // The two-NC-pins case, which is the real TXB0104 shape. A part prints one name on several
   // terminals, and those terminals need distinct ids. Deriving the id from the name alone walks the
   // author into a duplicate that blocks the save, on exactly the part this contract exists for.
   it("derivePinId suffixes rather than colliding when a name repeats", () => {
@@ -279,8 +279,8 @@ describe("bank relation authoring", () => {
     ...over,
   });
 
-  // Same argument as newPin: param.Validate requires provenance on a relation, so authoring one has
-  // to stamp the region it was read in or the draft can never be seeded.
+  // Same argument as newPin, since param.Validate requires provenance on a relation, so authoring
+  // one has to stamp the region it was read in or the draft can never be seeded.
   it("newRelation stamps region provenance and the only admitted kind", () => {
     const r = newRelation(relFields(), region, 4, "LM1117");
     expect(r.subjectPinRef).toBe("vcca");
@@ -334,7 +334,7 @@ describe("verification on hand transcription", () => {
     expect(spec.docs[0].contentHash).toBe("sha256:relQ");
   });
 
-  // The whole point: confidence 1.0 already claimed a human checked this, but could not say WHICH
+  // Confidence 1.0 already claimed a human checked this, but could not say WHICH
   // revision, so the claim never expired.
   it("a hand-transcribed parameter records who checked it and against which revision", () => {
     const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q - REVISED JANUARY 2023", "sha256:relQ");
@@ -349,7 +349,7 @@ describe("verification on hand transcription", () => {
   });
 
   // A confirmation nothing can invalidate is the failure the record exists to prevent, so it is not
-  // written at all. The value still saves; it is just honestly unverified.
+  // written at all. The value still saves, unverified.
   it("refuses to verify against a document whose revision is not recorded", () => {
     const spec = emptySpec("x/y.pdf", "y", "");
     expect(handVerification(spec.docs[0], "alice", "2026-08-14")).toBeUndefined();

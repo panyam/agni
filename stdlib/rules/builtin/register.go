@@ -1,8 +1,9 @@
-// Package builtin is the standard EE rule catalog: one file per rule (rule_*.go), each a
-// check.Rule value carrying its documentation and an Eval, plus the declarative-twin Specs that
-// the parity tests hold to those Evals. It registers through the same public seam an extension uses,
-// so the core engine (package check) owns no rules. Blank-importing this package installs the
-// catalog as the anonymous built-in source; a program that omits the import runs with no built-ins.
+// Package builtin is the standard EE rule catalog. Each rule is a check.Rule value in a rule_*.go
+// file (a file may hold a few related rules), carrying its documentation and an Eval, plus the
+// declarative-twin Specs that the parity tests hold to those Evals. It registers through the same
+// public hook an extension uses, so the core engine (package check) owns no rules. Blank-importing
+// this package installs the catalog as the anonymous built-in source, and a program that omits the
+// import runs with no built-ins.
 package builtin
 
 import (
@@ -16,9 +17,9 @@ func init() {
 	check.RegisterBuiltins(rules, specs)
 }
 
-// rules is the built-in rule set, in evaluation order. This is the single registry: adding a
-// rule means adding one rule_*.go file and one line here. check.Run evaluates these; the catalog
-// groups them for display.
+// rules is the built-in rule set, in evaluation order, and the single registry. Adding a rule
+// means writing it in a rule_*.go file and adding one line here. check.Run evaluates these, and the
+// catalog groups them for display.
 var rules = []*check.Rule{
 	singlePinNet,
 	unconnectedComponent,
@@ -76,10 +77,10 @@ var rules = []*check.Rule{
 // evaluates the Eval, not the twin, and the twin is held to it by TestSpecParity (identical
 // findings on every fixture) and TestSpecMetadata (the rule's hand-written Reads/Primitives equal
 // the spec's derived ones). Flipping a rule to spec-canonical replaces its Eval with its twin's,
-// gated by the parity test, and drops it from this map: output-output-conflict was the first flip
-// (rule_pin_matrix.go), which is why it is absent here. Spec-only rules never appear either,
-// because their Eval IS the interpreter: the matrix rows, plus new rules on proven vocabulary per
-// the twin discipline in docsite/content/build/check-rule.md. Benchmarks comparing the two
+// gated by the parity test, and drops it from this map. output-output-conflict was the first flip
+// (rule_pin_matrix.go), so it is absent here. Spec-only rules never appear either, because their
+// Eval IS the interpreter. Those are the matrix rows, plus new rules on proven vocabulary per the
+// twin discipline in docsite/content/build/check-rule.md. Benchmarks comparing the two
 // evaluation paths live in spec_bench_test.go and feed the WS3-004 fact-store decision.
 var specs = map[string]*check.Spec{
 	"single-pin-net":         singlePinNetSpec,

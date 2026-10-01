@@ -3,10 +3,9 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import type { OverviewState, OverviewView } from "./sheetoverview.js";
 
-// SheetOverviewPanel is the birds-eye sheet list (WS9-025): one tile per sheet with its
-// violation count — red-badged when nonzero, an explicit "clean" zero otherwise — and the
-// shown sheet marked active. Clicking a tile navigates (the WS9-024 showSheet path).
-// Name-only tiles for now; minimaps are the ticket's noted later refinement.
+// SheetOverviewPanel is the birds-eye sheet list (WS9-025), one tile per sheet with its violation
+// count and the shown sheet marked active. Clicking a tile navigates (the WS9-024 showSheet path).
+// Tiles are name-only, and minimaps are a noted later refinement of WS9-025.
 function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (sheetId: string) => void }) {
   return (
     <Show when={props.state().tiles.length > 0} fallback={<div class="findings-empty">No design open.</div>}>
@@ -26,9 +25,8 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
                 >
                   {/*
                     Two counts, because an inconclusive result is not a defect (agni issue 350). The
-                    zero only goes green when there is nothing unresolved either: a sheet whose three
-                    findings are all undecided is not clean, it is unexamined, and the green badge
-                    was the tile saying otherwise.
+                    zero goes green only when nothing is unresolved either, since a sheet whose
+                    findings are all undecided is unexamined rather than clean.
                   */}
                   <span class="sheet-tile-counts">
                     <span class={`sheet-tile-count${t.count > 0 ? " firing" : t.unresolved > 0 ? " open" : " clean"}`}>{t.count}</span>
@@ -48,8 +46,8 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
   );
 }
 
-// sheetOverviewPanelIsland mounts the panel and returns its command-down view; onSelect is
-// the intent up (show this sheet), same island shape as controlBarIsland.
+// sheetOverviewPanelIsland mounts the panel and returns its command-down view. Same island shape
+// as controlBarIsland (docsite/content/architecture/web-client.md#wiring-a-new-panel).
 export function sheetOverviewPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

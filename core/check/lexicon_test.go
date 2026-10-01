@@ -17,7 +17,7 @@ func projectLexicon(t *testing.T, railPattern string) *classify.Lexicon {
 	return &classify.Lexicon{Role: rv}
 }
 
-// TestModelNameProjectionsUseItsLexicon covers the residual name matches — the ones with no net to
+// TestModelNameProjectionsUseItsLexicon covers the residual name matches, the ones with no net to
 // read a stamped role from (the spec name FFIs over a literal, pin-role derivation). A model built
 // WithLexicon answers with the project's conventions; one built without it keeps the built-ins, and
 // neither disturbs the other.
@@ -40,7 +40,7 @@ func TestModelNameProjectionsUseItsLexicon(t *testing.T) {
 	}
 }
 
-// TestIsGroundNetPrefersStampedRole pins the trust rule the net-taking predicates rely on: the role
+// TestIsGroundNetPrefersStampedRole pins the trust rule the net-taking predicates rely on. The role
 // set stamped at ingestion wins, and this model's lexicon is consulted only for a net that carries
 // none (an IR built without the loader). This is why converting a rule from a bare name match to
 // IsGroundNet is behavior-preserving.
@@ -64,7 +64,7 @@ func TestIsGroundNetPrefersStampedRole(t *testing.T) {
 	}
 }
 
-// TestIsRailNetIsNarrowerThanIsPowerRail states the distinction deliberately: IsPowerRail also
+// TestIsRailNetIsNarrowerThanIsPowerRail states the distinction. IsPowerRail also
 // answers true for a driven-or-global net and for grounds, because it serves the "distributed by
 // power-symbol taps, nothing to stroke" locate question. A rule asking whether a net is a rail must
 // not inherit that.

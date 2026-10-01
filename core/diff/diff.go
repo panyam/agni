@@ -1,7 +1,7 @@
 // Package diff computes a semantic diff between two netlist IR Designs.
-// It operates purely on the IR (CONSTRAINTS C1): no I/O, no platform calls, so the same
+// It operates purely on the IR (CONSTRAINTS C1), with no I/O and no platform calls, so the same
 // diff runs over any format that reads into the IR. Design and rationale are in
-// docs/18-semantic-diff.md.
+// docsite/content/architecture/semantic-diff.md.
 package diff
 
 import (
@@ -29,10 +29,9 @@ const (
 	NetDeleted NetChangeKind = "deleted" // present only in the old design
 	NetRenamed NetChangeKind = "renamed" // same connectivity, different name
 	// NetRenamedApprox is a net the near-match pass believes was renamed while ALSO changing, which
-	// the exact pass cannot recover because its signature no longer matches. It is deliberately a
-	// distinct kind rather than a NetRenamed with a caveat: an exact rename is a fact about the two
-	// revisions, and this is the engine's best assignment among candidates. A consumer that must not
-	// act on a guess can filter on the kind, and Approx carries the evidence for one that will.
+	// the exact pass cannot recover because its signature no longer matches. It is a distinct kind
+	// because it is the engine's best assignment among candidates rather than a fact, so a consumer
+	// that must not act on a guess can filter on it. Approx carries the evidence.
 	NetRenamedApprox NetChangeKind = "renamed-approx"
 	NetHard          NetChangeKind = "hard" // connectivity (pin membership) changed
 	NetSoft          NetChangeKind = "soft" // attribute-only change; connectivity identical
@@ -54,13 +53,10 @@ type NetChange struct {
 	Approx *RenameEvidence
 }
 
-// RenameEvidence is why the near-match pass paired one deleted net with one added net. It is set
-// only on NetRenamedApprox.
-//
-// It exists so a reader can DISAGREE. The pass makes a judgement call that no threshold can make
-// correctly in every case, so a finding that showed only its conclusion would have to be taken on
-// trust, and the added and removed endpoints beside it are usually enough to settle the question by
-// eye. The significant figures are the ones insensitive to probe churn.
+// RenameEvidence is why the near-match pass paired one deleted net with one added net, so a reader
+// can DISAGREE with the pairing. It is set only on NetRenamedApprox. The significant figures are
+// the ones insensitive to probe churn; see
+// docsite/content/architecture/semantic-diff.md#near-matches-off-by-default.
 type RenameEvidence struct {
 	OldCoverage            float64 // fraction of the old net's endpoints that survived
 	OldCoverageSignificant float64 // the same, ignoring insignificant endpoint classes
@@ -83,11 +79,9 @@ type Report struct {
 
 // Designs diffs a (old) against b (new).
 //
-// opts is variadic so that every existing caller keeps the exact-signature behaviour it already
-// had. Passing nothing, or passing a RenameOptions with Enabled false, reproduces the previous
-// output byte for byte; the near-match pass is opt-in because a diff that guesses is a different
-// tool from a diff that does not, and a gate reading the output should say which one it wants.
-// Later options win, so a caller may layer a default and an override.
+// Passing no opts, or a RenameOptions with Enabled false, runs the exact passes alone. The
+// near-match pass is opt-in because it guesses, and a gate reading the output should say whether
+// it wants that. Later options win, so a caller may layer a default and an override.
 func Designs(a, b *ir.Design, opts ...RenameOptions) *Report {
 	var ro RenameOptions
 	for _, o := range opts {
@@ -130,9 +124,9 @@ func diffComponents(a, b *ir.Design, r *Report) {
 // componentFieldChanges returns the per-field changes (part references, value, and the
 // fabrication/footprint attributes captured in WS1-037) for a component present in both
 // designs. Because one ref_des may have several sections, the part reference is compared as
-// the SET of "library/part" over all sections, not a single value; this avoids false diffs
-// from section ordering (WS2-001 learning). dnp is compared so a populated-vs-not flip is
-// visible in a diff (a DNP part is not fabricated, so flipping it changes the built board).
+// the SET of "library/part" over all sections, so section ordering causes no false diff
+// (WS2-001). dnp is compared because a DNP part is not fabricated, so flipping it changes the
+// built board.
 func componentFieldChanges(ref string, a, b *ir.Component) []ComponentChange {
 	var out []ComponentChange
 	add := func(field, o, n string) {
@@ -227,9 +221,8 @@ func diffNets(a, b *ir.Design, r *Report, ro RenameOptions) {
 		})
 		renamedDel[dName], renamedAdd[aName] = true, true
 	}
-	// Near-match pass, over ONLY what the exact pass left. Running it after keeps the passes ordered
-	// so a net renamed with no connectivity change always comes out as an exact NetRenamed, never as
-	// an approximate one.
+	// Near-match pass, over ONLY what the exact pass left, so a net renamed with no connectivity
+	// change always comes out as an exact NetRenamed.
 	var leftDel, leftAdd []string
 	for _, name := range deleted {
 		if !renamedDel[name] {
@@ -279,8 +272,8 @@ func uniqueBySig(names []string, idx map[string]*netInfo) map[string]string {
 	return out
 }
 
-// indexComponents maps ref_des -> component for one design. Components are already
-// grouped by ref_des in the IR, so this no longer loses sections to last-wins.
+// indexComponents maps ref_des -> component for one design. Components are grouped by ref_des
+// in the IR, so one entry carries every section.
 func indexComponents(d *ir.Design) map[string]*ir.Component {
 	m := make(map[string]*ir.Component, len(d.Components))
 	for _, c := range d.Components {
@@ -357,8 +350,7 @@ func setDiff(a, b map[string]bool) []string {
 }
 
 // Render returns a human-readable report. limit caps how many items are listed per
-// section; a non-positive limit lists everything. The caller (e.g. the CLI) chooses
-// the limit, so the diff package holds no display policy of its own.
+// section; a non-positive limit lists everything. The caller (e.g. the CLI) chooses the limit.
 func (r *Report) Render(limit int) string {
 	var counts [6]int // indexed by kind, see below
 	kindIdx := map[NetChangeKind]int{NetNew: 0, NetDeleted: 1, NetRenamed: 2, NetRenamedApprox: 3, NetHard: 4, NetSoft: 5}
@@ -372,8 +364,7 @@ func (r *Report) Render(limit int) string {
 	fmt.Fprintf(&b, "Nets:       new %d  deleted %d  renamed %d  hard %d  soft %d\n",
 		counts[0], counts[1], counts[2], counts[4], counts[5])
 	// Reported on its own line, and only when the pass ran and found something, so the summary of a
-	// diff that did not guess is unchanged. Folding the count into "renamed" would let a guess be
-	// read as a recovered fact, which is the one thing the separate kind exists to prevent.
+	// diff that did not guess is unchanged. Folding it into "renamed" would read a guess as a fact.
 	if counts[3] > 0 {
 		fmt.Fprintf(&b, "            renamed-approx %d (near matches, review the evidence)\n", counts[3])
 	}
@@ -393,9 +384,8 @@ func (r *Report) Render(limit int) string {
 			case NetRenamed:
 				fmt.Fprintf(&b, "  [renamed] %s -> %s\n", nc.OldName, nc.Name)
 			case NetRenamedApprox:
-				// Counts rather than percentages. A reader deciding whether to believe the pairing wants
-				// the numerator and the denominator, and "3/3 device endpoints" is falsifiable against the
-				// design where "100%" is only reassuring.
+				// Counts rather than percentages, because "3/3 device endpoints" can be checked against
+				// the design and "100%" cannot.
 				fmt.Fprintf(&b, "  [renamed?] %s -> %s: +%v -%v (kept %d/%d device endpoints, %d/%d overall)\n",
 					nc.OldName, nc.Name, nc.Added, nc.Removed,
 					nc.Approx.OverlapSignificant, nc.Approx.OldSignificant,

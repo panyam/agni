@@ -30,7 +30,7 @@ func scopeDesign() *ir.Design {
 
 // THE PROPERTY Scope exists for. An out-of-scope element must produce NO verdict, because a pass
 // there would claim the rule checked something it was never about. This is the difference between
-// Scope and Where in one assertion: both are predicates, and only one of them can make a subject
+// Scope and Where in one assertion. Both are predicates, and only one of them can make a subject
 // disappear.
 func TestScopeExcludesRatherThanPasses(t *testing.T) {
 	s := &Spec{

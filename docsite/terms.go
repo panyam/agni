@@ -14,41 +14,21 @@ import (
 )
 
 // Explainable inlines a glossary term as a hoverable link, so a page can USE a term without
-// re-teaching it.
+// re-teaching it (#446). The gloss lives in ONE file, `content/reference/terms/<id>.md`:
 //
-// The problem it solves is repetition with a short half-life. A chapter explains what a differential
-// pair is, and three pages later the next chapter has to explain it again, because a reader arriving
-// there does not carry the first explanation with them. Writing the gloss every time is what makes
-// the prose long; writing it once and linking is what makes a reader bounce out of the page.
+//	CAN needs a {{ explainable "differential-pair" }} for anything leaving the board.
 //
-// So the gloss lives in ONE place, `content/reference/terms/<id>.md`, and every use site is a tag:
-//
-//	CAN needs a {{ explainable "differential-pair" }}, {{ explainable "termination" }}, and a
-//	{{ explainable "transceiver" }} for anything leaving the board.
-//
-// The term files are REAL pages rather than a data blob, which is what makes the fallbacks work. The
-// tag renders an ordinary anchor carrying the one-line summary in `title`, so with no JavaScript a
-// reader still gets the summary on hover and a click still lands on the full page. terms.js upgrades
-// that to an inline popover carrying the whole term page, diagram included. A term is therefore
-// deep-linkable, indexed by pagefind, and has somewhere for a diagram to live at full size, none of
-// which a JSON glossary would have given.
-//
-// The convention that goes with it: a `learn/` chapter still teaches a term in full the first time it
-// introduces it, and every later mention anywhere in the docsite is a tag. The course keeps its
-// teaching arc and the repetition goes.
-//
-// Adding a term is ONE file plus one line in the glossary index. It needs no nav wiring, because
-// `nav_test.go`'s reachability check reads files directly under a section and skips subdirectories,
-// the same reason the generated rule and relation catalogs need none. `terms_test.go` enforces the
-// rest.
+// The tag renders an ordinary anchor with the one-line summary in `title`, so with no JavaScript a
+// hover still shows the summary and a click lands on the term page; terms.js upgrades it to a popover
+// carrying the whole page. An optional label overrides the term's own. Conventions and how to add a
+// term are in docsite/README.md#glossary-terms, and `terms_test.go` enforces them.
 func Explainable(id string, label ...string) string {
 	return renderTerm(id, label, false)
 }
 
 // ExplainableCap is Explainable with the label's first letter upper-cased, for a term that opens a
-// sentence. It is a separate function rather than a heuristic because no rule can tell "the sentence
-// started" from "this term is a proper noun": a term that is ALWAYS capitalised (EDIF, ERC) sets its
-// `label` that way and both functions then agree, with nothing to detect.
+// sentence. A separate function rather than a heuristic, because nothing can detect a sentence start.
+// A term that is ALWAYS capitalised (EDIF, ERC) sets its `label` that way instead.
 func ExplainableCap(id string) string {
 	return renderTerm(id, nil, true)
 }
@@ -142,12 +122,8 @@ func TermURL(id string) string {
 	return PathPrefix + "/reference/terms/" + id + "/"
 }
 
-// renderTerm builds the inline anchor.
-//
-// A missing term renders LOUDLY rather than silently degrading to plain text, for the same reason
-// AgniRun renders its own failures: a tag that quietly becomes ordinary prose is indistinguishable
-// from prose someone wrote, so the typo survives every review. terms_test.go fails the build on it,
-// and this is what a preview shows in the meantime.
+// renderTerm builds the inline anchor. A missing term renders LOUDLY rather than as plain text, which
+// would read as ordinary prose and hide the typo. terms_test.go fails the build on it.
 func renderTerm(id string, label []string, capitalize bool) string {
 	terms, err := LoadTerms()
 	if err != nil {
@@ -172,8 +148,8 @@ func renderTerm(id string, label []string, capitalize bool) string {
 		html.EscapeString(text) + `</a>`
 }
 
-// upperFirst upper-cases the first rune, leaving the rest alone so an embedded acronym survives
-// ("i2c bus" must not become "I2c bus", so a term like that declares its own label).
+// upperFirst upper-cases the first rune and leaves the rest alone. It cannot fix "i2c bus", so a
+// term like that declares its own label.
 func upperFirst(s string) string {
 	if s == "" {
 		return s

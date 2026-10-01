@@ -115,3 +115,61 @@ class ListRelationsResponse(_message.Message):
     entity_queries: _containers.RepeatedCompositeFieldContainer[EntityQuery]
     search_query: SearchQuery
     def __init__(self, relations: _Optional[_Iterable[_Union[RelationInfo, _Mapping]]] = ..., examples: _Optional[_Iterable[_Union[ExampleQuery, _Mapping]]] = ..., entity_queries: _Optional[_Iterable[_Union[EntityQuery, _Mapping]]] = ..., search_query: _Optional[_Union[SearchQuery, _Mapping]] = ...) -> None: ...
+
+class QuerySet(_message.Message):
+    __slots__ = ("title", "preamble", "queries")
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    PREAMBLE_FIELD_NUMBER: _ClassVar[int]
+    QUERIES_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    preamble: str
+    queries: _containers.RepeatedCompositeFieldContainer[NamedQuery]
+    def __init__(self, title: _Optional[str] = ..., preamble: _Optional[str] = ..., queries: _Optional[_Iterable[_Union[NamedQuery, _Mapping]]] = ...) -> None: ...
+
+class NamedQuery(_message.Message):
+    __slots__ = ("name", "query", "description")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    query: str
+    description: str
+    def __init__(self, name: _Optional[str] = ..., query: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
+
+class RunQueriesRequest(_message.Message):
+    __slots__ = ("set", "uri", "overlay", "board_uri", "as_named")
+    SET_FIELD_NUMBER: _ClassVar[int]
+    URI_FIELD_NUMBER: _ClassVar[int]
+    OVERLAY_FIELD_NUMBER: _ClassVar[int]
+    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
+    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    set: QuerySet
+    uri: str
+    overlay: _checks_pb2_1.OverlayConfig
+    board_uri: str
+    as_named: bool
+    def __init__(self, set: _Optional[_Union[QuerySet, _Mapping]] = ..., uri: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+
+class RunQueriesResponse(_message.Message):
+    __slots__ = ("title", "preamble", "source", "results")
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    PREAMBLE_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    RESULTS_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    preamble: str
+    source: str
+    results: _containers.RepeatedCompositeFieldContainer[NamedQueryResult]
+    def __init__(self, title: _Optional[str] = ..., preamble: _Optional[str] = ..., source: _Optional[str] = ..., results: _Optional[_Iterable[_Union[NamedQueryResult, _Mapping]]] = ...) -> None: ...
+
+class NamedQueryResult(_message.Message):
+    __slots__ = ("name", "description", "result", "error")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    RESULT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    description: str
+    result: RunQueryResponse
+    error: str
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., result: _Optional[_Union[RunQueryResponse, _Mapping]] = ..., error: _Optional[str] = ...) -> None: ...

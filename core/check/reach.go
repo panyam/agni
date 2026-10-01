@@ -5,9 +5,9 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// passClass reports a component class the walk may cross terminal-to-terminal: the
-// series pass elements. Capacitors are deliberately absent (a series cap is a DC block,
-// not a pass), as are diodes (polarity, not a wire) and everything active.
+// passClass reports a component class the walk may cross terminal to terminal, which is the
+// series pass elements. Capacitors are absent because a series cap is a DC block, as are diodes
+// (polarity) and everything active.
 func passClass(c ComponentClass) bool {
 	switch c {
 	case ClassResistor, ClassInductor, ClassFerrite, ClassFuse:
@@ -16,55 +16,36 @@ func passClass(c ComponentClass) bool {
 	return false
 }
 
-// maxWalkFan bounds the fan-out of a net the walk may cross INTO: a series path node
-// carries a handful of members (fuse, bead, clamp, a cap or two, the load); a rail or
-// bus carries dozens. The degree guard is what keeps a name-only rail (an EDIF "+5V"
-// with no attributes) from turning a pull-up into a doorway to the whole design.
+// maxWalkFan bounds the fan-out of a net the walk may cross INTO. A series node carries a
+// handful of members and a rail or bus carries dozens, so without this guard a name-only rail (an
+// EDIF "+5V" with no attributes) turns a pull-up into a doorway to the whole design.
 const maxWalkFan = 16
 
-// ProtectionReachHops is the radius every protection guard asks at: a clamp, fuse or power pin
-// counts only within two series crossings of the net in question.
-//
-// The number is ELECTRICAL, not a search budget. A discharge arrives at a connector pin as a fast,
-// high-energy transient, and every series element between the pin and the clamp is impedance the
-// surge pushes through before the clamp conducts, so the pin's voltage spikes first. A TVS six
-// resistors away protects what is downstream of itself. It does not protect the pin.
-//
-// It is deliberately much smaller than the query layer's topology-search radius (query.reachHops).
-// Those two answer different questions: "is a clamp electrically adjacent to this pin" and "what is
-// connected to what through passives". Widening this one would credit distant clamps and turn real
-// unprotected pins into clean passes, which is the silent direction. Named here rather than passed
-// per caller because all four guards use it for the identical reason, and per-caller values would
-// suggest they are independently tunable.
+// ProtectionReachHops is the radius every protection guard asks at, so a clamp, fuse or power pin
+// counts only within two series crossings of the net. The number is ELECTRICAL (series impedance
+// before the clamp conducts), not a search budget, so it is much smaller than query.reachHops, which
+// answers a topology question. Widening it credits distant clamps and turns unprotected pins into
+// silent passes. See docsite/content/architecture/net-solving.md#how-far-a-walk-crosses-series-parts.
 const ProtectionReachHops = 2
 
-// SupplyPathReachHops is the radius a supply-compatibility question asks at (WS3-028): a regulator
-// and the part it feeds are usually on one net, but a filter bead or a series resistor between them
-// is ordinary and must not hide the connection. One crossing covers that and stops well short of
-// treating the whole rail tree as one node.
-//
-// Smaller than ProtectionReachHops deliberately, and for the opposite reason. A protection question
-// tolerates distance badly because the surge degrades along the path; a supply question tolerates it
-// badly because voltage does NOT degrade — cross too many elements and every part on the board looks
-// connected to every regulator, so the check would start reporting pairs that share no supply path.
+// SupplyPathReachHops is the radius a supply-compatibility question asks at (WS3-028). One crossing
+// lets a filter bead or series resistor between a regulator and its load through. Wider is wrong
+// because voltage does NOT degrade along the path, so every part would look fed by every regulator.
+// See docsite/content/architecture/net-solving.md#how-far-a-walk-crosses-series-parts.
 const SupplyPathReachHops = 1
 
 // PowerPathReachHops is the radius the power-entry walk asks at (UnprotectedPowerReach), one hop
-// wider than ProtectionReachHops. A power entry path legitimately crosses more series elements than
-// a signal clamp does: connector, then a fuse, then a bead, then the regulator's input node. Asking
-// at the signal radius would stop short of the regulator and read a genuinely unprotected path as
-// having nothing to protect.
+// wider than ProtectionReachHops. A power entry crosses connector, fuse and bead before the
+// regulator's input node, and the signal radius would stop short of the regulator and read an
+// unprotected path as having nothing to protect.
 const PowerPathReachHops = 3
 
-// IsBusLike reports a shared-DISTRIBUTION net — one the series-reach walk must not cross INTO,
-// because it is not a point-to-point series path but a plane/rail/wide fan-out that would turn a
-// pull-up into a doorway to the whole design. It is BUS evidence, three ways: a ground name (a
-// plane, never a series path), the global fact (a design-wide by-name rail), and rail-scale fan-out
-// (> maxWalkFan). Deliberately NOT bus-like: rail-looking NAMES (power-path nodes are legitimately
-// named VBUS/5V_PROT and are exactly what protection rules walk through) and the power_driven fact
-// (a PWR_FLAG marks the power ENTRY nets themselves — treating them as stops would blind the walk on
-// its primary use case). WS3-080 named this (was the inline walkStop) so the reach walk and the
-// net.bus_like query relation share ONE definition; the walk's start net is never treated as a stop.
+// IsBusLike reports a shared-DISTRIBUTION net the series-reach walk must not cross INTO. It is a
+// ground, a net marked global, or one with more than maxWalkFan connections. A rail-looking NAME is
+// NOT bus-like, since protection rules walk through nodes like VBUS and 5V_PROT, and neither is the
+// power_driven fact, since a PWR_FLAG marks the power entry nets the walk exists to reach. The reach
+// walk and the net.bus_like relation share this ONE definition (WS3-080), and the walk's start net
+// is never treated as a stop.
 func IsBusLike(m Model, n *ir.Net) bool {
 	a := n.GetAttributes()
 	return a[netgraph.AttrGlobal] == "true" ||
@@ -77,22 +58,21 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 	return m.walk(start, hops, false)
 }
 
-// ReachToTerminus is Reach with one difference: a bus-like net is admitted as a DESTINATION and is
-// still refused as a transit node. The walk lands on a rail, records how it got there, and does not
+// ReachToTerminus is Reach except that a bus-like net is admitted as a DESTINATION while still
+// refused as a transit node. The walk lands on a rail, records how it got there, and does not
 // continue through it.
 //
-// It exists because a net may legitimately be an endpoint of a question whose interior it must never
-// be. Reach excludes a bus-like net from the result set entirely (not merely from the frontier), so
-// a walk cannot arrive at the thing a pull-up terminates on or at a device pin that sits on a rail,
-// and PullUpPathToRail carries its own BFS for exactly that reason. The distinction is a property of
-// the POSITION in the path rather than of the net, which is why it cannot be expressed by filtering
-// the node set once (agni issue 374).
+// Reach excludes a bus-like net from the result set entirely, not merely from the frontier, so it
+// cannot arrive at the rail a pull-up terminates on (PullUpPathToRail carries its own BFS for that
+// reason). Use this variant when the question's endpoint may be a rail. Endpoint versus transit is
+// a property of the POSITION in the path, so filtering the node set once cannot express it (agni
+// issue 374).
 func (m *irModel) ReachToTerminus(start *ir.Net, hops int) Reach {
 	return m.walk(start, hops, true)
 }
 
-// walk is the bounded BFS both reach variants share. admitTerminus decides what happens at a
-// bus-like net: skip it entirely, or record it and refuse to expand it.
+// walk is the bounded BFS both reach variants share. admitTerminus decides whether a bus-like
+// net is skipped entirely or recorded and never expanded.
 func (m *irModel) walk(start *ir.Net, hops int, admitTerminus bool) Reach {
 	r := Reach{Crossed: map[string]bool{}, Parent: map[string]ReachStep{}, Depth: map[string]int{}}
 	if start == nil {
@@ -154,9 +134,9 @@ func pinOn(n *ir.Net, ref string) string {
 }
 
 // Between reports whether a component of the given class sits ON the series path from
-// one net to another, within the hop bound. False when `to` is not reachable at all —
-// unreachable is indistinguishable from unprotected for every current consumer, and
-// callers that care test reachability first via Reach.
+// one net to another, within the hop bound. It is also false when `to` is not reachable at
+// all, so a caller that needs to tell unreachable from unprotected tests reachability first
+// via Reach.
 func (m *irModel) Between(from, to *ir.Net, class ComponentClass, hops int) bool {
 	if from == nil || to == nil {
 		return false

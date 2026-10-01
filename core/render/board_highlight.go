@@ -8,15 +8,14 @@ import (
 )
 
 // HighlightBoardSVG resolves highlight specs against a board and returns a transparent SVG
-// overlay framed exactly like BoardSVG (both use frameBoard), so a client stacks it above
-// the base document — the board face of the WS9-016 highlight contract. The join mirrors
-// the board's key vocabulary: a listed NET matches its routed copper (segments re-stroked
-// wider, vias ringed) and every pad connected to it; a listed COMPONENT matches all of its
-// placement's pads plus a marker ring at the placement origin; a listed pin matches that
-// (ref_des, pad number). Specs paint in order, later wins.
+// overlay framed like BoardSVG (both use frameBoard), which a client stacks above the base
+// document. It is the board face of the WS9-016 highlight contract. A listed NET matches its
+// routed copper (segments re-stroked wider, vias ringed) and every pad on it, a listed
+// COMPONENT matches all its pads plus a marker ring at the placement origin, and a listed pin
+// matches that (ref_des, pad number). Specs paint in order, later wins.
 func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec) string {
 	fr := frameBoard(b)
-	c := svg.Open(fr.pxW, fr.pxH) // transparent: no background rect
+	c := svg.Open(fr.pxW, fr.pxH) // transparent, no background rect
 
 	for _, spec := range specs {
 		m := matcherFor(spec)

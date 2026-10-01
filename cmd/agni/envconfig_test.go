@@ -22,8 +22,9 @@ func writeEnvCfg(t *testing.T, dir, body string) string {
 
 func noEnv(string) string { return "" }
 
-// TestEnvConfigLoadsMountsAndSymbolPaths is the point: a repo can carry its own mount table so a
-// contributor's commands address designs the same way a server does, without a flag list.
+// TestEnvConfigLoadsMountsAndSymbolPaths covers why the file exists. A repo can carry its own mount
+// table so a contributor's commands address designs the same way a server does, without a flag
+// list.
 func TestEnvConfigLoadsMountsAndSymbolPaths(t *testing.T) {
 	root := t.TempDir()
 	writeEnvCfg(t, root, "mounts:\n  boards: /srv/boards\n  shared: /srv/shared\nsymbol_paths:\n  - /usr/share/syms\n")
@@ -45,8 +46,8 @@ func TestEnvConfigLoadsMountsAndSymbolPaths(t *testing.T) {
 	}
 }
 
-// TestEnvConfigNearestWins: the first hit walking up wins OUTRIGHT rather than merging. Merging two
-// tables would make the effective set depend on which directory a command ran from.
+// TestEnvConfigNearestWins checks that the first hit walking up wins OUTRIGHT rather than merging.
+// Merging two tables would make the effective set depend on which directory a command ran from.
 func TestEnvConfigNearestWins(t *testing.T) {
 	root := t.TempDir()
 	deep := filepath.Join(root, "a", "b")
@@ -61,7 +62,7 @@ func TestEnvConfigNearestWins(t *testing.T) {
 	}
 }
 
-// TestEnvConfigAbsenceIsNotAnError: running anywhere without one is the ordinary case.
+// TestEnvConfigAbsenceIsNotAnError, because running anywhere without one is the ordinary case.
 func TestEnvConfigAbsenceIsNotAnError(t *testing.T) {
 	cfg, path, err := loadEnvConfig(t.TempDir(), noEnv)
 	if err != nil || path != "" || len(cfg.Mounts) != 0 {
@@ -69,13 +70,13 @@ func TestEnvConfigAbsenceIsNotAnError(t *testing.T) {
 	}
 }
 
-// TestEnvConfigRejectsMalformedAndUnknown. A malformed file is an error rather than a skip: an
+// TestEnvConfigRejectsMalformedAndUnknown. A malformed file is an error rather than a skip, because an
 // operator who wrote a mount table and silently got none would see every path resolve through a
 // minted mount instead, which reads as working.
 //
-// Unknown fields are rejected on the same reasoning the descriptors use — a misspelled key that
+// Unknown fields are rejected on the same reasoning the descriptors use, since a misspelled key that
 // silently does nothing is the failure worth spending strictness on. It also guards the boundary this
-// file exists to hold: someone reaching for `conventions:` here gets told no rather than getting a
+// file exists to hold. Someone reaching for `conventions:` here gets told no rather than getting a
 // machine-wide analysis tier.
 func TestEnvConfigRejectsMalformedAndUnknown(t *testing.T) {
 	for name, body := range map[string]string{
@@ -113,9 +114,9 @@ func TestEnvConfigFallsBackToTheUserDirectory(t *testing.T) {
 	}
 }
 
-// TestApplyEnvConfigYieldsToFlags: a passed flag wins outright. An operator who named a mount table is
-// answering for the whole table, and a file quietly adding one they did not ask for is the
-// ambient-config failure this tier is only allowed because it cannot change an answer.
+// TestApplyEnvConfigYieldsToFlags checks that a passed flag wins outright. An operator who named a
+// mount table is answering for the whole table, and a file quietly adding one they did not ask for
+// is the ambient-config failure this tier is only allowed because it cannot change an answer.
 func TestApplyEnvConfigYieldsToFlags(t *testing.T) {
 	dir := t.TempDir()
 	writeEnvCfg(t, dir, "mounts:\n  fromfile: /f\n")
@@ -141,8 +142,8 @@ func TestApplyEnvConfigYieldsToFlags(t *testing.T) {
 		t.Errorf("nothing was taken from the file, so nothing should be announced, got %q", note.String())
 	}
 
-	// With no flag, the file fills in and SAYS so: a mount table nobody typed is not recoverable from
-	// the output of a run that used it.
+	// With no flag, the file fills in and SAYS so, because a mount table nobody typed is not
+	// recoverable from the output of a run that used it.
 	cliMountSpecs = nil
 	note.Reset()
 	if err := applyEnvConfig(&note, noEnv); err != nil {
@@ -189,8 +190,8 @@ func TestResolveWebDirPrecedence(t *testing.T) {
 			if dir != tc.wantDir {
 				t.Errorf("dir = %q, want %q", dir, tc.wantDir)
 			}
-			// An empty source means "nobody needs telling": either the operator typed it, or it is the
-			// documented default. A non-empty one gets announced.
+			// An empty source means "nobody needs telling", because either the operator typed it or
+			// it is the documented default. A non-empty one gets announced.
 			if source != tc.wantSource {
 				t.Errorf("source = %q, want %q", source, tc.wantSource)
 			}
@@ -198,8 +199,8 @@ func TestResolveWebDirPrecedence(t *testing.T) {
 	}
 }
 
-// TestEnvConfigCarriesWebDir: web_dir is tier-1 config, so the file has to actually bind it, and
-// applyEnvConfig has to say it used it.
+// TestEnvConfigCarriesWebDir exists because web_dir is tier-1 config, so the file has to actually
+// bind it, and applyEnvConfig has to say it used it.
 func TestEnvConfigCarriesWebDir(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, envConfigName), []byte("web_dir: /opt/agni/web\n"), 0o600); err != nil {
@@ -221,8 +222,9 @@ func TestEnvConfigCarriesWebDir(t *testing.T) {
 	}
 }
 
-// TestEnvConfigCarriesNativeTools: which golden renderers are installed is a property of the machine,
-// and naming an absent one fails loudly at the point of use, so it is tier-1 config like the others.
+// TestEnvConfigCarriesNativeTools treats the installed golden renderers as tier-1 config like the
+// others. Which ones are installed is a property of the machine, and naming an absent one fails
+// loudly at the point of use.
 func TestEnvConfigCarriesNativeTools(t *testing.T) {
 	dir := t.TempDir()
 	writeEnvCfg(t, dir, "native_tools:\n  - kicad-cli\n  - xschem\n")
@@ -235,7 +237,7 @@ func TestEnvConfigCarriesNativeTools(t *testing.T) {
 	}
 }
 
-// TestApplyEnvConfigBindsNativeTools: only serve consumes them, but the file is read once before any
+// TestApplyEnvConfigBindsNativeTools covers tools only serve consumes. The file is read once before any
 // command runs, so applyEnvConfig has to bind them for serve to find, and has to say it used them.
 func TestApplyEnvConfigBindsNativeTools(t *testing.T) {
 	dir := t.TempDir()

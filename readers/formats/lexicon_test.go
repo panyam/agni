@@ -30,7 +30,7 @@ func rolesOf(d *ir.Design, net string) []ir.Role {
 	return nil
 }
 
-// TestReadDesignStampsPerLoaderLexicon is the property the process global could not provide: two
+// TestReadDesignStampsPerLoaderLexicon is the property the process global could not provide. Two
 // loaders carrying different project conventions read the SAME file in ONE process and stamp
 // different net roles. Before WS3-106 the vocabulary lived in a package var, so the second read
 // would have overwritten the first's conventions (and on a server, another request's).
@@ -53,8 +53,8 @@ func TestReadDesignStampsPerLoaderLexicon(t *testing.T) {
 		t.Errorf("SIG roles with the project lexicon = %v, want it to carry %q", got, ir.Role_ROLE_RAIL)
 	}
 
-	// The first read's design is untouched by the second loader: the vocabulary travelled with each
-	// read rather than being installed process-wide.
+	// The first read's design is untouched by the second loader, because the vocabulary travelled
+	// with each read rather than being installed process-wide.
 	if got := rolesOf(plain, "SIG"); len(got) != 0 {
 		t.Errorf("the project read leaked into the default read: SIG roles = %v, want none", got)
 	}

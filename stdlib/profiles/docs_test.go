@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// TestRuleDocsOneToOne holds the requirement docs and docs/ to each other: every requirement the
+// TestRuleDocsOneToOne holds the requirement docs and docs/ to each other. Every requirement the
 // compiler documents has a file that opens with its heading, and docs/ has no orphan .md or missing
-// image (mirrors check/docs_test and datalogrules/docs_test).
+// image (mirrors the docs_test in stdlib/rules/builtin and stdlib/rules/datalog).
 func TestRuleDocsOneToOne(t *testing.T) {
 	want := map[string]bool{}
 	for _, r := range requirementDocs {
@@ -46,7 +46,7 @@ func TestRuleDocsOneToOne(t *testing.T) {
 }
 
 // TestDocRules holds profiles.DocRules to the requirement-type set the docsite catalog generator
-// projects: one entry per requirement, each with a non-empty caption and its Detail from ruleDoc. A
+// projects, one entry per requirement, each with a non-empty caption and its Detail from ruleDoc. A
 // new requirement doc without a DocRules caption fails here.
 func TestDocRules(t *testing.T) {
 	got := DocRules()

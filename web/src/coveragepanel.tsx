@@ -3,8 +3,8 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { type CoverageState, type CoverageView, type SignalCoverageItem, emptyCoverage, presentCount } from "./coverage.js";
 
-// STATE_LABEL is the short label a signal chip shows for each coverage state (WS9-041); the chip's
-// `cov-<state>` class colors it (present green, the three problem states amber/red).
+// STATE_LABEL is the short label a signal chip shows for each coverage state (WS9-041). The chip's
+// `cov-<state>` class colors it.
 const STATE_LABEL: Record<string, string> = {
   present: "✓",
   missing: "missing",
@@ -12,10 +12,9 @@ const STATE_LABEL: Record<string, string> = {
   pullup_missing: "no pull-up",
 };
 
-// CoveragePanel shows one block per DETECTED interface profile: a header with the profile name and a
-// present/total summary, then a chip per required signal (name + state). A signal with a matched net
-// is clickable — it emits onLocate(net) so the presenter highlights that net on the canvas, the same
-// locate path a finding or a query cell uses. An undetected design shows an empty-state message.
+// CoveragePanel shows one block per DETECTED interface profile, with a present/total summary and a
+// chip per required signal. A signal with a matched net emits onLocate(net) on click, the same
+// locate path a finding or a query cell uses.
 function CoveragePanel(props: { state: () => CoverageState; onLocate: (net: string) => void }) {
   const locate = (s: SignalCoverageItem) => {
     if (s.net) props.onLocate(s.net);
@@ -61,9 +60,8 @@ function CoveragePanel(props: { state: () => CoverageState; onLocate: (net: stri
   );
 }
 
-// coveragePanelIsland mounts the panel and returns its command-down view (setState). onLocate is the
-// intent up: the user clicked a signal, so the presenter locates its net. Same island shape as
-// findingsPanelIsland / queryPanelIsland.
+// coveragePanelIsland mounts the panel and returns its command-down view. Same island shape as
+// findingsPanelIsland (docsite/content/architecture/web-client.md#wiring-a-new-panel).
 export function coveragePanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

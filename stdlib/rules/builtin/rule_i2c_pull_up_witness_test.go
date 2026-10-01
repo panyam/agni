@@ -9,8 +9,8 @@ import (
 )
 
 // Proof-on-pass for a CONNECTIVITY rule. The datasheet rules prove a pass with values; this one
-// proves it with a path, and the point of these tests is that one Witness carries both without
-// changing shape. The failure mode is the same one build/evidence.md names: "a witness is present"
+// proves it with a path, and these tests assert that one Witness carries both without changing
+// shape. The failure mode is the same one build/evidence.md names. "A witness is present"
 // cannot fail, so what is asserted here is that the witness TRACKS THE TOPOLOGY.
 
 func verdictForNet(t *testing.T, vs []check.Verdict, net string) check.Verdict {
@@ -65,10 +65,10 @@ func TestPullUpWitnessTracksTheTopology(t *testing.T) {
 }
 
 // THE SHAPE QUESTION THIS RULE EXISTS TO ANSWER. A multi-hop path must come out as ORDERED,
-// TYPED entities, because the point of carrying a path is that a reader can be sent to each hop.
+// TYPED entities, because a path is carried so that a reader can be sent to each hop.
 //
-// It lives in Context and not Witness.Terms, and the distinction is load-bearing rather than
-// bookkeeping: a Term is a Label and a bare string, so "pull-up=R1" leaves a consumer guessing
+// It lives in Context and not Witness.Terms, and the distinction matters for more than
+// bookkeeping. A Term is a Label and a bare string, so "pull-up=R1" leaves a consumer guessing
 // whether R1 is a component, a net or a pin, and it cannot build a highlight from a guess. Every
 // entry here carries the Kind that HighlightSpec joins on.
 func TestPullUpPathIsOrderedTypedContext(t *testing.T) {
@@ -109,8 +109,8 @@ func TestPullUpPathIsOrderedTypedContext(t *testing.T) {
 }
 
 // A FAIL CARRIES ITS WITNESS TOO. "No rail within 3 hops" rests on the hop limit, and a reader has
-// to see it: a pull-up sitting four hops away is a different situation from no pull-up at all, and
-// the bare finding cannot tell them apart.
+// to see it, because a pull-up sitting four hops away is a different situation from no pull-up at
+// all, and the bare finding cannot tell them apart.
 func TestFailingPullUpStatesTheHopLimit(t *testing.T) {
 	v := verdictForNet(t, pullUpVerdicts(t, []string{"U1", "R1", "R2", "R3", "R4"},
 		tnet("SCL", "U1.1", "R1.1"),
@@ -140,7 +140,7 @@ func TestEveryI2CNetAnswersOnce(t *testing.T) {
 		tnet("SCL", "U1.1", "R1.1"),
 		tnet("+3V3", "R1.2"),
 		tnet("SDA", "U1.2"),
-		tnet("PLAIN_SIGNAL", "U1.3")) // not I2C: must not appear
+		tnet("PLAIN_SIGNAL", "U1.3")) // not I2C, so it must not appear
 
 	seen := map[string]int{}
 	for _, v := range vs {
@@ -155,7 +155,7 @@ func TestEveryI2CNetAnswersOnce(t *testing.T) {
 	if seen["PLAIN_SIGNAL"] != 0 {
 		t.Error("a non-I2C net is out of scope and must not be in the considered set")
 	}
-	// Positive control: the two nets really did reach opposite outcomes, so "answers once" was
+	// The positive control shows the two nets really did reach opposite outcomes, so "answers once" was
 	// asserted over a pass AND a fail rather than two of a kind.
 	if verdictForNet(t, vs, "SCL").Outcome == verdictForNet(t, vs, "SDA").Outcome {
 		t.Fatal("fixture must produce one pass and one fail or this proves less than it looks")

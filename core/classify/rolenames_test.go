@@ -8,9 +8,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestStampNetRoles: the ingestion pass stamps each net's role SET from the active naming lexicon — a
-// rail, a ground, a feedback node, a plain signal (no roles), and a rail-NAMED feedback node that
-// carries BOTH roles (precedence is the consumer's call, so the stamp records both).
+// TestStampNetRoles checks that the ingestion pass stamps each net's role SET from the active
+// naming lexicon. The cases are a rail, a ground, a feedback node, a plain signal (no roles), and a
+// rail-NAMED feedback node that carries BOTH roles (precedence is the consumer's call, so the stamp
+// records both).
 func TestStampNetRoles(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
 		{Name: "+3V3"}, {Name: "GND"}, {Name: "AMP_FB"}, {Name: "SDA"}, {Name: "VCC1V2_FB"},
@@ -30,8 +31,8 @@ func TestStampNetRoles(t *testing.T) {
 	}
 }
 
-// TestStampNetRolesIdempotent: a re-stamp (a re-read of the same design) overwrites rather than
-// accumulates, so the set stays correct.
+// TestStampNetRolesIdempotent checks that a re-stamp (a re-read of the same design) overwrites
+// rather than accumulates, so the set stays correct.
 func TestStampNetRolesIdempotent(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{{Name: "GND"}}}
 	StampNetRoles(d)
@@ -41,8 +42,9 @@ func TestStampNetRolesIdempotent(t *testing.T) {
 	}
 }
 
-// TestStampNetRolesHonorsActiveVocab: a --conventions role override installed via SetActiveRoleVocab
-// takes effect at stamp time, so a project's house rail name is stamped as a rail.
+// TestStampNetRolesHonorsActiveVocab checks that a --conventions role override installed via
+// SetActiveRoleVocab takes effect at stamp time, so a project's house rail name is stamped as a
+// rail.
 func TestStampNetRolesHonorsActiveVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
 	v, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{`^HV_`}}}})
@@ -97,7 +99,7 @@ func sourceOf(n *ir.Net, role ir.Role) ir.RoleSource {
 	return ir.RoleSource_ROLE_SOURCE_UNSPECIFIED
 }
 
-// The point of carrying provenance: a role read off the NAME and a role the SOURCE FILE stated are
+// Carrying provenance means a role read off the NAME and a role the SOURCE FILE stated are
 // no longer indistinguishable. Both were already unioned into the same set (WS1-051); before this
 // the consumer had no way to tell which one spoke.
 func TestStampNetRolesRecordsItsEvidence(t *testing.T) {
@@ -130,7 +132,7 @@ func TestStampNetRolesKeepsTheStrongerEvidence(t *testing.T) {
 }
 
 // Adding provenance must not change WHICH roles a net carries. This is the behaviour-preservation
-// half: the token set is exactly what it was before the field grew a source.
+// half. The token set is exactly what it was before the field grew a source.
 func TestStampNetRolesTokensUnchanged(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{{Name: "VCC1V2_FB"}}}
 	StampNetRoles(d)

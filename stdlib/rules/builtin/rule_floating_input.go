@@ -28,34 +28,26 @@ var floatingInput = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// floatingInputVerdicts decides every net that carries a LOGIC INPUT and more than one pin, and that
-// is the considered set. A net with no logic input is not a subject of a floating-input rule, and a
-// one-pin net belongs to single-pin-net, so neither yields a verdict: reporting them as passes would
-// claim a check that was never made, and reporting the stub twice would put one defect under two
-// names.
+// floatingInputVerdicts decides every net that carries a LOGIC INPUT and more than one pin. A net
+// with no logic input is not this rule's subject, and a one-pin net belongs to single-pin-net, so
+// neither yields a verdict.
 //
-// THE TWO EXEMPTIONS BECOME NotConsidered RATHER THAN PASSES, and the distinction is the substance
-// of the conversion. Both used to leave through the same silent `return false` a driven net did, so
-// downstream they were one answer. They are three:
+// Two exemptions are NotConsidered rather than passes (#400):
 //
 //   - An EXTERNAL net continues onto a sheet this read did not open, so its driver may exist and be
-//     invisible here. The rule has not cleared it; it cannot see it.
+//     invisible here.
 //   - A net carrying a PASSIVE part is not provably floating, which is a weaker claim than not
-//     floating. The resistor may be the pull-up that fixes it, or a series element with the driver on
-//     the far side, or a footprint nobody stuffed. The rule cannot tell those apart, so it says so and
-//     names the part in Context.
-//   - A net with a pin that is neither an input nor a no-connect genuinely passes: something on it
-//     can drive.
+//     floating. The part may be the pull-up that fixes it, a series element with the driver on the
+//     far side, or a footprint nobody stuffed. Context names it.
 //
-// The pass witness counts the non-input pins, so it tracks the fact rather than restating the
-// outcome. Retype the driver as an input and the count falls to zero and the verdict flips.
+// Any other net with a pin that is neither an input nor a no-connect passes. The pass witness counts
+// those pins, so retyping the driver as an input drops the count to zero and flips the verdict.
 func floatingInputVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
-		// Count LOGIC inputs (INPUT direction, excluding diode terminals): a diode/LED/TVS terminal is
-		// typed INPUT by some libraries but is not a logic input, so a pure diode network must not read
-		// as floating. Excluding it per-pin (not per-net) keeps a real floating IC input that merely
-		// carries a clamp diode firing.
+		// A diode/LED/TVS terminal is typed INPUT by some libraries but is not a logic input, so it
+		// counts toward ncOrIn and not logicInputs. Excluding it per pin rather than per net keeps a
+		// floating IC input that carries a clamp diode firing.
 		logicInputs, ncOrIn := 0, 0
 		for _, c := range n.Connections {
 			switch check.ConnDir(m, c) {
@@ -69,7 +61,7 @@ func floatingInputVerdicts(m check.Model) []check.Verdict {
 			}
 		}
 		if logicInputs < 1 || len(n.Connections) < 2 {
-			continue // not this rule's subject: nothing to float, or single-pin-net's finding
+			continue // nothing to float, or single-pin-net's finding
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
@@ -108,11 +100,9 @@ func floatingInputVerdicts(m check.Model) []check.Verdict {
 	return out
 }
 
-// floatingInputSpec is the rule's declarative twin (WS3-003): any passive member exempts
-// the net (see the Detail), then "all pins are input or no-connect" is the count of such
-// pins equalling the net's pin count. A diode/LED/TVS terminal is typed INPUT by some
-// libraries but is not a logic input, so it is excluded from the ">= 1 logic input" gate (a
-// pure diode network must not read as floating); it still counts toward "all pins input/nc".
+// floatingInputSpec is the rule's declarative twin (WS3-003). Diode terminals are excluded from
+// the logic-input count and still count toward "all pins input or no-connect", as in
+// floatingInputVerdicts.
 var floatingInputSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{

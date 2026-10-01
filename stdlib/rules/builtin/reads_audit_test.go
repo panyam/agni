@@ -10,28 +10,28 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// auditModel is the design every rule is run against for the declaration audit: the parity
+// auditModel is the design every rule is run against for the declaration audit, the parity
 // fixture's messy netlist with BOTH optional tiers attached.
 //
 // Attaching them is what makes the audit possible at all. Available gates a param or board rule to
 // not-applicable when its tier is absent, so on a bare design those rules never execute, never
-// touch an accessor, and would report as reading nothing — a false clean covering exactly the
+// touch an accessor, and would report as reading nothing, a false clean covering exactly the
 // rules the audit exists for.
 //
-// The param set is empty on purpose. What is recorded is the CALL, not what it returns: a rule that
+// The param set is empty on purpose. What is recorded is the CALL, not what it returns, so a rule that
 // asks for a PartSpec and gets nil has still demonstrated that it depends on the datasheet tier.
 // Seeding real specs would deepen each rule's path but is not needed to observe the dependency, and
 // an empty set keeps the fixture from encoding one rule's expectations.
 func auditModel() *check.RecordingModel {
 	d := specParityFixture()
-	// Net-class definitions are a third optional tier, gated by its own capability (WS3-105): with
+	// Net-class definitions are a third optional tier, gated by its own capability (WS3-105). With
 	// none declared, the two netclass rules read not-applicable and the audit never exercises them.
 	// One default class is enough, since the audit records the accessor call rather than the verdict.
 	d.Constraints = append(d.Constraints, &ir.Constraint{
 		Name: "Default", Kind: "netclass",
 		Params: map[string]string{"priority": "2147483647", "is_default": "true", "track_width": "0.25", "via_drill": "0.3"},
 	})
-	// The fixture stands in for a reader that computed its diagnostics (agni issue 309): without
+	// The fixture stands in for a reader that computed its diagnostics (agni issue 309). Without
 	// these declarations duplicate-ref-des and wire-no-junction gate to not-applicable, exactly as
 	// they now do on a format whose reader never looked, and the audit would stop exercising them.
 	if d.InputDiagnostics == nil {
@@ -57,13 +57,13 @@ func tierNames(ts []check.FactTier) []string {
 	return out
 }
 
-// TestReadsAreDeclared is the audit (WS3-122): every gated tier a rule actually reads must appear
+// TestReadsAreDeclared is the audit (WS3-122). Every gated tier a rule actually reads must appear
 // in its declared Reads.
 //
-// Three gates trust that declaration to decide whether a rule can run — the param tier, the board
-// tier, and the connectivity gate that reports inconclusive while a symbol is unresolved. An
-// UNDER-declared rule escapes its gate: it runs on a design whose tier was never attached and
-// reports over data it does not have, which looks exactly like a clean result.
+// Three gates trust that declaration to decide whether a rule can run (the param tier, the board
+// tier, and the connectivity gate that reports inconclusive while a symbol is unresolved). An
+// UNDER-declared rule escapes its gate. It runs on a design whose tier was never attached and
+// reports over data it does not have, which looks like a clean result.
 //
 // Only 15 of the shipped rules have a Spec twin whose derived reads are checked against the
 // declaration (TestSpecMetadata). This covers the rest, and covers the twinned ones too rather than
@@ -89,7 +89,7 @@ func TestReadsAreDeclared(t *testing.T) {
 	}
 }
 
-// TestReadsAudit reports the other direction, which cannot be asserted: a tier a rule declares but
+// TestReadsAudit reports the direction that cannot be asserted, a tier a rule declares but
 // was not observed reading. Each is either a genuine over-declaration (the rule reads
 // not-applicable where it would have worked) or simply a path this fixture does not drive. Telling
 // those apart needs a human, so this logs and never fails.
@@ -130,7 +130,7 @@ func TestReadsAudit(t *testing.T) {
 	t.Logf("declared-but-unobserved (%d):\n  %s", len(overDeclared), strings.Join(overDeclared, "\n  "))
 
 	// The audit's REACH, which matters more than its verdict. A rule that reached no gated accessor
-	// was not audited for under-declaration at all: the pass above says nothing about it. Reporting
+	// was not audited for under-declaration at all, and the pass above says nothing about it. Reporting
 	// the number keeps a green run from reading as "the catalog is verified" when a third of it was
 	// never exercised.
 	var silent []string
@@ -145,7 +145,7 @@ func TestReadsAudit(t *testing.T) {
 }
 
 // TestReadsAuditCoversEveryRule pins the audit's own reach. The audit is only worth its runtime if
-// the rules actually EXECUTE against the fixture: a rule gated to not-applicable never touches an
+// the rules actually EXECUTE against the fixture. A rule gated to not-applicable never touches an
 // accessor, so a fixture that silently stopped attaching a tier would turn the audit into a test
 // that passes by doing nothing.
 func TestReadsAuditCoversEveryRule(t *testing.T) {

@@ -35,8 +35,8 @@ func proj(name, extends string, cfg *webapi.AnalysisConfig) *webapi.Project {
 	return &webapi.Project{Name: name, Config: cfg}
 }
 
-// TestExtendsLayersRootFirst: a project overrides what it inherits, which is the direction every
-// other layer here runs (request over project, project over deployment default).
+// TestExtendsLayersRootFirst checks that a project overrides what it inherits, which is the direction
+// every other layer here runs (request over project, project over deployment default).
 func TestExtendsLayersRootFirst(t *testing.T) {
 	store := projectTable{
 		"projects/base": proj("projects/base", "", &webapi.AnalysisConfig{
@@ -53,7 +53,7 @@ func TestExtendsLayersRootFirst(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveExtends: %v", err)
 	}
-	// Ref tiers ACCUMULATE: inheriting a profile set and adding your own means running both.
+	// Ref tiers ACCUMULATE, so inheriting a profile set and adding your own means running both.
 	if n := len(got.GetProfileUris()); n != 2 {
 		t.Errorf("inherited and own profiles should both survive, got %v", got.GetProfileUris())
 	}
@@ -64,7 +64,7 @@ func TestExtendsLayersRootFirst(t *testing.T) {
 	if n := len(got.GetParamUris()); n != 1 {
 		t.Errorf("a tier only the base declares should be inherited, got %v", got.GetParamUris())
 	}
-	// The convention REPLACES rather than accumulating: two naming vocabularies cannot both be in
+	// The convention REPLACES rather than accumulating. Two naming vocabularies cannot both be in
 	// effect, so the nearest declaration wins.
 	if got.GetConventions().GetName() != "leaf" {
 		t.Errorf("the leaf's convention should win, got %q", got.GetConventions().GetName())
@@ -75,8 +75,8 @@ func TestExtendsLayersRootFirst(t *testing.T) {
 	}
 }
 
-// TestExtendsInheritsWhatTheLeafOmits: a project that declares only `extends` gets the whole parent
-// config, which is the case shared config exists for.
+// TestExtendsInheritsWhatTheLeafOmits checks that a project that declares only `extends` gets the
+// whole parent config, which is the case shared config exists for.
 func TestExtendsInheritsWhatTheLeafOmits(t *testing.T) {
 	store := projectTable{
 		"projects/house": proj("projects/house", "", &webapi.AnalysisConfig{
@@ -119,8 +119,8 @@ func TestExtendsRefusesSelfReference(t *testing.T) {
 	}
 }
 
-// TestExtendsBoundsDepth: a legitimately deep chain is also a smell. Config a reader has to open six
-// files to understand is config nobody will reason about correctly.
+// TestExtendsBoundsDepth exists because a legitimately deep chain is also a smell. Config a reader
+// has to open six files to understand is config nobody will reason about correctly.
 func TestExtendsBoundsDepth(t *testing.T) {
 	store := projectTable{}
 	for i := range 8 {

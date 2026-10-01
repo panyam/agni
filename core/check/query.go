@@ -10,8 +10,8 @@ import (
 	"github.com/panyam/agni/internal/refdes"
 )
 
-// irModel is the default Model: a fact projection computed once over an ir.Design and shared by
-// every rule in a Run, so the common projections are built a single time.
+// irModel is the default Model, a fact projection computed once over an ir.Design and shared by
+// every rule in a Run.
 type irModel struct {
 	d         *ir.Design
 	pinDir    map[string]ir.PinDirection  // "refdes\x00pin" -> direction
@@ -29,7 +29,7 @@ type irModel struct {
 	netNames  map[string]bool             // upper-cased net names (for the pair primitive)
 	nameCount map[string]int              // exact-name net counts (duplicate-net-name)
 	classSet  map[string][]ComponentClass // ref_des -> device_classes set (specific + family tags)
-	specs     param.ParamProvider         // params tier seam, populated only by NewModelWithParams
+	specs     param.ParamProvider         // params tier, populated only by NewModelWithParams
 	mpn       map[string]string           // ref_des -> design-side MPN (BomLine, else attribute)
 	passNets  map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
 	lex       *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
@@ -62,14 +62,14 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		classSet:  map[string][]ComponentClass{},
 		passNets:  map[string][]*ir.Net{},
 	}
-	// Apply options FIRST: the device-class fallback below re-derives through the lexicon, so a
-	// model built WithLexicon must already carry it by the time that runs.
+	// Apply options FIRST, because the device-class fallback below re-derives through the lexicon
+	// and a model built WithLexicon must already carry it.
 	for _, opt := range opts {
 		opt(m)
 	}
 	// Index part-type pins by (library, part) so a component's sections resolve to pin
-	// directions. The loose "/part" key matches when a section omits the library ref. The
-	// same index the ingestion classify pass uses (WS3-071), so part resolution never drifts.
+	// directions. The loose "/part" key matches when a section omits the library ref. This is
+	// the index the ingestion classify pass uses (WS3-071), so part resolution never drifts.
 	parts := classify.PartIndex(d)
 	for _, c := range d.Components {
 		var first *ir.PartType
@@ -100,10 +100,8 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		}
 		m.classSet[c.RefDes] = m.componentClassesOf(c, first)
 	}
-	// A duplicated ref-des mechanically puts one (ref, pin) key in several nets (each
-	// placement gets its own copper), so those pins are the ref-des collision's symptom,
-	// not a second malformed-input signal: duplicate-ref-des owns the root cause and
-	// pin-net-conflict skips them.
+	// A duplicated ref-des puts one (ref, pin) key in several nets, since each placement gets
+	// its own copper. duplicate-ref-des reports the root cause, so pin-net-conflict skips those pins.
 	collided := map[string]bool{}
 	for _, rc := range d.GetInputDiagnostics().GetRefDesCollisions() {
 		collided[rc.RefDes] = true
@@ -158,9 +156,9 @@ func (m *irModel) lexicon() *classify.Lexicon {
 	return m.lex
 }
 
-// IsPowerRailName / IsGroundName / IsFeedbackName project this model's naming lexicon over a bare
-// name. They are the model-scoped form of the package-level helpers of the same names, which read the
-// process globals; prefer these wherever a Model is in hand (WS3-106).
+// IsPowerRailName and the five name predicates beside it project this model's naming lexicon over a
+// bare name. The package-level helpers of the same names read the process globals, so prefer these
+// wherever a Model is in hand (WS3-106).
 func (m *irModel) IsPowerRailName(name string) bool { return m.lexicon().RoleVocab().IsRail(name) }
 func (m *irModel) IsGroundName(name string) bool    { return m.lexicon().RoleVocab().IsGround(name) }
 func (m *irModel) IsFeedbackName(name string) bool  { return m.lexicon().RoleVocab().IsFeedback(name) }
@@ -168,31 +166,28 @@ func (m *irModel) IsSwitchingName(name string) bool { return m.lexicon().RoleVoc
 func (m *irModel) IsControlName(name string) bool   { return m.lexicon().RoleVocab().IsControl(name) }
 func (m *irModel) IsGateDriveName(name string) bool { return m.lexicon().RoleVocab().IsGateDrive(name) }
 
-// IsGroundNet / IsRailNet answer the role question about a net: the stamped role set when the net
-// carries one (authoritative, filled at ingestion), else this model's lexicon over the name. Taking
-// the net rather than its name matters because net names are not unique.
+// IsGroundNet reports whether a net carries the ground role, read from the stamped role set when the
+// net has one (authoritative, filled at ingestion) and else from this model's lexicon over the name.
+// It takes the net rather than its name because net names are not unique. IsRailNet resolves the
+// same way.
 func (m *irModel) IsGroundNet(n *ir.Net) bool {
 	return NetHasRole(n, ir.Role_ROLE_GROUND, m.IsGroundName)
 }
 
-// A REGULATOR INTERNAL IS NOT A RAIL, and this is the one place that decides it (agni 679, 680).
-// A buck's feedback tap, switch node, bootstrap node, mode straps, enable and gate-drive supply all
-// inherit the name of the rail they serve, so all of them match the rail vocabulary and none carries
-// the rail's voltage: the feedback tap sits at the regulator's internal reference, the switch node
-// swings to the INPUT rail at the switching frequency, the bootstrap node rides above the output, and
-// a mode strap or enable is a logic input at whatever level the sequencer drives.
+// IsRailNet reports whether a net carries the rail role and is not a regulator internal. A REGULATOR
+// INTERNAL IS NOT A RAIL, and this is the one place that decides it (agni 679, 680). A buck's
+// feedback tap, switch node, bootstrap node, mode straps, enable and gate-drive supply are named after
+// the rail they serve, and none of them carries that rail's voltage.
 //
-// The general rule the vocabularies encode piecemeal: WHEN A RAIL TOKEN IS A PREFIX AND A KNOWN
-// REGULATOR-PIN-FUNCTION SUFFIX FOLLOWS, THE TOKEN NAMES THE CONVERTER RATHER THAN THE VOLTAGE.
-// That is why this does not disturb net.signal_level's own case, agni 194's `U3_12_U7_4_3V3`, where
-// the token stands free rather than heading a `<rail>_<function>` name. Encoding the grammar itself
-// was considered and held: it would decide railhood from a suffix list nobody has enumerated, and
-// changing what every board reads as a rail is a larger bet than naming the functions we have met.
+// The vocabularies encode one rule piecemeal. WHEN A RAIL TOKEN IS A PREFIX AND A KNOWN
+// REGULATOR-PIN-FUNCTION SUFFIX FOLLOWS, THE TOKEN NAMES THE CONVERTER RATHER THAN THE VOLTAGE. So
+// net.signal_level's free-standing token (agni 194's `U3_12_U7_4_3V3`) is untouched. Encoding the
+// grammar in general was held back because it would decide railhood from a suffix list nobody has
+// enumerated. DECISIONS.md carries the reasoning.
 //
-// Deciding it here rather than per consumer reverses what the role tokens used to say, deliberately.
-// Seven rail-quantified consumers read this model and exactly one, the test-point rule, remembered to
-// exclude feedback for itself. On one real board that left 48 of 77 "rails" as regulator internals.
-// A consumer that genuinely wants every rail-NAMED net still has IsPowerRailName.
+// Of seven rail-quantified consumers only one excluded feedback for itself, which left 48 of 77
+// "rails" on one real board as regulator internals. A consumer that wants every rail-NAMED net uses
+// IsPowerRailName.
 func (m *irModel) IsRailNet(n *ir.Net) bool {
 	if !NetHasRole(n, ir.Role_ROLE_RAIL, m.IsPowerRailName) {
 		return false
@@ -200,27 +195,20 @@ func (m *irModel) IsRailNet(n *ir.Net) bool {
 	return !m.IsRegulatorInternalNet(n)
 }
 
-// IsRegulatorInternalNet reports whether a net belongs to a regulator's own plumbing rather than
-// being a supply it produces: a feedback tap, a power-stage node, a configuration or enable input, or
-// a gate-drive supply. All four are named after the rail the converter produces, so all four match the
-// rail vocabulary, and for all four the voltage token in the name identifies the CONVERTER rather than
-// what the net carries.
+// IsRegulatorInternalNet reports whether a net is a regulator's own plumbing (a feedback tap, a
+// power-stage node, a configuration or enable input, or a gate-drive supply) rather than a supply it
+// produces. See IsRailNet for why the voltage token in such a name identifies the CONVERTER.
 //
-// Exported, and on the interface, because it has two callers that must not drift: IsRailNet
-// subtracts it from the rail role, and the two name-derived voltage relations subtract it from BOTH
-// sides of their split so a net dropped from one does not reappear in the other. It was briefly a
-// private method plus a copy in stdlib/relations, which is the shape that agreed by luck until
-// someone added a role to one of them.
+// It is exported and on the interface so its two callers cannot drift. IsRailNet subtracts it from
+// the rail role, and the two name-derived voltage relations subtract it from BOTH sides of their split
+// so a net dropped from one does not reappear in the other.
 func (m *irModel) IsRegulatorInternalNet(n *ir.Net) bool {
 	return m.HasAnyRole(n, ir.Role_ROLE_FEEDBACK, ir.Role_ROLE_SWITCHING, ir.Role_ROLE_CONTROL, ir.Role_ROLE_GATE_DRIVE)
 }
 
-// HasAnyRole reports whether a net carries any of the named roles, each resolved the way NetHasRole
-// resolves one: the stamped set when the net has one, else this model's lexicon over the name.
-//
-// It exists so a question about SEVERAL roles reads as a list rather than as a boolean expression
-// somebody has to extend correctly. IsRegulatorInternalNet was four hand-written disjuncts that grew
-// one at a time, and each addition had to remember the matching name fallback.
+// HasAnyRole reports whether a net carries any of the named roles. Each role resolves as NetHasRole
+// resolves it, from the stamped set when the net has one and else through that role's name matcher
+// from nameMatcherFor, so a caller listing roles never has to pair each with its fallback.
 func (m *irModel) HasAnyRole(n *ir.Net, roles ...ir.Role) bool {
 	for _, r := range roles {
 		if NetHasRole(n, r, m.nameMatcherFor(r)) {
@@ -251,10 +239,10 @@ func (m *irModel) nameMatcherFor(role ir.Role) func(string) bool {
 	return func(string) bool { return false }
 }
 
-// componentClassesOf resolves a component's device_classes SET: the normalized set stamped at
-// ingestion (WS3-071) when present, else a fallback derivation for a design built without the
-// ingestion pass (a hand-authored test IR). Because Stamp writes the same derivation, a never-stamped
-// component re-derives to the same set. Returns nil for an unclassified component.
+// componentClassesOf resolves a component's device_classes SET. It reads the normalized set stamped
+// at ingestion (WS3-071) when present, and otherwise derives one for a design built without the
+// ingestion pass, such as a hand-authored test IR. Stamp writes the same derivation, so both paths
+// agree. An unclassified component gets an empty, non-nil slice.
 func (m *irModel) componentClassesOf(c *ir.Component, pt *ir.PartType) []ComponentClass {
 	names := classify.ClassNames(c)
 	if len(names) == 0 {
@@ -344,9 +332,9 @@ func (m *irModel) PinRole(refDes, pin string) PinRole {
 	return classifyPinRole(m, m.pinName[refDes+"\x00"+pin], m.ComponentClass(refDes))
 }
 
-// PinName exposes the declared pin name the model already indexes for role derivation. It is
-// promoted to the Model interface because the datasheet pin join leads with the NAME: a designator
-// is that pin's position in one package, and the same die in another body renumbers it.
+// PinName exposes the declared pin name the model already indexes for role derivation. It is on the
+// Model interface because the datasheet pin join leads with the NAME, since a designator is the pin's
+// position in one package and the same die in another body renumbers it.
 func (m *irModel) PinName(refDes, pin string) string { return m.pinName[refDes+"\x00"+pin] }
 
 func (m *irModel) PinNetName(refDes, pin string) string { return m.pinNet[refDes+"\x00"+pin] }
@@ -363,9 +351,8 @@ func (m *irModel) FormatTypesPowerOut() bool { return formatTypesPowerOut(m.d.Ge
 // contract). Collected in the same nets walk as ncChannel, so the read is O(1).
 func (m *irModel) HasNetClasses() bool { return m.netClass }
 
-// NetClassDefs returns the design's net-class definition constraints (see model.Model). Filtered by
-// kind rather than assuming ir.Design.constraints holds only these: the node is a general carrier
-// and a second kind is expected to land on it.
+// NetClassDefs returns the design's net-class definition constraints (see model.Model). It filters by
+// kind because ir.Design.constraints is a general carrier and may hold other kinds.
 func (m *irModel) NetClassDefs() []*ir.Constraint {
 	var out []*ir.Constraint
 	for _, c := range m.d.GetConstraints() {
@@ -406,7 +393,7 @@ func (m *irModel) HasClass(refDes string, class ComponentClass) bool {
 // unknown ref-des. The slice is the model's own; callers must not mutate it.
 func (m *irModel) Classes(refDes string) []ComponentClass { return m.classSet[refDes] }
 
-// --- generic combinators: select / exists / count over any entity slice ---
+// --- generic combinators (select, exists, count) over any entity slice ---
 
 // Select returns the elements of xs matching pred (the select primitive).
 func Select[T any](xs []T, pred func(T) bool) []T {

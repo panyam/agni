@@ -35,8 +35,8 @@ function mount(over: Partial<ControlsState> = {}) {
 // place in the client, on opening a different design, so a reader could not turn the field off.
 describe("the clear-highlight control", () => {
   it("is always present, so the reader learns it once", () => {
-    // Rendered rather than shown-on-demand: a control that appears on a state change has to be
-    // discovered twice, and this exists precisely because the gesture was undiscoverable.
+    // Rendered rather than shown-on-demand, since a control that appears on a state change has to
+    // be discovered twice, and this exists because the gesture was undiscoverable.
     expect(mount({ hasHighlights: false }).clear()).not.toBeNull();
     expect(mount({ hasHighlights: true }).clear()).not.toBeNull();
   });

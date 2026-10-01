@@ -3,15 +3,15 @@ title: "Working in the web client"
 description: "The four edits a new viewer panel takes, and the traps that ship green in CI and broken in the browser."
 ---
 
-This page is what bites when you change the web client. It covers the edits a new panel takes, the
-framework behaviours that produce an inert UI with every unit test green, and the failures that only
-a real browser or a composition-root test can see. The architecture underneath is on
+This page collects what bites when you change the web client. It covers the edits a new panel
+takes, the framework behaviours that produce an inert UI with every unit test green, and the
+failures that only a real browser or a composition-root test can see. The architecture underneath is on
 [Web app and presenter](../web-app/), and the interaction model the panels serve is on
 [Picking and querying](../web-picking/).
 
 ## Wiring a new panel
 
-**FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island
+**A new viewer panel takes FOUR edits**, and everybody forgets the last one. They are the island
 (`web/src/<panel>.tsx`), its hole in `web/templates/ViewerPage.html` (`data-component="..."`), its
 field on `ViewSink` in `web/src/viewer.ts`, and its construction plus wiring in `web/src/main.ts`.
 
@@ -23,14 +23,16 @@ later throws at boot rather than deferring, which is how the trace panel first f
 `composition.test.ts`. Add the panel after the one it tabs with.
 
 `main.ts` is the composition root and nothing else constructs it, so a missed fourth edit is invisible
-to every other test: the presenter's view ports are OPTIONAL by design (an embedding host may leave a
-panel out, see `build/extending.md`), which means an unwired port is a silent no-op rather than a type
+to every other test, because the presenter's view ports are OPTIONAL by design (an embedding host
+may leave a panel out, see `build/extending.md`), which means an unwired port is a silent no-op rather than a type
 error. That has shipped a green-CI, broken-in-the-browser feature twice, once with a client never
 passed and once with a view never wired.
 
 `web/src/composition.test.ts` now boots the real `main.ts` under jsdom against the real page and fails
 on any of those omissions, so let the test tell you what you forgot. Read its header comment before
 changing the wiring; `docsite/content/architecture/web-app.md` has the rationale.
+
+## Traps that ship green
 
 **A panel's derived rows must be MEMOIZED, or selecting a row rebuilds the whole panel.** Solid's
 `<For>` keys by object REFERENCE, and a derivation like `collapseSorted(props.state().findings)` mints
@@ -73,10 +75,10 @@ or child expression in an effect over the signals it reads, so `class={p.pinRefs
 The data changes, the DOM does not. Read through the accessor instead (`props.spec().parameters.some(
 ...)`), which tracks. This shipped an inert set of buttons with every unit test green, because the
 helpers were correct and only the subscription was missing; a component test is the only thing that
-sees it, and `transcribe.tsx` still has none (OUT_OF_SCOPE).
+sees it, and `transcribe.test.tsx` covers the pin and relation editors but not the binding chips.
 
 **Never `window.confirm` / `alert` / `prompt` in a panel.** A native dialog blocks the page, which
-blocks browser automation outright: the screenshot and drive-the-app flows stop responding with no
+blocks browser automation outright, so the screenshot and drive-the-app flows stop responding with no
 error. Use an inline two-step (the `deletePackage` confirm in `transcribe.tsx`), which is also better
 UX, since it can name what is about to be lost rather than asking a generic "are you sure".
 
@@ -86,7 +88,7 @@ The datasheet workbench (`regionview.tsx`, `transcribe.tsx`) went untested for a
 reason was one import. `pdfrender.ts` sets pdf.js's worker options and pulls in its canvas module at
 LOAD time, and that module reaches for `DOMMatrix`, which jsdom does not have. Any file importing it
 therefore throws before a single test runs, whatever the test intended to assert. An 885-line
-component with no component test looked like a testing gap; it was an import graph.
+component with no component test looked like a testing gap, and the cause was the import graph.
 
 The fix is the split now in place, and it generalizes to any browser-only library:
 
@@ -103,7 +105,7 @@ So a test supplies a stub page and renders the real workbench.
 <summary>What the tests that became possible then caught</summary>
 
 `regionview.test.tsx` covers the non-passive wheel listener, the live-transform / settled-rasterize
-split, and fit-on-first-page. `transcribe.test.tsx` needed no seam at all, only a stub handlers
+split, and fit-on-first-page. `transcribe.test.tsx` needed no port at all, only a stub handlers
 object, and found a swallowed keystroke on its first run (a signal was set before the event value
 was read, so Solid wrote the empty derived id back into the field mid-handler).
 
@@ -122,7 +124,7 @@ about.
 
 Neither is a rendering bug, so neither is what `make browser-test` is for. **The general shape is that
 a panel test mounts state directly and therefore only ever exercises the state the presenter would
-push if it were working.** A deep link is a different entry point into the same panel: it arrives with
+push if it were working.** A deep link is a different entry point into the same panel, arriving with
 caches cold and view state unset. Test the arrival, not just the interaction.
 
 ## Two caches for one answer will drift
@@ -132,8 +134,8 @@ When the considered set arrived it got a second cache beside the first, filled f
 and the two did not stay in step: findings were invalidated in two places and verdicts in one, so
 changing the naming vocabulary left a considered set computed under the old one on screen.
 
-The sharp part is why that matters more for verdicts than for findings. **A verdict is keyed by rule
-NAME, and a convention change is exactly when rule names change**: the server's naming rules disappear
+That matters more for verdicts than for findings. **A verdict is keyed by rule
+NAME, and a convention change is when rule names change**, since the server's naming rules disappear
 and the request's appear under a different namespace. A surviving verdict can therefore name a rule
 that no longer exists and answer for a subject nothing re-examined, which is a coverage claim about a
 run that never happened.

@@ -4,19 +4,18 @@ import type { EventBus } from "@panyam/tsappkit";
 import type { SheetsState, SheetsView } from "./sheets.js";
 
 // SheetTab is one strip entry: a sheet the user has actually VISITED in the open design. The
-// strip deliberately holds a plain id/name pair rather than the proto SheetRef, so the view
-// state does not track the wire type.
+// strip holds a plain id/name pair rather than the proto SheetRef, so the view state does not
+// track the wire type.
 export interface SheetTab {
   id: string;
   name: string;
 }
 
-// TabStripState is the strip's own view state. It is NOT a mirror of the design's sheet list:
-// a design's full hierarchy lives in the Sheets overview panel, and opening a file would put
-// dozens of tabs on screen at once if the strip mirrored it. Instead a sheet earns a tab the
-// first time it is shown (from the Sheets panel, a finding, a query locate, or a deep link),
-// the way an editor accumulates open-file tabs. mount/path identify the design the tabs belong
-// to, so switching designs clears them.
+// TabStripState is the strip's own view state. It is NOT a mirror of the design's sheet list,
+// which lives in the Sheets overview panel and would put dozens of tabs on screen when a file
+// opens. Instead a sheet earns a tab the first time it is shown (from the Sheets panel, a finding,
+// a query locate, or a deep link), the way an editor accumulates open-file tabs. mount/path
+// identify the design the tabs belong to, so switching designs clears them.
 export interface TabStripState {
   mount: string;
   path: string;
@@ -29,10 +28,10 @@ export function emptyTabStrip(): TabStripState {
 }
 
 // visitSheet folds a presenter SheetsState push into the strip. Tabs accumulate in VISIT order
-// and keep their position on a revisit: reordering the strip on every navigation (a true MRU)
-// moves tabs out from under the cursor, which is why editors do not do it either. A push for a
-// different design resets the strip, and a push with no active sheet adds nothing — a design
-// whose sheet is still loading shows an empty strip rather than a placeholder tab.
+// and keep their position on a revisit, since reordering on every navigation (a true MRU) moves
+// tabs out from under the cursor. A push for a different design resets the strip. A push with no
+// active sheet adds nothing, so a design whose sheet is still loading shows an empty strip rather
+// than a placeholder tab.
 export function visitSheet(prev: TabStripState, s: SheetsState): TabStripState {
   const sameFile = prev.mount === s.mount && prev.path === s.path;
   const tabs = sameFile ? prev.tabs : [];
@@ -68,8 +67,8 @@ function TabStrip(props: { state: () => TabStripState; onSelect: (id: string) =>
             <button type="button" class="sheet-tab-label" title={tab.name} onClick={() => props.onSelect(tab.id)}>
               {tab.name}
             </button>
-            {/* The close affordance is hidden on the last remaining tab: closing it would leave a
-                rendered canvas with an empty strip, a state with no way back except the Sheets panel. */}
+            {/* The close affordance is hidden on the last remaining tab. Closing it would leave a
+                rendered canvas with an empty strip and no way back except the Sheets panel. */}
             <Show when={props.state().tabs.length > 1}>
               <button type="button" class="sheet-tab-close" title={`close ${tab.name}`} onClick={() => props.onClose(tab.id)}>
                 ×
@@ -82,16 +81,16 @@ function TabStrip(props: { state: () => TabStripState; onSelect: (id: string) =>
   );
 }
 
-// SheetTabHandlers is the strip's single intent: the user wants a sheet shown. Closing a tab is
-// view-local state, so it is not an intent — it only reaches the presenter when it implies a
-// different sheet must be shown, and then it arrives as onSelect like any other navigation.
+// SheetTabHandlers is the strip's single intent, that the user wants a sheet shown. Closing a tab
+// is view-local state and not an intent. It reaches the presenter only when a different sheet must
+// be shown, and then it arrives as onSelect like any other navigation.
 export interface SheetTabHandlers {
   onSelect: (sheetId: string) => void;
 }
 
 // sheetTabsIsland mounts the visited-sheet tab strip and returns its SheetsView, which the
 // presenter pushes the open design's sheet state to (the same push the Sheets panel and the file
-// tree receive — see ViewerPresenter's sheetNavs). Framework reactivity stays in this leaf
+// tree receive; see ViewerPresenter's sheetNavs). Framework reactivity stays in this leaf
 // (CONSTRAINTS C11).
 export function sheetTabsIsland(
   el: HTMLElement,

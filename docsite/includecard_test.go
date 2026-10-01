@@ -10,7 +10,7 @@ import (
 )
 
 // A transcluded card does not pass through the template engine, so any site directive it carries
-// reaches the browser verbatim. That broke four card images across two guide pages: the request went
+// reaches the browser verbatim. That broke four card images across two guide pages. The request went
 // out for a literal `%7B%7B.Site.PathPrefix%7D%7D` path and 404'd. Nothing caught it because the
 // prose around the image rendered perfectly and the page looked right.
 //

@@ -73,13 +73,13 @@ func TestEDIFPercentEscape(t *testing.T) {
 			t.Errorf("EDIF %q = %q, want %q", c.src, got, c.want)
 		}
 	}
-	// KiCad dialect does not use %..% escapes: a percent is an ordinary byte.
+	// KiCad dialect does not use %..% escapes, so a percent is an ordinary byte.
 	if got := parse(t, `(x "50%10%")`, KiCadStrings).Arg(1).Text(); got != "50%10%" {
 		t.Errorf("KiCad string = %q, want the percent literal", got)
 	}
 }
 
-// TestParenInString: a '(' inside a quoted string is not a list start in either dialect.
+// TestParenInString checks that a '(' inside a quoted string is not a list start in either dialect.
 func TestParenInString(t *testing.T) {
 	n := parse(t, `(property "Resistance (Ohm)" (value 10))`, EDIFStrings)
 	if n.Arg(1).Text() != "Resistance (Ohm)" || n.Child("value") == nil {
@@ -88,11 +88,11 @@ func TestParenInString(t *testing.T) {
 }
 
 // TestParseRejectsTruncation pins the property that made a 97% under-read look like a clean read
-// (agni issue 562): a surplus ')' closes the top-level expression early, and everything after it
+// (agni issue 562). A surplus ')' closes the top-level expression early, and everything after it
 // used to be discarded in silence. The board that found this is a KiCad demo whose teardrop blocks
-// are each written a '(' short, so the shape below is that file in miniature: the ')' meant to close
-// `teardrops` closes `pad` instead, and the cascade reaches depth 0 while a whole second footprint
-// is still unread.
+// are each written a '(' short, so the shape below is that file in miniature, where the ')' meant
+// to close `teardrops` closes `pad` instead, and the cascade reaches depth 0 while a whole second
+// footprint is still unread.
 func TestParseRejectsTruncation(t *testing.T) {
 	// The intended structure with exactly one '(' removed, which is what the board does 349 times.
 	const src = `(kicad_pcb
@@ -125,22 +125,24 @@ func TestParseRejectsTruncation(t *testing.T) {
 	}
 }
 
-// TestParseRejectsTrailingContent: two top-level expressions is the same defect without the paren
-// cascade. One file is one expression in both dialects.
+// TestParseRejectsTrailingContent covers two top-level expressions, which is the same defect
+// without the paren cascade. One file is one expression in both dialects.
 func TestParseRejectsTrailingContent(t *testing.T) {
 	for _, mode := range []StringMode{KiCadStrings, EDIFStrings} {
 		if _, err := Parse(strings.NewReader("(a 1)\n(b 2)\n"), mode); err == nil {
 			t.Errorf("mode %v: Parse accepted trailing expression", mode)
 		}
-		// Trailing whitespace is not trailing content: a well-formed file ends with a newline.
+		// Trailing whitespace is not trailing content, since a well-formed file ends with a
+		// newline.
 		if _, err := Parse(strings.NewReader("(a 1)\n\n\t \r\n"), mode); err != nil {
 			t.Errorf("mode %v: Parse rejected trailing whitespace: %v", mode, err)
 		}
 	}
 }
 
-// TestTokenizerLineCount: the position an error quotes has to survive the tokenizer's pushbacks
-// (scanAtom unreads its terminator, which may be the newline) and the newlines held inside strings.
+// TestTokenizerLineCount checks that the position an error quotes survives the tokenizer's
+// pushbacks (scanAtom unreads its terminator, which may be the newline) and the newlines held
+// inside strings.
 func TestTokenizerLineCount(t *testing.T) {
 	cases := []struct {
 		name string

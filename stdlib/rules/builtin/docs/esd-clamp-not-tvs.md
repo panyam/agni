@@ -3,7 +3,7 @@
 ### What it means
 
 An externally-exposed signal net (on a connector) has a **Zener clamp** in reach but no fast
-**ESD TVS**. The net is not unprotected, it is protected by a different device class than the one
+**ESD TVS**. The net is protected, but by a different device class than the one
 an ESD review usually asks for.
 
 ### Why engineers want it
@@ -13,15 +13,15 @@ fast and shunt the strike. A Zener diode clamps too, but slower and at higher cl
 it is commonly a load-dump / flyback clamp on an output rather than a signal-ESD device. Flagging
 "clamped by a Zener, not a TVS" lets a reviewer decide, per their checklist, whether that satisfies
 the ESD requirement for that pin or whether a dedicated TVS is still wanted. It is deliberately
-**info** severity: the finding is a distinction to weigh, not a defect.
+**info** severity because the finding is a distinction to weigh rather than a defect.
 
 ### Impact
 
 Reported so a review can tell "this pin has a Zener clamp" apart from "this pin has nothing." An
 ESD-specific checklist item may accept it or require a TVS; a load-dump item may consider it done.
 
-    OPH0070 ---[ J1 ]---[ D3 zener ]---[ U2 ]   clamped, but not a fast TVS -> info
-    OPH0070 ---[ J1 ]---[ D3 tvs   ]---[ U2 ]   fast ESD clamp              -> not flagged
+    EXT_IO  ---[ J1 ]---[ D3 zener ]---[ U2 ]   clamped, but not a fast TVS -> info
+    EXT_IO  ---[ J1 ]---[ D3 tvs   ]---[ U2 ]   fast ESD clamp              -> not flagged
 
 ![an external net clamped by a Zener is reported (info); the same net with a fast ESD TVS is not flagged](images/esd-clamp-not-tvs.svg)
 
@@ -34,8 +34,8 @@ protection in reach is a **Zener clamp** (no TVS, no IC ESD rating) is this rule
 exclusive on any one net, so moving a net here removes it from the `esd-protection` count without
 hiding it. A TVS or a datasheet IC-ESD rating in reach satisfies both rules (neither fires).
 
-The Zener is recognized by classification: a part whose `Description` (or other part text) carries a
-`zener` token classifies as the `zener` device class (distinct from `tvs`), the same
+The Zener is recognized by classification, since a part whose `Description` (or other part text)
+carries a `zener` token classifies as the `zener` device class (distinct from `tvs`), the same
 netlist-derived, config-extensible class lexicon that recognizes a TVS. As with the TVS check, the
 clamp may sit one series hop away (the reach walk is 2-hop), so a series resistor between the
 connector and the clamp does not hide it.
@@ -44,9 +44,9 @@ connector and the clamp does not hide it.
 
 A Zener clamp is a slower, higher-energy pressure-relief valve than a TVS. Both sit *beside* the
 signal path and shunt overvoltage to ground; the TVS is the one rated for the fast ESD spike. This
-rule is a **classifier**, not a gate: it re-labels a subset of what `esd-protection` would otherwise
-call "unprotected" as "protected by the wrong class," so a downstream policy (a review manifest) can
-route it to pass or fail without the engine hard-coding that judgment.
+rule is a **classifier** rather than a gate, re-labelling a subset of what `esd-protection` would
+otherwise call "unprotected" as "protected by the wrong class," so a downstream policy (a review
+manifest) can route it to pass or fail without the engine hard-coding that judgment.
 
 ### Query structure
 

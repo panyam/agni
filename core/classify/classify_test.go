@@ -6,9 +6,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestClassifyPlaceholderPrefix: a part's declared designator_prefix arrives as printed, and capture
-// tools print the annotation-placeholder form ("C?", "REF**"); the tail is trimmed before the table
-// lookup — without it every part-typed component on the Mentor EDIF corpus classified unknown.
+// TestClassifyPlaceholderPrefix covers a part's declared designator_prefix, which arrives as
+// printed, and capture tools print the annotation-placeholder form ("C?", "REF**"). The tail is
+// trimmed before the table lookup. Without it every part-typed component on the Mentor EDIF corpus
+// classified unknown.
 func TestClassifyPlaceholderPrefix(t *testing.T) {
 	c := &ir.Component{RefDes: "C3154"}
 	pt := &ir.PartType{Name: "GCJ188R71H224KA01D", DesignatorPrefix: "C?"}
@@ -20,9 +21,10 @@ func TestClassifyPlaceholderPrefix(t *testing.T) {
 	}
 }
 
-// TestStampFillsDeviceClasses is the left-shift proof: Stamp classifies every component once over the
-// read IR and writes the device_classes set, resolving part-type sections through the shared index. A
-// component the classifier cannot place (unknown) carries no tag, so the set stays honest.
+// TestStampFillsDeviceClasses is the left-shift proof. Stamp classifies every component once over
+// the read IR and writes the device_classes set, resolving part-type sections through the shared
+// index. A component the classifier cannot place (unknown) carries no tag, so the set stays
+// accurate.
 func TestStampFillsDeviceClasses(t *testing.T) {
 	d := &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{
@@ -52,8 +54,8 @@ func TestStampFillsDeviceClasses(t *testing.T) {
 	}
 }
 
-// TestClassesOf: a class with a subtype family carries the family tag too; test_connector does NOT
-// carry connector (WS3-066 split); unknown is the empty set.
+// TestClassesOf checks that a class with a subtype family carries the family tag too;
+// test_connector does NOT carry connector (WS3-066 split); unknown is the empty set.
 func TestClassesOf(t *testing.T) {
 	cases := []struct {
 		in   ComponentClass
@@ -65,7 +67,7 @@ func TestClassesOf(t *testing.T) {
 		{ClassLED, []string{"led", "diode"}},
 		{ClassZener, []string{"zener", "diode"}},
 		{ClassFerrite, []string{"ferrite", "inductor"}},
-		{ClassTestConnector, []string{"test_connector"}}, // NOT connector — the split is deliberate
+		{ClassTestConnector, []string{"test_connector"}}, // NOT connector, and the split is deliberate
 		{ClassConnector, []string{"connector"}},
 	}
 	for _, tc := range cases {
@@ -75,8 +77,9 @@ func TestClassesOf(t *testing.T) {
 	}
 }
 
-// TestMostSpecific: the specific class wins over its family tag so the Model's single component.class
-// stays stable as the set widens; a non-token-hint class (ic) still resolves; an empty set is unknown.
+// TestMostSpecific checks that the specific class wins over its family tag so the Model's single
+// component.class stays stable as the set widens; a non-token-hint class (ic) still resolves; an
+// empty set is unknown.
 func TestMostSpecific(t *testing.T) {
 	cases := []struct {
 		in   []string
@@ -118,8 +121,8 @@ func TestClassifyThermistor(t *testing.T) {
 		pt   *ir.PartType
 	}{
 		{"the RT prefix", &ir.Component{RefDes: "RT1"}, nil},
-		// A project whose ref-des convention differs still resolves from the part text, which is the
-		// only route open to it: the prefix table is not configurable.
+		// A project whose ref-des convention differs still resolves from the part text, without
+		// declaring a prefix in its lexicon (agni 677).
 		{"an NTC in the part text", &ir.Component{RefDes: "X9"}, &ir.PartType{Name: "NTC 10K 0603"}},
 		{"a PTC in the part text", &ir.Component{RefDes: "X9"}, &ir.PartType{Name: "PTC resettable"}},
 	} {
@@ -131,7 +134,7 @@ func TestClassifyThermistor(t *testing.T) {
 	}
 }
 
-// The family tag is what makes the fix reach the analyses that motivated it: a thermistor is a
+// The family tag is what makes the fix reach the analyses that motivated it. A thermistor is a
 // two-terminal resistor for every topological question, so test-point coverage and divider topology
 // must see it without each learning a new class name.
 func TestThermistorCarriesTheResistorFamily(t *testing.T) {

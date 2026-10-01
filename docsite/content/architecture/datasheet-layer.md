@@ -17,9 +17,9 @@ that document into data a rule can compare a design against.
 | **resolution** | which parameters to extract, and when | the scheduler below (not yet built) |
 | **the join** | parameter set to design, by part identity | `check.Model`'s params tier |
 
-Each contract follows the pattern used elsewhere in the engine: one schema, many producers, the same
-shape [ingestion](../ingestion-and-ir/) uses for format readers. No extractor populates the parameter
-schema in production yet, and hand-encoded fixtures validate it today.
+Each contract has one schema and many producers, the pattern [ingestion](../ingestion-and-ir/)
+uses for format readers. `datasheet/derive` produces specs offline, but nothing populates the
+parameter schema in production yet, and hand-encoded fixtures validate it today.
 
 ## The parameter contract
 
@@ -50,18 +50,18 @@ inside their own boundary.
 need, cited, in `datasheet/param/testdata/`, so `make testall` passes on a clean clone. A seeded
 corpus is the part's actual parameter set and lives OUTSIDE this repo with its source PDFs.
 Transcribing a whole vendor table because it demonstrates better is how a fixture drifts into being
-an extracted parameter document: `txb0104.textproto` reached 389 lines that way and was cut back. If
-a new fixture is much larger than its neighbours, that is the signal. Anything user-facing uses
-SYNTHETIC parts.
+an extracted parameter document, which is how `txb0104.textproto` reached 389 lines before it was
+cut back. A new fixture much larger than its neighbours has probably drifted the same way.
+Anything user-facing uses SYNTHETIC parts.
 
 ### Verification, and why it expires
 
 Provenance says how a value was PRODUCED, and cannot say whether anyone has since agreed with it.
 `Parameter.verification` is the separate record of who checked, when, and against WHICH REVISION.
 
-The revision is why this is a message rather than a boolean. A value checked against rev K is not
-thereby true of rev L, and a stale verification is worse than none: an unverified value is honest
-about what it is, while a stale-verified one is a confident wrong answer with a person's name
+This is a message rather than a boolean so it can carry the revision. A value checked against rev K
+is not thereby true of rev L, and a stale verification is worse than none, because an unverified
+value claims nothing while a stale-verified one is a confident wrong answer with a person's name
 attached, trusted precisely because someone did once check it.
 
 ![how a verification state is derived]({{.Site.PathPrefix}}/static/images/datasheet/verification-states.svg)
@@ -101,13 +101,13 @@ also 1.0/1.1, A/B, bare dates, "Rev K.1"), so "how many revisions behind" has no
 <details>
 <summary>Who writes a verification, and why hand transcription counts as one</summary>
 
-Hand transcription in the workbench. Typing a value off the page IS a confirmation, and the layer had
+Hand transcription in the workbench writes one. Typing a value off the page IS a confirmation, and the layer had
 always said so implicitly by stamping `confidence: 1.0` on a hand-entered row. What it could not say
 was WHICH revision, so the claim never expired.
 
 This is the opposite posture from `candidate.Accept`, which refuses to mark a machine proposal
 verified, keeping "a machine proposed this" from reading as "a person checked this". Hand
-transcription is on the checked side of that seam.
+transcription is on the checked side of that boundary.
 
 Two consequences. A transcription against a document whose revision the corpus has not recorded saves
 UNVERIFIED rather than being refused, because transcribing is still worth doing and claiming a
@@ -115,9 +115,9 @@ confirmation nothing can invalidate is not. And `SourceDoc.title` is editable in
 because producers fill it with a PART number ("LM1117") rather than the document number the field is
 specified to carry, and a snapshot of a part number reads identically before and after a reissue.
 
-One workbench behaviour matters here and the rest belongs to [Web app](../web-app/): browsing a
-corpus WRITES a `.partspec.json` beside every document you open, because a document with no saved
-spec gets one seeded and persisted. Point it at a scratch copy rather than an original.
+Browsing a corpus in the workbench WRITES a `.partspec.json` beside every document you open,
+because a document with no saved spec gets one seeded and persisted, so point it at a scratch copy
+rather than an original. The rest of the workbench is described in [Web app](../web-app/).
 
 That file is a DRAFT. It is saved without validation, so work is never lost, and no check reads it:
 `param.LoadSet` loads `*.textproto` only, even from a directory holding drafts. A draft reaches the
@@ -129,12 +129,12 @@ engine through [`agni params promote`](../../guide/cli-reference/#params-promote
 ### Comparison semantics
 
 Values, units, and symbols are STORED as printed, so the layer meets vendor variety and a seeded row
-can be checked against its page by eye. Three rules keep comparison honest, all one posture: when a
-comparison cannot be made safely, stay silent rather than improvise.
+can be checked against its page by eye. The three rules below share one posture, which is to stay
+silent when a comparison cannot be made safely rather than improvise one.
 
-**Three trust states, not two.** `param.UnderSpecified` says a row's conditions are not trustworthy
+**A row has three trust states, not two.** `param.UnderSpecified` says a row's conditions are not trustworthy
 at all, so skip it. A row can be fully captured and still carry a condition that exists only as text,
-which is honest data a human can evaluate next to its provenance and no machine can.
+which a human can evaluate next to its provenance and no machine can.
 `param.MachineComparable` names the boundary, and the middle state is surfaced but never
 auto-compared.
 
@@ -145,12 +145,32 @@ prefix parsed off the front, so every accepted spelling is a key a test can enum
 case-sensitive with no fallback, because `mΩ` and `MΩ` differ by nine orders of magnitude.
 
 **`core/classify`'s prefix table is deliberately NOT reused.** It parses a component's value text off
-a design, where IEC 60062's RKM code reads `M` as MEGA and case is not significant. Correct for a
-schematic value field, and it inverts three orders of magnitude on a printed unit symbol.
+a design, where IEC 60062's RKM code reads `M` as MEGA and case is not significant. It is correct
+for a schematic value field and inverts three orders of magnitude on a printed unit symbol.
 `TestUnitVocabulariesAgree` holds the two tables to each other without an import, since the datasheet
-tier depends on nothing in `core` (C17). Vendor symbols never appear in rule text either: the same
+tier depends on nothing in `core` (C17). Vendor symbols never appear in rule text either, because the same
 parameter prints as "VDC", "WV", or "Rated Voltage" depending on vendor, so `symbol` is the
 per-vendor match key and the lookup lives behind the join as a per-corpus alias map.
+
+**An alias set names one limit on one pair of terminals, and each extractor in `core/check`
+constrains the limit KIND only where the datasheet does.** The alias set, the unit, a stated max and
+the two trust gates above apply to every extractor. The rest differs per limit.
+
+| Extractor | Kind constrained | Why |
+|---|---|---|
+| `SupplyAbsMaxLimits` | `ABSOLUTE_MAX` | it reads what a supply pin can WITHSTAND |
+| `FetBreakdownLimits` | `ABSOLUTE_MAX` | drain-source breakdown is the voltage past which the part stops being a switch, and a datasheet always prints it as an absolute maximum |
+| `EsdRatingLimits` | `ABSOLUTE_MAX` | an ESD rating is a maximum survivable stress |
+| `OutputVoltageLimits`, `OutputCurrentLimits` | no | a regulator states its output as a recommended-operating or characteristic row, so filtering to one kind would find nothing on a real spec. The max is what a downstream part is exposed to |
+
+The FET breakdown set holds `VDSS`, `VDS`, `BVDSS` and `V(BR)DSS` and deliberately excludes `VGSS`.
+That is the gate-source rating, a different limit on a different pair of terminals and usually much
+lower, so comparing a rail against it would misreport which rating a design violates.
+
+An ESD rating is matched to the PART and not to the connector-facing PIN. A connector-facing net
+counts as IC-protected when any part within the protection radius declares a rating of 2 kV or more
+(`icEsdFloorVolts`), whichever of that part's pins the net lands on. Matching the rating to the pin
+is left for follow-up work.
 
 <details>
 <summary>The refusal that unit conversion replaced, and the five rule families it was silently breaking</summary>
@@ -160,14 +180,14 @@ the reasoning that conversion at a call site would become a second informal norm
 refusal shipped a worse failure than the one it avoided.
 
 An extractor that dropped the row left its rule with an empty list, and a rule that compares nothing
-reports nothing, which the runner scores as a **pass**. Neither guard caught it: `check.Available`
+reports nothing, which the runner scores as a **pass**. Neither guard caught it, since `check.Available`
 saw a params tier attached and the `needs-data` gate saw the symbol seeded. Milliamps are the
 ordinary spelling for a sub-amp regulator, so a spec transcribed as printed hit this without doing
 anything unusual, and five rule families were silently passing designs with genuine defects.
 
-What made conversion safe was location rather than caution, which is why one table lives in
+Conversion became safe by happening in one place rather than by being cautious, so one table lives in
 `datasheet/param` beside `UnderSpecified` and `MachineComparable` and every extractor reads through
-it. Storage is unchanged: the spec keeps the printed row and the extractor returns a converted copy,
+it. Storage is unchanged, since the spec keeps the printed row and the extractor returns a converted copy,
 mirroring `ir.Quantity`'s split on the design side.
 
 </details>
@@ -182,7 +202,7 @@ power or interface net ("does this connection meet what this pin actually requir
 **Inside the spec the binding key is a spec-local `Pin.id`**, neither the name nor a number, because
 an opaque local id is unique by construction and lets `param.Validate` reject a parameter bound to a
 pin the spec never declared. A dangling binding is worth catching at load precisely because
-downstream it does not look like an error: the parameter stops applying to anything and the rule that
+downstream it does not look like an error, since the parameter stops applying to anything and the rule that
 wanted it reports nothing.
 
 `pin_refs` is orthogonal to `applies_to` rather than a second spelling of it. `applies_to` narrows
@@ -229,7 +249,7 @@ mean two things depending on the row. `PinRelation` is the separate shape, held 
 than on a `Pin`, because a relation is between two terminals and owned by neither.
 
 **The bound is a value, not a comparison operator.** The obvious shape for "VCC(A) <= VCC(B)" is a
-subject, an operator and a reference, and it breaks on the next document: read across four vendors,
+subject, an operator and a reference, and it breaks on the next document, since across four vendors
 three of five instances carry a non-zero allowance. So the bound is on the DIFFERENCE, subject minus
 reference, reusing `RangeValue` unchanged:
 
@@ -240,7 +260,7 @@ reference, reusing `RangeValue` unchanged:
 | at least 1 V higher | `min: 1` |
 | within 0.3 V of | `min: -0.3, max: 0.3` |
 
-Because the bound is signed, the ORDER of the two ends is load-bearing and swapping them inverts the
+Because the bound is signed, swapping the ORDER of the two ends inverts the
 requirement, so `param.PinRelations` returning relations from either end means a caller must read
 `subject_pin_ref` rather than assume the pin it asked about is the subject.
 
@@ -254,7 +274,7 @@ suboptimality. The vendor's modal verb is the only evidence, and the printed sen
 
 **A regime is a `Condition`**, not a new field. Two of the five instances scope their bound, one to
 transient behaviour and explicitly not DC, another across power-up, power-down and normal operation.
-Those are test conditions in the sense `Condition` already models, down to its `raw` escape hatch. A
+Those are test conditions in the sense `Condition` already models, down to its `raw` fallback. A
 bound recorded without its regime is wrong in both directions, over-applying a transient allowance to
 steady state and under-applying a limit the vendor extended across power-up.
 
@@ -276,8 +296,8 @@ producer is a second vendor's datasheet.
 
 ### Why proto, and the worked examples
 
-A cross-runtime contract shared by the Go engine, the TypeScript viewer, and future extractors, where
-hand-written parallel types are exactly the drift a shared schema prevents. It is `agni.v1.param`
+The layer is proto because the Go engine, the TypeScript viewer and future extractors share it, and
+hand-written parallel types would drift where a shared schema cannot. It is `agni.v1.param`
 rather than a corner of `ir` because it has different producers, consumers, and lifecycle. Three
 fixtures are transcribed by hand from the cited revision, and `param_test.go` and `pins_test.go`
 assert all three validate, so the examples are executable rather than prose.
@@ -293,7 +313,7 @@ assert all three validate, so the examples are executable rather than prose.
 The doc-IR is the intermediate artifact, a source document decomposed into pages, tables, figures and
 text blocks, with cell structure and bounding-box provenance. Many parsers produce it. Recipes, LLM
 proposal stages, the verification UI and revision diffing consume it, and none of them touch the
-source bytes. It is named for documents rather than tables or datasheets on purpose: figures are
+source bytes. It is named for documents rather than tables or datasheets because figures are
 provenance targets and the page text layer feeds search, so "table-IR" would mislead, and app notes,
 errata and reference manuals decompose identically, so "datasheet-IR" would overfit today's corpus.
 
@@ -317,7 +337,7 @@ titles come back empty, because datasheet tables are headed rather than captione
 attachment is recipe-layer work. And symbol text needs normalization, since subscripts arrive
 space-split ("V GSS"), which is also a recipe concern because doc-IR stores text as extracted.
 
-Absent by design: no curve data (figures carry caption and bbox so provenance can point at them), no
+By design, doc-IR has no curve data (figures carry caption and bbox so provenance can point at them), no
 semantic classification (the recipe layer's output, which keeps doc-IR reusable across recipe
 versions), and no cross-document corpus structure.
 
@@ -326,7 +346,7 @@ versions), and no cross-document corpus structure.
     PartSpec = f(document, toolchain, recipes, patches)
 
 Every input is pinned, every output reproducible from a run manifest, re-runs incremental. A run has
-two outputs, and the second one is the point:
+two outputs, what it extracted and what it declined:
 
 ```mermaid
 flowchart LR
@@ -372,8 +392,8 @@ columns it declined to read.
 | The absence marker is an ASCII hyphen, not the printed em-dash | A parser matching the typographic glyph reads every absence as an unparsed cell |
 | Subscripts flatten with an injected space (`VCCA` as `V CCA`) | The name is the channel that resolves a design pin to a spec pin, so fragments are rejoined when every one is a short all-caps token. A multi-word label like `Thermal pad` keeps its spaces |
 
-A row carrying several designators per package is **ambiguous by construction**: `GND 2, 5, 7` is one
-terminal bonded to three legs, `NC 6, 9` is two terminals sharing a printed name. The table cannot
+A row carrying several designators per package is **ambiguous by construction**, since `GND 2, 5, 7` is one
+terminal bonded to three legs while `NC 6, 9` is two terminals sharing a printed name. The table cannot
 tell them apart, so the split keys on the one function the document states in words ("No connection.
 Not internally connected."), and every such row is gapped whichever way it went. The type column is
 otherwise taken at face value, because real tables leave it blank on supply and ground rows and
@@ -382,11 +402,11 @@ document declined to make.
 
 </details>
 
-Note what stage 5's gate covers, because it constrains what may be added to it. `param.Validate` is
+Stage 5's gate constrains what may be added to it. `param.Validate` is
 `Problems` joined, and `Problems` includes the COMPLETENESS half, so a derived spec must be complete
 rather than merely well-formed. Any new completeness check therefore fails every `derive` run the
 moment it lands, and the run reports it as "a derive bug, not a data gap". That is the right default
-and it is also a trap: a thing a first pass genuinely cannot supply must be recorded as a manifest
+and it is also a trap, so a thing a first pass genuinely cannot supply must be recorded as a manifest
 gap, never as a completeness problem.
 
 <details>
@@ -403,19 +423,19 @@ borrowing the part name.
 
 The one wrong state `param.Validate` does report is a title that repeats the MPN, because that is an
 assertion rather than an absence. The check is equality, deliberately, and not a guess at what a part
-number looks like: the failure being corrected came from a plausible-looking value nobody challenged,
+number looks like, because the failure being corrected came from a plausible-looking value nobody challenged,
 and a heuristic would reject legitimate titles for vendors whose numbering nobody has seen.
 
 </details>
 
-### Trust defaults, the honesty ladder
+### Trust defaults
 
 Rows from tables with **no conditions channel** stay UNSPECIFIED, under-specified until a human
 verifies, never UNCONDITIONAL, because a header default this stage cannot prove captured may qualify
 every row. Rows with a captured channel are COMPLETE, and raw-only members still make the row
 machine-incomparable, which is the intended middle state. Derived confidence is a constant 0.9.
 
-That upgrade is a SECOND signal rather than the record. `param.MarkVerified` raises confidence to 1
+Confidence is a SECOND signal rather than the record. `param.MarkVerified` raises confidence to 1
 alongside writing the `Verification`, so a consumer reading only the older float is not misled. But
 confidence cannot expire and a verification can, so anything deciding whether to TRUST a value reads
 the verification state. Judging on the float alone rates a verification of a superseded revision as
@@ -442,20 +462,20 @@ a silence.
 
 **The gap list is also the diagnostic instrument.** A pin table whose header spanned two rows had
 both its type and description columns invisible, so every pin came out named, numbered and untyped, a
-result indistinguishable from a datasheet that simply did not say. That is how a silent extractor bug
-survives: its output is plausible. It was found in minutes because the manifest said which pins were
+result indistinguishable from a datasheet that simply did not say. A silent extractor bug survives
+that way because its output is plausible. It was found in minutes because the manifest said which pins were
 declined and why, and the gap detail separates the two causes, since an unknown token is a vocabulary
 gap that names its own fix while a missing column is a judgement for a human.
 
 `derive_test.go` asserts that deriving the raw-shaped BSS138 doc-IR reproduces every hand-encoded row.
 Any change must keep that agreement or deliberately update the goldens, the same regression discipline
-the render golden SVGs use. Deferred: an ensemble or VLM second path with agreement gating, the
+the render golden SVGs use. Still deferred are an ensemble or VLM second path with agreement gating, the
 verification queue, a persistence store (specs and manifests are files today), realtime on-demand
 derivation, curves as data, and where the recipe catalog lives once a second vendor family accumulates.
 
 ## How resolution is scheduled
 
-**Decided, not built.** Everything above is contracts and a function over them. What drives
+**This part is decided and not yet built.** Everything above is contracts and a function over them. What drives
 `PartSpec` population, and when, is separate, sits on top, and changes none of them.
 
 docling gives a faithful but semantically flat decomposition, and across vendors that layer has no
@@ -472,20 +492,20 @@ database memorized in advance.
 
 ![the resolution chain]({{.Site.PathPrefix}}/static/images/datasheet/resolution-chain.svg)
 
-The eager/lazy seam sits at doc-IR to PartSpec. **doc-IR is eager**, because decomposing a PDF is a
+The eager/lazy boundary sits at doc-IR to PartSpec. **doc-IR is eager**, because decomposing a PDF is a
 fixed one-time cost per file that produces no semantic claim. **PartSpec population is lazy.** So
 "extract on demand" means classify and transcribe on demand over already-faithful doc-IR, not run
 docling on demand, which removes the usual objection to a just-in-time design where a developer
 clicks a rule and stalls on a heavy extraction.
 
-The query language and evaluators do not change. What is new is a resolver, a lazy provider behind
-the Model's params tier: today that tier is loaded eagerly and a miss means the rule silently skips,
-where a miss would instead trigger the chain and answer. Enumerating which params a rule needs is not
+The query language and evaluators do not change. The new piece is a resolver, a lazy provider behind
+the Model's params tier that turns a miss into a run of the chain and an answer. Today that tier is
+loaded eagerly and a miss means the rule silently skips. Enumerating which params a rule needs is not
 a new step either, since when `supply-exceeds-abs-max` reads `abs_max(part, "VIN")` from the Model,
 that read IS the query.
 
-Two consequences. `agni query` can answer datasheet questions that today it cannot unless the set was
-preloaded, so the resolver is what lets search reach the datasheet at all. And over a corpus the
+Two consequences. `agni query` would answer datasheet questions that today it cannot unless the set was
+preloaded, so the resolver lets search reach the datasheet at all. And over a corpus the
 cache converges toward the eager one in priority order, accreting into a `PartSpec` built from actual
 demand, where every parameter has already been used against a real net.
 
@@ -503,8 +523,8 @@ surfaced as a suggestion rather than committed as a silent fact.
 
 The resolver serves two query shapes over the same doc-IR and the same chain. A **scalar limit**,
 `(part, parameter, condition)`, returns a value with its range and limit kind, the shape
-`supply-exceeds-abs-max` needs. A **pin table**, `(part)`, returns a pin-function mapping: which pins
-carry which interface signals, a bus's CLK/CMD/DAT lines, a memory byte-lane, a
+`supply-exceeds-abs-max` needs. A **pin table**, `(part)`, returns a pin-function mapping of which pins
+carry which interface signals, such as a bus's CLK/CMD/DAT lines, a memory byte-lane, or a
 {{ explainable "transceiver" }}'s TXD/RXD. An interface-shape check can then derive its
 required-signal list from the host part's datasheet rather than hand-authoring it. A pin table is
 already a doc-IR `Table`, so a recipe classifies it exactly as another recipe locates an abs-max
@@ -512,20 +532,20 @@ value, and only the result type differs.
 
 Every resolution, automatic or human, is stored keyed by roughly
 `(part-family, parameter, vendor, region-shape)`. Nearest-prior over that store yields suggestions,
-which is the few-shot idea used as warm start rather than as auto-committed fact: it accelerates
-review and seeds the model backends, and auto-commit still requires the chain to clear the trust gate
+which is the few-shot idea used as warm start rather than as auto-committed fact, so it accelerates
+review and seeds the model backends while auto-commit still requires the chain to clear the trust gate
 on its own. Coverage also gets a better grain, since eager extraction reports "we extracted 300 of an
 unknowable total" while demand-driven reports "of the parameters your rules queried, N answered
 automatically, M needed a human, K unresolved".
 
-- **Check-driven, no human.** `agni check --params` reads `abs_max(LM1117, VIN)`, misses, the TI
+- **A check can drive it alone.** `agni check --params` reads `abs_max(LM1117, VIN)`, misses, the TI
   recipe locates the abs-max table and returns 20 V at confidence 0.9, the value materializes, and
   the rule compares the design's +24 V supply against it, fires, and cites both sides.
-- **Escalation at the point of demand.** The same walk, but the recipe cannot confidently locate or
+- **A check can escalate at the point of demand.** The same walk, but the recipe cannot confidently locate or
   parse the value. The resolver opens the workbench focused on the likely page and region, "confirm
   VIN abs-max for LM1117," with a warm start from recall. Confirming caches the value with
   region-cited provenance and upgrades trust, and the rule then fires.
-- **Search-driven.** A developer clicks a pin or runs a datalog search across parts. The same
+- **Search can drive it too.** A developer clicks a pin or runs a datalog search across parts. The same
   resolver runs underneath, so search and checks share one cache and one path.
 
 Four points stay open: the resolver interface signature and where it lives, async UX for the slow
@@ -538,30 +558,31 @@ extraction rather than the target.
 
 ## How it joins into checks
 
-The join key is part identity, `PartSpec.mpn` plus `PartSpec.manufacturer`, matching `ir.BomLine`.
-The dependency points one way: readers and the design IR never import the parameter layer. When a
+The join key is part identity, `PartSpec.mpn` matched against the design's MPN, and
+`PartSpec.manufacturer` takes no part in it. Readers and the design IR never import the parameter
+layer, so the dependency points one way. When a
 design carries no BOM or MPN data the join has no key and parameter checks skip, the same
 skip-not-false-pass behaviour used for unseeded parts. The Model's params tier
-(`check.NewModelWithParams`) is the join, taking the BomLine MPN first, else the component's MPN
-attribute, matched case-insensitively and nothing fuzzier.
+(`check.NewModelWithParams`) is the join, taking the BomLine MPN first, else the component's `mpn`
+field, matched case-insensitively and nothing fuzzier.
 
-That join is by part identity only. The finer per-pin join is a property of the contract today and no
-rule consumes it yet, since the shipped rules reach a terminal through a vendor-symbol alias table
-and so cannot tell two supply pins of one part apart. Pin-level relations and a pin-rating rule are
-separate work, both expected to keep the alias path as the fallback.
+That join is by part identity. The finer per-pin join is consumed by `pin-exceeds-abs-max` and
+`pin-out-of-recommended` (agni issue 190), which act only on a part whose spec carries pin bindings.
+Every other part keeps the alias path, which reaches a terminal through a vendor-symbol table and so
+cannot tell two supply pins of one part apart. `param.pin_relation` projects the pin-to-pin bounds.
 
-Two rules use the layer today. **`supply-exceeds-abs-max`** compares a power-input pin's rail nominal
-against the spec's machine-comparable abs-max supply rows, carrying the design site in `Prov` and the
+Several rules use the layer, and two show its range. **`supply-exceeds-abs-max`** compares a
+power-input pin's rail nominal against the spec's machine-comparable abs-max supply rows, carrying the design site in `Prov` and the
 datasheet citation in the message. It is already a right-to-left query, so the scheduling model above
 generalizes an existing shape rather than introducing a new one. **`cap-voltage`** is the first
-spec-authored datasheet rule with no Go twin: its body is a `check.Spec`, the join and the float
+spec-authored datasheet rule with no Go twin, whose body is a `check.Spec`. The join and the float
 compare live behind the `cap_voltage_detail` SpecFunc, and the FFI's declared reads flow into derived
 metadata, so `param.cap_rated_voltage`, `net.max_voltage` and `component.mpn` appear as named
 relations without hand-maintained lists.
 
 A citation also carries the value's verification state, derived at citation time from the revision its
-`SourceDoc` records. That is what lets the review layer tell a fail backed by a confirmed value apart
-from one backed by a confirmation of a superseded revision: `isUnratified` treats `stale` and
+`SourceDoc` records, which lets the review layer tell a fail backed by a confirmed value apart
+from one backed by a confirmation of a superseded revision, because `isUnratified` treats `stale` and
 `unknown` as untrustworthy, so the item reads Provisional (a re-confirm task) rather than a hard Fail.
 Deriving it at citation time rather than stamping it on the finding means a re-seed changes every
 subsequent answer with nothing to re-stamp.

@@ -35,7 +35,7 @@ func lsComp(refDes, part, mpn string) *ir.Component {
 
 func lsConn(ref, pin string) *ir.Connection { return &ir.Connection{ComponentRef: ref, PinRef: pin} }
 
-// loadSwitchBoard is a controller-based high-side switch: U1 drives Q1's gate and senses across R1,
+// loadSwitchBoard is a controller-based high-side switch. U1 drives Q1's gate and senses across R1,
 // whose value the design states in ohms. senseOhms sets the trip current against the controller's
 // threshold.
 func loadSwitchBoard(senseOhms float64) *ir.Design {
@@ -122,8 +122,8 @@ func runLoadSwitchRule(d *ir.Design, set param.ParamSet) []check.Finding {
 	return loadSwitchTripAboveFetRating.Findings(check.NewModelWithParams(d, nil, set))
 }
 
-// TestLoadSwitchTripAboveFetRatingFires: 50mV across a 10mOhm shunt trips at 5A, above the external
-// FET's 3A continuous rating, so the current limit never protects the pass element.
+// TestLoadSwitchTripAboveFetRatingFires covers 50mV across a 10mOhm shunt, which trips at 5A, above
+// the external FET's 3A continuous rating, so the current limit never protects the pass element.
 func TestLoadSwitchTripAboveFetRatingFires(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -172,8 +172,9 @@ func TestLoadSwitchTripWithinFetRating(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchTripEqualsRatingIsSilent: at exactly the rating the design is at the vendor's own
-// number, not past it. The rule claims only the unambiguous half, so the boundary is not a finding.
+// TestLoadSwitchTripEqualsRatingIsSilent pins the boundary. At exactly the rating the design is at
+// the vendor's own number, not past it. The rule claims only the unambiguous half, so the boundary
+// is not a finding.
 func TestLoadSwitchTripEqualsRatingIsSilent(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -184,8 +185,9 @@ func TestLoadSwitchTripEqualsRatingIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchLowestRatingBinds: a part is endangered at its weakest rating, so a second, higher
-// drain-current row must not excuse the over-current. Taking the highest would silence this design.
+// TestLoadSwitchLowestRatingBinds exists because a part is endangered at its weakest rating, so a
+// second, higher drain-current row must not excuse the over-current. Taking the highest would
+// silence this design.
 func TestLoadSwitchLowestRatingBinds(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -199,13 +201,13 @@ func TestLoadSwitchLowestRatingBinds(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchReportsEffectiveOnResistance: the effective on-resistance of a controller-based switch
-// is the external FET's RDS(on), which is what item-26-style sizing needs and what no number on the
-// controller's sheet answers.
+// TestLoadSwitchReportsEffectiveOnResistance checks that the effective on-resistance of a
+// controller-based switch is the external FET's RDS(on), which is what switch sizing needs and what
+// no number on the controller's sheet answers.
 //
-// It is quoted in the message but deliberately NOT added to DatasheetProv: the verdict does not rest
-// on it, and the review's data-trust gate rates a finding by its WEAKEST citation, so listing an
-// unused value could drag a genuine failure to provisional.
+// It is quoted in the message but deliberately NOT added to DatasheetProv, because the verdict does
+// not rest on it, and the review's data-trust gate rates a finding by its WEAKEST citation, so
+// listing an unused value could drag a genuine failure to provisional.
 func TestLoadSwitchReportsEffectiveOnResistance(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -222,8 +224,8 @@ func TestLoadSwitchReportsEffectiveOnResistance(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchWithoutOnResistanceSaysNothing: an unseeded RDS(on) must produce no clause at all.
-// Reporting a zero or an empty figure would read as a perfect switch.
+// TestLoadSwitchWithoutOnResistanceSaysNothing checks that an unseeded RDS(on) produces no clause
+// at all. Reporting a zero or an empty figure would read as a perfect switch.
 func TestLoadSwitchWithoutOnResistanceSaysNothing(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -240,8 +242,8 @@ func TestLoadSwitchWithoutOnResistanceSaysNothing(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchUnseededFetIsSilent: the pass element carries the rating being exceeded, so without it
-// there is nothing to judge. Skip, never pass.
+// TestLoadSwitchUnseededFetIsSilent exists because the pass element carries the rating being
+// exceeded, so without it there is nothing to judge. Skip, never pass.
 func TestLoadSwitchUnseededFetIsSilent(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -251,8 +253,8 @@ func TestLoadSwitchUnseededFetIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchFetWithNoDrainRatingIsSilent: a seeded FET whose spec states no continuous drain
-// current is the same gap as an unseeded one.
+// TestLoadSwitchFetWithNoDrainRatingIsSilent treats a seeded FET whose spec states no continuous
+// drain current as the same gap as an unseeded one.
 func TestLoadSwitchFetWithNoDrainRatingIsSilent(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -263,8 +265,9 @@ func TestLoadSwitchFetWithNoDrainRatingIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentWithoutParams: the params tier is a per-run injection, so an unseeded design has
-// no threshold to compute from and Available gates the rule to not-applicable rather than clean.
+// TestLoadSwitchSilentWithoutParams exists because the params tier is a per-run injection, so an
+// unseeded design has no threshold to compute from and Available gates the rule to not-applicable
+// rather than clean.
 func TestLoadSwitchSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(loadSwitchBoard(0.01))
 	if fs := loadSwitchTripAboveFetRating.Findings(m); len(fs) != 0 {

@@ -14,10 +14,10 @@ const (
 
 // protectionRule builds the rule for ONE protection kind, covering every declared protection of that
 // kind, named intent/protection-<kind> (protection-ovp, protection-discharge). For each declared rail
-// it probes the design topology on that EXACT net (not the rail-role heuristic, which misses names like
-// VBATT01): ovp requires a TVS/zener among the rail's components; discharge requires a resistor that
-// also touches a ground net. A declared rail with no matching device fails (a KindNet finding on the
-// rail).
+// it probes the design topology on that EXACT net rather than the rail-role heuristic, which misses
+// unconventional rail names. ovp requires a TVS/zener among the rail's components, and discharge
+// requires a resistor that also touches a ground net. A declared rail with no matching device fails
+// (a KindNet finding on the rail).
 func protectionRule(kind string, ps []Protection) *check.Rule {
 	return &check.Rule{
 		Name:                "protection-" + kind,
@@ -26,7 +26,7 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 		Detail:              intentDoc("protection-" + kind),
 		Impact:              "a power rail the design was intended to protect (OV clamp / discharge path) lacks the protection device",
 		Remedy:              intentRemedy("protection-" + kind),
-		Reads:               []string{"component-on-net", "component.class", "net.ground"},
+		Reads:               []string{"component.net", "component.class", "net.ground"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return protectionVerdicts(m, ps, kind) },
 		StatesConsideredSet: true,
@@ -37,14 +37,13 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 // belongs to a sibling rule and yields no verdict here, since these families compile to one rule per
 // kind and a pass about someone else's declaration would claim a check that never happened.
 //
-// The pass is what a protection declaration is for: "the OV clamp this rail was intended to have is on
-// it" is the sentence the intent file was written to get back, and the rule said nothing at all when
-// the answer was yes.
+// A protected rail reports a PASS naming the device found, so the report confirms each declaration
+// rather than going silent on it.
 func protectionVerdicts(m check.Model, ps []Protection, kind string) []check.Verdict {
 	var out []check.Verdict
 	for _, p := range ps {
 		if p.Kind != kind {
-			continue // another kind's declaration: not a subject of this rule
+			continue // another kind's declaration, not a subject of this rule
 		}
 		v := check.Verdict{Subjects: []check.Entity{check.NetNameEntity(p.Rail)}}
 		if protected(m, p) {
@@ -100,7 +99,7 @@ func componentsOnNet(m check.Model, name string) map[string]bool {
 }
 
 // groundRefs returns the ref-des set that touches any ground net, so a discharge check can ask "does
-// this resistor also reach ground". It asks the MODEL rather than matching the name itself: the role
+// this resistor also reach ground". It asks the MODEL rather than matching the name itself. The role
 // is stamped at ingestion and the model's reader falls back to this model's own lexicon, so a rule
 // neither re-runs name matching per net (C20) nor reads the process-wide active vocabulary (C22).
 func groundRefs(m check.Model) map[string]bool {

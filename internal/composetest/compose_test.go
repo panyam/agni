@@ -1,18 +1,19 @@
 // Package composetest is the green half of the engine facade's acceptance. It exists as its own
-// package because the two halves need OPPOSITE binaries: the facade's own tests assert what New
-// refuses when a registration seam is empty, which is only observable in a binary that installed
-// none, while these assert what it composes when every seam is filled. Registration is
+// package because the two halves need OPPOSITE binaries. The facade's own tests assert what New
+// refuses when a registration hook is empty, which is only observable in a binary that installed
+// none, while these assert what it composes when every hook is filled. Registration is
 // process-global, so one test binary cannot be in both states.
 //
 // The blank imports below ARE the subject. Dropping stdlib/rules/builtin, stdlib/rules/datalog or
 // stdlib/reviewquery is the red-check for the assertion that names it, and each was confirmed red
 // for its own reason.
 //
-// stdlib/relations is the exception and is listed for intent rather than for effect: stdlib/rules/datalog
-// imports it, so dropping the blank import here changes nothing and the seam cannot be red-checked
-// in this binary. The facade's own TestNewRefusesWhenNoRelationsAreInstalled is where that refusal
-// is proven, in a binary that genuinely installs none. Keep the import anyway, because a program
-// that drops the datalog suite would otherwise lose the fact base with it and silently.
+// stdlib/relations is the exception and is listed for intent rather than for effect.
+// stdlib/rules/datalog imports it, so dropping the blank import here changes nothing and the hook
+// cannot be red-checked in this binary. The facade's own TestNewRefusesWhenNoRelationsAreInstalled
+// is where that refusal is proven, in a binary that genuinely installs none. Keep the import
+// anyway, because a program that drops the datalog suite would otherwise lose the fact base with it
+// and silently.
 package composetest
 
 import (

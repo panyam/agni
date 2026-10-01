@@ -13,8 +13,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// twoProjects is a deployment serving two teams' boards, each with a naming convention that names
-// the OTHER team's rails. It is the shape the misfire was reported on: both configs are correct in
+// twoProjects is a deployment serving two teams' boards, each with a naming convention that names the
+// OTHER team's rails. It is the shape the misfire was reported on, where both configs are correct in
 // isolation and aimed at the wrong design.
 type twoProjects struct {
 	byURI map[string]*webapi.Project
@@ -50,11 +50,11 @@ func resolverFor(byURI map[string]*webapi.Project) *ProjectResolver {
 }
 
 // TestConfigDoesNotCrossProjects is the bug this change exists to close. Two designs on one server,
-// each in its own project: neither may be composed against the other's rules or vocabulary.
+// each in its own project, and neither may be composed against the other's rules or vocabulary.
 //
 // It asserts on the RULE SOURCE names because that is what a finding is attributed to. A rule that
-// runs under the wrong project's name is a finding a team cannot act on, and the failure is silent:
-// nothing in a findings list says which config produced it.
+// runs under the wrong project's name is a finding a team cannot act on, and the failure is silent
+// because nothing in a findings list says which config produced it.
 func TestConfigDoesNotCrossProjects(t *testing.T) {
 	acme := &webapi.Project{Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}}
 	globex := &webapi.Project{Name: "projects/globex", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("globex", "^GBX_")}}
@@ -86,7 +86,7 @@ func TestConfigDoesNotCrossProjects(t *testing.T) {
 	}
 }
 
-// TestNoProjectGetsNoProjectConfig is the structural half of the guarantee: a design that resolves
+// TestNoProjectGetsNoProjectConfig is the structural half of the guarantee. A design that resolves
 // to nothing cannot be checked against anyone's rules, because there is no project to take them
 // from. It is a property of the shape rather than a flag someone remembers to leave off.
 func TestNoProjectGetsNoProjectConfig(t *testing.T) {
@@ -109,7 +109,7 @@ func TestNoProjectGetsNoProjectConfig(t *testing.T) {
 	}
 }
 
-// TestFallbackAppliesOnlyWithoutAProject keeps every existing single-project deployment working: the
+// TestFallbackAppliesOnlyWithoutAProject keeps every existing single-project deployment working. The
 // serve flags stay the default, and a design that resolves to a project stops using them.
 func TestFallbackAppliesOnlyWithoutAProject(t *testing.T) {
 	fallbackOv, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("deployment", "^DEP_")}}, "")
@@ -140,8 +140,8 @@ func TestFallbackAppliesOnlyWithoutAProject(t *testing.T) {
 	}
 }
 
-// TestRequestOverridesTheProject: a caller that named its own conventions is answering for itself,
-// and the project is the default it is overriding (WS3-124's rule, one layer out).
+// TestRequestOverridesTheProject checks that a caller that named its own conventions is answering for
+// itself, and the project is the default it is overriding (WS3-124's rule, one layer out).
 func TestRequestOverridesTheProject(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
@@ -155,15 +155,15 @@ func TestRequestOverridesTheProject(t *testing.T) {
 	if !contains(sourceNames(ov), "mine") {
 		t.Errorf("composed %v, want the request's own convention", sourceNames(ov))
 	}
-	// The request's LEXICON replaces rather than merges, which is what makes switching visible: a
+	// The request's LEXICON replaces rather than merges, which makes switching visible. A
 	// vocabulary that half-applied would answer under neither team's names.
 	if ov.Lexicon == nil {
 		t.Error("the request's lexicon should be the one in effect")
 	}
 }
 
-// TestNilResolverFallsBack: a deployment with no descriptors behaves exactly as it did before
-// projects existed, which is what lets this land without a migration.
+// TestNilResolverFallsBack checks that a deployment with no descriptors behaves exactly as it did
+// before projects existed, which is what lets this land without a migration.
 func TestNilResolverFallsBack(t *testing.T) {
 	fallbackOv, _ := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("deployment", "^DEP_")}}, "")
 	var r *ProjectResolver
@@ -196,9 +196,9 @@ func contains(hay []string, want string) bool {
 
 var _ = check.Rule{}
 
-// TestIgnoreProjectYieldsTheBuiltInCatalog: a reviewer asking "is this finding the engine's opinion
-// or my project's" answers it by subtraction, so the opt-out has to produce EXACTLY what a design in
-// no project produces — not a filtered approximation of it.
+// TestIgnoreProjectYieldsTheBuiltInCatalog exists because a reviewer asking "is this finding the
+// engine's opinion or my project's" answers it by subtraction, so the opt-out has to produce EXACTLY
+// what a design in no project produces, not a filtered approximation of it.
 func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
@@ -217,7 +217,7 @@ func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 		t.Error("ignore_project must not leave the project's vocabulary in effect")
 	}
 
-	// It is the same answer a design in no project gets, which is what makes the comparison honest.
+	// It is the same answer a design in no project gets, so the comparison is like for like.
 	loose, _ := artifact.Parse("mount://m/loose/board.edn")
 	unowned, err := r.Overlay(ctx, loose, nil, Overlay{}, "")
 	if err != nil {
@@ -228,8 +228,8 @@ func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 	}
 }
 
-// TestIgnoreProjectKeepsTheRequestsOwnConvention: "ignore what my project declares" and "use this
-// instead" are different acts, and a caller doing both means both.
+// TestIgnoreProjectKeepsTheRequestsOwnConvention exists because "ignore what my project declares" and
+// "use this instead" are different acts, and a caller doing both means both.
 func TestIgnoreProjectKeepsTheRequestsOwnConvention(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
@@ -261,10 +261,10 @@ func (e *errStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design,
 	return nil, nil, e.err
 }
 
-// TestOverlayRefusesMalformedDescriptor: a descriptor that exists and does not parse is this design's
-// OWN configuration, so composing against the built-in vocabulary instead would report a different
-// answer that looks like an answer. On one real folder that difference was 40 findings the project's
-// lexicon would not have raised and 95 it would have.
+// TestOverlayRefusesMalformedDescriptor exists because a descriptor that exists and does not parse is
+// this design's OWN configuration, so composing against the built-in vocabulary instead would report
+// a different answer that looks like an answer. On one real folder that difference was 40 findings
+// the project's lexicon would not have raised and 95 it would have.
 func TestOverlayRefusesMalformedDescriptor(t *testing.T) {
 	r := &ProjectResolver{Store: &errStore{err: errors.New(`design.yaml: name "My Board" is not a valid id`)}}
 	_, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, Overlay{}, "")
@@ -276,9 +276,9 @@ func TestOverlayRefusesMalformedDescriptor(t *testing.T) {
 	}
 }
 
-// TestOverlayToleratesNoProject: the two ways a design legitimately has no project must stay quiet.
-// This is the half of the old behaviour that was correct, and narrowing it too far would make every
-// loose file unreadable.
+// TestOverlayToleratesNoProject checks that the two ways a design legitimately has no project must
+// stay quiet. This is the half of the old behaviour that was correct, and narrowing it too far would
+// make every loose file unreadable.
 func TestOverlayToleratesNoProject(t *testing.T) {
 	for name, store := range map[string]ProjectStore{
 		"no descriptor anywhere": &twoProjects{byURI: map[string]*webapi.Project{}},
@@ -293,9 +293,9 @@ func TestOverlayToleratesNoProject(t *testing.T) {
 	}
 }
 
-// TestOverlayIgnoreProjectSkipsResolution: ignore_project means "treat this as belonging to no
-// project", so it must not reach the store at all — otherwise a broken descriptor would defeat the
-// one flag whose whole purpose is to run without project config.
+// TestOverlayIgnoreProjectSkipsResolution exists because ignore_project means "treat this as
+// belonging to no project", so it must not reach the store at all. Otherwise a broken descriptor
+// would defeat the one flag whose purpose is to run without project config.
 func TestOverlayIgnoreProjectSkipsResolution(t *testing.T) {
 	r := &ProjectResolver{Store: &errStore{err: errors.New("descriptor is broken")}}
 	if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{IgnoreProject: true}, Overlay{}, ""); err != nil {

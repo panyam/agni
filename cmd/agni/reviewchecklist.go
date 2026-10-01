@@ -12,18 +12,15 @@ import (
 
 // This file resolves `agni review`'s checklist when the operator did not name one.
 //
-// It lives at the CLI edge and not in the service, and that is a contract rather than a preference.
-// CreateReview takes the manifest as a VALUE (C22), which is what lets it score a design with no
-// filesystem at all; a service that resolved a project's checklist_uri behind the caller's back would
-// give the run a file dependency the whole seam exists to remove. Reading the file the project named
-// is the CLI's job, exactly as reading the file `--conventions` names is.
+// It lives at the CLI edge because CreateReview takes the manifest as a VALUE (C22) and has no
+// filesystem. Reading the file the project named is the CLI's job, as reading the file
+// `--conventions` names is (docsite/content/architecture/web-services.md).
 
-// reviewManifestFor returns the manifest `agni review` should run: the file the operator named, or
-// the one the designs' project declares when they named none.
+// reviewManifestFor returns the manifest `agni review` should run, which is the file the operator
+// named or, when they named none, the one the designs' project declares.
 //
-// An explicit --checklist WINS outright and resolves nothing, which is what keeps the flag meaningful
-// on a design that does belong to a project. It also means the loose-file case — a design on a mounted
-// folder that belongs to no project — behaves exactly as it always has, flag and all.
+// An explicit --checklist WINS outright and resolves nothing, so the flag still overrides a project's
+// checklist, and a loose file (a design on a mounted folder that belongs to no project) needs it.
 func reviewManifestFor(ctx context.Context, checklist string, designs []string) (review.Manifest, string, error) {
 	if checklist != "" {
 		man, err := loadManifest(checklist)
@@ -35,15 +32,12 @@ func reviewManifestFor(ctx context.Context, checklist string, designs []string) 
 // resolveChecklist returns the manifest to run and a note describing where it came from, for the
 // designs named on the command line.
 //
-// It resolves PER DESIGN and then insists the answers agree. A rollup scored against two different
-// manifests would render as though it were one: RenderAggregateMarkdown builds its traceability
-// matrix from Reports[0].Areas on the documented assumption that "all reports share the manifest
-// structure", so the rows would be labelled from the first design's checklist and the cells filled
-// from the second's. Every row would look answered and the labels would be wrong, which is worse than
-// refusing.
+// It resolves PER DESIGN and then insists the answers agree. RenderAggregateMarkdown labels its
+// traceability matrix from Reports[0].Areas, assuming "all reports share the manifest structure", so
+// a rollup over two manifests would label rows from the first checklist and fill cells from the
+// second, with every row looking answered.
 func resolveChecklist(ctx context.Context, designs []string) (review.Manifest, string, error) {
-	// byURI keeps the designs behind each distinct checklist so a disagreement can name both sides
-	// rather than just asserting that one exists.
+	// byURI keeps the designs behind each distinct checklist so a disagreement can name both sides.
 	byURI := map[string][]string{}
 	var unowned, noChecklist []string
 	for _, d := range designs {
@@ -80,14 +74,13 @@ func resolveChecklist(ctx context.Context, designs []string) (review.Manifest, s
 		uri = u
 	}
 	if uri == "" {
-		// No designs at all. cobra's MinimumNArgs(1) makes this unreachable from the CLI, and it is
-		// handled rather than left to return a zero Manifest that would score every item not-automated.
+		// No designs at all. cobra's MinimumNArgs(1) makes this unreachable from the CLI, but a zero
+		// Manifest would score every item not-automated.
 		return review.Manifest{}, "", fmt.Errorf("review needs --checklist <manifest.yaml>")
 	}
 	man, err := loadManifest(localOf(uri))
 	if err != nil {
-		// The project named this file, so the operator did not type it and cannot see it in their
-		// command. Naming it is the difference between an actionable error and a confusing one.
+		// The project named this file, so the operator never typed it. The error has to name it.
 		return review.Manifest{}, "", fmt.Errorf("the checklist %s declares (%s): %w", projectOf(byURI, uri, ctx), uri, err)
 	}
 	return man, fmt.Sprintf("note: running the checklist %s declares (%s); pass --checklist to run a different one.\n",
@@ -98,10 +91,9 @@ func resolveChecklist(ctx context.Context, designs []string) (review.Manifest, s
 // to the same project in practice, so the first is representative.
 func projectOf(byURI map[string][]string, uri string, ctx context.Context) string {
 	for _, d := range byURI[uri] {
-		// The error is dropped on purpose: every design here already resolved cleanly a moment ago in
-		// resolveChecklist, which is what put it in byURI. This is a second lookup for a MESSAGE, so a
-		// failure that could only mean the descriptor changed mid-command falls back to "the project"
-		// rather than turning a report into an error.
+		// The error is dropped on purpose. Every design here already resolved cleanly in
+		// resolveChecklist, and this lookup is only for a MESSAGE, so a failure (the descriptor changed
+		// mid-command) falls back to "the project".
 		if _, project, _ := cliProjectChecklist(ctx, d); project != "" {
 			return project
 		}
@@ -109,8 +101,8 @@ func projectOf(byURI map[string][]string, uri string, ctx context.Context) strin
 	return "the project"
 }
 
-// describeSplit renders "uri (design, design), uri (design)" with a stable order, so the same
-// disagreement produces the same message rather than one that varies by map iteration.
+// describeSplit renders "uri for design, design; uri for design" in sorted order, so the same
+// disagreement always produces the same message.
 func describeSplit(byURI map[string][]string) string {
 	uris := make([]string, 0, len(byURI))
 	for u := range byURI {
@@ -133,8 +125,7 @@ func plural(n int, one, many string) string {
 	return many
 }
 
-// noteChecklist writes the resolution note, if there is one. Notes go to stderr so a redirect never
-// contaminates a `--format json` report on stdout, matching noteSource.
+// noteChecklist writes the resolution note, if there is one. w is stderr, as for noteSource.
 func noteChecklist(w io.Writer, note string) {
 	if note != "" {
 		fmt.Fprint(w, note)

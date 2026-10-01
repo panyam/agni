@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// TestResolvePinsReportsUnresolved (WS1-013, extended by WS1-052): ResolvePins reports the
-// placements whose symbol failed to resolve — the signal the readers gate dangling emission on,
-// and now also report as a diagnostic. A resolved symbol contributes its pins; an unresolved one
+// TestResolvePinsReportsUnresolved (WS1-013, extended by WS1-052) checks that ResolvePins reports
+// the placements whose symbol failed to resolve. The readers gate dangling emission on that signal
+// and also report it as a diagnostic. A resolved symbol contributes its pins; an unresolved one
 // contributes none and is recorded once, with every placement it cost pins.
 func TestResolvePinsReportsUnresolved(t *testing.T) {
 	place := func(px, py float64) (float64, float64) { return px, py }
@@ -35,7 +35,7 @@ func TestResolvePinsReportsUnresolved(t *testing.T) {
 	if got := unresolved[0].Symref; got != "missing.sym" {
 		t.Errorf("unresolved symref = %q, want missing.sym", got)
 	}
-	// One missing file, two affected placements: grouped per REFERENCE, so the single cause is
+	// One missing file and two affected placements, grouped per REFERENCE, so the single cause is
 	// reported once rather than duplicated per part.
 	if got := unresolved[0].RefDes; !slices.Equal(got, []string{"R2", "R4"}) {
 		t.Errorf("unresolved refdes = %v, want [R2 R4] in placement order", got)
@@ -55,11 +55,11 @@ func TestResolvePinsReportsUnresolved(t *testing.T) {
 	}
 }
 
-// TestResolvePinsSlotRemap (WS1-032): a Placement with SlotPins maps each drawn pin's number to
-// its slot's physical package pin, indexed by the pin's Seq. Two slots of one symbol share the
-// drawn geometry (numbers 1,2) but resolve to distinct package pins; a swapped slot row
-// (slotdef=K:9,8) proves the remap follows Seq order, not draw order. A pin whose Seq falls
-// outside the table keeps its drawn number.
+// TestResolvePinsSlotRemap (WS1-032) checks that a Placement with SlotPins maps each drawn pin's
+// number to its slot's physical package pin, indexed by the pin's Seq. Two slots of one symbol
+// share the drawn geometry (numbers 1,2) but resolve to distinct package pins; a swapped slot row
+// (slotdef=K:9,8) proves the remap follows Seq order, not draw order. A pin whose Seq falls outside
+// the table keeps its drawn number.
 func TestResolvePinsSlotRemap(t *testing.T) {
 	place := func(px, py float64) (float64, float64) { return px, py }
 	load := func(string) ([]Pin, bool) {

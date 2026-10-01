@@ -6,15 +6,12 @@ import (
 
 // The parameter contract's enums, rendered as the lowercase string tokens every surface prints.
 //
-// They live here rather than beside any one consumer because more than one surface now spells them:
-// the query relations publish `param.range`'s kind and `param.pin`'s function as tuple values, and
-// `agni params` prints the same vocabulary in a rendered record. A second private copy would be the
-// drift shape agni issue 380 records, where two renderers written apart stopped agreeing. A user
-// moving between `agni query` and `agni params` has to see one vocabulary.
+// They live here rather than beside one consumer because the query relations publish them as tuple
+// values (`param.range`'s kind, `param.pin`'s function) and `agni params` prints the same vocabulary.
+// Two private copies drift apart, as the two renderers in agni issue 380 did.
 //
 // A token is part of the CLI contract, since a datalog query matches on the literal
-// (`param.range(?m, ?s, "absolute_max", ?min, ?max)`). Renaming one breaks saved queries, so treat
-// these strings as data rather than as presentation.
+// (`param.range(?m, ?s, "absolute_max", ?min, ?max)`). Renaming one breaks saved queries.
 
 // LimitKindToken renders a parameter's LimitKind. UNSPECIFIED fails param.Validate, so
 // "unspecified" here means a spec that never reached a corpus.
@@ -32,7 +29,7 @@ func LimitKindToken(k parampb.LimitKind) string {
 }
 
 // PinFunctionToken renders a pin's PinFunction. Unlike a limit kind, "unspecified" is a LEGAL and
-// common answer: a document may print a pin table with no type column at all, and a pin whose name
+// common answer, since a document may print a pin table with no type column and a pin whose name
 // and number are known is still worth recording.
 func PinFunctionToken(f parampb.PinFunction) string {
 	switch f {

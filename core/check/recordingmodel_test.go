@@ -9,17 +9,17 @@ import (
 
 func TestTierOf(t *testing.T) {
 	for fact, want := range map[string]FactTier{
-		"param.cap_rated_voltage": TierParam,
-		"param(mpn, max_voltage)": TierParam,
-		"component.device_class":  TierParam, // relation name, no "param" prefix
-		"component.esd_rated":     TierParam,
-		"board.track_width":       TierBoard,
-		"pin.electrical_type":     TierConnectivity,
-		"pin.role":                TierConnectivity,
-		"on_net":                  TierConnectivity,
-		"net.names":               "",
-		"component.class":         "",
-		"wire.junction":           "",
+		"param.cap_rated_voltage":     TierParam,
+		"param.max(mpn, max_voltage)": TierParam,
+		"component.device_class":      TierParam, // relation name, no "param" prefix
+		"component.esd_rated":         TierParam,
+		"board.track_width":           TierBoard,
+		"pin.electrical_type":         TierConnectivity,
+		"pin.role":                    TierConnectivity,
+		"on_net":                      TierConnectivity,
+		"net.names":                   "",
+		"component.class":             "",
+		"wire.junction":               "",
 	} {
 		if got := TierOf(fact); got != want {
 			t.Errorf("TierOf(%q) = %q, want %q", fact, got, want)
@@ -42,7 +42,7 @@ func TestDeclaredTiersIncludesOptionalReads(t *testing.T) {
 
 // TestRecordingModelNotesEveryGatedAccessor is what keeps the audit from going blind.
 //
-// The audit reports green both when every rule declares honestly and when the recorder silently
+// The audit reports green both when every rule declares accurately and when the recorder silently
 // stopped noticing. Dropping one note() call from RecordingModel passes the whole audit suite,
 // because a rule reading that accessor then looks like a rule that never touched it. So the
 // recorder's own completeness is pinned here, accessor by accessor, rather than resting on the

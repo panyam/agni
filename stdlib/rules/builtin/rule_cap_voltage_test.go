@@ -11,7 +11,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// capSpec hand-builds a seeded cap: rated voltage as a machine-comparable
+// capSpec hand-builds a seeded cap with its rated voltage as a machine-comparable
 // recommended-operating row (the shape a cap datasheet's ratings table yields).
 func capSpec(mpn string, rated float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
@@ -91,11 +91,11 @@ func TestCapVoltageFires(t *testing.T) {
 
 func TestCapVoltagePassesWithMargin(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
-	// 3.3 x 1.25 = 4.125 <= 6.3: comfortable.
+	// 3.3 x 1.25 = 4.125 <= 6.3, comfortable.
 	if fs := runCapRule(t, capDesign("+3V3", "DEMO-CAP-6V3"), set); len(fs) != 0 {
 		t.Errorf("3V3 rail under a 6.3V rating: want silent, got %v", fs)
 	}
-	// 5 x 1.25 = 6.25 <= 6.3: the near-miss must still pass (float compare in the FFI).
+	// 5 x 1.25 = 6.25 <= 6.3, so the near-miss must still pass (float compare in the FFI).
 	if fs := runCapRule(t, capDesign("+5V", "DEMO-CAP-6V3"), set); len(fs) != 0 {
 		t.Errorf("5V rail x 1.25 = 6.25 within 6.3 rating: want silent, got %v", fs)
 	}
@@ -195,7 +195,7 @@ func TestCapVoltageReadsMillivoltRows(t *testing.T) {
 	}
 }
 
-// The WS3-004 fact-capture bullet is a tested property: the rule's Reads are DERIVED
+// The WS3-004 fact-capture bullet is a tested property. The rule's Reads are DERIVED
 // from the spec body plus the FFI's declaration, so the param join and the rail
 // voltage appear as named relations without hand-maintained metadata.
 func TestCapVoltageDerivedReads(t *testing.T) {

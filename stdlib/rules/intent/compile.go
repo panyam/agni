@@ -11,34 +11,33 @@ const (
 	RuleModuleMissing = "module-missing"
 	RuleModuleCount   = "module-count"
 	RuleVoltageDomain = "voltage-domain-mismatch"
-	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095): one
-	// mechanism at two thresholds, split into two names so the ratings item and the margins item get
+	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095), one
+	// mechanism at two thresholds split into two names so the ratings item and the margins item get
 	// separate verdicts.
 	RuleRailCurrentCapacity = "rail-current-capacity"
 	RuleRailCurrentMargin   = "rail-current-margin"
-	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085): the switch's
-	// current limit against the rail's declared draw. It reads the same rail_budgets the two rules above
-	// read, and it is a third rule rather than a threshold on them because it judges a different part,
-	// the switch rather than the supply.
+	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085), checking the
+	// switch's current limit against the rail's declared draw. It reads the same rail_budgets as the two
+	// rules above, but judges a different part (the switch rather than the supply), so it is its own rule.
 	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
-	// The three IO-map rules (agni issue 517). Fixed names rather than one per declared row, which
-	// is the documented exception to one-rule-per-declared-thing: a real map is hundreds of rows and
-	// a reviewer signs off "the netlist matches the IO map", not each row. Three names because the
-	// three answers are acted on differently, and because the last two are opposite defects that get
-	// confused when they share a verdict.
+	// The three IO-map rules (agni issue 517). Fixed names rather than one per declared row, because a
+	// real map is hundreds of rows and a reviewer signs off "the netlist matches the IO map", not each
+	// row (docsite/content/guide/design-intent.md#one-rule-per-declared-thing). Three names because each
+	// answer is acted on differently, and the last two are opposite defects that get confused when they
+	// share a verdict.
 	RuleIOMapPin       = "io-map-pin-mismatch"
 	RuleIOMapNetAbsent = "io-map-net-absent"
 	RuleIOMapFarEnd    = "io-map-far-end"
-	// RuleIOMapCoverage is the one whose considered set is the NETLIST rather than the declaration:
-	// which parts of the design the map never spoke about.
+	// RuleIOMapCoverage reports the parts of the design the map never mentions. Its considered set is
+	// the NETLIST, not the declaration; see ioMapCoverageRule.
 	RuleIOMapCoverage = "io-map-coverage"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
 	SourceName = "intent"
 )
 
-// Compile turns a Declaration into the set of check rules that verify a design against it. It mirrors
-// profiles.Compile: the declaration is config (per-design data), the rules are code. Each sub-check is
+// Compile turns a Declaration into the set of check rules that verify a design against it. Like
+// profiles.Compile, the declaration is per-design config and the rules are code. Each sub-check is
 // emitted only when the declaration carries the data it needs, so a declaration with modules but no
 // voltage domains compiles to just the module rule (no empty rule that silently passes). The rules
 // close over the declaration and read the design through check.Model (C19), so they are
@@ -58,8 +57,8 @@ func Compile(d Declaration) []*check.Rule {
 		rules = append(rules, railBudgetCapacityRule(d))
 		// The load-switch lower bound needs the budget and nothing else, so it rides the capacity
 		// condition rather than a second one. A design with no controller-based switch resolves none
-		// and the rule reports nothing. That silence is unavoidable: no declaration field says "this
-		// rail is switched", and inventing one would let an author's omission read as a defect.
+		// and the rule reports nothing. No declaration field says "this rail is switched", and adding
+		// one would let an author's omission read as a defect.
 		rules = append(rules, loadSwitchTripBelowBudgetRule(d))
 		// Only when a factor is declared, because the factor IS the rule's threshold. See
 		// Declaration.MarginFactor for why there is no default.
@@ -70,8 +69,8 @@ func Compile(d Declaration) []*check.Rule {
 	if len(d.IOMap) > 0 {
 		rules = append(rules, ioMapPinRule(d), ioMapNetAbsentRule(d))
 		// The far-end rule is compiled whenever a map is declared, not only when a row fills its far
-		// end, because its own verdicts are what report the denominator: a map whose far-end columns
-		// are empty must read as unexamined rather than as clean.
+		// end, because its verdicts report the denominator. A map with empty far-end columns must read
+		// as unexamined rather than clean.
 		rules = append(rules, ioMapFarEndRule(d))
 		rules = append(rules, ioMapCoverageRule(d))
 	}
@@ -79,8 +78,8 @@ func Compile(d Declaration) []*check.Rule {
 		rules = append(rules, subsystemRule(s))
 	}
 	// One rule per declared strap group (WS3-120). The collision check is cross-group, so it gets ONE
-	// rule for the whole declaration, compiled only when at least two groups share a bus: over fewer
-	// it could only ever pass.
+	// rule for the whole declaration, compiled only when at least two groups share a bus, since over
+	// fewer it could only pass.
 	for _, g := range d.StrapGroups {
 		rules = append(rules, strapGroupRule(g))
 	}
@@ -88,9 +87,8 @@ func Compile(d Declaration) []*check.Rule {
 		rules = append(rules, strapCollisionRule(d.StrapGroups))
 	}
 	// One rule per declared sequence (WS3-092). A sequence with no adjacent good/enable pair compiles
-	// to NOTHING: its rule would have no link to judge and could only ever pass. Parse already rejects
-	// that at load, so this guard only catches a Declaration built in Go; the two share hasGatingPair
-	// so they cannot disagree about what is checkable.
+	// to NOTHING, since its rule would have no link to judge. Parse rejects that at load, so this guard
+	// only catches a Declaration built in Go; both call hasGatingPair so they agree on what is checkable.
 	for _, s := range d.Sequences {
 		if hasGatingPair(s) {
 			rules = append(rules, sequenceRule(s))

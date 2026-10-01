@@ -5,10 +5,10 @@ summary: "The net every other voltage on a board is measured against, and the pa
 level: EE2
 ---
 
-Two things at once, and both are load-bearing. Ground is the reference: saying a rail is at 3.3 V is
+Two things at once, and a design needs both. Ground is the reference, so saying a rail is at 3.3 V is
 shorthand for saying it is 3.3 V above ground, and there is no other sense in which a single point has
-a voltage. Ground is also the return: current that leaves a regulator through a rail has to get back,
-and ground is how.
+a voltage. Ground is also the return, the path by which current that leaves a regulator through a rail
+gets back.
 
 {{ includeFile "figures/ground.svg" }}
 
@@ -32,8 +32,7 @@ names, which for ground usually means two spellings that a human reads as obviou
 tool must not. [`unconnected-pin`](../../rules/unconnected-pin/) and
 [`single-pin-net`](../../rules/single-pin-net/) pick up the part that never made it there at all.
 
-**Where the course teaches it:**
-[chapter 1](../../../learn/01-what-a-board-is-made-of/) uses it as one end of the two-terminal
-decision procedure, and
-[chapter 5](../../../learn/05-who-drives-this-net/#one-net-one-decider-ee3) explains why an output pin
+The course teaches it in [chapter 1](../../../learn/01-what-a-board-is-made-of/), which uses it as
+one end of the two-terminal decision procedure, and in
+[chapter 5](../../../learn/05-who-drives-this-net/#one-net-one-decider-ee3), which explains why an output pin
 deciding a net's voltage means connecting it either to a [rail](../rail/) or to ground.

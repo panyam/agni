@@ -20,8 +20,8 @@ slip. Every ERC ships it.
 
 ### Impact
 
-A floating enable, a missed feedback divider, one gate input of four left open:
-parts that mostly work and fail in ways that read as component defects.
+A floating enable, a missed feedback divider or one gate input of four left open each leaves a
+part that mostly works and fails in ways that read as a component defect.
 
 ![A declared pin left on no net is flagged; the same pin marked NO_CONNECT is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/unconnected-pin.svg)
 
@@ -31,17 +31,17 @@ Three guards, each learned
 from a real source:
 - **The source must have a no-connect channel** (any NO_CONNECT-typed pin or nc-marker net
   name anywhere in the design). Where none exists, an unwired pin carries no NC flag
-  because the format cannot express one, not because the designer missed it: a bare EDIF
+  because the format cannot express one, not because the designer missed it, and a bare EDIF
   netlist export lists every library pin of every part, and firing there produced 1836
   findings on one real board (unused gates, spare TVS channels, unwired connector pads,
-  all normal). No channel, no rule.
+  all normal). Without a channel the rule reports not-applicable.
 - **A direction-unknown (UNSPECIFIED) pin is skipped**, the same trade floating-input makes.
 - **A source with no part-pin data yields no pins** and is silent by construction.
 
 On KiCad, placed bare pins land on synthesized per-pin stub nets (the miss surfaces as
 single-pin-net instead); what can still fire there is a typed pin of an unplaced unit of a
 multi-unit part, in designs that use no-connect markers elsewhere, which is a real unused-unit
-signal. The hunting ground is sources with typed pins, an NC vocabulary, and no stub
+signal. The rule finds most on sources with typed pins, an NC vocabulary, and no stub
 synthesis (EDIF schematic exports, xschem/gEDA with symbol libraries).
 
 ### Query structure

@@ -20,14 +20,13 @@ import (
 const companionOverlapFloor = 0.5
 
 // renderReviewImages writes an annotated schematic image for each design in the review that has
-// findings. The geometry it draws on is, in order: an explicit --companion file; else a sibling
-// <stem>.eds next to a netlist design (WS1-047: the netlist is analysis truth, a companion schematic
-// is the drawing, joined BY NET NAME); else the design's own faithful geometry; else the default
-// auto-layout. It bakes every finding's subject as a highlight and writes one SVG per sheet the
-// findings land on, to <outDir>/<design-stem>/<sheet>.svg — the report-side twin of the web
-// click-to-locate. Designs with no findings are skipped; a per-design failure is reported and
-// skipped, never fatal. When a companion's net names poorly overlap the design's, it is flagged
-// (likely mis-paired) rather than silently mis-highlighted. Returns a human summary.
+// findings. It draws on the first of: an explicit --companion file, a sibling <stem>.eds next to a
+// netlist design (joined to the netlist BY NET NAME, WS1-047), the design's own faithful geometry,
+// or the default auto-layout. Every finding's subject becomes a highlight, and it writes one SVG per
+// sheet the findings land on, to <outDir>/<design-stem>/<sheet>.svg, as the report-side twin of the
+// web click-to-locate. Designs with no findings are skipped, a per-design failure is reported and
+// skipped, and a companion whose net names poorly overlap the design's is flagged as likely
+// mis-paired. Returns a human summary.
 func renderReviewImages(reports []review.Report, sources []string, outDir, companionFlag string) (string, error) {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return "", fmt.Errorf("--render %s: %w", outDir, err)
@@ -42,15 +41,14 @@ func renderReviewImages(reports []review.Report, sources []string, outDir, compa
 	for i, r := range reports {
 		specs := findingSpecs(reviewReportFindings(r))
 		if len(specs) == 0 {
-			continue // nothing flagged: no picture to draw
+			continue // nothing flagged, nothing to draw
 		}
 		comp, err := companionPath(r.Design, companionFlag, len(reports))
 		if err != nil {
 			return "", err // an explicit --companion misuse is a user error, not a per-design skip
 		}
-		// r.Design is the report's READING name; the file to open is the design's URI from the
-		// document it came from. They differ by design (option 3): one is for a person, one addresses
-		// an artifact, and only the second can be handed to a loader.
+		// r.Design is the report's READING name, for a person. The file to open is the design's URI
+		// from sources, since only that can be handed to a loader (agni issue 177).
 		src := r.Design
 		if i < len(sources) {
 			src = localOf(sources[i])
@@ -95,7 +93,7 @@ func renderReviewImages(reports []review.Report, sources []string, outDir, compa
 // companionPath resolves the geometry companion for one design: an explicit --companion file (valid
 // only with a single design, and it must exist), else an auto-detected sibling <stem>.eds next to a
 // NETLIST design (a design that already draws itself needs none), else "" (use the design's own
-// geometry / auto-layout). Deterministic and filename-only — it never reads a file's contents.
+// geometry or auto-layout). It looks at filenames only and never reads a file's contents.
 func companionPath(designPath, flag string, nDesigns int) (string, error) {
 	if flag != "" {
 		if nDesigns > 1 {
@@ -121,8 +119,8 @@ func companionPath(designPath, flag string, nDesigns int) (string, error) {
 
 // reviewGeometry loads the geometry to annotate for one design: a companion's faithful geometry when
 // one is resolved (with an alignment warning when its net names poorly overlap the design's), else
-// the design's own faithful geometry, else the default auto-layout. The warning is advisory — a
-// mismatched companion still renders, but the caller surfaces the caveat.
+// the design's own faithful geometry, else the default auto-layout. The warning is advisory, so a
+// mismatched companion still renders and the caller surfaces the caveat.
 func reviewGeometry(l *formats.Loader, reg *graph.Registry, designPath, companion string) (*geom.SchematicGeometry, string, error) {
 	if companion != "" {
 		g, err := l.FaithfulGeometry(companion)
@@ -140,14 +138,14 @@ func reviewGeometry(l *formats.Loader, reg *graph.Registry, designPath, companio
 }
 
 // companionAlignment measures how many of the companion's named wires are real nets of the design,
-// returning a warning when the overlap is below companionOverlapFloor — the signal that the two are
-// different-revision or mismatched exports (cf. the WS9-007 overlay alignment check). It reads the
-// design's netlist through the loader (the ENGINE parses it); it never surfaces net names, only the
-// overlap fraction. An empty result means the pairing looks consistent.
+// returning a warning when the overlap is below companionOverlapFloor, which suggests the two are
+// different-revision or mismatched exports (cf. the WS9-007 overlay alignment check). The warning
+// carries only the overlap fraction and never a net name. An empty result means the pairing looks
+// consistent.
 func companionAlignment(l *formats.Loader, designPath string, g *geom.SchematicGeometry) string {
 	d, err := l.ReadDesign(designPath)
 	if err != nil {
-		return "" // cannot check the design side: do not block, do not false-warn
+		return "" // the design side is unreadable, so neither block nor warn
 	}
 	designNets := map[string]bool{}
 	for _, n := range d.GetNets() {
@@ -179,8 +177,8 @@ func companionAlignment(l *formats.Loader, designPath string, g *geom.SchematicG
 	return ""
 }
 
-// reviewReportFindings flattens every finding across a report's areas and items. Findings appear
-// on fail / provisional items, so this is exactly the design's flagged evidence.
+// reviewReportFindings flattens every finding across a report's areas and items. Only fail and
+// provisional items carry findings, so this is the design's flagged evidence.
 func reviewReportFindings(r review.Report) []check.Finding {
 	var out []check.Finding
 	for _, a := range r.Areas {
@@ -191,11 +189,10 @@ func reviewReportFindings(r review.Report) []check.Finding {
 	return out
 }
 
-// findingSpecs maps findings to highlight specs, deduplicated: a single rule finding can bind to
-// several review items (so appear several times), and one net/component highlighted once is enough.
-// A net draws as a PATH marker along its wire (carrying its per-instance id so same-named nets stay
-// distinct), a component or pin as a bounding box; severity picks the color. Same vocabulary as the
-// render-highlight example and the web click-to-locate.
+// findingSpecs maps findings to highlight specs, deduplicated because one rule finding can bind to
+// several review items. A net draws as a PATH marker along its wire, carrying its per-instance id so
+// same-named nets stay distinct, and a component or pin as a bounding box. Severity picks the color,
+// in the same vocabulary as the render-highlight example and the web click-to-locate.
 func findingSpecs(findings []check.Finding) []*geom.HighlightSpec {
 	seen := map[string]bool{}
 	var specs []*geom.HighlightSpec
@@ -225,8 +222,8 @@ func findingSpecs(findings []check.Finding) []*geom.HighlightSpec {
 	return specs
 }
 
-// severityColor maps a finding severity to a highlight color: error hot red, warning amber, else
-// the renderer default (empty lets render pick DefaultHighlightColor).
+// severityColor maps a finding severity to a highlight color, red for error and amber for warning.
+// Anything else returns "", which lets render pick DefaultHighlightColor.
 func severityColor(severity string) string {
 	switch severity {
 	case "error":
@@ -238,8 +235,8 @@ func severityColor(severity string) string {
 	}
 }
 
-// sheetFileName makes a filesystem-safe base name for a sheet: its id (or name, or "sheet"),
-// with path separators and spaces folded so a hierarchical id like "/amp1/in" stays one file.
+// sheetFileName makes a filesystem-safe base name for a sheet from its id, else its name, else
+// "sheet", folding path separators and spaces so a hierarchical id like "/amp1/in" stays one file.
 func sheetFileName(sheet *geom.SheetGeometry) string {
 	name := sheet.GetId()
 	if name == "" {

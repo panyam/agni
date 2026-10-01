@@ -36,7 +36,7 @@ func TestUnidentifiedDocumentIsGappedWithItsEvidence(t *testing.T) {
 		t.Fatalf("want exactly one unidentified-document gap, got %d", len(gaps))
 	}
 	detail := gaps[0].GetDetail()
-	// The prose is the point: a reader decides from what the cover page says, without reopening it.
+	// The prose matters because a reader decides from what the cover page says, without reopening it.
 	if !strings.Contains(detail, "Opening prose:") {
 		t.Errorf("gap carries no evidence to decide from: %q", detail)
 	}
@@ -47,7 +47,7 @@ func TestUnidentifiedDocumentIsGappedWithItsEvidence(t *testing.T) {
 }
 
 // The evidence has to be real page-one prose, not a placeholder, or the gap is a flag with extra
-// words. This is the positive control on identityEvidence: a document whose first page carries text
+// words. This is the positive control on identityEvidence. A document whose first page carries text
 // must produce some of it.
 func TestIdentityEvidenceCarriesRealPageOneText(t *testing.T) {
 	d := loadDocFixture(t, "bss138-raw-docir.textproto")

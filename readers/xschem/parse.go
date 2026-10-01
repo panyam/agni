@@ -23,12 +23,12 @@ import (
 //	L/B/A/P layer ... {props}       drawing primitives (lines/boxes/arcs/polys); in a .sym
 //	                                a B box with {name=.. pinnumber=..} is a pin.
 //
-// The parser is deliberately lossless at the object level: it keeps every field verbatim so
+// The parser is lossless at the object level. It keeps every field verbatim so
 // both the structural extractor and the geometric netlister can read what they need without
 // re-scanning. Interpretation (which object is a component, which brace is a symref) lives in
 // read.go, not here.
 
-// token is one field of an object: either a brace block (its inner text, braces stripped) or
+// token is one field of an object, either a brace block (its inner text, braces stripped) or
 // a bare word.
 type token struct {
 	brace bool
@@ -254,8 +254,8 @@ func props(block string) map[string]string {
 func isSpace(b byte) bool { return b == ' ' || b == '\t' || b == '\r' || b == '\n' }
 
 // atoi parses an xschem coordinate. Coordinates are integers in the samples but the format
-// permits floats, so parse as float and round. A bad value yields (0,false); unlike the
-// fmt.Sscanf it replaces, trailing garbage is rejected rather than silently truncated.
+// permits floats, so parse as float and round. A bad value yields (0,false), and trailing
+// garbage counts as bad rather than being silently truncated.
 func atoi(s string) (float64, bool) {
 	f, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
 	if err != nil {

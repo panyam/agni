@@ -25,7 +25,7 @@ func net(name string) *ir.Net {
 	return &ir.Net{Name: name, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}
 }
 
-// TestSourceCompilesAndFires: the config round-trips into a namespaced catalog rule that
+// TestSourceCompilesAndFires checks that the config round-trips into a namespaced catalog rule that
 // fires on non-conforming names, honors exempt patterns and the always-exempt stubs, and
 // checks the LEAF of hierarchy-qualified names.
 func TestSourceCompilesAndFires(t *testing.T) {
@@ -68,7 +68,7 @@ func TestSourceCompilesAndFires(t *testing.T) {
 	}
 }
 
-// TestSourceRejectsBadConfig: operator input fails with errors, never panics.
+// TestSourceRejectsBadConfig checks that bad operator input fails with errors and never panics.
 func TestSourceRejectsBadConfig(t *testing.T) {
 	for name, cfg := range map[string]*configpb.NamingConvention{
 		"no source name": {Rules: []*configpb.NamingRule{{Name: "x", Allow: []string{"a"}}}},
@@ -83,7 +83,7 @@ func TestSourceRejectsBadConfig(t *testing.T) {
 	}
 }
 
-// TestParseRejectsUnknownKeys: a typo'd config key fails loudly instead of silently
+// TestParseRejectsUnknownKeys checks that a typo'd config key fails loudly instead of silently
 // dropping a pattern list.
 func TestParseRejectsUnknownKeys(t *testing.T) {
 	_, err := Parse([]byte("name: acme\nrules:\n  - name: x\n    alow: [\"a\"]\n"))
@@ -92,8 +92,9 @@ func TestParseRejectsUnknownKeys(t *testing.T) {
 	}
 }
 
-// TestApplyLexicon: a lexicon-only config (no rules) parses and installs its rail/feedback overrides
-// onto the process vocab, extending the built-ins; the defaults themselves are untouched.
+// TestApplyLexicon checks that a lexicon-only config (no rules) parses and installs its
+// rail/feedback overrides onto the process vocab, extending the built-ins; the defaults themselves
+// are untouched.
 func TestApplyLexicon(t *testing.T) {
 	defer check.SetActiveRoleVocab(nil)
 	cfg, err := Parse([]byte(`
@@ -126,8 +127,8 @@ lexicon:
 	}
 }
 
-// TestApplyLexiconClass: a lexicon class block installs a per-class pattern; an unknown class name is a
-// teaching error.
+// TestApplyLexiconClass checks that a lexicon class block installs a per-class pattern, and that an
+// unknown class name is a teaching error.
 func TestApplyLexiconClass(t *testing.T) {
 	defer check.SetActiveClassVocab(nil)
 	cfg, err := Parse([]byte(`
@@ -153,9 +154,10 @@ lexicon:
 	}
 }
 
-// TestEveryShippedClassLoadsFromYAML: a project may extend every class the engine ships, walked from
-// the YAML a project writes. The names a config may use were a hand-kept list that lacked thermistor,
-// zener and ideal_diode_controller, so conventions naming any of them failed to load (agni 677).
+// TestEveryShippedClassLoadsFromYAML checks that a project may extend every class the engine ships,
+// walked from the YAML a project writes. The names a config may use were a hand-kept list that
+// lacked thermistor, zener and ideal_diode_controller, so conventions naming any of them failed to
+// load (agni 677).
 func TestEveryShippedClassLoadsFromYAML(t *testing.T) {
 	for _, cl := range model.ComponentClasses() {
 		cfg, err := Parse([]byte("name: acme\nlexicon:\n  class:\n    " + string(cl) + ":\n      patterns: [\"^zzz$\"]\n"))
@@ -168,8 +170,9 @@ func TestEveryShippedClassLoadsFromYAML(t *testing.T) {
 	}
 }
 
-// TestClassPrefixesReachTheReadFromYAML: a prefix declared in YAML gives a part its class, and the
-// family tag rides along, through the per-read lexicon rather than a process install.
+// TestClassPrefixesReachTheReadFromYAML checks that a prefix declared in YAML gives a part its
+// class, and the family tag rides along, through the per-read lexicon rather than a process
+// install.
 func TestClassPrefixesReachTheReadFromYAML(t *testing.T) {
 	cfg, err := Parse([]byte(`
 name: acme
@@ -193,7 +196,7 @@ lexicon:
 			t.Errorf("%s: classes %q, want %q", c.GetRefDes(), got, want[c.GetRefDes()])
 		}
 	}
-	// Positive control: without the project's prefixes neither part classifies.
+	// Positive control. Without the project's prefixes neither part classifies.
 	classify.DefaultLexicon().Stamp(d)
 	if got := d.GetComponents()[0].GetDeviceClasses(); len(got) != 0 {
 		t.Errorf("TH3 classified %v under the built-in vocabulary, so the test above proves nothing", got)
@@ -267,9 +270,9 @@ lexicon:
 	}
 }
 
-// TestLexiconReadsBackItsPatterns: RoleVocab embeds the lexicon it compiled, so a caller can see the
-// EFFECTIVE patterns rather than only ask yes/no. ActiveRoleVocab's doc has promised that since
-// WS3-069 and could not deliver while the patterns were discarded at compile time.
+// TestLexiconReadsBackItsPatterns checks that RoleVocab embeds the lexicon it compiled, so a caller
+// can see the EFFECTIVE patterns rather than only ask yes/no. ActiveRoleVocab's doc has promised
+// that since WS3-069 and could not deliver while the patterns were discarded at compile time.
 func TestLexiconReadsBackItsPatterns(t *testing.T) {
 	cfg, err := Parse([]byte("name: acme\nlexicon:\n  net:\n    switching: { patterns: [\"_HSD$\"] }\n"))
 	if err != nil {

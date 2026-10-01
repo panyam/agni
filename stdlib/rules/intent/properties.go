@@ -19,7 +19,7 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 		Detail:              intentDoc("property-" + kind),
 		Impact:              propertyImpact(kind),
 		Remedy:              intentRemedy("property-" + kind),
-		Reads:               []string{"component-on-net", "component.class", "net.ground", "rail"},
+		Reads:               []string{"component.net", "component.class", "net.ground", "net.rail"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return propertyVerdicts(m, ps, kind) },
 		StatesConsideredSet: true,
@@ -30,17 +30,16 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 //
 // A property of another kind is not this rule's subject and yields nothing. The families compile to
 // one rule per kind, so `property-ac-coupled` reporting on a reset-polarity declaration would claim a
-// check it never made, which is the scope mistake fet-vdss shipped and PR 405 fixed.
+// check it never made (the fet-vdss scope bug, PR 405).
 //
-// The undecidable case was already computed and already reached a reviewer as an inconclusive finding
-// (agni issue 74); it becomes check.Inconclusive, which projects back to the same finding. What is new
-// is the PASS: a declared property the design honours reported nothing, exactly like a property nobody
-// declared, and for an intent rule that is the sentence the report exists to produce.
+// The undecidable case is check.Inconclusive, which projects to an inconclusive finding (agni issue
+// 74). A declared property the design honours reports a PASS, so it reads differently from a property
+// nobody declared.
 func propertyVerdicts(m check.Model, ps []NetProperty, kind string) []check.Verdict {
 	var out []check.Verdict
 	for _, p := range ps {
 		if p.Property != kind {
-			continue // another kind's declaration: not a subject of this rule
+			continue // another kind's declaration, not a subject of this rule
 		}
 		v := check.Verdict{Subjects: []check.Entity{check.NetNameEntity(p.Net)}}
 		if msg, undecidable := propertyUndecidable(m, p); undecidable {
@@ -127,21 +126,21 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 }
 
 // strapValueViolation checks a strap's pull resistor against the band the DECLARATION states, and is
-// silent unless it can do so honestly (WS3-119).
+// silent unless it can decide (WS3-119).
 //
 // Four ways it declines to answer:
 //   - no band declared, so there is nothing to check against;
 //   - no biasing resistor identified, which the direction half already reports on;
 //   - more than one, because a divider's two resistors set a level together and neither is "the"
 //     strap pull, so reporting one of them would name an arbitrary part;
-//   - a value that does not parse as a resistance, which is the params-tier posture: skip, never
-//     guess.
+//   - a value that does not parse as a resistance, which the params tier also skips rather than
+//     guesses.
 //
 // The finding quotes the SOURCE TEXT ("10k"), not the parsed 10000, so a reviewer reads the value
 // they will see on the schematic.
 func strapValueViolation(m check.Model, p NetProperty, refs []string) (string, bool) {
-	// No explicit "no band declared" early-out: an undeclared bound is zero, and the comparisons
-	// below are both gated on `> 0`, so an undeclared band already reports nothing. Mutation testing
+	// No explicit "no band declared" early-out. An undeclared bound is zero and both comparisons
+	// below are gated on `> 0`, so an undeclared band already reports nothing. Mutation testing
 	// showed a guard here was unreachable.
 	if len(refs) != 1 {
 		return "", false
@@ -185,12 +184,12 @@ func trimNum(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 // and the message saying so (agni issue 74). It runs BEFORE propertyViolation, so an undecidable
 // subject never reaches the contradiction test.
 //
-// Only reset-polarity has such a case, and it is PERMANENT rather than a data gap: a netlist states
+// Only reset-polarity has such a case, and it is PERMANENT rather than a data gap. A netlist states
 // polarity nowhere, the only structural evidence is a bias resistor, and a reset driven by a
 // supervisor with an internal pull carries none. No seeding, declaration or fact tier will ever
 // supply it, which is why this is not reported as needs-data.
 //
-// ac-coupled and strap are deliberately absent. A series capacitor is decidable by looking, so absent
+// ac-coupled and strap have no undecidable case. A series capacitor is decidable by looking, so absent
 // means the declaration is unmet. A strap with no bias is the DEFAULT-state case a datasheet tells
 // you to leave unfitted, so silence there is a correct pass rather than an unanswered question, and
 // emitting inconclusive for it would flag most correct boards.
@@ -205,10 +204,9 @@ func propertyUndecidable(m check.Model, p NetProperty) (string, bool) {
 	if up, down := check.NetBias(m, n); up || down {
 		return "", false // biased one way or the other, so the contradiction test can decide
 	}
-	// NetBias reports neither for TWO different designs, and telling a reviewer the wrong one wastes
-	// their time at the schematic: a net with no bias resistor at all, and a DIVIDER, which reports
-	// neither because it holds the line at an intermediate level rather than at either rail. Both are
-	// undecidable here, and the next step differs.
+	// NetBias reports neither for TWO different designs, a net with no bias resistor at all and a
+	// DIVIDER holding the line at an intermediate level rather than at either rail. Both are
+	// undecidable here, but the next step at the schematic differs, so the message names which one.
 	if dividerOn(m, n) {
 		return fmt.Sprintf(
 			"net %q is declared an active-%s reset, but a divider holds it at an intermediate level rather "+
@@ -253,8 +251,8 @@ func connectsRef(n *ir.Net, refDes string) bool {
 }
 
 // netNamed returns the design net with this exact name, or nil when the declaration names a net the
-// design does not have. An absent net is silence here: the presence forms (modules, subsystems) are
-// what report a missing thing.
+// design does not have. An absent net is silent here, because the presence forms (modules,
+// subsystems) are what report a missing thing.
 func netNamed(m check.Model, name string) *ir.Net {
 	for _, n := range m.Nets() {
 		if n.GetName() == name {

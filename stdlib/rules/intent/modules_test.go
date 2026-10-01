@@ -9,7 +9,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// declOf is a small helper: parse never fails on these well-formed literals in-test.
+// declOf is a small helper, since parse never fails on these well-formed literals in-test.
 func declOf(t *testing.T, yaml string) Declaration {
 	t.Helper()
 	d, err := Parse([]byte(yaml))
@@ -26,7 +26,7 @@ modules:
   - {name: SoC, class: soc}
   - {name: CAN transceiver, class: can_transceiver}
 `)
-	// The design has an SoC but NO CAN transceiver: the declared expectation set comes from the
+	// The design has an SoC but NO CAN transceiver. The declared expectation set comes from the
 	// declaration, not the netlist, so the absent module must fail.
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", DeviceClasses: classify.Tags("soc")},
@@ -65,7 +65,7 @@ func TestModuleMatchesByFamilyTag(t *testing.T) {
 
 func TestModuleCountFiresOnTooFew(t *testing.T) {
 	decl := declOf(t, "name: I\nmodules:\n  - {name: CAN, class: can, count: 2}")
-	// One CAN present, two declared: module-missing passes (>=1 present), module-count fires.
+	// One CAN present and two declared, so module-missing passes (>=1 present) and module-count fires.
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
 		{RefDes: "R1", DeviceClasses: classify.Tags("resistor")},

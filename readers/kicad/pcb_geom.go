@@ -13,8 +13,8 @@ import (
 )
 
 // ReadBoardGeometry parses a KiCad .kicad_pcb board into the board-geometry sidecar
-// (geom.BoardGeometry) — the physical layout the netlist reader (Read) deliberately
-// drops: the layer table, the Edge.Cuts outline, per-footprint placement and pads, routed
+// (geom.BoardGeometry), the physical layout the netlist reader (Read) drops. That is
+// the layer table, the Edge.Cuts outline, per-footprint placement and pads, routed
 // copper grouped by net, and zone outlines. It is joined to the netlist IR by ref_des
 // (placements) and net name (copper); pad numbers match ir.Connection.pin_ref.
 //
@@ -56,8 +56,8 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 	}
 
 	// Nets referenced by copper items carry a number; the top-level net table maps it to
-	// the name the IR keys on. (The netlist reader skips this table on purpose — pads
-	// carry their names — but segments and vias reference by number only.)
+	// the name the IR keys on. (The netlist reader skips this table because pads carry
+	// their names, but segments and vias reference by number only.)
 	netName := map[string]string{}
 	for _, n := range root.Children("net") {
 		netName[atomOf(n.Arg(1))] = atomOf(n.Arg(2))
@@ -123,7 +123,7 @@ func boardGraphics(root *node) []*geom.BoardGraphic {
 }
 
 // boardGraphicOf builds one BoardGraphic from a KiCad graphic node. place maps a Y-flipped
-// source point into board coordinates: it composes the footprint transform for fp_* graphics,
+// source point into board coordinates. It composes the footprint transform for fp_* graphics,
 // and is the identity for free gr_* graphics (already absolute). Returns nil if the node lacks
 // the geometry its kind needs.
 func boardGraphicOf(n *node, base string, place func(*geom.Point) *geom.Point, ref string) *geom.BoardGraphic {
@@ -193,7 +193,7 @@ func graphicShape(n *node, base string, place func(*geom.Point) *geom.Point) *ge
 	return nil
 }
 
-// graphicFill maps a KiCad (fill ...) node to the shape fill: a filled body fills with the
+// graphicFill maps a KiCad (fill ...) node to the shape fill. A filled body fills with the
 // silk/outline color (FILL_OUTLINE, since silk is a single color), otherwise outline only.
 func graphicFill(n *node) geom.Shape_Fill {
 	f := n.Child("fill")
@@ -224,8 +224,9 @@ func graphicWidth(n *node) int64 {
 // boardTexts collects the board's placed text: each footprint's silkscreen ref-des and
 // value (composed from footprint-local to board coordinates so they pin to the pads), and
 // free graphic text (gr_text, including the title block, authored absolute). Hidden source
-// text is dropped, mirroring the no-ref placement skip. Footprint user text (fp_text) and
-// silk/fab graphics are out of scope for this tier (C6 bound; see the proto contract).
+// text is dropped, mirroring the no-ref placement skip. Footprint user text (fp_text) is
+// out of scope for this tier (C6 bound; see the proto contract), and silk/fab graphics are
+// boardGraphics' job.
 func boardTexts(root *node) []*geom.BoardText {
 	var out []*geom.BoardText
 	for _, fp := range root.Children("footprint") {
@@ -258,10 +259,10 @@ func boardTexts(root *node) []*geom.BoardText {
 	return out
 }
 
-// footprintText composes one footprint-owned text (a property or fp_text) into a board-frame
-// BoardText. Position: the footprint-local offset is rotated by the footprint orientation
-// and mirrored on the back via geomath.ComposePlacement — the SAME composer padWorld uses,
-// so text lands on its part. Glyph rotation is the footprint orientation plus the text's own
+// footprintText composes one footprint-owned text (a Reference or Value property) into a
+// board-frame BoardText. Its position is the footprint-local offset rotated by the footprint
+// orientation and mirrored on the back via geomath.ComposePlacement, the SAME composer
+// padWorld uses, so text lands on its part. Glyph rotation is the footprint orientation plus the text's own
 // local angle, carried in the Y-up frame (a Y-down source negates). Returns nil for empty or
 // hidden text, or a text with no local (at).
 func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom.BoardText {
@@ -331,9 +332,9 @@ func effectsOf(n *node) (height int64, justify string, mirror bool) {
 }
 
 // keepUpright folds a footprint text's glyph angle into (-90, 90] by half turns, so text on
-// a rotated (e.g. 180°) footprint never renders upside down — matching KiCad's default
-// keep_upright behavior for silkscreen fields. Free gr_text is exempt: it stays as authored
-// (a mirrored back-side title is intentional).
+// a rotated (e.g. 180°) footprint never renders upside down, matching KiCad's default
+// keep_upright behavior for silkscreen fields. Free gr_text is exempt and stays as authored,
+// since a mirrored back-side title is intentional.
 func keepUpright(deg float64) float64 {
 	for deg > 90 {
 		deg -= 180
@@ -344,8 +345,8 @@ func keepUpright(deg float64) float64 {
 	return deg
 }
 
-// isHidden reports whether a text node is marked hidden — KiCad's (hide yes) child (v7+) or
-// the bare (hide) form — so dropped text never renders.
+// isHidden reports whether a text node is marked hidden, by KiCad's (hide yes) child (v7+)
+// or the bare (hide) form, so dropped text never renders.
 func isHidden(n *node) bool {
 	h := n.Child("hide")
 	if h == nil {
@@ -417,8 +418,8 @@ func arcPolyline(s, m, e *geom.Point) *geom.Polyline {
 	a0 := math.Atan2(float64(s.Y)-cy, float64(s.X)-cx)
 	a1 := math.Atan2(float64(m.Y)-cy, float64(m.X)-cx)
 	a2 := math.Atan2(float64(e.Y)-cy, float64(e.X)-cx)
-	// Sweep from a0 to a2 passing through a1: normalize both deltas into the same
-	// direction; if the midpoint is not inside the CCW sweep, go CW.
+	// To sweep from a0 to a2 through a1, normalize both deltas into the same direction,
+	// and go CW if the midpoint is not inside the CCW sweep.
 	ccw := func(from, to float64) float64 {
 		d := to - from
 		for d < 0 {
@@ -428,7 +429,7 @@ func arcPolyline(s, m, e *geom.Point) *geom.Polyline {
 	}
 	sweep := ccw(a0, a2)
 	if ccw(a0, a1) > sweep {
-		sweep -= 2 * math.Pi // midpoint outside the CCW span: sweep clockwise instead
+		sweep -= 2 * math.Pi // midpoint outside the CCW span, so sweep clockwise instead
 	}
 	r := math.Hypot(float64(s.X)-cx, float64(s.Y)-cy)
 	const steps = 16
@@ -506,7 +507,7 @@ func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
 
 // netCopper groups the board's segments and vias by resolved net name, sorted by name
 // for a deterministic artifact. Items on net 0 / an unknown number ("no net") are
-// dropped: copper the IR has no key for cannot join.
+// dropped, since copper the IR has no key for cannot join.
 func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
 	byNet := map[string]*geom.NetCopper{}
 	get := func(n *node) *geom.NetCopper {
@@ -560,12 +561,12 @@ func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
 // across the three source forms: (net N "name") carries the name directly; (net N) is the
 // pre-KiCad-10 numbered form resolved through the board's net table; (net "name") is the
 // KiCad 10 name-only form, recognizable because KiCad 10 also drops the table (and a name
-// is not all digits). "" means no net / unresolvable — the caller drops the copper.
+// is not all digits). "" means no net or unresolvable, and the caller drops the copper.
 func copperNet(ref *node, netName map[string]string) string {
 	if ref == nil || ref.Arg(1) == nil {
 		return ""
 	}
-	if len(ref.Kids) > 2 { // (net N "name"): the name is the last argument
+	if len(ref.Kids) > 2 { // (net N "name") carries the name as its last argument
 		return atomOf(ref.Arg(len(ref.Kids) - 1))
 	}
 	key := atomOf(ref.Arg(1))
@@ -575,11 +576,11 @@ func copperNet(ref *node, netName map[string]string) string {
 	if _, err := strconv.Atoi(key); err != nil || len(netName) == 0 {
 		return key // name-only form (KiCad 10)
 	}
-	return "" // a number the table does not know: no net
+	return "" // a number the table does not know means no net
 }
 
 // zoneOutline extracts one zone's authored polygon. A zone on no net (a keepout) keeps
-// net="" — it is real copper geometry even though it joins to nothing.
+// net="", since it is real copper geometry even though it joins to nothing.
 func zoneOutline(z *node, netName map[string]string) *geom.Zone {
 	poly := z.Child("polygon")
 	if poly == nil {

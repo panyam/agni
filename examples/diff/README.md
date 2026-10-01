@@ -21,8 +21,8 @@ make runquiet   # non-interactive defaults (CI-safe)
 make doc        # render the walkthrough to markdown
 ```
 
-Defaults to the bundled `rev-a.edn` / `rev-b.edn` pair, which differs by one change of each
-class (a rename, a hard rewire, a new net, a deleted net, plus an added component). Enter your
+Defaults to the bundled `rev-a.edn` / `rev-b.edn` pair, which carries one rename, one hard
+rewire, one new net and one deleted net, plus an added component. It has no soft change. Enter your
 own two paths to diff any pair.
 
 ## How it is built

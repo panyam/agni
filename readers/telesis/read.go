@@ -1,42 +1,17 @@
 // Package telesis reads the flat Telesis netlist (`.tel`) that the Mentor/Siemens schematic flow
-// emits, into the neutral IR.
+// emits into the neutral IR. The format carries connectivity and properties and no geometry, so
+// this is a Design-only reader (CONSTRAINTS C21).
 //
-// The format is line-oriented and sectioned, and it carries connectivity plus properties and no
-// geometry at all, so this is a Design-only reader (CONSTRAINTS C21: the netlist is the source of
-// truth for connectivity and component identity; layout arrives as a separate companion).
+// Fidelity: lossy-bounded (CONSTRAINTS C6). Read extracts the components and their part types (with
+// the manufacturer part number the `$PACKAGES` head carries), the nets and their pin membership, and
+// both property blocks transposed onto the components and pins they name. It drops the file's own
+// ordering and grouping, because a property is stored on each component it named and the
+// inverted-index entry it arrived on is not recoverable. There is no geometry to lose.
 //
-// Fidelity: lossy-bounded (CONSTRAINTS C6). Read extracts the components and their part types
-// (with the manufacturer part number the `$PACKAGES` head carries), the nets and their pin
-// membership, and both property blocks transposed onto the components and pins they name. What is
-// dropped is the file's own ordering and its grouping: a property is stored on each component it
-// named, so the inverted-index entry it arrived on is not recoverable. There is no geometry to
-// lose, since the format carries none.
-//
-// A file is a sequence of sections, each opened by a line-initial `$MARKER`:
-//
-//	$PACKAGES        'PART' ! 'MPN' ; U1 U2 U3,          part identity, grouped by part type
-//	$A_PROPERTIES    'Capacitance' '100nF' ; C1 C2,      component attributes, grouped by VALUE
-//	$NETS            'SOME_NET' ; U1.14 R7.2,            connectivity
-//	$PINS            (observed empty in every real export)
-//	$A_PROPERTIES    'Pin Type' 'IN' ; U1.14 U2.3,       pin attributes, grouped by VALUE
-//	$END
-//
-// Three things about that shape drive the whole implementation, and each is easy to get wrong in a
-// way that produces a design which parses cleanly and is quietly incorrect.
-//
-// THE `!` IS THE DISCRIMINATOR. A package entry and a property entry are both a quoted head, a
-// semicolon, and a run of targets. Only the package has the `!`. A scanner keying on quotes alone
-// reads properties as packages and invents components out of attribute names.
-//
-// `$A_PROPERTIES` APPEARS TWICE AND MEANS TWO DIFFERENT THINGS. The first block's targets are
-// ref-des and the second block's are `refdes.pin`. This reader discriminates on the TARGET SHAPE
-// rather than on which block it is in, so a file that orders them differently, or carries only one,
-// still reads correctly.
-//
-// THE PROPERTY SECTIONS ARE AN INVERTED INDEX, and they are the bulk of a real file. Each entry is
-// (name, value) -> many targets, so all the components sharing a value ride on one entry; one entry
-// can carry over a thousand. The IR is component-major, so reading properties is a transpose, and
-// it is most of the work here rather than an afterthought.
+// The sections, the entry grammar and the IR mapping are in GRAMMAR.md beside this file. Three
+// rules there produce a design that parses cleanly and is wrong when missed: only a `!` entry is a
+// package (addEntry), a property target is routed by its SHAPE and not its block (pinTargetRe), and
+// a property section is an inverted index that has to be transposed (addProperty).
 package telesis
 
 import (
@@ -53,9 +28,9 @@ import (
 // SourceFormat tags designs this reader produces.
 const SourceFormat = "telesis"
 
-// Section markers. Only these four carry anything this reader reads; an unrecognised `$SECTION` is
-// skipped whole rather than treated as an error, because the format is known from real exports
-// rather than from a specification and a second writer may emit sections this one has never seen.
+// Section markers this reader consumes. Any other `$SECTION` is skipped rather than treated as an
+// error, since the grammar is learned from real exports and another writer may emit sections this
+// one has never seen. noteUnparsed records the skip.
 const (
 	secPackages   = "$PACKAGES"
 	secProperties = "$A_PROPERTIES"
@@ -63,22 +38,17 @@ const (
 	secEnd        = "$END"
 )
 
-// generatedNamePrefix marks a net name the exporter invented rather than a human choosing it.
-// Hundreds appear in a real export, and nearly all of them are single-endpoint.
-//
-// They are KEPT, and tagged, rather than dropped. Dropping them would be quieter, and it would also
-// throw away every genuinely dangling connection the single-pin-net rule exists to report, with no
-// way for a consumer to tell that happened. Tagging leaves the filtering decision downstream, where
-// it can be made per rule and per project instead of once, invisibly, at the reader.
+// generatedNamePrefix marks a net name the exporter invented. Hundreds appear in a real export,
+// nearly all single-endpoint. They are KEPT and tagged, because dropping them would also drop every
+// genuinely dangling connection the single-pin-net rule reports. Filtering is left to consumers.
 const generatedNamePrefix = "$"
 
 // GeneratedNameAttr is set to "true" on a net whose name the exporter generated.
 const GeneratedNameAttr = "generated_name"
 
-// PinTypeProperty is the property name carrying pin direction. It is the ONLY place this format
-// states direction, which is why the property sections are not optional: skip them and every pin
-// reads PIN_DIRECTION_UNSPECIFIED, silently disabling every direction-dependent rule rather than
-// failing in a way anyone would notice.
+// PinTypeProperty is the property name carrying pin direction, the ONLY place this format states
+// it. Skip the property sections and every pin reads PIN_DIRECTION_UNSPECIFIED, which silently
+// disables every direction-dependent rule.
 const PinTypeProperty = "Pin Type"
 
 // PinLabelProperty carries the pin's printed label.
@@ -88,28 +58,18 @@ const PinLabelProperty = "PinLabel"
 // did not consume, comma-separated and in file order. Absent when everything was consumed.
 const UnparsedSectionsAttr = "telesis.unparsed_sections"
 
-// pinTargetRe matches a pin-scoped target: REFDES.PIN. The DOT is what distinguishes it, since a
-// ref-des never contains one, so the pin half is left deliberately permissive: numeric (U1.14), the
-// BGA row-column case (U7.L1), and the pure-letter case a connector shell can carry (J1.A) are all
-// legal designators, and narrowing this to digits would silently route a pure-letter pin into
-// COMPONENT scope, where it would land as an attribute on a component that does not exist.
+// pinTargetRe matches a pin-scoped target, REFDES.PIN. The DOT is the discriminator, since a
+// ref-des never contains one. The pin half is permissive on purpose (U1.14, BGA U7.L1, connector
+// shell J1.A), because narrowing it to digits would route a letter pin into COMPONENT scope as an
+// attribute on a component that does not exist.
 var pinTargetRe = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9_]*)\.([A-Za-z0-9_]+)$`)
 
-// splitEntryLine parses one entry line into its quoted head fields and its target run.
+// splitEntryLine parses one entry line into its quoted head fields and its target run. The five
+// head shapes it accepts are listed in GRAMMAR.md section 2. It is a scanner rather than a regex
+// because a line a pattern fails to match is skipped, and a skipped line also breaks the
+// continuation chain, so the entry's whole target run vanishes with it.
 //
-// It is a small scanner rather than a regular expression because the head is more variable than it
-// first appears, and every variant below was found only by running against real exports. A
-// pattern-per-shape approach silently skipped the shapes it did not anticipate, and a skipped line
-// also breaks the continuation chain, so the entry's whole target run vanishes with it:
-//
-//	'PART' ! 'MPN' ; targets                  the common package entry
-//	! 'MPN' ; targets                         a part the library names only by MPN
-//	'PART' ! 'MPN' ! 'value' ! '10%' ; ...    extra positional fields after the MPN
-//	'Name' 'Value' ; targets                  a property entry, no bang
-//	'NET_NAME' ; targets                      a net entry, one field
-//
-// Quoting is respected while scanning for the `;` and while splitting on `!`, so a field whose text
-// contains either character cannot end the head early. Returns ok=false for a line that opens no
+// Quoting is respected while scanning for `;` and `!`. Returns ok=false for a line that opens no
 // entry, which the caller treats as a continuation or as content to skip.
 func splitEntryLine(line string) (fields []string, bang bool, targets string, ok bool) {
 	var cur strings.Builder
@@ -131,8 +91,8 @@ func splitEntryLine(line string) (fields []string, bang bool, targets string, ok
 		switch c {
 		case '\'':
 			inQuote, sawQuote, started = true, true, true
-			// A bang seen before the FIRST field means field zero is absent, which is the
-			// MPN-only package entry. Record the hole so callers index fields positionally.
+			// A bang before the FIRST field is the MPN-only package entry. Record the empty
+			// field zero so callers index fields positionally.
 			if bang && len(fields) == 0 {
 				fields = append(fields, "")
 			}
@@ -154,7 +114,7 @@ func splitEntryLine(line string) (fields []string, bang bool, targets string, ok
 }
 
 // Read parses a Telesis netlist into an ir.Design. sourceFile is used for provenance only; this
-// function never opens a file (CONSTRAINTS C1: I/O lives at the edge).
+// function never opens a file (CONSTRAINTS C1, I/O lives at the edge).
 func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	raw, err := io.ReadAll(r)
 	if err != nil {
@@ -167,12 +127,9 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	return b.design(), nil
 }
 
-// decodeText turns the file's bytes into a string, tolerating the latin-1 that real exports carry.
-//
-// This is not defensive: real files contain bytes that are not valid UTF-8, and Go would silently
-// substitute U+FFFD for each one, corrupting whatever identifier it sat in. Since the format has no
-// encoding declaration, valid UTF-8 is taken at face value and anything else is read as latin-1,
-// which is the encoding these tools actually emit and which cannot fail.
+// decodeText turns the file's bytes into a string. Valid UTF-8 is taken as is and anything else is
+// read as latin-1, which real exports carry and which cannot fail. Without it Go substitutes U+FFFD
+// for each invalid byte and corrupts the identifier it sat in.
 func decodeText(b []byte) string {
 	if utf8.Valid(b) {
 		return string(b)
@@ -201,9 +158,8 @@ func IsTelesis(head []byte) bool {
 type entry struct {
 	head  string
 	value string
-	// extra holds head fields beyond the second. A package entry may carry positional fields after
-	// the MPN (a value, a tolerance) whose meaning the format states nowhere, so they are kept by
-	// position rather than interpreted.
+	// extra holds head fields beyond the second, such as a value or tolerance after the MPN. The
+	// format never states their meaning, so they are kept by position and not interpreted.
 	extra   []string
 	hasBang bool
 	targets []string
@@ -229,16 +185,15 @@ type builder struct {
 	partExtra map[string][]string
 
 	compAttrs map[string]map[string]string
-	// pinAttrs is keyed by ref-des then pin designator. Pin facts arrive per INSTANCE in this
-	// format even though the IR hangs pins off the shared part type, so they are collected per
-	// instance here and reconciled onto the part type in design().
+	// pinAttrs is keyed by ref-des then pin designator. Pin facts arrive per INSTANCE and are
+	// reconciled onto the shared part type in partType.
 	pinAttrs map[string]map[string]map[string]string
 
 	nets     []*ir.Net
 	netNames map[string]bool
 
 	// unparsed records sections that carried content this reader did not consume, in file order.
-	// See design() for why silence was not an option here.
+	// See noteUnparsed.
 	unparsed     []string
 	unparsedSeen map[string]bool
 }
@@ -319,9 +274,8 @@ func foldEntries(lines []string) []entry {
 
 		fields, bang, targets, ok := splitEntryLine(line)
 		if !ok {
-			// A line that opens no entry and continues none is not something this reader
-			// understands. Skipping beats failing: the grammar is known from real exports rather
-			// than a specification.
+			// A line that opens no entry and continues none is skipped rather than failing the
+			// read, since the grammar is learned from exports and not a specification.
 			continuing = false
 			cur = nil
 			continue
@@ -358,9 +312,8 @@ func splitTargets(s string) []string {
 func (b *builder) addEntry(section string, e entry) {
 	switch section {
 	case secPackages:
-		// Only a `!` entry is a package. Anything else in this section is an attribute line the
-		// exporter placed here, and reading it as a package would invent a component named after
-		// a property.
+		// Only a `!` entry is a package. Reading a non-bang entry here as one would invent a
+		// component named after a property.
 		if e.hasBang {
 			b.addPackage(e)
 		}
@@ -375,15 +328,10 @@ func (b *builder) addEntry(section string, e entry) {
 
 // noteUnparsed records a section that carried content this reader did not consume.
 //
-// $PINS is the case in hand. It is present and EMPTY in every real export examined, so nothing is
-// known about its body grammar, and the reader skips it. But "we skipped it" and "there was nothing
-// there" are different facts, and without this they are indistinguishable: an export that populates
-// the section would parse cleanly and lose whatever it held, with no error and no signal. The same
-// applies to a section from a writer this reader has never met.
-//
-// Recorded on the design rather than raised as an error, because a section this reader does not
-// understand does not make the connectivity it DID read wrong. The read is still good; it is just
-// not complete, and that is exactly the distinction worth surfacing.
+// $PINS is the case in hand. It is EMPTY in every real export examined, so its body grammar is
+// unknown and the reader skips it. Without this record, an export that populates it would parse
+// cleanly and lose its content with no signal. It is an attribute on the design and not an error,
+// because the connectivity that was read is still correct, only incomplete.
 func (b *builder) noteUnparsed(section string) {
 	if section == "" || b.unparsedSeen[section] {
 		return
@@ -394,9 +342,8 @@ func (b *builder) noteUnparsed(section string) {
 
 // addPackage records a part type and the components declared under it.
 //
-// An entry with no part name is identified by its MPN, which is the only identity it carries. That
-// keeps two unnamed parts with different MPNs distinct, and the substitution is recorded on the
-// part type so a reader of the IR is not left thinking the library named it.
+// An entry with no part name is identified by its MPN, which keeps two unnamed parts with
+// different MPNs distinct. The substitution is recorded as name_from_mpn on the part type.
 func (b *builder) addPackage(e entry) {
 	part, named := e.head, true
 	if part == "" {
@@ -452,9 +399,9 @@ func (b *builder) addNet(e entry) {
 	b.nets = append(b.nets, net)
 }
 
-// addProperty transposes one inverted-index entry onto its targets, routing each by target shape:
-// a `refdes.pin` target is a pin fact and a bare `refdes` is a component fact. Shape rather than
-// section, so a file that orders or merges the two property blocks still reads correctly.
+// addProperty transposes one inverted-index entry onto its targets. A `refdes.pin` target is a pin
+// fact and a bare `refdes` is a component fact. Routing by shape and not by block means a file that
+// orders or merges the two property blocks differently still reads correctly.
 func (b *builder) addProperty(e entry) {
 	if e.head == "" {
 		return
@@ -520,12 +467,9 @@ func (b *builder) design() *ir.Design {
 
 // partType builds one part type, folding every instance's pin facts onto the shared pin list.
 //
-// The reconciliation is the awkward part of this format. Pin facts arrive per INSTANCE
-// (`U1.14 'Pin Type' 'IN'`) while the IR hangs pins off the part type that every placement shares,
-// which is the right model: a pin's direction is a property of the part, and the exporter repeats
-// it per instance only because the file is a flat list. Where two instances of one part disagree,
-// the first wins and the disagreement is recorded on the pin rather than discarded, since a silent
-// pick would make a library inconsistency unfindable.
+// Pin facts arrive per INSTANCE (`U1.14 'Pin Type' 'IN'`) while the IR hangs pins off the shared
+// part type. Where two instances disagree the first wins, and the disagreement is recorded on the
+// pin (see applyPinAttrs) so a library inconsistency stays findable.
 func (b *builder) partType(part string) *ir.PartType {
 	pt := &ir.PartType{
 		Name: part,
@@ -542,8 +486,7 @@ func (b *builder) partType(part string) *ir.PartType {
 		if pt.Attributes == nil {
 			pt.Attributes = map[string]string{}
 		}
-		// Named by 1-based position in the head, so field_3 is the third field: the one after
-		// the part name and the MPN.
+		// Named by 1-based position in the head, so field_3 follows the part name and MPN.
 		pt.Attributes[fmt.Sprintf("field_%d", i+3)] = v
 	}
 	if b.unnamedParts[part] {
@@ -596,8 +539,8 @@ func applyPinAttrs(p *ir.Pin, attrs map[string]string) {
 				p.Direction = pinDirection(value)
 				continue
 			}
-			// Case alone is not a conflict: one real export spells the same value both ANALOG and
-			// Analog, and treating that as a library inconsistency would report noise.
+			// Case alone is not a conflict. One real export spells the same value both ANALOG
+			// and Analog.
 			if !strings.EqualFold(raw, value) {
 				setPinAttr(p, "direction_conflict", raw+"|"+value)
 			}
@@ -620,17 +563,11 @@ func setPinAttr(p *ir.Pin, k, v string) {
 
 // pinDirection maps the format's Pin Type vocabulary onto the IR enum.
 //
-// Case is folded because a single real export spells one value two ways (ANALOG and Analog); a
-// case-sensitive map would drop half those pins to UNSPECIFIED and quietly weaken every
-// direction-dependent rule over them.
-//
-// GROUND joins POWER as POWER_IN: a ground pin consumes from the ground net exactly as a supply pin
-// consumes from a rail, and the IR's POWER_OUT is for a source (a regulator output). TERMINAL and
-// ANALOG map to PASSIVE, meaning a leg that conducts rather than listening or driving, which is
-// what keeps direction-based rules treating them as transparent rather than as logic inputs.
-//
-// An unrecognised value returns UNSPECIFIED, and the caller keeps the raw spelling in
-// direction_raw, so a second exporter's vocabulary degrades to "unknown" rather than being lost.
+// Case is folded because one real export spells a value two ways (ANALOG and Analog). GROUND maps
+// to POWER_IN like POWER, since a ground pin consumes from its net and POWER_OUT is for a source.
+// TERMINAL and ANALOG map to PASSIVE so direction-based rules treat them as conducting legs and not
+// as logic inputs. An unrecognised value returns UNSPECIFIED, and the caller keeps the raw
+// spelling in direction_raw.
 func pinDirection(v string) ir.PinDirection {
 	switch strings.ToUpper(strings.TrimSpace(v)) {
 	case "IN":
@@ -649,11 +586,9 @@ func pinDirection(v string) ir.PinDirection {
 
 // diagnostics declares what this reader looked for, whether or not it found anything.
 //
-// `supplied` is the load-bearing half. Every diagnostic list is empty both when a reader looked and
-// found nothing and when it never looked, and a rule reading the second as the first reports a
-// clean pass over a question nobody asked. This reader can see a ref-des declared under two package
-// entries, so it supplies ref_des_collisions and stays silent about the rest, which are properties
-// of a drawing this format does not carry.
+// This format can only answer ref_des_collisions, so that is the one it supplies. The others are
+// properties of a drawing it does not carry. Why `supplied` is declared even when the list is empty
+// is in docsite/content/architecture/ingestion-and-ir.md#input-diagnostics (agni issue 309).
 func (b *builder) diagnostics() *ir.InputDiagnostics {
 	diag := &ir.InputDiagnostics{Supplied: []string{"ref_des_collisions"}}
 	for _, ref := range b.dupRefs {

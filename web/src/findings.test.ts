@@ -150,7 +150,8 @@ describe("findingKey", () => {
 
 describe("sortFindings", () => {
   it("sorts by severity worst-first, tiebreaking on rule then subject", () => {
-    // C1(warn, unconnected-component), TX_P(warn, diff-pair-naming): same severity -> rule breaks the tie.
+    // C1(warn, unconnected-component) and TX_P(warn, diff-pair-naming) share a severity, so rule
+    // breaks the tie.
     expect(sortFindings(findings, "severity", 1).map((x) => x.subject)).toEqual(["SCL", "TX_P", "C1", "STUB"]);
   });
   it("reverses the whole order when dir is -1", () => {
@@ -225,15 +226,16 @@ describe("focusStack separates the field from the figure (agni issue 348)", () =
     const [base, focus] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], [{ components: ["R1"] }]);
     expect(base.color).toBe(BASE_HIGHLIGHT_COLOR);
     expect(base.alpha).toBe(BASE_HIGHLIGHT_ALPHA);
-    // The focus names no color on purpose: it inherits the default, so a user style set through the
+    // The focus names no color on purpose. It inherits the default, so a user style set through the
     // Highlight menu still wins here rather than being overwritten by a hardcoded focus color.
     expect(focus.color).toBeUndefined();
   });
 
   it("gives the two layers different hues, not one hue at two alphas", () => {
     const [base] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], [{ components: ["R1"] }]);
-    // toBeDefined FIRST: `undefined !== DEFAULT` is true, so the not.toBe alone would pass on the
-    // very bug this describes (a base spec that names no color and falls back to the default).
+    // toBeDefined FIRST, because `undefined !== DEFAULT` is true, so the not.toBe alone would pass
+    // on the very bug this describes (a base spec that names no color and falls back to the
+    // default).
     expect(base.color).toBeDefined();
     expect(base.color).not.toBe(DEFAULT_HIGHLIGHT_COLOR);
   });
@@ -282,9 +284,9 @@ describe("severitySections parity with the server report (WS3-022)", () => {
   });
 });
 
-// What a selection is CHECKED for (agni issue 259). The whole point is that this is a FILTER over
-// the findings already computed, so what the tests pin is the matching rule and the honesty of a
-// zero, not any evaluation.
+// What a selection is CHECKED for (agni issue 259). This is a FILTER over
+// the findings already computed, so what the tests pin is the matching rule and what a zero
+// means, not any evaluation.
 describe("selectionFromFinding", () => {
   it("reads each subject kind as the thing the finding is about", () => {
     expect(selectionFromFinding(f({ kind: "component", subject: "R1" }))).toEqual({ kind: "component", ref: "R1" });
@@ -407,7 +409,7 @@ describe("an inconclusive finding is not a defect", () => {
     expect(findingRank(undecided)).toBeGreaterThan(findingRank(f({ severity: "catastrophe" })));
   });
 
-  // severitySections is the server-report parity oracle (WS3-022) and deliberately unchanged: it
+  // severitySections is the server-report parity oracle (WS3-022) and deliberately unchanged, since it
   // mirrors what GetCheckReport emits, and the client cannot fix that shape by disagreeing with it.
   it("still reaches severitySections under its own severity, where the server puts it", () => {
     expect(severitySections([undecided])).toEqual([{ severity: "error", count: 1 }]);

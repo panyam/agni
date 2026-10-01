@@ -14,10 +14,9 @@ type framePrim struct {
 	pts  [][2]int64
 }
 
-// frameLayout is the world-space geometry of the drawing-sheet furniture: the inner frame
-// corners, the ruler divisions, and the title-block box. Shared so the furniture lines
-// (worksheetLines) and the furniture text positions (collectLabels) are computed from one
-// layout and stay in step. All fields are world (Y-up) units.
+// frameLayout is the world-space (Y-up) geometry of the drawing-sheet furniture: the inner
+// frame corners, the ruler divisions, and the title-block box. worksheetLines and collectLabels
+// both read it, so the furniture lines and their text stay in step.
 type frameLayout struct {
 	l, r, b, t int64 // inner frame corners (b = bottom, t = top; Y-up)
 	m          int64 // inset margin
@@ -26,10 +25,8 @@ type frameLayout struct {
 	tbw, tbh   int64 // title-block box size
 }
 
-// worksheetLayout computes the furniture layout from the sheet's page (sheet.Size). The
-// second return is false when the sheet has no page, in which case there is no furniture. The
-// zone-ruler column count is derived from the page size (zoneCols), so a D-size sheet gets the
-// standard 8 divisions rather than a fixed count (WS7-038).
+// worksheetLayout computes the furniture layout from sheet.Size, returning false when the sheet
+// has no page. The zone-ruler column count comes from zoneCols (WS7-038).
 func worksheetLayout(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) (frameLayout, bool) {
 	sz := sheet.Size
 	if sz == nil || sz.Min == nil || sz.Max == nil {
@@ -50,13 +47,11 @@ func worksheetLayout(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) (fram
 	return fl, true
 }
 
-// worksheetLines synthesizes the drawing-sheet furniture in world (sheet) coordinates: the
-// inner frame border, the zone-ruler tick marks (6 columns x 4 rows), and the bottom-right
-// title-block box with one divider per title-block row. It is the WebGL counterpart to the
-// SVG backend's drawWorksheet, but computed in world units (Y-up) so it scales with the
-// schematic under the camera instead of in fixed pixels. Returns nil when the sheet has no
-// page. Ruler numbers/letters and title-block field text are not geometry; the text overlay
-// draws them (collectLabels / WS7-002b).
+// worksheetLines synthesizes the drawing-sheet furniture in world (Y-up) coordinates: the
+// inner frame border, the zone-ruler ticks (zoneCols columns x 4 rows), and the title-block box
+// and dividers. It is the WebGL counterpart to drawWorksheet, in world units so it scales under
+// the camera. Returns nil when the sheet has no page. Ruler and title-block text is drawn by the
+// text overlay (collectLabels, WS7-002b).
 func worksheetLines(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []framePrim {
 	if sheet.GetSuppressWorksheet() {
 		return nil // the source format carries its own title block/frame (xschem/gEDA); WS7-036
@@ -77,7 +72,7 @@ func worksheetLines(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []fram
 	// Inner frame border.
 	rect(fl.l, fl.b, fl.r, fl.t)
 
-	// Zone ruler: tick marks at the interior column/row boundaries (numbers/letters are text).
+	// Zone ruler tick marks at the interior column and row boundaries.
 	tick := fl.m * 3 / 5 // ~0.6 of the margin
 	for i := int64(1); i < fl.cols; i++ {
 		x := fl.l + (fl.r-fl.l)*i/fl.cols
@@ -90,7 +85,7 @@ func worksheetLines(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []fram
 		seg(fl.r, y, fl.r-tick, y) // inward from the right edge
 	}
 
-	// Title block: bottom-right box + the shared grid's row/column dividers.
+	// Title block: bottom-right box plus the shared grid's row and column dividers.
 	rows := titleBlockGrid(g, sheet)
 	bx, by, bw, bh := titleBlockBox(fl, rows)
 	rect(bx, by, bx+bw, by+bh)
@@ -114,10 +109,9 @@ func worksheetLines(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []fram
 	return out
 }
 
-// tbCell is one labeled cell of the title-block grid. text is the cell content (may be empty,
-// drawn as an empty cell). x0/x1 are the cell's horizontal span as fractions of the block
-// width, so 0..1 is full width. bold marks the cells KiCad emphasizes (Title, Rev), which the
-// SVG backend draws heavier.
+// tbCell is one cell of the title-block grid. text may be empty, drawn as an empty cell. x0/x1
+// are the cell's horizontal span as fractions of the block width. bold marks the cells KiCad
+// emphasizes (Title, Rev).
 type tbCell struct {
 	text   string
 	x0, x1 float64
@@ -132,12 +126,10 @@ type tbRow struct {
 }
 
 // titleBlockGrid builds KiCad's standard title-block cell layout for a sheet, filled from its
-// TitleBlock and its position among g.Sheets (the Id: n/m cell). It is the single model behind
-// the SVG title block (drawTitleBlock), the WebGL divider geometry (worksheetLines), and the
-// WebGL text overlay (collectLabels), so all three stay in step. The grid is fixed furniture:
-// every field cell is always drawn, empty where the source has no value; only the values vary.
-// Order matches Eeschema, top to bottom: comments (highest index on top), company, sheet path,
-// title, then the split Size|Date|Rev and the Id row.
+// TitleBlock and its position among g.Sheets (the Id n/m cell). drawTitleBlock, worksheetLines
+// and collectLabels all read it. Every field cell is always drawn, empty where the source has no
+// value. Order matches Eeschema, top to bottom: comments (highest index on top), extra fields,
+// company, sheet path, title, the split Size|Date|Rev row, and the Id row.
 func titleBlockGrid(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []tbRow {
 	tb := sheet.TitleBlock
 	title := sheet.Name
@@ -149,8 +141,8 @@ func titleBlockGrid(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []tbRo
 		rows = append(rows, tbRow{cells: []tbCell{{text: text, x0: 0, x1: 1, bold: bold}}, weight: weight})
 	}
 
-	// Comments stack above the block, highest index on top (KiCad order). Empty comment lines
-	// are skipped so the block does not grow for blanks.
+	// Comments stack highest index on top (KiCad order). Empty ones are skipped so the block
+	// does not grow for blanks.
 	comments := tb.GetComments()
 	for i := len(comments) - 1; i >= 0; i-- {
 		if comments[i] != "" {
@@ -224,10 +216,9 @@ var isoPaper = []struct {
 	{"A", 279.4, 215.9}, {"B", 431.8, 279.4}, {"C", 558.8, 431.8}, {"D", 863.6, 558.8}, {"E", 1117.6, 863.6},
 }
 
-// paperName infers the sheet-size name (A4, A3, ...) from the page dimensions, or "" when it
-// matches no standard size or the sidecar carries no unit scale. geom.SheetGeometry has no
-// paper-name field, so the Size cell is derived rather than stored (WS7-021). Dimensions are
-// the page bbox scaled by g.unit_nm into millimeters, normalized to landscape.
+// paperName infers the sheet-size name (A4, A3, ...) from the page bbox scaled by g.unit_nm
+// into landscape millimeters, or "" when it matches no standard size or the sidecar carries no
+// unit scale. geom.SheetGeometry has no paper-name field, so the Size cell is derived (WS7-021).
 func paperName(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) string {
 	sz := sheet.GetSize()
 	if sz == nil || sz.GetMin() == nil || sz.GetMax() == nil || g.GetUnitNm() == 0 {
@@ -246,11 +237,9 @@ func paperName(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) string {
 	return ""
 }
 
-// zoneCols is the number of horizontal zone divisions in a page's standard drawing frame. An
-// ASME/ISO title frame divides the sheet width into size-dependent zones (numbered right-to-left
-// in the ruler); the large D/E drafting sheets use 8 divisions, verified against the native
-// OrCAD D-size output (WS7-038), while smaller or unrecognized sheets keep the historical 6.
-// Vertical divisions are a fixed 4 (rows A..D) across sizes.
+// zoneCols is the number of horizontal zone divisions in a page's standard drawing frame. D and
+// E sheets use 8, verified against native OrCAD D-size output (WS7-038), and every other or
+// unrecognized size uses 6. Vertical divisions are a fixed 4 (rows A..D).
 func zoneCols(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) int64 {
 	switch paperName(g, sheet) {
 	case "D", "E":

@@ -27,19 +27,14 @@ var singlePinNet = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// singlePinNetVerdicts decides every net in the design and returns one verdict each, which IS this
-// rule's considered set. Nothing is NotConsidered: a net's connection count is readable on any
-// netlist, so every subject reaches a decision and none is dropped on the way.
+// singlePinNetVerdicts returns one verdict per net, which is this rule's considered set. Nothing is
+// NotConsidered, since a net's connection count is readable on any netlist.
 //
-// THE NO-CONNECT EXEMPTION BECOMES A PASS, and that is the substance of the conversion rather than a
-// detail. A one-pin net the author deliberately marked no-connect used to leave the rule through the
-// same silent `return` as a net the rule never looked at, so the two were indistinguishable
-// downstream. Stating it as a pass with its own reason answers the question a reviewer actually has
-// about a stub: not "did you find anything" but "there is a one-pin net here, do you know about it".
+// A one-pin net marked no-connect is a PASS with its own reason rather than a silent skip, so a
+// reviewer sees both the stub and that the author meant it (#395).
 //
-// The witness carries the count on every branch, including the exemption, so it tracks the fact it
-// rests on. Wire a second pin to a stub and the statement changes with it; that is the property
-// build/evidence.md asks for, and the reason the count is a Term rather than only prose.
+// The witness carries the count as a Term on every branch, including the exemption, so the statement
+// changes when the count does (docsite/content/build/evidence.md).
 func singlePinNetVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range m.Nets() {
@@ -71,8 +66,8 @@ func singlePinNetVerdicts(m check.Model) []check.Verdict {
 	return out
 }
 
-// singlePinNetSpec is the rule's declarative twin (WS3-003): the count compare in the AST,
-// the multi-clause no-connect heuristic through the FFI seam.
+// singlePinNetSpec is the rule's declarative twin (see specs in register.go). The count compare is
+// in the AST and the multi-clause no-connect heuristic goes through a Call to a registered SpecFunc.
 var singlePinNetSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{

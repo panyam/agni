@@ -22,19 +22,17 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// localLoader is the CLI's service.Loader: it resolves a bare LOCAL path with NO mount containment
-// (the mount arg is ignored). Containment is a serve-only policy that lives in osLoader's
-// mounts.Resolve; the CLI runs on the user's own files, so localLoader is the deliberate
-// no-containment sibling behind the same Loader interface (WS9-048). It satisfies the full
-// service.Loader (the check/query thin clients) plus Manifest (the review thin client), so a CLI
-// command constructs its service over this and calls the same method the web serves.
+// localLoader is the CLI's service.Loader, osLoader's sibling behind the same interfaces (WS9-048).
+// It resolves a URI to a local path through the run's mount table (see localPath) and runs it
+// through the enclosing design's descriptor. It satisfies the full service.Loader (the check and
+// query thin clients) plus Manifest (the review thin client), so a CLI command constructs its
+// service over this and calls the same method the web serves.
 type localLoader struct {
 	loader   *formats.Loader
 	resolver *designResolver
 	// notes is where a descriptor-resolution note is written, nil for os.Stderr. Notes are emitted
 	// once per named path (noted), because one BuildModel asks this loader for the netlist, the board,
-	// and the geometry of the SAME path, and a user does not need to be told three times which file
-	// was read.
+	// and the geometry of the SAME path.
 	notes io.Writer
 	mu    sync.Mutex
 	noted map[string]bool
@@ -139,23 +137,20 @@ func (l *localLoader) Manifest(_ context.Context, uri artifact.URI) (review.Mani
 	return loadManifest(localPath(uri))
 }
 
-// Convention resolves a naming-convention config from a local path. The CLI reads its own
-// --conventions at the edge and sends the value, so nothing in the CLI calls this; it exists because
-// localLoader is the no-containment sibling of osLoader behind the same interfaces, and a loader that
-// satisfied all of them but one would make the two impossible to swap.
+// Convention resolves a naming-convention config from a local path. Nothing in the CLI calls it,
+// since the CLI reads its own --conventions at the edge and sends the value. It exists so localLoader
+// and osLoader satisfy the same interfaces and stay swappable.
 func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
 	return naming.Load(localPath(uri))
 }
 
-// DesignHash hashes the design's entry file for a stored run's provenance (WS9-053). It reuses the
-// same hashSource the CLI's --results-out path uses, so a document written by `agni review` and one
-// created through the service record identical revision identity for identical bytes. An unreadable
-// file yields "" rather than an error, which is what DesignRef.content_hash documents for a producer
-// that did not hash.
+// DesignHash hashes the design's entry file for a stored run's provenance (WS9-053). It uses the
+// same hashSource as the CLI's --results-out path, so `agni review` and the service record the same
+// revision identity for the same bytes. An unreadable file yields "" rather than an error (see
+// DesignRef.content_hash).
 //
 // It hashes the ENTRY the descriptor declares, not the ref the caller passed, so a run recorded
-// against a companion and one recorded against the design folder carry the same revision identity:
-// they analysed the same bytes.
+// against a companion and one recorded against the design folder carry the same revision identity.
 func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string, error) {
 	e, err := l.designEntry(ctx, uri)
 	if err != nil {
@@ -168,12 +163,9 @@ func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string,
 // declared ENTRY when the caller named a design folder or a declared companion, and the named URI
 // itself when the folder carries no descriptor.
 //
-// It is exported from DesignHash's body rather than left inside it because the ENTRY is what a
-// verdict link has to be built from, not only what it has to be hashed from (agni issue 489). The
-// link used to take its path from the caller's argument and its hash from here, so the two halves
-// named different artifacts: a folder argument produced a path the viewer cannot open, and a
-// companion argument produced a correct path with the entry's hash, which the viewer then reported
-// as a revision mismatch on a design that was perfectly in sync.
+// A verdict link takes both its path and its hash from this ENTRY, so the two halves name the same
+// artifact (agni issue 489). A link built from the caller's argument instead would open nothing for
+// a folder argument and report a false revision mismatch for a companion.
 func (l *localLoader) designEntry(ctx context.Context, uri artifact.URI) (artifact.URI, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
@@ -182,12 +174,10 @@ func (l *localLoader) designEntry(ctx context.Context, uri artifact.URI) (artifa
 	return artifact.Parse(src.NetlistURI)
 }
 
-// loadManifest reads and validates a checklist from a local path. It is a package function rather
-// than only a loader method because `agni review` no longer goes through a loader to get its
-// manifest: the checklist travels to the service as a VALUE (WS9-050), so the CLI reads it at its own
-// edge and sends it. The loader method remains for GetReviewManifest, which serves a client that
-// holds a ref instead, and both paths share this one read so they cannot disagree about what a
-// well-formed manifest is.
+// loadManifest reads and validates a checklist from a local path. `agni review` calls it directly
+// and sends the checklist to the service as a VALUE (WS9-050), while the Manifest method uses it for
+// GetReviewManifest, which serves a client holding a ref. Both share this one read so they agree
+// on what a well-formed manifest is.
 func loadManifest(path string) (review.Manifest, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -199,11 +189,10 @@ func loadManifest(path string) (review.Manifest, error) {
 
 // localPath turns an artifact URI back into the local path the CLI's readers take.
 //
-// This is the ONLY place the CLI unpacks a URI, and it is deliberately at the port boundary: above
-// it every caller holds one contained value, below it the readers see the plain names they have
-// always seen. It resolves through the run's mount table exactly as the served adapter does, so the
-// CLI is no longer the "no containment" sibling it used to be: every path it reads is inside a mount,
-// even when that mount was minted from the argument.
+// This is the ONLY place the CLI unpacks a URI, at the port boundary, so every caller above it holds
+// one contained value and the readers below it see plain paths. It resolves through the run's mount
+// table as the served adapter does, so every path the CLI reads is inside a mount, even when that
+// mount was minted from the argument (#179). A URI that does not resolve falls back to its path.
 func localPath(uri artifact.URI) string {
 	ws, err := workspace()
 	if err != nil {

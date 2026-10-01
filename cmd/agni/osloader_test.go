@@ -28,7 +28,7 @@ func TestCompanionEds(t *testing.T) {
 	}
 }
 
-// TestOsLoaderCompanionGeometry: serving a netlist that has a sibling .eds draws on the .eds
+// TestOsLoaderCompanionGeometry checks that serving a netlist with a sibling .eds draws on the .eds
 // schematic (WS1-047), so GetDesign/GetSheet/HighlightSheet (all funneling through Geometry) show
 // the design's own drawing; a netlist without a sibling falls back to the auto-layout graph.
 func TestOsLoaderCompanionGeometry(t *testing.T) {
@@ -76,7 +76,7 @@ func hasWireNet(g *geom.SchematicGeometry, net string) bool {
 }
 
 // mustURI builds an artifact URI from a (mount, path) pair the test itself declared. It panics
-// rather than returning an error: a fixture URI that will not parse is a broken test.
+// rather than returning an error, since a fixture URI that will not parse is a broken test.
 func mustURI(mount, p string) artifact.URI {
 	u, err := artifact.New(mount, p)
 	if err != nil {

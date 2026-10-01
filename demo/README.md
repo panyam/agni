@@ -3,11 +3,11 @@
 Two shareable KiCad schematics that exercise the engine end to end. They carry no private
 data, so this is the "try it in 60 seconds" path on a fresh clone.
 
-- `showcase.passes.*` — a clean board. `agni check` finds nothing to report.
-- `showcase.fires.*` — the same board with deliberate design issues, so the rule checks
+- `showcase.passes.*` is a clean board, and `agni check` finds nothing to report.
+- `showcase.fires.*` is the same board with deliberate design issues, so the rule checks
   have something to say.
 
-Each design is a KiCad project pair: the `.kicad_pro` is a stub, the `.kicad_sch` holds the
+Each design is a KiCad project pair, where the `.kicad_pro` is a stub and the `.kicad_sch` holds the
 schematic. `agni` reads the project by its stem.
 
 ## Run the checks

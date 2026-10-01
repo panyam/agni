@@ -12,8 +12,8 @@ import (
 // never-matches function, so a role added to the vocabulary and forgotten there would answer false for
 // every net that skipped the ingestion stamp, silently.
 //
-// The fallback only fires for an unstamped net (a hand-authored IR), which is precisely why nothing
-// louder would notice: a normal read stamps roles, so the gap would sit unexercised until someone hit
+// The fallback only fires for an unstamped net (a hand-authored IR), so nothing louder would
+// notice. A normal read stamps roles, so the gap would sit unexercised until someone hit
 // it in a test fixture.
 func TestEveryRoleHasANameMatcher(t *testing.T) {
 	m := NewModel(&ir.Design{Nets: []*ir.Net{

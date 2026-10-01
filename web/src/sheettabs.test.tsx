@@ -26,7 +26,7 @@ describe("visitSheet", () => {
   });
 
   it("does not mirror the design's sheet list", () => {
-    // The whole point of the strip: a three-sheet design opens with ONE tab, not three.
+    // A three-sheet design opens with ONE tab, not three.
     expect(strip("root").tabs).toHaveLength(1);
   });
 

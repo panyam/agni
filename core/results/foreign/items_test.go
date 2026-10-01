@@ -3,11 +3,11 @@ package foreign
 import "testing"
 
 // TestParseItemFormMatrix is the form-matrix oracle for the description grammar, the same discipline
-// the EDIF name grammar earned: every shape the import claims to understand is a row here, so adding a
+// the EDIF name grammar earned. Every shape the import claims to understand is a row here, so adding a
 // shape means adding a row and a missing shape fails a test rather than a corpus file.
 //
 // Every input is a VERBATIM description captured from kicad-cli output over this repo's board and
-// schematic fixtures. They are UI strings with no stability guarantee, so evidence is the only honest
+// schematic fixtures. They are UI strings with no stability guarantee, so evidence is the only reliable
 // source for them, and a captured string is the only kind that proves the table matches reality.
 func TestParseItemFormMatrix(t *testing.T) {
 	cases := []struct {
@@ -34,7 +34,7 @@ func TestParseItemFormMatrix(t *testing.T) {
 		{"Symbol #PWR14 [GND]", itemRef{RefDes: "#PWR14"}},
 		{"Label 'VCC'", itemRef{Net: "VCC"}},
 		{"Global Label 'HARD'", itemRef{Net: "HARD"}},
-		// Shapes that name no joinable entity. These are not failures: a wire's description carries
+		// Shapes that name no joinable entity. These are not failures. A wire's description carries
 		// only its orientation and length, and board outline geometry belongs to no component or net.
 		{"Horizontal Wire, length 0.1500 mm", itemRef{}},
 		{"Vertical Wire, length 0.0508 mm", itemRef{}},
@@ -62,8 +62,8 @@ func TestParseItemPrefersTheMoreSpecificShape(t *testing.T) {
 }
 
 // TestNoNetIsNotANetName pins that KiCad's literal "<no net>" never becomes a net. Carrying it through
-// would invent a net by that name and join every unconnected pad on a board to it — a wrong join,
-// which is worse than no join because it attaches real violations to an innocent entity.
+// would invent a net by that name and join every unconnected pad on a board to it. A wrong join
+// is worse than no join because it attaches real violations to an innocent entity.
 func TestNoNetIsNotANetName(t *testing.T) {
 	if got := parseItem("Pad 2 [<no net>] of C1 on B.Cu"); got.Net != "" {
 		t.Errorf("net = %q, want empty", got.Net)

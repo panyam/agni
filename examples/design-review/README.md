@@ -1,6 +1,6 @@
 # design-review
 
-A team's schematic-review checklist, run against a board, with every item resolving to an outcome
+A team's schematic-review checklist, run against a board, with every item resolving to an outcome,
 including the ones nothing can answer.
 
 A review checklist is a list of questions someone decided to ask before a board is signed off. Most
@@ -19,7 +19,7 @@ over the fact relations (rung 11), or to nothing at all:
 | 4 | an item nobody wrote a rule for | an inline datalog query on the item itself |
 | 5 | the items nothing answers | three reasons, only one of which is a gap in the tool |
 
-Step 5 is why it exists. Three items go unanswered for three different reasons: a rule that ran and
+Three items go unanswered for three different reasons: a rule that ran and
 found no tier to read, a rule waiting on a declaration, and a question no shipped mechanism covers.
 Folding those into "not passing" would say the same thing about a missing rule and a missing
 datasheet.
@@ -36,14 +36,13 @@ datasheet.
     AGNI_EXAMPLE_DESIGN=/abs/path/board.edn AGNI_EXAMPLE_REVIEW=/abs/path/review.yaml make runquiet
 
 Both variables replace a DEFAULT, so the prompt still shows the path and a typed path still wins.
-Neither is committed here, which is the point: a team's checklist is as unshippable in this repo as
+Neither is committed here, because a team's checklist is as unshippable in this repo as
 their board.
 
 **Expect a lower covered count here than `agni review` reports on the same two files.** This runs the
 BUILT-IN catalog; the CLI composes a project's own overlay on top, so its interface profiles, its
 design intent and its naming conventions each answer items this cannot. On one real board the CLI
-covers 123 of 302 items where this covers 76. That is the overlay being visible rather than a defect,
-and it is worth knowing before you read the difference as one.
+covers 123 of 302 items where this covers 76. The gap is the overlay, not a defect.
 
 ## How it is built
 
@@ -52,12 +51,12 @@ bundled checklist is `checklist.yaml`, embedded so the walk runs from any direct
 
 The checklist is the pedagogy rather than scaffolding. It is sized so each outcome occurs at least
 once against the bundled design, and two of them come from what that design LACKS rather than from
-what it has: a board-tier item on a netlist is not-applicable, and an intent item with nothing
+what it has, since a board-tier item on a netlist is not-applicable and an intent item with nothing
 declared needs a declaration. `needs-data` is deliberately absent, because it is the state of a
 datasheet item whose corpus exists and lacks the symbol, and showing it would mean bundling a seeded
 corpus for one row.
 
-Four blank imports matter here, and three of them fail silently when missing. The rule catalog, the
-fact relations, and the **review query compiler**, without which an inline query item cannot compile
-at all. That last one is the seam this example is most likely to teach you about, because it is the
-only surface that needs it.
+Three blank imports matter here. The rule catalog and the fact relations fail silently when
+missing, and without the **review query compiler** an inline query item cannot compile at all. The
+compiler is the registration point this example is most likely to teach you about, because no other
+rung on the ladder imports it.

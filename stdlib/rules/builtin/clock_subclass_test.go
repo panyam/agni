@@ -33,12 +33,14 @@ func resonatorSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// TestDatasheetSubtypesClockFamily: a bare Y clock part is the clock FAMILY (so crystal-load-caps acts
-// on it), and a seeded device_class "ceramic resonator" enriches it to the ceramic_resonator subtype
-// (via the normalization + family-tag path), which then EXCLUDES it from crystal-load-caps — the
-// datasheet suppresses a false load-cap finding on an integrated-cap resonator.
+// TestDatasheetSubtypesClockFamily checks that a bare Y clock part is the clock FAMILY (so
+// crystal-load-caps acts on it), and a seeded device_class "ceramic resonator" enriches it to the
+// ceramic_resonator subtype (via the normalization + family-tag path), which then EXCLUDES it from
+// crystal-load-caps. The datasheet suppresses a false load-cap finding on an integrated-cap
+// resonator.
 func TestDatasheetSubtypesClockFamily(t *testing.T) {
-	// Without a datasheet: Y1 is the ambiguous clock family, has no subtype, and fires (2 terminals, no caps).
+	// Without a datasheet, Y1 is the ambiguous clock family, has no subtype, and fires (2
+	// terminals, no caps).
 	bare := check.NewModel(clockDesign("RES-1"))
 	if !bare.HasClass("Y1", check.ClassClock) {
 		t.Fatal("bare Y1 should be in the clock family")
@@ -50,8 +52,8 @@ func TestDatasheetSubtypesClockFamily(t *testing.T) {
 		t.Fatalf("bare clock part with no load caps: want 2 findings (XIN, XOUT), got %d: %v", len(got), got)
 	}
 
-	// With the seeded "ceramic resonator": Y1 gains the ceramic_resonator subtype + the clock family tag,
-	// and crystal-load-caps excludes it (integrated caps).
+	// With the seeded "ceramic resonator", Y1 gains the ceramic_resonator subtype + the clock
+	// family tag, and crystal-load-caps excludes it (integrated caps).
 	seeded := check.NewModelWithParams(clockDesign("RES-1"), nil, param.ParamSet{"RES-1": resonatorSpec("RES-1")})
 	if !seeded.HasClass("Y1", check.ClassCeramicResonator) {
 		t.Error("seeded Y1 should carry the ceramic_resonator subtype (normalized from 'ceramic resonator')")

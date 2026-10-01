@@ -1,13 +1,13 @@
-# Examples — Conventions
+# Example conventions
 
 Single source of truth for how an Agni example is laid out. Read this before adding a new
 example or upgrading an existing one. The reference example is
 [`read-and-stats/`](read-and-stats/).
 
 The style follows the demokit examples pattern (a shared `common` package plus one directory
-per example, each a narrated walkthrough), adapted to an engine rather than a server: Agni
-examples are **single-mode** (there is no server to run, unlike mcpkit's dual-mode
-`--serve`), and the narration lives in a **sidecar markdown file**, not in Go string
+per example, each a narrated walkthrough), adapted to an engine rather than a server. Agni
+examples are **single-mode** because there is no server to run (mcpkit's examples are dual-mode
+with `--serve`), and the narration lives in a **sidecar markdown file** rather than in Go string
 literals.
 
 ## 1. Directory layout
@@ -18,12 +18,14 @@ examples/
 ├── README.md             # the index (table of examples)
 ├── common/               # shared reuse package (its own module)
 │   ├── go.mod            # module .../examples/common; replace agni => ../..
-│   ├── designs.go        # ReadDesign / readByExt: reader dispatch at the I/O edge
+│   ├── designs.go        # Load / ReadDesign: reads through formats.Loader
 │   ├── fixtures.go       # go:embed designs/*; Designs(), ReadFixture()
+│   ├── geometry.go       # LoadSchematic: schematic geometry (.eds) at the I/O edge
+│   ├── input.go          # AskPath / AskReviewPath: the shared path prompt (§4)
 │   ├── present.go        # narration pretty-printers (StatsLines, NetLines, ...)
 │   ├── walkthrough.go    # SetupRenderer: --mode dispatch (plain/tui/notebook)
 │   ├── walkthrough.mk    # shared Makefile fragment
-│   └── designs/          # bundled synthetic fixtures (see rule in §4)
+│   └── designs/          # bundled synthetic fixtures (see rule in §5)
 └── <name>/               # one directory per example
     ├── main.go           # thin: embed the sidecar, Bind the steps that run code
     ├── walkthrough.md     # authored narration (demokit FromMarkdown sidecar)
@@ -54,9 +56,9 @@ demokit's `FromMarkdown` decides step vs section by content shape:
 - A ` ```mermaid ` block with `A ->> B: label` (solid) / `A -->> B: label` (dashed) lines
   becomes sequence-diagram arrows.
 - A ` ```inputs ` block (YAML list of `{name, prompt, type, options, default}`) declares
-  step inputs. Exception: a design-path input is declared in Go via `common.AskPath(...).Def()`
-  (see §4), not here, so the prompt stays identical across examples; the sidecar step then
-  carries only its note.
+  step inputs. The one exception is a design-path input, which is declared in Go via
+  `common.AskPath(...).Def()` (see §4) so the prompt stays identical across examples, and the
+  sidecar step then carries only its note.
 - A heading with any of [blockquote, mermaid, inputs, refs] is a **step**; a prose-only
   heading is a **section**.
 
@@ -86,9 +88,17 @@ demo.Bind("run").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 Setting **`AGNI_EXAMPLE_DESIGN`** replaces the default every `AskPath` offers, so a walkthrough
 can be driven over a design this repo cannot carry without that path being typed at the prompt
 or committed anywhere. It moves the DEFAULT rather than the value, so the prompt still shows it
-and a typed path still wins, and `--non-interactive` picks it up, which is what makes it worth
-having over just typing the path. A blank or whitespace-only value is not a value, so an
-`export AGNI_EXAMPLE_DESIGN=` left in a shell does not point every example at `""`.
+and a typed path still wins, and `--non-interactive` picks it up, which a typed path cannot do.
+A blank or whitespace-only value is not a value, so an `export AGNI_EXAMPLE_DESIGN=` left in a
+shell does not point every example at `""`.
+
+A review manifest works the same way. `common.AskReviewPath(name, default)` reads
+**`AGNI_EXAMPLE_REVIEW`** with the same semantics, because a team's checklist is as unshippable
+here as their board (`design-review` takes both). A package whose tests read either default must
+clear both variables in its `TestMain` (`os.Unsetenv(common.DesignPathEnv)` and
+`os.Unsetenv(common.ReviewPathEnv)`, as `design-review/outcomes_test.go` does). Otherwise a
+developer who exported one to drive a walkthrough over their own board fails the gate, and the
+failure prints their path into the log.
 
 `Load` (which `design.Load()` calls) reads the path from disk first, so a user can point the
 example at their own design, then falls back to the embedded fixture whose base name matches,

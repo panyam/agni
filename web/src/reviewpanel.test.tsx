@@ -118,7 +118,7 @@ describe("reviewPanel", () => {
 });
 
 describe("reviewPanel empty states", () => {
-  // The two empty states are deliberately different. One says the deployment cannot keep runs at
+  // The two empty states differ. One says the deployment cannot keep runs at
   // all; the other says nobody has reviewed this board. A user shown the wrong one goes looking for
   // a button that was never going to appear.
   it("names the flag when the server keeps no reviews, and offers no run control", () => {

@@ -20,7 +20,7 @@ packages that the CLI drives too.
 
 The engine, meaning parse, IR, diff, rules, and later simulation, is logic that must run in three
 places: a backend that batch-parses and validates large files, the browser viewer, and the CLI
-and tests. That is the shape the presenter pattern is designed for, so it is the architecture
+and tests. The presenter pattern was designed for that case, so it is the architecture
 here rather than an analogy borrowed from web apps.
 
 The pattern separates three tiers.
@@ -82,7 +82,7 @@ and the Connect handlers are glue over them. Which service owns which RPC is on
 
 ## The pages
 
-Four server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
+There are four server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
 
 | URL | Page | Bundle | What it is |
 |---|---|---|---|
@@ -95,20 +95,21 @@ The `/designs/` space holds two pages behind one pattern, split by the trailing 
 `ServeMux` pattern's `{path...}` wildcard must be its last segment. `/files/` is the retired
 pre-WS9-049 space and permanently redirects.
 
-**SIX edits for a new page**, and three of them fail quietly. The template (`web/templates/X.html`,
+**A new page takes SIX edits**, and three of them fail quietly. They are the template (`web/templates/X.html`,
 which must define BOTH its `Body` block and a `{{ define "X" }}{{ template "BasePage" . }}{{ end }}`,
 or the render errors with `"X" is undefined`), its entry point (`web/src/x.ts`), the bundle in
 `web/build.mjs`, that bundle's line in `web/.gitignore` (or the build artifact rides into a commit),
 the route in `cmd/agni/webpage.go`'s `registerPages`, and a boot test. The script tag goes in an
 `AppScript` block, not loose in `Body`.
 
-**Every page has a composition root, so every page gets a boot test** (C11's Verify names them). It
-boots the real entry point against the real template under jsdom and fails on a hole nothing mounts
-or a client nothing passes. That is not a viewer-specific concern: the browse page went untested for
+**Every page has a composition root, so every page gets a boot test** (C11's Verify names three of the four; `LandingPage` has only a template-id check in
+`web/src/landingpanels.test.tsx`). A boot test boots the real entry point against the real template
+under jsdom and fails on a hole nothing mounts or a client nothing passes. The concern is wider than
+the viewer, since the browse page went untested for
 months and the workbench shipped a deep link that recorded nothing, both in the window when
 `composition.test.ts` was the only one.
 
-Both trees are the same shape over one listing API: each declares what it opens (`web/src/treeprune.ts`),
+Both trees sit on one listing API, and each declares what it opens (`web/src/treeprune.ts`),
 hides rows of other kinds, and shows how many mounts the server pruned for it. A mount of PDFs is
 invisible to the viewer and is the whole sidebar on the workbench.
 
@@ -121,7 +122,7 @@ shared by everyone the server serves.
 
 ## The mount model
 
-`agni serve --mount name=path`, repeatable. Designs enter only through mounts, each
+`agni serve --mount name=path` adds a mount, and the flag repeats. Designs enter only through mounts, each
 exposing one folder to the file browser under a stable name. Every file-addressing request in the
 API is a pair of a mount name and a mount-relative path. The server resolves it inside the mount
 and rejects any path that escapes it. The browser never sees or sends an absolute filesystem
@@ -147,13 +148,13 @@ The highlight layer is decoupled from the base render. A highlight spec names co
 and pins, plus a style and a shape (outline, bounding rectangle, or bounding circle, per entity),
 and it projects to whichever backend is showing. The WebGL client resolves specs locally against
 the keys it already holds, with no round-trip, and the Go and TypeScript resolvers share a
-twinned test fixture so their semantics provably match. The SVG path fetches the overlay document
+twinned test fixture so a divergence fails a test on both sides. The SVG path fetches the overlay document
 and stacks it over the same frame.
 
 ## The client
 
-- **The presenter is a humble object.** It owns the semantic loop, open a file, get its sheets,
-  render, run checks, apply highlights, and pushes state snapshots into one typed sink of view
+- **The presenter is a humble object.** It owns the semantic loop (open a file, get its sheets,
+  render, run checks, apply highlights) and pushes state snapshots into one typed sink of view
   interfaces. It calls views and clients, never the DOM or a UI framework directly, so it tests
   with plain mocks.
 - **The UI is islands.** Leaf components render the pushed state and emit intents back up. Panels
@@ -165,24 +166,34 @@ and stacks it over the same frame.
   (`core/review/testdata/tally_twin.json`), read by a Go test and a TypeScript test, because the
   number they must agree on is `covered`, and a client that bucketed a verdict differently would
   report a checklist as answered when nobody had answered it.
-- **URLs are deep-linkable.** The path is `/files/<mount>/<path>`, with query parameters for the
-  sheet, the render mode, the layout, and symbol paths. A directory is the same path with a
-  trailing slash. The presenter reports location changes and the composition root reflects them
+- **URLs are deep-linkable.** The viewer's path is `/designs/<mount>/<path>/view`, with query
+  parameters for the sheet, the render mode, the layout, and symbol paths. A directory opens the
+  browse page at `/designs/<mount>/<dir>/`. The presenter reports location changes and the composition root reflects them
   into the browser URL.
 - **The composition root is tested, because everything else being tested is what hid its bugs.**
   Every other web test constructs its subject with collaborators supplied. `main.ts` is the one
-  thing nothing constructs: it resolves each island hole, builds each client, and assembles the
+  thing nothing constructs, and it resolves each island hole, builds each client, and assembles the
   presenter. Twice that gap shipped a feature that was green in CI and inert in the browser, once
   because a client was never passed and once because a view was never wired. `web/src/composition.test.ts`
   boots the real entry point under jsdom against the real `ViewerPage.html`, replays a design URL
   through the restore loop with stubbed transport, and asserts three things: every island hole the
   page declares gets mounted, every port `ViewSink` declares gets a view, and every client gets used.
   It asserts wiring only. Nothing rendered is checked, because jsdom does not render; the flows that
-  need a real browser are tracked in agni issue 136.
+  need a real browser run under `make browser-test` (agni issue 323).
 - **The diff view** is side-by-side synced panes, a changes panel with click-to-locate, and an
   overlay (union) mode gated by an alignment check. {{ explainable "netlist" "Netlist" }}-only formats, whose auto-layout node
   positions shift between revisions, refuse the overlay by design, while faithful-geometry
   revisions pass.
+
+**Every viewport navigates the same way, from one definition.** `web/src/panzoom.ts` holds the wheel
+curve and the cursor-anchored zoom math, and the three viewports that have a camera all take it from
+there: the WebGL schematic canvas, the SVG reference render, and the datasheet workbench. The wheel
+zooms toward the cursor and a drag pans, so learning one viewport teaches all of them. Two things
+follow from having it in one file. The exponential curve makes zoom scale-free, so an overshoot and
+an equal correction land exactly where they started at any zoom level. And the choice itself is
+revisitable, since the datasheet workbench trades the PDF-reader convention (wheel scrolls, ctrl+wheel
+zooms) for consistency with the schematic viewers, and reversing that is an edit to panzoom.ts's
+callers rather than a hunt through three viewers.
 
 ## Where the presenter runs
 
@@ -193,23 +204,13 @@ viewing a diff, and hovering or selecting are low-frequency semantic events that
 network hop. Per-frame interaction such as pan, zoom, and hit-testing never crosses the wire,
 because it is view-local.
 
-**Every viewport navigates the same way, from one definition.** `web/src/panzoom.ts` holds the wheel
-curve and the cursor-anchored zoom math, and the three viewports that have a camera all take it from
-there: the WebGL schematic canvas, the SVG reference render, and the datasheet workbench. The wheel
-zooms toward the cursor and a drag pans, so learning one viewport teaches all of them. Two things
-follow from having it in one file. The exponential curve makes zoom scale-free, so an overshoot and
-an equal correction land exactly where they started at any zoom level. And the choice itself is
-revisitable: the datasheet workbench trades the PDF-reader convention (wheel scrolls, ctrl+wheel
-zooms) for consistency with the schematic viewers, and reversing that is an edit to panzoom.ts's
-callers rather than a hunt through three viewers.
-
 A WebAssembly-compiled Go presenter that reuses the diff and IR logic in the browser remains the
 option for an offline or zero-server viewer. Nothing in the wire contract assumes the presenter's
 location, so the swap stays possible.
 
-Keeping that boundary cheap is why the contract is shaped this way: it carries meaning rather than
-pixels, so static geometry is uploaded to the GPU once and only a small dynamic overlay crosses per
-frame. The [stack](../stack/) page has the full argument.
+The contract carries meaning rather than pixels to keep that boundary cheap, so static geometry is
+uploaded to the GPU once and only a small dynamic overlay crosses per frame. The [stack](../stack/)
+page has the full argument.
 
 ## Serving pieces worth knowing
 

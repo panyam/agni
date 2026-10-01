@@ -75,7 +75,7 @@ func TestEveryOverlayInputMovesTheIdentity(t *testing.T) {
 				digestResolver{digest: "sha256:cfg"}, "house")
 		}},
 		// The one that is not a proto. Config a resolver READ changes the run without changing any
-		// message the request or the descriptor carries, which is the whole reason a digest exists.
+		// message the request or the descriptor carries, and a digest is what makes it visible.
 		{"the bytes the resolver read", func() (string, bool) {
 			return idFor(t, project("projects/p"), &webapi.Design{Name: "d"},
 				&webapi.OverlayConfig{}, digestResolver{digest: "sha256:DIFFERENT"}, "house")
@@ -94,7 +94,7 @@ func TestEveryOverlayInputMovesTheIdentity(t *testing.T) {
 }
 
 // A resolver that does not say what it read leaves the overlay unidentifiable, and unidentifiable
-// has to read as a refusal rather than as an empty key: every such overlay would otherwise share
+// has to read as a refusal rather than as an empty key, or every such overlay would share
 // one cache entry.
 func TestOverlayWithoutAConfigDigestRefusesToIdentify(t *testing.T) {
 	got, ok := idFor(t, project("projects/p"), nil, nil, digestResolver{digest: ""}, "house")

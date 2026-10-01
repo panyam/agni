@@ -33,8 +33,8 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error)
 ```
 
 `sourceFile` is the file name, used only for provenance and error messages. The reader does not
-open it. It reads bytes from `r` and returns the design. Keeping the parser `io.Reader`-pure is
-what lets the same reader run in the CLI, in the server, and in tests over an in-memory fixture.
+open it. It reads bytes from `r` and returns the design. An `io.Reader`-pure parser runs
+unchanged in the CLI, in the server, and in tests over an in-memory fixture.
 
 ## The registry entry
 
@@ -84,8 +84,8 @@ errors surfaced at process start, not runtime conditions. The `Ext` has to be lo
 with a dot, `Name` has to be non-empty, and at least one of the three capability funcs has to be
 set.
 
-Once registered, the extension resolves through every derived surface: the CLI reader dispatch,
-the file-tree label, and the supported-extensions error text all read this one table. There is no
+Once registered, the extension resolves everywhere that reads this one table, which is the CLI
+reader dispatch, the file-tree label, and the supported-extensions error text. There is no
 second table to update.
 
 ## One format, several extensions
@@ -143,7 +143,7 @@ in one place.
 
 The `Loader` carries the configuration a reader needs beyond the file itself: the `--symbol-path`
 search directories, the naming vocabulary reads are stamped with, and the file namespace those
-paths resolve in (`readers/formats/loader.go`):
+paths resolve in (abridged from `readers/formats/loader.go`):
 
 ```go
 type Loader struct {
@@ -164,13 +164,13 @@ libraries:
 
 ```go
 d, _, err := kicad.ReadSchematicHierarchyNetsWithSymbols(
-    path, content, sheetOpener(path), l.kicadSymOpener(path))
+    path, content, l.sheetOpener(path), l.kicadSymOpener(path))
 ```
 
 `sheetOpener` and `kicadSymOpener` are built by the `Loader` and injected. The reader calls them
 but never touches the filesystem directly. If your format has this shape, write the parser to take
-an opener closure and build that closure in the registry adapter, following `sheetOpener` and
-`symbolOpener` in `readers/formats/loader.go`.
+an opener closure and build that closure in the registry adapter, following `sheetOpener` in
+`readers/formats/registry.go` and `symbolOpener` in `readers/formats/loader.go`.
 
 Any diagnostic that depends on the referenced files has to account for a failed resolution. An
 unresolved symbol drops that symbol's pins, so wire ends meant to land on it read as dangling.
@@ -184,12 +184,15 @@ normalization passes so every reader's output is consistent (`readers/formats/lo
 ```go
 d, err := f.Design(l, path)
 // ...
-netgraph.StampNetIDs(d)      // deterministic per-instance net ids
-classify.Stamp(d)            // component device_classes
-classify.StampNetRoles(d)    // net roles (ir.Role) from the naming lexicon
-classify.StampValues(d)      // component values as machine-comparable quantities
-classify.StampPowerInPins(d) // fill POWER_IN on under-typed supply pins
-classify.StampMPN(d)         // promote the part number to one canonical attribute
+relocateSources(d, l.sourceName()) // locators name the mount path, not the host path
+netgraph.StampNetIDs(d)            // deterministic per-instance net ids
+lex := l.lexicon()
+lex.Stamp(d)                       // component device_classes
+lex.StampNetRoles(d)               // net roles (ir.Role) from the naming lexicon
+lex.StampValues(d)                 // component values as machine-comparable quantities
+lex.StampPowerInPins(d)            // fill POWER_IN on under-typed supply pins
+classify.StampMPN(d)               // fill ir.Component.mpn from the aliases or the part type
+classify.StampClassesFromSpecs(d, l.deviceClassFor()) // device classes a datasheet states
 ```
 
 These run for every reader, so a new reader does not have to reproduce them. Build a faithful IR
@@ -199,10 +202,10 @@ passes normalize it after the fact rather than pushing that concern into your pa
 
 ### The part number is the one to get wrong quietly
 
-`StampMPN` deserves a note because skipping it is invisible. Record the manufacturer part number
-wherever your grammar states it, under whatever key the format spells it, and on the part type if
-that is where the format puts it. The pass promotes it to the canonical `MPN` component attribute:
-it tries the component's own aliases first, then falls back to the component's part type.
+Record the manufacturer part number wherever your grammar states it, under whatever key the format
+spells it, and on the part type if that is where the format puts it. `StampMPN` fills the typed
+`ir.Component.mpn` field, trying the component's own attributes under each alias first and then the
+component's part type.
 
 Do not write your own promotion. Both halves of this used to live inside the EDIF reader, so EDIF
 designs resolved part numbers and no other format did. Telesis recorded the number on the part type,

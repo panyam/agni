@@ -27,9 +27,9 @@ func uriOf(t *testing.T, path string) artifact.URI {
 	return u
 }
 
-// TestLocalLoaderNotesOncePerPath: one BuildModel asks this loader for the netlist, the board, and
-// the geometry of the SAME design, so a note emitted per call would tell the user three times which
-// file was read.
+// TestLocalLoaderNotesOncePerPath guards the note's dedup. One BuildModel asks this loader for the
+// netlist, the board, and the geometry of the SAME design, so a note emitted per call would tell the
+// user three times which file was read.
 func TestLocalLoaderNotesOncePerPath(t *testing.T) {
 	dir := designFolder(t)
 	pcb := uriOf(t, filepath.Join(dir, "gateway.kicad_pcb"))
@@ -38,8 +38,8 @@ func TestLocalLoaderNotesOncePerPath(t *testing.T) {
 	l := &localLoader{loader: &formats.Loader{}, notes: &notes}
 	ctx := context.Background()
 
-	// The reads themselves fail (the fixture files hold throwaway bytes), which is fine: the note is
-	// written during resolution, before any parse.
+	// The reads themselves fail (the fixture files hold throwaway bytes), which is fine because the
+	// note is written during resolution, before any parse.
 	l.Design(ctx, pcb)
 	l.Board(ctx, pcb)
 	l.Geometry(ctx, pcb, "", false)
@@ -67,8 +67,8 @@ func TestLocalLoaderResolvesEachTier(t *testing.T) {
 	}
 }
 
-// TestLocalLoaderDesignHashFollowsTheEntry: a run recorded against a companion and one recorded
-// against the entry describe the same bytes, so they must record the same revision identity.
+// TestLocalLoaderDesignHashFollowsTheEntry holds that a run recorded against a companion and one
+// recorded against the entry describe the same bytes, so they must record the same revision identity.
 func TestLocalLoaderDesignHashFollowsTheEntry(t *testing.T) {
 	dir := designFolder(t)
 	l := &localLoader{loader: &formats.Loader{}, notes: &bytes.Buffer{}}

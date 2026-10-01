@@ -11,24 +11,20 @@ import (
 
 // The declared pin map checked against the netlist (agni issue 517).
 //
-// The failure this catches is ordinary rather than exotic. A pin assignment moves late, because
-// layout wanted a swap or firmware hit a mux conflict, the map is updated, and one net does not get
-// redrawn. The netlist stays self-consistent. Every electrical rule passes, correctly, because
-// nothing is electrically wrong. The only thing wrong is that the board disagrees with a document
-// nothing had ever read.
+// It catches a pin assignment that moved late, after layout wanted a swap or firmware hit a mux
+// conflict, where the map was updated and one net was not redrawn. The netlist stays self-consistent
+// and every electrical rule passes, because nothing is electrically wrong.
 //
-// THREE rules over one declaration, because a reviewer does something different about each answer: a
-// net on the wrong pin is a schematic edit, a declared net the netlist does not have is usually a
-// real disconnection, and a wrong far end is a routing question. Those last two get confused
-// constantly and they are opposite defects, so they never share a verdict.
+// THREE rules here over one declaration, because a reviewer acts differently on each answer. A net on
+// the wrong pin is a schematic edit, a declared net the netlist lacks is usually a real
+// disconnection, and a wrong far end is a routing question. The last two are often confused, so they
+// never share a verdict. The fourth rule, io-map-coverage, is in iomapcoverage.go.
 //
-// Every comparison runs through core/ident and never through string equality. A map is authored in
-// the vocabulary a datasheet uses and the netlist answers in package designators, and both documents
-// carry zero-padded indices, invisible characters pasted out of a PDF, and cells naming several
-// functions at once. We measured a shipped in-house checker of exactly this kind against a large
-// production board: every warning it produced was a string-comparison artifact and none was a design
-// defect. A checker whose warnings are all noise gets switched off, so the comparison is the part
-// that decides whether any of this is worth running.
+// Every comparison goes through core/ident, never string equality. A map uses the datasheet's
+// vocabulary and the netlist answers in package designators, and both carry zero-padded indices,
+// invisible characters pasted out of a PDF, and cells naming several functions at once. Measured on
+// a large production board, every warning a shipped in-house checker of this kind produced was a
+// string-comparison artifact and none was a design defect.
 
 // ioMapPinRule: the declared net is not on the pin the map names.
 func ioMapPinRule(d Declaration) *check.Rule {
@@ -42,7 +38,7 @@ func ioMapPinRule(d Declaration) *check.Rule {
 			"wired to a different peripheral than the software expects, which surfaces at bring-up as a " +
 			"peripheral that never responds.",
 		Remedy:              intentRemedy(RuleIOMapPin),
-		Reads:               []string{"pin", "pin.name", "pin.net"},
+		Reads:               []string{"component.pin", "pin.name", "pin.net"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return ioMapPinVerdicts(m, d) },
 		StatesConsideredSet: true,
@@ -78,23 +74,21 @@ func ioMapFarEndRule(d Declaration) *check.Rule {
 			"map says it drives. A net can be on the right pin at one end and land on the wrong part at the " +
 			"other, which no per-net check can see.",
 		Remedy:              intentRemedy(RuleIOMapFarEnd),
-		Reads:               []string{"pin", "pin.name", "pin.net", "reaches"},
+		Reads:               []string{"component.pin", "pin.name", "pin.net", "net.reaches"},
 		Tags:                intentTags(),
 		Eval:                func(m check.Model) []check.Verdict { return ioMapFarEndVerdicts(m, d) },
 		StatesConsideredSet: true,
 	}
 }
 
-// ioMapPinVerdicts decides every row the map declares. The considered set is the DECLARATION, which
-// is what an intent rule is for: it knows exactly what it was asked to look for, so it can say "all
-// two hundred declared assignments are as drawn" rather than saying the nothing an undeclared map
-// says.
+// ioMapPinVerdicts decides every row the map declares. The considered set is the DECLARATION, so a
+// clean result states how many declared assignments were checked.
 func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 	out := make([]check.Verdict, 0, len(d.IOMap))
 	for _, a := range d.IOMap {
 		v := check.Verdict{Subjects: []check.Entity{check.PinEntity(a.Device, a.Pin)}}
-		// The missing-net case belongs to io-map-net-absent. Reporting it here as well would put one
-		// defect under two review items, which is the partition railBudgetMarginRule keeps next door.
+		// io-map-net-absent owns the missing-net case. Reporting it here too would put one defect
+		// under two review items (railBudgetMarginRule splits the same way).
 		if netNamed(m, a.Net) == nil {
 			v.Outcome, v.Reason = check.NotConsidered, fmt.Sprintf(
 				"the design carries no net named %q, which %s reports rather than this rule", a.Net, RuleIOMapNetAbsent)
@@ -114,9 +108,8 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 			{Label: "declared", Value: a.Net},
 			{Label: "on the pin", Value: orNone(actual)},
 		}
-		// A net name is the design's OWN identifier, so it is compared at exact or normalized and
-		// never fuzzily. A token-subsequence match is right for a vendor's inconsistent function
-		// spellings and wrong here: DDR_CK_P and DDR_CK_T_P are two nets, not two spellings of one.
+		// Net names compare exact or normalized, never fuzzy (see sameName), since DDR_CK_P and
+		// DDR_CK_T_P are two different nets.
 		if actual != "" && sameName(actual, a.Net) {
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
@@ -144,17 +137,15 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 	return out
 }
 
-// ioMapNetAbsentVerdicts asks the other half of the pair, and it is a separate rule because the two
-// are opposite defects that get confused constantly: a net the map declares and the netlist does not
-// have is usually a real disconnection, where a net the netlist has and the map does not declare is
-// an incomplete map. The second is a COVERAGE question and is not this rule's.
+// ioMapNetAbsentVerdicts reports each declared net the netlist lacks, which is usually a real
+// disconnection. The reverse, a net the netlist has and the map omits, is an incomplete map and
+// belongs to io-map-coverage.
 func ioMapNetAbsentVerdicts(m check.Model, d Declaration) []check.Verdict {
 	out := make([]check.Verdict, 0, len(d.IOMap))
 	seen := map[string]bool{}
 	for _, a := range d.IOMap {
-		// One verdict per declared NET rather than per row. A map naming one net on several rows is
-		// ordinary (a bus, a rail), and repeating the same absence per row would inflate the count a
-		// reader uses to judge how bad the disagreement is.
+		// One verdict per declared NET, not per row. A net on several rows is ordinary (a bus, a
+		// rail), and a per-row verdict would inflate the absence count.
 		if seen[a.Net] {
 			continue
 		}
@@ -163,8 +154,7 @@ func ioMapNetAbsentVerdicts(m check.Model, d Declaration) []check.Verdict {
 		n := netNamed(m, a.Net)
 		if n == nil {
 			if alt := nearestNet(m, a.Net); alt != "" {
-				// The netlist has a net this one only differs from by spelling, which is a different
-				// defect from an absent net and must not be reported as one.
+				// A net differing only by spelling is a misspelling, not an absent net.
 				v.Outcome = check.Inconclusive
 				v.Reason = fmt.Sprintf("no net is named %q, and the design has %q, which differs from it only by spelling", a.Net, alt)
 				v.Finding = &check.Finding{
@@ -194,12 +184,12 @@ func ioMapNetAbsentVerdicts(m check.Model, d Declaration) []check.Verdict {
 }
 
 // ioMapFarEndVerdicts follows the net from the declared pin to the declared far end through the
-// series parts between them, so a failure says what the net actually goes through and where it ends
-// up rather than only that it is wrong (agni issue 518).
+// series parts between them, so a failure names what the net goes through and where it ends up
+// (agni issue 518).
 //
-// EVERY row gets a verdict, including the ones declaring no far end. The far-end columns of a real
-// map are filled sparsely, roughly a third of rows in the one we measured, and a rule that reported
-// only the rows carrying them would show a clean result whose denominator was the empty ones.
+// EVERY row gets a verdict, including rows with no far end, so a clean result's denominator is the
+// whole map. Real maps fill the far-end columns sparsely (roughly a third of rows in the one we
+// measured); see docsite/content/guide/design-intent.md#the-nine-forms.
 func ioMapFarEndVerdicts(m check.Model, d Declaration) []check.Verdict {
 	out := make([]check.Verdict, 0, len(d.IOMap))
 	for _, a := range d.IOMap {
@@ -243,10 +233,8 @@ func ioMapFarEndVerdicts(m check.Model, d Declaration) []check.Verdict {
 				Prov: check.ComponentProv(m, a.Device),
 			}
 		default:
-			// An endpoint that resolved to a pin the design has but that sits on no net at all. The
-			// walk could not start, which is not the same answer as "these two do not join", and
-			// reporting it as a no-route would send a reader to look at the routing instead of at
-			// the pin.
+			// An endpoint pin on no net, so the walk could not start. That is not a no-route, and
+			// reporting it as one would send a reader to the routing instead of the pin.
 			v.Outcome, v.Reason = check.NotConsidered, t.Reason
 		}
 		out = append(out, v)
@@ -276,9 +264,8 @@ func (p pinMatch) label() string {
 
 func (p pinMatch) endpoint(refDes string) string { return refDes + "." + p.label() }
 
-// note says what had to be assumed to match the map's spelling to the design's, and says nothing
-// when the two agreed outright. A match a reader cannot check is the thing this whole layer exists
-// to avoid, so an inferred one always announces itself.
+// note says what was assumed to match the map's spelling to the design's, and is empty when the two
+// agreed outright. An inferred match always announces itself so a reader can check it.
 func (p pinMatch) note() string {
 	if p.via.Match == ident.Exact || p.via.Note == "" {
 		return ""
@@ -286,16 +273,13 @@ func (p pinMatch) note() string {
 	return " (" + string(p.via.Match) + " pin-name match: " + p.via.Note + ")"
 }
 
-// resolvePin finds the design pin a map row names, accepting either the package designator or the
-// part type's functional name.
+// resolvePin finds the design pin a map row names, by package designator or by the part type's
+// functional name, both compared through core/ident. The designator wins when both match, since it
+// is the netlist's own key.
 //
-// An author writes a map in the vocabulary the datasheet uses and should not have to know which of
-// the two spellings the checker wants, so both are tried and both go through core/ident. The
-// designator is preferred when both match, because it is the netlist's own key.
-//
-// The four non-matches are kept apart because they send a reader to four different places: a device
-// the design does not have, a device the read gave no pins for, a pin no reading of the name finds,
-// and a name that finds SEVERAL pins.
+// The four non-matches stay apart because each sends a reader somewhere different: a device the
+// design lacks, a device the read gave no pins for, a pin no reading of the name finds, and a name
+// that finds SEVERAL pins.
 func resolvePin(m check.Model, refDes, declared string) pinMatch {
 	out := pinMatch{declared: declared}
 	if !m.HasComponent(refDes) {
@@ -344,10 +328,9 @@ func resolvePin(m check.Model, refDes, declared string) pinMatch {
 		out.outcome, out.designator, out.via = check.Pass, hits[0].designator, hits[0].via
 		return out
 	}
-	// Several pins answer to the name. A part type may declare one name on several pins (a device
-	// with four GND pins is ordinary), so this is a property of the part rather than a defect, and
-	// the comparison genuinely cannot decide which pin the map meant. That is inconclusive and it is
-	// emphatically not a fail: the row may well be correct.
+	// Several pins answer to the name. A part may declare one name on several pins (four GND pins is
+	// ordinary), so the comparison cannot decide which pin the map meant. That is inconclusive and not
+	// a fail, since the row may be correct.
 	var named []string
 	for _, h := range hits {
 		named = append(named, h.designator)
@@ -386,9 +369,8 @@ func rank(m ident.Match) int {
 }
 
 // sameName compares two names of the same THING (a net against a net), where a fuzzy reading is
-// wrong. ident.Fuzzy factors out tokens one side carries and the other does not, which is the right
-// reading of a vendor's inconsistent function spellings and the wrong reading of a design's own net
-// names, since dropping a token there names a different net.
+// wrong. ident.Fuzzy drops tokens one side carries and the other does not, which suits a vendor's
+// inconsistent function spellings, but dropping a token from a net name names a different net.
 func sameName(a, b string) bool {
 	switch ident.Compare(a, b).Match {
 	case ident.Exact, ident.Normalized:
@@ -398,11 +380,9 @@ func sameName(a, b string) bool {
 }
 
 // nearestNet returns the design's net whose name differs from the declared one only by spelling, or
-// "" when none does.
-//
-// It exists so a misspelling is never reported as a disconnection. Those are opposite defects and
-// the expensive one is the false alarm: a reviewer sent to look for a missing net that is actually
-// present, under a name differing by an invisible character, stops trusting the tool.
+// "" when none does. It keeps a misspelling from being reported as a disconnection, since a
+// reviewer sent after a missing net that is present under a name differing by an invisible
+// character stops trusting the tool.
 func nearestNet(m check.Model, declared string) string {
 	for _, n := range m.Nets() {
 		if sameName(n.Name, declared) {
@@ -413,11 +393,8 @@ func nearestNet(m check.Model, declared string) string {
 }
 
 // notEvaluatedFunction stamps a row that declares a `function` with the fact that nothing read it.
-//
-// The field is carried so a map is authored once (see IOAssignment.Function), and this is what stops
-// its presence reading as verification. An author who fills a column in believes it is being
-// checked, which is why the rail-budget card argues against carrying an unread field at all; making
-// it loud on every verdict is how both things can be true here.
+// The field is carried so a map is authored once (see IOAssignment.Function), and an author who
+// fills a column in assumes it is checked, so every verdict on such a row says it was not.
 func notEvaluatedFunction(v check.Verdict, a IOAssignment) check.Verdict {
 	if a.Function == "" {
 		return v
@@ -434,12 +411,9 @@ func notEvaluatedFunction(v check.Verdict, a IOAssignment) check.Verdict {
 	return v
 }
 
-// routeText renders a trace through the SHARED route renderer rather than joining the parts here.
-//
-// It used to build the string itself, which made a second implementation of a format core/model
-// already owned, agreeing with it only because one person wrote both within a week. That is the
-// hazard DECISIONS.md names under "A path is not a query column": once a path is rendered into a
-// string, the rendering becomes a format nobody can change, and a second copy is how that begins.
+// routeText renders a trace through check.RenderRoute, the one route renderer, so the IO-map
+// witness and the query column cannot diverge (#664). Do not join the parts here. DECISIONS.md, "A
+// path is not a query column", says why the format has one owner.
 func routeText(t check.Trace) string {
 	hops := make([]check.RouteHop, len(t.Crossings))
 	for i, c := range t.Crossings {

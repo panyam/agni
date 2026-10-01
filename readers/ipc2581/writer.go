@@ -41,11 +41,11 @@ type emitStep struct {
 
 // Write emits an IPC-2581 document from an ir.Design (the inverse of Read).
 //
-// Fidelity: lossy-bounded, matching the reader -- it writes the netlist and physical tier
-// (components, nets, footprints, layers, stackup, BOM) but not copper/pad geometry, and does
-// not reproduce the source's byte layout or XML namespace (the reader matches by local name,
-// so the output round-trips at the IR level). Byte/spec-lossless output is deferred to WS1-006
-// (board geometry) plus the FidelityFragment layer. Units are emitted as NANOMETER with raw
+// Fidelity: lossy-bounded, matching the reader. It writes the netlist and physical tier
+// (components, nets, footprints, layers, stackup, BOM) but not the source's byte layout or XML
+// namespace (the reader matches by local name, so the output round-trips at the IR level).
+// Copper and pad geometry live in the board sidecar (WS1-006), which Write does not take, and
+// byte/spec-lossless output waits on the FidelityFragment layer. Units are emitted as NANOMETER with raw
 // thickness_nm values, so a read-back recovers the same IR exactly.
 func Write(w io.Writer, d *ir.Design) error {
 	f := emitFile{

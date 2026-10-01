@@ -11,31 +11,23 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// WriteNetlist emits an EDIF 2.0.0 netlist from an ir.Design (the inverse of Read).
+// WriteNetlist emits an EDIF 2.0.0 netlist from an ir.Design (the inverse of Read), lossy-bounded
+// like the reader (CONSTRAINTS C6), so the output round-trips at the IR level and not the byte level.
+// It writes for readers other than ours, a stricter target than the round trip. The interop rules
+// and the fidelity list are in docsite/content/guide/cli-reference.md#emit-in-out.
 //
-// Fidelity: lossy-bounded, matching the reader (CONSTRAINTS C6). It writes the netlist subset Read
-// consumes -- libraries, cells with their interfaces and ports, and the top cell's contents as
-// instances and nets -- so the output round-trips at the IR level, not at the byte level. Read is
-// itself lossy-bounded, so several things are already gone before the writer sees the design and it
-// cannot invent them back:
+// What Read has already dropped cannot be written back:
 //
-//   - HIERARCHY. extract scopes instances and nets to the design's top cell and drops every
-//     sub-cell's contents (WS1-004, TestHierarchyDetected). A sub-cell survives as a part type with
-//     its pins and no contents, so writing a hierarchical design emits a FLAT one. The
-//     InputDiagnostics.unexpanded_hierarchy list that extract records for the dropped cells is
-//     therefore empty on the re-read. That difference is the round trip reporting the reader's own
-//     loss, not a writer bug, and writer_test.go excludes the list for exactly that reason.
+//   - HIERARCHY. extract scopes to the top cell (WS1-004), so a hierarchical design writes out FLAT
+//     and InputDiagnostics.unexpanded_hierarchy is empty on the re-read. writer_test.go excludes that
+//     list for this reason.
 //   - ARRAY BUS DECLARATIONS. A (port (array DATA 8) ...) reaches the IR as a BusNotModeled
-//     diagnostic that records the label and the member set but not the cell or port it was declared
-//     on, so there is nowhere to put it back. Array ports are not emitted.
-//   - THE portInstance TABLE. Read resolves each logical port to its physical pin designator(s)
-//     while building connections (WS1-025), so the IR holds the resolved pin and not the mapping
-//     that produced it. Connections are written as direct portRefs naming the physical pin, which
-//     reads back to the same connections by the no-mapping fallback in netOf.
-//   - View names, view types, instance display names, and property value types, none of which reach
-//     the IR at all. Each is minted from a constant below, which changes the bytes and not the IR.
+//     diagnostic with no cell or port, so array ports are not emitted.
+//   - View names, view types, instance display names and property value types never reach the IR,
+//     so each is minted from a constant below.
 //
-// The caller owns file I/O, so the core stays runtime-agnostic (CONSTRAINTS C1).
+// The portInstance table is rebuilt wherever the part type carries both a pin's name and its
+// designator (see portOf). The caller owns file I/O (CONSTRAINTS C1).
 func WriteNetlist(w io.Writer, d *ir.Design) error {
 	e := &emitter{}
 	e.design(d)
@@ -45,7 +37,7 @@ func WriteNetlist(w io.Writer, d *ir.Design) error {
 
 // The names EDIF requires and the IR has no field for. Read records the first two per design when
 // the source stated them (recordRootRefs), so these are the fallback for a design that came from
-// another format. The rest are pure syntax: every cell needs a view, and every viewRef names one.
+// another format. The rest are syntax, since every cell needs a view and every viewRef names one.
 const (
 	defaultTopCell     = "TOP"
 	defaultWorkLibrary = "WORK"
@@ -54,52 +46,31 @@ const (
 	viewType           = "NETLIST"
 )
 
-// atomOK reports whether s can be written as a bare name rather than wrapped in a rename.
+// atomOK reports whether s can be written as a bare name rather than wrapped in a rename. It sits
+// between two grammars.
 //
-// It sits between two grammars, deliberately, and the gap in each direction is load-bearing.
+// LOOSER than the EDIF identifier grammar (see identOK). The shared tokenizer returns anything but
+// whitespace, parens and quotes as one atom, so the fixtures spell a numeric pin as a bare `1`, and
+// real OrCAD and Allegro exports carry the loose forms too. The strict grammar here would rename
+// every such name and change its Prov.NativeId from "1" to "&1", failing the round-trip oracle.
 //
-// LOOSER than the EDIF identifier grammar, which admits only a letter followed by letters, digits
-// and underscores, with `&` escaping anything else. The shared s-expression tokenizer splits on
-// whitespace and parens and treats a quote as a string delimiter, returning everything else as one
-// atom, which is why the fixtures spell a numeric pin as a bare `1` rather than as the &1 escape.
-// Holding to the strict grammar here would wrap every such name in a rename and change its
-// Prov.NativeId from "1" to "&1", failing the round-trip oracle over a difference that is cosmetic
-// in the source. Real OrCAD and Allegro exports carry the loose forms too, so a reader that rejected
-// them would not get far.
-//
-// TIGHTER than the tokenizer, by the characters a real reader rejects. GNU Electric refuses a cell
-// name containing whitespace, `:`, `;`, `{`, `}` or `|` and ABANDONS THE WHOLE IMPORT, so a KiCad
-// part name like `gateway:CAP` took every design read from KiCad out with it. Those characters
-// cannot reach here from an EDIF source anyway: a name carrying one would have had to arrive as a
-// bare atom, and no fixture in the tree has one, so tightening costs nothing on the round trip and
-// is what makes the output readable elsewhere.
+// TIGHTER than the tokenizer, by the characters a real reader rejects. GNU Electric ABANDONS THE
+// WHOLE IMPORT on a cell name containing whitespace, `:`, `;`, `{`, `}` or `|`, which failed every
+// KiCad design on its `lib:part` names (agni issue 580). No fixture carries one as a bare atom, so
+// this costs the round trip nothing.
 func atomOK(s string) bool {
 	return s != "" && !strings.ContainsAny(s, badAtomChars)
 }
 
 const badAtomChars = " \t\r\n()\":;{}|"
 
-// refID is the identifier a name is DECLARED under, and every reference to that name has to repeat
-// it. A cellRef, a libraryRef and an instanceRef all name an identifier rather than a display name,
-// so a declaration that gets renamed and a reference that does not stop pointing at each other.
-// Sections carry the reference strings raw (`s.PartRef` is the cellRef id an EDIF source used, and
-// the part's own name for every other format), which is why this takes the raw string and is the
-// same function on both sides.
-// localName is a cell's name WITHIN its library. A KiCad part is named `gateway:CONN4` and sits in a
-// library already called `gateway`, so the qualification is spelled twice, and EDIF's own library
-// scoping is the half that a reader acts on. Writing the local name says the same thing and is what
-// makes the cell name legal: a reader that takes the rename's display string as the cell's name (GNU
-// Electric does, where ours takes the identifier) refuses a colon and abandons the whole import, so a
-// clean identifier beside a qualified display was not enough.
+// localName is a cell's name WITHIN its library, so `gateway:CONN4` in library `gateway` is written
+// as `CONN4`. GNU Electric takes a rename's display string as the cell name and abandons the import
+// on the colon, so a clean identifier beside a qualified display is not enough.
 //
-// It is a WRITER decision and stops here. The prefix is load-bearing in the reader, where it selects
-// the .kicad_sym file an external symbol is resolved from, so stripping it upstream would break
-// symbol resolution rather than tidy a name (agni issue 580). The cost is that a KiCad design taken
-// out through EDIF and read back names the part `CONN4` in library `gateway` rather than
-// `gateway:CONN4` in library `gateway`, which is the same fact with the redundancy gone.
-//
-// Only an EXACT match of the enclosing library is stripped. A prefix naming some other library is a
-// real part of the name and is kept.
+// The strip is a WRITER decision. The reader uses the prefix to select the .kicad_sym an external
+// symbol resolves from, so stripping it upstream breaks symbol resolution (agni issue 580). Only an
+// EXACT match of the enclosing library is stripped, and a prefix naming another library is kept.
 func localName(lib, name string) string {
 	if lib == "" {
 		return name
@@ -107,6 +78,11 @@ func localName(lib, name string) string {
 	return strings.TrimPrefix(name, lib+":")
 }
 
+// refID is the identifier a name is DECLARED under, which every reference to it has to repeat. A
+// cellRef, libraryRef or instanceRef names an identifier and not a display name, so renaming a
+// declaration without its references breaks the link. Sections carry reference strings raw
+// (`s.PartRef` is an EDIF source's cellRef id and the part's own name for other formats), so the
+// same function serves both sides.
 func refID(name string) string {
 	if atomOK(name) {
 		return name
@@ -114,10 +90,9 @@ func refID(name string) string {
 	return mintID(name)
 }
 
-// emitter accumulates LINES rather than one growing buffer, because a close has to reach back and
-// append its parens to the line already written -- EDIF trails a run of closing parens on the last
-// leaf rather than giving them lines of their own. Reaching into a strings.Builder means rebuilding
-// it, which is a full copy per close and quadratic over a real export; reaching into a slice is not.
+// emitter accumulates LINES rather than one buffer, because EDIF trails a run of closing parens on
+// the last leaf and close appends them to the line already written. Doing that to a strings.Builder
+// is a full copy per close, quadratic over a real export.
 type emitter struct {
 	lines []string
 	ind   int
@@ -162,28 +137,18 @@ func (e *emitter) design(d *ir.Design) {
 	if name == "" {
 		name = defaultDesignName
 	}
-	// Where the contents go depends on whether the declared top cell is one of the design's part
-	// types, and BOTH answers reproduce a shape the reader already handles.
-	//
-	// When it is, the contents belong in that cell, which is the ordinary export shape. When it is
-	// not, topCell fails to resolve on the next read and extract falls back to scoping over the whole
-	// document, so the contents are written into the (design ...) node itself. That is not a
-	// workaround: unannotated.edn is exactly that file, contents under the design and a cellRef
-	// naming a cell no library declares. Minting a cell to hold them instead would add a part type
-	// the source never had, and the round trip would report the writer's invention as a difference.
+	// The contents go in the declared top cell when it is one of the design's part types, the
+	// ordinary export shape. When a top cell the source NAMED resolves to nothing, they go under the
+	// (design ...) node itself, which is the shape unannotated.edn has and extract reads by scoping
+	// over the whole document. Minting a cell there would add a part type the source never had.
 	inCell := hasCell(d, work, top)
 	e.inst = newInstanceTable(d, work)
 
-	// LIBRARIES FIRST, and the design node last, because the design's cellRef is a FORWARD reference
-	// otherwise. Our own reader walks the parsed tree and does not care, which is how the order
-	// survived: it resolves every reference after the whole file is in memory. A reader that resolves
-	// as it goes cannot, and GNU Electric is one, so it reported the top cell as missing on every file
-	// this writer had ever produced. Real EDIF exports put the design node at the end.
-	// The contents need a cell to live in. Where the source NAMED a top cell we reproduce its shape,
-	// including the shape where that name resolves to nothing and the contents sit under the design
-	// node itself (unannotated.edn is exactly that file). Where the name is one we invented, because
-	// the design never came from EDIF at all, we owe the cell as well as the name: contents directly
-	// under a design node is not a construct EDIF has, and a reader rejects it.
+	// LIBRARIES FIRST and the design node last, or the design's cellRef is a FORWARD reference that a
+	// reader resolving as it goes (GNU Electric) reports as a missing top cell (agni issue 580). Our
+	// own reader resolves after the whole file is parsed and hides the problem.
+	// Where the top-cell name is our own default, because the design never came from EDIF, the cell
+	// is minted too, since contents directly under a design node is not a construct EDIF has.
 	mintTop := !inCell && d.GetAttributes()["edif_top_cell"] == ""
 
 	declared := map[string]bool{}
@@ -242,10 +207,8 @@ func (e *emitter) topCell(d *ir.Design, name string) {
 	e.close(2)
 }
 
-// mintedCells writes the cells of one library that nothing declares. Their interfaces come from the
-// connections, which is the completion cell() already does for a part type declaring too few pins,
-// applied where there is no part type at all. It declares what the cellRefs and portRefs in this very
-// file already name, so it adds no claim the file was not making.
+// mintedCells writes the cells of one library that nothing declares, with interfaces taken from the
+// connections, the completion cell() does for a part type declaring too few pins (agni issue 580).
 func (e *emitter) mintedCells(lib string) {
 	for _, k := range e.inst.mintedCells(lib) {
 		e.open("(cell %s", nameExpr(k.name, ""))
@@ -280,11 +243,9 @@ func hasCell(d *ir.Design, lib, cell string) bool {
 	return false
 }
 
-// topRefs resolves which cell carries the contents and which library holds it. Read records both
-// when the source stated them, because the pair is what decides the SCOPE a re-read recovers: point
-// the design at a different cell and the next read scopes to that cell's contents and comes back
-// with different components and nets. Falling back to constants is therefore only right for a design
-// that never came from EDIF.
+// topRefs resolves which cell carries the contents and which library holds it, from what Read
+// recorded (see recordRootRefs for why the pair decides a re-read's scope). The constants are the
+// fallback for a design that never came from EDIF.
 func topRefs(d *ir.Design) (top, work string) {
 	top, work = d.GetAttributes()["edif_top_cell"], d.GetAttributes()["edif_work_library"]
 	if top == "" {
@@ -305,9 +266,8 @@ func edifVersionOf(d *ir.Design) string {
 	return "2.0.0"
 }
 
-// cell writes one part type. The designator prefix goes at CELL level, which is one of the three
-// places cellDesignator accepts and the one the fixtures use; putting it in the interface would work
-// equally but reads worse beside the ports, whose own designators are pin numbers.
+// cell writes one part type. The designator prefix goes at CELL level, one of the three places
+// cellDesignator accepts and the one the fixtures use.
 func (e *emitter) cell(libName string, pt *ir.PartType, d *ir.Design, contents bool) {
 	e.open("(cell %s", nameExpr(localName(libName, pt.GetName()), pt.GetProv().GetNativeId()))
 	if k := pt.GetKind(); k != "" {
@@ -318,24 +278,20 @@ func (e *emitter) cell(libName string, pt *ir.PartType, d *ir.Design, contents b
 	}
 	// A part type's own MPN is written back as a cell property under the canonical spelling. Read
 	// accepts any spelling in classify.MPNAliases and only scans a LEAF cell, so this is skipped for
-	// the cell that carries the contents -- where a property would not be read back anyway.
+	// the cell carrying the contents, where it would not be read back.
 	if m := pt.GetMpn(); m != "" && !contents {
 		e.line("(property %s (string %s))", classify.MPNAliases[0], edifString(m))
 	}
 	e.open("(view %s (viewType %s)", viewName, viewType)
-	// A pin with NEITHER a name nor a designator is not a pin the source declared. It is what
-	// partTypeOf produces for an array port: parseName recognizes four name forms and (array DATA 8)
-	// is none of them, so the port lands in the part type nameless while the bus itself is picked up
-	// separately as a BusNotModeled diagnostic. Array declarations are not written (see
-	// WriteNetlist), so the pin they produce is not either, and writer_test.go drops those pins from
-	// both sides for the same reason. Writing one would be worse than dropping it: there is no name
-	// to write, so it would come back named after whatever placeholder was invented for it.
+	// A pin with NEITHER a name nor a designator is what partTypeOf produces for an array port, whose
+	// (array DATA 8) name parseName does not recognize. Array declarations are not written (see
+	// WriteNetlist), so neither is that pin, and writer_test.go drops such pins from both sides.
+	// Written, it would come back named after whatever placeholder was invented for it.
 	//
-	// A pin carrying ONLY a designator is a different thing and is declared. gEDA and Telesis record
-	// a pin by its number and give it no logical name, so testing for a name alone dropped every one
-	// of them out of the interface, and every net then referenced a port the cell did not declare
-	// (agni issue 580). Its designator is its identifier, which is what the re-read recovers anyway
-	// when no portInstance maps it.
+	// A pin carrying ONLY a designator is declared. gEDA and Telesis record pins by number with no
+	// logical name, so testing for a name alone left every net referencing an undeclared port (agni
+	// issue 580). The designator is its identifier, which the re-read recovers anyway when no
+	// portInstance maps it.
 	var pins []*ir.Pin
 	for _, p := range pt.GetPins() {
 		if p.GetName() != "" || p.GetDesignator() != "" {
@@ -343,16 +299,10 @@ func (e *emitter) cell(libName string, pt *ir.PartType, d *ir.Design, contents b
 		}
 	}
 	// Ports the NETLIST references and the part type never declared. EDIF resolves a portRef against
-	// the cell's interface, so a reference to an undeclared port is not a thin file, it is a broken
-	// one, and a conforming reader drops the connection. Several readers deliver a part type with
-	// fewer pins than the design connects: a board file carries no part types at all, Telesis records
-	// a package with no pin list, and a gEDA slot maps its gate onto physical pins the shared symbol
-	// never names.
-	//
-	// This DECLARES what the connections already assert rather than inventing anything, which is why
-	// it is not the fabrication the writer refuses elsewhere. It is bounded the same way: a pin on no
-	// net is invisible to a netlist, so a cell completed this way carries the pins the design uses
-	// and not the pins the part has.
+	// the cell's interface, so a conforming reader drops a connection to an undeclared port. A board
+	// file carries no part types, Telesis records a package with no pin list, and a gEDA slot maps its
+	// gate onto pins the shared symbol never names. This declares only what the connections already
+	// assert, so the cell carries the pins the design uses and not the pins the part has.
 	extra := e.inst.undeclaredPorts(pt)
 	if len(pins) == 0 && len(extra) == 0 {
 		e.line("(interface)")
@@ -407,10 +357,9 @@ func directionName(p *ir.Pin) string {
 	return p.GetAttributes()["direction_raw"]
 }
 
-// contents writes the top cell's instances and nets. One instance per component SECTION, not per
-// component: extract groups several instances sharing a designator into one component with N
-// sections (a multi-gate IC, a connector bank), so unrolling the sections is what restores the
-// source's instance count.
+// contents writes the top cell's instances and nets, one instance per component SECTION rather than
+// per component. extract groups instances sharing a designator into one component with N sections
+// (a multi-gate IC, a connector bank), so unrolling them restores the source's instance count.
 func (e *emitter) contents(d *ir.Design) {
 	e.open("(contents")
 	for _, c := range d.GetComponents() {
@@ -459,24 +408,16 @@ func (e *emitter) instance(c *ir.Component, s *ir.ComponentSection) {
 	e.close(1)
 }
 
-// net writes one net. Every connection that names a component in the design is ANCHORED to that
-// component's instance, and the unanchored form is reachable only for a connection that names no
-// instance at all.
+// net writes one net. A connection naming a component in the design is ANCHORED to that component's
+// instance. `(portRef 1 (instanceRef iu3))` names pin 1 of instance iu3, and `(portRef 1)` names an
+// interface port called 1 on the CONTAINING CELL, so writing the second where the first was meant
+// asserts a different connection. Anchoring off Prov.NativeId alone, which only the EDIF reader
+// fills, left every other format's components isolated while all the counts looked right (agni
+// issue 563).
 //
-// That distinction is the whole point, because the two forms are not more and less detailed spellings
-// of one thing. `(portRef 1 (instanceRef iu3))` names pin 1 of instance iu3; `(portRef 1)` names a
-// port called 1 on the CONTAINING CELL, an interface port. Writing the second where the first was
-// meant does not lose the connection, it asserts a different one, and a conforming reader believes
-// it. Anchoring off Prov.NativeId alone was exactly that bug: only the EDIF reader fills that field,
-// so every design read from any other format emitted a netlist whose components were all isolated
-// while its component, net and pin counts all looked right (agni issue 563).
-//
-// The remaining unanchored case is a connection whose ComponentRef names something the design does
-// not carry as a component: a KiCad power symbol or PWR_FLAG, which the reader records as a
-// connection on "#PWR01" while deliberately keeping the component list physical. There is no
-// instance to point at and minting one would fabricate a component the source never had, so the bare
-// portRef stands. It re-reads as a connection with an empty ComponentRef, which is what an EDIF
-// no-ref connection has always been.
+// The bare portRef stays for a connection naming no component the design carries, such as a KiCad
+// power symbol or PWR_FLAG recorded on "#PWR01" while the component list stays physical. Minting an
+// instance would fabricate a component, and the bare form re-reads as an EDIF no-ref connection.
 func (e *emitter) net(n *ir.Net) {
 	var refs []string
 	seen := map[string]bool{}
@@ -502,16 +443,13 @@ func (e *emitter) net(n *ir.Net) {
 }
 
 // instanceTable decides the identifier each (instance ...) is written under, for the whole design at
-// once. It exists as a table rather than a function of one section because the identifier has to be
-// UNIQUE across the contents -- a net's (instanceRef ...) is a lookup, so two instances sharing a
-// name make one of them unreachable -- and uniqueness is not a property any single section knows.
+// once, because the identifier has to be UNIQUE across the contents and no single section knows that.
+// A net's (instanceRef ...) is a lookup, so two instances sharing a name make one unreachable.
 //
-// Neither seed is unique on its own. A section's Prov.NativeId is only filled by some readers, and
-// where it is filled it still repeats: a KiCad symbol placed on two sheets of one hierarchy carries
-// the same id under two ref-des, and an unannotated part carries "R?" as many times as it occurs.
-// A ref-des repeats too, both for the multi-section part it is meant to (a multi-gate IC) and for a
-// genuine duplicate the reader models rather than resolves. So a seed is taken as a preference and
-// the collision is broken here.
+// Neither seed is unique on its own. Only some readers fill a section's Prov.NativeId, and a KiCad
+// symbol placed on two sheets of one hierarchy carries the same id under two ref-des. A ref-des
+// repeats for a multi-section part and for a duplicate the reader models rather than resolves. So a
+// seed is a preference and collisions are broken here.
 type instanceTable struct {
 	name        map[*ir.ComponentSection]string
 	display     map[*ir.ComponentSection]string
@@ -553,10 +491,9 @@ func newInstanceTable(d *ir.Design, work string) *instanceTable {
 				seed = refID(native)
 			}
 			switch {
-			// A native id is kept verbatim when the format it came from already spells a legal EDIF
-			// identifier, so an EDIF round-trip is byte-faithful. A KiCad uuid is neither: it opens
-			// with a digit and carries hyphens, so it is minted and the original rides along as the
-			// instance's display name (agni issue 582).
+			// A native id that is already a legal EDIF identifier is kept verbatim, so an EDIF round
+			// trip is byte-faithful. A KiCad uuid opens with a digit and carries hyphens, so it is
+			// minted and the original rides along as the display name (agni issue 582).
 			case seed != "":
 				if !identOK(seed) {
 					seed = mintID(seed)
@@ -590,7 +527,7 @@ func newInstanceTable(d *ir.Design, work string) *instanceTable {
 			t.byRef[c.GetRefDes()] = append(t.byRef[c.GetRefDes()], s)
 			// Registered from the SECTION rather than from the connections, because a component
 			// connected to nothing still names its cell and EDIF still needs that cell declared. The
-			// three mounting holes on the sample board are exactly this: no nets, and a cellRef each.
+			// three mounting holes on the sample board have no nets and a cellRef each.
 			if t.partOf(s) == nil {
 				k := t.mintKey(s)
 				if t.mintPorts[k] == nil {
@@ -637,11 +574,10 @@ func (t *instanceTable) displayOr(s *ir.ComponentSection) string {
 
 // anchor resolves the instance a connection hangs off, reporting false when the design carries none.
 //
-// Provenance is consulted first and wins outright, because a reader that filled it recorded the
-// source's own instance id and the connection is already keyed on it (EDIF, where a connection to an
-// instance carrying no ref-des keeps the id here and an empty ComponentRef -- TestUnresolvedRefIsStable).
-// An id naming no instance in the contents is written back verbatim for the same reason: it is what
-// the source said, and inventing a different anchor for it would be worse than preserving it.
+// Provenance wins outright, because a reader that filled it recorded the source's own instance id.
+// EDIF keeps the id there with an empty ComponentRef for an instance carrying no ref-des
+// (TestUnresolvedRefIsStable). An id naming no instance in the contents is written back verbatim
+// rather than re-anchored.
 func (t *instanceTable) anchor(c *ir.Connection) (string, bool) {
 	if id := c.GetProv().GetNativeId(); id != "" {
 		if n, ok := t.byNative[id]; ok {
@@ -653,12 +589,10 @@ func (t *instanceTable) anchor(c *ir.Connection) (string, bool) {
 	if c.GetComponentRef() == "" || len(secs) == 0 {
 		return "", false
 	}
-	// Which SECTION of a multi-section component a connection belongs to is not recorded in the IR --
-	// a Connection carries a ref-des and a pin, and nothing narrows it to one gate. Where the sections
-	// have different part types (a relay's coil and its contacts) the pin itself decides; where they
-	// share one (a multi-gate IC, whose gates declare the same pins) nothing can, and the first
-	// section is taken. Both instances belong to the same component and carry the same designator, so
-	// the choice moves which gate the file names and never which part the connection reaches.
+	// The IR does not record which SECTION of a multi-section component a connection belongs to.
+	// Where the sections have different part types (a relay's coil and contacts) the pin decides.
+	// Where they share one (a multi-gate IC) the first section is taken, which changes which gate the
+	// file names and never which part the connection reaches.
 	if len(secs) > 1 {
 		if s := t.sectionDeclaring(secs, c.GetPinRef()); s != nil {
 			return t.name[s], true
@@ -737,15 +671,12 @@ func (t *instanceTable) undeclaredPorts(pt *ir.PartType) []string {
 }
 
 // portOf resolves a connection's PHYSICAL pin to the logical port its cell declares, which is what a
-// portRef has to name. A portRef naming the pin designator instead is agni's own spelling and nobody
-// else's: our reader recovers it through netOf's no-mapping fallback, and a conforming reader looks
-// for a port by that name on the cell, finds none, and drops the connection (agni issue 580).
+// portRef has to name. A conforming reader drops a portRef naming a pin designator, finding no port
+// by that name, and only our reader recovers it through netOf's no-mapping fallback (agni issue 580).
 //
-// The pin is returned unchanged when the part type declares no matching designator, which covers two
-// real cases and keeps both working exactly as before. A design read from a board file has no part
-// types at all. And an EDIF source whose interface carries no designators (dup_ports.edn) has no
-// mapping to rebuild, which is what WriteNetlist's header means about the portInstance table: it is
-// unrecoverable THERE, and recoverable wherever the part type carries the pair.
+// The pin is returned unchanged when the part type declares no matching designator. That covers a
+// design read from a board file, which has no part types, and an EDIF source whose interface carries
+// no designators (dup_ports.edn), which has no mapping to rebuild.
 func (t *instanceTable) portOf(c *ir.Connection) string {
 	pin := c.GetPinRef()
 	s := t.sectionFor(c)
@@ -804,7 +735,7 @@ func (t *instanceTable) sectionFor(c *ir.Connection) *ir.ComponentSection {
 }
 
 // sectionDeclaring picks the single section whose part type declares the pin, and reports nil when
-// none or several do -- an ambiguous answer is no answer, and the caller has a defined fallback.
+// none or several do, since the caller has a defined fallback for an ambiguous answer.
 func (t *instanceTable) sectionDeclaring(secs []*ir.ComponentSection, pin string) *ir.ComponentSection {
 	var hit *ir.ComponentSection
 	for _, s := range secs {
@@ -841,23 +772,17 @@ func declaresPin(pt *ir.PartType, pin string) bool {
 	return false
 }
 
-// portRefExpr is the inverse of portName, which is a NORMALIZATION rather than a parse: it strips a
-// leading & escape and rewrites a (member NAME IDX) bus pin to NAME[IDX]. That asymmetry decides the
-// encoding here, and it is narrower than it looks.
+// portRefExpr is the inverse of portName, which NORMALIZES rather than parses, stripping a leading &
+// escape and rewriting a (member NAME IDX) bus pin to NAME[IDX].
 //
-// portName reads a rename by its IDENTIFIER and discards the display string, unlike parseName, so a
-// pin reference cannot be carried by a rename the way an entity name can: (rename P "with space")
-// reads back as "P", not as the name written. The bare atom is therefore the ONLY form that reads
-// back unchanged, which is also why the fixtures spell a numeric pin as a bare `1` rather than as
-// the &1 escape the grammar would otherwise require -- the tokenizer returns either as one atom, and
-// portName strips the &. A reference the tokenizer would not return as a single atom is genuinely
-// unrepresentable and is sanitized, which is the one place this writer changes a value rather than
-// its spelling. No EDIF-sourced design reaches it: portName built every PinRef in the first place.
+// portName reads a rename by its IDENTIFIER and discards the display string, unlike parseName, so
+// (rename P "with space") reads back as "P". The bare atom is therefore the ONLY form of a pin
+// reference that reads back unchanged. A reference the tokenizer would not return as one atom is
+// unrepresentable and is sanitized, the one place this writer changes a value rather than its
+// spelling. No EDIF-sourced design reaches it, since portName built every PinRef in the first place.
 //
-// The member rewrite is worth inverting because it changes the shape rather than a character. A pin
-// literally named DATA[0] and a member reference to bus DATA are indistinguishable in the IR, so
-// this picks the member form; both read back to the same PinRef, so the choice costs bytes and not
-// meaning.
+// A pin literally named DATA[0] and a member of bus DATA are indistinguishable in the IR, so this
+// picks the member form. Both read back to the same PinRef.
 func portRefExpr(pin string) string {
 	if m := memberPin.FindStringSubmatch(pin); m != nil {
 		return fmt.Sprintf("(member %s %s)", m[1], m[2])
@@ -875,7 +800,7 @@ var memberPin = regexp.MustCompile(`^(.+)\[(\d+)\]$`)
 // string, keeping the identifier in Prov.NativeId. The writer's job is to pick the form that reads
 // back to the same pair.
 //
-// An identifier that differs from its display name is exactly what (rename ID "D") encodes, so that
+// An identifier that differs from its display name is what (rename ID "D") encodes, so that
 // pair round-trips as a rename. When they agree the bare atom is shorter and is what the fixtures
 // use. A display name the bare grammar cannot hold still needs an identifier to hang off, and one is
 // derived from the name rather than counted from a sequence, because a positional id would move
@@ -891,12 +816,11 @@ func nameExpr(name, nativeID string) string {
 	}
 }
 
-// identOK reports whether s is already a legal EDIF identifier: a letter or underscore followed by
-// letters, digits and underscores, or the "&" escape the format defines for a name that would
-// otherwise open with a digit. It is deliberately stricter than atomOK, which asks only whether a
-// string survives the TOKENIZER. A name can clear atomOK and still be unreadable to a conforming
-// parser, which is what agni issue 582 measured: raw KiCad UUIDs opened with a digit and carried
-// hyphens, and a third-party reader skipped all 1123 instances built on them.
+// identOK reports whether s is already a legal EDIF identifier, meaning a letter or underscore
+// followed by letters, digits and underscores, or the "&" escape for a name that would otherwise open
+// with a digit. It is stricter than atomOK, which asks only whether a string survives the TOKENIZER.
+// Raw KiCad UUIDs clear atomOK, and a third-party reader skipped all 1123 instances named by them
+// (agni issue 582).
 func identOK(s string) bool {
 	if s == "" {
 		return false
@@ -934,10 +858,9 @@ func mintID(name string) string {
 	return s
 }
 
-// edifString renders a string literal. The dialect has NO escape mechanism -- sexpr.EDIFStrings
-// reads to the closing quote -- so a value containing a quote cannot be represented at all, and the
-// quote is dropped. Go's %q would emit a backslash escape that the reader would hand back verbatim
-// as part of the value, which is worse: it corrupts the value silently instead of narrowing it.
+// edifString renders a string literal. The dialect has NO escape mechanism (sexpr.EDIFStrings reads
+// to the closing quote), so a quote inside a value is dropped. Go's %q would emit a backslash escape
+// the reader hands back verbatim, corrupting the value silently instead of narrowing it.
 func edifString(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, "") + `"`
 }
@@ -949,9 +872,8 @@ func joinPrefixed(parts []string) string {
 	return " " + strings.Join(parts, " ")
 }
 
-// sortedKeys orders a map's keys so the output is deterministic. A map walked in range order would
-// make the writer emit a different byte stream per run, which is what a committed capture cannot
-// tolerate.
+// sortedKeys orders a map's keys so the output is deterministic, since committed captures compare
+// the writer's bytes across runs.
 func sortedKeys(m map[string]string) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {

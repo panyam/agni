@@ -20,9 +20,9 @@ func tapDesign(joined []*ir.JoinedTap, silent ...*ir.DanglingEndpoint) *ir.Desig
 	}}
 }
 
-// TestWireNoJunctionStatesConsideredSet (agni issue 420): the verdicts cover every wire-end-on-body
-// tap the reader examined, and the silent ones still project to exactly the findings the rule
-// reported before.
+// TestWireNoJunctionStatesConsideredSet (agni issue 420) checks that the verdicts cover every
+// wire-end-on-body tap the reader examined, and the silent ones still project to exactly the
+// findings the rule reported before.
 func TestWireNoJunctionStatesConsideredSet(t *testing.T) {
 	if !wireNoJunction.StatesConsideredSet {
 		t.Fatal("the rule must declare a considered set, or a sheet whose taps all carry dots means nothing")
@@ -84,9 +84,10 @@ func TestWireNoJunctionPassNamesTheJoin(t *testing.T) {
 	}
 }
 
-// TestWireNoJunctionGatedWhenNobodyLooked: only the KiCad reader examines wire geometry. Without the
-// capability the rule must report not-applicable WITH A REASON rather than running over an empty list
-// and contributing a considered set of nothing, which reads as a clean sheet (agni issue 309's shape).
+// TestWireNoJunctionGatedWhenNobodyLooked covers the capability gate. Only the KiCad reader
+// examines wire geometry. Without the capability the rule must report not-applicable WITH A REASON
+// rather than running over an empty list and contributing a considered set of nothing, which reads
+// as a clean sheet (agni issue 309's shape).
 func TestWireNoJunctionGatedWhenNobodyLooked(t *testing.T) {
 	d := tapDesign(nil)
 	d.InputDiagnostics.Supplied = nil
@@ -103,9 +104,9 @@ func TestWireNoJunctionGatedWhenNobodyLooked(t *testing.T) {
 	}
 }
 
-// TestWireNoJunctionFailWitnessSaysWhatIsWrong: the failing side gained a witness it did not have, and
-// it has to state the consequence rather than repeat the finding message, since the two sit side by
-// side in the verdict output.
+// TestWireNoJunctionFailWitnessSaysWhatIsWrong covers the failing side, which gained a witness it
+// did not have, and it has to state the consequence rather than repeat the finding message, since
+// the two sit side by side in the verdict output.
 func TestWireNoJunctionFailWitnessSaysWhatIsWrong(t *testing.T) {
 	vs := wireNoJunction.Eval(check.NewModel(tapDesign(nil, &ir.DanglingEndpoint{X: 5, Y: 6})))
 	if len(vs) != 1 || vs[0].Witness == nil {

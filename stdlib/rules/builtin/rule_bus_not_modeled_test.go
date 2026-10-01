@@ -8,9 +8,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestBusNotModeledResolution: the rule fires only when a bus's members are NOT all present as nets.
-// A bus whose every member is a net (the flat-sheet case, members formed by the tap labels) is silent;
-// a bus with a missing member, or with no known member set, fires.
+// TestBusNotModeledResolution checks that the rule fires only when a bus's members are NOT all
+// present as nets. A bus whose every member is a net (the flat-sheet case, members formed by the
+// tap labels) is silent; a bus with a missing member, or with no known member set, fires.
 func TestBusNotModeledResolution(t *testing.T) {
 	design := func(buses []*ir.BusNotModeled, nets ...string) *ir.Design {
 		d := &ir.Design{InputDiagnostics: &ir.InputDiagnostics{UnmodeledBuses: buses}}
@@ -23,7 +23,7 @@ func TestBusNotModeledResolution(t *testing.T) {
 		return &ir.BusNotModeled{Kind: "bus", Label: label, Members: members}
 	}
 
-	// Resolved: both members are nets -> silent.
+	// Resolved, since both members are nets -> silent.
 	if fs := busNotModeled.Findings(check.NewModel(design([]*ir.BusNotModeled{bus("DATA[1:0]", "DATA0", "DATA1")}, "DATA0", "DATA1"))); len(fs) != 0 {
 		t.Errorf("resolved bus should be silent, got %d findings", len(fs))
 	}
@@ -41,7 +41,7 @@ func TestBusNotModeledResolution(t *testing.T) {
 // TestBusNotModeledStatesTheResolvedBus is the half the findings contract cannot carry. A resolved
 // bus is silent to `check` and always was, so a design whose buses are all properly modelled and a
 // design with no bus in it report the same nothing. The verdict is where the difference now lives,
-// and the witness has to rest on the member count rather than merely asserting resolution: drop a
+// and the witness has to rest on the member count rather than merely asserting resolution. Drop a
 // member's net and the same bus comes back a failure naming it.
 func TestBusNotModeledStatesTheResolvedBus(t *testing.T) {
 	design := func(buses []*ir.BusNotModeled, nets ...string) *ir.Design {

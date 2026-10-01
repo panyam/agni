@@ -162,7 +162,7 @@ func TestTraceWillNotTransitARail(t *testing.T) {
 	}
 }
 
-// The positive control for the whole command: a topology that must NOT route. A capacitor is a DC
+// The positive control for the whole command is a topology that must NOT route. A capacitor is a DC
 // block, so two pins either side of one are not connected however short the path looks.
 func TestTraceDoesNotCrossACapacitor(t *testing.T) {
 	tr := TracePins(traceModel(), Endpoint{"U8", "1"}, Endpoint{"U9", "1"}, DefaultTraceHops)
@@ -210,7 +210,7 @@ func TestTraceSameNetIsRoutedWithNoCrossings(t *testing.T) {
 	}
 }
 
-// The case the ticket is emphatic about: an endpoint that does not resolve must never read as a
+// The ticket is emphatic about this case. An endpoint that does not resolve must never read as a
 // disconnection, and the four ways it can fail send a reader to four different places.
 func TestTraceUnresolvedEndpointsAreNotDisconnections(t *testing.T) {
 	m := traceModel()
@@ -274,8 +274,8 @@ func TestReachStepCarriesPinsOnBothSides(t *testing.T) {
 	}
 }
 
-// pullupFixture: SDA is pulled to +3V3 by TWO resistors, SCL by one, and ADDR by two that land on
-// DIFFERENT rails. R_GND is a pull-DOWN and must never count, and R_FAR sits four hops out.
+// pullupFixture pulls SDA to +3V3 through TWO resistors, SCL through one, and ADDR through two that
+// land on DIFFERENT rails. R_GND is a pull-DOWN and must never count, and R_FAR sits four hops out.
 func pullupFixture() *ir.Design {
 	comp := func(ref string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
@@ -314,7 +314,7 @@ func terminationsOn(t *testing.T, d *ir.Design, net string) []PullUpTermination 
 	return nil
 }
 
-// The question PullUpPathToRail cannot answer: how many. Two resistors in parallel are two
+// PullUpPathToRail cannot answer how many. Two resistors in parallel are two
 // terminations and one reach.
 func TestAllPullUpPathsFindsBothParallelResistors(t *testing.T) {
 	got := terminationsOn(t, pullupFixture(), "SDA")

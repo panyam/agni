@@ -8,9 +8,9 @@ posture as the KiCad grammar and the EDIF primers.
 
 gEDA is line-oriented. Each object is one line whose first field is its type. Two shapes span
 multiple lines:
-- a **text** (`T`) or **path** (`H`) object: a header line whose last field is a content-line
+- a **text** (`T`) or **path** (`H`) object is a header line whose last field is a content-line
   count `n`, followed by `n` content lines (an attribute text is `key=value` on that line);
-- an **attribute block** `{ ... }`: after an object, a `{` line, then `T` objects, then `}`.
+- an **attribute block** `{ ... }` follows an object as a `{` line, then `T` objects, then `}`.
 
 Types the reader acts on (others are parsed and ignored):
 
@@ -39,7 +39,7 @@ connection points by coincidence and merges nodes sharing a net name.
 
 gEDA net segments are unlabelled, so net names come from:
 - `netname=` texts, snapped to the nearest wire endpoint;
-- power/ground taps (`gnd-1`, `vcc-1`, ...): resolved through their `.sym` (the connect pin is
+- power/ground taps (`gnd-1`, `vcc-1`, ...), resolved through their `.sym` (the connect pin is
   offset from the origin, unlike xschem) and named from the instance `net=`, else the symbol's
   `net=`, else convention (`GND`/`VCC`/...).
 
@@ -56,7 +56,7 @@ Annotation symbols (`title-*`, `spice-directive-1`, ...) are skipped.
 | net (wires + netname/power taps) | `Net.name`, with `Connection{component_ref, pin_ref}` per resolved pin |
 | `refdes=` | `Provenance.native_id` (`native_id_kind = "geda-refdes"`) |
 
-Fidelity: lossy-bounded. Without a symbol library (`Read`) only `netname=` nets are known by
+Fidelity is lossy-bounded. Without a symbol library (`Read`) only `netname=` nets are known by
 name; `ReadWithSymbols` resolves pins and produces a connected netlist (nets without a name get
 a synthetic `N$<n>`).
 
@@ -83,32 +83,31 @@ An embedded `G` picture's base64 bytes are read as the run of pure-base64 lines 
 filename (the format stores no length); an external picture yields a bbox-only `Image`. An
 unresolved symbol renders as a placeholder box.
 
-
-## Dangling-endpoint diagnostics (WS1-013)
+## 6. Dangling-endpoint diagnostics (WS1-013)
 
 The reader surfaces wire endpoints that terminate on nothing (no pin, anchor, or other
 wire endpoint) as `ir.InputDiagnostics.dangling_endpoints`, in the geometry frame the
-viewer draws. Emission is GATED on full symbol resolution: an unresolved external `.sym`
-drops its pins, so a wire end meant to land on one would read as a phantom dangle — one
-unresolved placement suppresses the whole design's dangles (the conservative zero-false-
-positive gate). Wires carry no per-wire id, so the endpoint location is the finding's
+viewer draws. Emission is GATED on full symbol resolution. An unresolved external `.sym`
+drops its pins, so a wire end meant to land on one would read as a phantom dangle, and one
+unresolved placement therefore suppresses the whole design's dangles (the conservative
+zero-false-positive gate). Wires carry no per-wire id, so the endpoint location is the finding's
 subject.
 
 The endpoint-on-BODY diagnostic (`no_junction_endpoints`, the missing-junction T-tap) is
-**KiCad-only**: gEDA auto-connect a mid-span touch, so there is no missing junction to flag —
-running that detection here would flag legal connections.
+**KiCad-only**. gEDA auto-connects a mid-span touch, so there is no missing junction to flag,
+and running that detection here would flag legal connections.
 
-## Pin directions & power-rail drivenness (WS1-021)
+## 7. Pin directions and power-rail drivenness (WS1-021)
 
-A symbol pin's `pintype` maps to the neutral pin-direction vocabulary: `pwr` ->
-`power_in` (a placed part's power/ground pin draws supply — gEDA does not distinguish
-power_in from power_out, so a rare power-output pin is miscategorized, tolerated because
-its rail is marked External), `in`/`out`/`io`/`pas` -> input/output/inout/passive, the
-rest UNSPECIFIED. This makes the pin-type rules (power-input-not-driven, floating-input,
+A symbol pin's `pintype` maps to the neutral pin-direction vocabulary. `pwr` becomes
+`power_in`, because a placed part's power/ground pin draws supply. gEDA does not distinguish
+power_in from power_out, so a rare power-output pin is miscategorized, which is tolerated
+because its rail is marked External. `in`/`out`/`io`/`pas` map to input/output/inout/passive,
+and the rest to UNSPECIFIED. This makes the pin-type rules (power-input-not-driven, floating-input,
 output-output-conflict) reachable on gEDA designs.
 
 A power/ground SUPPLY symbol (`gnd`/`vcc`/`vdd`/`vss`) marks its net `External`, matching
-KiCad's power-symbol semantics: the rail is a global supply whose source may lie off the
+KiCad's power-symbol semantics, since the rail is a global supply whose source may lie off the
 read. gEDA has no separate PWR_FLAG driver directive, so the supply symbol alone carries
-this. External (not `power_driven`) is deliberate — it keeps power-input-not-driven quiet
-on a tapped rail without the bulk-cap noise a driven mark would add on sim-oriented designs.
+this. Marking it External rather than `power_driven` is deliberate. It keeps power-input-not-driven
+quiet on a tapped rail without the bulk-cap noise a driven mark would add on sim-oriented designs.

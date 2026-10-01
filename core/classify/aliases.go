@@ -1,8 +1,9 @@
-// Package classify is the format-neutral component-classification pass (WS3-071). It derives a
-// component's device class from cross-format conventions (ref-des prefix, part-type token vocabulary)
-// and stamps the normalized result onto the IR at ingestion, so check reads a data fact instead of
-// re-parsing vendor strings on every model build. It imports only the generated ir proto and the model
-// read-surface contract; check and formats both depend on it.
+// Package classify holds the format-neutral ingestion passes that stamp derived facts onto the IR, so
+// check reads a data fact instead of re-parsing vendor strings on every model build. The first was the
+// component-classification pass (WS3-071), which derives a device class from ref-des prefix and
+// part-type tokens. The package also owns the net-role vocabulary, the value parser and the MPN stamp.
+// It imports the generated ir and config protos and the model read-surface contract, and check and
+// formats both depend on it.
 package classify
 
 import "github.com/panyam/agni/core/model"

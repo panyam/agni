@@ -1,8 +1,9 @@
 // Package param loads and validates parameter-IR PartSpecs (agni.v1.param), the
-// datasheet-parameter contract described in docs/20-parameter-ir.md. The schema lives
-// in protos/agni/v1/param/param.proto; this package holds the invariants the proto
-// language cannot express (required provenance, resolvable doc refs, non-empty
-// ranges) and the under-specification predicate consumers must respect.
+// datasheet-parameter contract in
+// docsite/content/architecture/datasheet-layer.md#the-parameter-contract. The schema
+// is protos/agni/v1/param/param.proto. This package holds the invariants proto cannot
+// express (required provenance, resolvable doc refs, non-empty ranges) and the
+// under-specification predicate consumers must respect.
 package param
 
 import (
@@ -16,8 +17,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Load parses one PartSpec in textproto form (the fixture and hand-encoding format).
-// It only parses; call Validate for the semantic invariants.
+// Load parses one PartSpec in textproto form, the fixture and hand-encoding format.
+// It only parses, so call Validate for the semantic invariants.
 func Load(r io.Reader) (*parampb.PartSpec, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -31,22 +32,15 @@ func Load(r io.Reader) (*parampb.PartSpec, error) {
 }
 
 // Validate checks the invariants every PartSpec must hold before any consumer (the
-// WS10-003 join, a store) may trust it: a join key (mpn), and on every parameter a
-// classified limit kind, a value with at least one bound and min <= typ <= max where
-// present, and provenance that resolves to a declared source doc with a confidence
-// someone stands behind (in (0, 1]). All violations are reported, joined into one
-// error; nil means the spec is trustworthy as data (not that its values are true --
-// that is what the provenance is for).
+// WS10-003 join, a store) may trust it, which is every Problem joined into one error.
+// Nil means the spec is trustworthy as data, not that its values are true; the
+// provenance is for that.
 //
-// When a spec carries pin data it must also be COHERENT: unique package and pin ids,
-// a name on every pin, numbers that resolve to a declared package with no two pins
-// claiming one number within it, provenance on every pin, and every Parameter.pin_refs
-// resolving to a declared pin. A dangling binding is the failure worth catching at load,
-// because downstream it does not look like an error -- the parameter simply stops
-// applying to anything and the rule that wanted it reports nothing.
-//
-// Pin data is entirely OPTIONAL. A spec with no pins or packages validates exactly as it
-// did before pin binding existed, so an older corpus is unaffected (CONSTRAINTS C9).
+// When a spec carries pin data it must also be COHERENT (see structuralProblems). A
+// dangling pin binding is worth catching at load because downstream it does not look
+// like an error. The parameter stops applying to anything and the rule that wanted it
+// reports nothing. Pin data is OPTIONAL, so a spec with no pins or packages is
+// unaffected (CONSTRAINTS C9).
 func Validate(spec *parampb.PartSpec) error {
 	var errs []error
 	for _, p := range Problems(spec) {
@@ -55,10 +49,9 @@ func Validate(spec *parampb.PartSpec) error {
 	return errors.Join(errs...)
 }
 
-// ProblemKind separates the two questions Problems answers, because a consumer usually wants only
-// one of them. STRUCTURAL means the spec contradicts itself and is wrong now, at any stage of
-// authoring. COMPLETENESS means it is merely unfinished: true of every spec under transcription and
-// only interesting when deciding whether it is ready to be relied on.
+// ProblemKind separates the two questions Problems answers, since a consumer usually wants only one.
+// STRUCTURAL means the spec contradicts itself and is wrong at any stage of authoring. COMPLETENESS
+// means it is unfinished, which is true of every spec under transcription.
 type ProblemKind string
 
 const (
@@ -66,18 +59,16 @@ const (
 	ProblemCompleteness ProblemKind = "completeness"
 )
 
-// Problem is one validation finding, kept separate from its siblings rather than folded into a
-// joined error, so a caller can render them individually and act on the kinds differently.
+// Problem is one validation finding, unjoined so a caller can render each one and act on the kinds
+// differently.
 type Problem struct {
 	Kind    ProblemKind
 	Message string
 }
 
-// Problems reports everything wrong with a spec, classified. It is the form the workbench consumes:
-// the editor shows structural problems as things to fix now and completeness ones as what still
-// stands between a draft and a corpus. Validate is this, joined, for callers that only need a verdict.
-//
-// An empty result means the spec would load into a corpus today.
+// Problems reports everything wrong with a spec, classified. The workbench consumes it, showing
+// structural problems as things to fix now and completeness ones as what stands between a draft and a
+// corpus. Validate is this, joined. An empty result means the spec would load into a corpus today.
 func Problems(spec *parampb.PartSpec) []Problem {
 	var out []Problem
 	for _, e := range structuralProblems(spec) {
@@ -89,10 +80,10 @@ func Problems(spec *parampb.PartSpec) []Problem {
 	return out
 }
 
-// completenessProblems reports what a spec still lacks to be trusted as corpus data: a join key, and
-// on every parameter a classified limit kind, a value with at least one bound, and resolvable
-// provenance. Every one of these is a legitimate state mid-transcription, which is exactly what
-// separates them from structuralProblems.
+// completenessProblems reports what a spec still lacks to be trusted as corpus data. That is a join
+// key (mpn), a name and resolvable provenance on every pin, and on every parameter and relation a
+// classified kind, a non-empty bound with min <= max, and provenance resolving to a declared doc with
+// confidence in (0, 1]. Each is a legitimate state mid-transcription, unlike structuralProblems.
 func completenessProblems(spec *parampb.PartSpec) []error {
 	var errs []error
 	if spec.Mpn == "" {
@@ -103,24 +94,20 @@ func completenessProblems(spec *parampb.PartSpec) []error {
 		if d.Id == "" {
 			errs = append(errs, fmt.Errorf("docs[%d] has no id", i))
 		}
-		// The title is the citation an engineer opens, so it has to name the DOCUMENT: number and
-		// revision as printed. Two states fail that, and only one of them belongs here.
+		// The title is the citation an engineer opens, so it names the DOCUMENT, number and
+		// revision as printed.
 		//
-		// ABSENT is not a problem. A first-pass derivation genuinely cannot state the identity yet,
-		// and that refusal is recorded where derive-time refusals belong, in the run manifest's gap
-		// list with the cover-page prose attached. Reporting it here too would make every derived
-		// spec fail Validate, which is how derive tells a bug from a data gap. The citation itself
-		// says "revision unrecorded" at the point of use, which is where a reader needs it.
+		// ABSENT is not a problem here. A first-pass derivation cannot state the identity yet, and
+		// that refusal goes in the run manifest's gap list. Reporting it here too would make every
+		// derived spec fail Validate, which is how derive tells a bug from a data gap. The citation
+		// says "revision unrecorded" at the point of use.
 		//
-		// EQUAL TO THE MPN is, because it is not an absence: it is an assertion, and a wrong one. It
-		// is what a producer writes when it copies a doc-IR title, it looks completely fine, and it
-		// is the same string before and after a reissue -- so a reader is told the part they already
-		// knew and nothing about which revision to open (agni issue 290). Silence is honest; a
-		// confident wrong answer is the thing nobody re-checks.
+		// EQUAL TO THE MPN is a problem, because it is a wrong assertion rather than an absence. A
+		// producer copying a doc-IR title writes it, and it is the same string before and after a
+		// reissue, so a reader learns nothing about which revision to open (agni issue 290).
 		//
-		// Deliberately equality, not a guess at what a part number looks like. This whole issue
-		// exists because a plausible-looking value went unchallenged, and a heuristic here would
-		// reject legitimate titles for vendors whose document numbering nobody has seen.
+		// Equality, not a guess at what a part number looks like, because a heuristic would reject
+		// legitimate titles from vendors whose document numbering nobody has seen.
 		if d.Title != "" && spec.Mpn != "" && strings.EqualFold(strings.TrimSpace(d.Title), strings.TrimSpace(spec.Mpn)) {
 			errs = append(errs, fmt.Errorf(
 				"docs[%d] (%s) is titled %q, which is the part, not the document; the title is the citation an engineer opens, so it wants the vendor's document number and revision as printed",
@@ -172,8 +159,7 @@ func completenessProblems(spec *parampb.PartSpec) []error {
 		if r.Kind == parampb.PinRelationKind_PIN_RELATION_KIND_UNSPECIFIED {
 			errs = append(errs, fmt.Errorf("%s: kind is unspecified; classify or drop", id))
 		}
-		// A relation asserting no bound at all says nothing, which is the relation-shaped
-		// version of a parameter with no min, typ or max.
+		// A relation asserting no bound says nothing, like a parameter with no min, typ or max.
 		if r.Difference == nil || (r.Difference.Min == nil && r.Difference.Max == nil) {
 			errs = append(errs, fmt.Errorf("%s: difference has no min or max", id))
 		} else if r.Difference.Min != nil && r.Difference.Max != nil && r.Difference.GetMin() > r.Difference.GetMax() {
@@ -192,10 +178,11 @@ func completenessProblems(spec *parampb.PartSpec) []error {
 }
 
 // UnderSpecified reports whether a parameter's value must not be treated as a plain
-// comparable limit: its condition list is not asserted complete (coverage is unknown
-// or known-partial). A no-condition parameter is fine only when the source genuinely
+// comparable limit, because its condition list is not asserted complete (coverage is
+// unknown or known-partial). A no-condition parameter is fine only when the source
 // states none (CONDITION_COVERAGE_UNCONDITIONAL). Consumers skip or flag
-// under-specified parameters; they never compare against them (docs/20).
+// under-specified parameters and never compare against them
+// (docsite/content/architecture/datasheet-layer.md#comparison-semantics).
 func UnderSpecified(p *parampb.Parameter) bool {
 	switch p.ConditionCoverage {
 	case parampb.ConditionCoverage_CONDITION_COVERAGE_COMPLETE,
@@ -206,12 +193,11 @@ func UnderSpecified(p *parampb.Parameter) bool {
 }
 
 // MachineComparable reports whether a consumer may compare this parameter's value
-// against an operating point automatically: the condition list is asserted complete
-// (not UnderSpecified) AND every condition is structured (carries eq or min/max).
-// A condition captured only as text (raw) is honestly retained but cannot be
-// evaluated against anything, so the row is the middle trust state: fit to show a
-// human next to its provenance, never fit for an automatic comparison. The three
-// states a consumer must distinguish (docs/20):
+// against an operating point automatically. The condition list must be asserted
+// complete (not UnderSpecified) AND every condition structured (eq or min/max). A
+// condition captured only as raw text makes the row the middle trust state, shown to
+// a human next to its provenance and never auto-compared. The three states
+// (docsite/content/architecture/datasheet-layer.md#comparison-semantics):
 //
 //	UnderSpecified            -> skip; the conditions themselves are not trustworthy
 //	!UnderSpecified && !MachineComparable -> surface to a human; no auto-compare
@@ -229,20 +215,13 @@ func MachineComparable(p *parampb.Parameter) bool {
 }
 
 // structuralProblems checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
-// numbers that resolve to a declared package with no two pins claiming one number within it, and
-// every Parameter.pin_refs resolving to a declared pin. It returns the errors unjoined so Validate
-// can fold them in with its own rather than nesting a joined error inside a joined error.
+// numbers that resolve to a declared package with no two pins claiming one number within it, every
+// Parameter.pin_refs resolving to a declared pin, and every relation's two ends resolving to two
+// distinct pins. These can never be a valid work-in-progress state, unlike completenessProblems.
 //
-// It is split out rather than inlined because the structural rules differ in KIND from the rest of
-// Validate: they are the ones that can never be an honest work-in-progress state. A spec being
-// transcribed has no MPN and carries unclassified rows, which Validate rightly rejects; two pins
-// sharing an id is wrong the moment it is written and stays wrong.
-//
-// That distinction is currently only documentation. It is UNEXPORTED because nothing outside this
-// package needs the narrow check: the workbench's draft is not gated on it (saving records what an
-// author has, and param.LoadSet reads *.textproto so a draft cannot reach the corpus by sitting on
-// disk), and the editor mirrors these few rules in TS for live feedback. Export it when a caller
-// exists, not before.
+// The workbench's draft save is not gated on it, and param.LoadSet reads only *.textproto, so a draft
+// cannot reach the corpus by sitting on disk. The editor mirrors these rules in TS for live feedback,
+// so a change here wants the same change there.
 func structuralProblems(spec *parampb.PartSpec) []error {
 	var errs []error
 	packages := make(map[string]bool, len(spec.Packages))
@@ -258,10 +237,9 @@ func structuralProblems(spec *parampb.PartSpec) []error {
 	}
 
 	pins := make(map[string]bool, len(spec.Pins))
-	// A pin NUMBER belongs to one pin within one package. Names may repeat (that is the
-	// multi-supply case pin binding exists for) but a package cannot send one terminal to
-	// two pins, and a corpus that says otherwise would make the tie-breaking channel
-	// unusable.
+	// A pin NUMBER belongs to one pin within one package. Names may repeat (the
+	// multi-supply case pin binding exists for), but one terminal on two pins would make
+	// the number unusable as the tie-breaking channel.
 	claimed := map[string]string{}
 	for i, p := range spec.Pins {
 		id := p.Id
@@ -302,9 +280,8 @@ func structuralProblems(spec *parampb.PartSpec) []error {
 		}
 	}
 
-	// A relation's two ends are the only thing about it that can be wrong rather than merely
-	// unfinished. Everything else (the bound, the kind, the provenance) is something an author
-	// fills in later, and lives in completenessProblems with the Parameter rules it mirrors.
+	// A relation's two ends are the only part of it that can be wrong rather than unfinished.
+	// The bound, kind and provenance live in completenessProblems.
 	for i, r := range spec.Relations {
 		if !pins[r.SubjectPinRef] {
 			errs = append(errs, fmt.Errorf("relations[%d]: subject_pin_ref %q does not resolve to a declared pin", i, r.SubjectPinRef))

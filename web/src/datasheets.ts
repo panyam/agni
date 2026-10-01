@@ -1,9 +1,7 @@
-// Entry point for the extraction workbench shell (the /datasheets page, WS13-006), a page distinct
-// from the viewer's main.ts. The page is server-rendered by goapplib/templar (a datasheet-tree
-// sidebar and the region-viewer hole). This boots the tsappkit lifecycle over that shell: the tree
-// island and the region-viewer island initialize, a tree selection loads a datasheet into the
-// viewer, and the open datasheet lives in the URL (/datasheets/files/<mount>/<path>) so a refresh
-// or shared link reopens it.
+// Entry point for the extraction workbench (the /datasheets page, WS13-006). A tree selection loads
+// a datasheet into the region viewer, and the open datasheet lives in the URL
+// (/datasheets/files/<mount>/<path>) so a refresh or shared link reopens it. The page shapes are in
+// docsite/content/architecture/web-app.md#the-pages.
 
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";
 import { dsTreeIsland, type DsTreeView } from "./dstree.js";
@@ -14,7 +12,7 @@ import type { Parameter } from "./gen/agni/v1/param/param_pb.js";
 import { currentDs, dsToUrl, hasDatasheet, type DsLocation } from "./dsrouter.js";
 import { baseName, noteOpen } from "./recents.js";
 
-// restoring guards the URL feedback loop, like the viewer's main.ts: while replaying a URL (initial
+// restoring guards the URL feedback loop, like the viewer's main.ts. While replaying a URL (initial
 // load or back/forward) we load the datasheet but must not push a duplicate history entry.
 let restoring = false;
 
@@ -28,12 +26,11 @@ function syncUrl(loc: DsLocation): void {
 }
 
 class DatasheetsRoot extends BaseComponent {
-  // view/tree are exposed so the boot code can drive a deep-link restore once the islands init.
+  // view/tree are exposed so the boot code can reach the islands once they init.
   view: RegionView | null = null;
   tree: DsTreeView | null = null;
-  // open is exposed for the same reason, and it is what the restore SHOULD drive: the boot code
-  // used to reach past it to view.load + tree.setState, which is the same sequence minus whatever
-  // open gains later. It gained recording, and a deep-linked datasheet stopped being recorded.
+  // open is what a deep-link restore must drive. Calling view.load + tree.setState directly skips
+  // whatever open adds, such as recording the datasheet as recent (#318).
   open: ((mount: string, path: string) => void) | null = null;
 
   override performLocalInit(): LCMComponent[] {
@@ -43,8 +40,8 @@ class DatasheetsRoot extends BaseComponent {
     const paramsEl = document.getElementById("ds-params");
     if (!treeEl || !viewEl || !paramsEl) return children;
 
-    // The workbench pushes its parameter list to the params panel (forward ref: the panel is built
-    // after the workbench so its onLocate can call workbench.locate).
+    // The workbench pushes its parameter list to the params panel. This is a forward ref, because
+    // the panel is built after the workbench so its onLocate can call workbench.locate.
     let pushParams: (p: Parameter[]) => void = () => {};
     // pdf.js enters the app HERE and nowhere else, so the workbench can be rendered by a test.
     const region = workbenchIsland(viewEl, this._eventBus, (p) => pushParams(p), realPdfSource);
@@ -52,15 +49,13 @@ class DatasheetsRoot extends BaseComponent {
     pushParams = params.view.setState;
 
     let treeView: DsTreeView | null = null;
-    // open is the single "show this datasheet" action, shared by a tree click and a URL restore:
-    // load it into the viewer, highlight it in the tree, and reflect it into the URL.
+    // open is the single "show this datasheet" action, shared by a tree click and a URL restore.
     const open = (mount: string, path: string): void => {
       region.view.load(mount, path);
       treeView?.setState({ mount, path });
       syncUrl({ mount, path });
-      // Feeds the landing page's Recent list. Every way of showing a datasheet goes through here,
-      // including a deep link and back/forward, so arriving by URL counts as an opening the way it
-      // does in the viewer.
+      // Feeds the landing page's Recent list. A deep link and back/forward come through here too, so
+      // arriving by URL counts as an opening, as it does in the viewer.
       noteOpen({ kind: "datasheet", mount, path, label: baseName(path) });
     };
     const tree = dsTreeIsland(treeEl, this._eventBus, open);
@@ -78,15 +73,13 @@ const bus = new EventBus();
 const controller = new LifecycleController(bus);
 const root = new DatasheetsRoot("app", document.body, bus);
 void controller.initializeFromRoot(root).then(() => {
-  // applyUrl opens whatever the current URL addresses, once at boot (deep link) and on every
-  // popstate (back/forward). The restoring flag keeps the replay from pushing a duplicate entry.
+  // applyUrl opens whatever the current URL addresses, at boot and on every popstate.
   const applyUrl = (): void => {
     const loc = currentDs();
     if (!hasDatasheet(loc)) return; // bare /datasheets, leave the empty shell
     restoring = true;
     try {
-      // The same action a tree click takes. syncUrl is a no-op while restoring, so replaying a URL
-      // through it pushes no duplicate history entry.
+      // The same action a tree click takes. syncUrl pushes nothing while restoring.
       root.open?.(loc.mount, loc.path);
     } finally {
       restoring = false;

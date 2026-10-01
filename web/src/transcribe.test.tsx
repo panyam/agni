@@ -9,7 +9,7 @@ import type { Region } from "./regions.js";
 // The transcribe panel's first tests. Its pure helpers have always been covered in bank.test.ts, so
 // what was missing is everything between a person's keystrokes and those helpers: which fields the
 // editors read, what they refuse to submit, and what they hand over. That gap mattered more here
-// than in a read-only panel, because these editors WRITE — every Add button ends at a PartSpec on
+// than in a read-only panel, because these editors WRITE, and every Add button ends at a PartSpec on
 // disk.
 //
 // The panel needs no render harness of its own. It is an ordinary component over a handlers object,
@@ -54,7 +54,7 @@ function mountPanel(over: Partial<TranscribeHandlers> = {}) {
   return { el, calls };
 }
 
-// The editors are addressed the way a person addresses them: by the label they read.
+// The editors are addressed the way a person addresses them, by the label they read.
 const fieldNamed = (el: HTMLElement, label: string): HTMLInputElement | undefined =>
   [...el.querySelectorAll("label")].find((l) => l.textContent?.trim().startsWith(label))?.querySelector("input") ?? undefined;
 
@@ -84,8 +84,8 @@ describe("pin editor", () => {
     });
   });
 
-  // The id follows the name until someone edits it, and then stops: a part that prints one name on
-  // several terminals needs distinct ids for exactly those pins, which is only possible if a typed
+  // The id follows the name until someone edits it, and then stops. A part that prints one name on
+  // several terminals needs distinct ids for those pins, which is only possible if a typed
   // id survives the next keystroke in the name field.
   //
   // This is the test that found the swallowed first character. The handler set idTouched before

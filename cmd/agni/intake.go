@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// intakeCmd is the CLI wrapper over the intake library: load a design, build the sanitized Skeleton, and
-// render it. The sanitization guarantee lives in the intake.Skeleton type, not here — this command only
-// picks the model constructor (with/without a params tier) and the output format.
+// intakeCmd is the CLI wrapper over the intake library. It loads a design, builds the sanitized
+// Skeleton, and renders it. The sanitization guarantee lives in the intake.Skeleton type, and this
+// command only picks the parameter corpus and the output format.
 func intakeCmd() *cobra.Command {
 	var paramsDir, format, parts string
 	c := &cobra.Command{
@@ -33,11 +33,8 @@ design that belongs to no project, or overrides nothing when the project already
 			if err != nil {
 				return err
 			}
-			// The corpus comes from the design's PROJECT first and the flag second, which is the
-			// precedence check already uses (Overlay.SpecsOr). Before this, intake read --params
-			// alone, so inside a project declaring params/ you had to name a directory the project
-			// already names, and forgetting it produced a report whose datasheet-gap section was
-			// absent rather than empty (agni issue 474).
+			// The corpus comes from the design's PROJECT first and the flag second, the same
+			// precedence check uses (Overlay.SpecsOr, agni issue 474).
 			var flagSpecs param.ParamProvider
 			if paramsDir != "" {
 				set, err := param.LoadSet(os.DirFS(paramsDir))
@@ -46,8 +43,7 @@ design that belongs to no project, or overrides nothing when the project already
 				}
 				flagSpecs = set
 			}
-			// One constructor for both cases: NewModelWithParams guards a nil provider, so a design
-			// with no corpus builds the same model NewModel would have.
+			// NewModelWithParams accepts a nil provider, so this covers a design with no corpus too.
 			s := intake.Build(check.NewModelWithParams(d, nil, ov.SpecsOr(flagSpecs)))
 			full := parts == "full"
 			switch format {

@@ -73,6 +73,7 @@ func openCmd() *cobra.Command {
 				banner: func(urls []string, _ int) {
 					openBanner(cmd.ErrOrStderr(), urls[0], m, src.NetlistURI, view)
 				},
+				requireViewer: true,
 			})
 		},
 	}

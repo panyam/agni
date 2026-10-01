@@ -9,7 +9,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Tests for the considered set (stage 2). The failure mode here is the mirror of stage 1's: stage 1
+// Tests for the considered set (stage 2). The failure mode here is the mirror of stage 1's. Stage 1
 // asked whether a pass carries evidence, this asks whether a terminal the rule could NOT answer for
 // is reported at all. A rule that silently drops such a terminal produces output indistinguishable
 // from one that judged it clean, which is the coverage claim build/evidence.md warns about.
@@ -54,8 +54,8 @@ func TestOneTerminalProducesOneVerdict(t *testing.T) {
 			t.Errorf("%s produced %d verdicts; a pin-scoped verdict must answer once per terminal", key, n)
 		}
 	}
-	// Positive control: the fixture really does bind two rows to one pin, so the assertion above had
-	// something to catch.
+	// The positive control shows the fixture really does bind two rows to one pin, so the assertion
+	// above had something to catch.
 	if len(twoRowAbsMaxSpec(6.5, 5.0).GetParameters()) != 3 {
 		t.Fatal("fixture must carry two VCCB rows or this test proves nothing")
 	}

@@ -10,8 +10,8 @@ import (
 // moduleMissingRule fails once per declared module that no design component satisfies. A module matches
 // when ANY component is of its declared class (Model.HasClass, so a family tag matches its specific
 // classes) or carries its exact MPN (Model.ComponentMPN, which resolves only on a params-built model).
-// The finding is a design-level absence: KindComponent with the module label as Subject and no
-// provenance, because an absent module has no source site to cite (the presentResult shape).
+// The finding is a design-level absence, a KindComponent finding with the module label as Subject and
+// no provenance, because an absent module has no source site to cite (the presentResult shape).
 func moduleMissingRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:                RuleModuleMissing,
@@ -43,9 +43,9 @@ func modulePresent(m check.Model, mod Module) bool {
 }
 
 // moduleCountRule fails once per declared module whose EXACT expected Count differs from the actual
-// number of design components matching its criterion. It is the complement of moduleMissingRule:
-// missing asks "is at least one present", count asks "are there exactly N" (too few OR too many both
-// fail). Only modules with Count > 0 are checked, so a declaration that sets no counts compiles to no
+// number of design components matching its criterion. It complements moduleMissingRule, which asks
+// "is at least one present", where count asks "are there exactly N" (too few OR too many both fail).
+// Only modules with Count > 0 are checked, so a declaration that sets no counts compiles to no
 // count rule (empty-set-is-silent).
 func moduleCountRule(d Declaration) *check.Rule {
 	return &check.Rule{
@@ -63,9 +63,8 @@ func moduleCountRule(d Declaration) *check.Rule {
 }
 
 // modulePresenceVerdicts decides every module the declaration names. The considered set is the
-// declaration, which is the whole point of converting an intent rule: it already knows exactly what it
-// was asked to look for, so it can say "all four declared modules are here" instead of saying nothing,
-// which is what a declaration nobody wrote says too.
+// declaration, so the rule can say "all four declared modules are here" rather than the silence a
+// missing declaration also produces.
 func modulePresenceVerdicts(m check.Model, d Declaration) []check.Verdict {
 	out := make([]check.Verdict, 0, len(d.Modules))
 	for _, mod := range d.Modules {
@@ -90,8 +89,8 @@ func modulePresenceVerdicts(m check.Model, d Declaration) []check.Verdict {
 }
 
 // moduleCountVerdicts decides every module that declares a COUNT. A module declaring none is not a
-// subject of a count rule and yields no verdict: reporting it as a pass would claim the design has the
-// right number of something nobody said a number for.
+// subject of a count rule and yields no verdict, since a pass would claim the design has the right
+// number of something nobody said a number for.
 func moduleCountVerdicts(m check.Model, d Declaration) []check.Verdict {
 	var out []check.Verdict
 	for _, mod := range d.Modules {

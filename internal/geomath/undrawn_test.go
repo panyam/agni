@@ -6,7 +6,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// MarkUndrawn is the whole of agni issue 354 on the engine side: a render that loses a symbol still
+// MarkUndrawn is all of agni issue 354 on the engine side. A render that loses a symbol still
 // produces a complete-LOOKING sheet, so the only way a reader learns the drawing is short is if the
 // geometry says so.
 func TestMarkUndrawnRecordsOnlyWhatWillNotDraw(t *testing.T) {

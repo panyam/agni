@@ -3,10 +3,10 @@
 ### What it is
 
 `component.esd_rated(ref_des)` yields one row per component whose joined datasheet spec declares
-an ESD tolerance at or above the credit floor. It is a datasheet-tier fact: presence of a row
+an ESD tolerance at or above the credit floor. It is a datasheet-tier fact, so presence of a row
 means the part's stub carries a machine-comparable ESD rating high enough to count as protection,
 absence means it does not (or that no datasheet is joined). It carries no value, only the
-ref-des, because the question it answers is boolean: does this part have a creditable ESD rating.
+ref-des, because it answers a yes-or-no question, whether this part has a creditable ESD rating.
 
 ### For hardware engineers
 
@@ -18,25 +18,27 @@ conservative (2 kV), so a row means a genuinely rated part, not a marginal one.
 
 ### For software engineers
 
-This is a boolean predicate over the datasheet join (see ANALOGY.md): resolve the component to
-its part-number stub, read the ESD rating rows, and admit the ref-des only if a comparable row
-clears the floor. It is keyed by ref-des precisely so a rule joins it against structural
-relations (`component-on-net`, `component.class`, `pin.net`) to ask "an ESD-rated part sitting on
-this signal". Rows are 1:1 with qualifying components; absence is the normal case, not an error.
+This is a boolean predicate over the datasheet join (see [the analogy
+guide](../../../../docsite/content/reference/analogy.md)) that resolves the component to its
+part-number stub, reads the ESD rating rows, and admits the ref-des only if a comparable row clears
+the floor. It is keyed by ref-des so a rule joins it against structural relations
+(`component.net`, `component.class`, `pin.net`) to ask "an ESD-rated part sitting on this
+signal". Rows are 1:1 with qualifying components; absence is the normal case, not an error.
 
 ### Go projector
 
-`esdRatedFacts` in `check/facts.go` walks `Model.Components()`, looks up each part's spec via
-`Model.PartSpec(ref)`, and emits a row when `esdRatingLimits(spec)` returns at least one
-qualifying rating. `esdRatingLimits` is the same extractor the `esd-protection` Go rule uses: it
+`esdRatedFacts` in `stdlib/relations/facts.go` walks `Model.Components()`, looks up each part's spec via
+`Model.PartSpec(ref)`, and emits a row when `check.EsdRatingLimits(spec)` returns at least one
+qualifying rating. `check.EsdRatingLimits` is the same extractor the `esd-protection` Go rule uses,
+and it
 keeps only absolute-max ESD rows that are machine-comparable and at or above `icEsdFloorVolts`
-(2 kV). The citation on the row is the datasheet ESD row, the real evidence, not the component's
-schematic site.
+(2 kV). The row cites every qualifying datasheet ESD rating (air and contact discharge are printed
+separately), not the component's schematic site.
 
-This is a datasheet-tier relation, so it is silent by construction without seeded parameters:
+This is a datasheet-tier relation, so it is silent by construction without seeded parameters, because
 `PartSpec` is nil for every ref when the model was built without a params set, and the relation
 is empty. Run `agni` with `--params <dir>` to seed the datasheet corpus. Empty is skip, never a
-false pass: no row means "no evidence of a rated part", not "the part is unprotected".
+false pass, since no row means "no evidence of a rated part", not "the part is unprotected".
 
 ### Datalog
 

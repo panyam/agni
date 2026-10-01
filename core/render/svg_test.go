@@ -62,7 +62,7 @@ func textY(elem string) float64 {
 	return v
 }
 
-// TestSheetSVG_MultiLineLabel: a label carrying newlines (EDIF %10% decodes to '\n', e.g. a
+// TestSheetSVG_MultiLineLabel checks that a label carrying newlines (EDIF %10% decodes to '\n', e.g. a
 // table-of-contents sheet list) is drawn as one stacked <text> per line, not a single overlapping
 // run. Guards the multi-line path in drawText.
 func TestSheetSVG_MultiLineLabel(t *testing.T) {
@@ -118,7 +118,7 @@ func TestReadableText(t *testing.T) {
 // TestSheetSVG_UprightText is the regression guard for the upside-down text bug seen on a
 // real-corpus headers sheet: a symbol placed at R180 (or text with its own R180 orientation)
 // was drawn genuinely upside down instead of flipped upright the way every EDA viewer draws
-// it. The rule the render layer enforces: no text run ever carries a rotate(180 ...).
+// it. The render layer enforces that no text run ever carries a rotate(180 ...).
 func TestSheetSVG_UprightText(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Symbols: []*geom.SymbolDef{{
@@ -146,7 +146,7 @@ func TestSheetSVG_UprightText(t *testing.T) {
 	if strings.Contains(out, "rotate(180 ") {
 		t.Errorf("SVG has upside-down text (rotate(180 ...)):\n%s", out)
 	}
-	// The R180 field's justify must flip so the run still hangs off the same corner: a left
+	// The R180 field's justify must flip so the run still hangs off the same corner. A left
 	// justify becomes a right (text-anchor=end) rather than staying left.
 	if el := textElem(out, "X4"); el == "" {
 		t.Fatal("X4 ref-des text element not found")
@@ -156,7 +156,7 @@ func TestSheetSVG_UprightText(t *testing.T) {
 }
 
 // TestSheetSVG_AnnotationCondensed guards the caption-overflow fix (a "Net Splitter" label on
-// a real-corpus headers sheet): a symbol annotation wider than its drawn BOX is condensed to
+// a real-corpus headers sheet). A symbol annotation wider than its drawn BOX is condensed to
 // the box width with textLength + lengthAdjust rather than spilling past it, while a short caption
 // (narrower than the box) is left at natural width so it is not stretched to fill the box.
 func TestSheetSVG_AnnotationCondensed(t *testing.T) {
@@ -347,7 +347,7 @@ func TestSheetSVG_TitleBlockGrid(t *testing.T) {
 		t.Error("comment order wrong: comment 2 should render above comment 1")
 	}
 
-	// The sub-sheet has only a title: the other cells still draw their labels (empty values),
+	// The sub-sheet has only a title, and the other cells still draw their labels (empty values),
 	// and Id reflects its position.
 	sub := SheetSVG(g, g.Sheets[1])
 	for _, want := range []string{">Title: Sub<", ">Rev: <", ">Date: <", ">Id: 2/2<", ">Size: A4<"} {
@@ -383,11 +383,11 @@ func TestLabelFontHonorsSourceHeight(t *testing.T) {
 	}
 }
 
-// TestBlockTopFollowsJustify: a justify anchors the whole multi-line BLOCK, not its first line.
-// A tool that bottom-anchors its notes places the NEXT note relative to that same bottom, so a
-// block that grows downward from a bottom anchor runs onto whatever sits below it. One export
-// puts a 3-line note and the note under it exactly 2 line pitches apart, and stacking the first
-// downward landed its last line on the second note's anchor to the unit.
+// TestBlockTopFollowsJustify checks that a justify anchors the whole multi-line BLOCK, not its
+// first line. A tool that bottom-anchors its notes places the NEXT note relative to that same
+// bottom, so a block that grows downward from a bottom anchor runs onto whatever sits below it. One
+// export puts a 3-line note and the note under it exactly 2 line pitches apart, and stacking the
+// first downward landed its last line on the second note's anchor to the unit.
 func TestBlockTopFollowsJustify(t *testing.T) {
 	const y, step, lines = 100.0, 10.0, 3
 	span := float64(lines-1) * step // 20
@@ -413,7 +413,7 @@ func TestBlockTopFollowsJustify(t *testing.T) {
 }
 
 // TestSheetSVG_BottomAnchoredNotesDoNotCollide is the render-level guard for the multi-line
-// anchoring bug, built on the shape a real export uses: two notes both LOWERLEFT, the second
+// anchoring bug, built on the shape a real export uses. Two notes are both LOWERLEFT, the second
 // placed exactly TWO line pitches below the first's anchor so the tool prints a blank line
 // between them. Growing the 3-line note DOWNWARD from its anchor put its last line on the second
 // note's anchor to the unit, so the two collided on the page.
@@ -435,7 +435,7 @@ func TestSheetSVG_BottomAnchoredNotesDoNotCollide(t *testing.T) {
 	if !(yA < yC) {
 		t.Errorf("lines must still read top-to-bottom: A=%g C=%g", yA, yC)
 	}
-	// The property under test, stated exactly rather than as a gap heuristic: the block is
+	// The property under test, stated exactly rather than as a gap heuristic, is that the block is
 	// bottom-anchored, so its LAST line lands on the anchor. ANCHOR is a single-line note sharing
 	// that same origin y, so the two must render at the same y. Growing the block downward instead
 	// puts line A there and pushes C two pitches past it, which is what collided with NOTE TWO.
@@ -449,10 +449,10 @@ func TestSheetSVG_BottomAnchoredNotesDoNotCollide(t *testing.T) {
 	}
 }
 
-// A rendered sheet is its own pick index: every element says what it belongs to, so a viewer
+// A rendered sheet is its own pick index. Every element says what it belongs to, so a viewer
 // resolves a click by reading the DOM rather than joining a second representation (the packed tier)
 // to interpret its own picture. It also means a saved or embedded sheet keeps entity identity.
-// keyFixture is one placement with one pin and one named wire: the three things a rendered element
+// keyFixture is one placement with one pin and one named wire, the three things a rendered element
 // can belong to.
 func keyFixture() (*geom.SchematicGeometry, *geom.SheetGeometry) {
 	g := &geom.SchematicGeometry{
@@ -498,7 +498,7 @@ func TestSheetSVGPickTargetsAddPins(t *testing.T) {
 	if !strings.Contains(out, `data-kind="pin"`) || !strings.Contains(out, `data-pin="`) {
 		t.Fatalf("WithPickTargets emitted no pin targets:\n%s", first(out, 800))
 	}
-	// Invisible and hittable: the drawing must not change, and a point with no area cannot be
+	// Invisible and hittable. The drawing must not change, and a point with no area cannot be
 	// clicked.
 	if !strings.Contains(out, `pointer-events="all"`) {
 		t.Error("a pick target with no pointer-events is unhittable")
@@ -510,9 +510,9 @@ func TestSheetSVGPickTargetsAddPins(t *testing.T) {
 }
 
 // A wire is a 0.8px stroke and a fill:none polyline hit-tests only ON its stroke, so a click has to
-// land within half a pixel of the line. Measured in a browser: a probe at the wire's own midpoint,
+// land within half a pixel of the line. Measured in a browser, a probe at the wire's own midpoint,
 // rounded to whole pixels, hits the page rect instead. The viewer's render therefore carries an
-// invisible wide companion whose only job is to be hit — and a report's render does not.
+// invisible wide companion whose only job is to be hit. A report's render does not carry one.
 func TestPickTargetsAddWireHitCompanions(t *testing.T) {
 	g, sheet := keyFixture()
 
@@ -530,7 +530,7 @@ func TestPickTargetsAddWireHitCompanions(t *testing.T) {
 	if strings.Count(picky, `data-net="SDA"`) < 2 {
 		t.Error("the hit companion does not carry the wire's net")
 	}
-	// Invisible: it must not change the drawing.
+	// Invisible, so it must not change the drawing.
 	if !strings.Contains(picky, `stroke="none"`) {
 		t.Error("the hit companion is painted; it must be invisible")
 	}
@@ -560,10 +560,10 @@ func first(s string, n int) string {
 	return s[:n]
 }
 
-// A ground or rail glyph is drawn like a part and is not one: it NAMES the net at its pin. Keying it
-// as a component would offer a reader a part no consumer can join, so it is keyed as its net — which
-// makes the thing that names a rail clickable, and it was previously the one thing on a sheet that
-// was not.
+// A ground or rail glyph is drawn like a part and is not one, since it NAMES the net at its pin.
+// Keying it as a component would offer a reader a part no consumer can join, so it is keyed as its
+// net. That makes the thing that names a rail clickable, and it was previously the one thing on a
+// sheet that was not.
 func TestSheetSVGKeysNetAnchorsAsNets(t *testing.T) {
 	g, sheet := keyFixture()
 	sheet.Placements = append(sheet.Placements, &geom.SymbolPlacement{
@@ -575,14 +575,14 @@ func TestSheetSVGKeysNetAnchorsAsNets(t *testing.T) {
 	if !strings.Contains(out, `data-net="DGND"`) {
 		t.Fatalf("the anchor's net is not keyed:\n%s", first(out, 600))
 	}
-	// An anchor's pin gets no pick target: it belongs to a symbol that is not a component, so the
-	// target would carry an empty ref and resolve to nothing, and what a reader means by clicking a
-	// ground glyph is its net.
+	// An anchor's pin gets no pick target because it belongs to a symbol that is not a component,
+	// so the target would carry an empty ref and resolve to nothing, and what a reader means by
+	// clicking a ground glyph is its net.
 	picky := SheetSVG(g, sheet, WithPickTargets())
 	if strings.Contains(picky, `data-kind="pin" data-ref=""`) {
 		t.Error("an anchor emitted a pin target with no identity")
 	}
-	// And not as a component: an anchor has no ref_des to join.
+	// And not as a component, since an anchor has no ref_des to join.
 	if strings.Contains(out, `data-kind="component" data-ref=""`) {
 		t.Error("an anchor was keyed as a component with an empty ref")
 	}

@@ -3,7 +3,7 @@ import { artifactUri, uriPath } from "./uri.js";
 import { DesignPreview, captionFor, pickPreviewSheet, type PreviewView } from "./preview.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 
-// Fakes follow the diffpresenter.test.ts harness: plain stubs behind the typed client and a
+// Fakes follow the diffpresenter.test.ts harness, with plain stubs behind the typed client and a
 // recording view. defer lets a test hold a response open so an out-of-order landing is reachable.
 function harness(over: { getDesign?: ReturnType<typeof vi.fn>; getSheet?: ReturnType<typeof vi.fn> } = {}) {
   const getDesign =
@@ -44,7 +44,7 @@ describe("DesignPreview", () => {
     const h = harness();
     await h.preview.show("corpus", "boards/amp.kicad_sch");
 
-    // An EMPTY layout is the request that makes the preview faithful-first: the server resolves
+    // An EMPTY layout is the request that makes the preview faithful-first, because the server resolves
     // "" to the faithful layout whenever the file carries geometry. Pinning it stops a later edit
     // from hard-coding a layout and silently drawing every design as a netlist graph.
     expect(h.getDesign).toHaveBeenCalledWith({ uri: artifactUri("corpus", "boards/amp.kicad_sch"), layout: "" });
@@ -67,7 +67,7 @@ describe("DesignPreview", () => {
       sourceFormat: "kicad-pcb",
       componentCount: 2,
       netCount: 2,
-      // The board sheet comes LAST: the service appends it after the drawable sheets, so the
+      // The board sheet comes LAST. The service appends it after the drawable sheets, so the
       // first sheet of a board file is a synthetic auto-layout of its netlist.
       sheets: [
         { id: "graph", name: "netlist graph" },
@@ -84,7 +84,7 @@ describe("DesignPreview", () => {
 
   // Clicking down a file list starts a load per file, and a small design behind a large one
   // returns first. The stage must settle on the LAST design asked for, not the last to answer.
-  // There are two places a load can go stale, and they need separate cases: a load can still be
+  // There are two places a load can go stale, and they need separate cases. A load can still be
   // waiting on GetDesign when a newer one starts, or it can already be waiting on GetSheet. One
   // test only ever reaches whichever guard comes first.
   it("drops a stale load still waiting on the design lookup", async () => {
@@ -101,7 +101,7 @@ describe("DesignPreview", () => {
     slow.resolve({ ...base, sheets: [{ id: "s1", name: "Slow" }] });
     await first;
 
-    // The stale load must not even ASK for its sheet — that request would race the fast one.
+    // The stale load must not even ASK for its sheet, since that request would race the fast one.
     expect(h.getSheet).toHaveBeenCalledTimes(1);
     expect(h.showSvg).toHaveBeenCalledTimes(1);
     expect(h.showSvg).toHaveBeenCalledWith('<svg data-sheet="f1"/>');
@@ -233,7 +233,7 @@ describe("captionFor", () => {
   });
 
   // GetDesign fills format and both counts only on the AUTO-layout branch. A design carrying its
-  // own geometry takes the faithful branch, where all three are empty — so a caption built from
+  // own geometry takes the faithful branch, where all three are empty, so a caption built from
   // them alone is blank for every KiCad schematic, which is the common case, not an edge one.
   it("still says something for a faithful design, whose netlist fields are empty", () => {
     expect(captionFor("", 0, 0, 1)).toBe("1 sheet");

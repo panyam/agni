@@ -7,7 +7,7 @@ import (
 	"github.com/panyam/agni/core/facts"
 )
 
-// TestCatalogMatchesSchema is the drift guard: every EDB relation and predicate has a catalog entry
+// TestCatalogMatchesSchema is the drift guard. Every EDB relation and predicate has a catalog entry
 // with the right arity, and no catalog entry names a construct that does not exist. A relation added
 // to the fact schema (or a predicate to builtins) without a catalog row fails here, so a new relation
 // cannot ship undiscoverable. The relation half is registered with core/facts by stdlib/relations
@@ -88,8 +88,8 @@ func TestCatalogIncludesOverlayRelation(t *testing.T) {
 }
 
 // entitySuggestingLabels are arg labels that READ like they name something on the canvas. They carry
-// no meaning any more (a column's kind comes from ArgKinds), which is exactly why they need a guard:
-// a relation added with one of these labels and no declaration is the shape that used to work by
+// no meaning any more (a column's kind comes from ArgKinds), so they need a guard.
+// A relation added with one of these labels and no declaration is the shape that used to work by
 // accident and now silently types as a scalar (agni issue 548).
 var entitySuggestingLabels = map[string]bool{
 	"ref_des": true, "net": true, "from": true, "pin": true, "name": true, "label": true,
@@ -136,9 +136,9 @@ func TestEveryEntitySuggestingLabelIsDecided(t *testing.T) {
 	}
 }
 
-// TestDeclaredArgKindsAreCoherent: a declaration must name arguments the relation actually has, and
-// must pick exactly one of the three forms. A typo here would type a column as a scalar in silence,
-// which is the failure this whole change exists to stop.
+// TestDeclaredArgKindsAreCoherent checks that a declaration names arguments the relation actually
+// has, and picks exactly one of the three forms. A typo here would type a column as a scalar in
+// silence.
 func TestDeclaredArgKindsAreCoherent(t *testing.T) {
 	for _, ri := range Catalog() {
 		args := map[string]bool{}
@@ -157,9 +157,10 @@ func TestDeclaredArgKindsAreCoherent(t *testing.T) {
 			case k.OwnerArg != "" && !args[k.OwnerArg]:
 				t.Errorf("%s/%s names owner %q, which is not one of its arguments %v", ri.Name, label, k.OwnerArg, ri.Args)
 			case k.KindArg == "" && k.Entity == "" && len(k.ValidOptions) == 0:
-				// Domain joined Entity and KindArg as a third thing an ArgKind can say (agni 696): the
-				// column names no entity but holds a closed set of values. The invariant is unchanged,
-				// an ArgKind that says NOTHING should be omitted; what counts as saying something grew.
+				// Domain joined Entity and KindArg as a third thing an ArgKind can say (agni 696).
+				// The column names no entity but holds a closed set of values. The invariant is
+				// unchanged (an ArgKind that says NOTHING should be omitted); what counts as saying
+				// something grew.
 				t.Errorf("%s/%s declares no Entity, KindArg or Domain, so it says nothing; omit it instead", ri.Name, label)
 			case len(k.ValidOptions) > 0 && k.Entity != "":
 				// An entity column's values are names the design chose, so they cannot also be a closed

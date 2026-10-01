@@ -12,7 +12,7 @@ A `learn/` chapter still teaches a term in full the first time it introduces it.
 anywhere on the site, is a tag. Within a single page, tag the FIRST mention only and leave the rest as
 plain text, since a page of dotted underlines helps nobody.
 
-Authors: [the docsite README](https://github.com/panyam/agni/blob/main/docsite/README.md) has the
+For authors, [the docsite README](https://github.com/panyam/agni/blob/main/docsite/README.md) has the
 mechanics, and `terms_test.go` fails the build on a tag naming a term that does not exist, a term
 missing from this index, or a term nothing references.
 

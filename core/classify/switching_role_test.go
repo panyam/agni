@@ -8,9 +8,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestSwitchingRoleVocabulary: the switching vocabulary matches a regulator's power-stage nodes and
-// nothing else. The negative half carries the weight here, because a vocabulary that matched every
-// net would satisfy the positive half alone and read as working.
+// TestSwitchingRoleVocabulary checks that the switching vocabulary matches a regulator's
+// power-stage nodes and nothing else. The negative half carries the weight here, because a
+// vocabulary that matched every net would satisfy the positive half alone and read as working.
 func TestSwitchingRoleVocabulary(t *testing.T) {
 	v := DefaultRoleVocab()
 	for _, name := range []string{"12V_SW", "3V3_PHASE", "5V_BOOT", "VCC_LX", "/DCDC/12V_SW"} {
@@ -25,10 +25,10 @@ func TestSwitchingRoleVocabulary(t *testing.T) {
 	}
 }
 
-// TestStampNetRolesStampsSwitching: a switch node is stamped with BOTH roles, the same way a
-// rail-named feedback node is. The stamp still records every match; what changed with agni 680 is
-// that rail-versus-regulator-internal precedence is settled in Model.IsRailNet rather than by each
-// consumer, and that is asserted in core/check.
+// TestStampNetRolesStampsSwitching checks that a switch node is stamped with BOTH roles, the same
+// way a rail-named feedback node is. The stamp still records every match; what changed with agni
+// 680 is that rail-versus-regulator-internal precedence is settled in Model.IsRailNet rather than
+// by each consumer, and that is asserted in core/check.
 func TestStampNetRolesStampsSwitching(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
 		{Name: "12V_SW"}, {Name: "AMP_PHASE"}, {Name: "+5V"},
@@ -46,9 +46,9 @@ func TestStampNetRolesStampsSwitching(t *testing.T) {
 	}
 }
 
-// TestSwitchingVocabularyIsProjectExtensible: the role is lexicon config like every other, so a house
-// convention the built-in patterns miss is reachable without patching the engine. This is the
-// property agni 677 says a component CLASS does not have.
+// TestSwitchingVocabularyIsProjectExtensible checks that the role is lexicon config like every
+// other, so a house convention the built-in patterns miss is reachable without patching the engine.
+// This is the property agni 677 says a component CLASS does not have.
 func TestSwitchingVocabularyIsProjectExtensible(t *testing.T) {
 	v, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Switching: &configpb.VocabPatterns{Patterns: []string{`_HSD$`}}}})
 	if err != nil {

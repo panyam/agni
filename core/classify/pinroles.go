@@ -4,9 +4,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// underspecifiedInputDir reports whether a direction is an input-ish value a reader falls back to when
-// it cannot type a pin's electrical role. EDIF's port grammar carries only INPUT/OUTPUT/INOUT, so a
-// supply pin reads as plain INPUT; these are the directions StampPowerInPins may promote to POWER_IN.
+// underspecifiedInputDir reports whether d is an input-ish direction a reader falls back to when it
+// cannot type a pin's electrical role, which makes it one StampPowerInPins may promote to POWER_IN.
 // OUTPUT/POWER_OUT/POWER_IN/PASSIVE/NO_CONNECT are confident classifications and are never touched.
 func underspecifiedInputDir(d ir.PinDirection) bool {
 	switch d {
@@ -19,20 +18,17 @@ func underspecifiedInputDir(d ir.PinDirection) bool {
 }
 
 // StampPowerInPins FILLS the POWER_IN electrical type on supply pins a reader left under-typed
-// (WS3-072 PR2), once at ingestion. A source that classifies pin electrical type (KiCad, gEDA) already
-// marks a VCC/VIN pin POWER_IN, so this is a no-op there; a source that does NOT (EDIF's port grammar
-// carries only INPUT/OUTPUT/INOUT) leaves a VDD pin as plain INPUT, and this promotes it to POWER_IN
-// where the direction is under-specified AND the pin name is a supply name. Then every power-pin rule
-// works format-neutrally on a plain PinDir == POWER_IN check and the WS3-036 supplyInputPin interim is
-// removed.
+// (WS3-072 PR2), once at ingestion. KiCad and gEDA already mark a VCC/VIN pin POWER_IN, so it is a
+// no-op there. EDIF's port grammar carries only INPUT/OUTPUT/INOUT, so a VDD pin reads as plain INPUT,
+// and this promotes it where the direction is under-specified AND the pin name is a supply name. Every
+// power-pin rule then checks PinDir == POWER_IN whatever the format.
 //
-// This is the FILL variant of the C9 DERIVED-NORMALIZATION carve-out: unlike device_classes / net.roles
-// (new fields no reader populates), it normalizes an EXISTING reader-set field to a more specific value
-// where the reader was under-specified — and only there, so a confident OUTPUT/POWER_OUT is never
-// overwritten. It degrades safely when the pass did not run (the reader's INPUT stands; the power-pin
-// rules simply do not fire, absent-tolerant), meeting carve-out condition (c). Mutates the shared
-// part-type pins (a pin name is a part-type property, so a promotion is consistent across every
-// instance of the part). Idempotent.
-// It promotes from the PROCESS-level lexicon; a read carrying its own conventions calls
+// This is the FILL variant of the C9 DERIVED-NORMALIZATION carve-out. It narrows an EXISTING
+// reader-set field only where the reader was under-specified, so a confident OUTPUT/POWER_OUT is never
+// overwritten. When the pass did not run, the reader's INPUT stands and the power-pin rules do not
+// fire, which meets carve-out condition (c). It mutates the shared part-type pins, so a promotion holds
+// for every instance of the part. Idempotent.
+//
+// This is the process-level form; a read carrying its own conventions calls
 // (*Lexicon).StampPowerInPins instead (WS3-106).
 func StampPowerInPins(d *ir.Design) { ActiveLexicon().StampPowerInPins(d) }

@@ -1,8 +1,7 @@
 // Package sexpr is the shared s-expression parser for the format readers (KiCad, EDIF) and the
 // coverage census. It is a streaming tokenizer plus a generic AST, parameterized on the ONE point
-// where the KiCad and EDIF dialects diverge — how a quoted string's bytes are resolved — so a
-// single implementation serves both without changing either's observed behavior. Readers extract
-// their format subset from the generic tree (as edif/reader.go and kicad/*.go do today); the
+// where the KiCad and EDIF dialects diverge, how a quoted string's bytes are resolved (StringMode).
+// Readers extract their format subset from the generic tree (readers/edif, readers/kicad), and the
 // census walks it for the construct vocabulary.
 //
 // It streams via bufio (built for EDIF's multi-MB exports); a top-level Parse returns one node.
@@ -92,7 +91,7 @@ func Collect(n *Node, head string, out *[]*Node) {
 	}
 }
 
-// StringMode selects how a quoted string's bytes are resolved — the only point where the KiCad and
+// StringMode selects how a quoted string's bytes are resolved, the only point where the KiCad and
 // EDIF dialects diverge.
 type StringMode int
 
@@ -100,19 +99,18 @@ const (
 	// KiCadStrings decodes backslash escapes (\n -> newline, \t -> tab, \<c> -> <c>) and keeps
 	// literal newlines. The backslash also escapes a quote, so \" does not terminate the string.
 	KiCadStrings StringMode = iota
-	// EDIFStrings does NO escape processing and DROPS CR/LF inside a string: machine-generated EDIF
-	// is column-wrapped, splitting a token across a newline, and dropping the newline rejoins it
-	// losslessly (WS1-026). A backslash is an ordinary byte; any '"' terminates the string.
+	// EDIFStrings decodes only %<decimal codes>% escapes and DROPS CR/LF inside a string, because
+	// machine-generated EDIF is column-wrapped and dropping the newline rejoins a split token
+	// (WS1-026). A backslash is an ordinary byte, and any '"' terminates the string.
 	EDIFStrings
 )
 
 // Parse reads the top-level s-expression from r, resolving quoted strings per mode.
 //
-// The whole input must be that one expression. Input left over after it is an error rather than
-// something to ignore, because the only way to reach it is an unbalanced ')' earlier in the file,
-// and the tree already built is then a truncated PREFIX of the design. Returning it looks exactly
-// like a clean read of a small board: a KiCad demo with 349 surplus parens read as 2 of its 71
-// footprints, and `agni validate` called that ok (agni issue 562).
+// The whole input must be that one expression. Leftover input is an error, because it means an
+// unbalanced ')' closed the tree early and what was built is a truncated PREFIX that reads like a
+// small clean board. A KiCad demo with 349 surplus parens read as 2 of its 71 footprints (agni issue
+// 562).
 func Parse(r io.Reader, mode StringMode) (*Node, error) {
 	t := &tokenizer{r: bufio.NewReaderSize(r, 1<<20), mode: mode, line: 1}
 	tok, err := t.scan()
@@ -233,10 +231,9 @@ func (t *tokenizer) scanString() (token, error) {
 			return token{kind: tokString, text: string(buf)}, nil
 		}
 		if t.mode == EDIFStrings && b == '%' {
-			// EDIF escapes characters not directly representable as %<decimal code(s)>%:
-			// %10% -> newline, %72 73% -> "HI". A '%' that does not form a valid escape is
-			// kept literally (and its consumed bytes restored), so ordinary text with a
-			// stray percent is lossless.
+			// EDIF escapes characters as %<decimal code(s)>%, e.g. %10% -> newline,
+			// %72 73% -> "HI". A '%' that does not form a valid escape is kept literally, with
+			// its consumed bytes restored.
 			raw, closed := t.readEDIFPercent()
 			if dec, ok := decodeEDIFCodes(raw); ok && closed {
 				buf = append(buf, dec...)

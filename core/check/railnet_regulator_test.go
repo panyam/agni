@@ -7,7 +7,7 @@ import (
 )
 
 // regulatorPageDesign is one buck converter's worth of net names, the shape a real regulator page
-// produces: every internal node is named after the rail it serves, so every one of them matches the
+// produces. Every internal node is named after the rail it serves, so every one of them matches the
 // rail vocabulary on its prefix.
 func regulatorPageDesign() *ir.Design {
 	return &ir.Design{Nets: []*ir.Net{
@@ -16,7 +16,7 @@ func regulatorPageDesign() *ir.Design {
 	}}
 }
 
-// TestRailNetExcludesRegulatorInternals: the rail question has one answer and it is decided here.
+// TestRailNetExcludesRegulatorInternals is where the rail question gets its one answer.
 // A feedback tap, a switch node and a bootstrap node all read as rails by NAME, and none of them
 // carries the rail's voltage, so none is a rail (agni 679, 680).
 func TestRailNetExcludesRegulatorInternals(t *testing.T) {
@@ -43,10 +43,10 @@ func TestRailNetExcludesRegulatorInternals(t *testing.T) {
 	}
 }
 
-// TestRailNameStillSeesEveryRailNamedNet: excluding regulator internals from the rail ROLE must not
-// change what the name vocabulary answers. A consumer that genuinely wants every rail-named net,
-// including the internals, still has IsPowerRailName, and the spec-language rail_name FFI is built
-// on it.
+// TestRailNameStillSeesEveryRailNamedNet checks that excluding regulator internals from the rail
+// ROLE does not change what the name vocabulary answers. A consumer that genuinely wants every
+// rail-named net, including the internals, still has IsPowerRailName, and the spec-language
+// rail_name FFI is built on it.
 func TestRailNameStillSeesEveryRailNamedNet(t *testing.T) {
 	m := NewModel(regulatorPageDesign())
 	for _, name := range []string{"12V_OUT", "12V_FB", "12V_SW", "12V_BOOT", "12V_PHASE"} {
@@ -56,8 +56,8 @@ func TestRailNameStillSeesEveryRailNamedNet(t *testing.T) {
 	}
 }
 
-// TestSwitchingNameMatchesTheModelLexicon: the model-scoped projection answers the same as the
-// package-level helper, so a rule holding a Model and a spec FFI over a bare literal agree.
+// TestSwitchingNameMatchesTheModelLexicon checks that the model-scoped projection answers the same
+// as the package-level helper, so a rule holding a Model and a spec FFI over a bare literal agree.
 func TestSwitchingNameMatchesTheModelLexicon(t *testing.T) {
 	m := NewModel(regulatorPageDesign())
 	for _, name := range []string{"12V_SW", "12V_BOOT", "12V_OUT", "SDA"} {

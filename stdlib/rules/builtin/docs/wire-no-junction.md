@@ -9,25 +9,26 @@ placed, so the two wires are electrically separate despite touching on screen.
 ### Why engineers want it
 
 This is the sibling of dangling-endpoint with the opposite
-disguise: a dangling end is visibly incomplete if you look closely, but an undotted T-tap
+disguise, because a dangling end is visibly incomplete if you look closely while an undotted T-tap
 looks EXACTLY like a connected one. The mistake survives visual review by construction and
 surfaces at bring-up as a missing connection between two otherwise-healthy nets.
 
 ### Impact
 
 Net A and net B behave normally in isolation, and every net-level rule sees two
-well-formed nets, so nothing else can catch it. The drawing is the only witness, and the
-drawing lies.
+well-formed nets, so nothing else can catch it. Only the drawing shows it, and the
+drawing shows the wires joined.
 
 ![undotted T-tap flagged as two nets vs a dotted T that is one net](images/wire-no-junction.svg)
 
 ### Scope
 
 Endpoint-on-body only. Two wires that merely CROSS (no endpoint at the meet)
-never flag: KiCad does not connect crossings regardless, so the drawing tells no lie. A
+never flag, because KiCad does not connect crossings and the drawing shows them unjoined. A
 label at the touch point joins the wires by name (both attach to it) and the reader has
-already split the segment there, so labeled taps do not flag either. KiCad-family
-semantics: formats whose tools auto-connect T-touches (gEDA) never emit the diagnostic.
+already split the segment there, so labeled taps do not flag either. Only the KiCad
+reader supplies the diagnostic, so on every other format the rule reports not-applicable rather
+than a clean pass.
 
 ### Query structure
 
@@ -45,7 +46,7 @@ coordinates coincide, the way whitespace-significant syntax gives meaning to lay
 touching wires join only at endpoints or where the author placed a junction dot (the
 explicit "yes, these join" marker). A wire ENDING on the MIDDLE of another wire, with no
 dot, is a file that LOOKS imported because it sits in the right directory but was never
-added to the build: every human reads it as connected, the toolchain disagrees, and both
+added to the build, so every human reads it as connected while the toolchain disagrees, and both
 halves are individually healthy so nothing else can reveal the gap.
 
 ![t-tap cases](images/tjunc-cases.png)

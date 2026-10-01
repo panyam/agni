@@ -7,8 +7,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestClockFamilyTagRetention: each clock subtype answers HasClass(clock) (family membership), and an
-// oscillator does NOT answer HasClass(crystal) — the family is clock, not crystal (WS10-015).
+// TestClockFamilyTagRetention checks that each clock subtype answers HasClass(clock) (family
+// membership), and that an oscillator does NOT answer HasClass(crystal), since the family is clock,
+// not crystal (WS10-015).
 func TestClockFamilyTagRetention(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "X1", DeviceClasses: classify.Tags(string(ClassOscillator), string(ClassClock))},

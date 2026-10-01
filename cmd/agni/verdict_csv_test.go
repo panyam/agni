@@ -20,7 +20,7 @@ func runCheck(t *testing.T, args ...string) string {
 	return out.String()
 }
 
-// The verdict table's whole reason for existing is that a PASS appears in it. A findings table cannot
+// The verdict table exists so that a PASS appears in it. A findings table cannot
 // show one, so an engineer reading it cannot tell a clean subject from one nobody checked.
 func TestVerdictCSVShowsAPassWithItsProof(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "csv", "testdata/conformance/showcase.fires.kicad_sch")
@@ -71,9 +71,9 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 	if strings.Contains(raw, "verdict_id") {
 		t.Errorf("the findings csv must keep its own header:\n%s", raw)
 	}
-	// Every findings row is a violation, so every row carries a severity. A verdict row would not:
-	// a pass has nothing to grade. Asserted on the PARSED column rather than by searching the text,
-	// because a subject can legitimately appear here from another rule (SDA is reported by
+	// Every findings row is a violation, so every row carries a severity. A verdict row would not,
+	// since a pass has nothing to grade. Asserted on the PARSED column rather than by searching the
+	// text, because a subject can legitimately appear here from another rule (SDA is reported by
 	// reverse-blocking-absent on this fixture) and a substring match cannot tell the two apart.
 	sev, rule, subj := 0, 2, 4
 	for _, r := range recs[1:] {
@@ -88,7 +88,7 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 	// makes unavoidable once the field exists on the response, so what is asserted is that no verdict
 	// DATA rides along.
 	//
-	// Whitespace-insensitive on purpose: protojson deliberately varies the spacing after a colon to
+	// Whitespace-insensitive because protojson varies the spacing after a colon on purpose to
 	// discourage byte-comparing its output, so `"verdicts": []` and `"verdicts":  []` are both it.
 	js := strings.Join(strings.Fields(runCheck(t, "--format", "json", design)), " ")
 	if !strings.Contains(js, `"verdicts": []`) {
@@ -99,8 +99,8 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 	}
 }
 
-// A verdict id has to survive the trip out to the CLI, since it is the whole basis of a row being
-// addressable from a report or a link.
+// A verdict id has to survive the trip out to the CLI, since a row is addressable from a report or a
+// link only through it.
 func TestVerdictCSVCarriesTheDerivedID(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "csv", "testdata/conformance/showcase.fires.kicad_sch")
 	for _, want := range []string{"i2c-pull-up:(net:SDA)", "i2c-pull-up:(net:SCL)"} {

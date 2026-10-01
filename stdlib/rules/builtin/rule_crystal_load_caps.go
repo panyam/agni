@@ -28,8 +28,8 @@ var crystalLoadCaps = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// crystalTerminal is one oscillator terminal of one clock part: the net it sits on and the part's own
-// pin on that net. Both are needed, and for different jobs. The NET is what carries the capacitor and
+// crystalTerminal is one oscillator terminal of one clock part, holding the net it sits on and the
+// part's own pin on that net. Both are needed, and for different jobs. The NET is what carries the capacitor and
 // what the finding's sentence names; the PIN is what makes the verdict addressable, since a crystal
 // has two terminals and a verdict keyed by the part alone would be one identity for both.
 type crystalTerminal struct {
@@ -45,8 +45,8 @@ type clockPart struct {
 }
 
 // crystalLoadCapsVerdicts decides every oscillator TERMINAL of every passive crystal, one verdict
-// each. The terminal is the subject because the terminal is the question: a crystal with a cap on one
-// leg and none on the other is half right, and a part-level verdict could not say which half. The
+// each. The terminal is the subject because a crystal with a cap on one leg and none on the other is
+// half right, and a part-level verdict could not say which half. The
 // Finding stays part-scoped, matching what the viewer highlights and what every existing test asserts,
 // the same split the per-pin datasheet rules already draw.
 //
@@ -54,19 +54,18 @@ type clockPart struct {
 // component, so the enumeration quantifies over components and then over nets, rather than over nets
 // alone.
 //
-// THE TWO-TERMINAL GATE BECOMES NotConsidered, and it is the one exemption that deserved a voice. A
-// clock part carrying a recognized rail IS an active oscillator, which takes no external load caps, so
-// it is genuinely not a subject of this rule and gets no verdict. But the terminal COUNT is a
-// heuristic standing in for the same question where the rail is not recognizable, and a real EDIF
-// corpus supplied exactly that case: an oscillator whose Vcc net was neither flagged nor rail-named.
-// A part failing that count is one the rule declined to classify, not one it cleared, and the two used
-// to be the same silence.
+// THE TWO-TERMINAL GATE IS NotConsidered. A clock part carrying a recognized rail IS an active
+// oscillator, which takes no external load caps, so it is not a subject of this rule and gets no
+// verdict. The terminal COUNT is a heuristic for the same question where the rail is not
+// recognizable, as with an oscillator on a real EDIF corpus whose Vcc net was neither flagged nor
+// rail-named. A part failing that count is one the rule declined to classify, so it reports
+// NotConsidered rather than a pass.
 func crystalLoadCapsVerdicts(m check.Model) []check.Verdict {
 	parts := map[string]*clockPart{}
 	var order []string
 	for _, c := range m.Components() {
-		// Quantify over the CLOCK FAMILY (WS10-015), excluding the subtypes that do not take external
-		// load caps: an active oscillator has no external caps, a ceramic resonator has them integrated.
+		// Quantify over the CLOCK FAMILY (WS10-015), excluding the subtypes that take no external load
+		// caps (an active oscillator has none, a ceramic resonator has them integrated).
 		// A bare clock candidate the classifier could not subtype (the common un-seeded case) stays in,
 		// and the powered / exactly-two-terminal topology gates below remain the backstop that catches
 		// an oscillator whose Vcc net is not rail-recognizable.
@@ -106,12 +105,12 @@ func crystalLoadCapsVerdicts(m check.Model) []check.Verdict {
 	for _, ref := range order {
 		p := parts[ref]
 		if p.powered {
-			continue // an active oscillator: it carries its own drive and takes no external load caps
+			continue // an active oscillator carries its own drive and takes no external load caps
 		}
 		// A passive two-terminal resonator has EXACTLY two non-ground signal terminals. An active
 		// oscillator carries a Vcc (and often an enable/standby) pin, so it has more. Gating on the
-		// count excludes active oscillators structurally, independent of whether the supply net reads
-		// as a rail, which is the belt to the rail check's suspenders.
+		// count excludes active oscillators structurally, even when the supply net does not read as a
+		// rail.
 		if len(p.terms) != 2 {
 			out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: ref}}, Outcome: check.NotConsidered, Reason: fmt.Sprintf("the part has %d non-ground terminal(s) rather than the two a passive crystal has, "+
 				"so the rule cannot tell it from an active oscillator that needs no load caps", len(p.terms))})

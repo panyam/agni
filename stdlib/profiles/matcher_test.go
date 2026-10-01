@@ -17,7 +17,7 @@ func pulledProfile() Profile {
 	}, Requirements: []Requirement{{Type: "missing-pullup"}}}
 }
 
-// prefixedBusWithForeignNet: the profile's own bus is complete and pulled up through R1, and a
+// In prefixedBusWithForeignNet the profile's own bus is complete and pulled up through R1, and a
 // FOREIGN net shares the bare _CS suffix with no pull-up. Only the foreign net can produce a finding,
 // so any finding here is an over-match.
 func prefixedBusWithForeignNet() *ir.Design {
@@ -32,9 +32,10 @@ func prefixedBusWithForeignNet() *ir.Design {
 	}
 }
 
-// TestPrefixedProfilePullupIgnoresForeignNet: missing-pullup compiled its needs_pullup relation from
-// the bare suffix, ignoring the signal's prefix, so a prefix-discriminated profile fired on any
-// same-suffix net of a foreign bus once its own bus put it in use.
+// TestPrefixedProfilePullupIgnoresForeignNet guards a prefix-blind relation. missing-pullup
+// compiled its needs_pullup relation from the bare suffix, ignoring the signal's prefix, so a
+// prefix-discriminated profile fired on any same-suffix net of a foreign bus once its own bus put
+// it in use.
 func TestPrefixedProfilePullupIgnoresForeignNet(t *testing.T) {
 	fs := check.Run(check.NewModel(prefixedBusWithForeignNet()), Compile(pulledProfile()))
 	for _, f := range fs {
@@ -42,8 +43,9 @@ func TestPrefixedProfilePullupIgnoresForeignNet(t *testing.T) {
 	}
 }
 
-// TestPrefixedProfileDanglingIgnoresForeignNet: same defect in signal-dangling's sig_net relation.
-// FLASH_B_CS has a single connection, so a prefix-blind sig_net reports it as this bus's dangling net.
+// TestPrefixedProfileDanglingIgnoresForeignNet guards the same defect in signal-dangling's sig_net
+// relation. FLASH_B_CS has a single connection, so a prefix-blind sig_net reports it as this bus's
+// dangling net.
 func TestPrefixedProfileDanglingIgnoresForeignNet(t *testing.T) {
 	p := pulledProfile()
 	p.Requirements = []Requirement{{Type: "signal-dangling"}}
@@ -55,9 +57,9 @@ func TestPrefixedProfileDanglingIgnoresForeignNet(t *testing.T) {
 	}
 }
 
-// TestNetsScopeRespectsMatcher: the review scope (profiles.Nets/Components, the seam a per-interface
-// item filters its findings through) matched by suffix alone, so a prefixed profile's scope pulled in
-// foreign nets — and the components on them — that no rule of that profile can ever name.
+// TestNetsScopeRespectsMatcher guards the review scope (profiles.Nets/Components, what a per-interface
+// item filters its findings through), which matched by suffix alone, so a prefixed profile's scope
+// pulled in foreign nets, and the components on them, that no rule of that profile can ever name.
 func TestNetsScopeRespectsMatcher(t *testing.T) {
 	m := check.NewModel(prefixedBusWithForeignNet())
 	got := Nets(m, pulledProfile())
@@ -72,9 +74,9 @@ func TestNetsScopeRespectsMatcher(t *testing.T) {
 	}
 }
 
-// TestCoverageRespectsMatcher: the WS9-041 coverage panel bound each signal by suffix alone, so a
-// prefixed profile could display a foreign net as the signal's net — a cell disagreeing with every
-// finding, which the panel's contract says cannot happen.
+// TestCoverageRespectsMatcher guards the WS9-041 coverage panel, which bound each signal by suffix
+// alone, so a prefixed profile could display a foreign net as the signal's net, a cell disagreeing
+// with every finding, which the panel's contract says cannot happen.
 func TestCoverageRespectsMatcher(t *testing.T) {
 	d := prefixedBusWithForeignNet()
 	// Put the foreign net FIRST so a suffix-only scan reaches it before the profile's own CS net.
@@ -94,7 +96,7 @@ func TestCoverageRespectsMatcher(t *testing.T) {
 	}
 }
 
-// ethLike is the WS3-057 forcing case: the bus identity is the PREFIX (ETH_SW1_P1) and the suffix
+// ethLike is the WS3-057 forcing case. The bus identity is the PREFIX (ETH_SW1_P1) and the suffix
 // (_H/_L) is shared with CAN, so affix matching cannot express it. A glob can.
 func ethLike() Profile {
 	return Profile{Name: "EthTest", Signals: []Signal{
@@ -112,7 +114,7 @@ func canLike() Profile {
 	}, Requirements: []Requirement{{Type: "signal-missing"}}}
 }
 
-// TestGlobDiscriminatesSharedSuffix is the ticket's acceptance case: an Ethernet profile matching
+// TestGlobDiscriminatesSharedSuffix is the ticket's acceptance case. An Ethernet profile matching
 // ETH_SW*_H and a CAN profile matching CAN_*_H do not cross-match on a design carrying both. Each
 // fires only for ITS OWN incomplete bus, and neither anchors on the other's nets.
 func TestGlobDiscriminatesSharedSuffix(t *testing.T) {
@@ -144,8 +146,8 @@ func TestGlobDiscriminatesSharedSuffix(t *testing.T) {
 	}
 }
 
-// TestGlobProfileSilentOnForeignBusOnly: with no Ethernet at all, the glob profile is not in use and
-// says nothing about the CAN nets that share its _H/_L suffixes.
+// TestGlobProfileSilentOnForeignBusOnly checks that with no Ethernet at all the glob profile is not
+// in use and says nothing about the CAN nets that share its _H/_L suffixes.
 func TestGlobProfileSilentOnForeignBusOnly(t *testing.T) {
 	d := &ir.Design{Components: comps("U3", "U4"), Nets: []*ir.Net{
 		net("CAN_00_H", "U3.1", "U4.1"),
@@ -156,8 +158,8 @@ func TestGlobProfileSilentOnForeignBusOnly(t *testing.T) {
 	}
 }
 
-// TestRegexSignalMatching: the escape hatch expresses multi-instance naming a glob cannot — here
-// "an ETH port's H line, but only the 1000M ones" — and stays off the 10M port and off CAN.
+// TestRegexSignalMatching checks that the escape hatch expresses multi-instance naming a glob
+// cannot, here "an ETH port's H line, but only the 1000M ones", and stays off the 10M port and off CAN.
 func TestRegexSignalMatching(t *testing.T) {
 	p := Profile{Name: "EthGig", Signals: []Signal{
 		{Name: "H", Regex: `^ETH_SW\d+_P\d+_1000M_._H$`, Anchor: true},
@@ -186,7 +188,7 @@ func TestRegexSignalMatching(t *testing.T) {
 	}
 }
 
-// TestInUseAgreesWithRulesForGlobAndRegex holds the WS3-090 twin discipline across the new forms: the
+// TestInUseAgreesWithRulesForGlobAndRegex holds the WS3-090 twin discipline across the new forms. The
 // Go presence gate and the compiled in_use gate must reach the same verdict, or an interface the rules
 // cannot fire on is scored as a clean pass by a review.
 func TestInUseAgreesWithRulesForGlobAndRegex(t *testing.T) {
@@ -215,9 +217,9 @@ func TestInUseAgreesWithRulesForGlobAndRegex(t *testing.T) {
 	}
 }
 
-// TestSuffixOnlyProfilesUnchanged: every built-in is suffix-only, so routing the previously
-// suffix-only rules through the matcher must leave them byte-identical. spinorBroken's three findings
-// are the ones TestCoverageBroken pins.
+// TestSuffixOnlyProfilesUnchanged covers the built-ins. Every built-in is suffix-only, so routing
+// the previously suffix-only rules through the matcher must leave them byte-identical.
+// spinorBroken's three findings are the ones TestCoverageBroken pins.
 func TestSuffixOnlyProfilesUnchanged(t *testing.T) {
 	m := check.NewModel(spinorBroken())
 	names := map[string]int{}
@@ -260,8 +262,9 @@ func TestValidateSignalMatcher(t *testing.T) {
 	}
 }
 
-// TestCompilePanicsOnUnsoundMatcher: a Go-literal profile never goes through Parse, so Compile is its
-// only gate. Generating rules from a matcher-less signal would select every net on the design.
+// TestCompilePanicsOnUnsoundMatcher exists because a Go-literal profile never goes through Parse,
+// so Compile is its only gate. Generating rules from a matcher-less signal would select every net
+// on the design.
 func TestCompilePanicsOnUnsoundMatcher(t *testing.T) {
 	defer func() {
 		r := recover()

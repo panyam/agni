@@ -34,9 +34,9 @@ func TestSheetSVG_FreeTextColumnsFit(t *testing.T) {
 		Sheets: []*geom.SheetGeometry{{
 			Size: &geom.BBox{Min: &geom.Point{}, Max: &geom.Point{X: 10000, Y: 8000}},
 			Labels: []*geom.Label{
-				// A narrow left column: it would fit on its own, but shrinks with the rest.
+				// A narrow left column. It would fit on its own, but shrinks with the rest.
 				{Text: "NARROW\nN2", Origin: &geom.Point{X: 500, Y: 7000}, Height: 120, Justify: "left"},
-				// The rightmost column: its widest line exceeds the gap to the right frame edge.
+				// The rightmost column, whose widest line exceeds the gap to the right frame edge.
 				{Text: wideLine + "\nW2", Origin: &geom.Point{X: 5000, Y: 7000}, Height: 120, Justify: "left"},
 			},
 		}},
@@ -171,7 +171,7 @@ func TestFreeTextFitSkipsSchematicSheet(t *testing.T) {
 }
 
 // TestFreeTextFitDemoFixture drives the same scope rule end to end through the real EDIF reader on
-// the redistributable freetext-fit-demo.eds fixture: its "NOTES ON A SCHEMATIC" page carries two
+// the redistributable freetext-fit-demo.eds fixture. Its "NOTES ON A SCHEMATIC" page carries two
 // component placements plus an overflowing multi-line note, and its "CONTENTS" page is a
 // documentation page (no placements) with an overflowing column. The schematic page must skip the
 // fit (its note stays at natural, legible size) while the documentation page still gets fitted.

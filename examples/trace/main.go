@@ -1,6 +1,6 @@
-// Command trace is the trace rung of the Agni examples ladder: follow one pin to another
-// through the series parts between them and read the route. It is the walkthrough form of
-// `agni trace`. The narration lives in the sidecar walkthrough.md (demokit FromMarkdown);
+// Command trace is the trace rung of the Agni examples ladder. It follows one pin to another
+// through the series parts between them and prints the route. It is the walkthrough form of
+// `agni trace`. The narration lives in the sidecar walkthrough.md (demokit FromMarkdown), and
 // this file only binds the steps that run engine code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
@@ -26,13 +26,12 @@ import (
 var walkthroughMD []byte
 
 // The bundled fixture and the pins the walkthrough follows across it. They are package-level
-// because the prose in walkthrough.md states what they do, and trace_test.go holds those claims
-// against the fixture. A default that lived only inside main() could move without the test noticing,
-// which is how a narrated example starts teaching something the code no longer does.
+// because walkthrough.md states what they do and trace_test.go holds those claims against the
+// fixture. A default inside main() could move without the test noticing.
 const (
 	defaultDesign = "../common/designs/i2c-sensor/i2c-sensor.edn"
-	// The schematic the design declares as its companion. The CLI finds this through the folder's
-	// design.yaml; an example naming one file names both, which keeps the drawing step readable.
+	// The schematic the design declares as its companion. The CLI finds it through the folder's
+	// design.yaml, and this example names it directly to keep the drawing step readable.
 	defaultSchematic = "../common/designs/i2c-sensor/i2c-sensor.eds"
 	defaultFrom      = "U1.3"
 	defaultTo        = "J1.1"
@@ -155,8 +154,8 @@ func parseEndpoint(s string) (check.Endpoint, error) {
 	return check.Endpoint{RefDes: ref, Pin: pin}, nil
 }
 
-// traceLines narrates one trace: the route as a line to read, then each net with what else sits
-// on it. The three outcomes are kept apart, which is the part of the API worth showing.
+// traceLines narrates one trace as the route on one line, then each net with what else sits on
+// it. The three outcomes (routed, no route, unresolved) print differently.
 func traceLines(t check.Trace) string {
 	var b strings.Builder
 	switch t.Outcome {
@@ -195,11 +194,9 @@ func traceLines(t check.Trace) string {
 
 // drawTrace writes the trace onto the design's drawn schematic as an SVG, and returns the path.
 //
-// The conversion is four lines because Trace was built to make it four lines: the nets it passed
-// through and the parts it crossed ARE the subjects a highlight overlay takes, so nothing has to be
-// re-derived and no second walk happens. An embedder wanting different colours or a different set of
-// subjects writes their own version of this loop, which is the point of showing it rather than
-// calling a helper that hides it.
+// The nets a Trace passed through and the parts it crossed ARE the subjects a highlight overlay
+// takes, so nothing is re-derived and no second walk happens. An embedder wanting different
+// colours or subjects writes their own version of this loop.
 func drawTrace(designPath string, t check.Trace, out string) (string, error) {
 	if designPath != defaultDesign {
 		return "", fmt.Errorf("this step draws the bundled design's own schematic (%s); "+

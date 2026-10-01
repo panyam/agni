@@ -24,8 +24,9 @@ This and an incomplete map are opposite defects, and they get confused constantl
 - **A net the netlist has and the map does not declare** is usually an incomplete map. The design is
   fine and the document is behind.
 
-This rule reports the first. The second is a coverage question, because the interesting number there
-is not a failure count but how much of the netlist the map covers at all: a design with sixteen
+This rule reports the first. The second is a coverage question, which `intent/io-map-coverage`
+reports, because the interesting number there is not a failure count but how much of the netlist the
+map covers at all, and a design with sixteen
 hundred nets and a map declaring two hundred has two hundred checked and fourteen hundred
 UNEXAMINED, which is not the same as clean.
 
@@ -34,15 +35,15 @@ UNEXAMINED, which is not the same as clean.
 When no net carries the declared name but one differs from it only by spelling, the verdict is
 `inconclusive` and names the net it found, rather than failing.
 
-That distinction is the difference between a tool people trust and one they switch off. Sending a
+Sending a
 reviewer to look for a missing net that is present, under a name differing by an invisible character
 pasted out of a spreadsheet, costs more than the finding is worth. We measured a shipped checker of
 this kind against a large production board and every warning it produced was a comparison artifact of
 exactly this family.
 
-Spelling here means the shared identifier comparison: case, invisible characters, zero-padded and
-bracketed indices. It does not mean a fuzzy match, since dropping a token from a net name names a
-different net.
+Spelling here means what the shared identifier comparison forgives, which is case, invisible
+characters, and zero-padded and bracketed indices. It does not mean a fuzzy match, since dropping a
+token from a net name names a different net.
 
 ### Declaring it
 

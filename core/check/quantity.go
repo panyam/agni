@@ -14,16 +14,15 @@ const UnitOhm = classify.UnitOhm
 // ComponentValue returns a component's value in its unit's SI BASE unit, the unit symbol, and whether a
 // number is available (WS3-118).
 //
-// ok is false in three DIFFERENT situations that a rule must not distinguish but a REPORT should: the
-// component carries no value attribute, it carries one the parser could not read, or it is not a part
-// that has a value at all. For a rule the answer is the same either way, and it is the params-tier
-// posture: skip, never guess. A rule that fired on a value it could not read would report a defect it
-// has no evidence for.
+// ok is false when the component has no value attribute, has one the parser could not read, or is not
+// a part that has a value at all. A rule treats all three the same way and skips, never guesses; a
+// REPORT may want to tell them apart (see ComponentValueText).
 //
 // THE UNIT IS RETURNED, NOT ASSUMED, and a caller comparing against a threshold must check it. An empty
 // unit means the number is known and the unit is not (a bare value on a class the conventions do not
-// cover), which is a real state rather than an error. Treating an empty unit as "the one I wanted" is
-// exactly the unlike-units coercion docs/20 forbids, so ComponentValueIn exists for the common case.
+// cover). Treating it as the unit you wanted is the unlike-units coercion
+// docsite/content/architecture/datasheet-layer.md#comparison-semantics forbids, so use ComponentValueIn
+// for the common case.
 func ComponentValue(m Model, refDes string) (value float64, unit string, ok bool) {
 	q := componentQuantity(m, refDes)
 	if q == nil || q.Value == nil {
@@ -33,12 +32,10 @@ func ComponentValue(m Model, refDes string) (value float64, unit string, ok bool
 }
 
 // ComponentValueIn returns a component's value only when it is expressed in the unit the caller asked
-// for, in that unit's SI base. It is the form a rule should reach for: a resistance check asks for ohms
-// and gets nothing from a capacitor, rather than a farad count it would then compare against an ohm
-// threshold.
+// for, in that unit's SI base. A rule should reach for this one, so a resistance check asking for ohms
+// gets nothing from a capacitor instead of a farad count.
 //
-// An EMPTY stored unit does not match anything, deliberately. A bare number whose unit the conventions
-// could not supply is not evidence that it is in the unit you happen to want.
+// An EMPTY stored unit matches nothing, since a bare number is not evidence of the unit you want.
 func ComponentValueIn(m Model, refDes, unit string) (float64, bool) {
 	v, u, ok := ComponentValue(m, refDes)
 	if !ok || u == "" || u != unit {
@@ -48,12 +45,11 @@ func ComponentValueIn(m Model, refDes, unit string) (float64, bool) {
 }
 
 // ComponentValueText returns the SOURCE TEXT a component's value was read from, and whether it carried
-// one at all. It is what a finding should quote: reporting "10k" tells a reviewer where to look on the
-// schematic, and reporting 10000 makes them convert it back.
+// one at all. A finding should quote this ("10k" rather than 10000) so a reviewer can find it on the
+// schematic.
 //
-// It is present even when the parse FAILED, which is the point of keeping it: "this part states DNP and
-// we could not read a number from it" is a reportable gap, and "this part states nothing" is not the
-// same gap.
+// It is present even when the parse FAILED, so a report can tell "states DNP, no number read" apart
+// from "states nothing".
 func ComponentValueText(m Model, refDes string) (string, bool) {
 	q := componentQuantity(m, refDes)
 	if q == nil {
@@ -62,9 +58,8 @@ func ComponentValueText(m Model, refDes string) (string, bool) {
 	return q.GetInput(), true
 }
 
-// componentQuantity resolves a component's stamped Quantity, or nil. It re-stamps nothing: a design
-// built by hand in a test (no ingestion pass) simply has no values, the same fallback posture
-// device_classes takes.
+// componentQuantity resolves a component's stamped Quantity, or nil. It re-stamps nothing, so a design
+// built by hand in a test (no ingestion pass) has no values, as with device_classes.
 func componentQuantity(m Model, refDes string) *ir.Quantity {
 	for _, c := range m.Components() {
 		if c.GetRefDes() == refDes {
@@ -75,27 +70,18 @@ func componentQuantity(m Model, refDes string) *ir.Quantity {
 }
 
 // OhmsLawCurrent returns the current in AMPS that volts across ohms produces, and whether the inputs
-// admit an answer. It is the first arithmetic anywhere in the engine that crosses two units (WS3-085),
-// and it is deliberately a NAMED PHYSICAL OPERATION rather than a Quantity.Div.
+// admit an answer. It is a NAMED PHYSICAL OPERATION rather than a Quantity.Div, the first arithmetic
+// in the engine that crosses two units (WS3-085).
 //
-// WHY NOT A GENERAL UNIT ALGEBRA. Every other consumer of a quantity compares within one unit, which
-// the accessors already guarantee: OutputVoltageLimits returns rows param.InBaseUnit has reduced to
-// volts, ComponentValueIn refuses a mismatched or empty unit. Scaling a prefix off a printed unit is
-// not the same problem: it stays within one dimension, which is why one table settles it and this
-// operation still cannot be expressed by one. A dimension system that could type-check
-// volts/ohms -> amps in general is
-// a large amount of machinery for six units and three operations, and it would have no second caller
-// today. A named operation carries the same guarantee in its signature: the parameter names state
-// which unit each side must already be in, so a caller passing farads is making a visible mistake
-// rather than a silently typed one. It also reads to an EE, who knows what Ohm's law is and does not
-// know what a dimension vector is. If a fourth or fifth physical relation shows up, that is the point
-// to reconsider, not before.
+// No general unit algebra, because every other consumer compares within one unit, and a dimension
+// system for six units and three operations would have no second caller. The parameter names state
+// which unit each side must be in, so passing farads is a visible mistake. Reconsider if a fourth or
+// fifth physical relation shows up.
 //
-// ok is false for a non-positive or non-finite resistance and for a non-finite voltage. Zero ohms is
-// the case that matters: a sense resistor read as 0 is either a short or a value the parser could not
-// place, and dividing by it yields +Inf, which every comparison downstream would read as "enormous
-// current" and report as a defect. Refusing is the only honest answer. A NEGATIVE voltage is allowed
-// (a low-side sense threshold is legitimately negative) and simply yields a negative current.
+// ok is false for a non-positive or non-finite resistance and for a non-finite voltage. Zero ohms
+// matters most, since a sense resistor read as 0 (a short, or an unplaced value) would yield +Inf and
+// read downstream as an enormous current. A NEGATIVE voltage is allowed (a low-side sense threshold is
+// negative) and yields a negative current.
 func OhmsLawCurrent(volts, ohms float64) (amps float64, ok bool) {
 	if math.IsNaN(volts) || math.IsInf(volts, 0) {
 		return 0, false
@@ -107,22 +93,16 @@ func OhmsLawCurrent(volts, ohms float64) (amps float64, ok bool) {
 }
 
 // ResistivePowerWatts returns the power in WATTS a current of amps dissipates in ohms, and whether the
-// inputs admit an answer. It is OhmsLawCurrent's sibling and exists for the same reason: the second
-// physical relation this rule family needs, kept as a NAMED operation in the model layer rather than as
-// an `i*i*r` written inside a rule. A rule that spells its own unit arithmetic is a rule where a unit
-// bug can hide, and there is no unit in the expression to read it back from.
+// inputs admit an answer. Like OhmsLawCurrent, it is a NAMED operation so a rule does not spell its
+// own `i*i*r`, where a unit bug could hide.
 //
-// It is the sizing half of a controller-based load switch. A switch's pass element is the thing that
-// heats up, and what it dissipates at the current the design actually draws is the number that decides
-// whether the FET was chosen large enough. That figure is REPORTED, never judged: turning it into a
-// verdict needs a thermal limit (a package resistance, an ambient, a rise the house accepts) that no
-// datasheet row and no declaration states today.
+// It sizes a load switch's pass FET at the current the design draws. The figure is REPORTED, never
+// judged, because a verdict needs a thermal limit (package resistance, ambient, accepted rise) that no
+// datasheet row or declaration states today.
 //
 // ok is false for a non-finite current or resistance and for a negative resistance. A NEGATIVE current
-// is allowed and yields the same positive power a positive one does, since a current dissipates the
-// same whichever way it flows. Zero is allowed on both sides: a zero-ohm link dissipates nothing, which
-// is a true answer rather than an unanswerable one, and that is where it differs from OhmsLawCurrent
-// (which must refuse a zero divisor).
+// yields the same positive power. Zero is allowed on both sides, since a zero-ohm link dissipates
+// nothing, unlike OhmsLawCurrent's zero divisor.
 func ResistivePowerWatts(amps, ohms float64) (watts float64, ok bool) {
 	if math.IsNaN(amps) || math.IsInf(amps, 0) {
 		return 0, false
@@ -135,12 +115,10 @@ func ResistivePowerWatts(amps, ohms float64) (watts float64, ok bool) {
 
 // valueEpsilon is the RELATIVE tolerance for comparing a component value against a number of different
 // provenance (a datasheet parameter, a declared budget). Values this parser produces compare exactly to
-// each other, so this is not for them; it is for the boundary where an exactly-parsed 4700 meets a
-// double that arrived by another route entirely.
+// each other and do not need it.
 //
 // 1e-9 is far tighter than any real component tolerance (1% is the precision grade) and far looser than
-// double rounding, so it separates "the same number written twice" from "actually different" without
-// ever masking a real difference.
+// double rounding.
 const valueEpsilon = 1e-9
 
 // QuantityEqual reports whether two quantities in the same unit are the same number within

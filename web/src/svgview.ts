@@ -1,8 +1,8 @@
 // SvgView shows an SVG document in a host element with CSS-transform pan/zoom, so the SVG
 // reference render navigates the same way as the WebGL canvas (drag to pan, wheel to zoom
-// toward the cursor). The navigation math itself comes from panzoom.ts, which every Agni viewport
-// shares. It is a plain view adapter — no framework, no presenter coupling; the presenter only
-// calls setSvg / show / hide.
+// toward the cursor). The navigation math comes from panzoom.ts, which every Agni viewport
+// shares. It is a plain view adapter with no framework or presenter coupling, and the presenter
+// only calls setSvg / show / hide.
 import { wheelZoomFactor, zoomAbout, panBy } from "./panzoom.js";
 import { pickAt, type Selection } from "./selection.js";
 
@@ -11,7 +11,7 @@ import { pickAt, type Selection } from "./selection.js";
 const CLICK_SLOP_PX = 3;
 
 // SvgViewState is a snapshot of the SVG pan/zoom transform (CSS translate + scale). It is
-// structurally panzoom.PanZoom, which is what lets the shared helpers operate on it directly.
+// structurally panzoom.PanZoom, so the shared helpers operate on it directly.
 export interface SvgViewState {
   tx: number;
   ty: number;
@@ -34,8 +34,8 @@ export class SvgView {
   onViewChange: ((v: SvgViewState) => void) | null = null;
 
   // onPick fires when the reader CLICKS an entity in the drawing (a press and release that did not
-  // pan). The document is its own pick index — the renderer keys every element — so resolution is a
-  // question for the browser, not a join against a second representation of the same picture.
+  // pan). The renderer keys every element, so the document is its own pick index and the browser
+  // resolves the hit.
   onPick: ((sel: Selection) => void) | null = null;
 
   constructor(private readonly host: HTMLElement) {
@@ -47,12 +47,11 @@ export class SvgView {
     // The base sheet document and, stacked exactly over it, the transparent highlight
     // overlay. Both live inside the transformed layer so pan/zoom moves them as one; the
     // server frames both documents identically (same width/height/viewBox), so a plain
-    // top-left stack aligns them. The overlay ignores pointer events — input stays on the host.
+    // top-left stack aligns them. The overlay ignores pointer events, so input stays on the host.
     this.base = document.createElement("div");
     this.overlay = document.createElement("div");
-    // Named so the highlight layer is addressable from outside: a browser test asserting what the
-    // reader actually sees needs to find it, and so does anyone opening devtools on a highlight that
-    // looks wrong. The base document is reachable through its own content; this one was not.
+    // Named so a browser test asserting what the reader sees, or anyone in devtools looking at a
+    // wrong highlight, can find the highlight layer.
     this.overlay.className = "highlight-overlay";
     this.overlay.style.position = "absolute";
     this.overlay.style.left = "0";
@@ -65,9 +64,9 @@ export class SvgView {
     this.observeResize();
   }
 
-  // setSvg injects a standalone SVG document and fits it to the host. The highlight overlay
-  // is cleared: it described the previous document, and the caller re-fetches one framed for
-  // the new sheet if highlights are active.
+  // setSvg injects a standalone SVG document and fits it to the host. It clears the highlight
+  // overlay, which described the previous document; the caller re-fetches one framed for the new
+  // sheet if highlights are active.
   setSvg(markup: string): void {
     this.base.innerHTML = markup;
     this.overlay.innerHTML = "";
@@ -85,7 +84,7 @@ export class SvgView {
 
   // setOverlays stacks several overlay documents on top of each other (the WS9-007 union
   // canvas composes b's highlight overlay with a's removed-ghost overlay). Each document is
-  // pinned to the layer origin — inline SVGs would otherwise flow side by side — and all are
+  // pinned to the layer origin, since inline SVGs would otherwise flow side by side, and all are
   // framed like the base document, so they superimpose exactly.
   setOverlays(markups: string[]): void {
     this.overlay.innerHTML = markups.join("");
@@ -113,11 +112,10 @@ export class SvgView {
     this.host.style.display = "none";
   }
 
-  // revealOverlay pans/zooms to the highlight overlays' drawn content (WS9-006
-  // click-to-locate: the focused item's overlay IS its location, so its bbox drives the
-  // camera; with stacked overlays the union of their content is the target). Returns the
-  // applied view so a host can mirror it onto a synced sibling, or null when there is
-  // nothing to reveal (no overlay, or nothing drawn on this sheet).
+  // revealOverlay pans/zooms to the union of the highlight overlays' drawn content, since for
+  // WS9-006 click-to-locate the focused item's overlay IS its location. Returns the applied view
+  // so a host can mirror it onto a synced sibling, or null when there is nothing to reveal (no
+  // overlay, or nothing drawn on this sheet).
   revealOverlay(): SvgViewState | null {
     let box: RevealBox | null = null;
     for (const svg of this.overlay.querySelectorAll(":scope > svg")) {
@@ -125,7 +123,7 @@ export class SvgView {
       try {
         b = (svg as SVGGraphicsElement).getBBox();
       } catch {
-        continue; // detached/unrendered SVG (jsdom, display:none) — nothing to measure
+        continue; // detached/unrendered SVG (jsdom, display:none) has nothing to measure
       }
       if (b.width <= 0 && b.height <= 0) continue;
       if (!box) {
@@ -179,15 +177,10 @@ export class SvgView {
     this.apply();
   }
 
-  // observeResize refits the drawing when its pane changes size, but only while the reader has not
-  // taken over the camera. The SVG view had no observer at all (the WebGL canvas has always had
-  // one), so a document framed for one pane size stayed framed for it: dragging a splitter, opening
-  // a panel, or a boot layout that sizes the columns after the first render all left the drawing
-  // hanging off the edge of a pane it no longer fitted.
-  //
-  // The `touched` guard is what keeps the refit from being its own annoyance. Re-framing a view
-  // somebody has zoomed into, because they nudged a splitter, throws away the thing they were
-  // looking at. So a fresh document refits with its pane and a navigated one holds still.
+  // observeResize refits the drawing when its pane changes size (a splitter drag, a panel opening,
+  // a boot layout sizing the columns after the first render), but only while `touched` is false.
+  // Re-framing a view somebody has zoomed into throws away what they were looking at, so a fresh
+  // document refits with its pane and a navigated one holds still (#325).
   private observeResize(): void {
     if (typeof ResizeObserver === "undefined") return; // jsdom, and any non-browser host
     new ResizeObserver(() => {
@@ -203,9 +196,9 @@ export class SvgView {
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
-    // downX/downY and moved separate a CLICK from a PAN: both begin with a press on the drawing, and
-    // a pan that happens to end over a wire must not select it. The threshold exists because a click
-    // always carries a little hand movement.
+    // downX/downY and moved separate a CLICK from a PAN. Both begin with a press on the drawing, and
+    // a pan that ends over a wire must not select it. CLICK_SLOP_PX allows for the hand movement
+    // every click carries.
     let downX = 0;
     let downY = 0;
     let moved = false;
@@ -244,9 +237,8 @@ export class SvgView {
     );
   }
 
-  // commitUserView applies a view that came from a USER gesture, so it notifies onViewChange —
-  // unlike setView, which exists for a host mirroring one canvas onto another and must not feed
-  // back.
+  // commitUserView applies a view from a USER gesture, so it notifies onViewChange. setView does
+  // not, because a host mirroring one canvas onto another must not feed back.
   private commitUserView(v: SvgViewState): void {
     this.tx = v.tx;
     this.ty = v.ty;
@@ -273,9 +265,8 @@ export interface RevealBox {
   h: number;
 }
 
-// REVEAL_WINDOW is how much context surrounds a revealed target: the view window is this
-// many times the target's extent, so a component is seen with its neighborhood, not
-// wall-to-wall.
+// REVEAL_WINDOW is the view window's size as a multiple of the revealed target's extent, so a
+// component is seen with its neighborhood rather than wall-to-wall.
 const REVEAL_WINDOW = 2.5;
 
 // REVEAL_MIN_EXTENT floors a degenerate target (a single pin dot, a zero-height horizontal
@@ -283,8 +274,8 @@ const REVEAL_WINDOW = 2.5;
 const REVEAL_MIN_EXTENT = 40;
 
 // computeReveal returns the pan/zoom that centers the target box in a host of the given
-// size, zoomed so the box fills 1/REVEAL_WINDOW of the view. Pure — the DOM measurement
-// (getBBox) happens in revealOverlay; this is the tested half.
+// size, zoomed so the box fills 1/REVEAL_WINDOW of the view. It is pure, and the DOM
+// measurement (getBBox) happens in revealOverlay, so this is the tested half.
 export function computeReveal(b: RevealBox, hostW: number, hostH: number): SvgViewState {
   const w = Math.max(b.w, REVEAL_MIN_EXTENT);
   const h = Math.max(b.h, REVEAL_MIN_EXTENT);

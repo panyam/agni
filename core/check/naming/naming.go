@@ -1,23 +1,17 @@
 // Package naming compiles an operator-supplied net-naming convention into a
-// check.RuleSource (WS3-015). It is the catalog's first CONFIG-CARRYING source, and it is
-// deliberately built on the check package's exported surface alone — the Spec AST and
-// NewSource — so it doubles as proof that an out-of-tree rule suite needs no second
-// registry: config in, ordinary namespaced rules out (WS3-006).
+// check.RuleSource (WS3-015). It is a CONFIG-CARRYING source built on the check package's exported
+// surface alone (the Spec AST and NewSource), so an out-of-tree rule suite needs no second registry
+// (WS3-006).
 //
-// A convention is data, not code: the pattern set belongs to a project or customer and
-// must not be baked into the shareable engine. The config stays small on purpose (names,
-// severities, allow/exempt regex lists); anything needing more than patterns over net
-// names is a real rule and belongs in Go/Spec (the DSL-deferred posture, docs/19).
+// A convention is data, not code, because the pattern set belongs to a project and must not be baked
+// into the shareable engine. The config holds names, severities and allow/exempt regex lists. Anything
+// needing more than patterns over net names is a real rule and belongs in Go or a Spec
+// (docsite/content/architecture/rules-and-checks.md).
 //
-// The config TYPE is the generated agni.v1.config.NamingConvention, not a struct declared here.
-// There used to be both: this package held a yaml-tagged twin and internal/service converted it to
-// the wire message on every path. The two drifted, the wire form never grew the transistor terminal
-// vocabularies, and a project declaring them had them dropped in silence. One schema is what stops
-// that recurring, and agni.v1.config exists (rather than the message living in webapi) so the engine
-// can depend on it without importing the web request tier (C17).
-//
-// YAML remains the authoring syntax and carries no schema of its own: Parse converts it to JSON and
-// lets protojson bind it to the message.
+// The config TYPE is the generated agni.v1.config.NamingConvention, and it is the only schema. A
+// hand-written yaml twin drifted from the wire form and silently dropped fields (#384). The message
+// lives in agni.v1.config rather than webapi so the engine can import it without depending on the web
+// request tier (C17). YAML is only the authoring syntax, see Parse.
 package naming
 
 import (
@@ -44,10 +38,10 @@ func Load(path string) (*configpb.NamingConvention, error) {
 
 // Parse decodes a convention config.
 //
-// YAML has no protobuf binding, so it is converted to JSON and bound by protojson. That keeps the
+// YAML has no protobuf binding, so it is converted to JSON and bound by protojson, which keeps the
 // generated message as the single schema while an operator still writes (and comments) YAML. Decoding
-// stays STRICT, because protojson rejects an unknown field by default the same way the old
-// yaml.KnownFields(true) did: a typo'd key fails loudly instead of silently configuring nothing.
+// is STRICT, since protojson rejects an unknown field by default, so a typo'd key fails instead of
+// silently configuring nothing.
 func Parse(b []byte) (*configpb.NamingConvention, error) {
 	var tree any
 	if err := yaml.Unmarshal(b, &tree); err != nil {
@@ -74,9 +68,9 @@ const alwaysExempt = `^(N\$|unconnected-\(|Net-\(|\$)`
 // engine defaults. Each regex is validated here; a bad pattern is a returned error, not a panic,
 // because config is operator input.
 //
-// This is the form a per-request caller wants: the value travels with the read it configures, so two
+// A per-request caller wants this form, since the value travels with the read it configures and two
 // designs can be read with different project conventions in one process. ApplyLexicon is the same
-// build followed by a process-wide install, kept for the startup-config callers.
+// build followed by a process-wide install, for startup config.
 func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
 	lx := cfg.GetLexicon()
 	if lx == nil {
@@ -109,8 +103,8 @@ func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
 // (WS3-069). A nil Lexicon is a no-op (defaults stay). Call it once at startup, before any design is
 // read. It is idempotent for a given config.
 //
-// Prefer BuildLexicon where the vocabulary can travel with the read: a process-wide install cannot be
-// scoped to one request, so it is startup config only.
+// Prefer BuildLexicon where the vocabulary can travel with the read, because a process-wide install
+// cannot be scoped to one request.
 func ApplyLexicon(cfg *configpb.NamingConvention) error {
 	lex, err := BuildLexicon(cfg)
 	if err != nil || lex == nil {

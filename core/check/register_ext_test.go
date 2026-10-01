@@ -1,5 +1,5 @@
-// package check_test (black-box): imports check the way an out-of-module overlay does, so it
-// proves the WS12-004 acceptance — an external caller registers a Go rule suite and it flows
+// package check_test (black-box) imports check the way an out-of-module overlay does, so it
+// proves the WS12-004 acceptance. An external caller registers a Go rule suite and it flows
 // into the catalog the CLI and serve wire (DefaultCatalog / CatalogWith), namespaced and
 // runnable.
 package check_test
@@ -12,7 +12,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// widgetPresent fires one finding on any design that has a component — a stand-in for a
+// widgetPresent fires one finding on any design that has a component. It stands in for a
 // house-style rule an overlay would author.
 func widgetRule() *check.Rule {
 	return &check.Rule{

@@ -58,8 +58,8 @@ func TestFindsAFlattenedSubscript(t *testing.T) {
 	}
 }
 
-// A value cell is meaningless alone: "3.6" is not a fact. The row label and column header are what
-// make it one, so they are indexed with the cell and returned beside it.
+// A value cell is meaningless alone, since "3.6" is not a fact. The row label and column header are
+// what make it one, so they are indexed with the cell and returned beside it.
 func TestCellCarriesItsRowAndColumnContext(t *testing.T) {
 	got := Build(doc()).Search("VCCA max", 5)
 	if len(got) == 0 {
@@ -100,7 +100,7 @@ func TestEmptyAndUnmatchedQueries(t *testing.T) {
 	}
 }
 
-// The index is derived: rebuilding from the same doc-IR gives the same answers, so a stale index is
+// The index is derived. Rebuilding from the same doc-IR gives the same answers, so a stale index is
 // a performance problem and never a correctness one.
 func TestRebuildIsDeterministic(t *testing.T) {
 	a, b := Build(doc()).Search("supply voltage", 10), Build(doc()).Search("supply voltage", 10)

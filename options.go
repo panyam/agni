@@ -15,9 +15,8 @@ import (
 const datalogSourceName = "dl"
 
 // builder accumulates what the options set, so New composes once from a complete picture rather
-// than mutating an Engine as each option arrives. It is the shape facts.Registry uses and for the
-// same reason: composing in a known order checks collisions once, at the end, instead of depending
-// on the order the caller happened to write the options in.
+// than mutating an Engine per option. As in facts.Registry, collisions are checked once at the end
+// instead of depending on the order the caller wrote the options in.
 type builder struct {
 	profiles    []profiles.Profile
 	intent      *intent.Declaration
@@ -30,25 +29,23 @@ type builder struct {
 	noDatalog   bool
 }
 
-// Option configures New. Every option carries a VALUE rather than a path, because reading config is
-// the caller's business and configuration travels as a value (C22).
+// Option configures New. Every option carries a VALUE rather than a path, since reading config is
+// the caller's business (C22).
 type Option func(*builder)
 
 // WithProfiles composes interface profiles into the catalog. A profile whose Name matches a built-in
 // SUPERSEDES that built-in's rules rather than running alongside them, and the review's profile
-// index tracks that replacement, so an item scoped to the interface cannot score a clean pass on a
-// profile whose rules are no longer in the run.
+// index tracks that, so an item scoped to the interface cannot pass on rules no longer in the run.
 //
-// Load them with profiles.LoadDir for a directory of YAML, or build the values in Go. Either way the
-// file reading happens in the caller.
+// Load them with profiles.LoadDir for a directory of YAML, or build the values in Go.
 func WithProfiles(ps []profiles.Profile) Option {
 	return func(b *builder) { b.profiles = append(b.profiles, ps...) }
 }
 
-// WithIntent composes a design-intent declaration into the catalog, which is what flips an
-// intent-bound review item from needs-design-intent to a real verdict. Intent is per-DESIGN, so an
-// Engine composed with one is scoped to that design; a server serving many resolves intent per
-// design through the project config instead.
+// WithIntent composes a design-intent declaration into the catalog, which turns an intent-bound
+// review item from needs-design-intent into a real verdict. Intent is per-DESIGN, so an Engine
+// composed with one is scoped to that design, and a server serving many resolves intent per design
+// through the project config instead.
 //
 // Load it with intent.LoadFile for YAML, or build the Declaration in Go.
 func WithIntent(d intent.Declaration) Option {
@@ -84,13 +81,11 @@ type Tree struct {
 }
 
 // WithFSProjectStore supplies the shipped project store, which walks each tree for descriptors. It
-// takes an fs.FS rather than a path so containment is structural: an fs.FS has no parent to climb
-// into, so a resolution walk stops at the tree root.
+// takes an fs.FS rather than a path because an fs.FS has no parent to climb into, so a resolution
+// walk stops at the tree root.
 //
-// This is how the default store reaches a caller without the package that implements it becoming
-// public API. Everything true only of storing projects in DIRECTORIES stays behind
-// service.ProjectStore, which is the contract; a caller that outgrows the directory shape implements
-// the port and passes WithProjectStore instead.
+// It exposes the default store without making internal/projects public API. A caller that outgrows
+// the directory shape implements service.ProjectStore and passes WithProjectStore instead.
 func WithFSProjectStore(trees ...Tree) Option {
 	return func(b *builder) {
 		ts := make([]projects.Tree, 0, len(trees))
@@ -102,17 +97,17 @@ func WithFSProjectStore(trees ...Tree) Option {
 }
 
 // WithProjectResolver supplies an already-composed resolver, for a caller that built one to share
-// with the services this package does not construct (the design, diff and query services all take
-// the same resolver). It is the composed form of WithProjectStore plus WithConfigResolver and wins
+// with the services this package does not construct (the design, diff, query, check and review
+// services all take the same resolver). It is the composed form of WithProjectStore plus WithConfigResolver and wins
 // over both, so one run cannot resolve projects two ways.
 func WithProjectResolver(r *service.ProjectResolver) Option {
 	return func(b *builder) { b.resolver = r }
 }
 
 // WithConfigResolver supplies what resolves an analysis config's URIs into engine values: a
-// project's interface profiles, its seeded parameters, its symbol paths, a design's intent. It is
-// the seam where per-design config enters a run, so a server serving several projects gives each
-// one its own composed rules rather than applying one team's config to every design it reads.
+// project's interface profiles, its seeded parameters, its symbol paths, a design's intent. This is
+// where per-design config enters a run, so a server serving several projects composes each one's own
+// rules rather than applying one team's config to every design.
 func WithConfigResolver(c service.ConfigResolver) Option {
 	return func(b *builder) { b.config = c }
 }
@@ -124,10 +119,9 @@ func WithProducerVersion(v string) Option {
 	return func(b *builder) { b.version = v }
 }
 
-// WithoutDatalogRules declares that shipping with no datalog-authored rule suite is deliberate, and
+// WithoutDatalogRules declares that shipping with no datalog-authored rule suite is intended, and
 // drops the warning New would otherwise record. It changes nothing about the composition. The
-// warning exists because the absence is invisible from a report, and this option is how a caller who
-// meant it says so once instead of filtering the string.
+// warning exists because the absence is invisible from a report.
 func WithoutDatalogRules() Option {
 	return func(b *builder) { b.noDatalog = true }
 }

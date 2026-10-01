@@ -3,7 +3,7 @@ import { artifactUri, uriPath } from "./uri.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView, type DiffState } from "./diffpresenter.js";
 import { DIFF_COLORS } from "./diff.js";
 
-// Fakes mirror the viewer.test.ts harness: plain stubs behind the typed clients, a
+// Fakes mirror the viewer.test.ts harness, with plain stubs behind the typed clients, a
 // recording view per side, and the onState pushes captured for assertion.
 function harness(over: { diffDesigns?: ReturnType<typeof vi.fn> } = {}) {
   const diffDesigns =
@@ -85,7 +85,7 @@ describe("DiffPresenter.open", () => {
     const sheetReqs = h.getSheet.mock.calls.map((c) => c[0] as unknown as { uri: string; layout: string });
     expect(sheetReqs.find((r) => uriPath(r.uri) === "a.edn")?.layout).toBe("layout-a.edn");
     expect(sheetReqs.find((r) => uriPath(r.uri) === "b.edn")?.layout).toBe("layout-b.edn");
-    // Overlay specs are side-filtered: removed only on A, added only on B, renamed on both.
+    // Overlay specs are side-filtered, removed only on A, added only on B, renamed on both.
     const hlReqs = h.highlightSheet.mock.calls.map((c) => c[0] as { uri: string; specs: { color?: string; components?: string[]; nets?: string[] }[] });
     const aSpecs = hlReqs.find((r) => uriPath(r.uri) === "a.edn")!.specs;
     const bSpecs = hlReqs.find((r) => uriPath(r.uri) === "b.edn")!.specs;
@@ -147,7 +147,7 @@ describe("DiffPresenter.selectPair", () => {
   it("renders the chosen pair, with a placeholder on the absent side", async () => {
     const h = harness();
     await h.presenter.open(h.A, h.B);
-    await h.presenter.selectPair(1); // OldOnly: A has s2, B has nothing
+    await h.presenter.selectPair(1); // OldOnly, A has s2 and B has nothing
     expect(h.a.svg).toHaveBeenCalledWith('<svg data-doc="a.edn/s2"/>');
     expect(h.b.ph).toHaveBeenCalledWith('no sheet "OldOnly" in B');
     expect(last(h.states).activePair).toBe(1);
@@ -186,7 +186,7 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
     expect(reqs.map((r) => uriPath(r.uri))).toEqual(["a.edn"]);
     expect(reqs[0].specs.flatMap((s) => s.components ?? [])).toEqual(["R2"]);
     expect(h.b.overlay).toHaveBeenCalledWith("");
-    // The old side reveals (removed lives only there) — no sheet re-render for a same-pair focus.
+    // The old side reveals (removed lives only there), with no sheet re-render for a same-pair focus.
     expect(h.a.reveal).toHaveBeenCalledTimes(1);
     expect(h.b.reveal).not.toHaveBeenCalled();
   });
@@ -240,7 +240,7 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
   it("switches to the sub-sheet pair for a renamed net that lives only there (WS9-027)", async () => {
     // The server fix (each side's design as NetSource) is what populates netSheets for a
     // wireless sub-sheet net; the panel then navigates to it the same way a component does.
-    // A's side joins by the OLD name, B's by the NEW — both resolve to the sub pair (s2).
+    // A's side joins by the OLD name, B's by the NEW, and both resolve to the sub pair (s2).
     const h = harness({
       diffDesigns: vi.fn(async () => ({
         report: { componentsAdded: [], componentsRemoved: [], componentsChanged: [], nets: [{ kind: "renamed", name: "/sub/OUT", oldName: "/sub/SIG", added: [], removed: [] }] },
@@ -315,10 +315,10 @@ describe("DiffPresenter overlay mode (WS9-007)", () => {
     await h.presenter.setMode("overlay");
     expect(h.setOverlayMode).toHaveBeenCalledWith(true);
     expect(last(h.states).mode).toBe("overlay");
-    // The union base is B's RETAINED document on the a-canvas — no sheet re-fetch.
+    // The union base is B's RETAINED document on the a-canvas, with no sheet re-fetch.
     expect(h.a.svg).toHaveBeenLastCalledWith(expect.stringContaining('data-doc="b.edn/s1"'));
     expect(h.getSheet.mock.calls.length).toBe(sheetFetches);
-    // Two layers: b's own change classes on b's sheet, removed-only ghosts on a's sheet.
+    // Two layers, b's own change classes on b's sheet and removed-only ghosts on a's sheet.
     const reqs = h.highlightSheet.mock.calls.map((c) => c[0] as unknown as HlReq);
     const ghost = reqs.find((r) => uriPath(r.uri) === "a.edn")!;
     expect(ghost.specs.flatMap((s) => s.components ?? [])).toEqual(["R2"]);
@@ -373,7 +373,7 @@ describe("DiffPresenter overlay mode (WS9-007)", () => {
     await h.presenter.open(h.A, h.B);
     await h.presenter.setMode("overlay");
     h.highlightSheet.mockClear();
-    await h.presenter.selectItem("component:R2"); // removed: ghost layer only
+    await h.presenter.selectItem("component:R2"); // removed, so ghost layer only
     const reqs = h.highlightSheet.mock.calls.map((c) => uriPath((c[0] as unknown as HlReq).uri));
     expect(reqs).toEqual(["a.edn"]);
     expect(h.a.reveal).toHaveBeenCalledTimes(1);

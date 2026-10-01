@@ -13,43 +13,39 @@ import (
 )
 
 // Overlay is one request's composed catalog configuration: the rule sources to splice onto the
-// service's catalog, and the naming lexicon its design reads must be stamped with. It is the single
-// place overlay config becomes engine inputs, so every surface that accepts it composes identically
-// (WS3-102).
+// service's catalog, and the naming lexicon its design reads must be stamped with. Every surface
+// that accepts overlay config composes it here, so they all compose identically (WS3-102).
 //
-// The split matters. A convention carries rules AND a lexicon, and they land in different places at
-// different times: rules extend the catalog the rules run from, while the lexicon has to reach the
-// READ, because net roles are resolved once at ingestion. A composer that did only the catalog half
-// would compile the naming rules and still leave every OTHER rule blind to the project's rail names,
-// which is the more damaging half of the bug.
+// A convention carries rules AND a lexicon, and they land in different places. Rules extend the
+// catalog, while the lexicon has to reach the READ, because net roles are resolved once at ingestion.
+// Doing only the catalog half compiles the naming rules and leaves every OTHER rule blind to the
+// project's rail names.
 type Overlay struct {
 	Sources []check.RuleSource
 	Lexicon *classify.Lexicon
 	// Specs is the datasheet corpus this run checks part limits against, nil when there is none. It
-	// rides here because a project owns its parameters the same way it owns its profiles, so the two
-	// have to arrive together or a run could compose one team's rules against another's data.
+	// travels with the rule sources so a run cannot compose one team's rules against another's data.
 	Specs param.ParamProvider
 	// SymbolPaths are the symbol-library directories this run's config named, added to the read.
 	SymbolPaths []string
 	// Profiles and Intent record whether this overlay's Sources include a project's interface profiles
-	// and a design's intent declaration. See ProjectConfig for why the flags travel rather than being
+	// and a design's intent declaration. See ResolvedConfig for why the flags travel rather than being
 	// derived from Sources.
 	Profiles bool
 	Intent   bool
-	// conventionName is the source name of the convention THIS overlay currently carries, whether it
-	// came from a project or from the deployment default. A request-supplied convention replaces it
-	// (WS3-124), and replacement is by name, so the name has to travel with the value.
+	// conventionName is the source name of the convention THIS overlay carries, from a project or the
+	// deployment default. A request-supplied convention replaces it by name (WS3-124).
 	conventionName string
 	// id accumulates the inputs this overlay was composed FROM, which is what Identity hashes. See
 	// overlayidentity.go for why it is the inputs rather than the composed value.
 	id *overlayID
 	// baseConvention is the catalog source name of the SERVER's startup convention (`--conventions`),
 	// empty when the caller composed no such default. Catalog drops it before splicing this request's
-	// own, which is what makes a request-supplied convention override rather than stack (WS3-124).
+	// own, so a request-supplied convention overrides rather than stacks (WS3-124).
 	//
-	// It is supplied by whoever built the base catalog, since only they know which of its sources came
-	// from the startup flag. The zero value replaces nothing, which is the honest answer for a caller
-	// (the CLI) whose catalog has no startup convention at all.
+	// Whoever built the base catalog supplies it, since only they know which source came from the
+	// startup flag. The zero value replaces nothing, which is right for the CLI, whose catalog has no
+	// startup convention.
 	baseConvention string
 }
 
@@ -57,17 +53,13 @@ type Overlay struct {
 // Overlay, which changes nothing, so a request that names no overlay behaves exactly as before.
 //
 // baseConvention is the catalog source name of the SERVER's startup convention, which this request's
-// own convention replaces (WS3-124); "" when the caller composed no such default, and then nothing is
-// replaced. It is a REQUIRED parameter rather than an optional wither because there are three call
-// sites across two services, and "remember to also call the other thing" is precisely the shape that
-// let --conventions reach one rule-running surface and not the other (WS3-102, WS3-109). A required
-// argument makes forgetting it a compile error instead of a silently additive catalog.
+// own convention replaces (WS3-124). Pass "" when the caller composed no such default, and nothing is
+// replaced. It is a required parameter rather than an optional wither so that a call site forgetting
+// it fails to compile instead of silently stacking conventions (WS3-102, WS3-109).
 //
-// It performs no I/O: the config arrives as a value, so composing is pure and a caller can compose the
-// same inputs in a test, a CLI, or a browser without a filesystem. An invalid convention (a pattern
-// that will not compile, an unknown component class) is an ERROR, never a skip — an operator who asked
-// for their conventions and silently got the built-ins would read the resulting clean report as a
-// clean design.
+// It performs no I/O, since the config arrives as a value. An invalid convention (a pattern that will
+// not compile, an unknown component class) is an ERROR, never a skip, because an operator who silently
+// got the built-ins would read the clean report as a clean design.
 func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	o := Overlay{baseConvention: baseConvention}
 	conv := cfg.GetConfig().GetConventions()
@@ -79,8 +71,8 @@ func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, 
 		return Overlay{}, err
 	}
 	o.Lexicon = lex
-	// Convention RULES are optional: a config may carry only a lexicon, which is exactly the shape a
-	// project uses to teach the engine its rail names without adding any naming rule of its own.
+	// Convention RULES are optional. A config carrying only a lexicon teaches the engine a project's
+	// rail names without adding any naming rule.
 	if len(conv.GetRules()) > 0 {
 		src, err := naming.Source(conv)
 		if err != nil {
@@ -94,28 +86,18 @@ func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, 
 // Catalog splices this overlay's rule sources ONTO base, returning base unchanged when the overlay
 // carries none.
 //
-// It extends base rather than rebuilding a catalog, and that is the whole point (WS3-107). The
-// previous implementation called check.CatalogWith(o.Sources...), which keeps the built-ins and every
-// RegisterSource'd suite — true, and exactly what made the bug invisible — but drops base. For a
-// review, base is the catalog composed from --profile-path and --intent-path, so a convention that
-// carried a single naming RULE silently disabled every interface profile and the whole design-intent
-// tier for that run. Measured on one design, 19 items went pass -> needs-design-intent and 16 went
-// pass -> not-automated, with nothing anywhere to say why.
+// It extends base rather than rebuilding a catalog (WS3-107). check.CatalogWith keeps the built-ins
+// but drops base, and for a review base holds the --profile-path and --intent-path sources, so one
+// naming rule in a convention disabled every interface profile and the whole intent tier. Measured on
+// one design, 19 items went pass -> needs-design-intent and 16 went pass -> not-automated.
 //
-// A request's convention REPLACES the server's startup one rather than stacking on it (WS3-124),
-// which is what the serve flag help and the lexicon half both already promised. The replacement is a
-// tag filter: catalog composition stamps every rule with the name of the source that contributed it
-// (check.KeySource), so dropping the startup convention is dropping the rules carrying its name. Only
-// that one source goes; the built-ins and any --profile-path / --intent-path sources are not the
-// request's to remove, and a request that removed them would report a design clean by asking nothing.
+// A request's convention REPLACES the server's startup one rather than stacking on it (WS3-124).
+// Catalog composition tags every rule with its source name (check.KeySource), so the replacement
+// drops the rules carrying baseConvention's name and nothing else. The built-ins and the profile and
+// intent sources are not the request's to remove. A caller that names no base convention (the CLI)
+// keeps the additive behaviour.
 //
-// Replacement is scoped to a NAMED base convention rather than "any convention-looking source" on
-// purpose. A caller that never names one (the CLI, whose catalog has no startup convention) keeps the
-// additive behaviour, so this cannot silently subtract rules from a caller that did not opt in.
-//
-// A composition error is an error, not a panic: the sources come from a REQUEST here, and a caller
-// sending a convention whose name collides with an existing source should get a message, not a
-// crashed process.
+// A name collision returns an error rather than panicking, since the sources come from a REQUEST.
 func (o Overlay) Catalog(base *check.Catalog) (*check.Catalog, error) {
 	if len(o.Sources) == 0 {
 		return base, nil
@@ -130,10 +112,9 @@ func (o Overlay) Catalog(base *check.Catalog) (*check.Catalog, error) {
 	return out, nil
 }
 
-// explainCollision adds the one piece of context a duplicate-source error cannot carry on its own:
-// that the source it collided with may have come from a server flag rather than from this request.
-// The caller sees only their own convention, so "duplicate rule source" reads as though they sent it
-// twice, and the actual other party is invisible.
+// explainCollision tells the caller that the source a duplicate-source error collided with may have
+// come from a server flag. The caller sees only their own convention, so the bare error reads as
+// though they sent it twice.
 func (o Overlay) explainCollision(err error) error {
 	if !strings.Contains(err.Error(), "duplicate rule source") {
 		return err
@@ -143,7 +124,8 @@ func (o Overlay) explainCollision(err error) error {
 		"server's --conventions to replace it)", err)
 }
 
-// ReadOptions is what the overlay contributes to each design READ: the naming lexicon, or nothing.
+// ReadOptions is what the overlay contributes to each design READ: the naming lexicon, the symbol
+// paths, and the datasheet device-class lookup, each only when present.
 func (o Overlay) ReadOptions() []ReadOption {
 	var opts []ReadOption
 	if o.Lexicon != nil {
@@ -159,12 +141,11 @@ func (o Overlay) ReadOptions() []ReadOption {
 }
 
 // DeviceClassLookup adapts a param provider to the one question the ingestion class pass asks of it:
-// the device_class a seeded spec states for an MPN. It is the adapter that keeps the datasheet layer
-// on this side of the read seam, since readers/formats takes a function and never the provider.
+// the device_class a seeded spec states for an MPN. readers/formats takes this function and never the
+// provider, so the datasheet layer stays out of the readers.
 //
-// A nil provider answers nothing rather than panicking, which matters because specs is an interface:
-// a caller that composed no corpus holds a nil interface, and the difference between that and an
-// empty corpus is invisible at the call site.
+// A nil provider returns a nil function rather than panicking later. A caller that composed no corpus
+// holds a nil interface, which looks the same as an empty corpus at the call site.
 func DeviceClassLookup(specs param.ParamProvider) func(string) string {
 	if specs == nil {
 		return nil
@@ -178,23 +159,18 @@ func DeviceClassLookup(specs param.ParamProvider) func(string) string {
 }
 
 // ConfigResolver turns the ref-shaped tiers of an AnalysisConfig into the engine inputs a run needs.
-// It is the port that keeps file I/O out of a service (C13): a config names its profiles and
-// parameters as URIs, and only an adapter can read them.
+// It is the port that keeps file I/O out of a service (C13), since a config names its profiles and
+// parameters as URIs and only an adapter can read them.
 //
-// It resolves ANY AnalysisConfig, not only a project's. That is the point of the shared message: a
-// request that carries profile_uris is asking the same question a project asking it does, and two
-// resolvers would eventually answer it differently. Which config is being resolved shows up only as
-// the namespace.
-//
-// A tier the config does not name is a ZERO VALUE, never an error. Most configs declare some of this
-// and not the rest, and a resolver that failed on absence would make the ordinary case the error path.
+// It resolves ANY AnalysisConfig, a request's as well as a project's, so the two cannot drift apart.
+// Which config is being resolved shows up only as the namespace. A tier the config does not name is a
+// ZERO VALUE, never an error, because most configs declare only some tiers.
 type ConfigResolver interface {
 	// ResolveConfig loads what cfg's URIs point at.
 	//
-	// namespace is the catalog source name a profile set is registered under. It is a parameter rather
-	// than something the resolver derives, because the same config shape arrives from a project (whose
-	// id namespaces it) and from a request (which has no id), and two projects on one server would
-	// otherwise contribute rule sources of the same name.
+	// namespace is the catalog source name a profile set is registered under. The caller passes it
+	// because a project's config is namespaced by its id and a request's has no id, and two projects on
+	// one server would otherwise contribute rule sources of the same name.
 	ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig, namespace string) (ResolvedConfig, error)
 }
 
@@ -207,28 +183,24 @@ type ResolvedConfig struct {
 	Specs param.ParamProvider
 	// SymbolPaths are the resolved symbol-library directories, as host paths the reader can search.
 	SymbolPaths []string
-	// Profiles and Intent record WHICH tiers the Sources came from, because by the time they are rule
-	// sources that is no longer answerable: a compiled interface profile and a compiled intent
-	// declaration are both just rules in a catalog. A results document has to state which tiers were
-	// attached, and a run that guessed those flags from its own startup config would report false for
-	// a tier its config supplied.
+	// Profiles and Intent record WHICH tiers the Sources came from, since a compiled interface profile
+	// and a compiled intent declaration are both just rules in a catalog. A results document states
+	// which tiers were attached. See
+	// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 	Profiles bool
 	Intent   bool
 	// Digest identifies the BYTES this resolution read, so an overlay composed from it can say
 	// whether two runs saw the same config. Empty means this resolver does not report one, which is
-	// legal and costs the overlay its identity rather than producing one that quietly covers less
-	// than it claims: see Overlay.Identity.
+	// legal and costs the overlay its identity (see Overlay.Identity).
 	Digest string
 }
 
 // configNeedsResolver reports whether cfg names anything only an adapter can read.
 //
-// It is what makes the capability honest. A host with no resolver (a browser running the engine in
-// WASM, a service constructed without one) can still honour a config carrying only a resolved
-// convention, because that composes with no I/O. A config naming a directory is a different request,
-// and answering it by silently dropping the tier would report a clean run against config that never
-// loaded — the silent-pass failure this whole layer exists to prevent. So it is an error that names
-// what could not be resolved, on the same terms GetNamingConvention refuses a stored convention.
+// A host with no resolver (the engine in WASM, a service built without one) can still honour a config
+// carrying only a resolved convention, because that composes with no I/O. A config naming a URI is
+// an error there, on the same terms GetNamingConvention refuses a stored convention, because
+// dropping the tier would report a clean run against config that never loaded.
 func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 || cfg.GetIntentUri() != "" ||
 		len(cfg.GetSymbolPathUris()) > 0
@@ -237,24 +209,15 @@ func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 // OverlayFor composes the engine inputs for one design: the project's config where the design
 // resolves to one, and the caller's fallback where it does not.
 //
-// This is the whole point of the resource model, and the reason it is one function. Before it, the
-// config a run checked against came from `agni serve` startup flags, so a deployment mounting a
-// mixed set applied one team's config to every design it read — an overlay's profiles superseding
-// the built-ins for every board, an overlay's rail lexicon changing net roles on designs that never
-// asked. Both were correct in isolation and aimed at the wrong design.
+// A design that resolves to NO project gets no project config, so it cannot be checked against
+// another project's rules (#180). The motivating bug is on
+// docsite/content/architecture/projects-and-designs.md#three-tiers-of-configuration.
 //
-// The fix is structural rather than a guard: a design that resolves to NO project gets no project
-// config, so it cannot be checked against another project's rules. There is no flag to forget.
-//
-// `fallback` is the deployment default (the serve flags), used only for a design with no project. It
-// keeps every existing single-project deployment working unchanged while making the mixed case
-// correct, which is what lets this land without a migration.
-//
-// A REQUEST's own overlay still wins over both. A caller that named its conventions is answering for
-// itself, and the project is the default it is overriding.
+// `fallback` is the deployment default (the serve flags), used only for a design with no project.
+// baseConvention is as on ComposeOverlay. A REQUEST's own overlay wins over both.
 func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
-	// Seeded with every input this call can see. What a resolver reads is folded in where it is read,
-	// below, because only the resolver knows what it opened.
+	// Seeded with every input this call can see. What a resolver reads is folded in below, where it is
+	// read, because only the resolver knows what it opened.
 	id := &overlayID{}
 	id.add("base-convention", []byte(baseConvention))
 	id.addProto("request", req)
@@ -264,19 +227,16 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	if p == nil {
 		return overlayWithRequest(ctx, resolver, req, fallback, baseConvention, id)
 	}
-	// The project's config and the design's are resolved TOGETHER, as one AnalysisConfig. Intent is
-	// the design's where the rest is the project's, and loading them in one call is what keeps a run
-	// from composing one design's intent against another's profiles — which two separate calls would
-	// eventually allow.
-	// Whatever the project inherits is layered in FIRST, so `merged` below is the project's whole
-	// config rather than only what its own descriptor spelled out.
+	// The project's config and the design's intent resolve TOGETHER, as one AnalysisConfig, so a run
+	// cannot compose one design's intent against another's profiles. What the project inherits is
+	// layered in first, so `merged` is its whole config and not only its own descriptor's.
 	inherited, err := resolveExtends(ctx, store, p)
 	if err != nil {
 		return Overlay{}, err
 	}
 	merged := mergeConfig(inherited, d.GetConfig())
-	// The INHERITED config is an input the request and project protos do not carry: it came from
-	// whatever `extends` names, which is another project's descriptor.
+	// The request and project protos do not carry the INHERITED config, which comes from another
+	// project's descriptor through `extends`.
 	id.addProto("inherited-config", merged)
 	var o Overlay
 	if resolver != nil {
@@ -306,25 +266,20 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 
 // projectNamespace is the catalog source name a project's profiles are registered under.
 //
-// It is the project's resource name rather than a fixed label, because two projects on one server
-// would otherwise contribute rule sources of the same name and the second would collide with the
-// first.
+// It is the project's resource name so that two projects on one server do not collide.
 func projectNamespace(p *webapi.Project) string { return p.GetName() }
 
 // requestNamespace is the source name a REQUEST's profiles are registered under.
 //
-// It is a fixed string, and it has to be distinct from any project's: a request that supplies its own
-// profiles is layered ON TOP of whatever the project already contributed, so two sources sharing a
-// name would collide rather than override. Being visibly not a resource name is also the point — a
-// reader seeing `request-profiles/…` in a catalog snapshot knows the rule came from the call, not
-// from the project the run was filed under.
+// It must differ from any project's, because a request's profiles layer ON TOP of the project's and
+// two sources sharing a name would collide. A reader seeing `request-profiles/…` in a catalog
+// snapshot knows the rule came from the call and not from the project.
 const requestNamespace = "request"
 
 // mergeConfig layers b over a, field by field, for the tiers that are refs.
 //
-// It is a field-wise layer rather than a whole-message replace because the two configs describe
-// DIFFERENT tiers of one run: a Project sets everything but intent, a Design sets only intent. A
-// replace would make a design that declares intent drop its project's profiles.
+// It layers field by field because a Project sets everything but intent and a Design sets only
+// intent, so a whole-message replace would make a design declaring intent drop its project's profiles.
 func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 	out := &webapi.AnalysisConfig{
 		ProfileUris:    append(append([]string{}, a.GetProfileUris()...), b.GetProfileUris()...),
@@ -348,10 +303,9 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	if err != nil {
 		return Overlay{}, err
 	}
-	// The request's REF-shaped tiers resolve through the same port a project's do, and layer ON TOP of
-	// whatever the project contributed rather than replacing it. That is the difference between this
-	// and the convention below: a caller sending profiles is adding to the run, where a caller sending
-	// a convention is answering for the whole naming vocabulary and cannot stack two.
+	// The request's REF-shaped tiers resolve through the same port a project's do and layer ON TOP of
+	// what the project contributed. A convention is different and replaces, below, because it answers
+	// for the whole naming vocabulary.
 	reqCfg := req.GetConfig()
 	var reqResolved ResolvedConfig
 	if configNeedsResolver(reqCfg) {
@@ -364,25 +318,22 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 		}
 		id.addDigest("request-config", reqResolved.Digest)
 	}
-	// Every tier the request could have contributed has to appear in this guard. A tier missing from it
-	// is silently dropped for a request that carries ONLY that tier, which is the shape symbol paths
-	// arrive in and the shape a reader would never suspect.
+	// Every tier a request can contribute must appear in this guard. A tier missing from it is silently
+	// dropped for a request carrying ONLY that tier, which is how symbol paths usually arrive.
 	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 &&
 		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 {
 		base.id = id
 		return base, nil
 	}
-	// A request convention REPLACES rather than stacks (WS3-124), which is what the serve flag help
-	// and the lexicon half both already promised. Same rule, one layer out.
+	// A request convention REPLACES whatever this overlay already carried, project or deployment
+	// (WS3-124), lexicon and rules alike.
 	out := base
 	if reqOv.Lexicon != nil {
 		out.Lexicon = reqOv.Lexicon
 	}
-	// The request's convention REPLACES whatever this overlay already carried, project or deployment
-	// (WS3-124). Replacement is by source NAME, so the one already in place is dropped rather than
-	// stacked on: keeping both would run two vocabularies at once, and when the two are the same
-	// config — an operator passing --conventions for the file their project already declares — it is
-	// a duplicate-source error rather than a merge.
+	// Replacement is by source NAME. Keeping both would run two vocabularies at once, and when they
+	// are the same file (--conventions naming the one the project already declares) it would be a
+	// duplicate-source error.
 	kept := make([]check.RuleSource, 0, len(base.Sources))
 	for _, src := range base.Sources {
 		if base.conventionName != "" && src.Name() == base.conventionName {
@@ -391,22 +342,19 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 		kept = append(kept, src)
 	}
 	out.Sources = append(append(kept, reqResolved.Sources...), reqOv.Sources...)
-	// A request corpus WINS over the project's, on the same rule SpecsOr follows one layer down: the
-	// caller named it for this run, and merging two corpora would let one team's transcribed limits
-	// decide another's pass/fail.
+	// A request corpus WINS over the project's rather than merging, so one team's transcribed limits
+	// never decide another's pass/fail.
 	if reqResolved.Specs != nil {
 		out.Specs = reqResolved.Specs
 	}
-	// Symbol paths ACCUMULATE: a request naming a library is adding somewhere to look, not replacing
-	// where the project already looks.
+	// Symbol paths ACCUMULATE, since a request naming a library adds somewhere to look.
 	out.SymbolPaths = append(append([]string{}, out.SymbolPaths...), reqResolved.SymbolPaths...)
 	out.Profiles = out.Profiles || reqResolved.Profiles
 	out.Intent = out.Intent || reqResolved.Intent
 	out.conventionName = req.GetConfig().GetConventions().GetName()
-	// Carry the base convention's NAME through, because that is what makes replacement work:
-	// Overlay.Catalog drops the sources tagged with it before splicing these on. Inheriting whatever
-	// the fallback happened to hold would leave the server's convention running alongside the
-	// request's, which is the stacking WS3-124 removed.
+	// Set the base convention's NAME explicitly, since Overlay.Catalog drops the sources tagged with it.
+	// Inheriting whatever the fallback held would leave the server's convention running alongside the
+	// request's (WS3-124).
 	out.baseConvention = baseConvention
 	out.id = id
 	return out, nil

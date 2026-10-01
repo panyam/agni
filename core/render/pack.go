@@ -8,21 +8,21 @@ import (
 	geomath "github.com/panyam/agni/internal/geomath"
 )
 
-// Tier-2 packing (CONSTRAINTS C8): a derived projection of the tier-1 sidecar into the
+// Tier-2 packing (CONSTRAINTS C8) is a derived projection of the tier-1 sidecar into the
 // columnar GPU-upload form (geom.PackedSheet), not a second schema. One sheet's drawable
 // primitives are flattened into a single int32 vertex pool plus fixed-width primitive
 // records, so the browser can make typed-array views and upload once (C4).
 
 const packLayoutVersion = 1
 
-// Primitive kinds: the GPU draw mode for a primitive's vertex range.
+// Primitive kinds, the GPU draw mode for a primitive's vertex range.
 const (
 	primLineStrip uint8 = 1 // open polyline (wires, arcs)
 	primLineLoop  uint8 = 2 // closed outline (rects, circles)
 	primPoints    uint8 = 3 // discrete points (pin dots)
 )
 
-// Primitive groups: a category for coloring and picking.
+// Primitive groups, a category for coloring and picking.
 const (
 	groupSymbol uint8 = 0
 	groupWire   uint8 = 1
@@ -30,8 +30,8 @@ const (
 	groupFree   uint8 = 3 // sheet-level free graphics: junction dots, no-connects, notes
 	groupFrame  uint8 = 4 // synthesized worksheet furniture: frame, ruler ticks, title block
 	// groupBus (WS7-042) sits after the board strata (5-11, packboard.go) in the shared flat
-	// group space: a bus trunk/entry, tessellated to true-width triangle quads because GL cannot
-	// stroke a line wider than 1px (the same reason copper is quads).
+	// group space. A bus trunk/entry tessellates to true-width triangle quads because GL cannot
+	// stroke a line wider than 1px, the same reason copper is quads.
 	groupBus uint8 = 12
 )
 
@@ -41,10 +41,9 @@ const (
 const busWidthNm = 300_000
 
 // schematicGroupColors is the packed-sheet palette indexed by group constant. A plain sheet
-// carries only the schematic groups (0-4); a sheet that packed a bus extends the slice to
-// groupBus (12), which sits past the board strata (5-11) in the shared group space, leaving those
-// slots empty (a schematic sheet never uses them). Bus-less sheets keep the shorter slice so their
-// packed bytes are unchanged.
+// carries only the schematic groups (0-4). A sheet that packed a bus extends the slice to groupBus,
+// leaving the board slots (5-11) empty. Bus-less sheets keep the shorter slice so their packed bytes
+// are unchanged.
 func schematicGroupColors(style Style, hasBus bool) []string {
 	colors := []string{
 		groupSymbol: style.Symbol,
@@ -90,10 +89,9 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 	for _, w := range sheet.Wires {
 		switch w.GetKind() {
 		case geom.WireGeometry_KIND_BUS, geom.WireGeometry_KIND_BUS_ENTRY:
-			// A bus draws as true-width quads (GL can't stroke >1px), one per polyline segment,
-			// in groupBus so it takes the bus color. No net id: a bus's member nets are unmodeled;
-			// its join key is the bus NAME (Net), so a bus finding highlights it by name (WS7-042b).
-			// An unlabeled entry stub has an empty name and just draws (no pick key).
+			// One true-width quad per polyline segment, in groupBus for the bus color. No net id,
+			// since a bus's member nets are unmodeled. Its join key is the bus NAME (Net), so a bus
+			// finding highlights it by name (WS7-042b). An unlabeled entry stub draws with no pick key.
 			hasBus = true
 			busID := w.GetNet()
 			for _, pl := range w.Polylines {

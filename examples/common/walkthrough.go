@@ -6,9 +6,9 @@ import (
 	"github.com/panyam/demokit/tui"
 )
 
-// SetupRenderer selects the demokit renderer from the --mode flag, the one place every
-// example wires it: --mode=tui gives styled boxes, --mode=notebook the Bubble Tea cells, and
-// the default (no flag) is plain text. Call it just before demo.Execute().
+// SetupRenderer selects the demokit renderer from the --mode flag, for every example. --mode=tui
+// gives styled boxes, --mode=notebook the Bubble Tea cells, and no flag gives plain text. Call it
+// just before demo.Execute().
 func SetupRenderer(d *demokit.Demo) {
 	switch demokit.Mode() {
 	case "tui":

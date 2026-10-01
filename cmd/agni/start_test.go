@@ -50,12 +50,12 @@ func mustStart(t *testing.T, design, dir, name string) string {
 	return out.String()
 }
 
-// TestStartProducesAResolvableProject is the acceptance case: after `agni start`, the two commands
+// TestStartProducesAResolvableProject is the acceptance case. After `agni start`, the two commands
 // that used to need a flag list resolve everything from the scaffolded descriptors.
 //
 // It runs `check` and `review` for real rather than asserting on the generated YAML, because the
 // files being well-formed is not the claim. The claim is that the store resolves them, the config
-// tiers load, and the seeded checklist scores — and a stub that parsed but did not LOAD (a
+// tiers load, and the seeded checklist scores. A stub that parsed but did not LOAD (a
 // conventions.yaml the project declares and osProjectConfig then rejects) would pass a
 // file-shape assertion and break every command on the project it just created.
 func TestStartProducesAResolvableProject(t *testing.T) {
@@ -68,15 +68,16 @@ func TestStartProducesAResolvableProject(t *testing.T) {
 	if !strings.Contains(checkCmdOut, "findings by rule") {
 		t.Errorf("check should run against the scaffolded design, got:\n%s", checkCmdOut)
 	}
-	// No --checklist: the project declares one, so this also exercises the #218 fallback against a
-	// checklist this command generated.
+	// With no --checklist the project's declared one is used, so this also exercises the #218
+	// fallback against a checklist this command generated.
 	reviewOut := runCLI(t, reviewCmd(), designDir)
 	if !strings.Contains(reviewOut, "review") || !strings.Contains(reviewOut, "| Outcome |") {
 		t.Errorf("review should run the seeded checklist with no flags, got:\n%s", reviewOut)
 	}
-	// A seeded checklist whose every item read not-automated would be a checklist that binds nothing,
-	// which is worse than no checklist: it reports coverage that does not exist. Counted over the item
-	// ROWS, since the per-area tally lines name every outcome whether or not any item holds it.
+	// A seeded checklist whose every item read not-automated would be a checklist that binds
+	// nothing, which is worse than no checklist because it reports coverage that does not exist.
+	// Counted over the item ROWS, since the per-area tally lines name every outcome whether or not
+	// any item holds it.
 	rows := strings.Count(reviewOut, "| not-automated |")
 	if rows != 1 {
 		t.Errorf("exactly one seeded item (the deliberate manual one) should be not-automated, got %d:\n%s", rows, reviewOut)
@@ -88,7 +89,7 @@ func TestStartProducesAResolvableProject(t *testing.T) {
 // A same-stem sibling carrying a BOARD is a view of the design and is declared. A different-stem
 // netlist is a later revision and a legitimate analysis source of its own, so declaring it would turn
 // a diff of two revisions into a diff of one against itself. A same-stem sibling that is merely a
-// second netlist ENCODING carries no view and is declared either.
+// second netlist ENCODING carries no view and is not declared either.
 func TestStartCompanionRule(t *testing.T) {
 	design, root := startFixture(t, "gateway.kicad_pcb", "gateway-rev-b.edn", "gateway.edf")
 	proj := filepath.Join(root, "p")
@@ -121,8 +122,9 @@ func TestStartCompanionRule(t *testing.T) {
 	}
 }
 
-// TestStartBoardCompanionReachesTheRun: declaring the board is not the point, resolving it is. The
-// board-tier item goes from unanswerable to answered because the descriptor names the layout.
+// TestStartBoardCompanionReachesTheRun checks that the declared board is resolved, not only
+// declared. The board-tier item goes from unanswerable to answered because the descriptor names the
+// layout.
 func TestStartBoardCompanionReachesTheRun(t *testing.T) {
 	answered := func(siblings ...string) string {
 		t.Helper()
@@ -147,8 +149,8 @@ func TestStartBoardCompanionReachesTheRun(t *testing.T) {
 	}
 }
 
-// TestStartRefusesToOverwrite: every planned write is checked before any write happens, so a refusal
-// leaves nothing half-created.
+// TestStartRefusesToOverwrite checks that every planned write is checked before any write happens,
+// so a refusal leaves nothing half-created.
 func TestStartRefusesToOverwrite(t *testing.T) {
 	design, root := startFixture(t)
 	proj := filepath.Join(root, "p")
@@ -162,8 +164,9 @@ func TestStartRefusesToOverwrite(t *testing.T) {
 	}
 }
 
-// TestStartAddsToAnExistingProject: pointing at a folder that already declares a project adds a
-// design to it rather than nesting a second project, which would give one tree two config scopes.
+// TestStartAddsToAnExistingProject checks that pointing at a folder that already declares a project
+// adds a design to it rather than nesting a second project, which would give one tree two config
+// scopes.
 func TestStartAddsToAnExistingProject(t *testing.T) {
 	design, root := startFixture(t)
 	proj := filepath.Join(root, "p")
@@ -191,9 +194,9 @@ func TestStartAddsToAnExistingProject(t *testing.T) {
 	}
 }
 
-// TestStartRejectsANonNetlistEntry: entry names the file ANALYSIS reads, so a geometry-only file
-// cannot be one. Accepting it would produce a project whose every command failed later, at a place
-// that no longer names the mistake.
+// TestStartRejectsANonNetlistEntry exists because entry names the file ANALYSIS reads, so a
+// geometry-only file cannot be one. Accepting it would produce a project whose every command failed
+// later, at a place that no longer names the mistake.
 func TestStartRejectsANonNetlistEntry(t *testing.T) {
 	_, root := startFixture(t)
 	notADesign := filepath.Join(root, "src", "notes.txt")

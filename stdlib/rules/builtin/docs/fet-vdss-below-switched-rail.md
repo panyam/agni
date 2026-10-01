@@ -1,6 +1,6 @@
 ## fet-vdss-below-switched-rail
 
-### What it checks
+### What it means
 
 A MOSFET sitting on a power rail whose voltage is at or above the part's datasheet **drain-source
 breakdown** rating (VDSS). Both numbers are vendor values where the rail's voltage comes from a
@@ -14,8 +14,7 @@ being a switch. It avalanches, conducts when it is meant to block, and often fai
 The short is what makes this worth an error rather than a warning. An open failure disconnects the
 load, which is visible and usually harmless. A shorted high-side switch hands the full rail straight
 to whatever it was protecting, so a part chosen to protect the load becomes the thing that destroys
-it. A 30V-rated FET on a 48V rail is not marginal; it is outside the envelope the vendor will stand
-behind.
+it. A 30V-rated FET on a 48V rail is outside the envelope the vendor will stand behind.
 
 Rating a switch above the rail is also not the whole story in a real design, since inductive kickback
 and hot-plug transients push the drain well above the nominal rail, and that is why designers derate.
@@ -26,33 +25,33 @@ the unambiguous half.
 
 Two sources, preferred in this order:
 
-1. **A driving part's datasheet output.** If something on the rail declares an output voltage in its
-   spec, that is a vendor value. It earns its own citation, and the review's data-trust gate weighs
+1. **A driving part's datasheet output** comes first. If something on the rail declares an output
+   voltage in its spec, that is a vendor value. It earns its own citation, and the review's data-trust gate weighs
    it alongside the FET's.
-2. **The net's name.** `+5V` means 5V by convention. That is a design convention, not a document, so
+2. **The net's name** is the fallback, since `+5V` means 5V by convention. That is a design convention, not a document, so
    it gets no citation.
 
 The message names which was used. `5V` read from a datasheet and `5V` inferred from a net name are
 not equally trustworthy, and a report that flattened them would be overstating what it knows.
 
-### Precision limit worth knowing
+### Precision limit
 
-VDSS is a rating on the **drain-source** pair specifically, but the engine's pin-role vocabulary has
-no drain or source, only power, ground, and the two diode terminals. So the rule cannot tell which of
-the FET's nets actually sits across those terminals.
+VDSS is a rating on the **drain-source** pair specifically, and the naming lexicon now resolves a
+transistor's gate, source and drain (WS3-117), but this rule does not read them yet. So it cannot
+tell which of the FET's nets actually sits across those terminals.
 
-It therefore compares against every **rail** the part touches, and reports the highest. Rails are the
-right filter rather than every net: a gate-drive net is not a rail, so the obvious false pairing is
-excluded structurally rather than by luck.
+It therefore compares against every **rail** the part touches, one verdict per (FET, rail) pair.
+Rails are the right filter rather than every net, because a gate-drive net is not a rail, so the
+obvious false pairing is excluded structurally rather than by luck.
 
 The residual case is a gate deliberately tied to a rail (an always-on FET, or a P-FET gate pulled to
 its source). There the binding limit is VGSS, not VDSS, and VGSS is usually far lower, so the
-condition is typically still a defect, but this rule would name the wrong parameter for it. WS3-117
-(FET pin roles in the naming lexicon) is what makes this exact.
+condition is typically still a defect, but this rule would name the wrong parameter for it. Reading the WS3-117
+terminal roles is what would make this exact.
 
-### For software engineers
+### For software readers
 
-A join between two projections that were read independently before: the part's breakdown rows
+The rule joins two projections that were read independently before, the part's breakdown rows
 (`FetBreakdownLimits`) and the rail's voltage, resolved from either a driving part's
 `OutputVoltageLimits` or `RailMaxVoltage`'s name-derived nominal.
 
@@ -60,18 +59,20 @@ Where several rows are comparable the rule takes the **lowest** breakdown (a par
 its weakest rating) against the **highest** rail voltage. Any other pairing under-reports.
 
 `DatasheetProv` carries one citation or two depending on the rail's evidence, and the plural
-citation field from WS3-028 exists for that: the data-trust gate rates a finding by its weakest citation, so a
-rail voltage from a low-confidence extraction correctly drags the whole finding to Provisional.
+citation field from WS3-028 exists for that, because the data-trust gate rates a finding by its
+weakest citation, so a rail voltage from a low-confidence extraction correctly drags the whole finding to Provisional.
 
-### When it stays silent
+### When it reports no finding
 
-- **No seeded datasheet set.** The rule reads the params tier, so `check.Available` gates it to
-  not-applicable without `--params`. Unevaluable, never clean.
-- **The FET is unseeded**, or its spec carries no breakdown row, so skip, not pass.
-- **The rail's voltage is unknown**: no driving part declares an output and the name carries no
-  voltage token. A rail named `VSYS` yields no number, and the rule does not guess one.
-- **Ground.** Excluded explicitly: it is a rail by the engine's definition but carries no voltage to
-  compare.
+- **With no seeded datasheet set**, the rule has no params tier to read, so `check.Available` gates
+  it to not-applicable without `--params`. Unevaluable, never clean.
+- **The FET is unseeded**, or its spec carries no breakdown row. Each (FET, rail) pair reports
+  not-considered with that reason, never a pass.
+- **The rail's voltage is unknown**, because no driving part declares an output and the name carries
+  no voltage token. A rail named `VSYS` yields no number, so the pair reports no-limit and the rule
+  does not guess one.
+- **Ground is excluded explicitly**, because it is a rail by the engine's definition but carries no
+  voltage to compare. A ground net gets no verdict.
 
 ### Fixing a finding
 

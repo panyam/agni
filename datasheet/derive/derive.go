@@ -1,16 +1,13 @@
-// Package derive is the deterministic extraction stage of the datasheet pipeline
-// (docs/24-derivation.md): PartSpec = f(document, toolchain, recipes, patches). It
-// consumes a doc-IR (agni.v1.doc), classifies tables through declarative recipes,
-// tokenizes rows into parameter-IR rows, applies pinned human patches LAST (so a
-// verified fix can never regress), and emits the PartSpec together with a
-// RunManifest that pins the inputs and lists every gap — what the run saw and did
-// not extract. Pure data-in data-out, no I/O (CONSTRAINTS C1); loaders take fs.FS.
+// Package derive is the deterministic extraction stage of the datasheet pipeline:
+// PartSpec = f(document, toolchain, recipes, patches). It consumes a doc-IR
+// (agni.v1.doc), classifies tables through declarative recipes, tokenizes rows into
+// parameter-IR rows, applies pinned human patches LAST so a verified fix cannot
+// regress, and emits the PartSpec with a RunManifest that pins the inputs and lists
+// every gap the run saw and did not extract. Pure data-in data-out, no I/O
+// (CONSTRAINTS C1); loaders take fs.FS.
 //
-// Trust posture: derived rows carry method "derive/v0" and confidence < 1 (only a
-// human verification earns 1.0), and rows from tables with no test-conditions
-// channel stay ConditionCoverage UNSPECIFIED — under-specified until verified —
-// because a stress table's header defaults ("TA = 25C unless otherwise noted") are
-// conditions this stage cannot prove it captured.
+// The stages and the trust posture are in
+// docsite/content/architecture/datasheet-layer.md#how-a-partspec-is-derived-from-a-document.
 package derive
 
 import (
@@ -30,33 +27,30 @@ import (
 )
 
 // Version is the derive stage's toolchain pin, recorded in every RunManifest. Bump
-// on any behavior change: the golden agreement tests are the regression gate.
+// it on any behavior change; the golden agreement tests are the regression gate.
 const Version = "derive/v0"
 
-// Confidence is stamped on every derived parameter. Deliberately below 1: the
-// verification queue (WS10-002 follow-up) upgrades a human-confirmed row to
-// method "human-verified", confidence 1.
+// Confidence is stamped on every derived parameter. Below 1 because only a human
+// verification (param.MarkVerified) earns 1.0.
 const Confidence = 0.9
 
-// Identity is the part identity the operator supplies for a derivation: the doc-IR
-// does not know what part it describes, the seeder does.
+// Identity is the part identity the operator supplies for a derivation, because the
+// doc-IR does not know what part it describes.
 type Identity struct {
 	MPN          string
 	Manufacturer string
 	DeviceClass  string
-	// Locator is where this corpus keeps the document, for SourceDoc.locator. It is
-	// operator-supplied for the same reason the rest of this struct is: Run takes a
-	// decoded Document and not a path, so it cannot know where the bytes live. Empty
-	// is fine and means the corpus records no location.
+	// Locator is where this corpus keeps the document, for SourceDoc.locator. Run
+	// takes a decoded Document and not a path, so it cannot know. Empty means the
+	// corpus records no location.
 	Locator string
 }
 
-// Run derives a PartSpec from a doc-IR: attach titles to untitled tables (nearest
-// heading above — real producers emit datasheet tables untitled), classify them
-// through the recipes matching the document, apply patches, tokenize rows, validate,
-// and emit spec + manifest. The error return is for structural failures (an invalid
-// recipe regex, a spec that fails param.Validate — a bug, not a data gap); data-level
-// shortfalls are never errors, they are manifest gaps.
+// Run derives a PartSpec from a doc-IR: attach titles to untitled tables, classify
+// them through the recipes matching the document, apply patches, tokenize rows,
+// validate, and emit spec + manifest. The error return is for structural failures
+// (an invalid recipe regex, or a spec that fails param.Validate, which is a derive
+// bug). Data-level shortfalls are never errors; they are manifest gaps.
 func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patch, id Identity) (*parampb.PartSpec, *derivepb.RunManifest, error) {
 	if id.MPN == "" {
 		return nil, nil, errors.New("derive: identity.MPN is required (the join key of the emitted spec)")
@@ -76,31 +70,22 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 		DeviceClass:  id.DeviceClass,
 		Docs: []*parampb.SourceDoc{{
 			Id: "src",
-			// Title is deliberately NOT filled from the doc-IR. SourceDoc.title is specified as the
-			// vendor's document number and revision as printed -- the citation an engineer opens --
-			// while Document.title is "the document-declared title", which producers fill with the
-			// PART number. Copying one into the other asserted "SNOS412Q - REVISED JANUARY 2023" and
-			// stored "LM1117": a citation that cannot say which revision it cites, and identical
-			// before and after a reissue (agni issue 290).
-			//
-			// Left empty until something can establish the real identity, and the refusal is gapped
-			// below with the cover-page prose attached. Empty is a state a reader can act on; a
-			// confident wrong one is what nobody re-checks.
+			// Title is NOT filled from the doc-IR. SourceDoc.title is the vendor's document
+			// number and revision as printed, while producers fill Document.title with the PART
+			// number, so copying it gave a citation that could not name its revision (agni issue
+			// 290). It stays empty and gapUnidentifiedDocument records the refusal.
 			Vendor: id.Manufacturer,
-			// The revision this spec describes. Recording it is what makes a human verification
-			// expire when the vendor reissues the document: param.VerificationOfIn compares a
-			// verification's pinned hash against this one, so a seeder that leaves it empty produces
-			// a corpus in which staleness can never be concluded, only "unknown". Run already has
-			// the hash, and until this was written it went into Locator, which is a path field.
+			// The revision this spec describes. param.VerificationOfIn compares a verification's
+			// pinned hash against this one, so leaving it empty makes staleness "unknown" forever
+			// (#285).
 			ContentHash: work.ContentHash,
 			Locator:     id.Locator,
 		}},
 	}
 	gapUnidentifiedDocument(work, manifest)
 
-	// matchRecipes reads the doc-IR title, which is the RIGHT use of it: a recipe selects the
-	// documents it understands by the part they describe. That is a different question from which
-	// revision this is, which is why one field cannot serve both.
+	// matchRecipes reads the doc-IR title, which is the RIGHT use of it, because a recipe
+	// selects documents by the part they describe and not by revision.
 	rules, pinRules, err := matchRecipes(work.Title, recipes, manifest)
 	if err != nil {
 		return nil, nil, err
@@ -159,14 +144,12 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 	return spec, manifest, nil
 }
 
-// candidateTitles returns the plausible titles for a table, best-first, for
-// classification to try in order: the producer-attached title when present, then
-// band cells (wide merged header cells in the top rows — real parsers fold a
-// datasheet's section band INTO the table), then heading-like text blocks above the
-// table (within 72pt, short, nearest first). Classification picks the FIRST
-// candidate a recipe rule matches, which is what makes a note line sitting between
-// the section heading and the table ("TA = 25C unless otherwise noted") harmless:
-// it is a candidate, it just never matches a rule.
+// candidateTitles returns the plausible titles for a table, best-first: the
+// producer-attached title, then band cells (wide merged header cells in the top rows,
+// since real parsers fold a section band INTO the table), then short text blocks
+// within 72pt above the table, nearest first. Classification takes the FIRST one a
+// recipe rule matches, so a note line between heading and table ("TA = 25C unless
+// otherwise noted") is a candidate that never matches.
 func candidateTitles(pg *docpb.Page, t *docpb.Table) []string {
 	var out []string
 	if t.Title != "" {
@@ -186,7 +169,7 @@ func candidateTitles(pg *docpb.Page, t *docpb.Table) []string {
 				continue
 			}
 			gap := t.Bbox.Y - (tb.Bbox.Y + tb.Bbox.Height)
-			// Small negative tolerance: real detected boxes touch or overlap by a
+			// Small negative tolerance, since real detected boxes touch or overlap by a
 			// point or two (the BSS138 abs-max heading overlaps its table by 0.12pt).
 			if gap < -6 || gap > 72 {
 				continue
@@ -201,9 +184,9 @@ func candidateTitles(pg *docpb.Page, t *docpb.Table) []string {
 	return out
 }
 
-// bandCells returns the texts of band cells: cells in the rows above the header row
-// that span more than one column (a folded-in section band). Their non-title texts
-// are table-level conditions (see extractTable).
+// bandCells returns the texts of band cells, the cells above the header row that
+// span more than one column (a folded-in section band). Their non-title texts are
+// table-level conditions (see extractTable).
 func bandCells(t *docpb.Table) []string {
 	header := findHeaderRow(t)
 	var out []string
@@ -215,10 +198,10 @@ func bandCells(t *docpb.Table) []string {
 	return out
 }
 
-// findHeaderRow locates the column-header row: the first of the top rows whose
+// findHeaderRow locates the column-header row, the first of the top four rows whose
 // cells match at least two recognized column names. Real parsers put band rows
-// above it; hand fixtures have it at row 0. Returns 0 when nothing matches (the
-// detectColumns miss then lands the table in gaps).
+// above it and hand fixtures have it at row 0. Returns 0 when nothing matches, and
+// the detectColumns miss then lands the table in gaps.
 func findHeaderRow(t *docpb.Table) int32 {
 	for row := int32(0); row < min(t.Rows, 4); row++ {
 		hits := 0
@@ -289,8 +272,8 @@ func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.R
 }
 
 // classifyPin reports whether a title names a pin function table, and what the recipe
-// says its designator columns mean. The bool is the match: an axis of UNSPECIFIED is a
-// legitimate answer ("this is a pin table, do not read its columns as packages"), so it
+// says its designator columns mean. The bool is the match, because an axis of UNSPECIFIED
+// is a legitimate answer ("this is a pin table, do not read its columns as packages") and
 // cannot double as the not-matched signal the way LimitKind's zero value does.
 func classifyPin(title string, rules []compiledPinRule) (derivepb.PinColumnAxis, bool) {
 	for _, r := range rules {
@@ -332,8 +315,8 @@ func applyPatches(d *docpb.Document, patches []*derivepb.Patch, manifest *derive
 					}
 				}
 				if !done && p.Row >= 0 && p.Col >= 0 && p.Row < t.Rows && p.Col < t.Cols {
-					// Insert-if-absent: a producer that mis-placed a value leaves the
-					// correct position empty; the correction pair is a clear plus an
+					// Insert if absent. A producer that mis-placed a value leaves the
+					// correct position empty, so the correction pair is a clear plus an
 					// insert (the real LM1117 abs-max case).
 					t.Cells = append(t.Cells, &docpb.Cell{Row: p.Row, Col: p.Col, Text: p.Text})
 					done = true
@@ -354,8 +337,7 @@ func applyPatches(d *docpb.Document, patches []*derivepb.Patch, manifest *derive
 }
 
 // columns maps header names to column indexes for one table. Recognized headers are
-// generic vendor conventions; a recipe-level override waits for a sheet that needs
-// one.
+// generic vendor conventions, with no recipe-level override.
 type columns struct {
 	symbol, name, cond, min, typ, max, unit, ratings int
 }
@@ -395,8 +377,8 @@ func extractTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg *do
 	headerRow := findHeaderRow(t)
 	cols := detectColumns(t, headerRow)
 	// Band texts other than the chosen title are table-level conditions ("TA = 25C
-	// unless otherwise noted"): every row inherits them, raw when they do not parse,
-	// which keeps such rows machine-incomparable until verified — the honest state.
+	// unless otherwise noted"). Every row inherits them, raw when they do not parse,
+	// which keeps such rows machine-incomparable until verified.
 	var tableConds []*parampb.Condition
 	for _, band := range bandCells(t) {
 		if band == t.Title {
@@ -406,9 +388,8 @@ func extractTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg *do
 	}
 	if cols.symbol < 0 && cols.name < 0 {
 		// TI-shaped tables label rows in an unlabeled column 0 ("Maximum input
-		// voltage (VIN to GND) | MIN | MAX | UNIT"): fall back to column 0 as the
-		// name column when it is not already claimed as a value column. Symbol stays
-		// empty; the row is honest name-only data.
+		// voltage (VIN to GND) | MIN | MAX | UNIT"), so fall back to column 0 as the
+		// name column when no value column claims it. Symbol stays empty.
 		if cols.ratings != 0 && cols.min != 0 && cols.typ != 0 && cols.max != 0 && cols.unit != 0 && cols.cond != 0 {
 			cols.name = 0
 		}
@@ -503,14 +484,13 @@ func extractTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg *do
 		}
 		if cols.cond >= 0 || len(tableConds) > 0 {
 			// The condition channels present (column and/or band) were captured in
-			// full, structured or raw, so the list is asserted complete; raw-only
-			// members still make the row machine-incomparable, which is the intended
-			// middle trust state.
+			// full, structured or raw, so the list is asserted complete. Raw-only
+			// members still make the row machine-incomparable.
 			p.ConditionCoverage = parampb.ConditionCoverage_CONDITION_COVERAGE_COMPLETE
 		}
-		// No conditions channel at all: leave coverage UNSPECIFIED (under-specified
-		// until a human verifies). Never UNCONDITIONAL: defaults this stage cannot
-		// prove captured may qualify every row.
+		// With no conditions channel, coverage stays UNSPECIFIED and never
+		// UNCONDITIONAL, because header defaults this stage cannot prove captured
+		// may qualify every row (datasheet-layer.md#trust-defaults).
 
 		spec.Parameters = append(spec.Parameters, p)
 	}

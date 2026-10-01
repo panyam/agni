@@ -1,8 +1,8 @@
 // The report panel's command-down surface, mirroring findings.ts. The presenter fetches the
-// server-computed CheckReport pivot (GetCheckReport) and pushes CheckReportState; the panel
-// renders it as-is. The pivot is canonical and server-side (WS3-022): sections arrive
-// worst-severity first with counts, findings grouped by rule with catalog summaries, so this
-// module never re-derives a group-by the CLI's report formats would then drift from.
+// server-computed CheckReport pivot (GetCheckReport) and pushes CheckReportState, and the panel
+// renders it as-is. The pivot is canonical and server-side (WS3-022), with sections worst-severity
+// first and findings grouped by rule, so this module never re-derives a group-by that the CLI's
+// report formats could drift from.
 
 import { contextFromWire, type FindingItem, type SheetBadge, type WireContext } from "./findings.js";
 
@@ -34,8 +34,8 @@ export interface CheckReportState {
   // null when no design is open, the fetch failed (e.g. a geometry-only file), or no rules
   // are selected; the panel falls back to its empty messages.
   report: CheckReportData | null;
-  // subject of the focused finding, "" when none — kept in step with the findings panel so a
-  // chip and its row highlight together.
+  // subject of the focused finding, "" when none. Kept in step with the findings panel so a chip
+  // and its row highlight together.
   selected: string;
   // number of rules currently selected, so the panel tells "no rules selected" from "clean".
   ruleCount: number;
@@ -79,7 +79,7 @@ export interface WireCheckReport {
 // server's section and group order. Findings become the same FindingItem the checks panel
 // uses (so chips join the highlight layer identically); lookupCategory denormalizes the
 // rule's category tag, which findings do not carry on the wire, and sheetBadges denormalizes
-// the wire's sheet ids into display badges (the presenter holds the SheetRefs — WS9-024). It
+// the wire's sheet ids into display badges (the presenter holds the SheetRefs, WS9-024). It
 // defaults to none so pure-logic callers need not wire it.
 export function reportFromWire(
   r: WireCheckReport,

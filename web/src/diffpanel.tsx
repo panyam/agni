@@ -3,11 +3,11 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { emptyDiffState, type DiffMode, type DiffState } from "./diffpresenter.js";
 
-// DiffPanel is the diff view's chrome bar: the two file labels, the sheet-pair selector,
-// the change-class legend (swatch + label + design-wide count), and the close button. The
-// two canvases below it are plain DOM the composition root owns (the SvgViews are not
-// islands, same as the single-file viewer); this island renders only from the pushed
-// DiffState and emits pair/close intents up (C3).
+// DiffPanel is the diff view's chrome bar: the two file labels, the sheet-pair selector, the
+// side-by-side / overlay mode buttons, the change-class legend (swatch + label + design-wide
+// count), and the close button. The two canvases below it are plain DOM the composition root
+// owns. This island renders only from the pushed DiffState and emits pair/mode/close intents
+// up (C3).
 function DiffPanel(props: {
   state: () => DiffState;
   onPair: (i: number) => void;
@@ -84,8 +84,8 @@ export interface DiffPanelView {
   setState(s: DiffState): void;
 }
 
-// diffPanelIsland mounts the chrome bar and returns its command-down view; onPair/onClose
-// are the intents up, same island shape as controlBarIsland.
+// diffPanelIsland mounts the chrome bar and returns its command-down view. The handlers are the
+// intents up, the same island shape as controlBarIsland.
 export function diffPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

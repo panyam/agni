@@ -1,13 +1,10 @@
-// Command catalogdocs generates the docsite's browsable rule and relation catalog (issue 14)
-// from the composed engine catalog and the embedded per-rule/per-relation Detail markdown. It
-// is the single generator behind docsite/content/reference/{rules,relations}/ and the SVG cards
-// under docsite/static/images/catalog/. The stdlib docs stay the one source of truth; this tool
-// projects them into docsite pages so the site reflects the shipped catalog instead of drifting
-// hand-copied prose.
+// Command catalogdocs generates the docsite's rule and relation catalog (issue 14) from the composed
+// engine catalog and the embedded per-rule and per-relation Detail markdown. It writes
+// docsite/content/reference/{rules,relations}/ and the SVG cards under
+// docsite/static/images/catalog/, so the stdlib docs stay the one source of truth.
 //
-// Run it from the repo root via `make catalog-docs`. `make catalog-docs-check` regenerates and
-// fails when the committed output drifts, the same freshness discipline as the generated roadmap
-// index. Output is deterministic (sorted) so a clean regen produces no diff.
+// Run it from the repo root via `make catalog-docs`. `make catalog-docs-check` regenerates and fails
+// when the committed output drifts. Output is sorted, so a clean regen produces no diff.
 package main
 
 import (
@@ -26,10 +23,9 @@ import (
 	"github.com/panyam/agni/stdlib/rules/datalog"
 	"github.com/panyam/agni/stdlib/rules/intent"
 
-	// Blank imports register the built-in rule catalog and the query relations (plus their embedded
-	// Detail docs) into the process-global registries DefaultCatalog and query.Catalog read. The
-	// non-builtin rule sources (intent/datalog/profile) are pulled by their own DocRules() accessors
-	// below, not via DefaultCatalog, because intent/profile rules are generated per-declaration and
+	// Blank imports register the built-in rules and the query relations (with their Detail docs)
+	// into the process-global registries. The intent, datalog and profile rules come from their own
+	// DocRules() accessors below, because intent and profile rules are generated per declaration and
 	// have no static catalog entry.
 	_ "github.com/panyam/agni/stdlib/relations"
 	_ "github.com/panyam/agni/stdlib/rules/builtin"
@@ -43,13 +39,12 @@ var (
 	relImgSrc    = flag.String("relation-images", "stdlib/relations/facts/docs/images", "source dir for relation doc images")
 )
 
-// imageRef matches a markdown image whose target is a doc-relative images/<file> path, the form
-// the embedded Detail uses. Only this form is rewritten; absolute or templated refs are left alone.
+// imageRef matches a markdown image whose target is a doc-relative images/<file> path, the form the
+// embedded Detail uses. Absolute or templated refs are left alone.
 var imageRef = regexp.MustCompile(`\]\(images/([^)]+)\)`)
 
-// leadingHeading matches a leading "## <title>" line (plus its trailing blank line) at the very
-// start of a Detail body. The generated page's front-matter supplies the H1, so the duplicate
-// heading is stripped.
+// leadingHeading matches the "## <title>" line (and trailing blank lines) opening a Detail body. It
+// is stripped because the page's front-matter supplies the H1.
 var leadingHeading = regexp.MustCompile(`\A## [^\n]*\n+`)
 
 // ruleCategoryOrder is the fixed display order for the rules index; a category not listed here
@@ -89,11 +84,9 @@ func run() error {
 	return nil
 }
 
-// ruleSource is one origin of documented rules the catalog projects. label is shown in the index's
-// Source column so a reader can tell a built-in from an intent/datalog/profile rule; prefix namespaces
-// the page slug and link so a non-built-in name never collides with a built-in of the same name (and
-// carries provenance in the URL). imgSrc is the dir holding this source's docs/images, empty when the
-// source ships no cards.
+// ruleSource is one origin of documented rules. label fills the index's Source column. prefix
+// namespaces the page slug and link so a non-built-in name never collides with a built-in of the
+// same name. imgSrc is the dir holding this source's docs/images, empty when it ships no cards.
 type ruleSource struct {
 	rules  []*check.Rule
 	label  string
@@ -101,16 +94,14 @@ type ruleSource struct {
 	imgSrc string
 }
 
-// catalogRow is one rendered index entry: enough to place a rule in its category table with its
-// source, severity, and a link to its page.
+// catalogRow is one rendered rules-index entry.
 type catalogRow struct {
 	category, label, slug, source, severity, summary string
 }
 
-// genRules writes one page per documented rule across every source (built-in plus the non-built-in
-// intent/datalog/profile catalogs), the grouped index with a Source column, and copies the images
-// those pages reference. Built-in pages keep flat slugs (URLs unchanged); non-built-in pages are
-// namespaced by source so a name shared with a built-in (or a future collision) cannot overwrite.
+// genRules writes one page per documented rule across every source, the grouped index, and the
+// images those pages reference. Built-in pages keep flat slugs; the others are namespaced by source
+// so a name shared with a built-in cannot overwrite its page.
 func genRules() error {
 	sources := []ruleSource{
 		{rules: check.BuiltinRules(), label: "built-in", prefix: "", imgSrc: *ruleImgSrc},
@@ -160,8 +151,8 @@ func genRules() error {
 	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(rulesIndex(rows)), 0o644)
 }
 
-// pageSlug is a rule's page filename stem: flat for the built-ins (prefix ""), else "<prefix>-<name>"
-// so a non-built-in page never overwrites a built-in of the same bare name.
+// pageSlug is a rule's page filename stem, the bare name for built-ins (prefix "") and
+// "<prefix>-<name>" otherwise.
 func pageSlug(prefix, name string) string {
 	if prefix == "" {
 		return name
@@ -169,8 +160,8 @@ func pageSlug(prefix, name string) string {
 	return prefix + "-" + name
 }
 
-// linkLabel is the display/link text for a rule: the bare name for built-ins, else "<prefix>/<name>"
-// (the composed catalog name a review manifest binds to), so provenance shows inline.
+// linkLabel is a rule's display text, the bare name for built-ins and otherwise "<prefix>/<name>",
+// the composed catalog name a review manifest binds to.
 func linkLabel(prefix, name string) string {
 	if prefix == "" {
 		return name
@@ -178,9 +169,9 @@ func linkLabel(prefix, name string) string {
 	return prefix + "/" + name
 }
 
-// genRelations writes one page per documented relation plus the grouped index, and copies the
-// images those pages reference. A relation with no Detail yet (the staged backfill) gets an index
-// row but no page and no link, so the index never points at a missing file.
+// genRelations writes one page per documented relation, the grouped index, and the images those
+// pages reference. A relation with no Detail (a computed predicate may have none) gets an index row
+// with no page and no link.
 func genRelations() error {
 	rels := query.Catalog()
 	sort.Slice(rels, func(i, j int) bool { return rels[i].Name < rels[j].Name })
@@ -211,8 +202,8 @@ func genRelations() error {
 	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(relationsIndex(rels)), 0o644)
 }
 
-// prepareDetail strips the leading duplicate heading and rewrites doc-relative image refs to the
-// docsite static path, recording each referenced image basename in seen so only used images copy.
+// prepareDetail strips the leading heading and rewrites doc-relative image refs to the docsite
+// static path, recording each image basename in seen so only referenced images are copied.
 func prepareDetail(detail, kind string, seen map[string]bool) string {
 	body := leadingHeading.ReplaceAllString(strings.TrimSpace(detail), "")
 	body = imageRef.ReplaceAllStringFunc(body, func(m string) string {
@@ -223,27 +214,20 @@ func prepareDetail(detail, kind string, seen map[string]bool) string {
 	return body + "\n"
 }
 
-// pathPrefixExpr is the s3gen template expression for the site's URL prefix; content markdown is
-// templated, so an absolute static link stays correct if the prefix ever changes.
+// pathPrefixExpr is the s3gen template expression for the site's URL prefix. Content markdown is
+// templated, so an absolute static link follows a prefix change.
 const pathPrefixExpr = "{{.Site.PathPrefix}}"
 
 // remedySection renders a rule's Remedy as the page's first "### " section, or "" for a rule that
-// states none.
+// states none. It leads the page because a reader arrives from a finding that just fired and wants
+// to know what to do.
 //
-// It LEADS the page rather than trailing it because of who arrives here: a reader follows this link
-// from a finding that just fired, so "what do I do" is the question they came with rather than the one
-// they work up to. Everything below it explains why the rule fired.
+// A heading rather than a blockquote, because the docsite's stylesheet has no blockquote rule and a
+// "> " callout renders as unstyled indented text (build/check-rule.md prefers sections too).
 //
-// A heading rather than a blockquote, because the docsite's stylesheet has no blockquote rule at all,
-// so a "> " callout renders as unstyled indented text and reads as an aside. A "### " section is
-// styled like every other section on the page, and it matches the docs' own convention of proper
-// sections over bold run-ins (build/check-rule.md).
-//
-// ONLY Remedy is projected, deliberately, though the Impact FIELD is equally absent from these pages.
-// Most rule docs already write their own "### Impact" section in prose tuned to the page, so injecting
-// the field would print the same point twice in slightly different words across the majority of the
-// catalog. Remedy has no such section anywhere, by rule, so it is the half genuinely missing. Wanting
-// the Impact field here too means first taking that section out of the doc bodies.
+// ONLY Remedy is projected, though the Impact FIELD is equally absent here. Most rule docs already
+// write their own "### Impact" section, so injecting the field would print it twice. Adding Impact
+// means first taking that section out of the doc bodies.
 func remedySection(remedy string) string {
 	remedy = strings.TrimSpace(remedy)
 	if remedy == "" {
@@ -259,11 +243,9 @@ func frontMatter(name, summary string) string {
 	return fmt.Sprintf("---\ntitle: \"%s\"\ndescription: \"%s\"\n---\n\n", name, desc)
 }
 
-// resetDir ensures dir exists and removes every file in it with the given extension, so the
-// generated output is a pure function of the catalog: a removed rule or relation drops its page,
-// and a removed image ref drops its card, rather than lingering as an orphan the freshness check
-// cannot see. Only the one extension is touched, so a sibling hand-authored file would survive
-// (there are none today; the reference/{rules,relations} dirs are fully generated).
+// resetDir ensures dir exists and removes every file in it with the given extension, so a removed
+// rule, relation or image ref drops its file rather than lingering as an orphan the freshness check
+// cannot see. Files with other extensions survive.
 func resetDir(dir, ext string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -282,9 +264,8 @@ func resetDir(dir, ext string) error {
 	return nil
 }
 
-// copyImages copies the named SVGs from src into dst, replacing dst's prior contents for the ones
-// listed so a removed reference stops shipping its image. Missing source images are reported, not
-// skipped silently, since a referenced-but-absent card is a real doc bug.
+// copyImages copies the named SVGs from src into dst. A referenced image missing from src is an
+// error, not a silent skip.
 func copyImages(src, dst string, names map[string]bool) error {
 	if len(names) == 0 {
 		return nil
@@ -304,10 +285,8 @@ func copyImages(src, dst string, names map[string]bool) error {
 	return nil
 }
 
-// rulesIndex renders the rules catalog landing page: a table per category, rows sorted by label, each
-// linking to its page with its source and severity. The Source column flags where a rule comes from —
-// a built-in, a design-intent check, a datalog-authored rule, or an interface profile — so a reader
-// can tell a new category from a new "shape" of rule within an existing one.
+// rulesIndex renders the rules catalog landing page, a table per category with rows sorted by label,
+// each linking to its page with its source and severity.
 func rulesIndex(rows []catalogRow) string {
 	var b strings.Builder
 	b.WriteString(frontMatter("Rules catalog", "Every check rule the catalog ships, grouped by category, with its source."))
@@ -334,8 +313,8 @@ func rulesIndex(rows []catalogRow) string {
 	return b.String()
 }
 
-// relationsIndex renders the relations catalog landing page: a table per relation kind. A relation
-// with a reference page links to it; one still awaiting a doc shows its summary without a link.
+// relationsIndex renders the relations catalog landing page, a table per relation kind. A relation
+// with a reference page links to it, and one without shows its summary unlinked.
 func relationsIndex(rels []query.RelationInfo) string {
 	var b strings.Builder
 	b.WriteString(frontMatter("Relations catalog", "Every query relation the fact base exposes, grouped by kind."))

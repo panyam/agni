@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-// TestResolveSymbolPaths covers the container's load-bearing case: the image sets
+// TestResolveSymbolPaths covers the case the container depends on. The image sets
 // AGNI_SYMBOL_PATH so the symbol libraries reach every subcommand, because `docker run <image>
 // check ...` replaces CMD and would otherwise drop them. A symbol-short read does not error, it
 // just reports fewer findings, so losing this silently is the expensive failure.
@@ -24,7 +24,7 @@ func TestResolveSymbolPaths(t *testing.T) {
 		}
 	})
 
-	// Ambient configuration must never widen an explicit request: an operator who named their
+	// Ambient configuration must never widen an explicit request. An operator who named their
 	// own library is asserting which symbols resolve, and quietly appending the image's would
 	// change what the design reads as.
 	t.Run("flag wins outright over env", func(t *testing.T) {

@@ -2,10 +2,10 @@
 
 ### What it means
 
-The design intent declares that a named rail must have a discharge path: a bleeder resistor that bridges
-the rail to ground so stored charge drains when the supply is removed. This rule fails when the declared
-rail carries no such resistor. It probes that exact net for a component that is a resistor AND also
-touches a ground net, and a declared rail with none is flagged.
+The design intent declares that a named rail must have a discharge path, a bleeder resistor that
+bridges the rail to ground so stored charge drains when the supply is removed. This rule fails when
+the declared rail carries no such resistor. It probes that exact net for a component that is a
+resistor AND also touches a ground net, and a declared rail with none is flagged.
 
 ### Why engineers want it
 
@@ -16,9 +16,9 @@ names the rail and this rule verifies the resistor-to-ground is present.
 
 ### Impact
 
-A rail the design was intended to discharge holds charge after power-down: a shock or arc hazard on a
-high-voltage rail, or unpredictable power-sequencing on the next cycle because a capacitor never bled
-down.
+A rail the design was intended to discharge holds charge after power-down, giving a shock or arc
+hazard on a high-voltage rail, or unpredictable power-sequencing on the next cycle because a
+capacitor never bled down.
 
 ![A declared rail with no bleeder is flagged; the same rail with a resistor to ground is fine](images/protection-discharge.svg)
 

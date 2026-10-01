@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-// TestXschemBusDetected: a `lab=DATA[7:0]` bus-range label is recorded as an unmodeled-bus diagnostic
-// (WS1-034 Phase 1). A scalar indexed net (no colon) would not match the bus-range pattern.
+// TestXschemBusDetected checks that a `lab=DATA[7:0]` bus-range label is recorded as an
+// unmodeled-bus diagnostic (WS1-034 Phase 1). A scalar indexed net (no colon) would not match the
+// bus-range pattern.
 func TestXschemBusDetected(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "bus.sch")), "bus.sch")
 	if err != nil {

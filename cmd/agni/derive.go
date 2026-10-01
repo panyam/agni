@@ -11,9 +11,9 @@ import (
 	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
 )
 
-// deriveCmd derives a parameter-IR PartSpec from a doc-IR file: the CLI face of the
-// derivation stage (docs/24). Thin wiring per C13: file opening and os.DirFS happen
-// here; the derive package is pure data-in data-out.
+// deriveCmd derives a parameter-IR PartSpec from a doc-IR file, the CLI face of the derivation stage
+// (docsite/content/architecture/datasheet-layer.md#how-a-partspec-is-derived-from-a-document). File
+// opening and os.DirFS stay here per C13, so the derive package is pure data-in data-out.
 func deriveCmd() *cobra.Command {
 	var recipesDir, patchesDir, mpn, manufacturer, deviceClass, outSpec, outManifest string
 	cmd := &cobra.Command{

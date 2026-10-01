@@ -1,8 +1,7 @@
-// Package svg builds SVG documents ergonomically, replacing hand-formatted fmt.Fprintf
-// calls. It is a zero-dependency element writer: attribute values carry their own
+// Package svg is a zero-dependency SVG element writer. Attribute values carry their own
 // formatting (F/I) and text content is XML-escaped (Text), so callers avoid quote-soup and
-// manual escaping. It is a serialization helper, not a renderer: it holds no geometry model
-// and makes no drawing decisions (those stay in the render package).
+// manual escaping. It holds no geometry model and makes no drawing decisions, which stay in
+// core/render.
 package svg
 
 import (
@@ -11,29 +10,24 @@ import (
 	"strings"
 )
 
-// Attr is one element attribute. Construct with A, F, or I so numeric formatting lives in
-// one place rather than at each call site. The value is written verbatim inside quotes, so
-// it must not contain a double quote; the constructors only ever produce numbers, and A is
-// for caller-controlled tokens (colors, anchors, point lists) that never do.
+// Attr is one element attribute, built with A, AEsc, F or I. The value is written verbatim
+// inside quotes, so it must never contain a double quote unless it came through AEsc.
 type Attr struct{ key, val string }
 
-// A is a raw attribute: the value is written verbatim (colors, text-anchor, point lists,
-// and other tokens with no quote characters).
+// A is a raw attribute whose value is written verbatim, for colors, text-anchor, point lists
+// and other tokens with no quote characters.
 //
-// NEVER pass data read from a design file to this. Attribute values are written unescaped, so a net
-// or component name containing a quote would close the attribute and inject markup into a document
-// the viewer mounts with innerHTML. Text CONTENT has always been escaped (see Text); attributes were
-// safe only because nothing but colors and numbers went into them, which stopped being true when
-// entity keys arrived. Use AEsc for anything a reader's file supplies.
+// NEVER pass data read from a design file to this. A net or component name containing a quote
+// would close the attribute and inject markup into a document the viewer mounts with innerHTML.
+// Use AEsc for anything a reader's file supplies.
 func A(key, val string) Attr { return Attr{key, val} }
 
-// AEsc is an attribute whose value comes from the design: net names, designators, pin numbers. The
-// value is escaped, so a name carrying a quote or an angle bracket lands as text rather than as
-// markup.
+// AEsc is an escaped attribute for a value that comes from the design (net names, designators, pin
+// numbers), so a quote or angle bracket lands as text rather than as markup.
 func AEsc(key, val string) Attr { return Attr{key, escapeAttr(val)} }
 
 // escapeAttr escapes a value for an attribute in double quotes. xml.EscapeText covers the five XML
-// entities plus the control whitespace, which is what an attribute needs.
+// entities plus the control whitespace.
 func escapeAttr(v string) string {
 	var b strings.Builder
 	_ = xml.EscapeText(&b, []byte(v))
@@ -68,9 +62,8 @@ func (c *Canvas) El(tag string, attrs ...Attr) {
 	c.b.WriteString("/>")
 }
 
-// Group opens a container element (<g k="v" ...>) that stays open until GroupEnd. Used to
-// stratify a document into toggleable layers (the board renderer's class-per-layer groups);
-// nesting is the caller's responsibility.
+// Group opens a container element (<g k="v" ...>) that stays open until GroupEnd, as the board
+// renderer's class-per-layer groups do. Nesting is the caller's responsibility.
 func (c *Canvas) Group(attrs ...Attr) {
 	c.b.WriteString("\n<g")
 	writeAttrs(&c.b, attrs...)

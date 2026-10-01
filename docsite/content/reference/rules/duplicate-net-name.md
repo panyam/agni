@@ -32,7 +32,7 @@ schematic-vs-board join attaches findings to the wrong copper.
 Fires once per claiming net (each is a place to fix). Synthesized stub
 names (N$, unconnected-(...)) are per-net reader inventions and never collide; empty names
 carry no claim. A firing on a fresh format's corpus is ALSO a read-health signal, so check
-the reader before the design (the pin-net-conflict lesson).
+the reader before the design.
 
 ### Query structure
 

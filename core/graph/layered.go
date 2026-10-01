@@ -7,23 +7,17 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// layeredPlace is a layered (Sugiyama-style) placement: components are ranked into rows by
-// distance from a high-degree root, then ordered within each row to reduce edge crossings,
-// then given coordinates. Unlike the grid placer it uses connectivity, so connected
-// components land near each other, which is closer to how a schematic reads.
+// layeredPlace is a layered (Sugiyama-style) placement. Components are ranked into rows by distance
+// from a high-degree root, ordered within each row to reduce edge crossings, then given coordinates.
+// Unlike the grid placer it uses connectivity, so connected components land near each other.
 //
-// This is a first cut: rank + barycenter ordering + straight edges. It is not full Sugiyama
-// (no dummy-node edge routing), which is a later refinement. It is deterministic: adjacency
-// and roots are chosen in ref_des order and the sweep count is fixed, so a design always
-// lays out identically.
+// It is rank plus barycenter ordering plus straight edges, with no dummy-node edge routing. Adjacency
+// and roots are chosen in ref_des order and the sweep count is fixed, so a design always lays out
+// identically.
 //
-// Cycles: netlists are heavily cyclic (feedback loops, power/ground nets), and that is fine
-// here. The component graph is undirected and ranking is by BFS distance, so there is no
-// directed cycle to break, and BFS terminates on any graph. Classic Sugiyama cycle removal
-// does not apply: it exists to make a directed graph acyclic so edges can all point down a
-// layer, which is not the constraint this uses. A cycle instead yields intra-layer or
-// layer-skipping edges (drawn as-is), a drawing-quality matter that dummy-node routing would
-// refine later, not a correctness problem.
+// Netlists are heavily cyclic (feedback loops, power/ground nets), and that needs no cycle removal
+// here. The component graph is undirected and ranking is by BFS distance, so there is no directed
+// cycle to break. A cycle yields intra-layer or layer-skipping edges, drawn as-is.
 func layeredPlace(d *ir.Design) Placement {
 	adj := adjacency(d)
 
@@ -45,9 +39,9 @@ func layeredPlace(d *ir.Design) Placement {
 	return Placement{Positions: pos}
 }
 
-// adjacency builds the component graph: two components are adjacent if they share a net.
-// Every component appears as a key (isolated ones map to an empty set), so the placement
-// covers the whole design, not just the connected part.
+// adjacency builds the component graph, where two components are adjacent if they share a net.
+// Every component appears as a key (isolated ones map to an empty set), so the placement covers the
+// whole design.
 func adjacency(d *ir.Design) map[string]map[string]bool {
 	adj := make(map[string]map[string]bool, len(d.Components))
 	for _, c := range d.Components {
@@ -82,7 +76,7 @@ func assignLayers(refs []string, adj map[string]map[string]bool) map[string]int 
 	layer := make(map[string]int, len(refs))
 	visited := map[string]bool{}
 
-	// Root order: degree descending, then ref_des ascending.
+	// Roots by degree descending, then ref_des ascending.
 	roots := append([]string(nil), refs...)
 	sort.SliceStable(roots, func(i, j int) bool {
 		di, dj := len(adj[roots[i]]), len(adj[roots[j]])
@@ -120,10 +114,9 @@ func assignLayers(refs []string, adj map[string]map[string]bool) map[string]int 
 	return layer
 }
 
-// orderRows groups components by layer and orders each row to reduce crossings, using
-// barycenter sweeps (a node moves toward the average position of its neighbors in the
-// adjacent row). It runs a fixed number of sweeps for determinism. Initial order within a
-// row is ref_des, so the result is stable.
+// orderRows groups components by layer and orders each row to reduce crossings with barycenter
+// sweeps (a node moves toward the average position of its neighbors in the adjacent row). A fixed
+// sweep count and a ref_des initial order keep the result stable.
 func orderRows(refs []string, layer map[string]int, adj map[string]map[string]bool) [][]string {
 	maxLayer := 0
 	for _, l := range layer {
@@ -143,7 +136,7 @@ func orderRows(refs []string, layer map[string]int, adj map[string]map[string]bo
 		}
 		return m
 	}
-	// barycenter of cur against a fixed neighbor row; nodes with no neighbor there keep place.
+	// Barycenter of row against a fixed neighbor row. Nodes with no neighbor there keep their place.
 	sweep := func(row []string, refRow map[string]int) {
 		key := make(map[string]float64, len(row))
 		for i, r := range row {
@@ -165,10 +158,10 @@ func orderRows(refs []string, layer map[string]int, adj map[string]map[string]bo
 
 	const sweeps = 4
 	for s := 0; s < sweeps; s++ {
-		for l := 1; l <= maxLayer; l++ { // down: order against the row above
+		for l := 1; l <= maxLayer; l++ { // downward, against the row above
 			sweep(rows[l], posIn(rows[l-1]))
 		}
-		for l := maxLayer - 1; l >= 0; l-- { // up: order against the row below
+		for l := maxLayer - 1; l >= 0; l-- { // upward, against the row below
 			sweep(rows[l], posIn(rows[l+1]))
 		}
 	}

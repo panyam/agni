@@ -62,9 +62,8 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   const loadEntries = async (): Promise<void> => {
     if (entries() !== null) return;
     try {
-      // `opens` is this tree declaring what it can show, which is what lets the server leave out
-      // folders with no datasheet anywhere beneath them. The viewer tree declares DESIGN and gets
-      // the mirror image of this listing.
+      // `opens` declares what this tree can show, so the server leaves out folders with no datasheet
+      // anywhere beneath them. The viewer tree declares DESIGN and gets the mirror image.
       const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path), opens: DATASHEET_OPENS });
       setEntries(resp.entries);
     } catch (e) {
@@ -94,9 +93,9 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
       <Show when={open()}>
         <ul class="children">
           <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
-          {/* Only directories and datasheets; every other listed file is hidden, the way the viewer
-              tree hides what no reader opens. The kind comes from the server, so "what is a
-              datasheet" is defined once rather than re-derived from the extension here. */}
+          {/* Only directories and datasheets, the way the viewer tree hides what no reader opens.
+              The kind comes from the server, so "what is a datasheet" is not re-derived from the
+              extension here. */}
           <For each={(entries() ?? []).filter((e) => e.isDir || e.kind === FileKind.DATASHEET)}>
             {(e) =>
               e.isDir ? (
@@ -116,9 +115,8 @@ function DatasheetTree(props: { ctx: Ctx }) {
   const [mounts, setMounts] = createSignal<Mount[]>([]);
   const [pruned, setPruned] = createSignal(0);
   const [error, setError] = createSignal<string | null>(null);
-  // A mount of boards is as useless to this page as a mount of PDFs is to the viewer, so it prunes
-  // the roots on the same terms and reports the count for the same reason: a configured mount that
-  // simply vanishes reads as a broken mount.
+  // Mounts with no datasheets are pruned the way the viewer prunes mounts with no designs, and the
+  // count is reported because a configured mount that silently vanishes reads as a broken one.
   props.ctx.client
     .listMounts({ opens: DATASHEET_OPENS })
     .then((r) => {
@@ -138,8 +136,8 @@ function DatasheetTree(props: { ctx: Ctx }) {
   );
 }
 
-// dsTreeIsland mounts the datasheet tree and returns its DsTreeView (which the boot pushes the open
-// datasheet to, so the tree highlights and reveals it). onSelect is the user opening a datasheet.
+// dsTreeIsland mounts the datasheet tree and returns its DsTreeView. onSelect is the user opening a
+// datasheet.
 export function dsTreeIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

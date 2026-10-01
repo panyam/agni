@@ -36,8 +36,8 @@ single net touches directly. The same boundary is why
 [`floating-input`](../../rules/floating-input/) goes quiet on any net carrying a bead. Claiming that
 an input floats when a passive sits beside it is guesswork rather than a finding.
 
-**Where the course teaches it:**
-[chapter 1](../../../learn/01-what-a-board-is-made-of/#the-decision-procedure-ee3) puts a ferrite in
-the table of what a two-terminal part is doing, and
+The course teaches it in
+[chapter 1](../../../learn/01-what-a-board-is-made-of/#the-decision-procedure-ee3), which puts a
+ferrite in the table of what a two-terminal part is doing, and
 [the recurring jobs](../../../learn/01-what-a-board-is-made-of/#the-recurring-jobs-ee3) files it
 under taming a fast edge.

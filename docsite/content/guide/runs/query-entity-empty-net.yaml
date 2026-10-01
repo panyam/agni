@@ -6,4 +6,4 @@
 # that had to be fabricated to look useful would be the failure this mechanism exists to remove.
 fixture: cmd/agni/testdata/conformance
 script: |
-  agni query fires.edn 'entity(?net, "net"), not component-on-net(?any, ?net) => ?net'
+  agni query fires.edn 'entity(?net, "net"), not component.net(?any, ?net) => ?net'

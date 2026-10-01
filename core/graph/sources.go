@@ -8,10 +8,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// SymbolSource supplies the drawable symbol for each component node in an auto-layout. It is the
-// seam that lets the layout stay fixed while what gets drawn at a node varies: the Registry
-// (classified synthetic glyphs, WS7-030) is one implementation, FaithfulSource (the design's own
-// symbol artwork, WS7-031) is another. Symbol is called once per placed component; the returned
+// SymbolSource supplies the drawable symbol for each component node in an auto-layout, so the
+// layout stays fixed while what gets drawn at a node varies. The Registry (classified synthetic
+// glyphs, WS7-030) is one implementation and FaithfulSource (the design's own symbol artwork,
+// WS7-031) is another. Symbol is called once per placed component; the returned
 // SymbolDef's CellRef keys the placement to the shipped symbol library, so a source must return
 // a stable CellRef per distinct symbol. c may be nil when a placed ref has no matching component.
 type SymbolSource interface {

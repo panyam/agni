@@ -10,7 +10,7 @@ import (
 	_ "github.com/panyam/agni/stdlib/relations" // registers the built-in relations via init
 )
 
-// TestBuiltinRelationsRegisteredWithQuery is the seam guard (issue 10): blank-importing
+// TestBuiltinRelationsRegisteredWithQuery is the registration-hook guard (issue 10): blank-importing
 // stdlib/relations must install the built-in EDB relations into the query engine through
 // facts.RegisterBuiltinFacts, so query.Catalog lists them and query.NewBase projects them. Before
 // this package existed the query engine held these relations directly; if the init or the
@@ -20,9 +20,9 @@ func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 	// The catalog lists the built-in relations, with their kinds, once relations is imported.
 	want := map[string]string{
 		"component.mpn":     facts.KindNetlist,
-		"rail":              facts.KindNetlist,
+		"net.rail":          facts.KindNetlist,
 		"board.track_width": facts.KindBoard,
-		"param":             facts.KindDatasheet,
+		"param.max":         facts.KindDatasheet,
 	}
 	got := map[string]string{}
 	for _, r := range query.Catalog() {
@@ -34,19 +34,19 @@ func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 		}
 	}
 
-	// NewBase projects the built-in relations from a Model: a component on a net yields a
-	// component-on-net fact, which is empty when the built-ins are not registered.
+	// NewBase projects the built-in relations from a Model, so a component on a net yields a
+	// component.net fact, which is empty when the built-ins are not registered.
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets: []*ir.Net{{Name: "N1", Prov: &ir.Provenance{SourceFile: "t"},
 			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}},
 	}
-	rows, err := (query.Naive{}).Eval(query.MustParse(`component-on-net(?r,?n) => ?r, ?n`), query.NewBase(check.NewModel(d)))
+	rows, err := (query.Naive{}).Eval(query.MustParse(`component.net(?r,?n) => ?r, ?n`), query.NewBase(check.NewModel(d)))
 	if err != nil {
 		t.Fatalf("query over a built-in relation errored: %v", err)
 	}
 	if len(rows) != 1 {
-		t.Fatalf("component-on-net over U1/N1 = %d rows, want 1 (built-in relations not projected?)", len(rows))
+		t.Fatalf("component.net over U1/N1 = %d rows, want 1 (built-in relations not projected?)", len(rows))
 	}
 }
 

@@ -10,7 +10,8 @@ import (
 )
 
 // strapBitsDesign wires each named strap net to a rail (bias high), to ground (bias low), or to
-// nothing (unbiased: the pin sitting at the part's internal default, which the netlist cannot see).
+// nothing (unbiased, with the pin sitting at the part's internal default, which the netlist cannot
+// see).
 func strapBitsDesign(bits map[string]string) *ir.Design {
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}}}
 	rails := map[string]*ir.Net{}
@@ -43,8 +44,9 @@ func groupFindings(t *testing.T, d *ir.Design, g StrapGroup) []check.Finding {
 	return strapGroupRule(g).Findings(check.NewModel(d))
 }
 
-// TestStrapGroupDecodesMSBFirst (WS3-120): the group's value is read MSB-first from the declared net
-// order, which is the declaration's job because nothing in a netlist says which pin is the high bit.
+// TestStrapGroupDecodesMSBFirst (WS3-120) checks that the group's value is read MSB-first from the
+// declared net order, which is the declaration's job because nothing in a netlist says which pin is
+// the high bit.
 func TestStrapGroupDecodesMSBFirst(t *testing.T) {
 	// PHYAD2=1, PHYAD1=0, PHYAD0=1 -> 0b101 = 5.
 	d := strapBitsDesign(map[string]string{"PHYAD2": "+3V3", "PHYAD1": "GND", "PHYAD0": "+3V3"})
@@ -63,8 +65,8 @@ func TestStrapGroupDecodesMSBFirst(t *testing.T) {
 			t.Errorf("message missing %q, a reviewer needs the observed bits: %s", want, fs[0].Message)
 		}
 	}
-	// Reversing the declared order reads the same copper as a different number: bit order matters and
-	// comes from the declaration alone.
+	// Reversing the declared order reads the same copper as a different number, so bit order
+	// matters and comes from the declaration alone.
 	rev := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD0", "PHYAD1", "PHYAD2"}, Value: 5}
 	if fs := groupFindings(t, d, rev); len(fs) != 0 {
 		t.Errorf("0b101 reversed is still 5, so this must be silent: %+v", fs)
@@ -88,16 +90,16 @@ func TestStrapGroupPartialIsInconclusive(t *testing.T) {
 	if !strings.Contains(fs[0].Message, "PHYAD2") {
 		t.Errorf("message must name the pin it could not read: %s", fs[0].Message)
 	}
-	// Note the trap this guards: decoding PHYAD2 as 0 would give 0b001 = 1, which MATCHES the
+	// The trap this guards is that decoding PHYAD2 as 0 would give 0b001 = 1, which MATCHES the
 	// declared value and would have reported a clean pass on evidence the engine does not have.
 	if strings.Contains(fs[0].Message, "encodes") {
 		t.Errorf("an unreadable group must not claim an encoded value: %s", fs[0].Message)
 	}
 }
 
-// TestStrapGroupDefaultResolvesPartial: declaring the part's internal pull supplies the one fact the
-// netlist lacks, so a normally-built board (resistors only on the non-default bits) decodes and is
-// checked properly instead of reading inconclusive forever.
+// TestStrapGroupDefaultResolvesPartial shows that declaring the part's internal pull supplies the
+// one fact the netlist lacks, so a normally-built board (resistors only on the non-default bits)
+// decodes and is checked properly instead of reading inconclusive forever.
 func TestStrapGroupDefaultResolvesPartial(t *testing.T) {
 	d := strapBitsDesign(map[string]string{"PHYAD2": "", "PHYAD1": "", "PHYAD0": "+3V3"})
 	g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1, Default: "low"}
@@ -115,8 +117,9 @@ func TestStrapGroupDefaultResolvesPartial(t *testing.T) {
 	}
 }
 
-// TestStrapGroupSilentWhenNetAbsent: a declared net the design does not have is the presence forms'
-// business. Reporting it here would double-report and would guess at a group that is not there.
+// TestStrapGroupSilentWhenNetAbsent holds that a declared net the design does not have is the
+// presence forms' business. Reporting it here would double-report and would guess at a group that
+// is not there.
 func TestStrapGroupSilentWhenNetAbsent(t *testing.T) {
 	d := strapBitsDesign(map[string]string{"PHYAD1": "GND", "PHYAD0": "+3V3"})
 	g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1}
@@ -125,7 +128,7 @@ func TestStrapGroupSilentWhenNetAbsent(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionFires: the check with the real value. Both devices are individually correct and
+// TestStrapCollisionFires is the check with the real value. Both devices are individually correct and
 // the clash is only visible across them.
 func TestStrapCollisionFires(t *testing.T) {
 	d := strapBitsDesign(map[string]string{
@@ -147,8 +150,8 @@ func TestStrapCollisionFires(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionScopedByBus: two devices at the same address on DIFFERENT buses do not clash, and
-// a group with no declared bus opts out entirely.
+// TestStrapCollisionScopedByBus checks that two devices at the same address on DIFFERENT buses do
+// not clash, and a group with no declared bus opts out entirely.
 func TestStrapCollisionScopedByBus(t *testing.T) {
 	d := strapBitsDesign(map[string]string{
 		"A2": "GND", "A1": "GND", "A0": "+3V3",
@@ -170,9 +173,9 @@ func TestStrapCollisionScopedByBus(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionExcludesUndecidable is the guard the ticket flagged: an undecidable group must
-// never be decoded with assumed bits, because a fabricated address can fabricate a COLLISION — a
-// confident accusation that two innocent parts clash.
+// TestStrapCollisionExcludesUndecidable is the guard the ticket flagged. An undecidable group must
+// never be decoded with assumed bits, because a fabricated address can fabricate a COLLISION, which
+// is a confident accusation that two innocent parts clash.
 func TestStrapCollisionExcludesUndecidable(t *testing.T) {
 	// U13's high bit carries no resistor and its group declares no default, so its value is unknown.
 	// Assuming that bit is 0 would decode it to 1 and collide with U12.
@@ -187,15 +190,16 @@ func TestStrapCollisionExcludesUndecidable(t *testing.T) {
 	if fs := strapCollisionRule(groups).Findings(check.NewModel(d)); len(fs) != 0 {
 		t.Errorf("an undecidable group must not produce a collision; assuming its bits would accuse two innocent parts: %+v", fs)
 	}
-	// The gap is still visible: the group's own rule reports it inconclusive.
+	// The gap is still visible, because the group's own rule reports it inconclusive.
 	own := groupFindings(t, d, groups[1])
 	if len(own) != 1 || !own[0].Inconclusive {
 		t.Errorf("the undecidable group must be reported inconclusive by its own rule, not silently dropped: %+v", own)
 	}
 }
 
-// TestCollidableGroups: the collision rule is compiled only where a collision is expressible. Below
-// that it could never fail, and an item bound to it would read a pass it did not earn.
+// TestCollidableGroups checks that the collision rule is compiled only where a collision is
+// expressible. Below that it could never fail, and an item bound to it would read a pass it did not
+// earn.
 func TestCollidableGroups(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -213,9 +217,9 @@ func TestCollidableGroups(t *testing.T) {
 	}
 }
 
-// The intent half of the agni issue 361 sweep: these rules are filed under a NET (the group's first
-// strap) while their sentences are about a DEVICE, so before this the part the finding is about had
-// no way back into the drawing.
+// This is the intent half of the agni issue 361 sweep. These rules are filed under a NET (the
+// group's first strap) while their sentences are about a DEVICE, so before this the part the
+// finding is about had no way back into the drawing.
 func TestStrapGroupFindingsNameTheirDevice(t *testing.T) {
 	t.Run("a mis-encoded group names the device it straps", func(t *testing.T) {
 		d := strapBitsDesign(map[string]string{"PHYAD2": "+3V3", "PHYAD1": "GND", "PHYAD0": "+3V3"})
@@ -232,7 +236,7 @@ func TestStrapGroupFindingsNameTheirDevice(t *testing.T) {
 			t.Errorf("context = %+v, want U12 as the component playing device", c)
 		}
 		// The group NAME is a declaration from the intent file, not something on the design, so it
-		// must NOT become a chip: it would highlight nothing.
+		// must NOT become a chip, since it would highlight nothing.
 		for _, x := range fs[0].Context {
 			if x.Ref == "PHYAD" {
 				t.Error("the group name is a declaration, not a design entity; it must not be context")
@@ -315,9 +319,9 @@ func threeOnOneBus() (*ir.Design, []StrapGroup) {
 	}
 }
 
-// TestStrapCollisionStatesConsideredSet (agni issue 391): every pair of groups sharing a bus gets a
-// verdict, so the two correctly-addressed pairs are now countable. They used to report what a bus
-// nobody declared reported, which is nothing.
+// TestStrapCollisionStatesConsideredSet (agni issue 391) checks that every pair of groups sharing a
+// bus gets a verdict, so the two correctly-addressed pairs are now countable. They used to report
+// what a bus nobody declared reported, which is nothing.
 func TestStrapCollisionStatesConsideredSet(t *testing.T) {
 	d, groups := threeOnOneBus()
 	r := strapCollisionRule(groups)
@@ -347,9 +351,9 @@ func TestStrapCollisionStatesConsideredSet(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionSubjectShapeIsThePair: the shape is DECLARED, and it is what lets a consumer index
-// this rule's verdicts and a person build an id without running the check. A rule emitting a tuple it
-// did not declare is the failure this pins.
+// TestStrapCollisionSubjectShapeIsThePair pins that the shape is DECLARED, and it is what lets a
+// consumer index this rule's verdicts and a person build an id without running the check. A rule
+// emitting a tuple it did not declare is the failure this pins.
 func TestStrapCollisionSubjectShapeIsThePair(t *testing.T) {
 	d, groups := threeOnOneBus()
 	r := strapCollisionRule(groups)
@@ -370,9 +374,9 @@ func TestStrapCollisionSubjectShapeIsThePair(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionFindingsUnchangedForATwoWayClash: one clash is still one finding, with the same
-// subject, message and both devices as context. The pair subject changes what the rule can SAY about
-// the bus, not what it reports as a defect.
+// TestStrapCollisionFindingsUnchangedForATwoWayClash checks that one clash is still one finding,
+// with the same subject, message and both devices as context. The pair subject changes what the
+// rule can SAY about the bus, not what it reports as a defect.
 func TestStrapCollisionFindingsUnchangedForATwoWayClash(t *testing.T) {
 	d, groups := threeOnOneBus()
 	fs := strapCollisionRule(groups).Findings(check.NewModel(d))
@@ -424,10 +428,10 @@ func TestStrapCollisionThreeWayIsThreeFindings(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionUndecidableIsNotConsidered: an unreadable group must never be decoded, because a
-// fabricated address can fabricate a collision. It equally must not produce a PASS, which would assert
-// the two do not clash on evidence nobody has. It used to leave through the same silence a correctly
-// addressed pair did.
+// TestStrapCollisionUndecidableIsNotConsidered holds that an unreadable group must never be
+// decoded, because a fabricated address can fabricate a collision. It equally must not produce a
+// PASS, which would assert the two do not clash on evidence nobody has. It used to leave through
+// the same silence a correctly addressed pair did.
 func TestStrapCollisionUndecidableIsNotConsidered(t *testing.T) {
 	// U13's high bit carries no resistor and its group declares no default, so its value is unknown.
 	d := strapBitsDesign(map[string]string{
@@ -455,9 +459,9 @@ func TestStrapCollisionUndecidableIsNotConsidered(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionMissingNetIsNotConsidered: a declared net the board does not carry is the presence
-// forms' defect to report, not this rule's, but this rule did LOOK and could not judge. It used to
-// vanish through the same silence as a clean pair.
+// TestStrapCollisionMissingNetIsNotConsidered covers a declared net the board does not carry, which
+// is the presence forms' defect to report, not this rule's, but this rule did LOOK and could not
+// judge. It used to vanish through the same silence as a clean pair.
 func TestStrapCollisionMissingNetIsNotConsidered(t *testing.T) {
 	d := strapBitsDesign(map[string]string{
 		"A2": "GND", "A1": "GND", "A0": "+3V3",
@@ -476,9 +480,9 @@ func TestStrapCollisionMissingNetIsNotConsidered(t *testing.T) {
 	}
 }
 
-// TestStrapCollisionSameDeviceIsNotASubject: one part declaring two groups on a bus is a declaration
-// to read, not two parts answering one address. A verdict there would name the same device twice and
-// key on itself.
+// TestStrapCollisionSameDeviceIsNotASubject exists because one part declaring two groups on a bus
+// is a declaration to read, not two parts answering one address. A verdict there would name the
+// same device twice and key on itself.
 func TestStrapCollisionSameDeviceIsNotASubject(t *testing.T) {
 	d := strapBitsDesign(map[string]string{
 		"A2": "GND", "A1": "GND", "A0": "+3V3",

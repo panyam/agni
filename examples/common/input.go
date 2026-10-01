@@ -8,10 +8,9 @@ import (
 	"github.com/panyam/demokit"
 )
 
-// PathInput is the shared way an example asks the user for a design file path and turns it
-// into an IR design, so every example prompts the same way. The path is relative to the
-// example directory (the default is shown when the user just presses Enter), and any path the
-// user types is loaded with Load (disk first, bundled fixture by base name as a fallback).
+// PathInput asks the user for a design file path and turns it into an IR design, so every example
+// prompts the same way. The path is relative to the example directory, Enter keeps the shown
+// default, and whatever is chosen is read with Load.
 //
 // Wire it into a walkthrough in three touches:
 //
@@ -29,24 +28,16 @@ type PathInput struct {
 	path string
 }
 
-// DesignPathEnv overrides the default path every AskPath offers. It exists so a walkthrough can be
-// driven over a design this repo cannot carry, without that design's path appearing in any file here:
-// the board is named in the environment, and what is committed still defaults to a bundled fixture.
-//
-// Named for EXAMPLES rather than for any one walkthrough, because every example reaches it through
-// AskPath and a demo-shaped name would read as belonging to whichever one you happened to be running.
+// DesignPathEnv overrides the default path every AskPath offers, so a walkthrough can run over a
+// design this repo cannot carry without that design's path appearing in any file here.
 //
 // It changes the DEFAULT, not the value, so the prompt still shows the path and the user can still
-// type another. --non-interactive then runs on it too, which is what makes the env var worth having
-// over just typing the path.
+// type another. --non-interactive runs on it too.
 const DesignPathEnv = "AGNI_EXAMPLE_DESIGN"
 
 // ReviewPathEnv overrides the default review manifest, the way DesignPathEnv overrides the design.
-//
-// A review walkthrough needs BOTH to be pointed at real work: a team's checklist is as unshippable
-// here as their board, and a checklist without its design answers nothing. Two variables rather than
-// one because the two are separately useful, and because a manifest is often shared across the
-// designs of one project where the design is not.
+// A review walkthrough over real work needs BOTH, and they are separate because one manifest is often
+// shared across the designs of a project.
 const ReviewPathEnv = "AGNI_EXAMPLE_REVIEW"
 
 // AskPath creates a PathInput bound to the named walkthrough input, defaulting to def (a path
@@ -56,9 +47,8 @@ func AskPath(name, def string) *PathInput {
 	return askPathEnv(name, def, DesignPathEnv)
 }
 
-// AskReviewPath is AskPath for a review manifest, reading ReviewPathEnv instead. Same semantics
-// throughout: a blank value is not a value, the variable moves the DEFAULT rather than the answer, so
-// the prompt still shows it and a typed path still wins.
+// AskReviewPath is AskPath for a review manifest, reading ReviewPathEnv instead, with the same
+// semantics, so a blank value is ignored and a typed path still wins.
 func AskReviewPath(name, def string) *PathInput {
 	return askPathEnv(name, def, ReviewPathEnv)
 }
@@ -70,9 +60,8 @@ func askPathEnv(name, def, env string) *PathInput {
 	return &PathInput{key: name, path: def}
 }
 
-// Def is the demokit input to attach to the step that collects the path. Declaring it here
-// (rather than in a markdown `inputs` block) keeps the prompt wording identical across
-// examples; the sidecar step carries only its note.
+// Def is the demokit input to attach to the step that collects the path. Declaring it here rather
+// than in a markdown `inputs` block keeps the prompt wording identical across examples.
 func (p *PathInput) Def() demokit.InputDef {
 	return demokit.String().Named(p.key, "Path to a design (relative to this folder)").WithDefault(p.path)
 }

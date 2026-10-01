@@ -46,15 +46,14 @@ func Enumerate(data []byte, kind Kind) []string {
 }
 
 // opaqueSExpr are s-expr subtrees the census records as ONE construct without enumerating their
-// children: they are editor/plotter configuration blobs (dozens of one-off knob names) that carry
-// no reader-relevant vocabulary, so listing every knob would be noise. The block head itself is
-// still classified once.
+// children. They are editor/plotter configuration blobs (dozens of one-off knob names) carrying no
+// reader-relevant vocabulary. The block head itself is still classified once.
 var opaqueSExpr = map[string]bool{"pcbplotparams": true}
 
-// extractSExpr parses data with the shared s-expr parser (so quoted parens, escapes, and the
-// EDIF/KiCad string dialects are handled once, correctly) and walks the tree for head atoms. A
-// numeric head collapses to NumberToken; an opaqueSExpr block contributes its head but not its
-// children. A malformed file yields nothing — the census is coarse, not a validator.
+// extractSExpr parses data with the shared s-expr parser, so quoted parens, escapes and the
+// EDIF/KiCad string dialects match the readers, and walks the tree for head atoms. A numeric head
+// collapses to NumberToken, and an opaqueSExpr block contributes its head but not its children. A
+// malformed file yields nothing, since the census is coarse and not a validator.
 func extractSExpr(data []byte, mode sexpr.StringMode) []string {
 	root, err := sexpr.Parse(bytes.NewReader(data), mode)
 	if err != nil || root == nil {
@@ -107,16 +106,16 @@ func extractXML(data []byte) []string {
 	return keys(set)
 }
 
-// attrKeyRe matches an attribute key only at a KEY position — start of string or after
-// whitespace / '{' / '(' — capturing group 1. Requiring a boundary before the key means base64
-// padding inside an image_data value (a '=' preceded by an alnum char) never registers as a key.
+// attrKeyRe matches an attribute key only at a KEY position (start of string or after
+// whitespace, '{' or '('), capturing group 1. The boundary keeps base64 padding inside an
+// image_data value (a '=' preceded by an alnum char) from registering as a key.
 var attrKeyRe = regexp.MustCompile(`(?:^|[\s{(])([A-Za-z_][A-Za-z0-9_-]*)=`)
 
 // extractLine enumerates line-oriented formats (xschem, gEDA). An OBJECT line is a single-letter
-// type token followed by a coordinate, sign, or brace (`C 16400 …`, `T {text} …`, `v 2 …`) — the
-// coordinate/brace check rejects wrapped property/text continuation lines that merely happen to
-// start with "X ". Attribute keys become "@key" tokens (a second namespace, so an object `T` and
-// an attribute `@type` never collide).
+// type token followed by a coordinate, sign, or brace (`C 16400 …`, `T {text} …`, `v 2 …`). The
+// coordinate/brace check rejects wrapped property/text continuation lines that happen to start
+// with "X ". Attribute keys become "@key" tokens, a second namespace, so an object `T` and an
+// attribute `@type` never collide.
 func extractLine(data []byte) []string {
 	set := map[string]bool{}
 	for _, line := range strings.Split(string(data), "\n") {
@@ -127,7 +126,7 @@ func extractLine(data []byte) []string {
 	}
 	// Attribute keys are scanned with quoted regions blanked out, so a domain-parameter key inside
 	// a quoted value (xschem SPICE model params in template="Bf=100 Is=1e-14 …") is not mistaken
-	// for a schematic attribute — those are simulation model data, not a construct the reader drops.
+	// for a schematic attribute. Those are simulation model data, not a construct the reader drops.
 	for _, m := range attrKeyRe.FindAllStringSubmatch(string(blankQuoted(data)), -1) {
 		set["@"+m[1]] = true
 	}
@@ -154,8 +153,7 @@ func blankQuoted(data []byte) []byte {
 }
 
 // isObjectArgStart reports whether b can begin an object line's argument list: a coordinate
-// (digit/sign/dot) or a braced field. Attribute continuation lines start with a letter, so they
-// fail this and are not mistaken for objects.
+// (digit/sign/dot) or a braced field. Attribute continuation lines start with a letter and fail it.
 func isObjectArgStart(b byte) bool {
 	return (b >= '0' && b <= '9') || b == '-' || b == '.' || b == '{'
 }

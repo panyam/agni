@@ -10,22 +10,22 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 )
 
-// ClassVocab is the component-classification lexicon: per-class regex patterns matched against a part's
-// text TOKENS to hint its ComponentClass, and the ref-des prefix table that gives a part its base class.
-// Like the RoleVocab naming lexicon (WS3-069), it exists so the classification vocabulary stops being
-// frozen Go literals — a project extends it (an ESD-array MPN family, a house part-name convention, a
-// TH prefix for its thermistors) or tightens a fickle token via config (WS3-070, agni issue 677).
+// ClassVocab is the component-classification lexicon, holding per-class regex patterns matched against
+// a part's text TOKENS to hint its ComponentClass and the ref-des prefix table that gives a part its base
+// class. Like the RoleVocab naming lexicon (WS3-069), a project extends it through config (an ESD-array
+// MPN family, a house part-name convention, a TH prefix for its thermistors) or tightens a fickle token
+// (WS3-070, agni issue 677).
 //
-// Patterns match a single token, case-insensitively; the built-in defaults are exact-anchored ("^tvs$")
-// so classification is whole-token, never a substring (the pre-existing `tokenClasses` contract). A
-// project may use looser patterns ("^pesd") to catch a part-number family.
+// Patterns match a single token, case-insensitively. The built-in defaults are exact-anchored ("^tvs$")
+// so classification is whole-token, never a substring, as tokenClasses promises. A project may use
+// looser patterns ("^pesd") to catch a part-number family.
 type ClassVocab struct {
 	patterns map[ComponentClass][]*regexp.Regexp
 	prefixes map[string]ComponentClass
 }
 
-// DefaultClassVocab is the built-in classification lexicon: the historical tokenClasses map inverted to
-// class -> exact-anchored token patterns, so the defaults reproduce the whole-token behavior exactly.
+// DefaultClassVocab is the built-in classification lexicon, the tokenClasses map inverted to class ->
+// exact-anchored token patterns so the defaults reproduce the whole-token behavior exactly.
 func DefaultClassVocab() *ClassVocab {
 	byClass := map[ComponentClass][]string{}
 	for tok, cl := range tokenClasses {
@@ -84,9 +84,8 @@ func matchesAny(tok string, pats []*regexp.Regexp) bool {
 }
 
 // componentClassByName is the set of classes a config may override, keyed by their string value. It is
-// derived from model.ComponentClasses, which already leaves ClassUnknown out (there is no vocabulary
-// for "unknown"). It used to be a hand-kept literal, and it lacked thermistor, zener and
-// ideal_diode_controller, so a project extending any of the three was refused (agni issue 677).
+// derived from model.ComponentClasses, which leaves ClassUnknown out, so it cannot drift from the const
+// block and refuse a project extending a real class (agni issue 677).
 var componentClassByName = func() map[string]ComponentClass {
 	m := map[string]ComponentClass{}
 	for _, cl := range model.ComponentClasses() {
@@ -97,10 +96,10 @@ var componentClassByName = func() map[string]ComponentClass {
 
 // deviceClassAliases maps common datasheet device_class spellings to a canonical ComponentClass, keyed
 // by the alnum-lowercased form (so "ceramic resonator", "Ceramic-Resonator", and "CERAMICRESONATOR" all
-// hit one key). It is the datasheet-path analogue of the keyword lexicon (WS10-015): a seeded
+// hit one key). It is the datasheet-path analogue of the keyword lexicon (WS10-015). A seeded
 // device_class is a free-form vendor string ("SPXO", "ceramic resonator") that must resolve to the same
-// canonical class the keyword path produces, or it lands bare and misses its family tag. Only genuine
-// synonyms belong here; a string already equal to a canonical class name needs no entry (identity).
+// canonical class the keyword path produces, or it lands bare and misses its family tag. Only synonyms
+// belong here, since a string already equal to a canonical class name passes through as itself.
 var deviceClassAliases = map[string]ComponentClass{
 	"ceramicresonator": ClassCeramicResonator,
 	"resonator":        ClassCeramicResonator,
@@ -112,9 +111,9 @@ var deviceClassAliases = map[string]ComponentClass{
 	"vcxo":             ClassOscillator, // voltage-controlled
 	"activeoscillator": ClassOscillator,
 	"clocksource":      ClassClock,
-	// Ideal-diode / ORing / power-mux controllers (agni items behind reverse-polarity and
-	// reverse-current review asks). Vendors spell this family many ways and none of them is
-	// structurally recognisable, which is the whole reason the class is datasheet-driven.
+	// Ideal-diode / ORing / power-mux controllers, for reverse-polarity and reverse-current checks.
+	// Vendors spell this family many ways and none is structurally recognisable, so the class comes
+	// only from a datasheet.
 	"idealdiodecontroller":      ClassIdealDiodeController,
 	"idealdiode":                ClassIdealDiodeController,
 	"oringcontroller":           ClassIdealDiodeController,
@@ -167,9 +166,9 @@ func ParseComponentClass(name string) (ComponentClass, bool) {
 
 var activeClassVocab = DefaultClassVocab()
 
-// SetActiveClassVocab replaces the process-level classification lexicon (the CLI calls this after
-// loading a project's --conventions lexicon block). Passing nil restores the defaults. It must run
-// before ingestion (ReadDesign), since the classify pass stamps device_classes with the active vocab.
+// SetActiveClassVocab replaces the process-level classification lexicon (agni serve installs its server
+// default this way, through naming.ApplyLexicon). Same contract as SetActiveRoleVocab, so nil restores the
+// defaults, and it must run before ingestion because Stamp reads the active vocab.
 func SetActiveClassVocab(v *ClassVocab) {
 	if v == nil {
 		v = DefaultClassVocab()
@@ -182,9 +181,9 @@ func ActiveClassVocab() *ClassVocab { return activeClassVocab }
 
 // BuildClassVocab applies per-class overrides onto DefaultClassVocab, compiling and VALIDATING each
 // pattern and prefix (config is operator input, so a bad one is a returned error). An empty override
-// leaves that class at its default; Replace drops the built-in patterns for that class and leaves its
-// prefixes alone. A prefix is added to the built-in table and wins over it. Overrides are keyed by the
-// class; the caller has already refused a name the engine does not know (ParseComponentClass).
+// leaves that class at its default, and Replace drops the built-in patterns for that class and leaves
+// its prefixes alone. A prefix is added to the built-in table and wins over it. The caller has already
+// refused a class name the engine does not know (ParseComponentClass).
 func BuildClassVocab(overrides map[ComponentClass]*configpb.ClassVocab) (*ClassVocab, error) {
 	def := DefaultClassVocab()
 	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: def.prefixes}

@@ -6,18 +6,16 @@ import (
 )
 
 // A foreign checker names the entity a violation is about in FREE TEXT. KiCad writes "Pad 1 [VCC] of
-// R1 on B.Cu", "Track [GND] on F.Cu, length 1.0000 mm", "Symbol U1 Pin 1 [VIN, Power input, Line]".
-// There is no structured ref_des or net field anywhere in its JSON, so attaching a violation to our
-// model means parsing those strings.
+// R1 on B.Cu" or "Symbol U1 Pin 1 [VIN, Power input, Line]", with no structured ref_des or net field
+// in its JSON, so attaching a violation to our model means parsing those strings.
 //
-// That makes this table the load-bearing part of the import, and it is kept as ONE table with a form
-// matrix behind it, the same discipline the EDIF name grammar earned: a shape that is not in the table
-// must fall through to the residue and be reported, never be half-matched into the wrong entity. A
-// wrong join is worse than no join — it attaches a real violation to an innocent part.
+// This is ONE table with a form matrix behind it. A shape that is not in the table must fall through
+// to the residue and be reported, never be half-matched, because a wrong join attaches a real
+// violation to an innocent part. See
+// docsite/content/architecture/checks-contract.md#importing-another-tools-results.
 
-// itemRef is what a description yielded. Any field may be empty; all empty means the description named
-// no entity we can join to, which is a normal outcome rather than a failure (a wire's description
-// carries only its orientation and length).
+// itemRef is what a description yielded. Any field may be empty; RefDes and Net both empty means no
+// joinable entity, a normal outcome (a wire's description carries only orientation and length).
 type itemRef struct {
 	RefDes string
 	Pin    string
@@ -33,13 +31,12 @@ type itemPattern struct {
 	re   *regexp.Regexp
 }
 
-// itemPatterns is ordered: the first match wins, so a more specific shape must precede a more general
-// one. "Symbol U1 Pin 1 [...]" has to be tried before "Symbol U1 [...]", and the pad shapes before the
+// itemPatterns is ordered and the first match wins, so a more specific shape must precede a more
+// general one. "Symbol U1 Pin 1 [...]" has to be tried before "Symbol U1 [...]", and the pad shapes before the
 // generic "<graphic> of <ref> on <layer>".
 //
-// Every entry here was derived from real kicad-cli output over the repo's board and schematic
-// fixtures, not from the file-format documentation: the descriptions are UI strings with no stability
-// guarantee, so evidence is the only honest source.
+// Every entry was derived from real kicad-cli output over the repo's board and schematic fixtures,
+// not from documentation, since the descriptions are UI strings with no stability guarantee.
 var itemPatterns = []itemPattern{
 	// Board: pads. Two spellings, one with a layer suffix and one (the pad-stack forms) without.
 	{"pad", regexp.MustCompile(`^Pad (?P<pin>\S+) \[(?P<net>[^\]]*)\] of (?P<ref>\S+) on `)},
@@ -78,8 +75,8 @@ func parseItem(desc string) itemRef {
 				r.Net = m[i]
 			}
 		}
-		// KiCad spells "this pad is on no net" as the literal net name "<no net>". Carrying it through
-		// would invent a net by that name and join every unconnected pad on the board to it.
+		// KiCad spells "on no net" as the literal "<no net>", which would otherwise join every
+		// unconnected pad to one invented net.
 		if r.Net == "<no net>" || r.Net == "" {
 			r.Net = ""
 		}
@@ -89,10 +86,9 @@ func parseItem(desc string) itemRef {
 	return itemRef{}
 }
 
-// residueClass buckets an unjoinable description so the summary reports classes rather than a wall of
-// one-off strings. It answers "what KIND of thing did we fail to attach", which is what tells a benign
-// residue (board outline geometry has no entity to name) from a gap worth closing (a part-bearing
-// shape the table does not know).
+// residueClass buckets an unjoinable description so the summary reports classes rather than one-off
+// strings, separating benign residue (board outline geometry) from a gap worth closing (a
+// part-bearing shape the table does not know).
 func residueClass(desc string) string {
 	switch {
 	case strings.Contains(desc, " Wire,"), strings.HasPrefix(desc, "Wire"):

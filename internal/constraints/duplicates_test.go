@@ -15,7 +15,7 @@ import (
 
 // C33: a function body is not copied into a second package.
 //
-// Every duplicate agni 698 found had the same history: one package needed what another had, the
+// Every duplicate agni 698 found had the same history. One package needed what another had, the
 // function was copied because importing it was inconvenient, and the two agreed until someone edited
 // one. The net-class cascade was written twice and agreed by luck; model.RenderRoute and
 // isRegulatorInternal each did the same before they were caught. This test fires at the COPY, which is

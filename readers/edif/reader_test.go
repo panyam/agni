@@ -24,8 +24,8 @@ func readEDN(t *testing.T, name string) *ir.Design {
 // agni issue 519 the reader's job stops at capturing the part number where its grammar puts it, and
 // deciding which attribute the rest of the engine reads is a format-neutral pass. A test asserting
 // the component-level MPN is therefore asserting an INGESTION outcome, not a reader one, and has to
-// run the same two steps ingestion does. The fixtures stay: the claim worth keeping is that a real
-// OrCAD export resolves, not that a hand-built IR does.
+// run the same two steps ingestion does. The fixtures stay, because the claim worth keeping is that
+// a real OrCAD export resolves, not that a hand-built IR does.
 func readEDNIngested(t *testing.T, name string) *ir.Design {
 	t.Helper()
 	d := readEDN(t, name)
@@ -90,12 +90,12 @@ func hasConn(n *ir.Net, ref, pin string) bool {
 	return false
 }
 
-// TestReadNetlist is the baseline: normal parse, section grouping, connectivity.
-// TestNormalizeMPN (WS3-075): an OrCAD export carries the part number under a Manufacturer_PN
-// property (renamed to display "Manufacturer PN", or bare), not "MPN", so the datasheet join read
-// 0 MPNs. The reader records the property under the format's own key and classify.StampMPN promotes
-// it to the typed ir.Component.mpn field, preferring an explicit "MPN" over the aliases. This test
-// runs the pass (readEDNIngested) because the promotion is an ingestion outcome, not a reader one.
+// TestNormalizeMPN (WS3-075) covers an OrCAD export, which carries the part number under a
+// Manufacturer_PN property (renamed to display "Manufacturer PN", or bare), not "MPN", so the
+// datasheet join read 0 MPNs.
+// The reader records the property under the format's own key and classify.StampMPN promotes it to
+// the typed ir.Component.mpn field, preferring an explicit "MPN" over the aliases. This test runs
+// the pass (readEDNIngested) because the promotion is an ingestion outcome, not a reader one.
 func TestNormalizeMPN(t *testing.T) {
 	d := readEDNIngested(t, "mpn.edn")
 	for ref, want := range map[string]string{
@@ -113,6 +113,7 @@ func TestNormalizeMPN(t *testing.T) {
 	}
 }
 
+// TestReadNetlist is the baseline, covering a normal parse, section grouping and connectivity.
 func TestReadNetlist(t *testing.T) {
 	d := readEDN(t, "basic.edn")
 	if d.SourceFormat != "edif-2.0.0" || d.IrVersion != "0" {
@@ -128,7 +129,7 @@ func TestReadNetlist(t *testing.T) {
 		t.Errorf("GND connections = %v, want R1.2 + R2.2", netByName(d, "GND"))
 	}
 
-	// Provenance is recorded on the design and every extracted entity: the source file on
+	// Provenance is recorded on the design and every extracted entity, with the source file on
 	// all, plus the EDIF native-id kind on library-scoped entities (parts/nets) so a later
 	// re-export can be reconciled against the original ids.
 	if d.Prov.GetSourceFile() != "basic.edn" {
@@ -143,10 +144,11 @@ func TestReadNetlist(t *testing.T) {
 	}
 }
 
-// TestReadSchematicNetlist: an EDIF SCHEMATIC (.eds) export wraps designators and property
-// values in (stringDisplay "V" ...); the netlist reader must unwrap that form the same way the
-// geometry reader does (refDesOf/propText), or every .eds component reads with an empty ref_des,
-// no MPN, and no property values (WS1-046). The .edn writes bare atoms, so this is additive there.
+// TestReadSchematicNetlist covers an EDIF SCHEMATIC (.eds) export, which wraps designators and
+// property values in (stringDisplay "V" ...); the netlist reader must unwrap that form the same way
+// the geometry reader does (refDesOf/propText), or every .eds component reads with an empty
+// ref_des, no MPN, and no property values (WS1-046). The .edn writes bare atoms, so this is
+// additive there.
 func TestReadSchematicNetlist(t *testing.T) {
 	d := readEDNIngested(t, "schematic-netlist.eds")
 
@@ -171,7 +173,7 @@ func TestReadSchematicNetlist(t *testing.T) {
 	}
 
 	// Pin identity on a net comes from the instance's portInstance designators (physical pin
-	// numbers), which the schematic view wraps as well: port "1" maps to physical pin "3".
+	// numbers), which the schematic view wraps as well. Port "1" maps to physical pin "3".
 	if !hasConn(netByName(d, "SIGA"), "U7", "3") {
 		t.Errorf("SIGA should carry U7.3 (portInstance stringDisplay designator), got %v", netByName(d, "SIGA"))
 	}
@@ -180,11 +182,11 @@ func TestReadSchematicNetlist(t *testing.T) {
 	}
 }
 
-// TestCellMPNFallback (WS1-046 Piece B): OrCAD carries a shared part-type's Manufacturer_PN on the
-// CELL (the cell is named by the part number), not on every placed instance. A component with no
-// inline MPN must inherit its cell's; an inline MPN still wins; a cell with no MPN leaves the
-// component's MPN empty (no false fill). The join keys on the section's PartRef, resolving the cell
-// by either its display name or its &-stripped native id.
+// TestCellMPNFallback (WS1-046 Piece B) covers the cell-level part number. OrCAD carries a shared
+// part-type's Manufacturer_PN on the CELL (the cell is named by the part number), not on every
+// placed instance. A component with no inline MPN must inherit its cell's; an inline MPN still
+// wins; a cell with no MPN leaves the component's MPN empty (no false fill). The join keys on the
+// section's PartRef, resolving the cell by either its display name or its &-stripped native id.
 func TestCellMPNFallback(t *testing.T) {
 	d := readEDNIngested(t, "cell-mpn.edn")
 	if got := compByRef(d, "U1").GetMpn(); got != "CELL-MPN-1" {
@@ -198,9 +200,9 @@ func TestCellMPNFallback(t *testing.T) {
 	}
 }
 
-// TestSchematicCellMPNFallback (WS1-046 Piece A + B combined): the real-world .eds case where the
-// shared cell's Manufacturer_PN is stringDisplay-wrapped AND the instance carries no inline MPN, so
-// the value must be BOTH unwrapped (Piece A) and inherited via the cell join (Piece B). The
+// TestSchematicCellMPNFallback (WS1-046 Piece A + B combined) covers the real-world .eds case where
+// the shared cell's Manufacturer_PN is stringDisplay-wrapped AND the instance carries no inline
+// MPN, so the value must be BOTH unwrapped (Piece A) and inherited via the cell join (Piece B). The
 // cellRef here names the part by DISPLAY name, exercising the name key of the dual-keyed index. An
 // inline MPN on the .eds view still wins.
 func TestSchematicCellMPNFallback(t *testing.T) {
@@ -217,8 +219,8 @@ func TestSchematicCellMPNFallback(t *testing.T) {
 	}
 }
 
-// TestUnresolvedRefIsStable: a portRef to an instance with no ref_des (a power symbol) must
-// NOT be keyed by the export-unstable internal id; it becomes the "" no-ref marker.
+// TestUnresolvedRefIsStable checks that a portRef to an instance with no ref_des (a power symbol)
+// is NOT keyed by the export-unstable internal id; it becomes the "" no-ref marker.
 func TestUnresolvedRefIsStable(t *testing.T) {
 	d := readEDN(t, "edge.edn")
 	gnd := netByName(d, "GND")
@@ -234,7 +236,7 @@ func TestUnresolvedRefIsStable(t *testing.T) {
 	}
 }
 
-// TestMemberPort: (portRef (member NAME IDX) ...) must yield a stable bus-pin identity.
+// TestMemberPort checks that (portRef (member NAME IDX) ...) yields a stable bus-pin identity.
 func TestMemberPort(t *testing.T) {
 	d := readEDN(t, "edge.edn")
 	if !hasConn(netByName(d, "DATABUS"), "U1", "DATA[3]") {
@@ -242,9 +244,9 @@ func TestMemberPort(t *testing.T) {
 	}
 }
 
-// TestHierarchyDetected: a design whose top cell instantiates a sub-cell with its own contents
-// records that sub-cell as unexpanded, with its instance count, and extraction is scoped to the top
-// cell (no sub-cell instances merged).
+// TestHierarchyDetected checks that a design whose top cell instantiates a sub-cell with its own
+// contents records that sub-cell as unexpanded, with its instance count, and extraction is scoped
+// to the top cell (no sub-cell instances merged).
 func TestHierarchyDetected(t *testing.T) {
 	d := readEDN(t, "hier.edn")
 	got := d.GetInputDiagnostics().GetUnexpandedHierarchy()
@@ -265,7 +267,7 @@ func TestHierarchyDetected(t *testing.T) {
 	}
 }
 
-// TestFlatDesignListsNoHierarchy is the control for TestHierarchyDetected: a flat design still says
+// TestFlatDesignListsNoHierarchy is the control for TestHierarchyDetected. A flat design still says
 // the reader looked, and lists nothing, so an empty list means flat rather than unexamined.
 func TestFlatDesignListsNoHierarchy(t *testing.T) {
 	d := readEDN(t, "basic.edn")
@@ -277,7 +279,7 @@ func TestFlatDesignListsNoHierarchy(t *testing.T) {
 	}
 }
 
-// TestParseNameForms is the grammar oracle: one row per EDIF name form parseName accepts.
+// TestParseNameForms is the grammar oracle, with one row per EDIF name form parseName accepts.
 // A form the parser stops recognizing (or a new form added without a row) shows up here,
 // which is the guard the hand-rolled predecessor lacked (WS1-026). parseNode reuses the real
 // tokenizer so a row is written as source text, not a hand-built node tree.
@@ -292,7 +294,7 @@ func TestParseNameForms(t *testing.T) {
 		{`(rename FOO "Display")`, "FOO", "Display", "Display"},                            // simple rename
 		{"(name FOO (display (origin (pt 0 0))))", "FOO", "", "FOO"},                       // name + display
 		{`(rename (name &X (display (origin (pt 0 0)))) "+3.3V")`, "&X", "+3.3V", "+3.3V"}, // nested
-		{"(member BUS 3)", "", "", ""},                                                     // member: not an entity name
+		{"(member BUS 3)", "", "", ""},                                                     // member, not an entity name
 		{"(unknown FORM)", "", "", ""},                                                     // unrecognized -> empty
 	} {
 		got := parseName(parseNode(t, tc.form))
@@ -303,7 +305,7 @@ func TestParseNameForms(t *testing.T) {
 	}
 }
 
-// TestPortNameForms is the grammar oracle for the pin-identity projection: the & escape is
+// TestPortNameForms is the grammar oracle for the pin-identity projection. The & escape is
 // stripped and a (member NAME IDX) becomes NAME[IDX], where parseName leaves both verbatim.
 func TestPortNameForms(t *testing.T) {
 	for _, tc := range []struct{ form, want string }{
@@ -319,7 +321,7 @@ func TestPortNameForms(t *testing.T) {
 	}
 }
 
-// TestNetNameForms: every EDIF net-name form resolves to a non-empty name. The two
+// TestNetNameForms checks that every EDIF net-name form resolves to a non-empty name. The two
 // (name ...) forms are what OrCAD's cap2edif emits (the dominant net form in the corpus);
 // before WS1-026 they dropped to an empty name and vanished from diff/check keying.
 func TestNetNameForms(t *testing.T) {
@@ -327,7 +329,7 @@ func TestNetNameForms(t *testing.T) {
 	for _, tc := range []struct{ ref, pin, want string }{
 		{"R1", "1", "PLAIN"},   // bare atom
 		{"R1", "2", "SIG/A"},   // (rename ID "Display")
-		{"R1", "3", "ACT_LED"}, // (name ID (display ...)) -- id is the name, no string
+		{"R1", "3", "ACT_LED"}, // (name ID (display ...)); id is the name, no string
 		{"R1", "4", "+3.3V"},   // (rename (name ID (display ...)) "Display")
 	} {
 		if n := netByName(d, tc.want); !hasConn(n, tc.ref, tc.pin) {
@@ -341,8 +343,8 @@ func TestNetNameForms(t *testing.T) {
 	}
 }
 
-// TestWrappedName: a hard-wrap newline inside a quoted name (cap2edi splits the file at a
-// fixed column mid-token) is joined, so identities carry no control characters (WS1-026).
+// TestWrappedName checks that a hard-wrap newline inside a quoted name (cap2edif splits the file at
+// a fixed column mid-token) is joined, so identities carry no control characters (WS1-026).
 func TestWrappedName(t *testing.T) {
 	d := readEDN(t, "wrapped.edn")
 	if d.Name != "SCHEMATIC1" {
@@ -353,11 +355,12 @@ func TestWrappedName(t *testing.T) {
 	}
 }
 
-// A cell whose EDIF id is numeric is escaped with a leading & in the source (&87844225); the instance
-// references it by that escaped id, but the part-type is NAMED with the id un-escaped (parseName strips
-// the &). If instanceOf resolves the cellRef differently from how the part-type is named + indexed, the
-// component never links to its part-type and has NO part-type pins — connected (its net portRefs
-// resolve) but invisible to every pin-level rule. This asserts the instance -> part-type link resolves.
+// A cell whose EDIF id is numeric is escaped with a leading & in the source (&87844225); the
+// instance references it by that escaped id, but the part-type is NAMED with the id un-escaped
+// (parseName strips the &). If instanceOf resolves the cellRef differently from how the part-type
+// is named + indexed, the component never links to its part-type and has NO part-type pins. It is
+// connected (its net portRefs resolve) but invisible to every pin-level rule. This asserts the
+// instance -> part-type link resolves.
 func TestEscapedCellIdLinksToPartType(t *testing.T) {
 	d := readEDN(t, "escaped-cell-id.edn")
 
@@ -397,11 +400,12 @@ func TestEscapedCellIdLinksToPartType(t *testing.T) {
 	}
 }
 
-// TestRenameCellIdResolvesPins (WS1-045): a cell `(rename ID "Display")` whose display DIFFERS from its
-// id and carries no & escape is keyed by Display, but the instance references it by the ID — so the
-// section only resolves through the native-id alias PartIndex now adds. Before the fix the part's pins
-// were silently dropped (the real MC2016Z50 oscillator surfaced 0 pins). Assert the section resolves via
-// the ACTUAL classify.PartIndex (not a hand-rolled one) and its Vcc pin is present.
+// TestRenameCellIdResolvesPins (WS1-045) covers a cell `(rename ID "Display")` whose display
+// DIFFERS from its id and carries no & escape. It is keyed by Display, but the instance references
+// it by the ID, so the section only resolves through the native-id alias PartIndex now adds. Before
+// the fix the part's pins were silently dropped (the real MC2016Z50 oscillator surfaced 0 pins).
+// Assert the section resolves via the ACTUAL classify.PartIndex (not a hand-rolled one) and its Vcc
+// pin is present.
 func TestRenameCellIdResolvesPins(t *testing.T) {
 	d := readEDN(t, "rename-cell-id.edn")
 	parts := classify.PartIndex(d)
@@ -485,8 +489,8 @@ func TestEveryPinHasAJoinableDesignator(t *testing.T) {
 // TestEscapedCellIdLinksToPartType and TestRenameCellIdResolvesPins, verified by mutation. It is kept
 // for what those two do not say, which is WHY the value matters. Their failure reads
 // `VCC pin designator = "VCC", want 1` and looks like a cell-id resolution problem. Do not delete
-// those two believing this one covers them, and do not delete this one believing it is duplication:
-// it is the named statement of the constraint.
+// those two believing this one covers them, and do not delete this one believing it is duplication,
+// since it is the named statement of the constraint.
 func TestExplicitPinDesignatorIsNotOverwritten(t *testing.T) {
 	d := readEDN(t, "rename-cell-id.edn")
 	for _, lib := range d.GetLibraries() {
@@ -501,7 +505,7 @@ func TestExplicitPinDesignatorIsNotOverwritten(t *testing.T) {
 	t.Error("rename-cell-id.edn declares pin numbers distinct from port names (Vcc/4, OUTPUT/3, GND/2); the fallback has overwritten them")
 }
 
-// TestCellDesignatorIgnoresPortNumbers pins agni issue 109: a cell that declares no prefix of its
+// TestCellDesignatorIgnoresPortNumbers pins agni issue 109. A cell that declares no prefix of its
 // own must report none, not the pin number of its first port. Getting this wrong is silent all the
 // way down. The pin number lands in DesignatorPrefix, Lexicon.Classify prefers it over the
 // component's ref-des prefix, prefixClasses has no entry for "1", and every component of that cell
@@ -546,10 +550,10 @@ func TestCellDesignatorFromCellLevel(t *testing.T) {
 	}
 }
 
-// TestReadUnannotatedComponents: parts whose designator is still a placeholder are recorded as an
-// input diagnostic, grouped per PLACEHOLDER rather than per part, so a consumer can say "2 parts are
-// still called R?" rather than repeating one sentence per part. An assigned designator contributes
-// nothing, which is what keeps the diagnostic a signal rather than a census.
+// TestReadUnannotatedComponents checks that parts whose designator is still a placeholder are
+// recorded as an input diagnostic, grouped per PLACEHOLDER rather than per part, so a consumer can
+// say "2 parts are still called R?" rather than repeating one sentence per part. An assigned
+// designator contributes nothing, which is what keeps the diagnostic a signal rather than a census.
 func TestReadUnannotatedComponents(t *testing.T) {
 	d := readEDN(t, "unannotated.edn")
 	got := map[string]int{}
@@ -575,9 +579,9 @@ func TestReadUnannotatedComponents(t *testing.T) {
 	}
 }
 
-// TestReadDiagnosticsAccumulate: the reader used to assign a fresh InputDiagnostics for the bus
-// signal alone, so any second signal added beside it would silently drop the first. Both now ride
-// one struct.
+// TestReadDiagnosticsAccumulate exists because the reader used to assign a fresh InputDiagnostics
+// for the bus signal alone, so any second signal added beside it would silently drop the first.
+// Both now ride one struct.
 func TestReadDiagnosticsAccumulate(t *testing.T) {
 	d := readEDN(t, "unannotated.edn")
 	if len(d.GetInputDiagnostics().GetUnannotatedComponents()) == 0 {

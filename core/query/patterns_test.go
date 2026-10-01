@@ -9,7 +9,7 @@ import (
 )
 
 // patternDesign carries net names whose ROLE suffix is shared across buses (_H) and whose identity is
-// the prefix — the naming affix matching cannot discriminate (WS3-057).
+// the prefix, a naming that affix matching cannot discriminate (WS3-057).
 func patternDesign() check.Model {
 	return check.NewModel(&ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "d"}}},
@@ -31,8 +31,8 @@ func matched(t *testing.T, m check.Model, text string) []string {
 	return out
 }
 
-// TestGlobPredicate: glob matches the WHOLE name with * as any run and ? as one character, which is
-// what discriminates an ETH_ bus from a CAN_ bus that shares the bare _H suffix.
+// TestGlobPredicate pins that glob matches the WHOLE name with * as any run and ? as one character,
+// which is what discriminates an ETH_ bus from a CAN_ bus that shares the bare _H suffix.
 func TestGlobPredicate(t *testing.T) {
 	m := patternDesign()
 	cases := map[string][]string{
@@ -51,7 +51,7 @@ func TestGlobPredicate(t *testing.T) {
 }
 
 // TestGlobStarCrossesSlash pins the reason glob is translated to a regexp rather than deferring to
-// path.Match: path.Match's * stops at "/", and a hierarchical net name (a sub-sheet local) contains
+// path.Match. path.Match's * stops at "/", and a hierarchical net name (a sub-sheet local) contains
 // one, so path.Match would silently miss exactly the names a multi-instance bus is named with.
 func TestGlobStarCrossesSlash(t *testing.T) {
 	if got := matched(t, patternDesign(), `net.pin_count(?n,?c), glob(?n,"*DATA0") => ?n`); len(got) != 1 || got[0] != "/amp1/DATA0" {
@@ -59,9 +59,10 @@ func TestGlobStarCrossesSlash(t *testing.T) {
 	}
 }
 
-// TestMatchPredicate: match is an UNANCHORED RE2 search, so a caller who means the whole name anchors
-// it. Both readings are exercised so the semantics are pinned, not incidental. Datalog string
-// literals are verbatim (the parser processes no escapes), so a regex backslash is written singly.
+// TestMatchPredicate pins that match is an UNANCHORED RE2 search, so a caller who means the whole
+// name anchors it. Both readings are exercised so the semantics are pinned, not incidental. Datalog
+// string literals are verbatim (the parser processes no escapes), so a regex backslash is written
+// singly.
 func TestMatchPredicate(t *testing.T) {
 	m := patternDesign()
 	if got := matched(t, m, `net.pin_count(?n,?c), match(?n,"^ETH_SW\d+_P\d+_._H$") => ?n`); len(got) != 2 {
@@ -75,14 +76,14 @@ func TestMatchPredicate(t *testing.T) {
 	}
 }
 
-// TestPatternPredicateErrors: a malformed regex is an EVAL ERROR, not a silent non-match — a bad
-// pattern that quietly matched nothing would read as "the design is clean" on a completeness check.
-// Unbound and wrong-arity forms fail like every other filter.
+// TestPatternPredicateErrors pins that a malformed regex is an EVAL ERROR, not a silent non-match,
+// as a bad pattern that quietly matched nothing would read as "the design is clean" on a
+// completeness check. Unbound and wrong-arity forms fail like every other filter.
 func TestPatternPredicateErrors(t *testing.T) {
 	m := patternDesign()
 	for _, text := range []string{
 		`net.pin_count(?n,?c), match(?n,"^ETH_(SW") => ?n`, // will not compile
-		`match(?x,"^ETH_") => ?x`,                          // unbound: a filter cannot enumerate
+		`match(?x,"^ETH_") => ?x`,                          // unbound, and a filter cannot enumerate
 		`net.pin_count(?n,?c), glob(?n) => ?n`,             // wrong arity
 	} {
 		if _, err := (Naive{}).Eval(mustParse(t, text), NewBase(m)); err == nil {
@@ -91,8 +92,9 @@ func TestPatternPredicateErrors(t *testing.T) {
 	}
 }
 
-// TestCompileGlobTranslation pins the glob grammar itself: * and ? are the only metacharacters and
-// every other character is literal, so a regex metacharacter in a net name cannot leak through as one.
+// TestCompileGlobTranslation pins the glob grammar itself, where * and ? are the only
+// metacharacters and every other character is literal, so a regex metacharacter in a net name
+// cannot leak through as one.
 func TestCompileGlobTranslation(t *testing.T) {
 	re, err := CompileGlob("A+B*C?D")
 	if err != nil {

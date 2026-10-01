@@ -20,9 +20,9 @@ func quant(x, y float64) netgraph.Point {
 }
 
 // pinDir maps an xschem pin `dir` attribute onto the neutral pin-direction vocabulary
-// (WS1-021). xschem's dir is in/out/inout only — it has no power-pin concept — so
-// power-input-not-driven stays N/A on xschem, but the enrichment makes floating-input and
-// output-output-conflict reachable. Unmapped values stay UNSPECIFIED.
+// (WS1-021). xschem's dir is in/out/inout only, with no power-pin concept, so
+// power-input-not-driven stays N/A on xschem while floating-input and output-output-conflict
+// become reachable. Unmapped values stay UNSPECIFIED.
 func pinDir(dir string) ir.PinDirection {
 	switch dir {
 	case "in":
@@ -36,9 +36,9 @@ func pinDir(dir string) ir.PinDirection {
 }
 
 // geomDangles maps solver dangling endpoints back from the netgraph grid to the geometry
-// frame the viewer draws (WS1-013): xschem scales native coordinates by gridScale for the
-// grid, but geometry is native (UnitNm 1), so a dangle at grid (X,Y) is at native
-// (X/gridScale, Y/gridScale) — exact, since wire endpoints are integers pre-scale.
+// frame the viewer draws (WS1-013). The grid scales native coordinates by gridScale and
+// geometry is native (UnitNm 1), so a dangle at grid (X,Y) is at native
+// (X/gridScale, Y/gridScale). The division is exact because wire endpoints are integers pre-scale.
 func geomDangles(ds []netgraph.Dangle, src string) []*ir.DanglingEndpoint {
 	out := make([]*ir.DanglingEndpoint, 0, len(ds))
 	for _, d := range ds {
@@ -74,8 +74,8 @@ func atoiInt(s string) int {
 
 // loadPins adapts the xschem symbol pipeline (open, s-expr-ish parse, pin boxes) to the
 // shared resolver; memoization lives in symread.ResolvePins. The bool reports whether the
-// symbol RESOLVED (opened and parsed) — the signal the dangling-endpoint gate needs
-// (WS1-013): a failed open drops the symbol's pins and would fabricate dangles.
+// symbol RESOLVED (opened and parsed). The dangling-endpoint gate needs that signal
+// (WS1-013), because a failed open drops the symbol's pins and would fabricate dangles.
 func loadPins(open SymbolOpener) func(string) ([]symread.Pin, bool) {
 	return func(symref string) ([]symread.Pin, bool) {
 		data, err := open(symref)
@@ -97,8 +97,8 @@ func loadPins(open SymbolOpener) func(string) ([]symread.Pin, bool) {
 // transform places a symbol-local point onto the schematic grid for an xschem instance with
 // origin (xoff,yoff), rotation rot (0-3, in 90-degree CCW steps) and flip (0/1, mirror about
 // the y-axis). xschem applies the flip first, then the rotation, then the translation. Verified
-// against a real schematic: res.sym pin (0,-30) under "150 -460 rot=3 flip=1" lands at
-// (120,-460), exactly on the wire it is drawn to.
+// against a real schematic, where res.sym pin (0,-30) under "150 -460 rot=3 flip=1" lands at
+// (120,-460), on the wire it is drawn to.
 func transform(px, py, xoff, yoff float64, rot, flip int) (float64, float64) {
 	if flip == 1 {
 		px = -px

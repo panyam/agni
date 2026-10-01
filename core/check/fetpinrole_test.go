@@ -26,8 +26,8 @@ func pinRoleDesign(refDes string, pinNames ...string) *ir.Design {
 
 func roleOf(m Model, refDes, designator string) PinRole { return m.PinRole(refDes, designator) }
 
-// TestTransistorTerminalRoles (WS3-117): a transistor's G/S/D pin names reach the gate, source and
-// drain roles, in both their short and spelled-out forms.
+// TestTransistorTerminalRoles (WS3-117) checks that a transistor's G/S/D pin names reach the gate,
+// source and drain roles, in both their short and spelled-out forms.
 func TestTransistorTerminalRoles(t *testing.T) {
 	m := NewModel(pinRoleDesign("Q1", "G", "S", "D"))
 	for _, c := range []struct {
@@ -52,7 +52,7 @@ func TestTransistorTerminalRoles(t *testing.T) {
 
 // TestTerminalRolesAreClassGated is the assertion that matters most in this change. The terminal
 // vocabularies are the shortest pin names on a board, so applying them to any part would mis-role
-// most of a design — and a WRONG role is worse than a missing one, because a topology rule then walks
+// most of a design. A WRONG role is worse than a missing one, because a topology rule then walks
 // a path that does not exist and reports on it.
 //
 // U1 is an IC (not a transistor) whose pins are named exactly like a FET's. Every one must stay
@@ -66,9 +66,9 @@ func TestTerminalRolesAreClassGated(t *testing.T) {
 	}
 }
 
-// TestTerminalRolesDoNotShadowPowerAndGround: a transistor's supply and ground pins still resolve
-// through the rail lexicon. The terminal switch runs first, so a regression that matched too broadly
-// would silently take these over.
+// TestTerminalRolesDoNotShadowPowerAndGround checks that a transistor's supply and ground pins
+// still resolve through the rail lexicon. The terminal switch runs first, so a regression that
+// matched too broadly would silently take these over.
 func TestTerminalRolesDoNotShadowPowerAndGround(t *testing.T) {
 	m := NewModel(pinRoleDesign("Q1", "VDD", "GND"))
 	if got := roleOf(m, "Q1", "1"); got != RolePower {
@@ -79,9 +79,9 @@ func TestTerminalRolesDoNotShadowPowerAndGround(t *testing.T) {
 	}
 }
 
-// TestTerminalVocabIsAnchored: the patterns are whole-name anchored, so a pin whose name merely
-// STARTS with a terminal letter is not one. Without anchoring, "SDA" and "SCLK" would read as source
-// and "DIR" as drain on any transistor-classed part.
+// TestTerminalVocabIsAnchored checks that the patterns are whole-name anchored, so a pin whose name
+// merely STARTS with a terminal letter is not one. Without anchoring, "SDA" and "SCLK" would read
+// as source and "DIR" as drain on any transistor-classed part.
 func TestTerminalVocabIsAnchored(t *testing.T) {
 	m := NewModel(pinRoleDesign("Q1", "SDA", "SCLK", "DIR", "GPIO"))
 	for _, des := range []string{"1", "2", "3", "4"} {
@@ -91,9 +91,9 @@ func TestTerminalVocabIsAnchored(t *testing.T) {
 	}
 }
 
-// TestTerminalRolesHonourConventions: a house that names its gate "DRV" declares that in the lexicon
-// rather than patching the engine, which is the whole reason these are vocabularies and not literals
-// (C20, and the polarity tokens above them are the counter-example this deliberately does not copy).
+// TestTerminalRolesHonourConventions checks that a house naming its gate "DRV" declares that in the
+// lexicon rather than patching the engine, which is why these are vocabularies and not literals (C20;
+// the polarity tokens above them are the counter-example this does not copy).
 func TestTerminalRolesHonourConventions(t *testing.T) {
 	v, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{Gate: &configpb.VocabPatterns{Patterns: []string{`^DRV$`}}}})
 	if err != nil {
@@ -103,7 +103,7 @@ func TestTerminalRolesHonourConventions(t *testing.T) {
 	if got := roleOf(m, "Q1", "1"); got != RoleGate {
 		t.Errorf("DRV under a house lexicon = %q, want gate", got)
 	}
-	// The built-ins survive the merge: an override extends rather than replaces unless asked.
+	// The built-ins survive the merge, because an override extends rather than replaces unless asked.
 	if got := roleOf(NewModel(pinRoleDesign("Q2", "G"), WithLexicon(&classify.Lexicon{Role: v})), "Q2", "1"); got != RoleGate {
 		t.Errorf("built-in G under a house lexicon = %q, want gate", got)
 	}

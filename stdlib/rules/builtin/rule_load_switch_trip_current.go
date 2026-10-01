@@ -7,11 +7,11 @@ import (
 )
 
 // loadSwitchTripAboveFetRating flags a controller-based load switch whose current limit is set above
-// the continuous drain rating of the external MOSFET it switches through (WS3-085). Silence here is
-// "I could not tell", never "this is fine": the switch is only resolved when the controller, the FET
-// and the shunt are each unambiguous (see check.ExternalFetLoadSwitches). Every gap that produces
+// the continuous drain rating of the external MOSFET it switches through (WS3-085). Silence here means
+// "I could not tell", never "this is fine", because a switch is only resolved when the controller, the
+// FET and the shunt are each unambiguous (see check.ExternalFetLoadSwitches). The gaps that produce
 // silence, and what the rule does not claim about derating, are in
-// docs/load-switch-trip-above-fet-rating.md.
+// stdlib/rules/builtin/docs/load-switch-trip-above-fet-rating.md.
 var loadSwitchTripAboveFetRating = &check.Rule{
 	Name:       "load-switch-trip-above-fet-rating",
 	Severity:   "error",
@@ -34,28 +34,20 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// loadSwitchTripVerdicts decides every RESOLVED external-FET load switch, one verdict per pass FET,
-// and the resolution is what makes the subject set honest here. A switch is only resolved when the
-// controller, the FET and the shunt are each unambiguous (check.ExternalFetLoadSwitches), so a
-// transistor the walk could not tie to a controller and a sense resistor is not a load switch this
-// rule declined to check — as far as the rule can tell it is not a load switch at all, and claiming
-// it as a subject would overstate what the netlist supports.
+// loadSwitchTripVerdicts gives one verdict per pass FET of every RESOLVED external-FET load switch. A
+// transistor check.ExternalFetLoadSwitches could not tie to a controller and a sense resistor is not
+// a subject, since as far as the netlist shows it is not a load switch at all.
 //
-// THE UNRATED PASS FET BECOMES NotConsidered, which is the gap this rule's own doc leads with:
-// silence here is "I could not tell", never "this is fine". An unseeded FET and a seeded one stating
-// no continuous rating are the same gap and both used to leave through one `continue`, so a switch
-// whose protection nobody could verify reported exactly what a correctly-sized one did.
-//
-// check.CompareToBound makes the comparison and the witness together, so a pass here carries the two
-// numbers it rests on rather than asserting that the limit protects the FET.
+// THE UNRATED PASS FET BECOMES NotConsidered rather than passing silently (#400).
+// check.CompareToBound makes the comparison and the witness together, so a pass carries the two
+// numbers it rests on.
 func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, sw := range check.ExternalFetLoadSwitches(m) {
 		v := check.Verdict{
 			Subjects: []check.Entity{check.ComponentEntity(sw.Fet)},
-			// The controller whose threshold sets the trip current, and the sense resistor that sets
-			// it with them. The subject is the FET, because it is the part that overheats, but the
-			// fix is usually one of these two (agni issue 349).
+			// The subject is the FET, because it is the part that overheats, but the fix is usually
+			// the controller's threshold or the sense resistor (agni issue 349).
 			Context: []check.ContextSubject{
 				{Entity: check.Entity{Kind: check.KindComponent, Ref: sw.Controller}, Role: "controller"},
 				{Entity: check.Entity{Kind: check.KindComponent, Ref: sw.Sense}, Role: "sense"},
@@ -73,9 +65,8 @@ func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 			out = append(out, v)
 			continue
 		}
-		// The LOWEST rating binds, the same reasoning fet-vdss-below-switched-rail uses for
-		// breakdown. Taking the highest would let a pulsed-condition row excuse a steady
-		// over-current.
+		// The LOWEST rating binds, as in fet-vdss-below-switched-rail. Taking the highest would
+		// let a pulsed-condition row excuse a steady over-current.
 		id := rated[0]
 		for _, p := range rated[1:] {
 			if p.Value.GetMax() < id.Value.GetMax() {
@@ -101,11 +92,10 @@ func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 			sw.Ocp.Symbol, sw.Ocp.Value.GetMax(), sw.Sense, sw.SenseOhms,
 			sw.Fet, id.Symbol, id.Value.GetMax(),
 			check.Citation(fetSpec, id), check.Citation(ctrlSpec, sw.Ocp))
-		// The effective on-resistance of a controller-based switch is the external FET's RDS(on),
-		// which is the number a reviewer needs next. Quoted with an inline citation but NOT added
-		// to DatasheetProv: the verdict does not rest on it, and the review's data-trust gate
-		// rates a finding by its WEAKEST citation, so an unused low-confidence row would drag a
-		// genuine failure down to provisional.
+		// The switch's effective on-resistance is the external FET's RDS(on), quoted with an inline
+		// citation but NOT added to DatasheetProv. The verdict does not rest on it, and the review's
+		// data-trust gate rates a finding by its WEAKEST citation, so an unused low-confidence row
+		// would drag a real failure down to provisional.
 		if sw.OnResistance != nil {
 			msg += fmt.Sprintf(" Its effective on-resistance is %s's %s at %gΩ (%s).",
 				sw.Fet, sw.OnResistance.Symbol, sw.OnResistance.Value.GetMax(),
@@ -116,9 +106,8 @@ func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 			Message: msg,
 			Context: v.Context,
 			Prov:    check.ComponentProv(m, sw.Fet),
-			// The endangered part first (the FET carries the rating being exceeded), then the
-			// controller's threshold the trip current came from. Both are values the conclusion
-			// rests on (WS3-028).
+			// The FET's exceeded rating first, then the controller threshold the trip current came
+			// from. The conclusion rests on both (WS3-028).
 			DatasheetProv: []*check.DatasheetCitation{
 				check.DatasheetCitationOf(fetSpec, id),
 				check.DatasheetCitationOf(ctrlSpec, sw.Ocp),

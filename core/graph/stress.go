@@ -9,10 +9,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// stressIterations is the fixed SMACOF sweep count. Fixed on purpose: majorization is
-// monotone (each sweep can only lower stress), so a constant budget gives deterministic
-// output with no convergence-threshold wobble. 128 is far past visual convergence for
-// corpus-sized sheets.
+// stressIterations is the fixed SMACOF sweep count. Majorization is monotone (each sweep can
+// only lower stress), so a constant budget gives deterministic output with no
+// convergence-threshold wobble. 128 is far past visual convergence for corpus-sized sheets.
 const stressIterations = 128
 
 // stressPlace is the stress-majorization layout (WS7-009): positions are chosen so drawn
@@ -136,8 +135,8 @@ func stressComponent(refs []string, adj map[string]map[string]bool, init map[str
 		}
 	}
 
-	// Init from the layered placement: deterministic, and already globally reasonable, so
-	// majorization refines instead of rescuing. Coincident inits get an index-proportional
+	// Init from the layered placement, which is deterministic and already globally reasonable,
+	// so majorization refines instead of rescuing. Coincident inits get an index-proportional
 	// nudge so vote directions are defined.
 	x := make([]float64, n)
 	y := make([]float64, n)
@@ -148,8 +147,8 @@ func stressComponent(refs []string, adj map[string]map[string]bool, init map[str
 		x[i] += float64(i) * 1e-3
 	}
 
-	// SMACOF sweeps: each node moves to the weighted average of its pairwise votes
-	// (x_j + t_ij * unit(x_i - x_j)): "sit at exactly the target distance from j, in my
+	// Each SMACOF sweep moves every node to the weighted average of its pairwise votes
+	// (x_j + t_ij * unit(x_i - x_j)), meaning "sit at exactly the target distance from j, in my
 	// current direction". Majorization guarantees stress is non-increasing per sweep.
 	for range stressIterations {
 		nx := make([]float64, n)
@@ -164,7 +163,7 @@ func stressComponent(refs []string, adj map[string]map[string]bool, init map[str
 				dx, dy := x[i]-x[j], y[i]-y[j]
 				dd := math.Hypot(dx, dy)
 				if dd < 1e-9 {
-					dx, dy, dd = 1, 0, 1 // coincident: pick a fixed direction
+					dx, dy, dd = 1, 0, 1 // coincident, so pick a fixed direction
 				}
 				sx += w * (x[j] + target[i][j]*dx/dd)
 				sy += w * (y[j] + target[i][j]*dy/dd)
@@ -239,7 +238,7 @@ func shiftInto(pos map[string]*geom.Point, offsetX int64) int64 {
 	return maxX
 }
 
-// StressOf scores positions against the design's graph distances: Kruskal's normalized
+// StressOf scores positions against the design's graph distances with Kruskal's normalized
 // stress-1, sqrt(sum w (s*delta - t)^2 / sum w t^2) with the optimal uniform scale s applied
 // before scoring, so the number is scale-invariant (a layout is not penalized for its units)
 // and comparable across strategies on the same design. Pairs in different connected

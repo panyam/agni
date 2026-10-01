@@ -28,31 +28,25 @@ import { type Selection, askLabel, fillEntityQuery, labelFor, sameSelection, sel
 import { SheetBadges } from "./sheetbadges.jsx";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
-// server's /relation-docs/ route BEFORE markdown rendering. Making them root-absolute means the
-// shared renderMarkdown walk (which prepends the /rule-docs/ base to still-relative refs) leaves
-// them alone, so relation cards resolve to their own handler without touching rule-doc rendering.
+// server's /relation-docs/ route BEFORE markdown rendering. renderMarkdown prepends the /rule-docs/
+// base only to still-relative refs, so it leaves these alone.
 function resolveRelationImages(md: string): string {
   return md.replace(/\]\(images\//g, "](/relation-docs/images/");
 }
 
-// emptyFindings is the state before the presenter has pushed anything: no rules selected, so the
-// count says "no rules selected" rather than "no findings", which would be a claim.
+// emptyFindings is the state before the presenter has pushed anything. It has no rules selected, so
+// the count reads "no rules selected" rather than "no findings".
 function emptyFindings(): FindingsState {
   return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 0, pending: 0, running: false, skipped: [], ruleSummaries: {} };
 }
 
-// FindingsCount says what is already CHECKED about a selection (agni issue 259), for one entity or
-// for a whole answer set.
+// FindingsCount says what is already CHECKED about a selection, for one entity or for a whole answer
+// set (agni issue 259). A zero can mean not run, no rules, partially run, or clean, and a bare 0 reads
+// as clean, so the text names the state. See
+// docsite/content/architecture/web-picking.md#what-a-count-means.
 //
-// The number is the easy half. The hard half is that a zero has four different meanings and only one
-// of them is "nothing is wrong": nobody has pressed Run, no rules are selected, half the ruleset is
-// still pending, or it ran clean. A bare 0 reads as the last one in every case, and a reviewer acts
-// on it, so the state is named in the text rather than left to be inferred from a spinner elsewhere
-// on the page.
-//
-// `scope` names what was counted when that is not obvious from position ("these 5 entities"). The
-// selection bar passes "" because the entity is already named immediately to its left, and "1
-// finding on this" beside "NET /sub/DATA0" is a word longer than the reader needs.
+// `scope` names what was counted when position does not ("these 5 entities"). The selection bar
+// passes "" because the entity is named immediately to its left.
 function FindingsCount(props: {
   tally: SeverityTally;
   state: CheckedState;
@@ -94,9 +88,8 @@ function FindingsCount(props: {
           </Show>
         </span>
       </Show>
-      {/* Never a pass and never a fail, so it is worded as a question rather than counted with the
-          defects. A rule that examined this subject and could not decide is the one item a reader
-          can often clear themselves, by supplying whatever it named. */}
+      {/* Neither a pass nor a fail, so it is worded as an open question rather than counted with the
+          defects. The reader can often clear one by supplying whatever the rule named. */}
       <Show when={counted() && props.tally.inconclusive > 0}>
         <span class="query-findings-open-q">{props.tally.inconclusive} unresolved</span>
       </Show>
@@ -109,13 +102,12 @@ function FindingsCount(props: {
           {body()}
         </button>
       </Show>
-      {/* Visible rather than only in the hover, because this is the claim the panel must not let a
-          reader over-read, and a caveat nobody sees is a caveat nobody has. */}
+      {/* Visible text rather than only a hover, so the reader sees what the count does not cover. */}
       <span class="query-findings-caveat">
         selected rules, this subject only
         {/* A rule gated before it evaluated reports nothing ANYWHERE, so a clean entity under a
-            half-gated ruleset means much less than it looks. Design-wide, hence stated here rather
-            than counted above. */}
+            half-gated ruleset means much less than it looks. The gating is design-wide, so it is
+            stated here rather than counted above. */}
         <Show when={props.gated > 0}>
           <span class="query-findings-gated"> · {props.gated} rule(s) could not run</span>
         </Show>
@@ -124,13 +116,11 @@ function FindingsCount(props: {
   );
 }
 
-// QueryPanel is the ad-hoc datalog search surface (WS9-036 / WS3-029): type a query, run it, and
-// see provenance-linked answer rows. The panel owns the ephemeral query text (a local signal) and
-// emits onRun with it; the presenter loads the current design, evaluates the query server-side, and
-// pushes the QueryResult back through state(). Provenance is per-row expandable so many-citation
-// rows do not widen the results table. A run needs a file open — with none, the presenter reports
-// that as the result's error. The relation catalog (WS9-037), pushed once via relations(), renders
-// as click-to-insert chips grouped by kind so a user discovers the vocabulary without knowing it.
+// QueryPanel is the ad-hoc datalog query panel (WS9-036 / WS3-029). It owns the query text and emits
+// onRun; the presenter evaluates it server-side against the open design and pushes the QueryResult
+// back through state(), reporting "no file open" as the result's error. Provenance expands per row so
+// many-citation rows do not widen the table. The relation catalog (WS9-037) renders as click-to-insert
+// chips grouped by kind.
 function QueryPanel(props: {
   state: () => QueryResult;
   relations: () => RelationItem[];
@@ -148,22 +138,21 @@ function QueryPanel(props: {
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
 }) {
   const [text, setText] = createSignal("");
-  // expanded holds the row indices whose provenance is open — ephemeral view state, so it lives
-  // here rather than in the pushed result.
+  // expanded holds the row indices whose provenance is open. It is view state, so it lives here
+  // rather than in the pushed result.
   const [expanded, setExpanded] = createSignal<Set<number>>(new Set());
   // detailRel is the relation whose reference doc (Detail) is open in the inspect pane, or null
-  // (WS14-005). Clicking a chip's info affordance opens it; the ✕ closes it. Ephemeral view state.
+  // (WS14-005).
   const [detailRel, setDetailRel] = createSignal<RelationItem | null>(null);
-  // widths holds a per-column pixel width once the reader has dragged that column's edge. Columns
-  // nobody touched stay unset and share the table equally (see .query-table's fixed layout), which
-  // is the fix for the old auto layout: it sized every column to its widest cell, so one long
-  // provenance string or net name took most of the panel and the rest were unreadable slivers.
+  // widths holds a per-column pixel width once the reader has dragged that column's edge. Untouched
+  // columns share the table equally under .query-table's fixed layout. Auto layout sizes each column
+  // to its widest cell, so one long provenance string or net name squeezes the rest to slivers.
   const [widths, setWidths] = createSignal<Record<number, number>>({});
   const MIN_COL_PX = 48;
 
-  // startResize drags one column edge. It is a pointer capture rather than window listeners so the
-  // drag survives the cursor leaving the header, and it stops the click reaching the sort handler
-  // underneath — dragging an edge must not also re-sort the table.
+  // startResize drags one column edge. Pointer capture rather than window listeners keeps the drag
+  // alive when the cursor leaves the header, and stopPropagation keeps a drag from also re-sorting
+  // the table through the header's click handler.
   const startResize = (e: PointerEvent, col: number): void => {
     e.preventDefault();
     e.stopPropagation();
@@ -183,14 +172,8 @@ function QueryPanel(props: {
     handle.addEventListener("pointerup", up);
   };
 
-  // drawerOpen controls the slide-in helper drawer (examples + relations + reference). The main
-  // surface is just the query textarea and the results table; the discovery chrome lives in the
-  // drawer so it does not eat vertical space. A left-edge handle opens it, and clicking the textarea
-  // (or running anything) closes it so the results are unobscured. The drawer stays mounted at all
-  // times (translated off-screen when closed) so chip clicks work without opening it.
-  // A query written for the reader lands in the box AND runs, so a click on the drawing answers
-  // immediately; what it leaves behind is an editable query, which is how the click teaches the
-  // language rather than routing around it.
+  // A query written for the reader (a click on the drawing) lands in the box AND runs, and leaves an
+  // editable query behind so the click teaches the language.
   createEffect(() => {
     const p = props.prefill();
     if (!p.n) return;
@@ -199,17 +182,18 @@ function QueryPanel(props: {
     props.onRun(p.text);
   });
 
+  // drawerOpen controls the slide-in helper drawer (examples, relations, reference), which keeps
+  // that chrome out of the panel's vertical space. A left-edge handle opens it; a pointer-down in
+  // the input or any run closes it so the results are unobscured.
   const [drawerOpen, setDrawerOpen] = createSignal(false);
-  // mode is which of the two ways in the reader is using: write a query, or type a name. They are
-  // two ends of one lesson. A query says where to look and gets back what is there; a search says
-  // what a thing is called and gets back where it is. Both leave editable datalog in the box, which
-  // is why search is a mode on this panel rather than a search widget somewhere else.
+  // mode is "query" (say where to look, get back what is there) or "search" (say what a thing is
+  // called, get back where it is). Both leave editable datalog in the box, which is why search is a
+  // mode of this panel rather than a separate widget.
   const [mode, setMode] = createSignal<"query" | "search">("query");
   const [term, setTerm] = createSignal("");
-  // sortCol/sortDir are the results table's client-side sort (WS: sortable columns). sortCol is a
-  // column index into state().columns (-1 = natural row order); clicking a header cycles
-  // asc → desc → off. Sorting is view-only: rows carry their ORIGINAL index so the provenance
-  // expand-state (keyed by original index) survives a re-sort.
+  // sortCol/sortDir are the results table's client-side sort. sortCol indexes state().columns, with
+  // -1 meaning natural row order. Rows carry their ORIGINAL index, which keys the provenance
+  // expand-state, so a re-sort keeps it.
   const [sortCol, setSortCol] = createSignal(-1);
   const [sortDir, setSortDir] = createSignal<"asc" | "desc">("asc");
   let taRef: HTMLTextAreaElement | undefined;
@@ -219,8 +203,7 @@ function QueryPanel(props: {
     else next.add(i);
     setExpanded(next);
   };
-  // resetForRun clears the per-result view state (expanded provenance, sort) and closes the drawer,
-  // so a fresh run starts from natural order with the results unobscured.
+  // resetForRun clears the per-result view state (expanded provenance, sort) and closes the drawer.
   const resetForRun = () => {
     setExpanded(new Set<number>());
     setSortCol(-1);
@@ -232,18 +215,16 @@ function QueryPanel(props: {
     resetForRun();
     props.onRun(q);
   };
-  // runExample fills the textarea with a starter query AND runs it (WS14-002): the immediacy — click,
-  // see results — is the point, and the query stays visible/editable for the user to tweak next.
+  // runExample fills the textarea with a starter query AND runs it (WS14-002), leaving the query in
+  // the box to edit.
   const runExample = (e: ExampleItem) => {
     setText(e.query);
     if (props.state().loading) return;
     resetForRun();
     props.onRun(e.query);
   };
-  // doSearch fills the box with the datalog that answers the reader's name, runs it, and hands the
-  // panel BACK to query mode. Flipping back is the point rather than a shortcut: the reader ends up
-  // looking at the sentence that answered them, one edit away from asking a better question. It is
-  // the same bargain a click on the drawing makes, and search is the other end of it.
+  // doSearch fills the box with the datalog that answers the reader's name, runs it, and switches the
+  // panel BACK to query mode, so the reader sees the query that answered them and can edit it.
   const doSearch = () => {
     const tmpl = props.search();
     const t = term().trim();
@@ -257,9 +238,8 @@ function QueryPanel(props: {
   // presetFor is the served click-to-ask query for a selection's kind, or undefined before the
   // catalog has arrived (or for a kind the server writes no preset for).
   const presetFor = (kind: string): EntityQueryItem | undefined => props.entityQueries().find((p) => p.kind === kind);
-  // askAbout takes the next hop: fill the box with the preset for what is selected, and run it. It is
-  // runExample with the values spliced in, and it leaves the same editable query behind, because a
-  // hop is meant to teach the sentence that made it as well as answer the question.
+  // askAbout fills the box with the preset for what is selected and runs it. It is runExample with the
+  // selection's values spliced in, and leaves the same editable query behind.
   const askAbout = (sel: Selection) => {
     const preset = presetFor(sel.kind);
     if (!preset || props.state().loading) return;
@@ -268,15 +248,14 @@ function QueryPanel(props: {
     resetForRun();
     props.onRun(q);
   };
-  // pickCell is a click on a result cell (or on one of its sheet badges). It locates the entity, as
-  // it always has, AND selects it — so the answer to one question becomes the subject of the next,
-  // which is what makes the table a place to walk from rather than a dead end. A cell whose kind has
-  // no selection shape (a scalar never reaches here; a future entity kind might) locates and
-  // deselects rather than leaving the bar naming the previous pick.
+  // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
+  // selects it, so one answer becomes the subject of the next question. A kind with no selection
+  // shape (scalars never reach here) locates and deselects rather than leaving the bar naming the
+  // previous pick.
   //
-  // `ref` is the row's other half for a pin cell, "" for every other kind. A pin inverts what the
-  // arguments mean downstream: the entity is the COMPONENT and the cell is the designator on it, so
-  // the locate call is (pin, U7, ..., "5") where a component cell would send (component, U7).
+  // `ref` is the row's other half for a pin cell, "" for every other kind. A pin inverts the locate
+  // arguments, since the entity is the COMPONENT and the cell is its designator, so the call is
+  // (pin, U7, ..., "5") where a component cell sends (component, U7).
   const pickCell = (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, ref = "") => {
     const sel = selectionFromCell(kind, subject, ref);
     props.setSelection(sel);
@@ -286,28 +265,23 @@ function QueryPanel(props: {
     }
     props.onLocate(kind, subject, sheet, reason);
   };
-  // isCurrent reports whether a cell names the entity on screen right now, so the table can mark
-  // where the reader is standing. Forty rows in, a click sends the canvas somewhere and the table
-  // says nothing about which answer it came from.
-  //
-  // It is DERIVED from the selection rather than remembered from the click. A remembered mark is
-  // wrong the moment the reader picks something on the drawing or opens a finding, and it would be
-  // wrong silently, which is the worst way for a you-are-here marker to fail. The cost is that an
-  // entity appearing in several rows marks all of them, which is true: they all name the thing being
-  // shown.
+  // isCurrent reports whether a cell names the entity on screen now, so the table marks which answer
+  // the canvas is showing. It is DERIVED from the selection rather than remembered from the click,
+  // because a remembered mark goes silently wrong once the reader picks on the drawing or opens a
+  // finding. An entity appearing in several rows marks all of them.
   const isCurrent = (kind: string, cell: string): boolean =>
     sameSelection(selectionFromCell(kind, cell), props.selection());
   // A badge is current when its sheet is the one rendered AND its cell is the entity being shown.
-  // Without the second half every row's badge for this sheet would light up, which says nothing.
+  // Without the second half every row's badge for this sheet would light up.
   const isCurrentSheet = (kind: string, cell: string, sheet: string): boolean =>
     isCurrent(kind, cell) && sheet !== "" && sheet === props.currentSheet();
-  // What is CHECKED about the selection, and about the whole answer set (agni issue 259). Both are
-  // the same projection over the findings the panel was handed: a click is one subject, a result
-  // table is many, and a set is the primitive so neither needs its own path.
+  // What is CHECKED about the selection and about the whole answer set (agni issue 259). Both run the
+  // findings the panel was handed through findingsFor, which takes a set, so a click and a result
+  // table share one path.
   //
-  // resultSubjects reads every locatable cell in the table, deduped by identity, which is the set
-  // the reader is looking at. It goes through selectionFromCell (and so through cellKind), so a
-  // polymorphic search result contributes each row's own kind rather than a column's.
+  // resultSubjects is every locatable cell in the table, deduped by identity. It goes through
+  // selectionFromCell (and so cellKind), so a polymorphic search result contributes each row's own
+  // kind rather than a column's.
   const resultSubjects = (): Selection[] => {
     const out: Selection[] = [];
     const st = props.state();
@@ -321,9 +295,9 @@ function QueryPanel(props: {
   };
   const selectionTally = () => tallySeverities(findingsFor(props.findings().findings, [props.selection()]));
   const resultTally = () => tallySeverities(findingsFor(props.findings().findings, resultSubjects()));
-  // WHY the count reads the way it does, which the reader has to be told rather than infer. The
-  // caveats are not decoration: an entity view is a projection of attention, and a review pass is an
-  // enumeration guarantee, so a zero here means much less than a zero there.
+  // countTitle is the hover text saying WHY the count reads the way it does. An entity view projects
+  // attention where a review pass enumerates the design, so a zero here means much less than a zero
+  // there.
   const countTitle = (): string => {
     const st = props.findings();
     const state = checkedState(st);
@@ -335,11 +309,9 @@ function QueryPanel(props: {
           : state === "no-rules"
             ? "No rules are selected."
             : "";
-    // The skipped list is DESIGN-WIDE and is the largest thing a count beside one entity leaves
-    // out: a rule gated before it evaluated produces no findings anywhere, so a clean entity under
-    // a half-gated ruleset means much less than it looks. The reasons are the engine's own words,
-    // passed through rather than reworded, for the same reason the checks panel passes them
-    // through: the rule decides why it cannot run.
+    // The skipped list is DESIGN-WIDE, and a gated rule produces no findings anywhere. The reasons
+    // are the engine's own words, passed through unreworded as the checks panel does, because the
+    // rule decides why it cannot run.
     const gated = st.skipped.length
       ? `\n\n${st.skipped.length} selected rule(s) could not run on this design at all, so they report nothing anywhere:\n` +
         st.skipped.map((s) => `  ${s.rule}: ${s.reason}`).join("\n")
@@ -350,8 +322,8 @@ function QueryPanel(props: {
       `so the other end shows nothing.${gated}`
     );
   };
-  // cmpCells is a numeric-aware string compare: two numeric cells sort by value (so 9 < 10), any
-  // other pair sorts lexicographically. sortRows applies it, carrying each row's original index.
+  // cmpCells sorts two numeric cells by value (so 9 < 10) and any other pair lexicographically.
+  // displayRows applies it, carrying each row's original index.
   const cmpCells = (a: string, b: string): number => {
     const na = Number(a);
     const nb = Number(b);
@@ -367,8 +339,7 @@ function QueryPanel(props: {
     const dir = sortDir() === "asc" ? 1 : -1;
     return [...indexed].sort((x, y) => dir * cmpCells(x.row.cells[col] ?? "", y.row.cells[col] ?? ""));
   };
-  // sortBy cycles a column: first click sorts ascending, second descending, third clears back to the
-  // server's natural order.
+  // sortBy cycles a column through ascending, descending, and back to the server's natural order.
   const sortBy = (ci: number) => {
     if (sortCol() !== ci) {
       setSortCol(ci);
@@ -379,9 +350,9 @@ function QueryPanel(props: {
       setSortCol(-1);
     }
   };
-  // insertRelation splices a relation template into the query at the caret (replacing any
-  // selection), so a chip click extends the query in place rather than clobbering it. It restores
-  // focus and drops the caret just after the inserted snippet.
+  // insertRelation splices a relation template into the query at the caret, replacing any selection,
+  // so a chip click extends the query rather than clobbering it. It restores focus with the caret
+  // just after the snippet.
   const insertRelation = (r: RelationItem) => {
     const snip = relationTemplate(r);
     const ta = taRef;
@@ -401,8 +372,8 @@ function QueryPanel(props: {
 
   return (
     <div class="query">
-      {/* Two ways in, offered only once the server has sent a search template: without one, a
-          search mode could do nothing but guess at a query. */}
+      {/* The mode tabs appear only once the server has sent a search template, since without one a
+          search mode could only guess at a query. */}
       <Show when={props.search()}>
         <div class="query-modes" role="tablist" aria-label="Query or search">
           <button
@@ -464,7 +435,7 @@ function QueryPanel(props: {
           class="query-text"
           rows="3"
           spellcheck={false}
-          placeholder={'component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n'}
+          placeholder={'component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n'}
           value={text()}
           onInput={(e) => setText(e.currentTarget.value)}
           onPointerDown={() => setDrawerOpen(false)}
@@ -480,10 +451,8 @@ function QueryPanel(props: {
         </div>
       </div>
 
-      {/* The selection bar names what the reader last picked — on the drawing or in the results — and
-          offers the one question there is a served preset for. It is the visible half of the walk:
-          without it, a click on a result cell highlights something and says nothing about where the
-          reader can go from there. */}
+      {/* The selection bar names what the reader last picked, on the drawing or in the results, and
+          offers the one question there is a served preset for. */}
       <Show when={props.selection()}>
         {(sel) => (
           <div class="query-selection">
@@ -527,8 +496,8 @@ function QueryPanel(props: {
         <span class="query-drawer-handle-label">Examples &amp; relations</span>
       </button>
 
-      {/* The drawer stays mounted (translated off-screen when closed) so chip clicks and the
-          reference pane work whether or not it is open — the tests drive them without opening it. */}
+      {/* The drawer stays mounted, translated off-screen when closed, so chip clicks and the
+          reference pane work while it is closed. The tests drive them without opening it. */}
       <div class={`query-drawer${drawerOpen() ? " open" : ""}`} role="dialog" aria-label="Examples and relations">
         <div class="query-drawer-head">
           <span class="query-drawer-title">Examples &amp; relations</span>
@@ -691,21 +660,17 @@ function QueryPanel(props: {
                         <For each={row.cells}>
                           {(cell, ci) => {
                             // A pin cell whose component did not resolve names nothing, so it
-                            // renders as plain text rather than as a link to nowhere. The server
-                            // already blanks the kind in that case; this keeps the client honest if
-                            // it ever does not.
+                            // renders as plain text. The server already blanks the kind then, and
+                            // this covers a server that does not.
                             const rowRef = row.cellRefs[ci()] ?? "";
                             const rawKind = cellKind(props.state(), row, ci());
                             const kind = rawKind === "pin" && rowRef === "" ? "" : rawKind;
                             const reason = row.cellReasons[ci()] ?? LocateReason.UNSPECIFIED;
-                            // Only an entity cell is locatable; a scalar (a voltage, an mpn
-                            // string) stays plain text. Which cells those are can vary ROW BY ROW
-                            // under a polymorphic column, so the kind comes from cellKind rather
-                            // than straight off the column (agni issue 338). A located cell shows its subject as a link
-                            // and its sheet badge(s) inline (the findings-panel idiom): the subject
-                            // highlights the entity, a badge navigates to that sheet. The reason
-                            // (WS9-039) rides along so the presenter can explain a click that paints
-                            // nothing (a power rail, a virtual symbol).
+                            // Only an entity cell is locatable; a scalar (a voltage, an mpn) stays
+                            // plain text. That can vary ROW BY ROW under a polymorphic column, so the
+                            // kind comes from cellKind rather than the column (agni issue 338). The
+                            // reason (WS9-039) rides along so the presenter can explain a click that
+                            // paints nothing (a power rail, a virtual symbol).
                             return kind === "" ? (
                               <td>{cell}</td>
                             ) : (
@@ -748,9 +713,8 @@ function QueryPanel(props: {
             </table>
             <div class="query-count">
               {props.state().rows.length} result(s)
-              {/* The set case, and the reason findingsFor takes a set rather than one subject: the
-                  answers on screen ARE a selection, and asking what is flagged across them is the
-                  same question a click asks of one thing. */}
+              {/* The set case. The answers on screen ARE a selection, which is why findingsFor takes
+                  a set rather than one subject. */}
               <Show when={resultSubjects().length > 0}>
                 <FindingsCount
                   tally={resultTally()}
@@ -768,12 +732,10 @@ function QueryPanel(props: {
   );
 }
 
-// queryPanelIsland mounts the panel and returns its command-down view. onRun is the intent up (the
-// user ran a query); the presenter answers by pushing a QueryResult through view.setState. onLocate
-// is the second intent up (WS9-038: the user clicked a result cell or its sheet badge) — the
-// presenter navigates to the sheet and highlights the entity, the same path a finding click takes,
-// and (WS9-039) pushes back a locate note via setLocateNote when the highlight paints nothing.
-// Same island shape as rulesPanelIsland / findingsPanelIsland.
+// queryPanelIsland mounts the panel and returns its command-down view, per
+// docsite/content/architecture/web-client.md#wiring-a-new-panel. onRun is answered through
+// view.setState. onLocate (WS9-038) takes the same navigate-and-highlight path a finding click does,
+// and the presenter pushes a note through setLocateNote when the highlight paints nothing (WS9-039).
 export function queryPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
@@ -781,7 +743,7 @@ export function queryPanelIsland(
     onRun: (text: string) => void;
     onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
     // onInspect opens the check results for one entity. Optional like onLocate, since an embedding
-    // host may mount the query panel with no checks panel to open (C13).
+    // host may mount the query panel with no checks panel (C13).
     onInspect?: (sel: Selection) => void;
   },
 ): { island: SolidIsland; view: QueryView } {
@@ -790,25 +752,25 @@ export function queryPanelIsland(
   const [examples, setExamples] = signalView<ExampleItem[]>([]);
   const [locateNote, setLocateNote] = signalView<string>("");
   // prefill carries a query written FOR the reader (a click on the drawing generates one). The
-  // counter is what makes clicking the same pin twice re-fill and re-run: the text would be
-  // identical, and an effect over identical text does not fire.
+  // counter makes clicking the same pin twice re-fill and re-run, since an effect over identical
+  // text does not fire.
   const [prefill, setPrefill] = signalView<{ text: string; n: number }>({ text: "", n: 0 });
   let prefills = 0;
-  // The click-to-ask presets, held as a signal because the panel now RENDERS one (the ask button's
-  // wording and its hover show the query and what it teaches) as well as running it; the host still
-  // looks one up by the picked entity's kind (see entityQuery).
+  // The click-to-ask presets. A signal because the panel RENDERS one (the ask button's hover shows
+  // the query and what it teaches) as well as running it. The host looks one up by kind through
+  // entityQuery.
   const [entityQueries, setEntityQueries] = signalView<EntityQueryItem[]>([]);
   // The find-by-name template, null until the catalog arrives. The panel offers no search mode
   // while it is null (agni issue 338).
   const [search, setSearch] = signalView<SearchItem | null>(null);
-  // selection is what the reader last picked. The canvas pushes one through the view; a click on a
-  // result cell sets it from inside the panel, which is why the setter goes down as a prop.
+  // selection is what the reader last picked. The canvas pushes one through the view, and a click on
+  // a result cell sets it from inside the panel, which is why the setter goes down as a prop.
   const [selection, setSelection] = signalView<Selection | null>(null);
   // The sheet on screen, pushed by the presenter on every navigation. The panel needs it to mark
   // which of a cell's badges is the one being shown.
   const [currentSheet, setCurrentSheet] = signalView<string>("");
-  // The check results, whole. The panel projects them onto the selection and onto the answer set;
-  // it never asks for a scoped re-run (agni issue 259).
+  // The check results, whole. The panel projects them onto the selection and the answer set and
+  // never asks for a scoped re-run (agni issue 259).
   const [findings, setFindings] = signalView<FindingsState>(emptyFindings());
   const onLocate = handlers.onLocate ?? (() => {});
   const onInspect = handlers.onInspect ?? (() => {});

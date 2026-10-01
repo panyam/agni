@@ -51,7 +51,8 @@ func TestConfigDigestFollowsContent(t *testing.T) {
 	}
 }
 
-// The same bytes under a different name are different config: a profile set is addressed by file.
+// The same bytes under a different name are different config, because a profile set is addressed by
+// file.
 func TestConfigDigestFollowsNames(t *testing.T) {
 	a := digestOf(t, []string{writeTree(t, map[string]string{"a.yaml": "same"})}, nil)
 	b := digestOf(t, []string{writeTree(t, map[string]string{"b.yaml": "same"})}, nil)

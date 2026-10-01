@@ -1,6 +1,6 @@
-# extension-template — copy this to start your own extension
+# extension-template
 
-This is a **minimal, copyable scaffold** for a private extension: a Go module that extends the
+This is a **minimal, copyable scaffold** for a private extension, meaning a Go module that extends the
 public agni engine with your own format reader and rules, without forking it. Unlike
 [`examples/extension`](../extension/README.md) (a worked demonstration), this is a bare starting
 point full of `TODO:` markers.
@@ -16,9 +16,13 @@ The short version:
 
 ```
 $ go run .
+usage: agni-extension <design-file>
 registered custom format: true
-registered custom rules: 30 in the catalog
+registered custom rules: 1 in the catalog
 ```
 
-Dependencies point **extension → engine only** — the engine never imports your extension
+The catalog holds one rule because the template registers its own and does not import the
+built-in catalog (`stdlib/rules/builtin`).
+
+Dependencies point **extension → engine only**, and the engine never imports your extension
 (CONSTRAINTS C18).

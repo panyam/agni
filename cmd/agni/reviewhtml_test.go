@@ -18,8 +18,8 @@ func finding(rule, net, msg string) check.Finding {
 	return check.Finding{Rule: rule, Subject: check.Entity{Kind: check.KindNet, Ref: net}, Message: msg}
 }
 
-// twoAreas is a report whose areas and items are deliberately NOT in alphabetical or worst-first
-// order, so a renderer that sorts is visible.
+// twoAreas is a report whose areas and items are NOT in alphabetical or worst-first order,
+// so a renderer that sorts is visible.
 func twoAreas() review.Report {
 	return review.Report{
 		Manifest: "House checklist",
@@ -35,9 +35,10 @@ func twoAreas() review.Report {
 	}
 }
 
-// TestChecklistKeepsTheManifestOrder: the check report sorts rules worst-first because nobody
-// authored that order. A checklist's order is the team's. An item that has been P1 in their process
-// for years has to stay first, and an area must not move because the board got worse this week.
+// TestChecklistKeepsTheManifestOrder guards the checklist's order. The check report sorts rules
+// worst-first because nobody authored that order, but a checklist's order is the team's. An item
+// that has been P1 in their process for years has to stay first, and an area must not move because
+// the board got worse this week.
 func TestChecklistKeepsTheManifestOrder(t *testing.T) {
 	c := buildChecklist(twoAreas(), rpt.Checklist{})
 	if len(c.Areas) != 2 {
@@ -52,9 +53,10 @@ func TestChecklistKeepsTheManifestOrder(t *testing.T) {
 	}
 }
 
-// TestChecklistCarriesEveryFinding: the markdown Detail cell caps at three, and its comment says the
-// web surface is where the full list lives. A broad rule fires on hundreds of nets, and a page that
-// silently shows three of them is the same false-coverage failure the review layer exists to remove.
+// TestChecklistCarriesEveryFinding exists because the markdown Detail cell caps at three, and its
+// comment says ItemResult.Findings keeps the full list. A broad rule fires on hundreds of nets, and
+// a page that silently shows three of them is the same false-coverage failure the review layer
+// exists to remove.
 func TestChecklistCarriesEveryFinding(t *testing.T) {
 	var fs []check.Finding
 	for _, n := range []string{"A", "B", "C", "D", "E", "F", "G"} {
@@ -70,8 +72,9 @@ func TestChecklistCarriesEveryFinding(t *testing.T) {
 	}
 }
 
-// TestChecklistPromisesNoLinkWithoutAMount: same rule as `check --server`. A base address alone is
-// half the pair, and a link built from the other half missing resolves on nobody's server.
+// TestChecklistPromisesNoLinkWithoutAMount applies the same rule as `check --server`. A base
+// address alone is half the pair, and a link built from the other half missing resolves on nobody's
+// server.
 func TestChecklistPromisesNoLinkWithoutAMount(t *testing.T) {
 	c := buildChecklist(twoAreas(), rpt.Checklist{URLBase: "http://localhost:8080"})
 	for _, a := range c.Areas {

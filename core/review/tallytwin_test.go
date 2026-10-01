@@ -35,9 +35,9 @@ type tallyTwin struct {
 // A disagreement would not be cosmetic. `covered` is what a team reads as "how much of our checklist
 // is actually mechanised", and not-automated is the one outcome it excludes. A client that counted
 // not-automated as covered would report a checklist as answered when nobody had answered it, which is
-// the exact failure the outcome vocabulary exists to prevent.
+// the failure the outcome vocabulary exists to prevent.
 //
-// Checking both sides against ONE file is what makes that structural rather than a promise: the
+// Checking both sides against ONE file makes that structural rather than a promise. The
 // numbers here were authored once, so neither implementation can be "corrected" to match itself.
 func TestTallyTwinFixture(t *testing.T) {
 	b, err := os.ReadFile("testdata/tally_twin.json")
@@ -82,8 +82,8 @@ func TestTallyTwinFixture(t *testing.T) {
 }
 
 // TestTallyTwinFixtureCoversEveryOutcome fails when the vocabulary grows without the fixture growing
-// with it. Without this, adding an outcome would leave the twin silently checking a stale vocabulary:
-// both sides would keep agreeing about the outcomes they already knew, and the new one could be
+// with it. Without this, adding an outcome would leave the twin silently checking a stale vocabulary.
+// Both sides would keep agreeing about the outcomes they already knew, and the new one could be
 // bucketed differently on each surface with nothing to notice.
 func TestTallyTwinFixtureCoversEveryOutcome(t *testing.T) {
 	b, err := os.ReadFile("testdata/tally_twin.json")

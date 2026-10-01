@@ -23,7 +23,7 @@ func seedCorpus(f *testing.F, glob string) {
 	}
 }
 
-// FuzzRead covers the hand-rolled post-decode mapping behind the XML decode: arbitrary
+// FuzzRead covers the hand-rolled post-decode mapping behind the XML decode. Arbitrary
 // bytes must error, never panic, and never yield a nil design without an error.
 func FuzzRead(f *testing.F) {
 	seedCorpus(f, "*.xml")

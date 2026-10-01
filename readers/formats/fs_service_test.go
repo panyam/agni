@@ -21,7 +21,7 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// mountFS mirrors the helper in the internal test file: fixtures loaded from disk but mounted
+// mountFS mirrors the helper in the internal test file. It loads fixtures from disk but mounts them
 // under FS names that do NOT resolve on the host, so a read that escapes to os fails outright.
 func mountFS(t *testing.T, files map[string]string) fstest.MapFS {
 	t.Helper()
@@ -39,7 +39,7 @@ func mountFS(t *testing.T, files map[string]string) fstest.MapFS {
 	return m
 }
 
-// memLoader is a service.Loader backed entirely by an in-memory fs.FS — the shape a WASM build or
+// memLoader is a service.Loader backed entirely by an in-memory fs.FS, the shape a WASM build or
 // an embedder would inject where the CLI injects its os-backed one. It is the ticket's real
 // acceptance criterion, and the point is what it does NOT import: no os, no path resolution
 // against a host root, just a mount name selecting an FS. Expectations returns (nil, nil) because
@@ -103,19 +103,20 @@ func (m *memLoader) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeome
 	return l.BoardGeometry(p)
 }
 
-// DesignHash has nothing to hash: this loader's designs are in-memory strings with no entry file, so
-// it reports the unhashable case rather than inventing a digest over bytes no reader would see.
+// DesignHash has nothing to hash, because this loader's designs are in-memory strings with no entry
+// file, so it reports the unhashable case rather than inventing a digest over bytes no reader would
+// see.
 func (m *memLoader) DesignHash(context.Context, artifact.URI) (string, error) {
 	return "", nil
 }
 
 var _ service.Loader = (*memLoader)(nil)
 
-// TestInMemoryServiceLoader is the done-when from WS1-049: the service tier's Loader port can be
+// TestInMemoryServiceLoader is the done-when from WS1-049. The service tier's Loader port can be
 // satisfied by a host with no filesystem, reusing the engine's dispatch and stamps rather than
-// re-implementing them. Before the FS seam, memLoader could not exist — the only way in was a host
-// path, so an in-memory host would have had to call each reader directly and copy the post-read
-// pass sequence, which is the drift bug the single entry point prevents.
+// re-implementing them. Before the fs.FS entry point, memLoader could not exist. The only way in
+// was a host path, so an in-memory host would have had to call each reader directly and copy the
+// post-read pass sequence, which is the drift bug the single entry point prevents.
 func TestInMemoryServiceLoader(t *testing.T) {
 	l := &memLoader{mounts: map[string]fs.FS{
 		"designs": mountFS(t, map[string]string{
@@ -129,7 +130,7 @@ func TestInMemoryServiceLoader(t *testing.T) {
 	if err != nil || len(d.Components) == 0 {
 		t.Fatalf("Design over an in-memory mount = (%v components, %v), want a read design", len(d.GetComponents()), err)
 	}
-	// The per-request lexicon override must survive the FS: readerFor-style copying carries the
+	// The per-request lexicon override must survive the FS. readerFor-style copying carries the
 	// whole Loader, so a served request can set project conventions without losing its host.
 	lex := classify.DefaultLexicon()
 	if _, err := l.Design(ctx, uriOf(t, "designs", "boards/basic.edn"), service.WithLexicon(lex)); err != nil {
@@ -149,7 +150,7 @@ func TestInMemoryServiceLoader(t *testing.T) {
 	}
 }
 
-// uriOf builds an artifact URI for a test, failing rather than returning an error: a hard-coded
+// uriOf builds an artifact URI for a test, failing rather than returning an error, since a hard-coded
 // fixture URI that will not parse is a broken test, not a condition under test.
 func uriOf(t *testing.T, mount, p string) artifact.URI {
 	t.Helper()

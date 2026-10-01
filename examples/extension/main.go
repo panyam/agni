@@ -2,16 +2,14 @@
 // SEPARATE Go module that depends on the public engine and adds a private format reader and a
 // private rule suite through the engine's public extension points, without forking it.
 //
-// The composition is two blank imports for the extension's own extensions, plus agni.New for the
+// The composition is two blank imports for the extension's own packages, plus agni.New for the
 // engine's. The extension's reader and rule packages register themselves via formats.Register
-// (WS12-003) and check.RegisterSource (WS12-004) in their init; from there the engine's own library
-// resolves the .acme format and runs the acme/ rule alongside the built-ins.
+// (WS12-003) and check.RegisterSource (WS12-004) in their init, and from there the engine resolves
+// the .acme format and runs the acme/ rule alongside the built-ins.
 //
-// The engine's four registration seams arrive as the blank imports below and are CHECKED by
-// agni.New, which is the point of composing through it rather than by hand. Three of the four fail
-// silently when a binary forgets one: no built-in rules, or an empty fact base, and every design
-// reports clean. This file used to carry a comment warning about exactly that, because nothing
-// enforced it.
+// The engine's four registration hooks arrive as the blank imports below and are CHECKED by
+// agni.New. Three of the four fail silently when a binary forgets one, leaving no built-in rules or
+// an empty fact base, and every design then reports clean.
 package main
 
 import (
@@ -44,8 +42,8 @@ func main() {
 
 func run(path string) error {
 	// agni.New composes the catalog and the fact base together and refuses a composition that would
-	// run clean for a reason nobody could see. A warning is a legitimate composition worth saying out
-	// loud, so it goes to stderr rather than stopping the run.
+	// run clean for a reason nobody could see. A warning names a legitimate absence, so it goes to
+	// stderr rather than stopping the run.
 	engine, err := agni.New()
 	if err != nil {
 		return err

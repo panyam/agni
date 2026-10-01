@@ -2,9 +2,10 @@ package netgraph
 
 import "testing"
 
-// TestExpandBusName: a range bus expands to prefix+index members in the written direction; a scalar
-// or non-bus name yields nil. Both dialect spellings of the range are accepted, because one helper
-// serves every reader: xschem and gEDA write `DATA[7:0]`, KiCad writes `AN[0..7]` and only that.
+// TestExpandBusName checks that a range bus expands to prefix+index members in the written
+// direction; a scalar or non-bus name yields nil. Both dialect spellings of the range are accepted,
+// because one helper serves every reader: xschem and gEDA write `DATA[7:0]`, KiCad writes
+// `AN[0..7]` and only that.
 func TestExpandBusName(t *testing.T) {
 	cases := []struct {
 		in   string

@@ -11,7 +11,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// regSpec hand-builds a regulator spec whose OUTPUT voltage is stated the way a real one is: a
+// regSpec hand-builds a regulator spec whose OUTPUT voltage is stated the way a real one is, as a
 // recommended-operating row, not an absolute maximum. A rule filtering outputs to ABSOLUTE_MAX would
 // find nothing on a real part, which is why OutputVoltageLimits does not constrain the kind.
 func regSpec(mpn string, vout float64, method string, confidence float64) *parampb.PartSpec {
@@ -83,7 +83,7 @@ func regModel(t *testing.T, d *ir.Design, vout, absMax float64) check.Model {
 	})
 }
 
-// TestRegulatorOutputExceedsAbsMax is the WS3-028 acceptance: a param on one part compared against a
+// TestRegulatorOutputExceedsAbsMax is the WS3-028 acceptance. It compares a param on one part against a
 // param on ANOTHER, across the net joining them, citing both documents. The subject is the endangered
 // part, because that is the one a reviewer opens the datasheet for.
 func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
@@ -101,7 +101,7 @@ func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 			t.Errorf("message missing %q: %s", want, f.Message)
 		}
 	}
-	// BOTH datasheets, which is the point of the rule and the reason DatasheetProv is a slice.
+	// BOTH datasheets, which is why DatasheetProv is a slice.
 	if len(f.DatasheetProv) != 2 {
 		t.Fatalf("want 2 citations (load and source), got %d: %+v", len(f.DatasheetProv), f.DatasheetProv)
 	}
@@ -113,9 +113,9 @@ func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 	}
 }
 
-// TestRegulatorOutputWithinRating: the same topology with the regulator inside the load's rating is
-// silent. Guards the comparison direction, which a sign error would invert while every other
-// assertion still passed.
+// TestRegulatorOutputWithinRating checks that the same topology with the regulator inside the
+// load's rating is silent. Guards the comparison direction, which a sign error would invert while
+// every other assertion still passed.
 func TestRegulatorOutputWithinRating(t *testing.T) {
 	m := regModel(t, railDesign(""), 3.3, 3.6)
 	if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 0 {
@@ -123,8 +123,9 @@ func TestRegulatorOutputWithinRating(t *testing.T) {
 	}
 }
 
-// TestRegulatorOutputAcrossSeriesElement: a ferrite between regulator and load is ordinary layout and
-// must not hide the connection, so the rule walks one series crossing (check.SupplyPathReachHops).
+// TestRegulatorOutputAcrossSeriesElement exists because a ferrite between regulator and load is
+// ordinary layout and must not hide the connection, so the rule walks one series crossing
+// (check.SupplyPathReachHops).
 func TestRegulatorOutputAcrossSeriesElement(t *testing.T) {
 	d := railDesign("FB1")
 	d.Components[2].Sections = []*ir.ComponentSection{{Attributes: map[string]string{"kind": "ferrite"}}}
@@ -135,9 +136,9 @@ func TestRegulatorOutputAcrossSeriesElement(t *testing.T) {
 	}
 }
 
-// TestRegulatorOutputSilentWithoutParams: the params tier is a per-run injection, so with no seeded
-// set there is nothing to compare. check.Available gates the rule to not-applicable, which is what
-// makes an unseeded design read unevaluable rather than clean (the WS3-097 posture).
+// TestRegulatorOutputSilentWithoutParams exists because the params tier is a per-run injection, so
+// with no seeded set there is nothing to compare. check.Available gates the rule to not-applicable,
+// which is what makes an unseeded design read unevaluable rather than clean (the WS3-097 posture).
 func TestRegulatorOutputSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(railDesign(""))
 	if fs := regulatorOutputExceedsAbsMax.Findings(m); len(fs) != 0 {
@@ -148,8 +149,8 @@ func TestRegulatorOutputSilentWithoutParams(t *testing.T) {
 	}
 }
 
-// TestRegulatorOutputOneSidedSeed: a regulator with no spec, or a load with no spec, yields no
-// comparison. Skip, never pass — half a join is not evidence.
+// TestRegulatorOutputOneSidedSeed checks that a regulator with no spec, or a load with no spec,
+// yields no comparison. Skip, never pass, because half a join is not evidence.
 func TestRegulatorOutputOneSidedSeed(t *testing.T) {
 	for _, c := range []struct {
 		name string

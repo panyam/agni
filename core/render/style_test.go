@@ -52,7 +52,7 @@ func TestWithStyleOverrides(t *testing.T) {
 		t.Error("SVG did not use the overridden font")
 	}
 
-	// A plain render is unaffected: it uses the default label color, not the override.
+	// A plain render is unaffected and uses the default label color, not the override.
 	if plain := SheetSVG(g, g.Sheets[0]); strings.Contains(plain, "#ff0000") {
 		t.Error("default SVG picked up the override color")
 	}

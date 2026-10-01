@@ -19,7 +19,7 @@ figure.
 ### For software engineers
 
 The routed net is a set of track segments, each with a width. `board.track_width` is an aggregate
-projection over that set: a reduce to the minimum width, keyed by net. Reporting the minimum (the
+projection over that set, reducing it to the minimum width keyed by net. Reporting the minimum (the
 safety-relevant extreme) rather than one row per raw segment keeps the relation a compact per-net
 answer rather than a full segment dump. Rows are 1:1 with nets that have at least one track; a net
 with pads or vias but no routed track contributes no row. The stored unit is nanometres; the
@@ -27,15 +27,15 @@ projector converts to millimetres so a query reads a natural threshold.
 
 ### Go projector
 
-`boardFacts` in `check/facts.go` walks `Model.BoardNets()` and, for each net, calls the helper
-`minSegmentWidthNm(bn.Segments)`, which returns the smallest `Width` across the net's track
+`boardFacts` in `stdlib/relations/facts.go` walks `Model.BoardNets()` and, for each net, calls the
+helper `minSegmentWidthNm(bn.Segments)`, which returns the smallest `Width` across the net's track
 segments (and a false ok when the net has no segments, in which case no row is emitted). The
 nanometre minimum is converted with `nmToMM` and emitted as `board.track_width(net, mm)` with the
 numeric value populated for comparison.
 
 The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
 design was loaded with board geometry (`NewModelWithBoard`, fed a `.kicad_pcb` or IPC-2581 board
-sidecar). For a query this is silent-by-construction: `board.track_width` yields zero rows on any
+sidecar). For a query this is silent by construction, so `board.track_width` yields zero rows on any
 design without board geometry, the same posture the datasheet tier takes without `--params`. A
 query returning nothing does not mean every track is wide; it can mean the design carries no board
 at all.

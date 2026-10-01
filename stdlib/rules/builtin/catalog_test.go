@@ -49,7 +49,7 @@ func TestFilter(t *testing.T) {
 		t.Errorf("name filter returned %v, want [single-pin-net]", got)
 	}
 
-	// Name and tag axes intersect: a real name in a non-matching category yields nothing.
+	// Name and tag axes intersect, so a real name in a non-matching category yields nothing.
 	crossed := check.Filter(rules, check.Facets{
 		Names: []string{"single-pin-net"},
 		Tags:  map[string][]string{check.KeyCategory: {check.CategoryNaming}},
@@ -86,7 +86,7 @@ func TestCatalogComposition(t *testing.T) {
 	if got, want := len(c.Rules()), len(rules)+2; got != want {
 		t.Fatalf("composed %d rules, want %d", got, want)
 	}
-	// Built-ins pass through bare and untouched: same pointers, no source tag.
+	// Built-ins pass through bare and untouched, with the same pointers and no source tag.
 	if c.Rules()[0] != rules[0] || c.Rules()[0].Tags[check.KeySource] != "" {
 		t.Errorf("built-in rule mutated by composition: %+v", c.Rules()[0])
 	}

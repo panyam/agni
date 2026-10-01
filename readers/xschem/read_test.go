@@ -152,7 +152,7 @@ func equalSet(a, b []string) bool {
 
 // TestDanglingEndpoints (WS1-013): a wire drawn to nothing surfaces as a dangling
 // endpoint IN THE GEOMETRY FRAME (native coords, not the scaled netgraph grid), but only
-// when every symbol resolves — an unresolved symbol drops its pins and would fabricate
+// when every symbol resolves. An unresolved symbol drops its pins and would fabricate
 // dangles, so the whole design's dangles are suppressed.
 func TestDanglingEndpoints(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dangle.sch")), "dangle.sch", testOpener(t))
@@ -164,7 +164,7 @@ func TestDanglingEndpoints(t *testing.T) {
 		t.Fatalf("dangles = %d, want 1: %+v", len(dangles), dangles)
 	}
 	// Geometry frame: the wire end is at native (100,90). The netgraph grid scales by 2,
-	// so a missing unquant would report (200,180).
+	// so skipping geomDangles' back-mapping would report (200,180).
 	if dangles[0].X != 100 || dangles[0].Y != 90 {
 		t.Errorf("dangle at (%d,%d), want geometry-frame (100,90)", dangles[0].X, dangles[0].Y)
 	}
@@ -173,8 +173,8 @@ func TestDanglingEndpoints(t *testing.T) {
 	}
 }
 
-// TestDanglingSuppressedOnUnresolved: an opener that cannot resolve res.sym drops R1's
-// pins, so the wire ends would ALL read as dangling — the gate suppresses the entire set
+// TestDanglingSuppressedOnUnresolved covers an opener that cannot resolve res.sym. That drops R1's
+// pins, so the wire ends would ALL read as dangling, and the gate suppresses the entire set
 // rather than emit phantoms.
 func TestDanglingSuppressedOnUnresolved(t *testing.T) {
 	failOpen := func(string) ([]byte, error) { return nil, os.ErrNotExist }
@@ -187,7 +187,7 @@ func TestDanglingSuppressedOnUnresolved(t *testing.T) {
 	}
 }
 
-// TestPinDirectionsAndExternal (WS1-021): xschem pin `dir` maps to directions (res.sym
+// TestPinDirectionsAndExternal (WS1-021) checks that xschem pin `dir` maps to directions (res.sym
 // pins are dir=inout -> INOUT), and a supply symbol (vdd) marks its net External while a
 // plain net label (lab_pin) does not.
 func TestPinDirectionsAndExternal(t *testing.T) {
@@ -218,8 +218,8 @@ func TestPinDirectionsAndExternal(t *testing.T) {
 	}
 }
 
-// TestUnannotatedComponents (agni issue 311): this reader keeps a placeholder-designated component,
-// which makes it the layer that has to report one.
+// TestUnannotatedComponents (agni issue 311) covers this reader keeping a placeholder-designated
+// component, which makes it the layer that has to report one.
 //
 // The caveat belongs on the record. Nothing attests that xschem SHIPS placeholders the way gEDA's
 // refdes=R? templates do, because xschem assigns an instance name from the symbol template on
@@ -265,10 +265,10 @@ func TestUnannotatedWithoutSymbols(t *testing.T) {
 	}
 }
 
-// TestRefDesCollisions (agni issue 309): xschem documents instance names as unique within a
-// schematic, and this reader relies on it (the name is the provenance native id), so a repeat is
-// both a duplicated designator and a break of that assumption. It reported neither before, and
-// duplicate-ref-des read as a clean pass on every xschem design.
+// TestRefDesCollisions (agni issue 309) pins duplicate detection. xschem documents instance names
+// as unique within a schematic, and this reader relies on it (the name is the provenance native
+// id), so a repeat is both a duplicated designator and a break of that assumption. It reported
+// neither before, and duplicate-ref-des read as a clean pass on every xschem design.
 func TestRefDesCollisions(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dup_name.sch")), "dup_name.sch", testOpener(t))
 	if err != nil {
@@ -283,8 +283,8 @@ func TestRefDesCollisions(t *testing.T) {
 	}
 }
 
-// A clean read still declares it looked, and a placeholder pair is not a collision: two components
-// called "R?" have no name to fight over, which unannotated-components reports instead.
+// A clean read still declares it looked, and a placeholder pair is not a collision, since two
+// components called "R?" have no name to fight over, which unannotated-components reports instead.
 func TestRefDesCollisionsCleanAndPlaceholders(t *testing.T) {
 	for _, fixture := range []string{"divider.sch", "unannotated.sch"} {
 		d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, fixture)), fixture, testOpener(t))

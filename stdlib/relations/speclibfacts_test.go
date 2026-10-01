@@ -28,7 +28,7 @@ func TestSpecLibFacts(t *testing.T) {
 				Prov: &parampb.ParamProvenance{DocRef: "d", Page: 1, Confidence: 1},
 			}},
 		},
-		{Mpn: ""}, // no MPN: cannot join, skipped entirely
+		{Mpn: ""}, // no MPN, so it cannot join and is skipped entirely
 	}
 
 	rows := SpecLibFacts(specs)
@@ -49,7 +49,8 @@ func TestSpecLibFacts(t *testing.T) {
 			t.Errorf("audience subject = %q, want ACME-LDO", r.Subject)
 		}
 	}
-	// Sorted by relation, so param ("param") precedes part.audience — a spec library query prints stably.
+	// Sorted by relation, so param ("param") precedes part.audience, and a spec library query
+	// prints stably.
 	if len(rows) > 0 && rows[0].Relation != RelParam {
 		t.Errorf("first row relation = %q, want %q (rows must be sorted)", rows[0].Relation, RelParam)
 	}

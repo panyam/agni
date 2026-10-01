@@ -10,12 +10,11 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// rawDatasheetHandler streams a datasheet's source bytes (the PDF the browser renders under the
-// region overlay on the /datasheets page, WS13-006) from a mount, so the page can load it into
-// pdf.js. It is mounted under /datasheets/raw/<mount>/<path...>; mounts are the security boundary
-// (mounts.Resolve contains the path), and only .pdf files are served — doc-IR is served
-// structured over DatasheetService, never raw. Rendering stays in the browser, so nothing about
-// the document leaves the deployment boundary beyond the local client (C16).
+// rawDatasheetHandler streams a datasheet's PDF from a mount so the /datasheets page can render it
+// in pdf.js under the region overlay (WS13-006). It is mounted under /datasheets/raw/<mount>/<path...>,
+// and mounts.Resolve keeps the path inside its mount. Only .pdf files are served, since doc-IR goes
+// structured over DatasheetService. Rendering stays in the browser, so the document goes no
+// further than the local client (C16).
 func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.Path is already stripped of the /datasheets/raw/ prefix, leaving "<mount>/<path...>".
@@ -25,7 +24,7 @@ func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 			return
 		}
 		// The service owns what counts as a datasheet, so this endpoint and the browser trees cannot
-		// drift on it. It used to test the suffix here, which was the second copy of that rule.
+		// drift on it (#319).
 		if service.KindForName(rel) != webapi.FileKind_FILE_KIND_DATASHEET {
 			http.Error(w, "only .pdf datasheets are served raw", http.StatusBadRequest)
 			return
@@ -37,7 +36,7 @@ func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 		}
 		abs, err := mounts.Resolve(ms, uri)
 		if err != nil {
-			// Unknown mount or a path escaping it: do not distinguish, do not echo the host path.
+			// An unknown mount and an escaping path get the same answer, and the host path is never echoed.
 			http.Error(w, "no such datasheet", http.StatusNotFound)
 			return
 		}

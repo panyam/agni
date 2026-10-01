@@ -15,7 +15,7 @@ func reportByRef(rep *ConversionReport) map[string]ComponentReport {
 	return m
 }
 
-// TestBuildReportGlyphMode asserts the report attributes each component in glyph mode: a
+// TestBuildReportGlyphMode asserts the report attributes each component in glyph mode. A
 // classified glyph carries its class and Kind glyph, an unclassified part is Kind box, and the
 // box call-out lists it.
 func TestBuildReportGlyphMode(t *testing.T) {
@@ -38,7 +38,7 @@ func TestBuildReportGlyphMode(t *testing.T) {
 }
 
 // TestBuildReportFaithful asserts the faithful report distinguishes a resolved symbol (provided)
-// from an unresolved one — both a placeholder box (the .sym did not load) and a ref the sidecar
+// from an unresolved one. Both a placeholder box (the .sym did not load) and a ref the sidecar
 // does not cover at all fall to unresolved, which is the "pass --symbol-path" signal.
 func TestBuildReportFaithful(t *testing.T) {
 	real := &geom.SymbolDef{CellRef: "lib:R"} // no placeholder asset -> a resolved symbol

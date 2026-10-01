@@ -7,7 +7,7 @@ import { join } from "node:path";
 // The composition root, under test at last (agni issue 136).
 //
 // Every other web test constructs its subject directly, with collaborators supplied. The one thing
-// nothing constructed is `main.ts`: it resolves each island hole by id, builds each client, wires
+// nothing constructed is `main.ts`, which resolves each island hole by id, builds each client, wires
 // each callback, and assembles the presenter, and none of that ran under test. That is not an
 // oversight in one PR, it is a structural blind spot, and it has now shipped the same bug twice.
 //
@@ -18,12 +18,12 @@ import { join } from "node:path";
 //   one. `views.projectBar` was undefined, so `views.projectBar?.setState(...)` was a no-op on every
 //   push. Again green, again found by opening the page (PR 184 fixed it).
 //
-// Both are the same shape: correct logic, correct tests, wired to nothing. Every test here therefore
+// Both are the same shape, correct logic and correct tests wired to nothing. Every test here therefore
 // asserts the WIRING, and does it against the REAL page and the REAL entry point, because a
 // hand-built DOM would be one more artifact that agrees with the code while the shipped page does
 // not.
 //
-// This is the cheap rung of #136 and deliberately not the whole ticket. jsdom does not render, so
+// This is the cheap rung of #136 and not the whole ticket. jsdom does not render, so
 // nothing below asserts a pixel, a highlight, or an SVG. What it does assert is that the app boots,
 // mounts what the page declares, and reaches every service on a real deep-link open. The flows that
 // need a real browser are still open on the issue.
@@ -47,9 +47,9 @@ function readSrc(name: string): string {
 }
 
 // jsdom lacks two browser APIs the shell reaches for. Both are stubbed rather than worked around,
-// because the alternative is not booting the real composition root, which is the entire exercise.
-// Neither stub can hide a wiring bug: an island is mounted or it is not, an rpc is called or it is
-// not.
+// because the alternative is not booting the real composition root.
+// Neither stub can hide a wiring bug, since an island is mounted or it is not, and an rpc is called
+// or it is not.
 class ResizeObserverStub {
   observe(): void {}
   unobserve(): void {}
@@ -91,7 +91,7 @@ const REPLIES: Record<string, unknown> = {
     examples: [],
     // Without these a click highlights and asks nothing, so their absence here would make the click
     // test below fail for the right reason.
-    entityQueries: [{ kind: "net", query: 'component-on-net(?ref, "{net}") => ?ref', teaches: "join" }],
+    entityQueries: [{ kind: "net", query: 'component.net(?ref, "{net}") => ?ref', teaches: "join" }],
   },
 };
 
@@ -117,7 +117,7 @@ beforeAll(async () => {
   };
 
   // A DESIGN url, not the bare page. This is what makes the test exercise the restore loop rather
-  // than only the mount: main.ts reads the URL at boot and replays it through presenter.restore, so
+  // than only the mount. main.ts reads the URL at boot and replays it through presenter.restore, so
   // every client the open path needs gets used the way a deep-link refresh uses it.
   window.history.replaceState(null, "", "/designs/m/d/b.edn/view");
   document.body.innerHTML = pageBody();
@@ -136,7 +136,7 @@ describe("the composition root boots", () => {
     expect(bootErrors).toEqual([]);
   });
 
-  // The readout is where main.ts reports a boot failure. An error there is exactly what a person
+  // The readout is where main.ts reports a boot failure. An error there is what a person
   // would have seen on opening the page, which is how both prior bugs were eventually found.
   it("leaves no error in the readout", () => {
     expect(document.getElementById("readout")?.textContent ?? "").not.toContain("error:");
@@ -162,12 +162,12 @@ describe("every island hole the page declares is mounted", () => {
 // and `staleLinkStrip` take `document.getElementById(...)` and no-op on null, so deleting
 // `<div id="undrawn-note">` from the page leaves every test in this file green while the strip is
 // silently dead (OUT_OF_SCOPE, PR 490, issue 392 acceptance 3). The same is true of every other id
-// the root resolves: the lookup is the contract, and a missing hole is a no-op rather than an error.
+// the root resolves, because the lookup is the contract and a missing hole is a no-op, not an error.
 //
 // So read the ids off main.ts the way the port test reads ViewSink, and resolve each one against the
 // booted page. Every id the root looks up today is declared in ViewerPage.html's Body block. An id
 // the root means to resolve somewhere else, or on an element built at runtime, would fail here and
-// should: it is a second contract and wants saying out loud rather than passing by accident.
+// should, since it is a second contract and wants saying out loud rather than passing by accident.
 describe("every id the composition root looks up is declared by the page", () => {
   it("resolves each getElementById in main.ts against the real template", () => {
     const ids = [...new Set([...readSrc("main.ts").matchAll(/getElementById\("([^"]+)"\)/g)].map((m) => m[1]))];
@@ -180,19 +180,20 @@ describe("every id the composition root looks up is declared by the page", () =>
 
 // The hole test catches a panel whose island was never wired. It cannot catch a presenter VIEW PORT
 // that was never wired, because an unwired port puts nothing on the page to notice the absence of.
-// That is precisely how the project bar shipped invisible.
+// That is how the project bar shipped invisible.
 //
-// ViewSink's own doc states the contract this enforces: "adding a panel is one field here and one
+// ViewSink's own doc states the contract this enforces, "adding a panel is one field here and one
 // line in the composition root". Nothing checked the second half.
 //
 // Reading the two files as source is unusual for a unit test and is the right shape here, for the
-// same reason docsite/nav_test.go checks a new page reached all four of its registration points: the
+// same reason docsite/nav_test.go checks a new page reached all four of its registration points. The
 // failure being prevented is an OMISSION ACROSS FILES, and only something holding both files can see
 // an omission. There is no runtime state that distinguishes "deliberately absent" from "forgotten".
 //
 // The ports are optional in the interface by design, so a host embedding the presenter can leave a
-// panel out (build/overlay.md). That is a statement about OTHER hosts. This app is the reference host
-// and wires all of them, and "optional" is exactly what stopped the type checker from noticing.
+// panel out (docsite/content/architecture/web-client.md). That is a statement about OTHER hosts.
+// This app is the reference host and wires all of them, and "optional" is what stopped the type
+// checker from noticing.
 describe("every presenter view port is wired by the composition root", () => {
   it("passes a view for each port ViewSink declares", () => {
     const block = /export interface ViewSink \{([\s\S]*?)\n\}/.exec(readSrc("viewer.ts"));
@@ -215,7 +216,7 @@ describe("every presenter view port is wired by the composition root", () => {
 describe("a deep-link open reaches every service the page needs", () => {
   it("calls each client at least once", () => {
     // One rpc per client constructed in main.ts. If a client stops being passed, its method stops
-    // being called, and the panel that depended on it goes quiet in exactly the way WS9-052 did.
+    // being called, and the panel that depended on it goes quiet the way WS9-052 did.
     const perClient = {
       design: "GetDesign",
       checks: "ListRules",
@@ -230,7 +231,7 @@ describe("a deep-link open reaches every service the page needs", () => {
     expect(missing, "clients the composition root never gave the presenter").toEqual([]);
   });
 
-  // End to end through the real root: a stubbed resolution reaches the real bar and renders. This is
+  // End to end through the real root, a stubbed resolution reaches the real bar and renders. This is
   // the assertion that fails if the project bar is ever unwired again, without depending on how the
   // wiring is spelled.
   it("renders the resolved project into the bar", () => {
@@ -239,9 +240,9 @@ describe("a deep-link open reaches every service the page needs", () => {
 });
 
 // The landing page's Recent list is written by the viewer, not by the landing page, so the wiring
-// that feeds it is invisible from either file alone: recents.ts has its own tests and the landing
+// that feeds it is invisible from either file alone. recents.ts has its own tests and the landing
 // panels have theirs, and both stay green if main.ts never records anything. The deep-link boot
-// above is exactly an opening, so the store is an observable of it.
+// above is an opening, so the store is an observable of it.
 describe("opening a design feeds the landing page's Recent list", () => {
   it("records the opened design", () => {
     const got = loadRecents();
@@ -251,11 +252,11 @@ describe("opening a design feeds the landing page's Recent list", () => {
 });
 
 // Run checks, click a finding, watch it locate. This is agni issue 136's "open design → Review →
-// run → click a finding → highlight" flow, minus the pixels: every step here is a real click on the
+// run → click a finding → highlight" flow, minus the pixels. Every step here is a real click on the
 // real page driving the real composition root, and the observable is the rpc the presenter makes.
 //
 // What it cannot assert is whether anything lit up on the canvas, which needs WebGL and a browser.
-// That half stays on the successor issue, and the split is the point: the wiring is testable here
+// That half stays on the successor issue. The wiring is testable here
 // and the rendering is not, so testing the wiring here costs nothing and covers the failure mode
 // that has actually shipped (a panel wired to a client it never received).
 describe("run checks, then locate a finding", () => {
@@ -274,7 +275,7 @@ describe("run checks, then locate a finding", () => {
     }, 5000);
     expect(locate.textContent).toContain("R1");
 
-    // Counted rather than tested for membership: the deep-link restore already highlights, so
+    // Counted rather than tested for membership, because the deep-link restore already highlights, so
     // "HighlightSheet appears in called" is true before the click and the assertion would pass with
     // the handler unwired. It did, on the first run of this test.
     const before = called.filter((m) => m === "HighlightSheet").length;
@@ -325,12 +326,12 @@ describe("clicking the drawing asks a question about what was clicked", () => {
 
 // Escape is a PAGE-level binding, so nothing below main.ts can assert it. The presenter's
 // clearHighlights has its own unit test; what has no other home is whether this page ever hears the
-// key at all, which is exactly how it failed: the only Escape handler in the client belongs to the
+// key at all, and that is how it failed. The only Escape handler in the client belongs to the
 // datasheet workbench (pagegestures, reached from regionview) and never sees this canvas, so the
 // gesture a reader reaches for first did nothing (agni issue 348).
 //
 // The observable is the findings panel's selected row rather than an rpc, because clearing does NOT
-// make one: setHighlights([]) short-circuits the overlay fetch instead of requesting an empty one.
+// make one. setHighlights([]) short-circuits the overlay fetch instead of requesting an empty one.
 describe("Escape clears the highlight (agni issue 348)", () => {
   // Every describe in this file shares ONE booted page, so a finding may already be focused from the
   // locate test above and a blind click would TOGGLE IT OFF. Asserting the state we need rather than
@@ -356,7 +357,7 @@ describe("Escape clears the highlight (agni issue 348)", () => {
     const input = document.createElement("input");
     document.body.appendChild(input);
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    // Still selected: the key belonged to the field, not to the drawing.
+    // Still selected, because the key belonged to the field, not to the drawing.
     expect(document.querySelector(".check-row.selected")).not.toBeNull();
     input.remove();
   }, 10000);

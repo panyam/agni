@@ -16,7 +16,7 @@ import {
   OUTCOME_LABEL,
 } from "./review.js";
 
-// tallyLine is the headline a reviewer reads first: coverage, then the split.
+// tallyLine is the headline a reviewer reads first, coverage and then the split.
 //
 // Coverage leads because it is the question the outcome vocabulary exists to answer. "8 of 13
 // covered" says a mechanism exists for eight items; the pass/fail split only means anything once you
@@ -33,7 +33,7 @@ function tallyLine(t: Tally): string {
   return `${covered(t)} of ${t.total} covered — ${parts.join(", ")}`;
 }
 
-// runLabel names a stored run in the picker: when it ran, and what it scored.
+// runLabel names a stored run in the picker by when it ran and what it scored.
 function runLabel(run: ReviewRunView): string {
   const when = run.createdAt ? run.createdAt.replace("T", " ").replace("Z", " UTC") : "unknown time";
   const t = runTally(run);
@@ -51,14 +51,14 @@ function OutcomeChip(props: { outcome: string }) {
   );
 }
 
-// ReviewItemRow is one checklist item: its id, title, verdict, any note, and (for an item that
+// ReviewItemRow is one checklist item with its id, title, verdict, any note, and (for an item that
 // fired) its findings as click-to-locate rows. The findings collapse by default because a broad rule
 // can fire on hundreds of nets and an expanded list would bury the checklist itself.
 //
 // A finding locates by (kind, subject), the same path the query and coverage panels use, NOT by the
 // per-instance net id the checks panel can use. The checks panel can be precise because it holds the
 // findings it is locating; these arrive inside a stored document instead. Two nets sharing a name
-// therefore highlight together here. Recorded in OUT_OF_SCOPE.md rather than papered over.
+// therefore highlight together here (agni issue 144).
 function ReviewItemRow(props: {
   item: ReviewItemView;
   onLocate: (kind: string, subject: string) => void;
@@ -103,8 +103,8 @@ function ReviewItemRow(props: {
   );
 }
 
-// ReviewPanel shows a project's checklist verdict for the open design: a run picker over the stored
-// history, a create control, then the selected run's areas and per-item outcomes.
+// ReviewPanel shows a project's checklist verdict for the open design, with a run picker over the
+// stored history, a create control, then the selected run's areas and per-item outcomes.
 function ReviewPanel(props: {
   state: () => ReviewState;
   onSelectRun: (name: string) => void;
@@ -205,8 +205,8 @@ function ReviewPanel(props: {
 }
 
 // reviewPanelIsland mounts the panel and returns its command-down view (setState). The handlers are
-// the intents up: pick a stored run, pick a checklist, create a run, and locate a finding's entity.
-// Same island shape as findingsPanelIsland / coveragePanelIsland.
+// the intents up (pick a stored run, pick a checklist, create a run, locate a finding's entity). The
+// island shape is in docsite/content/architecture/web-client.md#wiring-a-new-panel.
 export function reviewPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,

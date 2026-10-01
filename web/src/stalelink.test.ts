@@ -21,7 +21,7 @@ describe("staleLinkNote", () => {
     expect(note?.served).toBe("bbbbbbbbbbbb");
   });
 
-  // The point of the whole field. A server that could not hash must not be read as agreement: that
+  // A server that could not hash must not be read as agreement. That
   // is the "absent looks like fine" failure the hash exists to remove, and folding this into null
   // would reintroduce it one layer down.
   it("keeps an unhashable server distinct from a match", () => {
@@ -63,7 +63,7 @@ describe("staleLinkStrip", () => {
     set(staleLinkNote(A, B));
     expect(el.classList.contains("warn")).toBe(true);
     expect(el.textContent).toContain("different revision");
-    // Set again from the other state: the warn class must come OFF, not accumulate, or a link that
+    // Set again from the other state. The warn class must come OFF, not accumulate, or a link that
     // merely could not be checked would keep reading as a confirmed mismatch.
     set(staleLinkNote(A, ""));
     expect(el.classList.contains("on")).toBe(true);

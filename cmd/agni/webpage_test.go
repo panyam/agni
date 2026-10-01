@@ -12,10 +12,10 @@ func TestViewerPageRendersShell(t *testing.T) {
 	// newPageApp joins dir + "/templates"; "../../web" resolves to the repo's web/templates
 	// relative to this package (cmd/agni), the go-test working directory.
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
-	// A work-page URL, not "/": since WS9-049 phase 2 the root serves the browse page, so the
-	// viewer shell is reached by addressing a design.
+	// A work-page URL, not "/", which serves the landing page, so the viewer shell is reached by
+	// addressing a design (WS9-049).
 	const workURL = "/designs/corpus/boards/b.kicad_sch/view"
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, workURL, nil))
@@ -41,9 +41,9 @@ func TestViewerPageRendersShell(t *testing.T) {
 			t.Errorf("rendered page missing %q", want)
 		}
 	}
-	// The Files dock panel is retired (WS9-049 phase 3). Its HOLE is what matters here: the dock
-	// adopts panels by finding a data-dock-panel element, so a stale hole would let a saved layout
-	// resurrect the panel even with the registry entry deleted.
+	// The Files dock panel is retired (WS9-049 phase 3). Its HOLE is what matters here, because the
+	// dock adopts panels by finding a data-dock-panel element, so a stale hole would let a saved
+	// layout resurrect the panel even with the registry entry deleted.
 	for _, deny := range []string{
 		`data-dock-panel="files"`,
 		`id="file-tree"`,
@@ -56,13 +56,13 @@ func TestViewerPageRendersShell(t *testing.T) {
 
 // TestWorkPageServesDesignsSpace asserts the WS9-049 work-page URL space renders the shell, AND
 // that it does so because /designs/ is registered rather than because the root pattern catches
-// everything. The pattern check is the load-bearing half: "/" is a catch-all, so a 200 alone would
-// pass even with no /designs/ registration at all, and phase 2 hangs the browse page off this
+// everything. The pattern check is the half that can fail, since "/" is a catch-all and a 200 alone
+// would pass even with no /designs/ registration at all, and phase 2 hangs the browse page off this
 // same pattern (the /view suffix is what splits them, since a ServeMux pattern cannot put a
 // wildcard segment before a literal one).
 func TestWorkPageServesDesignsSpace(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, path := range []string{
 		"/designs/",        // the space root
@@ -86,12 +86,12 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 // rendered and that the other one did not, because both pages descend from BasePage and share
 // enough markup that a one-sided check would pass if the dispatcher sent every request to the
 // same page.
-// "/" is the landing page rather than the design browser, and it is also the catch-all: a URL
+// "/" is the landing page rather than the design browser, and it is also the catch-all, so a URL
 // matching no other pattern lands somewhere that offers the destinations instead of on an empty
 // tree. The browser did not move, so the same test asserts /designs/ still serves it.
 func TestRootServesLandingPage(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, path := range []string{"/", "/not-a-page"} {
 		rec := httptest.NewRecorder()
@@ -117,14 +117,14 @@ func TestRootServesLandingPage(t *testing.T) {
 
 // Every page a person can land on offers a way back to the landing page. This is a cross-page
 // omission test, and it is written that way because the omission is invisible from inside any one
-// page: the viewer shipped with no route out of itself, and a design URL is the one people share, so
+// page. The viewer shipped with no route out of itself, and a design URL is the one people share, so
 // it is the page most likely to be somebody's first (PR 318 deferred it, this closes it).
 //
 // A page is checked for the crumb's own markup rather than a bare href="/", which any stylesheet or
 // icon reference would satisfy.
 func TestEveryPageOffersAWayHome(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, path := range []string{
 		"/designs/",                          // the folder browser
@@ -144,9 +144,9 @@ func TestEveryPageOffersAWayHome(t *testing.T) {
 
 func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
-	// browse markers / work markers. The bundle reference is the sharpest discriminator: a page
+	// browse markers / work markers. The bundle reference is the sharpest discriminator, since a page
 	// loading app.js IS the viewer, whatever else it renders.
 	browseMarkers := []string{`id="browse-tree"`, `id="browse-preview"`, "/static/browse.js"}
 	workMarkers := []string{`id="dock"`, `id="panel-park"`, "/static/app.js"}
@@ -181,13 +181,13 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 	}
 }
 
-// TestBrowsePageOmitsAnalysisChrome pins the ticket's structural promise: the browse preview is
+// TestBrowsePageOmitsAnalysisChrome pins the ticket's structural promise that the browse preview is
 // read-only, so the page must not ship the viewer's analysis surfaces. These are template-level
 // holes, so their absence is what keeps the presenter, WebGL canvas, and checks machinery from
 // ever mounting (the islands resolve their holes by id at boot and bail when they are missing).
 func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/", nil))
@@ -208,11 +208,11 @@ func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 	}
 }
 
-// TestLegacyFilesRedirect pins the WS9-049 migration promise: a /files/ deep link shared before
+// TestLegacyFilesRedirect pins the WS9-049 migration promise that a /files/ deep link shared before
 // the split still resolves, landing on the same design and sheet in the new space.
 func TestLegacyFilesRedirect(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	for _, tc := range []struct{ from, want string }{
 		{"/files/corpus/boards/b.kicad_sch", "/designs/corpus/boards/b.kicad_sch/view"},
@@ -239,7 +239,7 @@ func TestLegacyFilesRedirect(t *testing.T) {
 // shell at /datasheets/: the tree and region-viewer holes, its own bundle, and its title.
 func TestDatasheetsPageRendersShell(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux, nil)
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/datasheets/", nil))

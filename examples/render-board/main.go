@@ -1,8 +1,8 @@
-// Command render-board is the board rung of the Agni examples ladder: read a KiCad
-// board (.kicad_pcb) into the WS1-006 board geometry sidecar and render it — the physical
-// outline, per-layer copper, pads, and vias — plus a highlight overlay joining a net to its
-// routed copper (the same join the web viewer's findings use). Narration lives in the
-// sidecar walkthrough.md; this file only binds the steps that run engine code.
+// Command render-board is the board rung of the Agni examples ladder. It reads a KiCad board
+// (.kicad_pcb) into the WS1-006 board geometry sidecar and renders the physical outline, per-layer
+// copper, pads, and vias, plus a highlight overlay joining a net to its routed copper (the same
+// join the web viewer's findings use). Narration lives in the sidecar walkthrough.md, and this file
+// only binds the steps that run engine code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -24,7 +24,8 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// loadBoard reads a .kicad_pcb into the board sidecar.
+// loadBoard reads a .kicad_pcb into the board sidecar with os.Open and the bare KiCad reader, not
+// through formats.Loader.
 func loadBoard(path string) (*geom.BoardGeometry, error) {
 	f, err := os.Open(path)
 	if err != nil {

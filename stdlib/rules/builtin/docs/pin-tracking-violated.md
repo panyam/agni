@@ -20,20 +20,21 @@ which are the majority of the real ones.
 
 ### The difference is signed
 
-The bound is on `subject - reference`, so the order the datasheet states is load-bearing and swapping
+The bound is on `subject - reference`, so the order the datasheet states matters and swapping
 the two says the opposite thing. The finding prints the subtraction in that order.
 
 ### Two tiers of evidence, and why connectivity goes first
 
-**Both pins on one net.** Their difference is exactly zero, from connectivity alone, with no net name
-read. This is the stronger tier and it is decisive in both directions: a `max 0` bound is *satisfied*
-by tying the terminals, and a `min 1` bound is *violated* by tying them. It works on a design whose
-nets are not named for their voltages at all.
+When **both pins sit on one net**, their difference is exactly zero, from connectivity alone, with
+no net name read. This is the stronger tier and it is decisive in both directions: a `max 0` bound
+is *satisfied* by tying the terminals, and a `min 1` bound is *violated* by tying them. It works on
+a design whose nets are not named for their voltages at all.
 
-**Pins on different nets.** The rule falls back to comparing the two rails' name-declared nominals,
-which is a naming convention rather than measured evidence. Both nets must carry the rail role before
-either name is read, because a voltage token anywhere in a name parses as a nominal, and a signal net
-whose name encodes a signalling level would otherwise be compared as though it were a supply.
+When **the pins sit on different nets**, the rule falls back to comparing the two rails'
+name-declared nominals, which is a naming convention rather than measured evidence. Both nets must
+carry the rail role before either name is read, because a voltage token anywhere in a name parses as
+a nominal, and a signal net whose name encodes a signalling level would otherwise be compared as
+though it were a supply.
 
 ### Relationship to pin-tracking-advisory
 
@@ -45,7 +46,7 @@ severity misstates one of them.
 A relation whose modality was never recorded is taken by *this* rule and reported inconclusive rather
 than as an error, so an incomplete spec cannot pass in silence.
 
-### Evidence honesty
+### What it skips rather than guesses
 
 Every input that cannot be trusted is a skip, never a guess:
 - no MPN, unseeded MPN, or a spec with no pins or no relations -> silent;
@@ -58,7 +59,7 @@ Every input that cannot be trusted is a skip, never a guess:
 Two cases are reported **inconclusive** rather than as violations, and only when the numbers actually
 breach the bound. A bound the datasheet scopes to a regime this check cannot evaluate ("transient
 only, not for DC") is one; a relation with no recorded modality is the other. Where the numbers are
-within the bound, both stay silent.
+within the bound, both pass.
 
 ### Query structure
 
@@ -69,7 +70,7 @@ compare the difference the design puts between them against the bound.
       for R in tracking relations of spec(C) where required(R)
         S = terminal(C, subject_pin(R)); T = terminal(C, reference_pin(R))   -- may refuse
         if net(S) == net(T): diff = 0                                        -- connectivity
-        else: require rail(net(S)) and rail(net(T)); diff = nominal(net(S)) - nominal(net(T))
+        else: require net.rail(net(S)) and net.rail(net(T)); diff = nominal(net(S)) - nominal(net(T))
         diff outside bound(R) -> finding
 
 Reads: param.pin, param.pin_relation, net.role, net.nominal_voltage, net.name, on_net. Tier R.

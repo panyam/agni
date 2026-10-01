@@ -21,11 +21,10 @@ intended, every search, review note, and cross-reference under the losing name m
 
 ### Scope note
 
-Sheet-scoped names only (rank != 0), compared WITHIN one scope: a
-hierarchy net legitimately carries one qualified name per sheet it crosses (/amp1/CTRL
-joining the root is not a conflict), and a design-wide rail name plus a local nickname is
-normal (the rival-rail case is power-tap-conflict). Semantics cross-checked against
-kicad-cli sch erc.
+The rule compares sheet-scoped names only (rank != 0), and only WITHIN one scope, because a
+hierarchy net legitimately carries one qualified name per sheet it crosses (/amp1/CTRL joining the
+root is not a conflict), and a design-wide rail name plus a local nickname is normal (the rival-rail
+case is power-tap-conflict). Semantics cross-checked against kicad-cli sch erc.
 
 ### Query structure
 

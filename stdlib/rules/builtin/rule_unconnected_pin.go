@@ -8,10 +8,9 @@ import (
 // unconnectedPin flags a part-type pin that lands on no net and carries no no-connect
 // marking, the per-pin complement of unconnected-component. See Detail.
 //
-// It keeps a Go Eval alongside its twin because it introduced NEW interpreter vocabulary
-// (the pins entity set, pin.on_net, pin-scope pin.electrical_type), so the Go side is the
-// bring-up reference until that vocabulary has more users. Drop it then. Twin discipline:
-// docsite/content/build/check-rule.md.
+// It keeps a Go Eval beside its twin because it introduced NEW interpreter vocabulary (the pins
+// entity set, pin.on_net, pin-scope pin.electrical_type), so the Go side is the bring-up reference
+// until that vocabulary has more users. Twin discipline is in docsite/content/build/check-rule.md.
 var unconnectedPin = &check.Rule{
 	Name:       "unconnected-pin",
 	Severity:   "warning",
@@ -33,23 +32,17 @@ var unconnectedPin = &check.Rule{
 
 // unconnectedPinVerdicts decides every pin in the design and returns one verdict each.
 //
-// THE TWO SKIPPED PIN TYPES ARE NOT THE SAME ANSWER, and separating them is the substance of this
-// conversion. The old Eval returned false for both, so both left the rule identically silent:
+// THE TWO SKIPPED PIN TYPES ARE NOT THE SAME ANSWER (#395):
 //
-//   - NO_CONNECT is a PASS. The symbol declares the pin is meant to be left open, so an unwired pin
-//     is the design working as documented. It is the one case where "nothing is attached" is the
-//     right answer, and it deserves to say so rather than to look like an absence of checking.
-//   - UNSPECIFIED is NotConsidered. The symbol author never stated what the pin is, so the rule has
-//     no ground to judge it from: it cannot tell a deliberate open pin from a forgotten one. That is
-//     a gap in the input, not a verdict about the design, and reporting it as a pass would claim
-//     assurance the run does not have.
+//   - NO_CONNECT is a PASS. The symbol declares the pin may be left open, so an unwired pin is the
+//     design working as documented.
+//   - UNSPECIFIED is NotConsidered. The symbol never states what the pin is, so the rule cannot tell
+//     a deliberate open pin from a forgotten one, and a pass would claim assurance the run lacks.
 //
-// The no-connect CHANNEL gate is different again and is left to the caller. RequiresCapability
-// already gates this rule to not-applicable where the source format cannot express a no-connect, and
-// a gated rule contributes no verdicts and is reported through the run's skipped list. Emitting a
-// considered set here would duplicate that mechanism and, worse, disagree with it. The guard stays
-// as a defensive nil for a caller reaching EvalVerdicts directly, which is the same nothing the old
-// Eval produced on that path.
+// The no-connect CHANNEL gate is left to the caller. RequiresCapability already makes this rule
+// not-applicable where the format cannot express a no-connect, and the run reports it in its skipped
+// list, so a considered set here would duplicate that and could disagree with it. The nil return
+// covers a caller reaching EvalVerdicts directly.
 func unconnectedPinVerdicts(m check.Model) []check.Verdict {
 	if !m.HasNoConnectChannel() {
 		return nil
@@ -81,7 +74,7 @@ func unconnectedPinVerdicts(m check.Model) []check.Verdict {
 	return out
 }
 
-// unconnectedPinSpec is the rule's declarative twin; the first spec exercising the pins
+// unconnectedPinSpec is the rule's declarative twin, and the first spec exercising the pins
 // entity set.
 var unconnectedPinSpec = &check.Spec{
 	Over: "pins",

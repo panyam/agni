@@ -10,7 +10,8 @@ Connect the supply pin to the rail that feeds it, and check that the rail itself
 ### What it means
 
 A net that has a power-input pin (a VCC/VDD/rail-consuming pin) but no power
-source: no power-output pin and no power flag asserting the rail is fed elsewhere.
+source, meaning no driving pin (output, power-output or bidirectional) and no power flag
+asserting the rail is fed elsewhere.
 
 ### Why engineers want it
 
@@ -28,16 +29,17 @@ capture errors and only shows up at first power-on.
 
 ### Scope note
 
-Needs the power-in / power-out split (a reader that collapses both to a generic
-power pin cannot distinguish source from sink, so the rule does not fire). A power flag on the net,
-recorded by the reader, counts as driven.
+The rule needs the power-in / power-out split (a reader that collapses both to a generic
+power pin cannot distinguish source from sink, so the rule reports its nets not-considered). A power
+flag on the net, recorded by the reader, counts as driven. A net that continues onto a sheet the read
+did not open is not judged, since its feed may be there.
 
 Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS. EDIF's port
 grammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types
 (the `design.types_power_out` fact). There a rail's driver reads as a plain input, so "no power source"
-would false-fire on every switched or derived rail. WS3-072 PR2 stamps the power-INPUT side so the
-power-in-only rules (decoupling-present, input-protection) work on EDIF; this rule waits for the
-symmetric power-OUTPUT stamp (PR3) before it can run there soundly.
+would false-fire on every switched or derived rail. The power-INPUT side is stamped on EDIF
+(WS3-072), which is enough for the power-in-only rules (decoupling-present, input-protection). This
+rule stays gated until the reader stamps power outputs on those formats.
 
 ### Query structure
 

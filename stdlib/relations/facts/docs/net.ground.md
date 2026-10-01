@@ -2,13 +2,13 @@
 
 ### What it is
 
-`net.ground(net)` yields one row per net whose name reads as a ground node: `GND` or `EARTH`
-anywhere in the leaf name, or a `VSS` prefix. It is name-derived, since a directionless netlist
-carries the name as the only evidence that a net is ground.
+`net.ground(net)` yields one row per ground net, by name or by declaration. By name that means `GND`
+or `EARTH` anywhere in the leaf name, or a `VSS` prefix. It is usually name-derived, since most
+netlists carry the name as the only evidence that a net is ground.
 
-`net.ground` is the ground-only subset of `rail`. `rail` covers both power and ground, because
+`net.ground` is the ground-only subset of `net.rail`. `net.rail` covers both power and ground, because
 `Model.IsPowerRail` ORs the ground test into the rail test. So every `net.ground` net is also a
-`rail` net, and a rule reads `rail(?r), not net.ground(?r)` when it means "a supply rail, not
+`net.rail` net, and a rule reads `net.rail(?r), not net.ground(?r)` when it means "a supply rail, not
 ground."
 
 ### For hardware engineers
@@ -16,11 +16,11 @@ ground."
 Ground has to be told apart from a supply rail because rules treat the two differently. A grounded
 crystal case pin is not the Vdd pin of an active oscillator; a decoupling cap to ground is a
 different role than a cap between two supplies. During a review you query `net.ground` to confirm the
-engine recognises your ground naming, and you subtract it from `rail` to reason about supplies alone.
+engine recognises your ground naming, and you subtract it from `net.rail` to reason about supplies alone.
 
 ### For software engineers
 
-`net.ground` is a filtered projection over `Nets()`, the same shape as `rail`. Rows are 1:1 with
+`net.ground` is a filtered projection over `Nets()`, the same shape as `net.rail`. Rows are 1:1 with
 ground nets. An empty result means the read found no ground at all, which on a real design usually
 points at a naming convention the lexicon does not yet cover rather than a board with no ground.
 
@@ -50,5 +50,5 @@ net.ground(?n) => ?n
 Isolate the supply rails by subtracting ground from the rail set:
 
 ```
-rail(?n), not net.ground(?n) => ?n
+net.rail(?n), not net.ground(?n) => ?n
 ```

@@ -12,9 +12,8 @@ import (
 )
 
 // Model is the query interface a rule evaluates against: the entity sets it selects over and the
-// derived facts it reads. A Run depends only on this interface, never on how the facts are computed,
-// so an alternate implementation (lazy, cached, a columnar fact base, a datasheet-backed part-class
-// source) can be substituted without touching any rule.
+// derived facts it reads. A Run depends only on this interface, so an alternate implementation (lazy,
+// cached, columnar) can be substituted without touching any rule.
 //
 // The generic combinators (Select/Exists/Count in package check) are not methods because Go generics
 // cannot be interface methods. They operate on the slices the interface returns.
@@ -23,61 +22,61 @@ type Model interface {
 	Nets() []*ir.Net
 	Components() []*ir.Component
 	// SourceFormat is the reader label of the design's source (e.g. "kicad-pcb", "edif-2.0.0"),
-	// "" when unknown. The coarse catalog-availability gate reads it, so a board.* rule is only
-	// listed available for a board-carrying format (check.Available).
+	// "" when unknown. The catalog-availability gate (check.Available) reads it, so a board.* rule is
+	// only available for a board-carrying format.
 	SourceFormat() string
 	// HasParams reports whether a datasheet parameter tier is attached (a ParamProvider was
-	// supplied to NewModelWithParams), independent of whether any specific part is seeded. The
-	// catalog-availability gate reads it, so a datasheet rule is applicable exactly when params
-	// were supplied.
+	// supplied to NewModelWithParams), whether or not any specific part is seeded. A datasheet rule
+	// is applicable exactly when this is true.
 	HasParams() bool
 	// HasBoard reports whether a board-geometry tier is attached (a non-nil BoardGeometry was
 	// supplied to NewModelWithBoard/NewModelWithParams), independent of the design's source
 	// format. That is what makes a geometric rule applicable under `agni review --board-path`,
-	// where the netlist SourceFormat is not a board format but a separate board export is
-	// attached. A board file with no routed copper still reports true (checked, clean).
+	// where the netlist SourceFormat is not a board format. A board file with no routed copper
+	// still reports true (checked, clean).
 	HasBoard() bool
 	// SuppliesDiagnostic reports whether the reader COMPUTED a diagnostic, named by its
-	// InputDiagnostics field name ("ref_des_collisions"). It is the difference between "looked and
-	// found none" and "never looked", which every list below flattens into the same empty slice. A
-	// rule whose whole subject is one of these diagnostics gates on it (check.Available), so a
-	// format whose reader cannot detect the construct reports not-applicable rather than passing.
+	// InputDiagnostics field name ("ref_des_collisions"). It separates "looked and found none" from
+	// "never looked", which every list below flattens into the same empty slice. A rule whose subject
+	// is one of these diagnostics gates on it (check.Available), so a format whose reader cannot
+	// detect the construct reports not-applicable rather than passing.
 	SuppliesDiagnostic(name string) bool
-	// reader-emitted input diagnostics (docs/19): wire endpoints on nothing, and ref-des collisions.
-	// Empty for sources that carry none; a thin rule reports each.
+	// reader-emitted input diagnostics (docsite/content/architecture/rules-and-checks.md#where-a-rule-runs):
+	// wire endpoints on nothing, and ref-des collisions. Empty for sources that carry none; a thin
+	// rule reports each.
 	DanglingEndpoints() []*ir.DanglingEndpoint
 	NoJunctionEndpoints() []*ir.DanglingEndpoint
 	RefDesCollisions() []*ir.RefDesCollision
 	// UnmodeledBuses are bus constructs a reader detected but does not expand into member nets
-	// (WS1-034). Empty for sources with no bus; the bus-not-modeled integrity rule reports each so
-	// a bussed design is flagged, not silently mis-read.
+	// (WS1-034). Empty for sources with no bus; the bus-not-modeled rule reports each so a bussed
+	// design is flagged, not silently mis-read.
 	UnmodeledBuses() []*ir.BusNotModeled
 	// UnresolvedSymbols are symbol references the reader could not open or parse (WS1-052), each
 	// with the placements that lost their pins. Non-empty means the netlist is INCOMPLETE by an
-	// unknown amount: those parts have no pins, so a rule reading connectivity cannot tell them
-	// from a design where the connections were never drawn. Rules that read pin or connectivity
-	// facts are gated to inconclusive while this is non-empty (check.Run).
+	// unknown amount, and a rule reading connectivity cannot tell those pinless parts from a design
+	// where the connections were never drawn. Rules that read pin or connectivity facts are gated to
+	// inconclusive while this is non-empty (check.Run).
 	UnresolvedSymbols() []*ir.UnresolvedSymbol
 	// ResolvedSymbols are the symbol references that DID load, one per distinct reference, with the
-	// pin count each supplied. It is the other half of UnresolvedSymbols and exists so a rule over
-	// symbol resolution can state what it examined rather than only what failed (agni issue 418).
+	// pin count each supplied. It is the other half of UnresolvedSymbols, so a rule over symbol
+	// resolution can state what it examined rather than only what failed (agni issue 418).
 	//
-	// Empty means one of two different things, and SuppliesDiagnostic("resolved_symbols") is what
-	// separates them: a reader that declares the diagnostic and returns nothing placed no symbol,
-	// while a reader that does not declare it never looked. A consumer that skips the check reads
-	// "we deliberately read without symbols" as "we checked and everything was fine".
+	// Empty is ambiguous, and SuppliesDiagnostic("resolved_symbols") separates the cases: a reader
+	// that declares the diagnostic and returns nothing placed no symbol, while one that does not
+	// declare it never looked. Skipping that check reads "we read without symbols" as "we checked and
+	// everything was fine".
 	ResolvedSymbols() []*ir.ResolvedSymbol
-	// UnannotatedComponents are the placeholder designators the source has not assigned yet ("R?",
-	// "C?"), one entry per placeholder with every placement wearing it. Unlike UnresolvedSymbols
-	// nothing was LOST in the read: the parts and their pins are all present. What is absent is an
-	// identity, so a consumer must not key on these designators (see internal/refdes).
 	// JoinedTaps are the wire-end-on-wire-body taps something DOES join, with the construct that
-	// joined them (agni issue 420). It is the other half of NoJunctionEndpoints, and the two are one
-	// partition: a tap on both lists would be reported as passed and failed at once.
+	// joined them (agni issue 420). It is the other half of NoJunctionEndpoints, and the two
+	// partition the taps, so no tap is on both lists.
 	//
 	// Gate on SuppliesDiagnostic("junction_taps") before reading an empty slice as "no tap was
 	// silent", since a reader that never looked at wire geometry returns the same nothing.
 	JoinedTaps() []*ir.JoinedTap
+	// UnannotatedComponents are the placeholder designators the source has not assigned yet ("R?",
+	// "C?"), one entry per placeholder with every placement wearing it. Unlike UnresolvedSymbols
+	// nothing was LOST in the read, since the parts and their pins are all present. What is absent is
+	// an identity, so a consumer must not key on these designators (see internal/refdes).
 	UnannotatedComponents() []*ir.UnannotatedComponent
 	// traverse / pin-role: a pin's electrical direction, or the unspecified zero value when the
 	// source carries no part-type pin data (so direction-based rules do not fire).
@@ -90,10 +89,9 @@ type Model interface {
 	// authoring gap.
 	PinDeclared(refDes, pin string) bool
 	// traverse / param-join: the pin's NAME as its part type declares it ("VCCA", "GND"), or "" when
-	// the source carries no part-type pin data. Distinct from the designator, which is the pin's
-	// position in one package and therefore changes when the same die ships in a different body.
-	// The name is the die-relative channel, so it is what a datasheet join leads with; see
-	// param.ResolvePin for the precedence and why the designator only breaks ties.
+	// the source carries no part-type pin data. Unlike the designator, which changes when the same
+	// die ships in a different package, the name is die-relative, so a datasheet join leads with it;
+	// see param.ResolvePin for the precedence.
 	PinName(refDes, pin string) string
 	// on_net: whether a ref_des appears on at least one net (section-aware).
 	IsConnected(refDes string) bool
@@ -111,9 +109,9 @@ type Model interface {
 	// (ir.Net.roles, filled at ingestion) and falling back to this model's naming lexicon only for a
 	// net that skipped the loader (WS3-106). They take the net rather than its name because names
 	// are not unique (see NetNameCount), so a by-name lookup can answer about a different net.
-	// IsRailNet is the role question alone, deliberately NARROWER than IsPowerRail, which also
-	// answers true for a driven-or-global net and for grounds. A rule asking "is this a rail"
-	// wants IsRailNet.
+	// IsRailNet is NARROWER than IsPowerRail, which also answers true for a driven-or-global net and
+	// for grounds, and it excludes IsRegulatorInternalNet. A rule asking "is this a rail" wants
+	// IsRailNet.
 	IsGroundNet(n *ir.Net) bool
 	IsRailNet(n *ir.Net) bool
 	IsRegulatorInternalNet(n *ir.Net) bool
@@ -128,11 +126,10 @@ type Model interface {
 	IsSwitchingName(name string) bool
 	IsControlName(name string) bool
 	IsGateDriveName(name string) bool
-	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName's
-	// pairing lookup). More than one means the design states the same name for electrically
-	// distinct nets, which is impossible on connect-by-name formats (the solver merges them)
-	// and real on formats with explicit net lists (EDIF), so it is either an authoring slip
-	// or a reader gap (duplicate-net-name reads this).
+	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName). More than
+	// one means the design states the same name for electrically distinct nets. Connect-by-name
+	// formats cannot produce that (the solver merges them) and explicit-net-list formats (EDIF) can,
+	// so it is either an authoring slip or a reader gap (duplicate-net-name reads this).
 	NetNameCount(name string) int
 	// pins: every part-type pin of every placed component (empty for sources that
 	// carry no part-type pin data, so pin-level rules do not fire), and per-pin net
@@ -146,16 +143,15 @@ type Model interface {
 	// IR field, because no source format states polarity as data. RoleUnknown when the name
 	// carries no recognized convention; rules skip, never guess.
 	PinRole(refDes, pin string) PinRole
-	// PinNetName is the name of the net this pin appears on ("" when unconnected). Pins-to-net
-	// is many-to-one by definition (a net IS the equivalence class of joined pins), so a pin in
-	// several nets' connection lists is malformed input; PinNetName then reports the first net
-	// in design order. The arbitrary pick is safe because the conflict itself surfaces through
-	// PinNetConflicts and the pin-net-conflict rule.
+	// PinNetName is the name of the net this pin appears on ("" when unconnected). A pin belongs to
+	// one net by definition, so a pin in several nets' connection lists is malformed input, and
+	// PinNetName then reports the first net in design order. That pick is safe because the conflict
+	// surfaces through PinNetConflicts and the pin-net-conflict rule.
 	PinNetName(refDes, pin string) string
-	// PinNetConflicts are the malformed-input diagnostics PinNetName's contract leans on: every
-	// pin that appears in more than one net's connections, with the full net list. Detected
-	// from the normalized IR and collected once at model build, not a reader InputDiagnostic,
-	// since no reader-only information is involved.
+	// PinNetConflicts are the malformed-input diagnostics PinNetName's contract relies on: every
+	// pin that appears in more than one net's connections, with the full net list. Collected once
+	// at model build from the normalized IR, not a reader InputDiagnostic, since no reader-only
+	// information is involved.
 	PinNetConflicts() []PinNetConflict
 	// no-connect channel: whether the source can express "intentionally unconnected" at
 	// all, meaning any NO_CONNECT-typed pin or any no-connect-marker net name. Where the channel
@@ -172,9 +168,8 @@ type Model interface {
 	// net-class channel (WS3-105): whether the design carries any tool-assigned net-class
 	// membership at all. Only a KiCad project supplies it (net_settings in the .kicad_pro);
 	// an EDIF or IPC-2581 read, a bare .kicad_sch, and a project that declares no classes all
-	// leave every net_class empty. A rule SCOPED by net class evaluates over nothing there and
-	// reports clean, which a review cannot tell from a pass, so such a rule declares
-	// CapNetClass and reads not-applicable instead.
+	// leave every net_class empty. A rule SCOPED by net class would evaluate over nothing there and
+	// read as a pass, so such a rule declares CapNetClass and reads not-applicable instead.
 	HasNetClasses() bool
 	// net-class DEFINITIONS (WS3-111): the per-class routing constraints the project declares
 	// (clearance, track width, via sizes), as ir.Constraint nodes of kind "netclass". Separate
@@ -183,10 +178,9 @@ type Model interface {
 	// it assigns nothing to.
 	NetClassDefs() []*ir.Constraint
 	// reach (WS3-011): the bounded series-walk neighborhood of a net, meaning nets reachable by
-	// crossing two-net pass elements (R/L/ferrite/fuse) with rails excluded, plus the
-	// on-path class predicate over it. Protection rules are reachability questions: a
-	// series element splits the net, so "a fuse sits between connector and regulator" is
-	// invisible to any per-net quantifier.
+	// crossing two-net pass elements (R/L/ferrite/fuse) with rails excluded. A series element splits
+	// the net, so "a fuse sits between connector and regulator" is invisible to any per-net
+	// quantifier.
 	Reach(start *ir.Net, hops int) Reach
 	// ReachToTerminus is the same walk with one admission rule changed: a bus-like net is a legal
 	// DESTINATION and still an illegal transit node. A question whose answer is "we landed on a
@@ -210,8 +204,8 @@ type Model interface {
 	// Classes returns the full device_classes set for a component (specific class plus family
 	// tags), or nil for an unknown/unclassified ref-des. The set backing component.class(ref, class).
 	Classes(refDes string) []ComponentClass
-	// params tier (WS10-003): the design-side part identity (BomLine mpn, else the MPN
-	// attribute, else "") and the seeded datasheet spec joined to it. Nil/"" when the model was
+	// params tier (WS10-003): the design-side part identity (BomLine mpn, else the component's mpn
+	// field, else "") and the seeded datasheet spec joined to it. Nil/"" when the model was
 	// built without a seeded set (NewModel, NewModelWithBoard) or the part is unseeded, so
 	// datasheet-backed rules skip rather than false-pass; see NewModelWithParams and params.go.
 	ComponentMPN(refDes string) string

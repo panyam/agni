@@ -24,13 +24,11 @@ import (
 // unvalidated, and never read by param.LoadSet. `agni params promote` validates it into a corpus.
 const partSpecSuffix = ".partspec.json"
 
-// osPartSpecStore is the OS-backed service.PartSpecStore: it reads and writes a datasheet's shared
-// PartSpec as a sibling file in the mount. All filesystem access and the sibling convention live
-// here at the cmd edge (CONSTRAINTS C1/C13). Save is compare-and-swap under a per-file lock so two
-// concurrent writers in one serve process cannot clobber each other; the version is the sibling's
-// content hash. This is the one write path the workspace exposes, contained to the sibling by
-// mounts.Resolve. (Cross-process locking for multiple serve instances on one filesystem is a
-// follow-up; today the model is one shared serve.)
+// osPartSpecStore is the OS-backed service.PartSpecStore, reading and writing a datasheet's shared
+// PartSpec as a sibling file in the mount (CONSTRAINTS C1/C13). Save is compare-and-swap under a
+// per-file lock, and the version is the sibling's content hash. This is the one write path the
+// workspace exposes, contained to the sibling by mounts.Resolve. The lock is per PROCESS, so two
+// serve instances on one filesystem can still clobber each other.
 type osPartSpecStore struct {
 	mounts []mounts.Mount
 	locks  sync.Map // abs path -> *sync.Mutex
@@ -52,8 +50,8 @@ func versionOf(b []byte) string {
 	return "sha256:" + hex.EncodeToString(h[:])
 }
 
-// Get reads the datasheet's PartSpec sibling. Absence is (nil, "", false, nil): a normal first-open
-// state, not an error. version is the file's content hash, passed back as base_version on save.
+// Get reads the datasheet's PartSpec sibling. Absence is (nil, "", false, nil), the normal first-open
+// state. version is the file's content hash, passed back as base_version on save.
 func (s *osPartSpecStore) Get(ctx context.Context, uri artifact.URI) (*parampb.PartSpec, string, bool, error) {
 	abs, err := resolveSibling(s.mounts, uri, partSpecSibling)
 	if err != nil {

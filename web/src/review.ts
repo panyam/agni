@@ -1,4 +1,4 @@
-// The review panel's view-side types (WS9-052). A review RUN is a resource (WS9-053): the presenter
+// The review panel's view-side types (WS9-052). A review RUN is a resource (WS9-053), so the presenter
 // lists the runs stored for the open design, creates new ones, and pushes a ReviewState the panel
 // renders. Clicking a finding emits onLocate, reusing the same locate path a query cell or a finding
 // already uses.
@@ -10,10 +10,9 @@ import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 // OUTCOMES is the review vocabulary, in the order a report reads: the two decided verdicts, then the
 // ways a question went unanswered, then the ones awaiting data.
 //
-// It is a string union rather than an enum because the wire field is a string, deliberately, so a new
-// honest verdict is a review-layer change rather than a schema migration. The panel must therefore
-// cope with an outcome it has never heard of, and it does: an unknown value renders under its own
-// name with the neutral "unknown" style, never silently as a pass.
+// It is a string union rather than an enum because the wire field is a string, so a new verdict is a
+// review-layer change rather than a schema migration. The panel therefore copes with an outcome it has
+// never heard of, rendering it under its own name with the neutral "unknown" style and never as a pass.
 export const OUTCOME_PASS = "pass";
 export const OUTCOME_FAIL = "fail";
 export const OUTCOME_NOT_APPLICABLE = "not-applicable";
@@ -49,8 +48,8 @@ export function emptyTally(): Tally {
 }
 
 // tally counts a list of outcome strings. An outcome this build does not know still counts toward
-// `total`, exactly as the Go side does: the count of things asked must not shrink because the client
-// is older than the engine that answered them.
+// `total`, as on the Go side, so the count of things asked does not shrink when the client is older
+// than the engine that answered them.
 export function tally(outcomes: string[]): Tally {
   const t = emptyTally();
   for (const o of outcomes) {
@@ -70,10 +69,10 @@ export function tally(outcomes: string[]): Tally {
   return t;
 }
 
-// covered is the coverage axis: how many items a mechanism exists for, which is everything except
-// not-automated. It is the number a team reads as "how much of our checklist is mechanised", so it
-// deliberately counts an item awaiting a datasheet value or a design-intent declaration as COVERED —
-// those have a mechanism that ran and reported honestly, unlike an item nothing answers at all.
+// covered is the coverage axis, the number of items a mechanism exists for, which is everything
+// except not-automated. A team reads it as "how much of our checklist is mechanised", so an item
+// awaiting a datasheet value or a design-intent declaration counts as COVERED, because a mechanism
+// ran and reported on it.
 export function covered(t: Tally): number {
   return t.total - t.notAutomated;
 }
@@ -125,9 +124,9 @@ export interface ReviewState {
   checklist: string;
   // running is true while a create is in flight, so the panel disables its button.
   running: boolean;
-  // storeConfigured is false when the server was started without --review-store. It is a distinct
-  // state from "no runs yet" on purpose: one is a deployment that cannot keep runs at all, the other
-  // is a design nobody has reviewed. Collapsing them would send a user hunting for a missing button.
+  // storeConfigured is false when the server was started without --review-store. It stays distinct
+  // from "no runs yet", because one is a deployment that cannot keep runs at all and the other is a
+  // design nobody has reviewed. Collapsing them would send a user hunting for a missing button.
   storeConfigured: boolean;
   // error is a message to show instead of results, "" when fine.
   error: string;
@@ -156,9 +155,9 @@ export function areaTally(area: ReviewAreaView): Tally {
 
 // reviewFromWire maps a stored Review resource into the panel's view state.
 //
-// It reads the DOCUMENT rather than a bespoke response shape, which is what makes an archived run and
-// a just-created one render through one path: GetReview and CreateReview both return a Review, and a
-// run fetched months later carries everything this needs.
+// It reads the DOCUMENT rather than a bespoke response shape, so an archived run and a just-created
+// one render through one path. GetReview and CreateReview both return a Review, and a run fetched
+// months later carries everything this needs.
 export function reviewFromWire(rv: Review): ReviewRunView {
   const doc: CheckResults | undefined = rv.results;
   return {
@@ -196,10 +195,10 @@ export function reviewFromWire(rv: Review): ReviewRunView {
   };
 }
 
-// checklistOptions picks the manifests out of a directory listing. It filters by extension only,
-// because deciding whether a YAML file is a review manifest means parsing it, and that is the
-// server's job: GetReviewManifest validates and says so. Offering a file that turns out not to be a
-// checklist costs one clear error; hiding a real one costs a user their own file.
+// checklistOptions picks the manifests out of a directory listing by extension only. Deciding
+// whether a YAML file is a review manifest means parsing it, which GetReviewManifest does on the
+// server. Offering a file that turns out not to be a checklist costs one clear error, and hiding a
+// real one costs a user their own file.
 export function checklistOptions(entries: { name: string; path: string; isDir: boolean }[]): ChecklistOption[] {
   return entries
     .filter((e) => !e.isDir && (e.name.endsWith(".yaml") || e.name.endsWith(".yml")))
@@ -212,8 +211,8 @@ export function selectedRun(s: ReviewState): ReviewRunView | undefined {
 }
 
 // OUTCOME_LABEL is the short text an outcome chip shows. An outcome absent from this map renders
-// under its own wire name, which is why a build older than the engine degrades to "unrecognised
-// verdict" rather than to a wrong one.
+// under its own wire name, so a build older than the engine shows an unrecognised verdict rather
+// than a wrong one.
 export const OUTCOME_LABEL: Record<string, string> = {
   [OUTCOME_PASS]: "pass",
   [OUTCOME_FAIL]: "fail",
@@ -232,11 +231,10 @@ const KNOWN_OUTCOMES = new Set(Object.keys(OUTCOME_LABEL));
 
 // outcomeClass is the chip's CSS class for an outcome.
 //
-// The mapping is the panel's load-bearing accessibility decision, not styling. Only `pass` may look
-// like a pass. Everything else has to read as unfinished, because the entire reason this vocabulary
-// exists is that a question nobody answered must not score as answered. An unknown outcome gets
-// `rv-unknown`, which is styled like the unanswered group rather than the passing one: guessing
-// optimistically about a verdict this build does not understand is the one guess that can mislead.
+// The mapping is an accessibility decision rather than styling. Only `pass` may look like a pass,
+// and everything else has to read as unfinished, because a question nobody answered must not score
+// as answered. An unknown outcome gets `rv-unknown`, styled like the unanswered group, since an
+// optimistic guess about a verdict this build does not understand is the one guess that can mislead.
 export function outcomeClass(outcome: string): string {
   if (!KNOWN_OUTCOMES.has(outcome)) return "rv-unknown";
   return "rv-" + outcome.replace(/[^a-z0-9]+/g, "-");

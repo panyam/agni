@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// emmcGood: all eleven signals wired end-to-end; CMD pulled up to +3V3 through R1 (a resistor the
-// reach walk crosses). No profile finding.
+// emmcGood has all eleven signals wired end-to-end, with CMD pulled up to +3V3 through R1 (a
+// resistor the reach walk crosses). No profile finding.
 func emmcGood() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2", "R1"),
@@ -30,8 +30,8 @@ func emmcGood() *ir.Design {
 	}
 }
 
-// emmcBroken: DAT4 net absent (missing), no pull-up resistor on CMD (missing-pullup), and CLK on a
-// single-pin net (dangling).
+// emmcBroken has the DAT4 net absent (missing), no pull-up resistor on CMD (missing-pullup), and
+// CLK on a single-pin net (dangling).
 func emmcBroken() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2"),
@@ -76,8 +76,8 @@ func TestEMMCFires(t *testing.T) {
 }
 
 // Compile produces the four eMMC rules (signal-missing convention, host-incomplete, missing-pullup,
-// signal-dangling), registered under "profile" — the same four SPI-NOR yields, with no compiler
-// change: a new interface is a data value (WS3-046).
+// signal-dangling), registered under "profile". These are the same four SPI-NOR yields, with no
+// compiler change, because a new interface is a data value (WS3-046).
 func TestEMMCCompileAndRegistered(t *testing.T) {
 	if got := len(Compile(EMMC)); got != 4 {
 		t.Fatalf("Compile(EMMC): want 4 rules, got %d", got)
@@ -98,7 +98,7 @@ func emmcHost(ref string) *ir.Component {
 		Attributes: map[string]string{"interface": "eMMC"}}
 }
 
-// A component declaring interface=eMMC with DAT4 absent: the host-anchored path fires ONCE on the
+// With a component declaring interface=eMMC and DAT4 absent, the host-anchored path fires ONCE on the
 // host (DAT4), and the convention path is suppressed (no double-report); CMD is pulled up and every
 // net is 2-pin, so no other rule fires.
 func TestEMMCHostIncomplete(t *testing.T) {
@@ -127,7 +127,7 @@ func TestEMMCHostIncomplete(t *testing.T) {
 	}
 }
 
-// A host that declares the interface but is wired to none of its signals: host-anchored completeness
+// When a host declares the interface but is wired to none of its signals, host-anchored completeness
 // flags every one of the eleven required signals (wholly-absent detection the convention path cannot
 // do).
 func TestEMMCHostWhollyAbsent(t *testing.T) {
@@ -149,13 +149,13 @@ func TestEMMCHostWhollyAbsent(t *testing.T) {
 // emmcWideRail is emmcGood with a REALISTIC rail: +3V3 fans out to a couple of dozen loads instead of
 // the two in emmcGood. Everything else is identical, and CMD is still pulled up to it through R1.
 //
-// That one difference is the whole bug (WS3-108). The generated pull-up check asked
-// `reaches(n, rail)`, and the WS3-011 series walk deliberately refuses to cross INTO a net whose
-// fan-out exceeds maxWalkFan (16) — a guard that is right for its own purpose, since it stops a walk
+// That one difference is the bug (WS3-108). The generated pull-up check asked
+// `net.reaches(n, rail)`, and the WS3-011 series walk refuses to cross INTO a net whose
+// fan-out exceeds maxWalkFan (16). That guard is right for its own purpose, since it stops a walk
 // wandering across a plane as though it were a series path. But a pull-up TERMINATES on a rail, and a
 // rail is wide almost by definition, so the one destination the rule needs was the one kind of net the
-// walk would not enter. Verified on a real board: EMMC_CMD pulled up by R209 to a genuine 1.8V rail
-// with 51 pins on it, reported as reaching no rail.
+// walk would not enter. On a real board, a CMD line pulled up through one resistor to a genuine 1.8V
+// rail with 51 pins on it was reported as reaching no rail.
 //
 // emmcGood keeps a two-pin rail, which is why the suite passed while the rule could not do its job on
 // any real design.

@@ -11,8 +11,8 @@ Add or remove instances until the count matches the declaration, or amend the de
 
 When the design intent declares an exact count for a module (2 CAN transceivers, 4 radios), this
 rule fails if the number of design components matching that module's criterion differs. It is the
-complement of `module-missing`: missing asks "is at least one present", count asks "are there
-exactly N", where too few OR too many both fail.
+complement of `module-missing`, which asks "is at least one present" where this rule asks "are
+there exactly N", so too few OR too many both fail.
 
 ### Why engineers want it
 
@@ -23,7 +23,7 @@ copy-paste that left a stray instance).
 
 ### Impact
 
-The design has the wrong number of a required block: a missing redundant channel, a dropped
+The design has the wrong number of a required block, such as a missing redundant channel, a dropped
 interface, or a duplicated part that doubles cost and load. It matches the declared architecture in
 kind but not in quantity.
 
@@ -31,7 +31,7 @@ kind but not in quantity.
 
 ### Scope note
 
-Only modules that set a count are checked, so a declaration with modules but no counts compiles to no
-count rule (empty-set-is-silent). Counting by MPN requires a params-built model, same as the
-`module-missing` MPN path. Like every intent rule the expectation comes from the declaration, never
-enumerated from the netlist.
+Only modules that set a count are checked, so a declaration with modules but no counts compiles to
+no count rule. Counting by MPN requires a params-built model, same as the `module-missing` MPN path.
+Like every intent rule, it takes the expectation from the declaration and never enumerates it from
+the netlist.

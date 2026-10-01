@@ -25,10 +25,9 @@ var wireNoJunction = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // reader detects it from wire geometry (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("wire-no-junction"),
-	// Only the KiCad reader examines wire geometry, so on every other format this rule found nothing
-	// and a clean pass is what finding nothing looks like. Gating is what makes the considered set
-	// below an honest claim rather than one three formats silently fail (agni issue 309's shape,
-	// applied to the diagnostic this rule owns).
+	// Only the KiCad reader examines wire geometry, so on every other format this rule would find
+	// nothing and read as a clean pass. The gate keeps the considered set below from claiming a check
+	// three formats never ran (agni issue 309's shape, applied to the diagnostic this rule owns).
 	RequiresCapability:  []check.Capability{check.CapJunctionTaps},
 	Eval:                wireNoJunctionVerdicts,
 	StatesConsideredSet: true,
@@ -37,24 +36,19 @@ var wireNoJunction = &check.Rule{
 // wireNoJunctionVerdicts decides every wire-end-on-wire-body tap, the ones something joins and the
 // ones nothing does.
 //
-// This rule was the most expensive one in the catalog to leave silent, and the silence was total. Its
-// own Impact says why: a T-tap with no dot is drawn as a connection the netlist does not have, so the
-// author, the reviewer and the plot all agree while the board ships with the connection missing. A
-// design whose every tap carried its dot reported exactly what a design with no tap in it reported,
-// and exactly what a format that cannot see wire geometry reported, which is nothing.
+// Without the pass half, a design whose every tap carried its dot reported the same nothing as a
+// design with no tap in it and a format that cannot see wire geometry.
 //
-// The reader had the answer and threw it away. `splitWiresAt` runs at every junction dot and mid-span
-// label BEFORE the detection pass, so a joined tap is an endpoint of both wires by the time anything
-// looks and is indistinguishable from a point where no wire ever crossed. Running the same detection
-// once more BEFORE the split recovers the set (agni issue 420), which is the same move that converted
-// symbol-unresolved: the reader already decided, and only the good half was being discarded.
+// `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so by the
+// time anything looks a joined tap is an endpoint of both wires and indistinguishable from a point
+// where no wire crossed. The reader runs the same detection once more BEFORE the split to recover the
+// joined set (agni issue 420), the same move that converted symbol-unresolved.
 //
-// THE PASS NAMES THE CONSTRUCT THAT DID THE JOINING, and that is the whole of what makes it evidence.
-// "The tap is joined" is a restatement of the outcome, and it reads identically on a tap held by a
-// junction dot somebody placed on purpose and one held by a label that happens to sit at the meet.
-// The second is correct in KiCad and is a great deal easier to delete by accident, so a reviewer
-// checking a T-tap wants to know which they have. The segment count separates an ordinary T from a
-// crossing.
+// THE PASS NAMES THE CONSTRUCT THAT DID THE JOINING. "The tap is joined" only restates the outcome,
+// and it reads the same on a tap held by a junction dot somebody placed and one held by a label that
+// happens to sit at the meet. The second is correct in KiCad and far easier to delete by accident, so
+// a reviewer checking a T-tap wants to know which they have. The segment count separates an ordinary T
+// from a crossing.
 func wireNoJunctionVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, e := range m.NoJunctionEndpoints() {

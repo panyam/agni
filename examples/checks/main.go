@@ -1,5 +1,5 @@
-// Command checks is the checks rung of the Agni examples ladder: run the structural rule
-// checks over a design and read the findings. It is the walkthrough form of `agni check`.
+// Command checks is the checks rung of the Agni examples ladder, which runs the structural rule
+// checks over a design and reads the findings. It is the walkthrough form of `agni check`.
 // The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only
 // binds the steps that run engine code.
 //
@@ -21,7 +21,6 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	// The shared path input: default to the bundled fixture, accept any path the user enters.
 	design := common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn")
 
 	demo := demokit.New("checks").

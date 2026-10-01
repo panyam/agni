@@ -7,11 +7,9 @@ import (
 )
 
 // jsonReport is the stable, tooling-facing projection of a Report. It carries the FULL finding list per
-// item (unlike RenderMarkdown, which caps the Detail cell) so a downstream renderer — a customer's
-// folder-per-design report, the future web report — can show every finding and, eventually, deep-link
-// each one to the viewer highlighted on its subject net/component. It is a hand-authored DTO rather than
-// a marshal of the internal structs so the wire shape stays decoupled from check.Finding's proto
-// provenance and can evolve independently.
+// item (RenderMarkdown caps the Detail cell), so a downstream renderer can show and deep-link every
+// finding. It is a hand-authored DTO rather than a marshal of the internal structs, so the wire shape
+// stays decoupled from check.Finding's proto provenance.
 type jsonReport struct {
 	Manifest string      `json:"manifest"`
 	Design   string      `json:"design"`
@@ -20,18 +18,17 @@ type jsonReport struct {
 }
 
 // jsonSummary is the counts a pipeline gates on, stated rather than left to be recomputed. It carries
-// exactly the inputs of the two gates `agni review` exposes (--fail-on-outcome and --min-answered) so
-// a consumer reading this document sees the same numbers the exit code was derived from. Deriving them
-// by counting items is possible and is how every consumer did it before; two implementations of
-// Answered() is precisely how a gate and a report come to disagree.
+// exactly the inputs of the two gates `agni review` exposes (--fail-on-outcome and --min-answered), so
+// a consumer sees the numbers the exit code came from rather than writing a second Answered() that
+// can disagree with the gate.
 type jsonSummary struct {
 	Total    int `json:"total"`
 	Covered  int `json:"covered"`
 	Answered int `json:"answered"`
 	Pass     int `json:"pass"`
 	Fail     int `json:"fail"`
-	// Provisional is broken out because it is the one outcome whose gating is a per-team choice: it is
-	// a fail resting on unratified datasheet data, so a consumer may want to treat it either way.
+	// Provisional is broken out because it is a fail resting on unratified datasheet data, so its
+	// gating is a per-team choice.
 	Provisional int `json:"provisional"`
 }
 
@@ -75,9 +72,9 @@ type jsonDatasheet struct {
 	// parameter behind it. A consumer reading this report to decide whether to trust a fail wants
 	// "stale" to stand out, since confidence alone reports such a value as fully trustworthy.
 	Verification string `json:"verification,omitempty"`
-	// VerifiedRevision: the document identity as printed when the verification was performed. Beside
-	// `doc` (which is the revision the corpus holds NOW) it turns a "stale" flag into a re-confirm
-	// task naming both sides. Omitted when nothing was ever verified.
+	// VerifiedRevision is the document identity as printed when the verification was performed. Beside
+	// `doc` (the revision the corpus holds NOW) it turns a "stale" flag into a re-confirm task naming
+	// both sides. Omitted when nothing was ever verified.
 	VerifiedRevision string `json:"verified_revision,omitempty"`
 }
 

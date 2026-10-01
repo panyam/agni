@@ -1,30 +1,27 @@
-// Package docindex answers questions INSIDE one datasheet: given a phrase, which passages or table
-// cells of this document are about it, and where exactly are they.
+// Package docindex answers questions INSIDE one datasheet. Given a phrase, it finds which passages or
+// table cells of this document are about it, and exactly where they are.
 //
-// It exists because the doc-IR is addressable but not searchable. A page/block/cell can be located
-// precisely once you know which one you want, and "where does this document state the VCC range" has
-// no form at all, so a person looking for a fact the engine could not find has to scroll.
+// The doc-IR is addressable but not searchable. A page, block or cell can be located once you know
+// which one you want, and "where does this document state the VCC range" has no form at all.
 //
 // # This index must never be reachable from a check
 //
-// Two lookups get conflated the moment a retrieval index exists, and conflating them is how a
-// confident wrong answer reaches a design review:
+// Two lookups get conflated once a retrieval index exists, and conflating them puts a confident
+// wrong answer in front of a design review:
 //
-//   - A FACT lookup is exact, keyed by part and symbol. param.LoadSet already refuses a near-miss
-//     MPN on the stated grounds that a near-miss is a different part until a human says otherwise.
-//   - PASSAGE retrieval is fuzzy by construction, and exists to put a person or an extractor in
-//     front of the right paragraph.
+//   - A FACT lookup is exact, keyed by part and symbol. param.LoadSet refuses a near-miss MPN,
+//     because a near-miss is a different part until a human says otherwise.
+//   - PASSAGE retrieval is fuzzy by construction, and puts a person or an extractor in front of
+//     the right paragraph.
 //
-// Same document, two trust levels. The engine reads the first; people and extractors read the
-// second. This package therefore lives under datasheet/ beside the authoring surfaces and is
-// imported by none of core/check, core/review or core/query. If a check ever needs to consult it,
-// that is a design error rather than a convenient shortcut.
+// The engine reads the first, and people and extractors read the second. So this package lives
+// under datasheet/ beside the authoring surfaces and is imported by none of core/check, core/review
+// or core/query. A check that needs to consult it is a design error.
 //
 // # Derived, never a second source of truth
 //
-// An Index is built from a doc-IR and holds no state the doc-IR does not. It can be thrown away and
-// rebuilt at any time, which is what keeps a stale index a performance problem rather than a
-// correctness one.
+// An Index is built from a doc-IR and holds no state the doc-IR does not. It can be rebuilt at any
+// time, so a stale index is a performance problem rather than a correctness one.
 package docindex
 
 import (
@@ -35,22 +32,19 @@ import (
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 )
 
-// Hit is one passage the index matched, located precisely enough to highlight.
-//
-// A hit that resolved only to a page would be useless for the job this serves: verification has to be
-// possible at a glance, or a reviewer waves through whatever they are shown. So every hit names the
-// doc-IR region it came from, and a table hit names the cell.
+// Hit is one passage the index matched, located precisely enough to highlight. Every hit names the
+// doc-IR region it came from, and a table hit names the cell, because verification has to be possible
+// at a glance or a reviewer waves through whatever they are shown.
 type Hit struct {
 	Page int32
 	// RegionID is the doc-IR text block or table id, which is what a viewer highlights.
 	RegionID string
-	// Row and Col locate a table cell, and are -1 for a text block. A cell is the unit worth citing
-	// in a datasheet, because most facts worth finding are in one.
+	// Row and Col locate a table cell, and are -1 for a text block.
 	Row, Col int32
 	// Text is the matched content verbatim, so a caller quotes the document rather than paraphrasing.
 	Text string
-	// Context is what makes a cell mean something: its row label and column header. "3.6" is not a
-	// fact; "VCCA / MAX = 3.6" is. Empty for a text block, which carries its own context.
+	// Context is a cell's row label and column header, so "3.6" reads as "VCCA MAX 3.6". Empty for a
+	// text block, which carries its own context.
 	Context string
 	Score   float64
 }
@@ -65,14 +59,13 @@ type entry struct {
 // Index is a searchable view of one document. Safe for concurrent reads; build it once per document.
 type Index struct {
 	entries []entry
-	// docFreq counts how many entries contain a term, so a term appearing on every page of a
-	// datasheet ("voltage") contributes far less than one that appears twice.
+	// docFreq counts how many entries contain a term, so a term on every page ("voltage")
+	// contributes far less than one that appears twice.
 	docFreq map[string]int
 }
 
-// Build indexes every text block and table cell of a document. Blocks with no text are skipped
-// rather than indexed empty, and the result is deterministic: the same document yields the same
-// index, so a hit list is stable between runs.
+// Build indexes every text block and table cell of a document. Blocks with no text are skipped, and
+// the same document always yields the same index, so a hit list is stable between runs.
 func Build(d *docpb.Document) *Index {
 	ix := &Index{docFreq: map[string]int{}}
 	for _, pg := range d.GetPages() {
@@ -101,7 +94,7 @@ func (ix *Index) add(h Hit) {
 		return
 	}
 	// The context is indexed with the cell, so searching "VCCA max" finds the value cell rather than
-	// only the label. A value cell alone carries none of the words a person searches by.
+	// only the label.
 	toks := tokenize(h.Text + " " + h.Context)
 	if len(toks) == 0 {
 		return
@@ -118,10 +111,8 @@ func (ix *Index) add(h Hit) {
 
 // Search returns the best matches for a query, highest score first, capped at limit (<=0 means 10).
 //
-// Scoring is deliberately lexical and explainable rather than learned. Datasheet vocabulary is small
-// and highly conventional, and a baseline that can be reasoned about is worth having before anything
-// is embedded: a hit here can be justified to a person, which matters when the person's job is to
-// decide whether to trust it.
+// Scoring is lexical rather than learned. Datasheet vocabulary is small and conventional, and a
+// lexical hit can be justified to the person deciding whether to trust it.
 func (ix *Index) Search(q string, limit int) []Hit {
 	if limit <= 0 {
 		limit = 10
@@ -141,16 +132,16 @@ func (ix *Index) Search(q string, limit int) []Hit {
 				continue
 			}
 			matched++
-			// Rarity matters more than repetition: a term in few entries is what makes a hit
-			// specific, while a long block repeating a common word is not a better answer.
+			// Rarity outweighs repetition, so a long block repeating a common word does not
+			// outrank a specific hit.
 			idf := n / float64(1+ix.docFreq[t])
 			score += idf * (1 + float64(c-1)*0.2)
 		}
 		if matched == 0 {
 			continue
 		}
-		// Prefer entries that matched MORE of the query, and shorter ones among equals: a cell
-		// stating the fact beats a paragraph mentioning it.
+		// Prefer entries that matched MORE of the query, and shorter ones among equals, so a
+		// cell stating the fact beats a paragraph mentioning it.
 		score *= float64(matched) / float64(len(qt))
 		score /= 1 + float64(e.length)/40
 		h := e.hit
@@ -178,8 +169,8 @@ func (ix *Index) Search(q string, limit int) []Hit {
 	return out
 }
 
-// cellContext builds the row label and column header that make a value cell mean something. Both are
-// taken from the table's own first column and header row, which is where every datasheet puts them.
+// cellContext returns a cell's row label and column header, taken from the table's first column and
+// header row.
 func cellContext(t *docpb.Table, c *docpb.Cell) string {
 	var row, col string
 	for _, o := range t.GetCells() {
@@ -206,12 +197,11 @@ func cellContext(t *docpb.Table, c *docpb.Cell) string {
 // tokenize lowercases and splits on anything that is not a letter or digit, then adds a REJOINED
 // form for runs of short adjacent tokens.
 //
-// That last part is not a nicety. Producers flatten a subscript with an injected space, so a
-// datasheet printing "VCCA" reaches the doc-IR as "V CCA" and a search for the symbol as printed
-// finds nothing. The same document also carries "V CCB", "I CC" and every other subscripted symbol
-// the part defines, so this is the common case rather than an edge one. Runs are joined only while
-// the pieces are short and alphanumeric, which is the same test that repairs a flattened pin name in
-// the derive stage; a real multi-word phrase is left alone.
+// Producers flatten a subscript with an injected space, so a datasheet printing "VCCA" reaches the
+// doc-IR as "V CCA" and a search for the symbol as printed would find nothing. Every subscripted
+// symbol in a datasheet does this. Runs are joined only while the pieces are short (up to four
+// characters, three pieces at most), the same test that repairs a flattened pin name in the derive
+// stage, so a real multi-word phrase is left alone.
 func tokenize(s string) []string {
 	fields := strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r)

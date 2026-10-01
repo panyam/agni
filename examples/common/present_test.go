@@ -132,8 +132,8 @@ func TestFindingsLines(t *testing.T) {
 }
 
 // TestBundledFixtureFindings sanity-checks that a bundled fixture trips the rule it is meant
-// to teach. Assert the findings directly (fields, not the formatted string): rule behavior is
-// what matters here, and it should not be coupled to FindingsLines' output format.
+// to teach. Assert the findings directly (fields, not the formatted string), because rule behavior
+// is what matters here and it should not be coupled to FindingsLines' output format.
 func TestBundledFixtureFindings(t *testing.T) {
 	d, err := ReadFixture("demo-board.kicad_pcb")
 	if err != nil {

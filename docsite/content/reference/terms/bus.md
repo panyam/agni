@@ -34,8 +34,7 @@ end, and [`profile-termination`](../../rules/profile-termination/) for the resis
 I2C is common enough to be checked without a profile at all, by
 [`i2c-pull-up`](../../rules/i2c-pull-up/).
 
-**Where the course teaches it:**
-[chapter 10](../../../learn/10-interfaces-and-what-they-require/#a-bus-is-a-contract-ee6) is the
-argument that a bus is a contract, and
-[chapter 1](../../../learn/01-what-a-board-is-made-of/) reads a terminator off the two nets it
-bridges.
+The course teaches it in
+[chapter 10](../../../learn/10-interfaces-and-what-they-require/#a-bus-is-a-contract-ee6), which
+argues that a bus is a contract, and in [chapter 1](../../../learn/01-what-a-board-is-made-of/),
+which reads a terminator off the two nets it bridges.

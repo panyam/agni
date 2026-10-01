@@ -7,15 +7,16 @@ An extension is a private Go module that builds on the public Agni engine withou
 are two things you can do from one, and this page covers both.
 
 **Extending** adds capability to the engine: your own format reader, your own rules, your own fact
-relations, registered through the public seams. **Embedding** runs the engine inside your own
-program: composing it with `agni.New`, and serving your own catalog through the service tier.
+relations, registered through the public registration points. **Embedding** runs the engine inside
+your own program, composing it with `agni.New` and serving your own catalog through the service
+tier.
 
 This page walks from an empty directory to a working extension that does both.
 
 Both are Go. A program in another language calls agni rather than embedding it, through the CLI or
 a running server; [Calling agni from another language](../other-languages/) covers that.
 
-Two artifacts back this guide, both in the engine repo under `examples/`:
+Two example modules back this guide, both in the engine repo under `examples/`:
 
 - `extension-template` is a bare scaffold to copy.
 - `extension` is a fuller worked example, a `.acme` reader and a rule that fires, to read when you
@@ -23,9 +24,9 @@ Two artifacts back this guide, both in the engine repo under `examples/`:
 
 ## Prerequisites
 
-Go 1.26+ and the public engine module `github.com/panyam/agni`. An extension depends on the engine.
-The engine never depends on the extension. That one-way arrow is what keeps your private code out of
-the open-source repo.
+Go 1.26.4 or later and the public engine module `github.com/panyam/agni`. An extension depends on
+the engine. The engine never depends on the extension. That one-way arrow keeps your private code
+out of the open-source repo.
 
 ## Create the module
 
@@ -49,8 +50,7 @@ Register one `formats.Format` per extension:
 package myfmt
 
 import (
-    "os"
-    "github.com/panyam/agni/formats"
+    "github.com/panyam/agni/readers/formats"
     ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -58,8 +58,8 @@ func init() {
     formats.Register(&formats.Format{
         Ext:  ".myfmt",       // lowercase, with the dot
         Name: "myfmt",        // the file-tree / UI label
-        Design: func(_ *formats.Loader, path string) (*ir.Design, error) {
-            f, err := os.Open(path)
+        Design: func(l *formats.Loader, path string) (*ir.Design, error) {
+            f, err := l.Open(path) // the Loader owns file I/O
             if err != nil { return nil, err }
             defer f.Close()
             return Read(f, path) // Read is your io.Reader-pure parser
@@ -81,7 +81,7 @@ named source and register it:
 ```go
 package myrules
 
-import "github.com/panyam/agni/check"
+import "github.com/panyam/agni/core/check"
 
 func init() {
     check.RegisterSource(check.NewSource("myco", []*check.Rule{noExperimentalRefDes}))
@@ -107,8 +107,8 @@ var noExperimentalRefDes = &check.Rule{
 ```
 
 Your rules appear in the catalog namespaced `myco/<rule>`, so they can never shadow a built-in.
-`check.DefaultCatalog()` composes the built-ins plus every registered source, so the engine's own
-CLI and serve run your rules alongside its own.
+`check.DefaultCatalog()` composes the built-ins plus every registered source, so any binary that
+imports your package runs your rules alongside the built-ins.
 
 A rule registered this way does not join the built-in Spec-twin regression suite, which is the engine
 catalog's own concern.
@@ -154,16 +154,16 @@ replaces individual rules, and `Tags` replaces a family. A source's declaration 
 own rules, so a replacement cannot delete itself.
 
 Interface profiles do this for you. A profile that carries a built-in's name supersedes that
-built-in's rules, and that is the job a naming map does: re-binding `SPI_NOR` to your own net-name
-suffixes replaces the engine's reading of that interface rather than running beside it.
-[Interface profiles](../../guide/interface-profiles/) covers the YAML these are written in.
+built-in's rules, so a naming map that re-binds `SPI_NOR` to your own net-name suffixes replaces the
+engine's reading of that interface rather than running beside it. [Interface
+profiles](../../guide/interface-profiles/) covers the YAML these are written in.
 
-That matters more than it sounds. Running both is not merely noisy, it invents failures. A naming map
-that re-binds some roles and leaves others at the engine's naming lets the built-in profile still
-anchor and still clear its in-use gate, so it reports each re-bound role as a missing signal while
-your profile reads the same board clean. The effect is invisible when you re-bind the anchor role,
-because the built-in profile then has nothing to anchor on, so a convention CLOSER to the engine's
-produced more spurious failures than one further from it.
+Running both invents failures. A naming map that re-binds some roles and leaves others at the
+engine's naming lets the built-in profile still anchor and still clear its in-use gate, so it
+reports each re-bound role as a missing signal while your profile reads the same board clean. The
+effect is invisible when you re-bind the anchor role, because the built-in profile then has nothing
+to anchor on, so a convention CLOSER to the engine's produced more spurious failures than one
+further from it.
 
 Because supersession works by removing rules, the CLI prints a `note:` to stderr naming what was
 dropped and which source dropped it. A rule that was taken away produces no output, and without the
@@ -174,9 +174,9 @@ a standalone operation.
 
 ## Compose in main
 
-An extension reaches the engine through the same public seams the standard library uses, so the shape
-is the one [Stack and platform](../../architecture/stack/) draws, with your module as the fourth
-source:
+An extension reaches the engine through the same public registration points the standard library
+uses, so the shape is the one [Stack and platform](../../architecture/stack/) draws, with your
+module as the fourth source:
 
 {{ includeFile "figures/engine-layers.svg" }}
 
@@ -187,6 +187,8 @@ then compose with `agni.New`:
 package main
 
 import (
+    "log"
+
     "github.com/panyam/agni"
     "github.com/panyam/agni/core/check"
     "github.com/panyam/agni/readers/formats"
@@ -209,20 +211,20 @@ func main() {
         log.Println("note:", w)
     }
     d, _ := (&formats.Loader{}).ReadDesign("design.myfmt")
-    findings := check.Run(check.NewModel(d), engine.Catalog().Rules())
+    findings := check.Run(check.NewModelWithParams(d, nil, nil), engine.Catalog().Rules())
     // ... report findings
 }
 ```
 
 **Compose through `agni.New` rather than reaching for `check.DefaultCatalog` directly.** Those four
-blank imports are four independent registration seams, and three of them fail SILENTLY when a binary
-misses one: no built-in rules, or an empty fact base, and every design reports clean with nothing
-saying why. `New` refuses both rather than running.
+blank imports are four independent registration points, and three of them fail SILENTLY when a
+binary misses one: no built-in rules, or an empty fact base, and every design reports clean with
+nothing saying why. `New` refuses both rather than running.
 
-That is not a hypothetical worth guarding against. The extension example in this repo imported
-`stdlib/relations` and never `stdlib/rules/builtin`, so it ran with zero built-in rules and reported
-only its own two findings while two real defects on its own fixture went unreported. Nobody noticed
-until `New` started refusing it.
+That failure is not hypothetical. The extension example in this repo imported `stdlib/relations` and
+never `stdlib/rules/builtin`, so it ran with zero built-in rules and reported only its own two
+findings while two real defects on its own fixture went unreported. Nobody noticed until `New`
+started refusing it.
 
 Shipping without the datalog rule suite or without an inline-query compiler is a legitimate choice,
 so those are `Warnings()` rather than errors. `agni.WithoutDatalogRules()` says the first is
@@ -245,15 +247,15 @@ engine, err := agni.New(
 package implementing it becoming public API. A deployment that outgrows the directory shape
 implements `service.ProjectStore` and passes `WithProjectStore` instead.
 
-## Registration timing: init versus explicit main
+## Registering from init or from main
 
 Two styles both work:
 
-- `init` (import side effect), like the standard library's image readers. Wire an extension in
-  with one blank import. This is what the template uses.
+- From `init`, as an import side effect, the way the standard library's image readers register.
+  One blank import wires an extension in, and the template does it this way.
 - Explicit from `main`. Drop the `init` and call `formats.Register` / `check.RegisterSource`
-  yourself. More visible, no hidden ordering. Prefer this when a binary composes several extensions
-  and you want the wiring in one place.
+  yourself. The wiring is then visible and has no hidden ordering, so prefer this when a binary
+  composes several extensions and you want the wiring in one place.
 
 ## Verify
 
@@ -267,7 +269,7 @@ Add a smoke test that your reader loads a fixture and your rule fires. The templ
 ## Serve your own catalog with the service tier
 
 Registering a reader and a rule suite gets your extensions into a catalog. Running the engine's
-application layer over that catalog is the `service` package, which is public for exactly this
+application layer over that catalog is the `service` package, which is public for this
 reason (C13). The service impls are transport-neutral, so they carry plain protobuf signatures and
 take every I/O concern as an injected port:
 
@@ -281,22 +283,22 @@ resp, err := checkSvc.ListRules(ctx, &webapi.ListRulesRequest{})
 ```
 
 The two come back TOGETHER and the catalog is not a parameter, so you cannot hand one surface the
-composed catalog and the other something else. That drift is why the shape is this way: an extension
-profile flag once reached the check surface and the review surface differently, and a rule missing
-from a catalog is indistinguishable from a rule that ran and found nothing.
+composed catalog and the other something else. The shape exists because an extension profile flag
+once reached the check surface and the review surface differently, and a rule missing from a catalog
+is indistinguishable from a rule that ran and found nothing.
 
 Two ports are worth knowing by name. `service.ProjectStore` answers what projects and designs exist
 and which design an artifact belongs to, so a deployment backed by a PLM system or an index
-implements it instead of walking directories. `service.ProjectConfigLoader` resolves what a project's
+implements it instead of walking directories. `service.ConfigResolver` resolves what a project's
 analysis config points at, returning a `service.ResolvedConfig` carrying rule sources, a parameter
-provider, and symbol paths. Both speak `artifact.URI`, the `mount://` name for a file, which is why
-that package is public too.
+provider, and symbol paths. `ProjectStore` speaks `artifact.URI`, the `mount://` name for a file,
+which is why that package is public too.
 
 Your rules reach the web console through the same path with no extra work. `CheckService.ListRules`
 maps whatever catalog it was built over to the wire, and the client resolves its filter bundles
 against that response, so there is no static rule table anywhere to also update.
 
-## A current limitation: the CLI is not yet reusable
+## The CLI is not yet reusable
 
 The service tier above is reusable; the command line over it is not yet. Reusing the engine's whole
 CLI, so `my-extension serve` and `my-extension check` inherit your reader and rules with their flags

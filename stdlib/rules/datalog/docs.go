@@ -5,19 +5,17 @@ import (
 	"fmt"
 )
 
-// ruleDocs embeds the per-rule documentation for the datalog-authored rules: one markdown file per
-// rule under docs/, plus any images it references. The convention is in
-// docsite/content/build/check-rule.md, and stdlib/rules/builtin/docs is the other site. The whole
-// docs/ directory is embedded, not a `*.md` glob, so a rule's doc can add a `.png` walkthrough
-// image with no build change. The 1:1 between "dl" rules and doc files, and that every referenced
-// image exists, is harness-enforced (docs_test.go).
+// ruleDocs embeds docs/<rule>.md for each datalog rule plus the images those files reference, the
+// same arrangement as stdlib/rules/builtin/docs.go. It embeds the whole docs/ directory rather than
+// per-extension globs, so a doc can add an image of any type with no build change. docs_test.go
+// enforces the 1:1 between "dl" rules and doc files, and that every referenced image exists.
 //
 //go:embed docs
 var ruleDocs embed.FS
 
-// ruleDoc returns the embedded markdown for a datalog rule (the bare name, without the "dl/"
-// source prefix), and panics if the file is missing. That is a programmer error caught at package
-// init, when every rule loads its Detail.
+// ruleDoc returns the embedded markdown for a datalog rule, keyed by the bare name without the
+// "dl/" source prefix. It panics on a missing file, which surfaces at package init when every rule
+// loads its Detail.
 func ruleDoc(name string) string {
 	b, err := ruleDocs.ReadFile("docs/" + name + ".md")
 	if err != nil {

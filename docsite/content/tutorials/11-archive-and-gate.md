@@ -4,7 +4,7 @@ description: "Keep the result, re-read it a year later, and make it block a merg
 ---
 
 A review that exists only as terminal output is gone the moment the window closes. To be evidence it
-has to outlive the run, and to change behavior it has to be able to stop a merge. This rung is both.
+has to outlive the run, and to change behavior it has to be able to stop a merge. This rung does both.
 
 ## Write the run down
 
@@ -20,7 +20,7 @@ That is a self-contained check-result document. It carries what produced it and 
 design and a content hash of that design, which tiers were attached, which rules actually ran, and
 every finding and outcome.
 
-Each of those exists for a reason. Two results documents are only comparable once you know which
+Two results documents are only comparable once you know which
 build made each. The content hash is the revision identity, so a stale document cannot be silently
 read against a design that has since changed. And the list of rules that ran is what separates a
 clean design from a run that checked nothing, drawing the same distinction rung 9 was about.
@@ -29,7 +29,7 @@ clean design from a run that checked nothing, drawing the same distinction rung 
 
 {{ agniRun "content/tutorials/runs/11-results-reread.yaml" }}
 
-The useful property is that this works with the design gone. Copy the JSON to a machine that has
+This works with the design gone. Copy the JSON to a machine that has
 never seen the board, has no parameter corpus, and no profiles, and it renders the same report.
 
 That is what makes it archival. A year from now, when the design file has moved and the tool has
@@ -53,9 +53,9 @@ that verdict's proof drawn:
 agni check --format html --server self designs/gateway/gateway.edn > review.html
 ```
 
-That is one command rather than two, and the reason is worth understanding, because it is the same
-reason a link can be withheld. A link is a promise the reader can follow, so the CLI emits one only
-when it knows the server serves the design it just read. `self` starts a viewer on a free port over
+That is one command rather than two, for the same reason a link can be withheld. A link is a
+promise the reader can follow, so the CLI emits one only when it knows the server serves the design
+it just read. `self` starts a viewer on a free port over
 THIS run's own mount table and blocks until Ctrl-C, so the two cannot disagree by construction.
 
 Point it at a server someone else is running and the promise has to be checked instead:
@@ -65,19 +65,19 @@ agni check --format html --server http://localhost:8080 \
   --mount work=. designs/gateway/gateway.edn > review.html
 ```
 
-The `--mount` is load-bearing there. The CLI asks that server whether it serves the same mounts from
-the same roots, and a mount you did not NAME is one it minted for this run alone, which means nothing
-on anybody's server. Then the report renders plain text subjects instead of links, and says why. That
-is the honest answer rather than a URL that resolves on nobody's machine.
+The report needs that `--mount` to carry links. The CLI asks that server whether it serves the
+same mounts from the same roots, and a mount you did not NAME is one it minted for this run alone, which means nothing
+on anybody's server. Then the report renders plain text subjects instead of links, and says why, rather
+than emitting a URL that resolves on nobody's machine.
 
 For one design and a quick look, [`agni open`](../03-see-it/) serves it and prints a ready-made check
-command with the mount already filled in, which is the same trade in the other order: `open` when you
-want the viewer open anyway, `--server self` when you want the report.
+command with the mount already filled in, which is the same trade in the other order. Use `open`
+when you want the viewer open anyway, and `--server self` when you want the report.
 
-Two things this is not. It is not the archival artifact: the results document replays without the
-design and this does not. And a rule that reports violations without stating what it examined is
+The page is not the archival artifact, because the results document replays without the
+design and the page does not. And a rule that reports violations without stating what it examined is
 labelled "findings only" here, with its rows captioned so nobody reads silence from it as a clean
-bill. That caption is the difference between a report and a reassurance.
+bill.
 
 ## Gate a merge
 
@@ -88,7 +88,7 @@ cannot merge.
 
 ## The gate reads severity, not verdict
 
-Here is the part that surprises people. Rev B fixed the I2C {{ explainable "pull-up" "pull-ups" }} and the naming, and its review
+Rev B fixed the I2C {{ explainable "pull-up" "pull-ups" }} and the naming, and its review
 went from 8 failures to 6. Run the gate on it:
 
 {{ agniRun "content/tutorials/runs/11-gate-rev-b.yaml" }}
@@ -100,26 +100,25 @@ Still failing. The remaining error is the datasheet finding on U2, the one the r
 is a statement about evidence quality. They are different axes, and a finding can be severe and
 poorly evidenced at the same time, and this one is both.
 
-So a provisional finding still gates. Whether it should is your call, and there are two honest
+So a provisional finding still gates. Whether it should is your call, and there are two defensible
 answers. Leave it gating and treat the block as pressure to go transcribe the real datasheet value,
 which is usually the right instinct. Or drop the parameter tier out of the gate command until the
 corpus is trustworthy, and accept that those checks are not gating yet:
 
 {{ agniRun "content/tutorials/runs/11-gate-rev-b-no-params.yaml" }}
 
-Still `2`, and the reason is worth stopping on: dropping the parameter tier removed the *datasheet*
-error, and a different one was underneath it: a CAN host declaring the interface without its `STB`
-signal. Narrowing what a gate can see does not make a board pass, it only changes which failure you
-are looking at. If you want to know what remains, run without `--fail-on` and read the list.
+Still `2`. Dropping the parameter tier removed the *datasheet* error, and underneath it was a
+different one, from a CAN host that declares the interface without its `STB` signal. Narrowing
+what a gate can see does not make a board pass, it only changes which failure you are looking at. To see what remains, run without `--fail-on` and read the list.
 
 What you should not do is lower the severity of the rule to make the gate pass. That changes what
-the tool claims about consequence in order to change an exit code, and every future reader of that
+the tool claims about consequence to change an exit code, and every future reader of that
 finding inherits the lie.
 
 ## Gate on the checklist too
 
-The gate above cannot see one whole class of regression, and it is worth meeting before you rely on
-it. Run the review with a floor under how many items it has to answer:
+The gate above cannot see one whole class of regression. Before you rely on it, run the review
+with a floor under how many items it has to answer:
 
 {{ agniRun "content/tutorials/runs/gate-answered-holds.yaml" }}
 
@@ -147,7 +146,7 @@ Put `params` back before continuing:
 mv params-old params
 ```
 
-Two notes on using it. A `provisional` does not trip `--fail-on-outcome fail`, because it is a failure
+A `provisional` does not trip `--fail-on-outcome fail`, because it is a failure
 resting on placeholder data and a pipeline that goes red on data quality is a pipeline somebody
 switches off. Ask for it by name when you want it: `--fail-on-outcome fail,provisional`. And a tripped
 gate exits `2` where a broken run exits `1`, so a script can tell a bad board from a bad tool.
@@ -165,12 +164,7 @@ Run the full `review` in CI alongside the gate and publish the results document 
 The gate answers whether this can merge. The document answers what was checked, and that is what
 you will want in six months when somebody asks whether a particular question was ever considered.
 
-## That is the ladder
+## Next
 
-You now have a board that is read correctly, checked against general rules and your team's own, with
-a checklist whose every item reports honestly, comparable revision to revision, archived, and
-gating.
-
-The two things worth revisiting periodically are coverage and the parameter corpus. Coverage tells
-you how much of your checklist is really being decided. The corpus is usually the cheapest way to
-move it.
+[Reconcile with the tools you already run](../12-reconcile-existing-tools/), which brings your
+existing DRC report into the same model.

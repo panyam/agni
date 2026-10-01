@@ -8,7 +8,8 @@ IPC-2581 into itself.
 
 The walkthrough picks one of three bundled synthetic designs (one per reader), reads it into
 the IR, emits IPC-2581, and reads the emitted document straight back. The re-read stats match
-the input's, which is the semantic round-trip (geometry is not modeled yet; that is WS1-006).
+the input's, which is the semantic round-trip (geometry lives in a separate sidecar, WS1-006, and
+this round-trip covers the IR only).
 
 This is the narrated form of `agni emit <in> [out]`.
 
@@ -18,3 +19,10 @@ make demo       # TUI styled boxes
 make runquiet   # non-interactive defaults (CI-safe)
 make doc        # render the walkthrough to markdown
 ```
+
+## How it is built
+
+The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's `FromMarkdown`.
+`main.go` binds the `pick`, `to-ir`, `pick-format` and `emit` steps (`common.ReadFixture`,
+`ipc2581.Write`, and a re-read of the emitted document) and wires the renderer. See
+[`../CONVENTIONS.md`](../CONVENTIONS.md) for the shared layout.

@@ -25,10 +25,10 @@ rules:
     exempt: ["^\\+", "^GND"]
 ```
 
-- **`allow`**: a name is fine if it matches any of these patterns.
-- **`exempt`**: names matching any of these are never checked (here,
+- **`allow`** passes a name that matches any of these patterns.
+- **`exempt`** skips any name matching one of these patterns (here,
   {{ explainable "rail" "rails" }} starting with `+`, and `GND`).
-- **`name`** (top level): the namespace. The rule above appears in the catalog as
+- **`name`** (top level) is the namespace, so the rule above appears in the catalog as
   `example/signal-net-naming`.
 
 ## Run it
@@ -62,25 +62,25 @@ By default a pattern matches the **leaf** of a qualified name. A hierarchical ne
 `/amp2/CTRL` is matched on `CTRL`, so one convention works across every sheet without
 encoding the hierarchy into the pattern.
 
-## On a server: a default, and how a request replaces it
+## A server default, and how a request replaces it
 
 `agni serve --conventions house.yaml` makes that config the deployment's default. Its rules join the
 catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary, so
 everyone asking that server questions gets the house answer without doing anything.
 
 A request may carry its own convention instead, and when it does it **replaces** the server's for
-that request. Both halves go together: the request's rules replace the server's rules, and its
+that request. Both halves go together, so the request's rules replace the server's rules and its
 lexicon replaces the server's vocabulary. Nothing of the deployment's convention survives into a
 request that named its own.
 
-Two consequences worth knowing.
+That has two consequences.
 
 **Reusing the server's name is fine, and is the natural way to refine it.** A config named `house`
 sent to a server whose default is also named `house` simply replaces it. (Before this was settled,
 that combination failed outright with a duplicate-source error.)
 
 **Replacing is not the same as adding.** If your project wants the house rules *plus* its own, the
-config it sends has to contain both. That is deliberate: a request asking "what does this board look
+config it sends has to contain both. That is deliberate, because a request asking "what does this board look
 like under MY vocabulary" should get exactly that, and a caller who could not turn the deployment's
 rules off could not ask the question. It does mean that a finding which disappeared after switching
 conventions may have disappeared because the rule stopped running, not because the design improved.
@@ -95,16 +95,15 @@ the open design, and picking one applies it to everything that runs rules from t
 panel, the report, and a review run.
 
 The bar always says which vocabulary the answers on screen were computed under, and looks different
-while a request convention is in effect. That is deliberate, and it is the same caution as above: a
-finding that vanished when you switched conventions may have vanished because the rule stopped
-running. The bar is what lets you tell the two apart.
+while a request convention is in effect, so you can tell a finding the design fixed from one whose
+rule stopped running (the same caution as above).
 
 Switching discards the findings already on screen rather than keeping them, since they were computed
 by asking a different question.
 
 ## Teach it your vocabulary
 
-The `rules` block above checks names against your policy. The `lexicon` block is the other half: it
+The `rules` block above checks names against your policy. The `lexicon` block is the other half and
 tells the engine what a name *means*, so the built-in rules reason about your board in your words.
 
 A net can carry several roles at once, and six of them are configurable:
@@ -168,7 +167,7 @@ lexicon:
 
 A prefix is the leading run of letters of a ref-des, so `TH` matches `TH12` and a part whose
 library symbol declares `TH?`. Prefixes are matched case-insensitively and are ADDED to the built-in
-table, and a prefix you list wins over a built-in one: a house that writes `F` for its ferrites
+table, and a prefix you list wins over a built-in one, so a house that writes `F` for its ferrites
 re-points `F` away from fuse. `replace: true` applies to `patterns` only and leaves prefixes alone.
 
 The family tag follows the class, so a `TH12` answers both `component.class(TH12, "thermistor")`
@@ -181,12 +180,12 @@ Three things fail at load rather than reading as a convention that matched nothi
 - one prefix listed under two classes.
 
 The class must be one the engine already has. A project cannot yet declare a class of its own, such
-as a house `esd_array` refining `diode`: that opens a vocabulary the engine keeps closed, and
+as a house `esd_array` refining `diode`, because that opens a vocabulary the engine keeps closed, and
 DECISIONS.md records what would change that. The class names are the ones `component.class`
 answers with, listed in the [relation catalog](../../reference/relations/).
 
 ## Where to go next
 
-- [Checks and reports](../checks-and-reports/): conventions findings read like any other,
-  and `--fail-on` can gate on them.
-- [CLI reference](../cli-reference/): the `--conventions` flag.
+- [Checks and reports](../checks-and-reports/) shows that conventions findings read like any
+  other, and that `--fail-on` can gate on them.
+- [CLI reference](../cli-reference/) documents the `--conventions` flag.

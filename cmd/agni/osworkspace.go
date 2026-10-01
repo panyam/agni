@@ -10,9 +10,8 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// osWorkspace is the OS-backed service.Workspace adapter: it resolves a (mount, relpath) to an
-// absolute host path under the mount root (safeResolve containment) and lists it with os.ReadDir.
-// All filesystem access stays at the cmd edge (CONSTRAINTS C1/C13); the service package is os-free.
+// osWorkspace is the OS-backed service.Workspace. It resolves a URI to a host path with
+// mounts.Resolve, which keeps it inside the mount root, and lists it with os.ReadDir.
 type osWorkspace struct {
 	mounts []mounts.Mount
 }
@@ -26,9 +25,9 @@ func (w *osWorkspace) Mounts() []service.MountInfo {
 	return out
 }
 
-// ListDir resolves the mount + relative path and reads one directory level. An unknown mount or a
-// missing directory returns a plain error (the service maps it to NotFound); a path escaping the
-// mount is wrapped with service.ErrInvalidPath (mapped to InvalidArgument).
+// ListDir resolves the URI and reads one directory level. The service maps an error wrapping
+// service.ErrInvalidPath to InvalidArgument and any other, including an unknown mount or a missing
+// directory, to NotFound.
 func (w *osWorkspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
 	abs, err := mounts.Resolve(w.mounts, uri)
 	if err != nil {

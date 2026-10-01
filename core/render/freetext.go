@@ -8,27 +8,24 @@ import (
 )
 
 // freeTextFit returns the font-size shrink factor (0 < f <= 1) for the multi-line free-text
-// columns of a documentation page (an OrCAD table-of-contents sheet: several fixed-origin columns
-// of stacked text inside a sized worksheet). One factor is computed for the whole page — the
-// minimum any column needs so its widest line fits the horizontal gap to the next column (or the
-// frame margin) and its stack clears the corner title block — and applied uniformly, so the
-// columns stay one size the way the source draws them rather than each shrinking independently.
-// Shrinking the font also shortens the line stack, so the fix holds in every renderer including
-// rsvg PNG exports (unlike textLength condensing, which only the browser honors) — WS7-038.
+// columns of a documentation page, such as an OrCAD table-of-contents sheet with several
+// fixed-origin columns of stacked text inside a sized worksheet. One factor covers the whole page,
+// the minimum any column needs for its widest line to fit the gap to the next column (or the frame
+// margin) and its stack to clear the title block, so the columns stay one size as the source draws
+// them. Shrinking the font also shortens the stack, so the fit holds in rsvg PNG exports too, which
+// ignore textLength condensing (WS7-038).
 //
-// The fit applies ONLY to a documentation page (no component placements). A schematic sheet carries
-// stand-alone multi-line annotation notes that are not document columns, and squeezing one against
-// its neighbor or the frame margin shrinks legible text to an unreadable blob; the placement gate
-// keeps the fit off every schematic sheet (WS7-041 — verified over the 82-sheet industrial
-// design: the fit engaged on 18 schematic notes, some down to 0.3x, and only the TOC benefits).
+// The fit applies ONLY to a documentation page (no component placements). A schematic sheet's
+// multi-line annotation notes are not document columns, and squeezing them shrinks legible text to a
+// blob (WS7-041; on an 82-sheet design the fit engaged on 18 schematic notes, some down to 0.3x, and
+// only the TOC benefits).
 //
-// The result maps each multi-line free-text label to that shared factor; it is nil when nothing
-// overflows (every column fits), for single-line text, on a schematic sheet, or on a sheet with no
-// page. Both backends key on the same sheet.Labels pointers, so the SVG renderer and the WebGL
-// overlay apply the identical factor and stay in step.
+// The result maps each multi-line free-text label to the shared factor. It is nil when every column
+// fits, for single-line text, on a schematic sheet, or on a sheet with no page. The SVG renderer and
+// the WebGL overlay key on the same sheet.Labels pointers, so both apply the identical factor.
 func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom.Label]float64 {
 	if len(sheet.GetPlacements()) > 0 {
-		return nil // a schematic sheet: its multi-line text is annotation notes, not doc columns
+		return nil // a schematic sheet, whose multi-line text is annotation notes
 	}
 	if sheet.GetSuppressWorksheet() {
 		return nil // a source with its own frame/title block (xschem/gEDA); no synthesized layout
@@ -78,15 +75,12 @@ func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom
 		})
 	}
 
-	// Title-block clearance references: its top edge and left edge in world coordinates. A column
-	// whose text reaches into the title-block x-range and drops below its top edge must be shortened.
+	// Title-block left and top edges in world coordinates. A column whose text reaches into the
+	// title-block x-range and drops below its top edge must shrink.
 	tbx, tby, _, tbh := titleBlockBox(fl, titleBlockGrid(g, sheet))
 	tbTop := tby + tbh
 
-	// The source draws every column in one font, so the fix is one shrink factor applied
-	// uniformly to all multi-line free text: the minimum any column needs, so the widest/tallest
-	// column fits and the columns stay the same size (as the native output draws them), rather
-	// than each column shrinking independently to a different size.
+	// One uniform factor for all multi-line free text, the minimum any column needs.
 	global := 1.0
 	var multiline []*geom.Label
 	for i, a := range cols {

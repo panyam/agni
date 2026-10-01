@@ -12,7 +12,7 @@ import (
 // This package holds no query language (C29), so its own tests have to supply one. The adapter below
 // is stdlib/reviewquery's, written out here because that package imports THIS one and an in-package
 // test cannot import it back. Importing core/query from a test is the same posture stdlib/relations
-// takes: the production dependency is zero (go list -deps proves it), and the test still exercises
+// takes. The production dependency is zero (go list -deps proves it), and the test still exercises
 // the real engine rather than a stub that could agree with a broken contract.
 type datalogCompiler struct{}
 
@@ -33,10 +33,11 @@ func (datalogCompiler) CompileQuery(req QueryRequest) (*check.Rule, error) {
 
 func init() { RegisterQueryCompiler(datalogCompiler{}) }
 
-// TestNoQueryCompilerIsAnError pins the half of the silent-pass trap this seam introduces. A binary
-// that composes no query engine still loads a manifest, and an inline query it cannot compile must
-// not resolve to zero rules: runItem reads that as an item nothing checked, so a house rule would
-// report as unverified when it was never parsed. The error names the omission instead.
+// TestNoQueryCompilerIsAnError pins the half of the silent-pass trap this registration hook
+// introduces. A binary that composes no query engine still loads a manifest, and an inline query it
+// cannot compile must not resolve to zero rules, because runItem reads that as an item nothing
+// checked, so a house rule would report as unverified when it was never parsed. The error names the
+// omission instead.
 func TestNoQueryCompilerIsAnError(t *testing.T) {
 	compilerMu.Lock()
 	orig := compiler

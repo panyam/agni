@@ -12,8 +12,8 @@ The file is `conventions.yaml`, and it carries two halves that are wired very di
 ## The problem
 
 This project already carries the file this rung is about, so to see the problem it solves you have to
-move it out of the way first. The seeded parameter corpus moves aside with it, for a reason worth
-knowing up front: a datasheet that types a pin as a supply establishes the rail on its own, so with
+move it out of the way first. The seeded parameter corpus moves aside with it, because a
+datasheet that types a pin as a supply establishes the rail on its own, so with
 the corpus in place these rails classify whether or not the naming vocabulary reaches them. That is
 the later rungs' subject. This one is about names, so both are out of the way. Ask the board which of
 its nets are power rails:
@@ -27,7 +27,7 @@ That is not a bug. The built-in rail vocabulary is anchored on the names most bo
 `VDD`, `+3V3`, and so on. This project names rails function-first, subsystem before voltage, so none
 of them start the way the vocabulary expects.
 
-The consequence is quiet and it is the important part. A rule that finds its rails BY NAME simply sees
+The consequence is quiet. A rule that finds its rails BY NAME simply sees
 fewer of them. It does not warn you. It does not fail. A rail with no test point is not reported,
 because as far as that rule is concerned the net is not a rail.
 
@@ -52,8 +52,8 @@ rules:
 ```
 
 **`lexicon`** teaches the engine which of your names mean what. It is applied when the design is
-read, before any rule runs, so it changes the input every rule sees. This is the half that matters
-most and the half people skip.
+read, before any rule runs, so it changes the input every rule sees. It is also the half
+people skip.
 
 It is grouped by what is being named, because that is what decides whether a pattern is right.
 `net` holds `rail`, `ground` and `feedback`, matched against NET names. `pin` holds `supply`,
@@ -91,9 +91,8 @@ invisible to it became a rail, and that rail has no {{ explainable "test-point" 
 [info] test-point-coverage: PMIC_MAIN_12V0 (rail carries no test point; bring-up and factory test cannot probe it)
 ```
 
-That second change is the lexicon half doing its job. It is worth sitting with, because it is the
-shape of the whole tier system: supplying a tier does not just add its own findings, it can change
-what the rules you already had are able to see.
+That second change is the lexicon half doing its job, and every tier works the same way. Supplying
+a tier adds its own findings, and it can also change what the rules you already had are able to see.
 
 ## Reading the lexicon directly
 
@@ -112,17 +111,17 @@ rules.
 
 ## Writing your own
 
-Start with the lexicon, not the rules. Run `agni query <design> 'rail(?n) => ?n' --conventions
+Start with the lexicon, not the rules. Run `agni query <design> 'net.rail(?n) => ?n' --conventions
 <your file>` on a real board and compare the list against the rails you know it has. Whatever is
 missing tells you the pattern you need. Repeat until the list is right, and only then write naming
 rules.
 
 A rule's `allow` is a list of patterns, and a net name passes if it matches any of them. Getting
-this backwards is easy: `allow` describes what is legal, so a name matching none of them is the
-finding.
+this backwards is easy, because `allow` describes what is legal and the finding is a name matching
+none of them.
 
 Distinct name spaces need distinct lexicon entries. Rail net names and supply *pin* names are
-usually named differently, so `rail:` and `supply_pin:` are separate dimensions rather than one
+usually named differently, so `net.rail` and `pin.supply` are separate dimensions rather than one
 shared pattern list.
 
 ## Next

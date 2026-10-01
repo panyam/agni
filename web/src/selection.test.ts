@@ -73,22 +73,22 @@ describe("pickAt", () => {
 
 describe("filling a served preset", () => {
   // The templates live on the server, beside the relations they name, so what is tested here is the
-  // substitution: the client's half of the job.
+  // substitution, the client's half of the job.
   it("substitutes a pin's ref and designator", () => {
     const q = fillEntityQuery(`pin.net("{ref}", "{pin}", ?net) => ?net`, { kind: "pin", ref: "U7", pin: "12" });
     expect(q).toBe(`pin.net("U7", "12", ?net) => ?net`);
   });
 
   it("substitutes every occurrence, not just the first", () => {
-    const q = fillEntityQuery(`component-on-net(?r, "{net}"), pin.net(?r, ?p, "{net}") => ?r, ?p`, { kind: "net", net: "SDA" });
-    expect(q).toBe(`component-on-net(?r, "SDA"), pin.net(?r, ?p, "SDA") => ?r, ?p`);
+    const q = fillEntityQuery(`component.net(?r, "{net}"), pin.net(?r, ?p, "{net}") => ?r, ?p`, { kind: "net", net: "SDA" });
+    expect(q).toBe(`component.net(?r, "SDA"), pin.net(?r, ?p, "SDA") => ?r, ?p`);
   });
 
   // The grammar has no escape sequence, so a quote in a designator cannot be represented. Splicing
   // one in would end the string literal early and produce a query that means something else.
   it("strips a quote rather than splicing it into a string literal", () => {
-    const q = fillEntityQuery(`component-on-net("{ref}", ?n) => ?n`, { kind: "component", ref: `R"1` });
-    expect(q).toBe(`component-on-net("R1", ?n) => ?n`);
+    const q = fillEntityQuery(`component.net("{ref}", ?n) => ?n`, { kind: "component", ref: `R"1` });
+    expect(q).toBe(`component.net("R1", ?n) => ?n`);
   });
 
   it("leaves a placeholder the selection cannot fill as an empty literal", () => {
@@ -105,21 +105,21 @@ describe("labelFor", () => {
 });
 
 // A result cell is the second way a reader names an entity, and it has to produce the same value a
-// click on the drawing does — otherwise the walk needs its own copy of everything downstream.
+// click on the drawing does, or else the walk needs its own copy of everything downstream.
 describe("reading a result cell", () => {
   it("reads the kinds the server types a column with", () => {
     expect(selectionFromCell("component", "R1")).toEqual({ kind: "component", ref: "R1" });
     expect(selectionFromCell("net", "SDA")).toEqual({ kind: "net", net: "SDA" });
   });
 
-  // A search can return a bus (entity() enumerates them), and a bus with nothing drawn is exactly
+  // A search can return a bus (entity() enumerates them), and a bus with nothing drawn is
   // the sort of thing a reviewer hunts by name. Its subject is its label, the same key a drawn bus
   // element carries, so the walk continues from a search hit the way it does from a click.
   it("walks from a bus cell, using the label as the identity", () => {
     expect(selectionFromCell("bus", "DATA[7:0]")).toEqual({ kind: "bus", busId: "DATA[7:0]" });
   });
 
-  // A pin needs both halves, so the cell alone is not enough: the row supplies the component.
+  // A pin needs both halves, so the cell alone is not enough, and the row supplies the component.
   it("reads a pin from its cell and its row's ref", () => {
     expect(selectionFromCell("pin", "12", "U7")).toEqual({ kind: "pin", ref: "U7", pin: "12" });
   });
@@ -155,7 +155,7 @@ describe("wording the next question", () => {
 });
 
 // sameSelection is how a surface marks the pick it is currently showing, so what it has to get
-// right is the two ROUTES to one entity agreeing: the canvas knows a net by name and id, a result
+// right is the two ROUTES to one entity agreeing. The canvas knows a net by name and id, a result
 // cell only by name.
 describe("sameSelection", () => {
   it("matches a canvas net against the same net named by a result cell", () => {

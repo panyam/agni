@@ -37,10 +37,10 @@ func TestReviewCmd(t *testing.T) {
 	}
 }
 
-// TestReviewCmdBoardPath: --board-path attaches a SEPARATE board-geometry file to the netlist review,
-// so the board-tier DRC item that reads not-applicable without it (WS3-008 rules gated by
-// check.Available) flips to a genuine pass/fail (WS3-089). The fires board routes a sub-floor trace so
-// track-width fails; the passes board is clean so the same item passes.
+// TestReviewCmdBoardPath checks that --board-path attaches a SEPARATE board-geometry file to the
+// netlist review, so the board-tier DRC item that reads not-applicable without it (WS3-008 rules
+// gated by check.Available) flips to a genuine pass/fail (WS3-089). The fires board routes a
+// sub-floor trace so track-width fails; the passes board is clean so the same item passes.
 func TestReviewCmdBoardPath(t *testing.T) {
 	run := func(board string) string {
 		cmd := reviewCmd()
@@ -61,9 +61,9 @@ func TestReviewCmdBoardPath(t *testing.T) {
 	}
 }
 
-// TestReviewCmdBoardPathNonBoard: --board-path at a file whose format carries no board geometry (a
-// netlist) is a loud error, never a silent no-op — an explicit board request that reads nothing would
-// otherwise report the board items as clean without ever checking them.
+// TestReviewCmdBoardPathNonBoard checks that --board-path at a file whose format carries no board
+// geometry (a netlist) is a loud error, never a silent no-op. An explicit board request that reads
+// nothing would otherwise report the board items as clean without ever checking them.
 func TestReviewCmdBoardPathNonBoard(t *testing.T) {
 	cmd := reviewCmd()
 	cmd.SetOut(&bytes.Buffer{})
@@ -74,10 +74,11 @@ func TestReviewCmdBoardPathNonBoard(t *testing.T) {
 	}
 }
 
-// TestReviewCmdMultiDesign: several designs produce a project rollup — a manifest-level automation
-// header (stated ONCE, not summed across designs), a per-design outcome summary, and a per-item x
-// design traceability matrix. The same item reads its own outcome per design (202 fails on the broken
-// design, passes on the other) and a not-automated item stays not-automated in every column.
+// TestReviewCmdMultiDesign checks that several designs produce a project rollup of a manifest-level
+// automation header (stated ONCE, not summed across designs), a per-design outcome summary, and a
+// per-item x design traceability matrix. The same item reads its own outcome per design (202 fails
+// on the broken design, passes on the other) and a not-automated item stays not-automated in every
+// column.
 func TestReviewCmdMultiDesign(t *testing.T) {
 	cmd := reviewCmd()
 	var out bytes.Buffer
@@ -269,11 +270,12 @@ func runReview(t *testing.T, args ...string) string {
 	return out.String()
 }
 
-// TestReviewIntentContract is the end-to-end proof of the design-intent contract: an intent-bound item
-// reads not-automated with no --intent-path (the honest default — no declaration, nothing to check
-// against), flips to fail when the loaded design DEVIATES from a declaration (a missing module, an
-// absent rail, an incomplete subsystem, an unprotected rail), and passes when the design matches. It is the load-bearing
-// guard: the outcome is driven by the external declaration, not derived from the netlist.
+// TestReviewIntentContract is the end-to-end proof of the design-intent contract. An intent-bound
+// item reads needs-design-intent with no --intent-path (with no declaration there is nothing to
+// check against), flips to fail when the loaded design DEVIATES from a declaration (a missing
+// module, an absent rail, an incomplete subsystem, an unprotected rail), and passes when the design
+// matches. It guards that the outcome is driven by the external declaration, not derived from the
+// netlist.
 func TestReviewIntentContract(t *testing.T) {
 	checklist := "testdata/intent/checklist.yaml"
 	design := "testdata/intent/sample.edn"
@@ -336,7 +338,7 @@ func TestReviewIntentContract(t *testing.T) {
 //     The margin rule has no default policy, so it is not compiled and cannot pass against a number
 //     nobody declared.
 //   - With --params attached but no output current seeded, both read needs-data. An unseeded regulator
-//     must never read as big enough, which is the honest guard the ticket asks for.
+//     must never read as big enough, which is the guard the ticket asks for.
 func TestReviewRailBudgets(t *testing.T) {
 	checklist := "testdata/intent/rails-checklist.yaml"
 	design := "testdata/intent/rails.edn"
@@ -380,7 +382,7 @@ func TestReviewRailBudgets(t *testing.T) {
 		t.Errorf("no margin_factor must leave item 19 needs-design-intent, never pass\n%s", noFactor)
 	}
 
-	// The honest guard: a params tier is attached, but no part states an output current.
+	// The guard case, where a params tier is attached but no part states an output current.
 	unseeded := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml",
 		"--params", "testdata/intent/params-no-current", design)
 	for _, want := range []string{
@@ -423,15 +425,15 @@ func TestReviewPowerSequences(t *testing.T) {
 			t.Errorf("the finding should name the missing link (%q)\n%s", want, declared)
 		}
 	}
-	// The passing item must not carry the other sequence's rail: a merged verdict would put both
-	// domains under both items.
+	// The passing item must not carry the other sequence's rail, since a merged verdict would put
+	// both domains under both items.
 	if strings.Contains(declared, "sequence-soc-power-tree: MODEM_EN") {
 		t.Errorf("each item must report only its own sequence\n%s", declared)
 	}
 
-	// No sequences declared: covered, blocked on the declaration, never a pass. This is the honest
-	// reading for a board whose rail order lives in a PMIC or in firmware, which cannot declare a
-	// sequence at all.
+	// With no sequences declared the item is covered, blocked on the declaration, and never a pass.
+	// This is the correct reading for a board whose rail order lives in a PMIC or in firmware,
+	// which cannot declare a sequence at all.
 	none := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml", design)
 	for _, want := range []string{
 		"| 20 | SoC power sequence requirements | needs-design-intent |",
@@ -467,7 +469,7 @@ func TestReviewCmdRequiresChecklist(t *testing.T) {
 // it guards the edge the manifest read moved to (WS9-050). The CLI now reads the YAML itself and sends
 // the value, so a missing or malformed checklist has to fail HERE. The failure mode it prevents is
 // specific: an unreported read error would send a zero manifest, and a review with no items reports
-// nothing wrong, which reads exactly like a design that passed.
+// nothing wrong, which reads the same as a design that passed.
 func TestReviewCmdChecklistUnreadable(t *testing.T) {
 	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
 		cmd := reviewCmd()
@@ -498,7 +500,7 @@ func runConvReview(t *testing.T, conventions string) string {
 
 // TestReviewCmdConventionsRules covers the half that is merely invisible: a checklist item bound to a
 // convention rule. With no config the binding resolves to zero catalog rules, which the review reports
-// as not-automated — the same word it uses for a rule nobody has written, with no error to tell the
+// as not-automated, the same word it uses for a rule nobody has written, with no error to tell the
 // two apart. Loading the config compiles the rule and the item reaches a real verdict.
 func TestReviewCmdConventionsRules(t *testing.T) {
 	if want := "| 16 | nets named consistently | not-automated |"; !strings.Contains(runConvReview(t, ""), want) {
@@ -515,7 +517,7 @@ func TestReviewCmdConventionsRules(t *testing.T) {
 	}
 }
 
-// TestReviewCmdConventionsLexicon covers the damaging half: the vocabulary that changes what OTHER
+// TestReviewCmdConventionsLexicon covers the damaging half, the vocabulary that changes what OTHER
 // rules can see. This project names rails function-first (PMIC_VDD_LPM_1V8), which the start-anchored
 // built-in vocabulary matches nowhere, so without the config the item passes while checking nothing.
 func TestReviewCmdConventionsLexicon(t *testing.T) {
@@ -543,8 +545,8 @@ func TestReviewCmdConventionsReachesTheRead(t *testing.T) {
 	}
 }
 
-// TestReviewCmdConventionsUnreadable: a named config that cannot be read fails the run. Falling back
-// to the built-in vocabulary would report the design clean against conventions never applied.
+// TestReviewCmdConventionsUnreadable checks that an unreadable named config fails the run. Falling
+// back to the built-in vocabulary would report the design clean against conventions never applied.
 func TestReviewCmdConventionsUnreadable(t *testing.T) {
 	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
 		cmd := reviewCmd()
@@ -582,7 +584,7 @@ func runFullOverlayReview(t *testing.T, conventions string) string {
 // replacing it (WS3-107).
 //
 // Composing the per-request overlay used to rebuild the catalog from the standard sources, which keeps
-// the built-ins and every RegisterSource'd suite — true, and exactly what made the bug invisible — but
+// the built-ins and every RegisterSource'd suite (true, and why the bug was invisible) but
 // drops the catalog it was handed. For a review that catalog is the --profile-path and --intent-path
 // tiers, so adding one naming rule to a working config silently disabled interface profiles and design
 // intent for the whole run: 19 items pass -> needs-design-intent and 16 pass -> not-automated on one
@@ -604,8 +606,9 @@ func TestReviewOverlayTiersCoexist(t *testing.T) {
 			t.Errorf("a convention with rules dropped an overlay tier; missing %q\n---\n%s", want, got)
 		}
 	}
-	// Matched as a table CELL, not as a bare substring: the per-area tally lines name every outcome
-	// ("0 pass, 1 fail, 0 n/a, 0 not-automated"), so a substring test here would always fire.
+	// Matched as a table CELL, not as a bare substring, because the per-area tally lines name every
+	// outcome ("0 pass, 1 fail, 0 n/a, 0 not-automated"), so a substring test here would always
+	// fire.
 	for _, never := range []string{"| needs-design-intent |", "| not-automated |"} {
 		if strings.Contains(got, never) {
 			t.Errorf("an overlay tier went missing (%q in the report)\n---\n%s", never, got)
@@ -614,14 +617,15 @@ func TestReviewOverlayTiersCoexist(t *testing.T) {
 }
 
 // TestReviewProfileRequirementSelector (WS3-115) drives the requirement selector end to end: an
-// overlay profile authored in YAML, compiled by stdlib/profiles, resolved by core/review through the
-// CLI. It is the test that PINS the two packages together — review selects on the tag as a bare
-// string because core never imports stdlib, so nothing but a real run would catch the two drifting.
+// overlay profile authored in YAML, compiled by stdlib/profiles, resolved by core/review through
+// the CLI. It is the test that PINS the two packages together. core/review selects on the tag as a
+// bare string because core never imports stdlib, so nothing but a real run would catch the two
+// drifting.
 //
 // The fixture is the oracle. TESTBUS declares two requirements over the same two signals, and on this
-// design they disagree: both signal nets exist, so completeness is clean, while BUS_TBB has one
+// design they disagree. Both signal nets exist, so completeness is clean, while BUS_TBB has one
 // connection, so dangling fires. An item selecting completeness must therefore PASS on a design where
-// the profile as a whole fails, which is precisely what union semantics cannot express.
+// the profile as a whole fails, which union semantics cannot express.
 func TestReviewProfileRequirementSelector(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, body string) string {
@@ -683,7 +687,8 @@ areas:
 		// Selected: each answered by its own requirement, and they disagree.
 		"| m | both signals present | pass |",
 		"| d | signals wired through | fail |",
-		// A requirement the profile does not declare is not covered by anything: never a pass.
+		// A requirement the profile does not declare is not covered by anything, so it is never a
+		// pass.
 		"| x | bus terminated | not-automated |",
 		// The presence gate still runs ahead of resolution for a selected item.
 		"| g | absent bus | not-applicable |",
@@ -695,8 +700,8 @@ areas:
 }
 
 // TestReviewOverlayTiersCoexistWithoutAConvention is the control. The bug only triggered when the
-// convention carried RULES — a lexicon-only config composes no sources and took an early return that
-// was always correct — so without a convention at all, the same two items must already resolve. If
+// convention carried RULES (a lexicon-only config composes no sources and took an early return that
+// was always correct), so without a convention at all, the same two items must already resolve. If
 // this ever fails, the fixtures stopped exercising the tiers and the test above proves nothing.
 func TestReviewOverlayTiersCoexistWithoutAConvention(t *testing.T) {
 	got := runFullOverlayReview(t, "")
@@ -712,7 +717,7 @@ func TestReviewOverlayTiersCoexistWithoutAConvention(t *testing.T) {
 
 // TestReviewLoadSwitchSizing is the end-to-end proof for the load-switch sizing lower bound (WS3-085),
 // and it holds four outcomes over ONE design so that nothing about the netlist explains the difference
-// between them. The design is the conformance corpus's PASSING load-switch fixture: clean by
+// between them. The design is the conformance corpus's PASSING load-switch fixture, clean by
 // load-switch-trip-above-fet-rating, because its 1A limit sits well under the pass FET's 3A rating.
 //
 //   - No --intent-path: needs-design-intent. Nothing declares what the rail draws, so there is no
@@ -754,7 +759,8 @@ func TestReviewLoadSwitchSizing(t *testing.T) {
 		t.Errorf("a 0.5A budget against a 1A limit must pass\n%s", ok)
 	}
 
-	// The honest guard: the FET is seeded, the controller's threshold is not, so no switch resolves.
+	// The guard case. The FET is seeded and the controller's threshold is not, so no switch
+	// resolves.
 	unseeded := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/loadswitch-ok.yaml",
 		"--params", "testdata/intent/params-no-ocp", design)
 	if !strings.Contains(unseeded, "| 26 | load switch current limit sizing | needs-data |") {

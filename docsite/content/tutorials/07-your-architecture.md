@@ -4,7 +4,7 @@ description: "Declare what the board is supposed to be, and detect when it stops
 ---
 
 The three tiers so far describe your team. Naming, buses, and parts are the same across every board
-you build. This one is different: it describes one board, and it is the only tier that can catch a
+you build. This one describes one board, and it is the only tier that can catch a
 design drifting from what it was meant to be.
 
 The engine has no built-in opinion about your architecture. It cannot know that a rail was supposed
@@ -43,7 +43,7 @@ The declaration says the core domain runs at 3.3 V. The rail assigned to it is a
 structural is wrong with the board, and no rule from any other tier has anything to say. The only
 reason this is catchable is that somebody wrote down what was intended and the two disagree.
 
-The tier earns its place there. It finds divergence between the board and the description of the
+This tier finds divergence between the board and the description of the
 board rather than defects in the usual sense, and that divergence creeps in over
 months as a design is edited by people who did not write the original plan.
 
@@ -60,7 +60,7 @@ U2 are integrated circuits from their {{ explainable "reference-designator" "ref
 regulator" comes off the part's datasheet. Attach `--params` and the class resolves, and both
 findings disappear.
 
-Worth internalizing, because it generalizes: a module declaration written in terms of device class
+A module declaration written in terms of device class
 is only as good as the parameter tier underneath it. If you plan to declare modules by class, seed
 those parts first. Otherwise the intent tier reports absences that are really gaps in a different
 tier.
@@ -73,8 +73,8 @@ tier.
 ```
 
 `needs-design-intent`, not `pass`. A question about intent cannot be answered by a design that never
-stated its intent, and reporting that honestly is the difference between a checklist you can trust
-and one you cannot.
+stated its intent, and a checklist that reported `pass` here instead
+could not be trusted.
 
 ## All four tiers
 
@@ -88,11 +88,9 @@ make review
 **3 pass, 8 fail, 1 n/a, 2 not-automated, 1 provisional (of 15)**
 ```
 
-Which raises the question the next rungs answer: what is that checklist, and how should those
-numbers be read?
+The next rungs answer what that checklist is and how to read those numbers.
 
 ## Next
 
-Rung 8, writing your checklist, is being written. Until it lands, `examples/tutorial-project/review.yaml`
-is a worked example with all four binding kinds in it, and [Checks and reports](../../guide/checks-and-reports/)
-covers the underlying report.
+[Write your checklist](../08-write-your-checklist/), which binds the team's review questions to the
+engine so the mechanical ones answer themselves.

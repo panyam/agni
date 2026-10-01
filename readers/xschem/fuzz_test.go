@@ -31,7 +31,7 @@ func seedPairs(f *testing.F) {
 	}
 }
 
-// FuzzReadWithSymbols fuzzes the schematic and symbol parsers together: the opener serves
+// FuzzReadWithSymbols fuzzes the schematic and symbol parsers together, with the opener serving
 // the fuzzed symbol bytes for every reference. Any input must error or succeed, never
 // panic, and never yield a nil design without an error.
 func FuzzReadWithSymbols(f *testing.F) {

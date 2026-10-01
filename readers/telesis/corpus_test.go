@@ -17,7 +17,7 @@ const CorpusEnv = "AGNI_TELESIS_CORPUS"
 //
 // WHY THIS EXISTS AS A SEPARATE, SKIPPED TEST. Everything this reader knows about the format came
 // from reading real files, and the committed fixtures were then written from that same
-// understanding. Validating the parser only against those fixtures is circular: a misreading of the
+// understanding. Validating the parser only against those fixtures is circular. A misreading of the
 // grammar produces a fixture that encodes the misreading and a parser that agrees with it, and both
 // halves pass. Real files are the only thing that breaks the circle.
 //
@@ -26,7 +26,7 @@ const CorpusEnv = "AGNI_TELESIS_CORPUS"
 // CLAUDE.md). Hence the split: synthetic fixtures in testdata/ that CI runs, and this, which only
 // someone holding real exports can run.
 //
-// The assertions are deliberately STRUCTURAL rather than value-based. Nothing here names a net, a
+// The assertions are STRUCTURAL rather than value-based. Nothing here names a net, a
 // designator or a part, so a failure message cannot leak design content into a terminal, a log or a
 // CI artifact. What it checks is that the reader's model of the format survives contact with files
 // it was not written against: sections resolve, the two property scopes separate, directions
@@ -120,13 +120,13 @@ func TestCorpus(t *testing.T) {
 			if pct := typed * 100 / total; pct < 80 {
 				t.Errorf("only %d%% of %d pins have a direction, want >=80%%", pct, total)
 			}
-			// An unmapped Pin Type is not a failure, it is news: it means this export uses a value
+			// An unmapped Pin Type is not a failure, it is news. It means this export uses a value
 			// the mapping has never seen, and the vocabulary needs widening.
 			if unknown > 0 {
 				t.Logf("%d pins carry a Pin Type this reader does not map; the vocabulary needs widening", unknown)
 			}
 
-			// Not a failure: a section this reader does not consume does not make what it DID
+			// Not a failure, because a section this reader does not consume does not make what it DID
 			// read wrong. But it is the first thing anyone running this against a new exporter
 			// needs to know, and on the exports this reader was built against it stays empty.
 			if u := d.GetAttributes()[UnparsedSectionsAttr]; u != "" {

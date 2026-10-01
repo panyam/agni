@@ -28,21 +28,17 @@ var unconnectedComponent = &check.Rule{
 
 // unconnectedComponentVerdicts decides every component in the design and returns one verdict each.
 //
-// THE EMPTY REF-DES GUARD BECOMES NotConsidered, not a skip. A part carrying no designator has no
-// identity: there is nothing to key connectivity on and nothing to name in a report, so the rule
-// genuinely cannot judge it. Dropping it silently, which is what the old `c.RefDes != ""` filter did,
-// reported the same nothing as a part the rule cleared. Under an addressable model that is worse than
-// unhelpful, because the subject answers 404 as though it did not exist. Saying so costs one verdict
-// and is the distinction the considered set exists to carry.
+// A part with an empty ref-des is NotConsidered rather than skipped, since it has no identity to key
+// connectivity on or to name in a report, and a dropped subject answers 404 as though it did not
+// exist (#395).
 //
-// The pass witness counts the nets the part's pins land on, derived from the SAME net walk that
-// backs Model.IsConnected, so the evidence cannot disagree with the outcome it justifies. Counting
-// pins instead would introduce exactly that risk: a design read with no symbol library has no pin
-// records, so a connected part would witness "0 pins" beside a Pass.
+// The pass witness counts the nets the part's pins land on, from the SAME net walk that backs
+// Model.IsConnected, so the evidence cannot disagree with the outcome. Do not count pins instead,
+// because a design read with no symbol library has no pin records and a connected part would witness
+// "0 pins" beside a Pass.
 //
-// The nets themselves are deliberately NOT carried as Context. On a large part that is dozens of
-// entries, and a viewer renders each as a chip, so the proof would be less readable than the count
-// it replaces. Nothing is hidden by the choice: the count moves the moment connectivity does.
+// The nets are NOT carried as Context. A large part has dozens, and the viewer renders each as a
+// chip, so the list would read worse than the count.
 func unconnectedComponentVerdicts(m check.Model) []check.Verdict {
 	netsOn := map[string]int{}
 	for _, n := range m.Nets() {

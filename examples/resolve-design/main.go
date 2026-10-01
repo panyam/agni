@@ -1,7 +1,8 @@
-// Command resolve-design is the walkthrough of the engine's design descriptors: point at a file,
-// learn which design it belongs to, and read the design's declared entry rather than whatever file
-// happened to be named. The narration lives in the sidecar walkthrough.md (loaded via demokit's
-// FromMarkdown), so this file only binds the steps that run engine code and wires the renderer.
+// Command resolve-design is the walkthrough of the engine's design descriptors. It points at a
+// file, learns which design it belongs to, and reads the design's declared entry rather than
+// whatever file happened to be named. The narration lives in the sidecar walkthrough.md (loaded via
+// demokit's FromMarkdown), so this file only binds the steps that run engine code and wires the
+// renderer.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
@@ -27,8 +28,8 @@ import (
 var walkthroughMD []byte
 
 // fixtureRoot is the bundled project the walkthrough resolves against. A store's tree is rooted at
-// one filesystem, which on a server is a mount; here it is this folder. Everything the example names
-// is relative to it, never a host path.
+// one filesystem, which on a server is a mount and here is this folder. Everything the example
+// names is relative to it, never a host path.
 const fixtureRoot = "../common/designs/demo-project"
 
 // mount is the name this one tree is addressed by. An artifact URI always carries an authority, so
@@ -36,8 +37,8 @@ const fixtureRoot = "../common/designs/demo-project"
 const mount = "fixtures"
 
 func main() {
-	// The ref the walkthrough resolves. It defaults to the BOARD rather than the netlist on purpose:
-	// the board is the file whose resolution is interesting, because it is a declared companion.
+	// The ref the walkthrough resolves. It defaults to the BOARD rather than the netlist, because
+	// the board is a declared companion and so resolves to a different file than the one named.
 	ref := common.AskPath("ref", "designs/mixer/mixer.kicad_pcb")
 
 	demo := demokit.New("resolve-design").
@@ -45,8 +46,7 @@ func main() {
 		FromMarkdownBytes(walkthroughMD)
 
 	// The same ProjectService a server hosts, over the same filesystem-backed store, differing only
-	// in which tree it was pointed at. That is the whole shape: clients pick a store, everyone asks
-	// the service.
+	// in which tree it was pointed at. Clients pick a store and everyone asks the service.
 	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: mount, FS: os.DirFS(fixtureRoot)}))
 	ctx := context.Background()
 
@@ -103,11 +103,10 @@ func main() {
 		if resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: named}); err == nil && resp.GetDesign() != nil {
 			entry = resp.GetDesign().GetEntryUri()
 		}
-		// Reading BOTH is what makes the point visible. On this small fixture the two answers happen
-		// to match; neither of them says which file it came from, which is exactly why a divergence
-		// on a real export would be invisible.
-		// Both sides are addressed the same way, so the comparison is of what was READ rather than of
-		// how it was spelled. Turning a URI back into a path happens once, here, at the file edge.
+		// Read BOTH. On this small fixture the two answers happen to match, and neither says which
+		// file it came from, so a divergence on a real export would be invisible. Both sides are
+		// addressed the same way, so the comparison is of what was READ rather than how it was
+		// spelled. Turning a URI back into a path happens once, here, at the file edge.
 		for _, r := range []struct{ label, uri string }{{"as named", named}, {"the design's entry", entry}} {
 			u, err := artifact.Parse(r.uri)
 			if err != nil {

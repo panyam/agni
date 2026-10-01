@@ -34,8 +34,8 @@ const docCommandCount = 42
 // flag while leaving the pages that USE it. Four tutorial commands stopped working and the ladder
 // still read as though they did (agni issue 471).
 //
-// This checks that a command PARSES, not that it runs, and the difference is the whole reason it can
-// exist at all. Several of these commands cannot be executed by a test: `agni serve` blocks until
+// This checks that a command PARSES, not that it runs, and that difference is what lets it exist at
+// all. Several of these commands cannot be executed by a test: `agni serve` blocks until
 // interrupted, some name a board the reader has rather than a fixture in this repo, and one is on the
 // page precisely to show a mistake. Parsing needs no fixture, no server, and no terminating process,
 // and every one of the four regressions was an unknown subcommand or an unknown flag.
@@ -92,7 +92,7 @@ type docCommand struct {
 // `agni version` prints a first line that begins with the word agni. Two rules settle it. A fence
 // containing any `$ `-prefixed line is a transcript, so only the prompted lines are commands. And a
 // line indented under a line that did not end in a backslash is output, which disqualifies the whole
-// fence: that is exactly the shape of `agni v0.1.1` followed by its indented build detail.
+// fence. `agni v0.1.1` followed by its indented build detail has that shape.
 func docCommands(t *testing.T) []docCommand {
 	t.Helper()
 	var out []docCommand
@@ -185,7 +185,7 @@ func shellCommands(fence string) []string {
 			continue
 		}
 		if l[0] == ' ' || l[0] == '\t' {
-			return nil // indented with no continuation to belong to: this fence is output
+			return nil // indented with no continuation to belong to, so this fence is output
 		}
 		s := strings.TrimSpace(l)
 		wasPrompted := false
@@ -240,7 +240,7 @@ func shellSplit(line string) []string {
 			flush()
 		case (r == '#' || r == '>' || r == '|') && !started:
 			flush()
-			return args // a comment or a redirect: the command ends here
+			return args // a comment or a redirect ends the command here
 		default:
 			cur.WriteRune(r)
 			started = true

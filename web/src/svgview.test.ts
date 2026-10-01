@@ -12,7 +12,7 @@ describe("computeReveal (WS9-006)", () => {
 
   it("zooms so the target fills a fraction of the view, limited by the tighter axis", () => {
     const v = computeReveal({ x: 0, y: 0, w: 100, h: 50 }, 1000, 250);
-    // Width would allow 1000/(100*2.5)=4, height allows 250/(50*2.5)=2 — height wins.
+    // Width would allow 1000/(100*2.5)=4, height allows 250/(50*2.5)=2, so height wins.
     expect(v.scale).toBeCloseTo(2);
   });
 
@@ -47,7 +47,7 @@ describe("setOverlays (WS9-007)", () => {
 });
 
 // A pane that changes size after the drawing was framed used to leave the drawing framed for the
-// old one: the WebGL canvas has always observed its element, this view never did. A boot layout
+// old one. The WebGL canvas has always observed its element, and this view never did. A boot layout
 // that sizes the columns after the first render made that visible on every load, but dragging a
 // splitter or opening a panel did the same thing.
 describe("refit on resize", () => {

@@ -2,25 +2,22 @@ package classify
 
 import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
-// Lexicon is the naming vocabulary one READ is performed with: the role vocabulary (rail / ground /
-// feedback / supply-pin names) and the classification vocabulary (device-class token hints). It is a
-// VALUE carried by the loader, not a process global, so two designs read in one process can be
-// stamped with different project conventions (WS3-106) — the property a served request needs and a
-// package-level var cannot provide.
+// Lexicon is the naming vocabulary one READ is performed with: the role vocabulary (rail, ground,
+// feedback, switching, control, gate-drive and supply-pin names), the classification vocabulary
+// (device-class token hints) and the value vocabulary. It is a VALUE carried by the loader, not a
+// process global, so two designs read in one process can be stamped with different project
+// conventions (WS3-106).
 //
-// It belongs to the read rather than to the rule catalog because that is where it does its work: the
-// stamps below turn a vocabulary into DATA (ir.Net.roles, ir.Component.device_classes, POWER_IN pin
-// directions), after which rules read the data and the vocabulary is spent (WS3-072's left-shift).
-// Resolving names per rule instead would undo that.
+// The stamps below turn a vocabulary into DATA (ir.Net.roles, ir.Component.device_classes, POWER_IN
+// pin directions), after which rules read the data and the vocabulary is spent (WS3-072's
+// left-shift). The package-level Stamp, StampNetRoles, StampValues and StampPowerInPins are the
+// process-level forms of the methods here, reading the globals through ActiveLexicon.
 //
-// A nil *Lexicon means the process defaults, so every existing caller and any embedder that never
-// declares a convention is unchanged.
+// A nil *Lexicon means the process defaults.
 type Lexicon struct {
 	Role  *RoleVocab
 	Class *ClassVocab
-	// Value carries the bare-number unit conventions (WS3-118). A distinct name space from Role and
-	// Class, so a distinct vocabulary: what unit "100" means on a capacitor has nothing to do with
-	// what makes a net a rail.
+	// Value carries the bare-number unit conventions (WS3-118).
 	Value *ValueVocab
 }
 
@@ -30,16 +27,15 @@ func DefaultLexicon() *Lexicon {
 	return &Lexicon{Role: DefaultRoleVocab(), Class: DefaultClassVocab(), Value: DefaultValueVocab()}
 }
 
-// ActiveLexicon captures the process-level vocabularies as a value. It is the bridge for callers that
-// still install a convention globally (the CLI's --conventions today): the globals are read ONCE here,
-// at read time, instead of being consulted again by every downstream name match.
+// ActiveLexicon captures the process-level vocabularies as a value, for callers that install a
+// convention globally (`agni serve`, through naming.ApplyLexicon). The globals are read ONCE here, at
+// read time, rather than by every downstream name match.
 func ActiveLexicon() *Lexicon {
 	return &Lexicon{Role: activeRoleVocab, Class: activeClassVocab, Value: DefaultValueVocab()}
 }
 
-// role resolves the role vocabulary, falling back to the process default so a partially-filled or nil
-// Lexicon is usable rather than a panic. Config is operator input; a missing half means "unspecified",
-// which is the default, not an error.
+// role resolves the role vocabulary, falling back to the process default, so a nil or partially
+// filled Lexicon is usable. A missing half in operator config means the default, not an error.
 func (l *Lexicon) role() *RoleVocab {
 	if l == nil || l.Role == nil {
 		return activeRoleVocab
@@ -66,20 +62,20 @@ func (l *Lexicon) value() *ValueVocab {
 // ValueVocab returns the bare-number unit vocabulary in effect (the built-in default when unset).
 func (l *Lexicon) ValueVocab() *ValueVocab { return l.value() }
 
-// RoleVocab returns the role vocabulary in effect (the process default when unset), for the consumers
-// that must match a bare NAME after the read: the spec-language name FFIs and pin-role derivation,
-// which have no net to read a stamped role from.
+// RoleVocab returns the role vocabulary in effect (the process default when unset), for consumers
+// that must match a bare NAME after the read, such as the spec-language name FFIs and pin-role
+// derivation, which have no net to read a stamped role from.
 func (l *Lexicon) RoleVocab() *RoleVocab { return l.role() }
 
 // ClassVocab returns the classification vocabulary in effect (the process default when unset).
 func (l *Lexicon) ClassVocab() *ClassVocab { return l.class() }
 
 // Stamp runs the classification pass with this lexicon, filling each component's device_classes SET.
-// See the package-level Stamp for the pass's contract; this is the per-read form.
+// See the package-level Stamp for the pass's contract.
 //
-// It REPLACES the set rather than adding to it, which is what keeps a re-stamp after a re-read
-// idempotent. A datasheet tag any earlier StampClassesFromSpecs added is therefore dropped, so the
-// two passes run in that order and never the reverse.
+// It REPLACES the set, which keeps a re-stamp idempotent and also drops any datasheet tag an earlier
+// StampClassesFromSpecs added, so StampClassesFromSpecs must run after it. See
+// docsite/content/architecture/ingestion-and-ir.md#derived-fields-and-the-tiers-that-fill-them.
 func (l *Lexicon) Stamp(d *ir.Design) {
 	index := PartIndex(d)
 	for _, c := range d.GetComponents() {

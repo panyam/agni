@@ -24,7 +24,7 @@ describe("sheetTiles (WS9-025)", () => {
     const findings = [
       finding([{ id: "s1", name: "Root" }]),
       finding([{ id: "s1", name: "Root" }, { id: "s2", name: "Power" }]), // a spanning net counts on both
-      finding([]), // no geometry join (KiCad net pre-WS1-022): counts nowhere
+      finding([]), // no geometry join, so it counts nowhere
     ];
     expect(sheetTiles([root, power, clean], findings)).toEqual([
       { id: "s1", name: "Root", count: 2, unresolved: 0 },
@@ -34,8 +34,8 @@ describe("sheetTiles (WS9-025)", () => {
   });
 
   it("special-cases a single-sheet design to the total findings count", () => {
-    // Badges are deliberately empty for one-sheet designs (WS9-024), but everything lives
-    // on that sheet — a badge-joined 0 would read as clean on a design with findings.
+    // Badges are empty for one-sheet designs (WS9-024), but everything lives
+    // on that sheet, so a badge-joined 0 would read as clean on a design with findings.
     const findings = [finding([]), finding([])];
     expect(sheetTiles([root], findings)).toEqual([{ id: "s1", name: "Root", count: 2, unresolved: 0 }]);
   });

@@ -1,14 +1,12 @@
 // Package report aggregates a check run into the shape a person reads: what was checked, what it
 // rests on, and what to do about the parts that failed.
 //
-// It lives in core/ rather than cmd/ deliberately. Issue 380 records what happened the last time a
-// check renderer landed in cmd/: the example module could not reach it, wrote its own, and the two
-// drifted. A report is a projection over the run, so it belongs where a second consumer can import
-// it, and it does no I/O of its own (CONSTRAINTS C1).
+// It lives in core/ rather than cmd/ so a second consumer can import it (agni issue 380), and it does
+// no I/O of its own (CONSTRAINTS C1).
 //
-// The aggregation here is the judgment; the HTML in html.go is a rendering of it. That split is what
-// keeps the layout free to change without re-deciding what a reader should see first, and it is what
-// would make a caller-supplied template cheap later without freezing a template context now.
+// The aggregation here decides what a reader sees first; html.go only renders it, so the layout can
+// change without re-deciding that. The page itself is described in
+// docsite/content/guide/checks-and-reports.md#the-html-report.
 package report
 
 import (
@@ -22,9 +20,9 @@ import (
 
 // Report is one check run, aggregated.
 //
-// Generated and Design are supplied by the caller rather than read here, because this package does no
-// I/O and does not read the clock: a report built twice from the same run must be identical, which is
-// what lets a committed report be diffed across board revisions.
+// Generated and Design are supplied by the caller because this package does no I/O and does not read
+// the clock, so a report built twice from the same run is identical and a committed one diffs cleanly
+// across board revisions.
 type Report struct {
 	Design      string // the design this run read, as the caller names it
 	Generated   string // caller-supplied timestamp; empty is fine
@@ -32,12 +30,8 @@ type Report struct {
 	URLBase     string // e.g. "http://localhost:8080"; empty means emit no links at all
 	MountPath   string // e.g. "demo/board.kicad_sch"; empty means emit no links at all
 	// LinksWithheld is why this run promised no links, when it was asked for them and refused.
-	// Empty when links were emitted, and empty when none were asked for.
-	//
-	// The refusal was always said out loud on stderr, which is the wrong place for it: a report is
-	// read long after the terminal that produced it is gone, and its reader is exactly the person
-	// wondering why the subjects are plain text (issue 626). The reason travels with the artifact
-	// so the artifact can explain its own limits, the way a findings-only rule already does.
+	// Empty when links were emitted, and empty when none were asked for. It travels in the report
+	// because the report is read long after the stderr that also said it is gone (issue 626).
 	LinksWithheld string
 	Totals        Totals
 	Rules         []RuleReport
@@ -45,10 +39,9 @@ type Report struct {
 
 // Totals are the run's headline numbers.
 //
-// Considered and Findings are counted separately and neither is derivable from the other, which is
-// the point: a rule that states a considered set contributes to both, and a rule that reports only
-// failures contributes to Findings alone. Presenting one number would hide which kind of coverage the
-// run actually has.
+// Considered and Findings are counted separately and neither is derivable from the other. A rule
+// that states a considered set contributes to both; a rule that reports only failures contributes to
+// Findings alone.
 type Totals struct {
 	RulesReporting    int // rules that stated a considered set
 	RulesFindingsOnly int // rules that reported violations without stating what they looked at
@@ -68,10 +61,9 @@ type RuleReport struct {
 	Summary  string
 	Impact   string
 	Remedy   string
-	// StatesConsideredSet is carried into the report because a reader must be able to tell "this rule
-	// examined 41 rails and cleared 39" from "this rule reported two problems and said nothing about
-	// what else it looked at". Collapsing them is the false-coverage claim the verdict work removes,
-	// and a report is exactly where it would be most convincing and most wrong.
+	// StatesConsideredSet lets a reader tell "this rule examined 41 rails and cleared 39" from "this
+	// rule reported two problems and said nothing about what else it looked at". Collapsing the two
+	// would claim coverage the rule never checked.
 	StatesConsideredSet bool
 	Counts              map[check.Outcome]int
 	Rows                []Row
@@ -87,8 +79,7 @@ type Row struct {
 	ID      string
 	Outcome check.Outcome
 	// Subjects is what the row is about, in the rule's order: one entity for most rules, the whole
-	// tuple for a rule whose question is a relation. A reader of a copper-clearance row wants both
-	// nets, and a row that named one of them would be asking them to guess the other.
+	// tuple for a rule whose question is a relation, such as both nets of a copper-clearance row.
 	Subjects []check.Entity
 	Message  string // the violation sentence, set on a failure
 	Witness  string // what the outcome rests on
@@ -98,13 +89,9 @@ type Row struct {
 	URL      string   // empty when the caller supplied no base
 }
 
-// SubjectLabel is a row's subject tuple as one string, joined the way both renderers spell it. A
-// relation-shaped rule names two or three entities and a reader needs all of them: "copper of GND and
-// VBUS" is the fact, and naming one half asks them to guess the other.
-//
-// It lives on Row rather than in a renderer because it had been written twice, once as an HTML
-// template function and once in the CLI, and the two were free to disagree about a spelling nobody
-// would notice was drifting. That is the shape agni issue 380 describes.
+// SubjectLabel is a row's subject tuple as one string, joined the way both renderers spell it, so a
+// relation-shaped rule names every entity. It lives on Row so the HTML template and the CLI share one
+// spelling (agni issue 380).
 func (r Row) SubjectLabel() string {
 	parts := make([]string, 0, len(r.Subjects))
 	for _, e := range r.Subjects {
@@ -114,9 +101,8 @@ func (r Row) SubjectLabel() string {
 }
 
 // Detail is the sentence a row leads with: the violation where there is one, else the proof, else the
-// reason it could not be judged. Exactly one of the three is set on any row, and the precedence
-// matters where two are: a failing verdict carries both a Message and a Witness, and the Message is
-// the one addressed to a reader deciding what to do.
+// reason it could not be judged. A failing verdict carries both a Message and a Witness, and the
+// Message wins.
 func (r Row) Detail() string {
 	switch {
 	case r.Message != "":
@@ -137,8 +123,7 @@ type Term struct{ Label, Value string }
 // is present and visibly labelled rather than silently absent.
 //
 // ORDERING IS THE MAIN JUDGMENT HERE. Rules with something to act on come first, then the rest
-// alphabetically; within a rule, failures and undecidables come before passes. A reader opening a
-// report on a board with three problems and two thousand passes should meet the three problems.
+// alphabetically; within a rule, failures and undecidables come before passes.
 func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Rule, meta Report) Report {
 	byName := map[string]*check.Rule{}
 	for _, r := range rules {
@@ -167,13 +152,10 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 	for _, v := range verdicts {
 		fromVerdict[v.Rule] = true
 		s := section(v.Rule)
-		// EMITTING A VERDICT IS STATING A CONSIDERED SET, so the verdict itself settles this and the
-		// catalog flag is only a fallback for rules that produced none. They disagree for operator
-		// rules composed from an overlay (conventions.yaml, profiles/, intent.yaml): their namespaced
-		// names are absent from the catalog the report is handed, so the lookup above leaves the flag
-		// false and the rule gets captioned "absence here is not evidence of correctness" over rows
-		// that are exactly that evidence. Believing the verdict cannot over-claim: a rule with no
-		// considered set has no verdict to reach this line.
+		// EMITTING A VERDICT IS STATING A CONSIDERED SET, so the verdict settles this and the catalog
+		// flag is only a fallback. An overlay's rules (conventions.yaml, profiles/, intent.yaml) have
+		// namespaced names the catalog lookup misses, which would caption their rows as findings-only.
+		// This cannot over-claim, since a rule with no considered set emits no verdict.
 		s.StatesConsideredSet = true
 		s.Counts[v.Outcome]++
 		s.Rows = append(s.Rows, rowOf(v, out))
@@ -193,13 +175,9 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 	}
 
 	// Findings from rules that state no considered set have no verdict to carry them, so they are
-	// added here. A rule that DOES state one already contributed its failures above; adding them
-	// again would double-count, which is why this is keyed on the rule rather than on the finding.
-	//
-	// "Already contributed" is decided by whether the rule EMITTED a verdict, not by the catalog flag.
-	// The two differ for an operator's rule composed from an overlay, whose namespaced name the
-	// catalog lookup misses, and the catalog answer double-listed every one of its failures: once as a
-	// verdict row and once here.
+	// added here. A rule that DOES state one already contributed its failures above, so this is keyed
+	// on the rule to avoid double-counting. "Already contributed" means the rule EMITTED a verdict,
+	// not the catalog flag, which misses an overlay rule's namespaced name.
 	for _, f := range findings {
 		out.Totals.Findings++
 		if fromVerdict[f.Rule] {
@@ -295,40 +273,16 @@ func rowOf(v check.Verdict, meta Report) Row {
 	return r
 }
 
-// VerdictURL builds the link that opens this verdict's proof in a running viewer, or "" when the
-// caller gave no base.
-//
-// Exported because three renderers need it and only one of them builds a Report: the html page and
-// the terminal read Row.URL, and the csv writer emits protos in the run's own order rather than the
-// report's, so it composes the link per row. One function so the three cannot disagree about what a
-// link to a verdict looks like.
-//
-// A MISSING LINK IS THE CORRECT ANSWER for a loose file, not a gap to fill with a guess (issue 392).
-// A URL is a promise the reader can follow, and one assembled from an invented mount resolves on
-// nobody's server, which reads as a broken tool rather than a mismatched setup.
-//
-// The content hash rides along so the viewer can say "this link was computed against different bytes"
-// instead of silently highlighting whatever now sits at that subject. A link that quietly points at
-// the wrong pin is the same false-confidence failure this whole layer exists to remove, relocated
-// into the browser.
 // TraceURL is the viewer link that re-asks a pin-to-pin question, "" when this run cannot promise
-// one. Same two conditions VerdictURL applies, for the same reason: a URL is a promise the reader can
-// follow, and one assembled from a mount the operator never declared resolves on nobody's server.
+// one, under the same two conditions as VerdictURL.
 //
-// It carries the QUESTION rather than an answer, which is why it takes no content hash and why the
-// viewer draws no stale-link banner for one. A verdict id names something already concluded, so it
-// has to say which bytes it was concluded about; two pin names are re-asked against whatever the
-// design is now, and a pin that has since gone is an outcome the panel states plainly.
+// It carries the QUESTION rather than an answer, so it takes no content hash and the viewer draws no
+// stale-link banner for one; the pins are re-asked against whatever the design is now.
 //
-// hops rides along whenever the caller STATES one, and the two callers legitimately differ. The CLI
-// knows the concrete radius it searched at, so it always states it and the link re-asks that exact
-// question by construction rather than by the CLI's default and the server's happening to be the
-// same number. The viewer states one only when the reader pinned it, since 0 there means "whatever
-// the server uses" and writing the number down would freeze a default into a URL.
-//
-// What neither may do is drop a radius that was pinned. A link that did would re-ask a narrower
-// question wider, so a run reporting "no route within 2 crossings" could show a route to whoever
-// followed it, and the two would describe different questions while appearing to describe one answer.
+// hops is written whenever the caller STATES one (> 0). The CLI always states the radius it searched
+// at; the viewer states one only when the reader pinned it, since 0 there means the server default.
+// Never drop a pinned radius, or the link re-asks a narrower question wider and can show a route the
+// run said did not exist.
 func TraceURL(meta Report, from, to string, hops int) string {
 	if meta.URLBase == "" || meta.MountPath == "" || from == "" || to == "" {
 		return ""
@@ -340,6 +294,15 @@ func TraceURL(meta Report, from, to string, hops int) string {
 	return u
 }
 
+// VerdictURL builds the link that opens this verdict's proof in a running viewer, or "" when the
+// caller gave no base.
+//
+// Exported because three renderers use it. The html page and the terminal read Row.URL, and the csv
+// writer composes the link per row because it emits in the run's order rather than the report's.
+//
+// A MISSING LINK IS THE CORRECT ANSWER for a loose file, not a gap to fill with a guess (issue 392),
+// because a URL built from an invented mount resolves on nobody's server. The content hash rides along
+// so the viewer can flag a link computed against different bytes.
 func VerdictURL(meta Report, id, rule string) string {
 	if meta.URLBase == "" || meta.MountPath == "" {
 		return ""
@@ -349,13 +312,11 @@ func VerdictURL(meta Report, id, rule string) string {
 		u += "&hash=" + url.QueryEscape(meta.ContentHash)
 	}
 	// The rule rides along so the viewer can resolve this verdict by running ONE rule rather than the
-	// whole catalog. It is named here rather than recovered from the id because VerdictID is generated
-	// and never parsed (core/check/verdict.go): the id escapes its delimiters precisely so a ref may
-	// carry its own colons and commas, and splitting it back apart would undo that.
+	// whole catalog. It is passed in rather than recovered from the id because VerdictID is generated
+	// and never parsed (core/check/verdict.go).
 	//
-	// It is a HINT, not part of the address. Two verdicts of one rule differ by subject, so the id
-	// stays the identity and a link that lost this parameter still resolves, just by the slower route.
-	// That is what keeps every link already written into a saved report working.
+	// It is a HINT, not part of the address. A link without it still resolves by the slower route,
+	// which keeps saved reports working.
 	if rule != "" {
 		u += "&rule=" + url.QueryEscape(rule)
 	}

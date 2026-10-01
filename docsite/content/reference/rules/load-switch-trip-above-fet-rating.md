@@ -7,7 +7,7 @@ description: "A controller-based load switch trips above the continuous drain ra
 
 Lower the switch's current-limit setting below the FET's continuous drain rating, or fit a FET rated above the trip point. As drawn, the limit protects nothing.
 
-### What it checks
+### What it means
 
 A load switch built from a **switch controller** plus an **external MOSFET** plus an **external sense
 resistor**, where the current at which the controller trips is higher than the continuous current the
@@ -31,10 +31,10 @@ A controller-based switch is three parts chosen by three separate decisions:
 - The **MOSFET** carries that current, and has its own continuous drain rating.
 
 Nothing in the design flow checks that the third number is bigger than the first two put together.
-When it is not, the current limit does nothing useful: the FET reaches its own rating while the
-controller is still comfortably below its trip point, so the part the protection existed for is the
-part that dies. And a high-side MOSFET that dies usually dies **short**, which puts the whole rail on
-the load it was switching.
+When it is not, the current limit does nothing useful, because the FET reaches its own rating while
+the controller is still comfortably below its trip point, so the part the protection existed for is
+the part that dies. And a high-side MOSFET that dies usually dies **short**, which puts the whole
+rail on the load it was switching.
 
 The effective on-resistance of such a switch is likewise the external FET's RDS(on), not any number
 on the controller's sheet. The finding reports it, because "what does the FET dissipate at the trip
@@ -56,52 +56,55 @@ in still air behind a connector" is a thermal argument this rule does not attemp
   naming lexicon's role vocabulary, so a house that calls its gate `DRV` declares that in
   `--conventions` rather than patching the engine.
 - **The controller** is the single non-transistor part on that gate net whose datasheet states an
-  overcurrent threshold. Identified by what its sheet says, not by a device-class keyword: a part that
-  declares a sense threshold is a current-limiting controller, whatever its description string reads.
-  This also settles integrated-versus-controller for free, since an integrated switch has no external
-  gate net to be found from.
+  overcurrent threshold. The rule identifies it by what its sheet says rather than by a device-class
+  keyword, so a part that declares a sense threshold is a current-limiting controller, whatever its
+  description string reads. This also settles integrated-versus-controller for free, since an
+  integrated switch has no external gate net to be found from.
 - **The sense resistor** is the single resistor **every** one of whose nets the controller also
-  touches. That is Kelvin sensing expressed structurally: a shunt is measured by two dedicated pins
-  landing on its two terminals. A series part that merely sits nearby has a far terminal the
+  touches. That is Kelvin sensing expressed structurally, since a shunt is measured by two dedicated
+  pins landing on its two terminals. A series part that merely sits nearby has a far terminal the
   controller does not touch.
 
 A feedback or programming divider between a controller's output and its sense pin shares that
-structural signature. Magnitude separates them by orders of magnitude, so the resolver accepts only a
-resistance of **1Ω or less**: a shunt dropping tens of millivolts at amperes is milliohm-class, a
-divider that must not waste current is kilohms, and one ohm sits in the empty middle.
+structural signature. Their values differ by orders of magnitude, so the resolver accepts only a
+resistance of **1Ω or less**, because a shunt dropping tens of millivolts at amperes is
+milliohm-class, a divider that must not waste current is kilohms, and one ohm sits in the empty
+middle.
 
-### When it stays silent
+### When it reports no finding
 
-Silence is always "I could not tell", never "this is fine".
+No finding always means "I could not tell", never "this is fine".
 
-- **No seeded datasheet set.** `check.Available` gates the rule to not-applicable without `--params`.
+- **With no seeded datasheet set**, `check.Available` gates the rule to not-applicable without
+  `--params`.
 - **The gate net carries two candidate controllers**, or the controller has **two candidate shunts**.
   Unresolvable, so no verdict rather than a verdict computed from the wrong part.
 - **The FET's gate lands on more than one net**, or it declares no gate pin at all.
-- **The controller states no overcurrent threshold**, or states it in a unit the parameter layer does
-  not recognize. A millivolt row is reduced to volts and compared, which is how real controller sheets
-  print this row; a unit with no entry in the conversion table is skipped rather than scaled by a
-  guess, so the rule still fails toward silence instead of toward a current a thousand times too large.
-- **The FET is unseeded** or states no continuous drain rating. Pulsed drain current is deliberately
-  not accepted in its place.
+- **The controller states no overcurrent threshold**, or states it in a unit the parameter layer
+  does not recognize. A millivolt row is reduced to volts and compared, which is how real controller
+  sheets print this row; a unit with no entry in the conversion table is skipped rather than scaled
+  by a guess, so the rule still fails toward silence instead of toward a current a thousand times
+  too large.
+- **The FET is unseeded** or states no continuous drain rating. The FET then reports not-considered
+  with that reason. Pulsed drain current is deliberately not accepted in its place.
 - **The shunt's value is not stated in ohms in the design.** A component whose value the reader never
   normalized, or normalized without a unit, is no evidence that it is a milliohm shunt. This is the
-  live limit on formats: KiCad, IPC-2581 and gEDA normalize the value attribute at ingestion; EDIF and
-  xschem do not, so an EDIF design's shunt commonly carries no readable number and the rule reports
-  nothing there.
-- **A zero-ohm shunt.** Dividing by it gives infinity, which every comparison downstream would read as
-  an enormous current and report as a defect.
+  live limit on formats, because the loader's value pass (`classify.StampValues`) recognizes only a
+  few property spellings (`value`, `val`, `partvalue`, `component_value`), so an EDIF design whose
+  exporter spelled it otherwise carries no readable number and the rule reports nothing there.
+- **A zero-ohm shunt is skipped**, because dividing by it gives infinity, which every comparison
+  downstream would read as an enormous current and report as a defect.
 
-### For software engineers
+### For software readers
 
-Two joins that had no prior arithmetic between them. `check.ExternalFetLoadSwitches` resolves the
-topology and the trip current; the rule adds the rating comparison.
+The rule joins two things that had no prior arithmetic between them. `check.ExternalFetLoadSwitches`
+resolves the topology and the trip current; the rule adds the rating comparison.
 
-The trip current is the first calculation anywhere in the engine that crosses two units. It goes
+The trip current is the first calculation in the engine to cross two units (WS3-085). It goes
 through `check.OhmsLawCurrent(volts, ohms) (amps, ok)`, a named physical operation rather than a
-general dimension algebra: every other consumer compares within one unit, which the accessors already
-gate, so a dimension system would be a lot of machinery with no second caller. The signature states
-the unit contract, and `ok` is false for a non-positive or non-finite resistance.
+general dimension algebra, because every other consumer compares within one unit, which the
+accessors already gate, so a dimension system would be a lot of machinery with no second caller. The
+signature states the unit contract, and `ok` is false for a non-positive or non-finite resistance.
 
 `DatasheetProv` carries exactly two citations, the FET's rating first (the endangered part) and the
 controller's threshold second. The on-resistance is quoted in the message with an inline citation but

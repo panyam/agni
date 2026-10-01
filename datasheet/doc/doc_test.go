@@ -73,7 +73,7 @@ func TestQueryHelpers(t *testing.T) {
 	}
 }
 
-// The ticket's acceptance check: every provenance entry in the WS10-001 param
+// The ticket's acceptance check. Every provenance entry in the WS10-001 param
 // fixture (page + table label) must resolve to a region in this document's doc-IR.
 func TestParamProvenanceResolves(t *testing.T) {
 	d := readFixture(t, "bss138-docir.textproto")
@@ -94,8 +94,8 @@ func TestParamProvenanceResolves(t *testing.T) {
 	}
 }
 
-// A recipe fragment (title pattern -> LimitKind) evaluated over the doc-IR: the
-// consumer surface WS10-002's recipes will use.
+// A recipe fragment (title pattern -> LimitKind) evaluated over the doc-IR, which is
+// the consumer surface WS10-002's recipes will use.
 func TestRecipeFragmentClassifiesTables(t *testing.T) {
 	d := readFixture(t, "bss138-docir.textproto")
 	recipe := []struct {

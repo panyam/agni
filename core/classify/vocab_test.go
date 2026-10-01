@@ -9,8 +9,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestDefaultClassVocab pins the built-in classification vocabulary: the historical tokens still map to
-// their class, and matching stays whole-token (a token containing "esd" as a substring does not match).
+// TestDefaultClassVocab pins the built-in classification vocabulary. The historical tokens still
+// map to their class, and matching stays whole-token (a token containing "esd" as a substring does
+// not match).
 func TestDefaultClassVocab(t *testing.T) {
 	v := DefaultClassVocab()
 	cases := map[string]ComponentClass{"tvs": ClassTVS, "esd": ClassTVS, "zener": ClassZener, "diode": ClassDiode,
@@ -26,8 +27,9 @@ func TestDefaultClassVocab(t *testing.T) {
 	}
 }
 
-// TestClassVocabConfigExtendsClassification: a project pattern added to the tvs class lets an ESD-array
-// MPN family classify as TVS, where the default (no tvs/esd word) leaves it a plain diode.
+// TestClassVocabConfigExtendsClassification checks that a project pattern added to the tvs class
+// lets an ESD-array MPN family classify as TVS, where the default (no tvs/esd word) leaves it a
+// plain diode.
 func TestClassVocabConfigExtendsClassification(t *testing.T) {
 	defer SetActiveClassVocab(nil)
 	part := &ir.Component{RefDes: "D5", Attributes: map[string]string{"Part Name": "PESD2ETH1GT"}}
@@ -47,8 +49,8 @@ func TestClassVocabConfigExtendsClassification(t *testing.T) {
 	}
 }
 
-// TestBuildClassVocabReplaceAndErrors: Replace drops the built-ins for that class; a bad regex is a
-// returned error.
+// TestBuildClassVocabReplaceAndErrors checks that Replace drops the built-ins for that class; a bad
+// regex is a returned error.
 func TestBuildClassVocabReplaceAndErrors(t *testing.T) {
 	repl, err := BuildClassVocab(map[ComponentClass]*configpb.ClassVocab{ClassTVS: {Patterns: []string{"^myTvs$"}, Replace: true}})
 	if err != nil {
@@ -76,8 +78,9 @@ func TestParseComponentClass(t *testing.T) {
 	}
 }
 
-// TestBuildClassVocabWithNoOverrideIsTheBuiltIns: a project that declares no class block reads with
-// exactly the built-in prefix table, asserted entry by entry rather than assumed (agni 677).
+// TestBuildClassVocabWithNoOverrideIsTheBuiltIns checks that a project that declares no class block
+// reads with exactly the built-in prefix table, asserted entry by entry rather than assumed (agni
+// 677).
 func TestBuildClassVocabWithNoOverrideIsTheBuiltIns(t *testing.T) {
 	v, err := BuildClassVocab(nil)
 	if err != nil {
@@ -129,8 +132,9 @@ func TestClassPrefixOverrides(t *testing.T) {
 	}
 }
 
-// TestClassPrefixLoadErrors: a prefix that can never match, and one claimed by two classes, fail at
-// load and name what is wrong, rather than reading as a convention that matched nothing.
+// TestClassPrefixLoadErrors checks that a prefix that can never match, and one claimed by two
+// classes, fail at load and name what is wrong, rather than reading as a convention that matched
+// nothing.
 func TestClassPrefixLoadErrors(t *testing.T) {
 	cases := map[string]struct {
 		o    map[ComponentClass]*configpb.ClassVocab

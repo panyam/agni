@@ -7,9 +7,10 @@ import (
 	"testing"
 )
 
-// TestUnresolvedSymbolReported (WS1-052): a lib_id the schematic does not embed AND whose external
-// library fails to open is recorded, with every placement it cost pins. extlib.kicad_sch has an
-// empty (lib_symbols) block, so both its parts depend entirely on the external "ext" library.
+// TestUnresolvedSymbolReported (WS1-052) checks that a lib_id the schematic does not embed AND
+// whose external library fails to open is recorded, with every placement it cost pins.
+// extlib.kicad_sch has an empty (lib_symbols) block, so both its parts depend entirely on the
+// external "ext" library.
 func TestUnresolvedSymbolReported(t *testing.T) {
 	failing := func(lib string) ([]byte, error) { return nil, fmt.Errorf("no library %q", lib) }
 	d, err := ReadSchematicWithSymbols(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch", failing)
@@ -35,8 +36,9 @@ func TestUnresolvedSymbolReported(t *testing.T) {
 	}
 }
 
-// TestUnresolvedSymbolSilentWhenResolved: the real library resolves both lib_ids, so nothing is
-// reported. Without this the test above would pass on a reader that flagged unconditionally.
+// TestUnresolvedSymbolSilentWhenResolved uses the real library, which resolves both lib_ids, so
+// nothing is reported. Without this the test above would pass on a reader that flagged
+// unconditionally.
 func TestUnresolvedSymbolSilentWhenResolved(t *testing.T) {
 	d, err := ReadSchematicWithSymbols(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch", extOpen(t))
 	if err != nil {
@@ -47,9 +49,9 @@ func TestUnresolvedSymbolSilentWhenResolved(t *testing.T) {
 	}
 }
 
-// TestUnresolvedSymbolSilentWithoutOpener: reading with no opener at all is a caller deliberately
-// asking for a symbol-free read (the plain ReadSchematic entry), not a resolution failure. Flagging
-// it would fire on every such read and train the reader to ignore the diagnostic.
+// TestUnresolvedSymbolSilentWithoutOpener covers reading with no opener at all, which is a caller
+// deliberately asking for a symbol-free read (the plain ReadSchematic entry), not a resolution
+// failure. Flagging it would fire on every such read and train the reader to ignore the diagnostic.
 func TestUnresolvedSymbolSilentWithoutOpener(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch")
 	if err != nil {
@@ -60,9 +62,9 @@ func TestUnresolvedSymbolSilentWithoutOpener(t *testing.T) {
 	}
 }
 
-// TestUnresolvedSymbolGroupsPlacements: one missing library that several parts share is ONE record
-// carrying both designators, not one record per part. The grouping is what keeps a single missing
-// file from reading as N separate problems.
+// TestUnresolvedSymbolGroupsPlacements checks that one missing library that several parts share is
+// ONE record carrying both designators, not one record per part. The grouping is what keeps a
+// single missing file from reading as N separate problems.
 func TestUnresolvedSymbolGroupsPlacements(t *testing.T) {
 	failing := func(string) ([]byte, error) { return nil, fmt.Errorf("missing") }
 	d, err := ReadSchematicWithSymbols(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch", failing)
@@ -76,7 +78,7 @@ func TestUnresolvedSymbolGroupsPlacements(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolsRecorded (agni issue 418): the references that DID load are recorded too, so
+// TestResolvedSymbolsRecorded (agni issue 418) checks the references that DID load are recorded too, so
 // the rule reading them can state what it examined instead of only what failed. Both routes appear
 // with the kind that separates them, because only an external library can go missing on somebody
 // else's machine.
@@ -109,9 +111,10 @@ func TestResolvedSymbolsRecorded(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolsRecordEmbedded: a schematic that carries its own symbols is the ordinary case
-// and is the one that would otherwise have nothing to say. Leaving it out would mean a KiCad file
-// with no external dependency produced an empty considered set, which reads as "nobody looked".
+// TestResolvedSymbolsRecordEmbedded covers a schematic that carries its own symbols. That is the
+// ordinary case and is the one that would otherwise have nothing to say. Leaving it out would mean
+// a KiCad file with no external dependency produced an empty considered set, which reads as "nobody
+// looked".
 func TestResolvedSymbolsRecordEmbedded(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "sch.kicad_sch")), "sch.kicad_sch")
 	if err != nil {
@@ -131,7 +134,7 @@ func TestResolvedSymbolsRecordEmbedded(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolsExcludeFailures: a reference that did not open must not appear on both lists.
+// TestResolvedSymbolsExcludeFailures checks that a reference that did not open is not on both lists.
 // The two are one partition, and a reference in both would let a rule count the same subject twice
 // and report it as passed and failed at once.
 func TestResolvedSymbolsExcludeFailures(t *testing.T) {
