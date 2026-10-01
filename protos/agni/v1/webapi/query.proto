@@ -175,6 +175,10 @@ message ListRelationsRequest {
   // its members list and describe beside the shipped ones. Empty answers for the shipped vocabulary
   // alone. A project library that does not compose is an error rather than a catalog without it.
   string uri = 2;
+  // overlay carries library modules sent with the request (AnalysisConfig.library_modules, agni
+  // issue 788), so the catalog lists and describes them as a query sent with the same overlay would
+  // read them. They join the design's project library when uri is set too.
+  OverlayConfig overlay = 3;
 }
 
 // RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,

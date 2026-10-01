@@ -95,4 +95,27 @@ message AnalysisConfig {
   // path, or reading a relation nothing registers, fails the read rather than answering nothing.
   // Rules compiled from queries do not read them yet (agni issue 779).
   repeated string library_uris = 9;
+  // library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller
+  // whose modules live with it rather than on the server: a script calling a shared server, a
+  // generated client's CLI transport, the viewer trying a module, an embedder. They compose exactly
+  // as a library directory's do, accumulating with the design's project library, and a member path
+  // defined twice is refused naming each module's source. Being values, they need no ConfigResolver.
+  repeated LibraryModule library_modules = 10;
+  // library_docs are optional reference pages for library members, keyed by member path, as a
+  // library directory's docs/<member.path>.md are. A page for a member nothing defines is refused.
+  map<string, string> library_docs = 11;
+}
+
+// LibraryModule is one module of derived relations sent as a value.
+message LibraryModule {
+  // path is the module path its members register under, as a library file's name gives it: "house"
+  // defines house.<member>, "net" adds members to net.
+  string path = 1;
+  // language is the module's language. Empty means "datalog", the only one agni registers.
+  string language = 2;
+  // text is the module's source.
+  string text = 3;
+  // source names the module in an error or drill-down, such as "request:house.dl". Empty becomes
+  // "request:<path>".
+  string source = 4;
 }

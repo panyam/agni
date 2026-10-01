@@ -117,6 +117,32 @@ calls it, and `agni query --relations house --design <design>` lists it. Four ru
 The tier is discovered like `profiles/`, so a project declares nothing to get it, and `lib: ""` in
 `project.yaml` turns it off with the directory in place.
 
+## Sending a library with a request
+
+A library can also travel with a request rather than sit in a project folder, which is the shape for
+a script or CI job calling a shared server, a generated client over the CLI, or a viewer trying a
+module before committing it (agni issue 788). `AnalysisConfig.library_modules` carries each module
+as a value, its path, its text, and a `source` that errors name, with optional pages in
+`library_docs`. Modules sent this way compose exactly as a `lib/` directory's do and join the
+design's project library when it has one. A member two modules define is refused naming both, and
+the same module arriving twice, such as a project's own `lib/` also named by `--lib`, counts once.
+
+On the command line `--lib <dir>` reads a directory laid out as `lib/` and sends it this way:
+
+```
+agni query designs/board/board.edn 'house.pmic_rail(?n) => ?n' --lib ../house-lib
+```
+
+From Python, the request carries the modules, and both transports send them:
+
+```python
+client.run_query(
+    uri="mount://designs/board.edn",
+    query="house.pmic_rail(?n) => ?n",
+    overlay={"config": {"library_modules": [{"path": "house", "text": open("lib/house.dl").read()}]}},
+)
+```
+
 ## Reading the library from a shipped rule
 
 No shipped rule reads the library yet, and the first one has a trap waiting. Rules in

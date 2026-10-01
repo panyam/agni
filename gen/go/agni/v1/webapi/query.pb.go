@@ -402,7 +402,11 @@ type ListRelationsRequest struct {
 	// uri, when set, names a design whose project's own library joins the catalog (agni issue 773), so
 	// its members list and describe beside the shipped ones. Empty answers for the shipped vocabulary
 	// alone. A project library that does not compose is an error rather than a catalog without it.
-	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	// overlay carries library modules sent with the request (AnalysisConfig.library_modules, agni
+	// issue 788), so the catalog lists and describes them as a query sent with the same overlay would
+	// read them. They join the design's project library when uri is set too.
+	Overlay       *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -449,6 +453,13 @@ func (x *ListRelationsRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *ListRelationsRequest) GetOverlay() *OverlayConfig {
+	if x != nil {
+		return x.Overlay
+	}
+	return nil
 }
 
 // RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
@@ -1330,10 +1341,11 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x04rows\x18\x02 \x03(\v2\x18.agni.v1.webapi.QueryRowR\x04rows\x12!\n" +
 	"\fcolumn_kinds\x18\x03 \x03(\tR\vcolumnKinds\x12\x14\n" +
 	"\x05query\x18\x04 \x01(\tR\x05query\x12\x16\n" +
-	"\x06source\x18\x05 \x01(\tR\x06source\"<\n" +
+	"\x06source\x18\x05 \x01(\tR\x06source\"u\n" +
 	"\x14ListRelationsRequest\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xba\x01\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\x127\n" +
+	"\aoverlay\x18\x03 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\"\xba\x01\n" +
 	"\fRelationInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04args\x18\x02 \x03(\tR\x04args\x12\x18\n" +
@@ -1443,28 +1455,29 @@ var file_agni_v1_webapi_query_proto_depIdxs = []int32{
 	2,  // 1: agni.v1.webapi.QueryRow.cell_sheets:type_name -> agni.v1.webapi.CellSheets
 	17, // 2: agni.v1.webapi.QueryRow.cell_reasons:type_name -> agni.v1.checks.LocateReason
 	1,  // 3: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
-	6,  // 4: agni.v1.webapi.RelationEntry.members:type_name -> agni.v1.webapi.RelationEntry
-	5,  // 5: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
-	7,  // 6: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
-	8,  // 7: agni.v1.webapi.ListRelationsResponse.entity_queries:type_name -> agni.v1.webapi.EntityQuery
-	9,  // 8: agni.v1.webapi.ListRelationsResponse.search_query:type_name -> agni.v1.webapi.SearchQuery
-	6,  // 9: agni.v1.webapi.ListRelationsResponse.entry:type_name -> agni.v1.webapi.RelationEntry
-	12, // 10: agni.v1.webapi.QuerySet.queries:type_name -> agni.v1.webapi.NamedQuery
-	11, // 11: agni.v1.webapi.RunQueriesRequest.set:type_name -> agni.v1.webapi.QuerySet
-	16, // 12: agni.v1.webapi.RunQueriesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	15, // 13: agni.v1.webapi.RunQueriesResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
-	3,  // 14: agni.v1.webapi.NamedQueryResult.result:type_name -> agni.v1.webapi.RunQueryResponse
-	0,  // 15: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
-	13, // 16: agni.v1.webapi.QueryService.RunQueries:input_type -> agni.v1.webapi.RunQueriesRequest
-	4,  // 17: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
-	3,  // 18: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
-	14, // 19: agni.v1.webapi.QueryService.RunQueries:output_type -> agni.v1.webapi.RunQueriesResponse
-	10, // 20: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
-	18, // [18:21] is the sub-list for method output_type
-	15, // [15:18] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	16, // 4: agni.v1.webapi.ListRelationsRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	6,  // 5: agni.v1.webapi.RelationEntry.members:type_name -> agni.v1.webapi.RelationEntry
+	5,  // 6: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
+	7,  // 7: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
+	8,  // 8: agni.v1.webapi.ListRelationsResponse.entity_queries:type_name -> agni.v1.webapi.EntityQuery
+	9,  // 9: agni.v1.webapi.ListRelationsResponse.search_query:type_name -> agni.v1.webapi.SearchQuery
+	6,  // 10: agni.v1.webapi.ListRelationsResponse.entry:type_name -> agni.v1.webapi.RelationEntry
+	12, // 11: agni.v1.webapi.QuerySet.queries:type_name -> agni.v1.webapi.NamedQuery
+	11, // 12: agni.v1.webapi.RunQueriesRequest.set:type_name -> agni.v1.webapi.QuerySet
+	16, // 13: agni.v1.webapi.RunQueriesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	15, // 14: agni.v1.webapi.RunQueriesResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
+	3,  // 15: agni.v1.webapi.NamedQueryResult.result:type_name -> agni.v1.webapi.RunQueryResponse
+	0,  // 16: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
+	13, // 17: agni.v1.webapi.QueryService.RunQueries:input_type -> agni.v1.webapi.RunQueriesRequest
+	4,  // 18: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
+	3,  // 19: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
+	14, // 20: agni.v1.webapi.QueryService.RunQueries:output_type -> agni.v1.webapi.RunQueriesResponse
+	10, // 21: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
+	19, // [19:22] is the sub-list for method output_type
+	16, // [16:19] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_query_proto_init() }

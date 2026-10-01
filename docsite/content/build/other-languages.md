@@ -70,8 +70,11 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 | `DesignService/TraceDesign` | `trace --format json` |
 | `DesignService/GetLayoutReport` | `render --report --report-format json` |
 
-Any other rpc raises `CliUnsupported`. So does a request field the command has no flag for, such as
-an `overlay`, because dropping it would answer a different question from the one asked. `validate`
+Any other rpc raises `CliUnsupported`. So does a request field the command has no flag for, because
+dropping it would answer a different question from the one asked. The one part of an `overlay` the
+CLI sends is a library: a query or a set whose overlay carries only `library_modules` and
+`library_docs` is written to a temporary directory and passed as `--lib`, so it answers as the same
+request over Connect does (agni issue 788). `validate`
 and `params` print a wire message with no rpc behind it, and `CliTransport.run` reads them. `intake`
 is C31's declared exception and has no wire message. `review` is Connect only until
 `review --format json` emits the `Review` proto (agni issue 734).
