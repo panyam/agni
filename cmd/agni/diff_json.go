@@ -22,7 +22,11 @@ func diffViaService(cmd *cobra.Command, a, b string, renameApprox bool) error {
 		return err
 	}
 	svc := service.NewDiffService(&localLoader{loader: newLoader()}, cliProjects())
-	resp, err := svc.DiffDesigns(cmd.Context(), &webapi.DiffDesignsRequest{AUri: aURI, BUri: bURI, RenameApprox: renameApprox})
+	req := &webapi.DiffDesignsRequest{AUri: aURI, BUri: bURI}
+	if renameApprox {
+		req.NearRenames = &webapi.NearRenameOptions{} // the calibrated thresholds
+	}
+	resp, err := svc.DiffDesigns(cmd.Context(), req)
 	if err != nil {
 		return err
 	}

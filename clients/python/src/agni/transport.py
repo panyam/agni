@@ -256,9 +256,17 @@ def _review_stdin(req: Message) -> str:
 
 
 def _diff_argv(req: Message) -> List[str]:
-    _only(req, ("a_uri", "b_uri", "rename_approx"))
+    _only(req, ("a_uri", "b_uri", "near_renames"))
     out = ["diff", req.a_uri, req.b_uri, "--format", "json"]
-    if req.rename_approx:
+    if req.HasField("near_renames"):
+        # --rename-approx runs the pass with the calibrated thresholds; the CLI has no flag for an
+        # override, so one is refused rather than dropped.
+        overrides = sorted(f.name for f, _ in req.near_renames.ListFields())
+        if overrides:
+            raise CliUnsupported(
+                f"DiffDesignsRequest.near_renames: the CLI runs the default thresholds only, not "
+                f"{', '.join(overrides)}; use ConnectTransport"
+            )
         out.append("--rename-approx")
     return out
 

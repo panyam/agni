@@ -25,12 +25,38 @@ message DiffDesignsRequest {
   // a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
   string a_uri = 1;
   string b_uri = 2;
-  // rename_approx also pairs a net that was renamed AND changed slightly with its old self,
-  // reported as renamed-approx with the evidence behind each pairing (agni issue 817). Off by
-  // default, as `agni diff --rename-approx` is: the pass ASSIGNS a best match among candidates
-  // rather than recovering a fact, so a consumer opts in. The thresholds are the calibrated
-  // defaults (diff.DefaultRenameOptions).
-  bool rename_approx = 3;
+  // near_renames, when set, also pairs a net that was renamed AND changed slightly with its old
+  // self, reported as renamed-approx with the evidence behind each pairing (agni issue 817). Unset
+  // is off, as `agni diff` is without --rename-approx: the pass ASSIGNS a best match among
+  // candidates rather than recovering a fact, so a consumer opts in. An empty message runs it with
+  // the calibrated thresholds; a field that is set overrides that one threshold.
+  NearRenameOptions near_renames = 3;
+}
+
+// NearRenameOptions tunes the near-rename pass. It matches nets by CONNECTIVITY, never by name: an
+// old net and a new one pair when enough of their endpoints ("refdes.pin") coincide, and the best
+// pairs are taken first, one-to-one. A "significant" endpoint is one whose component is not of an
+// insignificant class, so adding or removing probes cannot make or break a match. The evidence on
+// each renamed-approx entry is in the same units, so a pairing shows what it scored against these.
+// Unset fields keep diff.DefaultRenameOptions, which were calibrated against real revision pairs.
+message NearRenameOptions {
+  // min_old_coverage is the fraction of the old net's endpoints that must survive into the new one.
+  optional double min_old_coverage = 1;
+  // min_old_coverage_significant is the same fraction over significant endpoints only.
+  optional double min_old_coverage_significant = 2;
+  // min_new_coverage is the fraction of the new net made up of old endpoints, so a large net that
+  // merely contains a small one is not its rename.
+  optional double min_new_coverage = 3;
+  // min_new_coverage_significant is that guard over significant endpoints.
+  optional double min_new_coverage_significant = 4;
+  // max_added_significant_floor is how many significant endpoints a net may gain and still pair,
+  // when half its old significant count is smaller.
+  optional int32 max_added_significant_floor = 5;
+  // min_significant_endpoints is the size below which no pairing is attempted.
+  optional int32 min_significant_endpoints = 6;
+  // insignificant_classes are the device classes left out of the overlap arithmetic. Empty keeps
+  // the default, test points.
+  repeated string insignificant_classes = 7;
 }
 
 // DiffReport is the wire form of diff.Report: the classified component and net changes

@@ -46,8 +46,11 @@ pull-up to it:
 
 The pairing is marked `renamed?` because it is the best match among candidates rather than a fact the
 connectivity proves, which is why the pass is off unless you ask for it. The API takes the same
-option as `rename_approx` on `DiffDesignsRequest`, and the Python client as
-`diff_designs(..., rename_approx=True)` over either transport.
+option as `near_renames` on `DiffDesignsRequest`: an empty message runs the calibrated thresholds,
+and a field that is set overrides that one threshold, such as `min_new_coverage_significant`. The
+pass matches by connectivity and never by name, so the thresholds are fractions of shared endpoints.
+The Python client sends it as `diff_designs(..., near_renames={})`; overriding a threshold needs a
+server, since the CLI runs the defaults only.
 
 ## In the viewer
 
