@@ -13,7 +13,9 @@ import (
 // docsite/content/architecture/projects-and-designs.md#sharing-config-between-projects.
 const maxExtendsDepth = 4
 
-// resolveExtends returns the project's config with everything it inherits already layered underneath.
+// ResolveExtends returns the project's config with everything it inherits already layered underneath.
+// It is exported for a caller that reads one tier of the composed config directly, as the CLI reads a
+// project's checklists, so the answer cannot differ from what a run composes.
 //
 // The chain is walked leaf-to-root and composed root-FIRST, so a project overrides what it inherits,
 // the same direction as request over project over deployment default. Why inheritance is declared
@@ -21,7 +23,7 @@ const maxExtendsDepth = 4
 //
 // A nil store is fine for a project that extends nothing. A project that declared an extends the
 // store cannot resolve gets an error rather than a subset of its declared config.
-func resolveExtends(ctx context.Context, store ProjectStore, p *webapi.Project) (*webapi.AnalysisConfig, error) {
+func ResolveExtends(ctx context.Context, store ProjectStore, p *webapi.Project) (*webapi.AnalysisConfig, error) {
 	cfg := p.GetConfig()
 	if cfg.GetExtends() == "" {
 		return cfg, nil
@@ -64,7 +66,6 @@ func resolveExtends(ctx context.Context, store ProjectStore, p *webapi.Project) 
 	for i := len(chain) - 1; i >= 0; i-- {
 		if c := chain[i].GetConventions(); c != nil {
 			out.Conventions = c
-			out.ConventionsUri = chain[i].GetConventionsUri()
 		}
 	}
 	// Clear extends so nothing re-reading the composed config walks the chain a second time.

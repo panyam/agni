@@ -4,5 +4,5 @@
 fixture: examples/tutorial-project
 from_root: true
 script: |
-  agni review examples/tutorial-project/designs/gateway --checklist examples/tutorial-project/review.yaml
+  agni review examples/tutorial-project/designs/gateway --checklist review
 match: '^\| P4 \|'

@@ -49,9 +49,9 @@ func TestExtendsLayersRootFirst(t *testing.T) {
 		ProfileUris: []string{"mount://m/leaf/profiles"},
 		Conventions: conventionNaming("leaf", "^LEAF_"),
 	})
-	got, err := resolveExtends(context.Background(), store, leaf)
+	got, err := ResolveExtends(context.Background(), store, leaf)
 	if err != nil {
-		t.Fatalf("resolveExtends: %v", err)
+		t.Fatalf("ResolveExtends: %v", err)
 	}
 	// Ref tiers ACCUMULATE, so inheriting a profile set and adding your own means running both.
 	if n := len(got.GetProfileUris()); n != 2 {
@@ -84,9 +84,9 @@ func TestExtendsInheritsWhatTheLeafOmits(t *testing.T) {
 			Conventions: conventionNaming("house", "^H_"),
 		}),
 	}
-	got, err := resolveExtends(context.Background(), store, proj("projects/board", "projects/house", nil))
+	got, err := ResolveExtends(context.Background(), store, proj("projects/board", "projects/house", nil))
 	if err != nil {
-		t.Fatalf("resolveExtends: %v", err)
+		t.Fatalf("ResolveExtends: %v", err)
 	}
 	if len(got.GetProfileUris()) != 1 || got.GetConventions().GetName() != "house" {
 		t.Errorf("a bare extends should inherit everything, got %+v", got)
@@ -100,7 +100,7 @@ func TestExtendsRefusesACycle(t *testing.T) {
 		"projects/a": proj("projects/a", "projects/b", nil),
 		"projects/b": proj("projects/b", "projects/a", nil),
 	}
-	_, err := resolveExtends(context.Background(), store, store["projects/a"])
+	_, err := ResolveExtends(context.Background(), store, store["projects/a"])
 	if err == nil {
 		t.Fatal("a cycle must be an error")
 	}
@@ -113,7 +113,7 @@ func TestExtendsRefusesACycle(t *testing.T) {
 // the PARENT would miss.
 func TestExtendsRefusesSelfReference(t *testing.T) {
 	me := proj("projects/me", "projects/me", nil)
-	_, err := resolveExtends(context.Background(), projectTable{"projects/me": me}, me)
+	_, err := ResolveExtends(context.Background(), projectTable{"projects/me": me}, me)
 	if err == nil || !strings.Contains(err.Error(), "cycle") {
 		t.Errorf("a project extending itself must be a cycle, got %v", err)
 	}
@@ -128,7 +128,7 @@ func TestExtendsBoundsDepth(t *testing.T) {
 		next := "projects/p" + string(rune('0'+i+1))
 		store[name] = proj(name, next, nil)
 	}
-	_, err := resolveExtends(context.Background(), store, store["projects/p0"])
+	_, err := ResolveExtends(context.Background(), store, store["projects/p0"])
 	if err == nil || !strings.Contains(err.Error(), "levels deep") {
 		t.Errorf("a chain past the bound must be an error, got %v", err)
 	}
@@ -138,17 +138,17 @@ func TestExtendsBoundsDepth(t *testing.T) {
 // the operator declared is not what would run", which has to be loud.
 func TestExtendsRefusesWhatItCannotReach(t *testing.T) {
 	leaf := proj("projects/leaf", "projects/missing", nil)
-	if _, err := resolveExtends(context.Background(), projectTable{}, leaf); err == nil ||
+	if _, err := ResolveExtends(context.Background(), projectTable{}, leaf); err == nil ||
 		!strings.Contains(err.Error(), "does not exist") {
 		t.Errorf("an absent parent must be an error, got %v", err)
 	}
-	if _, err := resolveExtends(context.Background(), nil, leaf); err == nil ||
+	if _, err := ResolveExtends(context.Background(), nil, leaf); err == nil ||
 		!strings.Contains(err.Error(), "no project store") {
 		t.Errorf("a host with no store must refuse a declared extends, got %v", err)
 	}
 	// A project that extends NOTHING is unaffected by either, which is why a nil store is not fatal
 	// on its own.
-	if _, err := resolveExtends(context.Background(), nil, proj("projects/solo", "", nil)); err != nil {
+	if _, err := ResolveExtends(context.Background(), nil, proj("projects/solo", "", nil)); err != nil {
 		t.Errorf("a project that inherits nothing should not need a store: %v", err)
 	}
 }

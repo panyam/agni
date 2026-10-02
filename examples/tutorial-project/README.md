@@ -10,12 +10,12 @@ is redistributable and nothing on it is anyone's real design.
 make review
 ```
 
-That runs the checklist in `review.yaml` over the bundled board with every tier this project
-supplies, and prints one outcome per item. `make help` lists the rest.
+That runs the `review` checklist in `project.yaml` over the bundled board with every tier this
+project supplies, and prints one outcome per item. `make help` lists the rest.
 
 Note what the command does **not** carry: no `--conventions`, no `--profile-path`, no `--params`, no
-`--intent-path`. The board resolves to this project, and the project's config is read from beside
-`project.yaml`. That is also what keeps it from reaching anywhere else. A design in another project,
+`--intent-path`. The board resolves to this project, and the project's config is read from
+`project.yaml` and from beside it. That is also what keeps it from reaching anywhere else. A design in another project,
 or in none, cannot be checked against these rules, because config travels along the design-to-project
 edge rather than along the command line.
 
@@ -28,9 +28,9 @@ This is the shape a real review project takes. Two kinds of file live here.
 | Path | What it is |
 |---|---|
 | `project.yaml` | the project's name, which is what makes this folder a project rather than a folder |
-| `review.yaml` | the checklist: the questions this team asks of every board |
-| `house-review.yaml` | a second checklist whose inline query calls this project's own library in `lib/` |
-| `conventions.yaml` | house naming: which net names are rails, and what a legal name looks like |
+| `project.yaml` `conventions:` | house naming, which says which net names are rails and what a legal name looks like |
+| `project.yaml` `checklists.review` | the checklist of questions this team asks of every board, and the project's default since it is written first |
+| `project.yaml` `checklists.house` | a second checklist whose inline query calls this project's own library in `lib/`, run with `--checklist house` |
 | `profiles/` | interface declarations, one per bus this team designs with |
 | `params/` | datasheet parameter sets, one per part worth checking against its limits |
 | `lib/` | this team's own derived relations, one Datalog module per `.dl` file, such as `house.pmic_rail` |
@@ -62,9 +62,9 @@ The board is deliberately imperfect. Each flaw exists so some part of the tool h
 to report rather than a contrived one.
 
 - **Rails are named function-first** (`PMIC_CORE_3V3`), which the built-in rail vocabulary does not
-  match. Without `conventions.yaml` the only rail on the board is `GND`. That is what the lexicon
-  half of a conventions file is for, and running `agni check` with and without it shows the
-  difference.
+  match. Without the `conventions:` section the only rail on the board is `GND`. That is what the
+  lexicon half of a conventions section is for, and running `agni check` with and without it shows
+  the difference.
 - **CAN is present, complete, and terminated, but has no ESD part on the pair.** So the built-in
   CAN profile has exactly one real finding. `profiles/can.yaml` then supersedes that built-in and
   adds a standby signal this project always routes, which the board does not, so a second finding
@@ -100,7 +100,8 @@ and it is fixed.
 
 `examples/tutorial-project/` is the shareable review-project fixture the docsite tutorial runs on, a
 synthetic sample board in three views (`.edn` plus a rev-b, a `.kicad_sch` with an external symbol
-library, a `.kicad_pcb`) with `review.yaml`, `conventions.yaml`, `profiles/`, `params/`, and a
+library, a `.kicad_pcb`) with a `project.yaml` carrying its conventions and checklists,
+`profiles/`, `params/`, and a
 `design.yaml` per design carrying its `intent:` section. The KiCad views are GENERATED from the netlist by `tools/`. From
 inside `examples/tutorial-project/`, `make check-views` fails if the three stop describing the same
 design, and `make regen-views` rebuilds them after any netlist edit (both targets live in this

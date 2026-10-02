@@ -24,8 +24,7 @@ func mapFS(files map[string]string) fstest.MapFS {
 //	scratch/loose.edn                 belongs to no design
 func demoStore() *FSStore {
 	return NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
-		"project.yaml":                              "name: gateway\ntitle: Gateway program\n",
-		"conventions.yaml":                          "name: gateway\n",
+		"project.yaml":                              "name: gateway\ntitle: Gateway program\nconventions: {name: gateway}\n",
 		"designs/gateway/design.yaml":               "name: gateway\ntitle: Sample Board\nentry: gateway.edn\ncompanions: [gateway.kicad_pcb, gateway.kicad_sch]\n",
 		"designs/gateway/gateway.edn":               "x",
 		"designs/gateway/gateway.kicad_pcb":         "x",
@@ -225,32 +224,82 @@ func testURI(t *testing.T, mount, p string) artifact.URI {
 	return u
 }
 
-// TestFSStoreNamesTheConventionsFile exists because the conventions VALUE is what composes a run,
-// and the URI is what a client needs to offer the project's convention back as a choice. A picker
-// has to pass something, and a resolved value is not a ref, so without this a viewer can say which
-// convention is in effect but cannot let a reader re-select it after trying another.
-func TestFSStoreNamesTheConventionsFile(t *testing.T) {
-	p, err := demoStore().Project(context.Background(), "projects/gateway")
+// A project's conventions and checklists are sections of its descriptor (agni issue 828), so they
+// reach the config as values, the checklists in the order they are written, since the first is the
+// project's default.
+func TestFSStoreCarriesTheProjectsSections(t *testing.T) {
+	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
+		"project.yaml": "name: p\nconventions:\n  name: house\n  lexicon: {net: {rail: {patterns: ['_V$']}}}\n" +
+			"checklists:\n" +
+			"  zeta: {name: Z, areas: [{name: A, items: [{id: Z1, title: z, rule: bulk-cap}]}]}\n" +
+			"  alpha: {name: A, areas: [{name: A, items: [{id: A1, title: a, note: by hand}]}]}\n",
+	})})
+	p, err := s.Project(context.Background(), "projects/p")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := p.GetConfig().GetConventionsUri(); got != "mount://m/conventions.yaml" {
-		t.Errorf("conventions uri = %q, want the file the value was read from", got)
+	if got := p.GetConfig().GetConventions().GetName(); got != "house" {
+		t.Errorf("conventions name = %q, want house", got)
+	}
+	if got := p.GetConfig().GetConventions().GetLexicon().GetNet().GetRail().GetPatterns(); len(got) != 1 || got[0] != "_V$" {
+		t.Errorf("conventions lexicon = %v, want the declared rail pattern", got)
+	}
+	var names []string
+	for _, c := range p.GetConfig().GetChecklists() {
+		names = append(names, c.GetName())
+	}
+	// Written order, not sorted, which is what makes zeta the default here.
+	if strings.Join(names, ",") != "zeta,alpha" {
+		t.Errorf("checklists = %v, want [zeta alpha] in the order written", names)
+	}
+	if item := p.GetConfig().GetChecklists()[0].GetManifest().GetAreas()[0].GetItems()[0]; item.GetId() != "Z1" {
+		t.Errorf("first checklist's first item = %q, want Z1", item.GetId())
 	}
 }
 
-// TestFSStoreConventionsUriAbsentWhenUndeclared keeps the URI accurate. A project with no conventions
-// file must not advertise one, or a picker offers a ref that resolves to nothing.
-func TestFSStoreConventionsUriAbsentWhenUndeclared(t *testing.T) {
-	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
-		"project.yaml": "name: bare\n",
-	})})
+// A project declaring neither section carries neither, so a client offers no checklist and the
+// engine's vocabulary applies.
+func TestFSStoreProjectWithNoSections(t *testing.T) {
+	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: bare\n"})})
 	p, err := s.Project(context.Background(), "projects/bare")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := p.GetConfig().GetConventionsUri(); got != "" {
-		t.Errorf("conventions uri = %q, want empty for a project that declares none", got)
+	if p.GetConfig().GetConventions() != nil || len(p.GetConfig().GetChecklists()) != 0 {
+		t.Errorf("a bare project must carry no conventions and no checklists, got %+v", p.GetConfig())
+	}
+}
+
+// A conventions.yaml or review.yaml beside project.yaml is the layout before agni issue 828. Reading
+// the project without it would drop a tier and read as a team that declared none, so the load fails
+// and names where the content goes.
+func TestFSStoreRefusesFormerProjectFiles(t *testing.T) {
+	ctx := context.Background()
+	if _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: p\n"})}).Project(ctx, "projects/p"); err != nil {
+		t.Fatalf("positive control: a project with neither file must load: %v", err)
+	}
+	for file, want := range map[string]string{"conventions.yaml": "under conventions:", "review.yaml": "under checklists:"} {
+		s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: p\n", file: "name: x\n"})})
+		_, err := s.Projects(ctx)
+		if err == nil || !strings.Contains(err.Error(), file+" is no longer read") || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: error = %v, want it refused and pointed %s", file, err, want)
+		}
+	}
+}
+
+func TestParseProjectRefusesTheFileForms(t *testing.T) {
+	for label, c := range map[string]struct{ doc, want string }{
+		"conventions naming a file": {"name: p\nconventions: house.yaml\n", "written inline under conventions:"},
+		"checklist key":             {"name: p\nchecklist: review.yaml\n", "written inline under checklists:"},
+		"checklist naming a file":   {"name: p\nchecklists: {review: review.yaml}\n", "not a file name"},
+		"checklists as a list":      {"name: p\nchecklists: [review]\n", "must map a name to a checklist"},
+		"unknown conventions key":   {"name: p\nconventions: {nmae: x}\n", `unknown key "nmae"`},
+		"invalid checklist":         {"name: p\nchecklists: {review: {name: R, areas: [{name: A, items: [{title: no id}]}]}}\n", `checklist "review"`},
+	} {
+		_, _, _, err := ParseProject(strings.NewReader(c.doc))
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: error = %v, want it to contain %q", label, err, c.want)
+		}
 	}
 }
 
@@ -304,9 +353,9 @@ func TestFSStoreRefusesAFormerIntentFile(t *testing.T) {
 	}
 }
 
-// An inline intent section makes the descriptor itself the intent URI, and a design without one
-// carries none.
-func TestFSStoreIntentUriNamesTheDescriptor(t *testing.T) {
+// A design's intent section reaches its config as a value (agni issue 828), so nothing above the
+// store opens design.yaml again, and a design without one carries none.
+func TestFSStoreCarriesTheDesignsIntent(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"project.yaml":          "name: gateway\n",
 		"designs/a/design.yaml": "name: a\nentry: a.edn\nintent:\n  modules:\n  - {name: X, class: soc}\n",
@@ -319,21 +368,21 @@ func TestFSStoreIntentUriNamesTheDescriptor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := a.GetConfig().GetIntentUri(); !strings.HasSuffix(got, "designs/a/design.yaml") {
-		t.Errorf("intent URI = %q, want the design's own descriptor", got)
+	if got := a.GetConfig().GetIntent().GetModules(); len(got) != 1 || got[0].GetClass() != "soc" {
+		t.Errorf("intent modules = %v, want the declared module", got)
 	}
 	b, _, err := s.ResolveDesign(ctx, testURI(t, "m", "designs/b"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := b.GetConfig().GetIntentUri(); got != "" {
-		t.Errorf("a design declaring no intent carries no intent URI, got %q", got)
+	if b.GetConfig().GetIntent() != nil {
+		t.Errorf("a design declaring no intent carries none, got %v", b.GetConfig().GetIntent())
 	}
 }
 
 func TestParseDesignRefusesIntentNamingAFile(t *testing.T) {
 	_, _, err := ParseDesign(strings.NewReader("name: a\nentry: a.edn\nintent: intent.yaml\n"))
-	if err == nil || !strings.Contains(err.Error(), "written inline") {
-		t.Fatalf("intent naming a file must fail and say it is written inline now, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "declared inline") {
+		t.Fatalf("intent naming a file must fail and say it is declared inline now, got %v", err)
 	}
 }

@@ -27,7 +27,8 @@ Four of the six roles exist to say "this is named after a rail and is not one":
 The first two must never be probed. The last two are ordinary signals a test point is welcome on, and
 are excluded from rail rules only because they are not rails.
 
-The patterns behind each role are lexicon config a project extends in `conventions.yaml`.
+The patterns behind each role are lexicon config a project extends in the `conventions:` section of
+its `project.yaml`.
 
 ### For software engineers
 

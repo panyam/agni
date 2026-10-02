@@ -4,6 +4,10 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { ReviewManifest } from "../checks/checks_pb";
+import { file_agni_v1_checks_checks } from "../checks/checks_pb";
+import type { DesignIntent } from "../config/intent_pb";
+import { file_agni_v1_config_intent } from "../config/intent_pb";
 import type { NamingConvention } from "../config/naming_pb";
 import { file_agni_v1_config_naming } from "../config/naming_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIqkDCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_config_naming]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIoUECg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFAoMcHJvZmlsZV91cmlzGAMgAygJEhIKCnBhcmFtX3VyaXMYBCADKAkSMgoKY2hlY2tsaXN0cxgMIAMoCzIeLmFnbmkudjEud2ViYXBpLk5hbWVkQ2hlY2tsaXN0EiwKBmludGVudBgNIAEoCzIcLmFnbmkudjEuY29uZmlnLkRlc2lnbkludGVudBIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFKBAgCEANKBAgFEAZKBAgGEAdSD2NvbnZlbnRpb25zX3VyaVINY2hlY2tsaXN0X3VyaVIKaW50ZW50X3VyaSJQCg5OYW1lZENoZWNrbGlzdBIMCgRuYW1lGAEgASgJEjAKCG1hbmlmZXN0GAIgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming]);
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -54,18 +58,6 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
   conventions?: NamingConvention | undefined;
 
   /**
-   * conventions_uri names the file `conventions` was read from, absent when none was declared.
-   *
-   * It is redundant for COMPOSING a run, which is why the value above exists, and not redundant for a
-   * client that has to OFFER the convention as a choice: a picker needs something to pass back, and a
-   * resolved value is not a ref. Without it a viewer can state which convention is in effect but
-   * cannot let a reader re-select it after trying another.
-   *
-   * @generated from field: string conventions_uri = 2;
-   */
-  conventionsUri: string;
-
-  /**
    * profile_uris are the interface-profile declarations composed into the catalog.
    *
    * @generated from field: repeated string profile_uris = 3;
@@ -80,24 +72,32 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
   paramUris: string[];
 
   /**
-   * checklist_uri names the review manifest a review run scores. It is NOT loaded with the rest: a
-   * checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
+   * checklists are the review manifests a project declares, by name, in the order project.yaml writes
+   * them (agni issue 828). The first is the project's default, the one a review runs when no
+   * checklist is named. They are VALUES, as conventions is, because a review run takes its manifest
+   * as a value (C22), so a client holding the project's config can run any of them with no further
+   * read.
    *
-   * @generated from field: string checklist_uri = 5;
+   * A project that extends another inherits its checklists, and one of the same name replaces the
+   * inherited one in place.
+   *
+   * @generated from field: repeated agni.v1.webapi.NamedChecklist checklists = 12;
    */
-  checklistUri: string;
+  checklists: NamedChecklist[];
 
   /**
-   * intent_uri names a design's declared architecture: its domains, modules, and subsystems.
+   * intent is a design's declared architecture (agni issue 824): its modules, what each named net is,
+   * power sequences, strap groups and pin map. It is per-DESIGN where the rest of this message is
+   * per-project, because each board has its own intended architecture while conventions and profiles
+   * describe the team. One message carries both because the SHAPE is the same, and which fields a
+   * Project sets and which a Design sets is what keeps the scopes apart.
    *
-   * Intent is per-DESIGN where the rest of this message is per-project, because each board has its own
-   * intended architecture while conventions and profiles describe the team. One message carries both
-   * because the SHAPE is the same; which fields a Project sets and which a Design sets is what keeps
-   * the scopes apart, and it is now visible in the descriptors rather than asserted in a comment.
+   * A value, so it compiles into rules with no I/O, on any host, whether a project store supplied it
+   * or a request carried it.
    *
-   * @generated from field: string intent_uri = 6;
+   * @generated from field: agni.v1.config.DesignIntent intent = 13;
    */
-  intentUri: string;
+  intent?: DesignIntent | undefined;
 
   /**
    * extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
@@ -179,6 +179,32 @@ export const AnalysisConfigSchema: GenMessage<AnalysisConfig> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_config, 0);
 
 /**
+ * NamedChecklist is one review manifest a project declares, under the name a run picks it by.
+ *
+ * @generated from message agni.v1.webapi.NamedChecklist
+ */
+export type NamedChecklist = Message<"agni.v1.webapi.NamedChecklist"> & {
+  /**
+   * name is the key it is written under in project.yaml, such as "review" or "house".
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: agni.v1.checks.ReviewManifest manifest = 2;
+   */
+  manifest?: ReviewManifest | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.NamedChecklist.
+ * Use `create(NamedChecklistSchema)` to create a new message.
+ */
+export const NamedChecklistSchema: GenMessage<NamedChecklist> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_config, 1);
+
+/**
  * LibraryModule is one module of derived relations sent as a value.
  *
  * @generated from message agni.v1.webapi.LibraryModule
@@ -220,5 +246,5 @@ export type LibraryModule = Message<"agni.v1.webapi.LibraryModule"> & {
  * Use `create(LibraryModuleSchema)` to create a new message.
  */
 export const LibraryModuleSchema: GenMessage<LibraryModule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_config, 1);
+  messageDesc(file_agni_v1_webapi_config, 2);
 

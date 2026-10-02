@@ -193,7 +193,7 @@ which storing runs would be pointless.
 
 Each run is one file, written in the same format `agni review --results-out` produces, so the volume
 stays readable with ordinary tools and a run can be copied out and rendered anywhere. A run records
-the checklist it scored, not a pointer to it, so editing your `review.yaml` afterwards never
+the checklist it scored, not a pointer to it, so editing your project's checklist afterwards never
 rewrites what an older run says it asked.
 
 </details>

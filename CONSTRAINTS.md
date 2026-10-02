@@ -777,7 +777,7 @@ constructs a `checkspb.RunConfig`. A surface must not derive it from its own fla
 config, or the request message, because none of those is what the run used once a design resolves to
 a project.
 **Why:** the alternative already shipped a wrong document, and it was wrong in the reassuring
-direction. `agni check designs/gateway --results-out` inside a project declaring `conventions.yaml`,
+direction. `agni check designs/gateway --results-out` inside a project declaring conventions,
 `profiles/` and `params/` composed all three and recorded `"run": {}`, because no flag named any of
 them. `RunConfig` exists precisely so a reader can tell a design with no datasheet violations from a
 run that had no datasheet corpus, so recording `false` for an attached corpus makes a clean report

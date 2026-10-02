@@ -50,8 +50,8 @@ tolerate. Neither shows up in a functional test that powers everything simultane
   rails. That is deliberate, because the sequencing question is about which supply and not which
   voltage.
 - What counts as a rail comes from the naming lexicon, so a project whose supplies the built-in
-  vocabulary does not recognise reports nothing here. Declare them in `conventions.yaml`; the
-  `rail-not-classified` rule is the tripwire that says when this is happening.
+  vocabulary does not recognise reports nothing here. Declare them in the `conventions:` section of
+  `project.yaml`; the `rail-not-classified` rule is the tripwire that says when this is happening.
 - Severity is `warning`, because a bus deliberately pulled to one domain with a translator elsewhere
   on the net can look like this to a netlist.
 

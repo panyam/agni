@@ -4,6 +4,8 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/checks/checks.proto";
+import "agni/v1/config/intent.proto";
 import "agni/v1/config/naming.proto";
 
 // This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -36,27 +38,28 @@ message AnalysisConfig {
   // so they arrive as refs the injected port loads — the same reason a design is a ref rather than an
   // inlined megabyte.
   agni.v1.config.NamingConvention conventions = 1;
-  // conventions_uri names the file `conventions` was read from, absent when none was declared.
-  //
-  // It is redundant for COMPOSING a run, which is why the value above exists, and not redundant for a
-  // client that has to OFFER the convention as a choice: a picker needs something to pass back, and a
-  // resolved value is not a ref. Without it a viewer can state which convention is in effect but
-  // cannot let a reader re-select it after trying another.
-  string conventions_uri = 2;
   // profile_uris are the interface-profile declarations composed into the catalog.
   repeated string profile_uris = 3;
   // param_uris are the seeded datasheet parameter sets part limits are checked against.
   repeated string param_uris = 4;
-  // checklist_uri names the review manifest a review run scores. It is NOT loaded with the rest: a
-  // checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
-  string checklist_uri = 5;
-  // intent_uri names a design's declared architecture: its domains, modules, and subsystems.
+  // checklists are the review manifests a project declares, by name, in the order project.yaml writes
+  // them (agni issue 828). The first is the project's default, the one a review runs when no
+  // checklist is named. They are VALUES, as conventions is, because a review run takes its manifest
+  // as a value (C22), so a client holding the project's config can run any of them with no further
+  // read.
   //
-  // Intent is per-DESIGN where the rest of this message is per-project, because each board has its own
-  // intended architecture while conventions and profiles describe the team. One message carries both
-  // because the SHAPE is the same; which fields a Project sets and which a Design sets is what keeps
-  // the scopes apart, and it is now visible in the descriptors rather than asserted in a comment.
-  string intent_uri = 6;
+  // A project that extends another inherits its checklists, and one of the same name replaces the
+  // inherited one in place.
+  repeated NamedChecklist checklists = 12;
+  // intent is a design's declared architecture (agni issue 824): its modules, what each named net is,
+  // power sequences, strap groups and pin map. It is per-DESIGN where the rest of this message is
+  // per-project, because each board has its own intended architecture while conventions and profiles
+  // describe the team. One message carries both because the SHAPE is the same, and which fields a
+  // Project sets and which a Design sets is what keeps the scopes apart.
+  //
+  // A value, so it compiles into rules with no I/O, on any host, whether a project store supplied it
+  // or a request carried it.
+  agni.v1.config.DesignIntent intent = 13;
 
   // extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
   // when it inherits nothing.
@@ -104,6 +107,18 @@ message AnalysisConfig {
   // library_docs are optional reference pages for library members, keyed by member path, as a
   // library directory's docs/<member.path>.md are. A page for a member nothing defines is refused.
   map<string, string> library_docs = 11;
+
+  // conventions_uri, checklist_uri and intent_uri named the files these tiers were read from, before
+  // each became a section of a descriptor and a value here (agni issues 824, 828).
+  reserved 2, 5, 6;
+  reserved "conventions_uri", "checklist_uri", "intent_uri";
+}
+
+// NamedChecklist is one review manifest a project declares, under the name a run picks it by.
+message NamedChecklist {
+  // name is the key it is written under in project.yaml, such as "review" or "house".
+  string name = 1;
+  agni.v1.checks.ReviewManifest manifest = 2;
 }
 
 // LibraryModule is one module of derived relations sent as a value.

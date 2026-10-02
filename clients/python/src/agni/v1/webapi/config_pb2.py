@@ -22,10 +22,12 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from agni.v1.checks import checks_pb2 as agni_dot_v1_dot_checks_dot_checks__pb2
+from agni.v1.config import intent_pb2 as agni_dot_v1_dot_config_dot_intent__pb2
 from agni.v1.config import naming_pb2 as agni_dot_v1_dot_config_dot_naming__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/config.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/config/naming.proto\"\xc6\x04\n\x0e\x41nalysisConfig\x12\x42\n\x0b\x63onventions\x18\x01 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\x0b\x63onventions\x12\'\n\x0f\x63onventions_uri\x18\x02 \x01(\tR\x0e\x63onventionsUri\x12!\n\x0cprofile_uris\x18\x03 \x03(\tR\x0bprofileUris\x12\x1d\n\nparam_uris\x18\x04 \x03(\tR\tparamUris\x12#\n\rchecklist_uri\x18\x05 \x01(\tR\x0c\x63hecklistUri\x12\x1d\n\nintent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n\x07\x65xtends\x18\x07 \x01(\tR\x07\x65xtends\x12(\n\x10symbol_path_uris\x18\x08 \x03(\tR\x0esymbolPathUris\x12!\n\x0clibrary_uris\x18\t \x03(\tR\x0blibraryUris\x12\x46\n\x0flibrary_modules\x18\n \x03(\x0b\x32\x1d.agni.v1.webapi.LibraryModuleR\x0elibraryModules\x12R\n\x0clibrary_docs\x18\x0b \x03(\x0b\x32/.agni.v1.webapi.AnalysisConfig.LibraryDocsEntryR\x0blibraryDocs\x1a>\n\x10LibraryDocsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"k\n\rLibraryModule\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x1a\n\x08language\x18\x02 \x01(\tR\x08language\x12\x12\n\x04text\x18\x03 \x01(\tR\x04text\x12\x16\n\x06source\x18\x04 \x01(\tR\x06sourceB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/config.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/checks/checks.proto\x1a\x1b\x61gni/v1/config/intent.proto\x1a\x1b\x61gni/v1/config/naming.proto\"\x8d\x05\n\x0e\x41nalysisConfig\x12\x42\n\x0b\x63onventions\x18\x01 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\x0b\x63onventions\x12!\n\x0cprofile_uris\x18\x03 \x03(\tR\x0bprofileUris\x12\x1d\n\nparam_uris\x18\x04 \x03(\tR\tparamUris\x12>\n\nchecklists\x18\x0c \x03(\x0b\x32\x1e.agni.v1.webapi.NamedChecklistR\nchecklists\x12\x34\n\x06intent\x18\r \x01(\x0b\x32\x1c.agni.v1.config.DesignIntentR\x06intent\x12\x18\n\x07\x65xtends\x18\x07 \x01(\tR\x07\x65xtends\x12(\n\x10symbol_path_uris\x18\x08 \x03(\tR\x0esymbolPathUris\x12!\n\x0clibrary_uris\x18\t \x03(\tR\x0blibraryUris\x12\x46\n\x0flibrary_modules\x18\n \x03(\x0b\x32\x1d.agni.v1.webapi.LibraryModuleR\x0elibraryModules\x12R\n\x0clibrary_docs\x18\x0b \x03(\x0b\x32/.agni.v1.webapi.AnalysisConfig.LibraryDocsEntryR\x0blibraryDocs\x1a>\n\x10LibraryDocsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01J\x04\x08\x02\x10\x03J\x04\x08\x05\x10\x06J\x04\x08\x06\x10\x07R\x0f\x63onventions_uriR\rchecklist_uriR\nintent_uri\"`\n\x0eNamedChecklist\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12:\n\x08manifest\x18\x02 \x01(\x0b\x32\x1e.agni.v1.checks.ReviewManifestR\x08manifest\"k\n\rLibraryModule\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x1a\n\x08language\x18\x02 \x01(\tR\x08language\x12\x12\n\x04text\x18\x03 \x01(\tR\x04text\x12\x16\n\x06source\x18\x04 \x01(\tR\x06sourceB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,10 +37,12 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_ANALYSISCONFIG_LIBRARYDOCSENTRY']._loaded_options = None
   _globals['_ANALYSISCONFIG_LIBRARYDOCSENTRY']._serialized_options = b'8\001'
-  _globals['_ANALYSISCONFIG']._serialized_start=77
-  _globals['_ANALYSISCONFIG']._serialized_end=659
-  _globals['_ANALYSISCONFIG_LIBRARYDOCSENTRY']._serialized_start=597
-  _globals['_ANALYSISCONFIG_LIBRARYDOCSENTRY']._serialized_end=659
-  _globals['_LIBRARYMODULE']._serialized_start=661
-  _globals['_LIBRARYMODULE']._serialized_end=768
+  _globals['_ANALYSISCONFIG']._serialized_start=135
+  _globals['_ANALYSISCONFIG']._serialized_end=788
+  _globals['_ANALYSISCONFIG_LIBRARYDOCSENTRY']._serialized_start=664
+  _globals['_ANALYSISCONFIG_LIBRARYDOCSENTRY']._serialized_end=726
+  _globals['_NAMEDCHECKLIST']._serialized_start=790
+  _globals['_NAMEDCHECKLIST']._serialized_end=886
+  _globals['_LIBRARYMODULE']._serialized_start=888
+  _globals['_LIBRARYMODULE']._serialized_end=995
 # @@protoc_insertion_point(module_scope)

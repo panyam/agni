@@ -71,7 +71,7 @@ func TestEveryOverlayInputMovesTheIdentity(t *testing.T) {
 		}},
 		{"the request", func() (string, bool) {
 			return idFor(t, project("projects/p"), &webapi.Design{Name: "d"},
-				&webapi.OverlayConfig{IgnoreProject: false, Config: &webapi.AnalysisConfig{IntentUri: "mount://m/i.yaml"}},
+				&webapi.OverlayConfig{IgnoreProject: false, Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/profiles"}}},
 				digestResolver{digest: "sha256:cfg"}, "house")
 		}},
 		// The one that is not a proto. Config a resolver READ changes the run without changing any

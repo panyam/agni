@@ -7,6 +7,7 @@
 package webapi
 
 import (
+	checks "github.com/panyam/agni/gen/go/agni/v1/checks"
 	config "github.com/panyam/agni/gen/go/agni/v1/config"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -53,27 +54,28 @@ type AnalysisConfig struct {
 	// so they arrive as refs the injected port loads — the same reason a design is a ref rather than an
 	// inlined megabyte.
 	Conventions *config.NamingConvention `protobuf:"bytes,1,opt,name=conventions,proto3" json:"conventions,omitempty"`
-	// conventions_uri names the file `conventions` was read from, absent when none was declared.
-	//
-	// It is redundant for COMPOSING a run, which is why the value above exists, and not redundant for a
-	// client that has to OFFER the convention as a choice: a picker needs something to pass back, and a
-	// resolved value is not a ref. Without it a viewer can state which convention is in effect but
-	// cannot let a reader re-select it after trying another.
-	ConventionsUri string `protobuf:"bytes,2,opt,name=conventions_uri,json=conventionsUri,proto3" json:"conventions_uri,omitempty"`
 	// profile_uris are the interface-profile declarations composed into the catalog.
 	ProfileUris []string `protobuf:"bytes,3,rep,name=profile_uris,json=profileUris,proto3" json:"profile_uris,omitempty"`
 	// param_uris are the seeded datasheet parameter sets part limits are checked against.
 	ParamUris []string `protobuf:"bytes,4,rep,name=param_uris,json=paramUris,proto3" json:"param_uris,omitempty"`
-	// checklist_uri names the review manifest a review run scores. It is NOT loaded with the rest: a
-	// checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
-	ChecklistUri string `protobuf:"bytes,5,opt,name=checklist_uri,json=checklistUri,proto3" json:"checklist_uri,omitempty"`
-	// intent_uri names a design's declared architecture: its domains, modules, and subsystems.
+	// checklists are the review manifests a project declares, by name, in the order project.yaml writes
+	// them (agni issue 828). The first is the project's default, the one a review runs when no
+	// checklist is named. They are VALUES, as conventions is, because a review run takes its manifest
+	// as a value (C22), so a client holding the project's config can run any of them with no further
+	// read.
 	//
-	// Intent is per-DESIGN where the rest of this message is per-project, because each board has its own
-	// intended architecture while conventions and profiles describe the team. One message carries both
-	// because the SHAPE is the same; which fields a Project sets and which a Design sets is what keeps
-	// the scopes apart, and it is now visible in the descriptors rather than asserted in a comment.
-	IntentUri string `protobuf:"bytes,6,opt,name=intent_uri,json=intentUri,proto3" json:"intent_uri,omitempty"`
+	// A project that extends another inherits its checklists, and one of the same name replaces the
+	// inherited one in place.
+	Checklists []*NamedChecklist `protobuf:"bytes,12,rep,name=checklists,proto3" json:"checklists,omitempty"`
+	// intent is a design's declared architecture (agni issue 824): its modules, what each named net is,
+	// power sequences, strap groups and pin map. It is per-DESIGN where the rest of this message is
+	// per-project, because each board has its own intended architecture while conventions and profiles
+	// describe the team. One message carries both because the SHAPE is the same, and which fields a
+	// Project sets and which a Design sets is what keeps the scopes apart.
+	//
+	// A value, so it compiles into rules with no I/O, on any host, whether a project store supplied it
+	// or a request carried it.
+	Intent *config.DesignIntent `protobuf:"bytes,13,opt,name=intent,proto3" json:"intent,omitempty"`
 	// extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
 	// when it inherits nothing.
 	//
@@ -161,13 +163,6 @@ func (x *AnalysisConfig) GetConventions() *config.NamingConvention {
 	return nil
 }
 
-func (x *AnalysisConfig) GetConventionsUri() string {
-	if x != nil {
-		return x.ConventionsUri
-	}
-	return ""
-}
-
 func (x *AnalysisConfig) GetProfileUris() []string {
 	if x != nil {
 		return x.ProfileUris
@@ -182,18 +177,18 @@ func (x *AnalysisConfig) GetParamUris() []string {
 	return nil
 }
 
-func (x *AnalysisConfig) GetChecklistUri() string {
+func (x *AnalysisConfig) GetChecklists() []*NamedChecklist {
 	if x != nil {
-		return x.ChecklistUri
+		return x.Checklists
 	}
-	return ""
+	return nil
 }
 
-func (x *AnalysisConfig) GetIntentUri() string {
+func (x *AnalysisConfig) GetIntent() *config.DesignIntent {
 	if x != nil {
-		return x.IntentUri
+		return x.Intent
 	}
-	return ""
+	return nil
 }
 
 func (x *AnalysisConfig) GetExtends() string {
@@ -231,6 +226,60 @@ func (x *AnalysisConfig) GetLibraryDocs() map[string]string {
 	return nil
 }
 
+// NamedChecklist is one review manifest a project declares, under the name a run picks it by.
+type NamedChecklist struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name is the key it is written under in project.yaml, such as "review" or "house".
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Manifest      *checks.ReviewManifest `protobuf:"bytes,2,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NamedChecklist) Reset() {
+	*x = NamedChecklist{}
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NamedChecklist) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NamedChecklist) ProtoMessage() {}
+
+func (x *NamedChecklist) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NamedChecklist.ProtoReflect.Descriptor instead.
+func (*NamedChecklist) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *NamedChecklist) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *NamedChecklist) GetManifest() *checks.ReviewManifest {
+	if x != nil {
+		return x.Manifest
+	}
+	return nil
+}
+
 // LibraryModule is one module of derived relations sent as a value.
 type LibraryModule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -250,7 +299,7 @@ type LibraryModule struct {
 
 func (x *LibraryModule) Reset() {
 	*x = LibraryModule{}
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -262,7 +311,7 @@ func (x *LibraryModule) String() string {
 func (*LibraryModule) ProtoMessage() {}
 
 func (x *LibraryModule) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -275,7 +324,7 @@ func (x *LibraryModule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LibraryModule.ProtoReflect.Descriptor instead.
 func (*LibraryModule) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *LibraryModule) GetPath() string {
@@ -310,16 +359,16 @@ var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/config/naming.proto\"\xc6\x04\n" +
+	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/intent.proto\x1a\x1bagni/v1/config/naming.proto\"\x8d\x05\n" +
 	"\x0eAnalysisConfig\x12B\n" +
-	"\vconventions\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\x12'\n" +
-	"\x0fconventions_uri\x18\x02 \x01(\tR\x0econventionsUri\x12!\n" +
+	"\vconventions\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\x12!\n" +
 	"\fprofile_uris\x18\x03 \x03(\tR\vprofileUris\x12\x1d\n" +
 	"\n" +
-	"param_uris\x18\x04 \x03(\tR\tparamUris\x12#\n" +
-	"\rchecklist_uri\x18\x05 \x01(\tR\fchecklistUri\x12\x1d\n" +
+	"param_uris\x18\x04 \x03(\tR\tparamUris\x12>\n" +
 	"\n" +
-	"intent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n" +
+	"checklists\x18\f \x03(\v2\x1e.agni.v1.webapi.NamedChecklistR\n" +
+	"checklists\x124\n" +
+	"\x06intent\x18\r \x01(\v2\x1c.agni.v1.config.DesignIntentR\x06intent\x12\x18\n" +
 	"\aextends\x18\a \x01(\tR\aextends\x12(\n" +
 	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUris\x12!\n" +
 	"\flibrary_uris\x18\t \x03(\tR\vlibraryUris\x12F\n" +
@@ -328,7 +377,11 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\flibrary_docs\x18\v \x03(\v2/.agni.v1.webapi.AnalysisConfig.LibraryDocsEntryR\vlibraryDocs\x1a>\n" +
 	"\x10LibraryDocsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"k\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x02\x10\x03J\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x0fconventions_uriR\rchecklist_uriR\n" +
+	"intent_uri\"`\n" +
+	"\x0eNamedChecklist\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12:\n" +
+	"\bmanifest\x18\x02 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\"k\n" +
 	"\rLibraryModule\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1a\n" +
 	"\blanguage\x18\x02 \x01(\tR\blanguage\x12\x12\n" +
@@ -347,22 +400,28 @@ func file_agni_v1_webapi_config_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_config_proto_rawDescData
 }
 
-var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_agni_v1_webapi_config_proto_goTypes = []any{
 	(*AnalysisConfig)(nil),          // 0: agni.v1.webapi.AnalysisConfig
-	(*LibraryModule)(nil),           // 1: agni.v1.webapi.LibraryModule
-	nil,                             // 2: agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
-	(*config.NamingConvention)(nil), // 3: agni.v1.config.NamingConvention
+	(*NamedChecklist)(nil),          // 1: agni.v1.webapi.NamedChecklist
+	(*LibraryModule)(nil),           // 2: agni.v1.webapi.LibraryModule
+	nil,                             // 3: agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
+	(*config.NamingConvention)(nil), // 4: agni.v1.config.NamingConvention
+	(*config.DesignIntent)(nil),     // 5: agni.v1.config.DesignIntent
+	(*checks.ReviewManifest)(nil),   // 6: agni.v1.checks.ReviewManifest
 }
 var file_agni_v1_webapi_config_proto_depIdxs = []int32{
-	3, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.config.NamingConvention
-	1, // 1: agni.v1.webapi.AnalysisConfig.library_modules:type_name -> agni.v1.webapi.LibraryModule
-	2, // 2: agni.v1.webapi.AnalysisConfig.library_docs:type_name -> agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	4, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.config.NamingConvention
+	1, // 1: agni.v1.webapi.AnalysisConfig.checklists:type_name -> agni.v1.webapi.NamedChecklist
+	5, // 2: agni.v1.webapi.AnalysisConfig.intent:type_name -> agni.v1.config.DesignIntent
+	2, // 3: agni.v1.webapi.AnalysisConfig.library_modules:type_name -> agni.v1.webapi.LibraryModule
+	3, // 4: agni.v1.webapi.AnalysisConfig.library_docs:type_name -> agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
+	6, // 5: agni.v1.webapi.NamedChecklist.manifest:type_name -> agni.v1.checks.ReviewManifest
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_config_proto_init() }
@@ -376,7 +435,7 @@ func file_agni_v1_webapi_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_config_proto_rawDesc), len(file_agni_v1_webapi_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

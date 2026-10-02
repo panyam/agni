@@ -1,6 +1,5 @@
-# What makes this folder a PROJECT: a name, and the fact that the config beside it (conventions.yaml,
-# profiles/, params/, review.yaml, lib/) belongs to every design under designs/ rather than to any one
-# of them.
+# What makes this folder a PROJECT: a name, and the fact that the config in this file and beside it
+# (profiles/, params/, lib/) belongs to every design under designs/ rather than to any one of them.
 #
 # The name is the project's identity, not its folder. `agni serve` addresses this project as
 # `projects/gateway` and the board below it as `projects/gateway/designs/gateway`, so renaming the
@@ -10,3 +9,151 @@
 # file, and it lives under designs/gateway/ if a design has one. This is the other scope: the team's.
 name: gateway
 title: Sample Board review project
+
+# House naming conventions, composed into every run on a design of this project. The section carries
+# two halves, wired differently.
+#
+#   lexicon: teaches the engine which of THIS project's net names are power rails. It is applied to
+#            the design READ, so it changes what the rail-quantified rules can even see.
+#   rules:   adds catalog rules, namespaced <config name>/<rule name>, so they appear as
+#            `gateway/signal-net-naming` alongside the built-ins.
+#
+# The lexicon half is the one worth understanding. This project names rails function-first
+# (PMIC_CORE_3V3), and the built-in rail vocabulary is start-anchored on VCC / VDD / +3V3, so it
+# matches none of them. Without this section the only rail on the board is GND.
+conventions:
+  name: gateway
+  lexicon:
+    net:
+      rail:
+        patterns: ["_[0-9]+V[0-9]$"]
+  rules:
+    - name: signal-net-naming
+      severity: warning
+      why: "house style names a clock net CLK_*, so XTAL_IN / XTAL_OUT are off-convention"
+      allow: ["^(PMIC|CAN[0-9]+|I2C|MCU|CLK|GND)"]
+
+# Checklists are named, and a run picks one with --checklist NAME.
+checklists:
+  # The gateway project's review checklist, listed first so it is the one `agni review` runs when no
+  # --checklist is named. These are the questions this team asks of every board, in the order a
+  # reviewer asks them, and `agni review` reports one outcome per item.
+  #
+  # An item is bound to the engine in one of four ways, and all four appear below:
+  #   rule:    a catalog rule decides the item (built-in, house, profile, or intent)
+  #   profile: an interface profile decides it, and the item reads n/a when the interface is absent
+  #   query:   an inline datalog query decides it, for a question no shipped rule asks
+  #   note:    nothing automated decides it, and the note says who does
+  #
+  # The point of the not-automated verdicts is that a question nobody answered must not score as a
+  # pass. An item bound to a profile for an interface this board does not have reads n/a, not pass.
+  review:
+    name: Sample Board design review
+    areas:
+      - name: Power
+        items:
+          - id: "P1"
+            title: every rail carries a bulk capacitor
+            description: A rail with no bulk capacitance browns out on a load step.
+            rule: bulk-cap
+          - id: "P2"
+            title: every rail carries decoupling
+            rule: decoupling-present
+          - id: "P3"
+            title: the input rail is protected against reverse polarity
+            description: A harness connected backwards must not destroy the board.
+            rule: reverse-blocking-absent
+          - id: "P4"
+            title: no part is operated above its absolute-maximum supply voltage
+            description: Needs a seeded datasheet parameter for the part, else it cannot be decided.
+            rule: supply-exceeds-abs-max
+          - id: "P5"
+            title: every rail is probeable during bring-up
+            rule: test-point-coverage
+
+      - name: Interfaces
+        items:
+          - id: "I1"
+            title: the CAN interface is complete and terminated
+            description: Bound to the profile, so it reads n/a on a board with no CAN.
+            profile: CAN
+          - id: "I2"
+            title: the LIN interface is complete
+            description: >-
+              This board has no LIN. The item must not score a pass just because a check for an
+              absent interface found nothing to complain about.
+            profile: LIN
+          - id: "I3"
+            title: exposed signals have ESD protection
+            rule: esd-protection
+          - id: "I4"
+            title: every I2C bus has pull-ups
+            rule: i2c-pull-up
+
+      - name: House style
+        items:
+          - id: "H1"
+            title: net names follow house convention
+            description: Resolves only when --conventions is supplied, since the rule ships in that file.
+            rule: gateway/signal-net-naming
+          - id: "H2"
+            title: every test point sits on a recognized rail
+            description: >-
+              An inline query, because no shipped rule asks this project-specific question. Note that
+              the query matches the VIOLATION (a test point on a net that is not a rail), not the
+              healthy case. A query binding reports what it matches as findings, so matching the
+              healthy case inverts the item and a good board scores a fail.
+            query:
+              match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), not net.rail(?n) => ?r, ?n'
+              subject: r
+              message: '{r} probes {n}, which is not a recognized rail'
+          - id: "H3"
+            title: the assembly drawing lists a torque spec for every fastener
+            description: Nothing in the netlist can answer this.
+            note: manual review against the mechanical drawing package
+
+      - name: Board
+        items:
+          - id: "B1"
+            title: no track is below the fab's minimum width
+            description: >-
+              A board-tier question. This project's design.yaml entry is a netlist, which carries no
+              copper, so the item is answered from the board its design.yaml declares as a companion. A
+              design declaring no board reads n/a here, which means the question does not apply to what
+              was loaded, not that it passed.
+            rule: track-width
+
+      - name: Architecture
+        items:
+          - id: "A1"
+            title: each rail sits at its declared voltage
+            description: Resolves only when --intent-path is supplied.
+            rule: intent/voltage-domain-mismatch
+          - id: "A2"
+            title: the declared modules are all present
+            rule: intent/module-missing
+
+  # A checklist of this team's own questions, answered by its own library (lib/house.dl). It is a
+  # second checklist rather than part of review so the tutorial's checklist keeps the counts its
+  # pages teach with. Run it with
+  #
+  #   agni review designs/gateway --checklist house
+  #
+  # An inline query here compiles against the vocabulary the review runs with: the shipped library,
+  # this project's lib/, and anything sent with --lib.
+  house:
+    name: Gateway house checklist
+    areas:
+      - name: Bring-up
+        items:
+          - id: "P6"
+            title: every rail the PMIC drives has a test point
+            description: >-
+              house.pmic_rail names the PMIC's rails by this team's PMIC_ convention, and
+              house.pmic_probe_point the ones a probe can reach. The query matches the rails with no
+              test point, the violation.
+            query:
+              match: 'house.pmic_rail(?n), not house.pmic_probe_point(?n) => ?n'
+              subject: n
+              kind: net
+              message: 'PMIC rail {n} has no test point'

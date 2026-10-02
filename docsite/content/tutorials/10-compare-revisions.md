@@ -69,8 +69,8 @@ name a design folder the way rung 8 did. `--as-named` reads exactly the file you
 sides need it so that the two runs differ only by the revision:
 
 ```
-agni review --as-named designs/gateway/gateway.edn       --checklist review.yaml
-agni review --as-named designs/gateway/gateway-rev-b.edn --checklist review.yaml
+agni review --as-named designs/gateway/gateway.edn       --checklist review
+agni review --as-named designs/gateway/gateway-rev-b.edn --checklist review
 ```
 
 Rev A:

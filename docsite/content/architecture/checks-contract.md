@@ -105,7 +105,7 @@ a verdict naming a new way to go unanswered should be a review-layer change, not
 conclusion from a real report.
 
 `Covered()` is `Total - NotAutomated`, the count of items a MECHANISM exists for. It moves when a rule
-leaves the catalog, as a moved profiles directory or a renamed conventions file makes it do.
+leaves the catalog, as a moved profiles directory or a deleted conventions section makes it do.
 
 `Answered()` is `Pass + Fail + Provisional + ComputedNA`, the count of items the run actually DECIDED. It
 moves for a second reason, and that reason is invisible to the first count. A rule can be present,
@@ -138,8 +138,8 @@ Both numbers are rendered, and `agni review` gates on the second (`--min-answere
 `run` records what the run HAD, so it has to be derived from the same value the run used. That is
 `service.Overlay`, after the project's config and the request's own have been composed onto the
 deployment's. It is not the caller's flags, and the two stopped agreeing the moment a project could
-supply config: a design under a project declaring `conventions.yaml`, `profiles/` and `params/` is
-scored against all three by `agni check designs/gateway` with no flags at all.
+supply config: a design under a project declaring a `conventions:` section, `profiles/` and
+`params/` is scored against all three by `agni check designs/gateway` with no flags at all.
 
 `Overlay.Provenance` is the one place that value is computed and `RunConfigProto` the one place it
 becomes the message, so the CLI's check path and the service's review path cannot describe one run

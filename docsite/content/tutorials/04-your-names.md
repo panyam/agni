@@ -7,12 +7,14 @@ Everything so far used only the shipped rules, which know nothing about your tea
 first of four that change that, and it is deliberately first because it changes what the later ones
 can see at all.
 
-The file is `conventions.yaml`, and it carries two halves that are wired very differently.
+The vocabulary is the `conventions:` section of `project.yaml`, and it carries two halves that are
+wired very differently.
 
 ## The problem
 
-This project already carries the file this rung is about, so to see the problem it solves you have to
-move it out of the way first. The seeded parameter corpus moves aside with it, because a
+This project already carries the section this rung is about, so to see the problem it solves you
+have to delete it first, which the run below does on its scratch copy of the project. The seeded
+parameter corpus moves aside too, because a
 datasheet that types a pin as a supply establishes the rail on its own, so with
 the corpus in place these rails classify whether or not the naming vocabulary reaches them. That is
 the later rungs' subject. This one is about names, so both are out of the way. Ask the board which of
@@ -39,16 +41,17 @@ rail, and you cannot tell which rules those are by reading their descriptions.
 ## The two halves
 
 ```yaml
-name: gateway
-lexicon:
-  net:
-    rail:
-      patterns: ["_[0-9]+V[0-9]$"]
-rules:
-  - name: signal-net-naming
-    severity: warning
-    why: "house style names a clock net CLK_*, so XTAL_IN / XTAL_OUT are off-convention"
-    allow: ["^(PMIC|CAN[0-9]+|I2C|MCU|CLK|GND)"]
+conventions:
+  name: gateway
+  lexicon:
+    net:
+      rail:
+        patterns: ["_[0-9]+V[0-9]$"]
+  rules:
+    - name: signal-net-naming
+      severity: warning
+      why: "house style names a clock net CLK_*, so XTAL_IN / XTAL_OUT are off-convention"
+      allow: ["^(PMIC|CAN[0-9]+|I2C|MCU|CLK|GND)"]
 ```
 
 **`lexicon`** teaches the engine which of your names mean what. It is applied when the design is
@@ -62,11 +65,12 @@ or `VIN` while a rail net is called `3V3` or `+5V`, so a pattern that belongs in
 in the other. There is also a `class` map, which marks a PART as belonging to a component class.
 
 **`rules`** adds checks. They join the catalog namespaced under the config's name, so this one
-appears as `gateway/signal-net-naming`. Most people opening a conventions file expect only this half.
+appears as `gateway/signal-net-naming`. Most people opening a conventions section expect only this
+half.
 
 ## Both halves, visible
 
-Without the file:
+Without the section:
 
 {{ agniRun "content/tutorials/runs/04-check-conventions-off.yaml" }}
 
@@ -101,20 +105,21 @@ putting the same question this rung opened with:
 
 {{ agniRun "content/tutorials/runs/04-query-rails-conventions.yaml" }}
 
-Four rails, where the same query without the flag found one. Nothing was added to the design and no
+Four rails, where the same query without the section found one. Nothing was added to the design and no
 rule ran. The lexicon changed what the engine believes a rail *is*, and every relation derived from
 that role now answers differently.
 
 This is the loop to write a lexicon in: ask, compare against the rails you know the board has, adjust
-the pattern, ask again. `--conventions` on `query` reads only the lexicon half, since a query runs no
-rules.
+the pattern, ask again. A query reads only the lexicon half, since it runs no rules.
 
 ## Writing your own
 
 Start with the lexicon, not the rules. Run `agni query <design> 'net.rail(?n) => ?n' --conventions
-<your file>` on a real board and compare the list against the rails you know it has. Whatever is
-missing tells you the pattern you need. Repeat until the list is right, and only then write naming
-rules.
+<your file>` on a real board and compare the list against the rails you know it has. The file holds
+what the section holds (`name`, `lexicon`, `rules`) at its top level, and for that run it replaces any
+conventions the design's project declares, so you can try a candidate without editing the project.
+Whatever is missing tells you the pattern you need. Repeat until the list is right, move it into the
+project's `conventions:` section, and only then write naming rules.
 
 A rule's `allow` is a list of patterns, and a net name passes if it matches any of them. Getting
 this backwards is easy, because `allow` describes what is legal and the finding is a name matching

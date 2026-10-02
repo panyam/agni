@@ -1968,3 +1968,29 @@ number for the whole declaration.
 
 **Reopen if** one design's intent needs to be shared across several designs. That is `extends` on a
 descriptor, rather than a reason to split the file again.
+
+## A project's conventions and checklists are sections of project.yaml, and travel as values
+
+**They were files beside the descriptor.** `conventions.yaml` held the naming vocabulary, `review.yaml`
+the checklist, and `checklist:` could name another file. On the wire, `AnalysisConfig` carried the
+convention as a value with its file's URI beside it, the checklist as a URI a second rpc resolved, and
+a design's intent as a URI the config resolver read.
+
+**Answer, since agni 828: `project.yaml` carries `conventions:` and a named `checklists:` map, and
+`AnalysisConfig` carries both, and a design's intent, as values.** The first checklist written is the
+project's default. `--checklist` takes a name, or a file for a manifest that is not the project's.
+
+- A team's config is one file to read, review and diff. The directory tiers stay directories,
+  because a profile set, a parameter corpus and a library are many files each.
+- Every tier that is small enough to be a value now is one, which is C22's rule applied to the two
+  that were still refs. A viewer holding a project's config runs any of its checklists with no read,
+  and a design's intent compiles in the service with no I/O, so a host with no filesystem runs the
+  intent tier too.
+- Checklists are a map in the file and an ordered list on the wire, because a proto map loses the
+  order that makes the first one the default.
+- Sharing is `extends`, not a path. A checklist of the same name in the nearer project replaces the
+  inherited one in place, and a new name follows the inherited ones.
+- It is a clean break. The old files and keys are load errors that say where the content goes.
+
+**Reopen if** a checklist has to be edited by people who may not edit the rest of a project's config.
+One file then carries two audiences' permissions, which a separate file would not.

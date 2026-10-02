@@ -32,6 +32,7 @@ import {
   type ReviewState,
   type ReviewView,
   checklistOptions,
+  projectChecklistOptions,
   emptyReview,
   reviewFromWire,
 } from "./review.js";
@@ -969,12 +970,13 @@ export class ViewerPresenter {
     this.pushReview();
   }
 
-  // pickerChoices are the config files the convention and checklist pickers offer, ONE LIST PER
-  // KIND. When the design resolves to a project they are what the PROJECT DECLARES, since a sibling
-  // listing cannot tell the kinds apart and offers intent files and descriptors that never resolve.
+  // pickerChoices are what the convention and checklist pickers offer, ONE LIST PER KIND. When the
+  // design resolves to a project that declares either, they are what the PROJECT declares: its named
+  // checklists, carried as values, and no convention files, since the project's conventions are a
+  // section of project.yaml that every run already composes (agni issue 828).
   //
   // The kinds stay APART because a checklist and a naming convention are parsed by different rpcs,
-  // and offering `review.yaml` in the vocabulary picker fails with a YAML error naming a field the
+  // and offering a checklist in the vocabulary picker fails with a YAML error naming a field the
   // other schema has never heard of. Profiles appear in NEITHER, since a profile is composed into
   // the catalog rather than selected.
   //
@@ -983,11 +985,9 @@ export class ViewerPresenter {
   // hiding a real one costs a user their own file.
   private async pickerChoices(): Promise<{ conventions: ChecklistOption[]; checklists: ChecklistOption[] }> {
     const cfg = this.projectResolved?.project?.config;
-    if (cfg && (cfg.conventionsUri || cfg.checklistUri)) {
-      return {
-        conventions: optionsFor(cfg.conventionsUri),
-        checklists: optionsFor(cfg.checklistUri),
-      };
+    const declared = cfg?.checklists ?? [];
+    if (cfg && (cfg.conventions || declared.length > 0)) {
+      return { conventions: [], checklists: projectChecklistOptions(declared) };
     }
     const siblings = await this.yamlSiblings();
     return { conventions: siblings, checklists: siblings };
@@ -1024,8 +1024,9 @@ export class ViewerPresenter {
   }
 
   // createReview runs the chosen checklist against the open design and stores the result, then
-  // shows it. The manifest is resolved server-side first (GetReviewManifest) and sent back as a
-  // VALUE (C22), because the browser holds a ref and no filesystem.
+  // shows it. The manifest travels as a VALUE (C22): a project's checklist already is one, and a file
+  // beside the design is resolved server-side first (GetReviewManifest), because the browser holds a
+  // ref and no filesystem.
   async createReview(): Promise<void> {
     if (!this.views.review || !this.reviews) return;
     if (this.reviewState.running) return;
@@ -1034,14 +1035,18 @@ export class ViewerPresenter {
     this.pushReview();
     this.setBusy(true, "running review…");
     try {
-      const man = await this.reviews.getReviewManifest({ uri: artifactUri(this.mount, this.reviewState.checklist) });
+      // A project's checklist is already a value. Only a file found beside the design is resolved.
+      const chosen = this.checklistChoices.find((c) => c.ref === this.reviewState.checklist);
+      const manifest =
+        chosen?.manifest ??
+        (await this.reviews.getReviewManifest({ uri: artifactUri(this.mount, this.reviewState.checklist) })).manifest;
       const created = await this.reviews.createReview({
         // Resolved here rather than re-derived by the server, so the run is filed under the project
         // whose config scored it. An empty parent is a real answer, since a design on a mounted
         // folder often belongs to no project.
         parent: await this.designParent(),
         designUri: artifactUri(this.mount, this.path),
-        manifest: man.manifest,
+        manifest,
         overlay: this.overlay(),
       });
       const run = reviewFromWire(created);
@@ -1489,16 +1494,4 @@ function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-// baseOf is the final path element of an artifact URI, for a picker label.
-function baseOf(uri: string): string {
-  const p = uriPath(uri);
-  const i = p.lastIndexOf("/");
-  return i < 0 ? p : p.slice(i + 1);
-}
 
-// optionsFor turns one declared URI into a picker's option list, empty when the project declared
-// none. A project that declares no convention offers only the server's, since there is no project
-// convention to go back to.
-function optionsFor(uri: string | undefined): ChecklistOption[] {
-  return uri ? [{ ref: uriPath(uri), label: baseOf(uri) }] : [];
-}

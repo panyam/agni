@@ -1,4 +1,5 @@
-# Rung 4: the same query under the project's naming vocabulary.
+# Rung 4: the same query under the project's naming vocabulary. No --conventions, because the
+# project composes its own conventions section into every run.
 fixture: examples/tutorial-project
 script: |
-  agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n' --conventions conventions.yaml
+  agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n'

@@ -1,6 +1,6 @@
 # The tutorial project's commands. Every target is a plain `agni` invocation, so the tutorial can
 # show you the command and you can see it here unchanged. There is no code-generation step: the
-# checklist in review.yaml is hand-authored, which is the right scale for a checklist this size.
+# checklist under checklists.review in project.yaml is hand-authored, which is the right scale for a checklist this size.
 #
 # DESIGN selects which folder under designs/ to run against. Each design declares its own entry file
 # in design.yaml, so adding a second board needs no edit here.
@@ -37,17 +37,17 @@ check: ## Run the rule catalog with every tier this project supplies
 	@$(AGNI) check $(DIR) $(TIERS)
 
 review: ## Run the review checklist and print per-item outcomes
-	@$(AGNI) review $(DIR) --checklist review.yaml $(TIERS)
+	@$(AGNI) review $(DIR) --checklist review $(TIERS)
 
 coverage: ## Per-area rollup: how many items each area actually decided
-	@$(AGNI) review $(DIR) --checklist review.yaml $(TIERS) --coverage
+	@$(AGNI) review $(DIR) --checklist review $(TIERS) --coverage
 
 diff: ## Structural diff of the two bundled revisions
 	@$(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway-rev-b.edn
 
 report: ## Write the review as a self-contained results document you can re-render later
 	@mkdir -p reports/$(DESIGN)
-	@$(AGNI) review $(DIR) --checklist review.yaml $(TIERS) \
+	@$(AGNI) review $(DIR) --checklist review $(TIERS) \
 	  --results-out reports/$(DESIGN)/review.results.json >/dev/null
 	@echo "wrote reports/$(DESIGN)/review.results.json"
 

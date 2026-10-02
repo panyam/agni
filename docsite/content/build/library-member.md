@@ -111,10 +111,10 @@ calls it, and `agni query --relations house --design <design>` lists it. Four ru
   Answering without the library would read as a design with none of what the query asks for.
 - **Outside the project the members do not exist**, so one team's vocabulary never reaches another
   team's design.
-- **A checklist's inline queries read it too** (agni issue 779). A `query:` item in `review.yaml`
-  compiles against the vocabulary the review runs with, so the tutorial project's
-  `house-review.yaml` calls `house.pmic_rail`. Interface profiles do not, because their queries are generated from the
-  profile's own fields and never name a library member.
+- **A checklist's inline queries read it too** (agni issue 779). A `query:` item in a project's
+  checklist compiles against the vocabulary the review runs with, so the tutorial project's `house`
+  checklist calls `house.pmic_rail`. Interface profiles do not, because their queries are generated
+  from the profile's own fields and never name a library member.
 
 The tier is discovered like `profiles/`, so a project declares nothing to get it, and `lib: ""` in
 `project.yaml` turns it off with the directory in place.
@@ -149,8 +149,8 @@ client.run_query(
 
 A review manifest's `query:` item compiles against the vocabulary the review runs with, the shipped
 library, the design's project library and any library sent with the request together. The tutorial
-project carries a second checklist for its own questions, `house-review.yaml`, whose item P6 does
-this:
+project carries a second checklist for its own questions, `house` under `checklists:` in
+`project.yaml`, whose item P6 does this:
 
 ```yaml
 - id: "P6"
@@ -162,7 +162,7 @@ this:
     message: 'PMIC rail {n} has no test point'
 ```
 
-`agni review designs/gateway --checklist house-review.yaml` and a served `CreateReview` agree on it,
+`agni review designs/gateway --checklist house` and a served `CreateReview` agree on it,
 failing on `PMIC_MAIN_12V0`, and
 `agni review --lib <dir>` sends a library for a design that belongs to no project. A manifest's
 queries are checked when a review is created rather than when the file is read, since that is the

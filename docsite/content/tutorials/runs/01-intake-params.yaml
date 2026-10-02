@@ -1,6 +1,6 @@
 # Rung 1: the sanitized summary, including the datasheet-gap work queue.
 #
-# No --params. The project declares params/ and composes it, the same way it composes conventions.yaml
+# No --params. The project declares params/ and composes it, the same way it composes its conventions section
 # and profiles/, so intake picks the corpus up from naming the design (agni issue 474). Before that it
 # read the flag alone, and this capture carried a --params naming a directory the run already had.
 fixture: examples/tutorial-project

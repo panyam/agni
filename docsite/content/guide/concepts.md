@@ -85,7 +85,8 @@ eyeballing two prints side by side.
 
 ## Naming conventions as patterns
 
-The tool reads a conventions file (allow / exempt regex sets), which is your net and
+The tool reads naming conventions (allow / exempt regex sets), from a project's `project.yaml` or a
+`--conventions` file, which is your net and
 {{ explainable "reference-designator" "ref-des" }} house style written down once as patterns
 instead of a wiki page nobody reads. "Power nets look like `+3V3`," "diff pairs end in
 `_P`/`_N`," "no ref des reused."

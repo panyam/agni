@@ -23,8 +23,9 @@ Measured on a real 1700-net board, supplying the project's rail patterns moved t
 13 to 91. Roughly seven eighths of that board's rails were invisible to every rail rule, with no
 error and no warning.
 
-The fix is to declare the project's rail patterns in a `--conventions` lexicon. The shipped tutorial
-project does this, and its `conventions.yaml` explains why in the file.
+The fix is to declare the project's rail patterns in a conventions lexicon, the `conventions:`
+section of `project.yaml` or a `--conventions` file. The shipped tutorial project does this, and the
+comment above its `conventions:` section explains why.
 
 ### Why it needs more than the name
 

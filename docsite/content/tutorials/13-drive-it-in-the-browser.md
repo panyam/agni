@@ -35,8 +35,9 @@ viewer's own assets; [Running the server](../../guide/running-the-server/) cover
 
 `--mount name=path` exposes a folder in the file browser, and it is repeatable, so a real deployment
 mounts several project folders at once. Point it at the **project root**, not at
-`designs/gateway/`. A mount rooted inside the design puts `project.yaml` and `review.yaml` above the
-mount, where the server cannot reach them, and the Review panel then has no checklist to offer.
+`designs/gateway/`. A mount rooted inside the design puts `project.yaml`, which carries the
+checklists, above the mount, where the server cannot reach it, and the Review panel then has no
+checklist to offer.
 
 `--review-store` is the only other flag, and it is the one genuinely new thing here, a place to
 keep review runs. Everything else this rung needs, the server discovers.
@@ -44,13 +45,15 @@ keep review runs. Everything else this rung needs, the server discovers.
 ## The tiers arrive on their own
 
 Rungs 4 through 7 each added a tier, and none of them is a flag here. A project descriptor names its
-own layout, so `FSStore` composes `conventions.yaml`, `profiles/`, `params/` and `review.yaml` from
-the project root, and each design's `intent:` section and `symbols/` from beside the design.
+own layout, so `FSStore` reads the `conventions:` and `checklists:` sections of `project.yaml`,
+composes `profiles/` and `params/` from the project root, and takes each design's `intent:` section
+and `symbols/` from beside the design.
 
-Passing a flag for one of them does not switch it on, because it is already on. It loads the tier a
-second time. Rung 4's run shows the harmless version of that, where `--conventions` names the file
-the project already composed and the output does not change; `agni check` now refuses the profile
-case outright rather than reporting every profile finding twice.
+Passing a flag for one of them does not switch it on, because it is already on. For the conventions
+that is harmless, since a `--conventions` file replaces the project's section rather than adding to
+it, so a file saying the same thing leaves the output unchanged. A directory tier loads a second
+time instead, and `agni check` now refuses the profile case outright rather than reporting every
+profile finding twice.
 
 The Rules panel below is how you confirm the tier reaches the design rather than assuming
 it.
@@ -65,7 +68,7 @@ command line report them identically:
 
 {{ agniRun "content/tutorials/runs/13-check-tiers.yaml" }}
 
-Read the rule column. `gateway/` is your conventions file. `gateway-profiles/` is your CAN profile
+Read the rule column. `gateway/` is your conventions section. `gateway-profiles/` is your CAN profile
 superseding the built-in. `intent/` is your architecture declaration. Every tier you added is
 present, namespaced exactly as it is at the command line, because it is the same catalog.
 
@@ -145,10 +148,12 @@ composes its own profiles prints nothing, so the count is the thing to read.
 **Compare** is [rung 10's](../10-compare-revisions/) diff with a revision picker.
 
 **Review** is your checklist from [rung 8](../08-write-your-checklist/), scored in the browser. It
-needs no second server, because `--review-store` was on the command at the top, and `review.yaml`
+needs no second server, because `--review-store` was on the command at the top, and `project.yaml`
 sits at the project root, which is inside the mount.
 
-Pick your `review.yaml` and press Run review. What comes back is the same verdict
+The checklist picker lists the project's checklists by name, `review` and `house` here, in the
+order `project.yaml` declares them, so its first entry is the project's default. Pick `review` and
+press Run review. What comes back is the same verdict
 [rung 9](../09-read-the-verdicts/) read in the terminal, item by item, with the same vocabulary, so an
 item that could not be evaluated is styled differently from one that passed, because the two mean
 opposite things. The headline leads with coverage rather than pass/fail, for the reason rung 9 gave
@@ -166,8 +171,8 @@ is the same move Findings offers one level down.
 Runs are kept, so the panel opens on the latest one and the picker holds the history. That is the
 browser half of [rung 11](../11-archive-and-gate/), and it compares this week's verdict against
 last month's without either of them being a file somebody had to remember to save. Each stored
-run also carries the checklist it actually scored, so a run from before you edited `review.yaml` still shows
-the questions it really asked.
+run also carries the checklist it actually scored, so a run from before you edited the checklist still
+shows the questions it really asked.
 
 ## Where this fits
 

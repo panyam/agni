@@ -21,8 +21,7 @@ import (
 func diskTree(t *testing.T) (*FSStore, string) {
 	t.Helper()
 	root := t.TempDir()
-	writeFile(t, root, "proj/project.yaml", "name: gw\ntitle: Gateway\n")
-	writeFile(t, root, "proj/conventions.yaml", "name: gw\nlexicon:\n  net:\n    rail:\n      patterns: [\"^OLD\"]\n")
+	writeFile(t, root, "proj/project.yaml", "name: gw\ntitle: Gateway\nconventions:\n  name: gw\n  lexicon:\n    net:\n      rail:\n        patterns: [\"^OLD\"]\n")
 	writeFile(t, root, "proj/designs/board/design.yaml", "name: board\nentry: board.edn\n")
 	writeFile(t, root, "proj/designs/board/board.edn", "x")
 	return NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)}), root
@@ -100,7 +99,8 @@ func TestEditedDescriptorIsSeenImmediately(t *testing.T) {
 
 // TestEditedConventionsIsSeenImmediately is the edit whose staleness is least visible. The rules
 // still run, they just run under the vocabulary from before the fix. Nothing in a findings list says
-// so, which is why the cache keys on every file a load reads rather than on the descriptor alone.
+// so. The conventions are a section of project.yaml (agni issue 828), so this is an edit to the
+// descriptor the cache keys on.
 func TestEditedConventionsIsSeenImmediately(t *testing.T) {
 	s, root := diskTree(t)
 	ctx := context.Background()
@@ -113,7 +113,7 @@ func TestEditedConventionsIsSeenImmediately(t *testing.T) {
 		t.Fatalf("rail patterns = %v", got)
 	}
 
-	writeFile(t, root, "proj/conventions.yaml", "name: gw\nlexicon:\n  net:\n    rail:\n      patterns: [\"^NEW\"]\n")
+	writeFile(t, root, "proj/project.yaml", "name: gw\ntitle: Gateway\nconventions:\n  name: gw\n  lexicon:\n    net:\n      rail:\n        patterns: [\"^NEW\"]\n")
 	p, err = s.Project(ctx, "projects/gw")
 	if err != nil {
 		t.Fatal(err)

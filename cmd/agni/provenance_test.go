@@ -10,8 +10,8 @@ import (
 )
 
 // projectFixture writes a minimal PROJECT around a copy of a design fixture and returns the path to
-// the design folder. The layout is the conventional one, so `project.yaml` declares only a name and
-// the config is found beside it: conventions.yaml, params/, profiles/.
+// the design folder. `project.yaml` carries the conventions as a section and the rest is found beside
+// it by its conventional name: params/.
 //
 // It is built here rather than committed as testdata because the point is the config being RESOLVED
 // through the descriptors, and a fixture tree makes it easy to add a file to one and forget the other.
@@ -36,8 +36,15 @@ func projectFixture(t *testing.T) string {
 		}
 		write(rel, string(b))
 	}
-	write("project.yaml", "name: prov\ntitle: Provenance fixture\n")
-	copyIn("testdata/review/conventions.yaml", "conventions.yaml")
+	conv, err := os.ReadFile("testdata/review/conventions.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := "name: prov\ntitle: Provenance fixture\nconventions:\n"
+	for _, line := range strings.Split(strings.TrimRight(string(conv), "\n"), "\n") {
+		project += "  " + line + "\n"
+	}
+	write("project.yaml", project)
 	copyIn("testdata/review/can-broken.edn", "designs/d/board.edn")
 	write("designs/d/design.yaml", "name: d\ntitle: D\nentry: board.edn\n")
 	// A params directory with one seeded spec, so the corpus is genuinely attached rather than merely
@@ -99,7 +106,7 @@ func runConfigOf(t *testing.T, path string) map[string]any {
 }
 
 // TestResultsRunConfigRecordsProjectTiers is the regression this closes, and it is reachable on the
-// shipped tutorial project. A design whose PROJECT declares conventions.yaml and params/ was scored
+// shipped tutorial project. A design whose PROJECT declares conventions and params/ was scored
 // against both and wrote `"run": {}`.
 //
 // The failure direction is what makes it worth a test. RunConfig exists so a reader can tell a design
@@ -122,7 +129,7 @@ func TestResultsRunConfigRecordsProjectTiers(t *testing.T) {
 
 	run := runConfigOf(t, out)
 	if run["conventions"] != "house" {
-		t.Errorf("run.conventions = %v, want \"house\" (the project's conventions.yaml)", run["conventions"])
+		t.Errorf("run.conventions = %v, want \"house\" (the project's conventions)", run["conventions"])
 	}
 	if run["params"] != true {
 		t.Errorf("run.params = %v, want true (the project declares params/)", run["params"])

@@ -433,27 +433,33 @@ func cliProjectParent(ctx context.Context, arg string) (string, error) {
 	return p.GetName(), nil
 }
 
-// cliProjectChecklist reports the review manifest a design's project declares, and the project it
-// came from.
+// cliProjectChecklists reports the checklists a design's project declares, in declared order, and
+// the project they came from.
 //
 // It returns THREE distinguishable states, because the caller has something different to say for
 // each:
 //
-//	("", "")            the design belongs to no project
-//	("", "projects/x")  it belongs to one, and that project declares no checklist
-//	("mount://…", "projects/x")  it belongs to one that declares this checklist
+//	(nil, "")            the design belongs to no project
+//	(nil, "projects/x")  it belongs to one, and that project declares no checklist
+//	(lists, "projects/x")  it belongs to one that declares these
 //
 // Collapsing the middle case into the first would tell an operator with a real project to "pass
-// --checklist" when the fix is a `checklist:` line in the project.yaml they already have.
+// --checklist" when the fix is a checklists: section in the project.yaml they already have.
 //
 // A descriptor that exists and does not PARSE is returned as an error, since the fix there is one
 // edit to that descriptor and not --checklist either.
-func cliProjectChecklist(ctx context.Context, arg string) (uri, project string, err error) {
+func cliProjectChecklists(ctx context.Context, arg string) ([]*webapi.NamedChecklist, string, error) {
 	_, p, err := cliResolveProject(ctx, arg)
-	if err != nil {
-		return "", "", err
+	if err != nil || p == nil {
+		return nil, "", err
 	}
-	return p.GetConfig().GetChecklistUri(), p.GetName(), nil
+	// What the project inherits through extends is its own as much as what it writes, so a checklist
+	// a shared config project declares runs here too.
+	cfg, err := service.ResolveExtends(ctx, cliProjects().Store, p)
+	if err != nil {
+		return nil, "", err
+	}
+	return cfg.GetChecklists(), p.GetName(), nil
 }
 
 // relName returns the name provenance records for an absolute host path, which is its path within

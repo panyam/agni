@@ -40,8 +40,8 @@ result means no net name matched the power-stage lexicon.
 `switchingFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits a row for each net
 carrying the `switching` role, falling back to `Model.IsSwitchingName` for a net that skipped the
 ingestion stamp. The role is stamped by `classify.StampNetRoles` from the active naming lexicon, so a
-project extends the patterns in `conventions.yaml` rather than patching the engine. One row per
-switching-named net; empty when no net matches.
+project extends the patterns in its `conventions:` section rather than patching the engine. One row
+per switching-named net; empty when no net matches.
 
 ### Datalog
 

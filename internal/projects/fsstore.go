@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"github.com/panyam/agni/artifact"
 	"io/fs"
+	"maps"
 	"path"
+	"slices"
 	"sort"
 
-	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/proto"
@@ -209,7 +210,7 @@ func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, erro
 	name := path.Join(walkRoot(dir), ProjectDescriptor)
 	// The directory is a dependency too, so the existence probes in attachConfig are covered, since
 	// adding params/ moves the directory's mtime without changing any file read here.
-	deps := []string{walkRoot(dir), name, path.Join(walkRoot(dir), defaultConventions)}
+	deps := []string{walkRoot(dir), name}
 	return s.projectC.get(t.FS, t.Mount+"\x00"+name, deps, func() (string, *webapi.Project, error) {
 		return s.readProject(t, dir, name)
 	}, cloneProject)
@@ -231,21 +232,27 @@ func (s *FSStore) readProject(t Tree, dir, name string) (string, *webapi.Project
 	}
 	p.Name = service.ProjectName(id)
 	p.Uri = u.String()
+	// A conventions.yaml or review.yaml beside the descriptor is the layout before agni issue 828.
+	// Reading the project without it would drop the team's vocabulary or its checklist and report as
+	// though the team declared none, so it is an error that says where the content goes now.
+	for _, f := range slices.Sorted(maps.Keys(formerProjectFiles)) {
+		if exists(t.FS, path.Join(walkRoot(dir), f)) {
+			return "", nil, fmt.Errorf("%s: %s is no longer read; move its content under %s in %s (agni issue 828)", name, f, formerProjectFiles[f], ProjectDescriptor)
+		}
+	}
 	if err := s.attachConfig(t, dir, u, names, p); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
 	return id, p, nil
 }
 
-// attachConfig fills in the config a project owns, as URIs for what exists.
+// attachConfig fills in the directory tiers a project owns, as URIs for what exists. Its conventions
+// and checklists are values ParseProject already read from the descriptor.
 //
 // A declared name that names nothing is SILENTLY ABSENT rather than an error. The names default
-// (conventions.yaml, profiles/, params/, review.yaml, lib/), so otherwise a project that declared nothing
-// would fail for lacking files. An explicitly declared missing name deserves an error, but the
-// descriptor cannot tell the two apart yet.
-//
-// The conventions file is the one tier read HERE rather than handed on as a URI, because it is a
-// value under C22 and composing it must need no I/O.
+// (profiles/, params/, symbols/, lib/), so otherwise a project that declared nothing would fail for
+// lacking directories. An explicitly declared missing name deserves an error, but the descriptor
+// cannot tell the two apart yet.
 func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names ProjectConfigNames, p *webapi.Project) error {
 	rel := func(n string) (string, bool) {
 		if n == "" {
@@ -261,26 +268,11 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 		}
 		return u.String(), true
 	}
-	if uri, ok := rel(names.Conventions); ok {
-		b, err := fs.ReadFile(t.FS, path.Join(walkRoot(dir), names.Conventions))
-		if err != nil {
-			return err
-		}
-		cfg, err := naming.Parse(b)
-		if err != nil {
-			return fmt.Errorf("%s: %w", uri, err)
-		}
-		p.Config.Conventions = cfg
-		p.Config.ConventionsUri = uri
-	}
 	if uri, ok := rel(names.Profiles); ok {
 		p.Config.ProfileUris = []string{uri}
 	}
 	if uri, ok := rel(names.Params); ok {
 		p.Config.ParamUris = []string{uri}
-	}
-	if uri, ok := rel(names.Checklist); ok {
-		p.Config.ChecklistUri = uri
 	}
 	if uri, ok := rel(names.Symbols); ok {
 		p.Config.SymbolPathUris = []string{uri}
@@ -328,20 +320,8 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 	if exists(t.FS, path.Join(walkRoot(dir), formerIntentFile)) {
 		return "", nil, fmt.Errorf("%s: %s is no longer read; move its declarations under intent: in %s (agni issue 824)", name, formerIntentFile, DesignDescriptor)
 	}
-	// Intent is a NAME until here and becomes a URI only if the file exists, so a design that never
-	// wrote one reads as having none rather than naming a missing file.
-	if d.GetConfig().GetIntentUri() != "" {
-		if exists(t.FS, path.Join(walkRoot(dir), d.GetConfig().GetIntentUri())) {
-			iu, err := base.Join(d.GetConfig().GetIntentUri())
-			if err != nil {
-				return "", nil, err
-			}
-			d.Config.IntentUri = iu.String()
-		} else {
-			d.Config.IntentUri = ""
-		}
-	}
-	// Symbols likewise, for a directory.
+	// Symbols become URIs only for a directory that exists, so a design that never made one reads as
+	// having none rather than naming a missing directory.
 	if names := d.GetConfig().GetSymbolPathUris(); len(names) > 0 {
 		var resolved []string
 		for _, n := range names {
