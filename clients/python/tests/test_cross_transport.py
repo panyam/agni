@@ -178,6 +178,13 @@ CASES: List[Case] = [
         {"name": UNSTORED},
         _run_time,
     ),
+    # The design itself, whole or in parts (agni issue 836); unmasked it is the summary alone.
+    Case("DesignService/GetDesign", lambda c: c.get_design(uri=DESIGN)),
+    Case("DesignService/GetDesign", lambda c: c.get_design(uri=DESIGN, read_mask={"paths": ["design"]})),
+    Case(
+        "DesignService/GetDesign",
+        lambda c: c.get_design(uri=DESIGN, read_mask={"paths": ["design.nets", "design.components.mpn"]}, nets=["PMIC_EN"], ref_des=["U1"]),
+    ),
     Case("DesignService/TraceDesign", _trace("J1.3", "J1.4")),
     Case("DesignService/TraceDesign", _trace("J1.3", "ZZ9.1")),
     Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(uri=DESIGN + "/gateway.edn", as_named=True)),

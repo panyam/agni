@@ -1,6 +1,7 @@
 from agni.v1.geom import geom_pb2 as _geom_pb2
 from agni.v1.geom import geom_packed_pb2 as _geom_packed_pb2
 from agni.v1.ir import ir_pb2 as _ir_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -52,17 +53,23 @@ class SheetRef(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., parent_id: _Optional[str] = ...) -> None: ...
 
 class GetDesignRequest(_message.Message):
-    __slots__ = ("layout", "uri", "as_named")
+    __slots__ = ("layout", "uri", "as_named", "read_mask", "nets", "ref_des")
     LAYOUT_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    READ_MASK_FIELD_NUMBER: _ClassVar[int]
+    NETS_FIELD_NUMBER: _ClassVar[int]
+    REF_DES_FIELD_NUMBER: _ClassVar[int]
     layout: str
     uri: str
     as_named: bool
-    def __init__(self, layout: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    read_mask: _field_mask_pb2.FieldMask
+    nets: _containers.RepeatedScalarFieldContainer[str]
+    ref_des: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, layout: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., read_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ..., nets: _Optional[_Iterable[str]] = ..., ref_des: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetDesignResponse(_message.Message):
-    __slots__ = ("name", "source_format", "component_count", "net_count", "undrawn", "layout", "sheets", "native_available", "available_layouts", "content_hash", "unexpanded_hierarchy")
+    __slots__ = ("name", "source_format", "component_count", "net_count", "undrawn", "layout", "sheets", "native_available", "available_layouts", "content_hash", "unexpanded_hierarchy", "design")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FORMAT_FIELD_NUMBER: _ClassVar[int]
     COMPONENT_COUNT_FIELD_NUMBER: _ClassVar[int]
@@ -74,6 +81,7 @@ class GetDesignResponse(_message.Message):
     AVAILABLE_LAYOUTS_FIELD_NUMBER: _ClassVar[int]
     CONTENT_HASH_FIELD_NUMBER: _ClassVar[int]
     UNEXPANDED_HIERARCHY_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_FIELD_NUMBER: _ClassVar[int]
     name: str
     source_format: str
     component_count: int
@@ -85,7 +93,8 @@ class GetDesignResponse(_message.Message):
     available_layouts: _containers.RepeatedScalarFieldContainer[str]
     content_hash: str
     unexpanded_hierarchy: _containers.RepeatedCompositeFieldContainer[_ir_pb2.UnexpandedHierarchy]
-    def __init__(self, name: _Optional[str] = ..., source_format: _Optional[str] = ..., component_count: _Optional[int] = ..., net_count: _Optional[int] = ..., undrawn: _Optional[_Iterable[_Union[_geom_pb2.UndrawnPlacement, _Mapping]]] = ..., layout: _Optional[str] = ..., sheets: _Optional[_Iterable[_Union[SheetRef, _Mapping]]] = ..., native_available: _Optional[bool] = ..., available_layouts: _Optional[_Iterable[str]] = ..., content_hash: _Optional[str] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ...) -> None: ...
+    design: _ir_pb2.Design
+    def __init__(self, name: _Optional[str] = ..., source_format: _Optional[str] = ..., component_count: _Optional[int] = ..., net_count: _Optional[int] = ..., undrawn: _Optional[_Iterable[_Union[_geom_pb2.UndrawnPlacement, _Mapping]]] = ..., layout: _Optional[str] = ..., sheets: _Optional[_Iterable[_Union[SheetRef, _Mapping]]] = ..., native_available: _Optional[bool] = ..., available_layouts: _Optional[_Iterable[str]] = ..., content_hash: _Optional[str] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ..., design: _Optional[_Union[_ir_pb2.Design, _Mapping]] = ...) -> None: ...
 
 class GetSheetRequest(_message.Message):
     __slots__ = ("sheet", "layout", "format", "symbols", "uri", "as_named")

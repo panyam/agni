@@ -207,10 +207,69 @@ func layoutForFile(path, requested string) string {
 	return graph.DefaultStrategy
 }
 
-// GetDesign loads a file, resolves its geometry, and returns the design summary plus the drawable
+// GetDesign answers what a design is. With no read_mask it is the summary the viewer opens with
+// (counts, sheets, layout, content hash), unchanged. With one it carries exactly the paths named,
+// which may include the design's IR (agni issue 836): `design` for all of it, `design.nets` or
+// `design.components.mpn` for parts, `*` for everything. A mask entirely under `design` skips the
+// drawing and reads the netlist alone. nets and ref_des narrow which entities the IR carries.
+func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
+	paths := req.GetReadMask().GetPaths()
+	if len(paths) == 0 {
+		return s.designSummary(ctx, req)
+	}
+	tree, err := parseMask((&webapi.GetDesignResponse{}).ProtoReflect().Descriptor(), paths)
+	if err != nil {
+		return nil, err
+	}
+	resp := &webapi.GetDesignResponse{}
+	if !onlyUnder(tree, "design") {
+		if resp, err = s.designSummary(ctx, req); err != nil {
+			return nil, err
+		}
+	}
+	_, all := tree["*"]
+	if _, want := tree["design"]; want || all {
+		if resp.Design, err = s.designIR(ctx, req); err != nil {
+			return nil, err
+		}
+	}
+	prune(resp.ProtoReflect(), tree)
+	return resp, nil
+}
+
+// designIR is the design's netlist tier read as every analysis reads it, narrowed to the requested
+// nets and components. It is a copy, because the loader may hand the same message to later reads.
+func (s *DesignService) designIR(ctx context.Context, req *webapi.GetDesignRequest) (*ir.Design, error) {
+	u, err := ParseArtifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	src, err := s.projects.Sources(ctx, u, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	nu, err := ParseArtifactURI(src.NetlistURI)
+	if err != nil {
+		return nil, err
+	}
+	opts, err := s.readOptions(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	d, err := s.loader.Design(ctx, nu, opts...)
+	if err != nil {
+		return nil, ClassifyLoadErr(err)
+	}
+	d = proto.Clone(d).(*ir.Design)
+	d.Nets = keepNamed(d.GetNets(), req.GetNets(), (*ir.Net).GetName)
+	d.Components = keepNamed(d.GetComponents(), req.GetRefDes(), (*ir.Component).GetRefDes)
+	return d, nil
+}
+
+// designSummary loads a file, resolves its geometry, and returns the design summary plus the drawable
 // sheets. Netlist formats also carry IR counts; a geometry-only .eds does not, so its name comes
 // from the geometry's design ref and its counts stay zero.
-func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
+func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
 	u, err := ParseArtifactURI(req.GetUri())
 	if err != nil {
 		return nil, err
@@ -246,7 +305,7 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	}
 	resp := &webapi.GetDesignResponse{
 		Layout:           layout,
-		NativeAvailable:  s.native.Available(u),
+		NativeAvailable:  s.native != nil && s.native.Available(u),
 		AvailableLayouts: availableLayouts(gu.Path),
 		// Carried straight off the geometry, which computed it with the same resolution the renderer
 		// uses. A render that lost its symbols still draws every ref des and wire, so without this the

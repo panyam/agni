@@ -1,0 +1,5 @@
+# One net of the tutorial board's IR, asked for by mask: the net and every pin on it, as an analysis
+# reads them. The summary fields print as empty because the mask did not ask for them.
+fixture: examples/tutorial-project
+script: |
+  agni stats designs/gateway/gateway.edn --format json --mask design.nets --net PMIC_EN

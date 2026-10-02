@@ -269,6 +269,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `TestNoCommandCallsAHandRolledEncoderInAnotherPackage` follows the commands' calls into the
   module's other packages, which is how `report.TableJSON` and `review.RenderJSON` hid (agni 734).
   `review --format json` is the `Review` the rpc returns, with a `summary` computed on the way out.
+  **`GetDesign` serves the IR on request** (agni 836): a `read_mask` over the response (`design`,
+  `design.nets`, `design.components.mpn`, `*`) plus `nets`/`ref_des` filters, and `stats --format json
+  --mask` on the CLI. UNMASKED it stays the viewer's summary with no IR, deliberately against AIP-157's
+  "empty mask is everything", because the viewer calls it on every open.
 - **`agni trace <design> --from U7.3 --to U12.4` follows a signal through the series parts between
   them** and prints the route, the nets, and the probe points on each. `--render <file.svg>` draws it,
   on the design's own schematic where it has one and on an auto-layout where it does not, saying which.

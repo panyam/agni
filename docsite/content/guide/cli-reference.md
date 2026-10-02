@@ -35,6 +35,20 @@ note: board.edn is hierarchical and only its top cell was read. 7 sub-cells hold
 not extracted:       7 sub-cells holding 74 instances (counts above are the top cell only)
 ```
 
+| flag | what it does |
+|---|---|
+| `--format <fmt>` | `text` (the counts above, the default) or `json`, the `GetDesignResponse` the `GetDesign` rpc returns |
+| `--mask <paths>` | with `json`, which fields to carry, over `GetDesignResponse`: `design` is the design's whole IR, `design.nets` or `design.components.mpn` parts of it (a path through a list applies to every element), `*` everything. Unset is the summary alone. Repeatable or comma-separated; an unknown path is an error |
+| `--net <name>` | with a mask selecting `design`, keep only this net in `design.nets` (repeatable) |
+| `--ref <ref_des>` | with a mask selecting `design`, keep only this component in `design.components` (repeatable) |
+
+The IR is what every analysis reads, after the project's configuration and the ingestion passes
+(part numbers promoted, classes stamped), so a script prototyping its own analysis reads it here
+rather than parsing the netlist again. A mask entirely under `design` reads the netlist and skips
+the drawing.
+
+{{ agniRun "content/guide/runs/stats-ir.yaml" }}
+
 ### `check <file>`
 
 Run the rule catalog and report findings. See
