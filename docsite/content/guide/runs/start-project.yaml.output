@@ -1,9 +1,7 @@
 #agni-run 04d8c01ceea646c3
 Created project "showcase-review".
 
-  showcase-review/project.yaml
-  showcase-review/conventions.yaml        (stub — your team's naming vocabulary)
-  showcase-review/review.yaml             (seeded from the shipped catalog — edit it)
+  showcase-review/project.yaml   (your team's naming vocabulary, and a review checklist seeded from the shipped catalog; edit both)
   showcase-review/designs/showcase.fires/design.yaml
   showcase-review/designs/showcase.fires/showcase.fires.kicad_pro   (copied)
   showcase-review/designs/showcase.fires/showcase.fires.kicad_sch   (copied, declared as a companion view)

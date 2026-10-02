@@ -1,4 +1,4 @@
-#agni-run c1d4ee2400e7c0ca
+#agni-run 6f119a6917272d5a
 net             fanout  provenance
 GND             13      designs/gateway/gateway.edn:GND
 PMIC_CORE_3V3   8       designs/gateway/gateway.edn:PMIC_CORE_3V3
