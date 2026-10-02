@@ -173,11 +173,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	// A deployment's budget, narrowed by the request's, reaches every query-backed rule through ctx
 	// (agni issue 792); a rule past it reports itself inconclusive and the others still answer.
 	ctx = query.NarrowBudget(ctx, req.GetWorkBudget())
-	findings, err := check.Run(ctx, m, runnable)
-	if err != nil {
-		return nil, err
-	}
-	verdicts, err := check.RunVerdicts(ctx, m, runnable)
+	// One evaluation per rule for both contracts (agni issue 810). Calling Run and then RunVerdicts
+	// ran the whole catalog twice, since a finding is a projection of a verdict.
+	findings, verdicts, err := check.RunAll(ctx, m, runnable)
 	if err != nil {
 		return nil, err
 	}

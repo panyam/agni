@@ -3,6 +3,7 @@ package check
 import (
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
@@ -35,6 +36,7 @@ type irModel struct {
 	mpn       map[string]string           // ref_des -> design-side MPN (BomLine, else attribute)
 	passNets  map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
 	lex       *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
+	memo      sync.Map                    // key -> *memoEntry, values derived from this model once (Memo)
 }
 
 // ModelOption configures a Model at construction. Options are applied before anything is derived, so an
