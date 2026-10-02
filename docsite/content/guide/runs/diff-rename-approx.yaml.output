@@ -1,0 +1,26 @@
+#agni-run da8a4fb943e85d90
+diff designs/gateway/gateway-rev-b.edn -> designs/gateway/gateway-rev-c.edn
+
+Components: +1  -0  ~0
+Nets:       new 1  deleted 1  renamed 0  hard 1  soft 0
+
+Components added (1):
+  R6
+
+Nets changed (3):
+  [deleted] PMIC_EN
+  [hard]    PMIC_IO_1V8: +[R6.2] -[]
+  [new]     PMIC_ENABLE
+#agni-step
+diff designs/gateway/gateway-rev-b.edn -> designs/gateway/gateway-rev-c.edn
+
+Components: +1  -0  ~0
+Nets:       new 0  deleted 0  renamed 0  hard 1  soft 0
+            renamed-approx 1 (near matches, review the evidence)
+
+Components added (1):
+  R6
+
+Nets changed (2):
+  [hard]    PMIC_IO_1V8: +[R6.2] -[]
+  [renamed?] PMIC_EN -> PMIC_ENABLE: +[R6.1] -[] (kept 2/2 device endpoints, 2/2 overall)

@@ -1,4 +1,4 @@
-#agni-run e2911b8dc3a45b0d
+#agni-run 00d96165609e590f
 decoupling-present  1 fail, 2 pass
     fail  PMIC_MAIN_12V0  no capacitor sits on the rail, which feeds at least one power-input
                           pin
