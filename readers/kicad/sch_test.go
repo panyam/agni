@@ -222,6 +222,28 @@ func TestReadSchematicDangling(t *testing.T) {
 	}
 }
 
+// A wire ending on either end of a bus entry is connected, not dangling (agni issue 808). Every one of
+// the Jetson board's 428 dangling-endpoint findings was this case. Each wire's OTHER end floats, as
+// the control that the check still reports a wire ending on nothing.
+func TestReadSchematicBusEntryEndsAreNotDangling(t *testing.T) {
+	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "bus_entry_dangling.kicad_sch")), "bus_entry_dangling.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	type pt struct{ x, y int64 }
+	got := map[pt]string{}
+	for _, e := range d.GetInputDiagnostics().GetDanglingEndpoints() {
+		got[pt{e.X, e.Y}] = e.Prov.GetNativeId()
+	}
+	want := map[pt]string{
+		{60000000, -10000000}: "w5", // floats; its other end is on be1's origin
+		{80000000, -11270000}: "w6", // floats; its other end is on be2's far end (origin + size)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("dangling endpoints = %v, want %v", got, want)
+	}
+}
+
 // TestReadSchematicRefDesCollision checks the reader flags a genuine duplicate (two symbols
 // claiming U1 unit 1) as a RefDesCollision with both placements' uuids, while a distinct ref-des is
 // clean and a legitimate multi-unit part (sch.kicad_sch's U1, units 1+2) does not collide.
