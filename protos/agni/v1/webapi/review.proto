@@ -94,6 +94,26 @@ message Review {
   // content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
   // item outcomes.
   agni.v1.checks.CheckResults results = 2;
+  // summary is the counts a pipeline gates on, computed from results.areas each time a review is
+  // returned and never stored, so a document stored before the field existed still answers with one
+  // (agni issue 734). It carries exactly the inputs of the two gates `agni review` exposes
+  // (--fail-on-outcome and --min-answered), so a consumer reads the numbers the exit code came from
+  // rather than recomputing them and disagreeing.
+  ReviewSummary summary = 3;
+}
+
+// ReviewSummary counts a run's checklist items. covered is every item a mechanism exists for (all
+// but not-automated); answered is the stricter count of items the run produced an answer for (pass,
+// fail, provisional, and computed not-applicable), which is what --min-answered gates on.
+// provisional is a fail resting on unratified datasheet data, broken out because gating on it is a
+// per-team choice.
+message ReviewSummary {
+  int32 total = 1;
+  int32 covered = 2;
+  int32 answered = 3;
+  int32 pass = 4;
+  int32 fail = 5;
+  int32 provisional = 6;
 }
 
 message CreateReviewRequest {

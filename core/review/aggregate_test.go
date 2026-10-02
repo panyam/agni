@@ -1,7 +1,6 @@
 package review
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -56,28 +55,5 @@ func TestAggregateCoverageHasNoMatrix(t *testing.T) {
 	}
 	if strings.Contains(s, "Traceability matrix") {
 		t.Error("coverage must not include the per-item matrix")
-	}
-}
-
-// TestAggregateJSON checks that the JSON carries manifest-level automation, per-design summaries,
-// and per-item outcome-by-design.
-func TestAggregateJSON(t *testing.T) {
-	s, err := RenderAggregateJSON(twoDesignAgg())
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got jsonAggregate
-	if err := json.Unmarshal([]byte(s), &got); err != nil {
-		t.Fatal(err)
-	}
-	if got.Total != 2 || got.Automated != 1 || got.NotAutomated != 1 {
-		t.Errorf("automation = {total:%d automated:%d not_automated:%d}, want {2 1 1}", got.Total, got.Automated, got.NotAutomated)
-	}
-	if len(got.PerDesign) != 2 || got.PerDesign[0].Design != "d1" {
-		t.Errorf("per_design = %+v, want two designs starting d1", got.PerDesign)
-	}
-	it := got.Areas[0].Items[0]
-	if it.Outcomes["d1"] != "pass" || it.Outcomes["d2"] != "fail" {
-		t.Errorf("item 1 outcomes = %v, want d1:pass d2:fail", it.Outcomes)
 	}
 }

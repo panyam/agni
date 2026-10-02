@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMi7QEKE0NyZWF0ZVJldmlld1JlcXVlc3QSDgoGcGFyZW50GAYgASgJEhIKCmRlc2lnbl91cmkYASABKAkSEQoJYm9hcmRfdXJpGAIgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAMgASgBEi4KB292ZXJsYXkYBCABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAUgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QSEAoIYXNfbmFtZWQYByABKAgSEwoLd29ya19idWRnZXQYCCABKAMiIAoQR2V0UmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIlsKEkxpc3RSZXZpZXdzUmVxdWVzdBIOCgZwYXJlbnQYBCABKAkSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIlcKE0xpc3RSZXZpZXdzUmVzcG9uc2USJwoHcmV2aWV3cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJldmlldxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIicKGEdldFJldmlld01hbmlmZXN0UmVxdWVzdBILCgN1cmkYASABKAkiTQoZR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZRIwCghtYW5pZmVzdBgBIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0MrIDCg1SZXZpZXdTZXJ2aWNlEksKDENyZWF0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZVJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSRQoJR2V0UmV2aWV3EiAuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJWCgtMaXN0UmV2aWV3cxIiLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVzcG9uc2USSwoMRGVsZXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuRGVsZXRlUmV2aWV3UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJoChFHZXRSZXZpZXdNYW5pZmVzdBIoLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVxdWVzdBopLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpInUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMSLgoHc3VtbWFyeRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlJldmlld1N1bW1hcnkicgoNUmV2aWV3U3VtbWFyeRINCgV0b3RhbBgBIAEoBRIPCgdjb3ZlcmVkGAIgASgFEhAKCGFuc3dlcmVkGAMgASgFEgwKBHBhc3MYBCABKAUSDAoEZmFpbBgFIAEoBRITCgtwcm92aXNpb25hbBgGIAEoBSLtAQoTQ3JlYXRlUmV2aWV3UmVxdWVzdBIOCgZwYXJlbnQYBiABKAkSEgoKZGVzaWduX3VyaRgBIAEoCRIRCglib2FyZF91cmkYAiABKAkSFgoOcmF0aWZpZWRfZmxvb3IYAyABKAESLgoHb3ZlcmxheRgEIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSMAoIbWFuaWZlc3QYBSABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdBIQCghhc19uYW1lZBgHIAEoCBITCgt3b3JrX2J1ZGdldBgIIAEoAyIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiWwoSTGlzdFJldmlld3NSZXF1ZXN0Eg4KBnBhcmVudBgEIAEoCRIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkiVwoTTGlzdFJldmlld3NSZXNwb25zZRInCgdyZXZpZXdzGAEgAygLMhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSIjChNEZWxldGVSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiJwoYR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0EgsKA3VyaRgBIAEoCSJNChlHZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlEjAKCG1hbmlmZXN0GAEgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QysgMKDVJldmlld1NlcnZpY2USSwoMQ3JlYXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuQ3JlYXRlUmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJFCglHZXRSZXZpZXcSIC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3ElYKC0xpc3RSZXZpZXdzEiIuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXNwb25zZRJLCgxEZWxldGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5EZWxldGVSZXZpZXdSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EmgKEUdldFJldmlld01hbmlmZXN0EiguYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0GikuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
 
 /**
  * Review is one stored review run.
@@ -59,6 +59,17 @@ export type Review = Message<"agni.v1.webapi.Review"> & {
    * @generated from field: agni.v1.checks.CheckResults results = 2;
    */
   results?: CheckResults | undefined;
+
+  /**
+   * summary is the counts a pipeline gates on, computed from results.areas each time a review is
+   * returned and never stored, so a document stored before the field existed still answers with one
+   * (agni issue 734). It carries exactly the inputs of the two gates `agni review` exposes
+   * (--fail-on-outcome and --min-answered), so a consumer reads the numbers the exit code came from
+   * rather than recomputing them and disagreeing.
+   *
+   * @generated from field: agni.v1.webapi.ReviewSummary summary = 3;
+   */
+  summary?: ReviewSummary | undefined;
 };
 
 /**
@@ -67,6 +78,54 @@ export type Review = Message<"agni.v1.webapi.Review"> & {
  */
 export const ReviewSchema: GenMessage<Review> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_review, 0);
+
+/**
+ * ReviewSummary counts a run's checklist items. covered is every item a mechanism exists for (all
+ * but not-automated); answered is the stricter count of items the run produced an answer for (pass,
+ * fail, provisional, and computed not-applicable), which is what --min-answered gates on.
+ * provisional is a fail resting on unratified datasheet data, broken out because gating on it is a
+ * per-team choice.
+ *
+ * @generated from message agni.v1.webapi.ReviewSummary
+ */
+export type ReviewSummary = Message<"agni.v1.webapi.ReviewSummary"> & {
+  /**
+   * @generated from field: int32 total = 1;
+   */
+  total: number;
+
+  /**
+   * @generated from field: int32 covered = 2;
+   */
+  covered: number;
+
+  /**
+   * @generated from field: int32 answered = 3;
+   */
+  answered: number;
+
+  /**
+   * @generated from field: int32 pass = 4;
+   */
+  pass: number;
+
+  /**
+   * @generated from field: int32 fail = 5;
+   */
+  fail: number;
+
+  /**
+   * @generated from field: int32 provisional = 6;
+   */
+  provisional: number;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ReviewSummary.
+ * Use `create(ReviewSummarySchema)` to create a new message.
+ */
+export const ReviewSummarySchema: GenMessage<ReviewSummary> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 1);
 
 /**
  * @generated from message agni.v1.webapi.CreateReviewRequest
@@ -155,7 +214,7 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
  * Use `create(CreateReviewRequestSchema)` to create a new message.
  */
 export const CreateReviewRequestSchema: GenMessage<CreateReviewRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 1);
+  messageDesc(file_agni_v1_webapi_review, 2);
 
 /**
  * @generated from message agni.v1.webapi.GetReviewRequest
@@ -174,7 +233,7 @@ export type GetReviewRequest = Message<"agni.v1.webapi.GetReviewRequest"> & {
  * Use `create(GetReviewRequestSchema)` to create a new message.
  */
 export const GetReviewRequestSchema: GenMessage<GetReviewRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 2);
+  messageDesc(file_agni_v1_webapi_review, 3);
 
 /**
  * @generated from message agni.v1.webapi.ListReviewsRequest
@@ -220,7 +279,7 @@ export type ListReviewsRequest = Message<"agni.v1.webapi.ListReviewsRequest"> & 
  * Use `create(ListReviewsRequestSchema)` to create a new message.
  */
 export const ListReviewsRequestSchema: GenMessage<ListReviewsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 3);
+  messageDesc(file_agni_v1_webapi_review, 4);
 
 /**
  * @generated from message agni.v1.webapi.ListReviewsResponse
@@ -246,7 +305,7 @@ export type ListReviewsResponse = Message<"agni.v1.webapi.ListReviewsResponse"> 
  * Use `create(ListReviewsResponseSchema)` to create a new message.
  */
 export const ListReviewsResponseSchema: GenMessage<ListReviewsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 4);
+  messageDesc(file_agni_v1_webapi_review, 5);
 
 /**
  * @generated from message agni.v1.webapi.DeleteReviewRequest
@@ -265,7 +324,7 @@ export type DeleteReviewRequest = Message<"agni.v1.webapi.DeleteReviewRequest"> 
  * Use `create(DeleteReviewRequestSchema)` to create a new message.
  */
 export const DeleteReviewRequestSchema: GenMessage<DeleteReviewRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 5);
+  messageDesc(file_agni_v1_webapi_review, 6);
 
 /**
  * @generated from message agni.v1.webapi.GetReviewManifestRequest
@@ -285,7 +344,7 @@ export type GetReviewManifestRequest = Message<"agni.v1.webapi.GetReviewManifest
  * Use `create(GetReviewManifestRequestSchema)` to create a new message.
  */
 export const GetReviewManifestRequestSchema: GenMessage<GetReviewManifestRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 6);
+  messageDesc(file_agni_v1_webapi_review, 7);
 
 /**
  * @generated from message agni.v1.webapi.GetReviewManifestResponse
@@ -302,7 +361,7 @@ export type GetReviewManifestResponse = Message<"agni.v1.webapi.GetReviewManifes
  * Use `create(GetReviewManifestResponseSchema)` to create a new message.
  */
 export const GetReviewManifestResponseSchema: GenMessage<GetReviewManifestResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 7);
+  messageDesc(file_agni_v1_webapi_review, 8);
 
 /**
  * ReviewService manages review RUNS as resources (WS9-053). A run used to be a call: you sent a

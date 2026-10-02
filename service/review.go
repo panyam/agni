@@ -207,7 +207,25 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 		return nil, err
 	}
 	doc.Meta.CreatedAt = createdAt
-	return &webapi.Review{Name: name, Results: doc}, nil
+	return ReviewOf(name, doc), nil
+}
+
+// ReviewOf is the Review resource for a stored document, with its summary computed from the
+// document's item outcomes (agni issue 734). Every rpc returning a review builds it here, so the
+// summary is never stored and a document written before the field existed answers with one. The CLI
+// uses it too, for a document it read from a file.
+func ReviewOf(name string, doc *checkspb.CheckResults) *webapi.Review {
+	var outcomes []review.Outcome
+	for _, a := range doc.GetAreas() {
+		for _, it := range a.GetItems() {
+			outcomes = append(outcomes, review.Outcome(it.GetOutcome()))
+		}
+	}
+	t := review.TallyOf(outcomes...)
+	return &webapi.Review{Name: name, Results: doc, Summary: &webapi.ReviewSummary{
+		Total: int32(t.Total), Covered: int32(t.Covered()), Answered: int32(t.Answered()),
+		Pass: int32(t.Pass), Fail: int32(t.Fail), Provisional: int32(t.Provisional),
+	}}
 }
 
 // GetReview returns a stored run. It reads only the store, so neither the design nor the checklist
@@ -221,7 +239,7 @@ func (s *ReviewService) GetReview(ctx context.Context, req *webapi.GetReviewRequ
 	if err != nil {
 		return nil, err
 	}
-	return &webapi.Review{Name: req.GetName(), Results: doc}, nil
+	return ReviewOf(req.GetName(), doc), nil
 }
 
 // ListReviews returns stored runs newest first, paginated, optionally narrowed to one project and to
@@ -247,7 +265,7 @@ func (s *ReviewService) ListReviews(ctx context.Context, req *webapi.ListReviews
 	}
 	resp := &webapi.ListReviewsResponse{NextPageToken: next}
 	for i, doc := range docs {
-		resp.Reviews = append(resp.Reviews, &webapi.Review{Name: names[i], Results: doc})
+		resp.Reviews = append(resp.Reviews, ReviewOf(names[i], doc))
 	}
 	return resp, nil
 }

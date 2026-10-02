@@ -62,7 +62,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 
 | flag | what it does |
 |---|---|
-| `--checklist <file>` | the review manifest (YAML) declaring areas and their items. Optional when the design belongs to a project that declares one; passing it overrides the project's |
+| `--checklist <file>` | the review manifest (YAML, or `-` to read it from stdin) declaring areas and their items. Optional when the design belongs to a project that declares one; passing it overrides the project's |
 | `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
 | `--profile-path <dir>` | interface-profile declarations added to the catalog |
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |
@@ -72,7 +72,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
 | `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
 | `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |
-| `--format <fmt>` | `markdown` (default), `json`, or `html`. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--server` is given. One design at a time, since a page's title, hash and links all name one design |
+| `--format <fmt>` | `markdown` (default), `json`, or `html`. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--server` is given. One design at a time, since a page's title, hash and links all name one design. `json` is protojson of the `Review` the `CreateReview` rpc returns, every finding per item and a `summary` holding the counts `--fail-on-outcome` and `--min-answered` gate on; several designs give a `ListReviewsResponse` with one `Review` each. A CLI run is stored nowhere, so its `name` is empty |
 | `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
 | `--results-out <file>` | also write the run as a self-contained check-result document |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
@@ -257,7 +257,7 @@ The document is self-contained, so this works with the design deleted.
 
 | flag | what it does |
 |---|---|
-| `--format <fmt>` | the same output formats the live run offers |
+| `--format <fmt>` | the same output formats the live run offers. A review document's `json` is the same `Review` the live run emits, unnamed |
 | `--compare <file>` | compare against another results document and print the three-way entity split instead of a report |
 
 ### `import-results <report.json>`

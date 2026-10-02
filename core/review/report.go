@@ -17,6 +17,16 @@ type Tally struct {
 	Inconclusive                                   int
 }
 
+// TallyOf counts a list of outcomes, for a caller holding outcomes rather than a Report, such as a
+// stored review document.
+func TallyOf(outcomes ...Outcome) Tally {
+	var t Tally
+	for _, o := range outcomes {
+		t.add(o)
+	}
+	return t
+}
+
 func (t *Tally) add(o Outcome) {
 	t.Total++
 	switch o {
@@ -158,7 +168,7 @@ func RenderCoverageMarkdown(r Report) string {
 
 // maxDetailFindings caps how many findings a failing item's Detail cell lists inline. A broad rule
 // can fire on hundreds of nets (a real esd item failed on 250+ nets, a 100KB line). The cap is
-// markdown-only, and ItemResult.Findings keeps the full list, which RenderJSON emits.
+// markdown-only, and ItemResult.Findings keeps the full list, which the Review a run returns carries in full.
 const maxDetailFindings = 3
 
 // detail is the last column: the findings for a failed item, the reason (plus any manifest note) for

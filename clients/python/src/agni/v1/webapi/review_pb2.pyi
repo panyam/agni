@@ -10,12 +10,29 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Review(_message.Message):
-    __slots__ = ("name", "results")
+    __slots__ = ("name", "results", "summary")
     NAME_FIELD_NUMBER: _ClassVar[int]
     RESULTS_FIELD_NUMBER: _ClassVar[int]
+    SUMMARY_FIELD_NUMBER: _ClassVar[int]
     name: str
     results: _checks_pb2.CheckResults
-    def __init__(self, name: _Optional[str] = ..., results: _Optional[_Union[_checks_pb2.CheckResults, _Mapping]] = ...) -> None: ...
+    summary: ReviewSummary
+    def __init__(self, name: _Optional[str] = ..., results: _Optional[_Union[_checks_pb2.CheckResults, _Mapping]] = ..., summary: _Optional[_Union[ReviewSummary, _Mapping]] = ...) -> None: ...
+
+class ReviewSummary(_message.Message):
+    __slots__ = ("total", "covered", "answered", "fail", "provisional")
+    TOTAL_FIELD_NUMBER: _ClassVar[int]
+    COVERED_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_FIELD_NUMBER: _ClassVar[int]
+    PASS_FIELD_NUMBER: _ClassVar[int]
+    FAIL_FIELD_NUMBER: _ClassVar[int]
+    PROVISIONAL_FIELD_NUMBER: _ClassVar[int]
+    total: int
+    covered: int
+    answered: int
+    fail: int
+    provisional: int
+    def __init__(self, total: _Optional[int] = ..., covered: _Optional[int] = ..., answered: _Optional[int] = ..., fail: _Optional[int] = ..., provisional: _Optional[int] = ..., **kwargs) -> None: ...
 
 class CreateReviewRequest(_message.Message):
     __slots__ = ("parent", "design_uri", "board_uri", "ratified_floor", "overlay", "manifest", "as_named", "work_budget")

@@ -8,6 +8,23 @@ process and the versioning rules are in `RELEASING.md`.
 Each entry summarizes.  The full per-release write-up lives in `RELEASES/<tag>.md` and is what the
 GitHub Release body carries.
 
+## [Unreleased]
+
+### Changed
+
+- **Breaking.** `review --format json` emits protojson of the `Review` the `CreateReview` rpc returns,
+  and several designs emit a `ListReviewsResponse`, where both used to be hand-rolled shapes (agni issue
+  734).  Items keep `id`, `outcome` and `findings`, spelled as protojson spells them, and gain the whole
+  results document.  The counts a gate reads are `summary` on the `Review`, which every review rpc now
+  carries.  The multi-design rollup's `total`/`automated`/`per_design` and outcome matrix are gone,
+  since each design's `Review` and summary carry the same facts.  `results --format json` on a review
+  document emits the same `Review`.
+
+### Added
+
+- `review --checklist -` reads the manifest from stdin, and the Python client's `create_review` works
+  over the CLI transport.
+
 ## [0.2.1] - 2026-09-08
 
 Full notes: [`RELEASES/v0.2.1.md`](RELEASES/v0.2.1.md).
