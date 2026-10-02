@@ -24,6 +24,7 @@ import (
 //	  strap_groups: [...]   # several strap nets read as one number
 //	  io_map:       [...]   # which net lands on which pin
 //	  margin_factor: 1.25   # headroom over a declared peak, optional
+//	  components:   {...}   # facts about named components: a connector's exposure
 //
 // Parse reads that shape whether it comes from a whole design.yaml or from a file holding only `name`
 // and `intent:` (the --intent-path flag). The section's schema is the configpb.DesignIntent message
@@ -50,7 +51,7 @@ var earlierForms = map[string]string{
 }
 
 // intentKeys are the intent section's keys, for recognising a file that puts them at the top level.
-var intentKeys = []string{"modules", "nets", "sequences", "strap_groups", "io_map", "margin_factor",
+var intentKeys = []string{"modules", "nets", "sequences", "strap_groups", "io_map", "margin_factor", "components",
 	"voltage_domains", "protections", "net_properties", "rail_budgets", "subsystems"}
 
 // Parse reads a design's intent from its descriptor (or a file of the same shape) into a Declaration
@@ -63,30 +64,53 @@ var intentKeys = []string{"modules", "nets", "sequences", "strap_groups", "io_ma
 // netlist can be checked against; a strap group needs distinct nets that can encode its value; an
 // io_map row needs a net, a device and a pin.
 func Parse(b []byte) (Declaration, error) {
+	name, in, err := parseSection(b)
+	if err != nil {
+		return Declaration{}, err
+	}
+	return FromProto(name, in)
+}
+
+// ParseProto reads the same shape Parse does and returns the section as its proto, validated, for a
+// caller that sends intent as a VALUE rather than compiling it: the CLI's --intent-path, which rides
+// the request so the model sees the declaration as well as the catalog (agni issue 831).
+func ParseProto(b []byte) (*configpb.DesignIntent, error) {
+	name, in, err := parseSection(b)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := FromProto(name, in); err != nil {
+		return nil, err
+	}
+	return in, nil
+}
+
+// parseSection binds a descriptor-shaped document's intent section, with the document's name.
+func parseSection(b []byte) (string, *configpb.DesignIntent, error) {
 	var top map[string]yaml.Node
 	if err := yaml.Unmarshal(b, &top); err != nil {
-		return Declaration{}, fmt.Errorf("intent: invalid YAML: %w", err)
+		return "", nil, fmt.Errorf("intent: invalid YAML: %w", err)
 	}
 	for _, k := range intentKeys {
 		if _, ok := top[k]; ok {
-			return Declaration{}, fmt.Errorf("intent: %q is at the top level; a design's intent now sits under \"intent:\" in its design.yaml (agni issue 824)", k)
+			return "", nil, fmt.Errorf("intent: %q is at the top level; a design's intent now sits under \"intent:\" in its design.yaml (agni issue 824)", k)
 		}
 	}
 	var doc designDoc
 	if err := yaml.Unmarshal(b, &doc); err != nil {
-		return Declaration{}, fmt.Errorf("intent: invalid YAML: %w", err)
+		return "", nil, fmt.Errorf("intent: invalid YAML: %w", err)
 	}
 	if strings.TrimSpace(doc.Name) == "" {
-		return Declaration{}, fmt.Errorf("intent: missing required field \"name\"")
+		return "", nil, fmt.Errorf("intent: missing required field \"name\"")
 	}
 	if doc.Intent.Kind == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: has no \"intent:\" section", doc.Name)
+		return "", nil, fmt.Errorf("intent %q: has no \"intent:\" section", doc.Name)
 	}
 	in, err := DecodeSection(&doc.Intent)
 	if err != nil {
-		return Declaration{}, fmt.Errorf("intent %q: %w", doc.Name, err)
+		return "", nil, fmt.Errorf("intent %q: %w", doc.Name, err)
 	}
-	return FromProto(doc.Name, in)
+	return doc.Name, in, nil
 }
 
 // DecodeSection binds a design descriptor's intent section to its proto, refusing the earlier
@@ -118,8 +142,8 @@ func DecodeSection(n *yaml.Node) (*configpb.DesignIntent, error) {
 // wire is held to exactly what a file is. A declaration stating nothing is an error, because a design
 // that declares intent and checks nothing would read as covered.
 func FromProto(name string, in *configpb.DesignIntent) (Declaration, error) {
-	if len(in.GetModules()) == 0 && len(in.GetNets()) == 0 && len(in.GetSequences()) == 0 && len(in.GetStrapGroups()) == 0 && len(in.GetIoMap()) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: declares no modules, nets, sequences, strap_groups or io_map", name)
+	if len(in.GetModules()) == 0 && len(in.GetNets()) == 0 && len(in.GetSequences()) == 0 && len(in.GetStrapGroups()) == 0 && len(in.GetIoMap()) == 0 && len(in.GetComponents()) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: declares no modules, nets, sequences, strap_groups, io_map or components", name)
 	}
 	d := Declaration{Name: name}
 	if err := buildModules(name, in.GetModules(), &d); err != nil {
@@ -158,7 +182,39 @@ func FromProto(name string, in *configpb.DesignIntent) (Declaration, error) {
 		}
 		d.IOMap = append(d.IOMap, asg)
 	}
+	exps, err := buildExposures(name, in.GetComponents())
+	if err != nil {
+		return Declaration{}, err
+	}
+	d.Exposures = exps
 	return d, nil
+}
+
+// buildExposures reads the components section into Exposures sorted by ref-des, since a map has no
+// order and findings must be stable. A component entry has to declare an exposure, because an empty
+// entry would read as a declaration that took effect.
+func buildExposures(name string, cs map[string]*configpb.ComponentIntent) ([]Exposure, error) {
+	refs := make([]string, 0, len(cs))
+	for ref := range cs {
+		refs = append(refs, ref)
+	}
+	sort.Strings(refs)
+	out := make([]Exposure, 0, len(refs))
+	for _, ref := range refs {
+		if strings.TrimSpace(ref) == "" {
+			return nil, fmt.Errorf("intent %q: a component is declared with an empty ref-des", name)
+		}
+		e := cs[ref].GetExposure()
+		switch e {
+		case ExposureInternal, ExposureExternal:
+		case "":
+			return nil, fmt.Errorf("intent %q: component %q declares nothing; give it an exposure (internal or external)", name, ref)
+		default:
+			return nil, fmt.Errorf("intent %q: component %q: exposure must be internal or external, not %q", name, ref, e)
+		}
+		out = append(out, Exposure{Ref: ref, Exposure: e})
+	}
+	return out, nil
 }
 
 // buildModules splits the modules list into the two shapes it carries: a module checked by class or

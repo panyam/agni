@@ -4,16 +4,17 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/stdlib/profiles"
-	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // composeRules builds the catalog every rule-running surface shares, plus the profile index the
 // review's absence gate reads. Both come out of one call so a caller cannot compose a catalog that
 // silently omits a tier (WS3-109).
 //
-// It takes VALUES rather than paths. Reading a profile directory or an intent file is the caller's
-// business (C22), so an embedder can compose from profiles it built in Go and never wrote to disk.
-func composeRules(overlay []profiles.Profile, decl *intent.Declaration, extra ...check.RuleSource) (*check.Catalog, map[string][]profiles.Profile, error) {
+// It takes VALUES rather than paths. Reading a profile directory is the caller's business (C22), so
+// an embedder can compose from profiles it built in Go and never wrote to disk. A design's intent is
+// not composed here, because it is per design and has to reach the model as well as the catalog; it
+// arrives on a request or in the design's own config (agni issue 831).
+func composeRules(overlay []profiles.Profile, extra ...check.RuleSource) (*check.Catalog, map[string][]profiles.Profile, error) {
 	var sources []check.RuleSource
 	byName := map[string][]profiles.Profile{}
 	for _, p := range profiles.Profiles {
@@ -36,9 +37,6 @@ func composeRules(overlay []profiles.Profile, decl *intent.Declaration, extra ..
 		for _, p := range overlay {
 			byName[p.Name] = append(byName[p.Name], p)
 		}
-	}
-	if decl != nil {
-		sources = append(sources, intent.Source("intent", *decl))
 	}
 	sources = append(sources, extra...)
 	catalog := check.DefaultCatalog()

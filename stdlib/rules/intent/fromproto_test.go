@@ -39,6 +39,9 @@ func fullIntent() *configpb.DesignIntent {
 			To: &configpb.PinEndpoint{Device: "U1", Pin: "5"},
 		}},
 		MarginFactor: 1.2,
+		Components: map[string]*configpb.ComponentIntent{
+			"J1": {Exposure: ExposureInternal},
+		},
 	}
 }
 
@@ -108,6 +111,9 @@ func TestFromProtoCarriesEveryField(t *testing.T) {
 		"agni.v1.config.PinAssignment.to":       func() bool { return d.IOMap[0].To != nil },
 		"agni.v1.config.PinEndpoint.device":     func() bool { return d.IOMap[0].To.Device == "U1" },
 		"agni.v1.config.PinEndpoint.pin":        func() bool { return d.IOMap[0].To.Pin == "5" },
+
+		"agni.v1.config.DesignIntent.components":  func() bool { return len(d.Exposures) == 1 && d.Exposures[0].Ref == "J1" },
+		"agni.v1.config.ComponentIntent.exposure": func() bool { return d.Exposures[0].Exposure == ExposureInternal },
 	}
 
 	seen := map[protoreflect.FullName]bool{}

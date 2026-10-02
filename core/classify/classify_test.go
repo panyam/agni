@@ -3,7 +3,6 @@ package classify
 import (
 	"testing"
 
-	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -68,8 +67,7 @@ func TestClassesOf(t *testing.T) {
 		{ClassLED, []string{"led", "diode"}},
 		{ClassZener, []string{"zener", "diode"}},
 		{ClassFerrite, []string{"ferrite", "inductor"}},
-		{ClassTestConnector, []string{"test_connector"}},         // NOT connector, and the split is deliberate
-		{ClassInternalConnector, []string{"internal_connector"}}, // NOT connector either (agni issue 815)
+		{ClassTestConnector, []string{"test_connector"}}, // NOT connector, and the split is deliberate
 		{ClassConnector, []string{"connector"}},
 	}
 	for _, tc := range cases {
@@ -167,25 +165,17 @@ func TestAPlainResistorIsNotAThermistor(t *testing.T) {
 	}
 }
 
-// A mezzanine connector is a board-to-board joint, refined out of the J-prefix connector base as a
-// debug header is (agni issue 815), and a project's lexicon can put its own connectors in the class,
-// which is how a part number with no telling word in it gets there.
-func TestInternalConnectorClassification(t *testing.T) {
+// A mezzanine connector is a plain connector. Whether one faces the field is declared in a design's
+// intent rather than classified, so no keyword and no lexicon pattern can put a part in an internal
+// class, and a lexicon naming the removed class is refused rather than read (agni issue 831).
+func TestNoInternalConnectorClass(t *testing.T) {
 	comp := func(ref, value string) *ir.Component {
 		return &ir.Component{RefDes: ref, Attributes: map[string]string{"Value": value}}
 	}
-	if got := Classify(comp("J5", "Mezzanine 80-pin"), nil); got != ClassInternalConnector {
-		t.Errorf("a mezzanine connector classifies as %s, want internal_connector", got)
+	if got := Classify(comp("J5", "Mezzanine 80-pin"), nil); got != ClassConnector {
+		t.Errorf("a mezzanine connector classifies as %s, want connector", got)
 	}
-	if got := Classify(comp("J6", "USB-C receptacle"), nil); got != ClassConnector {
-		t.Errorf("a USB receptacle classifies as %s, want connector", got)
-	}
-	cv, err := BuildClassVocab(map[ComponentClass]*configpb.ClassVocab{ClassInternalConnector: {Patterns: []string{"^218650$"}}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	lex := &Lexicon{Class: cv}
-	if got := lex.Classify(comp("J18", "ASP-218650-01"), nil); got != ClassInternalConnector {
-		t.Errorf("a project-declared internal connector classifies as %s, want internal_connector", got)
+	if _, ok := ParseComponentClass("internal_connector"); ok {
+		t.Error("internal_connector is still a class a lexicon may extend")
 	}
 }

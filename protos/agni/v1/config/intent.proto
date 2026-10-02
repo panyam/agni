@@ -30,6 +30,18 @@ message DesignIntent {
   // margin_factor is the headroom every supply must have over the peaks declared on its rails. Zero
   // means none was declared, which leaves the margin rule uncompiled. A declared factor must exceed 1.
   double margin_factor = 6;
+  // components holds what each named component is, keyed by its ref-des as the design spells it.
+  map<string, ComponentIntent> components = 7;
+}
+
+// ComponentIntent is everything declared about one component. It exists for what a part number cannot
+// say, because the same part is used differently on different boards.
+message ComponentIntent {
+  // exposure says whether a connector faces the outside of the product: "internal" for one that joins
+  // this board to another inside the same enclosure (a module socket, a mezzanine), or "external".
+  // An undeclared connector is external, so the exposure rules (esd-protection, esd-clamp-not-tvs,
+  // input-protection, reverse-blocking-absent) check every connector nobody declared internal.
+  string exposure = 1;
 }
 
 message IntentModule {

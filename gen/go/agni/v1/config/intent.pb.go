@@ -47,7 +47,9 @@ type DesignIntent struct {
 	IoMap []*PinAssignment `protobuf:"bytes,5,rep,name=io_map,json=ioMap,proto3" json:"io_map,omitempty"`
 	// margin_factor is the headroom every supply must have over the peaks declared on its rails. Zero
 	// means none was declared, which leaves the margin rule uncompiled. A declared factor must exceed 1.
-	MarginFactor  float64 `protobuf:"fixed64,6,opt,name=margin_factor,json=marginFactor,proto3" json:"margin_factor,omitempty"`
+	MarginFactor float64 `protobuf:"fixed64,6,opt,name=margin_factor,json=marginFactor,proto3" json:"margin_factor,omitempty"`
+	// components holds what each named component is, keyed by its ref-des as the design spells it.
+	Components    map[string]*ComponentIntent `protobuf:"bytes,7,rep,name=components,proto3" json:"components,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -124,6 +126,63 @@ func (x *DesignIntent) GetMarginFactor() float64 {
 	return 0
 }
 
+func (x *DesignIntent) GetComponents() map[string]*ComponentIntent {
+	if x != nil {
+		return x.Components
+	}
+	return nil
+}
+
+// ComponentIntent is everything declared about one component. It exists for what a part number cannot
+// say, because the same part is used differently on different boards.
+type ComponentIntent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// exposure says whether a connector faces the outside of the product: "internal" for one that joins
+	// this board to another inside the same enclosure (a module socket, a mezzanine), or "external".
+	// An undeclared connector is external, so the exposure rules (esd-protection, esd-clamp-not-tvs,
+	// input-protection, reverse-blocking-absent) check every connector nobody declared internal.
+	Exposure      string `protobuf:"bytes,1,opt,name=exposure,proto3" json:"exposure,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ComponentIntent) Reset() {
+	*x = ComponentIntent{}
+	mi := &file_agni_v1_config_intent_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ComponentIntent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ComponentIntent) ProtoMessage() {}
+
+func (x *ComponentIntent) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_config_intent_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ComponentIntent.ProtoReflect.Descriptor instead.
+func (*ComponentIntent) Descriptor() ([]byte, []int) {
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ComponentIntent) GetExposure() string {
+	if x != nil {
+		return x.Exposure
+	}
+	return ""
+}
+
 type IntentModule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -139,7 +198,7 @@ type IntentModule struct {
 
 func (x *IntentModule) Reset() {
 	*x = IntentModule{}
-	mi := &file_agni_v1_config_intent_proto_msgTypes[1]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -151,7 +210,7 @@ func (x *IntentModule) String() string {
 func (*IntentModule) ProtoMessage() {}
 
 func (x *IntentModule) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_intent_proto_msgTypes[1]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -164,7 +223,7 @@ func (x *IntentModule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntentModule.ProtoReflect.Descriptor instead.
 func (*IntentModule) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *IntentModule) GetName() string {
@@ -230,7 +289,7 @@ type NetIntent struct {
 
 func (x *NetIntent) Reset() {
 	*x = NetIntent{}
-	mi := &file_agni_v1_config_intent_proto_msgTypes[2]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -242,7 +301,7 @@ func (x *NetIntent) String() string {
 func (*NetIntent) ProtoMessage() {}
 
 func (x *NetIntent) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_intent_proto_msgTypes[2]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -255,7 +314,7 @@ func (x *NetIntent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetIntent.ProtoReflect.Descriptor instead.
 func (*NetIntent) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *NetIntent) GetNominal() float64 {
@@ -335,7 +394,7 @@ type PowerSequence struct {
 
 func (x *PowerSequence) Reset() {
 	*x = PowerSequence{}
-	mi := &file_agni_v1_config_intent_proto_msgTypes[3]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -347,7 +406,7 @@ func (x *PowerSequence) String() string {
 func (*PowerSequence) ProtoMessage() {}
 
 func (x *PowerSequence) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_intent_proto_msgTypes[3]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -360,7 +419,7 @@ func (x *PowerSequence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowerSequence.ProtoReflect.Descriptor instead.
 func (*PowerSequence) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *PowerSequence) GetName() string {
@@ -397,7 +456,7 @@ type SequenceStage struct {
 
 func (x *SequenceStage) Reset() {
 	*x = SequenceStage{}
-	mi := &file_agni_v1_config_intent_proto_msgTypes[4]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -409,7 +468,7 @@ func (x *SequenceStage) String() string {
 func (*SequenceStage) ProtoMessage() {}
 
 func (x *SequenceStage) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_intent_proto_msgTypes[4]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -422,7 +481,7 @@ func (x *SequenceStage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SequenceStage.ProtoReflect.Descriptor instead.
 func (*SequenceStage) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SequenceStage) GetRail() string {
@@ -465,7 +524,7 @@ type StrapGroup struct {
 
 func (x *StrapGroup) Reset() {
 	*x = StrapGroup{}
-	mi := &file_agni_v1_config_intent_proto_msgTypes[5]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -477,7 +536,7 @@ func (x *StrapGroup) String() string {
 func (*StrapGroup) ProtoMessage() {}
 
 func (x *StrapGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_intent_proto_msgTypes[5]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -490,7 +549,7 @@ func (x *StrapGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StrapGroup.ProtoReflect.Descriptor instead.
 func (*StrapGroup) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *StrapGroup) GetName() string {
@@ -551,7 +610,7 @@ type PinAssignment struct {
 
 func (x *PinAssignment) Reset() {
 	*x = PinAssignment{}
-	mi := &file_agni_v1_config_intent_proto_msgTypes[6]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -563,7 +622,7 @@ func (x *PinAssignment) String() string {
 func (*PinAssignment) ProtoMessage() {}
 
 func (x *PinAssignment) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_intent_proto_msgTypes[6]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -576,7 +635,7 @@ func (x *PinAssignment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PinAssignment.ProtoReflect.Descriptor instead.
 func (*PinAssignment) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PinAssignment) GetNet() string {
@@ -624,7 +683,7 @@ type PinEndpoint struct {
 
 func (x *PinEndpoint) Reset() {
 	*x = PinEndpoint{}
-	mi := &file_agni_v1_config_intent_proto_msgTypes[7]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -636,7 +695,7 @@ func (x *PinEndpoint) String() string {
 func (*PinEndpoint) ProtoMessage() {}
 
 func (x *PinEndpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_intent_proto_msgTypes[7]
+	mi := &file_agni_v1_config_intent_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -649,7 +708,7 @@ func (x *PinEndpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PinEndpoint.ProtoReflect.Descriptor instead.
 func (*PinEndpoint) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_config_intent_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PinEndpoint) GetDevice() string {
@@ -670,17 +729,25 @@ var File_agni_v1_config_intent_proto protoreflect.FileDescriptor
 
 const file_agni_v1_config_intent_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/config/intent.proto\x12\x0eagni.v1.config\"\xad\x03\n" +
+	"\x1bagni/v1/config/intent.proto\x12\x0eagni.v1.config\"\xdb\x04\n" +
 	"\fDesignIntent\x126\n" +
 	"\amodules\x18\x01 \x03(\v2\x1c.agni.v1.config.IntentModuleR\amodules\x12:\n" +
 	"\x04nets\x18\x02 \x03(\v2&.agni.v1.config.DesignIntent.NetsEntryR\x04nets\x12;\n" +
 	"\tsequences\x18\x03 \x03(\v2\x1d.agni.v1.config.PowerSequenceR\tsequences\x12=\n" +
 	"\fstrap_groups\x18\x04 \x03(\v2\x1a.agni.v1.config.StrapGroupR\vstrapGroups\x124\n" +
 	"\x06io_map\x18\x05 \x03(\v2\x1d.agni.v1.config.PinAssignmentR\x05ioMap\x12#\n" +
-	"\rmargin_factor\x18\x06 \x01(\x01R\fmarginFactor\x1aR\n" +
+	"\rmargin_factor\x18\x06 \x01(\x01R\fmarginFactor\x12L\n" +
+	"\n" +
+	"components\x18\a \x03(\v2,.agni.v1.config.DesignIntent.ComponentsEntryR\n" +
+	"components\x1aR\n" +
 	"\tNetsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12/\n" +
-	"\x05value\x18\x02 \x01(\v2\x19.agni.v1.config.NetIntentR\x05value:\x028\x01\"t\n" +
+	"\x05value\x18\x02 \x01(\v2\x19.agni.v1.config.NetIntentR\x05value:\x028\x01\x1a^\n" +
+	"\x0fComponentsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x125\n" +
+	"\x05value\x18\x02 \x01(\v2\x1f.agni.v1.config.ComponentIntentR\x05value:\x028\x01\"-\n" +
+	"\x0fComponentIntent\x12\x1a\n" +
+	"\bexposure\x18\x01 \x01(\tR\bexposure\"t\n" +
 	"\fIntentModule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05class\x18\x02 \x01(\tR\x05class\x12\x10\n" +
@@ -739,32 +806,36 @@ func file_agni_v1_config_intent_proto_rawDescGZIP() []byte {
 	return file_agni_v1_config_intent_proto_rawDescData
 }
 
-var file_agni_v1_config_intent_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_agni_v1_config_intent_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_agni_v1_config_intent_proto_goTypes = []any{
-	(*DesignIntent)(nil),  // 0: agni.v1.config.DesignIntent
-	(*IntentModule)(nil),  // 1: agni.v1.config.IntentModule
-	(*NetIntent)(nil),     // 2: agni.v1.config.NetIntent
-	(*PowerSequence)(nil), // 3: agni.v1.config.PowerSequence
-	(*SequenceStage)(nil), // 4: agni.v1.config.SequenceStage
-	(*StrapGroup)(nil),    // 5: agni.v1.config.StrapGroup
-	(*PinAssignment)(nil), // 6: agni.v1.config.PinAssignment
-	(*PinEndpoint)(nil),   // 7: agni.v1.config.PinEndpoint
-	nil,                   // 8: agni.v1.config.DesignIntent.NetsEntry
+	(*DesignIntent)(nil),    // 0: agni.v1.config.DesignIntent
+	(*ComponentIntent)(nil), // 1: agni.v1.config.ComponentIntent
+	(*IntentModule)(nil),    // 2: agni.v1.config.IntentModule
+	(*NetIntent)(nil),       // 3: agni.v1.config.NetIntent
+	(*PowerSequence)(nil),   // 4: agni.v1.config.PowerSequence
+	(*SequenceStage)(nil),   // 5: agni.v1.config.SequenceStage
+	(*StrapGroup)(nil),      // 6: agni.v1.config.StrapGroup
+	(*PinAssignment)(nil),   // 7: agni.v1.config.PinAssignment
+	(*PinEndpoint)(nil),     // 8: agni.v1.config.PinEndpoint
+	nil,                     // 9: agni.v1.config.DesignIntent.NetsEntry
+	nil,                     // 10: agni.v1.config.DesignIntent.ComponentsEntry
 }
 var file_agni_v1_config_intent_proto_depIdxs = []int32{
-	1, // 0: agni.v1.config.DesignIntent.modules:type_name -> agni.v1.config.IntentModule
-	8, // 1: agni.v1.config.DesignIntent.nets:type_name -> agni.v1.config.DesignIntent.NetsEntry
-	3, // 2: agni.v1.config.DesignIntent.sequences:type_name -> agni.v1.config.PowerSequence
-	5, // 3: agni.v1.config.DesignIntent.strap_groups:type_name -> agni.v1.config.StrapGroup
-	6, // 4: agni.v1.config.DesignIntent.io_map:type_name -> agni.v1.config.PinAssignment
-	4, // 5: agni.v1.config.PowerSequence.order:type_name -> agni.v1.config.SequenceStage
-	7, // 6: agni.v1.config.PinAssignment.to:type_name -> agni.v1.config.PinEndpoint
-	2, // 7: agni.v1.config.DesignIntent.NetsEntry.value:type_name -> agni.v1.config.NetIntent
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	2,  // 0: agni.v1.config.DesignIntent.modules:type_name -> agni.v1.config.IntentModule
+	9,  // 1: agni.v1.config.DesignIntent.nets:type_name -> agni.v1.config.DesignIntent.NetsEntry
+	4,  // 2: agni.v1.config.DesignIntent.sequences:type_name -> agni.v1.config.PowerSequence
+	6,  // 3: agni.v1.config.DesignIntent.strap_groups:type_name -> agni.v1.config.StrapGroup
+	7,  // 4: agni.v1.config.DesignIntent.io_map:type_name -> agni.v1.config.PinAssignment
+	10, // 5: agni.v1.config.DesignIntent.components:type_name -> agni.v1.config.DesignIntent.ComponentsEntry
+	5,  // 6: agni.v1.config.PowerSequence.order:type_name -> agni.v1.config.SequenceStage
+	8,  // 7: agni.v1.config.PinAssignment.to:type_name -> agni.v1.config.PinEndpoint
+	3,  // 8: agni.v1.config.DesignIntent.NetsEntry.value:type_name -> agni.v1.config.NetIntent
+	1,  // 9: agni.v1.config.DesignIntent.ComponentsEntry.value:type_name -> agni.v1.config.ComponentIntent
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_config_intent_proto_init() }
@@ -772,14 +843,14 @@ func file_agni_v1_config_intent_proto_init() {
 	if File_agni_v1_config_intent_proto != nil {
 		return
 	}
-	file_agni_v1_config_intent_proto_msgTypes[2].OneofWrappers = []any{}
+	file_agni_v1_config_intent_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_config_intent_proto_rawDesc), len(file_agni_v1_config_intent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

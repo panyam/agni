@@ -228,3 +228,39 @@ func TestIntentValueComposesWithoutAResolver(t *testing.T) {
 		t.Errorf("an invalid intent must fail the run and say why, got %v", err)
 	}
 }
+
+// A design's intent reaches the MODEL as well as the catalog, because which connectors are internal
+// is read by the exposure rules through the model (agni issue 831). A request carrying intent
+// REPLACES the design's, as a convention does, rather than compiling a second source named intent,
+// which the catalog refuses.
+func TestRequestIntentReplacesTheDesignsAndReachesTheModel(t *testing.T) {
+	internal := func(ref string) *configpb.DesignIntent {
+		return &configpb.DesignIntent{Components: map[string]*configpb.ComponentIntent{ref: {Exposure: "internal"}}}
+	}
+	d := &webapi.Design{Name: "projects/p/designs/board", Config: &webapi.AnalysisConfig{Intent: internal("J1")}}
+	p := &webapi.Project{Name: "projects/p"}
+
+	ov, err := OverlayFor(context.Background(), nil, nil, p, d, nil, Overlay{}, "")
+	if err != nil {
+		t.Fatalf("OverlayFor: %v", err)
+	}
+	if got := ReadOpts(ov.ReadOptions()...).Intent.GetComponents(); got["J1"] == nil {
+		t.Errorf("the design's intent did not reach the read options BuildModel reads, got %v", got)
+	}
+
+	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Intent: internal("J2")}}
+	ov, err = OverlayFor(context.Background(), nil, nil, p, d, req, Overlay{}, "")
+	if err != nil {
+		t.Fatalf("a request carrying intent for a design that declares its own must replace it, got %v", err)
+	}
+	if names := sourceNames(ov); len(names) != 1 || names[0] != "intent" {
+		t.Errorf("want exactly one intent source, got %v", names)
+	}
+	if _, err := ov.Catalog(check.DefaultCatalog()); err != nil {
+		t.Errorf("the composed catalog must accept the overlay: %v", err)
+	}
+	got := ReadOpts(ov.ReadOptions()...).Intent.GetComponents()
+	if got["J2"] == nil || got["J1"] != nil {
+		t.Errorf("the model must read the request's intent alone, got %v", got)
+	}
+}

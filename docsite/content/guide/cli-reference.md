@@ -66,7 +66,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
 | `--profile-path <dir>` | interface-profile declarations added to the catalog |
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |
-| `--intent-path <file>` | a design-intent declaration, so intent-bound items resolve instead of reading `needs-design-intent` |
+| `--intent-path <file>` | a design-intent declaration sent with the run, so intent-bound items resolve instead of reading `needs-design-intent`. It replaces the design's own `intent:` for this run rather than adding to it |
 | `--board-path <file>` | a board-geometry file attached to a netlist design, so board-tier items resolve instead of `n/a` |
 | `--coverage` | a per-area rollup of how many items each area decided, instead of the per-item report. Renders as markdown only, so it refuses an explicit `--format`; the `--format html` page carries the same rollup in its header |
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |

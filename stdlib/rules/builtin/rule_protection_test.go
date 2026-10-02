@@ -135,14 +135,9 @@ func TestEsdProtection(t *testing.T) {
 	// A debug connector (WS3-066) is a bench interface, not harness exposure, so its lines are not
 	// flagged.
 	comps = append(comps, &ir.Component{RefDes: "J99", Attributes: map[string]string{"Description": "Debugger"}, Prov: &ir.Provenance{SourceFile: "t"}})
-	// A mezzanine connector (agni issue 815) joins two boards inside the product, so a net reaching
-	// only it is not exposed either.
-	comps = append(comps, &ir.Component{RefDes: "J98", Attributes: map[string]string{"Value": "Mezzanine"}, Prov: &ir.Provenance{SourceFile: "t"}})
 	d := protDesign(comps, lib, []*ir.Net{
 		tnet("DP", "J1.2", "U1.5"),         // external signal, no tvs -> fires
 		tnet("DBGSIG", "J99.1", "U1.12"),   // debug connector, no tvs -> NOT external, quiet
-		tnet("B2B", "J98.1", "U1.13"),      // internal connector only, no tvs -> NOT external, quiet
-		tnet("BOTH", "J98.2", "J1.8"),      // internal AND an external connector -> still external, fires
 		tnet("DM", "J1.3", "U1.6", "D1.1"), // tvs member -> quiet
 		tnet("VIN", "J1.1", "U2.1"),        // feeds a power pin -> input-protection's turf, quiet here
 		tnet("GND", "J1.4", "U1.2"),        // ground-named -> quiet
@@ -157,10 +152,7 @@ func TestEsdProtection(t *testing.T) {
 	if !got["DP"] {
 		t.Error("DP (external signal, no TVS) should be flagged")
 	}
-	if !got["BOTH"] {
-		t.Error("BOTH reaches an external connector too, so an internal one beside it must not hide it")
-	}
-	for _, quiet := range []string{"DM", "VIN", "GND", "INT", "VCC", "12V", "DSER", "DCLAMP", "DBGSIG", "B2B"} {
+	for _, quiet := range []string{"DM", "VIN", "GND", "INT", "VCC", "12V", "DSER", "DCLAMP", "DBGSIG"} {
 		if got[quiet] {
 			t.Errorf("%s must not be flagged by esd-protection", quiet)
 		}

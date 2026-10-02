@@ -85,6 +85,9 @@ func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
 		overrides := map[check.ComponentClass]*configpb.ClassVocab{}
 		for name, v := range cls {
 			cl, ok := check.ParseComponentClass(name)
+			if !ok && name == "internal_connector" {
+				return nil, fmt.Errorf("naming config %q lexicon: the internal_connector class was removed; declare the connector under intent: components: {REF: {exposure: internal}} in its design.yaml (agni issue 831)", cfg.GetName())
+			}
 			if !ok {
 				return nil, fmt.Errorf("naming config %q lexicon: unknown component class %q", cfg.GetName(), name)
 			}

@@ -93,7 +93,7 @@ var esdProtectionSpec = &check.Spec{
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "rail_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "intentionally_unconnected"}}},
-		check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "connector"}}},
+		check.ExistsIn{Over: "net.connections", Where: check.IsTrue{T: check.Fact{Name: "component.exposed_connector"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "power_pin_reach"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "tvs_reach"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ic_esd_rated"}}},

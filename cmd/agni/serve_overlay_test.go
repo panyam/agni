@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/panyam/agni/stdlib/rules/intent"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,14 +21,6 @@ signals:
   - {name: B, suffix: _TBB}
 requirements:
   - {type: signal-dangling}
-`
-
-const overlayIntentYAML = `
-name: serve overlay intent
-intent:
-  nets:
-    5V0:
-      protect: [discharge]
 `
 
 const overlayConventionsYAML = `
@@ -68,7 +61,7 @@ func writeFile(t *testing.T, name, body string) string {
 // It skips naming.ApplyLexicon, which serve also does at startup, because the lexicon is a process
 // global and installing it here would leak one test's vocabulary into the next while testing
 // nothing this file is about.
-func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath string) []string {
+func servedRuleNames(t *testing.T, profileDir, conventionsPath string) []string {
 	t.Helper()
 	var cfg *configpb.NamingConvention
 	if conventionsPath != "" {
@@ -78,7 +71,7 @@ func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath strin
 		}
 		cfg = loaded
 	}
-	svc, _, err := serveRuleServices(nil, service.NewMemReviewStore(), nil, profileDir, intentPath, cfg, nil, nil)
+	svc, _, err := serveRuleServices(nil, service.NewMemReviewStore(), nil, profileDir, cfg, nil, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}
@@ -98,7 +91,7 @@ func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath strin
 // customer's profile fired on the CLI and was invisible in the viewer, where the
 // interface-aware view presents it.
 func TestServeCheckCatalogIncludesOverlayProfiles(t *testing.T) {
-	names := servedRuleNames(t, writeProfileDir(t, overlayProfileYAML), "", "")
+	names := servedRuleNames(t, writeProfileDir(t, overlayProfileYAML), "")
 	want := "profile-overlay/testbus-signal-dangling"
 	if !slicesContains(names, want) {
 		t.Fatalf("served check catalog should advertise %q, got %d rules: %v", want, len(names), names)
@@ -110,21 +103,11 @@ func TestServeCheckCatalogIncludesOverlayProfiles(t *testing.T) {
 	}
 }
 
-// WS3-109: --intent-path reached the ReviewService catalog alone, so an intent rule ran in a review
-// and was absent from the check panel. Absent there is indistinguishable from ran-and-passed.
-func TestServeCheckCatalogIncludesIntent(t *testing.T) {
-	names := servedRuleNames(t, "", writeFile(t, "intent.yaml", overlayIntentYAML), "")
-	want := "intent/protection-discharge"
-	if !slicesContains(names, want) {
-		t.Fatalf("served check catalog should advertise %q, got %d rules: %v", want, len(names), names)
-	}
-}
-
 // WS3-109: a --conventions config carrying RULES had those rules composed into the review catalog
 // only. Its lexicon already reached both surfaces through the startup ApplyLexicon, which is what made
 // the rules half easy to miss.
 func TestServeCheckCatalogIncludesConventionRules(t *testing.T) {
-	names := servedRuleNames(t, "", "", writeFile(t, "conventions.yaml", overlayConventionsYAML))
+	names := servedRuleNames(t, "", writeFile(t, "conventions.yaml", overlayConventionsYAML))
 	want := "house/signal-net-naming"
 	if !slicesContains(names, want) {
 		t.Fatalf("served check catalog should advertise %q, got %d rules: %v", want, len(names), names)
@@ -132,24 +115,22 @@ func TestServeCheckCatalogIncludesConventionRules(t *testing.T) {
 }
 
 // This pins the regression that matters most, where serve REBUILT its review catalog when
-// --conventions carried rules (check.CatalogWith(src)), which silently dropped the profile and
-// intent sources composed just above it. So the combination an operator is most likely to run
+// --conventions carried rules (check.CatalogWith(src)), which silently dropped the profile sources
+// composed just above it. So the combination an operator is most likely to run
 // (house conventions plus their own interface profiles) was the one that lost both tiers, with
 // nothing in the output to say so. This is the startup-side twin of the service-layer bug WS3-107
 // fixed.
 func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 	names := servedRuleNames(t,
 		writeProfileDir(t, overlayProfileYAML),
-		writeFile(t, "intent.yaml", overlayIntentYAML),
 		writeFile(t, "conventions.yaml", overlayConventionsYAML))
 	for _, want := range []string{
 		"profile-overlay/testbus-signal-dangling",
-		"intent/protection-discharge",
 		"house/signal-net-naming",
 		"single-pin-net",
 	} {
 		if !slicesContains(names, want) {
-			t.Errorf("composing all three overlay flags dropped %q; got %d rules: %v", want, len(names), names)
+			t.Errorf("composing both overlay flags dropped %q; got %d rules: %v", want, len(names), names)
 		}
 	}
 }
@@ -160,7 +141,8 @@ func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 // service and not the other, and mutation testing confirmed that starving only the ReviewService
 // survived every one of them. This runs an actual review through the service serve hands to
 // CreateReview, over the same fixtures as the CLI-side TestReviewOverlayTiersCoexist, and asserts
-// all three overlay tiers arrive. Both fixtures are authored to FAIL rather than pass, because a
+// all three overlay tiers arrive. Intent is per design, so it rides the request as `agni review
+// --intent-path` sends it (agni issue 831). Both fixtures are authored to FAIL rather than pass, because a
 // pass is also what a vanished tier would produce on a design with nothing wrong.
 func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	cfg, err := naming.Load("testdata/review/conventions.yaml")
@@ -168,7 +150,7 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, reviewSvc, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil,
-		"testdata/review/profiles", "testdata/review/intent.yaml", cfg, nil, nil)
+		"testdata/review/profiles", cfg, nil, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}
@@ -176,9 +158,14 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	di, err := intent.LoadFileProto("testdata/review/intent.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
 	resp, err := reviewSvc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  service.ManifestProto(man),
 		DesignUri: "mount://m/testdata/review/conv-demo.edn",
+		Overlay:   &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Intent: di}},
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -191,7 +178,7 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	}
 	for id, tier := range map[string]string{
 		"16": "the convention's own rule",
-		"70": "--intent-path",
+		"70": "the request's intent",
 		"71": "--profile-path",
 	} {
 		if outcomes[id] != "fail" {
@@ -203,7 +190,7 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 // With no overlay flags the served catalog is the built-ins alone, so a server started without them
 // advertises nothing extra.
 func TestServeCheckCatalogWithoutOverlayFlags(t *testing.T) {
-	names := servedRuleNames(t, "", "", "")
+	names := servedRuleNames(t, "", "")
 	for _, n := range names {
 		if strings.HasPrefix(n, "profile-overlay/") || strings.HasPrefix(n, "intent/") || strings.HasPrefix(n, "house/") {
 			t.Errorf("no overlay flags should mean no overlay rules, got %q", n)
@@ -224,12 +211,12 @@ func TestServeBadProfileFailsStartup(t *testing.T) {
 	}
 }
 
-// The same holds for the other two: a bad declaration stops the server coming up rather than serving a
-// catalog quietly missing a tier the operator asked for.
+// The same holds for conventions: a bad declaration stops the server coming up rather than serving a
+// catalog quietly missing a tier the operator asked for. A bad --intent-path fails the CLI command
+// before any request is sent.
 func TestServeBadIntentAndConventionsFailStartup(t *testing.T) {
-	_, _, err := composeReviewInputsFrom(nil, writeFile(t, "intent.yaml", "name: x\nintent:\n  nets:\n    5V0:\n      protect: [nope]\n"))
-	if err == nil {
-		t.Error("a bad --intent-path should fail startup")
+	if _, err := intent.LoadFileProto(writeFile(t, "intent.yaml", "name: x\nintent:\n  nets:\n    5V0:\n      protect: [nope]\n")); err == nil {
+		t.Error("a bad --intent-path should fail before the request")
 	}
 	// A convention's regexes are validated when it is compiled into a source, not when the YAML is
 	// read, so this is the call serve has to reach for the operator to hear about it at startup.
@@ -268,7 +255,7 @@ func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkSvc, _, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil, "", "", house, nil, nil)
+	checkSvc, _, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil, "", house, nil, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/panyam/agni/core/check"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 )
 
 // LoadFile reads a single intent declaration from a YAML file (the --intent-path flag). The os
@@ -21,6 +22,20 @@ func LoadFile(path string) (Declaration, error) {
 		return Declaration{}, fmt.Errorf("intent: %s: %w", path, err)
 	}
 	return d, nil
+}
+
+// LoadFileProto reads a single intent declaration from a YAML file as its proto, validated (see
+// ParseProto). The CLI's --intent-path sends it on the request.
+func LoadFileProto(path string) (*configpb.DesignIntent, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("intent: reading --intent-path %q: %w", path, err)
+	}
+	in, err := ParseProto(b)
+	if err != nil {
+		return nil, fmt.Errorf("intent: %s: %w", path, err)
+	}
+	return in, nil
 }
 
 // Source compiles a declaration into a named check.RuleSource so the CLI can splice the intent rules

@@ -18,7 +18,7 @@ func TestReviewIndexDropsSupersededBuiltinProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load naming map: %v", err)
 	}
-	_, byName, err := composeReviewInputsFrom([]profiles.Profile{p}, "")
+	_, byName, err := composeReviewInputsFrom([]profiles.Profile{p})
 	if err != nil {
 		t.Fatalf("composeReviewInputsFrom: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestTwoOverlayProfilesOfOneNameAreRejectedAtComposition(t *testing.T) {
 			t.Errorf("panic = %v, want a duplicate rule name composition error", r)
 		}
 	}()
-	composeReviewInputsFrom([]profiles.Profile{a, b}, "") //nolint:errcheck // panics by design
+	composeReviewInputsFrom([]profiles.Profile{a, b}) //nolint:errcheck // panics by design
 }
 
 func hasSignalSuffix(p profiles.Profile, suffix string) bool {

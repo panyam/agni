@@ -400,6 +400,10 @@ var specFacts = map[string]factDef{
 			return string(ev.m.ComponentClass(ev.ents["component"].(*ir.Component).RefDes))
 		},
 	},
+	"component.exposed_connector": { // the in-scope connection's component is a connector the intent does not declare internal (agni issue 831)
+		reads: []string{"component.class"},
+		get:   func(ev *evalEnv) any { return ev.m.ExposedConnector(ev.ents["conn"].(*ir.Connection).ComponentRef) },
+	},
 	"component.ref_des": {
 		get: func(ev *evalEnv) any { return ev.ents["component"].(*ir.Component).RefDes },
 	},

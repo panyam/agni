@@ -94,8 +94,8 @@ like under MY vocabulary" should get exactly that, and a caller who could not tu
 rules off could not ask the question. It does mean that a finding which disappeared after switching
 conventions may have disappeared because the rule stopped running, not because the design improved.
 
-Only the convention is replaced. The built-in rules, and anything from `--profile-path` or
-`--intent-path`, are unaffected.
+Only the convention is replaced. The built-in rules, and anything from `--profile-path`, are
+unaffected. A request's `--intent-path` replaces the design's intent the same way.
 
 ### In the browser
 
@@ -173,14 +173,13 @@ lexicon:
     thermistor: { prefixes: ["TH"] }         # your house writes TH12, not RT12
     zener:      { prefixes: ["Z"] }
     tvs:        { patterns: ["^pesd"] }      # a part-number family with no "tvs" in its name
-    internal_connector: { patterns: ["^218650$"] }  # a mezzanine whose part number says nothing
 ```
 
-`internal_connector` is worth knowing about on any board that plugs into another one. A
-board-to-board, module, mezzanine or card-slot connector faces nothing a user touches, so the
-exposure rules (`esd-protection`, `input-protection`, `reverse-blocking-absent`) leave its nets alone
-once it is classified that way. Left as a plain `connector`, every signal on a module connector reads
-as an ESD path into the board.
+A board that plugs into another one has connectors facing nothing a user touches, and those are not a
+class. Whether a connector is the module socket or the cable entry depends on the product rather than
+the part, so it is declared per design in the `components` section of its
+[design intent](design-intent.md), which the exposure rules read. A lexicon naming the
+`internal_connector` class it replaced fails to load and says where the declaration goes.
 
 A prefix is the leading run of letters of a ref-des, so `TH` matches `TH12` and a part whose
 library symbol declares `TH?`. Prefixes are matched case-insensitively and are ADDED to the built-in
