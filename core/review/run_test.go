@@ -2,7 +2,6 @@ package review
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"testing"
 
@@ -643,38 +642,6 @@ func TestFilterToScope(t *testing.T) {
 		if kept[drop] {
 			t.Errorf("%s should be dropped by the scope", drop)
 		}
-	}
-}
-
-// RenderJSON emits the FULL finding list for a failing item, including findings past maxDetailFindings
-// that the markdown Detail cell caps, so tooling and the future web report lose nothing.
-func TestRenderJSONFullFindings(t *testing.T) {
-	var fs []check.Finding
-	for i := 0; i < 10; i++ {
-		fs = append(fs, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "NET_" + string(rune('A'+i))}, Rule: "esd-protection", Message: "no ESD device", Prov: &ir.Provenance{SourceFile: "evt.edn"}})
-	}
-	rep := Report{Manifest: "t", Design: "evt", Areas: []AreaResult{{Area: Area{Name: "A"}, Items: []ItemResult{
-		{Item: Item{ID: "esd", Title: "ESD"}, Outcome: Fail, Findings: fs},
-	}}}}
-	js, err := RenderJSON(rep)
-	if err != nil {
-		t.Fatalf("RenderJSON: %v", err)
-	}
-	var got jsonReport
-	if err := json.Unmarshal([]byte(js), &got); err != nil {
-		t.Fatalf("unmarshal: %v\n%s", err, js)
-	}
-	if len(got.Areas) != 1 || len(got.Areas[0].Items) != 1 {
-		t.Fatalf("shape: %+v", got)
-	}
-	item := got.Areas[0].Items[0]
-	if len(item.Findings) != 10 {
-		t.Errorf("want all 10 findings uncapped, got %d", len(item.Findings))
-	}
-	// The last finding (past the markdown cap) is present, with subject + source for the eventual link.
-	last := item.Findings[9]
-	if last.Subject != "NET_J" || last.SourceFile != "evt.edn" {
-		t.Errorf("last finding = %+v, want subject NET_J from evt.edn", last)
 	}
 }
 

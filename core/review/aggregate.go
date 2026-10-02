@@ -1,7 +1,6 @@
 package review
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -113,81 +112,4 @@ func RenderAggregateMarkdown(a Aggregate) string {
 		b.WriteString("\n")
 	}
 	return b.String()
-}
-
-// jsonAggregate is the tooling-facing projection of an Aggregate, parallel to jsonReport. Automation is
-// stated once (manifest-level); each item carries its per-design outcome map, and each design its
-// pass/fail/n-a summary.
-type jsonAggregate struct {
-	Manifest     string              `json:"manifest"`
-	Designs      []string            `json:"designs"`
-	Total        int                 `json:"total"`
-	Automated    int                 `json:"automated"`
-	NotAutomated int                 `json:"not_automated"`
-	PerDesign    []jsonDesignSummary `json:"per_design"`
-	Areas        []jsonAggArea       `json:"areas"`
-}
-
-type jsonDesignSummary struct {
-	Design string `json:"design"`
-	// Answered is the per-design gate input, alongside the manifest-level Covered/NotAutomated above, so
-	// a design that stopped answering its checklist shows without the consumer recounting outcomes.
-	Answered          int    `json:"answered"`
-	Total             int    `json:"total"`
-	Pass              int    `json:"pass"`
-	Fail              int    `json:"fail"`
-	Provisional       int    `json:"provisional"`
-	NeedsDesignIntent int    `json:"needs_design_intent"`
-	NeedsData         int    `json:"needs_data"`
-	ComputedNA        int    `json:"computed_na"`
-	NotApplicable     int    `json:"not_applicable"`
-}
-
-type jsonAggArea struct {
-	Name  string        `json:"name"`
-	Items []jsonAggItem `json:"items"`
-}
-
-type jsonAggItem struct {
-	ID       string            `json:"id"`
-	Title    string            `json:"title"`
-	Outcomes map[string]string `json:"outcomes"` // design -> outcome
-}
-
-// RenderAggregateJSON emits the project rollup as indented JSON for tooling: the manifest-level
-// automation counts, a per-design summary, and the per-item outcome-by-design matrix.
-func RenderAggregateJSON(a Aggregate) (string, error) {
-	out := jsonAggregate{Manifest: a.Manifest, Designs: a.designs()}
-	if len(a.Reports) > 0 {
-		t0 := a.Reports[0].Tally()
-		out.Total, out.Automated, out.NotAutomated = t0.Total, t0.Covered(), t0.NotAutomated
-	}
-	for _, r := range a.Reports {
-		t := r.Tally()
-		out.PerDesign = append(out.PerDesign, jsonDesignSummary{
-			Design: r.Design, Answered: t.Answered(), Total: t.Total,
-			Pass: t.Pass, Fail: t.Fail, NotApplicable: t.NotApplicable,
-			Provisional: t.Provisional, NeedsDesignIntent: t.NeedsDesignIntent, NeedsData: t.NeedsData, ComputedNA: t.ComputedNA,
-		})
-	}
-	ms := a.outcomeByID()
-	designs := a.designs()
-	if len(a.Reports) > 0 {
-		for _, ar := range a.Reports[0].Areas {
-			ja := jsonAggArea{Name: ar.Area.Name}
-			for _, it := range ar.Items {
-				outcomes := map[string]string{}
-				for i, d := range designs {
-					outcomes[d] = string(ms[i][it.Item.ID])
-				}
-				ja.Items = append(ja.Items, jsonAggItem{ID: it.Item.ID, Title: it.Item.Title, Outcomes: outcomes})
-			}
-			out.Areas = append(out.Areas, ja)
-		}
-	}
-	buf, err := json.MarshalIndent(out, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(buf) + "\n", nil
 }

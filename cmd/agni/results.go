@@ -15,7 +15,9 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/version"
+	"github.com/panyam/agni/service"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -70,7 +72,7 @@ func resultsCmd() *cobra.Command {
 				return results.WriteComparison(cmd.OutOrStdout(), results.Compare(doc, other))
 			}
 			if doc.GetManifest() != "" {
-				return renderReviewResults(cmd.OutOrStdout(), doc, format, coverage)
+				return renderReviewResults(cmd.OutOrStdout(), "", doc, format, coverage)
 			}
 			if coverage {
 				return fmt.Errorf("%s: --coverage applies to a review document; this one is a check run", args[0])
@@ -116,7 +118,9 @@ func renderCheckResults(w io.Writer, doc *checkspb.CheckResults, format string) 
 // renderReviewResults rebuilds the review view-model from the document and renders it with the same
 // renderers the live command uses. The reconstruction is the document's own areas and items, so a
 // rendered review needs neither the manifest nor the design that produced it.
-func renderReviewResults(w io.Writer, doc *checkspb.CheckResults, format string, coverage bool) error {
+// renderReviewResults renders a review document. Its json is the Review resource the rpc returns
+// (C31, agni issue 734), named when the run has a name and summarized from the document.
+func renderReviewResults(w io.Writer, name string, doc *checkspb.CheckResults, format string, coverage bool) error {
 	if format == "" {
 		format = "markdown"
 	}
@@ -141,7 +145,7 @@ func renderReviewResults(w io.Writer, doc *checkspb.CheckResults, format string,
 	case format == "markdown":
 		out = review.RenderMarkdown(rep)
 	case format == "json":
-		out, err = review.RenderJSON(rep)
+		out, err = protoJSON(service.ReviewOf(name, doc))
 	default:
 		return fmt.Errorf("unknown --format %q for a review document (want: markdown, json)", format)
 	}
@@ -267,4 +271,14 @@ func skippedFromDoc(in []*checkspb.SkippedRule) []*webapi.SkippedRule {
 		out[i] = &webapi.SkippedRule{Name: s.GetName(), Reason: s.GetReason()}
 	}
 	return out
+}
+
+// protoJSON renders a wire message the way every command's --format json does (C31): protojson,
+// indented, with unpopulated fields emitted so a consumer sees a zero rather than an absent key.
+func protoJSON(m proto.Message) (string, error) {
+	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(m)
+	if err != nil {
+		return "", err
+	}
+	return string(b) + "\n", nil
 }

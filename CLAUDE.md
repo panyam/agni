@@ -260,9 +260,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   reading the CLI and a client reading the rpc parse one shape. `agni intake` is the one declared
   exception and its reasoning is on `intake.Skeleton`, because that type's confidentiality guarantee is
   structural and a proto twin would have to carry it into a file people edit for other reasons.
-  `TestEveryJSONFormatEmitsAProto` enforces it and reads SOURCE in `cmd/agni`, so it cannot see an
-  encoder reached through a helper in another package; that is why `report.TableJSON` was deleted
-  rather than pattern-matched.
+  `TestEveryJSONFormatEmitsAProto` enforces it over `cmd/agni`'s own source, and
+  `TestNoCommandCallsAHandRolledEncoderInAnotherPackage` follows the commands' calls into the
+  module's other packages, which is how `report.TableJSON` and `review.RenderJSON` hid (agni 734).
+  `review --format json` is the `Review` the rpc returns, with a `summary` computed on the way out.
 - **`agni trace <design> --from U7.3 --to U12.4` follows a signal through the series parts between
   them** and prints the route, the nets, and the probe points on each. `--render <file.svg>` draws it,
   on the design's own schematic where it has one and on an auto-layout where it does not, saying which.

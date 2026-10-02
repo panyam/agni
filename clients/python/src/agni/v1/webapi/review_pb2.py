@@ -27,7 +27,7 @@ from agni.v1.webapi import checks_pb2 as agni_dot_v1_dot_webapi_dot_checks__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/review.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/checks/checks.proto\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"T\n\x06Review\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x36\n\x07results\x18\x02 \x01(\x0b\x32\x1c.agni.v1.checks.CheckResultsR\x07results\"\xc1\x02\n\x13\x43reateReviewRequest\x12\x16\n\x06parent\x18\x06 \x01(\tR\x06parent\x12\x1d\n\ndesign_uri\x18\x01 \x01(\tR\tdesignUri\x12\x1b\n\tboard_uri\x18\x02 \x01(\tR\x08\x62oardUri\x12%\n\x0eratified_floor\x18\x03 \x01(\x01R\rratifiedFloor\x12\x37\n\x07overlay\x18\x04 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12:\n\x08manifest\x18\x05 \x01(\x0b\x32\x1e.agni.v1.checks.ReviewManifestR\x08manifest\x12\x19\n\x08\x61s_named\x18\x07 \x01(\x08R\x07\x61sNamed\x12\x1f\n\x0bwork_budget\x18\x08 \x01(\x03R\nworkBudget\"&\n\x10GetReviewRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n\x12ListReviewsRequest\x12\x16\n\x06parent\x18\x04 \x01(\tR\x06parent\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"o\n\x13ListReviewsResponse\x12\x30\n\x07reviews\x18\x01 \x03(\x0b\x32\x16.agni.v1.webapi.ReviewR\x07reviews\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\")\n\x13\x44\x65leteReviewRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\",\n\x18GetReviewManifestRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"W\n\x19GetReviewManifestResponse\x12:\n\x08manifest\x18\x01 \x01(\x0b\x32\x1e.agni.v1.checks.ReviewManifestR\x08manifest2\xb2\x03\n\rReviewService\x12K\n\x0c\x43reateReview\x12#.agni.v1.webapi.CreateReviewRequest\x1a\x16.agni.v1.webapi.Review\x12\x45\n\tGetReview\x12 .agni.v1.webapi.GetReviewRequest\x1a\x16.agni.v1.webapi.Review\x12V\n\x0bListReviews\x12\".agni.v1.webapi.ListReviewsRequest\x1a#.agni.v1.webapi.ListReviewsResponse\x12K\n\x0c\x44\x65leteReview\x12#.agni.v1.webapi.DeleteReviewRequest\x1a\x16.google.protobuf.Empty\x12h\n\x11GetReviewManifest\x12(.agni.v1.webapi.GetReviewManifestRequest\x1a).agni.v1.webapi.GetReviewManifestResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/review.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/checks/checks.proto\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x8d\x01\n\x06Review\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x36\n\x07results\x18\x02 \x01(\x0b\x32\x1c.agni.v1.checks.CheckResultsR\x07results\x12\x37\n\x07summary\x18\x03 \x01(\x0b\x32\x1d.agni.v1.webapi.ReviewSummaryR\x07summary\"\xa5\x01\n\rReviewSummary\x12\x14\n\x05total\x18\x01 \x01(\x05R\x05total\x12\x18\n\x07\x63overed\x18\x02 \x01(\x05R\x07\x63overed\x12\x1a\n\x08\x61nswered\x18\x03 \x01(\x05R\x08\x61nswered\x12\x12\n\x04pass\x18\x04 \x01(\x05R\x04pass\x12\x12\n\x04\x66\x61il\x18\x05 \x01(\x05R\x04\x66\x61il\x12 \n\x0bprovisional\x18\x06 \x01(\x05R\x0bprovisional\"\xc1\x02\n\x13\x43reateReviewRequest\x12\x16\n\x06parent\x18\x06 \x01(\tR\x06parent\x12\x1d\n\ndesign_uri\x18\x01 \x01(\tR\tdesignUri\x12\x1b\n\tboard_uri\x18\x02 \x01(\tR\x08\x62oardUri\x12%\n\x0eratified_floor\x18\x03 \x01(\x01R\rratifiedFloor\x12\x37\n\x07overlay\x18\x04 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12:\n\x08manifest\x18\x05 \x01(\x0b\x32\x1e.agni.v1.checks.ReviewManifestR\x08manifest\x12\x19\n\x08\x61s_named\x18\x07 \x01(\x08R\x07\x61sNamed\x12\x1f\n\x0bwork_budget\x18\x08 \x01(\x03R\nworkBudget\"&\n\x10GetReviewRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n\x12ListReviewsRequest\x12\x16\n\x06parent\x18\x04 \x01(\tR\x06parent\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"o\n\x13ListReviewsResponse\x12\x30\n\x07reviews\x18\x01 \x03(\x0b\x32\x16.agni.v1.webapi.ReviewR\x07reviews\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\")\n\x13\x44\x65leteReviewRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\",\n\x18GetReviewManifestRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"W\n\x19GetReviewManifestResponse\x12:\n\x08manifest\x18\x01 \x01(\x0b\x32\x1e.agni.v1.checks.ReviewManifestR\x08manifest2\xb2\x03\n\rReviewService\x12K\n\x0c\x43reateReview\x12#.agni.v1.webapi.CreateReviewRequest\x1a\x16.agni.v1.webapi.Review\x12\x45\n\tGetReview\x12 .agni.v1.webapi.GetReviewRequest\x1a\x16.agni.v1.webapi.Review\x12V\n\x0bListReviews\x12\".agni.v1.webapi.ListReviewsRequest\x1a#.agni.v1.webapi.ListReviewsResponse\x12K\n\x0c\x44\x65leteReview\x12#.agni.v1.webapi.DeleteReviewRequest\x1a\x16.google.protobuf.Empty\x12h\n\x11GetReviewManifest\x12(.agni.v1.webapi.GetReviewManifestRequest\x1a).agni.v1.webapi.GetReviewManifestResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,22 +35,24 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agni.v1.webapi.review_pb2',
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
-  _globals['_REVIEW']._serialized_start=134
-  _globals['_REVIEW']._serialized_end=218
-  _globals['_CREATEREVIEWREQUEST']._serialized_start=221
-  _globals['_CREATEREVIEWREQUEST']._serialized_end=542
-  _globals['_GETREVIEWREQUEST']._serialized_start=544
-  _globals['_GETREVIEWREQUEST']._serialized_end=582
-  _globals['_LISTREVIEWSREQUEST']._serialized_start=585
-  _globals['_LISTREVIEWSREQUEST']._serialized_end=713
-  _globals['_LISTREVIEWSRESPONSE']._serialized_start=715
-  _globals['_LISTREVIEWSRESPONSE']._serialized_end=826
-  _globals['_DELETEREVIEWREQUEST']._serialized_start=828
-  _globals['_DELETEREVIEWREQUEST']._serialized_end=869
-  _globals['_GETREVIEWMANIFESTREQUEST']._serialized_start=871
-  _globals['_GETREVIEWMANIFESTREQUEST']._serialized_end=915
-  _globals['_GETREVIEWMANIFESTRESPONSE']._serialized_start=917
-  _globals['_GETREVIEWMANIFESTRESPONSE']._serialized_end=1004
-  _globals['_REVIEWSERVICE']._serialized_start=1007
-  _globals['_REVIEWSERVICE']._serialized_end=1441
+  _globals['_REVIEW']._serialized_start=135
+  _globals['_REVIEW']._serialized_end=276
+  _globals['_REVIEWSUMMARY']._serialized_start=279
+  _globals['_REVIEWSUMMARY']._serialized_end=444
+  _globals['_CREATEREVIEWREQUEST']._serialized_start=447
+  _globals['_CREATEREVIEWREQUEST']._serialized_end=768
+  _globals['_GETREVIEWREQUEST']._serialized_start=770
+  _globals['_GETREVIEWREQUEST']._serialized_end=808
+  _globals['_LISTREVIEWSREQUEST']._serialized_start=811
+  _globals['_LISTREVIEWSREQUEST']._serialized_end=939
+  _globals['_LISTREVIEWSRESPONSE']._serialized_start=941
+  _globals['_LISTREVIEWSRESPONSE']._serialized_end=1052
+  _globals['_DELETEREVIEWREQUEST']._serialized_start=1054
+  _globals['_DELETEREVIEWREQUEST']._serialized_end=1095
+  _globals['_GETREVIEWMANIFESTREQUEST']._serialized_start=1097
+  _globals['_GETREVIEWMANIFESTREQUEST']._serialized_end=1141
+  _globals['_GETREVIEWMANIFESTRESPONSE']._serialized_start=1143
+  _globals['_GETREVIEWMANIFESTRESPONSE']._serialized_end=1230
+  _globals['_REVIEWSERVICE']._serialized_start=1233
+  _globals['_REVIEWSERVICE']._serialized_end=1667
 # @@protoc_insertion_point(module_scope)

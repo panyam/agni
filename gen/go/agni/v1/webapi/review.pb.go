@@ -51,7 +51,13 @@ type Review struct {
 	// results is the self-contained document: meta (producer, created_at), the design ref and its
 	// content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
 	// item outcomes.
-	Results       *checks.CheckResults `protobuf:"bytes,2,opt,name=results,proto3" json:"results,omitempty"`
+	Results *checks.CheckResults `protobuf:"bytes,2,opt,name=results,proto3" json:"results,omitempty"`
+	// summary is the counts a pipeline gates on, computed from results.areas each time a review is
+	// returned and never stored, so a document stored before the field existed still answers with one
+	// (agni issue 734). It carries exactly the inputs of the two gates `agni review` exposes
+	// (--fail-on-outcome and --min-answered), so a consumer reads the numbers the exit code came from
+	// rather than recomputing them and disagreeing.
+	Summary       *ReviewSummary `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -100,6 +106,102 @@ func (x *Review) GetResults() *checks.CheckResults {
 	return nil
 }
 
+func (x *Review) GetSummary() *ReviewSummary {
+	if x != nil {
+		return x.Summary
+	}
+	return nil
+}
+
+// ReviewSummary counts a run's checklist items. covered is every item a mechanism exists for (all
+// but not-automated); answered is the stricter count of items the run produced an answer for (pass,
+// fail, provisional, and computed not-applicable), which is what --min-answered gates on.
+// provisional is a fail resting on unratified datasheet data, broken out because gating on it is a
+// per-team choice.
+type ReviewSummary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Total         int32                  `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
+	Covered       int32                  `protobuf:"varint,2,opt,name=covered,proto3" json:"covered,omitempty"`
+	Answered      int32                  `protobuf:"varint,3,opt,name=answered,proto3" json:"answered,omitempty"`
+	Pass          int32                  `protobuf:"varint,4,opt,name=pass,proto3" json:"pass,omitempty"`
+	Fail          int32                  `protobuf:"varint,5,opt,name=fail,proto3" json:"fail,omitempty"`
+	Provisional   int32                  `protobuf:"varint,6,opt,name=provisional,proto3" json:"provisional,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReviewSummary) Reset() {
+	*x = ReviewSummary{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewSummary) ProtoMessage() {}
+
+func (x *ReviewSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewSummary.ProtoReflect.Descriptor instead.
+func (*ReviewSummary) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ReviewSummary) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *ReviewSummary) GetCovered() int32 {
+	if x != nil {
+		return x.Covered
+	}
+	return 0
+}
+
+func (x *ReviewSummary) GetAnswered() int32 {
+	if x != nil {
+		return x.Answered
+	}
+	return 0
+}
+
+func (x *ReviewSummary) GetPass() int32 {
+	if x != nil {
+		return x.Pass
+	}
+	return 0
+}
+
+func (x *ReviewSummary) GetFail() int32 {
+	if x != nil {
+		return x.Fail
+	}
+	return 0
+}
+
+func (x *ReviewSummary) GetProvisional() int32 {
+	if x != nil {
+		return x.Provisional
+	}
+	return 0
+}
+
 type CreateReviewRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// parent is the project the run belongs to, "projects/{project}", empty when the design resolves
@@ -145,7 +247,7 @@ type CreateReviewRequest struct {
 
 func (x *CreateReviewRequest) Reset() {
 	*x = CreateReviewRequest{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -157,7 +259,7 @@ func (x *CreateReviewRequest) String() string {
 func (*CreateReviewRequest) ProtoMessage() {}
 
 func (x *CreateReviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +272,7 @@ func (x *CreateReviewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateReviewRequest.ProtoReflect.Descriptor instead.
 func (*CreateReviewRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateReviewRequest) GetParent() string {
@@ -238,7 +340,7 @@ type GetReviewRequest struct {
 
 func (x *GetReviewRequest) Reset() {
 	*x = GetReviewRequest{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -250,7 +352,7 @@ func (x *GetReviewRequest) String() string {
 func (*GetReviewRequest) ProtoMessage() {}
 
 func (x *GetReviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -263,7 +365,7 @@ func (x *GetReviewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReviewRequest.ProtoReflect.Descriptor instead.
 func (*GetReviewRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetReviewRequest) GetName() string {
@@ -295,7 +397,7 @@ type ListReviewsRequest struct {
 
 func (x *ListReviewsRequest) Reset() {
 	*x = ListReviewsRequest{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -307,7 +409,7 @@ func (x *ListReviewsRequest) String() string {
 func (*ListReviewsRequest) ProtoMessage() {}
 
 func (x *ListReviewsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -320,7 +422,7 @@ func (x *ListReviewsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListReviewsRequest.ProtoReflect.Descriptor instead.
 func (*ListReviewsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListReviewsRequest) GetParent() string {
@@ -363,7 +465,7 @@ type ListReviewsResponse struct {
 
 func (x *ListReviewsResponse) Reset() {
 	*x = ListReviewsResponse{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -375,7 +477,7 @@ func (x *ListReviewsResponse) String() string {
 func (*ListReviewsResponse) ProtoMessage() {}
 
 func (x *ListReviewsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -388,7 +490,7 @@ func (x *ListReviewsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListReviewsResponse.ProtoReflect.Descriptor instead.
 func (*ListReviewsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListReviewsResponse) GetReviews() []*Review {
@@ -414,7 +516,7 @@ type DeleteReviewRequest struct {
 
 func (x *DeleteReviewRequest) Reset() {
 	*x = DeleteReviewRequest{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -426,7 +528,7 @@ func (x *DeleteReviewRequest) String() string {
 func (*DeleteReviewRequest) ProtoMessage() {}
 
 func (x *DeleteReviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +541,7 @@ func (x *DeleteReviewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteReviewRequest.ProtoReflect.Descriptor instead.
 func (*DeleteReviewRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DeleteReviewRequest) GetName() string {
@@ -460,7 +562,7 @@ type GetReviewManifestRequest struct {
 
 func (x *GetReviewManifestRequest) Reset() {
 	*x = GetReviewManifestRequest{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +574,7 @@ func (x *GetReviewManifestRequest) String() string {
 func (*GetReviewManifestRequest) ProtoMessage() {}
 
 func (x *GetReviewManifestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +587,7 @@ func (x *GetReviewManifestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReviewManifestRequest.ProtoReflect.Descriptor instead.
 func (*GetReviewManifestRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetReviewManifestRequest) GetUri() string {
@@ -504,7 +606,7 @@ type GetReviewManifestResponse struct {
 
 func (x *GetReviewManifestResponse) Reset() {
 	*x = GetReviewManifestResponse{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -516,7 +618,7 @@ func (x *GetReviewManifestResponse) String() string {
 func (*GetReviewManifestResponse) ProtoMessage() {}
 
 func (x *GetReviewManifestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -529,7 +631,7 @@ func (x *GetReviewManifestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReviewManifestResponse.ProtoReflect.Descriptor instead.
 func (*GetReviewManifestResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetReviewManifestResponse) GetManifest() *checks.ReviewManifest {
@@ -543,10 +645,18 @@ var File_agni_v1_webapi_review_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"T\n" +
+	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x8d\x01\n" +
 	"\x06Review\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
-	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\xc1\x02\n" +
+	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\x127\n" +
+	"\asummary\x18\x03 \x01(\v2\x1d.agni.v1.webapi.ReviewSummaryR\asummary\"\xa5\x01\n" +
+	"\rReviewSummary\x12\x14\n" +
+	"\x05total\x18\x01 \x01(\x05R\x05total\x12\x18\n" +
+	"\acovered\x18\x02 \x01(\x05R\acovered\x12\x1a\n" +
+	"\banswered\x18\x03 \x01(\x05R\banswered\x12\x12\n" +
+	"\x04pass\x18\x04 \x01(\x05R\x04pass\x12\x12\n" +
+	"\x04fail\x18\x05 \x01(\x05R\x04fail\x12 \n" +
+	"\vprovisional\x18\x06 \x01(\x05R\vprovisional\"\xc1\x02\n" +
 	"\x13CreateReviewRequest\x12\x16\n" +
 	"\x06parent\x18\x06 \x01(\tR\x06parent\x12\x1d\n" +
 	"\n" +
@@ -594,42 +704,44 @@ func file_agni_v1_webapi_review_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_review_proto_rawDescData
 }
 
-var file_agni_v1_webapi_review_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_agni_v1_webapi_review_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_agni_v1_webapi_review_proto_goTypes = []any{
 	(*Review)(nil),                    // 0: agni.v1.webapi.Review
-	(*CreateReviewRequest)(nil),       // 1: agni.v1.webapi.CreateReviewRequest
-	(*GetReviewRequest)(nil),          // 2: agni.v1.webapi.GetReviewRequest
-	(*ListReviewsRequest)(nil),        // 3: agni.v1.webapi.ListReviewsRequest
-	(*ListReviewsResponse)(nil),       // 4: agni.v1.webapi.ListReviewsResponse
-	(*DeleteReviewRequest)(nil),       // 5: agni.v1.webapi.DeleteReviewRequest
-	(*GetReviewManifestRequest)(nil),  // 6: agni.v1.webapi.GetReviewManifestRequest
-	(*GetReviewManifestResponse)(nil), // 7: agni.v1.webapi.GetReviewManifestResponse
-	(*checks.CheckResults)(nil),       // 8: agni.v1.checks.CheckResults
-	(*OverlayConfig)(nil),             // 9: agni.v1.webapi.OverlayConfig
-	(*checks.ReviewManifest)(nil),     // 10: agni.v1.checks.ReviewManifest
-	(*emptypb.Empty)(nil),             // 11: google.protobuf.Empty
+	(*ReviewSummary)(nil),             // 1: agni.v1.webapi.ReviewSummary
+	(*CreateReviewRequest)(nil),       // 2: agni.v1.webapi.CreateReviewRequest
+	(*GetReviewRequest)(nil),          // 3: agni.v1.webapi.GetReviewRequest
+	(*ListReviewsRequest)(nil),        // 4: agni.v1.webapi.ListReviewsRequest
+	(*ListReviewsResponse)(nil),       // 5: agni.v1.webapi.ListReviewsResponse
+	(*DeleteReviewRequest)(nil),       // 6: agni.v1.webapi.DeleteReviewRequest
+	(*GetReviewManifestRequest)(nil),  // 7: agni.v1.webapi.GetReviewManifestRequest
+	(*GetReviewManifestResponse)(nil), // 8: agni.v1.webapi.GetReviewManifestResponse
+	(*checks.CheckResults)(nil),       // 9: agni.v1.checks.CheckResults
+	(*OverlayConfig)(nil),             // 10: agni.v1.webapi.OverlayConfig
+	(*checks.ReviewManifest)(nil),     // 11: agni.v1.checks.ReviewManifest
+	(*emptypb.Empty)(nil),             // 12: google.protobuf.Empty
 }
 var file_agni_v1_webapi_review_proto_depIdxs = []int32{
-	8,  // 0: agni.v1.webapi.Review.results:type_name -> agni.v1.checks.CheckResults
-	9,  // 1: agni.v1.webapi.CreateReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	10, // 2: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
-	0,  // 3: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
-	10, // 4: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
-	1,  // 5: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
-	2,  // 6: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
-	3,  // 7: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
-	5,  // 8: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
-	6,  // 9: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
-	0,  // 10: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
-	0,  // 11: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
-	4,  // 12: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
-	11, // 13: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
-	7,  // 14: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	9,  // 0: agni.v1.webapi.Review.results:type_name -> agni.v1.checks.CheckResults
+	1,  // 1: agni.v1.webapi.Review.summary:type_name -> agni.v1.webapi.ReviewSummary
+	10, // 2: agni.v1.webapi.CreateReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	11, // 3: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
+	0,  // 4: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
+	11, // 5: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
+	2,  // 6: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
+	3,  // 7: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
+	4,  // 8: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
+	6,  // 9: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
+	7,  // 10: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
+	0,  // 11: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
+	0,  // 12: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
+	5,  // 13: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
+	12, // 14: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
+	8,  // 15: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_review_proto_init() }
@@ -644,7 +756,7 @@ func file_agni_v1_webapi_review_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_review_proto_rawDesc), len(file_agni_v1_webapi_review_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

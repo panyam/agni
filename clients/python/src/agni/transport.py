@@ -23,7 +23,7 @@ from agni.errors import AgniError, CliUnsupported
 from agni.services import Rpc
 from agni.v1.checks import checks_pb2 as _checks  # noqa: F401  (registers PartSpec's imports)
 from agni.v1.param import param_pb2
-from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, validate_pb2
+from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, validate_pb2
 
 M = TypeVar("M", bound=Message)
 
@@ -236,6 +236,25 @@ def _query_set_stdin(req: Message) -> str:
     return json.dumps(_set_bindings(json_format.MessageToDict(req.set, preserving_proto_field_name=True)))
 
 
+def _review_argv(req: Message) -> List[str]:
+    _only(req, ("design_uri", "manifest", "board_uri", "as_named", "overlay", "ratified_floor"))
+    _library_only(req)
+    out = ["review", req.design_uri, "--checklist", "-", "--format", "json"] + _read_flags(req)
+    if req.ratified_floor:
+        out += ["--ratified-floor", repr(req.ratified_floor)]
+    return out
+
+
+def _review_stdin(req: Message) -> str:
+    # A manifest file puts an item's binding (rule, query, present...) on the item itself, where the
+    # wire nests it under `binding`, so it is lifted back out. JSON is YAML, so `--checklist -` reads it.
+    man = json_format.MessageToDict(req.manifest, preserving_proto_field_name=True)
+    for area in man.get("areas", []):
+        for item in area.get("items", []):
+            item.update(item.pop("binding", {}))
+    return json.dumps(man)
+
+
 def _diff_argv(req: Message) -> List[str]:
     _only(req, ("a_uri", "b_uri"))
     return ["diff", req.a_uri, req.b_uri, "--format", "json"]
@@ -257,9 +276,9 @@ def _layout_argv(req: Message) -> List[str]:
 
 # The command each rpc maps to. An rpc absent here raises CliUnsupported on the CLI transport.
 #
-# Deliberately absent: ReviewService, because `review --format json` is not yet the Review proto
-# (agni issue 734), so mapping it would hand back a message parsed from a different shape. And
-# `intake`, C31's declared exception, whose output has no wire message on purpose.
+# Deliberately absent: `intake`, C31's declared exception, whose output has no wire message on purpose.
+# CreateReview maps to `review`, whose json is the Review the rpc returns since agni issue 734. The
+# CLI stores nothing, so its review is unnamed; Get, List and Delete need a store and stay Connect only.
 CLI_COMMANDS: Dict[str, CliCommand] = {
     "CheckService/CheckDesign": CliCommand(_check_argv("json"), checks_pb2.CheckDesignResponse),
     "CheckService/GetCheckReport": CliCommand(_check_argv("report"), checks_pb2.GetCheckReportResponse),
@@ -268,6 +287,7 @@ CLI_COMMANDS: Dict[str, CliCommand] = {
     "QueryService/RunQueries": CliCommand(
         _query_set_argv, query_pb2.RunQueriesResponse, stdin=_query_set_stdin, answers_on_failure=True
     ),
+    "ReviewService/CreateReview": CliCommand(_review_argv, review_pb2.Review, stdin=_review_stdin),
     "DiffService/DiffDesigns": CliCommand(_diff_argv, diff_pb2.DiffDesignsResponse),
     "DesignService/TraceDesign": CliCommand(
         _trace_argv,

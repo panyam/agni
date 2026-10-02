@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // TestReviewCmd runs a review manifest over a broken-CAN design and checks the per-item outcomes end
@@ -130,8 +132,9 @@ func TestReviewCmdMultiCoverage(t *testing.T) {
 	}
 }
 
-// Multi-design --format json carries the manifest-level automation counts, a per-design summary, and
-// the per-item outcome-by-design matrix.
+// Multi-design --format json is a ListReviewsResponse, one Review per design with its summary (agni
+// issue 734). The automation counts and the per-item outcome by design that the old rollup carried
+// are read from it: the summaries agree on the manifest, and each design's items carry their outcomes.
 func TestReviewCmdMultiJSON(t *testing.T) {
 	cmd := reviewCmd()
 	var out bytes.Buffer
@@ -141,41 +144,37 @@ func TestReviewCmdMultiJSON(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("review multi --format json: %v", err)
 	}
-	var got struct {
-		Total        int                       `json:"total"`
-		Automated    int                       `json:"automated"`
-		NotAutomated int                       `json:"not_automated"`
-		PerDesign    []struct{ Design string } `json:"per_design"`
-		Areas        []struct {
-			Items []struct {
-				ID       string
-				Outcomes map[string]string
-			}
+	var got webapi.ListReviewsResponse
+	if err := protojson.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("output is not a ListReviewsResponse: %v\n%s", err, out.String())
+	}
+	if len(got.GetReviews()) != 2 {
+		t.Fatalf("reviews = %d designs, want 2", len(got.GetReviews()))
+	}
+	for _, rv := range got.GetReviews() {
+		if s := rv.GetSummary(); s.GetTotal() != 6 || s.GetCovered() != 5 || s.GetTotal()-s.GetCovered() != 1 {
+			t.Errorf("%s automation = {total:%d covered:%d}, want {6 5}, one not automated", rv.GetResults().GetDesign().GetSource(), s.GetTotal(), s.GetCovered())
 		}
-	}
-	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
-		t.Fatalf("json: %v", err)
-	}
-	if got.Total != 6 || got.Automated != 5 || got.NotAutomated != 1 {
-		t.Errorf("automation counts = {total:%d automated:%d not_automated:%d}, want {6 5 1}", got.Total, got.Automated, got.NotAutomated)
-	}
-	if len(got.PerDesign) != 2 {
-		t.Errorf("per_design = %d designs, want 2", len(got.PerDesign))
 	}
 	// item 202's outcome differs by design
 	var found bool
-	for _, a := range got.Areas {
-		for _, it := range a.Items {
-			if it.ID == "202" {
-				found = true
-				if it.Outcomes["can-broken.edn"] != "fail" {
-					t.Errorf("item 202 on can-broken = %q, want fail", it.Outcomes["can-broken.edn"])
+	for _, rv := range got.GetReviews() {
+		if !strings.HasSuffix(rv.GetResults().GetDesign().GetSource(), "can-broken.edn") {
+			continue
+		}
+		for _, a := range rv.GetResults().GetAreas() {
+			for _, it := range a.GetItems() {
+				if it.GetId() == "202" {
+					found = true
+					if it.GetOutcome() != "fail" {
+						t.Errorf("item 202 on can-broken = %q, want fail", it.GetOutcome())
+					}
 				}
 			}
 		}
 	}
 	if !found {
-		t.Error("item 202 missing from the matrix")
+		t.Error("item 202 missing from can-broken's review")
 	}
 }
 
@@ -216,8 +215,8 @@ func TestReviewCmdNotApplicable(t *testing.T) {
 	}
 }
 
-// --format json emits the full report as JSON, with the findings that failed each item. It is the
-// tooling surface (the markdown Detail cell caps findings; JSON does not).
+// --format json emits the Review the rpc returns (agni issue 734), with the findings that failed
+// each item. It is the tooling surface (the markdown Detail cell caps findings; JSON does not).
 func TestReviewCmdFormatJSON(t *testing.T) {
 	cmd := reviewCmd()
 	var out bytes.Buffer
@@ -226,34 +225,29 @@ func TestReviewCmdFormatJSON(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("review --format json: %v", err)
 	}
-	var rep struct {
-		Areas []struct {
-			Items []struct {
-				ID       string `json:"id"`
-				Outcome  string `json:"outcome"`
-				Findings []struct {
-					Rule    string `json:"rule"`
-					Subject string `json:"subject"`
-				} `json:"findings"`
-			} `json:"items"`
-		} `json:"areas"`
-	}
-	if err := json.Unmarshal(out.Bytes(), &rep); err != nil {
-		t.Fatalf("output is not valid JSON: %v\n%s", err, out.String())
+	var rv webapi.Review
+	if err := protojson.Unmarshal(out.Bytes(), &rv); err != nil {
+		t.Fatalf("output is not a Review: %v\n%s", err, out.String())
 	}
 	var fails int
-	for _, a := range rep.Areas {
-		for _, it := range a.Items {
-			if it.Outcome == "fail" {
+	for _, a := range rv.GetResults().GetAreas() {
+		for _, it := range a.GetItems() {
+			if it.GetOutcome() == "fail" {
 				fails++
-				if len(it.Findings) == 0 {
-					t.Errorf("failing item %q has no findings in JSON", it.ID)
+				if len(it.GetFindings()) == 0 {
+					t.Errorf("failing item %q has no findings in JSON", it.GetId())
 				}
 			}
 		}
 	}
 	if fails != 2 {
 		t.Errorf("want 2 failing items in JSON, got %d\n%s", fails, out.String())
+	}
+	if rv.GetSummary().GetFail() != 2 {
+		t.Errorf("summary.fail = %d, want the 2 failing items", rv.GetSummary().GetFail())
+	}
+	if rv.GetName() != "" {
+		t.Errorf("a CLI run is named %q, want unnamed, since nothing stores it", rv.GetName())
 	}
 }
 

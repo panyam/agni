@@ -793,7 +793,7 @@ func reviewCmd() *cobra.Command {
 			// The checklist travels as a value and where it came from is the caller's business
 			// (WS9-050). With no --checklist the design's PROJECT supplies one, and the note names it,
 			// since a checklist nobody typed cannot be recovered from the outcomes.
-			man, checklistNote, err := reviewManifestFor(cmd.Context(), checklist, args)
+			man, checklistNote, err := reviewManifestFor(cmd.Context(), checklist, cmd.InOrStdin(), args)
 			if err != nil {
 				return err
 			}
@@ -834,6 +834,7 @@ func reviewCmd() *cobra.Command {
 			svc := service.NewReviewService(ll, service.NewMemReviewStore(), catalog, byName, specs, env, "", cliProjects())
 			// One create per design, since a stored run is about ONE design. The loop is the rollup.
 			var docs []*checkspb.CheckResults
+			var reviews []*webapi.Review
 			boardURI, err := cliArgURI(boardPath)
 			if err != nil {
 				return err
@@ -874,6 +875,9 @@ func reviewCmd() *cobra.Command {
 					return err
 				}
 				docs = append(docs, rv.GetResults())
+				// The CLI's store lives as long as the command, so the name it assigned means nothing
+				// once the command exits. The run is emitted unnamed, as `agni results` emits a document.
+				reviews = append(reviews, service.ReviewOf("", rv.GetResults()))
 			}
 			// Map the stored documents back to the Go view-model, the CLI analogue of the web tier's
 			// reportFromWire.
@@ -899,7 +903,7 @@ func reviewCmd() *cobra.Command {
 				if err := writeResults(resultsOut, doc); err != nil {
 					return err
 				}
-				if err := renderReviewResults(cmd.OutOrStdout(), doc, format, coverage); err != nil {
+				if err := renderReviewResults(cmd.OutOrStdout(), "", doc, format, coverage); err != nil {
 					return err
 				}
 				// The gate applies on this path too, which is the one a CI pipeline archiving its
@@ -915,7 +919,8 @@ func reviewCmd() *cobra.Command {
 				case coverage:
 					out = review.RenderCoverageMarkdown(rep)
 				case format == "json":
-					out, err = review.RenderJSON(rep)
+					// The Review the rpc returned, summary included (C31, agni issue 734).
+					out, err = protoJSON(reviews[0])
 				case format == "html":
 					// The checklist page, items in the manifest's order with one row per question and
 					// every finding per item (markdown caps the Detail cell at three).
@@ -935,7 +940,9 @@ func reviewCmd() *cobra.Command {
 				case coverage:
 					out = review.RenderAggregateCoverageMarkdown(agg)
 				case format == "json":
-					out, err = review.RenderAggregateJSON(agg)
+					// One Review per design, as ListReviews answers. The rollup the markdown draws is
+					// derivable from it, so it has no message of its own.
+					out, err = protoJSON(&webapi.ListReviewsResponse{Reviews: reviews})
 				case format == "" || format == "markdown":
 					out = review.RenderAggregateMarkdown(agg)
 				case format == "html":
@@ -955,7 +962,7 @@ func reviewCmd() *cobra.Command {
 			return gateReview(cmd, gate, reports)
 		},
 	}
-	cmd.Flags().StringVar(&checklist, "checklist", "", "review manifest (YAML) declaring review areas and their checklist items")
+	cmd.Flags().StringVar(&checklist, "checklist", "", "review manifest (YAML, or - for stdin) declaring review areas and their checklist items")
 	cmd.Flags().StringArrayVar(&reviewLibs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the run, beside any the design's project carries, so a checklist's inline query can call them. Repeatable")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations added to the catalog")

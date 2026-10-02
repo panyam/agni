@@ -63,10 +63,11 @@ def _free_port() -> int:
 
 
 @pytest.fixture(scope="session")
-def server(agni_bin, isolated):
+def server(agni_bin, isolated, tmp_path_factory):
     env, cwd = isolated
     port = _free_port()
-    argv = [agni_bin, "serve", "--addr", f"127.0.0.1:{port}"]
+    # A review store, so CreateReview answers rather than refusing for want of somewhere to keep runs.
+    argv = [agni_bin, "serve", "--addr", f"127.0.0.1:{port}", "--review-store", str(tmp_path_factory.mktemp("reviews"))]
     for name, path in MOUNTS.items():
         argv += ["--mount", f"{name}={path}"]
     proc = subprocess.Popen(argv, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

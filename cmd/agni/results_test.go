@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 // runCLI executes one cobra command with args and returns its stdout.
@@ -204,10 +207,13 @@ func TestReviewResultsRoundTripWithoutTheDesign(t *testing.T) {
 	if err := os.Remove(design); err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range []string{"markdown", "json"} {
-		if got := runCLI(t, resultsCmd(), "--format", f, doc); got != live[f] {
-			t.Errorf("results --format %s differs from review --format %s\n got:\n%s\nwant:\n%s", f, f, got, live[f])
-		}
+	if got := runCLI(t, resultsCmd(), "--format", "markdown", doc); got != live["markdown"] {
+		t.Errorf("results --format markdown differs from review --format markdown\n got:\n%s\nwant:\n%s", got, live["markdown"])
+	}
+	// The json is the whole Review, document metadata included, so the two runs differ in when they
+	// were made and in nothing else (agni issue 734).
+	if got, want := reviewAt(t, runCLI(t, resultsCmd(), "--format", "json", doc)), reviewAt(t, live["json"]); !proto.Equal(got, want) {
+		t.Errorf("results --format json differs from review --format json\n got:\n%v\nwant:\n%v", got, want)
 	}
 	if got := runCLI(t, resultsCmd(), "--coverage", doc); got != liveCoverage {
 		t.Errorf("results --coverage differs from review --coverage\n got:\n%s\nwant:\n%s", got, liveCoverage)
@@ -314,4 +320,16 @@ func TestReviewResultsCoverageRefusesAFormatItCannotRender(t *testing.T) {
 	if got := runCLI(t, resultsCmd(), "--coverage", doc); !strings.Contains(got, "Review coverage") {
 		t.Errorf("--coverage alone should still render the rollup, got:\n%s", got)
 	}
+}
+
+// reviewAt parses a review's json with its creation time cleared, the one field two runs of the same
+// review over the same design differ in.
+func reviewAt(t *testing.T, js string) *webapi.Review {
+	t.Helper()
+	var rv webapi.Review
+	if err := protojson.Unmarshal([]byte(js), &rv); err != nil {
+		t.Fatalf("not a Review: %v\n%s", err, js)
+	}
+	rv.GetResults().GetMeta().CreatedAt = ""
+	return &rv
 }

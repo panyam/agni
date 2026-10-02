@@ -44,8 +44,10 @@ def test_cli_refuses_a_field_it_has_no_flag_for(cli: Client):
 
 
 def test_cli_refuses_an_rpc_no_command_serves(cli: Client):
-    with pytest.raises(CliUnsupported, match="ReviewService/CreateReview"):
-        cli.create_review(design_uri=DESIGN)
+    # GetReview reads a stored run, and the CLI stores none. CreateReview served as this example until
+    # agni issue 734 gave it a command.
+    with pytest.raises(CliUnsupported, match="ReviewService/GetReview"):
+        cli.call("ReviewService", "GetReview", name="reviews/x")
 
 
 def test_connect_reaches_an_rpc_with_no_named_method(connect: Client):

@@ -21,7 +21,13 @@ import (
 //
 // An explicit --checklist WINS outright and resolves nothing, so the flag still overrides a project's
 // checklist, and a loose file (a design on a mounted folder that belongs to no project) needs it.
-func reviewManifestFor(ctx context.Context, checklist string, designs []string) (review.Manifest, string, error) {
+func reviewManifestFor(ctx context.Context, checklist string, stdin io.Reader, designs []string) (review.Manifest, string, error) {
+	// `-` reads the manifest from stdin, which is how the Python client's CLI transport sends the
+	// one a CreateReview request carries (agni issue 734), as `query --set -` takes a set.
+	if checklist == "-" {
+		man, err := review.Load(stdin)
+		return man, "", err
+	}
 	if checklist != "" {
 		man, err := loadManifest(checklist)
 		return man, "", err

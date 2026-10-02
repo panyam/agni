@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"google.golang.org/protobuf/proto"
 )
 
 // This file is the review manifest's wire <-> value conversion, the manifest half of what overlay.go
@@ -105,6 +106,11 @@ func bindingProto(b review.Binding) *checkspb.ItemBinding {
 	}
 	if len(b.Scope.Profiles) > 0 {
 		p.Scope = &checkspb.ManifestScope{Profiles: b.Scope.Profiles}
+	}
+	// An item bound to nothing has no binding, as a client building the manifest leaves it, so a
+	// manifest read from YAML and one sent over the wire snapshot identically (agni issue 734).
+	if proto.Equal(p, &checkspb.ItemBinding{}) {
+		return nil
 	}
 	return p
 }

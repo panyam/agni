@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // reviewGateErr runs `review` with the given args and returns the error, which is nil when the gate did
@@ -51,21 +53,17 @@ const (
 	cleanDesign   = "testdata/profiles/overlay-bus.edn"
 )
 
-// answeredFromJSON reads the answered and fail counts out of `review --format json`'s summary block.
+// answeredFromJSON reads the answered and fail counts off the summary of the Review that
+// `review --format json` emits.
 // It reads the rendered document rather than recomputing from the items, so it asserts that the
 // number a consumer sees is the same one the gate reads.
 func answeredFromJSON(t *testing.T, out string) (answered, fail int) {
 	t.Helper()
-	var doc struct {
-		Summary struct {
-			Answered int `json:"answered"`
-			Fail     int `json:"fail"`
-		} `json:"summary"`
+	var rv webapi.Review
+	if err := protojson.Unmarshal([]byte(out), &rv); err != nil {
+		t.Fatalf("review --format json is not a Review: %v\n%s", err, out)
 	}
-	if err := json.Unmarshal([]byte(out), &doc); err != nil {
-		t.Fatalf("review --format json: %v\n%s", err, out)
-	}
-	return doc.Summary.Answered, doc.Summary.Fail
+	return int(rv.GetSummary().GetAnswered()), int(rv.GetSummary().GetFail())
 }
 
 // wrapErr wraps an error the way the call chain between the gate and main may, so TestExitCode proves

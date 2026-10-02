@@ -87,8 +87,9 @@ CLI sends is a library: a query or a set whose overlay carries only `library_mod
 `library_docs` is written to a temporary directory and passed as `--lib`, so it answers as the same
 request over Connect does (agni issue 788). `validate`
 and `params` print a wire message with no rpc behind it, and `CliTransport.run` reads them. `intake`
-is C31's declared exception and has no wire message. `review` is Connect only until
-`review --format json` emits the `Review` proto (agni issue 734).
+is C31's declared exception and has no wire message. `create_review` runs `agni review`, sending the
+manifest on stdin, and answers the same `Review` as the server except that it is unnamed, because the
+CLI stores nothing (agni issue 734). Getting, listing and deleting stored reviews need a server.
 
 ## Where the two transports differ today
 
