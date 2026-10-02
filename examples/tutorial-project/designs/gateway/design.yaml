@@ -19,3 +19,22 @@ entry: gateway.edn
 companions:
   - gateway.kicad_sch
   - gateway.kicad_pcb
+
+# What the board is SUPPOSED to be, declared beside what it is. The engine has no built-in opinion
+# about a board's intended architecture, so an intent-bound review item reads needs-design-intent
+# until a section like this one exists. It is per-DESIGN, unlike profiles/ and params/ which are
+# per-project: each design has its own intended architecture.
+#
+# One declaration here is deliberately WRONG. The core domain is declared at 3.3 V but its rail is
+# PMIC_IO_1V8, an actual 1.8 V rail, so the intent check has a real deviation to report. That is the
+# point of declaring intent: it fails when the board stops matching what you said you were building.
+intent:
+  modules:
+    - {name: regulators, class: regulator, count: 2}
+    - {name: connectors, class: connector, count: 1}
+    - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
+    - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3: {nominal: 3.3, domain: io}
+    PMIC_IO_1V8: {nominal: 3.3, domain: core}

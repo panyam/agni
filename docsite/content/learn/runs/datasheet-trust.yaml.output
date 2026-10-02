@@ -1,2 +1,2 @@
-#agni-run 21cc497a7b2237c9
+#agni-run f387d8013da5621d
 | P4 | no part is operated above its absolute-maximum supply voltage | provisional | supply-exceeds-abs-max: U2 (power-input pin 1 on rail "PMIC_CORE_3V3": nominal 3.3V exceeds absolute-maximum VIN 3V — datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3)) |

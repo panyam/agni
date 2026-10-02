@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package agni.v1.config;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/config";
+
+// This file: a design's declared intent, as the ONE schema the authoring YAML and any wire form share
+// (CONSTRAINTS C26, agni issue 824).
+//
+// A design writes it under `intent:` in its design.yaml. YAML is the syntax and this message is the
+// schema, so the loader binds the section to DesignIntent and compiles that, and a field added here is
+// a field every surface carries. The compiled form the rules read (stdlib/rules/intent.Declaration) is
+// derived from this message in one direction, since it deals each net's facts out into per-kind lists.
+//
+// Every field is checked at load for something it can evaluate, and the error names the offending
+// entry. The rule each field compiles to is in the guide's "Design intent" page.
+message DesignIntent {
+  // modules are the blocks the board must contain. A module with no nets is checked by class or MPN
+  // with an optional count. A module listing nets is a named block whose nets must all exist, and a
+  // class or MPN on it names a component that must be present too.
+  repeated IntentModule modules = 1;
+  // nets holds what each named net is, keyed by the net's name as the design spells it.
+  map<string, NetIntent> nets = 2;
+  // sequences are power-up orders, each checked as a gating chain in the netlist.
+  repeated PowerSequence sequences = 3;
+  // strap_groups are several strap nets read together as one binary number.
+  repeated StrapGroup strap_groups = 4;
+  // io_map says which net lands on which pin of which device.
+  repeated PinAssignment io_map = 5;
+  // margin_factor is the headroom every supply must have over the peaks declared on its rails. Zero
+  // means none was declared, which leaves the margin rule uncompiled. A declared factor must exceed 1.
+  double margin_factor = 6;
+}
+
+message IntentModule {
+  string name = 1;
+  // class is a component class the engine ships (regulator, connector, crystal, ...).
+  string class = 2;
+  string mpn = 3;
+  // count is how many must be present, on a module with no nets. Zero asks for at least one.
+  int32 count = 4;
+  repeated string nets = 5;
+}
+
+// NetIntent is everything declared about one net. Presence matters on nominal and peak, because a
+// stated zero is an authoring error and an absent value is no claim at all.
+message NetIntent {
+  // nominal is the rail's voltage, in volts.
+  optional double nominal = 1;
+  // domain labels the voltage domain the rail belongs to. Absent, the domain is named by the nominal
+  // ("3.3V"). Rails sharing a domain must share a nominal.
+  string domain = 2;
+  // peak is the rail's peak draw, in amps.
+  optional double peak = 3;
+  // protect lists the protection the rail must carry: "ovp" or "discharge".
+  repeated string protect = 4;
+  // reset is the level that asserts this reset net: "low" or "high".
+  string reset = 5;
+  // strap is the level this strap net must latch: "low" or "high".
+  string strap = 6;
+  // min_ohms and max_ohms bound the strap resistor, either side optional. Only a strap takes them.
+  double min_ohms = 7;
+  double max_ohms = 8;
+  // ac_coupled says the net must carry a series capacitor.
+  bool ac_coupled = 9;
+}
+
+message PowerSequence {
+  string name = 1;
+  // relation is how the design enforces the order. "enable-gated" is the only one a netlist
+  // evidences.
+  string relation = 2;
+  // order is the stages in the order they must come up.
+  repeated SequenceStage order = 3;
+}
+
+message SequenceStage {
+  string rail = 1;
+  // good is the stage's power-good net, which gates the next stage's enable.
+  string good = 2;
+  // enable is the stage's enable net.
+  string enable = 3;
+}
+
+message StrapGroup {
+  string name = 1;
+  // device is the part whose straps these are.
+  string device = 2;
+  // nets are the bits, most significant first.
+  repeated string nets = 3;
+  // value is the number the group must encode.
+  int32 value = 4;
+  // bus names the shared bus whose devices must not collide on an address.
+  string bus = 5;
+  // default is the level a bit with no strap resistor reads at: "low", "high", or empty.
+  string default = 6;
+}
+
+message PinAssignment {
+  string net = 1;
+  string device = 2;
+  // pin is the package designator or the datasheet's functional name. Both resolve.
+  string pin = 3;
+  // function is carried and not yet evaluated (agni issue 667).
+  string function = 4;
+  // to is the optional far end, which needs both a device and a pin.
+  PinEndpoint to = 5;
+}
+
+message PinEndpoint {
+  string device = 1;
+  string pin = 2;
+}

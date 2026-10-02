@@ -807,12 +807,16 @@ by two calls: make it one call returning both.
 ## C26: One schema per contract; a hand-written twin carries a round-trip guard
 **Rule:** A contract with both a YAML/authoring form and a wire form has ONE schema, the `.proto`,
 and YAML is authoring SYNTAX rather than a second schema (parse it by converting to JSON and binding
-with `protojson`, which also gives strict unknown-field rejection for free). Where a hand-written Go
+with `protojson`, which also gives strict unknown-field rejection for free; `internal/yamlpb` does
+the conversion guided by the message, so a scalar takes its field's type and an error names its
+line). Where a hand-written Go
 twin genuinely must exist (a domain type that carries behaviour, an AST, a struct whose zero values
 mean something a message cannot express), the twin and its converter carry a **deep-equality
 round-trip test**: build a fixture with EVERY field set to a distinguishable non-zero value, go
-domain -> proto -> domain, and require `reflect.DeepEqual`. A tier with no wire form at all (design
-intent today) has no twin and owes neither.
+domain -> proto -> domain, and require `reflect.DeepEqual`. A domain type DERIVED from the message in
+one direction, such as a design's intent compiled into `intent.Declaration`, has no inverse to
+round-trip, so it carries a field census instead: a test that walks the message's descriptors and
+fails on any field without a check that its fixture value arrived (`TestFromProtoCarriesEveryField`).
 **Why:** two hand-maintained schemas for one contract drift, and they drift SILENTLY, because a field
 the converter never learned is absent from both sides of any assertion made on the proto. This has
 now shipped twice. `naming.Lexicon` grew gate/source/drain terminal vocabularies with no wire fields,

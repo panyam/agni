@@ -7,5 +7,6 @@
 # so the only thing that fires here is the lower bound, and nothing in the design changed to make it
 # fire. The budget did.
 name: Load switch budget (over the limit)
-rail_budgets:
-  - {rail: VOUT, peak: 2}
+intent:
+  nets:
+    VOUT: {peak: 2}

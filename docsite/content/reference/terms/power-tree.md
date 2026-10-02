@@ -32,7 +32,7 @@ do are all questions about the cascade rather than about any one part in it.
 None of it is recoverable from a netlist. Nothing in a connectivity graph states that a rail was meant
 to be 3.3 V, how much current its loads draw, or which stage is supposed to feed which. The rail's
 name says the voltage, and a name is a convention somebody followed rather than a measurement. So the
-tree is declared beside the design, in `voltage_domains`, `rail_budgets` and `sequences`, and the
+tree is declared beside the design, in its `nets` (each rail's voltage and peak draw) and `sequences`, and the
 checks compare the board against the declaration instead of against physics.
 
 Five rules read it. [`intent-rail-current-capacity`](../../rules/intent-rail-current-capacity/) asks

@@ -44,7 +44,7 @@ This is the shape a real review project takes. Two kinds of file live here.
 | `gateway.edn` | the netlist, and `gateway-rev-b.edn` a later revision of it |
 | `gateway.kicad_sch` | the same board as a KiCad schematic, with `symbols/` as an external library |
 | `gateway.kicad_pcb` | the same board's copper, for the board-tier checks |
-| `intent.yaml` | what this board is supposed to be: declared domains, modules, subsystems |
+| `design.yaml` `intent:` | what this board is supposed to be: declared modules and what each rail is |
 
 Intent is per-design because each board has its own intended architecture. Conventions, profiles,
 and parameters are per-project because they describe the team, not the board.
@@ -101,7 +101,7 @@ and it is fixed.
 `examples/tutorial-project/` is the shareable review-project fixture the docsite tutorial runs on, a
 synthetic sample board in three views (`.edn` plus a rev-b, a `.kicad_sch` with an external symbol
 library, a `.kicad_pcb`) with `review.yaml`, `conventions.yaml`, `profiles/`, `params/`, and a
-per-design `intent.yaml`. The KiCad views are GENERATED from the netlist by `tools/`. From
+`design.yaml` per design carrying its `intent:` section. The KiCad views are GENERATED from the netlist by `tools/`. From
 inside `examples/tutorial-project/`, `make check-views` fails if the three stop describing the same
 design, and `make regen-views` rebuilds them after any netlist edit (both targets live in this
 folder's own Makefile, not the root one). It is not a Go module, so `make testall`'s

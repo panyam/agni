@@ -24,8 +24,10 @@ requirements:
 
 const overlayIntentYAML = `
 name: serve overlay intent
-protections:
-  - {rail: 5V0, kind: discharge}
+intent:
+  nets:
+    5V0:
+      protect: [discharge]
 `
 
 const overlayConventionsYAML = `
@@ -225,7 +227,7 @@ func TestServeBadProfileFailsStartup(t *testing.T) {
 // The same holds for the other two: a bad declaration stops the server coming up rather than serving a
 // catalog quietly missing a tier the operator asked for.
 func TestServeBadIntentAndConventionsFailStartup(t *testing.T) {
-	_, _, err := composeReviewInputsFrom(nil, writeFile(t, "intent.yaml", "name: x\nprotections:\n  - {rail: 5V0, kind: nope}\n"))
+	_, _, err := composeReviewInputsFrom(nil, writeFile(t, "intent.yaml", "name: x\nintent:\n  nets:\n    5V0:\n      protect: [nope]\n"))
 	if err == nil {
 		t.Error("a bad --intent-path should fail startup")
 	}

@@ -51,9 +51,10 @@ number as stated.
 ### Declaring it
 
 ```yaml
-rail_budgets:
-  - {rail: +3V3, peak: 0.8}
-margin_factor: 1.2
+intent:
+  nets:
+    +3V3: {peak: 0.8}
+  margin_factor: 1.2
 ```
 
 One factor applies to every budget in the declaration. It must be greater than 1, because a factor

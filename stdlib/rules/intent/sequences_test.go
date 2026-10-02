@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -14,12 +14,13 @@ import (
 // declared where a test needs the reversed-chain diagnosis.
 const twoStage = `
 name: I
-sequences:
+intent:
+  sequences:
   - name: SoC power tree
     relation: enable-gated
     order:
-      - {rail: VDD_CORE, good: CORE_PG, enable: CORE_EN}
-      - {rail: VDD_IO, good: IO_PG, enable: IO_EN}
+    - {rail: VDD_CORE, good: CORE_PG, enable: CORE_EN}
+    - {rail: VDD_IO, good: IO_PG, enable: IO_EN}
 `
 
 // conn and net build a design's connectivity with the ref-des spelled by the caller; sequence tests
@@ -44,12 +45,13 @@ func runSeq(t *testing.T, decl Declaration, d *ir.Design) []check.Finding {
 func TestSequenceSameNetChainIsSilent(t *testing.T) {
 	decl := declOf(t, `
 name: I
-sequences:
+intent:
+  sequences:
   - name: SoC power tree
     relation: enable-gated
     order:
-      - {rail: VDD_CORE, good: PG_EN}
-      - {rail: VDD_IO, enable: PG_EN}
+    - {rail: VDD_CORE, good: PG_EN}
+    - {rail: VDD_IO, enable: PG_EN}
 `)
 	d := &ir.Design{Nets: []*ir.Net{net("VDD_CORE"), net("VDD_IO"), net("PG_EN", "U1", "U2")}}
 	if fs := runSeq(t, decl, d); len(fs) != 0 {
@@ -165,12 +167,13 @@ func TestSequenceReversedChainFires(t *testing.T) {
 func TestSequenceReversedChainBeatsAbsentHandles(t *testing.T) {
 	decl := declOf(t, `
 name: I
-sequences:
+intent:
+  sequences:
   - name: SoC power tree
     relation: enable-gated
     order:
-      - {rail: VDD_IO, good: IO_PG, enable: IO_EN}
-      - {rail: VDD_CORE, good: CORE_PG, enable: CORE_EN}
+    - {rail: VDD_IO, good: IO_PG, enable: IO_EN}
+    - {rail: VDD_CORE, good: CORE_PG, enable: CORE_EN}
 `)
 	// IO_PG and CORE_EN are not on the design. CORE_PG and IO_EN are, wired through R1.
 	d := &ir.Design{
@@ -252,13 +255,18 @@ func TestSequenceVirtualSymbolIsNotAGatingPart(t *testing.T) {
 func TestSequencesCompileToDistinctRules(t *testing.T) {
 	decl := declOf(t, `
 name: I
-sequences:
+intent:
+  sequences:
   - name: SoC power tree
     relation: enable-gated
-    order: [{rail: VDD_CORE, good: CORE_PG}, {rail: VDD_IO, enable: IO_EN}]
+    order:
+    - {rail: VDD_CORE, good: CORE_PG}
+    - {rail: VDD_IO, enable: IO_EN}
   - name: modem rails
     relation: enable-gated
-    order: [{rail: VBAT_MODEM, good: MODEM_PG}, {rail: MODEM_IO, enable: MODEM_EN}]
+    order:
+    - {rail: VBAT_MODEM, good: MODEM_PG}
+    - {rail: MODEM_IO, enable: MODEM_EN}
 `)
 	names := map[string]bool{}
 	for _, r := range Compile(decl) {
@@ -309,10 +317,13 @@ func TestParseSequenceValid(t *testing.T) {
 func TestParseRejectsUncheckableSequence(t *testing.T) {
 	_, err := Parse([]byte(`
 name: I
-sequences:
+intent:
+  sequences:
   - name: PMIC internal
     relation: enable-gated
-    order: [{rail: VDD_CORE}, {rail: VDD_IO}]
+    order:
+    - {rail: VDD_CORE}
+    - {rail: VDD_IO}
 `))
 	if err == nil {
 		t.Fatal("a sequence with no good -> enable pair must be rejected at load")
@@ -328,24 +339,24 @@ sequences:
 // that would otherwise compile to a rule nobody can trust.
 func TestParseRejectsBadSequences(t *testing.T) {
 	cases := map[string]string{
-		"no name": "name: N\nsequences:\n  - {relation: enable-gated, order: [{rail: A, good: A_PG}, {rail: B, enable: B_EN}]}",
+		"no name": "name: N\nintent:\n  sequences:\n  - relation: enable-gated\n    order:\n    - {rail: A, good: A_PG}\n    - {rail: B, enable: B_EN}\n",
 		// An unknown relation would silently compile to the enable-gated reading, checking something
 		// the author did not ask for.
-		"unknown relation": "name: N\nsequences:\n  - {name: S, relation: before, order: [{rail: A, good: A_PG}, {rail: B, enable: B_EN}]}",
-		"no relation":      "name: N\nsequences:\n  - {name: S, order: [{rail: A, good: A_PG}, {rail: B, enable: B_EN}]}",
+		"unknown relation": "name: N\nintent:\n  sequences:\n  - name: S\n    relation: before\n    order:\n    - {rail: A, good: A_PG}\n    - {rail: B, enable: B_EN}\n",
+		"no relation":      "name: N\nintent:\n  sequences:\n  - name: S\n    order:\n    - {rail: A, good: A_PG}\n    - {rail: B, enable: B_EN}\n",
 		// A one-stage order has nothing to come before. It is also caught by the gating-pair check,
 		// so the assertion below holds it to its OWN message, since the two errors send an author to
 		// different fixes.
-		"one stage":     "name: N\nsequences:\n  - {name: S, relation: enable-gated, order: [{rail: A, good: A_PG}]}",
-		"stage no rail": "name: N\nsequences:\n  - {name: S, relation: enable-gated, order: [{good: A_PG}, {rail: B, enable: B_EN}]}",
+		"one stage":     "name: N\nintent:\n  sequences:\n  - name: S\n    relation: enable-gated\n    order:\n    - {rail: A, good: A_PG}\n",
+		"stage no rail": "name: N\nintent:\n  sequences:\n  - name: S\n    relation: enable-gated\n    order:\n    - {good: A_PG}\n    - {rail: B, enable: B_EN}\n",
 		// A rail twice in one order has no unambiguous position.
-		"repeated rail": "name: N\nsequences:\n  - {name: S, relation: enable-gated, order: [{rail: A, good: A_PG}, {rail: A, enable: A_EN}]}",
+		"repeated rail": "name: N\nintent:\n  sequences:\n  - name: S\n    relation: enable-gated\n    order:\n    - {rail: A, good: A_PG}\n    - {rail: A, enable: A_EN}\n",
 		// Two sequences slugifying alike would collide on one rule name, so one would silently
 		// shadow the other's review item.
-		"slug collision": "name: N\nsequences:\n" +
-			"  - {name: SoC power tree, relation: enable-gated, order: [{rail: A, good: A_PG}, {rail: B, enable: B_EN}]}\n" +
-			"  - {name: 'soc-power-tree', relation: enable-gated, order: [{rail: C, good: C_PG}, {rail: D, enable: D_EN}]}",
-		"name with no alphanumerics": "name: N\nsequences:\n  - {name: '---', relation: enable-gated, order: [{rail: A, good: A_PG}, {rail: B, enable: B_EN}]}",
+		"slug collision": "name: N\nintent:\n  sequences:\n" +
+			"    - {name: SoC power tree, relation: enable-gated, order: [{rail: A, good: A_PG}, {rail: B, enable: B_EN}]}\n" +
+			"    - {name: 'soc-power-tree', relation: enable-gated, order: [{rail: C, good: C_PG}, {rail: D, enable: D_EN}]}",
+		"name with no alphanumerics": "name: N\nintent:\n  sequences:\n  - name: '---'\n    relation: enable-gated\n    order:\n    - {rail: A, good: A_PG}\n    - {rail: B, enable: B_EN}\n",
 	}
 	for label, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {

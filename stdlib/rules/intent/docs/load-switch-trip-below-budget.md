@@ -7,7 +7,7 @@ sets, a threshold voltage the controller states divided by a sense resistor the 
 limit must sit above the current the rail actually draws. When it sits below, the switch opens on the
 load the design was drawn for, so the rail never comes up under load and the protection is the fault.
 
-The draw comes from the declaration's `rail_budgets`. The threshold comes from the controller's seeded
+The draw comes from the `peak` declared on the rail's `nets` entry. The threshold comes from the controller's seeded
 datasheet. The sense resistance comes from the design. All three are required, and any one missing
 means no verdict rather than a pass.
 
@@ -96,11 +96,12 @@ that only helps if the FET can carry the budgeted current at all.
 
 ### Declaring it
 
-The same `rail_budgets` the regulator-sizing rules read. No extra field:
+The same `peak` the regulator-sizing rules read. No extra field:
 
 ```yaml
-rail_budgets:
-  - {rail: VSW_CAM, peak: 2.5}
+intent:
+  nets:
+    VSW_CAM: {peak: 2.5}
 ```
 
 Declare the budget on either side of the switch. There is deliberately no way to declare "this rail

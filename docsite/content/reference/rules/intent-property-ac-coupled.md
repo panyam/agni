@@ -46,11 +46,12 @@ before assuming the two behave alike.
 ### Declaring it
 
 ```yaml
-net_properties:
-  - {net: PCIE_TX0_P, property: ac-coupled}
+intent:
+  nets:
+    PCIE_TX0_P: {ac_coupled: true}
 ```
 
-No `value`; the kind is the whole assertion. A net you do not declare is not checked, because the rule
+No level to state, since the fact is the whole assertion. A net you do not declare is not checked, because the rule
 iterates the declaration, never the design, so it has no opinion about nets your intent is silent on.
 
 ### Fixing a finding

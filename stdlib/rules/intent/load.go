@@ -3,271 +3,125 @@ package intent
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/internal/yamlpb"
 	"gopkg.in/yaml.v3"
 )
 
-// declarationDoc is the YAML wire shape of a Declaration. It is a DTO separate from the domain type so
-// Declaration carries no yaml tags and the file can nest (voltage_domains: [{name, nominal, rails}])
-// where the domain struct stays plain. A customer authors one of these in their overlay.
-type declarationDoc struct {
-	Name           string            `yaml:"name"`
-	Modules        []moduleDoc       `yaml:"modules"`
-	VoltageDomains []vDomainDoc      `yaml:"voltage_domains"`
-	Subsystems     []subsystemDoc    `yaml:"subsystems"`
-	Protections    []protectionDoc   `yaml:"protections"`
-	NetProperties  []netPropertyDoc  `yaml:"net_properties"`
-	StrapGroups    []strapGroupDoc   `yaml:"strap_groups"`
-	RailBudgets    []railBudgetDoc   `yaml:"rail_budgets"`
-	Sequences      []sequenceDoc     `yaml:"sequences"`
-	IOMap          []ioAssignmentDoc `yaml:"io_map"`
-	MarginFactor   float64           `yaml:"margin_factor"`
+// A design's intent is a section of its descriptor (agni issue 824):
+//
+//	name: gateway
+//	entry: gateway.edn
+//	intent:
+//	  modules:      [...]   # what the board must contain: a block by class or MPN, with an optional
+//	                        # count, or a named block that must instantiate nets
+//	  nets:         {...}   # facts about named nets: nominal voltage, peak current, protection,
+//	                        # reset polarity, strap level, AC coupling
+//	  sequences:    [...]   # power-up order
+//	  strap_groups: [...]   # several strap nets read as one number
+//	  io_map:       [...]   # which net lands on which pin
+//	  margin_factor: 1.25   # headroom over a declared peak, optional
+//
+// Parse reads that shape whether it comes from a whole design.yaml or from a file holding only `name`
+// and `intent:` (the --intent-path flag). The section's schema is the configpb.DesignIntent message
+// (CONSTRAINTS C26), which YAML only spells, so FromProto is the one place a declaration is validated
+// whether it arrived as a file or as a message. The six forms compile to exactly the
+// rules the nine earlier ones did, under the same names, so a review checklist binding
+// intent/voltage-domain-mismatch or intent/subsystem-<slug> is unaffected.
+
+// designDoc is the part of a design descriptor Parse reads. The descriptor's other keys (entry,
+// companions, symbols) are the project store's, so they are not decoded here.
+type designDoc struct {
+	Name   string    `yaml:"name"`
+	Intent yaml.Node `yaml:"intent"`
 }
 
-type ioAssignmentDoc struct {
-	Net      string         `yaml:"net"`
-	Device   string         `yaml:"device"`
-	Pin      string         `yaml:"pin"`
-	Function string         `yaml:"function"`
-	To       *ioEndpointDoc `yaml:"to"`
+// earlierForms names the forms the six replaced, and what each became, so a file written for the
+// earlier layout fails with the spelling to use rather than reading as a design with no intent.
+var earlierForms = map[string]string{
+	"voltage_domains": "nets: {RAIL: {nominal: VOLTS, domain: NAME}}",
+	"protections":     "nets: {RAIL: {protect: [ovp, discharge]}}",
+	"net_properties":  "nets: {NET: {reset: low|high, strap: low|high, ac_coupled: true}}",
+	"rail_budgets":    "nets: {RAIL: {peak: AMPS}}",
+	"subsystems":      "modules: [{name: NAME, nets: [...], class or mpn for its source}]",
 }
 
-type ioEndpointDoc struct {
-	Device string `yaml:"device"`
-	Pin    string `yaml:"pin"`
-}
+// intentKeys are the intent section's keys, for recognising a file that puts them at the top level.
+var intentKeys = []string{"modules", "nets", "sequences", "strap_groups", "io_map", "margin_factor",
+	"voltage_domains", "protections", "net_properties", "rail_budgets", "subsystems"}
 
-type sequenceDoc struct {
-	Name     string             `yaml:"name"`
-	Relation string             `yaml:"relation"`
-	Order    []sequenceStageDoc `yaml:"order"`
-}
-
-type sequenceStageDoc struct {
-	Rail   string `yaml:"rail"`
-	Good   string `yaml:"good"`
-	Enable string `yaml:"enable"`
-}
-
-type moduleDoc struct {
-	Name  string `yaml:"name"`
-	Class string `yaml:"class"`
-	MPN   string `yaml:"mpn"`
-	Count int    `yaml:"count"`
-}
-
-type vDomainDoc struct {
-	Name    string   `yaml:"name"`
-	Nominal float64  `yaml:"nominal"`
-	Rails   []string `yaml:"rails"`
-}
-
-type subsystemDoc struct {
-	Name   string     `yaml:"name"`
-	Source *moduleDoc `yaml:"source"`
-	Nets   []string   `yaml:"nets"`
-}
-
-type protectionDoc struct {
-	Rail string `yaml:"rail"`
-	Kind string `yaml:"kind"`
-}
-
-type railBudgetDoc struct {
-	Rail string  `yaml:"rail"`
-	Peak float64 `yaml:"peak"`
-}
-
-type strapGroupDoc struct {
-	Name    string   `yaml:"name"`
-	Device  string   `yaml:"device"`
-	Nets    []string `yaml:"nets"`
-	Value   int      `yaml:"value"`
-	Bus     string   `yaml:"bus"`
-	Default string   `yaml:"default"`
-}
-
-type netPropertyDoc struct {
-	MinOhms  float64 `yaml:"min_ohms"`
-	MaxOhms  float64 `yaml:"max_ohms"`
-	Net      string  `yaml:"net"`
-	Property string  `yaml:"property"`
-	Value    string  `yaml:"value"`
-}
-
-// Parse reads a YAML intent declaration into a Declaration and validates its structure. A name is
-// present, and the declaration is not empty (at least one entry in any of the nine forms, from modules
-// to io_map). Each module needs a class or an mpn (matching nothing otherwise), each voltage domain
-// needs a name, a positive nominal, and at least one rail, each subsystem needs a name (slugifying
-// uniquely) plus a source or at least one net, each strap_group needs a uniquely-slugifying name and
-// distinct nets that can encode its value, each protection needs a rail and a known kind (ovp or
-// discharge), each net_property needs a net and a value its kind accepts, each rail_budget needs a
-// rail and a positive peak with no rail budgeted twice, a declared margin_factor must exceed 1 and
-// have budgets to apply to, each sequence needs a uniquely-slugifying name, a known relation, and an
-// order the netlist can be checked against (parseSequence), and each io_map row needs a net, a device
-// and a pin (parseIOAssignment).
-// A malformed declaration fails at load, where the error can teach, rather than at run. Parse is
-// WASM-clean (yaml only, no os); LoadFile adds the file read.
+// Parse reads a design's intent from its descriptor (or a file of the same shape) into a Declaration
+// and validates it. The declaration takes the design's name. A malformed declaration fails at load,
+// where the error can teach, rather than at run. Parse is WASM-clean (yaml only, no os); LoadFile adds
+// the file read.
+//
+// Every form is checked for something it can evaluate: a module needs a class, an MPN or nets; a net
+// needs at least one fact, and each fact a value its kind accepts; a sequence needs an order the
+// netlist can be checked against; a strap group needs distinct nets that can encode its value; an
+// io_map row needs a net, a device and a pin.
 func Parse(b []byte) (Declaration, error) {
-	var doc declarationDoc
+	var top map[string]yaml.Node
+	if err := yaml.Unmarshal(b, &top); err != nil {
+		return Declaration{}, fmt.Errorf("intent: invalid YAML: %w", err)
+	}
+	for _, k := range intentKeys {
+		if _, ok := top[k]; ok {
+			return Declaration{}, fmt.Errorf("intent: %q is at the top level; a design's intent now sits under \"intent:\" in its design.yaml (agni issue 824)", k)
+		}
+	}
+	var doc designDoc
 	if err := yaml.Unmarshal(b, &doc); err != nil {
 		return Declaration{}, fmt.Errorf("intent: invalid YAML: %w", err)
 	}
 	if strings.TrimSpace(doc.Name) == "" {
 		return Declaration{}, fmt.Errorf("intent: missing required field \"name\"")
 	}
-	if len(doc.Modules) == 0 && len(doc.VoltageDomains) == 0 && len(doc.Subsystems) == 0 && len(doc.Protections) == 0 &&
-		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 && len(doc.Sequences) == 0 && len(doc.StrapGroups) == 0 &&
-		len(doc.IOMap) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, rail_budgets, sequences, strap_groups, or io_map", doc.Name)
+	if doc.Intent.Kind == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: has no \"intent:\" section", doc.Name)
 	}
-	d := Declaration{Name: doc.Name}
-	for i, m := range doc.Modules {
-		if strings.TrimSpace(m.Name) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: module #%d is missing its \"name\"", doc.Name, i+1)
-		}
-		if strings.TrimSpace(m.Class) == "" && strings.TrimSpace(m.MPN) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: module %q needs a \"class\" or an \"mpn\"", doc.Name, m.Name)
-		}
-		if m.Count < 0 {
-			return Declaration{}, fmt.Errorf("intent %q: module %q has a negative \"count\" %d", doc.Name, m.Name, m.Count)
-		}
-		d.Modules = append(d.Modules, Module{Name: m.Name, Class: m.Class, MPN: m.MPN, Count: m.Count})
+	if doc.Intent.Kind == yaml.ScalarNode {
+		return Declaration{}, fmt.Errorf("intent %q: \"intent:\" names a file (%q); intent is now declared inline in design.yaml (agni issue 824)", doc.Name, doc.Intent.Value)
 	}
-	for i, v := range doc.VoltageDomains {
-		if strings.TrimSpace(v.Name) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: voltage domain #%d is missing its \"name\"", doc.Name, i+1)
-		}
-		if v.Nominal <= 0 {
-			return Declaration{}, fmt.Errorf("intent %q: voltage domain %q needs a positive \"nominal\"", doc.Name, v.Name)
-		}
-		if len(v.Rails) == 0 {
-			return Declaration{}, fmt.Errorf("intent %q: voltage domain %q needs at least one rail", doc.Name, v.Name)
-		}
-		d.VoltageDomains = append(d.VoltageDomains, VoltageDomain{Name: v.Name, Nominal: v.Nominal, Rails: v.Rails})
-	}
-	slugs := map[string]string{} // slug -> first name, to reject a rule-name collision
-	for i, s := range doc.Subsystems {
-		if strings.TrimSpace(s.Name) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: subsystem #%d is missing its \"name\"", doc.Name, i+1)
-		}
-		if s.Source == nil && len(s.Nets) == 0 {
-			return Declaration{}, fmt.Errorf("intent %q: subsystem %q needs a \"source\" or at least one \"nets\" entry", doc.Name, s.Name)
-		}
-		sl := slug(s.Name)
-		if sl == "" {
-			return Declaration{}, fmt.Errorf("intent %q: subsystem name %q has no alphanumeric characters to form a rule name", doc.Name, s.Name)
-		}
-		if first, dup := slugs[sl]; dup {
-			return Declaration{}, fmt.Errorf("intent %q: subsystems %q and %q slugify to the same rule name %q", doc.Name, first, s.Name, "intent/subsystem-"+sl)
-		}
-		slugs[sl] = s.Name
-		sub := Subsystem{Name: s.Name, Nets: s.Nets}
-		if s.Source != nil {
-			if strings.TrimSpace(s.Source.Class) == "" && strings.TrimSpace(s.Source.MPN) == "" {
-				return Declaration{}, fmt.Errorf("intent %q: subsystem %q source needs a \"class\" or an \"mpn\"", doc.Name, s.Name)
+	if doc.Intent.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(doc.Intent.Content); i += 2 {
+			k := doc.Intent.Content[i].Value
+			if hint, ok := earlierForms[k]; ok {
+				return Declaration{}, fmt.Errorf("intent %q: %q is no longer a form; write it as %s (agni issue 824)", doc.Name, k, hint)
 			}
-			sub.Source = &Module{Name: s.Name + " source", Class: s.Source.Class, MPN: s.Source.MPN}
 		}
-		d.Subsystems = append(d.Subsystems, sub)
 	}
-	groupSlugs := map[string]string{}
-	for i, g := range doc.StrapGroups {
-		if strings.TrimSpace(g.Name) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: strap_group #%d is missing its \"name\"", doc.Name, i+1)
-		}
-		if len(g.Nets) == 0 {
-			return Declaration{}, fmt.Errorf("intent %q: strap_group %q lists no \"nets\"; a group with no bits encodes nothing to check", doc.Name, g.Name)
-		}
-		// The declared value has to be representable in the bits declared, or the group can never
-		// encode it and the rule would fail on every design including a correct one. That is an
-		// authoring error, so it is rejected here rather than reported as a design finding.
-		if max := 1<<len(g.Nets) - 1; g.Value < 0 || g.Value > max {
-			return Declaration{}, fmt.Errorf("intent %q: strap_group %q declares value %d, which %d net(s) cannot encode (range 0..%d)", doc.Name, g.Name, g.Value, len(g.Nets), max)
-		}
-		if g.Default != "" && g.Default != "low" && g.Default != "high" {
-			return Declaration{}, fmt.Errorf("intent %q: strap_group %q has default %q (want \"low\", \"high\", or omitted)", doc.Name, g.Name, g.Default)
-		}
-		seenNet := map[string]bool{}
-		for _, n := range g.Nets {
-			if seenNet[n] {
-				return Declaration{}, fmt.Errorf("intent %q: strap_group %q lists net %q twice; one net cannot be two bits of the same number", doc.Name, g.Name, n)
-			}
-			seenNet[n] = true
-		}
-		sl := slug(g.Name)
-		if sl == "" {
-			return Declaration{}, fmt.Errorf("intent %q: strap_group name %q has no alphanumeric characters to form a rule name", doc.Name, g.Name)
-		}
-		if first, dup := groupSlugs[sl]; dup {
-			return Declaration{}, fmt.Errorf("intent %q: strap_groups %q and %q slugify to the same rule name %q", doc.Name, first, g.Name, "intent/strap-group-"+sl)
-		}
-		groupSlugs[sl] = g.Name
-		d.StrapGroups = append(d.StrapGroups, StrapGroup{
-			Name: g.Name, Device: g.Device, Nets: g.Nets, Value: g.Value, Bus: g.Bus, Default: g.Default,
-		})
+	in := &configpb.DesignIntent{}
+	// A misspelled key is an error naming its line, not a fact that silently declares nothing.
+	if err := yamlpb.Decode(&doc.Intent, in); err != nil {
+		return Declaration{}, fmt.Errorf("intent %q: %w", doc.Name, err)
 	}
-	for i, p := range doc.Protections {
-		if strings.TrimSpace(p.Rail) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: protection #%d is missing its \"rail\"", doc.Name, i+1)
-		}
-		if p.Kind != ProtectionOVP && p.Kind != ProtectionDischarge {
-			return Declaration{}, fmt.Errorf("intent %q: protection for rail %q has kind %q (want %q or %q)", doc.Name, p.Rail, p.Kind, ProtectionOVP, ProtectionDischarge)
-		}
-		d.Protections = append(d.Protections, Protection{Rail: p.Rail, Kind: p.Kind})
+	return FromProto(doc.Name, in)
+}
+
+// FromProto validates a design's declared intent and compiles it into the Declaration the rules
+// read, under the design's name. It is the whole of validation, so a DesignIntent that arrived on the
+// wire is held to exactly what a file is. A declaration stating nothing is an error, because a design
+// that declares intent and checks nothing would read as covered.
+func FromProto(name string, in *configpb.DesignIntent) (Declaration, error) {
+	if len(in.GetModules()) == 0 && len(in.GetNets()) == 0 && len(in.GetSequences()) == 0 && len(in.GetStrapGroups()) == 0 && len(in.GetIoMap()) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: declares no modules, nets, sequences, strap_groups or io_map", name)
 	}
-	for i, np := range doc.NetProperties {
-		if strings.TrimSpace(np.Net) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: net_property #%d is missing its \"net\"", doc.Name, i+1)
-		}
-		switch np.Property {
-		case PropACCoupled:
-			if strings.TrimSpace(np.Value) != "" {
-				return Declaration{}, fmt.Errorf("intent %q: net_property %q kind %q takes no \"value\" (got %q)", doc.Name, np.Net, np.Property, np.Value)
-			}
-		case PropResetPolarity, PropStrap:
-			// The value is the assertion. Without it the rule has nothing to contradict, so an
-			// omitted or misspelled level is a load error rather than a rule that silently never fires.
-			if np.Value != "low" && np.Value != "high" {
-				return Declaration{}, fmt.Errorf("intent %q: net_property %q kind %q needs \"value\" of \"low\" or \"high\" (got %q)", doc.Name, np.Net, np.Property, np.Value)
-			}
-		default:
-			return Declaration{}, fmt.Errorf("intent %q: net_property %q has property %q (want %q or %q)", doc.Name, np.Net, np.Property, PropResetPolarity, PropACCoupled)
-		}
-		// A band on a kind that has no resistance to bound is an authoring slip that would compile to
-		// a check that can never run, which is the route-six false pass (a declaration meaning nothing
-		// at load time). Reject it here rather than let it read as a silent pass at review.
-		if np.Property != PropStrap && (np.MinOhms != 0 || np.MaxOhms != 0) {
-			return Declaration{}, fmt.Errorf("intent %q: net_property %q kind %q takes no min_ohms/max_ohms (only %q does)", doc.Name, np.Net, np.Property, PropStrap)
-		}
-		if np.MinOhms < 0 || np.MaxOhms < 0 {
-			return Declaration{}, fmt.Errorf("intent %q: net_property %q has a negative resistance bound (min_ohms %g, max_ohms %g)", doc.Name, np.Net, np.MinOhms, np.MaxOhms)
-		}
-		if np.MinOhms > 0 && np.MaxOhms > 0 && np.MinOhms > np.MaxOhms {
-			return Declaration{}, fmt.Errorf("intent %q: net_property %q has min_ohms %g above max_ohms %g, a band nothing can satisfy", doc.Name, np.Net, np.MinOhms, np.MaxOhms)
-		}
-		d.NetProperties = append(d.NetProperties, NetProperty{Net: np.Net, Property: np.Property, Value: np.Value, MinOhms: np.MinOhms, MaxOhms: np.MaxOhms})
+	d := Declaration{Name: name}
+	if err := buildModules(name, in.GetModules(), &d); err != nil {
+		return Declaration{}, err
 	}
-	rails := map[string]bool{} // one budget per rail, so two declarations cannot both fire on one net
-	for i, rb := range doc.RailBudgets {
-		if strings.TrimSpace(rb.Rail) == "" {
-			return Declaration{}, fmt.Errorf("intent %q: rail_budget #%d is missing its \"rail\"", doc.Name, i+1)
-		}
-		// A zero or negative peak is satisfied by every supply, so it would be a declaration that can
-		// only ever pass. Rejecting it at load is the same discipline the "value" checks above use.
-		if rb.Peak <= 0 {
-			return Declaration{}, fmt.Errorf("intent %q: rail_budget %q needs a positive \"peak\" current in amps (got %g)", doc.Name, rb.Rail, rb.Peak)
-		}
-		if rails[rb.Rail] {
-			return Declaration{}, fmt.Errorf("intent %q: rail %q has more than one rail_budget", doc.Name, rb.Rail)
-		}
-		rails[rb.Rail] = true
-		d.RailBudgets = append(d.RailBudgets, RailBudget{Rail: rb.Rail, Peak: rb.Peak})
+	if err := buildNets(name, in.GetNets(), &d); err != nil {
+		return Declaration{}, err
+	}
+	if err := buildStrapGroups(name, in.GetStrapGroups(), &d); err != nil {
+		return Declaration{}, err
 	}
 	seqSlugs := map[string]string{} // slug -> first name, to reject a rule-name collision
-	for i, s := range doc.Sequences {
-		seq, err := parseSequence(doc.Name, i, s, seqSlugs)
+	for i, s := range in.GetSequences() {
+		seq, err := parseSequence(name, i, s, seqSlugs)
 		if err != nil {
 			return Declaration{}, err
 		}
@@ -277,21 +131,201 @@ func Parse(b []byte) (Declaration, error) {
 	// rule is never compiled. Declared, it must ask for headroom. A factor of 1 restates the capacity
 	// rule and anything below 1 asks for a supply SMALLER than the budget, so both are author errors
 	// caught here rather than a second rule that duplicates or inverts the first.
-	if doc.MarginFactor != 0 && doc.MarginFactor <= 1 {
-		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" must be greater than 1 (got %g); omit it to leave the margin rule uncompiled", doc.Name, doc.MarginFactor)
+	mf := in.GetMarginFactor()
+	if mf != 0 && mf <= 1 {
+		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" must be greater than 1 (got %g); omit it to leave the margin rule uncompiled", name, mf)
 	}
-	if doc.MarginFactor != 0 && len(doc.RailBudgets) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" is declared with no rail_budgets, so nothing applies it", doc.Name)
+	if mf != 0 && len(d.RailBudgets) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" is declared with no net declaring a \"peak\", so nothing applies it", name)
 	}
-	d.MarginFactor = doc.MarginFactor
-	for i, a := range doc.IOMap {
-		asg, err := parseIOAssignment(doc.Name, i, a)
+	d.MarginFactor = mf
+	for i, a := range in.GetIoMap() {
+		asg, err := parseIOAssignment(name, i, a)
 		if err != nil {
 			return Declaration{}, err
 		}
 		d.IOMap = append(d.IOMap, asg)
 	}
 	return d, nil
+}
+
+// buildModules splits the modules list into the two shapes it carries: a module checked by class or
+// MPN with an optional count, and a named block whose nets must exist (a subsystem), whose class or
+// MPN, when given, names a component that must be present too.
+func buildModules(name string, ms []*configpb.IntentModule, d *Declaration) error {
+	slugs := map[string]string{} // slug -> first name, to reject a rule-name collision
+	for i, m := range ms {
+		if strings.TrimSpace(m.GetName()) == "" {
+			return fmt.Errorf("intent %q: module #%d is missing its \"name\"", name, i+1)
+		}
+		hasPart := strings.TrimSpace(m.GetClass()) != "" || strings.TrimSpace(m.GetMpn()) != ""
+		if len(m.GetNets()) == 0 {
+			if !hasPart {
+				return fmt.Errorf("intent %q: module %q needs a \"class\", an \"mpn\" or \"nets\"", name, m.GetName())
+			}
+			if m.GetCount() < 0 {
+				return fmt.Errorf("intent %q: module %q has a negative \"count\" %d", name, m.GetName(), m.GetCount())
+			}
+			d.Modules = append(d.Modules, Module{Name: m.GetName(), Class: m.GetClass(), MPN: m.GetMpn(), Count: int(m.GetCount())})
+			continue
+		}
+		// A block with nets is checked as a whole (one rule, intent/subsystem-<slug>), so a count on it
+		// would compile to nothing.
+		if m.GetCount() != 0 {
+			return fmt.Errorf("intent %q: module %q declares nets and a \"count\"; a block with nets is checked as one block, so declare the count on a module of its own", name, m.GetName())
+		}
+		sl := slug(m.GetName())
+		if sl == "" {
+			return fmt.Errorf("intent %q: module name %q has no alphanumeric characters to form a rule name", name, m.GetName())
+		}
+		if first, dup := slugs[sl]; dup {
+			return fmt.Errorf("intent %q: modules %q and %q slugify to the same rule name %q", name, first, m.GetName(), "intent/subsystem-"+sl)
+		}
+		slugs[sl] = m.GetName()
+		sub := Subsystem{Name: m.GetName(), Nets: m.GetNets()}
+		if hasPart {
+			sub.Source = &Module{Name: m.GetName() + " source", Class: m.GetClass(), MPN: m.GetMpn()}
+		}
+		d.Subsystems = append(d.Subsystems, sub)
+	}
+	return nil
+}
+
+// buildNets converts the per-net facts into the declaration's per-kind lists. Nets are taken in name
+// order, so a declaration compiles the same way however the YAML map is written. Rails sharing a
+// nominal voltage and a domain label form one voltage domain; without a label the domain is named by
+// its voltage ("3.3V").
+func buildNets(name string, nets map[string]*configpb.NetIntent, d *Declaration) error {
+	names := make([]string, 0, len(nets))
+	for n := range nets {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	domains := map[string]int{} // domain name -> index in d.VoltageDomains
+	for _, net := range names {
+		nd := nets[net]
+		if strings.TrimSpace(net) == "" {
+			return fmt.Errorf("intent %q: a net under \"nets\" has an empty name", name)
+		}
+		declared := false
+		if nd.Nominal != nil {
+			declared = true
+			if *nd.Nominal <= 0 {
+				return fmt.Errorf("intent %q: net %q needs a positive \"nominal\" voltage (got %g)", name, net, *nd.Nominal)
+			}
+			dom := strings.TrimSpace(nd.GetDomain())
+			if dom == "" {
+				dom = fmt.Sprintf("%gV", *nd.Nominal)
+			}
+			if i, ok := domains[dom]; ok {
+				if d.VoltageDomains[i].Nominal != *nd.Nominal {
+					return fmt.Errorf("intent %q: domain %q is declared at %gV and at %gV (net %q)", name, dom, d.VoltageDomains[i].Nominal, *nd.Nominal, net)
+				}
+				d.VoltageDomains[i].Rails = append(d.VoltageDomains[i].Rails, net)
+			} else {
+				domains[dom] = len(d.VoltageDomains)
+				d.VoltageDomains = append(d.VoltageDomains, VoltageDomain{Name: dom, Nominal: *nd.Nominal, Rails: []string{net}})
+			}
+		} else if strings.TrimSpace(nd.GetDomain()) != "" {
+			return fmt.Errorf("intent %q: net %q names a \"domain\" with no \"nominal\" voltage", name, net)
+		}
+		if nd.Peak != nil {
+			declared = true
+			// A zero or negative peak is satisfied by every supply, so it would be a declaration that
+			// can only ever pass. Rejecting it at load is the same discipline the value checks use.
+			if *nd.Peak <= 0 {
+				return fmt.Errorf("intent %q: net %q needs a positive \"peak\" current in amps (got %g)", name, net, *nd.Peak)
+			}
+			d.RailBudgets = append(d.RailBudgets, RailBudget{Rail: net, Peak: *nd.Peak})
+		}
+		seenKind := map[string]bool{}
+		for _, k := range nd.GetProtect() {
+			declared = true
+			if k != ProtectionOVP && k != ProtectionDischarge {
+				return fmt.Errorf("intent %q: net %q has protection %q (want %q or %q)", name, net, k, ProtectionOVP, ProtectionDischarge)
+			}
+			if seenKind[k] {
+				return fmt.Errorf("intent %q: net %q lists protection %q twice", name, net, k)
+			}
+			seenKind[k] = true
+			d.Protections = append(d.Protections, Protection{Rail: net, Kind: k})
+		}
+		// reset and strap are assertions about a level, so an omitted or misspelled level is a load
+		// error rather than a rule that silently never fires.
+		if nd.GetReset_() != "" {
+			declared = true
+			if nd.GetReset_() != "low" && nd.GetReset_() != "high" {
+				return fmt.Errorf("intent %q: net %q has reset %q (want \"low\" or \"high\")", name, net, nd.GetReset_())
+			}
+			d.NetProperties = append(d.NetProperties, NetProperty{Net: net, Property: PropResetPolarity, Value: nd.GetReset_()})
+		}
+		if nd.GetStrap() != "" {
+			declared = true
+			if nd.GetStrap() != "low" && nd.GetStrap() != "high" {
+				return fmt.Errorf("intent %q: net %q has strap %q (want \"low\" or \"high\")", name, net, nd.GetStrap())
+			}
+			if nd.GetMinOhms() < 0 || nd.GetMaxOhms() < 0 {
+				return fmt.Errorf("intent %q: net %q has a negative resistance bound (min_ohms %g, max_ohms %g)", name, net, nd.GetMinOhms(), nd.GetMaxOhms())
+			}
+			if nd.GetMinOhms() > 0 && nd.GetMaxOhms() > 0 && nd.GetMinOhms() > nd.GetMaxOhms() {
+				return fmt.Errorf("intent %q: net %q has min_ohms %g above max_ohms %g, a band nothing can satisfy", name, net, nd.GetMinOhms(), nd.GetMaxOhms())
+			}
+			d.NetProperties = append(d.NetProperties, NetProperty{Net: net, Property: PropStrap, Value: nd.GetStrap(), MinOhms: nd.GetMinOhms(), MaxOhms: nd.GetMaxOhms()})
+		} else if nd.GetMinOhms() != 0 || nd.GetMaxOhms() != 0 {
+			// A band with no strap has no resistance to bound, and would compile to a check that can
+			// never run, a declaration meaning nothing. Reject it rather than let it pass at review.
+			return fmt.Errorf("intent %q: net %q declares min_ohms/max_ohms with no \"strap\"", name, net)
+		}
+		if nd.GetAcCoupled() {
+			declared = true
+			d.NetProperties = append(d.NetProperties, NetProperty{Net: net, Property: PropACCoupled})
+		}
+		if !declared {
+			return fmt.Errorf("intent %q: net %q declares nothing (nominal, peak, protect, reset, strap or ac_coupled)", name, net)
+		}
+	}
+	return nil
+}
+
+// buildStrapGroups validates and converts the strap groups.
+func buildStrapGroups(name string, gs []*configpb.StrapGroup, d *Declaration) error {
+	groupSlugs := map[string]string{}
+	for i, g := range gs {
+		if strings.TrimSpace(g.GetName()) == "" {
+			return fmt.Errorf("intent %q: strap_group #%d is missing its \"name\"", name, i+1)
+		}
+		if len(g.GetNets()) == 0 {
+			return fmt.Errorf("intent %q: strap_group %q lists no \"nets\"; a group with no bits encodes nothing to check", name, g.GetName())
+		}
+		// The declared value has to be representable in the bits declared, or the group can never
+		// encode it and the rule would fail on every design including a correct one. That is an
+		// authoring error, so it is rejected here rather than reported as a design finding.
+		if max := 1<<len(g.GetNets()) - 1; g.GetValue() < 0 || int(g.GetValue()) > max {
+			return fmt.Errorf("intent %q: strap_group %q declares value %d, which %d net(s) cannot encode (range 0..%d)", name, g.GetName(), g.GetValue(), len(g.GetNets()), max)
+		}
+		if g.GetDefault() != "" && g.GetDefault() != "low" && g.GetDefault() != "high" {
+			return fmt.Errorf("intent %q: strap_group %q has default %q (want \"low\", \"high\", or omitted)", name, g.GetName(), g.GetDefault())
+		}
+		seenNet := map[string]bool{}
+		for _, n := range g.GetNets() {
+			if seenNet[n] {
+				return fmt.Errorf("intent %q: strap_group %q lists net %q twice; one net cannot be two bits of the same number", name, g.GetName(), n)
+			}
+			seenNet[n] = true
+		}
+		sl := slug(g.GetName())
+		if sl == "" {
+			return fmt.Errorf("intent %q: strap_group name %q has no alphanumeric characters to form a rule name", name, g.GetName())
+		}
+		if first, dup := groupSlugs[sl]; dup {
+			return fmt.Errorf("intent %q: strap_groups %q and %q slugify to the same rule name %q", name, first, g.GetName(), "intent/strap-group-"+sl)
+		}
+		groupSlugs[sl] = g.GetName()
+		d.StrapGroups = append(d.StrapGroups, StrapGroup{
+			Name: g.GetName(), Device: g.GetDevice(), Nets: g.GetNets(), Value: int(g.GetValue()), Bus: g.GetBus(), Default: g.GetDefault(),
+		})
+	}
+	return nil
 }
 
 // parseIOAssignment validates one declared pin-map row.
@@ -303,37 +337,37 @@ func Parse(b []byte) (Declaration, error) {
 // A far end must be COMPLETE or absent. A `to` naming a device and no pin is the shape that would
 // otherwise reach the rule as a half-question, and the rule would have to invent a reading of it.
 // Rejecting it at load is the same discipline the rail-budget and strap-group checks above use.
-func parseIOAssignment(declName string, i int, a ioAssignmentDoc) (IOAssignment, error) {
+func parseIOAssignment(declName string, i int, a *configpb.PinAssignment) (IOAssignment, error) {
 	row := fmt.Sprintf("io_map #%d", i+1)
-	if strings.TrimSpace(a.Net) == "" {
+	if strings.TrimSpace(a.GetNet()) == "" {
 		return IOAssignment{}, fmt.Errorf("intent %q: %s is missing its \"net\"", declName, row)
 	}
-	row = fmt.Sprintf("io_map row for net %q", a.Net)
-	if strings.TrimSpace(a.Device) == "" {
+	row = fmt.Sprintf("io_map row for net %q", a.GetNet())
+	if strings.TrimSpace(a.GetDevice()) == "" {
 		return IOAssignment{}, fmt.Errorf("intent %q: %s is missing its \"device\"", declName, row)
 	}
-	if strings.TrimSpace(a.Pin) == "" {
+	if strings.TrimSpace(a.GetPin()) == "" {
 		return IOAssignment{}, fmt.Errorf("intent %q: %s is missing its \"pin\"", declName, row)
 	}
 	asg := IOAssignment{
-		Net: strings.TrimSpace(a.Net), Device: strings.TrimSpace(a.Device),
-		Pin: strings.TrimSpace(a.Pin), Function: strings.TrimSpace(a.Function),
+		Net: strings.TrimSpace(a.GetNet()), Device: strings.TrimSpace(a.GetDevice()),
+		Pin: strings.TrimSpace(a.GetPin()), Function: strings.TrimSpace(a.GetFunction()),
 	}
-	if a.To != nil {
-		if strings.TrimSpace(a.To.Device) == "" || strings.TrimSpace(a.To.Pin) == "" {
+	if to := a.GetTo(); to != nil {
+		if strings.TrimSpace(to.GetDevice()) == "" || strings.TrimSpace(to.GetPin()) == "" {
 			return IOAssignment{}, fmt.Errorf("intent %q: %s declares a \"to\" with %s; a far end needs both a device and a pin",
-				declName, row, missingHalf(a.To))
+				declName, row, missingHalf(to))
 		}
-		asg.To = &IOEndpoint{Device: strings.TrimSpace(a.To.Device), Pin: strings.TrimSpace(a.To.Pin)}
+		asg.To = &IOEndpoint{Device: strings.TrimSpace(to.GetDevice()), Pin: strings.TrimSpace(to.GetPin())}
 	}
 	return asg, nil
 }
 
-func missingHalf(e *ioEndpointDoc) string {
+func missingHalf(e *configpb.PinEndpoint) string {
 	switch {
-	case strings.TrimSpace(e.Device) == "" && strings.TrimSpace(e.Pin) == "":
+	case strings.TrimSpace(e.GetDevice()) == "" && strings.TrimSpace(e.GetPin()) == "":
 		return "neither a device nor a pin"
-	case strings.TrimSpace(e.Device) == "":
+	case strings.TrimSpace(e.GetDevice()) == "":
 		return "no device"
 	default:
 		return "no pin"
@@ -349,39 +383,39 @@ func missingHalf(e *ioEndpointDoc) string {
 // The teaching matters more here than elsewhere, because the case it rejects is a real and correct
 // board, one whose rail order lives in a PMIC's configuration or in firmware. Saying so in the error
 // stops an author from inventing net names to satisfy the schema.
-func parseSequence(declName string, i int, s sequenceDoc, slugs map[string]string) (Sequence, error) {
-	if strings.TrimSpace(s.Name) == "" {
+func parseSequence(declName string, i int, s *configpb.PowerSequence, slugs map[string]string) (Sequence, error) {
+	if strings.TrimSpace(s.GetName()) == "" {
 		return Sequence{}, fmt.Errorf("intent %q: sequence #%d is missing its \"name\"", declName, i+1)
 	}
-	if s.Relation != SequenceEnableGated {
-		return Sequence{}, fmt.Errorf("intent %q: sequence %q has relation %q (want %q, the only ordering a netlist evidences)", declName, s.Name, s.Relation, SequenceEnableGated)
+	if s.GetRelation() != SequenceEnableGated {
+		return Sequence{}, fmt.Errorf("intent %q: sequence %q has relation %q (want %q, the only ordering a netlist evidences)", declName, s.GetName(), s.GetRelation(), SequenceEnableGated)
 	}
-	sl := slug(s.Name)
+	sl := slug(s.GetName())
 	if sl == "" {
-		return Sequence{}, fmt.Errorf("intent %q: sequence name %q has no alphanumeric characters to form a rule name", declName, s.Name)
+		return Sequence{}, fmt.Errorf("intent %q: sequence name %q has no alphanumeric characters to form a rule name", declName, s.GetName())
 	}
 	if first, dup := slugs[sl]; dup {
-		return Sequence{}, fmt.Errorf("intent %q: sequences %q and %q slugify to the same rule name %q", declName, first, s.Name, "intent/sequence-"+sl)
+		return Sequence{}, fmt.Errorf("intent %q: sequences %q and %q slugify to the same rule name %q", declName, first, s.GetName(), "intent/sequence-"+sl)
 	}
-	slugs[sl] = s.Name
-	if len(s.Order) < 2 {
-		return Sequence{}, fmt.Errorf("intent %q: sequence %q needs at least two stages in \"order\" (an order of one has nothing to come before)", declName, s.Name)
+	slugs[sl] = s.GetName()
+	if len(s.GetOrder()) < 2 {
+		return Sequence{}, fmt.Errorf("intent %q: sequence %q needs at least two stages in \"order\" (an order of one has nothing to come before)", declName, s.GetName())
 	}
-	seq := Sequence{Name: s.Name, Relation: s.Relation}
+	seq := Sequence{Name: s.GetName(), Relation: s.GetRelation()}
 	rails := map[string]bool{}
-	for j, st := range s.Order {
-		if strings.TrimSpace(st.Rail) == "" {
-			return Sequence{}, fmt.Errorf("intent %q: sequence %q stage #%d is missing its \"rail\"", declName, s.Name, j+1)
+	for j, st := range s.GetOrder() {
+		if strings.TrimSpace(st.GetRail()) == "" {
+			return Sequence{}, fmt.Errorf("intent %q: sequence %q stage #%d is missing its \"rail\"", declName, s.GetName(), j+1)
 		}
-		if rails[st.Rail] {
-			return Sequence{}, fmt.Errorf("intent %q: sequence %q lists rail %q twice, so its position in the order is ambiguous", declName, s.Name, st.Rail)
+		if rails[st.GetRail()] {
+			return Sequence{}, fmt.Errorf("intent %q: sequence %q lists rail %q twice, so its position in the order is ambiguous", declName, s.GetName(), st.GetRail())
 		}
-		rails[st.Rail] = true
-		seq.Order = append(seq.Order, SequenceStage{Rail: st.Rail, Good: st.Good, Enable: st.Enable})
+		rails[st.GetRail()] = true
+		seq.Order = append(seq.Order, SequenceStage{Rail: st.GetRail(), Good: st.GetGood(), Enable: st.GetEnable()})
 	}
 	if !hasGatingPair(seq) {
 		return Sequence{}, fmt.Errorf("intent %q: sequence %q declares no adjacent \"good\" -> \"enable\" pair, so nothing in the netlist can be checked against it. "+
-			"A rail order enforced inside a PMIC or by firmware leaves no trace in a netlist; record it as a review note rather than as a sequence", declName, s.Name)
+			"A rail order enforced inside a PMIC or by firmware leaves no trace in a netlist; record it as a review note rather than as a sequence", declName, s.GetName())
 	}
 	return seq, nil
 }

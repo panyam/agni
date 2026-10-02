@@ -1940,3 +1940,31 @@ because a caller naming a corpus for one run is choosing it outright.
 
 **Reopen if** a deployment needs a project to opt out of the shared corpus entirely. That is a project
 setting to add, rather than a reason to restore wholesale replacement for everyone.
+
+## A design's intent is a section of its descriptor, keyed by what it describes
+
+**It was a separate `intent.yaml` beside the design, in nine top-level forms.** Five of them were
+facts about one net or one block, held in lists keyed by different field names (`rails` on a voltage
+domain, `rail` on a protection and a budget, `net` on a property). Declaring what one rail is, its
+voltage, its peak draw and the clamp it carries, meant writing its name in three lists.
+
+**Answer, since agni 824: `design.yaml` carries the declaration under `intent:`, in six forms.**
+`modules` absorbs `subsystems`, because a subsystem was a module that also named nets. `nets` is a
+map keyed by net name, carrying every per-net fact. `sequences`, `strap_groups` and `io_map` stay
+lists, since each entry relates several nets and belongs to none of them, and `margin_factor` is one
+number for the whole declaration.
+
+- The rules did not change, and neither did their names, so a review manifest's bindings survive. The
+  only rule a declaration moves between is a subsystem written with a source and no nets, which is
+  a module and now compiles to `module-missing`.
+- It is a clean break. An `intent.yaml` beside a design fails the load, and so does any earlier key,
+  each naming its replacement, because a reader that skipped them would drop every intent rule and
+  report the board as declaring nothing.
+- A per-component fact (connector exposure, #815) arrives as a third keyed map rather than a tenth
+  form.
+- The schema is a proto message, `config.DesignIntent`, and the YAML only spells it (C26). A
+  hand-written YAML struct would have been a second schema, and intent is about to travel on the
+  wire with a request and feed the model, which is the point at which two schemas start drifting.
+
+**Reopen if** one design's intent needs to be shared across several designs. That is `extends` on a
+descriptor, rather than a reason to split the file again.

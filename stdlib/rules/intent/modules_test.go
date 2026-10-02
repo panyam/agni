@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -22,7 +22,8 @@ func declOf(t *testing.T, yaml string) Declaration {
 func TestModuleMissingFiresOnAbsentModule(t *testing.T) {
 	decl := declOf(t, `
 name: I
-modules:
+intent:
+  modules:
   - {name: SoC, class: soc}
   - {name: CAN transceiver, class: can_transceiver}
 `)
@@ -45,7 +46,7 @@ modules:
 }
 
 func TestModulePresentPasses(t *testing.T) {
-	decl := declOf(t, "name: I\nmodules:\n  - {name: SoC, class: soc}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: SoC, class: soc}\n")
 	// The classifier tags a TVS as both tvs and diode; HasClass matches a family parent, so a module
 	// declared as "diode" would match a tvs. Here the exact class matches directly.
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}}
@@ -55,7 +56,7 @@ func TestModulePresentPasses(t *testing.T) {
 }
 
 func TestModuleMatchesByFamilyTag(t *testing.T) {
-	decl := declOf(t, "name: I\nmodules:\n  - {name: any diode, class: diode}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: any diode, class: diode}\n")
 	// A component classed tvs carries the diode family tag, so a diode-declared module matches it.
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")}}}
 	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
@@ -64,7 +65,7 @@ func TestModuleMatchesByFamilyTag(t *testing.T) {
 }
 
 func TestModuleCountFiresOnTooFew(t *testing.T) {
-	decl := declOf(t, "name: I\nmodules:\n  - {name: CAN, class: can, count: 2}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: CAN, class: can, count: 2}\n")
 	// One CAN present and two declared, so module-missing passes (>=1 present) and module-count fires.
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
@@ -83,7 +84,7 @@ func TestModuleCountFiresOnTooFew(t *testing.T) {
 }
 
 func TestModuleCountFiresOnTooMany(t *testing.T) {
-	decl := declOf(t, "name: I\nmodules:\n  - {name: CAN, class: can, count: 1}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: CAN, class: can, count: 1}\n")
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
 		{RefDes: "U2", DeviceClasses: classify.Tags("can")},
@@ -98,7 +99,7 @@ func TestModuleCountFiresOnTooMany(t *testing.T) {
 }
 
 func TestModuleCountPassesOnExact(t *testing.T) {
-	decl := declOf(t, "name: I\nmodules:\n  - {name: CAN, class: can, count: 2}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: CAN, class: can, count: 2}\n")
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", DeviceClasses: classify.Tags("can")},
 		{RefDes: "U2", DeviceClasses: classify.Tags("can")},
@@ -111,7 +112,7 @@ func TestModuleCountPassesOnExact(t *testing.T) {
 func TestModuleCountUnspecifiedEmitsNoRule(t *testing.T) {
 	// A declaration with modules but no counts must compile to NO count rule (empty-set-is-silent), so
 	// an item bound to intent/module-count reads not-automated rather than silently passing.
-	decl := declOf(t, "name: I\nmodules:\n  - {name: SoC, class: soc}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: SoC, class: soc}\n")
 	for _, r := range Compile(decl) {
 		if r.Name == RuleModuleCount {
 			t.Fatalf("no count declared, but a module-count rule was emitted")
@@ -120,13 +121,13 @@ func TestModuleCountUnspecifiedEmitsNoRule(t *testing.T) {
 }
 
 func TestNegativeCountIsALoadError(t *testing.T) {
-	if _, err := Parse([]byte("name: I\nmodules:\n  - {name: CAN, class: can, count: -1}")); err == nil {
+	if _, err := Parse([]byte("name: I\nintent:\n  modules:\n  - {name: CAN, class: can, count: -1}\n")); err == nil {
 		t.Fatal("a negative count should be a load error")
 	}
 }
 
 func TestModuleMatchesByMPN(t *testing.T) {
-	decl := declOf(t, "name: I\nmodules:\n  - {name: flash, mpn: W25Q128}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: flash, mpn: W25Q128}\n")
 	// Every model joins the design's MPNs, with or without a datasheet provider (agni issue 748), so
 	// the module matches on a plain model. A part carrying a DIFFERENT MPN leaves it unmatched (fires).
 	other := &ir.Design{Components: []*ir.Component{

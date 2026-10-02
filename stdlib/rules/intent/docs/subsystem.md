@@ -2,10 +2,10 @@
 
 ### What it means
 
-The design intent declares named architectural subsystems (a clock tree, a reset scheme, the power
-tree), each evidenced by a required source component and/or a set of nets that must all exist. This
-is the family doc for every `intent/subsystem-<name>` rule, and each declared subsystem compiles to
-its own rule (so "clock architecture" and "reset architecture" bind and report independently) that
+The design intent declares named architectural blocks (a clock tree, a reset scheme, the power
+tree) as `modules` entries that list `nets`, each evidenced by the nets that must all exist and
+optionally by a source component named by class or MPN. This is the family doc for every
+`intent/subsystem-<name>` rule, and each module declaring nets compiles to its own rule (so "clock architecture" and "reset architecture" bind and report independently) that
 fails when its source component is absent or any of its required nets is missing.
 
 ### Why engineers want it
@@ -26,6 +26,14 @@ complete but a whole function does not come up.
 
 ### Scope note
 
+```yaml
+intent:
+  modules:
+    - {name: main clock, class: crystal, nets: [XTAL_IN, XTAL_OUT]}
+    - {name: power tree, nets: [5V0, 3V3, 1V8]}
+```
+
 Names must slugify uniquely within a declaration. A subsystem checks its source (matched by class or
-MPN, like a module) and each of its required nets. Like every intent rule it iterates the
+MPN, like a module) and each of its required nets. A module with no `nets` is checked by
+`module-missing` and `module-count` instead, and a `count` belongs only there. Like every intent rule it iterates the
 declaration and probes the design, never enumerating the expected subsystems from the netlist.

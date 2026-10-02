@@ -45,7 +45,7 @@ keep review runs. Everything else this rung needs, the server discovers.
 
 Rungs 4 through 7 each added a tier, and none of them is a flag here. A project descriptor names its
 own layout, so `FSStore` composes `conventions.yaml`, `profiles/`, `params/` and `review.yaml` from
-the project root, and each design's `intent.yaml` and `symbols/` from beside the design.
+the project root, and each design's `intent:` section and `symbols/` from beside the design.
 
 Passing a flag for one of them does not switch it on, because it is already on. It loads the tier a
 second time. Rung 4's run shows the harmless version of that, where `--conventions` names the file

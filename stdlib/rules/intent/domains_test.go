@@ -8,7 +8,7 @@ import (
 )
 
 func TestVoltageDomainPassesWhenRailsMatch(t *testing.T) {
-	decl := declOf(t, "name: I\nvoltage_domains:\n  - {name: io_3v3, nominal: 3.3, rails: [3V3]}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    3V3: {nominal: 3.3, domain: io_3v3}\n")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "3V3"}, {Name: "GND"}}}
 	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a rail whose name matches its declared nominal must not fire, got %+v", fs)
@@ -16,7 +16,7 @@ func TestVoltageDomainPassesWhenRailsMatch(t *testing.T) {
 }
 
 func TestVoltageDomainFiresOnAbsentRail(t *testing.T) {
-	decl := declOf(t, "name: I\nvoltage_domains:\n  - {name: io_3v3, nominal: 3.3, rails: [3V3, VDD_IO]}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    3V3: {nominal: 3.3, domain: io_3v3}\n    VDD_IO: {nominal: 3.3, domain: io_3v3}\n")
 	// Only 3V3 exists; the declared VDD_IO rail is absent -> one finding.
 	d := &ir.Design{Nets: []*ir.Net{{Name: "3V3"}}}
 	fs := check.RunBackground(check.NewModel(d), Compile(decl))
@@ -28,7 +28,7 @@ func TestVoltageDomainFiresOnAbsentRail(t *testing.T) {
 func TestVoltageDomainFiresOnWrongDomain(t *testing.T) {
 	// A rail named 5V0 is declared to be in the 3.3V domain, but its name declares a different voltage
 	// than the domain, so it is on the wrong domain and must fire.
-	decl := declOf(t, "name: I\nvoltage_domains:\n  - {name: io_3v3, nominal: 3.3, rails: [5V0]}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    5V0: {nominal: 3.3, domain: io_3v3}\n")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "5V0"}}}
 	fs := check.RunBackground(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "5V0" {
@@ -39,7 +39,7 @@ func TestVoltageDomainFiresOnWrongDomain(t *testing.T) {
 func TestVoltageDomainSkipsUnparseableRailName(t *testing.T) {
 	// VDD_CORE's name encodes no voltage token, so the nominal is unverifiable; presence is confirmed
 	// and the rule refuses to guess (no finding).
-	decl := declOf(t, "name: I\nvoltage_domains:\n  - {name: core, nominal: 0.8, rails: [VDD_CORE]}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    VDD_CORE: {nominal: 0.8, domain: core}\n")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "VDD_CORE"}}}
 	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("an unparseable rail name should verify presence only, got %+v", fs)

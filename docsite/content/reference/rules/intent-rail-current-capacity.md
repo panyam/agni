@@ -72,9 +72,10 @@ power outputs as on one that does.
 ### Declaring it
 
 ```yaml
-rail_budgets:
-  - {rail: +3V3, peak: 0.8}
-  - {rail: +1V8, peak: 0.35}
+intent:
+  nets:
+    +3V3: {peak: 0.8}
+    +1V8: {peak: 0.35}
 ```
 
 `peak` is in amps and must be positive, because a zero budget is met by every supply, so it would be a

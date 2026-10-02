@@ -11,29 +11,29 @@ The engine has no built-in opinion about your architecture. It cannot know that 
 to be 1.8 V, because a netlist records what is connected and never records what anyone intended. So
 you declare it, and the declaration becomes checkable.
 
-The file lives beside the design, not at the project root.
+The declaration lives in the design's own descriptor, under `intent:`, rather than at the project
+root.
 
 ## The declaration
 
-`designs/gateway/intent.yaml`:
+The `intent:` section of `designs/gateway/design.yaml`:
 
 ```yaml
-name: gateway intent
-modules:
-  - {name: regulators, class: regulator, count: 2}
-  - {name: connectors, class: connector, count: 1}
-voltage_domains:
-  - {name: main, nominal: 12.0, rails: [PMIC_MAIN_12V0]}
-  - {name: io, nominal: 3.3, rails: [PMIC_CORE_3V3]}
-  - {name: core, nominal: 3.3, rails: [PMIC_IO_1V8]}
-subsystems:
-  - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
-  - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+intent:
+  modules:
+    - {name: regulators, class: regulator, count: 2}
+    - {name: connectors, class: connector, count: 1}
+    - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
+    - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3: {nominal: 3.3, domain: io}
+    PMIC_IO_1V8: {nominal: 3.3, domain: core}
 ```
 
 Read it as the sentence you would say describing the board to a colleague. Two regulators and one
-connector. Three voltage domains at these voltages. A {{ explainable "power-tree" }} and a CAN subsystem made of these
-nets.
+connector. A {{ explainable "power-tree" }} and a CAN block made of these nets. Three rails at these
+voltages, each in a named domain.
 
 ## Running it
 
@@ -49,7 +49,8 @@ months as a design is edited by people who did not write the original plan.
 
 ## A tier can depend on another tier
 
-Run the same thing without `--params`:
+Run the same thing without `--params`. A project discovers its own tiers, so dropping the flag
+alone would change nothing, and both runs move the project's `params/` aside first:
 
 {{ agniRun "content/tutorials/runs/07-check-intent.yaml" }}
 

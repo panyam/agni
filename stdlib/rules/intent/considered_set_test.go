@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -27,7 +27,8 @@ func verdictsFor(t *testing.T, decl Declaration, m check.Model, rule string) []c
 func TestIntentRuleStatesWhatItWasAskedToLookFor(t *testing.T) {
 	decl := declOf(t, `
 name: I
-modules:
+intent:
+  modules:
   - {name: SoC, class: soc}
   - {name: CAN transceiver, class: can_transceiver}
 `)
@@ -60,7 +61,8 @@ modules:
 func TestIntentCountRuleClaimsOnlyModulesThatDeclareOne(t *testing.T) {
 	decl := declOf(t, `
 name: I
-modules:
+intent:
+  modules:
   - {name: SoC, class: soc}
   - {name: CAN transceiver, class: can_transceiver, count: 2}
 `)
@@ -85,8 +87,11 @@ modules:
 func TestVoltageDomainSeparatesAgreementFromNothingToCompare(t *testing.T) {
 	decl := declOf(t, `
 name: I
-voltage_domains:
-  - {name: core, nominal: 3.3, rails: [PMIC_CORE_3V3, VBUS, MISSING_RAIL]}
+intent:
+  nets:
+    PMIC_CORE_3V3: {nominal: 3.3, domain: core}
+    VBUS: {nominal: 3.3, domain: core}
+    MISSING_RAIL: {nominal: 3.3, domain: core}
 `)
 	m := check.NewModel(&ir.Design{Nets: []*ir.Net{
 		{Name: "PMIC_CORE_3V3", Prov: &ir.Provenance{SourceFile: "t"}},

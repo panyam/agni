@@ -1,3 +1,3 @@
-#agni-run 89f5c5dffcf5ad6e
+#agni-run c688b6ae1adcae71
 **2 pass, 1 fail, 3 n/a, 1 not-automated, 8 inconclusive (of 15)**
 | P1 | every rail carries a bulk capacitor | inconclusive | the check ran but could not decide for gateway:CONN4, gateway:TVS, gateway:BUCK, gateway:LDO, gateway:MCU, gateway:CANXCVR, gateway:EEPROM, gateway:CAP, gateway:RES, gateway:XTAL, gateway:TESTPOINT |
