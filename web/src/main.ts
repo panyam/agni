@@ -36,7 +36,7 @@ import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
 import { staleLinkStrip } from "./stalelink.js";
-import { fillEntityQuery } from "./selection.js";
+import { entityBindings } from "./selection.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
 // restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
@@ -271,7 +271,7 @@ class AppRoot extends BaseComponent {
     // The datalog query panel (WS9-036) runs an ad-hoc query. The presenter evaluates
     // it over the open design and pushes results back through query.view.
     const query = queryPanelIsland(queryEl, this._eventBus, {
-      onRun: (text) => void presenter.runQuery(text),
+      onRun: (text, bindings) => void presenter.runQuery(text, bindings),
       onLocate: (kind, subject, sheet, reason, pin) => void presenter.locateEntity(kind, subject, sheet, reason, pin ?? ""),
       // onInspect opens the check results for the selected entity through the EXISTING finding focus
       // (agni issue 259). Nothing re-evaluates, since selectFinding focuses a subject within the
@@ -296,7 +296,7 @@ class AppRoot extends BaseComponent {
       // the relations it names are defined. Before the catalog arrives there is no preset, and a
       // click then highlights and asks nothing rather than running a guess.
       const preset = query.view.entityQuery(sel.kind);
-      if (preset) query.view.setQuery(fillEntityQuery(preset, sel));
+      if (preset) query.view.setQuery(preset.query, entityBindings(preset.binds, sel));
       if (dockApi) dockApi.getPanel("query")?.api.setActive();
     };
 
@@ -344,7 +344,8 @@ class AppRoot extends BaseComponent {
         query.view.setEntityQueries(r.entityQueries); // the click-to-ask presets
         // The find-by-name template (agni issue 338). A server that sends none leaves the panel
         // with no search mode, since the template names relations only the server defines.
-        query.view.setSearch(r.searchQuery ? { query: r.searchQuery.query, teaches: r.searchQuery.teaches } : null);
+        const sq = r.searchQuery;
+        query.view.setSearch(sq ? { query: sq.query, teaches: sq.teaches, bind: sq.bind, pattern: sq.pattern } : null);
       })
       .catch(() => {});
     // The presenter fans sheet state to every surface in sheetNavs, here only the top tab strip

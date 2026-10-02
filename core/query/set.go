@@ -28,6 +28,38 @@ type NamedQuery struct {
 	Name        string `yaml:"name"`
 	Query       string `yaml:"query"`
 	Description string `yaml:"description"`
+	// Bind gives this query's goal variables values (agni issue 793), as RunQueryRequest's bindings
+	// do. YAML types each value, so `3.3` binds a number and `"3"` or `GND` binds text.
+	Bind map[string]Value `yaml:"-"`
+}
+
+// UnmarshalYAML reads a query's `bind:` map into typed values. A list or a map is refused, since a
+// bound variable holds one scalar as a constant in the goal does.
+func (q *NamedQuery) UnmarshalYAML(n *yaml.Node) error {
+	type plain NamedQuery
+	var raw struct {
+		plain `yaml:",inline"`
+		Bind  map[string]yaml.Node `yaml:"bind"`
+	}
+	if err := n.Decode(&raw); err != nil {
+		return err
+	}
+	*q = NamedQuery(raw.plain)
+	for name, v := range raw.Bind {
+		if v.Kind != yaml.ScalarNode {
+			return fmt.Errorf("query %q: bind %s: want a single value", q.Name, name)
+		}
+		if q.Bind == nil {
+			q.Bind = map[string]Value{}
+		}
+		var f float64
+		if (v.Tag == "!!int" || v.Tag == "!!float") && v.Decode(&f) == nil {
+			q.Bind[name] = Number(f)
+		} else {
+			q.Bind[name] = Text(v.Value)
+		}
+	}
+	return nil
 }
 
 // ParseQuerySet reads a query set from YAML and validates it. An unknown key is an error, because a

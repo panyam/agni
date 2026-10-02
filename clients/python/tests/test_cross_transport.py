@@ -13,7 +13,7 @@ from typing import Callable, Dict, List, NamedTuple
 import pytest
 from google.protobuf.message import Message
 
-from agni import CLI_COMMANDS, Client
+from agni import CLI_COMMANDS, Client, bindings
 from agni.errors import AgniError
 from agni.v1.webapi import query_pb2
 from agni.v1.webapi import design_pb2
@@ -97,6 +97,26 @@ CASES: List[Case] = [
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET)),
     # A budget the query fits in answers alike, work included (agni issue 792).
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c', work_budget=10_000_000)),
+    # Bound variables answer alike, text and number, quoting included (agni issue 793).
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"}))),
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3.0}))),
+    # The TEXT "3" stays text on both transports, unlike the number above. Today the engine then
+    # answers nothing rather than coercing or refusing (panyam/jaala#65); this case holds the two
+    # transports to the same behaviour whichever way that goes.
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": "3"}))),
+    Case(
+        "QueryService/RunQueries",
+        lambda c: c.run_queries(
+            uri=DESIGN,
+            set=query_pb2.QuerySet(
+                title="bound",
+                queries=[
+                    query_pb2.NamedQuery(name="u1", query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"})),
+                    query_pb2.NamedQuery(name="many", query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3})),
+                ],
+            ),
+        ),
+    ),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="probe.resistor_net(?n) => ?n", overlay=_LIB)),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='probe.class_net(?n, "capacitor") => ?n', overlay=_LIB)),
     Case(
@@ -172,3 +192,20 @@ def test_a_query_past_its_budget_fails_on_both_transports(cli: Client, connect: 
         with pytest.raises(AgniError) as e:
             c.run_query(uri=DESIGN, query="component.net(?r, ?n), component.net(?r2, ?n) => ?r, ?r2", work_budget=5)
         assert "budget of 5" in (str(e.value) + getattr(e.value, "detail", "")), e.value
+
+
+def test_a_binding_the_query_does_not_use_fails_on_both_transports(cli: Client, connect: Client):
+    """agni issue 793. A misspelled binding is refused rather than leaving the variable free."""
+    for c in (cli, connect):
+        with pytest.raises(AgniError) as e:
+            c.run_query(uri=DESIGN, query="component.net(?r, ?n) => ?n", bindings=bindings({"zz": "U1"}))
+        assert "?zz" in (str(e.value) + getattr(e.value, "detail", "")), e.value
+
+
+def test_bindings_types_each_value():
+    b = bindings({"t": "3", "n": 3, "f": 3.3})
+    assert b["t"].WhichOneof("kind") == "text" and b["t"].text == "3"
+    assert b["n"].WhichOneof("kind") == "number" and b["n"].number == 3.0
+    assert b["f"].number == 3.3
+    with pytest.raises(TypeError):
+        bindings({"x": True})

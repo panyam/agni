@@ -3,6 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { queryPanelIsland } from "./querypanel.jsx";
 import { type ExampleItem, type QueryResult, type RelationItem, LocateReason, emptyResult, errorResult, resultFromResponse } from "./query.js";
 
+// chips reads the binding chips under the box as [name label, value] pairs.
+function chips(el: HTMLElement): [string, string][] {
+  return [...el.querySelectorAll(".query-binding")].map((c) => [
+    c.querySelector(".query-binding-name")!.textContent ?? "",
+    c.querySelector<HTMLInputElement>(".query-binding-value")!.value,
+  ]);
+}
+
 function mountPanel() {
   const onRun = vi.fn();
   const onLocate = vi.fn();
@@ -53,7 +61,7 @@ describe("querypanel", () => {
     typeQuery(el, "  component.net(?r,?n) => ?r  ");
     el.querySelector<HTMLButtonElement>("button.query-run")!.click();
     expect(onRun).toHaveBeenCalledOnce();
-    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r");
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r", {});
   });
 
   it("disables Run for an empty query and while a run is loading", () => {
@@ -212,7 +220,7 @@ describe("querypanel", () => {
     el.querySelector<HTMLButtonElement>(".query-example")!.click();
     // Clicking fills the textarea AND runs the query.
     expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("component.net(?r,?n) => ?r, ?n");
-    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r, ?n");
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r, ?n", {});
   });
 
   it("keeps the helper chrome in a drawer: closed by default, opened by the handle, closed on textarea click", () => {
@@ -355,8 +363,8 @@ describe("resizable result columns", () => {
 // kind, so pin → net → parts → other nets is a loop the reader can go round without typing.
 describe("walking from a result row", () => {
   const PRESETS = [
-    { kind: "component", query: 'component.net("{ref}", ?net) => ?net', teaches: "projection" },
-    { kind: "net", query: 'component.net(?ref, "{net}") => ?ref', teaches: "join" },
+    { kind: "component", query: "component.net(?ref, ?net) => ?net", teaches: "projection", binds: ["ref"] },
+    { kind: "net", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] },
   ];
   const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
   const netCell = (el: HTMLElement) =>
@@ -374,18 +382,19 @@ describe("walking from a result row", () => {
     expect(el.querySelector(".query-ask")!.textContent).toContain("What is R1 connected to?");
   });
 
-  it("takes the hop: the question fills the box with the filled preset and runs it", () => {
+  it("takes the hop: the question fills the box with the preset, binds the pick, and runs it", () => {
     const { el, push, panel, onRun } = mountPanel();
     panel.view.setEntityQueries(PRESETS);
     pushLocatable(push);
     netCell(el).click();
 
     el.querySelector<HTMLButtonElement>(".query-ask")!.click();
-    const asked = 'component.net(?ref, "SDA") => ?ref';
-    expect(onRun).toHaveBeenCalledWith(asked);
+    const asked = "component.net(?ref, ?net) => ?ref";
+    expect(onRun).toHaveBeenCalledWith(asked, { net: "SDA" });
     // The query stays in the box, editable, because the hop is meant to teach the sentence that
-    // made it.
+    // made it, and the value it was asked about shows beside it (agni issue 793).
     expect(box(el).value).toBe(asked);
+    expect(chips(el)).toEqual([["?net =", "SDA"]]);
   });
 
   // A cell click still locates. The walk is added to that behaviour, not swapped for it, so the
@@ -415,8 +424,10 @@ describe("walking from a result row", () => {
 // such a result in the first place.
 describe("querypanel search", () => {
   const SEARCH = {
-    query: 'entity(?name, ?kind), str.match(?name, "(?i){term}")',
+    query: "entity(?name, ?kind), str.match(?name, ?pattern) => ?name, ?kind",
     teaches: "entity(?name, ?kind) enumerates what a design names",
+    bind: "pattern",
+    pattern: "(?i){term}",
   };
   // one row per kind, each typed by the row rather than by the column, which is what a search over
   // entity(?name, ?kind) comes back as.
@@ -457,11 +468,12 @@ describe("querypanel search", () => {
     typeTerm(el, "  CAN  ");
     el.querySelector<HTMLButtonElement>(".query-run")!.click();
 
-    const want = 'entity(?name, ?kind), str.match(?name, "(?i)CAN")';
-    expect(onRun).toHaveBeenCalledWith(want);
+    expect(onRun).toHaveBeenCalledWith(SEARCH.query, { pattern: "(?i)CAN" });
     // Back in query mode with the sentence that answered visible and editable, which is the whole
-    // reason search is a mode on this panel rather than a widget of its own.
-    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe(want);
+    // reason search is a mode on this panel rather than a widget of its own. The query is the served
+    // text, and the term reaches it as a bound value shown beside it (agni issue 793).
+    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe(SEARCH.query);
+    expect(chips(el)).toEqual([["?pattern =", "(?i)CAN"]]);
     expect(search(el)).toBeNull();
   });
 
@@ -840,5 +852,67 @@ describe("querypanel unresolved and gated", () => {
     push(panel);
     panel.view.setSelection({ kind: "net", net: "SDA" });
     expect(bar(el).querySelector(".query-findings-gated")).toBeNull();
+  });
+});
+
+// agni issue 793: a search or a click binds its values rather than splicing them into the text, and
+// the chips are how the reader sees and changes them.
+describe("bound values", () => {
+  const PRESET = { kind: "net", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] };
+  const ask = (panel: ReturnType<typeof mountPanel>["panel"]) => {
+    panel.view.setEntityQueries([PRESET]);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+  };
+  const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+  const runBtn = (el: HTMLElement) => el.querySelector<HTMLButtonElement>(".query-run")!;
+
+  it("sends an edited value on the next run", () => {
+    const { el, panel, onRun } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    const input = el.querySelector<HTMLInputElement>(".query-binding-value")!;
+    input.value = "SCL";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "SCL" });
+  });
+
+  it("unbinds a removed chip, leaving its variable free", () => {
+    const { el, panel, onRun } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    el.querySelector<HTMLButtonElement>(".query-binding-remove")!.click();
+    expect(chips(el)).toEqual([]);
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, {});
+  });
+
+  it("drops a binding whose variable the reader edited out of the query", () => {
+    const { el, panel, onRun } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    box(el).value = "component.net(?ref, ?n) => ?ref";
+    box(el).dispatchEvent(new Event("input", { bubbles: true }));
+    expect(chips(el)).toEqual([]);
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?n) => ?ref", {});
+  });
+
+  it("clears the bindings when an example replaces the query", () => {
+    const { el, panel, onRun, pushExamples } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    pushExamples([{ label: "nets", query: "component.net(?ref, ?net) => ?net", teaches: "t" }]);
+    el.querySelector<HTMLButtonElement>(".query-example")!.click();
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?net) => ?net", {});
+    expect(chips(el)).toEqual([]);
+  });
+
+  it("fills the box and the chips from a click on the drawing", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setQuery(PRESET.query, { net: "GND" });
+    expect(box(el).value).toBe(PRESET.query);
+    expect(chips(el)).toEqual([["?net =", "GND"]]);
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" });
   });
 });

@@ -215,3 +215,29 @@ func tableLines(doc string) []string {
 func cellCount(row string) int {
 	return strings.Count(strings.ReplaceAll(row, `\|`, ""), "|") - 1
 }
+
+// A parameterized view prints its bindings under the query in both documents, so it still states
+// the whole question it answers (agni issue 793).
+func TestAViewStatesItsBindings(t *testing.T) {
+	tb := Table{Query: `component.net(?r, ?n) => ?n`, Bindings: []string{`?r = "U1"`}, Columns: []string{"n"},
+		Rows: []TableRow{{Cells: []string{"GND"}}}}
+	var md, html, set strings.Builder
+	if err := TableMarkdown(&md, tb); err != nil {
+		t.Fatal(err)
+	}
+	if err := TableHTML(&html, tb); err != nil {
+		t.Fatal(err)
+	}
+	if err := TableSetMarkdown(&set, TableSet{Sections: []TableSection{{Name: "a", Error: "boom", Table: tb}}}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(md.String(), "Bound: `?r = \"U1\"`") {
+		t.Errorf("markdown does not state the binding:\n%s", md.String())
+	}
+	if !strings.Contains(html.String(), "<code>?r = &#34;U1&#34;</code>") {
+		t.Errorf("html does not state the binding:\n%s", html.String())
+	}
+	if !strings.Contains(set.String(), "Bound: `?r = \"U1\"`") {
+		t.Errorf("a set section that could not answer does not state its binding:\n%s", set.String())
+	}
+}

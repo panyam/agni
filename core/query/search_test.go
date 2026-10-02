@@ -1,6 +1,7 @@
 package query
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -18,19 +19,27 @@ func TestSearchQueryParses(t *testing.T) {
 	}
 }
 
-// {term} must sit inside a string literal. Outside one it splices a bare token into the query,
-// which parses as a variable or fails outright.
-func TestSearchQueryPlaceholderIsQuoted(t *testing.T) {
+// The query binds the variable Bind names, and the value carries the reader's term in place of
+// {term}, so a search builds no query text (agni issue 793).
+func TestSearchQueryBindsItsPattern(t *testing.T) {
 	s := Search()
-	if n := strings.Count(s.Query, "{term}"); n != 1 {
-		t.Fatalf("want exactly one {term} placeholder, got %d in %s", n, s.Query)
+	if strings.Contains(s.Query, "{") {
+		t.Errorf("search query still carries a text placeholder: %s", s.Query)
 	}
-	seg := strings.SplitN(s.Query, "{term}", 2)
-	if !strings.HasSuffix(seg[0], `"`) && !strings.Contains(seg[0], `"(?i)`) {
-		t.Errorf("{term} does not open inside a string literal: %s", s.Query)
+	if s.Bind == "" || !regexp.MustCompile(`\?`+regexp.QuoteMeta(s.Bind)+`\b`).MatchString(s.Query) {
+		t.Errorf("search binds %q, which its query %s does not use", s.Bind, s.Query)
 	}
-	if !strings.HasPrefix(seg[1], `"`) {
-		t.Errorf("{term} does not close inside a string literal: %s", s.Query)
+	if n := strings.Count(s.Pattern, "{term}"); n != 1 {
+		t.Errorf("want exactly one {term} in the pattern, got %d in %q", n, s.Pattern)
+	}
+	q, err := Parse(s.Query)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for _, c := range q.Columns() {
+		if string(c) == s.Bind {
+			t.Errorf("search projects ?%s, so every row would answer the pattern it was given", s.Bind)
+		}
 	}
 }
 
@@ -38,7 +47,7 @@ func TestSearchQueryPlaceholderIsQuoted(t *testing.T) {
 // the blind spot entity() was added to close. Pin the relation so a well-meaning rewrite to
 // component.net goes red here rather than in a review nobody runs.
 func TestSearchQueryRangesOverEntity(t *testing.T) {
-	q, err := Parse(strings.ReplaceAll(Search().Query, "{term}", "CAN"))
+	q, err := Parse(Search().Query)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -54,9 +63,9 @@ func TestSearchQueryRangesOverEntity(t *testing.T) {
 }
 
 // The term is matched case-insensitively. A search box that only matches case is one a newcomer
-// tries twice and abandons, and (?i) is the only thing in this template that says otherwise.
+// tries twice and abandons, and (?i) is the only thing in the served pattern that says otherwise.
 func TestSearchQueryIsCaseInsensitive(t *testing.T) {
-	if !strings.Contains(Search().Query, "(?i)") {
-		t.Errorf("search template is case-sensitive: %s", Search().Query)
+	if !strings.HasPrefix(Search().Pattern, "(?i)") {
+		t.Errorf("search pattern is case-sensitive: %s", Search().Pattern)
 	}
 }

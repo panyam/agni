@@ -23,7 +23,7 @@ export function stubQueryView(over: Partial<QueryView> = {}): QueryView {
     setSelection: () => {},
     setCurrentSheet: () => {},
     setFindings: () => {},
-    entityQuery: () => "",
+    entityQuery: () => undefined,
     ...over,
   };
 }

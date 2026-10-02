@@ -130,6 +130,26 @@ def _only(req: Message, allowed: Sequence[str]) -> None:
         )
 
 
+def _bind_flags(req: Message) -> List[str]:
+    # A text value is quoted so one that looks like a number still binds text, as it does over Connect.
+    out: List[str] = []
+    for name in sorted(req.bindings):
+        v = req.bindings[name]
+        val = repr(v.number) if v.WhichOneof("kind") == "number" else '"' + v.text + '"'
+        out += ["--bind", f"{name}={val}"]
+    return out
+
+
+def _set_bindings(set_dict: dict) -> dict:
+    # A set file spells a query's bindings as a `bind:` map of plain values, where the wire carries
+    # {"text": ...} or {"number": ...} under `bindings`.
+    for q in set_dict.get("queries", []):
+        wire = q.pop("bindings", None)
+        if wire:
+            q["bind"] = {k: v.get("number", v.get("text", "")) for k, v in wire.items()}
+    return set_dict
+
+
 def _read_flags(req: Message) -> List[str]:
     out: List[str] = []
     budget = getattr(req, "work_budget", 0)
@@ -200,9 +220,9 @@ def _write_library(req: Message, root: str) -> List[str]:
 
 
 def _query_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "query", "board_uri", "as_named", "overlay", "work_budget"))
+    _only(req, ("uri", "query", "board_uri", "as_named", "overlay", "work_budget", "bindings"))
     _library_only(req)
-    return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req)
+    return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req) + _bind_flags(req)
 
 
 def _query_set_argv(req: Message) -> List[str]:
@@ -213,7 +233,7 @@ def _query_set_argv(req: Message) -> List[str]:
 
 def _query_set_stdin(req: Message) -> str:
     # JSON is YAML, so the set goes to `--set -` as JSON and needs no YAML library here.
-    return json.dumps(json_format.MessageToDict(req.set, preserving_proto_field_name=True))
+    return json.dumps(_set_bindings(json_format.MessageToDict(req.set, preserving_proto_field_name=True)))
 
 
 def _diff_argv(req: Message) -> List[str]:

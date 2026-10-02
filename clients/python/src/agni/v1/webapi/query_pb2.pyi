@@ -9,20 +9,29 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class RunQueryRequest(_message.Message):
-    __slots__ = ("query", "overlay", "board_uri", "uri", "as_named", "work_budget")
+    __slots__ = ("query", "overlay", "board_uri", "uri", "as_named", "work_budget", "bindings")
+    class BindingsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: QueryValue
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[QueryValue, _Mapping]] = ...) -> None: ...
     QUERY_FIELD_NUMBER: _ClassVar[int]
     OVERLAY_FIELD_NUMBER: _ClassVar[int]
     BOARD_URI_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
+    BINDINGS_FIELD_NUMBER: _ClassVar[int]
     query: str
     overlay: _checks_pb2_1.OverlayConfig
     board_uri: str
     uri: str
     as_named: bool
     work_budget: int
-    def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ...) -> None: ...
+    bindings: _containers.MessageMap[str, QueryValue]
+    def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ...) -> None: ...
 
 class QueryRow(_message.Message):
     __slots__ = ("cells", "cites", "cell_sheets", "cell_reasons", "cell_kinds", "cell_refs")
@@ -47,20 +56,37 @@ class CellSheets(_message.Message):
     def __init__(self, sheet_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class RunQueryResponse(_message.Message):
-    __slots__ = ("columns", "rows", "column_kinds", "query", "source", "work")
+    __slots__ = ("columns", "rows", "column_kinds", "query", "source", "work", "bindings")
+    class BindingsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: QueryValue
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[QueryValue, _Mapping]] = ...) -> None: ...
     COLUMNS_FIELD_NUMBER: _ClassVar[int]
     ROWS_FIELD_NUMBER: _ClassVar[int]
     COLUMN_KINDS_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     WORK_FIELD_NUMBER: _ClassVar[int]
+    BINDINGS_FIELD_NUMBER: _ClassVar[int]
     columns: _containers.RepeatedScalarFieldContainer[str]
     rows: _containers.RepeatedCompositeFieldContainer[QueryRow]
     column_kinds: _containers.RepeatedScalarFieldContainer[str]
     query: str
     source: str
     work: int
-    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ...) -> None: ...
+    bindings: _containers.MessageMap[str, QueryValue]
+    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ...) -> None: ...
+
+class QueryValue(_message.Message):
+    __slots__ = ("text", "number")
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    NUMBER_FIELD_NUMBER: _ClassVar[int]
+    text: str
+    number: float
+    def __init__(self, text: _Optional[str] = ..., number: _Optional[float] = ...) -> None: ...
 
 class ListRelationsRequest(_message.Message):
     __slots__ = ("path", "uri", "overlay")
@@ -123,22 +149,28 @@ class ExampleQuery(_message.Message):
     def __init__(self, label: _Optional[str] = ..., query: _Optional[str] = ..., teaches: _Optional[str] = ...) -> None: ...
 
 class EntityQuery(_message.Message):
-    __slots__ = ("kind", "query", "teaches")
+    __slots__ = ("kind", "query", "teaches", "binds")
     KIND_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TEACHES_FIELD_NUMBER: _ClassVar[int]
+    BINDS_FIELD_NUMBER: _ClassVar[int]
     kind: str
     query: str
     teaches: str
-    def __init__(self, kind: _Optional[str] = ..., query: _Optional[str] = ..., teaches: _Optional[str] = ...) -> None: ...
+    binds: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, kind: _Optional[str] = ..., query: _Optional[str] = ..., teaches: _Optional[str] = ..., binds: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SearchQuery(_message.Message):
-    __slots__ = ("query", "teaches")
+    __slots__ = ("query", "teaches", "bind", "pattern")
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TEACHES_FIELD_NUMBER: _ClassVar[int]
+    BIND_FIELD_NUMBER: _ClassVar[int]
+    PATTERN_FIELD_NUMBER: _ClassVar[int]
     query: str
     teaches: str
-    def __init__(self, query: _Optional[str] = ..., teaches: _Optional[str] = ...) -> None: ...
+    bind: str
+    pattern: str
+    def __init__(self, query: _Optional[str] = ..., teaches: _Optional[str] = ..., bind: _Optional[str] = ..., pattern: _Optional[str] = ...) -> None: ...
 
 class ListRelationsResponse(_message.Message):
     __slots__ = ("relations", "examples", "entity_queries", "search_query", "entry")
@@ -165,14 +197,23 @@ class QuerySet(_message.Message):
     def __init__(self, title: _Optional[str] = ..., preamble: _Optional[str] = ..., queries: _Optional[_Iterable[_Union[NamedQuery, _Mapping]]] = ...) -> None: ...
 
 class NamedQuery(_message.Message):
-    __slots__ = ("name", "query", "description")
+    __slots__ = ("name", "query", "description", "bindings")
+    class BindingsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: QueryValue
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[QueryValue, _Mapping]] = ...) -> None: ...
     NAME_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    BINDINGS_FIELD_NUMBER: _ClassVar[int]
     name: str
     query: str
     description: str
-    def __init__(self, name: _Optional[str] = ..., query: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
+    bindings: _containers.MessageMap[str, QueryValue]
+    def __init__(self, name: _Optional[str] = ..., query: _Optional[str] = ..., description: _Optional[str] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ...) -> None: ...
 
 class RunQueriesRequest(_message.Message):
     __slots__ = ("set", "uri", "overlay", "board_uri", "as_named", "work_budget")

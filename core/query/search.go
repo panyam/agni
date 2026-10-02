@@ -13,14 +13,21 @@ package query
 // `str.contains` so the search is case-insensitive via `(?i)` and a reader can type a pattern such
 // as `^U`.
 //
-// The caller substitutes {term} with the reader's text, regex-escaped (see the web client's
-// searchPattern). Escaping is the caller's job because only the caller knows whether the text is a
-// typed name or already a pattern.
+// The caller BINDS ?pattern rather than splicing text into the query (agni issue 793), so the query
+// is the same text for every search. The bound value is Pattern with {term} replaced by the reader's
+// text, regex-escaped (see the web client's searchPattern), since the value is a regex. Escaping is
+// the caller's job because only the caller knows whether the text is a typed name or already a
+// pattern.
 
 // SearchQuery is the find-by-name template, with Teaches carrying the concept a search leaves
 // behind the way an example's does.
 type SearchQuery struct {
-	Query   string
+	Query string
+	// Bind names the variable the caller binds, without its `?`.
+	Bind string
+	// Pattern is the value bound to Bind, with {term} standing for the escaped text. It holds the
+	// (?i) here rather than in each client, so the search is case-insensitive wherever it runs.
+	Pattern string
 	Teaches string
 }
 
@@ -29,7 +36,9 @@ type SearchQuery struct {
 // and the bus label together.
 func Search() SearchQuery {
 	return SearchQuery{
-		Query:   `entity(?name, ?kind), str.match(?name, "(?i){term}")`,
+		Query:   `entity(?name, ?kind), str.match(?name, ?pattern) => ?name, ?kind`,
+		Bind:    "pattern",
+		Pattern: "(?i){term}",
 		Teaches: "entity(?name, ?kind) enumerates what a design NAMES, so a search finds the parts and nets that no connection reaches",
 	}
 }

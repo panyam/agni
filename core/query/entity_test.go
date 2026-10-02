@@ -19,34 +19,42 @@ func TestEntityQueriesParse(t *testing.T) {
 	}
 }
 
-// The client substitutes by placeholder name, so a preset naming one the client cannot fill would
-// reach the reader with a literal "{whatever}" in the query.
-func TestEntityQueriesUseKnownPlaceholders(t *testing.T) {
-	known := map[string]bool{"ref": true, "pin": true, "net": true, "bus": true}
-	// Which placeholders each kind may use, given what a selection of that kind carries.
+// The client binds each variable a preset names from the field of the same name on the selection,
+// so a preset binding one the selection does not carry would ask with that variable free, and one
+// its goal does not use would be refused by the engine (agni issue 793).
+func TestEntityQueriesBindWhatTheSelectionCarries(t *testing.T) {
+	// Which variables each kind may bind, given what a selection of that kind carries.
 	allowed := map[string]map[string]bool{
 		"pin":       {"ref": true, "pin": true},
 		"component": {"ref": true},
 		"net":       {"net": true},
 		"bus":       {"bus": true},
 	}
-	re := regexp.MustCompile(`\{(\w+)\}`)
-
 	for _, e := range EntityQueries() {
-		for _, m := range re.FindAllStringSubmatch(e.Query, -1) {
-			name := m[1]
-			if !known[name] {
-				t.Errorf("preset for %q uses unknown placeholder {%s}", e.Kind, name)
-			}
-			if !allowed[e.Kind][name] {
-				t.Errorf("preset for %q uses {%s}, which a %s selection does not carry", e.Kind, name, e.Kind)
-			}
+		if len(e.Binds) == 0 {
+			t.Errorf("preset for %q binds nothing, so every click asks the same question", e.Kind)
 		}
-		// A placeholder outside quotes would splice a bare token into the query, which parses as a
-		// variable or fails; every one must sit inside a string literal.
-		for _, seg := range strings.Split(e.Query, "{")[1:] {
-			if !strings.HasPrefix(seg, "ref}\"") && !strings.HasPrefix(seg, "pin}\"") && !strings.HasPrefix(seg, "net}\"") && !strings.HasPrefix(seg, "bus}\"") {
-				t.Errorf("preset for %q has a placeholder outside a string literal: {%s", e.Kind, seg)
+		if strings.Contains(e.Query, "{") {
+			t.Errorf("preset for %q still carries a text placeholder: %s", e.Kind, e.Query)
+		}
+		q, err := Parse(e.Query)
+		if err != nil {
+			continue // TestEntityQueriesParse reports it
+		}
+		vals := map[string]Value{}
+		for _, v := range e.Binds {
+			if !allowed[e.Kind][v] {
+				t.Errorf("preset for %q binds ?%s, which a %s selection does not carry", e.Kind, v, e.Kind)
+			}
+			if !regexp.MustCompile(`\?` + v + `\b`).MatchString(e.Query) {
+				t.Errorf("preset for %q binds ?%s, which its query does not use", e.Kind, v)
+			}
+			vals[v] = Text("x")
+		}
+		// Every bound variable must be an input: a projected one would answer the value it was given.
+		for _, c := range q.Columns() {
+			if _, ok := vals[string(c)]; ok {
+				t.Errorf("preset for %q projects ?%s, which it binds", e.Kind, c)
 			}
 		}
 	}

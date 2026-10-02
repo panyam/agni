@@ -11,7 +11,9 @@ import {
   LocateReason,
   cellKind,
   emptyResult,
-  fillSearchQuery,
+  bindingsInUse,
+  formatBinding,
+  searchBindings,
   groupRelations,
   relationTemplate,
 } from "./query.js";
@@ -24,7 +26,7 @@ import {
   tallySeverities,
 } from "./findings.js";
 import { renderMarkdown } from "./markdown.js";
-import { type Selection, askLabel, fillEntityQuery, labelFor, sameSelection, selectionFromCell } from "./selection.js";
+import { type Selection, askLabel, entityBindings, labelFor, sameSelection, selectionFromCell } from "./selection.js";
 import { SheetBadges } from "./sheetbadges.jsx";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
@@ -128,16 +130,23 @@ function QueryPanel(props: {
   entityQueries: () => EntityQueryItem[];
   search: () => SearchItem | null;
   locateNote: () => string;
-  prefill: () => { text: string; n: number };
+  prefill: () => { text: string; bindings: Record<string, string>; n: number };
   selection: () => Selection | null;
   setSelection: (sel: Selection | null) => void;
   currentSheet: () => string;
   findings: () => FindingsState;
-  onRun: (text: string) => void;
+  onRun: (text: string, bindings: Record<string, string>) => void;
   onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
 }) {
   const [text, setText] = createSignal("");
+  // bindings are the values the query's variables are bound to (agni issue 793), set by a search or a
+  // click and shown as chips under the box, so the box keeps the query as the server wrote it and
+  // the values stay visible and editable beside it.
+  const [bindings, setBindings] = createSignal<Record<string, string>>({});
+  // inUse is the bindings the current text still names, which are the ones a run sends and the
+  // chips show.
+  const inUse = () => bindingsInUse(text(), bindings());
   // expanded holds the row indices whose provenance is open. It is view state, so it lives here
   // rather than in the pushed result.
   const [expanded, setExpanded] = createSignal<Set<number>>(new Set());
@@ -178,8 +187,9 @@ function QueryPanel(props: {
     const p = props.prefill();
     if (!p.n) return;
     setText(p.text);
+    setBindings(p.bindings);
     setDrawerOpen(false);
-    props.onRun(p.text);
+    props.onRun(p.text, p.bindings);
   });
 
   // drawerOpen controls the slide-in helper drawer (examples, relations, reference), which keeps
@@ -213,40 +223,44 @@ function QueryPanel(props: {
     const q = text().trim();
     if (q === "" || props.state().loading) return;
     resetForRun();
-    props.onRun(q);
+    props.onRun(q, bindingsInUse(q, bindings()));
   };
   // runExample fills the textarea with a starter query AND runs it (WS14-002), leaving the query in
   // the box to edit.
   const runExample = (e: ExampleItem) => {
     setText(e.query);
+    setBindings({});
     if (props.state().loading) return;
     resetForRun();
-    props.onRun(e.query);
+    props.onRun(e.query, {});
   };
-  // doSearch fills the box with the datalog that answers the reader's name, runs it, and switches the
-  // panel BACK to query mode, so the reader sees the query that answered them and can edit it.
+  // doSearch fills the box with the datalog that answers the reader's name, binds the pattern, runs
+  // it, and switches the panel BACK to query mode, so the reader sees the query and its binding and
+  // can edit either.
   const doSearch = () => {
-    const tmpl = props.search();
+    const s = props.search();
     const t = term().trim();
-    if (!tmpl || t === "" || props.state().loading) return;
-    const q = fillSearchQuery(tmpl.query, t);
-    setText(q);
+    if (!s || t === "" || props.state().loading) return;
+    const b = searchBindings(s, t);
+    setText(s.query);
+    setBindings(b);
     setMode("query");
     resetForRun();
-    props.onRun(q);
+    props.onRun(s.query, b);
   };
   // presetFor is the served click-to-ask query for a selection's kind, or undefined before the
   // catalog has arrived (or for a kind the server writes no preset for).
   const presetFor = (kind: string): EntityQueryItem | undefined => props.entityQueries().find((p) => p.kind === kind);
-  // askAbout fills the box with the preset for what is selected and runs it. It is runExample with the
-  // selection's values spliced in, and leaves the same editable query behind.
+  // askAbout fills the box with the preset for what is selected, binds the selection's values, and
+  // runs it, leaving the same editable query behind.
   const askAbout = (sel: Selection) => {
     const preset = presetFor(sel.kind);
     if (!preset || props.state().loading) return;
-    const q = fillEntityQuery(preset.query, sel);
-    setText(q);
+    const b = entityBindings(preset.binds, sel);
+    setText(preset.query);
+    setBindings(b);
     resetForRun();
-    props.onRun(q);
+    props.onRun(preset.query, b);
   };
   // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
   // selects it, so one answer becomes the subject of the next question. A kind with no selection
@@ -443,6 +457,42 @@ function QueryPanel(props: {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") run();
           }}
         />
+        {/* The values a search or a click bound, one chip per variable the query still names. Each
+            value can be edited, and removing one leaves its variable free, which widens the
+            question. */}
+        <Show when={Object.keys(inUse()).length > 0}>
+          <div class="query-bindings" aria-label="bound values">
+            <For each={Object.entries(inUse())}>
+              {([name, value]) => (
+                <span class="query-binding" title={formatBinding(name, value)}>
+                  <span class="query-binding-name">?{name} =</span>
+                  <input
+                    class="query-binding-value"
+                    aria-label={`value of ?${name}`}
+                    size={Math.max(4, value.length)}
+                    value={value}
+                    onInput={(e) => setBindings({ ...bindings(), [name]: e.currentTarget.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") run();
+                    }}
+                  />
+                  <button
+                    type="button"
+                    class="query-binding-remove"
+                    aria-label={`unbind ?${name}`}
+                    onClick={() => {
+                      const next = { ...bindings() };
+                      delete next[name];
+                      setBindings(next);
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+            </For>
+          </div>
+        </Show>
         <div class="query-actions">
           <button type="button" class="query-run" disabled={props.state().loading || text().trim() === ""} onClick={run}>
             {props.state().loading ? "Running…" : "Run"}
@@ -474,7 +524,9 @@ function QueryPanel(props: {
                   type="button"
                   class="query-ask"
                   disabled={props.state().loading}
-                  title={`${fillEntityQuery(preset().query, sel())}\n\n${preset().teaches}`}
+                  title={`${preset().query}\n${Object.entries(entityBindings(preset().binds, sel()))
+                    .map(([k, v]) => formatBinding(k, v))
+                    .join("\n")}\n\n${preset().teaches}`}
                   onClick={() => askAbout(sel())}
                 >
                   {askLabel(sel())}
@@ -740,7 +792,7 @@ export function queryPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   handlers: {
-    onRun: (text: string) => void;
+    onRun: (text: string, bindings: Record<string, string>) => void;
     onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
     // onInspect opens the check results for one entity. Optional like onLocate, since an embedding
     // host may mount the query panel with no checks panel (C13).
@@ -754,7 +806,7 @@ export function queryPanelIsland(
   // prefill carries a query written FOR the reader (a click on the drawing generates one). The
   // counter makes clicking the same pin twice re-fill and re-run, since an effect over identical
   // text does not fire.
-  const [prefill, setPrefill] = signalView<{ text: string; n: number }>({ text: "", n: 0 });
+  const [prefill, setPrefill] = signalView<{ text: string; bindings: Record<string, string>; n: number }>({ text: "", bindings: {}, n: 0 });
   let prefills = 0;
   // The click-to-ask presets. A signal because the panel RENDERS one (the ask button's hover shows
   // the query and what it teaches) as well as running it. The host looks one up by kind through
@@ -809,13 +861,13 @@ export function queryPanelIsland(
       setRelations,
       setExamples,
       setLocateNote,
-      setQuery: (text: string) => setPrefill({ text, n: ++prefills }),
+      setQuery: (text: string, bindings: Record<string, string> = {}) => setPrefill({ text, bindings, n: ++prefills }),
       setEntityQueries,
       setSearch,
       setSelection,
       setCurrentSheet,
       setFindings,
-      entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind)?.query ?? "",
+      entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind),
     },
   };
 }

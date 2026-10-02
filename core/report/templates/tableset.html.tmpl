@@ -21,6 +21,7 @@
 <h2>{{.Name}}</h2>
 {{if .Description}}<p>{{.Description}}</p>{{end}}
 {{if .Query}}<pre class="q">{{.Query}}</pre>{{end}}
+{{if .Bindings}}<p class="sub">Bound: {{range $i, $b := .Bindings}}{{if $i}}, {{end}}<code>{{$b}}</code>{{end}}</p>{{end}}
 {{if .Error}}
 <p class="note">Could not answer: {{.Error}}</p>
 {{else if .Body}}

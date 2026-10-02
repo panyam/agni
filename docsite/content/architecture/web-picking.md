@@ -46,7 +46,11 @@ a component or net cell reads back as the same `Selection` a canvas click produc
 (`selectionFromCell`). Clicking one locates it, as it always did, and now also selects it, so the
 query panel names what is selected and offers the served preset for that kind as a plain-language
 question. Taking it fills the box and runs, which lands the reader on a fresh set of cells to walk
-from.
+from. The preset's text is the same for every pick. It names the variables to bind
+(`EntityQuery.binds`), and `entityBindings` fills each from the selection field of the same name, so
+the pick reaches the query as a value shown in a chip rather than spliced text (agni issue 793).
+The list is explicit because one preset's input is another's output: the pin preset answers `?net`
+and the net preset asks about one.
 
 Two things are deliberate here. A cell click does not itself re-run the query, because scanning a
 result set and highlighting each row in turn is what the locate affordance was for, and a click that
@@ -103,14 +107,18 @@ A click says where to look and gets back what is there. A search says what a thi
 gets back where it is. Both write datalog into the box and run it, which is why search is a MODE on
 the query panel rather than a widget of its own, and the reader keeps an editable query either way.
 
-The panel's "Find by name" mode takes a term, fills the served template
+The panel's "Find by name" mode takes a term, binds it into the served query
 (`ListRelationsResponse.search_query`, from `query.Search()`), runs it, and hands the panel back to
-query mode so the reader ends up looking at the sentence that answered them. The template ranges over
+query mode so the reader ends up looking at the sentence that answered them, with the term as a
+binding chip beside it. The query text never changes. The client binds `?pattern` to the served
+`pattern` with `{term}` replaced (agni issue 793), so the `(?i)` lives on the server once. The template ranges over
 `entity(?name, ?kind)` because every other relation ranges over an ASSOCIATION, so a search built on
 one silently cannot find a part with no connections or a net with nothing on it. It matches with
 `str.match` and `(?i)` rather than `str.contains`, so case does not have to be guessed at and a reader who
 wants `^U` can write it. The client regex-escapes the typed term (`searchPattern`, mirroring Go's
-`regexp.QuoteMeta`), because `VDD+` and `DATA[7:0]` are ordinary names here.
+`regexp.QuoteMeta`), because `VDD+` and `DATA[7:0]` are ordinary names here. Escaping is still
+needed because the bound value is a regex. A double quote is no longer special, since nothing is
+spliced into a string literal.
 
 **A search result is the one answer set whose rows are not all the same shape**. Kind is normally a
 COLUMN property, since a variable binds at the same relation position in every row. Under
