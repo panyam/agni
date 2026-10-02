@@ -338,20 +338,41 @@ message DatalogAggregate {
 message ProfileDef {
   string name = 1;
   repeated ProfileSignal signals = 2;
-  // host_attr_key / host_attr_val bind the interface to a component that DECLARES it via an attribute
-  // (interface=SPI_NOR). A declared host gives a precise anchor and can flag a wholly-absent bus, which
-  // the naming-convention path cannot. Empty key means no host binding.
-  string host_attr_key = 3;
-  string host_attr_val = 4;
   repeated ProfileRequirement requirements = 5;
-  // host_class binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
-  // against component.device_class (WS3-044). Either binding form, or both; a profile declaring both
-  // binds a host matching either. Empty means no class binding.
+  // host binds the interface to the component that carries it. Absent means no host binding.
   //
-  // It is field 6 because the message shipped without it while Profile.HostClass already existed, so
-  // a class-only host binding was dropped crossing this contract and the profile read as having no
-  // host at all. TestProfileProtoRoundTrip is what now makes that class of omission fail.
-  string host_class = 6;
+  // It replaced three flat fields (agni issue 827) when this message became the schema for the
+  // authoring file as well as the wire, because the file has always nested them under host:. A
+  // reader of an older encoding sees no host, so a deck written before the change must be rewritten.
+  ProfileHost host = 7;
+
+  reserved 3, 4, 6;
+  reserved "host_attr_key", "host_attr_val", "host_class";
+}
+
+// ProfileHost binds an interface to its host component, by a declared attribute (interface=SPI_NOR),
+// by the datasheet's device class (WS3-044), or both. A declared host gives a precise anchor and can
+// flag a wholly-absent bus, which the naming-convention path cannot. A profile declaring both forms
+// binds a host matching either.
+message ProfileHost {
+  // attr and value are the attribute form: the component carries attribute attr set to value.
+  string attr = 1;
+  string value = 2;
+  // class is the device-class form, matched against component.device_class. A class-only binding
+  // was once dropped crossing this contract, and TestProfileProtoRoundTrip is what makes that class
+  // of omission fail now.
+  string class = 3;
+}
+
+// ProfileNamingMap re-binds a built-in profile's signals to a project's net-name suffixes without
+// re-authoring the profile (WS3-054). It is the other shape a profile file takes: a file whose top
+// level carries override is a naming map, and one carrying name is a full ProfileDef.
+message ProfileNamingMap {
+  // override names the built-in profile being re-bound.
+  string override = 1;
+  // suffixes maps a signal's role name (ProfileSignal.name, "TXD") to this project's suffix ("_TX").
+  // A signal it does not name keeps the built-in matcher.
+  map<string, string> suffixes = 2;
 }
 
 // ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
@@ -364,7 +385,7 @@ message ProfileSignal {
   string suffix = 3;
   string glob = 4;
   string regex = 5;
-  bool pull_up = 6;  // the signal needs a pull-up
+  bool pullup = 6;   // the signal needs a pull-up, spelled as profile files have always written it
   // anchor marks the always-present signal the naming-convention completeness check hangs on. At most
   // one, and a profile declaring a completeness requirement must declare it: without an anchor that
   // requirement compiles to nothing, and a check that silently does not exist scores as a pass.

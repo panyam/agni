@@ -6,55 +6,10 @@ import (
 	"sort"
 	"strings"
 
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/internal/yamlpb"
 	"gopkg.in/yaml.v3"
 )
-
-// profileDoc is the YAML wire shape of a Profile declaration (WS3-045). It is a DTO, separate from
-// Profile, so the domain type carries no yaml tags and the file layout can nest (host: {attr, value})
-// where the struct is flat. A customer authors one of these in their overlay; Compile turns it into
-// check rules through the same requirement registry the built-ins use.
-type profileDoc struct {
-	Name         string          `yaml:"name"`
-	Host         *hostDoc        `yaml:"host"`
-	Signals      []signalDoc     `yaml:"signals"`
-	Requirements []requirementDoc `yaml:"requirements"`
-}
-
-// hostDoc is the YAML host binding. attr+value is the declared-attribute form; class is the
-// datasheet device_class form (WS3-044). Either or both; a profile declaring both binds a host that
-// matches either one.
-type hostDoc struct {
-	Attr  string `yaml:"attr"`
-	Value string `yaml:"value"`
-	Class string `yaml:"class"`
-}
-
-type signalDoc struct {
-	Name   string `yaml:"name"`
-	Prefix string `yaml:"prefix"`
-	Suffix string `yaml:"suffix"`
-	Glob   string `yaml:"glob"`
-	Regex  string `yaml:"regex"`
-	PullUp bool   `yaml:"pullup"`
-	Anchor bool   `yaml:"anchor"`
-}
-
-type requirementDoc struct {
-	Type   string            `yaml:"type"`
-	Params map[string]string `yaml:"params"`
-}
-
-// namingMapDoc is the YAML wire shape of a NAMING MAP (WS3-054), with which an overlay re-binds a
-// core profile's signals to this project's net-name suffixes without re-authoring the profile.
-// Override names the core profile (by Name); Suffixes maps a signal ROLE (Signal.Name, e.g. "TXD") to this project's
-// suffix (e.g. "_TX"). Unmapped signals keep the core suffix; structure and requirements come from
-// core unchanged. A file carrying "override:" is a naming map; a file carrying "name:" is a full
-// profile. This is the structure-vs-naming split, where the interface shape stays in core and the
-// naming becomes overlay config.
-type namingMapDoc struct {
-	Override string            `yaml:"override"`
-	Suffixes map[string]string `yaml:"suffixes"`
-}
 
 // Parse reads a YAML profile declaration into a Profile and validates its STRUCTURE (name present, at
 // least one signal, at most one anchor) and every signal's MATCHER (exactly one form, compiling, not
@@ -63,31 +18,47 @@ type namingMapDoc struct {
 // Built-in profiles load through mustParse, which adds ValidateRequirements; external/customer
 // profiles go through Load for the teaching type-check.
 func Parse(b []byte) (Profile, error) {
-	var doc profileDoc
-	if err := yaml.Unmarshal(b, &doc); err != nil {
-		return Profile{}, fmt.Errorf("profile: invalid YAML: %w", err)
+	n, err := profileNode(b)
+	if err != nil {
+		return Profile{}, err
 	}
-	if strings.TrimSpace(doc.Name) == "" {
-		return Profile{}, fmt.Errorf("profile: missing required field \"name\"")
+	var def checkspb.ProfileDef
+	if err := yamlpb.Decode(n, &def); err != nil {
+		return Profile{}, fmt.Errorf("profile: %w", err)
 	}
-	if len(doc.Signals) == 0 {
-		return Profile{}, fmt.Errorf("profile %q: needs at least one signal", doc.Name)
-	}
-	p := Profile{Name: doc.Name}
-	if doc.Host != nil {
-		p.HostAttrKey, p.HostAttrVal = doc.Host.Attr, doc.Host.Value
-		p.HostClass = doc.Host.Class
-	}
-	for _, s := range doc.Signals {
-		p.Signals = append(p.Signals, Signal{Name: s.Name, Prefix: s.Prefix, Suffix: s.Suffix, Glob: s.Glob, Regex: s.Regex, PullUp: s.PullUp, Anchor: s.Anchor})
-	}
-	for _, r := range doc.Requirements {
-		p.Requirements = append(p.Requirements, Requirement{Type: r.Type, Params: r.Params})
-	}
+	p := ProfileFromProto(&def)
 	if err := Validate(p); err != nil {
 		return Profile{}, err
 	}
 	return p, nil
+}
+
+// profileNode parses a profile file's YAML. A file is bound to checkspb.ProfileDef, or to
+// checkspb.ProfileNamingMap when its top level carries override, so the generated messages are the
+// file's schema and a key neither has is an error naming its line (C26, agni issue 827).
+func profileNode(b []byte) (*yaml.Node, error) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return nil, fmt.Errorf("profile: invalid YAML: %w", err)
+	}
+	return &doc, nil
+}
+
+// isNamingMap reports whether a profile file's top level carries override, which makes it a naming
+// map rather than a full declaration.
+func isNamingMap(n *yaml.Node) bool {
+	if n.Kind == yaml.DocumentNode && len(n.Content) == 1 {
+		n = n.Content[0]
+	}
+	if n.Kind != yaml.MappingNode {
+		return false
+	}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		if n.Content[i].Value == "override" {
+			return true
+		}
+	}
+	return false
 }
 
 // Validate reports why a profile cannot do what it says: a missing name, no signals, an unnamed
@@ -143,9 +114,16 @@ func Load(r io.Reader) (Profile, error) {
 		return Profile{}, err
 	}
 	// A doc with "override:" is a naming map over a core profile, not a full declaration.
-	var probe namingMapDoc
-	if err := yaml.Unmarshal(b, &probe); err == nil && strings.TrimSpace(probe.Override) != "" {
-		return loadNamingMap(probe)
+	n, err := profileNode(b)
+	if err != nil {
+		return Profile{}, err
+	}
+	if isNamingMap(n) {
+		var nm checkspb.ProfileNamingMap
+		if err := yamlpb.Decode(n, &nm); err != nil {
+			return Profile{}, fmt.Errorf("naming map: %w", err)
+		}
+		return loadNamingMap(&nm)
 	}
 	p, err := Parse(b)
 	if err != nil {
@@ -186,23 +164,23 @@ func ValidateRequirements(p Profile) error {
 // loadNamingMap resolves a naming map against a built-in profile and applies the suffix remap. Errors
 // teach. An unknown override profile lists the known ones, and a suffix keyed to a role the profile has
 // no signal for names the valid roles.
-func loadNamingMap(doc namingMapDoc) (Profile, error) {
-	core, ok := ByName(doc.Override)
+func loadNamingMap(doc *checkspb.ProfileNamingMap) (Profile, error) {
+	core, ok := ByName(doc.GetOverride())
 	if !ok {
 		return Profile{}, fmt.Errorf("naming map: unknown profile %q (known: %s)",
-			doc.Override, strings.Join(builtinProfileNames(), ", "))
+			doc.GetOverride(), strings.Join(builtinProfileNames(), ", "))
 	}
 	roles := map[string]bool{}
 	for _, s := range core.Signals {
 		roles[s.Name] = true
 	}
-	for role := range doc.Suffixes {
+	for role := range doc.GetSuffixes() {
 		if !roles[role] {
 			return Profile{}, fmt.Errorf("naming map for %q: no signal role %q (roles: %s)",
-				doc.Override, role, strings.Join(profileRoles(core), ", "))
+				doc.GetOverride(), role, strings.Join(profileRoles(core), ", "))
 		}
 	}
-	return applyNamingMap(core, doc.Suffixes), nil
+	return applyNamingMap(core, doc.GetSuffixes()), nil
 }
 
 // applyNamingMap returns a copy of core with each signal whose role (Signal.Name) is in suffixes

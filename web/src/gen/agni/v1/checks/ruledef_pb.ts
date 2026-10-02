@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/checks/ruledef.proto.
  */
 export const file_agni_v1_checks_ruledef: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL2NoZWNrcy9ydWxlZGVmLnByb3RvEg5hZ25pLnYxLmNoZWNrcyJQCghSdWxlRGVjaxIMCgRuYW1lGAEgASgJEg4KBnNvdXJjZRgCIAEoCRImCgVydWxlcxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLlJ1bGVEZWYilgEKB1J1bGVEZWYSKAoEc3BlYxgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNSdWxlSAASKgoFcXVlcnkYAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5RdWVyeVJ1bGVIABItCgdwcm9maWxlGAMgASgLMhouYWduaS52MS5jaGVja3MuUHJvZmlsZURlZkgAQgYKBGJvZHki/wEKCFJ1bGVNZXRhEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRIOCgZpbXBhY3QYBCABKAkSDgoGZGV0YWlsGAUgASgJEjAKBHRhZ3MYBiADKAsyIi5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YS5UYWdzRW50cnkSFgoOb3B0aW9uYWxfcmVhZHMYByADKAkSGwoTcmVxdWlyZXNfY2FwYWJpbGl0eRgIIAMoCRIOCgZyZW1lZHkYCSABKAkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiWgoIU3BlY1J1bGUSJgoEbWV0YRgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlJ1bGVNZXRhEiYKBGJvZHkYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keSLxAQoIU3BlY0JvZHkSDAoEb3ZlchgBIAEoCRIuCgNsZXQYAiADKAsyIS5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keS5MZXRFbnRyeRInCgV3aGVyZRgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByEg8KB21lc3NhZ2UYBCABKAkSJwoFc2NvcGUYBSABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwchpECghMZXRFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybToCOAEitAEKCFNwZWNUZXJtEiYKA2xpdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlNwZWNMaXRIABIOCgRmYWN0GAIgASgJSAASDQoDdmFyGAMgASgJSAASKAoEY2FsbBgEIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNDYWxsSAASLwoIY291bnRfb2YYBSABKAsyGy5hZ25pLnYxLmNoZWNrcy5TcGVjQ291bnRPZkgAQgYKBHRlcm0iOQoHU3BlY0xpdBILCgFzGAEgASgJSAASCwoBaRgCIAEoA0gAEgsKAWIYAyABKAhIAEIHCgV2YWx1ZSI+CghTcGVjQ2FsbBIKCgJmbhgBIAEoCRImCgRhcmdzGAIgAygLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm0iRAoLU3BlY0NvdW50T2YSDAoEb3ZlchgBIAEoCRInCgV3aGVyZRgCIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIu4CCghTcGVjRXhwchIrCgNhbmQYASABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwckxpc3RIABIqCgJvchgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByTGlzdEgAEicKA25vdBgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHBySAASJgoDY21wGAQgASgLMhcuYWduaS52MS5jaGVja3MuU3BlY0NtcEgAEiQKAmluGAUgASgLMhYuYWduaS52MS5jaGVja3MuU3BlY0luSAASKgoFbWF0Y2gYBiABKAsyGS5hZ25pLnYxLmNoZWNrcy5TcGVjTWF0Y2hIABIxCglleGlzdHNfaW4YByABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhpc3RzSW5IABIrCgdpc190cnVlGAggASgLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm1IAEIGCgRleHByIjQKDFNwZWNFeHByTGlzdBIkCgJ4cxgBIAMoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIl8KB1NwZWNDbXASIwoBbBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgoKAm9wGAIgASgJEiMKAXIYAyABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybSI6CgZTcGVjSW4SIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgsKA3NldBgCIAMoCSJBCglTcGVjTWF0Y2gSIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEg8KB3BhdHRlcm4YAiABKAkiRQoMU3BlY0V4aXN0c0luEgwKBG92ZXIYASABKAkSJwoFd2hlcmUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwciLtAQoJUXVlcnlSdWxlEiYKBG1ldGEYASABKAsyGC5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YRIrCgVxdWVyeRgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dRdWVyeRIMCgRraW5kGAMgASgJEhMKC3N1YmplY3RfdmFyGAQgASgJEg8KB3Bpbl92YXIYBSABKAkSDwoHbWVzc2FnZRgGIAEoCRIUCgxwYXJhbV9zeW1ib2wYByABKAkSMAoMY29udGV4dF92YXJzGAggAygLMhouYWduaS52MS5jaGVja3MuQ29udGV4dFZhciI1CgpDb250ZXh0VmFyEgsKA3ZhchgBIAEoCRIMCgRraW5kGAIgASgJEgwKBHJvbGUYAyABKAkiwgEKDERhdGFsb2dRdWVyeRIqCgVydWxlcxgBIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dSdWxlEikKBGdvYWwYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQm9keRIrCgZzZWxlY3QYAyADKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIuCgZoYXZpbmcYBCADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZSJxCgtEYXRhbG9nUnVsZRIpCgRoZWFkGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b20SKQoEYm9keRgCIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5EgwKBGhvcHMYAyABKAUiPwoLRGF0YWxvZ0JvZHkSMAoIbGl0ZXJhbHMYASADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nTGl0ZXJhbCKmAQoORGF0YWxvZ0xpdGVyYWwSKgoDcG9zGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b21IABIqCgNuZWcYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQXRvbUgAEjEKB2NvbXBhcmUYAyABKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZUgAQgkKB2xpdGVyYWwiSgoLRGF0YWxvZ0F0b20SEAoIcmVsYXRpb24YASABKAkSKQoEYXJncxgCIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtInMKDkRhdGFsb2dDb21wYXJlEikKBGxlZnQYASABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIKCgJvcBgCIAEoCRIqCgVyaWdodBgDIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtIocBCgtEYXRhbG9nVGVybRINCgN2YXIYASABKAlIABIwCghjb25zdGFudBgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dWYWx1ZUgAEi8KA2FnZxgDIAEoCzIgLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dBZ2dyZWdhdGVIAEIGCgR0ZXJtIlYKDERhdGFsb2dWYWx1ZRIJCgFzGAEgASgJEhAKA251bRgCIAEoAUgAiAEBEg4KBmFic2VudBgDIAEoCBIRCgliYXNlX3VuaXQYBCABKAlCBgoEX251bSI/ChBEYXRhbG9nQWdncmVnYXRlEgwKBGZ1bmMYASABKAkSCwoDdmFyGAIgASgJEhAKCGRpc3RpbmN0GAMgASgIIsYBCgpQcm9maWxlRGVmEgwKBG5hbWUYASABKAkSLgoHc2lnbmFscxgCIAMoCzIdLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVTaWduYWwSFQoNaG9zdF9hdHRyX2tleRgDIAEoCRIVCg1ob3N0X2F0dHJfdmFsGAQgASgJEjgKDHJlcXVpcmVtZW50cxgFIAMoCzIiLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVSZXF1aXJlbWVudBISCgpob3N0X2NsYXNzGAYgASgJInsKDVByb2ZpbGVTaWduYWwSDAoEbmFtZRgBIAEoCRIOCgZwcmVmaXgYAiABKAkSDgoGc3VmZml4GAMgASgJEgwKBGdsb2IYBCABKAkSDQoFcmVnZXgYBSABKAkSDwoHcHVsbF91cBgGIAEoCBIOCgZhbmNob3IYByABKAgikQEKElByb2ZpbGVSZXF1aXJlbWVudBIMCgR0eXBlGAEgASgJEj4KBnBhcmFtcxgCIAMoCzIuLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVSZXF1aXJlbWVudC5QYXJhbXNFbnRyeRotCgtQYXJhbXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY2hlY2tzYgZwcm90bzM");
+  fileDesc("ChxhZ25pL3YxL2NoZWNrcy9ydWxlZGVmLnByb3RvEg5hZ25pLnYxLmNoZWNrcyJQCghSdWxlRGVjaxIMCgRuYW1lGAEgASgJEg4KBnNvdXJjZRgCIAEoCRImCgVydWxlcxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLlJ1bGVEZWYilgEKB1J1bGVEZWYSKAoEc3BlYxgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNSdWxlSAASKgoFcXVlcnkYAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5RdWVyeVJ1bGVIABItCgdwcm9maWxlGAMgASgLMhouYWduaS52MS5jaGVja3MuUHJvZmlsZURlZkgAQgYKBGJvZHki/wEKCFJ1bGVNZXRhEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRIOCgZpbXBhY3QYBCABKAkSDgoGZGV0YWlsGAUgASgJEjAKBHRhZ3MYBiADKAsyIi5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YS5UYWdzRW50cnkSFgoOb3B0aW9uYWxfcmVhZHMYByADKAkSGwoTcmVxdWlyZXNfY2FwYWJpbGl0eRgIIAMoCRIOCgZyZW1lZHkYCSABKAkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiWgoIU3BlY1J1bGUSJgoEbWV0YRgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlJ1bGVNZXRhEiYKBGJvZHkYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keSLxAQoIU3BlY0JvZHkSDAoEb3ZlchgBIAEoCRIuCgNsZXQYAiADKAsyIS5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keS5MZXRFbnRyeRInCgV3aGVyZRgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByEg8KB21lc3NhZ2UYBCABKAkSJwoFc2NvcGUYBSABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwchpECghMZXRFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybToCOAEitAEKCFNwZWNUZXJtEiYKA2xpdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlNwZWNMaXRIABIOCgRmYWN0GAIgASgJSAASDQoDdmFyGAMgASgJSAASKAoEY2FsbBgEIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNDYWxsSAASLwoIY291bnRfb2YYBSABKAsyGy5hZ25pLnYxLmNoZWNrcy5TcGVjQ291bnRPZkgAQgYKBHRlcm0iOQoHU3BlY0xpdBILCgFzGAEgASgJSAASCwoBaRgCIAEoA0gAEgsKAWIYAyABKAhIAEIHCgV2YWx1ZSI+CghTcGVjQ2FsbBIKCgJmbhgBIAEoCRImCgRhcmdzGAIgAygLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm0iRAoLU3BlY0NvdW50T2YSDAoEb3ZlchgBIAEoCRInCgV3aGVyZRgCIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIu4CCghTcGVjRXhwchIrCgNhbmQYASABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwckxpc3RIABIqCgJvchgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByTGlzdEgAEicKA25vdBgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHBySAASJgoDY21wGAQgASgLMhcuYWduaS52MS5jaGVja3MuU3BlY0NtcEgAEiQKAmluGAUgASgLMhYuYWduaS52MS5jaGVja3MuU3BlY0luSAASKgoFbWF0Y2gYBiABKAsyGS5hZ25pLnYxLmNoZWNrcy5TcGVjTWF0Y2hIABIxCglleGlzdHNfaW4YByABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhpc3RzSW5IABIrCgdpc190cnVlGAggASgLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm1IAEIGCgRleHByIjQKDFNwZWNFeHByTGlzdBIkCgJ4cxgBIAMoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIl8KB1NwZWNDbXASIwoBbBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgoKAm9wGAIgASgJEiMKAXIYAyABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybSI6CgZTcGVjSW4SIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgsKA3NldBgCIAMoCSJBCglTcGVjTWF0Y2gSIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEg8KB3BhdHRlcm4YAiABKAkiRQoMU3BlY0V4aXN0c0luEgwKBG92ZXIYASABKAkSJwoFd2hlcmUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwciLtAQoJUXVlcnlSdWxlEiYKBG1ldGEYASABKAsyGC5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YRIrCgVxdWVyeRgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dRdWVyeRIMCgRraW5kGAMgASgJEhMKC3N1YmplY3RfdmFyGAQgASgJEg8KB3Bpbl92YXIYBSABKAkSDwoHbWVzc2FnZRgGIAEoCRIUCgxwYXJhbV9zeW1ib2wYByABKAkSMAoMY29udGV4dF92YXJzGAggAygLMhouYWduaS52MS5jaGVja3MuQ29udGV4dFZhciI1CgpDb250ZXh0VmFyEgsKA3ZhchgBIAEoCRIMCgRraW5kGAIgASgJEgwKBHJvbGUYAyABKAkiwgEKDERhdGFsb2dRdWVyeRIqCgVydWxlcxgBIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dSdWxlEikKBGdvYWwYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQm9keRIrCgZzZWxlY3QYAyADKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIuCgZoYXZpbmcYBCADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZSJxCgtEYXRhbG9nUnVsZRIpCgRoZWFkGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b20SKQoEYm9keRgCIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5EgwKBGhvcHMYAyABKAUiPwoLRGF0YWxvZ0JvZHkSMAoIbGl0ZXJhbHMYASADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nTGl0ZXJhbCKmAQoORGF0YWxvZ0xpdGVyYWwSKgoDcG9zGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b21IABIqCgNuZWcYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQXRvbUgAEjEKB2NvbXBhcmUYAyABKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZUgAQgkKB2xpdGVyYWwiSgoLRGF0YWxvZ0F0b20SEAoIcmVsYXRpb24YASABKAkSKQoEYXJncxgCIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtInMKDkRhdGFsb2dDb21wYXJlEikKBGxlZnQYASABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIKCgJvcBgCIAEoCRIqCgVyaWdodBgDIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtIocBCgtEYXRhbG9nVGVybRINCgN2YXIYASABKAlIABIwCghjb25zdGFudBgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dWYWx1ZUgAEi8KA2FnZxgDIAEoCzIgLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dBZ2dyZWdhdGVIAEIGCgR0ZXJtIlYKDERhdGFsb2dWYWx1ZRIJCgFzGAEgASgJEhAKA251bRgCIAEoAUgAiAEBEg4KBmFic2VudBgDIAEoCBIRCgliYXNlX3VuaXQYBCABKAlCBgoEX251bSI/ChBEYXRhbG9nQWdncmVnYXRlEgwKBGZ1bmMYASABKAkSCwoDdmFyGAIgASgJEhAKCGRpc3RpbmN0GAMgASgIIusBCgpQcm9maWxlRGVmEgwKBG5hbWUYASABKAkSLgoHc2lnbmFscxgCIAMoCzIdLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVTaWduYWwSOAoMcmVxdWlyZW1lbnRzGAUgAygLMiIuYWduaS52MS5jaGVja3MuUHJvZmlsZVJlcXVpcmVtZW50EikKBGhvc3QYByABKAsyGy5hZ25pLnYxLmNoZWNrcy5Qcm9maWxlSG9zdEoECAMQBEoECAQQBUoECAYQB1INaG9zdF9hdHRyX2tleVINaG9zdF9hdHRyX3ZhbFIKaG9zdF9jbGFzcyI5CgtQcm9maWxlSG9zdBIMCgRhdHRyGAEgASgJEg0KBXZhbHVlGAIgASgJEg0KBWNsYXNzGAMgASgJIpcBChBQcm9maWxlTmFtaW5nTWFwEhAKCG92ZXJyaWRlGAEgASgJEkAKCHN1ZmZpeGVzGAIgAygLMi4uYWduaS52MS5jaGVja3MuUHJvZmlsZU5hbWluZ01hcC5TdWZmaXhlc0VudHJ5Gi8KDVN1ZmZpeGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ6Cg1Qcm9maWxlU2lnbmFsEgwKBG5hbWUYASABKAkSDgoGcHJlZml4GAIgASgJEg4KBnN1ZmZpeBgDIAEoCRIMCgRnbG9iGAQgASgJEg0KBXJlZ2V4GAUgASgJEg4KBnB1bGx1cBgGIAEoCBIOCgZhbmNob3IYByABKAgikQEKElByb2ZpbGVSZXF1aXJlbWVudBIMCgR0eXBlGAEgASgJEj4KBnBhcmFtcxgCIAMoCzIuLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVSZXF1aXJlbWVudC5QYXJhbXNFbnRyeRotCgtQYXJhbXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY2hlY2tzYgZwcm90bzM");
 
 /**
  * PROVISIONAL: nothing consumes this schema yet, so names and shape may change until a front-end or a
@@ -1021,36 +1021,20 @@ export type ProfileDef = Message<"agni.v1.checks.ProfileDef"> & {
   signals: ProfileSignal[];
 
   /**
-   * host_attr_key / host_attr_val bind the interface to a component that DECLARES it via an attribute
-   * (interface=SPI_NOR). A declared host gives a precise anchor and can flag a wholly-absent bus, which
-   * the naming-convention path cannot. Empty key means no host binding.
-   *
-   * @generated from field: string host_attr_key = 3;
-   */
-  hostAttrKey: string;
-
-  /**
-   * @generated from field: string host_attr_val = 4;
-   */
-  hostAttrVal: string;
-
-  /**
    * @generated from field: repeated agni.v1.checks.ProfileRequirement requirements = 5;
    */
   requirements: ProfileRequirement[];
 
   /**
-   * host_class binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
-   * against component.device_class (WS3-044). Either binding form, or both; a profile declaring both
-   * binds a host matching either. Empty means no class binding.
+   * host binds the interface to the component that carries it. Absent means no host binding.
    *
-   * It is field 6 because the message shipped without it while Profile.HostClass already existed, so
-   * a class-only host binding was dropped crossing this contract and the profile read as having no
-   * host at all. TestProfileProtoRoundTrip is what now makes that class of omission fail.
+   * It replaced three flat fields (agni issue 827) when this message became the schema for the
+   * authoring file as well as the wire, because the file has always nested them under host:. A
+   * reader of an older encoding sees no host, so a deck written before the change must be rewritten.
    *
-   * @generated from field: string host_class = 6;
+   * @generated from field: agni.v1.checks.ProfileHost host = 7;
    */
-  hostClass: string;
+  host?: ProfileHost | undefined;
 };
 
 /**
@@ -1059,6 +1043,75 @@ export type ProfileDef = Message<"agni.v1.checks.ProfileDef"> & {
  */
 export const ProfileDefSchema: GenMessage<ProfileDef> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 26);
+
+/**
+ * ProfileHost binds an interface to its host component, by a declared attribute (interface=SPI_NOR),
+ * by the datasheet's device class (WS3-044), or both. A declared host gives a precise anchor and can
+ * flag a wholly-absent bus, which the naming-convention path cannot. A profile declaring both forms
+ * binds a host matching either.
+ *
+ * @generated from message agni.v1.checks.ProfileHost
+ */
+export type ProfileHost = Message<"agni.v1.checks.ProfileHost"> & {
+  /**
+   * attr and value are the attribute form: the component carries attribute attr set to value.
+   *
+   * @generated from field: string attr = 1;
+   */
+  attr: string;
+
+  /**
+   * @generated from field: string value = 2;
+   */
+  value: string;
+
+  /**
+   * class is the device-class form, matched against component.device_class. A class-only binding
+   * was once dropped crossing this contract, and TestProfileProtoRoundTrip is what makes that class
+   * of omission fail now.
+   *
+   * @generated from field: string class = 3;
+   */
+  class: string;
+};
+
+/**
+ * Describes the message agni.v1.checks.ProfileHost.
+ * Use `create(ProfileHostSchema)` to create a new message.
+ */
+export const ProfileHostSchema: GenMessage<ProfileHost> = /*@__PURE__*/
+  messageDesc(file_agni_v1_checks_ruledef, 27);
+
+/**
+ * ProfileNamingMap re-binds a built-in profile's signals to a project's net-name suffixes without
+ * re-authoring the profile (WS3-054). It is the other shape a profile file takes: a file whose top
+ * level carries override is a naming map, and one carrying name is a full ProfileDef.
+ *
+ * @generated from message agni.v1.checks.ProfileNamingMap
+ */
+export type ProfileNamingMap = Message<"agni.v1.checks.ProfileNamingMap"> & {
+  /**
+   * override names the built-in profile being re-bound.
+   *
+   * @generated from field: string override = 1;
+   */
+  override: string;
+
+  /**
+   * suffixes maps a signal's role name (ProfileSignal.name, "TXD") to this project's suffix ("_TX").
+   * A signal it does not name keeps the built-in matcher.
+   *
+   * @generated from field: map<string, string> suffixes = 2;
+   */
+  suffixes: { [key: string]: string };
+};
+
+/**
+ * Describes the message agni.v1.checks.ProfileNamingMap.
+ * Use `create(ProfileNamingMapSchema)` to create a new message.
+ */
+export const ProfileNamingMapSchema: GenMessage<ProfileNamingMap> = /*@__PURE__*/
+  messageDesc(file_agni_v1_checks_ruledef, 28);
 
 /**
  * ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
@@ -1097,11 +1150,11 @@ export type ProfileSignal = Message<"agni.v1.checks.ProfileSignal"> & {
   regex: string;
 
   /**
-   * the signal needs a pull-up
+   * the signal needs a pull-up, spelled as profile files have always written it
    *
-   * @generated from field: bool pull_up = 6;
+   * @generated from field: bool pullup = 6;
    */
-  pullUp: boolean;
+  pullup: boolean;
 
   /**
    * anchor marks the always-present signal the naming-convention completeness check hangs on. At most
@@ -1118,7 +1171,7 @@ export type ProfileSignal = Message<"agni.v1.checks.ProfileSignal"> & {
  * Use `create(ProfileSignalSchema)` to create a new message.
  */
 export const ProfileSignalSchema: GenMessage<ProfileSignal> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 27);
+  messageDesc(file_agni_v1_checks_ruledef, 29);
 
 /**
  * ProfileRequirement is one declared check: a registered requirement-type name plus its parameters.
@@ -1146,5 +1199,5 @@ export type ProfileRequirement = Message<"agni.v1.checks.ProfileRequirement"> & 
  * Use `create(ProfileRequirementSchema)` to create a new message.
  */
 export const ProfileRequirementSchema: GenMessage<ProfileRequirement> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 28);
+  messageDesc(file_agni_v1_checks_ruledef, 30);
 

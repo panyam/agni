@@ -299,38 +299,58 @@ class DatalogAggregate(_message.Message):
     def __init__(self, func: _Optional[str] = ..., var: _Optional[str] = ..., distinct: _Optional[bool] = ...) -> None: ...
 
 class ProfileDef(_message.Message):
-    __slots__ = ("name", "signals", "host_attr_key", "host_attr_val", "requirements", "host_class")
+    __slots__ = ("name", "signals", "requirements", "host")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SIGNALS_FIELD_NUMBER: _ClassVar[int]
-    HOST_ATTR_KEY_FIELD_NUMBER: _ClassVar[int]
-    HOST_ATTR_VAL_FIELD_NUMBER: _ClassVar[int]
     REQUIREMENTS_FIELD_NUMBER: _ClassVar[int]
-    HOST_CLASS_FIELD_NUMBER: _ClassVar[int]
+    HOST_FIELD_NUMBER: _ClassVar[int]
     name: str
     signals: _containers.RepeatedCompositeFieldContainer[ProfileSignal]
-    host_attr_key: str
-    host_attr_val: str
     requirements: _containers.RepeatedCompositeFieldContainer[ProfileRequirement]
-    host_class: str
-    def __init__(self, name: _Optional[str] = ..., signals: _Optional[_Iterable[_Union[ProfileSignal, _Mapping]]] = ..., host_attr_key: _Optional[str] = ..., host_attr_val: _Optional[str] = ..., requirements: _Optional[_Iterable[_Union[ProfileRequirement, _Mapping]]] = ..., host_class: _Optional[str] = ...) -> None: ...
+    host: ProfileHost
+    def __init__(self, name: _Optional[str] = ..., signals: _Optional[_Iterable[_Union[ProfileSignal, _Mapping]]] = ..., requirements: _Optional[_Iterable[_Union[ProfileRequirement, _Mapping]]] = ..., host: _Optional[_Union[ProfileHost, _Mapping]] = ...) -> None: ...
+
+class ProfileHost(_message.Message):
+    __slots__ = ("attr", "value")
+    ATTR_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    CLASS_FIELD_NUMBER: _ClassVar[int]
+    attr: str
+    value: str
+    def __init__(self, attr: _Optional[str] = ..., value: _Optional[str] = ..., **kwargs) -> None: ...
+
+class ProfileNamingMap(_message.Message):
+    __slots__ = ("override", "suffixes")
+    class SuffixesEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    SUFFIXES_FIELD_NUMBER: _ClassVar[int]
+    override: str
+    suffixes: _containers.ScalarMap[str, str]
+    def __init__(self, override: _Optional[str] = ..., suffixes: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ProfileSignal(_message.Message):
-    __slots__ = ("name", "prefix", "suffix", "glob", "regex", "pull_up", "anchor")
+    __slots__ = ("name", "prefix", "suffix", "glob", "regex", "pullup", "anchor")
     NAME_FIELD_NUMBER: _ClassVar[int]
     PREFIX_FIELD_NUMBER: _ClassVar[int]
     SUFFIX_FIELD_NUMBER: _ClassVar[int]
     GLOB_FIELD_NUMBER: _ClassVar[int]
     REGEX_FIELD_NUMBER: _ClassVar[int]
-    PULL_UP_FIELD_NUMBER: _ClassVar[int]
+    PULLUP_FIELD_NUMBER: _ClassVar[int]
     ANCHOR_FIELD_NUMBER: _ClassVar[int]
     name: str
     prefix: str
     suffix: str
     glob: str
     regex: str
-    pull_up: bool
+    pullup: bool
     anchor: bool
-    def __init__(self, name: _Optional[str] = ..., prefix: _Optional[str] = ..., suffix: _Optional[str] = ..., glob: _Optional[str] = ..., regex: _Optional[str] = ..., pull_up: _Optional[bool] = ..., anchor: _Optional[bool] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., prefix: _Optional[str] = ..., suffix: _Optional[str] = ..., glob: _Optional[str] = ..., regex: _Optional[str] = ..., pullup: _Optional[bool] = ..., anchor: _Optional[bool] = ...) -> None: ...
 
 class ProfileRequirement(_message.Message):
     __slots__ = ("type", "params")

@@ -2060,23 +2060,16 @@ func (x *DatalogAggregate) GetDistinct() bool {
 // It carries no RuleMeta: each generated rule names itself from the profile and the requirement, so a
 // single meta block here would have to be either ignored or applied to rules it does not describe.
 type ProfileDef struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Name    string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Signals []*ProfileSignal       `protobuf:"bytes,2,rep,name=signals,proto3" json:"signals,omitempty"`
-	// host_attr_key / host_attr_val bind the interface to a component that DECLARES it via an attribute
-	// (interface=SPI_NOR). A declared host gives a precise anchor and can flag a wholly-absent bus, which
-	// the naming-convention path cannot. Empty key means no host binding.
-	HostAttrKey  string                `protobuf:"bytes,3,opt,name=host_attr_key,json=hostAttrKey,proto3" json:"host_attr_key,omitempty"`
-	HostAttrVal  string                `protobuf:"bytes,4,opt,name=host_attr_val,json=hostAttrVal,proto3" json:"host_attr_val,omitempty"`
-	Requirements []*ProfileRequirement `protobuf:"bytes,5,rep,name=requirements,proto3" json:"requirements,omitempty"`
-	// host_class binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
-	// against component.device_class (WS3-044). Either binding form, or both; a profile declaring both
-	// binds a host matching either. Empty means no class binding.
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Name         string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Signals      []*ProfileSignal       `protobuf:"bytes,2,rep,name=signals,proto3" json:"signals,omitempty"`
+	Requirements []*ProfileRequirement  `protobuf:"bytes,5,rep,name=requirements,proto3" json:"requirements,omitempty"`
+	// host binds the interface to the component that carries it. Absent means no host binding.
 	//
-	// It is field 6 because the message shipped without it while Profile.HostClass already existed, so
-	// a class-only host binding was dropped crossing this contract and the profile read as having no
-	// host at all. TestProfileProtoRoundTrip is what now makes that class of omission fail.
-	HostClass     string `protobuf:"bytes,6,opt,name=host_class,json=hostClass,proto3" json:"host_class,omitempty"`
+	// It replaced three flat fields (agni issue 827) when this message became the schema for the
+	// authoring file as well as the wire, because the file has always nested them under host:. A
+	// reader of an older encoding sees no host, so a deck written before the change must be rewritten.
+	Host          *ProfileHost `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2125,20 +2118,6 @@ func (x *ProfileDef) GetSignals() []*ProfileSignal {
 	return nil
 }
 
-func (x *ProfileDef) GetHostAttrKey() string {
-	if x != nil {
-		return x.HostAttrKey
-	}
-	return ""
-}
-
-func (x *ProfileDef) GetHostAttrVal() string {
-	if x != nil {
-		return x.HostAttrVal
-	}
-	return ""
-}
-
 func (x *ProfileDef) GetRequirements() []*ProfileRequirement {
 	if x != nil {
 		return x.Requirements
@@ -2146,11 +2125,137 @@ func (x *ProfileDef) GetRequirements() []*ProfileRequirement {
 	return nil
 }
 
-func (x *ProfileDef) GetHostClass() string {
+func (x *ProfileDef) GetHost() *ProfileHost {
 	if x != nil {
-		return x.HostClass
+		return x.Host
+	}
+	return nil
+}
+
+// ProfileHost binds an interface to its host component, by a declared attribute (interface=SPI_NOR),
+// by the datasheet's device class (WS3-044), or both. A declared host gives a precise anchor and can
+// flag a wholly-absent bus, which the naming-convention path cannot. A profile declaring both forms
+// binds a host matching either.
+type ProfileHost struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// attr and value are the attribute form: the component carries attribute attr set to value.
+	Attr  string `protobuf:"bytes,1,opt,name=attr,proto3" json:"attr,omitempty"`
+	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// class is the device-class form, matched against component.device_class. A class-only binding
+	// was once dropped crossing this contract, and TestProfileProtoRoundTrip is what makes that class
+	// of omission fail now.
+	Class         string `protobuf:"bytes,3,opt,name=class,proto3" json:"class,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProfileHost) Reset() {
+	*x = ProfileHost{}
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProfileHost) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProfileHost) ProtoMessage() {}
+
+func (x *ProfileHost) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProfileHost.ProtoReflect.Descriptor instead.
+func (*ProfileHost) Descriptor() ([]byte, []int) {
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ProfileHost) GetAttr() string {
+	if x != nil {
+		return x.Attr
 	}
 	return ""
+}
+
+func (x *ProfileHost) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *ProfileHost) GetClass() string {
+	if x != nil {
+		return x.Class
+	}
+	return ""
+}
+
+// ProfileNamingMap re-binds a built-in profile's signals to a project's net-name suffixes without
+// re-authoring the profile (WS3-054). It is the other shape a profile file takes: a file whose top
+// level carries override is a naming map, and one carrying name is a full ProfileDef.
+type ProfileNamingMap struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// override names the built-in profile being re-bound.
+	Override string `protobuf:"bytes,1,opt,name=override,proto3" json:"override,omitempty"`
+	// suffixes maps a signal's role name (ProfileSignal.name, "TXD") to this project's suffix ("_TX").
+	// A signal it does not name keeps the built-in matcher.
+	Suffixes      map[string]string `protobuf:"bytes,2,rep,name=suffixes,proto3" json:"suffixes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProfileNamingMap) Reset() {
+	*x = ProfileNamingMap{}
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProfileNamingMap) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProfileNamingMap) ProtoMessage() {}
+
+func (x *ProfileNamingMap) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProfileNamingMap.ProtoReflect.Descriptor instead.
+func (*ProfileNamingMap) Descriptor() ([]byte, []int) {
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ProfileNamingMap) GetOverride() string {
+	if x != nil {
+		return x.Override
+	}
+	return ""
+}
+
+func (x *ProfileNamingMap) GetSuffixes() map[string]string {
+	if x != nil {
+		return x.Suffixes
+	}
+	return nil
 }
 
 // ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
@@ -2164,7 +2269,7 @@ type ProfileSignal struct {
 	Suffix string                 `protobuf:"bytes,3,opt,name=suffix,proto3" json:"suffix,omitempty"`
 	Glob   string                 `protobuf:"bytes,4,opt,name=glob,proto3" json:"glob,omitempty"`
 	Regex  string                 `protobuf:"bytes,5,opt,name=regex,proto3" json:"regex,omitempty"`
-	PullUp bool                   `protobuf:"varint,6,opt,name=pull_up,json=pullUp,proto3" json:"pull_up,omitempty"` // the signal needs a pull-up
+	Pullup bool                   `protobuf:"varint,6,opt,name=pullup,proto3" json:"pullup,omitempty"` // the signal needs a pull-up, spelled as profile files have always written it
 	// anchor marks the always-present signal the naming-convention completeness check hangs on. At most
 	// one, and a profile declaring a completeness requirement must declare it: without an anchor that
 	// requirement compiles to nothing, and a check that silently does not exist scores as a pass.
@@ -2175,7 +2280,7 @@ type ProfileSignal struct {
 
 func (x *ProfileSignal) Reset() {
 	*x = ProfileSignal{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2187,7 +2292,7 @@ func (x *ProfileSignal) String() string {
 func (*ProfileSignal) ProtoMessage() {}
 
 func (x *ProfileSignal) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2200,7 +2305,7 @@ func (x *ProfileSignal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileSignal.ProtoReflect.Descriptor instead.
 func (*ProfileSignal) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{27}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ProfileSignal) GetName() string {
@@ -2238,9 +2343,9 @@ func (x *ProfileSignal) GetRegex() string {
 	return ""
 }
 
-func (x *ProfileSignal) GetPullUp() bool {
+func (x *ProfileSignal) GetPullup() bool {
 	if x != nil {
-		return x.PullUp
+		return x.Pullup
 	}
 	return false
 }
@@ -2265,7 +2370,7 @@ type ProfileRequirement struct {
 
 func (x *ProfileRequirement) Reset() {
 	*x = ProfileRequirement{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[28]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2277,7 +2382,7 @@ func (x *ProfileRequirement) String() string {
 func (*ProfileRequirement) ProtoMessage() {}
 
 func (x *ProfileRequirement) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[28]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2290,7 +2395,7 @@ func (x *ProfileRequirement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileRequirement.ProtoReflect.Descriptor instead.
 func (*ProfileRequirement) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{28}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ProfileRequirement) GetType() string {
@@ -2441,23 +2546,31 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x10DatalogAggregate\x12\x12\n" +
 	"\x04func\x18\x01 \x01(\tR\x04func\x12\x10\n" +
 	"\x03var\x18\x02 \x01(\tR\x03var\x12\x1a\n" +
-	"\bdistinct\x18\x03 \x01(\bR\bdistinct\"\x88\x02\n" +
+	"\bdistinct\x18\x03 \x01(\bR\bdistinct\"\x8e\x02\n" +
 	"\n" +
 	"ProfileDef\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
-	"\asignals\x18\x02 \x03(\v2\x1d.agni.v1.checks.ProfileSignalR\asignals\x12\"\n" +
-	"\rhost_attr_key\x18\x03 \x01(\tR\vhostAttrKey\x12\"\n" +
-	"\rhost_attr_val\x18\x04 \x01(\tR\vhostAttrVal\x12F\n" +
-	"\frequirements\x18\x05 \x03(\v2\".agni.v1.checks.ProfileRequirementR\frequirements\x12\x1d\n" +
-	"\n" +
-	"host_class\x18\x06 \x01(\tR\thostClass\"\xae\x01\n" +
+	"\asignals\x18\x02 \x03(\v2\x1d.agni.v1.checks.ProfileSignalR\asignals\x12F\n" +
+	"\frequirements\x18\x05 \x03(\v2\".agni.v1.checks.ProfileRequirementR\frequirements\x12/\n" +
+	"\x04host\x18\a \x01(\v2\x1b.agni.v1.checks.ProfileHostR\x04hostJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x06\x10\aR\rhost_attr_keyR\rhost_attr_valR\n" +
+	"host_class\"M\n" +
+	"\vProfileHost\x12\x12\n" +
+	"\x04attr\x18\x01 \x01(\tR\x04attr\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12\x14\n" +
+	"\x05class\x18\x03 \x01(\tR\x05class\"\xb7\x01\n" +
+	"\x10ProfileNamingMap\x12\x1a\n" +
+	"\boverride\x18\x01 \x01(\tR\boverride\x12J\n" +
+	"\bsuffixes\x18\x02 \x03(\v2..agni.v1.checks.ProfileNamingMap.SuffixesEntryR\bsuffixes\x1a;\n" +
+	"\rSuffixesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xad\x01\n" +
 	"\rProfileSignal\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06prefix\x18\x02 \x01(\tR\x06prefix\x12\x16\n" +
 	"\x06suffix\x18\x03 \x01(\tR\x06suffix\x12\x12\n" +
 	"\x04glob\x18\x04 \x01(\tR\x04glob\x12\x14\n" +
-	"\x05regex\x18\x05 \x01(\tR\x05regex\x12\x17\n" +
-	"\apull_up\x18\x06 \x01(\bR\x06pullUp\x12\x16\n" +
+	"\x05regex\x18\x05 \x01(\tR\x05regex\x12\x16\n" +
+	"\x06pullup\x18\x06 \x01(\bR\x06pullup\x12\x16\n" +
 	"\x06anchor\x18\a \x01(\bR\x06anchor\"\xab\x01\n" +
 	"\x12ProfileRequirement\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12F\n" +
@@ -2478,7 +2591,7 @@ func file_agni_v1_checks_ruledef_proto_rawDescGZIP() []byte {
 	return file_agni_v1_checks_ruledef_proto_rawDescData
 }
 
-var file_agni_v1_checks_ruledef_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_agni_v1_checks_ruledef_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_agni_v1_checks_ruledef_proto_goTypes = []any{
 	(*RuleDeck)(nil),           // 0: agni.v1.checks.RuleDeck
 	(*RuleDef)(nil),            // 1: agni.v1.checks.RuleDef
@@ -2507,21 +2620,24 @@ var file_agni_v1_checks_ruledef_proto_goTypes = []any{
 	(*DatalogValue)(nil),       // 24: agni.v1.checks.DatalogValue
 	(*DatalogAggregate)(nil),   // 25: agni.v1.checks.DatalogAggregate
 	(*ProfileDef)(nil),         // 26: agni.v1.checks.ProfileDef
-	(*ProfileSignal)(nil),      // 27: agni.v1.checks.ProfileSignal
-	(*ProfileRequirement)(nil), // 28: agni.v1.checks.ProfileRequirement
-	nil,                        // 29: agni.v1.checks.RuleMeta.TagsEntry
-	nil,                        // 30: agni.v1.checks.SpecBody.LetEntry
-	nil,                        // 31: agni.v1.checks.ProfileRequirement.ParamsEntry
+	(*ProfileHost)(nil),        // 27: agni.v1.checks.ProfileHost
+	(*ProfileNamingMap)(nil),   // 28: agni.v1.checks.ProfileNamingMap
+	(*ProfileSignal)(nil),      // 29: agni.v1.checks.ProfileSignal
+	(*ProfileRequirement)(nil), // 30: agni.v1.checks.ProfileRequirement
+	nil,                        // 31: agni.v1.checks.RuleMeta.TagsEntry
+	nil,                        // 32: agni.v1.checks.SpecBody.LetEntry
+	nil,                        // 33: agni.v1.checks.ProfileNamingMap.SuffixesEntry
+	nil,                        // 34: agni.v1.checks.ProfileRequirement.ParamsEntry
 }
 var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	1,  // 0: agni.v1.checks.RuleDeck.rules:type_name -> agni.v1.checks.RuleDef
 	3,  // 1: agni.v1.checks.RuleDef.spec:type_name -> agni.v1.checks.SpecRule
 	15, // 2: agni.v1.checks.RuleDef.query:type_name -> agni.v1.checks.QueryRule
 	26, // 3: agni.v1.checks.RuleDef.profile:type_name -> agni.v1.checks.ProfileDef
-	29, // 4: agni.v1.checks.RuleMeta.tags:type_name -> agni.v1.checks.RuleMeta.TagsEntry
+	31, // 4: agni.v1.checks.RuleMeta.tags:type_name -> agni.v1.checks.RuleMeta.TagsEntry
 	2,  // 5: agni.v1.checks.SpecRule.meta:type_name -> agni.v1.checks.RuleMeta
 	4,  // 6: agni.v1.checks.SpecRule.body:type_name -> agni.v1.checks.SpecBody
-	30, // 7: agni.v1.checks.SpecBody.let:type_name -> agni.v1.checks.SpecBody.LetEntry
+	32, // 7: agni.v1.checks.SpecBody.let:type_name -> agni.v1.checks.SpecBody.LetEntry
 	9,  // 8: agni.v1.checks.SpecBody.where:type_name -> agni.v1.checks.SpecExpr
 	9,  // 9: agni.v1.checks.SpecBody.scope:type_name -> agni.v1.checks.SpecExpr
 	6,  // 10: agni.v1.checks.SpecTerm.lit:type_name -> agni.v1.checks.SpecLit
@@ -2561,15 +2677,17 @@ var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	23, // 44: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
 	24, // 45: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
 	25, // 46: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
-	27, // 47: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
-	28, // 48: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
-	31, // 49: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
-	5,  // 50: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
-	51, // [51:51] is the sub-list for method output_type
-	51, // [51:51] is the sub-list for method input_type
-	51, // [51:51] is the sub-list for extension type_name
-	51, // [51:51] is the sub-list for extension extendee
-	0,  // [0:51] is the sub-list for field type_name
+	29, // 47: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
+	30, // 48: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
+	27, // 49: agni.v1.checks.ProfileDef.host:type_name -> agni.v1.checks.ProfileHost
+	33, // 50: agni.v1.checks.ProfileNamingMap.suffixes:type_name -> agni.v1.checks.ProfileNamingMap.SuffixesEntry
+	34, // 51: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
+	5,  // 52: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
+	53, // [53:53] is the sub-list for method output_type
+	53, // [53:53] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_ruledef_proto_init() }
@@ -2621,7 +2739,7 @@ func file_agni_v1_checks_ruledef_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_checks_ruledef_proto_rawDesc), len(file_agni_v1_checks_ruledef_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   32,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

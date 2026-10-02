@@ -15,16 +15,15 @@
 package naming
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/core/check"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/internal/yamlpb"
 )
 
 // Load reads and parses a convention YAML file.
@@ -38,24 +37,18 @@ func Load(path string) (*configpb.NamingConvention, error) {
 
 // Parse decodes a convention config.
 //
-// YAML has no protobuf binding, so it is converted to JSON and bound by protojson, which keeps the
-// generated message as the single schema while an operator still writes (and comments) YAML. Decoding
-// is STRICT, since protojson rejects an unknown field by default, so a typo'd key fails instead of
-// silently configuring nothing.
+// The generated message is the one schema and YAML is how an operator writes it (C26). internal/yamlpb
+// binds it field by field, so an unknown key fails with its line instead of silently configuring
+// nothing, and a scalar takes its field's type, so `name: 2024` is the convention named "2024". It is
+// the same binding a project's `conventions:` section goes through, so a standalone --conventions file
+// and that section accept exactly the same documents (agni issue 827).
 func Parse(b []byte) (*configpb.NamingConvention, error) {
-	var tree any
-	if err := yaml.Unmarshal(b, &tree); err != nil {
-		return nil, fmt.Errorf("naming config: %w", err)
-	}
-	if tree == nil {
-		return &configpb.NamingConvention{}, nil
-	}
-	j, err := json.Marshal(tree)
-	if err != nil {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
 		return nil, fmt.Errorf("naming config: %w", err)
 	}
 	var cfg configpb.NamingConvention
-	if err := protojson.Unmarshal(j, &cfg); err != nil {
+	if err := yamlpb.Decode(&doc, &cfg); err != nil {
 		return nil, fmt.Errorf("naming config: %w", err)
 	}
 	return &cfg, nil
