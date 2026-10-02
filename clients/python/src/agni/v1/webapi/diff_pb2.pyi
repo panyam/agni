@@ -8,12 +8,14 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DiffDesignsRequest(_message.Message):
-    __slots__ = ("a_uri", "b_uri")
+    __slots__ = ("a_uri", "b_uri", "rename_approx")
     A_URI_FIELD_NUMBER: _ClassVar[int]
     B_URI_FIELD_NUMBER: _ClassVar[int]
+    RENAME_APPROX_FIELD_NUMBER: _ClassVar[int]
     a_uri: str
     b_uri: str
-    def __init__(self, a_uri: _Optional[str] = ..., b_uri: _Optional[str] = ...) -> None: ...
+    rename_approx: bool
+    def __init__(self, a_uri: _Optional[str] = ..., b_uri: _Optional[str] = ..., rename_approx: _Optional[bool] = ...) -> None: ...
 
 class DiffReport(_message.Message):
     __slots__ = ("components_added", "components_removed", "components_changed", "nets")

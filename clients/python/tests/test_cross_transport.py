@@ -86,7 +86,6 @@ _MANIFEST = checks_pb2.ReviewManifest(
     ],
 )
 
-DIFF_GEOMETRY = "agni issue 737: the CLI skips the service's sheet and placement annotation"
 LAYOUT_TIERS = "agni issue 736: GetLayoutReport does not resolve tiers, so the folder reads as nothing"
 
 # A set whose preamble every query reads, and the same set with one query the design cannot answer:
@@ -167,16 +166,11 @@ CASES: List[Case] = [
         ),
     ),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET_WITH_TYPO)),
+    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn")),
+    # A near-rename, asked for (agni issue 817): rev C renames PMIC_EN and adds a pull-up to it.
     Case(
         "DiffService/DiffDesigns",
-        lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn"),
-        {
-            "component_sheets_b": DIFF_GEOMETRY,
-            "net_sheets_a": DIFF_GEOMETRY,
-            "net_sheets_b": DIFF_GEOMETRY,
-            "shared_placements_a": DIFF_GEOMETRY,
-            "shared_placements_b": DIFF_GEOMETRY,
-        },
+        lambda c: c.diff_designs(a_uri=DESIGN + "/gateway-rev-b.edn", b_uri=DESIGN + "/gateway-rev-c.edn", rename_approx=True),
     ),
     Case(
         "ReviewService/CreateReview",

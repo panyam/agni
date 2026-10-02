@@ -1,0 +1,6 @@
+# Revision C renames PMIC_EN and adds a pull-up to it. Without the flag that reads as one deleted and
+# one new net; with it the two are paired, with the evidence behind the pairing.
+fixture: examples/tutorial-project
+steps:
+  - script: agni diff designs/gateway/gateway-rev-b.edn designs/gateway/gateway-rev-c.edn
+  - script: agni diff --rename-approx designs/gateway/gateway-rev-b.edn designs/gateway/gateway-rev-c.edn

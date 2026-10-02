@@ -25,6 +25,12 @@ message DiffDesignsRequest {
   // a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
   string a_uri = 1;
   string b_uri = 2;
+  // rename_approx also pairs a net that was renamed AND changed slightly with its old self,
+  // reported as renamed-approx with the evidence behind each pairing (agni issue 817). Off by
+  // default, as `agni diff --rename-approx` is: the pass ASSIGNS a best match among candidates
+  // rather than recovering a fact, so a consumer opts in. The thresholds are the calibrated
+  // defaults (diff.DefaultRenameOptions).
+  bool rename_approx = 3;
 }
 
 // DiffReport is the wire form of diff.Report: the classified component and net changes

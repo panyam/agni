@@ -27,8 +27,14 @@ const (
 type DiffDesignsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
-	AUri          string `protobuf:"bytes,1,opt,name=a_uri,json=aUri,proto3" json:"a_uri,omitempty"`
-	BUri          string `protobuf:"bytes,2,opt,name=b_uri,json=bUri,proto3" json:"b_uri,omitempty"`
+	AUri string `protobuf:"bytes,1,opt,name=a_uri,json=aUri,proto3" json:"a_uri,omitempty"`
+	BUri string `protobuf:"bytes,2,opt,name=b_uri,json=bUri,proto3" json:"b_uri,omitempty"`
+	// rename_approx also pairs a net that was renamed AND changed slightly with its old self,
+	// reported as renamed-approx with the evidence behind each pairing (agni issue 817). Off by
+	// default, as `agni diff --rename-approx` is: the pass ASSIGNS a best match among candidates
+	// rather than recovering a fact, so a consumer opts in. The thresholds are the calibrated
+	// defaults (diff.DefaultRenameOptions).
+	RenameApprox  bool `protobuf:"varint,3,opt,name=rename_approx,json=renameApprox,proto3" json:"rename_approx,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -75,6 +81,13 @@ func (x *DiffDesignsRequest) GetBUri() string {
 		return x.BUri
 	}
 	return ""
+}
+
+func (x *DiffDesignsRequest) GetRenameApprox() bool {
+	if x != nil {
+		return x.RenameApprox
+	}
+	return false
 }
 
 // DiffReport is the wire form of diff.Report: the classified component and net changes
@@ -692,10 +705,11 @@ var File_agni_v1_webapi_diff_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\n" +
-	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\">\n" +
+	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"c\n" +
 	"\x12DiffDesignsRequest\x12\x13\n" +
 	"\x05a_uri\x18\x01 \x01(\tR\x04aUri\x12\x13\n" +
-	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\"\x9c\b\n" +
+	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\x12#\n" +
+	"\rrename_approx\x18\x03 \x01(\bR\frenameApprox\"\x9c\b\n" +
 	"\n" +
 	"DiffReport\x12)\n" +
 	"\x10components_added\x18\x01 \x03(\tR\x0fcomponentsAdded\x12-\n" +

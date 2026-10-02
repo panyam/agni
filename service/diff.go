@@ -83,7 +83,9 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	resp := DiffResponseProto(diff.Designs(a, b))
+	opts := diff.DefaultRenameOptions()
+	opts.Enabled = req.GetRenameApprox()
+	resp := DiffResponseProto(diff.Designs(a, b, opts))
 	gA := BuildGeometry(ctx, s.loader, aURI, aOpts...)
 	gB := BuildGeometry(ctx, s.loader, bURI, bOpts...)
 	// Plain netlist models, NOT BuildModel. Diff runs no rules and annotateDiffSheets reads only

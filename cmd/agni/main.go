@@ -1075,6 +1075,12 @@ func diffCmd() *cobra.Command {
 		Short: "Structural diff between two revisions of a design (over the IR)",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// json is the message DiffDesigns returns, so it goes through the service (C31, agni
+			// issues 737 and 817): the CLI is a client of the rpc rather than a second composition
+			// of it, and the sheet and placement maps the service fills are in its output too.
+			if format == "json" {
+				return diffViaService(cmd, args[0], args[1], renameApprox)
+			}
 			a, err := readDesign(args[0])
 			if err != nil {
 				return err
@@ -1087,10 +1093,7 @@ func diffCmd() *cobra.Command {
 			opts.Enabled = renameApprox
 			rep := diff.Designs(a, b, opts)
 			w := cmd.OutOrStdout()
-			switch format {
-			case "json":
-				return writeDiffJSON(w, rep)
-			case "csv":
+			if format == "csv" {
 				return writeDiffCSV(w, rep)
 			}
 			fmt.Fprintf(w, "diff %s -> %s\n\n", args[0], args[1])

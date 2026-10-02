@@ -256,8 +256,11 @@ def _review_stdin(req: Message) -> str:
 
 
 def _diff_argv(req: Message) -> List[str]:
-    _only(req, ("a_uri", "b_uri"))
-    return ["diff", req.a_uri, req.b_uri, "--format", "json"]
+    _only(req, ("a_uri", "b_uri", "rename_approx"))
+    out = ["diff", req.a_uri, req.b_uri, "--format", "json"]
+    if req.rename_approx:
+        out.append("--rename-approx")
+    return out
 
 
 def _trace_argv(req: Message) -> List[str]:

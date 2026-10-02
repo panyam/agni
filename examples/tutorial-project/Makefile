@@ -21,7 +21,7 @@ DIR = designs/$(DESIGN)
 # by a wildcard so a project missing a tier still ran. That is what per-design config replaced.
 TIERS =
 
-.PHONY: help stats check review coverage diff report views check-views regen-views
+.PHONY: help stats check review coverage diff diff-approx report views check-views regen-views
 
 # The KiCad schematic and the board are GENERATED from the EDIF netlist, so all three views describe
 # the same design by construction. Regenerate after editing the netlist, then re-run check-views.
@@ -44,6 +44,9 @@ coverage: ## Per-area rollup: how many items each area actually decided
 
 diff: ## Structural diff of the two bundled revisions
 	@$(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway-rev-b.edn
+
+diff-approx: ## Diff rev B against rev C, pairing the net it renamed and rewired
+	@$(AGNI) diff --rename-approx $(DIR)/gateway-rev-b.edn $(DIR)/gateway-rev-c.edn
 
 report: ## Write the review as a self-contained results document you can re-render later
 	@mkdir -p reports/$(DESIGN)

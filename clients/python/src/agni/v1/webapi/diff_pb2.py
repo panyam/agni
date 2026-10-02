@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from agni.v1.ir import ir_pb2 as agni_dot_v1_dot_ir_dot_ir__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19\x61gni/v1/webapi/diff.proto\x12\x0e\x61gni.v1.webapi\x1a\x13\x61gni/v1/ir/ir.proto\">\n\x12\x44iffDesignsRequest\x12\x13\n\x05\x61_uri\x18\x01 \x01(\tR\x04\x61Uri\x12\x13\n\x05\x62_uri\x18\x02 \x01(\tR\x04\x62Uri\"\x9c\x08\n\nDiffReport\x12)\n\x10\x63omponents_added\x18\x01 \x03(\tR\x0f\x63omponentsAdded\x12-\n\x12\x63omponents_removed\x18\x02 \x03(\tR\x11\x63omponentsRemoved\x12Y\n\x12\x63omponents_changed\x18\x03 \x03(\x0b\x32*.agni.v1.webapi.DiffReport.ComponentChangeR\x11\x63omponentsChanged\x12\x38\n\x04nets\x18\x04 \x03(\x0b\x32$.agni.v1.webapi.DiffReport.NetChangeR\x04nets\x1a\x64\n\x0f\x43omponentChange\x12\x17\n\x07ref_des\x18\x01 \x01(\tR\x06refDes\x12\x14\n\x05\x66ield\x18\x02 \x01(\tR\x05\x66ield\x12\x10\n\x03old\x18\x03 \x01(\tR\x03old\x12\x10\n\x03new\x18\x04 \x01(\tR\x03new\x1a\xa7\x02\n\tNetChange\x12\x12\n\x04kind\x18\x01 \x01(\tR\x04kind\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n\x08old_name\x18\x03 \x01(\tR\x07oldName\x12\x14\n\x05\x61\x64\x64\x65\x64\x18\x04 \x03(\tR\x05\x61\x64\x64\x65\x64\x12\x18\n\x07removed\x18\x05 \x03(\tR\x07removed\x12\x31\n\x08old_prov\x18\x06 \x01(\x0b\x32\x16.agni.v1.ir.ProvenanceR\x07oldProv\x12\x31\n\x08new_prov\x18\x07 \x01(\x0b\x32\x16.agni.v1.ir.ProvenanceR\x07newProv\x12\x41\n\x06\x61pprox\x18\x08 \x01(\x0b\x32).agni.v1.webapi.DiffReport.RenameEvidenceR\x06\x61pprox\x1a\x8e\x03\n\x0eRenameEvidence\x12!\n\x0cold_coverage\x18\x01 \x01(\x01R\x0boldCoverage\x12\x38\n\x18old_coverage_significant\x18\x02 \x01(\x01R\x16oldCoverageSignificant\x12\x38\n\x18new_coverage_significant\x18\x03 \x01(\x01R\x16newCoverageSignificant\x12\x18\n\x07overlap\x18\x04 \x01(\x05R\x07overlap\x12/\n\x13overlap_significant\x18\x05 \x01(\x05R\x12overlapSignificant\x12#\n\rold_endpoints\x18\x06 \x01(\x05R\x0coldEndpoints\x12#\n\rnew_endpoints\x18\x07 \x01(\x05R\x0cnewEndpoints\x12\'\n\x0fold_significant\x18\x08 \x01(\x05R\x0eoldSignificant\x12\'\n\x0fnew_significant\x18\t \x01(\x05R\x0enewSignificant\"\xe2\r\n\x13\x44iffDesignsResponse\x12\x32\n\x06report\x18\x01 \x01(\x0b\x32\x1a.agni.v1.webapi.DiffReportR\x06report\x12\x63\n\x10\x63omponent_status\x18\x02 \x03(\x0b\x32\x38.agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntryR\x0f\x63omponentStatus\x12Q\n\nnet_status\x18\x03 \x03(\x0b\x32\x32.agni.v1.webapi.DiffDesignsResponse.NetStatusEntryR\tnetStatus\x12g\n\x12\x63omponent_sheets_a\x18\x04 \x03(\x0b\x32\x39.agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntryR\x10\x63omponentSheetsA\x12g\n\x12\x63omponent_sheets_b\x18\x05 \x03(\x0b\x32\x39.agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntryR\x10\x63omponentSheetsB\x12U\n\x0cnet_sheets_a\x18\x06 \x03(\x0b\x32\x33.agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntryR\nnetSheetsA\x12U\n\x0cnet_sheets_b\x18\x07 \x03(\x0b\x32\x33.agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntryR\nnetSheetsB\x12j\n\x13shared_placements_a\x18\x08 \x03(\x0b\x32:.agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntryR\x11sharedPlacementsA\x12j\n\x13shared_placements_b\x18\t \x03(\x0b\x32:.agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntryR\x11sharedPlacementsB\x1a\x42\n\x14\x43omponentStatusEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x1a<\n\x0eNetStatusEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x1a\x1c\n\x08SheetIds\x12\x10\n\x03ids\x18\x01 \x03(\tR\x03ids\x1aq\n\x15\x43omponentSheetsAEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1aq\n\x15\x43omponentSheetsBEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1ak\n\x0fNetSheetsAEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1ak\n\x0fNetSheetsBEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1a=\n\tPlacement\x12\x14\n\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x0c\n\x01x\x18\x02 \x01(\x01R\x01x\x12\x0c\n\x01y\x18\x03 \x01(\x01R\x01y\x1as\n\x16SharedPlacementsAEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x43\n\x05value\x18\x02 \x01(\x0b\x32-.agni.v1.webapi.DiffDesignsResponse.PlacementR\x05value:\x02\x38\x01\x1as\n\x16SharedPlacementsBEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x43\n\x05value\x18\x02 \x01(\x0b\x32-.agni.v1.webapi.DiffDesignsResponse.PlacementR\x05value:\x02\x38\x01\x32\x65\n\x0b\x44iffService\x12V\n\x0b\x44iffDesigns\x12\".agni.v1.webapi.DiffDesignsRequest\x1a#.agni.v1.webapi.DiffDesignsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19\x61gni/v1/webapi/diff.proto\x12\x0e\x61gni.v1.webapi\x1a\x13\x61gni/v1/ir/ir.proto\"c\n\x12\x44iffDesignsRequest\x12\x13\n\x05\x61_uri\x18\x01 \x01(\tR\x04\x61Uri\x12\x13\n\x05\x62_uri\x18\x02 \x01(\tR\x04\x62Uri\x12#\n\rrename_approx\x18\x03 \x01(\x08R\x0crenameApprox\"\x9c\x08\n\nDiffReport\x12)\n\x10\x63omponents_added\x18\x01 \x03(\tR\x0f\x63omponentsAdded\x12-\n\x12\x63omponents_removed\x18\x02 \x03(\tR\x11\x63omponentsRemoved\x12Y\n\x12\x63omponents_changed\x18\x03 \x03(\x0b\x32*.agni.v1.webapi.DiffReport.ComponentChangeR\x11\x63omponentsChanged\x12\x38\n\x04nets\x18\x04 \x03(\x0b\x32$.agni.v1.webapi.DiffReport.NetChangeR\x04nets\x1a\x64\n\x0f\x43omponentChange\x12\x17\n\x07ref_des\x18\x01 \x01(\tR\x06refDes\x12\x14\n\x05\x66ield\x18\x02 \x01(\tR\x05\x66ield\x12\x10\n\x03old\x18\x03 \x01(\tR\x03old\x12\x10\n\x03new\x18\x04 \x01(\tR\x03new\x1a\xa7\x02\n\tNetChange\x12\x12\n\x04kind\x18\x01 \x01(\tR\x04kind\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n\x08old_name\x18\x03 \x01(\tR\x07oldName\x12\x14\n\x05\x61\x64\x64\x65\x64\x18\x04 \x03(\tR\x05\x61\x64\x64\x65\x64\x12\x18\n\x07removed\x18\x05 \x03(\tR\x07removed\x12\x31\n\x08old_prov\x18\x06 \x01(\x0b\x32\x16.agni.v1.ir.ProvenanceR\x07oldProv\x12\x31\n\x08new_prov\x18\x07 \x01(\x0b\x32\x16.agni.v1.ir.ProvenanceR\x07newProv\x12\x41\n\x06\x61pprox\x18\x08 \x01(\x0b\x32).agni.v1.webapi.DiffReport.RenameEvidenceR\x06\x61pprox\x1a\x8e\x03\n\x0eRenameEvidence\x12!\n\x0cold_coverage\x18\x01 \x01(\x01R\x0boldCoverage\x12\x38\n\x18old_coverage_significant\x18\x02 \x01(\x01R\x16oldCoverageSignificant\x12\x38\n\x18new_coverage_significant\x18\x03 \x01(\x01R\x16newCoverageSignificant\x12\x18\n\x07overlap\x18\x04 \x01(\x05R\x07overlap\x12/\n\x13overlap_significant\x18\x05 \x01(\x05R\x12overlapSignificant\x12#\n\rold_endpoints\x18\x06 \x01(\x05R\x0coldEndpoints\x12#\n\rnew_endpoints\x18\x07 \x01(\x05R\x0cnewEndpoints\x12\'\n\x0fold_significant\x18\x08 \x01(\x05R\x0eoldSignificant\x12\'\n\x0fnew_significant\x18\t \x01(\x05R\x0enewSignificant\"\xe2\r\n\x13\x44iffDesignsResponse\x12\x32\n\x06report\x18\x01 \x01(\x0b\x32\x1a.agni.v1.webapi.DiffReportR\x06report\x12\x63\n\x10\x63omponent_status\x18\x02 \x03(\x0b\x32\x38.agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntryR\x0f\x63omponentStatus\x12Q\n\nnet_status\x18\x03 \x03(\x0b\x32\x32.agni.v1.webapi.DiffDesignsResponse.NetStatusEntryR\tnetStatus\x12g\n\x12\x63omponent_sheets_a\x18\x04 \x03(\x0b\x32\x39.agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntryR\x10\x63omponentSheetsA\x12g\n\x12\x63omponent_sheets_b\x18\x05 \x03(\x0b\x32\x39.agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntryR\x10\x63omponentSheetsB\x12U\n\x0cnet_sheets_a\x18\x06 \x03(\x0b\x32\x33.agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntryR\nnetSheetsA\x12U\n\x0cnet_sheets_b\x18\x07 \x03(\x0b\x32\x33.agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntryR\nnetSheetsB\x12j\n\x13shared_placements_a\x18\x08 \x03(\x0b\x32:.agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntryR\x11sharedPlacementsA\x12j\n\x13shared_placements_b\x18\t \x03(\x0b\x32:.agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntryR\x11sharedPlacementsB\x1a\x42\n\x14\x43omponentStatusEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x1a<\n\x0eNetStatusEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x1a\x1c\n\x08SheetIds\x12\x10\n\x03ids\x18\x01 \x03(\tR\x03ids\x1aq\n\x15\x43omponentSheetsAEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1aq\n\x15\x43omponentSheetsBEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1ak\n\x0fNetSheetsAEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1ak\n\x0fNetSheetsBEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x42\n\x05value\x18\x02 \x01(\x0b\x32,.agni.v1.webapi.DiffDesignsResponse.SheetIdsR\x05value:\x02\x38\x01\x1a=\n\tPlacement\x12\x14\n\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x0c\n\x01x\x18\x02 \x01(\x01R\x01x\x12\x0c\n\x01y\x18\x03 \x01(\x01R\x01y\x1as\n\x16SharedPlacementsAEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x43\n\x05value\x18\x02 \x01(\x0b\x32-.agni.v1.webapi.DiffDesignsResponse.PlacementR\x05value:\x02\x38\x01\x1as\n\x16SharedPlacementsBEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x43\n\x05value\x18\x02 \x01(\x0b\x32-.agni.v1.webapi.DiffDesignsResponse.PlacementR\x05value:\x02\x38\x01\x32\x65\n\x0b\x44iffService\x12V\n\x0b\x44iffDesigns\x12\".agni.v1.webapi.DiffDesignsRequest\x1a#.agni.v1.webapi.DiffDesignsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -50,37 +50,37 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSBENTRY']._loaded_options = None
   _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSBENTRY']._serialized_options = b'8\001'
   _globals['_DIFFDESIGNSREQUEST']._serialized_start=66
-  _globals['_DIFFDESIGNSREQUEST']._serialized_end=128
-  _globals['_DIFFREPORT']._serialized_start=131
-  _globals['_DIFFREPORT']._serialized_end=1183
-  _globals['_DIFFREPORT_COMPONENTCHANGE']._serialized_start=384
-  _globals['_DIFFREPORT_COMPONENTCHANGE']._serialized_end=484
-  _globals['_DIFFREPORT_NETCHANGE']._serialized_start=487
-  _globals['_DIFFREPORT_NETCHANGE']._serialized_end=782
-  _globals['_DIFFREPORT_RENAMEEVIDENCE']._serialized_start=785
-  _globals['_DIFFREPORT_RENAMEEVIDENCE']._serialized_end=1183
-  _globals['_DIFFDESIGNSRESPONSE']._serialized_start=1186
-  _globals['_DIFFDESIGNSRESPONSE']._serialized_end=2948
-  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSTATUSENTRY']._serialized_start=2045
-  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSTATUSENTRY']._serialized_end=2111
-  _globals['_DIFFDESIGNSRESPONSE_NETSTATUSENTRY']._serialized_start=2113
-  _globals['_DIFFDESIGNSRESPONSE_NETSTATUSENTRY']._serialized_end=2173
-  _globals['_DIFFDESIGNSRESPONSE_SHEETIDS']._serialized_start=2175
-  _globals['_DIFFDESIGNSRESPONSE_SHEETIDS']._serialized_end=2203
-  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSAENTRY']._serialized_start=2205
-  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSAENTRY']._serialized_end=2318
-  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSBENTRY']._serialized_start=2320
-  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSBENTRY']._serialized_end=2433
-  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSAENTRY']._serialized_start=2435
-  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSAENTRY']._serialized_end=2542
-  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSBENTRY']._serialized_start=2544
-  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSBENTRY']._serialized_end=2651
-  _globals['_DIFFDESIGNSRESPONSE_PLACEMENT']._serialized_start=2653
-  _globals['_DIFFDESIGNSRESPONSE_PLACEMENT']._serialized_end=2714
-  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSAENTRY']._serialized_start=2716
-  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSAENTRY']._serialized_end=2831
-  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSBENTRY']._serialized_start=2833
-  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSBENTRY']._serialized_end=2948
-  _globals['_DIFFSERVICE']._serialized_start=2950
-  _globals['_DIFFSERVICE']._serialized_end=3051
+  _globals['_DIFFDESIGNSREQUEST']._serialized_end=165
+  _globals['_DIFFREPORT']._serialized_start=168
+  _globals['_DIFFREPORT']._serialized_end=1220
+  _globals['_DIFFREPORT_COMPONENTCHANGE']._serialized_start=421
+  _globals['_DIFFREPORT_COMPONENTCHANGE']._serialized_end=521
+  _globals['_DIFFREPORT_NETCHANGE']._serialized_start=524
+  _globals['_DIFFREPORT_NETCHANGE']._serialized_end=819
+  _globals['_DIFFREPORT_RENAMEEVIDENCE']._serialized_start=822
+  _globals['_DIFFREPORT_RENAMEEVIDENCE']._serialized_end=1220
+  _globals['_DIFFDESIGNSRESPONSE']._serialized_start=1223
+  _globals['_DIFFDESIGNSRESPONSE']._serialized_end=2985
+  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSTATUSENTRY']._serialized_start=2082
+  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSTATUSENTRY']._serialized_end=2148
+  _globals['_DIFFDESIGNSRESPONSE_NETSTATUSENTRY']._serialized_start=2150
+  _globals['_DIFFDESIGNSRESPONSE_NETSTATUSENTRY']._serialized_end=2210
+  _globals['_DIFFDESIGNSRESPONSE_SHEETIDS']._serialized_start=2212
+  _globals['_DIFFDESIGNSRESPONSE_SHEETIDS']._serialized_end=2240
+  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSAENTRY']._serialized_start=2242
+  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSAENTRY']._serialized_end=2355
+  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSBENTRY']._serialized_start=2357
+  _globals['_DIFFDESIGNSRESPONSE_COMPONENTSHEETSBENTRY']._serialized_end=2470
+  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSAENTRY']._serialized_start=2472
+  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSAENTRY']._serialized_end=2579
+  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSBENTRY']._serialized_start=2581
+  _globals['_DIFFDESIGNSRESPONSE_NETSHEETSBENTRY']._serialized_end=2688
+  _globals['_DIFFDESIGNSRESPONSE_PLACEMENT']._serialized_start=2690
+  _globals['_DIFFDESIGNSRESPONSE_PLACEMENT']._serialized_end=2751
+  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSAENTRY']._serialized_start=2753
+  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSAENTRY']._serialized_end=2868
+  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSBENTRY']._serialized_start=2870
+  _globals['_DIFFDESIGNSRESPONSE_SHAREDPLACEMENTSBENTRY']._serialized_end=2985
+  _globals['_DIFFSERVICE']._serialized_start=2987
+  _globals['_DIFFSERVICE']._serialized_end=3088
 # @@protoc_insertion_point(module_scope)
