@@ -1,8 +1,9 @@
 # Rung 4: the same board WITHOUT this project's naming vocabulary.
 #
-# conventions.yaml is moved aside for the run, because the project declares it and it therefore
-# applies automatically, which makes the "before" state otherwise unreachable by naming this design.
-# Same mechanism as the rung 4 query pair beside it.
+# The conventions section is deleted from project.yaml for the run, because the project declares it
+# and it therefore applies automatically, which makes the "before" state otherwise unreachable by
+# naming this design. Same mechanism as the rung 4 query pair beside it. The sed deletes from
+# `conventions:` to the blank line ending the section, and runs on the scratch copy every run gets.
 #
 # The params corpus STAYS here, unlike that query pair. The query is about the rail RELATION, where a
 # seeded datasheet establishes the role on its own and would show four rails before the vocabulary
@@ -12,5 +13,5 @@
 # intent/module-*), which are an artefact of the removal rather than anything this rung teaches.
 fixture: examples/tutorial-project
 script: |
-  mv conventions.yaml conventions-off.yaml
+  sed -i.orig '/^conventions:/,/^$/d' project.yaml
   agni check designs/gateway/gateway.edn

@@ -30,7 +30,7 @@ projects/gateway                      a set of designs that share configuration
 ```
 
 A **project** owns what is shared across designs: the team's naming vocabulary, its interface
-profiles, its seeded parameters, its review checklist. A **design** owns what is specific to it:
+profiles, its seeded parameters, its review checklists. A **design** owns what is specific to it:
 which file is the analysis source, which files are views of it, and its design intent.
 
 Both ids are **declared** by an operator, in a `project.yaml` and a `design.yaml`, rather than
@@ -41,6 +41,19 @@ folder being renamed or moved between mounts and gives a review run a parent to 
 # project.yaml
 name: gateway
 title: Sample Board review project
+conventions:
+  name: gateway
+  lexicon:
+    net:
+      rail:
+        patterns: ["_[0-9]+V[0-9]$"]
+checklists:
+  review:
+    name: Sample Board design review
+    areas: [...]
+  house:
+    name: Gateway house checklist
+    areas: [...]
 ```
 
 ```yaml
@@ -52,6 +65,25 @@ companions:
   - gateway.kicad_sch
   - gateway.kicad_pcb
 ```
+
+A project's naming vocabulary and its checklists are sections of `project.yaml`. `conventions` is
+bound to the `config.NamingConvention` proto, the schema a standalone `--conventions` file also
+uses, and `checklists` maps a name to a review manifest. Its interface profiles, seeded parameters,
+symbol libraries and derived relations are directories found beside the descriptor by their
+conventional names (`profiles/`, `params/`, `symbols/`, `lib/`), and the descriptor can name a
+different directory for any of them or opt out with an empty value.
+
+**The first checklist written is the project's default**, the one `agni review <design>` runs when
+no `--checklist` is given, and the CLI says which it ran. `--checklist` takes a name or a file. A
+value ending in `.yaml` or `.yml`, or `-` for stdin, is a manifest read from outside the project, and
+any other value names one of the project's checklists, so the tutorial project's second one runs
+with `--checklist house`.
+
+Both used to be files beside the descriptor, `conventions.yaml` and `review.yaml`, until agni issue
+828 folded them in. A project folder still holding either is refused at load, as is a
+`conventions:` key holding a file name or the old `checklist:` key, and each message says where the
+content goes now. Reading past the old file would quietly drop a whole tier, which is why it is an
+error rather than ignored.
 
 ## The netlist is the source; the rest are views
 
@@ -130,15 +162,17 @@ A tier whose absence changes the answer while still looking like an answer belon
 that changes the answer.
 
 **The descriptor is what binds config, and its absence fails exactly that way.** A team folder can
-hold `conventions.yaml`, `profiles/`, `params/` and a checklist at every conventional name and still
-bind none of it, because nothing declared a project.
+hold `profiles/`, `params/` and `lib/` at their conventional names and still bind none of them,
+because nothing declared a project.
 
 <details>
 <summary>What that cost on one folder, and why only the server was affected</summary>
 
-Adding a two-line `project.yaml` moved a run from 316 findings to 369, took `rail-not-classified`
-from 40 to 0 (their own lexicon recognises {{ explainable "rail" "rails" }} the built-ins miss), and
-surfaced 95 further `test-point-coverage` findings.
+This was before agni issue 828, when the vocabulary was a `conventions.yaml` beside the descriptor.
+Adding a two-line `project.yaml` to a folder already holding one moved a run from 316 findings to
+369, took `rail-not-classified` from 40 to 0 (their own lexicon recognises
+{{ explainable "rail" "rails" }} the built-ins miss), and surfaced 95 further `test-point-coverage`
+findings.
 
 The CLI and a `Makefile` passing the flags by hand were unaffected. Only the server, which discovers
 config rather than being handed it, ran on the built-in vocabulary. It reported an `invalid_argument`
@@ -164,7 +198,9 @@ different configuration.
 One `AnalysisConfig` carries the analysis tier everywhere it appears (on a `Project`, on a `Design`,
 and on a request), so adding a tier is one schema change every surface gets. The fields each one
 populates keep the scopes apart, and a `Design` sets only its intent, because a board has its own
-architecture where conventions and profiles describe the team. The message's own header in
+architecture where conventions and profiles describe the team. The conventions, the checklists and a
+design's intent travel as values, read once from the descriptors, while the directory tiers travel
+as URIs a config resolver reads. The message's own header in
 `protos/agni/v1/webapi/config.proto` carries the rest.
 
 Whether a given host can RESOLVE the ref-shaped tiers is a property of the deployment, not of the
@@ -190,6 +226,11 @@ The chain composes **root-first**, so a project overrides what it inherits, matc
 here (a request overrides a project, a project overrides the deployment default). The ref-shaped tiers
 ACCUMULATE, so inheriting a profile set and declaring your own runs both, while the naming convention
 REPLACES, because two naming vocabularies cannot both be in effect and the nearest declaration wins.
+Checklists layer by NAME. One the extending project declares under an inherited name replaces the
+inherited one in place, and a new name is appended after the inherited ones, so the inherited
+default stays first unless the nearer project redeclares it. That is how a team shares its
+conventions or its checklists, by writing them in a config-only project the others name with
+`extends`.
 
 {{ includeFile "figures/config-composition.svg" }}
 

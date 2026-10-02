@@ -1,8 +1,7 @@
 # Rung 4: the same board with the project's naming vocabulary in place.
 #
-# No --conventions. The project names conventions.yaml in its own layout and composes it, so passing
-# the flag as well names the same file twice and the run is identical to rung 2's. That is what this
-# capture used to show: a tier the rung claims changes things, producing no observable change at all.
+# No --conventions. The project carries a conventions section in project.yaml and composes it into
+# every run, so the run needs no flag to show what the vocabulary changes.
 fixture: examples/tutorial-project
 script: |
   agni check designs/gateway/gateway.edn

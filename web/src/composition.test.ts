@@ -66,7 +66,7 @@ const REPLIES: Record<string, unknown> = {
   GetSheetSvg: { svg: "<svg/>" },
   ResolveDesign: {
     design: { name: "projects/demo/designs/board", entryUri: "mount://m/d/b.edn" },
-    project: { name: "projects/demo", title: "Demo project", conventionsUri: "mount://m/conventions.yaml" },
+    project: { name: "projects/demo", title: "Demo project", config: { conventions: { name: "demo" }, checklists: [] } },
   },
   ListRules: {
     rules: [{ name: "duplicate-ref-des", severity: "error", summary: "a designator claimed twice", available: true }],

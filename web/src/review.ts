@@ -2,7 +2,7 @@
 // lists the runs stored for the open design, creates new ones, and pushes a ReviewState the panel
 // renders. Clicking a finding emits onLocate, reusing the same locate path a query cell or a finding
 // already uses.
-import type { CheckResults } from "./gen/agni/v1/checks/checks_pb.js";
+import type { CheckResults, ReviewManifest } from "./gen/agni/v1/checks/checks_pb.js";
 import type { Review } from "./gen/agni/v1/webapi/review_pb.js";
 import { contextFromWire, type FindingItem } from "./findings.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
@@ -105,10 +105,20 @@ export interface ReviewRunView {
   areas: ReviewAreaView[];
 }
 
-// ChecklistOption is one manifest a user can run, discovered by listing the design's directory.
+// ChecklistOption is one manifest a user can run. A project's checklist carries its manifest as a
+// value, since the project declares it inline (agni issue 828), so running it needs no read. A file
+// found beside a design that belongs to no project carries only its ref, resolved through
+// GetReviewManifest when it runs.
 export interface ChecklistOption {
   ref: string;
   label: string;
+  manifest?: ReviewManifest;
+}
+
+// projectChecklistOptions are the checklists a project declares, in the order it declares them, so
+// the picker's first entry is the project's default.
+export function projectChecklistOptions(lists: { name: string; manifest?: ReviewManifest }[]): ChecklistOption[] {
+  return lists.map((c) => ({ ref: c.name, label: c.name, manifest: c.manifest }));
 }
 
 export interface ReviewState {

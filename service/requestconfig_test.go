@@ -7,6 +7,8 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/param"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -33,10 +35,6 @@ func (r *recordingResolver) ResolveConfig(_ context.Context, cfg *webapi.Analysi
 	for range cfg.GetParamUris() {
 		out.Specs = r.specs
 	}
-	if cfg.GetIntentUri() != "" {
-		out.Sources = append(out.Sources, check.NewSource("intent", nil))
-		out.Intent = true
-	}
 	return out, nil
 }
 
@@ -58,7 +56,7 @@ func TestRequestConfigResolvesRefTiers(t *testing.T) {
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{
 		ProfileUris: []string{"mount://m/profiles"},
 		ParamUris:   []string{"mount://m/params"},
-		IntentUri:   "mount://m/intent.yaml",
+		Intent:      &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}},
 	}}
 	ov, err := OverlayFor(context.Background(), res, nil, nil, nil, req, Overlay{}, "")
 	if err != nil {
@@ -176,13 +174,57 @@ func TestProjectRefsAlsoNeedAResolver(t *testing.T) {
 // so merging has to be per field. A whole-message replace would make a design that declares intent
 // drop its project's profiles, which reads as the project having none.
 func TestMergeConfigLayersFieldWise(t *testing.T) {
-	p := &webapi.AnalysisConfig{ProfileUris: []string{"p"}, ParamUris: []string{"q"}, ChecklistUri: "c"}
-	d := &webapi.AnalysisConfig{IntentUri: "i"}
+	di := &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}}
+	p := &webapi.AnalysisConfig{ProfileUris: []string{"p"}, ParamUris: []string{"q"},
+		Checklists: []*webapi.NamedChecklist{{Name: "review"}}}
+	d := &webapi.AnalysisConfig{Intent: di}
 	got := mergeConfig(p, d)
 	if len(got.GetProfileUris()) != 1 || len(got.GetParamUris()) != 1 {
 		t.Errorf("the project's ref tiers must survive a design that declares intent, got %+v", got)
 	}
-	if got.GetIntentUri() != "i" || got.GetChecklistUri() != "c" {
+	if got.GetIntent() != di || len(got.GetChecklists()) != 1 {
 		t.Errorf("both scopes' fields should be present, got %+v", got)
+	}
+}
+
+// A checklist inherited through extends is replaced IN PLACE by one of the same name, so the
+// inherited default stays first, and a new name follows the inherited ones.
+func TestMergeChecklistsByName(t *testing.T) {
+	parent := []*webapi.NamedChecklist{{Name: "review", Manifest: &checkspb.ReviewManifest{Name: "shared"}}, {Name: "dft"}}
+	child := []*webapi.NamedChecklist{{Name: "house"}, {Name: "review", Manifest: &checkspb.ReviewManifest{Name: "ours"}}}
+	got := mergeChecklists(parent, child)
+	var names []string
+	for _, c := range got {
+		names = append(names, c.GetName())
+	}
+	if strings.Join(names, ",") != "review,dft,house" {
+		t.Errorf("order = %v, want review,dft,house", names)
+	}
+	if got[0].GetManifest().GetName() != "ours" {
+		t.Errorf("the nearer project's review must replace the inherited one, got %q", got[0].GetManifest().GetName())
+	}
+	if len(parent) != 2 || parent[0].GetManifest().GetName() != "shared" {
+		t.Error("merging must not modify the inherited list")
+	}
+}
+
+// A design's intent arrives as a value and compiles in the service, with no resolver at all, so a
+// host with no filesystem still runs the intent tier. An invalid declaration fails the run rather
+// than dropping the tier.
+func TestIntentValueComposesWithoutAResolver(t *testing.T) {
+	d := &webapi.Design{Name: "projects/p/designs/board", Config: &webapi.AnalysisConfig{
+		Intent: &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}},
+	}}
+	ov, err := OverlayFor(context.Background(), nil, nil, &webapi.Project{Name: "projects/p"}, d, nil, Overlay{}, "")
+	if err != nil {
+		t.Fatalf("OverlayFor: %v", err)
+	}
+	if !ov.Intent || len(sourceNames(ov)) != 1 || sourceNames(ov)[0] != "intent" {
+		t.Errorf("the design's intent must compose as the intent source, got intent=%v sources=%v", ov.Intent, sourceNames(ov))
+	}
+	d.Config.Intent = &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU"}}}
+	_, err = OverlayFor(context.Background(), nil, nil, &webapi.Project{Name: "projects/p"}, d, nil, Overlay{}, "")
+	if err == nil || !strings.Contains(err.Error(), `module "MCU" needs a "class"`) {
+		t.Errorf("an invalid intent must fail the run and say why, got %v", err)
 	}
 }

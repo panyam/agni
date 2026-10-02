@@ -34,7 +34,7 @@ documents are independent concerns with independent cadences.
 | Query | RunQuery | evaluate an ad-hoc datalog query over the design's fact base, returning columns and provenance-linked rows, the same engine as `agni query` |
 | Query | RunQueries | a named set of queries over one read of the design, each result shaped as RunQuery would return it |
 | Query | ListRelations | the relation catalog with arg labels, summary, and kind, driving the panel's click-to-insert picker |
-| Review | GetReviewManifest | resolve a stored checklist into a manifest value, parsed and validated |
+| Review | GetReviewManifest | resolve a checklist file into a manifest value, parsed and validated |
 | Review | CreateReview | run a checklist against one design and store the result, returning the stored run |
 | Review | GetReview | one stored run, by resource name |
 | Review | ListReviews | stored runs newest first, paginated, filterable by design |
@@ -74,9 +74,11 @@ A few contract details bite if missed.
   while the design stays an artifact URI. A design is megabytes, needs a reader chosen by
   extension, and is re-requested across many calls, so the call names it and the server reads it
   from the mount. A checklist is a small declaration the caller already holds, and a service
-  that took a path for it would need a filesystem to do its job. GetReviewManifest is the bridge for
-  a client that holds a URI and no filesystem. The server reads and validates the checklist once,
-  and the client sends back the value it got. The CLI skips it, because reading the file the user named is its own job.
+  that took a path for it would need a filesystem to do its job. A project's checklists already
+  arrive as values, by name, on its `AnalysisConfig.checklists`, so the viewer runs one of those
+  without another call. GetReviewManifest is the bridge for a checklist FILE, such as a YAML sibling
+  of a design that belongs to no project, held by a client with a URI and no filesystem. The server
+  reads and validates the checklist once, and the client sends back the value it got. The CLI skips it, because reading the file the user named is its own job.
 - **Reviews and projects are resources, and everything else is a verb.** A review RUN outlives
   the call that made it, so it has a name and the four standard methods, with paging and filtering
   following AIP. A project and its designs carry names an operator declared, so they get `Get` and

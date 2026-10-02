@@ -9,9 +9,9 @@ correctly and will still fail. Deciding that needs a number that exists only on 
 datasheet.
 
 A parameter set is that number, in a form a rule can compare against. `params/` holds one file per
-part worth checking. This project declares that directory the same way it declares
-`conventions.yaml` and `profiles/`, so naming the design is enough for `check` and `review` to pick
-the corpus up, and neither carries a `--params` flag below.
+part worth checking. The project finds that directory by its conventional name, as it finds
+`profiles/`, so naming the design is enough for `check` and `review` to pick the corpus up, and
+neither carries a `--params` flag below.
 
 ## Silent without it
 

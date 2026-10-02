@@ -210,16 +210,21 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   before the config is loaded, so it accepts anything and proves nothing. Probe with a command that
   reads a design, and run the same probe with a deliberately bogus key first as a positive control.
 - **A project DISCOVERS its analysis tiers, so a flag naming one is redundant and dropping the flag
-  does not turn it off.** `internal/projects/descriptor.go` defaults `conventions.yaml`, `profiles`,
-  `params`, `review.yaml` and `lib`, and `FSStore` composes each one it finds. `lib/` is the
+  does not turn it off.** `project.yaml` carries the team's `conventions:` and its named
+  `checklists:` as sections (agni 828), `internal/projects/descriptor.go` defaults the directories
+  `profiles`, `params`, `symbols` and `lib`, and `FSStore` composes each one it finds. `lib/` is the
   project's own derived relations, which every query surface and a review manifest's inline queries
   read through `Overlay.Registry` (agni 773, 779). That has two consequences, and
   each has cost a bug. Before adding a tier flag to a command, check whether the name is already
   defaulted, because `--profile-path` naming the project's own directory double-loaded every
   profile rule (issue 450) and `--params` naming its own is merely redundant. And to reach a tier's
-  "off" state you must MOVE THE DIRECTORY ASIDE, which is why rungs 4, 5 and 6 open with
-  `mv <tier> <tier>-off`; rung 6 shipped a before/after whose two captures were byte-identical
-  because both ran with the corpus in place.
+  "off" state you must MOVE THE DIRECTORY ASIDE or delete the SECTION, which is why rungs 5 and 6
+  open with `mv <tier> <tier>-off` and rung 4 with a `sed` deleting `conventions:` from its scratch
+  copy; rung 6 shipped a before/after whose two captures were byte-identical because both ran with
+  the corpus in place. A `conventions.yaml`, `review.yaml` or `intent.yaml` left in the old place is
+  a load ERROR naming where its content goes, because a read that skipped it would drop a tier.
+  `--checklist` takes a project checklist's NAME, or a file ending `.yaml`/`.yml`, and with neither
+  the first checklist the project writes runs.
 - **Between a project tier and its flag, the project wins, and for the datasheet corpus it wins PER
   MPN (`Overlay.SpecsOver`, agni 749).** That is the opposite of the mount rule above, deliberately,
   because a project owns its parameters the way it owns its profiles. The project's `params/` is

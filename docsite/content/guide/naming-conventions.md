@@ -49,6 +49,15 @@ Both flagged names carry a trailing character the `allow` pattern does not cover
 either, because `^\+` exempts a name that *starts* with `+`, which neither of these does.
 Tightening `allow`, or narrowing `exempt`, surfaces more names the same way.
 
+## In a project
+
+A project writes the same content as the `conventions:` section of its `project.yaml`, and every run
+on one of its designs composes it with no flag. A team sharing one vocabulary across projects puts it
+in a project of its own, which the others name with `extends`. See
+[Projects and designs](../../architecture/projects-and-designs/). A `--conventions` file still works
+on a project's design, and replaces the project's section for that run in the way the next section
+describes.
+
 ## Tool-generated names are exempt by default
 
 CAD tools invent stub names for connections you never named: KiCad `unconnected-(...)`,
@@ -92,7 +101,8 @@ Only the convention is replaced. The built-in rules, and anything from `--profil
 
 The viewer has a **vocabulary** control in the top bar. It lists the convention configs sitting beside
 the open design, and picking one applies it to everything that runs rules from then on: the checks
-panel, the report, and a review run.
+panel, the report, and a review run. For a design whose project declares conventions it offers no
+file, because the project's conventions are already in every run.
 
 The bar always says which vocabulary the answers on screen were computed under, and looks different
 while a request convention is in effect, so you can tell a finding the design fixed from one whose

@@ -62,8 +62,8 @@ Your file differs from the built-in by one line, the `STB` signal. This team alw
 has no opinion about that, because it is a house practice rather than a CAN requirement.
 
 There is no flag. The project names its own `profiles/` directory, so agni composes it for every
-design under `designs/`, the same way it composes `conventions.yaml` and `params/`. Putting the file
-in place is the whole step:
+design under `designs/`, the same way it composes `params/` and the `conventions:` section of
+`project.yaml`. Putting the file in place is the whole step:
 
 {{ agniRun "content/tutorials/runs/05-check-profiles.yaml" }}
 

@@ -82,23 +82,35 @@ func Parse(b []byte) (Declaration, error) {
 	if doc.Intent.Kind == 0 {
 		return Declaration{}, fmt.Errorf("intent %q: has no \"intent:\" section", doc.Name)
 	}
-	if doc.Intent.Kind == yaml.ScalarNode {
-		return Declaration{}, fmt.Errorf("intent %q: \"intent:\" names a file (%q); intent is now declared inline in design.yaml (agni issue 824)", doc.Name, doc.Intent.Value)
+	in, err := DecodeSection(&doc.Intent)
+	if err != nil {
+		return Declaration{}, fmt.Errorf("intent %q: %w", doc.Name, err)
 	}
-	if doc.Intent.Kind == yaml.MappingNode {
-		for i := 0; i+1 < len(doc.Intent.Content); i += 2 {
-			k := doc.Intent.Content[i].Value
+	return FromProto(doc.Name, in)
+}
+
+// DecodeSection binds a design descriptor's intent section to its proto, refusing the earlier
+// layouts with the spelling to use instead. It checks SHAPE only (keys, types, the earlier forms);
+// FromProto is what validates the declarations, so a store can read a descriptor without compiling
+// rules from it.
+func DecodeSection(n *yaml.Node) (*configpb.DesignIntent, error) {
+	if n.Kind == yaml.ScalarNode {
+		return nil, fmt.Errorf("intent names a file (%q); a design's intent is now declared inline under intent: in its design.yaml (agni issue 824)", n.Value)
+	}
+	if n.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			k := n.Content[i].Value
 			if hint, ok := earlierForms[k]; ok {
-				return Declaration{}, fmt.Errorf("intent %q: %q is no longer a form; write it as %s (agni issue 824)", doc.Name, k, hint)
+				return nil, fmt.Errorf("%q is no longer a form; write it as %s (agni issue 824)", k, hint)
 			}
 		}
 	}
 	in := &configpb.DesignIntent{}
 	// A misspelled key is an error naming its line, not a fact that silently declares nothing.
-	if err := yamlpb.Decode(&doc.Intent, in); err != nil {
-		return Declaration{}, fmt.Errorf("intent %q: %w", doc.Name, err)
+	if err := yamlpb.Decode(n, in); err != nil {
+		return nil, err
 	}
-	return FromProto(doc.Name, in)
+	return in, nil
 }
 
 // FromProto validates a design's declared intent and compiles it into the Declaration the rules

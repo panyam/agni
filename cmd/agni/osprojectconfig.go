@@ -15,12 +15,12 @@ import (
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/lib"
 	"github.com/panyam/agni/stdlib/profiles"
-	"github.com/panyam/agni/stdlib/rules/intent"
 	"github.com/panyam/jaala/datalog"
 )
 
-// osProjectConfig is the OS-backed service.ConfigResolver. It reads the interface profiles and
-// seeded parameters a project names, from the mounts.
+// osProjectConfig is the OS-backed service.ConfigResolver. It reads the interface profiles, seeded
+// parameters, symbol libraries and derived-relation libraries a project names, from the mounts. A
+// design's intent is not among them, since it arrives as a value the service compiles.
 //
 // It holds NO CACHE. An operator edits a profile or seeds a part while the server runs, and an index
 // answering with the previous version would produce a confident wrong verdict. If re-reading a large
@@ -72,21 +72,6 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 			return service.ResolvedConfig{}, err
 		}
 		out.SymbolPaths = append(out.SymbolPaths, dir)
-	}
-	// Intent composes as its own rule source. A config declaring none contributes nothing, so the
-	// intent-bound checklist items read needs-design-intent rather than passing.
-	if uri := cfg.GetIntentUri(); uri != "" {
-		abs, err := c.file(uri)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
-		read = append(read, abs)
-		decl, err := intent.LoadFile(abs)
-		if err != nil {
-			return service.ResolvedConfig{}, fmt.Errorf("%s intent %s: %w", namespace, uri, err)
-		}
-		out.Sources = append(out.Sources, intent.Source("intent", decl))
-		out.Intent = true
 	}
 	// A project's own library is read here and composed by the service (Overlay.Registry), so a module
 	// that does not parse or collides is reported when a query first runs over it, naming the file.

@@ -102,7 +102,7 @@ func mustCompileRole(pats ...string) []*regexp.Regexp {
 	return out
 }
 
-// defaultLexicon is the built-in naming policy, in the SAME schema a project's conventions.yaml
+// defaultLexicon is the built-in naming policy, in the SAME schema a project's conventions section
 // carries, so the engine, the wire and the viewer read one definition of the vocabularies (C2). A
 // hand-written Go twin lost three vocabularies twice (WS3-117, agni 680). What the four
 // "named after a rail, not a rail" roles mean is in docsite/content/guide/naming-conventions.md.

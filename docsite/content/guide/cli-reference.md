@@ -62,7 +62,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 
 | flag | what it does |
 |---|---|
-| `--checklist <file>` | the review manifest (YAML, or `-` to read it from stdin) declaring areas and their items. Optional when the design belongs to a project that declares one; passing it overrides the project's |
+| `--checklist <name-or-file>` | which checklist to run. A value ending in `.yaml` or `.yml` is a review manifest file read from outside the project, and `-` reads one from stdin; any other value names one of the checklists the design's project declares under `checklists:` in `project.yaml`. Optional when the design belongs to a project that declares one, since the project's first checklist is its default |
 | `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
 | `--profile-path <dir>` | interface-profile declarations added to the catalog |
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |
@@ -152,7 +152,7 @@ with the tool's own name in the error. Only `serve` consumes it, though every co
 read it, because the note says what the file supplied rather than what the command went on to use.
 
 **It carries only tier-1 config, deliberately.** Naming conventions,
-interface profiles, seeded parameters, design intent and a review checklist belong to a project
+interface profiles, seeded parameters, design intent and review checklists belong to a project
 instead. See [Projects and designs](../../architecture/projects-and-designs/).
 
 <details>
@@ -176,9 +176,7 @@ agni start boards/gateway.edn ./gateway-review
 
 ```
 gateway-review/
-├── project.yaml            declares the project's id
-├── conventions.yaml        stub — your team's naming vocabulary
-├── review.yaml             seeded from the shipped catalog
+├── project.yaml            the project's id, a conventions stub, and a review checklist seeded from the shipped catalog
 └── designs/gateway/
     ├── design.yaml         names the entry and its companion views
     ├── gateway.edn         copied

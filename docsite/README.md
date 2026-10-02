@@ -164,10 +164,11 @@ so a rung that teaches `mv params params-old` cannot rename the checked-in one, 
 hand.
 
 **A before/after over a DISCOVERED project tier has to move the tier aside in the script.** A project
-composes `conventions.yaml`, `profiles/` and `params/` from naming the design, so dropping the flag
-does not reach the "before" state and the two captures come out identical. Rung 6 shipped that way:
-both of its captures ran with the corpus in place, so the page taught a contrast whose own output
-disproved it. Rungs 4, 5 and 6 all now open with `mv <tier> <tier>-off`. Before adding a tier flag to
+composes its `conventions:` section, `profiles/` and `params/` from naming the design, so dropping the
+flag does not reach the "before" state and the two captures come out identical. Rung 6 shipped that
+way: both of its captures ran with the corpus in place, so the page taught a contrast whose own output
+disproved it. Rungs 5 and 6 now open with `mv <tier> <tier>-off`, and rung 4 deletes the section from
+its scratch copy with `sed -i.orig '/^conventions:/,/^$/d' project.yaml`. Before adding a tier flag to
 a capture, check whether `internal/projects/descriptor.go` already defaults the name.
 
 **`from_root: true` runs the script at the scratch root with the fixture at its full relative path**,
@@ -218,8 +219,8 @@ currently does, which is right when the doc drifted and wrong when the code regr
 the rung teaches.** Seeding pin functions into the tutorial's two synthetic specs made rung 4's
 "without this project's naming vocabulary, only GND is a rail" false, because the datasheet then
 classified those rails regardless. Both statements were true; they just could not share a run. The
-rung now moves the params corpus aside along with `conventions.yaml` so it isolates NAMING as it
-intends, and the page says why. Regenerating instead would have shipped a page contradicting its own
+rung now moves the params corpus aside along with deleting the `conventions:` section, so it isolates
+NAMING as it intends, and the page says why. Regenerating instead would have shipped a page contradicting its own
 output. When a fixture edit changes a capture's CONTENT rather than its stamp, find which page reads
 it and decide what that page is for.
 

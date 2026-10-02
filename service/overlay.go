@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -10,6 +11,7 @@ import (
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // Overlay is one request's composed catalog configuration: the rule sources to splice onto the
@@ -213,7 +215,7 @@ type ResolvedConfig struct {
 // an error there, on the same terms GetNamingConvention refuses a stored convention, because
 // dropping the tier would report a clean run against config that never loaded.
 func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
-	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 || cfg.GetIntentUri() != "" ||
+	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 ||
 		len(cfg.GetSymbolPathUris()) > 0 || len(cfg.GetLibraryUris()) > 0
 }
 
@@ -241,7 +243,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	// The project's config and the design's intent resolve TOGETHER, as one AnalysisConfig, so a run
 	// cannot compose one design's intent against another's profiles. What the project inherits is
 	// layered in first, so `merged` is its whole config and not only its own descriptor's.
-	inherited, err := resolveExtends(ctx, store, p)
+	inherited, err := ResolveExtends(ctx, store, p)
 	if err != nil {
 		return Overlay{}, err
 	}
@@ -261,6 +263,13 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		id.addDigest("project-config", cfg.Digest)
 	} else if configNeedsResolver(merged) {
 		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, p.GetName())
+	}
+	// The design's intent arrives as a value and compiles here, with no I/O, on any host.
+	if src, err := intentSource(merged, d.GetName()); err != nil {
+		return Overlay{}, err
+	} else if src != nil {
+		o.Sources = append(o.Sources, src)
+		o.Intent = true
 	}
 	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
 	if conv := inherited.GetConventions(); conv != nil {
@@ -288,26 +297,71 @@ func projectNamespace(p *webapi.Project) string { return p.GetName() }
 // snapshot knows the rule came from the call and not from the project.
 const requestNamespace = "request"
 
-// mergeConfig layers b over a, field by field, for the tiers that are refs.
+// mergeConfig layers b over a, field by field.
 //
 // It layers field by field because a Project sets everything but intent and a Design sets only
-// intent, so a whole-message replace would make a design declaring intent drop its project's profiles.
+// intent and its own symbols, so a whole-message replace would make a design declaring intent drop
+// its project's profiles. The convention is not merged here, because it layers by replacement along
+// an extends chain (ResolveExtends) and a design never sets one.
 func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 	out := &webapi.AnalysisConfig{
+		Conventions:    a.GetConventions(),
 		ProfileUris:    append(append([]string{}, a.GetProfileUris()...), b.GetProfileUris()...),
 		ParamUris:      append(append([]string{}, a.GetParamUris()...), b.GetParamUris()...),
 		SymbolPathUris: append(append([]string{}, a.GetSymbolPathUris()...), b.GetSymbolPathUris()...),
 		LibraryUris:    append(append([]string{}, a.GetLibraryUris()...), b.GetLibraryUris()...),
-		IntentUri:      a.GetIntentUri(),
-		ChecklistUri:   a.GetChecklistUri(),
+		Checklists:     mergeChecklists(a.GetChecklists(), b.GetChecklists()),
+		Intent:         a.GetIntent(),
 	}
-	if b.GetIntentUri() != "" {
-		out.IntentUri = b.GetIntentUri()
+	if b.GetConventions() != nil {
+		out.Conventions = b.GetConventions()
 	}
-	if b.GetChecklistUri() != "" {
-		out.ChecklistUri = b.GetChecklistUri()
+	if b.GetIntent() != nil {
+		out.Intent = b.GetIntent()
 	}
 	return out
+}
+
+// mergeChecklists layers b's checklists over a's by name. One of the same name replaces the earlier
+// in place, so an inherited default stays first unless the nearer project redeclares it, and a new
+// name is appended after the ones inherited.
+func mergeChecklists(a, b []*webapi.NamedChecklist) []*webapi.NamedChecklist {
+	out := append([]*webapi.NamedChecklist{}, a...)
+	for _, c := range b {
+		replaced := false
+		for i := range out {
+			if out[i].GetName() == c.GetName() {
+				out[i], replaced = c, true
+				break
+			}
+		}
+		if !replaced {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// intentSource compiles a config's declared intent into its rule source, nil when it declares none.
+// name labels the declaration in findings, and is the design's resource name where a project store
+// supplied the intent.
+//
+// An invalid declaration is an ERROR, never a skip, because a design whose intent silently failed to
+// compile would leave every intent-bound checklist item reading needs-design-intent, which looks like
+// a design that never declared any.
+func intentSource(cfg *webapi.AnalysisConfig, name string) (check.RuleSource, error) {
+	di := cfg.GetIntent()
+	if di == nil {
+		return nil, nil
+	}
+	if name == "" {
+		name = "request"
+	}
+	decl, err := intent.FromProto(path.Base(name), di)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	return intent.Source("intent", decl), nil
 }
 
 // overlayWithRequest lets a request's own config override whatever it was layered on.
@@ -330,6 +384,13 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 			return Overlay{}, err
 		}
 		id.addDigest("request-config", reqResolved.Digest)
+	}
+	reqIntent, err := intentSource(reqCfg, "")
+	if err != nil {
+		return Overlay{}, err
+	}
+	if reqIntent != nil {
+		reqOv.Sources = append(reqOv.Sources, reqIntent)
 	}
 	// Every tier a request can contribute must appear in this guard. A tier missing from it is silently
 	// dropped for a request carrying ONLY that tier, which is how symbol paths usually arrive.
@@ -368,7 +429,7 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.Library = append(append(append([]LibraryModule{}, out.Library...), reqResolved.Library...), reqOv.Library...)
 	out.LibraryDocs = mergeDocs(mergeDocs(out.LibraryDocs, reqResolved.LibraryDocs), reqOv.LibraryDocs)
 	out.Profiles = out.Profiles || reqResolved.Profiles
-	out.Intent = out.Intent || reqResolved.Intent
+	out.Intent = out.Intent || reqResolved.Intent || reqIntent != nil
 	out.conventionName = req.GetConfig().GetConventions().GetName()
 	// Set the base convention's NAME explicitly, since Overlay.Catalog drops the sources tagged with it.
 	// Inheriting whatever the fallback held would leave the server's convention running alongside the

@@ -291,7 +291,7 @@ regulators the second is the larger of the two, and a probe-point or decoupling 
 wants the first.
 
 The vocabularies behind each role are config you extend in
-[your conventions file](../naming-conventions/#teach-it-your-vocabulary).
+[your conventions](../naming-conventions/#teach-it-your-vocabulary).
 
 ### Ask what the design DECLARED about a net (attributes)
 
@@ -527,15 +527,16 @@ boards use. On a board that names rails function-first, what the built-in vocabu
 badly wrong for your project.
 
 Isolating that takes moving two things aside rather than one. The
-tutorial project declares its `conventions.yaml`, so naming the design applies it automatically and
-the before-state is otherwise unreachable. And a seeded datasheet's pin functions establish the rail
+tutorial project declares a `conventions:` section in its `project.yaml`, so naming the design applies
+it automatically and the before-state is otherwise unreachable, which is why the run below deletes
+the section from its copy of the project. And a seeded datasheet's pin functions establish the rail
 role on their own, so with `params/` in place this board classifies all four rails whatever the
 naming vocabulary says. Move both and the question is about NAMING alone:
 
 {{ agniRun "content/guide/runs/query-rail-builtin-vocabulary.yaml" }}
 
-Pass your own vocabulary and ask again, with the corpus still aside so the pair differs in exactly
-one thing:
+Leave the project's vocabulary in place and ask again, with the corpus still aside so the pair
+differs in exactly one thing:
 
 {{ agniRun "content/guide/runs/query-rail-own-vocabulary.yaml" }}
 

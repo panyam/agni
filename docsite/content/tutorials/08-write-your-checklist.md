@@ -7,8 +7,8 @@ Most teams already have a review checklist. It is usually a spreadsheet, and goi
 usually somebody's afternoon. Much of it is mechanical, asking questions whose definite answer is
 already sitting in the design file.
 
-`review.yaml` is that checklist, written so the mechanical items answer themselves and the rest stay
-visible as work for a human.
+The `review` checklist in this project's `project.yaml` is that checklist, written so the mechanical
+items answer themselves and the rest stay visible as work for a human.
 
 `agni check` answers "what is wrong with this board".
 `agni review` answers "which of our questions did we actually answer", which is a different question
@@ -17,15 +17,20 @@ and a more useful one when you are deciding whether a board is ready.
 ## The shape
 
 ```yaml
-name: Sample Board design review
-areas:
-  - name: Power
-    items:
-      - id: "P1"
-        title: every rail carries a bulk capacitor
-        description: A rail with no bulk capacitance browns out on a load step.
-        rule: bulk-cap
+checklists:
+  review:
+    name: Sample Board design review
+    areas:
+      - name: Power
+        items:
+          - id: "P1"
+            title: every rail carries a bulk capacitor
+            description: A rail with no bulk capacitance browns out on a load step.
+            rule: bulk-cap
 ```
+
+`checklists` maps a name to a checklist, so a project can carry several. This one carries a second,
+`house`, for questions its own library answers. The first one written is the project's default.
 
 Areas group items the way your existing checklist groups them. Each item keeps its own `id`, so an
 item that has been "P1" in your process for years stays P1 here and nobody has to relearn numbering.
@@ -33,7 +38,7 @@ item that has been "P1" in your process for years stays P1 here and nobody has t
 ## Four ways to bind an item
 
 **`rule:`** hands the item to a catalog rule. It can be any rule from any tier, whether
-built in, added by your conventions file, contributed by a profile, or declared as intent.
+built in, added by your conventions section, contributed by a profile, or declared as intent.
 
 ```yaml
 - {id: "P2", title: every rail carries decoupling, rule: decoupling-present}
@@ -92,18 +97,18 @@ agni review designs/gateway
 ```
 
 That is the whole command. Every input a review needs is something this project already declares:
-`review.yaml` is its checklist, `conventions.yaml` its naming vocabulary, `profiles/` its interfaces,
-`params/` its part limits, and `designs/gateway/design.yaml` names the netlist to read and the board
-beside it. Naming the design is enough because the project answers the rest.
+`project.yaml` carries its checklists and its naming vocabulary, `profiles/` its interfaces, `params/`
+its part limits, and `designs/gateway/design.yaml` names the netlist to read and the board beside it. Naming the design is enough because the project answers the rest.
 
 It says which checklist it picked, on stderr:
 
 ```
-note: running the checklist projects/gateway declares (mount://gateway/review.yaml); pass --checklist to run a different one.
+note: running the checklist "review" projects/gateway declares; pass --checklist to run a different one.
 ```
 
 Which checklist scored a run is not recoverable from the outcomes it produced, so a checklist you
-did not type has to announce itself.
+did not type has to announce itself. `--checklist house` runs the other one by name, and a value
+ending in `.yaml` is read as a manifest file instead, for a checklist that lives outside the project.
 
 ```
 # Review: Sample Board design review
@@ -165,7 +170,7 @@ To see what the item does with no copper, read the netlist on its own with `--as
 that says "exactly the file I named, not the design it belongs to":
 
 ```
-agni review --as-named designs/gateway/gateway.edn --checklist review.yaml
+agni review --as-named designs/gateway/gateway.edn --checklist review
 ```
 
 ```

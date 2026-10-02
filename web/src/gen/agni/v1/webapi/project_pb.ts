@@ -65,7 +65,7 @@ export type Project = Message<"agni.v1.webapi.Project"> & {
    * applied to every design it read: an overlay's profiles superseded the built-ins for every board
    * on the server, and an overlay's rail lexicon changed net roles on designs that never asked.
    *
-   * A Project populates every field EXCEPT intent_uri, which is a design's own (see Design.config).
+   * A Project populates every field EXCEPT intent, which is a design's own (see Design.config).
    * The scopes are kept apart by which fields each descriptor sets rather than by two message shapes,
    * because the shape genuinely is the same and two copies of it would be one more place for two
    * layers to disagree about what config is.
@@ -141,9 +141,9 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
   companionUris: string[];
 
   /**
-   * config is this design's own analysis config. A Design populates only intent_uri: each board has
-   * its own intended architecture, where conventions, profiles and parameters describe the team and
-   * live on the Project. That asymmetry is the one the on-disk layout already had, and carrying both
+   * config is this design's own analysis config. A Design populates intent and its own symbol paths,
+   * since each board has its own intended architecture, where conventions, profiles and parameters
+   * describe the team and live on the Project. That asymmetry is the one the on-disk layout already had, and carrying both
    * in one message shape is what lets a composer layer them without knowing which tier it holds.
    *
    * @generated from field: agni.v1.webapi.AnalysisConfig config = 7;

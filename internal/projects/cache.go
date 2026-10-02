@@ -140,13 +140,12 @@ func findDescriptorsStamped(fsys fs.FS, root, name string) ([]string, []dirStamp
 
 // parseCache memoizes a loaded descriptor against every file the load read.
 //
-// Against EVERY file, not just the descriptor, because loading a project also reads its conventions
-// and probes for its profiles, params, and checklist. An entry keyed on `project.yaml` alone would
-// survive an edit to `conventions.yaml`, and the rules would keep running under the old vocabulary
-// with nothing to show it.
+// Against EVERY file the load read, not only the descriptor. A project's conventions and checklists
+// are sections of `project.yaml` since agni issue 828, so the descriptor covers them, but a load also
+// probes for its profiles, params, symbols and library, and for the files the earlier layout used.
 //
 // The containing DIRECTORY is a dependency too, which covers the existence probes, since adding or
-// removing `params/` moves the directory's mtime.
+// removing `params/`, or leaving a `conventions.yaml` behind, moves the directory's mtime.
 type parseCache[T any] struct {
 	mu      sync.Mutex
 	entries map[string]parseEntry[T]

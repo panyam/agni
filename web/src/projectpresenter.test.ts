@@ -10,6 +10,8 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
   const onConvention = vi.fn();
   const onReview = vi.fn();
   const listReviews = vi.fn(async () => ({ reviews: [] }));
+  const createReview = vi.fn(async (_req: unknown) => ({ name: "reviews/r1" }));
+  const getReviewManifest = vi.fn(async (_req: unknown) => ({ manifest: { name: "from a file" } }));
   const resolveDesign = vi.fn(async () => resolve);
   const listRules = vi.fn(async () => ({ rules: [{ name: "bulk-cap", severity: "warning", summary: "", available: true }] }));
   const checkDesign = vi.fn(async () => ({ findings: [] }));
@@ -49,13 +51,13 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
     },
     undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { listReviews } as any,
+    { listReviews, createReview, getReviewManifest } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { listDir } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { resolveDesign } as any,
   );
-  return { presenter, onProject, onConvention, onReview, resolveDesign, listRules, checkDesign, listDir };
+  return { presenter, onProject, onConvention, onReview, resolveDesign, listRules, checkDesign, listDir, createReview, getReviewManifest };
 }
 
 // last is the most recent state the bar was pushed, which is what a user is actually looking at.
@@ -71,8 +73,11 @@ const inProject = {
     name: "projects/gateway",
     title: "Sample Board",
     config: {
-      conventionsUri: "mount://m/conventions.yaml",
-      checklistUri: "mount://m/review.yaml",
+      conventions: { name: "gateway" },
+      checklists: [
+        { name: "review", manifest: { name: "Sample Board design review" } },
+        { name: "house", manifest: { name: "Gateway house checklist" } },
+      ],
       profileUris: ["mount://m/profiles"],
     },
   },
@@ -174,16 +179,32 @@ describe("the built-in catalog toggle", () => {
 // the first shape and it moved the bug rather than fixing it. A checklist chosen as a vocabulary
 // fails on a field the naming schema has never heard of, the same way an intent file did.
 describe("the config pickers offer one kind each", () => {
-  it("offers the project's conventions to the vocabulary picker", async () => {
-    const h = harness(inProject);
+  // The project's conventions are a section of project.yaml that every run already composes (agni
+  // issue 828), so there is no convention FILE to offer, and offering the design's siblings would
+  // offer descriptors that are not conventions.
+  it("offers no convention file for a project that declares its conventions", async () => {
+    const h = harness(inProject, [{ name: "design.yaml", uri: "mount://m/d/design.yaml", isDir: false }]);
     await h.presenter.openFile("m", "d/gateway.edn");
-    expect(refs(h.onConvention, "choices")).toEqual(["conventions.yaml"]);
+    expect(refs(h.onConvention, "choices")).toEqual([]);
   });
 
-  it("offers the project's checklist to the review picker", async () => {
+  // Declared order, not sorted, because the first is the project's default.
+  it("offers the project's checklists by name, in the order declared", async () => {
     const h = harness(inProject);
     await h.presenter.openFile("m", "d/gateway.edn");
-    expect(refs(h.onReview, "checklists")).toEqual(["review.yaml"]);
+    expect(refs(h.onReview, "checklists")).toEqual(["review", "house"]);
+  });
+
+  // A project checklist is already a value, so running it reads nothing.
+  it("runs a project checklist as the value it already holds", async () => {
+    const h = harness(inProject);
+    await h.presenter.openFile("m", "d/gateway.edn");
+    h.presenter.setChecklist("house");
+    await h.presenter.createReview();
+    expect(h.getReviewManifest).not.toHaveBeenCalled();
+    expect(h.createReview).toHaveBeenCalledTimes(1);
+    const req = h.createReview.mock.calls[0][0] as unknown as { manifest: { name: string } };
+    expect(req.manifest.name).toBe("Gateway house checklist");
   });
 
   // A profile is composed into the catalog, never selected as a vocabulary or run as a checklist, so
@@ -206,5 +227,16 @@ describe("the config pickers offer one kind each", () => {
     await h.presenter.openFile("m", "d/gateway.edn");
     expect(refs(h.onConvention, "choices")).toEqual(["d/house.yaml"]);
     expect(refs(h.onReview, "checklists")).toEqual(["d/house.yaml"]);
+  });
+
+  // A file found beside a loose design carries no manifest, so running it resolves it first.
+  it("resolves a sibling checklist file before running it", async () => {
+    const h = harness({}, [{ name: "house.yaml", uri: "mount://m/d/house.yaml", isDir: false }]);
+    await h.presenter.openFile("m", "d/gateway.edn");
+    h.presenter.setChecklist("d/house.yaml");
+    await h.presenter.createReview();
+    expect(h.getReviewManifest).toHaveBeenCalledWith({ uri: artifactUri("m", "d/house.yaml") });
+    const req = h.createReview.mock.calls[0][0] as unknown as { manifest: { name: string } };
+    expect(req.manifest.name).toBe("from a file");
   });
 });

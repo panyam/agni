@@ -25,10 +25,11 @@ cd agni/examples/tutorial-project
 make review
 ```
 
-The folder is checked in complete, with every file present. Each rung below tells you which file it
-is about and passes only the flags earned so far, so you can start at any rung and it will run. If
-you would rather build it up yourself, delete `conventions.yaml`, `profiles/`, `params/`, and
-the `intent:` section of `designs/gateway/design.yaml` and add them back as you go.
+The folder is checked in complete, with every file present. Each rung below tells you which file or
+section it is about and passes only the flags earned so far, so you can start at any rung and it will
+run. If you would rather build it up yourself, delete the `conventions:` section of `project.yaml`,
+`profiles/`, `params/`, and the `intent:` section of `designs/gateway/design.yaml` and add them back
+as you go.
 
 The board is deliberately imperfect. Each flaw is a real defect a reviewer would flag, and each one
 exists so some part of the tool has something true to report.
@@ -81,11 +82,11 @@ same step on your own design by changing which files it points at.
 |---|---|---|
 | 1 | `make stats` | point `designs/<name>/design.yaml` at your netlist, and list your board and schematic exports under `companions` |
 | 2 | `make check` | same command, your design folder |
-| 4 | the bundled `conventions.yaml` | your team's rail names and naming rules |
+| 4 | `conventions:` in `project.yaml` | your team's rail names and naming rules |
 | 5 | the bundled `profiles/can.yaml` | one file per bus your team designs with |
 | 6 | the bundled `params/` | a seeded PartSpec per part worth checking |
 | 7 | `intent:` in `designs/gateway/design.yaml` | one per design, since each board has its own architecture |
-| 8 | the bundled `review.yaml` | your team's checklist |
+| 8 | `checklists:` in `project.yaml` | your team's checklists, by name |
 
 Conventions, profiles, and parameters describe the *team*, so they
 sit at the project root and are shared by every design. Intent describes one *board*, so it sits

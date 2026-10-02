@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -28,9 +29,9 @@ func startCmd() *cobra.Command {
 		Use:   "start <design-file> [dir]",
 		Short: "Scaffold a review project around an existing design file",
 		Long: "Create a project from one design file, so every other command can stop taking flags. It " +
-			"writes a project.yaml, a design.yaml naming the design and any companion views of it, a " +
-			"conventions.yaml stub, and a review.yaml seeded from the shipped rule catalog — then copies " +
-			"the design and its companions in. After it, `agni check <dir>` and `agni review <dir>` " +
+			"writes a project.yaml carrying a conventions stub and a review checklist seeded from the " +
+			"shipped rule catalog, and a design.yaml naming the design and any companion views of it, " +
+			"then copies the design and its companions in. After it, `agni check <dir>` and `agni review <dir>` " +
 			"resolve the project's config with no flags at all.\n\n" +
 			"[dir] defaults to the current directory. Pointing it at a folder that already holds a " +
 			"project.yaml ADDS the design to that project instead of creating a second one. Nothing is " +
@@ -156,10 +157,7 @@ func runStart(w io.Writer, designPath, dir, name, title string) error {
 		planned = append(planned, filepath.Join(designDir, c))
 	}
 	if !adopted {
-		planned = append(planned,
-			filepath.Join(root, projects.ProjectDescriptor),
-			filepath.Join(root, "conventions.yaml"),
-			filepath.Join(root, "review.yaml"))
+		planned = append(planned, filepath.Join(root, projects.ProjectDescriptor))
 	}
 	for _, p := range planned {
 		if _, err := os.Stat(p); err == nil {
@@ -172,15 +170,11 @@ func runStart(w io.Writer, designPath, dir, name, title string) error {
 		return err
 	}
 	if !adopted {
-		if err := writeDescriptorFile(filepath.Join(root, projects.ProjectDescriptor), func(f io.Writer) error {
-			return projects.WriteProject(f, projectHeader, projectID, title, nil)
-		}); err != nil {
+		body, err := projectDescriptor(projectID, title)
+		if err != nil {
 			return err
 		}
-		if err := writeStub(filepath.Join(root, "conventions.yaml"), conventionsStub(projectID)); err != nil {
-			return err
-		}
-		if err := writeStub(filepath.Join(root, "review.yaml"), seededChecklist(title)); err != nil {
+		if err := os.WriteFile(filepath.Join(root, projects.ProjectDescriptor), body, 0o644); err != nil {
 			return err
 		}
 	}
@@ -229,8 +223,43 @@ func writeDescriptorFile(path string, emit func(io.Writer) error) error {
 	return emit(f)
 }
 
-func writeStub(path, body string) error {
-	return os.WriteFile(path, []byte(body), 0o644)
+// projectDescriptor renders the scaffolded project.yaml: the descriptor WriteProject writes, then the
+// conventions stub and the seeded checklist as its two sections. It parses the result before
+// returning it, so a scaffold that would not load fails here rather than on the first command run
+// against the project it created.
+func projectDescriptor(projectID, title string) ([]byte, error) {
+	var b bytes.Buffer
+	if err := projects.WriteProject(&b, projectHeader, projectID, title, nil); err != nil {
+		return nil, err
+	}
+	b.WriteString("\n" + indentYAML(conventionsStub(projectID), "conventions:", "  "))
+	b.WriteString("\n# Checklists are named, and the first is the one `agni review` runs when none is named.\n")
+	b.WriteString("checklists:\n" + indentYAML(seededChecklist(title), "  review:", "    "))
+	if _, _, _, err := projects.ParseProject(bytes.NewReader(b.Bytes())); err != nil {
+		return nil, fmt.Errorf("scaffolded %s does not parse: %w", projects.ProjectDescriptor, err)
+	}
+	return b.Bytes(), nil
+}
+
+// indentYAML places a YAML document under key, indenting its body by pad. The document's leading
+// comment block stays above the key at the key's own indent, so it reads as the section's heading.
+func indentYAML(doc, key, pad string) string {
+	lines := strings.Split(strings.TrimRight(doc, "\n"), "\n")
+	keyIndent := key[:len(key)-len(strings.TrimLeft(key, " "))]
+	var b strings.Builder
+	i := 0
+	for ; i < len(lines) && strings.HasPrefix(lines[i], "#"); i++ {
+		b.WriteString(keyIndent + lines[i] + "\n")
+	}
+	b.WriteString(key + "\n")
+	for _, l := range lines[i:] {
+		if strings.TrimSpace(l) == "" {
+			b.WriteString("\n")
+			continue
+		}
+		b.WriteString(pad + l + "\n")
+	}
+	return b.String()
 }
 
 func copyFile(src, dst string) error {
@@ -252,9 +281,7 @@ func report(w io.Writer, root, projectID, designID, entry string, companions []s
 		fmt.Fprintf(w, "Added design %q to the existing project %q.\n\n", designID, projectID)
 	} else {
 		fmt.Fprintf(w, "Created project %q.\n\n", projectID)
-		fmt.Fprintf(w, "  %s\n", rel(projects.ProjectDescriptor))
-		fmt.Fprintf(w, "  %s        (stub — your team's naming vocabulary)\n", rel("conventions.yaml"))
-		fmt.Fprintf(w, "  %s             (seeded from the shipped catalog — edit it)\n", rel("review.yaml"))
+		fmt.Fprintf(w, "  %s   (your team's naming vocabulary, and a review checklist seeded from the shipped catalog; edit both)\n", rel(projects.ProjectDescriptor))
 	}
 	fmt.Fprintf(w, "  %s\n", rel("designs", designID, projects.DesignDescriptor))
 	fmt.Fprintf(w, "  %s   (copied)\n", rel("designs", designID, entry))
@@ -269,12 +296,13 @@ func report(w io.Writer, root, projectID, designID, entry string, companions []s
 
 const projectHeader = `Generated by ` + "`agni start`" + `. Edit freely.
 
-What makes this folder a project is this file: a declared name, and the fact that the config
-beside it belongs to every design under designs/ rather than to any one of them.
+What makes this folder a project is this file: a declared name, and the fact that the config in it
+and beside it belongs to every design under designs/ rather than to any one of them.
 
-The config files are found by their conventional names (conventions.yaml, profiles/, params/,
-review.yaml), so none of them is declared here. Declare one only to depart from that: a
-conventions file shared with another project, a differently-named checklist, or "" to opt out.`
+The conventions and checklists are sections below. The directories beside this file are found by
+their conventional names (profiles/, params/, symbols/, lib/), so none of them is declared here.
+Declare one only to depart from that, or as "" to opt out. Config shared with another project lives
+in a project of its own, which this one names with extends.`
 
 // designHeader records where the copied files came from. It is a COMMENT because Design has no
 // provenance field, and adding one for a scaffolder's note would be a schema change.
@@ -294,9 +322,9 @@ beside the entry" would turn a diff of two revisions into a diff of one against 
 // to load is an error (osProjectConfig), so a stub that did not parse would fail every command on the
 // scaffolded project.
 func conventionsStub(projectID string) string {
-	return `# Your team's naming vocabulary, composed into every run on this project.
+	return `# Your team's naming vocabulary, composed into every run on this project. It carries two halves,
+# wired differently.
 #
-# It carries two halves, wired differently:
 #   lexicon: teaches the engine which net names are this project's rails, grounds and supply pins.
 #            It reaches the design READ, so every rule sees the roles it implies.
 #   rules:   adds catalog rules, namespaced ` + projectID + `/<rule name>.

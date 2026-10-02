@@ -202,8 +202,8 @@ no findings and no findings is what clean looks like.
 `review` gates on the other axis:
 
 ```
-agni review designs/gateway --checklist review.yaml --fail-on-outcome fail
-agni review designs/gateway --checklist review.yaml --min-answered 13
+agni review designs/gateway --checklist review --fail-on-outcome fail
+agni review designs/gateway --checklist review --min-answered 13
 ```
 
 `--min-answered` counts the items that produced an answer (`pass`, `fail`, `provisional`,

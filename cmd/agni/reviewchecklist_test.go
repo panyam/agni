@@ -9,9 +9,9 @@ import (
 )
 
 // checklistProject writes a project around a copy of the CAN fixture and returns the design folder.
-// checklist names the file the project declares, "" to declare none (and write none, so the
-// conventional review.yaml default does not resolve either).
-func checklistProject(t *testing.T, root, id, checklist string) string {
+// checklists maps each name the project declares to the manifest fixture written under it, in the
+// order given, so the first is the project's default. None declares no checklists section at all.
+func checklistProject(t *testing.T, root, id string, checklists ...[2]string) string {
 	t.Helper()
 	write := func(rel, body string) {
 		t.Helper()
@@ -29,20 +29,29 @@ func checklistProject(t *testing.T, root, id, checklist string) string {
 	}
 	write("designs/d/board.edn", string(design))
 	write("designs/d/design.yaml", "name: "+id+"-d\ntitle: D\nentry: board.edn\n")
-	if checklist == "" {
-		write("project.yaml", "name: "+id+"\ntitle: "+id+"\n")
-		return filepath.Join(root, "designs", "d")
+	project := "name: " + id + "\ntitle: " + id + "\n"
+	if len(checklists) > 0 {
+		project += "checklists:\n"
 	}
-	man, err := os.ReadFile("testdata/review/mini.yaml")
-	if err != nil {
-		t.Fatal(err)
+	for _, c := range checklists {
+		man, err := os.ReadFile(c[1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		project += "  " + c[0] + ":\n"
+		for _, line := range strings.Split(strings.TrimRight(string(man), "\n"), "\n") {
+			project += "    " + line + "\n"
+		}
 	}
-	write(checklist, string(man))
-	// Declared explicitly rather than relying on the review.yaml default, so a test naming a
-	// non-default file proves the DECLARATION is read and not just the convention.
-	write("project.yaml", "name: "+id+"\ntitle: "+id+"\nchecklist: "+checklist+"\n")
+	write("project.yaml", project)
 	return filepath.Join(root, "designs", "d")
 }
+
+// mini and rails are the two manifest fixtures a project declares, by name.
+var (
+	mini  = [2]string{"review", "testdata/review/mini.yaml"}
+	rails = [2]string{"rails", "testdata/intent/rails-checklist.yaml"}
+)
 
 // runReviewCapturing runs review and returns stdout, stderr, and the error.
 func runReviewCapturing(t *testing.T, args ...string) (string, string, error) {
@@ -60,7 +69,7 @@ func runReviewCapturing(t *testing.T, args ...string) (string, string, error) {
 // --checklist. Before this, `agni review designs/gateway` errored out before
 // reading anything, even with the project's review.yaml sitting two directories up.
 func TestReviewUsesProjectChecklist(t *testing.T) {
-	design := checklistProject(t, t.TempDir(), "proj", "review.yaml")
+	design := checklistProject(t, t.TempDir(), "proj", mini)
 	out, errOut, err := runReviewCapturing(t, design)
 	if err != nil {
 		t.Fatalf("review: %v\n%s", err, errOut)
@@ -70,29 +79,41 @@ func TestReviewUsesProjectChecklist(t *testing.T) {
 	}
 	// Which checklist scored a run is not recoverable from the outcomes, so a checklist nobody typed
 	// has to announce itself.
-	if !strings.Contains(errOut, "projects/proj") || !strings.Contains(errOut, "review.yaml") {
+	if !strings.Contains(errOut, "projects/proj") || !strings.Contains(errOut, `"review"`) {
 		t.Errorf("stderr should name the project and the checklist it declared, got %q", errOut)
 	}
 }
 
-// TestReviewReadsTheDeclaredChecklistNotTheDefault has the project name a file that is NOT
-// review.yaml, so a run that worked by finding the conventional name rather than by reading the
-// declaration would fail here.
-func TestReviewReadsTheDeclaredChecklistNotTheDefault(t *testing.T) {
-	design := checklistProject(t, t.TempDir(), "proj", "checklists/house.yaml")
-	out, _, err := runReviewCapturing(t, design)
+// TestReviewPicksAChecklistByName covers a project declaring two checklists (agni issue 828). With no
+// --checklist the first one WRITTEN runs, whatever its name, and --checklist NAME runs another. A run
+// that sorted the names, or that looked for one called "review", would fail here, since the default
+// is called "rails".
+func TestReviewPicksAChecklistByName(t *testing.T) {
+	design := checklistProject(t, t.TempDir(), "proj", rails, mini)
+	out, errOut, err := runReviewCapturing(t, design)
 	if err != nil {
 		t.Fatalf("review: %v", err)
 	}
+	if !strings.Contains(out, "Rail sizing review") || !strings.Contains(errOut, `"rails"`) {
+		t.Errorf("the first declared checklist should run by default, got:\n%s\n%s", out, errOut)
+	}
+	out, _, err = runReviewCapturing(t, "--checklist", "review", design)
+	if err != nil {
+		t.Fatalf("review --checklist review: %v", err)
+	}
 	if !strings.Contains(out, "Mini board review") {
-		t.Errorf("the declared checklist should have run, got:\n%s", out)
+		t.Errorf("--checklist review should run the checklist of that name, got:\n%s", out)
+	}
+	_, _, err = runReviewCapturing(t, "--checklist", "nope", design)
+	if err == nil || !strings.Contains(err.Error(), `no checklist named "nope"`) || !strings.Contains(err.Error(), "rails, review") {
+		t.Errorf("an unknown name should fail and list what the project declares, got %v", err)
 	}
 }
 
 // TestReviewChecklistFlagWins keeps the flag meaningful on a design that DOES belong to a project.
 // The flag also suppresses the resolution note, because nothing was resolved.
 func TestReviewChecklistFlagWins(t *testing.T) {
-	design := checklistProject(t, t.TempDir(), "proj", "review.yaml")
+	design := checklistProject(t, t.TempDir(), "proj", mini)
 	_, errOut, err := runReviewCapturing(t, "--checklist", "testdata/intent/rails-checklist.yaml", design)
 	if err != nil {
 		t.Fatalf("review: %v", err)
@@ -116,12 +137,12 @@ func TestReviewChecklistErrorsAreActionable(t *testing.T) {
 		}
 	})
 	t.Run("project declares none", func(t *testing.T) {
-		design := checklistProject(t, t.TempDir(), "bare", "")
+		design := checklistProject(t, t.TempDir(), "bare")
 		_, _, err := runReviewCapturing(t, design)
 		if err == nil {
 			t.Fatal("a project with no checklist must error")
 		}
-		for _, want := range []string{"bare", "checklist:", "project.yaml"} {
+		for _, want := range []string{"bare", "checklists:", "project.yaml"} {
 			if !strings.Contains(err.Error(), want) {
 				t.Errorf("message should name the project and the fix, missing %q: %v", want, err)
 			}
@@ -134,8 +155,8 @@ func TestReviewChecklistErrorsAreActionable(t *testing.T) {
 // from Reports[0].Areas, so two manifests would label the rows from the first design's checklist and
 // fill the cells from the second's, so every row looks answered under the wrong labels.
 func TestReviewRollupRefusesMixedChecklists(t *testing.T) {
-	a := checklistProject(t, t.TempDir(), "proj-a", "review.yaml")
-	b := checklistProject(t, t.TempDir(), "proj-b", "review.yaml")
+	a := checklistProject(t, t.TempDir(), "proj-a", mini)
+	b := checklistProject(t, t.TempDir(), "proj-b", mini)
 	_, _, err := runReviewCapturing(t, a, b)
 	if err == nil {
 		t.Fatal("two designs resolving to different checklists must refuse rather than score one against the other's manifest")
@@ -153,7 +174,7 @@ func TestReviewRollupRefusesMixedChecklists(t *testing.T) {
 // checklist and roll up without a flag, which is the case a gate in CI is most likely to be.
 func TestReviewRollupAcceptsOneChecklist(t *testing.T) {
 	root := t.TempDir()
-	first := checklistProject(t, root, "proj", "review.yaml")
+	first := checklistProject(t, root, "proj", mini)
 	second := filepath.Join(root, "designs", "d2")
 	if err := os.MkdirAll(second, 0o755); err != nil {
 		t.Fatal(err)
@@ -192,7 +213,7 @@ func breakDescriptor(t *testing.T, path string) {
 // built-in vocabulary while looking authoritative.
 func TestReviewRefusesMalformedDesignDescriptor(t *testing.T) {
 	root := t.TempDir()
-	design := checklistProject(t, root, "proj", "review.yaml")
+	design := checklistProject(t, root, "proj", mini)
 	breakDescriptor(t, filepath.Join(design, "design.yaml"))
 	_, _, err := runReviewCapturing(t, design)
 	if err == nil {
@@ -213,7 +234,7 @@ func TestReviewRefusesMalformedDesignDescriptor(t *testing.T) {
 // run's own project resolution rather than from the checklist lookup.
 func TestReviewRefusesMalformedProjectDescriptor(t *testing.T) {
 	root := t.TempDir()
-	design := checklistProject(t, root, "proj", "review.yaml")
+	design := checklistProject(t, root, "proj", mini)
 	breakDescriptor(t, filepath.Join(root, "project.yaml"))
 	_, _, err := runReviewCapturing(t, "--checklist", "testdata/intent/rails-checklist.yaml", design)
 	if err == nil {

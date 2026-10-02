@@ -21,7 +21,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/panyam/agni/core/review"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/yamlpb"
+	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // The two descriptor file names, confined to this package for the reason in the package doc.
@@ -36,62 +41,71 @@ const (
 type projectYAML struct {
 	Name  string `yaml:"name"`
 	Title string `yaml:"title"`
-	// The config this project owns. Each is OPTIONAL and defaults to the conventional name beside
-	// `project.yaml` (see configNames). Declare one for a shared conventions file, a
-	// differently-named checklist, or to opt out with an empty value. Extends names another
-	// project whose config this one layers on top of, "projects/{project}".
-	Extends     string  `yaml:"extends"`
-	Conventions *string `yaml:"conventions"`
-	Profiles    *string `yaml:"profiles"`
-	Params      *string `yaml:"params"`
-	Symbols     *string `yaml:"symbols"`
-	Checklist   *string `yaml:"checklist"`
+	// Extends names another project whose config this one layers on top of, "projects/{project}".
+	Extends string `yaml:"extends,omitempty"`
+	// Conventions is the team's naming vocabulary and Checklists its review checklists by name, both
+	// written inline (agni issue 828). Each is bound to its proto, config.NamingConvention and
+	// checks.ReviewManifest, so the file and the wire share one schema.
+	Conventions yaml.Node `yaml:"conventions,omitempty"`
+	Checklists  yaml.Node `yaml:"checklists,omitempty"`
+	// Checklist is the key that named a checklist FILE before agni issue 828. It is decoded only so a
+	// descriptor still carrying it is refused with a message saying where the checklist goes now.
+	Checklist *string `yaml:"checklist,omitempty"`
+	// The directory tiers this project owns. Each is OPTIONAL and defaults to the conventional name
+	// beside `project.yaml` (see configNames). Declare one for a differently-named directory, or opt
+	// out with an empty value.
+	Profiles *string `yaml:"profiles,omitempty"`
+	Params   *string `yaml:"params,omitempty"`
+	Symbols  *string `yaml:"symbols,omitempty"`
 	// Lib is the project's own library of derived relations, a directory of `.dl` modules (agni
 	// issue 773).
-	Lib *string `yaml:"lib"`
+	Lib *string `yaml:"lib,omitempty"`
 }
 
 type designYAML struct {
 	Name       string   `yaml:"name"`
 	Title      string   `yaml:"title"`
 	Entry      string   `yaml:"entry"`
-	Companions []string `yaml:"companions"`
+	Companions []string `yaml:"companions,omitempty"`
 	// Intent is this design's declared architecture, written inline (agni issue 824). It is per-DESIGN,
 	// where conventions and profiles describe the team. Only its presence is read here; the intent
 	// package parses it, from this same file, when a run composes the design's config.
 	Intent yaml.Node `yaml:"intent,omitempty"`
 	// Symbols is this design's own symbol library, optional and defaulting to `symbols` beside the
 	// descriptor.
-	Symbols *string `yaml:"symbols"`
+	Symbols *string `yaml:"symbols,omitempty"`
 }
 
-// The conventional config names used when a descriptor declares none, matching the layout of
+// The conventional directory names used when a descriptor declares none, matching the layout of
 // `examples/tutorial-project`. They belong to `project.yaml` (symbols to both descriptors). FSStore
-// composes each tier it finds. A design's intent is not among them, since it is a section of
-// design.yaml itself.
+// composes each tier it finds. Conventions, checklists and a design's intent are not among them,
+// since each is a section of a descriptor.
 const (
-	defaultConventions = "conventions.yaml"
-	defaultProfiles    = "profiles"
-	defaultParams      = "params"
-	defaultSymbols     = "symbols"
-	defaultChecklist   = "review.yaml"
-	defaultLib         = "lib"
+	defaultProfiles = "profiles"
+	defaultParams   = "params"
+	defaultSymbols  = "symbols"
+	defaultLib      = "lib"
 )
 
-// formerIntentFile is where a design's intent lived before it moved into design.yaml. A design folder
-// still holding one is refused rather than read without it (agni issue 824).
+// formerIntentFile is where a design's intent lived before it moved into design.yaml, and
+// formerProjectFiles where a project's conventions and checklist lived before they moved into
+// project.yaml. A folder still holding one is refused rather than read without it (agni issues 824,
+// 828), because a read that skipped it would quietly drop a whole tier.
 const formerIntentFile = "intent.yaml"
+
+var formerProjectFiles = map[string]string{
+	"conventions.yaml": "conventions:",
+	"review.yaml":      "checklists: {review: ...}",
+}
 
 // ProjectConfigNames is what a parsed project descriptor says its config is called, before anything
 // checks whether those files exist. An empty entry means the project opted OUT of that tier, which is
 // distinct from "not declared, so use the default".
 type ProjectConfigNames struct {
-	Conventions string
-	Profiles    string
-	Params      string
-	Checklist   string
-	Symbols     string
-	Lib         string
+	Profiles string
+	Params   string
+	Symbols  string
+	Lib      string
 }
 
 // configNames resolves a project descriptor's declarations against the defaults.
@@ -108,12 +122,10 @@ func (y projectYAML) configNames() ProjectConfigNames {
 		return CleanRel(*declared)
 	}
 	return ProjectConfigNames{
-		Conventions: pick(y.Conventions, defaultConventions),
-		Profiles:    pick(y.Profiles, defaultProfiles),
-		Params:      pick(y.Params, defaultParams),
-		Checklist:   pick(y.Checklist, defaultChecklist),
-		Symbols:     pick(y.Symbols, defaultSymbols),
-		Lib:         pick(y.Lib, defaultLib),
+		Profiles: pick(y.Profiles, defaultProfiles),
+		Params:   pick(y.Params, defaultParams),
+		Symbols:  pick(y.Symbols, defaultSymbols),
+		Lib:      pick(y.Lib, defaultLib),
 	}
 }
 
@@ -138,8 +150,20 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfi
 	if err := validID("name", y.Name); err != nil {
 		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
 	}
+	if y.Checklist != nil {
+		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: checklist names a file (%q); a project's checklists are now written inline under checklists:, by name (agni issue 828)", ProjectDescriptor, *y.Checklist)
+	}
+	cfg := &webapi.AnalysisConfig{Extends: strings.TrimSpace(y.Extends)}
+	conv, err := parseConventions(&y.Conventions)
+	if err != nil {
+		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
+	}
+	cfg.Conventions = conv
+	if cfg.Checklists, err = parseChecklists(&y.Checklists); err != nil {
+		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
+	}
 	names = y.configNames()
-	for field, rel := range map[string]string{"conventions": names.Conventions, "profiles": names.Profiles, "params": names.Params, "checklist": names.Checklist, "symbols": names.Symbols, "lib": names.Lib} {
+	for field, rel := range map[string]string{"profiles": names.Profiles, "params": names.Params, "symbols": names.Symbols, "lib": names.Lib} {
 		if rel == "" {
 			continue
 		}
@@ -149,10 +173,65 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfi
 	}
 	// Config is always non-nil, even for a project that declares nothing, so callers need no nil
 	// check and an absent tier is an empty field.
-	return y.Name, &webapi.Project{
-		Title:  orName(y.Title, y.Name),
-		Config: &webapi.AnalysisConfig{Extends: strings.TrimSpace(y.Extends)},
-	}, names, nil
+	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name), Config: cfg}, names, nil
+}
+
+// parseConventions binds a project's conventions section to its proto. An absent section is nil,
+// meaning the engine's vocabulary. A scalar is the earlier form that named a file, refused with
+// where the content goes now.
+func parseConventions(n *yaml.Node) (*configpb.NamingConvention, error) {
+	switch {
+	case n.IsZero() || n.Tag == "!!null":
+		return nil, nil
+	case n.Kind == yaml.ScalarNode:
+		return nil, fmt.Errorf("conventions names a file (%q); a project's conventions are now written inline under conventions: (agni issue 828)", n.Value)
+	}
+	conv := &configpb.NamingConvention{}
+	if err := yamlpb.Decode(n, conv); err != nil {
+		return nil, fmt.Errorf("conventions: %w", err)
+	}
+	return conv, nil
+}
+
+// parseChecklists reads a project's checklists section, a mapping from a name to a review manifest,
+// in the order it is written, since the first is the project's default. Each manifest is validated
+// here, so a malformed checklist fails the project's load and names the checklist.
+//
+// A manifest's YAML is the review package's authoring form, which spells an item's binding flat where
+// the proto nests it, so it is read by review.Load and converted, rather than bound to the proto.
+func parseChecklists(n *yaml.Node) ([]*webapi.NamedChecklist, error) {
+	if n.IsZero() || n.Tag == "!!null" {
+		return nil, nil
+	}
+	if n.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("line %d: checklists must map a name to a checklist, as checklists: {review: {areas: [...]}}", n.Line)
+	}
+	var out []*webapi.NamedChecklist
+	seen := map[string]bool{}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		k, v := n.Content[i], n.Content[i+1]
+		name := strings.TrimSpace(k.Value)
+		if k.Kind != yaml.ScalarNode || name == "" {
+			return nil, fmt.Errorf("line %d: a checklist needs a name", k.Line)
+		}
+		if seen[name] {
+			return nil, fmt.Errorf("line %d: checklist %q is declared twice", k.Line, name)
+		}
+		seen[name] = true
+		if v.Kind != yaml.MappingNode {
+			return nil, fmt.Errorf("line %d: checklist %q must be a checklist (name, areas), not a file name", v.Line, name)
+		}
+		b, err := yaml.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("checklist %q: %w", name, err)
+		}
+		man, err := review.Load(strings.NewReader(string(b)))
+		if err != nil {
+			return nil, fmt.Errorf("checklist %q (line %d): %w", name, v.Line, err)
+		}
+		out = append(out, &webapi.NamedChecklist{Name: name, Manifest: service.ManifestProto(man)})
+	}
+	return out, nil
 }
 
 // ParseDesign reads a `design.yaml`, returning the declared id and the wire message, with the same
@@ -204,15 +283,14 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 		}
 		out.Config.SymbolPathUris = []string{clean}
 	}
-	// The intent URI names this descriptor, whose intent section the config resolver parses.
-	switch {
-	case y.Intent.IsZero() || y.Intent.Tag == "!!null":
-	case y.Intent.Kind == yaml.MappingNode:
-		out.Config.IntentUri = DesignDescriptor
-	case y.Intent.Kind == yaml.ScalarNode:
-		return "", nil, fmt.Errorf("%s: intent names a file (%q); a design's intent is now written inline under intent: (agni issue 824)", DesignDescriptor, y.Intent.Value)
-	default:
-		return "", nil, fmt.Errorf("%s: intent must be a section of declarations", DesignDescriptor)
+	// The intent section is bound to its proto here and compiled where a run composes its config, so
+	// the store hands it on as a value and no reader of the design opens this file again.
+	if !y.Intent.IsZero() && y.Intent.Tag != "!!null" {
+		di, err := intent.DecodeSection(&y.Intent)
+		if err != nil {
+			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
+		}
+		out.Config.Intent = di
 	}
 	return y.Name, out, nil
 }
@@ -276,7 +354,9 @@ func validRel(field, rel string) error {
 // descriptor SHAPE has one definition, and TestDescriptorRoundTrip pins the two halves together.
 //
 // names is optional. Passing nil declares nothing, which suits a scaffolder writing the conventional
-// layout, since the defaults already name `conventions.yaml`, `profiles`, `params` and `review.yaml`.
+// layout, since the defaults already name `profiles`, `params`, `symbols` and `lib`. The conventions
+// and checklists sections are a scaffolder's to append, since their content is prose an operator
+// edits rather than a value this writer could own.
 //
 // header is prose written as a YAML comment above the document, "" for none.
 func WriteProject(w io.Writer, header, id, title string, names *ProjectConfigNames) error {
@@ -291,8 +371,7 @@ func WriteProjectExtending(w io.Writer, header, id, title, extends string, names
 	}
 	y := projectYAML{Name: id, Title: title, Extends: extends}
 	if names != nil {
-		y.Conventions, y.Profiles = &names.Conventions, &names.Profiles
-		y.Params, y.Checklist = &names.Params, &names.Checklist
+		y.Profiles, y.Params = &names.Profiles, &names.Params
 		y.Symbols, y.Lib = &names.Symbols, &names.Lib
 	}
 	return writeDescriptor(w, header, y)

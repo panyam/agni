@@ -114,8 +114,8 @@ From then on the commands take a design and nothing else, as the two lines under
 because the project answers the rest.
 
 The design is **copied** into the project with any companion view it declares, and the project owns
-the copy, so edits to the original do not reach it. The generated `review.yaml`
-is a starting point seeded from the shipped catalog rather than a finished checklist;
+the copy, so edits to the original do not reach it. The `review` checklist it writes into
+`project.yaml` is a starting point seeded from the shipped catalog rather than a finished checklist;
 [Write your checklist](../../tutorials/08-write-your-checklist/) is about turning it into your
 team's.
 
