@@ -175,6 +175,9 @@ func TestNoInternalConnectorClass(t *testing.T) {
 	if got := Classify(comp("J5", "Mezzanine 80-pin"), nil); got != ClassConnector {
 		t.Errorf("a mezzanine connector classifies as %s, want connector", got)
 	}
+	if got := Classify(comp("J6", "USB-C receptacle"), nil); got != ClassConnector {
+		t.Errorf("a USB receptacle classifies as %s, want connector", got)
+	}
 	if _, ok := ParseComponentClass("internal_connector"); ok {
 		t.Error("internal_connector is still a class a lexicon may extend")
 	}
