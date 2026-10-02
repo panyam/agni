@@ -34,7 +34,7 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/panyam/demokit/notebook v0.0.28 // indirect
 	github.com/panyam/gocurrent v0.1.1 // indirect
-	github.com/panyam/jaala v0.1.12 // indirect
+	github.com/panyam/jaala v0.1.15 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect

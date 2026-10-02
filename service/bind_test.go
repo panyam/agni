@@ -86,3 +86,54 @@ func TestEachQueryInASetBindsItsOwnVariables(t *testing.T) {
 		t.Errorf("U1 answered %q and J1 %q, want two different non-empty answers", a, b)
 	}
 }
+
+// TestABindingInANumberPositionIsReadAsANumber: a value bound where the schema declares a number is
+// read as one whatever type it arrived as (panyam/jaala#65), so a caller holding only text, such as a
+// viewer's input box, binds a count correctly, and text that is not a number is refused rather than
+// answering nothing.
+func TestABindingInANumberPositionIsReadAsANumber(t *testing.T) {
+	svc, uri := tutorialQueries()
+	const q = `net.pin_count(?n, ?c), ?c >= ?min => ?n`
+	asked := func(v *webapi.QueryValue) (*webapi.RunQueryResponse, error) {
+		return svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q, Bindings: map[string]*webapi.QueryValue{"min": v}})
+	}
+	asNumber, err := asked(number(3))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(asNumber.GetRows()) == 0 {
+		t.Fatal("no net has three or more pins on the fixture, so the comparison proves nothing")
+	}
+	asText, err := asked(text("3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g, w := rowCells(asText), rowCells(asNumber); g != w {
+		t.Errorf("the text 3 answered %s, the number 3 answered %s", g, w)
+	}
+	if _, err := asked(text("abc")); !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "number") {
+		t.Errorf("binding abc to a number: err = %v, want an invalid argument saying it is a number", err)
+	}
+}
+
+// TestAnUntypedBindingKeepsItsOwnType: where nothing in the query types a variable, the binding's own
+// type decides, which is what the typed wire value is for. As numbers 10 < 9 is false; as text "10"
+// sorts before "9".
+func TestAnUntypedBindingKeepsItsOwnType(t *testing.T) {
+	svc, uri := tutorialQueries()
+	const q = `entity(?n, "net"), ?a < ?b => ?n`
+	asked := func(a, b *webapi.QueryValue) int {
+		t.Helper()
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q, Bindings: map[string]*webapi.QueryValue{"a": a, "b": b}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(resp.GetRows())
+	}
+	if n := asked(number(10), number(9)); n != 0 {
+		t.Errorf("as numbers 10 < 9 held for %d nets, want none", n)
+	}
+	if n := asked(text("10"), text("9")); n == 0 {
+		t.Error(`as text "10" < "9" held for no net, want every net`)
+	}
+}

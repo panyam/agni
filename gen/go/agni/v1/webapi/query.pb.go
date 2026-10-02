@@ -436,9 +436,11 @@ func (x *RunQueryResponse) GetBindings() map[string]*QueryValue {
 	return nil
 }
 
-// QueryValue is a value bound to a query variable. It is typed because the engine compares a number
-// and a string differently, and a binding must mean what the same constant written into the query
-// would: `3.3` is a number and `"3.3"` a string.
+// QueryValue is a value bound to a query variable. Where the schema types the variable's position,
+// the engine reads the value as that type whichever field carries it (panyam/jaala#65): text that
+// parses binds a number in a number position, text that does not is refused, and a number in a name
+// position matches by its text. Where nothing types the variable, this field decides, as `3.3`
+// versus `"3.3"` written into the query would.
 type QueryValue struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Kind:

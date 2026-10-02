@@ -100,9 +100,8 @@ CASES: List[Case] = [
     # Bound variables answer alike, text and number, quoting included (agni issue 793).
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"}))),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3.0}))),
-    # The TEXT "3" stays text on both transports, unlike the number above. Today the engine then
-    # answers nothing rather than coercing or refusing (panyam/jaala#65); this case holds the two
-    # transports to the same behaviour whichever way that goes.
+    # The TEXT "3", in a position the schema types as a number, is read as 3 on both transports
+    # (panyam/jaala#65), so this answers as the case above.
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": "3"}))),
     Case(
         "QueryService/RunQueries",
