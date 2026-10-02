@@ -60,7 +60,7 @@ func serveCmd() *cobra.Command {
 	var nativeTools []string
 	var datasheetsURL string
 	var theme string
-	var paramsDir, paramsURL, profilePath, intentPath, conventions string
+	var paramsDir, paramsURL, profilePath, conventions string
 	var reviewStorePath string
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
@@ -77,7 +77,7 @@ func serveCmd() *cobra.Command {
 			return runViewer(cmd, viewerOpts{
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
-				profilePath: profilePath, intentPath: intentPath, conventions: conventions,
+				profilePath: profilePath, conventions: conventions,
 				reviewStorePath: reviewStorePath,
 				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
 			})
@@ -100,7 +100,6 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&paramsURL, "params-url", "", "a PartSpecService to read published PartSpecs from instead of a directory, e.g. http://host:8090 for an `agnids serve --corpus`; each request fetches its design's parts in one batch, and a spec published there reaches the next request. Not with --params. A project's own params/ still wins over it")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
-	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
 	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
 	return c
 }
@@ -119,7 +118,6 @@ type viewerOpts struct {
 	paramsDir   string
 	paramsURL   string
 	profilePath string
-	intentPath  string
 	conventions string
 
 	reviewStorePath string
@@ -150,7 +148,7 @@ type viewerOpts struct {
 func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	addr, webDir, mountRoot := o.addr, o.webDir, o.mountRoot
 	nativeTools, theme := o.nativeTools, o.theme
-	paramsDir, profilePath, intentPath, conventions := o.paramsDir, o.profilePath, o.intentPath, o.conventions
+	paramsDir, profilePath, conventions := o.paramsDir, o.profilePath, o.conventions
 	reviewStorePath := o.reviewStorePath
 	if theme == "" {
 		theme = "default"
@@ -281,7 +279,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 		reviewStore = st
 	}
-	checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, intentPath, conventionCfg, projectResolver, cmd.ErrOrStderr())
+	checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, conventionCfg, projectResolver, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -371,7 +369,7 @@ type serveLoader = agni.RuleLoader
 // conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here,
 // since that is a process-global install done once at startup, and doing it in a function tests call
 // would leak one test's vocabulary into the next.
-func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions *configpb.NamingConvention, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath string, conventions *configpb.NamingConvention, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
 		return nil, nil, err
@@ -384,7 +382,7 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 		}
 		extra = append(extra, src)
 	}
-	e, err := newEngine(overlay, intentPath, extra, agni.WithProjectResolver(projects))
+	e, err := newEngine(overlay, extra, agni.WithProjectResolver(projects))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -489,7 +487,7 @@ func inContainer() bool {
 // process is up and serving HTTP.
 //
 // It does NOT re-probe the mounts, the rule catalog, or the params set. A bad --mount,
-// --profile-path, --intent-path, or --params fails before the listener exists, so a 200 says
+// --profile-path or --params fails before the listener exists, so a 200 says
 // nothing about configuration and should not be read as if it did.
 func healthHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

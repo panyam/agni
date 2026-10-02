@@ -19,12 +19,9 @@ type ComponentClass string
 // because a Zener is a slower clamp than a fast ESD TVS (esd-clamp-not-tvs, WS3-078, credits them
 // differently). ClassTestConnector is distinct from ClassConnector because a debug, test, edge-card
 // or programming connector is a bench interface, not a field-facing harness, so protection rules
-// (esd, input-protection) that quantify over ClassConnector exclude it. ClassInternalConnector is
-// distinct for the same reason: a board-to-board, module, mezzanine or card-slot connector joins this
-// board to another one inside the product, so nothing a user touches reaches it, and the exposure
-// rules (esd-protection, esd-clamp-not-tvs, input-protection, reverse-blocking-absent) exclude it.
-// The engine recognises only an unambiguous keyword for it; a project names its own internal
-// connectors through its lexicon, since a part number or footprint rarely says (agni issue 815).
+// (esd, input-protection) that quantify over ClassConnector exclude it. A board-to-board connector
+// is NOT a class, because whether it faces the field depends on the product rather than the part; a
+// design declares it in its intent instead (Model.ExposedConnector, agni issue 831).
 //
 // ClassClock is the clock-source FAMILY (WS10-015), with ClassOscillator, ClassCrystal, and
 // ClassCeramicResonator as its subtypes. The family is NOT ClassCrystal, since an active oscillator
@@ -44,22 +41,21 @@ const (
 	// for every topological question and not for anything temperature-related, the same split
 	// ClassFerrite makes against ClassInductor. Without it a thermistor emits no component.class row
 	// and drops out of every class-scoped rule; on one real board that was 15 parts (agni issue 627).
-	ClassThermistor        ComponentClass = "thermistor"
-	ClassDiode             ComponentClass = "diode"
-	ClassLED               ComponentClass = "led"
-	ClassTVS               ComponentClass = "tvs"
-	ClassZener             ComponentClass = "zener"
-	ClassFuse              ComponentClass = "fuse"
-	ClassConnector         ComponentClass = "connector"
-	ClassTestConnector     ComponentClass = "test_connector"
-	ClassInternalConnector ComponentClass = "internal_connector"
-	ClassTestPoint         ComponentClass = "test_point"
-	ClassClock             ComponentClass = "clock"
-	ClassOscillator        ComponentClass = "oscillator"
-	ClassCrystal           ComponentClass = "crystal"
-	ClassCeramicResonator  ComponentClass = "ceramic_resonator"
-	ClassIC                ComponentClass = "ic"
-	ClassTransistor        ComponentClass = "transistor"
+	ClassThermistor       ComponentClass = "thermistor"
+	ClassDiode            ComponentClass = "diode"
+	ClassLED              ComponentClass = "led"
+	ClassTVS              ComponentClass = "tvs"
+	ClassZener            ComponentClass = "zener"
+	ClassFuse             ComponentClass = "fuse"
+	ClassConnector        ComponentClass = "connector"
+	ClassTestConnector    ComponentClass = "test_connector"
+	ClassTestPoint        ComponentClass = "test_point"
+	ClassClock            ComponentClass = "clock"
+	ClassOscillator       ComponentClass = "oscillator"
+	ClassCrystal          ComponentClass = "crystal"
+	ClassCeramicResonator ComponentClass = "ceramic_resonator"
+	ClassIC               ComponentClass = "ic"
+	ClassTransistor       ComponentClass = "transistor"
 	// ClassIdealDiodeController is a controller that drives an external FET to behave as a diode
 	// (ORing controllers, ideal-diode controllers, power muxes). No netlist labels a FET plus bias
 	// network as an ideal diode, so reverse-blocking analysis takes the identity from a seeded
@@ -78,7 +74,7 @@ func ComponentClasses() []ComponentClass {
 	return []ComponentClass{
 		ClassResistor, ClassCapacitor, ClassInductor, ClassFerrite, ClassThermistor,
 		ClassDiode, ClassLED, ClassTVS, ClassZener, ClassFuse,
-		ClassConnector, ClassTestConnector, ClassInternalConnector, ClassTestPoint,
+		ClassConnector, ClassTestConnector, ClassTestPoint,
 		ClassClock, ClassOscillator, ClassCrystal, ClassCeramicResonator,
 		ClassIC, ClassTransistor, ClassIdealDiodeController,
 	}

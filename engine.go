@@ -48,7 +48,7 @@ func New(opts ...Option) (*Engine, error) {
 		o(b)
 	}
 	registry := facts.RegistryWith(b.factOptions...)
-	catalog, byName, err := composeRules(b.profiles, b.intent, b.sources...)
+	catalog, byName, err := composeRules(b.profiles, b.sources...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,6 @@ func New(opts ...Option) (*Engine, error) {
 		env: service.ReviewEnv{
 			ProducerVersion: b.version,
 			Profiles:        len(b.profiles) > 0,
-			Intent:          b.intent != nil,
 		},
 	}
 	if err := e.checkSeams(b); err != nil {

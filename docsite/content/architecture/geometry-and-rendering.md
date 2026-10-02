@@ -334,7 +334,7 @@ The netlist-graph fallback (`agni render --layout=grid|layered`) has no source g
 
   A class with no glyph of its own draws through its family, which is already in the stamped set:
   a zener carries `["zener", "diode"]` and draws as a diode. `glyphAliases` covers the rest, where
-  the set holds no drawable tag (`clock`, `test_connector`, `internal_connector`, `ideal_diode_controller`) or the class
+  the set holds no drawable tag (`clock`, `test_connector`, `ideal_diode_controller`) or the class
   arrives outside a set from a user rule. These are drawing conventions and not classification
   claims, so they stay out of `classify`'s family table, where a test connector is deliberately
   NOT a connector for the protection rules even though it is drawn as one.

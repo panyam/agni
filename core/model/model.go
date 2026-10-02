@@ -201,6 +201,11 @@ type Model interface {
 	// rather than equality against the single most-specific class (WS3-071). An unknown ref-des
 	// or class is false.
 	HasClass(refDes string, class ComponentClass) bool
+	// ExposedConnector reports whether a component is a connector that faces the outside of the
+	// product: a connector the design's intent does not declare internal (agni issue 831). The
+	// exposure rules ask this rather than HasClass(ref, ClassConnector), because whether a connector
+	// faces the field is a fact about one product, which only its declaration can state.
+	ExposedConnector(refDes string) bool
 	// Classes returns the full device_classes set for a component (specific class plus family
 	// tags), or nil for an unknown/unclassified ref-des. The set backing component.class(ref, class).
 	Classes(refDes string) []ComponentClass

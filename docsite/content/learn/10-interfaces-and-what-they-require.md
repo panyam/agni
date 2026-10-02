@@ -50,6 +50,8 @@ Run it against the board:
 
 The ESD finding is the other kind, a genuine requirement of anything with a connector on it. Both CAN nets reach the outside world through `J1` with no clamp in reach.
 
+That assumes `J1` faces the outside world, and the tool cannot know. If this board plugged into a carrier through `J1`, the CAN pins would meet the carrier's copper inside the enclosure and the carrier's own connector would be the one a cable touches. The same connector part can be either, so the design says which in its intent, `components: {J1: {exposure: internal}}`, and the exposure rules then leave nets that reach only `J1` alone (see [Design intent](../../guide/design-intent/)).
+
 ## The trap in that file (EE6)
 
 This one costs real boards.

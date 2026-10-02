@@ -153,6 +153,11 @@ lexicon:
 	if err := ApplyLexicon(bad); err == nil {
 		t.Error("an unknown component class in a lexicon must error")
 	}
+	// The removed internal_connector class names where its declaration went (agni issue 831).
+	gone, _ := Parse([]byte("name: acme\nlexicon:\n  class:\n    internal_connector:\n      patterns: [\"^x\"]\n"))
+	if err := ApplyLexicon(gone); err == nil || !strings.Contains(err.Error(), "exposure: internal") {
+		t.Errorf("a lexicon extending internal_connector should point at the intent declaration, got %v", err)
+	}
 }
 
 // TestEveryShippedClassLoadsFromYAML checks that a project may extend every class the engine ships,

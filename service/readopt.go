@@ -1,6 +1,9 @@
 package service
 
-import "github.com/panyam/agni/core/classify"
+import (
+	"github.com/panyam/agni/core/classify"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+)
 
 // ReadOptions is the per-read configuration a service passes down to its loader, for inputs that
 // belong to the READ rather than to the rule catalog. A naming lexicon resolves net roles once at
@@ -21,6 +24,11 @@ type ReadOptions struct {
 	// same additive, idempotent pass, so a corpus arriving after the read still gets the class, but
 	// only a class stamped here reaches the DRAWING (agni issue 710).
 	DeviceClassFor func(mpn string) string
+	// Intent is the design's declared intent, for the MODEL built from this read rather than for the
+	// read itself: BuildModel hands it to check.WithIntent so the exposure rules know which connectors
+	// the design declares internal (agni issue 831). It rides the read options because every surface
+	// that builds a model already passes Overlay.ReadOptions, so none can miss it.
+	Intent *configpb.DesignIntent
 }
 
 // ReadOption configures one read.
@@ -42,6 +50,12 @@ func WithSymbolPaths(dirs []string) ReadOption {
 // a project that declares a params tier carries the classes only its corpus can establish.
 func WithDeviceClasses(f func(mpn string) string) ReadOption {
 	return func(o *ReadOptions) { o.DeviceClassFor = f }
+}
+
+// WithDesignIntent carries a design's declared intent to the model BuildModel builds (see
+// ReadOptions.Intent).
+func WithDesignIntent(di *configpb.DesignIntent) ReadOption {
+	return func(o *ReadOptions) { o.Intent = di }
 }
 
 // ReadOpts resolves options to a value, for a loader implementation to read. Exported because the

@@ -31,6 +31,10 @@ const (
 	// RuleIOMapCoverage reports the parts of the design the map never mentions. Its considered set is
 	// the NETLIST, not the declaration; see ioMapCoverageRule.
 	RuleIOMapCoverage = "io-map-coverage"
+	// RuleExposureDeclared confirms each component a declaration gives an exposure is a connector the
+	// design has (agni issue 831). Without it a misspelled ref-des would change nothing and read as a
+	// declaration that took effect.
+	RuleExposureDeclared = "exposure-declared"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
 	SourceName = "intent"
@@ -73,6 +77,9 @@ func Compile(d Declaration) []*check.Rule {
 		// as unexamined rather than clean.
 		rules = append(rules, ioMapFarEndRule(d))
 		rules = append(rules, ioMapCoverageRule(d))
+	}
+	if len(d.Exposures) > 0 {
+		rules = append(rules, exposureDeclaredRule(d))
 	}
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))

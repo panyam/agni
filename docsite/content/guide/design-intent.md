@@ -46,10 +46,12 @@ Intent is per-**design**, unlike naming conventions, interface profiles and seed
 are per-project. Each board has its own intended architecture, so the declaration lives with the
 board rather than with the team, in the one file that already says which files the board is.
 
-`--intent-path` exists for a design that belongs to no project, and names a file in the same shape, a
-`name` and an `intent:` section. Reaching for it on a design whose project already declares intent is
-an error rather than a silent double-load, so you find out immediately instead of reading every
-finding twice.
+`--intent-path` on `check` and `review` names a file in the same shape, a `name` and an `intent:`
+section, for a design that belongs to no project or to try a declaration before committing it. It
+rides the request as the declaration's value, so on a design that already declares intent it REPLACES
+that declaration for the run rather than being added to it, the way a request's naming convention
+replaces the project's. A server takes no intent flag, since intent is per design and a flag would
+apply one board's declaration to every design it serves (agni issue 831).
 
 The section's schema is the `DesignIntent` message in `protos/agni/v1/config/intent.proto`, so a
 declaration has the same shape in YAML, in JSON and on the wire, and a key the message does not have
@@ -59,10 +61,10 @@ A separate `intent.yaml` beside the design is no longer read, and a project hold
 with a message saying where its declarations go (agni issue 824). So does a declaration written in
 the earlier nine-form vocabulary, each refused key naming its replacement.
 
-## The six forms
+## The seven forms
 
-Each form answers a question the netlist cannot. Two are keyed by what they describe (a block, a
-net), and the other four describe relationships between several nets.
+Each form answers a question the netlist cannot. Three are keyed by what they describe (a block, a
+net, a component), and the other four describe relationships between several nets.
 
 | Form | Declares | Fails when |
 |---|---|---|
@@ -72,6 +74,7 @@ net), and the other four describe relationships between several nets.
 | `strap_groups` | several strap nets read together as one binary number, and the value it encodes | the group does not encode the declared value, or two devices collide |
 | `io_map` | which net lands on which pin of which device, and optionally what sits at the far end | the net is on a different pin, the declared net is absent, or the far end is wrong |
 | `margin_factor` | the headroom every supply must have over its rails' declared peaks | a supply is rated below peak times the factor |
+| `components` | what each named component is, keyed by ref-des (a connector's exposure) | a declared component is absent, or is not a connector |
 
 A `nets` entry carries any of these facts, and each compiles to the same rule it always did.
 
@@ -89,6 +92,27 @@ A rail with a `nominal` and no `domain` is named by its voltage (`3.3V`), and ra
 must share a voltage. `protect` takes `ovp` (a TVS or zener clamping the rail) and `discharge` (a
 bleeder to ground). A resistance band belongs to a strap, so `min_ohms` without `strap` is a load
 error.
+
+A `components` entry says whether a connector faces the outside of the product. The exposure rules
+(`esd-protection`, `esd-clamp-not-tvs`, `input-protection` and `reverse-blocking-absent`) treat every
+connector as a way into the board, which is right for a cable entry and wrong for a module socket or
+a mezzanine that joins two boards inside one enclosure. Whether a connector is which depends on the
+product rather than the part. The same board-to-board connector is the module socket on one carrier
+and the cable entry on another, and its part number and footprint rarely say either way, so the
+engine does not guess from them.
+
+```yaml
+intent:
+  components:
+    J1:  {exposure: internal}   # the module connector
+    J18: {exposure: internal}   # the expansion mezzanine
+```
+
+A connector declared `internal` leaves the exposure rules, so a net reaching only it is not checked
+for ESD or input protection. A net that also reaches an undeclared connector still is. An undeclared
+connector is external, and `external` can be written to say so. The declarations themselves compile
+to `intent/exposure-declared`, which fails a ref-des the design does not have and a part that is not a
+connector, because either would change nothing while reading as a declaration that took effect.
 
 `io_map` is the largest of them in practice and the one most boards already have, usually as a
 spreadsheet. On any board carrying a big MCU or SoC, someone decides which peripheral lands on which

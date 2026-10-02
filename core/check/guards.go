@@ -221,7 +221,7 @@ func ExternalSignalNet(m Model, n *ir.Net) bool {
 		return false
 	}
 	hasConn := Exists(n.Connections, func(c *ir.Connection) bool {
-		return m.HasClass(c.ComponentRef, ClassConnector)
+		return m.ExposedConnector(c.ComponentRef)
 	})
 	if !hasConn {
 		return false

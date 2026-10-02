@@ -69,8 +69,8 @@ tier.
 ## Without the declaration
 
 ```
-| A1 | each rail sits at its declared voltage | needs-design-intent | needs a design-intent declaration (--intent-path) |
-| A2 | the declared modules are all present | needs-design-intent | needs a design-intent declaration (--intent-path) |
+| A1 | each rail sits at its declared voltage | needs-design-intent | needs a design-intent declaration (an intent: section in the design's design.yaml, or --intent-path) |
+| A2 | the declared modules are all present | needs-design-intent | needs a design-intent declaration (an intent: section in the design's design.yaml, or --intent-path) |
 ```
 
 `needs-design-intent`, not `pass`. A question about intent cannot be answered by a design that never

@@ -25,7 +25,6 @@ const (
 	ClassFuse                 = model.ClassFuse
 	ClassConnector            = model.ClassConnector
 	ClassTestConnector        = model.ClassTestConnector
-	ClassInternalConnector    = model.ClassInternalConnector
 	ClassTestPoint            = model.ClassTestPoint
 	ClassClock                = model.ClassClock
 	ClassOscillator           = model.ClassOscillator

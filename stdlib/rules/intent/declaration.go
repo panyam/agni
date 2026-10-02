@@ -63,6 +63,11 @@ type Declaration struct {
 	// (pin mismatch, net absent, far end wrong) and io-map-coverage reports the nets the map never
 	// mentions. See compile.go.
 	IOMap []IOAssignment
+	// Exposures is what the declaration says about each named component's exposure, sorted by ref-des.
+	// The model reads the same declaration to decide which connectors the exposure rules check (see
+	// check.WithIntent), so the one rule compiled from it, intent/exposure-declared, only confirms that
+	// each declaration names a connector the design has.
+	Exposures []Exposure
 	// MarginFactor is the house headroom policy, the multiple of a rail's peak budget its supply must
 	// be rated for (1.2 means 20% headroom). It compiles intent/rail-current-margin and has NO DEFAULT,
 	// because a default puts one company's policy in a rule literal (what WS3-069 moved naming
@@ -308,4 +313,22 @@ type IOAssignment struct {
 type IOEndpoint struct {
 	Device string
 	Pin    string
+}
+
+// ExposureInternal and ExposureExternal are the two values a component's exposure takes. Internal is
+// a connector joining this board to another inside the same product, which the exposure rules leave
+// alone. External is the default and needs no declaration.
+const (
+	ExposureInternal = "internal"
+	ExposureExternal = "external"
+)
+
+// Exposure is one component's declared exposure (agni issue 831). Whether a connector faces the field
+// is a fact about one product rather than about the part, since the same mezzanine connector is the
+// module socket on one carrier and the cable entry on another.
+type Exposure struct {
+	// Ref is the component's ref-des as the design spells it.
+	Ref string
+	// Exposure is ExposureInternal or ExposureExternal.
+	Exposure string
 }

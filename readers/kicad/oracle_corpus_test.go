@@ -39,7 +39,7 @@ func TestOracleCorpus(t *testing.T) {
 		t.Skip("not the default suite: run `make oracle`, which fetches the both-views corpus first")
 	}
 	const dir = "../../tools/samples"
-	boards, err := filepath.Glob(filepath.Join(dir, "boards", "*"))
+	boards, err := globCorpus(filepath.Join(dir, "boards", "*"))
 	if err != nil || len(boards) == 0 {
 		// Fatal, never skipped, because it is reached only via `make oracle`, which has already
 		// fetched.
@@ -76,6 +76,32 @@ func TestOracleCorpus(t *testing.T) {
 	}
 }
 
+// globCorpus is filepath.Glob without macOS AppleDouble files. A tarball packed on a Mac carries a
+// "._name" resource-fork shadow beside every file unless COPYFILE_DISABLE is set, and one sorts
+// ahead of the real file, so it would be read as a board or as the root schematic (agni issue 812).
+func globCorpus(pattern string) ([]string, error) {
+	all, err := filepath.Glob(pattern)
+	out := all[:0]
+	for _, p := range all {
+		if !strings.HasPrefix(filepath.Base(p), "._") {
+			out = append(out, p)
+		}
+	}
+	return out, err
+}
+
+// boardRoot picks the board's root schematic, the .kicad_sch with a sibling .kicad_pcb, and returns
+// both paths, or two empty strings when the directory has no such pair.
+func boardRoot(dir string) (root, pcb string) {
+	schs, _ := globCorpus(filepath.Join(dir, "*.kicad_sch"))
+	for _, s := range schs {
+		if p := strings.TrimSuffix(s, ".kicad_sch") + ".kicad_pcb"; fileExists(p) {
+			return s, p
+		}
+	}
+	return "", ""
+}
+
 // baselinePath is deliberately NOT under testdata/. The docsite run specs mount that directory as a
 // fixture and stamp each capture with a hash of every tracked file in it, so a baseline living there
 // would restamp five tutorial captures every time a reader fix shrinks it, coupling two things that
@@ -87,14 +113,7 @@ const baselinePath = "oracle_corpus.baseline"
 // rather than passing by silently skipping.
 func crossCheckBoard(t *testing.T, dir string) []string {
 	t.Helper()
-	schs, _ := filepath.Glob(filepath.Join(dir, "*.kicad_sch"))
-	var root, pcb string
-	for _, s := range schs {
-		if p := strings.TrimSuffix(s, ".kicad_sch") + ".kicad_pcb"; fileExists(p) {
-			root, pcb = s, p
-			break
-		}
-	}
+	root, pcb := boardRoot(dir)
 	if root == "" {
 		// The schematics-only tarball has no copper, so there is nothing to cross-check against.
 		t.Fatalf("%s has no .kicad_sch with a sibling .kicad_pcb; run `make samples-oracle`", dir)
@@ -249,3 +268,31 @@ const baselineHeader = `# Where our KiCad read still disagrees with KiCad, board
 `
 
 var _ = ir.Design{}
+
+// The oracle's walk ignores AppleDouble shadows, which sort ahead of the files they shadow and pair
+// up with each other, so without the filter "._csi" is chosen as the root and fails to parse
+// (agni issue 812). This runs in the gate, where the oracle itself does not.
+func TestOracleWalkSkipsAppleDouble(t *testing.T) {
+	dir := t.TempDir()
+	board := filepath.Join(dir, "boards", "csi")
+	if err := os.MkdirAll(board, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{
+		filepath.Join(dir, "boards", "._csi"),
+		filepath.Join(board, "._csi.kicad_sch"), filepath.Join(board, "._csi.kicad_pcb"),
+		filepath.Join(board, "csi.kicad_sch"), filepath.Join(board, "csi.kicad_pcb"),
+	} {
+		if err := os.WriteFile(f, []byte("(kicad)"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	boards, err := globCorpus(filepath.Join(dir, "boards", "*"))
+	if err != nil || len(boards) != 1 || filepath.Base(boards[0]) != "csi" {
+		t.Errorf("boards = %v (err %v), want the one real board", boards, err)
+	}
+	root, pcb := boardRoot(board)
+	if filepath.Base(root) != "csi.kicad_sch" || filepath.Base(pcb) != "csi.kicad_pcb" {
+		t.Errorf("root, pcb = %q, %q; want the real pair, not the AppleDouble shadows", root, pcb)
+	}
+}
