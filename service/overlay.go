@@ -451,8 +451,13 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.conventionName = req.GetConfig().GetConventions().GetName()
 	// Set the base convention's NAME explicitly, since Overlay.Catalog drops the sources tagged with it.
 	// Inheriting whatever the fallback held would leave the server's convention running alongside the
-	// request's (WS3-124).
-	out.baseConvention = baseConvention
+	// request's (WS3-124). Only a request that SENDS a convention replaces the server's. One carrying
+	// only intent, profiles or library modules keeps it, or its rules would vanish from a run that
+	// never asked to change the naming vocabulary.
+	out.baseConvention = ""
+	if req.GetConfig().GetConventions() != nil {
+		out.baseConvention = baseConvention
+	}
 	out.id = id
 	return out, nil
 }
