@@ -1,4 +1,9 @@
 # Generated block for 07-your-architecture.md. Edit the script, not the capture.
+#
+# The project's params/ is moved aside and named by flag, so this run and its twin without --params
+# differ by the flag alone. Left in place, the project would supply it to both and the two captures
+# would be identical.
 fixture: examples/tutorial-project
 script: |
-  agni check designs/gateway/gateway.edn --params params
+  mv params params-off
+  agni check designs/gateway/gateway.edn --params params-off

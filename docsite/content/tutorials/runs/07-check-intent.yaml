@@ -1,4 +1,8 @@
 # Generated block for 07-your-architecture.md. Edit the script, not the capture.
+#
+# The project's params/ is moved aside, because a project discovers its own tiers and dropping the flag
+# alone would not turn the datasheet tier off.
 fixture: examples/tutorial-project
 script: |
+  mv params params-off
   agni check designs/gateway/gateway.edn

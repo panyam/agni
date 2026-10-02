@@ -1,1 +1,46 @@
-#agni-run 4a0251cc60b9700a
+#agni-run 37cbbd1262c45dfa
+findings by rule:
+  copper-clearance       12
+  decoupling-present     1
+  esd-protection         2
+  gateway-profiles/can-host-incomplete 1
+  gateway/signal-net-naming 2
+  i2c-pull-up            2
+  intent/module-count    1
+  intent/module-missing  1
+  intent/voltage-domain-mismatch 1
+  reverse-blocking-absent 1
+  test-point-coverage    2
+  track-width            1
+
+first 27:
+  [error] copper-clearance: CAN1_CANH (copper of "CAN1_CANH" and "I2C_SCL" closer than 0.127mm at 1 place(s); worst gap -0.175mm near (5.00, -84.00)mm)
+  [error] copper-clearance: CAN1_CANL (copper of "CAN1_CANL" and "I2C_SDA" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -85.50)mm)
+  [error] copper-clearance: CAN1_RXD (copper of "CAN1_RXD" and "PMIC_PG" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm)
+  [error] copper-clearance: CAN1_RXD (copper of "CAN1_RXD" and "PMIC_CORE_3V3" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm)
+  [error] copper-clearance: CAN1_TXD (copper of "CAN1_TXD" and "PMIC_MAIN_12V0" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm)
+  [error] copper-clearance: CAN1_TXD (copper of "CAN1_TXD" and "MCU_NRST" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm)
+  [error] copper-clearance: GND (copper of "GND" and "XTAL_OUT" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -82.50)mm)
+  [error] copper-clearance: MCU_NRST (copper of "MCU_NRST" and "PMIC_MAIN_12V0" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm)
+  [error] copper-clearance: PMIC_CORE_3V3 (copper of "PMIC_CORE_3V3" and "PMIC_PG" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm)
+  [error] copper-clearance: PMIC_EN (copper of "PMIC_EN" and "PMIC_IO_1V8" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -81.00)mm)
+  [error] copper-clearance: PMIC_EN (copper of "PMIC_EN" and "XTAL_IN" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -81.00)mm)
+  [error] copper-clearance: PMIC_IO_1V8 (copper of "PMIC_IO_1V8" and "XTAL_IN" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -81.00)mm)
+  [warning] decoupling-present: PMIC_MAIN_12V0 (power rail has no decoupling capacitor)
+  [info] esd-protection: CAN1_CANH (externally-exposed signal net has no ESD protection)
+  [info] esd-protection: CAN1_CANL (externally-exposed signal net has no ESD protection)
+  [error] gateway-profiles/can-host-incomplete: U4 (CAN host U4 declares the interface but is missing required signal STB)
+  [warning] gateway/signal-net-naming: XTAL_IN (net name matches no allowed naming pattern)
+  [warning] gateway/signal-net-naming: XTAL_OUT (net name matches no allowed naming pattern)
+  [error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor to a rail)
+  [error] i2c-pull-up: I2C_SDA (I2C net has no pull-up resistor to a rail)
+  [warning] intent/module-count: regulators (declared module "regulators" (class regulator) expects 2, found 0)
+  [warning] intent/module-missing: regulators (declared module "regulators" (class regulator) is not present on the design)
+  [warning] intent/voltage-domain-mismatch: PMIC_IO_1V8 (rail "PMIC_IO_1V8" is declared in voltage domain "core" (3.3V) but its name declares 1.8V)
+  [warning] reverse-blocking-absent: PMIC_MAIN_12V0 (connector feeds a power input with no reverse-blocking element in the path)
+  [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
+  [info] test-point-coverage: PMIC_MAIN_12V0 (rail carries no test point; bring-up and factory test cannot probe it)
+  [error] track-width: CAN1_CANH (net has 1 track segment(s) narrower than the 0.127mm fabrication floor)
+
+27 finding(s) total
+253 subject(s) considered by 33 rule(s), 6 not considered (--verdicts for the detail)

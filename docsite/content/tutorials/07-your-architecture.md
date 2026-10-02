@@ -49,7 +49,8 @@ months as a design is edited by people who did not write the original plan.
 
 ## A tier can depend on another tier
 
-Run the same thing without `--params`:
+Run the same thing without `--params`. A project discovers its own tiers, so dropping the flag
+alone would change nothing, and both runs move the project's `params/` aside first:
 
 {{ agniRun "content/tutorials/runs/07-check-intent.yaml" }}
 

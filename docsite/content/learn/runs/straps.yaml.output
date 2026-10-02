@@ -1,4 +1,4 @@
-#agni-run f2ffc1feb64fca9a
+#agni-run 94ead7998135807a
 intent/strap-address-collision  1 fail
     fail  U12 + U13  U12 (PHYAD U12) and U13 (PHYAD U13) both strap to address 1 on bus MDIO;
                      two devices answering one address make that bus unreliable
