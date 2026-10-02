@@ -163,7 +163,14 @@ lexicon:
     thermistor: { prefixes: ["TH"] }         # your house writes TH12, not RT12
     zener:      { prefixes: ["Z"] }
     tvs:        { patterns: ["^pesd"] }      # a part-number family with no "tvs" in its name
+    internal_connector: { patterns: ["^218650$"] }  # a mezzanine whose part number says nothing
 ```
+
+`internal_connector` is worth knowing about on any board that plugs into another one. A
+board-to-board, module, mezzanine or card-slot connector faces nothing a user touches, so the
+exposure rules (`esd-protection`, `input-protection`, `reverse-blocking-absent`) leave its nets alone
+once it is classified that way. Left as a plain `connector`, every signal on a module connector reads
+as an ESD path into the board.
 
 A prefix is the leading run of letters of a ref-des, so `TH` matches `TH12` and a part whose
 library symbol declares `TH?`. Prefixes are matched case-insensitively and are ADDED to the built-in

@@ -65,7 +65,11 @@ var tokenClasses = map[string]ComponentClass{
 	"edge":        ClassTestConnector,
 	"programming": ClassTestConnector,
 	"programmer":  ClassTestConnector,
-	"testpoint":   ClassTestPoint,
+	// A mezzanine connector joins two boards inside one product, so it faces nothing a user touches.
+	// Deliberately the only keyword: "socket", "header" and "b2b" each name external parts too, and a
+	// project declares its own internal connectors through its lexicon (agni issue 815).
+	"mezzanine": ClassInternalConnector,
+	"testpoint": ClassTestPoint,
 	// Clock sources (WS10-015). ALL clock tokens, "oscillator" included, mark CLOCK-FAMILY candidacy
 	// and never a subtype. On real EDIF a whole vendor library is named "Oscillator" (its DXDB_LIBNAME
 	// rides every crystal AND resonator in it) and the per-part "Oscillator Type?" label is swapped in
@@ -131,6 +135,9 @@ func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 		if hints[ClassTestConnector] {
 			return ClassTestConnector
 		}
+		if hints[ClassInternalConnector] {
+			return ClassInternalConnector
+		}
 	case ClassInductor:
 		if hints[ClassFerrite] {
 			return ClassFerrite
@@ -165,7 +172,7 @@ var hintPriority = []ComponentClass{
 	// Clock subtypes rank above the ClassClock family (a subtype is more specific); the family ranks
 	// above the leaf classes so a bare clock candidate resolves to clock, not further down the list.
 	ClassOscillator, ClassCrystal, ClassCeramicResonator, ClassClock,
-	ClassTestPoint, ClassTestConnector, ClassConnector,
+	ClassTestPoint, ClassTestConnector, ClassInternalConnector, ClassConnector,
 	ClassFuse, ClassTransistor, ClassDiode, ClassThermistor, ClassResistor, ClassCapacitor, ClassInductor,
 }
 
