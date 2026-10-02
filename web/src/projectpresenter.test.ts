@@ -10,8 +10,8 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
   const onConvention = vi.fn();
   const onReview = vi.fn();
   const listReviews = vi.fn(async () => ({ reviews: [] }));
-  const createReview = vi.fn(async () => ({ name: "reviews/r1" }));
-  const getReviewManifest = vi.fn(async () => ({ manifest: { name: "from a file" } }));
+  const createReview = vi.fn(async (_req: unknown) => ({ name: "reviews/r1" }));
+  const getReviewManifest = vi.fn(async (_req: unknown) => ({ manifest: { name: "from a file" } }));
   const resolveDesign = vi.fn(async () => resolve);
   const listRules = vi.fn(async () => ({ rules: [{ name: "bulk-cap", severity: "warning", summary: "", available: true }] }));
   const checkDesign = vi.fn(async () => ({ findings: [] }));
