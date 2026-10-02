@@ -339,14 +339,81 @@ const (
 // It checks ctx before each rule and returns its error when the caller has gone (agni issue 795),
 // rather than the findings so far, which would read as a run that found nothing more.
 func Run(ctx context.Context, m Model, rules []*Rule) ([]Finding, error) {
-	out, err := runFindings(ctx, m, rules)
-	if err != nil {
-		return nil, err
+	fs, _, err := run(ctx, m, rules, true, false)
+	return fs, err
+}
+
+// RunAll is Run and RunVerdicts together, evaluating each rule ONCE (agni issue 810). A caller that
+// wants both contracts, as a check response does, used to call the two and so ran the whole catalog
+// twice, since a finding is a projection of a verdict. The findings and verdicts are exactly the ones
+// Run and RunVerdicts return over the same rules, gate included.
+func RunAll(ctx context.Context, m Model, rules []*Rule) ([]Finding, []Verdict, error) {
+	return run(ctx, m, rules, true, true)
+}
+
+// run is the one loop behind Run, RunVerdicts and RunAll. Findings take the unresolved-symbol gate,
+// as Run always has; verdicts never did, so a gated rule that states a considered set is still
+// evaluated for its verdicts, and only then. Each rule's Eval runs at most once.
+func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts bool) ([]Finding, []Verdict, error) {
+	var fs []Finding
+	var vs []Verdict
+	gate := func(*Rule) (Finding, bool) { return Finding{}, false }
+	if wantFindings {
+		gate = unresolvedSymbolGate(m)
 	}
-	for i := range out {
-		stampCorpus(m, out[i].DatasheetProv)
+	for _, r := range rules {
+		if err := ctx.Err(); err != nil {
+			return nil, nil, err
+		}
+		gated := false
+		if wantFindings {
+			if f, ok := gate(r); ok {
+				f.Rule, f.Severity = r.Name, r.Severity
+				fs = append(fs, f)
+				gated = true
+			}
+		}
+		needVerdicts := wantVerdicts && r.StatesConsideredSet
+		if gated && !needVerdicts {
+			continue
+		}
+		if !wantFindings && !needVerdicts {
+			continue
+		}
+		evaluated := r.Eval(ctx, m)
+		if wantFindings && !gated {
+			for _, f := range VerdictsToFindings(evaluated) {
+				f.Rule, f.Severity = r.Name, r.Severity
+				stampCorpus(m, f.DatasheetProv)
+				fs = append(fs, f)
+			}
+		}
+		if needVerdicts {
+			for _, v := range evaluated {
+				v.Rule = r.Name
+				if v.Witness != nil {
+					stampCorpus(m, v.Witness.Datasheet)
+				}
+				vs = append(vs, v)
+			}
+		}
 	}
-	return out, nil
+	sort.Slice(fs, func(i, j int) bool {
+		if fs[i].Rule != fs[j].Rule {
+			return fs[i].Rule < fs[j].Rule
+		}
+		return EntityRef(fs[i].Subject) < EntityRef(fs[j].Subject)
+	})
+	sort.Slice(vs, func(i, j int) bool {
+		if vs[i].Rule != vs[j].Rule {
+			return vs[i].Rule < vs[j].Rule
+		}
+		return SubjectRefs(vs[i]) < SubjectRefs(vs[j])
+	})
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err // the last rule ran past a cancellation, so its results are not to be trusted as complete
+	}
+	return fs, vs, nil
 }
 
 // stampCorpus names the corpus each citation's spec came from, when the model's provider can say.
@@ -362,35 +429,6 @@ func stampCorpus(m Model, cs []*DatasheetCitation) {
 			c.Corpus = sc.SpecCorpus(c.spec)
 		}
 	}
-}
-
-func runFindings(ctx context.Context, m Model, rules []*Rule) ([]Finding, error) {
-	var out []Finding
-	gate := unresolvedSymbolGate(m)
-	for _, r := range rules {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		if f, gated := gate(r); gated {
-			f.Rule, f.Severity = r.Name, r.Severity
-			out = append(out, f)
-			continue
-		}
-		for _, f := range r.Findings(ctx, m) {
-			f.Rule, f.Severity = r.Name, r.Severity
-			out = append(out, f)
-		}
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Rule != out[j].Rule {
-			return out[i].Rule < out[j].Rule
-		}
-		return EntityRef(out[i].Subject) < EntityRef(out[j].Subject)
-	})
-	if err := ctx.Err(); err != nil {
-		return nil, err // the last rule ran past a cancellation, so its findings are not to be trusted as complete
-	}
-	return out, nil
 }
 
 // unresolvedSymbolGate returns a per-rule gate reporting whether a rule cannot be DECIDED because the
@@ -456,32 +494,8 @@ func RunDesign(d *ir.Design) []Finding { return RunBackground(NewModel(d), built
 //
 // Like Run, it checks ctx before each rule and returns its error rather than a partial list.
 func RunVerdicts(ctx context.Context, m Model, rules []*Rule) ([]Verdict, error) {
-	var out []Verdict
-	for _, r := range rules {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		if !r.StatesConsideredSet {
-			continue
-		}
-		for _, v := range r.Eval(ctx, m) {
-			v.Rule = r.Name
-			if v.Witness != nil {
-				stampCorpus(m, v.Witness.Datasheet)
-			}
-			out = append(out, v)
-		}
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Rule != out[j].Rule {
-			return out[i].Rule < out[j].Rule
-		}
-		return SubjectRefs(out[i]) < SubjectRefs(out[j])
-	})
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
+	_, vs, err := run(ctx, m, rules, false, true)
+	return vs, err
 }
 
 // Report maps a selection to findings (the report step every rule ends with). Subject and

@@ -203,6 +203,18 @@ func (fq FindingQuery) vocabulary() *facts.Registry {
 	return facts.DefaultRegistry()
 }
 
+// baseKey keys the fact base cached on a model, one per vocabulary.
+type baseKey struct{ reg *facts.Registry }
+
+// sharedBase returns the model's fact base over reg, built once per model and shared by every
+// query-backed rule that runs over it (agni issue 810). Building it projects the whole design into
+// tuples, which on a 1123-component board took 64ms, and each of 34 rules was paying it to run a query
+// that usually matched nothing. Sharing is safe because jaala keeps a query's derived relations on a
+// per-query copy of the Base, never on the shared one.
+func sharedBase(reg *facts.Registry, m check.Model) *Base {
+	return check.Memo(m, baseKey{reg}, func() any { return NewBaseFrom(reg, m) }).(*Base)
+}
+
 func buildRule(fq FindingQuery) *check.Rule {
 	q := fq.Query
 	r := fq.Rule
@@ -229,7 +241,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// passed over are not in the answer and the only accurate report is failures-only.
 	if fq.Domain == nil {
 		r.Eval = check.FailuresOnly(func(ctx context.Context, m check.Model) []check.Finding {
-			rows, err := Default.Eval(ctx, q, NewBaseFrom(fq.vocabulary(), m), EvalOptions(ctx)...)
+			rows, err := Default.Eval(ctx, q, sharedBase(fq.vocabulary(), m), EvalOptions(ctx)...)
 			if err != nil {
 				// Construction validated this query, so this is the ENGINE failing on a design. An
 				// inconclusive finding says the rule could not decide, where nil would read as a clean
@@ -249,7 +261,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// The failing verdicts are built here rather than through check.FailuresOnly, because that adapter
 	// sees only the Finding, whose subject is singular, and the subject tuple has to come from the ROW.
 	r.Eval = func(ctx context.Context, m check.Model) []check.Verdict {
-		base := NewBaseFrom(fq.vocabulary(), m)
+		base := sharedBase(fq.vocabulary(), m)
 		var vs []check.Verdict
 		failed := map[string]bool{}
 		rows, err := Default.Eval(ctx, q, base, EvalOptions(ctx)...)
