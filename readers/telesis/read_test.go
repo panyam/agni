@@ -446,3 +446,46 @@ func TestEmptySectionIsNotRecordedAsUnparsed(t *testing.T) {
 		t.Errorf("%s = %q, want it to name $UNKNOWN_SECTION, which carries content", UnparsedSectionsAttr, got)
 	}
 }
+
+// TestPartsSharingAFootprintKeepTheirOwnMPN covers agni issue 835. Two entries share the package
+// name TP_SMD with different MPNs, and a third repeats the first's MPN. Each part keeps the MPN its
+// own entry states; the later MPN gets a part type of its own that records the shared package, and
+// the repeat joins the first part type rather than making a third.
+func TestPartsSharingAFootprintKeepTheirOwnMPN(t *testing.T) {
+	const tel = "$PACKAGES\n\n" +
+		"'TP_SMD' ! 'TP_SMALL' ;  TP1 TP2\n\n" +
+		"'TP_SMD' ! 'TP_LARGE' ;  TP3 TP4\n\n" +
+		"'TP_SMD' ! 'TP_SMALL' ;  TP5\n\n" +
+		"$NETS\n\n" +
+		"'N1' ;  TP1.1 TP3.1\n\n" +
+		"$END\n"
+	d, err := Read(strings.NewReader(tel), "shared.tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mpn := map[string]string{}
+	for _, lib := range d.GetLibraries() {
+		for _, p := range lib.GetParts() {
+			mpn[p.GetName()] = p.GetMpn()
+		}
+	}
+	want := map[string]string{"TP1": "TP_SMALL", "TP2": "TP_SMALL", "TP3": "TP_LARGE", "TP4": "TP_LARGE", "TP5": "TP_SMALL"}
+	for ref, w := range want {
+		c := compByRef(d, ref)
+		if c == nil {
+			t.Fatalf("%s missing", ref)
+		}
+		if got := mpn[c.GetSections()[0].GetPartRef()]; got != w {
+			t.Errorf("%s reads part type %q with MPN %q, want %q", ref, c.GetSections()[0].GetPartRef(), got, w)
+		}
+	}
+	if n := len(mpn); n != 2 {
+		t.Errorf("%d part types, want 2 (one per distinct MPN): %v", n, mpn)
+	}
+	if p := partByName(d, "TP_SMD:TP_LARGE"); p == nil || p.GetAttributes()["package"] != "TP_SMD" {
+		t.Errorf("the second MPN's part type does not record its package: %v", p)
+	}
+	if p := partByName(d, "TP_SMD"); p == nil || p.GetAttributes()["package"] != "" {
+		t.Errorf("the first part type should keep the plain package name and no package attribute: %v", p)
+	}
+}

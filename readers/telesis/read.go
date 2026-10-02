@@ -183,6 +183,9 @@ type builder struct {
 	unnamedParts map[string]bool
 	// partExtra holds a package entry's positional fields beyond the MPN.
 	partExtra map[string][]string
+	// partPackage holds the package name of a part type keyed apart from it, because the package
+	// was already declared with a different MPN (see addPackage).
+	partPackage map[string]string
 
 	compAttrs map[string]map[string]string
 	// pinAttrs is keyed by ref-des then pin designator. Pin facts arrive per INSTANCE and are
@@ -206,6 +209,7 @@ func newBuilder(source string) *builder {
 		refSeen:      map[string]bool{},
 		unnamedParts: map[string]bool{},
 		partExtra:    map[string][]string{},
+		partPackage:  map[string]string{},
 		compAttrs:    map[string]map[string]string{},
 		pinAttrs:     map[string]map[string]map[string]string{},
 		netNames:     map[string]bool{},
@@ -344,6 +348,11 @@ func (b *builder) noteUnparsed(section string) {
 //
 // An entry with no part name is identified by its MPN, which keeps two unnamed parts with
 // different MPNs distinct. The substitution is recorded as name_from_mpn on the part type.
+//
+// Two entries may share a package (footprint) name with different MPNs, parts that share a
+// footprint. Each keeps its own MPN: the first takes the package name, and a later one is keyed
+// "<package>:<mpn>" with the package recorded as its `package` attribute (agni issue 835). Keying by
+// the package alone gave every part of the later entry the first entry's MPN, with no warning.
 func (b *builder) addPackage(e entry) {
 	part, named := e.head, true
 	if part == "" {
@@ -351,6 +360,11 @@ func (b *builder) addPackage(e entry) {
 	}
 	if part == "" {
 		return
+	}
+	if mpn, seen := b.partMPN[part]; seen && named && mpn != e.value {
+		pkg := part
+		part = pkg + ":" + e.value
+		b.partPackage[part] = pkg
 	}
 	if !named {
 		b.unnamedParts[part] = true
@@ -494,6 +508,12 @@ func (b *builder) partType(part string) *ir.PartType {
 			pt.Attributes = map[string]string{}
 		}
 		pt.Attributes["name_from_mpn"] = "true"
+	}
+	if pkg := b.partPackage[part]; pkg != "" {
+		if pt.Attributes == nil {
+			pt.Attributes = map[string]string{}
+		}
+		pt.Attributes["package"] = pkg
 	}
 
 	byDesignator := map[string]*ir.Pin{}

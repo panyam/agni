@@ -77,6 +77,7 @@ continuation in progress.
 | `! 'MPN'` with no part name | `PartType.name` = the MPN, plus attribute `name_from_mpn = "true"` |
 | head fields 3 and on | `PartType.attributes["field_3"]`, `["field_4"]`, ... by 1-based position, uninterpreted |
 | a package target | `Component.ref_des`, one `ComponentSection` naming the part type |
+| a second entry with the same `PART` and a different `MPN` | its own `PartType`, named `PART:MPN` with attribute `package = PART`, so each part keeps the MPN its entry states (parts sharing a footprint). A repeat of an `MPN` already seen for that `PART` joins the existing part type |
 | a ref-des under a second package entry | `InputDiagnostics.ref_des_collisions`. The first declaration wins |
 | `$NETS` entry head | `Net.name`. A repeated name is ignored after the first |
 | a net name starting with `$` (`$1N0001`) | `Net.attributes["generated_name"] = "true"`. Kept, never dropped |
