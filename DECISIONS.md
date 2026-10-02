@@ -1962,6 +1962,9 @@ number for the whole declaration.
   report the board as declaring nothing.
 - A per-component fact (connector exposure, #815) arrives as a third keyed map rather than a tenth
   form.
+- The schema is a proto message, `config.DesignIntent`, and the YAML only spells it (C26). A
+  hand-written YAML struct would have been a second schema, and intent is about to travel on the
+  wire with a request and feed the model, which is the point at which two schemas start drifting.
 
 **Reopen if** one design's intent needs to be shared across several designs. That is `extends` on a
 descriptor, rather than a reason to split the file again.

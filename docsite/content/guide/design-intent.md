@@ -51,6 +51,10 @@ board rather than with the team, in the one file that already says which files t
 an error rather than a silent double-load, so you find out immediately instead of reading every
 finding twice.
 
+The section's schema is the `DesignIntent` message in `protos/agni/v1/config/intent.proto`, so a
+declaration has the same shape in YAML, in JSON and on the wire, and a key the message does not have
+fails the load with the line it sits on.
+
 A separate `intent.yaml` beside the design is no longer read, and a project holding one fails to load
 with a message saying where its declarations go (agni issue 824). So does a declaration written in
 the earlier nine-form vocabulary, each refused key naming its replacement.
