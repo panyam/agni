@@ -43,13 +43,14 @@ const (
 //
 // Most stamped classes need no entry, because the device_classes set already carries the family
 // tag and choose walks it. An entry is needed when the set holds no drawable tag (clock,
-// test_connector, ideal_diode_controller) or when the class arrives OUTSIDE a set, from a user
+// test_connector, internal_connector, ideal_diode_controller) or when the class arrives OUTSIDE a set, from a user
 // --class rule, where there is no family to walk. See
 // docsite/content/architecture/geometry-and-rendering.md#auto-layout-node-drawing.
 var glyphAliases = map[string]string{
 	string(model.ClassThermistor):           ClassResistor,
 	string(model.ClassZener):                ClassDiode,
 	string(model.ClassTestConnector):        ClassConnector,
+	string(model.ClassInternalConnector):    ClassConnector,
 	string(model.ClassClock):                ClassCrystal,
 	string(model.ClassOscillator):           ClassCrystal,
 	string(model.ClassCeramicResonator):     ClassCrystal,

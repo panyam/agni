@@ -43,8 +43,13 @@ rules (input-protection, bulk-cap), and the name check is the only rail evidence
 netlist (EDIF) carries. A DEBUG / TEST / edge-card / programming connector is excluded because it
 classifies as `test_connector` (WS3-066), a distinct class from `connector`, so a bench interface (a
 JTAG header, a SAMTEC edge card) is not treated as harness exposure; the debug-connector patterns
-are lexicon defaults a project can extend. Severity is info because the approximation still cannot
-know whether a plain header is a real external interface or an unlabeled internal one. Since WS3-011
+are lexicon defaults a project can extend. A board-to-board, module, mezzanine or card-slot connector
+is excluded the same way, as `internal_connector` (agni issue 815): it joins this board to another one
+inside the product, so nothing a user touches reaches it. The engine recognises only the keyword
+`mezzanine`, because a part number or footprint rarely says, so a project names its own through
+`lexicon.class.internal_connector` (on a carrier board, the module connector and the M.2 sockets).
+Severity is info because the approximation still cannot know whether a plain header is a real
+external interface or an unlabeled internal one. Since WS3-011
 the clamp may sit one series hop away (connector -> series R -> clamped node, the classic ESD
 topology), so the TVS existence check runs over the net's 2-hop reach. True ordering ("the clamp is
 connector-side of the IC") remains unmodeled; reach makes the existence check topology-tolerant, not

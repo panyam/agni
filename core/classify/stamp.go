@@ -147,8 +147,9 @@ func AddClassTag(c *ir.Component, class string, src ir.ClassSource) {
 
 // classFamily maps a specific class to its SUBTYPE family parent, the tag a consumer checks for
 // family membership. Only genuine "is-a" subtypes are listed: a TVS is-a diode, an LED is-a diode, a
-// ferrite bead is-a inductor. ClassTestConnector is DELIBERATELY absent, since it was split OUT of
-// connector (WS3-066) so that protection rules quantifying over connector exclude a bench interface.
+// ferrite bead is-a inductor. ClassTestConnector and ClassInternalConnector are DELIBERATELY absent,
+// since each was split OUT of connector (WS3-066, agni issue 815) so that protection rules quantifying
+// over connector exclude a bench interface and a board-to-board joint.
 // Cross-family electrical groupings (passive, pass-element) are NOT families and stay Go predicates
 // (isPassiveClass, passClass).
 var classFamily = map[ComponentClass]ComponentClass{
