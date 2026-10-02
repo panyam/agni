@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/config/intent.proto\x12\x0e\x61gni.v1.config\"\xad\x03\n\x0c\x44\x65signIntent\x12\x36\n\x07modules\x18\x01 \x03(\x0b\x32\x1c.agni.v1.config.IntentModuleR\x07modules\x12:\n\x04nets\x18\x02 \x03(\x0b\x32&.agni.v1.config.DesignIntent.NetsEntryR\x04nets\x12;\n\tsequences\x18\x03 \x03(\x0b\x32\x1d.agni.v1.config.PowerSequenceR\tsequences\x12=\n\x0cstrap_groups\x18\x04 \x03(\x0b\x32\x1a.agni.v1.config.StrapGroupR\x0bstrapGroups\x12\x34\n\x06io_map\x18\x05 \x03(\x0b\x32\x1d.agni.v1.config.PinAssignmentR\x05ioMap\x12#\n\rmargin_factor\x18\x06 \x01(\x01R\x0cmarginFactor\x1aR\n\tNetsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12/\n\x05value\x18\x02 \x01(\x0b\x32\x19.agni.v1.config.NetIntentR\x05value:\x02\x38\x01\"t\n\x0cIntentModule\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05\x63lass\x18\x02 \x01(\tR\x05\x63lass\x12\x10\n\x03mpn\x18\x03 \x01(\tR\x03mpn\x12\x14\n\x05\x63ount\x18\x04 \x01(\x05R\x05\x63ount\x12\x12\n\x04nets\x18\x05 \x03(\tR\x04nets\"\x8b\x02\n\tNetIntent\x12\x1d\n\x07nominal\x18\x01 \x01(\x01H\x00R\x07nominal\x88\x01\x01\x12\x16\n\x06\x64omain\x18\x02 \x01(\tR\x06\x64omain\x12\x17\n\x04peak\x18\x03 \x01(\x01H\x01R\x04peak\x88\x01\x01\x12\x18\n\x07protect\x18\x04 \x03(\tR\x07protect\x12\x14\n\x05reset\x18\x05 \x01(\tR\x05reset\x12\x14\n\x05strap\x18\x06 \x01(\tR\x05strap\x12\x19\n\x08min_ohms\x18\x07 \x01(\x01R\x07minOhms\x12\x19\n\x08max_ohms\x18\x08 \x01(\x01R\x07maxOhms\x12\x1d\n\nac_coupled\x18\t \x01(\x08R\tacCoupledB\n\n\x08_nominalB\x07\n\x05_peak\"t\n\rPowerSequence\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n\x08relation\x18\x02 \x01(\tR\x08relation\x12\x33\n\x05order\x18\x03 \x03(\x0b\x32\x1d.agni.v1.config.SequenceStageR\x05order\"O\n\rSequenceStage\x12\x12\n\x04rail\x18\x01 \x01(\tR\x04rail\x12\x12\n\x04good\x18\x02 \x01(\tR\x04good\x12\x16\n\x06\x65nable\x18\x03 \x01(\tR\x06\x65nable\"\x8e\x01\n\nStrapGroup\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n\x06\x64\x65vice\x18\x02 \x01(\tR\x06\x64\x65vice\x12\x12\n\x04nets\x18\x03 \x03(\tR\x04nets\x12\x14\n\x05value\x18\x04 \x01(\x05R\x05value\x12\x10\n\x03\x62us\x18\x05 \x01(\tR\x03\x62us\x12\x18\n\x07\x64\x65\x66\x61ult\x18\x06 \x01(\tR\x07\x64\x65\x66\x61ult\"\x94\x01\n\rPinAssignment\x12\x10\n\x03net\x18\x01 \x01(\tR\x03net\x12\x16\n\x06\x64\x65vice\x18\x02 \x01(\tR\x06\x64\x65vice\x12\x10\n\x03pin\x18\x03 \x01(\tR\x03pin\x12\x1a\n\x08\x66unction\x18\x04 \x01(\tR\x08\x66unction\x12+\n\x02to\x18\x05 \x01(\x0b\x32\x1b.agni.v1.config.PinEndpointR\x02to\"7\n\x0bPinEndpoint\x12\x16\n\x06\x64\x65vice\x18\x01 \x01(\tR\x06\x64\x65vice\x12\x10\n\x03pin\x18\x02 \x01(\tR\x03pinB.Z,github.com/panyam/agni/gen/go/agni/v1/configb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/config/intent.proto\x12\x0e\x61gni.v1.config\"\xdb\x04\n\x0c\x44\x65signIntent\x12\x36\n\x07modules\x18\x01 \x03(\x0b\x32\x1c.agni.v1.config.IntentModuleR\x07modules\x12:\n\x04nets\x18\x02 \x03(\x0b\x32&.agni.v1.config.DesignIntent.NetsEntryR\x04nets\x12;\n\tsequences\x18\x03 \x03(\x0b\x32\x1d.agni.v1.config.PowerSequenceR\tsequences\x12=\n\x0cstrap_groups\x18\x04 \x03(\x0b\x32\x1a.agni.v1.config.StrapGroupR\x0bstrapGroups\x12\x34\n\x06io_map\x18\x05 \x03(\x0b\x32\x1d.agni.v1.config.PinAssignmentR\x05ioMap\x12#\n\rmargin_factor\x18\x06 \x01(\x01R\x0cmarginFactor\x12L\n\ncomponents\x18\x07 \x03(\x0b\x32,.agni.v1.config.DesignIntent.ComponentsEntryR\ncomponents\x1aR\n\tNetsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12/\n\x05value\x18\x02 \x01(\x0b\x32\x19.agni.v1.config.NetIntentR\x05value:\x02\x38\x01\x1a^\n\x0f\x43omponentsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x35\n\x05value\x18\x02 \x01(\x0b\x32\x1f.agni.v1.config.ComponentIntentR\x05value:\x02\x38\x01\"-\n\x0f\x43omponentIntent\x12\x1a\n\x08\x65xposure\x18\x01 \x01(\tR\x08\x65xposure\"t\n\x0cIntentModule\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05\x63lass\x18\x02 \x01(\tR\x05\x63lass\x12\x10\n\x03mpn\x18\x03 \x01(\tR\x03mpn\x12\x14\n\x05\x63ount\x18\x04 \x01(\x05R\x05\x63ount\x12\x12\n\x04nets\x18\x05 \x03(\tR\x04nets\"\x8b\x02\n\tNetIntent\x12\x1d\n\x07nominal\x18\x01 \x01(\x01H\x00R\x07nominal\x88\x01\x01\x12\x16\n\x06\x64omain\x18\x02 \x01(\tR\x06\x64omain\x12\x17\n\x04peak\x18\x03 \x01(\x01H\x01R\x04peak\x88\x01\x01\x12\x18\n\x07protect\x18\x04 \x03(\tR\x07protect\x12\x14\n\x05reset\x18\x05 \x01(\tR\x05reset\x12\x14\n\x05strap\x18\x06 \x01(\tR\x05strap\x12\x19\n\x08min_ohms\x18\x07 \x01(\x01R\x07minOhms\x12\x19\n\x08max_ohms\x18\x08 \x01(\x01R\x07maxOhms\x12\x1d\n\nac_coupled\x18\t \x01(\x08R\tacCoupledB\n\n\x08_nominalB\x07\n\x05_peak\"t\n\rPowerSequence\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n\x08relation\x18\x02 \x01(\tR\x08relation\x12\x33\n\x05order\x18\x03 \x03(\x0b\x32\x1d.agni.v1.config.SequenceStageR\x05order\"O\n\rSequenceStage\x12\x12\n\x04rail\x18\x01 \x01(\tR\x04rail\x12\x12\n\x04good\x18\x02 \x01(\tR\x04good\x12\x16\n\x06\x65nable\x18\x03 \x01(\tR\x06\x65nable\"\x8e\x01\n\nStrapGroup\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n\x06\x64\x65vice\x18\x02 \x01(\tR\x06\x64\x65vice\x12\x12\n\x04nets\x18\x03 \x03(\tR\x04nets\x12\x14\n\x05value\x18\x04 \x01(\x05R\x05value\x12\x10\n\x03\x62us\x18\x05 \x01(\tR\x03\x62us\x12\x18\n\x07\x64\x65\x66\x61ult\x18\x06 \x01(\tR\x07\x64\x65\x66\x61ult\"\x94\x01\n\rPinAssignment\x12\x10\n\x03net\x18\x01 \x01(\tR\x03net\x12\x16\n\x06\x64\x65vice\x18\x02 \x01(\tR\x06\x64\x65vice\x12\x10\n\x03pin\x18\x03 \x01(\tR\x03pin\x12\x1a\n\x08\x66unction\x18\x04 \x01(\tR\x08\x66unction\x12+\n\x02to\x18\x05 \x01(\x0b\x32\x1b.agni.v1.config.PinEndpointR\x02to\"7\n\x0bPinEndpoint\x12\x16\n\x06\x64\x65vice\x18\x01 \x01(\tR\x06\x64\x65vice\x12\x10\n\x03pin\x18\x02 \x01(\tR\x03pinB.Z,github.com/panyam/agni/gen/go/agni/v1/configb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,22 +34,28 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/config'
   _globals['_DESIGNINTENT_NETSENTRY']._loaded_options = None
   _globals['_DESIGNINTENT_NETSENTRY']._serialized_options = b'8\001'
+  _globals['_DESIGNINTENT_COMPONENTSENTRY']._loaded_options = None
+  _globals['_DESIGNINTENT_COMPONENTSENTRY']._serialized_options = b'8\001'
   _globals['_DESIGNINTENT']._serialized_start=48
-  _globals['_DESIGNINTENT']._serialized_end=477
-  _globals['_DESIGNINTENT_NETSENTRY']._serialized_start=395
-  _globals['_DESIGNINTENT_NETSENTRY']._serialized_end=477
-  _globals['_INTENTMODULE']._serialized_start=479
-  _globals['_INTENTMODULE']._serialized_end=595
-  _globals['_NETINTENT']._serialized_start=598
-  _globals['_NETINTENT']._serialized_end=865
-  _globals['_POWERSEQUENCE']._serialized_start=867
-  _globals['_POWERSEQUENCE']._serialized_end=983
-  _globals['_SEQUENCESTAGE']._serialized_start=985
-  _globals['_SEQUENCESTAGE']._serialized_end=1064
-  _globals['_STRAPGROUP']._serialized_start=1067
-  _globals['_STRAPGROUP']._serialized_end=1209
-  _globals['_PINASSIGNMENT']._serialized_start=1212
-  _globals['_PINASSIGNMENT']._serialized_end=1360
-  _globals['_PINENDPOINT']._serialized_start=1362
-  _globals['_PINENDPOINT']._serialized_end=1417
+  _globals['_DESIGNINTENT']._serialized_end=651
+  _globals['_DESIGNINTENT_NETSENTRY']._serialized_start=473
+  _globals['_DESIGNINTENT_NETSENTRY']._serialized_end=555
+  _globals['_DESIGNINTENT_COMPONENTSENTRY']._serialized_start=557
+  _globals['_DESIGNINTENT_COMPONENTSENTRY']._serialized_end=651
+  _globals['_COMPONENTINTENT']._serialized_start=653
+  _globals['_COMPONENTINTENT']._serialized_end=698
+  _globals['_INTENTMODULE']._serialized_start=700
+  _globals['_INTENTMODULE']._serialized_end=816
+  _globals['_NETINTENT']._serialized_start=819
+  _globals['_NETINTENT']._serialized_end=1086
+  _globals['_POWERSEQUENCE']._serialized_start=1088
+  _globals['_POWERSEQUENCE']._serialized_end=1204
+  _globals['_SEQUENCESTAGE']._serialized_start=1206
+  _globals['_SEQUENCESTAGE']._serialized_end=1285
+  _globals['_STRAPGROUP']._serialized_start=1288
+  _globals['_STRAPGROUP']._serialized_end=1430
+  _globals['_PINASSIGNMENT']._serialized_start=1433
+  _globals['_PINASSIGNMENT']._serialized_end=1581
+  _globals['_PINENDPOINT']._serialized_start=1583
+  _globals['_PINENDPOINT']._serialized_end=1638
 # @@protoc_insertion_point(module_scope)

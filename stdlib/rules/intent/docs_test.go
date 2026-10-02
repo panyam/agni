@@ -34,7 +34,8 @@ func kitchenSink() Declaration {
 		// One IO-map row emits all THREE io-map rules, far-end included. That rule is compiled
 		// whenever a map is declared rather than only when a row fills its far end, because its
 		// verdicts are what report the denominator.
-		IOMap: []IOAssignment{{Net: "SYS_RESET_N", Device: "U1", Pin: "PTC11"}},
+		IOMap:     []IOAssignment{{Net: "SYS_RESET_N", Device: "U1", Pin: "PTC11"}},
+		Exposures: []Exposure{{Ref: "J1", Exposure: ExposureInternal}},
 		// One sequence with an adjacent good -> enable pair. Without the pair it would compile to no
 		// rule at all (a sequence with nothing to judge is rejected at load), leaving the sequence doc
 		// key unemitted and failing the one-to-one check below.

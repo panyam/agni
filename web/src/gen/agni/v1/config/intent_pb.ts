@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/intent.proto.
  */
 export const file_agni_v1_config_intent: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9pbnRlbnQucHJvdG8SDmFnbmkudjEuY29uZmlnIuUCCgxEZXNpZ25JbnRlbnQSLQoHbW9kdWxlcxgBIAMoCzIcLmFnbmkudjEuY29uZmlnLkludGVudE1vZHVsZRI0CgRuZXRzGAIgAygLMiYuYWduaS52MS5jb25maWcuRGVzaWduSW50ZW50Lk5ldHNFbnRyeRIwCglzZXF1ZW5jZXMYAyADKAsyHS5hZ25pLnYxLmNvbmZpZy5Qb3dlclNlcXVlbmNlEjAKDHN0cmFwX2dyb3VwcxgEIAMoCzIaLmFnbmkudjEuY29uZmlnLlN0cmFwR3JvdXASLQoGaW9fbWFwGAUgAygLMh0uYWduaS52MS5jb25maWcuUGluQXNzaWdubWVudBIVCg1tYXJnaW5fZmFjdG9yGAYgASgBGkYKCU5ldHNFbnRyeRILCgNrZXkYASABKAkSKAoFdmFsdWUYAiABKAsyGS5hZ25pLnYxLmNvbmZpZy5OZXRJbnRlbnQ6AjgBIlUKDEludGVudE1vZHVsZRIMCgRuYW1lGAEgASgJEg0KBWNsYXNzGAIgASgJEgsKA21wbhgDIAEoCRINCgVjb3VudBgEIAEoBRIMCgRuZXRzGAUgAygJIsABCglOZXRJbnRlbnQSFAoHbm9taW5hbBgBIAEoAUgAiAEBEg4KBmRvbWFpbhgCIAEoCRIRCgRwZWFrGAMgASgBSAGIAQESDwoHcHJvdGVjdBgEIAMoCRINCgVyZXNldBgFIAEoCRINCgVzdHJhcBgGIAEoCRIQCghtaW5fb2htcxgHIAEoARIQCghtYXhfb2htcxgIIAEoARISCgphY19jb3VwbGVkGAkgASgIQgoKCF9ub21pbmFsQgcKBV9wZWFrIl0KDVBvd2VyU2VxdWVuY2USDAoEbmFtZRgBIAEoCRIQCghyZWxhdGlvbhgCIAEoCRIsCgVvcmRlchgDIAMoCzIdLmFnbmkudjEuY29uZmlnLlNlcXVlbmNlU3RhZ2UiOwoNU2VxdWVuY2VTdGFnZRIMCgRyYWlsGAEgASgJEgwKBGdvb2QYAiABKAkSDgoGZW5hYmxlGAMgASgJImUKClN0cmFwR3JvdXASDAoEbmFtZRgBIAEoCRIOCgZkZXZpY2UYAiABKAkSDAoEbmV0cxgDIAMoCRINCgV2YWx1ZRgEIAEoBRILCgNidXMYBSABKAkSDwoHZGVmYXVsdBgGIAEoCSJ0Cg1QaW5Bc3NpZ25tZW50EgsKA25ldBgBIAEoCRIOCgZkZXZpY2UYAiABKAkSCwoDcGluGAMgASgJEhAKCGZ1bmN0aW9uGAQgASgJEicKAnRvGAUgASgLMhsuYWduaS52MS5jb25maWcuUGluRW5kcG9pbnQiKgoLUGluRW5kcG9pbnQSDgoGZGV2aWNlGAEgASgJEgsKA3BpbhgCIAEoCUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2NvbmZpZ2IGcHJvdG8z");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9pbnRlbnQucHJvdG8SDmFnbmkudjEuY29uZmlnIvsDCgxEZXNpZ25JbnRlbnQSLQoHbW9kdWxlcxgBIAMoCzIcLmFnbmkudjEuY29uZmlnLkludGVudE1vZHVsZRI0CgRuZXRzGAIgAygLMiYuYWduaS52MS5jb25maWcuRGVzaWduSW50ZW50Lk5ldHNFbnRyeRIwCglzZXF1ZW5jZXMYAyADKAsyHS5hZ25pLnYxLmNvbmZpZy5Qb3dlclNlcXVlbmNlEjAKDHN0cmFwX2dyb3VwcxgEIAMoCzIaLmFnbmkudjEuY29uZmlnLlN0cmFwR3JvdXASLQoGaW9fbWFwGAUgAygLMh0uYWduaS52MS5jb25maWcuUGluQXNzaWdubWVudBIVCg1tYXJnaW5fZmFjdG9yGAYgASgBEkAKCmNvbXBvbmVudHMYByADKAsyLC5hZ25pLnYxLmNvbmZpZy5EZXNpZ25JbnRlbnQuQ29tcG9uZW50c0VudHJ5GkYKCU5ldHNFbnRyeRILCgNrZXkYASABKAkSKAoFdmFsdWUYAiABKAsyGS5hZ25pLnYxLmNvbmZpZy5OZXRJbnRlbnQ6AjgBGlIKD0NvbXBvbmVudHNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy5hZ25pLnYxLmNvbmZpZy5Db21wb25lbnRJbnRlbnQ6AjgBIiMKD0NvbXBvbmVudEludGVudBIQCghleHBvc3VyZRgBIAEoCSJVCgxJbnRlbnRNb2R1bGUSDAoEbmFtZRgBIAEoCRINCgVjbGFzcxgCIAEoCRILCgNtcG4YAyABKAkSDQoFY291bnQYBCABKAUSDAoEbmV0cxgFIAMoCSLAAQoJTmV0SW50ZW50EhQKB25vbWluYWwYASABKAFIAIgBARIOCgZkb21haW4YAiABKAkSEQoEcGVhaxgDIAEoAUgBiAEBEg8KB3Byb3RlY3QYBCADKAkSDQoFcmVzZXQYBSABKAkSDQoFc3RyYXAYBiABKAkSEAoIbWluX29obXMYByABKAESEAoIbWF4X29obXMYCCABKAESEgoKYWNfY291cGxlZBgJIAEoCEIKCghfbm9taW5hbEIHCgVfcGVhayJdCg1Qb3dlclNlcXVlbmNlEgwKBG5hbWUYASABKAkSEAoIcmVsYXRpb24YAiABKAkSLAoFb3JkZXIYAyADKAsyHS5hZ25pLnYxLmNvbmZpZy5TZXF1ZW5jZVN0YWdlIjsKDVNlcXVlbmNlU3RhZ2USDAoEcmFpbBgBIAEoCRIMCgRnb29kGAIgASgJEg4KBmVuYWJsZRgDIAEoCSJlCgpTdHJhcEdyb3VwEgwKBG5hbWUYASABKAkSDgoGZGV2aWNlGAIgASgJEgwKBG5ldHMYAyADKAkSDQoFdmFsdWUYBCABKAUSCwoDYnVzGAUgASgJEg8KB2RlZmF1bHQYBiABKAkidAoNUGluQXNzaWdubWVudBILCgNuZXQYASABKAkSDgoGZGV2aWNlGAIgASgJEgsKA3BpbhgDIAEoCRIQCghmdW5jdGlvbhgEIAEoCRInCgJ0bxgFIAEoCzIbLmFnbmkudjEuY29uZmlnLlBpbkVuZHBvaW50IioKC1BpbkVuZHBvaW50Eg4KBmRldmljZRgBIAEoCRILCgNwaW4YAiABKAlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jb25maWdiBnByb3RvMw");
 
 /**
  * This file: a design's declared intent, as the ONE schema the authoring YAML and any wire form share
@@ -71,6 +71,13 @@ export type DesignIntent = Message<"agni.v1.config.DesignIntent"> & {
    * @generated from field: double margin_factor = 6;
    */
   marginFactor: number;
+
+  /**
+   * components holds what each named component is, keyed by its ref-des as the design spells it.
+   *
+   * @generated from field: map<string, agni.v1.config.ComponentIntent> components = 7;
+   */
+  components: { [key: string]: ComponentIntent };
 };
 
 /**
@@ -79,6 +86,31 @@ export type DesignIntent = Message<"agni.v1.config.DesignIntent"> & {
  */
 export const DesignIntentSchema: GenMessage<DesignIntent> = /*@__PURE__*/
   messageDesc(file_agni_v1_config_intent, 0);
+
+/**
+ * ComponentIntent is everything declared about one component. It exists for what a part number cannot
+ * say, because the same part is used differently on different boards.
+ *
+ * @generated from message agni.v1.config.ComponentIntent
+ */
+export type ComponentIntent = Message<"agni.v1.config.ComponentIntent"> & {
+  /**
+   * exposure says whether a connector faces the outside of the product: "internal" for one that joins
+   * this board to another inside the same enclosure (a module socket, a mezzanine), or "external".
+   * An undeclared connector is external, so the exposure rules (esd-protection, esd-clamp-not-tvs,
+   * input-protection, reverse-blocking-absent) check every connector nobody declared internal.
+   *
+   * @generated from field: string exposure = 1;
+   */
+  exposure: string;
+};
+
+/**
+ * Describes the message agni.v1.config.ComponentIntent.
+ * Use `create(ComponentIntentSchema)` to create a new message.
+ */
+export const ComponentIntentSchema: GenMessage<ComponentIntent> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_intent, 1);
 
 /**
  * @generated from message agni.v1.config.IntentModule
@@ -119,7 +151,7 @@ export type IntentModule = Message<"agni.v1.config.IntentModule"> & {
  * Use `create(IntentModuleSchema)` to create a new message.
  */
 export const IntentModuleSchema: GenMessage<IntentModule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_intent, 1);
+  messageDesc(file_agni_v1_config_intent, 2);
 
 /**
  * NetIntent is everything declared about one net. Presence matters on nominal and peak, because a
@@ -196,7 +228,7 @@ export type NetIntent = Message<"agni.v1.config.NetIntent"> & {
  * Use `create(NetIntentSchema)` to create a new message.
  */
 export const NetIntentSchema: GenMessage<NetIntent> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_intent, 2);
+  messageDesc(file_agni_v1_config_intent, 3);
 
 /**
  * @generated from message agni.v1.config.PowerSequence
@@ -228,7 +260,7 @@ export type PowerSequence = Message<"agni.v1.config.PowerSequence"> & {
  * Use `create(PowerSequenceSchema)` to create a new message.
  */
 export const PowerSequenceSchema: GenMessage<PowerSequence> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_intent, 3);
+  messageDesc(file_agni_v1_config_intent, 4);
 
 /**
  * @generated from message agni.v1.config.SequenceStage
@@ -259,7 +291,7 @@ export type SequenceStage = Message<"agni.v1.config.SequenceStage"> & {
  * Use `create(SequenceStageSchema)` to create a new message.
  */
 export const SequenceStageSchema: GenMessage<SequenceStage> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_intent, 4);
+  messageDesc(file_agni_v1_config_intent, 5);
 
 /**
  * @generated from message agni.v1.config.StrapGroup
@@ -311,7 +343,7 @@ export type StrapGroup = Message<"agni.v1.config.StrapGroup"> & {
  * Use `create(StrapGroupSchema)` to create a new message.
  */
 export const StrapGroupSchema: GenMessage<StrapGroup> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_intent, 5);
+  messageDesc(file_agni_v1_config_intent, 6);
 
 /**
  * @generated from message agni.v1.config.PinAssignment
@@ -354,7 +386,7 @@ export type PinAssignment = Message<"agni.v1.config.PinAssignment"> & {
  * Use `create(PinAssignmentSchema)` to create a new message.
  */
 export const PinAssignmentSchema: GenMessage<PinAssignment> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_intent, 6);
+  messageDesc(file_agni_v1_config_intent, 7);
 
 /**
  * @generated from message agni.v1.config.PinEndpoint
@@ -376,5 +408,5 @@ export type PinEndpoint = Message<"agni.v1.config.PinEndpoint"> & {
  * Use `create(PinEndpointSchema)` to create a new message.
  */
 export const PinEndpointSchema: GenMessage<PinEndpoint> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_intent, 7);
+  messageDesc(file_agni_v1_config_intent, 8);
 

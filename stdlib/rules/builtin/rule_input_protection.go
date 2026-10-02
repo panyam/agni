@@ -47,7 +47,7 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			continue // the return path, not a power entry
 		}
 		hasConn := check.Exists(n.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, check.ClassConnector)
+			return m.ExposedConnector(c.ComponentRef)
 		})
 		if !hasConn {
 			continue // no connector on it, so nothing enters the board here
@@ -98,7 +98,7 @@ var inputProtectionSpec = &check.Spec{
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
-		check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "connector"}}},
+		check.ExistsIn{Over: "net.connections", Where: check.IsTrue{T: check.Fact{Name: "component.exposed_connector"}}},
 		check.IsTrue{T: check.Call{Fn: "unprotected_power_reach"}},
 	}},
 	Message: "connector feeds a power input with no fuse or TVS in the path",

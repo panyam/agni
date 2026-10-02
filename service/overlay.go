@@ -10,6 +10,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
@@ -35,6 +36,10 @@ type Overlay struct {
 	// derived from Sources.
 	Profiles bool
 	Intent   bool
+	// DesignIntent is the declared intent itself, nil when none was declared. Its rules are already in
+	// Sources, and the value travels too because part of it is read by the MODEL rather than by a rule:
+	// which connectors are internal (agni issue 831).
+	DesignIntent *configpb.DesignIntent
 	// Library and LibraryDocs are the project's own derived relations and their pages, composed into
 	// a query vocabulary by Registry.
 	Library     []LibraryModule
@@ -144,6 +149,9 @@ func (o Overlay) ReadOptions() []ReadOption {
 	}
 	if o.Specs != nil {
 		opts = append(opts, WithDeviceClasses(DeviceClassLookup(o.Specs)))
+	}
+	if o.DesignIntent != nil {
+		opts = append(opts, WithDesignIntent(o.DesignIntent))
 	}
 	return opts
 }
@@ -270,6 +278,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	} else if src != nil {
 		o.Sources = append(o.Sources, src)
 		o.Intent = true
+		o.DesignIntent = merged.GetIntent()
 	}
 	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
 	if conv := inherited.GetConventions(); conv != nil {
@@ -414,7 +423,16 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 		if base.conventionName != "" && src.Name() == base.conventionName {
 			continue
 		}
+		// A request's intent REPLACES the design's, as a convention does, because a design has one
+		// intended architecture. Keeping both would compile two sources named intent, which the
+		// catalog refuses.
+		if reqIntent != nil && src.Name() == intent.SourceName {
+			continue
+		}
 		kept = append(kept, src)
+	}
+	if reqIntent != nil {
+		out.DesignIntent = reqCfg.GetIntent()
 	}
 	out.Sources = append(append(kept, reqResolved.Sources...), reqOv.Sources...)
 	// A request corpus WINS over the project's rather than merging, so one team's transcribed limits
@@ -433,8 +451,13 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.conventionName = req.GetConfig().GetConventions().GetName()
 	// Set the base convention's NAME explicitly, since Overlay.Catalog drops the sources tagged with it.
 	// Inheriting whatever the fallback held would leave the server's convention running alongside the
-	// request's (WS3-124).
-	out.baseConvention = baseConvention
+	// request's (WS3-124). Only a request that SENDS a convention replaces the server's. One carrying
+	// only intent, profiles or library modules keeps it, or its rules would vanish from a run that
+	// never asked to change the naming vocabulary.
+	out.baseConvention = ""
+	if req.GetConfig().GetConventions() != nil {
+		out.baseConvention = baseConvention
+	}
 	out.id = id
 	return out, nil
 }

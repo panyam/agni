@@ -8,7 +8,6 @@ import (
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/profiles"
-	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // datalogSourceName is the catalog source stdlib/rules/datalog registers under.
@@ -19,7 +18,6 @@ const datalogSourceName = "dl"
 // instead of depending on the order the caller wrote the options in.
 type builder struct {
 	profiles    []profiles.Profile
-	intent      *intent.Declaration
 	sources     []check.RuleSource
 	factOptions []facts.Option
 	store       service.ProjectStore
@@ -42,19 +40,9 @@ func WithProfiles(ps []profiles.Profile) Option {
 	return func(b *builder) { b.profiles = append(b.profiles, ps...) }
 }
 
-// WithIntent composes a design-intent declaration into the catalog, which turns an intent-bound
-// review item from needs-design-intent into a real verdict. Intent is per-DESIGN, so an Engine
-// composed with one is scoped to that design, and a server serving many resolves intent per design
-// through the project config instead.
-//
-// Load it with intent.LoadFile for YAML, or build the Declaration in Go.
-func WithIntent(d intent.Declaration) Option {
-	return func(b *builder) { b.intent = &d }
-}
-
 // WithSources composes arbitrary rule sources into the catalog: a house suite built in Go, a naming
-// convention's rules, anything satisfying check.RuleSource. They compose after the profile and
-// intent sources, and a source implementing check.SupersedingSource replaces what it names.
+// convention's rules, anything satisfying check.RuleSource. They compose after the profile
+// sources, and a source implementing check.SupersedingSource replaces what it names.
 func WithSources(srcs ...check.RuleSource) Option {
 	return func(b *builder) { b.sources = append(b.sources, srcs...) }
 }

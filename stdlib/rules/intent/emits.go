@@ -23,7 +23,9 @@ func Emits(ruleName string) bool {
 		// The load-switch lower bound (WS3-085).
 		RuleLoadSwitchTripBelowBudget,
 		// The IO-map rules (agni issue 517).
-		RuleIOMapPin, RuleIOMapNetAbsent, RuleIOMapFarEnd, RuleIOMapCoverage:
+		RuleIOMapPin, RuleIOMapNetAbsent, RuleIOMapFarEnd, RuleIOMapCoverage,
+		// Connector exposure (agni issue 831).
+		RuleExposureDeclared:
 		return true
 	}
 	return strings.HasPrefix(name, "subsystem-") || strings.HasPrefix(name, "protection-") ||

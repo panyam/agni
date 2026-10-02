@@ -7,6 +7,7 @@ import (
 
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"
@@ -36,6 +37,7 @@ type irModel struct {
 	mpn       map[string]string           // ref_des -> design-side MPN (BomLine, else attribute)
 	passNets  map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
 	lex       *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
+	internal  map[string]bool             // ref_des the design's intent declares an internal connector
 	memo      sync.Map                    // key -> *memoEntry, values derived from this model once (Memo)
 }
 
@@ -49,6 +51,22 @@ type ModelOption func(*irModel)
 // Pass the same *classify.Lexicon the loader used; omitting it means the process defaults.
 func WithLexicon(lex *classify.Lexicon) ModelOption {
 	return func(m *irModel) { m.lex = lex }
+}
+
+// WithIntent tells the model what the design's intent declares about its components, so
+// ExposedConnector answers for this product rather than for the part (agni issue 831). Omitting it, or
+// passing a nil intent, leaves every connector exposed.
+func WithIntent(di *configpb.DesignIntent) ModelOption {
+	return func(m *irModel) {
+		for ref, c := range di.GetComponents() {
+			if c.GetExposure() == "internal" {
+				if m.internal == nil {
+					m.internal = map[string]bool{}
+				}
+				m.internal[ref] = true
+			}
+		}
+	}
 }
 
 // NewModel builds the default IR-backed Model for a design. WithBoard and WithParamProvider attach the
@@ -396,6 +414,11 @@ func (m *irModel) ComponentClass(refDes string) ComponentClass {
 // membership); false for an unknown ref-des or class, matching the absent-tolerant contract.
 func (m *irModel) HasClass(refDes string, class ComponentClass) bool {
 	return slices.Contains(m.classSet[refDes], class)
+}
+
+// ExposedConnector is a connector the intent does not declare internal; see Model.ExposedConnector.
+func (m *irModel) ExposedConnector(refDes string) bool {
+	return m.HasClass(refDes, ClassConnector) && !m.internal[refDes]
 }
 
 // Classes returns a ref-des's full device_classes set (specific class plus family tags), nil for an

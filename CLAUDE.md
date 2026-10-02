@@ -24,7 +24,7 @@ expensive to rediscover.
 | The web wire contract, the viewer's interaction model, changing a panel | `architecture/web-services.md`, `architecture/web-picking.md`, `architecture/web-client.md` |
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
-| A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the six forms), `core/ident`'s package comment |
+| A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the seven forms), `core/ident`'s package comment |
 | The checks contract (the CLI/service boundary) | `architecture/checks-contract.md` |
 | The config a run is checked against, and where it comes from | `architecture/projects-and-designs.md` |
 | Semantic diff | `architecture/semantic-diff.md` |

@@ -51,10 +51,10 @@ netlist (EDIF) carries. A DEBUG / TEST / edge-card / programming connector is ex
 classifies as `test_connector` (WS3-066), a distinct class from `connector`, so a bench interface (a
 JTAG header, a SAMTEC edge card) is not treated as harness exposure; the debug-connector patterns
 are lexicon defaults a project can extend. A board-to-board, module, mezzanine or card-slot connector
-is excluded the same way, as `internal_connector` (agni issue 815): it joins this board to another one
-inside the product, so nothing a user touches reaches it. The engine recognises only the keyword
-`mezzanine`, because a part number or footprint rarely says, so a project names its own through
-`lexicon.class.internal_connector` (on a carrier board, the module connector and the M.2 sockets).
+that a design declares `internal` in its intent (`components: {J1: {exposure: internal}}`) is
+excluded too, because it joins this board to another one inside the product and nothing a user
+touches reaches it. That is a declaration rather than a class, since the same connector is the module
+socket on one carrier and the cable entry on another (agni issue 831).
 Severity is info because the approximation still cannot know whether a plain header is a real
 external interface or an unlabeled internal one. Since WS3-011
 the clamp may sit one series hop away (connector -> series R -> clamped node, the classic ESD

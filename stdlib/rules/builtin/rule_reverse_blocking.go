@@ -44,7 +44,7 @@ func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			continue
 		}
 		hasConn := check.Exists(n.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, check.ClassConnector)
+			return m.ExposedConnector(c.ComponentRef)
 		})
 		if !hasConn {
 			continue

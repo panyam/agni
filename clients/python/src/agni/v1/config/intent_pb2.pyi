@@ -7,7 +7,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DesignIntent(_message.Message):
-    __slots__ = ("modules", "nets", "sequences", "strap_groups", "io_map", "margin_factor")
+    __slots__ = ("modules", "nets", "sequences", "strap_groups", "io_map", "margin_factor", "components")
     class NetsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -15,19 +15,34 @@ class DesignIntent(_message.Message):
         key: str
         value: NetIntent
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[NetIntent, _Mapping]] = ...) -> None: ...
+    class ComponentsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: ComponentIntent
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[ComponentIntent, _Mapping]] = ...) -> None: ...
     MODULES_FIELD_NUMBER: _ClassVar[int]
     NETS_FIELD_NUMBER: _ClassVar[int]
     SEQUENCES_FIELD_NUMBER: _ClassVar[int]
     STRAP_GROUPS_FIELD_NUMBER: _ClassVar[int]
     IO_MAP_FIELD_NUMBER: _ClassVar[int]
     MARGIN_FACTOR_FIELD_NUMBER: _ClassVar[int]
+    COMPONENTS_FIELD_NUMBER: _ClassVar[int]
     modules: _containers.RepeatedCompositeFieldContainer[IntentModule]
     nets: _containers.MessageMap[str, NetIntent]
     sequences: _containers.RepeatedCompositeFieldContainer[PowerSequence]
     strap_groups: _containers.RepeatedCompositeFieldContainer[StrapGroup]
     io_map: _containers.RepeatedCompositeFieldContainer[PinAssignment]
     margin_factor: float
-    def __init__(self, modules: _Optional[_Iterable[_Union[IntentModule, _Mapping]]] = ..., nets: _Optional[_Mapping[str, NetIntent]] = ..., sequences: _Optional[_Iterable[_Union[PowerSequence, _Mapping]]] = ..., strap_groups: _Optional[_Iterable[_Union[StrapGroup, _Mapping]]] = ..., io_map: _Optional[_Iterable[_Union[PinAssignment, _Mapping]]] = ..., margin_factor: _Optional[float] = ...) -> None: ...
+    components: _containers.MessageMap[str, ComponentIntent]
+    def __init__(self, modules: _Optional[_Iterable[_Union[IntentModule, _Mapping]]] = ..., nets: _Optional[_Mapping[str, NetIntent]] = ..., sequences: _Optional[_Iterable[_Union[PowerSequence, _Mapping]]] = ..., strap_groups: _Optional[_Iterable[_Union[StrapGroup, _Mapping]]] = ..., io_map: _Optional[_Iterable[_Union[PinAssignment, _Mapping]]] = ..., margin_factor: _Optional[float] = ..., components: _Optional[_Mapping[str, ComponentIntent]] = ...) -> None: ...
+
+class ComponentIntent(_message.Message):
+    __slots__ = ("exposure",)
+    EXPOSURE_FIELD_NUMBER: _ClassVar[int]
+    exposure: str
+    def __init__(self, exposure: _Optional[str] = ...) -> None: ...
 
 class IntentModule(_message.Message):
     __slots__ = ("name", "mpn", "count", "nets")

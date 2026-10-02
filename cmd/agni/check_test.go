@@ -150,3 +150,39 @@ func TestCheckStrapGroupUndecidableCLI(t *testing.T) {
 		t.Errorf("error should say what is wrong with the declaration: %v", err)
 	}
 }
+
+// --intent-path rides the request as a value, so on a design that declares its own intent it
+// replaces that declaration rather than compiling a second intent source, and the model reads it, so
+// a connector declared internal leaves the exposure rules (agni issue 831). The gateway's J1 carries
+// the CAN bus, which esd-protection reports until the declaration says J1 joins another board.
+func TestCheckIntentPathDeclaresAConnectorInternal(t *testing.T) {
+	const gateway = "../../examples/tutorial-project/designs/gateway"
+	run := func(extra ...string) string {
+		t.Helper()
+		cmd := checkCmd()
+		var buf bytes.Buffer
+		cmd.SetOut(&buf)
+		cmd.SetErr(&bytes.Buffer{})
+		cmd.SetArgs(append([]string{gateway, "--rule", "esd-protection", "--rule", "intent/exposure-declared"}, extra...))
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		return buf.String()
+	}
+	if out := run(); !strings.Contains(out, "CAN1_CANH") {
+		t.Fatalf("with no declaration J1 is exposed, so esd-protection should report CAN1_CANH:\n%s", out)
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "intent.yaml")
+	if err := os.WriteFile(path, []byte("name: carrier\nintent:\n  components:\n    J1: {exposure: internal}\n    J7: {exposure: internal}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := run("--intent-path", path)
+	if strings.Contains(out, "CAN1_CANH") {
+		t.Errorf("J1 is declared internal, so esd-protection must not report the CAN bus:\n%s", out)
+	}
+	if !strings.Contains(out, "J7") {
+		t.Errorf("J7 is not on the board, so exposure-declared should report it:\n%s", out)
+	}
+}

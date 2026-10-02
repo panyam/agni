@@ -271,3 +271,29 @@ func TestGetNamingConventionNeedsALoader(t *testing.T) {
 		t.Error("want an error from a service with no convention loader")
 	}
 }
+
+// A request carrying intent but no convention keeps the server's convention rules. Only a request's
+// own convention replaces them, and dropping them for any request with a source of its own made a
+// run lose the deployment's naming rules for asking about something else (found with agni issue 831,
+// where --intent-path moved onto the request).
+func TestRequestWithoutAConventionKeepsTheServers(t *testing.T) {
+	base := startupCatalog(t, "house", "house-nets")
+	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{
+		Intent: &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}},
+	}}
+	ov, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, Overlay{}, "house")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := ov.Catalog(base)
+	if err != nil {
+		t.Fatalf("Catalog: %v", err)
+	}
+	names := ruleNames(got)
+	if !names["house/house-nets"] {
+		t.Error("the server's convention rule was dropped by a request that sent no convention")
+	}
+	if !names["intent/module-missing"] {
+		t.Error("the request's intent did not compose")
+	}
+}

@@ -522,12 +522,18 @@ func checkCmd() *cobra.Command {
 				warnOverBroadProfiles(cmd.ErrOrStderr(), args[0], ps)
 				extra = append(extra, profiles.Source("profile-overlay", ps))
 			}
+			// --intent-path rides the request as a VALUE, as the design's own intent: section does, so the
+			// model sees which connectors it declares internal and a design that already declares
+			// intent has it replaced rather than compiled twice (agni issue 831).
 			if intentPath != "" {
-				decl, err := intent.LoadFile(intentPath)
+				di, err := intent.LoadFileProto(intentPath)
 				if err != nil {
 					return err
 				}
-				extra = append(extra, intent.Source("intent", decl))
+				if overlay.Config == nil {
+					overlay.Config = &webapi.AnalysisConfig{}
+				}
+				overlay.Config.Intent = di
 			}
 			if len(extra) > 0 {
 				catalog = check.CatalogWith(extra...)
@@ -844,7 +850,7 @@ func reviewCmd() *cobra.Command {
 			noteChecklist(cmd.ErrOrStderr(), checklistNote)
 			// A thin client of the in-process ReviewService, the same service the web calls (WS9-048).
 			// The CLI composes the design-independent inputs and renders the proto response.
-			catalog, byName, err := composeReviewInputs(profilePath, intentPath)
+			catalog, byName, err := composeReviewInputs(profilePath)
 			if err != nil {
 				return err
 			}
@@ -862,6 +868,14 @@ func reviewCmd() *cobra.Command {
 			// inline checklist query can name its members.
 			if err := addLibraries(overlay.Config, reviewLibs); err != nil {
 				return err
+			}
+			// --intent-path rides the request as a value, as it does for `check` (agni issue 831).
+			if intentPath != "" {
+				di, err := intent.LoadFileProto(intentPath)
+				if err != nil {
+					return err
+				}
+				overlay.Config.Intent = di
 			}
 			var specs param.ParamProvider
 			if paramsDir != "" {
@@ -1057,15 +1071,15 @@ func gateReview(cmd *cobra.Command, g reviewGate, reports []review.Report) error
 }
 
 // composeReviewInputs builds the design-INDEPENDENT review inputs shared by the CLI (reviewCmd) and
-// the served ReviewService. That is the rule catalog with the profiles at profilePath and the intent
-// at intentPath spliced in, and the by-Name profile index the presence check reads. With neither path
-// an intent or overlay-profile item reads not-automated rather than passing.
-func composeReviewInputs(profilePath, intentPath string) (*check.Catalog, map[string][]profiles.Profile, error) {
+// the served ReviewService. That is the rule catalog with the profiles at profilePath spliced in, and
+// the by-Name profile index the presence check reads. Intent is per design, so it arrives on the
+// request rather than here.
+func composeReviewInputs(profilePath string) (*check.Catalog, map[string][]profiles.Profile, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
 		return nil, nil, err
 	}
-	return composeReviewInputsFrom(overlay, intentPath)
+	return composeReviewInputsFrom(overlay)
 }
 
 // loadOverlayProfiles reads the overlay interface profiles at path, or nil for an empty path. serve
@@ -1078,14 +1092,13 @@ func loadOverlayProfiles(profilePath string) ([]profiles.Profile, error) {
 }
 
 // composeReviewInputsFrom is composeReviewInputs over profiles that are already loaded, plus any
-// extra sources the caller composed itself. The CLI reads the intent file and agni.New composes the
-// catalog (C22).
+// extra sources the caller composed itself, with agni.New composing the catalog (C22).
 //
 // extra carries serve's --conventions, a startup DEPLOYMENT default rather than a per-request value
-// (WS3-109). Compose through here rather than a second CatalogWith, which would drop the profile and
-// intent sources.
-func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string, extra ...check.RuleSource) (*check.Catalog, map[string][]profiles.Profile, error) {
-	e, err := newEngine(overlay, intentPath, extra)
+// (WS3-109). Compose through here rather than a second CatalogWith, which would drop the profile
+// sources.
+func composeReviewInputsFrom(overlay []profiles.Profile, extra ...check.RuleSource) (*check.Catalog, map[string][]profiles.Profile, error) {
+	e, err := newEngine(overlay, extra)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1094,20 +1107,13 @@ func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string, extr
 
 // newEngine composes the engine the CLI runs on. Every command that runs rules goes through it, so
 // agni.New checks the four registration hooks once.
-func newEngine(overlay []profiles.Profile, intentPath string, extra []check.RuleSource, more ...agni.Option) (*agni.Engine, error) {
+func newEngine(overlay []profiles.Profile, extra []check.RuleSource, more ...agni.Option) (*agni.Engine, error) {
 	opts := []agni.Option{
 		agni.WithProfiles(overlay),
 		agni.WithSources(extra...),
 		agni.WithProducerVersion(version.Version()),
 	}
 	opts = append(opts, more...)
-	if intentPath != "" {
-		decl, err := intent.LoadFile(intentPath)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, agni.WithIntent(decl))
-	}
 	return agni.New(opts...)
 }
 
