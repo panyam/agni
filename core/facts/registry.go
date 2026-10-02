@@ -233,6 +233,7 @@ func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
 		if info, ok := r.InfoOf(name); ok {
 			s.Labels, s.Types, s.Doc = info.Args, ArgTypes(info.Args, info.ArgKinds), info.Summary
 		}
+		s.Types = numericTypes(s.Types, r.schema[name])
 		if err := v.AddRelation(name, s); err != nil {
 			errs = append(errs, err)
 		}
@@ -363,6 +364,27 @@ func ArgTypes(labels []string, kinds map[string]ArgKind) []ns.ArgType {
 		out[i] = ns.ArgType{Kind: k.Entity, KindFrom: k.KindArg, Owner: k.OwnerArg, Domain: k.ValidOptions}
 	}
 	return out
+}
+
+// numericTypes declares every position the relation's layout fills from a numeric slot (FieldNum,
+// FieldMin) as a number, unless it already names an entity. The engine reads a constant or a bound
+// value in a number position as a number (panyam/jaala#65), so `?c >= "3"` answers as `?c >= 3` and
+// `?c >= "abc"` is refused. Left undeclared, the position is untyped, and a text constant compared
+// with a count answers nothing rather than failing. It is derived from the layout rather than written
+// per relation, so a new numeric relation is typed by registering its fields.
+func numericTypes(types []ns.ArgType, fields []Field) []ns.ArgType {
+	for i, f := range fields {
+		if f != FieldNum && f != FieldMin {
+			continue
+		}
+		if types == nil {
+			types = make([]ns.ArgType, len(fields))
+		}
+		if i < len(types) && types[i].Kind == "" && types[i].KindFrom == "" && types[i].Type == "" {
+			types[i].Type = ns.TypeNumber
+		}
+	}
+	return types
 }
 
 func argKindOf(t ns.ArgType) ArgKind {

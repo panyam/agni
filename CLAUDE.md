@@ -352,6 +352,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `RunQueryRequest.bindings`, a set's `bind:`. The viewer's search and click presets bind too
   (`EntityQuery.binds`, `SearchQuery.bind`/`pattern`) and show the values as chips, so a served
   preset's text never changes. A binding the goal does not use is refused by the engine.
+  **A position filled from a numeric slot is declared a NUMBER automatically** (`numericTypes` in
+  `core/facts`, from the relation's `FieldNum`/`FieldMin` layout), and since jaala v0.1.15 the engine
+  reads a constant or bound value there as a number: `"3"` against a count is 3 and `"abc"` is
+  refused. An UNDECLARED position keeps a value as given, so a text constant compared with an untyped
+  number answers nothing rather than failing (panyam/jaala#65).
 - **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/list`
   group by the projection's plain columns; `count(distinct ?x)` reduces the SET of values instead.
   The trap is that a goal joining two things yields one binding per combination, so on

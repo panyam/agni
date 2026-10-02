@@ -428,8 +428,11 @@ the query once with a variable where the part goes, and bind the variable to a v
 {{ agniRun "content/guide/runs/query-bind.yaml" }}
 
 A bound variable answers exactly as the same value written into the query as a constant, so the run
-above is `component.net("U1", ?net), ...` without the quoting. A value that parses as a number binds a
-number, so `--bind v=3.3` compares as `3.3` would; quote it (`--bind 'n="3"'`) to bind the text.
+above is `component.net("U1", ?net), ...` without the quoting. A value is read as the type its
+position declares: a voltage, a count or a datasheet limit is a number, so `--bind min=3` and
+`--bind 'min="3"'` both compare as `3`, and `--bind min=abc` is refused as not a number. Where
+nothing in the query types the variable, as in `?a < ?b` alone, a value that parses as a number binds
+a number and a quoted one (`--bind 'a="3"'`) binds the text.
 `--bind` repeats, one per variable. Naming a variable the query does not use is an error, so a typo
 fails rather than leaving the variable free and widening the question.
 

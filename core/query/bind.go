@@ -32,8 +32,9 @@ func Bind(vals map[string]Value) datalog.Option {
 
 // ParseBinding reads one `name=value` pair, the form `agni query --bind` takes. The value is read
 // as the query language reads a constant: a quoted value is text, one that parses as a number is a
-// number, and any other bare word is text, so `--bind n=GND` needs no quotes and `--bind 'n="3"'`
-// binds the text "3" rather than the number.
+// number, and any other bare word is text, so `--bind n=GND` needs no quotes. In a position the
+// schema types, the engine then reads the value as that type either way (panyam/jaala#65), so the
+// quoting matters only for a variable nothing types, where `--bind 'n="3"'` binds the text.
 func ParseBinding(s string) (string, Value, error) {
 	name, val, ok := strings.Cut(s, "=")
 	name = strings.TrimPrefix(strings.TrimSpace(name), "?")
