@@ -1,0 +1,35 @@
+# Dependabot for the Go modules.
+#
+# This repo is MANY Go modules: the root, datasheet/, docsite/, and one per example (C10 keeps each
+# example's dependencies out of the engine's go.mod). Every nested module reaches the root through a
+# `replace ../` and so inherits the root's requirements, which it must record in its own go.mod and
+# go.sum. With no config, a security update touched the root alone, and `make tidyall-check` then failed
+# on every other module (PR 782: a grpc bump left 36 manifests stale). Listing every module directory
+# and grouping the updates makes one bump arrive as one PR that touches them all.
+#
+# `allow: all` because the nested modules carry most of these dependencies only as `// indirect`, and
+# Dependabot leaves indirect dependencies alone by default, which is exactly the half that went stale.
+#
+# Version updates are OFF (open-pull-requests-limit: 0): only security updates open PRs, and they still
+# read this file's directories, allow and groups. Raise the limit to also receive routine upgrades.
+#
+# The examples are matched by glob so a new example module is covered with no edit here, the same
+# reason hack/tidy_check.sh finds modules rather than listing them.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories:
+      - "/"
+      - "/datasheet"
+      - "/docsite"
+      - "/examples/*"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    allow:
+      - dependency-type: all
+    groups:
+      go-security:
+        applies-to: security-updates
+        patterns:
+          - "*"

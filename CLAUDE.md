@@ -525,6 +525,9 @@ runs `go mod tidy` over the root and every example module and fails on any diffe
 front so "updates to go.mod needed" is diagnosed there rather than as a later `examples-test`
 failure). Eleven example modules had drifted before anything looked, because an untidy module keeps
 building until some later change needs a requirement it never recorded. `make tidyall` fixes it.
+`.github/dependabot.yml` lists every module directory (examples by glob) and groups security updates,
+because a bump that touched the root alone left every nested module stale and failed this check (PR
+782). A new module outside `examples/` needs a line there.
 
 **`make testall` is the full gate, and CI runs exactly it.** Read
 `docsite/content/build/the-gate.md` before trusting a run, since the gate has three ways to be
