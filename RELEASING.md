@@ -93,5 +93,9 @@ logged-out client tests that.
 - [ ] Notes committed and pushed to `main`
 - [ ] `make tag-push V=vX.Y.Z`
 - [ ] `release.yml` green, image pullable and reporting the tag
+- [ ] Both images pull ANONYMOUSLY, from a logged-out client: `docker logout ghcr.io`, then
+      `docker pull ghcr.io/panyam/agni:vX.Y.Z` and `docker pull ghcr.io/panyam/agnids:vX.Y.Z`. The
+      first release after agni 744 is the first to publish `agnids`, so its visibility is untested
+      until then (see GHCR visibility above)
 - [ ] GitHub Release published from the notes file
 - [ ] `go list -m github.com/panyam/agni@vX.Y.Z` resolves
