@@ -149,6 +149,15 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 			}
 		}
 	}
+	// A bus entry joins a wire to a bus, so a wire ending on either of its two ends is connected rather
+	// than dangling (agni issue 808). It contributes terminals only: which bus member the wire carries
+	// comes from the wire's own label, not from the entry, so the entry joins no net here. Without this
+	// every wire drawn to a bus entry was a dangling endpoint, 428 of them on one 17-sheet board.
+	for _, e := range root.Children("bus_entry") {
+		for _, p := range busEntryPoints(e) {
+			terminals = append(terminals, gp(p))
+		}
+	}
 	// A hierarchical sheet's pins are ports to its sub-sheet, so a wire ending on one is not
 	// dangling. The single-sheet read stops there, having no child file. The hierarchy walk ALSO
 	// emits a port anchor at this point, joining the parent net to the child's hierarchical label.

@@ -1,0 +1,8 @@
+(kicad_sch
+	(version 20240620)
+	(generator "test")
+	(bus_entry (at 50 10) (size -1.27 -1.27) (uuid "be1"))
+	(bus_entry (at 70 10) (size 1.27 1.27) (uuid "be2"))
+	(wire (pts (xy 50 10) (xy 60 10)) (uuid "w5"))
+	(wire (pts (xy 71.27 11.27) (xy 80 11.27)) (uuid "w6"))
+)
