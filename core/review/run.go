@@ -235,7 +235,7 @@ func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 		// An intent-bound item (WS3-084) resolves to zero rules when no declaration was supplied, because
 		// the intent rule is then absent from the catalog. It is COVERED, so it names --intent-path.
 		if bindsIntent(it, p.IntentRuleKnown) {
-			return ItemResult{Item: it, Outcome: NeedsDesignIntent, Note: "needs a design-intent declaration (--intent-path)"}
+			return ItemResult{Item: it, Outcome: NeedsDesignIntent, Note: "needs a design-intent declaration (an intent: section in the design's design.yaml, or --intent-path)"}
 		}
 		// The interface is present (or none is named) but nothing shipped checks it.
 		return ItemResult{Item: it, Outcome: NotAutomated}

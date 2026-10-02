@@ -242,14 +242,18 @@ Config reaches `New` as a VALUE, never as a path, because reading files is the c
 
 ```go
 ps, _ := profiles.LoadDir("profiles")        // you read it
-decl, _ := intent.LoadFile("design.yaml")    // you read it
 engine, err := agni.New(
     agni.WithProfiles(ps),
-    agni.WithIntent(decl),
     agni.WithSources(check.NewSource("myco", myRules)),
     agni.WithFSProjectStore(agni.Tree{Mount: "boards", FS: os.DirFS("/srv/boards")}),
 )
 ```
+
+A design's intent is not an engine option, because it belongs to one board and the model reads part of
+it as well as the catalog (which connectors are internal, agni issue 831). A design declares it in the
+`intent:` section of its `design.yaml`, which the project store reads, and a caller holding a
+declaration of its own sends it on the request as `AnalysisConfig.intent`, where it replaces the
+design's for that run. `intent.LoadFileProto` reads one from a file.
 
 `WithFSProjectStore` is how the shipped directory-walking project store reaches you without the
 package implementing it becoming public API. A deployment that outgrows the directory shape

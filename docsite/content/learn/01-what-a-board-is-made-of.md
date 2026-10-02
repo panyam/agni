@@ -86,7 +86,7 @@ A termination across a differential pair, or to ground at the end of a bus, is *
 
 Strap resistors that encode a number the chip latches at reset, and zero-ohm links that make an option selectable at build time, are **configuring at boot**. → the design-intent strap rules, `intent/strap-address-collision` (chapter 9)
 
-A TVS or ESD clamp on anything reaching a connector, reverse-polarity protection on the input, and a fuse are **surviving the outside world**. → `profile/esd`, `esd-protection`
+A TVS or ESD clamp on anything reaching a connector that faces the outside of the product, reverse-polarity protection on the input, and a fuse are **surviving the outside world**. → `profile/esd`, `esd-protection`
 
 A shunt resistor turning a current into a voltage you can read, or a divider scaling a voltage into an ADC's range, is **measuring**.
 
