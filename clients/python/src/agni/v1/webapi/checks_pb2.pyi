@@ -156,10 +156,14 @@ class ListRulesResponse(_message.Message):
     def __init__(self, rules: _Optional[_Iterable[_Union[RuleInfo, _Mapping]]] = ...) -> None: ...
 
 class GetInterfaceCoverageRequest(_message.Message):
-    __slots__ = ("uri",)
+    __slots__ = ("uri", "overlay", "as_named")
     URI_FIELD_NUMBER: _ClassVar[int]
+    OVERLAY_FIELD_NUMBER: _ClassVar[int]
+    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     uri: str
-    def __init__(self, uri: _Optional[str] = ...) -> None: ...
+    overlay: OverlayConfig
+    as_named: bool
+    def __init__(self, uri: _Optional[str] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., as_named: _Optional[bool] = ...) -> None: ...
 
 class SignalCoverage(_message.Message):
     __slots__ = ("name", "net", "state")

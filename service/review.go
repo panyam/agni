@@ -352,7 +352,9 @@ func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact
 	if err != nil {
 		return review.Report{}, nil, err
 	}
-	present, scope, compScope := reviewClosures(m, s.byName)
+	// The run's own profiles, so a project profile re-binding a built-in's signals is the one the
+	// presence gate asks about (agni issue 833).
+	present, scope, compScope := reviewClosures(m, ov.ProfileIndex(s.byName))
 	rep, err := review.Run(ctx, review.RunParams{
 		Model: m, Catalog: cat, Manifest: man, Design: designURI.String(),
 		Present: present, Scope: scope, CompScope: compScope, RatifiedFloor: floor,

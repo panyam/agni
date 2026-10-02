@@ -52,6 +52,7 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 			return service.ResolvedConfig{}, fmt.Errorf("%s profiles %s: %w", namespace, uri, err)
 		}
 		out.Sources = append(out.Sources, profiles.Source(sourceName(namespace), ps))
+		out.InterfaceProfiles = append(out.InterfaceProfiles, ps...)
 		out.Profiles = true
 	}
 	for _, uri := range cfg.GetParamUris() {

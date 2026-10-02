@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/stdlib/profiles"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
@@ -39,6 +40,18 @@ type CheckService struct {
 	// conventions backs GetNamingConvention alone, so it is a narrow port rather than a Loader
 	// method, like ReviewLoader. A host that cannot resolve a stored convention passes nil.
 	conventions ConventionLoader
+	// profiles is the deployment's interface-profile index (the built-ins and any --profile-path),
+	// the one ReviewService holds, for GetInterfaceCoverage. Nil means the built-ins alone.
+	profiles map[string][]profiles.Profile
+}
+
+// WithProfileIndex gives the service the deployment's interface-profile index, keyed by name, which
+// the coverage panel walks with a design's own profiles layered on. Pass the same index the
+// ReviewService was built with, so the panel and a review describe an interface by one definition. It
+// returns s for chaining. Without it the panel walks the built-ins.
+func (s *CheckService) WithProfileIndex(byName map[string][]profiles.Profile) *CheckService {
+	s.profiles = byName
+	return s
 }
 
 // ConventionLoader reads a stored naming-convention config, mount-scoped by the impl.

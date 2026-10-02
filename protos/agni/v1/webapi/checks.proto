@@ -298,6 +298,10 @@ message ListRulesResponse {
 message GetInterfaceCoverageRequest {
   // uri names the design to project coverage over.
   string uri = 1;
+  // overlay and as_named mean what they mean on CheckDesignRequest, so the coverage panel reads the
+  // design the way the check it sits beside does (agni issue 833).
+  OverlayConfig overlay = 2;
+  bool as_named = 3;
 }
 
 // SignalCoverage is one required interface signal's state (WS9-041). net is the matched net name,

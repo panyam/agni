@@ -1142,7 +1142,7 @@ export class ViewerPresenter {
       return;
     }
     try {
-      const resp = await this.checks.getInterfaceCoverage({ uri: artifactUri(this.mount, this.path) });
+      const resp = await this.checks.getInterfaceCoverage({ uri: artifactUri(this.mount, this.path), overlay: this.overlay() });
       this.views.coverage.setState(coverageFromResponse(resp));
     } catch {
       this.views.coverage.setState(emptyCoverage());

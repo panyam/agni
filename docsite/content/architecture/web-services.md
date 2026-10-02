@@ -27,7 +27,7 @@ documents are independent concerns with independent cadences.
 | Check | CheckDesign | run a rule subset and return findings, where each subject joins the packed primitive keys for highlighting |
 | Check | GetExpectations | the design's expectation sidecar as its own resource, reconciled against findings client-side |
 | Check | GetCheckReport | the severity-organized report, the same shape as `agni check --format report` |
-| Check | GetInterfaceCoverage | per detected interface profile, each required signal with its matched net and state, from the same datalog the profile rules compile to |
+| Check | GetInterfaceCoverage | per detected interface profile, each required signal with its matched net and state, from the same datalog the profile rules compile to. It reads the design through its overlay and declared tiers, as CheckDesign does, and walks the profiles the run's rules came from, so a project's own profiles replace the built-ins they supersede |
 | Check | GetComponentParams | every component whose MPN resolves to a seeded PartSpec, with that spec's parameters; empty when no corpus is loaded |
 | Check | GetNamingConvention | resolve a stored convention config into a value an OverlayConfig carries, parsed and validated |
 | Diff | DiffDesigns | semantic diff of two designs plus the highlight maps, the wire form shared with `agni diff --format json` |

@@ -184,7 +184,7 @@ type RuleServiceDeps struct {
 // like a rule that ran and found nothing.
 func (e *Engine) RuleServices(d RuleServiceDeps) (*service.CheckService, *service.ReviewService) {
 	resolver := e.ProjectResolver()
-	return service.NewCheckService(d.Loader, e.catalog, d.Specs, d.BaseConvention, d.Loader, resolver),
+	return service.NewCheckService(d.Loader, e.catalog, d.Specs, d.BaseConvention, d.Loader, resolver).WithProfileIndex(e.byName),
 		service.NewReviewService(d.Loader, d.ReviewStore, e.catalog, e.byName, d.Specs, e.env, d.BaseConvention, resolver)
 }
 
