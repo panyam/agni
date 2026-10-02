@@ -8,12 +8,32 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DiffDesignsRequest(_message.Message):
-    __slots__ = ("a_uri", "b_uri")
+    __slots__ = ("a_uri", "b_uri", "near_renames")
     A_URI_FIELD_NUMBER: _ClassVar[int]
     B_URI_FIELD_NUMBER: _ClassVar[int]
+    NEAR_RENAMES_FIELD_NUMBER: _ClassVar[int]
     a_uri: str
     b_uri: str
-    def __init__(self, a_uri: _Optional[str] = ..., b_uri: _Optional[str] = ...) -> None: ...
+    near_renames: NearRenameOptions
+    def __init__(self, a_uri: _Optional[str] = ..., b_uri: _Optional[str] = ..., near_renames: _Optional[_Union[NearRenameOptions, _Mapping]] = ...) -> None: ...
+
+class NearRenameOptions(_message.Message):
+    __slots__ = ("min_old_coverage", "min_old_coverage_significant", "min_new_coverage", "min_new_coverage_significant", "max_added_significant_floor", "min_significant_endpoints", "insignificant_classes")
+    MIN_OLD_COVERAGE_FIELD_NUMBER: _ClassVar[int]
+    MIN_OLD_COVERAGE_SIGNIFICANT_FIELD_NUMBER: _ClassVar[int]
+    MIN_NEW_COVERAGE_FIELD_NUMBER: _ClassVar[int]
+    MIN_NEW_COVERAGE_SIGNIFICANT_FIELD_NUMBER: _ClassVar[int]
+    MAX_ADDED_SIGNIFICANT_FLOOR_FIELD_NUMBER: _ClassVar[int]
+    MIN_SIGNIFICANT_ENDPOINTS_FIELD_NUMBER: _ClassVar[int]
+    INSIGNIFICANT_CLASSES_FIELD_NUMBER: _ClassVar[int]
+    min_old_coverage: float
+    min_old_coverage_significant: float
+    min_new_coverage: float
+    min_new_coverage_significant: float
+    max_added_significant_floor: int
+    min_significant_endpoints: int
+    insignificant_classes: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, min_old_coverage: _Optional[float] = ..., min_old_coverage_significant: _Optional[float] = ..., min_new_coverage: _Optional[float] = ..., min_new_coverage_significant: _Optional[float] = ..., max_added_significant_floor: _Optional[int] = ..., min_significant_endpoints: _Optional[int] = ..., insignificant_classes: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class DiffReport(_message.Message):
     __slots__ = ("components_added", "components_removed", "components_changed", "nets")

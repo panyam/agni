@@ -83,7 +83,7 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	resp := DiffResponseProto(diff.Designs(a, b))
+	resp := DiffResponseProto(diff.Designs(a, b, RenameOptionsFromProto(req.GetNearRenames())))
 	gA := BuildGeometry(ctx, s.loader, aURI, aOpts...)
 	gB := BuildGeometry(ctx, s.loader, bURI, bOpts...)
 	// Plain netlist models, NOT BuildModel. Diff runs no rules and annotateDiffSheets reads only
@@ -235,4 +235,36 @@ func renameEvidenceProto(e *diff.RenameEvidence) *webapi.DiffReport_RenameEviden
 		OldSignificant:         int32(e.OldSignificant),
 		NewSignificant:         int32(e.NewSignificant),
 	}
+}
+
+// RenameOptionsFromProto turns a request's near-rename options into the diff's: nil is the pass
+// off, an empty message the calibrated defaults, and each set field overrides one threshold.
+func RenameOptionsFromProto(p *webapi.NearRenameOptions) diff.RenameOptions {
+	opts := diff.DefaultRenameOptions()
+	if p == nil {
+		return opts
+	}
+	opts.Enabled = true
+	if p.MinOldCoverage != nil {
+		opts.MinOldCoverage = p.GetMinOldCoverage()
+	}
+	if p.MinOldCoverageSignificant != nil {
+		opts.MinOldCoverageSignificant = p.GetMinOldCoverageSignificant()
+	}
+	if p.MinNewCoverage != nil {
+		opts.MinNewCoverage = p.GetMinNewCoverage()
+	}
+	if p.MinNewCoverageSignificant != nil {
+		opts.MinNewCoverageSignificant = p.GetMinNewCoverageSignificant()
+	}
+	if p.MaxAddedSignificantFloor != nil {
+		opts.MaxAddedSignificantFloor = int(p.GetMaxAddedSignificantFloor())
+	}
+	if p.MinSignificantEndpoints != nil {
+		opts.MinSignificantEndpoints = int(p.GetMinSignificantEndpoints())
+	}
+	if len(p.GetInsignificantClasses()) > 0 {
+		opts.InsignificantClasses = p.GetInsignificantClasses()
+	}
+	return opts
 }

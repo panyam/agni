@@ -14,7 +14,7 @@ import pytest
 from google.protobuf.message import Message
 
 from agni import CLI_COMMANDS, Client, bindings
-from agni.errors import AgniError
+from agni.errors import AgniError, CliUnsupported
 from agni.v1.checks import checks_pb2
 from agni.v1.webapi import query_pb2
 from agni.v1.webapi import design_pb2
@@ -86,7 +86,6 @@ _MANIFEST = checks_pb2.ReviewManifest(
     ],
 )
 
-DIFF_GEOMETRY = "agni issue 737: the CLI skips the service's sheet and placement annotation"
 LAYOUT_TIERS = "agni issue 736: GetLayoutReport does not resolve tiers, so the folder reads as nothing"
 
 # A set whose preamble every query reads, and the same set with one query the design cannot answer:
@@ -167,16 +166,11 @@ CASES: List[Case] = [
         ),
     ),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET_WITH_TYPO)),
+    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn")),
+    # A near-rename, asked for (agni issue 817): rev C renames PMIC_EN and adds a pull-up to it.
     Case(
         "DiffService/DiffDesigns",
-        lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn"),
-        {
-            "component_sheets_b": DIFF_GEOMETRY,
-            "net_sheets_a": DIFF_GEOMETRY,
-            "net_sheets_b": DIFF_GEOMETRY,
-            "shared_placements_a": DIFF_GEOMETRY,
-            "shared_placements_b": DIFF_GEOMETRY,
-        },
+        lambda c: c.diff_designs(a_uri=DESIGN + "/gateway-rev-b.edn", b_uri=DESIGN + "/gateway-rev-c.edn", near_renames={}),
     ),
     Case(
         "ReviewService/CreateReview",
@@ -257,3 +251,13 @@ def test_bindings_types_each_value():
     assert b["f"].number == 3.3
     with pytest.raises(TypeError):
         bindings({"x": True})
+
+
+def test_the_cli_refuses_a_near_rename_threshold_it_cannot_pass(cli: Client, connect: Client):
+    """agni issue 817. Over the CLI only the default thresholds run, so an override is refused rather
+    than silently dropped; over Connect it applies."""
+    ask = dict(a_uri=DESIGN + "/gateway-rev-b.edn", b_uri=DESIGN + "/gateway-rev-c.edn", near_renames={"min_new_coverage_significant": 0.9})
+    with pytest.raises(CliUnsupported, match="min_new_coverage_significant"):
+        cli.diff_designs(**ask)
+    kinds = {n.name: n.kind for n in connect.diff_designs(**ask).report.nets}
+    assert kinds.get("PMIC_ENABLE") == "new", kinds

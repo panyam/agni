@@ -10,8 +10,9 @@
 # against the netlist. Asking for analysis of one reads the entry instead and says so; `--as-named`
 # overrides that when reading a view as a netlist is the point (see the Makefile's check-views).
 #
-# `gateway-rev-b.edn` is deliberately NOT listed. It is a later revision, an analysis source in its
-# own right, and `make diff` compares it against the entry. That is why companions are declared file
+# `gateway-rev-b.edn` and `gateway-rev-c.edn` are deliberately NOT listed. They are later revisions,
+# analysis sources in their own right: `make diff` compares rev B against the entry, and rev C renames
+# and rewires one net so `agni diff --rename-approx` has a near-rename to pair. That is why companions are declared file
 # by file instead of inferred from "everything beside the entry".
 name: gateway
 title: Sample Board

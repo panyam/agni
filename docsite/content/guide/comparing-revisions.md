@@ -39,7 +39,18 @@ that actually moved a wire.
 
 For rename detection to fire, the net has to keep identical connections under the new name.
 A net that was both renamed *and* rewired shows up as a new net plus a deleted one, unless you
-pass `--rename-approx`.
+pass `--rename-approx`. The tutorial board's revision C renames the regulator enable net and adds a
+pull-up to it:
+
+{{ agniRun "content/guide/runs/diff-rename-approx.yaml" }}
+
+The pairing is marked `renamed?` because it is the best match among candidates rather than a fact the
+connectivity proves, which is why the pass is off unless you ask for it. The API takes the same
+option as `near_renames` on `DiffDesignsRequest`: an empty message runs the calibrated thresholds,
+and a field that is set overrides that one threshold, such as `min_new_coverage_significant`. The
+pass matches by connectivity and never by name, so the thresholds are fractions of shared endpoints.
+The Python client sends it as `diff_designs(..., near_renames={})`; overriding a threshold needs a
+server, since the CLI runs the defaults only.
 
 ## In the viewer
 

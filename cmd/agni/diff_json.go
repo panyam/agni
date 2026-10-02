@@ -1,24 +1,39 @@
 package main
 
 import (
-	"fmt"
-	"io"
+	"github.com/spf13/cobra"
 
-	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/panyam/agni/core/diff"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
 
-// writeDiffJSON emits the diff as a DiffDesignsResponse in protojson form, the same message
-// the web API's DiffService serves (WS9-004), so the CLI and the viewer parse one shape.
-// EmitUnpopulated keeps empty lists/maps present, so a no-change diff is still a well-formed
+// diffViaService answers `diff --format json` with the DiffDesignsResponse the DiffDesigns rpc
+// returns, built by the same service over the CLI's local loader, so the CLI and the web API emit
+// one message with the same content, sheet and placement maps included (agni issue 737).
+// EmitUnpopulated keeps empty lists and maps present, so a no-change diff is still a well-formed
 // object rather than fields that appear and vanish per run.
-func writeDiffJSON(w io.Writer, rep *diff.Report) error {
-	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(service.DiffResponseProto(rep))
+func diffViaService(cmd *cobra.Command, a, b string, renameApprox bool) error {
+	aURI, err := cliArgURI(a)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(w, string(b))
+	bURI, err := cliArgURI(b)
+	if err != nil {
+		return err
+	}
+	svc := service.NewDiffService(&localLoader{loader: newLoader()}, cliProjects())
+	req := &webapi.DiffDesignsRequest{AUri: aURI, BUri: bURI}
+	if renameApprox {
+		req.NearRenames = &webapi.NearRenameOptions{} // the calibrated thresholds
+	}
+	resp, err := svc.DiffDesigns(cmd.Context(), req)
+	if err != nil {
+		return err
+	}
+	out, err := protoJSON(resp)
+	if err != nil {
+		return err
+	}
+	_, err = cmd.OutOrStdout().Write([]byte(out))
 	return err
 }

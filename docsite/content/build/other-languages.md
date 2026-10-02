@@ -99,7 +99,8 @@ it field by field, and each declaration fails once the difference goes away:
 
 - `CheckDesign` over the CLI carries no `verdicts`. `check --format json` strips the considered set on
   purpose and `--verdicts` prints it as a bare list, which is not a wire message.
-- `DiffDesigns` over the CLI carries no sheet or placement maps (agni issue 737).
+- `CreateReview` over the CLI has an empty `name`, because the CLI stores nothing. The two runs also
+  differ in `results.meta.created_at`, which the test clears on both sides before comparing.
 - `GetLayoutReport` on a design FOLDER answers an empty report from the server (agni issue 736).
   Name the entry file with `as_named` until that lands.
 
