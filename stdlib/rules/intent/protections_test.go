@@ -3,8 +3,8 @@ package intent
 import (
 	"testing"
 
-	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -20,7 +20,7 @@ func protDesign(rail, d1class string) *ir.Design {
 }
 
 func TestOVPPassesWhenTVSOnRail(t *testing.T) {
-	decl := declOf(t, "name: I\nprotections:\n  - {rail: VBATT01, kind: ovp}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    VBATT01:\n      protect: [ovp]\n")
 	if fs := check.RunBackground(check.NewModel(protDesign("VBATT01", "tvs")), Compile(decl)); len(fs) != 0 {
 		t.Errorf("a TVS on the declared rail should pass, got %+v", fs)
 	}
@@ -31,7 +31,7 @@ func TestOVPPassesWhenTVSOnRail(t *testing.T) {
 }
 
 func TestOVPFiresWhenNoClampOnRail(t *testing.T) {
-	decl := declOf(t, "name: I\nprotections:\n  - {rail: VBATT01, kind: ovp}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    VBATT01:\n      protect: [ovp]\n")
 	// A resistor on the rail is not a clamp -> fire.
 	fs := check.RunBackground(check.NewModel(protDesign("VBATT01", "resistor")), Compile(decl))
 	if len(fs) != 1 || fs[0].Rule != "protection-ovp" || check.EntityRef(fs[0].Subject) != "VBATT01" {
@@ -41,7 +41,7 @@ func TestOVPFiresWhenNoClampOnRail(t *testing.T) {
 
 func TestOVPNetScoped(t *testing.T) {
 	// The TVS is on a DIFFERENT net than the declared rail -> the declared rail is still unprotected.
-	decl := declOf(t, "name: I\nprotections:\n  - {rail: VBATT01, kind: ovp}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    VBATT01:\n      protect: [ovp]\n")
 	d := protDesign("SOME_OTHER_NET", "tvs")
 	d.Nets = append(d.Nets, &ir.Net{Name: "VBATT01"}) // declared rail exists but has no TVS
 	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 1 {
@@ -51,7 +51,7 @@ func TestOVPNetScoped(t *testing.T) {
 
 func TestDischargePassesWithBleeder(t *testing.T) {
 	// A resistor with one pin on the rail and one on GND is a bleeder.
-	decl := declOf(t, "name: I\nprotections:\n  - {rail: 5V0, kind: discharge}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    5V0:\n      protect: [discharge]\n")
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: classify.Tags("resistor")}},
 		Nets: []*ir.Net{
@@ -65,7 +65,7 @@ func TestDischargePassesWithBleeder(t *testing.T) {
 }
 
 func TestDischargeFiresWithoutBleeder(t *testing.T) {
-	decl := declOf(t, "name: I\nprotections:\n  - {rail: 5V0, kind: discharge}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    5V0:\n      protect: [discharge]\n")
 	// R1 is on the rail but its other pin is a signal, not ground -> not a bleeder.
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: classify.Tags("resistor")}},
@@ -80,7 +80,7 @@ func TestDischargeFiresWithoutBleeder(t *testing.T) {
 }
 
 func TestProtectionsCompileToPerKindRules(t *testing.T) {
-	decl := declOf(t, "name: I\nprotections:\n  - {rail: A, kind: ovp}\n  - {rail: B, kind: discharge}\n  - {rail: C, kind: ovp}")
+	decl := declOf(t, "name: I\nintent:\n  nets:\n    A:\n      protect: [ovp]\n    B:\n      protect: [discharge]\n    C:\n      protect: [ovp]\n")
 	names := map[string]bool{}
 	for _, r := range Compile(decl) {
 		names[r.Name] = true
@@ -95,9 +95,9 @@ func TestProtectionsCompileToPerKindRules(t *testing.T) {
 
 func TestParseRejectsProtections(t *testing.T) {
 	for label, doc := range map[string]string{
-		"no rail":      "name: N\nprotections:\n  - {kind: ovp}",
-		"unknown kind": "name: N\nprotections:\n  - {rail: X, kind: crowbar}",
-		"empty kind":   "name: N\nprotections:\n  - {rail: X}",
+		"no rail":      "name: N\nintent:\n  nets:\n    null:\n      protect: [ovp]\n",
+		"unknown kind": "name: N\nintent:\n  nets:\n    X:\n      protect: [crowbar]\n",
+		"empty kind":   "name: N\nintent:\n  nets:\n    X:\n      protect: [null]\n",
 	} {
 		if _, err := Parse([]byte(doc)); err == nil {
 			t.Errorf("%s: expected a validation error, got nil", label)

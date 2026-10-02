@@ -322,6 +322,12 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 	}
 	d.Uri = base.String()
 	d.EntryUri = entry.String()
+	// An intent.yaml beside the descriptor is the layout before agni issue 824. Reading the design
+	// without it would quietly drop every intent rule, which reads as a board that declares nothing,
+	// so it is an error that says where the declarations go now.
+	if exists(t.FS, path.Join(walkRoot(dir), formerIntentFile)) {
+		return "", nil, fmt.Errorf("%s: %s is no longer read; move its declarations under intent: in %s (agni issue 824)", name, formerIntentFile, DesignDescriptor)
+	}
 	// Intent is a NAME until here and becomes a URI only if the file exists, so a design that never
 	// wrote one reads as having none rather than naming a missing file.
 	if d.GetConfig().GetIntentUri() != "" {

@@ -52,12 +52,13 @@ contradiction would be wrong.
 ### Declaring it
 
 ```yaml
-net_properties:
-  - {net: SYS_RESET_N, property: reset-polarity, value: low}
-  - {net: PHY_ENABLE,  property: reset-polarity, value: high}
+intent:
+  nets:
+    SYS_RESET_N: {reset: low}
+    PHY_ENABLE:  {reset: high}
 ```
 
-The `value` is the assertion, and it is required, because without it the rule has nothing to
+The level is the assertion, and it is required, because without it the rule has nothing to
 contradict, so an omitted or misspelled level is rejected at load rather than becoming a rule that
 silently never fires.
 

@@ -3,16 +3,19 @@ package intent
 import (
 	"testing"
 
-	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 func TestSubsystemPassesWhenComplete(t *testing.T) {
 	decl := declOf(t, `
 name: I
-subsystems:
-  - {name: main clock, source: {class: crystal}, nets: [XTAL_IN, XTAL_OUT]}
+intent:
+  modules:
+  - name: main clock
+    class: crystal
+    nets: [XTAL_IN, XTAL_OUT]
 `)
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "X1", DeviceClasses: classify.Tags("crystal")}},
@@ -26,8 +29,11 @@ subsystems:
 func TestSubsystemFiresOnMissingSourceAndNet(t *testing.T) {
 	decl := declOf(t, `
 name: I
-subsystems:
-  - {name: reset, source: {class: supervisor}, nets: [PORZ, SYS_RESET_N]}
+intent:
+  modules:
+  - name: reset
+    class: supervisor
+    nets: [PORZ, SYS_RESET_N]
 `)
 	// The design has PORZ but no supervisor and no SYS_RESET_N, so two findings, one per missing piece.
 	d := &ir.Design{
@@ -49,9 +55,13 @@ subsystems:
 func TestSubsystemsCompileToDistinctRules(t *testing.T) {
 	decl := declOf(t, `
 name: I
-subsystems:
-  - {name: main clock, source: {class: crystal}}
-  - {name: reset, nets: [SYS_RESET_N]}
+intent:
+  modules:
+  - name: main clock
+    class: crystal
+    nets: [XTAL_IN]
+  - name: reset
+    nets: [SYS_RESET_N]
 `)
 	rules := Compile(decl)
 	names := map[string]bool{}
@@ -65,7 +75,7 @@ subsystems:
 
 func TestSubsystemNetsOnlyOrSourceOnly(t *testing.T) {
 	// A nets-only subsystem (the power-tree shape) requires every rail to exist.
-	decl := declOf(t, "name: I\nsubsystems:\n  - {name: power tree, nets: [5V0, 3V3, 1V8]}")
+	decl := declOf(t, "name: I\nintent:\n  modules:\n  - name: power tree\n    nets: [5V0, 3V3, 1V8]\n")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "5V0"}, {Name: "3V3"}}} // 1V8 missing
 	fs := check.RunBackground(check.NewModel(d), Compile(decl))
 	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "1V8" || fs[0].Rule != "subsystem-power-tree" {
@@ -84,11 +94,11 @@ func TestSlug(t *testing.T) {
 
 func TestParseRejectsSubsystems(t *testing.T) {
 	cases := map[string]string{
-		"empty subsystem": "name: N\nsubsystems:\n  - {name: x}",
-		"no name":         "name: N\nsubsystems:\n  - {nets: [A]}",
-		"source no crit":  "name: N\nsubsystems:\n  - {name: x, source: {}}",
-		"slug collision":  "name: N\nsubsystems:\n  - {name: main clock, nets: [A]}\n  - {name: 'main  clock', nets: [B]}",
-		"non-alnum name":  "name: N\nsubsystems:\n  - {name: '///', nets: [A]}",
+		"empty subsystem": "name: N\nintent:\n  modules:\n  - {name: x}\n",
+		"no name":         "name: N\nintent:\n  modules:\n  - {nets: [A]}\n",
+		"source no crit":  "name: N\nintent:\n  modules:\n  - {name: x}\n",
+		"slug collision":  "name: N\nintent:\n  modules:\n  - name: main clock\n    nets: [A]\n  - name: main  clock\n    nets: [B]\n",
+		"non-alnum name":  "name: N\nintent:\n  modules:\n  - name: ///\n    nets: [A]\n",
 	}
 	for label, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {

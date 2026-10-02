@@ -16,56 +16,75 @@ were building.
 ## Write a declaration
 
 ```yaml
-# designs/gateway/intent.yaml
-name: gateway intent
-modules:
-  - {name: regulators, class: regulator, count: 2}
-  - {name: connectors, class: connector, count: 1}
-voltage_domains:
-  - {name: main, nominal: 12.0, rails: [PMIC_MAIN_12V0]}
-  - {name: io,   nominal: 3.3,  rails: [PMIC_CORE_3V3]}
-  - {name: core, nominal: 3.3,  rails: [PMIC_IO_1V8]}
-subsystems:
-  - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
-  - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+# designs/gateway/design.yaml
+name: gateway
+entry: gateway.edn
+intent:
+  modules:
+    - {name: regulators, class: regulator, count: 2}
+    - {name: connectors, class: connector, count: 1}
+    - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
+    - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3:  {nominal: 3.3,  domain: io}
+    PMIC_IO_1V8:    {nominal: 3.3,  domain: core}
 ```
 
-That last voltage domain is wrong on purpose, so the run below has something to catch. `core` is
-declared at 3.3 V while the rail it names is `PMIC_IO_1V8`, an actual 1.8 V rail. Nothing about the
-schematic is malformed. The board simply stopped matching the architecture, and only a declaration
-can notice.
+That last rail is wrong on purpose, so the run below has something to catch. `PMIC_IO_1V8` is
+declared at 3.3 V in the `core` domain, and it is an actual 1.8 V rail. Nothing about the schematic is
+malformed. The board simply stopped matching the architecture, and only a declaration can notice.
 
-## Where the file goes
+## Where it goes
 
-Beside the design, named `intent.yaml`. A design that belongs to a project needs no flag, because the
-descriptor defaults that name and the project finds it:
+In the design's own `design.yaml`, under `intent:`. A design that belongs to a project needs no flag,
+because the project reads its descriptor and finds the section:
 
 {{ agniRun "content/guide/runs/intent-domain-mismatch.yaml" }}
 
 Intent is per-**design**, unlike naming conventions, interface profiles and seeded parameters, which
-are per-project. Each board has its own intended architecture, so the file lives with the board
-rather than with the team.
+are per-project. Each board has its own intended architecture, so the declaration lives with the
+board rather than with the team, in the one file that already says which files the board is.
 
-`--intent-path` exists for a design that belongs to no project. Reaching for it on a design whose
-project already declares intent is an error rather than a silent double-load, so you find out
-immediately instead of reading every finding twice.
+`--intent-path` exists for a design that belongs to no project, and names a file in the same shape, a
+`name` and an `intent:` section. Reaching for it on a design whose project already declares intent is
+an error rather than a silent double-load, so you find out immediately instead of reading every
+finding twice.
 
-## The nine forms
+A separate `intent.yaml` beside the design is no longer read, and a project holding one fails to load
+with a message saying where its declarations go (agni issue 824). So does a declaration written in
+the earlier nine-form vocabulary, each refused key naming its replacement.
 
-Each form answers a question the netlist cannot, and each compiles to its own rule so a reviewer
-signing them off separately gets separate verdicts.
+## The six forms
+
+Each form answers a question the netlist cannot. Two are keyed by what they describe (a block, a
+net), and the other four describe relationships between several nets.
 
 | Form | Declares | Fails when |
 |---|---|---|
-| `modules` | the functional blocks the board must contain, by class or MPN, optionally with a count | a declared module is absent, or the count is short |
-| `voltage_domains` | named rails pinned to a nominal voltage | a declared rail is missing, or sits on the wrong domain |
-| `subsystems` | a named architectural block and the nets it must instantiate | its source component is absent, or any declared net is missing |
-| `protections` | a rail that must carry a protection device, by kind | the declared rail carries no device of that kind |
-| `net_properties` | what a net *is*, rather than that it exists (a reset is active-low) | the design's structure contradicts the declaration |
-| `rail_budgets` | the peak current a rail draws, with an optional `margin_factor` | the supply reaching it is rated below the peak, or below the margin |
+| `modules` | a functional block the board must contain, by class or MPN with an optional count, or by the nets it must instantiate | a declared module is absent, the count is short, or a declared net is missing |
+| `nets` | what each named net is, keyed by name (its voltage and domain, its peak draw, the protection it carries, its reset polarity, strap level or AC coupling) | the design contradicts any fact declared for it |
 | `sequences` | the power-up order of groups of rails | the gating chain is absent, or runs the other way round |
 | `strap_groups` | several strap nets read together as one binary number, and the value it encodes | the group does not encode the declared value, or two devices collide |
 | `io_map` | which net lands on which pin of which device, and optionally what sits at the far end | the net is on a different pin, the declared net is absent, or the far end is wrong |
+| `margin_factor` | the headroom every supply must have over its rails' declared peaks | a supply is rated below peak times the factor |
+
+A `nets` entry carries any of these facts, and each compiles to the same rule it always did.
+
+```yaml
+intent:
+  nets:
+    VDD_3V3:   {nominal: 3.3, domain: io, peak: 0.8, protect: [ovp, discharge]}
+    MCU_NRST:  {reset: low}
+    BOOT0:     {strap: low, min_ohms: 4700, max_ohms: 47000}
+    PCIE_TX0_P: {ac_coupled: true}
+  margin_factor: 1.2
+```
+
+A rail with a `nominal` and no `domain` is named by its voltage (`3.3V`), and rails sharing a domain
+must share a voltage. `protect` takes `ovp` (a TVS or zener clamping the rail) and `discharge` (a
+bleeder to ground). A resistance band belongs to a strap, so `min_ohms` without `strap` is a load
+error.
 
 `io_map` is the largest of them in practice and the one most boards already have, usually as a
 spreadsheet. On any board carrying a big MCU or SoC, someone decides which peripheral lands on which
@@ -107,7 +126,7 @@ over a third of the map and say nothing about the rest. `function` is accepted a
 evaluated, since deciding whether a function is legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so
 outright.
 
-`rail_budgets` joins two tiers. The declaration supplies the demand, which no design
+A `peak` joins two tiers. The declaration supplies the demand, which no design
 artifact carries, and a seeded {{ explainable "absolute-maximum-rating" "datasheet parameter" }}
 supplies the regulator's capacity. Both halves have to be present or the rule stays quiet rather than
 guessing.
@@ -119,9 +138,9 @@ separately gets its own rule (WS3-058), and the naming follows what the sign-off
 
 | Form | Rules it compiles to | Why that grain |
 |---|---|---|
-| `subsystems`, `sequences`, `strap_groups` | one per declared entry, named from a slug of it (`subsystem-<name>`, `sequence-<name>`, `strap-group-<name>`) | each entry is its own checklist item |
-| `protections`, `net_properties` | one per KIND (`protection-<kind>`, `property-<kind>`) | a reviewer signs off "every rail has its OVP clamp", not each rail |
-| `modules`, `voltage_domains`, `rail_budgets` | fixed names (`module-missing`, `module-count`, `voltage-domain-mismatch`, `rail-current-capacity`, `rail-current-margin`, `load-switch-trip-below-budget`) | the review item is the mechanism rather than any one entry |
+| `modules` with nets, `sequences`, `strap_groups` | one per declared entry, named from a slug of it (`subsystem-<name>`, `sequence-<name>`, `strap-group-<name>`) | each entry is its own checklist item |
+| `modules` without nets | fixed names (`module-missing`, `module-count`) | the review item is the mechanism rather than any one entry |
+| `nets` | one per FACT (`voltage-domain-mismatch`, `protection-<kind>`, `property-<kind>`, `rail-current-capacity`, `rail-current-margin`, `load-switch-trip-below-budget`) | a reviewer signs off "every rail has its OVP clamp", not each rail |
 | `io_map` | four fixed names, whatever the map's length | the exception, since nobody signs off "net 137 is on the right pin" as its own item |
 
 `strap_groups` also compiles one `strap-address-collision` rule across all groups, because a

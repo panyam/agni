@@ -10,9 +10,9 @@ import (
 )
 
 // Power-up sequencing as design intent (WS3-092) is the third intent mechanism, after presence
-// (module/subsystem/protection) and property (net_properties). Presence asks whether a thing is on the
-// design and property asks what a net IS; neither can express an ORDER, and order is what a multi-rail
-// board gets wrong in the way that damages parts.
+// (module/subsystem/protection) and property (a net's declared facts). Presence asks whether a thing
+// is on the design and property asks what a net IS; neither can express an ORDER, and order is what a
+// multi-rail board gets wrong in the way that damages parts.
 //
 // A netlist carries no order. It carries connectivity, and the only ordering an order leaves behind in
 // connectivity is a GATING CHAIN, where the earlier stage's power-good signal drives the later stage's

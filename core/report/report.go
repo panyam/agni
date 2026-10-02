@@ -153,7 +153,7 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 		fromVerdict[v.Rule] = true
 		s := section(v.Rule)
 		// EMITTING A VERDICT IS STATING A CONSIDERED SET, so the verdict settles this and the catalog
-		// flag is only a fallback. An overlay's rules (conventions.yaml, profiles/, intent.yaml) have
+		// flag is only a fallback. An overlay's rules (conventions.yaml, profiles/, a design's intent) have
 		// namespaced names the catalog lookup misses, which would caption their rows as findings-only.
 		// This cannot over-claim, since a rule with no considered set emits no verdict.
 		s.StatesConsideredSet = true

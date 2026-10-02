@@ -126,7 +126,7 @@ func TestNoLinksWithoutABase(t *testing.T) {
 	}
 }
 
-// An OPERATOR's rule (from conventions.yaml, profiles/ or intent.yaml) is namespaced and is absent
+// An OPERATOR's rule (from conventions.yaml, profiles/ or a design's intent) is namespaced and is absent
 // from the catalog the report is handed, so the catalog lookup cannot vouch for it. Its verdicts
 // can, because emitting one IS stating a considered set. Before this, every rule a team wrote
 // itself was captioned "absence here is not evidence of correctness" over rows that were exactly

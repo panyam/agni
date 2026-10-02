@@ -17,7 +17,7 @@ import (
 // The upper bound is decidable from two datasheets. THE LOWER BOUND IS NOT, which is why this half is an
 // intent rule and its twin is a builtin. Nothing in a design states what a rail draws, and summing rated
 // draws would need near-complete part seeding plus a guess at which loads draw at once. So the demand is
-// DECLARED, in the same rail_budgets the regulator-sizing rules read.
+// DECLARED, in the same per-net peak the regulator-sizing rules read.
 
 // loadSwitchTripBelowBudgetRule reports a controller-based load switch whose limit is below the
 // declared peak draw of the rail it feeds.

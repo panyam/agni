@@ -72,16 +72,17 @@ arbitrary part.
 ### Declaring it
 
 ```yaml
-net_properties:
-  # direction only
-  - {net: BOOT_MODE0, property: strap, value: high}
-  # direction plus an acceptable pull band, in ohms
-  - {net: PHYAD1, property: strap, value: low, min_ohms: 1000, max_ohms: 100000}
-  # one-sided: bound the weak end only
-  - {net: BOOT_CFG2, property: strap, value: high, max_ohms: 47000}
+intent:
+  nets:
+    # direction only
+    BOOT_MODE0: {strap: high}
+    # direction plus an acceptable pull band, in ohms
+    PHYAD1: {strap: low, min_ohms: 1000, max_ohms: 100000}
+    # one-sided: bound the weak end only
+    BOOT_CFG2: {strap: high, max_ohms: 47000}
 ```
 
-The `value` is the intended latched level and is required, because without it the rule has nothing to
+The `strap` level is the intended latched level and is required, because without it the rule has nothing to
 contradict, so an omitted or misspelled level is rejected at load rather than becoming a rule that
 silently never fires.
 

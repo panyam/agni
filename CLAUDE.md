@@ -24,7 +24,7 @@ expensive to rediscover.
 | The web wire contract, the viewer's interaction model, changing a panel | `architecture/web-services.md`, `architecture/web-picking.md`, `architecture/web-client.md` |
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
-| A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the nine forms), `core/ident`'s package comment |
+| A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the six forms), `core/ident`'s package comment |
 | The checks contract (the CLI/service boundary) | `architecture/checks-contract.md` |
 | The config a run is checked against, and where it comes from | `architecture/projects-and-designs.md` |
 | Semantic diff | `architecture/semantic-diff.md` |
@@ -487,8 +487,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 
 ## Engine gotchas
 
-**A declared pin map is the ninth intent form, and it compiles to FOUR rules.** `io_map` on a design's
-`intent.yaml` says which net lands on which pin of which device. Three rules ask whether the design
+**A declared pin map is an intent form, and it compiles to FOUR rules.** `io_map` in a design's
+`intent:` section says which net lands on which pin of which device. Three rules ask whether the design
 kept that promise (`io-map-pin-mismatch`, `io-map-net-absent`, `io-map-far-end`) and the fourth,
 `io-map-coverage`, inverts the question by taking the NETLIST as its considered set, so it reports
 how much of the design the map never mentioned. That number usually matters most, because a map

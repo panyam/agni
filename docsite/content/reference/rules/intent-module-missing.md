@@ -36,5 +36,5 @@ The rule iterates the declared modules and probes the design, so the expectation
 declaration rather than the netlist and a missing module fails. A rule that enumerated modules
 from the design would always pass (circular), the silent false-pass this family of rules
 exists to prevent. There is no built-in intent; the declaration is loaded per design, from the
-project's `intent.yaml` or from `--intent-path`, so a design run with none leaves the item
+`intent:` section of its `design.yaml` or from `--intent-path`, so a design run with none leaves the item
 `needs-design-intent` rather than silently passing.

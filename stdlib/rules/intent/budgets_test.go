@@ -335,6 +335,6 @@ func TestMarginRuleNotCompiledWithoutAFactor(t *testing.T) {
 	// a silently-passing sizing rule into the catalog.
 	none := names(Declaration{Name: "t", Modules: []Module{{Name: "MCU", Class: "soc"}}})
 	if none[RuleRailCurrentCapacity] || none[RuleRailCurrentMargin] {
-		t.Errorf("no rail_budgets must compile no sizing rule, got %v", none)
+		t.Errorf("no declared peak must compile no sizing rule, got %v", none)
 	}
 }

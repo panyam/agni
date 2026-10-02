@@ -43,10 +43,11 @@ A power tree has no such external referent. **Nothing anywhere states that `PMIC
 So at this level the tool has to be *told* what was intended, in a declaration that sits beside the design:
 
 ```yaml
-voltage_domains:
-  - {name: main, nominal: 12.0, rails: [PMIC_MAIN_12V0]}
-  - {name: io,   nominal: 3.3,  rails: [PMIC_CORE_3V3]}
-  - {name: core, nominal: 3.3,  rails: [PMIC_IO_1V8]}
+intent:
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3:  {nominal: 3.3,  domain: io}
+    PMIC_IO_1V8:    {nominal: 3.3,  domain: core}
 ```
 
 and then it can check the board against it:

@@ -17,8 +17,8 @@ const (
 	RuleRailCurrentCapacity = "rail-current-capacity"
 	RuleRailCurrentMargin   = "rail-current-margin"
 	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085), checking the
-	// switch's current limit against the rail's declared draw. It reads the same rail_budgets as the two
-	// rules above, but judges a different part (the switch rather than the supply), so it is its own rule.
+	// switch's current limit against the rail's declared draw. It reads the same declared peaks as the
+	// two rules above, but judges a different part (the switch rather than the supply), so it is its own rule.
 	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
 	// The three IO-map rules (agni issue 517). Fixed names rather than one per declared row, because a
 	// real map is hundreds of rows and a reviewer signs off "the netlist matches the IO map", not each

@@ -428,7 +428,7 @@ func TestLoadSwitchSilentWithoutTheShuntValue(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchRuleCompiledWithBudgets relies on the rule reading rail_budgets and nothing else
+// TestLoadSwitchRuleCompiledWithBudgets relies on the rule reading declared peaks and nothing else
 // from the declaration, so it compiles exactly when a budget is declared. A declaration about
 // something else must not drag a silently-passing sizing rule into the catalog.
 func TestLoadSwitchRuleCompiledWithBudgets(t *testing.T) {
@@ -449,6 +449,6 @@ func TestLoadSwitchRuleCompiledWithBudgets(t *testing.T) {
 	}
 	none := names(Declaration{Name: "t", Modules: []Module{{Name: "MCU", Class: "soc"}}})
 	if none[RuleLoadSwitchTripBelowBudget] {
-		t.Errorf("no rail_budgets must compile no load-switch rule, got %v", none)
+		t.Errorf("no declared peak must compile no load-switch rule, got %v", none)
 	}
 }

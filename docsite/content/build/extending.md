@@ -242,7 +242,7 @@ Config reaches `New` as a VALUE, never as a path, because reading files is the c
 
 ```go
 ps, _ := profiles.LoadDir("profiles")        // you read it
-decl, _ := intent.LoadFile("intent.yaml")    // you read it
+decl, _ := intent.LoadFile("design.yaml")    // you read it
 engine, err := agni.New(
     agni.WithProfiles(ps),
     agni.WithIntent(decl),

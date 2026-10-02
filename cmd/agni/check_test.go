@@ -46,7 +46,7 @@ func TestCheckStrapBandCLI(t *testing.T) {
 func TestCheckStrapImpossibleBandRejected(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.yaml")
-	if err := os.WriteFile(path, []byte("name: bad\nnet_properties:\n  - {net: B0, property: strap, value: high, min_ohms: 100000, max_ohms: 1000}\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("name: bad\nintent:\n  nets:\n    B0: {strap: high, min_ohms: 100000, max_ohms: 1000}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cmd := checkCmd()
@@ -130,9 +130,9 @@ func TestCheckStrapGroupUndecidableCLI(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "undecidable.yaml")
 	// PHY2AD0 is replaced by UNWIRED, which exists nowhere, so U13's group has an unreadable bit.
-	body := "name: undecidable\nstrap_groups:\n" +
-		"  - {name: PHYAD U12, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 1, bus: MDIO}\n" +
-		"  - {name: PHYAD U13, device: U13, nets: [PHY2AD2, PHY2AD1, PHY2AD1], value: 1, bus: MDIO}\n"
+	body := "name: undecidable\nintent:\n  strap_groups:\n" +
+		"    - {name: PHYAD U12, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 1, bus: MDIO}\n" +
+		"    - {name: PHYAD U13, device: U13, nets: [PHY2AD2, PHY2AD1, PHY2AD1], value: 1, bus: MDIO}\n"
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}

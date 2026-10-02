@@ -56,17 +56,19 @@ type designYAML struct {
 	Title      string   `yaml:"title"`
 	Entry      string   `yaml:"entry"`
 	Companions []string `yaml:"companions"`
-	// Intent is this design's declared architecture, optional and defaulting to `intent.yaml` beside
-	// the descriptor. It is per-DESIGN, where conventions and profiles describe the team.
-	Intent *string `yaml:"intent"`
+	// Intent is this design's declared architecture, written inline (agni issue 824). It is per-DESIGN,
+	// where conventions and profiles describe the team. Only its presence is read here; the intent
+	// package parses it, from this same file, when a run composes the design's config.
+	Intent yaml.Node `yaml:"intent,omitempty"`
 	// Symbols is this design's own symbol library, optional and defaulting to `symbols` beside the
 	// descriptor.
 	Symbols *string `yaml:"symbols"`
 }
 
 // The conventional config names used when a descriptor declares none, matching the layout of
-// `examples/tutorial-project`. The first six belong to `project.yaml` (symbols to both descriptors),
-// intent to `design.yaml`. FSStore composes each tier it finds.
+// `examples/tutorial-project`. They belong to `project.yaml` (symbols to both descriptors). FSStore
+// composes each tier it finds. A design's intent is not among them, since it is a section of
+// design.yaml itself.
 const (
 	defaultConventions = "conventions.yaml"
 	defaultProfiles    = "profiles"
@@ -74,8 +76,11 @@ const (
 	defaultSymbols     = "symbols"
 	defaultChecklist   = "review.yaml"
 	defaultLib         = "lib"
-	defaultIntent      = "intent.yaml"
 )
+
+// formerIntentFile is where a design's intent lived before it moved into design.yaml. A design folder
+// still holding one is refused rather than read without it (agni issue 824).
+const formerIntentFile = "intent.yaml"
 
 // ProjectConfigNames is what a parsed project descriptor says its config is called, before anything
 // checks whether those files exist. An empty entry means the project opted OUT of that tier, which is
@@ -199,13 +204,15 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 		}
 		out.Config.SymbolPathUris = []string{clean}
 	}
-	if y.Intent == nil {
-		out.Config.IntentUri = defaultIntent
-	} else if clean := CleanRel(*y.Intent); clean != "" {
-		if err := validRel("intent", clean); err != nil {
-			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-		}
-		out.Config.IntentUri = clean
+	// The intent URI names this descriptor, whose intent section the config resolver parses.
+	switch {
+	case y.Intent.IsZero() || y.Intent.Tag == "!!null":
+	case y.Intent.Kind == yaml.MappingNode:
+		out.Config.IntentUri = DesignDescriptor
+	case y.Intent.Kind == yaml.ScalarNode:
+		return "", nil, fmt.Errorf("%s: intent names a file (%q); a design's intent is now written inline under intent: (agni issue 824)", DesignDescriptor, y.Intent.Value)
+	default:
+		return "", nil, fmt.Errorf("%s: intent must be a section of declarations", DesignDescriptor)
 	}
 	return y.Name, out, nil
 }

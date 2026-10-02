@@ -57,7 +57,7 @@ func ioMapDesign() *ir.Design {
 
 func ioMapDecl(t *testing.T, rows string) Declaration {
 	t.Helper()
-	return declOf(t, "name: I\nio_map:\n"+rows)
+	return declOf(t, ioMapDoc(rows))
 }
 
 func onlyVerdict(t *testing.T, decl Declaration, rule string) check.Verdict {
@@ -254,7 +254,7 @@ func TestIOMapLoadRejectsIncompleteRows(t *testing.T) {
 		{"a far end with no device", "  - {net: N, device: U101, pin: '41', to: {pin: PG}}", "no device"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := Parse([]byte("name: I\nio_map:\n" + c.rows))
+			_, err := Parse([]byte(ioMapDoc(c.rows)))
 			if err == nil {
 				t.Fatal("want an error naming the missing field")
 			}
@@ -389,4 +389,17 @@ func TestIOMapCoverageMatchesAcrossSpelling(t *testing.T) {
 			t.Errorf("got %d covered, want 1", got)
 		}
 	})
+}
+
+// ioMapDoc wraps io_map rows, written at the indent of a top-level list, into a design's intent
+// section.
+func ioMapDoc(rows string) string {
+	var b strings.Builder
+	b.WriteString("name: I\nintent:\n  io_map:\n")
+	for _, line := range strings.Split(rows, "\n") {
+		if line != "" {
+			b.WriteString("  " + line + "\n")
+		}
+	}
+	return b.String()
 }

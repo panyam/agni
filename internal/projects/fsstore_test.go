@@ -283,3 +283,57 @@ func TestFSStoreDiscoversALibraryAndHonoursAnOptOut(t *testing.T) {
 		})
 	}
 }
+
+// A design's intent is a section of its design.yaml (agni issue 824). An intent.yaml left beside the
+// descriptor fails the read and names where its declarations go, because reading the design without
+// it would drop every intent rule and look like a board that declares nothing.
+func TestFSStoreRefusesAFormerIntentFile(t *testing.T) {
+	files := map[string]string{
+		"project.yaml":                "name: gateway\n",
+		"designs/gateway/design.yaml": "name: gateway\nentry: gateway.edn\n",
+		"designs/gateway/gateway.edn": "x",
+	}
+	ctx := context.Background()
+	if _, _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(files)}).ResolveDesign(ctx, testURI(t, "m", "designs/gateway")); err != nil {
+		t.Fatalf("positive control: the design without intent.yaml must resolve: %v", err)
+	}
+	files["designs/gateway/intent.yaml"] = "name: gateway\nmodules: []\n"
+	_, _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(files)}).ResolveDesign(ctx, testURI(t, "m", "designs/gateway"))
+	if err == nil || !strings.Contains(err.Error(), "intent.yaml is no longer read") || !strings.Contains(err.Error(), "design.yaml") {
+		t.Fatalf("a stray intent.yaml must fail the read and say where its declarations go, got %v", err)
+	}
+}
+
+// An inline intent section makes the descriptor itself the intent URI, and a design without one
+// carries none.
+func TestFSStoreIntentUriNamesTheDescriptor(t *testing.T) {
+	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
+		"project.yaml":          "name: gateway\n",
+		"designs/a/design.yaml": "name: a\nentry: a.edn\nintent:\n  modules:\n  - {name: X, class: soc}\n",
+		"designs/a/a.edn":       "x",
+		"designs/b/design.yaml": "name: b\nentry: b.edn\n",
+		"designs/b/b.edn":       "x",
+	})})
+	ctx := context.Background()
+	a, _, err := s.ResolveDesign(ctx, testURI(t, "m", "designs/a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := a.GetConfig().GetIntentUri(); !strings.HasSuffix(got, "designs/a/design.yaml") {
+		t.Errorf("intent URI = %q, want the design's own descriptor", got)
+	}
+	b, _, err := s.ResolveDesign(ctx, testURI(t, "m", "designs/b"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := b.GetConfig().GetIntentUri(); got != "" {
+		t.Errorf("a design declaring no intent carries no intent URI, got %q", got)
+	}
+}
+
+func TestParseDesignRefusesIntentNamingAFile(t *testing.T) {
+	_, _, err := ParseDesign(strings.NewReader("name: a\nentry: a.edn\nintent: intent.yaml\n"))
+	if err == nil || !strings.Contains(err.Error(), "written inline") {
+		t.Fatalf("intent naming a file must fail and say it is written inline now, got %v", err)
+	}
+}
