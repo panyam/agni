@@ -12,3 +12,4 @@ cmd/agni:compareLayouts
 cmd/agni:Design
 cmd/agni:readDesign
 cmd/agni:readDesignWithConfig
+service:designIR
