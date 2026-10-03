@@ -107,6 +107,21 @@ func TestAnnotateWithoutAModelExplainsNothing(t *testing.T) {
 	}
 }
 
+// With neither a geometry nor a model there is nothing to annotate from, so both passes return early
+// rather than asking a nil source for its nets (agni issue 756).
+func TestAnnotateWithNoSourceIsANoOp(t *testing.T) {
+	f := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "ANY"}}
+	AnnotateSheets([]*checkspb.Finding{f}, nil, nil)
+	if len(f.GetSheets()) != 0 || f.GetLocateReason() != checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED {
+		t.Errorf("finding = %v, want it untouched", f)
+	}
+	tr := &webapi.Trace{Nets: []*webapi.TraceNet{{Name: "SDA"}}}
+	AnnotateTraceSheets(tr, nil, nil)
+	if len(tr.GetNets()[0].GetSheetIds()) != 0 {
+		t.Errorf("trace net sheets = %v, want none", tr.GetNets()[0].GetSheetIds())
+	}
+}
+
 // A trace was the third consumer of the sheet index and the only one that never asked, so a route
 // drew on the design's first sheet whatever it crossed (agni issue 657). These pin the two lookups
 // that differ from a finding's, and the outcome that is easiest to leave unfilled.
