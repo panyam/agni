@@ -20,5 +20,8 @@ CLI covers, where the two differ today, and writing tables to xlsx.
 
 - `examples/audit_workbook.py` writes a five-sheet audit workbook of the tutorial board, asking its
   four tables as one query set (`run_queries`) so the design is read once.
+- `examples/revision_audit.py` compares two revisions of the gateway and audits the newer one, writing
+  a workbook and a markdown summary that lists each tab still to be built. `make
+  exercise-revision-audit` runs it with the checkout's binary (agni issue 843).
 - `make proto-py` regenerates `src/agni/v1`. Never edit it by hand; `make proto-check` fails on drift.
 - `make python-test` runs the suite against a built binary and a real server.

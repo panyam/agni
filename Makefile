@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -187,6 +187,15 @@ python-venv: $(PY_VENV)/.installed
 
 python-test: agni python-venv
 	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
+
+# The revision-audit mission's exercise (agni issue 843): two revisions of the tutorial gateway into one
+# workbook plus a markdown summary, which lists any tab still missing with the issue that fills it.
+# It runs the checkout's binary and the client's venv, so neither a stale agni on PATH nor a python3
+# without the client changes what it reports. Writes outside the repo, under EXERCISE_OUT.
+EXERCISE_OUT ?= /tmp/agni-exercise
+
+exercise-revision-audit: agni python-venv
+	$(PY_VENV)/bin/python $(PY_CLIENT)/examples/revision_audit.py --agni $(CURDIR)/bin/agni -o $(EXERCISE_OUT)/revision-audit.xlsx
 
 # Web unit tests: TypeScript typecheck + the vitest suite, in each of the three workspace packages
 # (the viewer, the datasheets workbench, and what they share). No browser, no server.
