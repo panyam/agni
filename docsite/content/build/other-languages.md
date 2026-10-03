@@ -59,6 +59,24 @@ client.run_query(uri="mount://tut/designs/gateway", query="component.net(?ref, ?
 The query text stays the same for every part, and the value needs no escaping. Over the CLI transport
 the bindings travel as `--bind`, and a set's per-query bindings as the set file's `bind:` maps.
 
+### Reading the design itself
+
+When a question is not yet a query, a check or a diff, a script can read the design's IR and work on
+it directly, prototyping an analysis before it moves into agni as a library relation or a rule.
+`get_design` carries it when a `read_mask` asks, and only the parts asked for:
+
+```python
+d = client.get_design(uri="mount://tut/designs/gateway",
+                      read_mask={"paths": ["design.nets", "design.components.mpn"]},
+                      nets=["PMIC_EN"]).design
+for net in d.nets:
+    print(net.name, [f"{c.component_ref}.{c.pin_ref}" for c in net.connections])
+```
+
+The messages are `agni.v1.ir` types. Unmasked, `get_design` is the summary it always was, because a
+large board's IR runs to megabytes. `nets` and `ref_des` narrow which entities come back. Over the
+CLI transport the same request runs `agni stats --format json --mask ...`.
+
 ## Choosing a transport
 
 **The CLI transport** needs no server and ships as one binary. Every call starts a process and reads

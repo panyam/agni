@@ -7,6 +7,7 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 import "agni/v1/geom/geom.proto";
 import "agni/v1/geom/geom_packed.proto";
 import "agni/v1/ir/ir.proto";
+import "google/protobuf/field_mask.proto";
 
 // This file: DesignService, loading and rendering one design. Rule checks are the separate
 // CheckService (checks.proto); the structural diff is DiffService (diff.proto).
@@ -102,6 +103,20 @@ message GetDesignRequest {
   // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
   // how two views of one design are checked against each other.
   bool as_named = 3;
+  // read_mask selects what the response carries (agni issue 836). Unset, the response is the summary
+  // it has always been, with no IR, because the viewer asks on every open and a large board's IR is
+  // megabytes. Set, it keeps exactly the paths named, over GetDesignResponse: `design` for the whole
+  // IR, `design.nets` or `design.components.mpn` for parts of it, `sheets` for a summary field, `*`
+  // for everything. A path through a repeated or map field applies to every element. When every path
+  // is under `design`, the server reads the netlist alone and skips the drawing. An unknown path is
+  // an invalid argument.
+  google.protobuf.FieldMask read_mask = 4;
+  // nets and ref_des narrow WHICH entities `design` carries, by exact name: only these nets in
+  // design.nets, only these components in design.components. Each narrows its own list; neither
+  // filters the other. A name the design does not have is simply absent. They apply only when the
+  // mask selects `design`.
+  repeated string nets = 5;
+  repeated string ref_des = 6;
 }
 
 message GetDesignResponse {
@@ -152,6 +167,11 @@ message GetDesignResponse {
   // It is on the DESIGN response for the reason `undrawn` is: it is a property of this read. Empty
   // whenever the counts are, since both come from the same netlist read.
   repeated agni.v1.ir.UnexpandedHierarchy unexpanded_hierarchy = 11;
+  // design is the design's IR as every analysis reads it (the project's configuration, the declared
+  // tiers, the format-neutral ingestion passes such as part-number promotion), present only when the
+  // request's read_mask selects it (agni issue 836). A client prototyping an analysis reads this
+  // rather than parsing the netlist again.
+  agni.v1.ir.Design design = 12;
 }
 
 message GetSheetRequest {

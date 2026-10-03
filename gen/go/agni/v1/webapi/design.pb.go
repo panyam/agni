@@ -11,6 +11,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -267,7 +268,21 @@ type GetDesignRequest struct {
 	//
 	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
 	// how two views of one design are checked against each other.
-	AsNamed       bool `protobuf:"varint,3,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	AsNamed bool `protobuf:"varint,3,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	// read_mask selects what the response carries (agni issue 836). Unset, the response is the summary
+	// it has always been, with no IR, because the viewer asks on every open and a large board's IR is
+	// megabytes. Set, it keeps exactly the paths named, over GetDesignResponse: `design` for the whole
+	// IR, `design.nets` or `design.components.mpn` for parts of it, `sheets` for a summary field, `*`
+	// for everything. A path through a repeated or map field applies to every element. When every path
+	// is under `design`, the server reads the netlist alone and skips the drawing. An unknown path is
+	// an invalid argument.
+	ReadMask *fieldmaskpb.FieldMask `protobuf:"bytes,4,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
+	// nets and ref_des narrow WHICH entities `design` carries, by exact name: only these nets in
+	// design.nets, only these components in design.components. Each narrows its own list; neither
+	// filters the other. A name the design does not have is simply absent. They apply only when the
+	// mask selects `design`.
+	Nets          []string `protobuf:"bytes,5,rep,name=nets,proto3" json:"nets,omitempty"`
+	RefDes        []string `protobuf:"bytes,6,rep,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -323,6 +338,27 @@ func (x *GetDesignRequest) GetAsNamed() bool {
 	return false
 }
 
+func (x *GetDesignRequest) GetReadMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.ReadMask
+	}
+	return nil
+}
+
+func (x *GetDesignRequest) GetNets() []string {
+	if x != nil {
+		return x.Nets
+	}
+	return nil
+}
+
+func (x *GetDesignRequest) GetRefDes() []string {
+	if x != nil {
+		return x.RefDes
+	}
+	return nil
+}
+
 type GetDesignResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the design name (from the IR, or the geometry's design ref for .eds).
@@ -372,8 +408,13 @@ type GetDesignResponse struct {
 	// It is on the DESIGN response for the reason `undrawn` is: it is a property of this read. Empty
 	// whenever the counts are, since both come from the same netlist read.
 	UnexpandedHierarchy []*ir.UnexpandedHierarchy `protobuf:"bytes,11,rep,name=unexpanded_hierarchy,json=unexpandedHierarchy,proto3" json:"unexpanded_hierarchy,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// design is the design's IR as every analysis reads it (the project's configuration, the declared
+	// tiers, the format-neutral ingestion passes such as part-number promotion), present only when the
+	// request's read_mask selects it (agni issue 836). A client prototyping an analysis reads this
+	// rather than parsing the netlist again.
+	Design        *ir.Design `protobuf:"bytes,12,opt,name=design,proto3" json:"design,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetDesignResponse) Reset() {
@@ -479,6 +520,13 @@ func (x *GetDesignResponse) GetContentHash() string {
 func (x *GetDesignResponse) GetUnexpandedHierarchy() []*ir.UnexpandedHierarchy {
 	if x != nil {
 		return x.UnexpandedHierarchy
+	}
+	return nil
+}
+
+func (x *GetDesignResponse) GetDesign() *ir.Design {
+	if x != nil {
+		return x.Design
 	}
 	return nil
 }
@@ -1688,15 +1736,18 @@ var File_agni_v1_webapi_design_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/design.proto\x12\x0eagni.v1.webapi\x1a\x17agni/v1/geom/geom.proto\x1a\x1eagni/v1/geom/geom_packed.proto\x1a\x13agni/v1/ir/ir.proto\"K\n" +
+	"\x1bagni/v1/webapi/design.proto\x12\x0eagni.v1.webapi\x1a\x17agni/v1/geom/geom.proto\x1a\x1eagni/v1/geom/geom_packed.proto\x1a\x13agni/v1/ir/ir.proto\x1a google/protobuf/field_mask.proto\"K\n" +
 	"\bSheetRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
-	"\tparent_id\x18\x03 \x01(\tR\bparentId\"W\n" +
+	"\tparent_id\x18\x03 \x01(\tR\bparentId\"\xbd\x01\n" +
 	"\x10GetDesignRequest\x12\x16\n" +
 	"\x06layout\x18\x01 \x01(\tR\x06layout\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\x12\x19\n" +
-	"\bas_named\x18\x03 \x01(\bR\aasNamed\"\xe5\x03\n" +
+	"\bas_named\x18\x03 \x01(\bR\aasNamed\x127\n" +
+	"\tread_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskR\breadMask\x12\x12\n" +
+	"\x04nets\x18\x05 \x03(\tR\x04nets\x12\x17\n" +
+	"\aref_des\x18\x06 \x03(\tR\x06refDes\"\x91\x04\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -1709,7 +1760,8 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x11available_layouts\x18\b \x03(\tR\x10availableLayouts\x12!\n" +
 	"\fcontent_hash\x18\n" +
 	" \x01(\tR\vcontentHash\x12R\n" +
-	"\x14unexpanded_hierarchy\x18\v \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\"\xd9\x01\n" +
+	"\x14unexpanded_hierarchy\x18\v \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\x12*\n" +
+	"\x06design\x18\f \x01(\v2\x12.agni.v1.ir.DesignR\x06design\"\xd9\x01\n" +
 	"\x0fGetSheetRequest\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x123\n" +
@@ -1849,51 +1901,55 @@ var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(*TraceStub)(nil),               // 19: agni.v1.webapi.TraceStub
 	(*ConversionReport)(nil),        // 20: agni.v1.webapi.ConversionReport
 	(*ComponentReport)(nil),         // 21: agni.v1.webapi.ComponentReport
-	(*geom.UndrawnPlacement)(nil),   // 22: agni.v1.geom.UndrawnPlacement
-	(*ir.UnexpandedHierarchy)(nil),  // 23: agni.v1.ir.UnexpandedHierarchy
-	(*geom.PackedSheet)(nil),        // 24: agni.v1.geom.PackedSheet
-	(*geom.HighlightSpec)(nil),      // 25: agni.v1.geom.HighlightSpec
-	(*geom.PackedHighlight)(nil),    // 26: agni.v1.geom.PackedHighlight
+	(*fieldmaskpb.FieldMask)(nil),   // 22: google.protobuf.FieldMask
+	(*geom.UndrawnPlacement)(nil),   // 23: agni.v1.geom.UndrawnPlacement
+	(*ir.UnexpandedHierarchy)(nil),  // 24: agni.v1.ir.UnexpandedHierarchy
+	(*ir.Design)(nil),               // 25: agni.v1.ir.Design
+	(*geom.PackedSheet)(nil),        // 26: agni.v1.geom.PackedSheet
+	(*geom.HighlightSpec)(nil),      // 27: agni.v1.geom.HighlightSpec
+	(*geom.PackedHighlight)(nil),    // 28: agni.v1.geom.PackedHighlight
 }
 var file_agni_v1_webapi_design_proto_depIdxs = []int32{
-	22, // 0: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
-	3,  // 1: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
-	23, // 2: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
-	0,  // 3: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	1,  // 4: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	24, // 5: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
-	1,  // 6: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	0,  // 7: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	25, // 8: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
-	26, // 9: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
-	1,  // 10: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	20, // 11: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
-	13, // 12: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
-	13, // 13: agni.v1.webapi.TraceDesignRequest.to:type_name -> agni.v1.webapi.TraceEndpoint
-	15, // 14: agni.v1.webapi.TraceDesignResponse.trace:type_name -> agni.v1.webapi.Trace
-	16, // 15: agni.v1.webapi.Trace.from:type_name -> agni.v1.webapi.TraceEnd
-	16, // 16: agni.v1.webapi.Trace.to:type_name -> agni.v1.webapi.TraceEnd
-	2,  // 17: agni.v1.webapi.Trace.outcome:type_name -> agni.v1.webapi.TraceOutcome
-	17, // 18: agni.v1.webapi.Trace.crossings:type_name -> agni.v1.webapi.TraceCross
-	18, // 19: agni.v1.webapi.Trace.nets:type_name -> agni.v1.webapi.TraceNet
-	13, // 20: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
-	19, // 21: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
-	21, // 22: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	4,  // 23: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	6,  // 24: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	8,  // 25: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	10, // 26: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	12, // 27: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
-	5,  // 28: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	7,  // 29: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	9,  // 30: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	11, // 31: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	14, // 32: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
-	28, // [28:33] is the sub-list for method output_type
-	23, // [23:28] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	22, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
+	23, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	3,  // 2: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
+	24, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
+	25, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
+	0,  // 5: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
+	1,  // 6: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	26, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
+	1,  // 8: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	0,  // 9: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
+	27, // 10: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
+	28, // 11: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
+	1,  // 12: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	20, // 13: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
+	13, // 14: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
+	13, // 15: agni.v1.webapi.TraceDesignRequest.to:type_name -> agni.v1.webapi.TraceEndpoint
+	15, // 16: agni.v1.webapi.TraceDesignResponse.trace:type_name -> agni.v1.webapi.Trace
+	16, // 17: agni.v1.webapi.Trace.from:type_name -> agni.v1.webapi.TraceEnd
+	16, // 18: agni.v1.webapi.Trace.to:type_name -> agni.v1.webapi.TraceEnd
+	2,  // 19: agni.v1.webapi.Trace.outcome:type_name -> agni.v1.webapi.TraceOutcome
+	17, // 20: agni.v1.webapi.Trace.crossings:type_name -> agni.v1.webapi.TraceCross
+	18, // 21: agni.v1.webapi.Trace.nets:type_name -> agni.v1.webapi.TraceNet
+	13, // 22: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
+	19, // 23: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
+	21, // 24: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
+	4,  // 25: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	6,  // 26: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 27: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	10, // 28: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	12, // 29: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	5,  // 30: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	7,  // 31: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 32: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	11, // 33: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	14, // 34: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	30, // [30:35] is the sub-list for method output_type
+	25, // [25:30] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }

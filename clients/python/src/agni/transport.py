@@ -255,6 +255,20 @@ def _review_stdin(req: Message) -> str:
     return json.dumps(man)
 
 
+def _design_argv(req: Message) -> List[str]:
+    # GetDesign is `stats --format json`, which builds the same message through the same service
+    # (agni issue 836). The read_mask, nets and ref_des select what it carries, as on the wire.
+    _only(req, ("uri", "read_mask", "nets", "ref_des", "as_named"))
+    out = ["stats", req.uri, "--format", "json"]
+    if req.HasField("read_mask") and req.read_mask.paths:
+        out += ["--mask", ",".join(req.read_mask.paths)]
+    for n in req.nets:
+        out += ["--net", n]
+    for r in req.ref_des:
+        out += ["--ref", r]
+    return out + _read_flags(req)
+
+
 def _diff_argv(req: Message) -> List[str]:
     _only(req, ("a_uri", "b_uri", "near_renames"))
     out = ["diff", req.a_uri, req.b_uri, "--format", "json"]
@@ -300,6 +314,7 @@ CLI_COMMANDS: Dict[str, CliCommand] = {
     ),
     "ReviewService/CreateReview": CliCommand(_review_argv, review_pb2.Review, stdin=_review_stdin),
     "DiffService/DiffDesigns": CliCommand(_diff_argv, diff_pb2.DiffDesignsResponse),
+    "DesignService/GetDesign": CliCommand(_design_argv, design_pb2.GetDesignResponse),
     "DesignService/TraceDesign": CliCommand(
         _trace_argv,
         design_pb2.Trace,

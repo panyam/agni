@@ -1,0 +1,75 @@
+#agni-run 7624cd372b887769
+{
+  "name": "",
+  "sourceFormat": "",
+  "componentCount": 0,
+  "netCount": 0,
+  "undrawn": [],
+  "layout": "",
+  "sheets": [],
+  "nativeAvailable": false,
+  "availableLayouts": [],
+  "contentHash": "",
+  "unexpandedHierarchy": [],
+  "design": {
+    "name": "",
+    "irVersion": "",
+    "sourceFormat": "",
+    "libraries": [],
+    "components": [],
+    "nets": [
+      {
+        "name": "PMIC_EN",
+        "netClasses": [],
+        "connections": [
+          {
+            "componentRef": "U1",
+            "pinRef": "4",
+            "attributes": {},
+            "prov": {
+              "sourceFile": "designs/gateway/gateway.edn",
+              "span": null,
+              "nativeId": "IU1",
+              "nativeIdKind": "edif-rename-id"
+            }
+          },
+          {
+            "componentRef": "R2",
+            "pinRef": "1",
+            "attributes": {},
+            "prov": {
+              "sourceFile": "designs/gateway/gateway.edn",
+              "span": null,
+              "nativeId": "IR2",
+              "nativeIdKind": "edif-rename-id"
+            }
+          }
+        ],
+        "id": "f8eb746d81f9",
+        "roles": [
+          {
+            "roleKind": "ROLE_CONTROL",
+            "source": "ROLE_SOURCE_CONVENTION"
+          }
+        ],
+        "attributes": {},
+        "prov": {
+          "sourceFile": "designs/gateway/gateway.edn",
+          "span": null,
+          "nativeId": "PMIC_EN",
+          "nativeIdKind": "edif-rename-id"
+        }
+      }
+    ],
+    "sheets": [],
+    "inputDiagnostics": null,
+    "footprints": [],
+    "layers": [],
+    "stackup": null,
+    "constraints": [],
+    "bom": [],
+    "attributes": {},
+    "fidelity": [],
+    "prov": null
+  }
+}

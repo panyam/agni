@@ -18,12 +18,14 @@ import (
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	"github.com/panyam/agni"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/render"
 	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -343,11 +345,23 @@ func readModelWithParams(path, paramsDir string) (check.Model, error) {
 }
 
 func statsCmd() *cobra.Command {
-	return &cobra.Command{
+	var format string
+	var maskPaths, nets, refs []string
+	c := &cobra.Command{
 		Use:   "stats <file>",
 		Short: "Print component/section/net counts for one design",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			switch format {
+			case "json":
+				return statsJSON(cmd, args[0], maskPaths, nets, refs)
+			case "text":
+			default:
+				return fmt.Errorf("--format %s: want text or json", format)
+			}
+			if len(maskPaths)+len(nets)+len(refs) > 0 {
+				return fmt.Errorf("--mask, --net and --ref select what --format json carries; the text summary takes none")
+			}
 			d, err := readDesign(args[0])
 			if err != nil {
 				return err
@@ -394,6 +408,36 @@ func statsCmd() *cobra.Command {
 			return nil
 		},
 	}
+	c.Flags().StringVar(&format, "format", "text", "text (the summary above) or json (the GetDesignResponse the GetDesign rpc returns)")
+	c.Flags().StringSliceVar(&maskPaths, "mask", nil, "with --format json, the read_mask: which fields to carry, over GetDesignResponse. `design` is the whole IR, `design.nets` or `design.components.mpn` parts of it, `*` everything. Repeatable or comma-separated; unset is the summary alone")
+	c.Flags().StringArrayVar(&nets, "net", nil, "with --format json and a mask selecting design, keep only this net in design.nets (repeatable)")
+	c.Flags().StringArrayVar(&refs, "ref", nil, "with --format json and a mask selecting design, keep only this component in design.components (repeatable)")
+	return c
+}
+
+// statsJSON answers `stats --format json` with the GetDesignResponse the GetDesign rpc returns,
+// through the same in-process DesignService the server runs (C31), so --mask, --net and --ref mean
+// what read_mask, nets and ref_des mean on the wire (agni issue 836).
+func statsJSON(cmd *cobra.Command, design string, maskPaths, nets, refs []string) error {
+	uri, err := cliArgURI(design)
+	if err != nil {
+		return err
+	}
+	req := &webapi.GetDesignRequest{Uri: string(uri), AsNamed: readAsNamed, Nets: nets, RefDes: refs}
+	if len(maskPaths) > 0 {
+		req.ReadMask = &fieldmaskpb.FieldMask{Paths: maskPaths}
+	}
+	svc := service.NewDesignService(&localLoader{loader: newLoader()}, nil, render.Style{}, cliProjects())
+	resp, err := svc.GetDesign(cmd.Context(), req)
+	if err != nil {
+		return err
+	}
+	out, err := protoJSON(resp)
+	if err != nil {
+		return err
+	}
+	_, err = cmd.OutOrStdout().Write([]byte(out))
+	return err
 }
 
 func checkCmd() *cobra.Command {
