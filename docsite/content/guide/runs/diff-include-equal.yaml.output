@@ -1,0 +1,18 @@
+#agni-run f89e93828e3f3902
+diff designs/gateway/gateway.edn -> designs/gateway/gateway-rev-b.edn
+
+Components: +2  -0  ~0
+Nets:       new 0  deleted 0  renamed 2  hard 3  soft 0
+
+Components added (2):
+  R4
+  R5
+
+Nets changed (5):
+  [hard]    I2C_SCL: +[R4.2] -[]
+  [hard]    I2C_SDA: +[R5.2] -[]
+  [hard]    PMIC_CORE_3V3: +[R4.1 R5.1] -[]
+  [renamed] XTAL_IN -> CLK_IN
+  [renamed] XTAL_OUT -> CLK_OUT
+
+Unchanged nets: 10
