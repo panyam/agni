@@ -43,7 +43,7 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	if err != nil {
 		return nil, err
 	}
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}

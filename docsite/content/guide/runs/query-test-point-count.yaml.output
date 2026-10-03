@@ -1,0 +1,9 @@
+#agni-run eec9b4167144838a
+n         c  provenance
+I2C_SCL   0  netlist-audit.tel
+MCU_NRST  0  netlist-audit.tel
+GND       1  netlist-audit.tel
+I2C_SDA   1  netlist-audit.tel
+VCC_3V3   1  netlist-audit.tel
+
+5 result(s)

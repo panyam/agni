@@ -146,7 +146,7 @@ func locateReasonProto(code string) checkspb.LocateReason {
 // is a no-op and findings keep empty sheets, which the viewer handles. A net-only channel (design
 // set, geometry nil) still annotates net subjects.
 func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource) {
-	if g == nil && len(m.Nets()) == 0 {
+	if g == nil && (m == nil || len(m.Nets()) == 0) {
 		return
 	}
 	ix := indexSheets(g, m)
@@ -183,7 +183,7 @@ func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m L
 // that is the picture a reader wants once they learn the pins do not join. Empty sheet ids mean the
 // net is drawn nowhere, rather than that nobody looked.
 func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSource) {
-	if t == nil || (g == nil && len(m.Nets()) == 0) {
+	if t == nil || (g == nil && (m == nil || len(m.Nets()) == 0)) {
 		return
 	}
 	ix := indexSheets(g, m)

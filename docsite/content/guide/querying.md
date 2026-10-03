@@ -324,6 +324,12 @@ net.ground(?n), component.net(?tp,?n), component.class(?tp,"test_point") => coun
 A projection that does group, such as `=> ?n, count(?r)`, still answers nothing when nothing
 matched, because there is no net to name a group after.
 
+That is why a grouped count never lists the nets with nothing to count. For test points, which is
+the coverage table most reviews want, the library member `net.test_point_count` gives every net a
+row and a `0` where it has none, so the uncovered nets sort to the top:
+
+{{ agniRun "content/guide/runs/query-test-point-count.yaml" }}
+
 ### Keep only some groups (having)
 
 A comparison in the question filters facts, one at a time, before there is any group. To ask about

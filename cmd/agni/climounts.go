@@ -375,7 +375,7 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 	if err != nil {
 		return nil, service.Overlay{}, err
 	}
-	ov, err := service.OverlayFor(ctx, r.Config, r.Store, p, d, req, service.Overlay{}, "")
+	ov, err := service.OverlayFor(ctx, r.Config, r.Store, p, d, req, "")
 	if err != nil {
 		return nil, service.Overlay{}, err
 	}

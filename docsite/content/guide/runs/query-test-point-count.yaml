@@ -1,0 +1,5 @@
+# net.test_point_count answers every net, 0 included, which a grouped count cannot. The fixture is
+# the netlist-audit design, where two nets carry no test point.
+fixture: examples/common/designs
+script: |
+  agni query netlist-audit.tel 'net.test_point_count(?n, ?c) => ?n, ?c order by ?c, ?n'

@@ -22,9 +22,8 @@ import (
 // It answers what `agni query` answers and knows no transport. The evaluator sits behind
 // query.Evaluator and defaults to the naive interpreter.
 type QueryService struct {
-	// projects and fallback are documented on ProjectResolver and Overlay.
+	// projects is documented on ProjectResolver.
 	projects *ProjectResolver
-	fallback Overlay
 	loader   Loader
 	eval     query.Evaluator
 	// specs is the datasheet provider the param.* and component.device_class relations read
@@ -208,7 +207,7 @@ func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, sourc
 	// readopt.go), which decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113).
 	// Its RULES half is ignored and no base convention is passed, since a query composes no catalog
 	// and a conventions file carrying rules is still valid for a query.
-	ov, err := s.projects.Overlay(ctx, u, overlay, s.fallback, "")
+	ov, err := s.projects.Overlay(ctx, u, overlay, "")
 	if err != nil {
 		return nil, err
 	}
@@ -540,7 +539,7 @@ func (s *QueryService) catalogRegistry(ctx context.Context, uri string, overlay 
 		}
 		return ov.Registry()
 	}
-	ov, err := s.projects.Overlay(ctx, u, overlay, s.fallback, "")
+	ov, err := s.projects.Overlay(ctx, u, overlay, "")
 	if err != nil {
 		return nil, err
 	}

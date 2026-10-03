@@ -58,7 +58,7 @@ func TestRequestConfigResolvesRefTiers(t *testing.T) {
 		ParamUris:   []string{"mount://m/params"},
 		Intent:      &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}},
 	}}
-	ov, err := OverlayFor(context.Background(), res, nil, nil, nil, req, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), res, nil, nil, nil, req, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestRequestConfigLayersOverTheProject(t *testing.T) {
 		Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/acme/profiles"}},
 	}
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/mine"}}}
-	ov, err := OverlayFor(context.Background(), res, nil, project, &webapi.Design{}, req, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), res, nil, project, &webapi.Design{}, req, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 	res := &recordingResolver{specs: someSpecs()}
 	project := &webapi.Project{Name: "projects/acme", Config: &webapi.AnalysisConfig{}}
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{ParamUris: []string{"mount://m/mine"}}}
-	ov, err := OverlayFor(context.Background(), res, nil, project, &webapi.Design{}, req, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), res, nil, project, &webapi.Design{}, req, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 func TestHostWithoutResolverRefusesRefs(t *testing.T) {
 	ctx := context.Background()
 	refs := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/profiles"}}}
-	_, err := OverlayFor(ctx, nil, nil, nil, nil, refs, Overlay{}, "")
+	_, err := OverlayFor(ctx, nil, nil, nil, nil, refs, "")
 	if err == nil {
 		t.Fatal("a host that cannot resolve refs must refuse rather than silently drop the tier")
 	}
@@ -144,7 +144,7 @@ func TestHostWithoutResolverRefusesRefs(t *testing.T) {
 
 	// The no-I/O path is untouched, so a resolved convention still composes with no resolver at all.
 	valueOnly := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("house", "^H_")}}
-	ov, err := OverlayFor(ctx, nil, nil, nil, nil, valueOnly, Overlay{}, "")
+	ov, err := OverlayFor(ctx, nil, nil, nil, nil, valueOnly, "")
 	if err != nil {
 		t.Fatalf("a value-shaped config must still compose with no resolver: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestProjectRefsAlsoNeedAResolver(t *testing.T) {
 		Name:   "projects/acme",
 		Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/acme/profiles"}},
 	}
-	_, err := OverlayFor(context.Background(), nil, nil, project, &webapi.Design{}, nil, Overlay{}, "")
+	_, err := OverlayFor(context.Background(), nil, nil, project, &webapi.Design{}, nil, "")
 	if err == nil {
 		t.Fatal("a project declaring refs on a resolver-less host must refuse")
 	}
@@ -215,7 +215,7 @@ func TestIntentValueComposesWithoutAResolver(t *testing.T) {
 	d := &webapi.Design{Name: "projects/p/designs/board", Config: &webapi.AnalysisConfig{
 		Intent: &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}},
 	}}
-	ov, err := OverlayFor(context.Background(), nil, nil, &webapi.Project{Name: "projects/p"}, d, nil, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), nil, nil, &webapi.Project{Name: "projects/p"}, d, nil, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -223,7 +223,7 @@ func TestIntentValueComposesWithoutAResolver(t *testing.T) {
 		t.Errorf("the design's intent must compose as the intent source, got intent=%v sources=%v", ov.Intent, sourceNames(ov))
 	}
 	d.Config.Intent = &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU"}}}
-	_, err = OverlayFor(context.Background(), nil, nil, &webapi.Project{Name: "projects/p"}, d, nil, Overlay{}, "")
+	_, err = OverlayFor(context.Background(), nil, nil, &webapi.Project{Name: "projects/p"}, d, nil, "")
 	if err == nil || !strings.Contains(err.Error(), `module "MCU" needs a "class"`) {
 		t.Errorf("an invalid intent must fail the run and say why, got %v", err)
 	}
@@ -240,7 +240,7 @@ func TestRequestIntentReplacesTheDesignsAndReachesTheModel(t *testing.T) {
 	d := &webapi.Design{Name: "projects/p/designs/board", Config: &webapi.AnalysisConfig{Intent: internal("J1")}}
 	p := &webapi.Project{Name: "projects/p"}
 
-	ov, err := OverlayFor(context.Background(), nil, nil, p, d, nil, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), nil, nil, p, d, nil, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -249,7 +249,7 @@ func TestRequestIntentReplacesTheDesignsAndReachesTheModel(t *testing.T) {
 	}
 
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Intent: internal("J2")}}
-	ov, err = OverlayFor(context.Background(), nil, nil, p, d, req, Overlay{}, "")
+	ov, err = OverlayFor(context.Background(), nil, nil, p, d, req, "")
 	if err != nil {
 		t.Fatalf("a request carrying intent for a design that declares its own must replace it, got %v", err)
 	}

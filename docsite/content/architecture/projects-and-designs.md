@@ -296,10 +296,11 @@ built from a name only this run knows resolves on nobody's server. It is also wh
 viewer safely, because the process doing the minting is the server.
 
 **Absent and malformed have to stay distinct at every layer that touches config, and the CLI now
-draws it once** (`cliResolveProject`). Absent is ordinary, since most files on a mounted folder belong
-to no project and run against the fallback. Malformed is refused, matching how the served surfaces
-behave and how the other config tiers already fail. An unknown mount is a third thing and stays
-quiet, because having nothing to resolve against is not the same as having something broken.
+draws it once** (`cliResolveProject`). Absent is ordinary, since most files on a mounted folder
+belong to no project and run against the deployment defaults alone. Malformed is refused, matching
+how the served surfaces behave and how the other config tiers already fail. An unknown mount is a
+third thing and stays quiet, because having nothing to resolve against is not the same as having
+something broken.
 
 There is also no separate Go type for a project anywhere in this stack. The descriptors parse
 straight into the wire messages, the port passes those, and the service serves them. A

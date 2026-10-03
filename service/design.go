@@ -158,7 +158,7 @@ func NewDesignService(loader Loader, native NativeRenderer, style render.Style, 
 //
 // It passes no request overlay, since the four design surfaces carry no OverlayConfig on the wire.
 func (s *DesignService) readOptions(ctx context.Context, uri artifact.URI) ([]ReadOption, error) {
-	ov, err := s.projects.Overlay(ctx, uri, nil, Overlay{}, "")
+	ov, err := s.projects.Overlay(ctx, uri, nil, "")
 	if err != nil {
 		return nil, err
 	}

@@ -288,7 +288,7 @@ func designOverlay(ctx context.Context, path string) (service.Overlay, error) {
 	if err != nil {
 		return service.Overlay{}, err
 	}
-	return cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, service.Overlay{}, "")
+	return cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, "")
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never

@@ -46,7 +46,7 @@ func NewDiffService(loader DesignLoader, projects *ProjectResolver) *DiffService
 // readOptions composes one side's per-read config from its project. Each side resolves its own,
 // because a diff may span two projects.
 func (s *DiffService) readOptions(ctx context.Context, uri artifact.URI) ([]ReadOption, error) {
-	ov, err := s.projects.Overlay(ctx, uri, nil, Overlay{}, "")
+	ov, err := s.projects.Overlay(ctx, uri, nil, "")
 	if err != nil {
 		return nil, err
 	}

@@ -2,3 +2,8 @@
 
 # A net at least one test point sits on, so a probe can land on it during bring-up or in-circuit test.
 has_test_point(?n: net) :- component.net(?tp, ?n), component.class(?tp, "test_point");
+
+# How many test points sit on each net, 0 for a net with none, so every net answers one row.
+test_point_count(?n: net, ?c: number) :- _test_points(?n, ?c);
+test_point_count(?n: net, 0) :- entity(?n, "net"), not _test_points(?n, _);
+_test_points(?n: net, count(distinct ?tp)) :- component.net(?tp, ?n), component.class(?tp, "test_point");

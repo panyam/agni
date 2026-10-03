@@ -68,9 +68,8 @@ type ReviewEnv struct {
 // provider are design-INDEPENDENT and injected once, as CheckService receives its catalog and specs.
 // Only the Model and its presence/scope closures are per design. It knows no transport (C13).
 type ReviewService struct {
-	// projects and fallback play the same roles as on CheckService; see ProjectResolver.
+	// projects plays the same role as on CheckService; see ProjectResolver.
 	projects *ProjectResolver
-	fallback Overlay
 	loader   ReviewLoader
 	catalog  *check.Catalog
 	// byName is every profile (built-in + overlay) keyed by Name, for the interface-absence check that
@@ -145,7 +144,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	// Per-request overlay config (WS3-102), composed BEFORE the design is read, because net roles
 	// are resolved at ingestion and its lexicon half has to reach the read. An empty overlay leaves the
 	// service's own catalog and the default vocabulary in place.
-	ov, err := s.projects.Overlay(ctx, designURI, req.GetOverlay(), s.fallback, s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, designURI, req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}

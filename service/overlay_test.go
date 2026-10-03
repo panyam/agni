@@ -282,7 +282,7 @@ func TestRequestWithoutAConventionKeepsTheServers(t *testing.T) {
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{
 		Intent: &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}},
 	}}
-	ov, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, Overlay{}, "house")
+	ov, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, "house")
 	if err != nil {
 		t.Fatal(err)
 	}

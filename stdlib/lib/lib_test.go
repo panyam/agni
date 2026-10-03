@@ -18,17 +18,18 @@ import (
 
 // probeDesign has one part of every shape the library separates. R1 sits between two probed nets,
 // R2 between a probed net and an unprobed one, R3 between two unprobed nets, and U1 on three nets,
-// so it is not two-terminal at all. TP1 and TP2 are the test points that make A and B probed.
+// so it is not two-terminal at all. TP1 and TP2 are the test points that make A and B probed, and TP3
+// gives A a second one, so a count can tell two test points from one.
 func probeDesign() *ir.Design {
 	p := &ir.Provenance{SourceFile: "probe"}
 	conn := func(ref, pin string) *ir.Connection { return &ir.Connection{ComponentRef: ref, PinRef: pin} }
 	return &ir.Design{
 		Components: []*ir.Component{
 			{RefDes: "R1", Prov: p}, {RefDes: "R2", Prov: p}, {RefDes: "R3", Prov: p},
-			{RefDes: "U1", Prov: p}, {RefDes: "TP1", Prov: p}, {RefDes: "TP2", Prov: p},
+			{RefDes: "U1", Prov: p}, {RefDes: "TP1", Prov: p}, {RefDes: "TP2", Prov: p}, {RefDes: "TP3", Prov: p},
 		},
 		Nets: []*ir.Net{
-			{Name: "A", Connections: []*ir.Connection{conn("R1", "1"), conn("R2", "1"), conn("U1", "1"), conn("TP1", "1")}, Prov: p},
+			{Name: "A", Connections: []*ir.Connection{conn("R1", "1"), conn("R2", "1"), conn("U1", "1"), conn("TP1", "1"), conn("TP3", "1")}, Prov: p},
 			{Name: "B", Connections: []*ir.Connection{conn("R1", "2"), conn("U1", "2"), conn("TP2", "1")}, Prov: p},
 			{Name: "C", Connections: []*ir.Connection{conn("R2", "2"), conn("R3", "1"), conn("U1", "3")}, Prov: p},
 			{Name: "D", Connections: []*ir.Connection{conn("R3", "2")}, Prov: p},
@@ -47,9 +48,10 @@ func answers(t *testing.T, q string) []string {
 	}
 	var out []string
 	for _, r := range rows {
-		vals := make([]string, len(parsed.Select))
-		for i, s := range parsed.Select {
-			vals[i] = r.Bind[s.Var].S
+		cols := parsed.Columns()
+		vals := make([]string, len(cols))
+		for i, c := range cols {
+			vals[i] = r.Bind[c].S
 		}
 		out = append(out, strings.Join(vals, "/"))
 	}
@@ -60,6 +62,7 @@ func answers(t *testing.T, q string) []string {
 func TestLibraryMembersAnswerOnTheProbeDesign(t *testing.T) {
 	for q, want := range map[string]string{
 		`net.has_test_point(?n) => ?n`:                     "A,B",
+		`net.test_point_count(?n, ?c) => ?n, ?c`:           "A/2,B/1,C/0,D/0",
 		`component.two_terminal(?r, ?a, ?b) => ?r, ?a, ?b`: "R1/A/B,R2/A/C,R3/C/D",
 		`component.probed_both(?r) => ?r`:                  "R1",
 		`component.probed_one(?r, ?p, ?u) => ?r, ?p, ?u`:   "R2/A/C",
@@ -67,6 +70,24 @@ func TestLibraryMembersAnswerOnTheProbeDesign(t *testing.T) {
 	} {
 		if got := strings.Join(answers(t, q), ","); got != want {
 			t.Errorf("%s = %q, want %q", q, got, want)
+		}
+	}
+}
+
+// TestTestPointCountAgreesWithADistinctCount holds net.test_point_count to the grouped count it
+// replaces, on every net that count can see.
+func TestTestPointCountAgreesWithADistinctCount(t *testing.T) {
+	grouped := answers(t, `component.net(?tp, ?n), component.class(?tp, "test_point") => ?n, count(distinct ?tp)`)
+	if len(grouped) < 2 {
+		t.Fatalf("grouped count answered %v, want a row for each covered net", grouped)
+	}
+	member := map[string]bool{}
+	for _, row := range answers(t, `net.test_point_count(?n, ?c) => ?n, ?c`) {
+		member[row] = true
+	}
+	for _, row := range grouped {
+		if !member[row] {
+			t.Errorf("grouped count has %s, which net.test_point_count does not", row)
 		}
 	}
 }
