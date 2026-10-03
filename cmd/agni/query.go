@@ -32,6 +32,7 @@ func queryCmd() *cobra.Command {
 	var verbose bool
 	var specLib bool
 	var format, title string
+	var orderBy []string
 	var setPath string
 	var relDesign string
 	var libDirs []string
@@ -139,7 +140,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				}
 				resp := respFromRows(q, rows, args[0], filepath.Base(paramsDir))
 				resp.Bindings = service.BindingsProto(bind)
-				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)))
+				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)), orderBy)
 			}
 			// A design query goes through the in-process QueryService (WS9-048), the same service and
 			// BuildModel fact base the web query panel uses, so the two cannot drift. The CLI supplies
@@ -184,7 +185,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			if err != nil {
 				return err
 			}
-			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI))
+			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI), orderBy)
 		},
 	}
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (datasheet corpus) — enables the param relation")
@@ -196,6 +197,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().StringVar(&format, "format", "text", "output format: text (the aligned terminal table), csv (spreadsheet-safe, header row, table only), json (rows with their citations kept apart), markdown or html (a VIEW: the question above its answer, ready to hand to someone). markdown and html carry the query; csv deliberately does not, because its first row has to be the header")
 	outFileFlag(c, &outPath)
 	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
+	c.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so a net or part column puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
 	c.Flags().StringArrayVar(&bindArgs, "bind", nil, "give a query variable a value, as name=value (repeatable): `--bind n=GND` asks the query with ?n bound to GND, exactly as if \"GND\" were written in its place. A value that parses as a number binds a number; quote it (n=\"3\") to bind text. A name the query does not use is an error")
 	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons plus generator rows), as `agni serve --query-budget` does. 0, the default, sets none")
@@ -325,10 +327,14 @@ func printExamples(w io.Writer) {
 
 // renderTable writes a query answer in the requested format. One dispatch for both evaluation paths
 // (the service and the --speclib direct one), so a format can never work on one and not the other.
-func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rpt.Table) error {
+func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rpt.Table, orderBy []string) error {
+	if len(orderBy) > 0 && format != "csv" {
+		return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
+	}
 	switch format {
 	case "csv":
-		return rpt.TableCSV(w, t)
+		// The TableService's projection, so this csv and a workbook of the same answer agree (agni 862).
+		return writeTableCSV(w, service.QueryTable("query", resp), orderBy)
 	case "json":
 		// protojson of the WIRE message RunQuery returns (C31, agni issue 603), including
 		// column_kinds and the echoed query and design.

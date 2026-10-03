@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 from typing import Callable, List, Tuple
 
-from agni import Client, CliTransport, ConnectTransport, diff_sheets, set_sheets, tables_to_xlsx, verdict_sheets
+from agni import Client, CliTransport, ConnectTransport, diff_sheets, table_sheets, tables_to_xlsx
 from agni.tables import Rows, to_rows
 from agni.v1.webapi import query_pb2
 
@@ -44,23 +44,25 @@ def plan(client: Client, base: str, head: str) -> List[Tuple[str, Callable[[], L
             title="Revision audit",
             queries=[query_pb2.NamedQuery(name=name, query=q) for name, q in TABLES],
         )
-        return [(name, to_rows(t)) for name, t in set_sheets(client.run_queries(uri=head, set=audit))]
+        return [(name, to_rows(t)) for name, t in table_sheets(client.tabulate(query_set=client.run_queries(uri=head, set=audit)))]
 
-    # One check answers both the findings and the verdicts tabs.
+    # One check, tabulated once, answers the findings and the verdicts tabs.
     check = None
 
-    def checked():
+    def checked(name: str) -> List[Tuple[str, Rows]]:
         nonlocal check
         if check is None:
-            check = client.check_design(uri=head)
-        return check
+            names = {"findings": "Findings", "verdicts": "Verdicts", "verdicts_by_rule": "Verdicts by rule"}
+            check = table_sheets(client.tabulate(check=client.check_design(uri=head)), names)
+        want = {"Findings": ["Findings"], "Verdicts": ["Verdicts", "Verdicts by rule"]}[name]
+        return [(n, to_rows(t)) for n, t in check if n in want]
 
     return [
         ("Diff", lambda: diff_sheets(client.diff_designs(a_uri=base, b_uri=head, include_equal=True))),
         ("Audit", audit),
         ("Review", missing("#859 (ListChecklists, so the review runs the project's own checklist)")),
-        ("Findings", lambda: [("Findings", to_rows(checked()))]),
-        ("Verdicts", lambda: verdict_sheets(checked())),
+        ("Findings", lambda: checked("Findings")),
+        ("Verdicts", lambda: checked("Verdicts")),
     ]
 
 

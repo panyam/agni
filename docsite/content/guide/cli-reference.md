@@ -60,6 +60,7 @@ Run the rule catalog and report findings. See
 | `--tag <key>=<value>` | run only rules with this tag, e.g. `--tag category=power` (repeatable) |
 | `--format <fmt>` | `text` (default), `markdown`, `json`, `csv`, `report`, or `html`. `csv` emits one row per finding with a stable header, for a spreadsheet-driven review. `html` is the verdict report as a self-contained page and turns `--verdicts` on by itself |
 | `--verdicts` | report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. A separate table, so plain `--format csv` is unchanged. Honours `--format text/csv/json/html`, and with `json` it prints the whole CheckDesign response, findings and verdicts both, as a server returns it. Only rules that state one contribute, and a rule absent from the output is declining to say rather than reporting that it considered nothing |
+| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=rule,-subject`. A column sorts by its type, so a net or part column puts R2 before R10. csv only, and the order is the one the `Tabulate` rpc applies, so the csv and a workbook built from the same answer agree |
 | `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
 | `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info`. This is the **severity** axis. For the coverage axis, see `review --fail-on-outcome` and `--min-answered` below |
@@ -289,6 +290,7 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--board-path <file>` | attach a separate board export so the `board.*` relations have facts; without it they are empty |
 | `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (protojson of the `RunQueryResponse` the `RunQuery` rpc returns, so a script and a client parse one shape; it carries the column kinds, and echoes the query and the design so an answer names its own question), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
 | `--set <file>` | answer a query set instead of one query: named queries sharing a `preamble` of rules, all over ONE read of the design (see [Ask many questions at once](../querying/#ask-many-questions-at-once-query-sets)). Takes the design alone, no query argument; `-` reads the set from stdin. `json` is the `RunQueriesResponse`, `markdown`/`html`/`text` one document with a section per query, and `csv` is refused. Every answer is written, then the command exits non-zero if any query could not be answered |
+| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=rule,-subject`. A column sorts by its type, so a net or part column puts R2 before R10. csv only, and the order is the one the `Tabulate` rpc applies, so the csv and a workbook built from the same answer agree |
 | `--title <name>` | name the view (or replace a set's title), used as the heading in `--format markdown` and `html` |
 | `--lib <dir>` | a directory of derived-relation modules laid out as a project's `lib/` (`<module.path>.dl`, optional `docs/<member.path>.md`), sent with the query beside any library the design's project carries (see [Adding a library member](../../build/library-member/#sending-a-library-with-a-request)). Repeatable. Also read by `--relations`, so the catalog lists the modules' members |
 | `--bind <name>=<value>` | bind a query variable to a value, repeatable: `--bind ref=U1` asks with `?ref` bound to U1, exactly as if `"U1"` were written in its place. A value is read as the type its position declares, so a count or a voltage takes `3` or `"3"` alike and refuses `abc`; where nothing types the variable, a value that parses as a number binds a number and a quoted one (`--bind 'n="3"'`) binds text. A name the query does not use is an error. Refused with `--set`, whose queries carry their own `bind:` (see [Querying](../querying/#ask-the-same-question-about-different-things-bindings)) |
@@ -318,6 +320,18 @@ pins that are not connected.
 | `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
 | `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not, which it says so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
+
+### `tabulate <request.json|->`
+
+Project an answer into the tables every csv and workbook of it carries. The input is a
+`TabulateRequest` as protojson, holding the answer an analysis command printed with `--format json`
+(a check run, a query, a query set) and optionally `order_by` and `column_types`. The output is the
+`TabulateResponse` the `Tabulate` rpc returns. It reads no design, and it exists so a client on the
+CLI transport gets the engine's rows rather than deriving its own (agni issue 862).
+
+| flag | what it does |
+|---|---|
+| `--format json` | the only format, the `TabulateResponse` |
 
 ### `diff <old> <new>`
 

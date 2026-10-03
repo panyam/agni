@@ -2,68 +2,47 @@ package main
 
 import (
 	"io"
-	"strconv"
 
 	rpt "github.com/panyam/agni/core/report"
-
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
 )
 
-// checkCSVColumns is the column set of `check --format csv`, in emitted order. It is fixed so a
-// downstream sheet or script can bind to a stable header.
-//
-// context flattens to one pipe-separated cell of role=ref pairs. Datasheet citations are left out,
-// because each is a document, page and section and a repeated struct does not fit one cell. A
-// consumer that needs them wants --format json.
-var checkCSVColumns = []string{
-	"severity",
-	"inconclusive",
-	"rule",
-	"kind",
-	"subject",
-	"pin",
-	"net_id",
-	"message",
-	"source_file",
-	"native_id",
-	"context",
+// checkCSVColumns is the header of `check --format csv`, the findings table's columns
+// (service.FindingColumns), named here for the tests that bind to it.
+var checkCSVColumns = columnNames(service.FindingColumns)
+
+// writeCheckCSV emits the findings table in the order the run produced it. Run order is already
+// deterministic (catalog order, then entity order within a rule), so it keeps the csv in the same
+// order as the json (TestCheckCSVMatchesJSON) unless --order-by asks otherwise.
+func writeCheckCSV(w io.Writer, findings []*checkspb.Finding, orderBy ...string) error {
+	return writeTableCSV(w, service.FindingsTable(findings), orderBy)
 }
 
-// writeCheckCSV emits one row per finding, in the order the run produced them. Run order is
-// already deterministic (catalog order, then entity order within a rule), so it does not re-sort,
-// which keeps the csv in the same order as the json (TestCheckCSVMatchesJSON).
-func writeCheckCSV(w io.Writer, findings []*checkspb.Finding) error {
+// writeTableCSV encodes a projected table as csv, ordered by orderBy first. The rows are the
+// TableService's, so a csv and a workbook built from one answer carry the same cells (agni issue
+// 862); escaping against spreadsheet formulas happens here, in the encoder.
+func writeTableCSV(w io.Writer, t *webapi.Table, orderBy []string) error {
+	if err := service.OrderTables([]*webapi.Table{t}, orderBy, nil); err != nil {
+		return err
+	}
 	c := rpt.NewCSVWriter(w)
-	c.Header(checkCSVColumns)
-	for _, f := range findings {
-		subject := f.GetSubject()
-		prov := f.GetProvenance()
-		c.Row([]string{
-			f.GetSeverity(),
-			strconv.FormatBool(f.GetInconclusive()),
-			f.GetRule(),
-			subject.GetKind(),
-			subject.GetRef(),
-			subject.GetPin(),
-			subject.GetNetId(),
-			f.GetMessage(),
-			prov.GetSourceFile(),
-			prov.GetNativeId(),
-			contextCell(f.GetContext()),
-		})
+	header := make([]string, 0, len(t.GetColumns()))
+	for _, col := range t.GetColumns() {
+		header = append(header, col.GetName())
+	}
+	c.Header(header)
+	for _, r := range t.GetRows() {
+		c.Row(r.GetCells())
 	}
 	return c.Finish()
 }
 
-// contextCell renders a finding's context entities as role=ref pairs in author order. The order
-// matters because ContextSubject is an ordered list in which a role may repeat (issue 349).
-func contextCell(ctx []*checkspb.ContextSubject) string {
-	if len(ctx) == 0 {
-		return ""
+func columnNames(cs []webapi.TableColumn) []string {
+	out := make([]string, 0, len(cs))
+	for i := range cs {
+		out = append(out, cs[i].Name)
 	}
-	parts := make([]string, 0, len(ctx))
-	for _, cs := range ctx {
-		parts = append(parts, cs.GetRole()+"="+cs.GetSubject().GetRef())
-	}
-	return rpt.JoinCell(parts)
+	return out
 }

@@ -96,6 +96,7 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 | `QueryService/RunQuery` | `query --format json` |
 | `QueryService/RunQueries` | `query --set - --format json`, the set sent on stdin |
 | `DiffService/DiffDesigns` | `diff --format json` |
+| `TableService/Tabulate` | `tabulate -`, the request sent on stdin |
 | `DesignService/TraceDesign` | `trace --format json` |
 | `DesignService/GetLayoutReport` | `render --report --report-format json` |
 
@@ -122,30 +123,25 @@ it field by field, and each declaration fails once the difference goes away:
 
 ## Tables and workbooks
 
-A query answer is `repeated QueryRow { repeated string cells }` plus `column_kinds`. Its cells are
-strings, and the client leaves them that way. A column kind says what a column names, such as a net
-or a component, and not what type its values are, so converting `"10k"` or `"007"` on a guess would be
-wrong.
+A table has two halves, and agni owns the first. Projecting an answer into rows (which columns, how
+a subject is spelled, how rows order) is the engine's call, made once and served by
+`TableService.Tabulate`. Writing the rows as a workbook is the client's. So a client never lays an
+answer out itself: `client.tabulate(check=…)`, `query=…` or `query_set=…` returns the engine's
+tables, which are the rows `agni check --format csv` and `agni query --format csv` print for the
+same answer, and C35 holds the two together. A check run gives `findings`, and when the response
+carries verdicts, `verdicts` and a per-rule `verdicts_by_rule`. `order_by` sorts them, as
+`["rule", "-subject"]`, by each column's type, so a net or part column puts `R2` before `R10`, and
+`column_types` overrides a column the projection could not type, such as a query's count.
 
-`tables_to_xlsx(path, [(sheet, table), ...])` writes one sheet per table with a bold header row, a
-frozen top row and an autofilter. A table is a `RunQueryResponse`, a `CheckDesignResponse` (one
-finding per row), or a `(header, rows)` pair. It needs the `xlsx` extra. Tab names, colours and
-highlighted rows stay in the caller, which can reopen the file with openpyxl. `set_sheets(response)`
-turns a `RunQueriesResponse` into those pairs, one per query in the set's order, and refuses a set
-with an unanswered query unless asked to drop it, because a workbook missing a tab reads as a table
-that matched nothing. `clients/python/examples/audit_workbook.py` writes a five-sheet audit of the
-tutorial board this way.
+`table_sheets(response, {"findings": "Findings"})` names each table as a sheet, and
+`tables_to_xlsx(path, sheets)` writes one sheet per table with a bold header row, a frozen top row
+and an autofilter. It keeps a cell that starts with `=` as text, since a cell is a name off a design
+file and must not run as a formula. It needs the `xlsx` extra, and tab names, colours and highlighted
+rows stay in the caller, which can reopen the file with openpyxl.
+`clients/python/examples/audit_workbook.py` writes a five-sheet audit of the tutorial board this way.
 
-Three more helpers turn the other answers an audit needs into sheets, each returning those pairs.
-`diff_sheets` gives a diff one sheet per kind of net change plus one for components, and every kind
-gets its tab even when empty, so a workbook's layout does not move between runs. A near rename keeps
-the evidence it was matched on. `review_sheet` gives one row per checklist item, in the checklist's
-order, naming each finding behind a failed item, plus a summary sheet. `verdict_sheets` gives every
-verdict, passes included, with the witness that proves a pass, plus a count of each outcome per rule.
-It refuses a response that has findings and no verdicts, which is what `check --format json` prints
-without `--verdicts`. Engine order sorts text plainly, so `R10` lands before `R2`. `natural_sort` orders
-any table by named columns with the digits read as numbers, and the three helpers already sort that
-way. `clients/python/examples/revision_audit.py` builds the whole revision-audit workbook from them.
+`diff_sheets` and `review_sheet` still lay out a diff and a review in the client, until the engine
+projects those answers too (agni issue 862, part two).
 
 The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts whose
 layout belongs to whoever reads it, so it stays in the client.

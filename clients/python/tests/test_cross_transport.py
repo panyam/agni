@@ -172,6 +172,10 @@ CASES: List[Case] = [
         {"name": UNSTORED},
         _run_time,
     ),
+    # The engine's tables for an answer (agni issue 862). Each side tabulates the answer IT got, so
+    # this also holds the two answers to one projection.
+    Case("TableService/Tabulate", lambda c: c.tabulate(check=c.check_design(uri=DESIGN), order_by=["rule", "-subject"])),
+    Case("TableService/Tabulate", lambda c: c.tabulate(query_set=c.run_queries(uri=DESIGN, set=_SET), order_by=["-provenance"])),
     # The design itself, whole or in parts (agni issue 836); unmasked it is the summary alone.
     Case("DesignService/GetDesign", lambda c: c.get_design(uri=DESIGN)),
     Case("DesignService/GetDesign", lambda c: c.get_design(uri=DESIGN, read_mask={"paths": ["design"]})),

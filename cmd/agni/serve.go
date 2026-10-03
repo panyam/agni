@@ -295,6 +295,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	mux.Handle(ckPath, ckHandler)
 	diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
 	mux.Handle(diffPath, diffHandler)
+	tbPath, tbHandler := webapiconnect.NewTableServiceHandler(server.NewTable())
+	mux.Handle(tbPath, tbHandler)
 	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)), budgeted)
 	mux.Handle(qPath, qHandler)
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
@@ -316,7 +318,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	mux.Handle("GET /healthz", healthHandler())
 	switch {
 	case !assets.viewer:
-		mux.Handle("/", apiOnlyHandler([]string{wsPath, prPath, dsPath, ckPath, diffPath, qPath, rvPath}))
+		mux.Handle("/", apiOnlyHandler([]string{wsPath, prPath, dsPath, ckPath, diffPath, tbPath, qPath, rvPath}))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
 	default:
 		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/")}), mux)

@@ -7,7 +7,7 @@ from typing import Optional, Protocol
 from google.protobuf.message import Message
 
 from agni import services
-from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, workspace_pb2
+from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, tables_pb2, workspace_pb2
 
 
 class Transport(Protocol):
@@ -66,9 +66,17 @@ class Client:
         """Answer a named list of queries over one read of the design.
 
         A query that could not be answered carries ``error`` rather than ``result``; the call itself
-        succeeds, so check each result. ``agni.set_sheets`` turns the response into workbook sheets.
+        succeeds, so check each result. ``tabulate(query_set=...)`` turns it into tables.
         """
         return self.call("QueryService", "RunQueries", request, **fields)  # type: ignore[return-value]
+
+    def tabulate(self, request: Optional[tables_pb2.TabulateRequest] = None, **fields) -> tables_pb2.TabulateResponse:
+        """The engine's tables for an answer this client already holds: ``check=`` a CheckDesign
+        response, ``query=`` a query answer or ``query_set=`` a set's, with ``order_by`` such as
+        ``["rule", "-subject"]``. These are the rows ``agni check --format csv`` prints, so a workbook
+        built from them matches the csv of the same run. ``agni.tables_to_xlsx`` writes them.
+        """
+        return self.call("TableService", "Tabulate", request, **fields)  # type: ignore[return-value]
 
     def list_relations(self, request: Optional[query_pb2.ListRelationsRequest] = None, **fields) -> query_pb2.ListRelationsResponse:
         return self.call("QueryService", "ListRelations", request, **fields)  # type: ignore[return-value]
