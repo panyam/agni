@@ -87,7 +87,8 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
 | `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
 | `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |
-| `--format <fmt>` | `markdown` (default), `json`, or `html`. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--server` is given. One design at a time, since a page's title, hash and links all name one design. `json` is protojson of the `Review` the `CreateReview` rpc returns, every finding per item and a `summary` holding the counts `--fail-on-outcome` and `--min-answered` gate on; several designs give a `ListReviewsResponse` with one `Review` each. A CLI run is stored nowhere, so its `name` is empty |
+| `--format <fmt>` | `markdown` (default), `json`, `csv`, or `html`. `csv` is one row per checklist item (area, id, title, outcome, note, findings, unmet), the table the `Tabulate` rpc projects, for one design. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--server` is given. One design at a time, since a page's title, hash and links all name one design. `json` is protojson of the `Review` the `CreateReview` rpc returns, every finding per item and a `summary` holding the counts `--fail-on-outcome` and `--min-answered` gate on; several designs give a `ListReviewsResponse` with one `Review` each. A CLI run is stored nowhere, so its `name` is empty |
+| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=outcome,id`. csv only |
 | `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
 | `--results-out <file>` | also write the run as a self-contained check-result document |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
@@ -325,7 +326,7 @@ pins that are not connected.
 
 Project an answer into the tables every csv and workbook of it carries. The input is a
 `TabulateRequest` as protojson, holding the answer an analysis command printed with `--format json`
-(a check run, a query, a query set) and optionally `order_by` and `column_types`. The output is the
+(a check run, a query, a query set, a diff, a review) and optionally `order_by` and `column_types`. The output is the
 `TabulateResponse` the `Tabulate` rpc returns. It reads no design, and it exists so a client on the
 CLI transport gets the engine's rows rather than deriving its own (agni issue 862).
 
@@ -343,6 +344,7 @@ Structural diff between two revisions, over the IR. See
 | `--format <fmt>` | `text` (default human summary), `json`, or `csv` (one row per change, with a `change_class` column naming which kind it is) |
 | `--rename-approx` | also pair a net renamed AND changed slightly with its old self, as `renamed-approx` with the evidence (see [Comparing revisions](../comparing-revisions/)) |
 | `--include-equal` | also report the nets that did not change: kind `equal` in `json`, `net-equal` rows in `csv`, and a count in `text`. Off by default, since most diffs are about what changed |
+| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=change_class,subject`. csv only, and the order the `Tabulate` rpc applies |
 
 ### `render <file>`
 

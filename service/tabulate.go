@@ -103,6 +103,116 @@ func VerdictsTable(verdicts []*checkspb.Verdict, link func(*checkspb.Verdict) st
 	return t
 }
 
+// DiffColumns is the diff table's header, the one `diff --format csv` published. A diff is four
+// collections of different shapes, and one table with change_class naming each row's kind lets a
+// reader filter back to any one of them and sort across all of them at once. A row leaves the
+// columns its class does not use empty. The match_ columns are filled on a near rename only, since a
+// near match is a judgement and the numbers that decided it are what a reviewer triages it by.
+var DiffColumns = []webapi.TableColumn{
+	{Name: "change_class"},
+	{Name: "subject", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "old_name", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "field"},
+	{Name: "old_value"},
+	{Name: "new_value"},
+	{Name: "added", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "removed", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "old_source_file"},
+	{Name: "new_source_file"},
+	{Name: "match_old_coverage", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "match_old_coverage_significant", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "match_new_coverage_significant", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+}
+
+// DiffTable is one row per change, components first and then nets, in the order the diff reported
+// them (by ref des, by ref des then field, nets by kind then name), with the unchanged nets last when
+// the diff carried them. A net row's class is its kind under a net- prefix, so the table names kinds
+// exactly as the diff does.
+func DiffTable(resp *webapi.DiffDesignsResponse) *webapi.Table {
+	t := &webapi.Table{Name: "diff", Columns: columns(DiffColumns)}
+	row := func(class, subject string) []string {
+		r := make([]string, len(DiffColumns))
+		r[0], r[1] = class, subject
+		return r
+	}
+	rep := resp.GetReport()
+	for _, ref := range rep.GetComponentsAdded() {
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-added", ref)})
+	}
+	for _, ref := range rep.GetComponentsRemoved() {
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-removed", ref)})
+	}
+	for _, cc := range rep.GetComponentsChanged() {
+		r := row("component-changed", cc.GetRefDes())
+		r[3], r[4], r[5] = cc.GetField(), cc.GetOld(), cc.GetNew()
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r})
+	}
+	for _, nc := range rep.GetNets() {
+		r := row("net-"+nc.GetKind(), nc.GetName())
+		r[2] = nc.GetOldName()
+		r[6], r[7] = strings.Join(nc.GetAdded(), rpt.MultiValueSep), strings.Join(nc.GetRemoved(), rpt.MultiValueSep)
+		r[8], r[9] = nc.GetOldProv().GetSourceFile(), nc.GetNewProv().GetSourceFile()
+		if e := nc.GetApprox(); e != nil {
+			r[10] = strconv.FormatFloat(e.GetOldCoverage(), 'f', 3, 64)
+			r[11] = strconv.FormatFloat(e.GetOldCoverageSignificant(), 'f', 3, 64)
+			r[12] = strconv.FormatFloat(e.GetNewCoverageSignificant(), 'f', 3, 64)
+		}
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r})
+	}
+	return t
+}
+
+// ReviewColumns is the review table's header. findings names each firing behind an item as
+// rule=kind:ref, and unmet each part whose datasheet the item needed, so a failed or undecided row
+// says what to look at.
+var ReviewColumns = []webapi.TableColumn{
+	{Name: "area"},
+	{Name: "id", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "title"},
+	{Name: "outcome"},
+	{Name: "note"},
+	{Name: "findings"},
+	{Name: "unmet"},
+}
+
+// ReviewTables is a review's items, one row each in the checklist's own order, since a reviewer reads
+// a checklist in the order it was written, and its one-row summary.
+func ReviewTables(rv *webapi.Review) []*webapi.Table {
+	items := &webapi.Table{Name: "review", Columns: columns(ReviewColumns)}
+	for _, area := range rv.GetResults().GetAreas() {
+		for _, it := range area.GetItems() {
+			findings := make([]string, 0, len(it.GetFindings()))
+			for _, f := range it.GetFindings() {
+				findings = append(findings, f.GetRule()+"="+subjectsCell([]*checkspb.Subject{f.GetSubject()}))
+			}
+			unmet := make([]string, 0, len(it.GetUnmet()))
+			for _, u := range it.GetUnmet() {
+				part := strings.TrimSpace(u.GetManufacturer() + " " + u.GetMpn())
+				if u.GetSpecAbsent() {
+					part += " (no spec)"
+				}
+				unmet = append(unmet, part)
+			}
+			items.Rows = append(items.Rows, &webapi.TableRow{Cells: []string{
+				area.GetName(), it.GetId(), it.GetTitle(), it.GetOutcome(), it.GetNote(),
+				strings.Join(findings, rpt.MultiValueSep), strings.Join(unmet, rpt.MultiValueSep),
+			}})
+		}
+	}
+	s := rv.GetSummary()
+	summary := &webapi.Table{Name: "review_summary"}
+	var cells []string
+	for _, kv := range []struct {
+		name string
+		n    int32
+	}{{"total", s.GetTotal()}, {"covered", s.GetCovered()}, {"answered", s.GetAnswered()}, {"pass", s.GetPass()}, {"fail", s.GetFail()}, {"provisional", s.GetProvisional()}} {
+		summary.Columns = append(summary.Columns, &webapi.TableColumn{Name: kv.name, Type: webapi.ColumnType_COLUMN_TYPE_NUMBER})
+		cells = append(cells, strconv.Itoa(int(kv.n)))
+	}
+	summary.Rows = []*webapi.TableRow{{Cells: cells}}
+	return []*webapi.Table{items, summary}
+}
+
 // verdictOutcomes are the outcome columns of the per-rule count, in the order a reader triages them.
 var verdictOutcomes = []checkspb.Outcome{
 	checkspb.Outcome_OUTCOME_PASS, checkspb.Outcome_OUTCOME_FAIL, checkspb.Outcome_OUTCOME_INCONCLUSIVE,
@@ -227,6 +337,10 @@ func (TableService) Tabulate(_ context.Context, req *webapi.TabulateRequest) (*w
 		if vs := a.Check.GetVerdicts(); len(vs) > 0 {
 			tables = append(tables, VerdictsTable(vs, nil), VerdictCountsTable(vs))
 		}
+	case *webapi.TabulateRequest_Diff:
+		tables = append(tables, DiffTable(a.Diff))
+	case *webapi.TabulateRequest_Review:
+		tables = append(tables, ReviewTables(a.Review)...)
 	case *webapi.TabulateRequest_Query:
 		tables = append(tables, QueryTable("query", a.Query))
 	case *webapi.TabulateRequest_QuerySet:

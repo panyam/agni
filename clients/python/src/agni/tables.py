@@ -10,8 +10,7 @@ from __future__ import annotations
 import re
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
-from agni.v1.checks import checks_pb2 as checks
-from agni.v1.webapi import diff_pb2, query_pb2, review_pb2, tables_pb2
+from agni.v1.webapi import query_pb2, tables_pb2
 
 Rows = Tuple[List[str], List[List[str]]]
 Table = Union[tables_pb2.Table, Rows]
@@ -44,120 +43,6 @@ def table_sheets(resp: tables_pb2.TabulateResponse, names: Optional[Mapping[str,
     """
     names = names or {}
     return [(names.get(t.name, t.name), t) for t in resp.tables]
-
-
-# diff_sheets and review_sheet still build their own rows, until the engine projects a diff and a
-# review the way it projects a check run (agni issue 862, part two). Nothing else here may.
-_DIGITS = re.compile(r"(\d+)")
-
-
-def _natural_key(s: str) -> tuple:
-    parts = _DIGITS.split(s)
-    return tuple((int(p), p) if i % 2 else (p.casefold(), p) for i, p in enumerate(parts))
-
-
-def _natural_sort(table: Rows, *columns: str) -> Rows:
-    header, rows = table
-    idx = [header.index(c) for c in columns] or [0]
-    return header, sorted(rows, key=lambda r: tuple(_natural_key(r[i]) for i in idx))
-
-
-# One sheet per net change kind, in the order a reviewer reads a diff. "equal" only appears when the
-# request set include_equal, so its sheet is written only when it has rows: an empty "Unchanged nets"
-# would read as every net having changed.
-_NET_SHEETS = [
-    ("new", "New nets"),
-    ("deleted", "Deleted nets"),
-    ("renamed", "Renamed nets"),
-    ("renamed-approx", "Near renames"),
-    ("hard", "Changed nets"),
-    ("soft", "Attribute changes"),
-    ("equal", "Unchanged nets"),
-]
-NET_CHANGE_COLUMNS = ["net", "old_name", "added", "removed", "old_source", "new_source"]
-RENAME_EVIDENCE_COLUMNS = [
-    "old_coverage", "old_coverage_significant", "new_coverage_significant", "overlap",
-    "overlap_significant", "old_endpoints", "new_endpoints", "old_significant", "new_significant",
-]
-COMPONENT_CHANGE_COLUMNS = ["ref_des", "change", "field", "old", "new"]
-
-
-def _source(prov) -> str:
-    if not prov.source_file:
-        return ""
-    return f"{prov.source_file}:{prov.span.line}" if prov.span.line else prov.source_file
-
-
-def _endpoints(eps: Iterable[str]) -> str:
-    return " ".join(sorted(eps, key=_natural_key))
-
-
-def _number(v: float) -> str:
-    return f"{v:g}"
-
-
-def diff_sheets(resp: diff_pb2.DiffDesignsResponse) -> List[Tuple[str, Rows]]:
-    """A diff as sheets, one per kind of net change and one for components, each in natural order.
-
-    Every kind's sheet is written even when empty, so a workbook's tabs are the same from one run to
-    the next and an empty tab says that kind did not happen. "Unchanged nets" is the exception, written
-    only when the response has some (see ``_NET_SHEETS``). A near rename carries the evidence the
-    engine matched it on, since it was assigned rather than recovered. A net kind this client does not
-    know raises ``ValueError`` rather than being left off every sheet.
-    """
-    known = {k for k, _ in _NET_SHEETS}
-    unknown = sorted({n.kind for n in resp.report.nets} - known)
-    if unknown:
-        raise ValueError(f"diff_sheets does not know the net change kind(s) {', '.join(unknown)}")
-    sheets: List[Tuple[str, Rows]] = []
-    for kind, name in _NET_SHEETS:
-        rows = []
-        for n in resp.report.nets:
-            if n.kind != kind:
-                continue
-            row = [n.name, n.old_name, _endpoints(n.added), _endpoints(n.removed), _source(n.old_prov), _source(n.new_prov)]
-            if kind == "renamed-approx":
-                row += [_number(getattr(n.approx, c)) for c in RENAME_EVIDENCE_COLUMNS]
-            rows.append(row)
-        if kind == "equal" and not rows:
-            continue
-        header = NET_CHANGE_COLUMNS + (RENAME_EVIDENCE_COLUMNS if kind == "renamed-approx" else [])
-        sheets.append((name, _natural_sort((list(header), rows), "net")))
-    r = resp.report
-    comps = [[c, "added", "", "", ""] for c in r.components_added]
-    comps += [[c, "removed", "", "", ""] for c in r.components_removed]
-    comps += [[c.ref_des, "changed", c.field, c.old, c.new] for c in r.components_changed]
-    sheets.append(("Component changes", _natural_sort((list(COMPONENT_CHANGE_COLUMNS), comps), "ref_des", "change", "field")))
-    return sheets
-
-
-def _subject(s: checks.Subject) -> str:
-    ref = f"{s.ref}.{s.pin}" if s.pin else s.ref
-    return f"{s.kind} {ref}" if s.kind else ref
-
-
-REVIEW_COLUMNS = ["area", "id", "title", "outcome", "note", "findings", "unmet"]
-
-
-def review_sheet(review: review_pb2.Review) -> List[Tuple[str, Rows]]:
-    """A review as two sheets: one row per checklist item in the checklist's own order, and the summary.
-
-    An item's findings are written as ``rule: kind ref``, one per firing, so a failed item names what
-    failed. Unmet datasheet dependencies name the part, since a reader fixes those by seeding its
-    spec. Rows keep the checklist's order rather than sorting, because a reviewer reads a checklist
-    in the order it was written.
-    """
-    rows = []
-    for area in review.results.areas:
-        for it in area.items:
-            findings = "; ".join(f"{f.rule}: {_subject(f.subject)}" for f in it.findings)
-            unmet = "; ".join(
-                " ".join(x for x in (u.manufacturer, u.mpn) if x) + (" (no spec)" if u.spec_absent else "") for u in it.unmet
-            )
-            rows.append([area.name, it.id, it.title, it.outcome, it.note, findings, unmet])
-    s = review.summary
-    summary = [[k, str(getattr(s, k))] for k in ("total", "covered", "answered", "pass", "fail", "provisional")]
-    return [("Review", (list(REVIEW_COLUMNS), rows)), ("Review summary", (["metric", "value"], summary))]
 
 
 # Excel refuses these in a sheet name and caps the name at 31 characters.

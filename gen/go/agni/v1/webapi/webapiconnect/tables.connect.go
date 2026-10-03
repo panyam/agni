@@ -40,8 +40,9 @@ const (
 // TableServiceClient is a client for the agni.v1.webapi.TableService service.
 type TableServiceClient interface {
 	// Tabulate returns the answer's tables. A check run gives its findings and, when the response
-	// carries them, its verdicts and a count of them per rule. A query answer gives one table, and a
-	// query set one per answered query; a set with a query that failed is an invalid argument naming
+	// carries them, its verdicts and a count of them per rule. A diff gives one table, a row per change.
+	// A review gives its items and its summary. A query answer gives one table, and a query set one per
+	// answered query; a set with a query that failed is an invalid argument naming
 	// it, since a missing table reads as a question that matched nothing.
 	Tabulate(context.Context, *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error)
 }
@@ -79,8 +80,9 @@ func (c *tableServiceClient) Tabulate(ctx context.Context, req *connect.Request[
 // TableServiceHandler is an implementation of the agni.v1.webapi.TableService service.
 type TableServiceHandler interface {
 	// Tabulate returns the answer's tables. A check run gives its findings and, when the response
-	// carries them, its verdicts and a count of them per rule. A query answer gives one table, and a
-	// query set one per answered query; a set with a query that failed is an invalid argument naming
+	// carries them, its verdicts and a count of them per rule. A diff gives one table, a row per change.
+	// A review gives its items and its summary. A query answer gives one table, and a query set one per
+	// answered query; a set with a query that failed is an invalid argument naming
 	// it, since a missing table reads as a question that matched nothing.
 	Tabulate(context.Context, *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error)
 }

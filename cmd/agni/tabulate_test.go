@@ -107,3 +107,39 @@ func TestOrderByIsRefusedWithoutACSV(t *testing.T) {
 		t.Errorf("--order-by with json = %v, want it refused", err)
 	}
 }
+
+func TestDiffCSVIsTheTabulatedTable(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		a, b  string
+		flags []string
+	}{
+		{"unchanged nets", "gateway.edn", "gateway-rev-b.edn", []string{"--include-equal"}},
+		{"near renames", "gateway-rev-b.edn", "gateway-rev-c.edn", []string{"--rename-approx"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, b := tutorialGateway+tc.a, tutorialGateway+tc.b
+			var resp webapi.DiffDesignsResponse
+			js := runCLI(t, diffCmd(), append([]string{a, b, "--format", "json"}, tc.flags...)...)
+			if err := protojson.Unmarshal([]byte(js), &resp); err != nil {
+				t.Fatal(err)
+			}
+			order := []string{"-change_class", "subject"}
+			tables := tabulate(t, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Diff{Diff: &resp}, OrderBy: order})
+			csvText := runCLI(t, diffCmd(), append([]string{a, b, "--format", "csv", "--order-by", strings.Join(order, ",")}, tc.flags...)...)
+			sameAsCSV(t, "diff "+tc.name, csvText, tables["diff"])
+		})
+	}
+}
+
+func TestReviewCSVIsTheTabulatedTable(t *testing.T) {
+	var rv webapi.Review
+	if err := protojson.Unmarshal([]byte(runCLI(t, reviewCmd(), tutorialGateway, "--format", "json")), &rv); err != nil {
+		t.Fatal(err)
+	}
+	tables := tabulate(t, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Review{Review: &rv}})
+	sameAsCSV(t, "review", runCLI(t, reviewCmd(), tutorialGateway, "--format", "csv"), tables["review"])
+	if s := tables["review_summary"]; s == nil || len(s.GetRows()) != 1 {
+		t.Errorf("review_summary = %v, want one row", s)
+	}
+}

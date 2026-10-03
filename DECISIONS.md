@@ -2013,12 +2013,15 @@ rows decides which fields a reader needs, how a subject is spelled, how a tuple 
 rows order, and that is domain judgement made once, in `service/tabulate.go`. Encoding rows as csv,
 xlsx, markdown or html is format work, done wherever the bytes are written. So the rows travel: a
 `Table` message (columns with a type and an entity kind, rows of raw cells) and a `TableService.
-Tabulate` that projects an answer the caller already holds. The CLI's csv writers encode it, and so
-does a client's workbook. C35 holds the two together.
+Tabulate` that projects an answer the caller already holds: a check run, a query, a query set, a
+diff or a review. The CLI's csv writers encode it, and so does a client's workbook. C35 holds the two
+together, and `diff --format csv` now asks the DiffDesigns rpc as `--format json` does, so both read
+one composition of the diff.
 
 - **Where the projections disagreed, the csv won**, because its headers are published and scripts
-  bind to them. The workbook took the csv's verdict columns and `kind:ref` spelling, and lost the
-  per-kind diff tabs when the diff moves over, since the one-table diff was itself a recorded choice.
+  bind to them. The workbook took the csv's verdict columns and `kind:ref` spelling, and its eight
+  per-kind diff tabs became the csv's one diff table, since that shape was itself a recorded choice. A
+  review had no csv, so its table is new, and `review --format csv` encodes it for one design.
 - **Order is a request, not a projection.** `order_by` names columns with a `-` for descending, and a
   column's TYPE decides how it compares (`name` puts R2 before R10, `number` reads numbers), which a
   request can override for a column the projection could not type. Empty `order_by` keeps run order,
