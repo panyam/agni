@@ -115,6 +115,53 @@ func TestMatchingNothingIsAnError(t *testing.T) {
 	}
 }
 
+// A command that fails and prints nothing to the captured stream rendered as an empty block, and the
+// gate stayed green because regenerating it reproduced the emptiness exactly (agni issue 825). Rung 7
+// shipped two such blocks. Exit status is still a legitimate lesson, so the spec has to say so.
+func TestAFailureThatPrintsNothingIsAnError(t *testing.T) {
+	for name, spec := range map[string]runSpec{
+		"stdout empty, error on stderr": {Script: "echo 'duplicate rule source' 1>&2; exit 1"},
+		"capture none hides a failure":  {Script: "echo report; exit 2", Capture: "none"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := execute(spec)
+			if err == nil {
+				t.Fatal("a failing step that captured nothing must be an error, not an empty block")
+			}
+			if !strings.Contains(err.Error(), "exited") || !strings.Contains(err.Error(), "exit: true") {
+				t.Errorf("the error should give the exit status and the way to declare it, got %v", err)
+			}
+		})
+	}
+	if _, err := execute(runSpec{Script: "echo 'duplicate rule source' 1>&2; exit 1"}); err == nil || !strings.Contains(err.Error(), "duplicate rule source") {
+		t.Errorf("the error should quote what the command said on stderr, got %v", err)
+	}
+}
+
+// The three ways an empty or failing step stays legal: the spec declares the exit status as the
+// lesson, the step succeeded and printed nothing by design, or it failed while printing a report.
+func TestADeclaredOrExplainedExitStaysLegal(t *testing.T) {
+	for name, tc := range map[string]struct {
+		spec runSpec
+		want string
+	}{
+		"exit declared, nothing captured": {runSpec{Script: "exit 1", Exit: true}, "exit 1\n"},
+		"capture none with exit declared": {runSpec{Script: "echo r; exit 2", Capture: "none", Exit: true}, "exit 2\n"},
+		"succeeded and printed nothing":   {runSpec{Script: "echo r >/dev/null"}, ""},
+		"failed while printing a report":  {runSpec{Script: "echo finding; exit 1"}, "finding\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := execute(tc.spec)
+			if err != nil {
+				t.Fatalf("execute: %v", err)
+			}
+			if len(got) != 1 || got[0] != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 // TestUnknownCaptureIsRejected holds that a typo must not silently fall back to stdout.
 func TestUnknownCaptureIsRejected(t *testing.T) {
 	if _, err := execute(runSpec{Script: "echo x", Capture: "stdrr"}); err == nil {

@@ -125,7 +125,8 @@ type runSpec struct {
 	// or a pipe.
 	Script string `yaml:"script"`
 	// Capture selects which stream the block shows: "stdout" (default), "stderr", "both", or "none"
-	// for a lesson that is only about the exit code. A field rather than a shell redirect, since
+	// for a lesson that is only about the exit code, which then needs Exit when the step fails. A step
+	// that exits non-zero and captures nothing is an error unless Exit is set (agni issue 825). A field rather than a shell redirect, since
 	// resolution notes and a gate's message share stderr (#241).
 	Capture string `yaml:"capture"`
 	// Exit appends "exit N" to the block, for the rungs whose lesson IS the exit code. Use it rather
@@ -427,7 +428,8 @@ func runOne(spec runSpec, step runStep, work, dir, bin string, last bool) (strin
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	// The exit status is not an error here, because several rungs demonstrate a gate TRIPPING.
+	// A non-zero exit is not an error by itself, because several rungs demonstrate a gate TRIPPING.
+	// It is one when the step also captured nothing, below.
 	runErr := cmd.Run()
 
 	var body string
@@ -443,6 +445,21 @@ func runOne(spec runSpec, step runStep, work, dir, bin string, last bool) (strin
 		body = ""
 	default:
 		return "", fmt.Errorf("unknown capture %q (want stdout, stderr or both)", spec.Capture)
+	}
+	// A step that FAILED and captured nothing would render as an empty block, and regenerating it
+	// reproduces the emptiness, so the gate stays green over a page teaching from a blank space. Rung 7
+	// shipped two that way (agni issue 825). A spec whose lesson is the exit status says so with
+	// `exit: true`, which only the last step can carry.
+	if code := exitStatus(runErr); code != 0 && strings.TrimSpace(body) == "" && !(spec.Exit && last) {
+		said := strings.TrimSpace(stderr.String())
+		if lines := strings.SplitN(said, "\n", 4); len(lines) > 3 {
+			said = strings.Join(lines[:3], "\n") + "\n..."
+		}
+		if said == "" {
+			said = "(nothing on stderr either)"
+		}
+		return "", fmt.Errorf("step %q exited %d and captured nothing, so its block would be empty. "+
+			"If the exit status is the lesson, set `exit: true`; otherwise fix the command. It said:\n%s", step.Script, code, said)
 	}
 	// A step that printed NOTHING is not a filter that stopped matching, so Match skips it. Rung 11's
 	// first step redirects its report to /dev/null and is empty by design.
