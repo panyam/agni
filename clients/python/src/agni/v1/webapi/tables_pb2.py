@@ -23,10 +23,12 @@ _sym_db = _symbol_database.Default()
 
 
 from agni.v1.webapi import checks_pb2 as agni_dot_v1_dot_webapi_dot_checks__pb2
+from agni.v1.webapi import diff_pb2 as agni_dot_v1_dot_webapi_dot_diff__pb2
 from agni.v1.webapi import query_pb2 as agni_dot_v1_dot_webapi_dot_query__pb2
+from agni.v1.webapi import review_pb2 as agni_dot_v1_dot_webapi_dot_review__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/tables.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x1a\x61gni/v1/webapi/query.proto\"e\n\x0bTableColumn\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12.\n\x04type\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x04type\x12\x12\n\x04kind\x18\x03 \x01(\tR\x04kind\" \n\x08TableRow\x12\x14\n\x05\x63\x65lls\x18\x01 \x03(\tR\x05\x63\x65lls\"\x80\x01\n\x05Table\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x35\n\x07\x63olumns\x18\x02 \x03(\x0b\x32\x1b.agni.v1.webapi.TableColumnR\x07\x63olumns\x12,\n\x04rows\x18\x03 \x03(\x0b\x32\x18.agni.v1.webapi.TableRowR\x04rows\"\xa1\x03\n\x0fTabulateRequest\x12;\n\x05\x63heck\x18\x01 \x01(\x0b\x32#.agni.v1.webapi.CheckDesignResponseH\x00R\x05\x63heck\x12\x38\n\x05query\x18\x02 \x01(\x0b\x32 .agni.v1.webapi.RunQueryResponseH\x00R\x05query\x12\x41\n\tquery_set\x18\x03 \x01(\x0b\x32\".agni.v1.webapi.RunQueriesResponseH\x00R\x08querySet\x12\x19\n\x08order_by\x18\x04 \x03(\tR\x07orderBy\x12S\n\x0c\x63olumn_types\x18\x05 \x03(\x0b\x32\x30.agni.v1.webapi.TabulateRequest.ColumnTypesEntryR\x0b\x63olumnTypes\x1aZ\n\x10\x43olumnTypesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x30\n\x05value\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x05value:\x02\x38\x01\x42\x08\n\x06\x61nswer\"A\n\x10TabulateResponse\x12-\n\x06tables\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.TableR\x06tables*m\n\nColumnType\x12\x1b\n\x17\x43OLUMN_TYPE_UNSPECIFIED\x10\x00\x12\x14\n\x10\x43OLUMN_TYPE_TEXT\x10\x01\x12\x14\n\x10\x43OLUMN_TYPE_NAME\x10\x02\x12\x16\n\x12\x43OLUMN_TYPE_NUMBER\x10\x03\x32]\n\x0cTableService\x12M\n\x08Tabulate\x12\x1f.agni.v1.webapi.TabulateRequest\x1a .agni.v1.webapi.TabulateResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/tables.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x19\x61gni/v1/webapi/diff.proto\x1a\x1a\x61gni/v1/webapi/query.proto\x1a\x1b\x61gni/v1/webapi/review.proto\"e\n\x0bTableColumn\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12.\n\x04type\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x04type\x12\x12\n\x04kind\x18\x03 \x01(\tR\x04kind\" \n\x08TableRow\x12\x14\n\x05\x63\x65lls\x18\x01 \x03(\tR\x05\x63\x65lls\"\x80\x01\n\x05Table\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x35\n\x07\x63olumns\x18\x02 \x03(\x0b\x32\x1b.agni.v1.webapi.TableColumnR\x07\x63olumns\x12,\n\x04rows\x18\x03 \x03(\x0b\x32\x18.agni.v1.webapi.TableRowR\x04rows\"\x8e\x04\n\x0fTabulateRequest\x12;\n\x05\x63heck\x18\x01 \x01(\x0b\x32#.agni.v1.webapi.CheckDesignResponseH\x00R\x05\x63heck\x12\x38\n\x05query\x18\x02 \x01(\x0b\x32 .agni.v1.webapi.RunQueryResponseH\x00R\x05query\x12\x41\n\tquery_set\x18\x03 \x01(\x0b\x32\".agni.v1.webapi.RunQueriesResponseH\x00R\x08querySet\x12\x39\n\x04\x64iff\x18\x06 \x01(\x0b\x32#.agni.v1.webapi.DiffDesignsResponseH\x00R\x04\x64iff\x12\x30\n\x06review\x18\x07 \x01(\x0b\x32\x16.agni.v1.webapi.ReviewH\x00R\x06review\x12\x19\n\x08order_by\x18\x04 \x03(\tR\x07orderBy\x12S\n\x0c\x63olumn_types\x18\x05 \x03(\x0b\x32\x30.agni.v1.webapi.TabulateRequest.ColumnTypesEntryR\x0b\x63olumnTypes\x1aZ\n\x10\x43olumnTypesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x30\n\x05value\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x05value:\x02\x38\x01\x42\x08\n\x06\x61nswer\"A\n\x10TabulateResponse\x12-\n\x06tables\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.TableR\x06tables*m\n\nColumnType\x12\x1b\n\x17\x43OLUMN_TYPE_UNSPECIFIED\x10\x00\x12\x14\n\x10\x43OLUMN_TYPE_TEXT\x10\x01\x12\x14\n\x10\x43OLUMN_TYPE_NAME\x10\x02\x12\x16\n\x12\x43OLUMN_TYPE_NUMBER\x10\x03\x32]\n\x0cTableService\x12M\n\x08Tabulate\x12\x1f.agni.v1.webapi.TabulateRequest\x1a .agni.v1.webapi.TabulateResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,20 +38,20 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._loaded_options = None
   _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_options = b'8\001'
-  _globals['_COLUMNTYPE']._serialized_start=859
-  _globals['_COLUMNTYPE']._serialized_end=968
-  _globals['_TABLECOLUMN']._serialized_start=104
-  _globals['_TABLECOLUMN']._serialized_end=205
-  _globals['_TABLEROW']._serialized_start=207
-  _globals['_TABLEROW']._serialized_end=239
-  _globals['_TABLE']._serialized_start=242
-  _globals['_TABLE']._serialized_end=370
-  _globals['_TABULATEREQUEST']._serialized_start=373
-  _globals['_TABULATEREQUEST']._serialized_end=790
-  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_start=690
-  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_end=780
-  _globals['_TABULATERESPONSE']._serialized_start=792
-  _globals['_TABULATERESPONSE']._serialized_end=857
-  _globals['_TABLESERVICE']._serialized_start=970
-  _globals['_TABLESERVICE']._serialized_end=1063
+  _globals['_COLUMNTYPE']._serialized_start=1024
+  _globals['_COLUMNTYPE']._serialized_end=1133
+  _globals['_TABLECOLUMN']._serialized_start=160
+  _globals['_TABLECOLUMN']._serialized_end=261
+  _globals['_TABLEROW']._serialized_start=263
+  _globals['_TABLEROW']._serialized_end=295
+  _globals['_TABLE']._serialized_start=298
+  _globals['_TABLE']._serialized_end=426
+  _globals['_TABULATEREQUEST']._serialized_start=429
+  _globals['_TABULATEREQUEST']._serialized_end=955
+  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_start=855
+  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_end=945
+  _globals['_TABULATERESPONSE']._serialized_start=957
+  _globals['_TABULATERESPONSE']._serialized_end=1022
+  _globals['_TABLESERVICE']._serialized_start=1135
+  _globals['_TABLESERVICE']._serialized_end=1228
 # @@protoc_insertion_point(module_scope)

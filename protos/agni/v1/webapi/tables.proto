@@ -5,7 +5,9 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/diff.proto";
 import "agni/v1/webapi/query.proto";
+import "agni/v1/webapi/review.proto";
 
 // This file: TableService, the one projection of an answer into rows (agni issue 862).
 //
@@ -19,8 +21,9 @@ import "agni/v1/webapi/query.proto";
 // no state, so the request carries the answer itself.
 service TableService {
   // Tabulate returns the answer's tables. A check run gives its findings and, when the response
-  // carries them, its verdicts and a count of them per rule. A query answer gives one table, and a
-  // query set one per answered query; a set with a query that failed is an invalid argument naming
+  // carries them, its verdicts and a count of them per rule. A diff gives one table, a row per change.
+  // A review gives its items and its summary. A query answer gives one table, and a query set one per
+  // answered query; a set with a query that failed is an invalid argument naming
   // it, since a missing table reads as a question that matched nothing.
   rpc Tabulate(TabulateRequest) returns (TabulateResponse);
 }
@@ -69,6 +72,12 @@ message TabulateRequest {
     CheckDesignResponse check = 1;
     RunQueryResponse query = 2;
     RunQueriesResponse query_set = 3;
+    // diff gives the "diff" table, one row per change with change_class naming its kind, components
+    // first, then nets by kind and name, then the unchanged nets when the diff asked for them.
+    DiffDesignsResponse diff = 6;
+    // review gives the "review" table, one row per checklist item in the checklist's order, and the
+    // one-row "review_summary".
+    Review review = 7;
   }
   // order_by sorts each table by these columns, in priority order. A name sorts ascending and a name
   // with a leading "-" descending: ["rule", "-outcome", "subjects"]. The sort is stable and empty

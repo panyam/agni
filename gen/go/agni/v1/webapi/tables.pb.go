@@ -259,6 +259,8 @@ type TabulateRequest struct {
 	//	*TabulateRequest_Check
 	//	*TabulateRequest_Query
 	//	*TabulateRequest_QuerySet
+	//	*TabulateRequest_Diff
+	//	*TabulateRequest_Review
 	Answer isTabulateRequest_Answer `protobuf_oneof:"answer"`
 	// order_by sorts each table by these columns, in priority order. A name sorts ascending and a name
 	// with a leading "-" descending: ["rule", "-outcome", "subjects"]. The sort is stable and empty
@@ -336,6 +338,24 @@ func (x *TabulateRequest) GetQuerySet() *RunQueriesResponse {
 	return nil
 }
 
+func (x *TabulateRequest) GetDiff() *DiffDesignsResponse {
+	if x != nil {
+		if x, ok := x.Answer.(*TabulateRequest_Diff); ok {
+			return x.Diff
+		}
+	}
+	return nil
+}
+
+func (x *TabulateRequest) GetReview() *Review {
+	if x != nil {
+		if x, ok := x.Answer.(*TabulateRequest_Review); ok {
+			return x.Review
+		}
+	}
+	return nil
+}
+
 func (x *TabulateRequest) GetOrderBy() []string {
 	if x != nil {
 		return x.OrderBy
@@ -368,11 +388,27 @@ type TabulateRequest_QuerySet struct {
 	QuerySet *RunQueriesResponse `protobuf:"bytes,3,opt,name=query_set,json=querySet,proto3,oneof"`
 }
 
+type TabulateRequest_Diff struct {
+	// diff gives the "diff" table, one row per change with change_class naming its kind, components
+	// first, then nets by kind and name, then the unchanged nets when the diff asked for them.
+	Diff *DiffDesignsResponse `protobuf:"bytes,6,opt,name=diff,proto3,oneof"`
+}
+
+type TabulateRequest_Review struct {
+	// review gives the "review" table, one row per checklist item in the checklist's order, and the
+	// one-row "review_summary".
+	Review *Review `protobuf:"bytes,7,opt,name=review,proto3,oneof"`
+}
+
 func (*TabulateRequest_Check) isTabulateRequest_Answer() {}
 
 func (*TabulateRequest_Query) isTabulateRequest_Answer() {}
 
 func (*TabulateRequest_QuerySet) isTabulateRequest_Answer() {}
+
+func (*TabulateRequest_Diff) isTabulateRequest_Answer() {}
+
+func (*TabulateRequest_Review) isTabulateRequest_Answer() {}
 
 type TabulateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -422,7 +458,7 @@ var File_agni_v1_webapi_tables_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_tables_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/tables.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1aagni/v1/webapi/query.proto\"e\n" +
+	"\x1bagni/v1/webapi/tables.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x19agni/v1/webapi/diff.proto\x1a\x1aagni/v1/webapi/query.proto\x1a\x1bagni/v1/webapi/review.proto\"e\n" +
 	"\vTableColumn\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12.\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1a.agni.v1.webapi.ColumnTypeR\x04type\x12\x12\n" +
@@ -432,11 +468,13 @@ const file_agni_v1_webapi_tables_proto_rawDesc = "" +
 	"\x05Table\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x125\n" +
 	"\acolumns\x18\x02 \x03(\v2\x1b.agni.v1.webapi.TableColumnR\acolumns\x12,\n" +
-	"\x04rows\x18\x03 \x03(\v2\x18.agni.v1.webapi.TableRowR\x04rows\"\xa1\x03\n" +
+	"\x04rows\x18\x03 \x03(\v2\x18.agni.v1.webapi.TableRowR\x04rows\"\x8e\x04\n" +
 	"\x0fTabulateRequest\x12;\n" +
 	"\x05check\x18\x01 \x01(\v2#.agni.v1.webapi.CheckDesignResponseH\x00R\x05check\x128\n" +
 	"\x05query\x18\x02 \x01(\v2 .agni.v1.webapi.RunQueryResponseH\x00R\x05query\x12A\n" +
-	"\tquery_set\x18\x03 \x01(\v2\".agni.v1.webapi.RunQueriesResponseH\x00R\bquerySet\x12\x19\n" +
+	"\tquery_set\x18\x03 \x01(\v2\".agni.v1.webapi.RunQueriesResponseH\x00R\bquerySet\x129\n" +
+	"\x04diff\x18\x06 \x01(\v2#.agni.v1.webapi.DiffDesignsResponseH\x00R\x04diff\x120\n" +
+	"\x06review\x18\a \x01(\v2\x16.agni.v1.webapi.ReviewH\x00R\x06review\x12\x19\n" +
 	"\border_by\x18\x04 \x03(\tR\aorderBy\x12S\n" +
 	"\fcolumn_types\x18\x05 \x03(\v20.agni.v1.webapi.TabulateRequest.ColumnTypesEntryR\vcolumnTypes\x1aZ\n" +
 	"\x10ColumnTypesEntry\x12\x10\n" +
@@ -479,6 +517,8 @@ var file_agni_v1_webapi_tables_proto_goTypes = []any{
 	(*CheckDesignResponse)(nil), // 7: agni.v1.webapi.CheckDesignResponse
 	(*RunQueryResponse)(nil),    // 8: agni.v1.webapi.RunQueryResponse
 	(*RunQueriesResponse)(nil),  // 9: agni.v1.webapi.RunQueriesResponse
+	(*DiffDesignsResponse)(nil), // 10: agni.v1.webapi.DiffDesignsResponse
+	(*Review)(nil),              // 11: agni.v1.webapi.Review
 }
 var file_agni_v1_webapi_tables_proto_depIdxs = []int32{
 	0,  // 0: agni.v1.webapi.TableColumn.type:type_name -> agni.v1.webapi.ColumnType
@@ -487,16 +527,18 @@ var file_agni_v1_webapi_tables_proto_depIdxs = []int32{
 	7,  // 3: agni.v1.webapi.TabulateRequest.check:type_name -> agni.v1.webapi.CheckDesignResponse
 	8,  // 4: agni.v1.webapi.TabulateRequest.query:type_name -> agni.v1.webapi.RunQueryResponse
 	9,  // 5: agni.v1.webapi.TabulateRequest.query_set:type_name -> agni.v1.webapi.RunQueriesResponse
-	6,  // 6: agni.v1.webapi.TabulateRequest.column_types:type_name -> agni.v1.webapi.TabulateRequest.ColumnTypesEntry
-	3,  // 7: agni.v1.webapi.TabulateResponse.tables:type_name -> agni.v1.webapi.Table
-	0,  // 8: agni.v1.webapi.TabulateRequest.ColumnTypesEntry.value:type_name -> agni.v1.webapi.ColumnType
-	4,  // 9: agni.v1.webapi.TableService.Tabulate:input_type -> agni.v1.webapi.TabulateRequest
-	5,  // 10: agni.v1.webapi.TableService.Tabulate:output_type -> agni.v1.webapi.TabulateResponse
-	10, // [10:11] is the sub-list for method output_type
-	9,  // [9:10] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	10, // 6: agni.v1.webapi.TabulateRequest.diff:type_name -> agni.v1.webapi.DiffDesignsResponse
+	11, // 7: agni.v1.webapi.TabulateRequest.review:type_name -> agni.v1.webapi.Review
+	6,  // 8: agni.v1.webapi.TabulateRequest.column_types:type_name -> agni.v1.webapi.TabulateRequest.ColumnTypesEntry
+	3,  // 9: agni.v1.webapi.TabulateResponse.tables:type_name -> agni.v1.webapi.Table
+	0,  // 10: agni.v1.webapi.TabulateRequest.ColumnTypesEntry.value:type_name -> agni.v1.webapi.ColumnType
+	4,  // 11: agni.v1.webapi.TableService.Tabulate:input_type -> agni.v1.webapi.TabulateRequest
+	5,  // 12: agni.v1.webapi.TableService.Tabulate:output_type -> agni.v1.webapi.TabulateResponse
+	12, // [12:13] is the sub-list for method output_type
+	11, // [11:12] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_tables_proto_init() }
@@ -505,11 +547,15 @@ func file_agni_v1_webapi_tables_proto_init() {
 		return
 	}
 	file_agni_v1_webapi_checks_proto_init()
+	file_agni_v1_webapi_diff_proto_init()
 	file_agni_v1_webapi_query_proto_init()
+	file_agni_v1_webapi_review_proto_init()
 	file_agni_v1_webapi_tables_proto_msgTypes[3].OneofWrappers = []any{
 		(*TabulateRequest_Check)(nil),
 		(*TabulateRequest_Query)(nil),
 		(*TabulateRequest_QuerySet)(nil),
+		(*TabulateRequest_Diff)(nil),
+		(*TabulateRequest_Review)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
