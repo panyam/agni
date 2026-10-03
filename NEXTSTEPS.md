@@ -13,7 +13,7 @@ Last pruned 2026-10-03, at `016973d3` (PR 850).
 
 ## At a glance
 
-Three missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
+Four missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
 skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
 links rather than here. Log each exercise run on the mission issue.
 
@@ -24,7 +24,7 @@ links rather than here. Log each exercise run on the mission issue.
 - **#844 `mission_real_board_tutorial`**, 0 of 4. Next is #564. The exercise has not run yet.
 - **#845 `mission_browser_review`**, 0 of 11. Next is #829. The exercise is a manual walk with no
   logged run yet.
-- **#851 `mission_public_demo`**, filed and NOT active yet (no worktree). The engine runs as wasm in
+- **#851 `mission_public_demo`**, active in the `docs` clone. The engine runs as wasm in
   the browser for a dropped KiCad or EDIF design, and a read-only server answers seeded boards too
   large for it. 0 of 9; start with #178 (revive the parked wasm build, #567), which unblocks #852.
 
