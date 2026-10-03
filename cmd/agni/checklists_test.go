@@ -42,6 +42,8 @@ func sharedChecklistTree(t *testing.T) string {
 	write("proj/designs/d/board.edn", string(design))
 	write("proj/designs/d/design.yaml", "name: d\ntitle: D\nentry: board.edn\n")
 	write("agni.yaml", "mounts:\n  t: "+root+"\n")
+	// A --mount or a mount table left by another test would shut this agni.yaml out.
+	freshWorkspace(t)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))

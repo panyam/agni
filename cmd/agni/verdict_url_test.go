@@ -23,8 +23,19 @@ const urlBaseFlag = "http://localhost:8080"
 // fixes the table for all of them.
 func withMount(t *testing.T) {
 	t.Helper()
-	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
+	freshWorkspace(t)
 	cliMountSpecs = []string{"demo=testdata/conformance"}
+}
+
+// freshWorkspace gives one test the mount table a fresh CLI process starts with: no --mount, and a
+// table not yet parsed, so its arguments mint their own mounts. It restores the previous table after.
+// A test whose output names a design by its path within a mount needs it, since an earlier test's
+// table changes that path (`review/can-broken.edn` for `can-broken.edn`), which read as a scoring
+// difference in agni issue 869.
+func freshWorkspace(t *testing.T) {
+	t.Helper()
+	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
+	cliMountSpecs = nil
 	cliWSOnce, cliWSVal, cliWSErr = sync.Once{}, nil, nil
 	t.Cleanup(func() {
 		cliMountSpecs, cliWSVal, cliWSErr = prevSpecs, prevVal, prevErr

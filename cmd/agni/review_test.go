@@ -82,6 +82,7 @@ func TestReviewCmdBoardPathNonBoard(t *testing.T) {
 // on the broken design, passes on the other) and a not-automated item stays not-automated in every
 // column.
 func TestReviewCmdMultiDesign(t *testing.T) {
+	freshWorkspace(t)
 	cmd := reviewCmd()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
