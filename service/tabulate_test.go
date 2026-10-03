@@ -130,3 +130,31 @@ func TestQueryTableTypesEntityColumnsAndAppendsProvenance(t *testing.T) {
 		t.Errorf("row = %q", got)
 	}
 }
+
+func TestReviewTablesKeepChecklistOrderAndNameEachFiring(t *testing.T) {
+	rv := &webapi.Review{
+		Results: &checkspb.CheckResults{Areas: []*checkspb.ReviewArea{{Name: "Power", Items: []*checkspb.ReviewItem{
+			{Id: "P10", Title: "bulk", Outcome: "fail", Findings: []*checkspb.Finding{
+				{Rule: "bulk-cap", Subject: &checkspb.Subject{Kind: "net", Ref: "VBUS"}},
+				{Rule: "bulk-cap", Subject: &checkspb.Subject{Kind: "pin", Ref: "U1", Pin: "3"}},
+			}},
+			{Id: "P2", Title: "abs max", Outcome: "not-applicable", Unmet: []*checkspb.UnmetDependency{{Manufacturer: "TI", Mpn: "TPS1", SpecAbsent: true}}},
+		}}}},
+		Summary: &webapi.ReviewSummary{Total: 2, Covered: 2, Answered: 1, Fail: 1},
+	}
+	out, err := TableService{}.Tabulate(context.Background(), &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Review{Review: rv}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tables := out.GetTables()
+	if len(tables) != 2 || tables[0].GetName() != "review" || tables[1].GetName() != "review_summary" {
+		t.Fatalf("tables = %v, want review then review_summary", tables)
+	}
+	want := "Power/P10/bulk/fail//bulk-cap=net:VBUS|bulk-cap=pin:U1.3/ Power/P2/abs max/not-applicable///TI TPS1 (no spec)"
+	if got := firsts(tables[0]); got != want {
+		t.Errorf("review = %q, want %q", got, want)
+	}
+	if got := firsts(tables[1]); got != "2/2/1/0/1/0" {
+		t.Errorf("review_summary = %q", got)
+	}
+}

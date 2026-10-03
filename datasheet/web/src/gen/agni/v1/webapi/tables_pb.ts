@@ -6,15 +6,19 @@ import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobu
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { CheckDesignResponse } from "./checks_pb";
 import { file_agni_v1_webapi_checks } from "./checks_pb";
+import type { DiffDesignsResponse } from "./diff_pb";
+import { file_agni_v1_webapi_diff } from "./diff_pb";
 import type { RunQueriesResponse, RunQueryResponse } from "./query_pb";
 import { file_agni_v1_webapi_query } from "./query_pb";
+import type { Review } from "./review_pb";
+import { file_agni_v1_webapi_review } from "./review_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/tables.proto.
  */
 export const file_agni_v1_webapi_tables: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS90YWJsZXMucHJvdG8SDmFnbmkudjEud2ViYXBpIlMKC1RhYmxlQ29sdW1uEgwKBG5hbWUYASABKAkSKAoEdHlwZRgCIAEoDjIaLmFnbmkudjEud2ViYXBpLkNvbHVtblR5cGUSDAoEa2luZBgDIAEoCSIZCghUYWJsZVJvdxINCgVjZWxscxgBIAMoCSJrCgVUYWJsZRIMCgRuYW1lGAEgASgJEiwKB2NvbHVtbnMYAiADKAsyGy5hZ25pLnYxLndlYmFwaS5UYWJsZUNvbHVtbhImCgRyb3dzGAMgAygLMhguYWduaS52MS53ZWJhcGkuVGFibGVSb3ci5wIKD1RhYnVsYXRlUmVxdWVzdBI0CgVjaGVjaxgBIAEoCzIjLmFnbmkudjEud2ViYXBpLkNoZWNrRGVzaWduUmVzcG9uc2VIABIxCgVxdWVyeRgCIAEoCzIgLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2VIABI3CglxdWVyeV9zZXQYAyABKAsyIi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVzcG9uc2VIABIQCghvcmRlcl9ieRgEIAMoCRJGCgxjb2x1bW5fdHlwZXMYBSADKAsyMC5hZ25pLnYxLndlYmFwaS5UYWJ1bGF0ZVJlcXVlc3QuQ29sdW1uVHlwZXNFbnRyeRpOChBDb2x1bW5UeXBlc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoDjIaLmFnbmkudjEud2ViYXBpLkNvbHVtblR5cGU6AjgBQggKBmFuc3dlciI5ChBUYWJ1bGF0ZVJlc3BvbnNlEiUKBnRhYmxlcxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLlRhYmxlKm0KCkNvbHVtblR5cGUSGwoXQ09MVU1OX1RZUEVfVU5TUEVDSUZJRUQQABIUChBDT0xVTU5fVFlQRV9URVhUEAESFAoQQ09MVU1OX1RZUEVfTkFNRRACEhYKEkNPTFVNTl9UWVBFX05VTUJFUhADMl0KDFRhYmxlU2VydmljZRJNCghUYWJ1bGF0ZRIfLmFnbmkudjEud2ViYXBpLlRhYnVsYXRlUmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlRhYnVsYXRlUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_checks, file_agni_v1_webapi_query]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS90YWJsZXMucHJvdG8SDmFnbmkudjEud2ViYXBpIlMKC1RhYmxlQ29sdW1uEgwKBG5hbWUYASABKAkSKAoEdHlwZRgCIAEoDjIaLmFnbmkudjEud2ViYXBpLkNvbHVtblR5cGUSDAoEa2luZBgDIAEoCSIZCghUYWJsZVJvdxINCgVjZWxscxgBIAMoCSJrCgVUYWJsZRIMCgRuYW1lGAEgASgJEiwKB2NvbHVtbnMYAiADKAsyGy5hZ25pLnYxLndlYmFwaS5UYWJsZUNvbHVtbhImCgRyb3dzGAMgAygLMhguYWduaS52MS53ZWJhcGkuVGFibGVSb3cixgMKD1RhYnVsYXRlUmVxdWVzdBI0CgVjaGVjaxgBIAEoCzIjLmFnbmkudjEud2ViYXBpLkNoZWNrRGVzaWduUmVzcG9uc2VIABIxCgVxdWVyeRgCIAEoCzIgLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2VIABI3CglxdWVyeV9zZXQYAyABKAsyIi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVzcG9uc2VIABIzCgRkaWZmGAYgASgLMiMuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZUgAEigKBnJldmlldxgHIAEoCzIWLmFnbmkudjEud2ViYXBpLlJldmlld0gAEhAKCG9yZGVyX2J5GAQgAygJEkYKDGNvbHVtbl90eXBlcxgFIAMoCzIwLmFnbmkudjEud2ViYXBpLlRhYnVsYXRlUmVxdWVzdC5Db2x1bW5UeXBlc0VudHJ5Gk4KEENvbHVtblR5cGVzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgOMhouYWduaS52MS53ZWJhcGkuQ29sdW1uVHlwZToCOAFCCAoGYW5zd2VyIjkKEFRhYnVsYXRlUmVzcG9uc2USJQoGdGFibGVzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuVGFibGUqbQoKQ29sdW1uVHlwZRIbChdDT0xVTU5fVFlQRV9VTlNQRUNJRklFRBAAEhQKEENPTFVNTl9UWVBFX1RFWFQQARIUChBDT0xVTU5fVFlQRV9OQU1FEAISFgoSQ09MVU1OX1RZUEVfTlVNQkVSEAMyXQoMVGFibGVTZXJ2aWNlEk0KCFRhYnVsYXRlEh8uYWduaS52MS53ZWJhcGkuVGFidWxhdGVSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuVGFidWxhdGVSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_checks, file_agni_v1_webapi_diff, file_agni_v1_webapi_query, file_agni_v1_webapi_review]);
 
 /**
  * @generated from message agni.v1.webapi.TableColumn
@@ -125,6 +129,24 @@ export type TabulateRequest = Message<"agni.v1.webapi.TabulateRequest"> & {
      */
     value: RunQueriesResponse;
     case: "querySet";
+  } | {
+    /**
+     * diff gives the "diff" table, one row per change with change_class naming its kind, components
+     * first, then nets by kind and name, then the unchanged nets when the diff asked for them.
+     *
+     * @generated from field: agni.v1.webapi.DiffDesignsResponse diff = 6;
+     */
+    value: DiffDesignsResponse;
+    case: "diff";
+  } | {
+    /**
+     * review gives the "review" table, one row per checklist item in the checklist's order, and the
+     * one-row "review_summary".
+     *
+     * @generated from field: agni.v1.webapi.Review review = 7;
+     */
+    value: Review;
+    case: "review";
   } | { case: undefined; value?: undefined };
 
   /**
@@ -223,8 +245,9 @@ export const ColumnTypeSchema: GenEnum<ColumnType> = /*@__PURE__*/
 export const TableService: GenService<{
   /**
    * Tabulate returns the answer's tables. A check run gives its findings and, when the response
-   * carries them, its verdicts and a count of them per rule. A query answer gives one table, and a
-   * query set one per answered query; a set with a query that failed is an invalid argument naming
+   * carries them, its verdicts and a count of them per rule. A diff gives one table, a row per change.
+   * A review gives its items and its summary. A query answer gives one table, and a query set one per
+   * answered query; a set with a query that failed is an invalid argument naming
    * it, since a missing table reads as a question that matched nothing.
    *
    * @generated from rpc agni.v1.webapi.TableService.Tabulate

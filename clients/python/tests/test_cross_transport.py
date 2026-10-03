@@ -176,6 +176,11 @@ CASES: List[Case] = [
     # this also holds the two answers to one projection.
     Case("TableService/Tabulate", lambda c: c.tabulate(check=c.check_design(uri=DESIGN), order_by=["rule", "-subject"])),
     Case("TableService/Tabulate", lambda c: c.tabulate(query_set=c.run_queries(uri=DESIGN, set=_SET), order_by=["-provenance"])),
+    Case(
+        "TableService/Tabulate",
+        lambda c: c.tabulate(diff=c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn", include_equal=True)),
+    ),
+    Case("TableService/Tabulate", lambda c: c.tabulate(review=c.create_review(design_uri=DESIGN, manifest=_MANIFEST, overlay=_LIB))),
     # The design itself, whole or in parts (agni issue 836); unmasked it is the summary alone.
     Case("DesignService/GetDesign", lambda c: c.get_design(uri=DESIGN)),
     Case("DesignService/GetDesign", lambda c: c.get_design(uri=DESIGN, read_mask={"paths": ["design"]})),

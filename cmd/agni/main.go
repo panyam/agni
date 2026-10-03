@@ -815,7 +815,7 @@ func reviewCmd() *cobra.Command {
 	var ratifiedFloor float64
 	var failOnOutcome string
 	var minAnswered int
-	var reviewLibs []string
+	var reviewLibs, orderBy []string
 	cmd := &cobra.Command{
 		Use:   "review <file>...",
 		Short: "Run a review checklist (manifest) over one or more designs and report per-item outcomes",
@@ -991,6 +991,9 @@ func reviewCmd() *cobra.Command {
 				case format == "json":
 					// The Review the rpc returned, summary included (C31, agni issue 734).
 					out, err = protoJSON(reviews[0])
+				case format == "csv":
+					// The review table the TableService projects, one row per item (agni issue 862).
+					return writeTableCSV(cmd.OutOrStdout(), service.ReviewTables(reviews[0])[0], orderBy)
 				case format == "html":
 					// The checklist page, items in the manifest's order with one row per question and
 					// every finding per item (markdown caps the Detail cell at three).
@@ -1002,7 +1005,7 @@ func reviewCmd() *cobra.Command {
 				case format == "" || format == "markdown":
 					out = review.RenderMarkdown(rep)
 				default:
-					return fmt.Errorf("review: unknown --format %q (want markdown, json or html)", format)
+					return fmt.Errorf("review: unknown --format %q (want markdown, json, csv or html)", format)
 				}
 			} else {
 				agg := review.Aggregate{Manifest: man.Name, Reports: reports}
@@ -1019,6 +1022,9 @@ func reviewCmd() *cobra.Command {
 					// One page addresses one design, since its title, content hash and every link name
 					// that design.
 					return fmt.Errorf("review --format html takes one design (got %d); run it once per design", len(args))
+				case format == "csv":
+					// A csv is one table, and a rollup is one per design.
+					return fmt.Errorf("review --format csv takes one design (got %d); run it once per design", len(args))
 				default:
 					return fmt.Errorf("review: unknown --format %q (want markdown, json or html)", format)
 				}
@@ -1041,7 +1047,8 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&boardPath, "board-path", "", "a board-geometry file (.kicad_pcb / IPC-2581 .xml|.cvg) attached to the netlist design so board-tier DRC items resolve pass/fail instead of not-applicable")
 	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/needs-data/computed-n-a/n-a/not-automated) instead of the per-item report. Markdown only, so it refuses an explicit --format; the --format html page already carries the same rollup in its header")
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
-	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped), json (full findings, for tooling), or html (the checklist as a self-contained page, every finding per item)")
+	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped), json (full findings, for tooling), html (the checklist as a self-contained page, every finding per item), or csv (one row per item, the table the TableService projects)")
+	cmd.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=outcome,id. csv only (agni issue 862)")
 	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
 	outFileFlag(cmd, &reviewOutPath)
@@ -1131,6 +1138,7 @@ func newEngine(overlay []profiles.Profile, extra []check.RuleSource, more ...agn
 
 func diffCmd() *cobra.Command {
 	var format string
+	var orderBy []string
 	var renameApprox, includeEqual bool
 	c := &cobra.Command{
 		Use:   "diff <old> <new>",
@@ -1140,8 +1148,19 @@ func diffCmd() *cobra.Command {
 			// json is the message DiffDesigns returns, so it goes through the service (C31, agni
 			// issues 737 and 817): the CLI is a client of the rpc rather than a second composition
 			// of it, and the sheet and placement maps the service fills are in its output too.
+			if len(orderBy) > 0 && format != "csv" {
+				return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
+			}
 			if format == "json" {
 				return diffViaService(cmd, args[0], args[1], renameApprox, includeEqual)
+			}
+			// csv is the diff table the TableService projects from the same response (agni 862).
+			if format == "csv" {
+				resp, err := diffResponse(cmd, args[0], args[1], renameApprox, includeEqual)
+				if err != nil {
+					return err
+				}
+				return writeDiffCSV(cmd.OutOrStdout(), resp, orderBy)
 			}
 			a, err := readDesign(args[0])
 			if err != nil {
@@ -1155,9 +1174,6 @@ func diffCmd() *cobra.Command {
 			opts.Enabled = renameApprox
 			rep := diff.Designs(a, b, opts)
 			w := cmd.OutOrStdout()
-			if format == "csv" {
-				return writeDiffCSV(w, rep, includeEqual)
-			}
 			fmt.Fprintf(w, "diff %s -> %s\n\n", args[0], args[1])
 			fmt.Fprint(w, rep.Render(diffListLimit))
 			if includeEqual {
@@ -1177,6 +1193,7 @@ func diffCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&format, "format", "text",
 		"output format: text (human summary), json (the DiffDesignsResponse wire shape the web API serves), or csv (one row per change)")
+	c.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=change_class,subject. A column sorts by its type, so subject puts R2 before R10. csv only (agni issue 862)")
 	c.Flags().BoolVar(&includeEqual, "include-equal", false,
 		"also report the nets that did not change: as kind equal in --format json, as net-equal rows in csv, and as a count in text. Off by default")
 	c.Flags().BoolVar(&renameApprox, "rename-approx", false,
