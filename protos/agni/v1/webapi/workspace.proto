@@ -26,6 +26,14 @@ service WorkspaceService {
   // mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
   // subdirectories holding nothing the caller can open, at any depth.
   rpc ListDir(ListDirRequest) returns (ListDirResponse);
+
+  // ListDesignFiles lists every file a design's analysis reads, so a client that analyses it
+  // somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
+  // issue 853). That is the design's folder, its project's descriptor, and every config directory
+  // the project names. Each file is then fetched by its path under the server's read-only
+  // `/raw/<mount>/<path>` route. A set larger than the server's bound is refused with its size,
+  // since a board that big is what the server's own engine is for.
+  rpc ListDesignFiles(ListDesignFilesRequest) returns (ListDesignFilesResponse);
 }
 
 // Mount is one configured root folder. Clients reference it by name in later calls;
@@ -129,4 +137,28 @@ message ListDirResponse {
   // entries are the directory's subdirectories and supported files, directories first,
   // each group sorted by name.
   repeated DirEntry entries = 1;
+}
+
+message ListDesignFilesRequest {
+  // uri names the design: its folder, its entry, a declared companion, or a loose file in a mount.
+  string uri = 1;
+}
+
+message ListDesignFilesResponse {
+  // mount is the mount every path below is relative to. A client mounts the files under this name,
+  // so the design keeps its URI whichever engine reads it.
+  string mount = 1;
+  // files are the design's files, sorted by path, each listed once.
+  repeated DesignFile files = 2;
+  // total_size is the sum of the files' sizes in bytes.
+  int64 total_size = 3;
+}
+
+// DesignFile is one file a design's analysis reads.
+message DesignFile {
+  // path is relative to the mount, slash-separated.
+  string path = 1;
+  int64 size = 2;
+  // sha256 is the file's content hash, "sha256:<hex>", so a client can tell a cached copy is current.
+  string sha256 = 3;
 }

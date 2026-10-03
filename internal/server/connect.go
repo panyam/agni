@@ -77,6 +77,14 @@ func (a *Workspace) ListDir(ctx context.Context, req *connect.Request[webapi.Lis
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Workspace) ListDesignFiles(ctx context.Context, req *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error) {
+	resp, err := a.svc.ListDesignFiles(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Design adapts service.DesignService to the generated Connect handler interface.
 type Design struct {
 	webapiconnect.UnimplementedDesignServiceHandler

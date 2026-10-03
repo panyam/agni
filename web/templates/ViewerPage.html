@@ -5,7 +5,7 @@
 {{ end }}
 
 {{ define "Body" }}
-<div class="app">
+<div class="app" data-engine="{{ .Engine }}">
   <div class="sheet-nav-bar">
     <!-- The way back. A design is the deepest page in the app and the only one you can reach by a
          shared link, so it is the page most likely to be somebody's first, and it had no route out

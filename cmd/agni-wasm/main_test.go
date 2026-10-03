@@ -9,8 +9,6 @@ import (
 	"strings"
 	"syscall/js"
 	"testing"
-
-	"github.com/panyam/agni/fshost"
 )
 
 // This runs under Node (`make wasm-test`), as the browser's worker will: the tutorial project goes in
@@ -19,7 +17,7 @@ import (
 // needs a JavaScript host: that the exports exist, take bytes, and answer without deadlocking.
 
 func TestEngineAnswersThroughTheJSExports(t *testing.T) {
-	s := &state{mounts: map[string]fshost.Mount{}}
+	s := &state{mounts: map[string]map[string][]byte{}}
 	s.recompose()
 	if s.err != nil {
 		t.Fatalf("compose: %v", s.err)

@@ -6,7 +6,7 @@
 //
 // It exports three functions on the global object:
 //
-//	agniMount(name, files)               replaces mount `name` with files, a {path: Uint8Array} object
+//	agniMount(name, files)               adds files, a {path: Uint8Array} object, to mount `name`
 //	agniUnmount(name)                    removes a mount
 //	agniHTTP(method, url, headers, body) one HTTP request, answered as a Promise of {status, headers, body}
 //
@@ -29,10 +29,11 @@ import (
 )
 
 // state is the mount table and the engine composed over it. A mount change recomposes the engine, so
-// no service holds a project tree that has since been replaced.
+// no service holds a project tree that has since been replaced. A mount accumulates files: the page
+// brings each design in as it is first named (agni issue 853), and two designs in one mount share it.
 type state struct {
 	mu     sync.Mutex
-	mounts map[string]fshost.Mount
+	mounts map[string]map[string][]byte
 	engine *wasmengine.Engine
 	err    error
 }
@@ -45,7 +46,7 @@ func (s *state) recompose() {
 	sort.Strings(names)
 	ms := make([]fshost.Mount, 0, len(names))
 	for _, n := range names {
-		ms = append(ms, s.mounts[n])
+		ms = append(ms, fshost.Mount{Name: n, FS: fshost.MemFS(s.mounts[n])})
 	}
 	s.engine, s.err = wasmengine.New(ms...)
 }
@@ -75,7 +76,14 @@ func (s *state) mount(this js.Value, args []js.Value) any {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.mounts[name] = fshost.Mount{Name: name, FS: fshost.MemFS(files)}
+	m := s.mounts[name]
+	if m == nil {
+		m = map[string][]byte{}
+		s.mounts[name] = m
+	}
+	for p, b := range files {
+		m[p] = b
+	}
 	s.recompose()
 	if s.err != nil {
 		return jsError(s.err.Error())
@@ -154,7 +162,7 @@ func rejected(msg string) js.Value {
 }
 
 func main() {
-	s := &state{mounts: map[string]fshost.Mount{}}
+	s := &state{mounts: map[string]map[string][]byte{}}
 	s.recompose()
 	if s.err != nil {
 		// A build missing a registration seam composes nothing, and saying so beats an engine that
