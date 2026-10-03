@@ -46,6 +46,15 @@ def plan(client: Client, base: str, head: str) -> List[Tuple[str, Callable[[], L
         )
         return [(name, to_rows(t)) for name, t in table_sheets(client.tabulate(query_set=client.run_queries(uri=head, set=audit)))]
 
+    def review():
+        # The project's own default checklist, the first ListChecklists returns, run on the head.
+        lists = client.list_checklists(design_uri=head)
+        if not lists.checklists:
+            raise Missing(f"{head} belongs to no project with a checklist")
+        rv = client.create_review(design_uri=head, manifest=lists.checklists[0].manifest)
+        names = {"review": "Review", "review_summary": "Review summary"}
+        return [(n, to_rows(t)) for n, t in table_sheets(client.tabulate(review=rv), names)]
+
     # One check, tabulated once, answers the findings and the verdicts tabs.
     check = None
 
@@ -63,7 +72,7 @@ def plan(client: Client, base: str, head: str) -> List[Tuple[str, Callable[[], L
             for n, t in table_sheets(client.tabulate(diff=client.diff_designs(a_uri=base, b_uri=head, include_equal=True)), {"diff": "Diff"})
         ]),
         ("Audit", audit),
-        ("Review", missing("#859 (ListChecklists, so the review runs the project's own checklist)")),
+        ("Review", review),
         ("Findings", lambda: checked("Findings")),
         ("Verdicts", lambda: checked("Verdicts")),
     ]
