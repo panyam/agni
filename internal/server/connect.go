@@ -200,6 +200,23 @@ func (a *Diff) DiffDesigns(ctx context.Context, req *connect.Request[webapi.Diff
 	return connect.NewResponse(resp), nil
 }
 
+// Table adapts service.TableService to the generated Connect handler interface.
+type Table struct {
+	webapiconnect.UnimplementedTableServiceHandler
+	svc service.TableService
+}
+
+// NewTable wraps the projection service for Connect. It holds no state, so it takes none.
+func NewTable() *Table { return &Table{} }
+
+func (a *Table) Tabulate(ctx context.Context, req *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error) {
+	resp, err := a.svc.Tabulate(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Query adapts service.QueryService to the generated Connect handler interface.
 type Query struct {
 	webapiconnect.UnimplementedQueryServiceHandler

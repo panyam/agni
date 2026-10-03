@@ -7,7 +7,7 @@
 The tables go to agni as ONE query set, so the design is read once for all of them, whether the
 transport is the CLI (no --server) or a server started with the same --mount. The layout of each
 sheet (tab names, which tables) is this script's business; agni answers the questions, and
-`set_sheets` and `tables_to_xlsx` lay each answer out as a sheet.
+`Client.tabulate` turns each answer into the tables agni projects, and `tables_to_xlsx` writes them.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
-from agni import Client, CliTransport, ConnectTransport, set_sheets, tables_to_xlsx
+from agni import Client, CliTransport, ConnectTransport, table_sheets, tables_to_xlsx
 from agni.v1.webapi import query_pb2
 
 TUTORIAL = Path(__file__).resolve().parents[3] / "examples" / "tutorial-project"
@@ -36,8 +36,9 @@ def build(client: Client, design: str, out: str) -> List[str]:
         title="Netlist audit",
         queries=[query_pb2.NamedQuery(name=name, query=q) for name, q in TABLES],
     )
-    sheets = set_sheets(client.run_queries(uri=design, set=audit))
-    sheets.append(("Findings", client.check_design(uri=design)))
+    sheets = table_sheets(client.tabulate(query_set=client.run_queries(uri=design, set=audit)))
+    checked = table_sheets(client.tabulate(check=client.check_design(uri=design)), {"findings": "Findings"})
+    sheets.append(checked[0])
     tables_to_xlsx(out, sheets)
     return [name for name, _ in sheets]
 

@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/query.proto";
+
+// This file: TableService, the one projection of an answer into rows (agni issue 862).
+//
+// An answer is a wire message: a check run, a query answer, a diff, a review. Turning one into rows
+// decides which fields a reader needs, how an entity is spelled and how rows sort, and that is the
+// engine's call, made once. Writing rows as csv, xlsx, markdown or html is an encoding, and it stays
+// with whoever writes the bytes. So every table agni emits, `check --format csv` and a workbook built
+// by a client alike, carries the rows this service projects, and no client derives its own.
+
+// TableService projects an answer the caller already holds into tables. It reads no design and keeps
+// no state, so the request carries the answer itself.
+service TableService {
+  // Tabulate returns the answer's tables. A check run gives its findings and, when the response
+  // carries them, its verdicts and a count of them per rule. A query answer gives one table, and a
+  // query set one per answered query; a set with a query that failed is an invalid argument naming
+  // it, since a missing table reads as a question that matched nothing.
+  rpc Tabulate(TabulateRequest) returns (TabulateResponse);
+}
+
+// ColumnType says how a column's cells compare when rows are ordered by it. Cells are always strings
+// on the wire; the type decides the ordering and nothing else.
+enum ColumnType {
+  // Unspecified orders as text.
+  COLUMN_TYPE_UNSPECIFIED = 0;
+  // Text compares as plain strings.
+  COLUMN_TYPE_TEXT = 1;
+  // Name compares with its digit runs read as numbers, so R2 sorts before R10 and U10.3 before U10.12.
+  // A column naming a design entity (a net, a part, a pin) is one.
+  COLUMN_TYPE_NAME = 2;
+  // Number compares numerically. A cell that does not parse as a number sorts after every one that
+  // does.
+  COLUMN_TYPE_NUMBER = 3;
+}
+
+message TableColumn {
+  string name = 1;
+  ColumnType type = 2;
+  // kind is the entity kind every cell of the column names ("net", "component"), empty when the
+  // column names no entity or names different kinds on different rows.
+  string kind = 3;
+}
+
+message TableRow {
+  repeated string cells = 1;
+}
+
+// Table is one projected table. Cells are raw, so an encoder applies its own escaping (a csv writer
+// guards against spreadsheet formulas; markdown escapes pipes).
+message Table {
+  // name is the table's role in the answer ("findings", "verdicts", a query set entry's name).
+  string name = 1;
+  repeated TableColumn columns = 2;
+  repeated TableRow rows = 3;
+}
+
+message TabulateRequest {
+  // answer is what to project. The caller sends back the message an analysis rpc returned.
+  oneof answer {
+    // check gives the "findings" table and, when verdicts are present, the "verdicts" table and the
+    // "verdicts_by_rule" count of each outcome per rule.
+    CheckDesignResponse check = 1;
+    RunQueryResponse query = 2;
+    RunQueriesResponse query_set = 3;
+  }
+  // order_by sorts each table by these columns, in priority order. A name sorts ascending and a name
+  // with a leading "-" descending: ["rule", "-outcome", "subjects"]. The sort is stable and empty
+  // cells sort last. A table lacking a named column ignores that entry, and a name no table carries
+  // is an invalid argument. Empty keeps the order the answer arrived in.
+  repeated string order_by = 4;
+  // column_types overrides how a named column orders, for a column the projection could not type,
+  // such as a query's count.
+  map<string, ColumnType> column_types = 5;
+}
+
+message TabulateResponse {
+  repeated Table tables = 1;
+}

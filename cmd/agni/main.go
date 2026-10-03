@@ -90,7 +90,7 @@ func rootCmd() *cobra.Command {
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched). Defaults to "+
 			envSymbolPath+" when unset.")
-	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), openCmd(), nativeCmd(), queryCmd(), traceCmd(), reviewCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd())
+	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), openCmd(), nativeCmd(), queryCmd(), traceCmd(), reviewCmd(), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd(), tabulateCmd())
 	return root
 }
 
@@ -445,6 +445,7 @@ func checkCmd() *cobra.Command {
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
 	var verdicts bool
 	var serverVal, outPath string
+	var orderBy []string
 	var srvSpec serverSpec
 	cmd := &cobra.Command{
 		Use:   "check <file>",
@@ -480,6 +481,9 @@ func checkCmd() *cobra.Command {
 				verdicts = true
 			default:
 				return fmt.Errorf("unknown --format %q (want: text, json, csv, markdown, report, html)", format)
+			}
+			if len(orderBy) > 0 && format != "csv" {
+				return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
 			}
 			switch failOn {
 			case "", "error", "warning", "info":
@@ -650,7 +654,7 @@ func checkCmd() *cobra.Command {
 					meta.Generated = time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
 					switch format {
 					case "csv":
-						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts(), meta); err != nil {
+						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts(), meta, orderBy...); err != nil {
 							return err
 						}
 					case "json":
@@ -676,7 +680,7 @@ func checkCmd() *cobra.Command {
 						return err
 					}
 				case "csv":
-					if err := writeCheckCSV(cmd.OutOrStdout(), resp.GetFindings()); err != nil {
+					if err := writeCheckCSV(cmd.OutOrStdout(), resp.GetFindings(), orderBy...); err != nil {
 						return err
 					}
 				default:
@@ -697,6 +701,7 @@ func checkCmd() *cobra.Command {
 	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
 	outFileFlag(cmd, &outPath)
+	cmd.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so subject puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")

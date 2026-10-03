@@ -24,6 +24,7 @@ from agni.v1.webapi import (  # noqa: F401
     project_pb2,
     query_pb2,
     review_pb2,
+    tables_pb2,
     workspace_pb2,
 )
 
@@ -36,6 +37,7 @@ _MODULES = (
     project_pb2,
     query_pb2,
     review_pb2,
+    tables_pb2,
     workspace_pb2,
 )
 

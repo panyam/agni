@@ -9,7 +9,8 @@ import (
 )
 
 // API is the set of services one host serves over Connect. `agni serve` and the wasm engine both
-// register through it, so the two cannot serve different lists of handlers.
+// register through it, so the two cannot serve different lists of handlers. TableService holds no
+// state, so it has no field here and every host serves it.
 type API struct {
 	Workspace *service.WorkspaceService
 	Project   *service.ProjectService
@@ -34,6 +35,7 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 	add(webapiconnect.NewDesignServiceHandler(NewDesign(a.Design)))
 	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queryOpts...))
 	add(webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff)))
+	add(webapiconnect.NewTableServiceHandler(NewTable()))
 	add(webapiconnect.NewQueryServiceHandler(NewQuery(a.Query), queryOpts...))
 	add(webapiconnect.NewReviewServiceHandler(NewReview(a.Review), queryOpts...))
 	return paths

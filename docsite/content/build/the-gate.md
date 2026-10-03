@@ -96,6 +96,7 @@ Where a constraint's test lives follows from what it READS, and there are three 
 | the package graph, or the module | `deps_test.go` at the repo root | C13's embedding surface, C17's reader tier, C18's `go.mod`, C30's rule primitive |
 | one package's own rule | a test beside that package | C13's transport clause in `service/transport_guard_test.go`, C29 in `core/facts`, C19 as `hack/ir_model_check.sh` |
 | a line of source somewhere nobody would think to guard | `internal/constraints` | C6, C12, C20, C22, C24, C25, C28, C33 |
+| what two surfaces print for one answer | a parity test beside the surface | C35 in `cmd/agni/tabulate_test.go`, and its Python ratchet |
 
 The other thirteen are REVIEW questions and say so, and C15 is a tombstone merged into C17. C5 turns
 on whether an ingestion path was approved, which is a fact about a conversation. C21 forbids
