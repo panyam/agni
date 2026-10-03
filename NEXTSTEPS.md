@@ -9,43 +9,47 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-03, at `396cfe12` (PR 838).
+Last pruned 2026-10-03, at `e5fa07df` (PR 841).
 
 ## At a glance
 
 Three missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
 skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
-links rather than here.
+links rather than here. Log each exercise run on the mission issue.
 
-- **#843 `mission_revision_audit`**, one workbook comparing two revisions and auditing the new one.
-  Next is #842 (`make exercise-revision-audit`), then #825, #818, #819, #822.
-- **#844 `mission_real_board_tutorial`**, the tutorial ladder on the Jetson carrier. Next is #564.
-- **#845 `mission_browser_review`**, checklist to saved report without leaving the viewer. Next is
-  #829.
+- **#843 `mission_revision_audit`**, 2 of 9 tickets closed. Exercise `make exercise-revision-audit`
+  last ran at `e5fa07df`: the query and findings tabs build, and Diff, Review and Verdicts are listed
+  as missing until #822. Next ready is #819, #822, #825 and #848, all P1.
+- **#844 `mission_real_board_tutorial`**, 0 of 4. Next is #564. The exercise has not run yet.
+- **#845 `mission_browser_review`**, 0 of 11. Next is #829. The exercise is a manual walk with no
+  logged run yet.
 
 ## Open, ranked
 
-1. **#825, a docsite capture whose command fails renders as an empty block and the gate stays
-   green.** Rung 7 shipped this way. Its comment adds the `capture: none` case, which should demand
-   exit 0 too. Small, and every later docs or `demofeature` PR leans on captures being right.
-2. **#829, the viewer's checklist picker misses checklists a project inherits through `extends`.**
+1. **#848, declare a design's revisions each with its own board.** Found by the revision-audit
+   exercise: `gateway-rev-b.edn` is an undeclared sibling, so it reads with no board and 13 of rev
+   A's 28 findings (copper-clearance, track-width) silently do not run. Needs a
+   `gateway-rev-b.kicad_pcb` fixture carrying R4 and R5, which restamps the tutorial captures.
+2. **#822, the `agni.tables` diff, review and verdict sheets.** #818 landed (PR 841), so the diff
+   sheet can use the `equal` kind. Update the Diff line in `revision_audit.py`'s `plan()` from
+   `missing` to the real builder, which still cites #818.
+3. **#825, a docsite capture whose command fails renders as an empty block and the gate stays
+   green.** Its comment adds the `capture: none` case. #823's checked summary capture leans on it.
+4. **#829, the viewer's checklist picker misses checklists a project inherits through `extends`.**
    `agni review` resolves the chain and `ResolveDesign` does not. The issue has two fix shapes.
-3. **Three small real bugs: #755 (`CheckService.fallback` is never assigned), #756 (a nil check
-   after the call it guards), #605 (KiCad accepts `[hi:lo]` as a bus, which absorbed #758).** #755
-   matters most, and PR 838's coverage rpc now passes that unassigned fallback like every other rpc.
-4. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Every
-   blocker is closed. Decide the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan
-   is the latest comment on #564. Re-run rung 13 in the CLI and the panel before editing it.
-5. **The `demofeature` track, #818 to #823.** #817 is done (PR 832). #818 (unchanged nets in a
-   diff) comes before the #822/#823 audit workbook it feeds. Each PR adds a docsite capture.
-6. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
+5. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
+   the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
+   #564. Re-run rung 13 in the CLI and the panel before editing it.
+6. **Three small real bugs off any mission: #755 (`CheckService.fallback` is never assigned), #756
+   (a nil check after the call it guards), #605 (KiCad accepts `[hi:lo]` as a bus, which absorbed
+   #758).** #755 matters most.
+7. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
-7. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
+8. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
    corrections comment before writing any code.
-8. **#356 (the run-wide highlight floods big boards), #485 (review report links built from findings,
-   not verdicts), #634 (`agni query` has no viewer link), #736 (`GetLayoutReport` skips
-   `TierURIs`).** The Python client's cross-transport test declares #736 field by field, so its fix
-   also deletes that declaration in `clients/python/tests/test_cross_transport.py`.
+9. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
+   test declares #736 field by field, so its fix also deletes that declaration in
+   `clients/python/tests/test_cross_transport.py`.
 
 Later work is #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380,
 #456, #374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group,

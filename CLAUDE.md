@@ -413,6 +413,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   read exactly as named**, which is why companions are declared file by file rather than
   inferred. A later revision of the netlist sits in the same folder and is a legitimate analysis
   source, so inferring would turn a diff of two revisions into a diff of one against itself.
+  **The cost is that a later revision reads with NO board**, so its board-tier rules (copper-clearance,
+  track-width) do not run and nothing says so. On the tutorial, rev B shows 11 findings to rev A's 28,
+  and 13 of the 17 that vanish are those rules not running. Compare a revision's findings only against
+  a read with the same tiers, until #848 lets a descriptor declare each revision's own board.
 - **A `.eds` is dual-capability, and its netlist is NOT the `.edn`'s.** An EDIF schematic export
   registers both a `Design` and a `Geometry` reader, because it carries nets joining portRefs in the
   same grammar, so every tool will parse it as a netlist without complaint. It counts DRAWN instances
@@ -481,6 +485,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   never elides a fail or an inconclusive. One sample board went from 1977 lines to 799 with all 150
   actionable rows intact. A long list is a worse read, but a hidden failure is a wrong answer. csv and
   html are untouched, because a spreadsheet and a scrollable page have no reason to fold anything.
+- **The Python client is installed only in `clients/python/.venv`** (`make python-venv`), so a bare
+  `python3 examples/…` fails with `No module named 'agni'`. Its CLI transport runs whatever `agni` is
+  on PATH unless given `--agni` (or `AGNI_BIN`), which is the stale-binary trap above. A make target
+  that runs a client script uses `$(PY_VENV)/bin/python` and `--agni $(CURDIR)/bin/agni`, as
+  `python-test` and `exercise-revision-audit` do.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
   and `examples/tutorial-project/README.md` for the fixture the docsite tutorial runs on).
 - **`AGNI_EXAMPLE_DESIGN` points every example at a board this repo cannot carry.** Each example asks
@@ -751,7 +760,9 @@ and the command that exercises it. Several are active at once, one per worktree:
 mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
-each mission's next ready ticket.
+each mission's next ready ticket. Each mission has an exercise in its issue body, a make target where one exists
+(`make exercise-revision-audit`), and after a mission PR merges, run it and log the result as a
+comment on the mission issue.
 
 ## Working in this repo
 
