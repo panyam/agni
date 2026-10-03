@@ -181,6 +181,17 @@ error rather than a silent global analysis tier.
 
 </details>
 
+### `checklists <design>`
+
+List the review checklists a design's project declares, in the order the project writes them, with
+the checklists it inherits through `extends` first. The first is the one `agni review` runs when no
+`--checklist` is named, and the viewer's picker offers the same list. A design in no project, and a
+project that declares none, each say so, since the fix differs.
+
+| flag | what it does |
+|---|---|
+| `--format <fmt>` | `text` (one checklist per line, the default marked) or `json` (the `ListChecklistsResponse` the `ListChecklists` rpc returns, each checklist carrying its manifest) |
+
 ### `start <design-file> [dir]`
 
 Scaffold a review project around an existing design file, so the commands above can stop taking

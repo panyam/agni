@@ -985,7 +985,17 @@ export class ViewerPresenter {
   // hiding a real one costs a user their own file.
   private async pickerChoices(): Promise<{ conventions: ChecklistOption[]; checklists: ChecklistOption[] }> {
     const cfg = this.projectResolved?.project?.config;
-    const declared = cfg?.checklists ?? [];
+    let declared = cfg?.checklists ?? [];
+    // The descriptor's own config misses what the project inherits through extends, so the checklists
+    // come from ListChecklists, which answers from the composed config the CLI's review reads (agni
+    // issues 829, 859). A failure keeps the descriptor's own list rather than offering nothing.
+    if (this.projectResolved?.project && this.reviews) {
+      try {
+        declared = (await this.reviews.listChecklists({ designUri: artifactUri(this.mount, this.path) })).checklists;
+      } catch {
+        // the descriptor's own checklists stand
+      }
+    }
     if (cfg && (cfg.conventions || declared.length > 0)) {
       return { conventions: [], checklists: projectChecklistOptions(declared) };
     }
