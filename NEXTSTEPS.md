@@ -11,6 +11,18 @@ file. That material stays in gitignored `HANDOFF*.md` notes.
 
 Last pruned 2026-10-03, at `396cfe12` (PR 838).
 
+## At a glance
+
+Three missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
+skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
+links rather than here.
+
+- **#843 `mission_revision_audit`**, one workbook comparing two revisions and auditing the new one.
+  Next is #842 (`make exercise-revision-audit`), then #825, #818, #819, #822.
+- **#844 `mission_real_board_tutorial`**, the tutorial ladder on the Jetson carrier. Next is #564.
+- **#845 `mission_browser_review`**, checklist to saved report without leaving the viewer. Next is
+  #829.
+
 ## Open, ranked
 
 1. **#825, a docsite capture whose command fails renders as an empty block and the gate stays
@@ -19,8 +31,8 @@ Last pruned 2026-10-03, at `396cfe12` (PR 838).
 2. **#829, the viewer's checklist picker misses checklists a project inherits through `extends`.**
    `agni review` resolves the chain and `ResolveDesign` does not. The issue has two fix shapes.
 3. **Three small real bugs: #755 (`CheckService.fallback` is never assigned), #756 (a nil check
-   after the call it guards), #758 (KiCad accepts `[hi:lo]` as a bus).** #755 matters most, and
-   PR 838's coverage rpc now passes that unassigned fallback like every other rpc.
+   after the call it guards), #605 (KiCad accepts `[hi:lo]` as a bus, which absorbed #758).** #755
+   matters most, and PR 838's coverage rpc now passes that unassigned fallback like every other rpc.
 4. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Every
    blocker is closed. Decide the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan
    is the latest comment on #564. Re-run rung 13 in the CLI and the panel before editing it.

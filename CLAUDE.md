@@ -743,6 +743,16 @@ retyped. **The seventh is `dimensionlessNumericRelations` in `stdlib/relations/f
 a relation whose number is a bare count, since `TestNoRelationPublishesAnUnlabelledNumber` fails
 until the count is listed there on purpose (agni 727).
 
+## Issues and missions
+
+Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
+and the command that exercises it. Several are active at once, one per worktree: #843
+`mission_revision_audit`, #844 `mission_real_board_tutorial`, #845 `mission_browser_review`. A
+mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
+issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
+filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
+each mission's next ready ticket.
+
 ## Working in this repo
 
 `CONTRIBUTING.md` holds the workflow rules: running several checkouts in parallel (use
