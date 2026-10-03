@@ -136,6 +136,17 @@ with an unanswered query unless asked to drop it, because a workbook missing a t
 that matched nothing. `clients/python/examples/audit_workbook.py` writes a five-sheet audit of the
 tutorial board this way.
 
+Three more helpers turn the other answers an audit needs into sheets, each returning those pairs.
+`diff_sheets` gives a diff one sheet per kind of net change plus one for components, and every kind
+gets its tab even when empty, so a workbook's layout does not move between runs. A near rename keeps
+the evidence it was matched on. `review_sheet` gives one row per checklist item, in the checklist's
+order, naming each finding behind a failed item, plus a summary sheet. `verdict_sheets` gives every
+verdict, passes included, with the witness that proves a pass, plus a count of each outcome per rule.
+It refuses a response that has findings and no verdicts, which is what `check --format json` prints
+without `--verdicts`. Engine order sorts text plainly, so `R10` lands before `R2`. `natural_sort` orders
+any table by named columns with the digits read as numbers, and the three helpers already sort that
+way. `clients/python/examples/revision_audit.py` builds the whole revision-audit workbook from them.
+
 The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts whose
 layout belongs to whoever reads it, so it stays in the client.
 
