@@ -2,8 +2,9 @@ package profiles
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
+	"path"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
@@ -14,23 +15,34 @@ import (
 // --profile-path flag); the os dependency lives here, isolated from the WASM-clean Parse/Load path.
 // An empty or missing dir is an error (a caller that wants "optional" checks existence first).
 func LoadDir(dir string) ([]Profile, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
+	// Checked here rather than by wrapping LoadFS's error, so only an unreadable directory names the
+	// flag and a malformed profile keeps its own message.
+	if _, err := os.ReadDir(dir); err != nil {
 		return nil, fmt.Errorf("profiles: reading --profile-path %q: %w", dir, err)
+	}
+	return LoadFS(os.DirFS(dir), ".")
+}
+
+// LoadFS is LoadDir over dir inside fsys, for a host whose profiles are not on the host filesystem
+// (a project mounted in memory in the wasm engine).
+func LoadFS(fsys fs.FS, dir string) ([]Profile, error) {
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		return nil, err
 	}
 	var names []string
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
 		}
-		if ext := filepath.Ext(e.Name()); ext == ".yaml" || ext == ".yml" {
+		if ext := path.Ext(e.Name()); ext == ".yaml" || ext == ".yml" {
 			names = append(names, e.Name())
 		}
 	}
 	sort.Strings(names)
 	var out []Profile
 	for _, name := range names {
-		f, err := os.Open(filepath.Join(dir, name))
+		f, err := fsys.Open(path.Join(dir, name))
 		if err != nil {
 			return nil, err
 		}

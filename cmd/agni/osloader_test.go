@@ -12,22 +12,6 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// TestCompanionEds covers the sibling resolution: a netlist with a sibling .eds returns it, a
-// netlist without one returns "", and a design that already draws itself (.eds/.kicad_sch) returns
-// "" so it is never overridden by a stray sibling.
-func TestCompanionEds(t *testing.T) {
-	edn := filepath.Join("testdata", "review", "companion-demo.edn")
-	if got := companionEds(edn); filepath.Base(got) != "companion-demo.eds" {
-		t.Errorf("netlist with sibling: got %q, want companion-demo.eds", got)
-	}
-	if got := companionEds(filepath.Join("testdata", "review", "can-broken.edn")); got != "" {
-		t.Errorf("netlist without a sibling .eds: got %q, want \"\"", got)
-	}
-	if got := companionEds(filepath.Join("testdata", "review", "companion-demo.eds")); got != "" {
-		t.Errorf("an .eds already draws itself: got %q, want \"\"", got)
-	}
-}
-
 // TestOsLoaderCompanionGeometry checks that serving a netlist with a sibling .eds draws on the .eds
 // schematic (WS1-047), so GetDesign/GetSheet/HighlightSheet (all funneling through Geometry) show
 // the design's own drawing; a netlist without a sibling falls back to the auto-layout graph.

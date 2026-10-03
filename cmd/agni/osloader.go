@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check/naming"
@@ -43,31 +41,13 @@ func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, 
 	// Through readerFor, as in Design, because a project's declared symbol library changes what the
 	// geometry read CONTAINS and arrives as a read option (agni issue 347).
 	reader := readerFor(l.loader, opts...)
-	// Companion (WS1-047). A netlist with a sibling <stem>.eds draws that schematic instead of the
-	// auto-layout, while checks and queries still read the netlist via Design, joined by net name
-	// (C21). GetDesign, GetSheet and HighlightSheet all funnel through here. The sibling sits in the
-	// SAME mount dir as the already-contained abs, so it needs no extra containment check.
-	if comp := companionEds(abs); comp != "" {
+	// The companion is what GetDesign, GetSheet and HighlightSheet draw, so all three funnel through
+	// here (WS1-047). The sibling sits in the SAME mount dir as the already-contained abs, so it needs
+	// no extra containment check.
+	if comp := reader.Companion(abs); comp != "" {
 		return reader.FaithfulGeometry(comp)
 	}
 	return reader.ResolveGeometry(abs, layout, nil, symbolsFor(faithfulSymbols))
-}
-
-// companionEds returns a sibling <stem>.eds schematic for a NETLIST design, or "" when the design
-// already carries its own geometry (an .eds/.kicad_sch draws itself) or no sibling exists. It checks
-// filenames only and never reads a file's contents.
-func companionEds(abs string) string {
-	if formats.HasFaithful(abs) {
-		return ""
-	}
-	sib := strings.TrimSuffix(abs, filepath.Ext(abs)) + ".eds"
-	if sib == abs {
-		return ""
-	}
-	if st, err := os.Stat(sib); err == nil && !st.IsDir() {
-		return sib
-	}
-	return ""
 }
 
 func (l *osLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
@@ -92,13 +72,8 @@ func (l *osLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.
 	return expect.Load(sidecar)
 }
 
-// symbolsFor maps the service's faithful-symbols bool to the engine's --symbols string.
-func symbolsFor(faithful bool) string {
-	if faithful {
-		return symbolsFaithful
-	}
-	return symbolsGlyph
-}
+// symbolsFor is formats.SymbolsFor, named for the CLI's call sites.
+func symbolsFor(faithful bool) string { return formats.SymbolsFor(faithful) }
 
 // Board resolves the physical board sidecar (WS1-006) through the formats registry. A format
 // without one yields (nil, nil), and the service then lists no board sheet.
