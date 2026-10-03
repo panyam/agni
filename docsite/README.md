@@ -163,6 +163,14 @@ should not see**, since it defaults to the script. And **every run gets a scratc
 so a rung that teaches `mv params params-old` cannot rename the checked-in one, which it did once, by
 hand.
 
+**A step that exits non-zero and captures nothing is a build error**, unless the spec sets `exit:
+true`, which shows the status as the block's last line and is the declared way to make the exit
+status the lesson. A failing step that prints its report stays legal (a gate tripping), and so does an
+empty capture from a step that succeeded. Before this rule, rung 7 shipped two captures of a command
+that failed outright: each held only its stamp, the page showed two empty blocks, and the gate
+stayed green because regenerating reproduced the emptiness exactly (agni issue 825). `capture: none`
+is covered the same way, so a step whose output the page hides still has to succeed or say why not.
+
 **A before/after over a DISCOVERED project tier has to move the tier aside in the script.** A project
 composes its `conventions:` section, `profiles/` and `params/` from naming the design, so dropping the
 flag does not reach the "before" state and the two captures come out identical. Rung 6 shipped that
