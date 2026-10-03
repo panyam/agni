@@ -3,10 +3,9 @@ from __future__ import annotations
 import openpyxl
 import pytest
 
-from agni import rows_as_dicts, set_sheets, tables_to_xlsx, to_rows
-from agni.tables import FINDING_COLUMNS
+from agni import rows_as_dicts, table_sheets, tables_to_xlsx, to_rows
 from agni.v1.checks import checks_pb2 as checks
-from agni.v1.webapi import checks_pb2, query_pb2
+from agni.v1.webapi import checks_pb2, query_pb2, tables_pb2
 
 
 def _answer() -> query_pb2.RunQueryResponse:
@@ -20,20 +19,28 @@ def test_rows_as_dicts_keeps_cells_as_sent():
     assert rows_as_dicts(_answer()) == [{"c": "R1", "n": "10"}, {"c": "R2", "n": "007"}]
 
 
-def test_findings_flatten_one_per_row():
-    resp = checks_pb2.CheckDesignResponse(
-        findings=[
-            checks.Finding(rule="r", severity="error", subject=checks.Subject(kind="net", ref="N1"), message="m", sheets=["/", "/a"])
-        ]
+def _table(name="t") -> tables_pb2.Table:
+    return tables_pb2.Table(
+        name=name,
+        columns=[tables_pb2.TableColumn(name="c"), tables_pb2.TableColumn(name="n")],
+        rows=[tables_pb2.TableRow(cells=["R1", "10"]), tables_pb2.TableRow(cells=["R2", "007"])],
     )
-    header, rows = to_rows(resp)
-    assert header == FINDING_COLUMNS
-    assert rows == [["r", "error", "net", "N1", "m", "", "/ /a"]]
+
+
+def test_to_rows_reads_an_engine_table_and_refuses_an_answer():
+    assert to_rows(_table()) == (["c", "n"], [["R1", "10"], ["R2", "007"]])
+    with pytest.raises(TypeError, match="tabulate"):
+        to_rows(checks_pb2.CheckDesignResponse())
+
+
+def test_table_sheets_keep_order_and_rename():
+    resp = tables_pb2.TabulateResponse(tables=[_table("findings"), _table("verdicts")])
+    assert [n for n, _ in table_sheets(resp, {"findings": "Findings"})] == ["Findings", "verdicts"]
 
 
 def test_xlsx_has_header_freeze_and_filter(tmp_path):
     out = tmp_path / "audit.xlsx"
-    tables_to_xlsx(str(out), [("Resistors", _answer()), ("Plain", (["a"], [["1"], ["2"], ["3"]]))])
+    tables_to_xlsx(str(out), [("Resistors", _table()), ("Plain", (["a"], [["1"], ["2"], ["3"]]))])
     wb = openpyxl.load_workbook(out)
     assert wb.sheetnames == ["Resistors", "Plain"]
     ws = wb["Resistors"]
@@ -49,52 +56,28 @@ def test_xlsx_has_header_freeze_and_filter(tmp_path):
 @pytest.mark.parametrize("name", ["", "a" * 32, "a/b", "x[1]"])
 def test_xlsx_refuses_a_sheet_name_excel_rejects(tmp_path, name):
     with pytest.raises(ValueError):
-        tables_to_xlsx(str(tmp_path / "x.xlsx"), [(name, _answer())])
+        tables_to_xlsx(str(tmp_path / "x.xlsx"), [(name, _table())])
 
 
 def test_xlsx_refuses_a_name_used_twice(tmp_path):
     with pytest.raises(ValueError, match="twice"):
-        tables_to_xlsx(str(tmp_path / "x.xlsx"), [("Nets", _answer()), ("nets", _answer())])
+        tables_to_xlsx(str(tmp_path / "x.xlsx"), [("Nets", _table()), ("nets", _table())])
 
 
-def _set_answer(with_error: bool) -> query_pb2.RunQueriesResponse:
-    res = [
-        query_pb2.NamedQueryResult(name="first", result=_answer()),
-        query_pb2.NamedQueryResult(name="second", result=_answer()),
-    ]
-    if with_error:
-        res.insert(1, query_pb2.NamedQueryResult(name="broken", error="unknown relation"))
-    return query_pb2.RunQueriesResponse(title="t", results=res)
-
-
-def test_set_sheets_keeps_the_set_order():
-    sheets = set_sheets(_set_answer(False))
-    assert [n for n, _ in sheets] == ["first", "second"]
-    assert to_rows(sheets[0][1]) == to_rows(_answer())
-
-
-def test_set_sheets_refuses_to_drop_an_unanswered_query():
-    with pytest.raises(ValueError, match="broken: unknown relation"):
-        set_sheets(_set_answer(True))
-    assert [n for n, _ in set_sheets(_set_answer(True), allow_missing=True)] == ["first", "second"]
+def test_xlsx_keeps_a_formula_shaped_cell_as_text(tmp_path):
+    out = tmp_path / "f.xlsx"
+    tables_to_xlsx(str(out), [("Nets", (["net"], [["=HYPERLINK(\"x\")"], ["+5V"]]))])
+    ws = openpyxl.load_workbook(out)["Nets"]
+    assert ws["A2"].data_type == "s" and ws["A2"].value == '=HYPERLINK("x")'
+    assert ws["A3"].value == "+5V"
 
 
 # ---- natural order, and the diff, review and verdict sheets (agni issue 822) ----
 
-from agni.tables import diff_sheets, natural_key, natural_sort, review_sheet, verdict_sheets  # noqa: E402
+from agni.tables import diff_sheets, review_sheet  # noqa: E402
 from agni.v1.webapi import diff_pb2, review_pb2  # noqa: E402
 
 from conftest import DESIGN  # noqa: E402
-
-
-def test_natural_key_puts_r2_before_r10():
-    assert sorted(["R10", "R2", "C1", "R1", "U10.3", "U10.12"], key=natural_key) == ["C1", "R1", "R2", "R10", "U10.3", "U10.12"]
-
-
-def test_natural_sort_orders_by_the_named_columns():
-    header, rows = natural_sort((["net", "c"], [["N10", "1"], ["N2", "0"], ["N2", "1"]]), "net", "c")
-    assert header == ["net", "c"]
-    assert rows == [["N2", "0"], ["N2", "1"], ["N10", "1"]]
 
 
 def test_diff_sheets_keep_every_kind_and_the_near_rename_evidence():
@@ -123,12 +106,6 @@ def test_diff_sheets_refuse_a_kind_they_do_not_know():
     resp = diff_pb2.DiffDesignsResponse(report=diff_pb2.DiffReport(nets=[diff_pb2.DiffReport.NetChange(kind="sideways", name="N")]))
     with pytest.raises(ValueError, match="sideways"):
         diff_sheets(resp)
-
-
-def test_verdict_sheets_refuse_a_response_stripped_of_its_verdicts():
-    resp = checks_pb2.CheckDesignResponse(findings=[checks.Finding(rule="r", subject=checks.Subject(kind="net", ref="N"))])
-    with pytest.raises(ValueError, match="no verdicts"):
-        verdict_sheets(resp)
 
 
 @pytest.fixture(params=["cli", "connect"])
@@ -180,13 +157,49 @@ def test_review_sheet_over_the_tutorial(client, tmp_path):
     tables_to_xlsx(str(tmp_path / "review.xlsx"), list(sheets.items()))
 
 
-def test_verdict_sheets_over_the_tutorial(client, tmp_path):
-    sheets = dict(verdict_sheets(client.check_design(uri=DESIGN)))
-    header, rows = sheets["Verdicts"]
+def test_tabulate_gives_the_cli_csv_tables(client, tmp_path):
+    out = client.tabulate(check=client.check_design(uri=DESIGN), order_by=["rule", "subjects"])
+    tables = {t.name: t for t in out.tables}
+    assert list(tables) == ["findings", "verdicts", "verdicts_by_rule"]
+    header, rows = to_rows(tables["verdicts"])
+    # The header `agni check --verdicts --format csv` publishes, and its kind:ref subject spelling.
+    assert header == ["verdict_id", "url", "rule", "outcome", "subjects", "statement", "context", "terms", "reason"]
     vs = [dict(zip(header, r)) for r in rows]
     passes = [v for v in vs if v["outcome"] == "pass"]
-    assert passes and all(v["subject"] for v in vs)
-    assert any(v["witness"] or v["context"] for v in passes)
-    by_rule = [dict(zip(sheets["Verdicts by rule"][0], r)) for r in sheets["Verdicts by rule"][1]]
-    assert sum(int(r["total"]) for r in by_rule) == len(rows)
-    tables_to_xlsx(str(tmp_path / "verdicts.xlsx"), list(sheets.items()))
+    assert passes and all(v["statement"] or v["context"] for v in passes)
+    assert all(":" in v["subjects"] for v in vs)
+    rules = [v["rule"] for v in vs]
+    assert rules == sorted(rules) and len(set(rules)) > 1, "order_by rule did not order the verdicts"
+    count_header, count_rows = to_rows(tables["verdicts_by_rule"])
+    assert sum(int(dict(zip(count_header, r))["total"]) for r in count_rows) == len(rows)
+    tables_to_xlsx(str(tmp_path / "check.xlsx"), table_sheets(out))
+
+
+def test_tabulate_refuses_an_unknown_order_column(client):
+    with pytest.raises(Exception, match="nope"):
+        client.tabulate(check=client.check_design(uri=DESIGN), order_by=["nope"])
+
+
+# The table rows an answer becomes are the engine's (agni issue 862). These are the public functions
+# that still take an answer message, each for its stated reason, so a new one fails here.
+STILL_TAKES_AN_ANSWER = {
+    "rows_as_dicts": "reads a query answer as dicts; it lays no table out",
+    "diff_sheets": "until the engine projects a diff (agni issue 862, part two)",
+    "review_sheet": "until the engine projects a review (agni issue 862, part two)",
+}
+
+
+def test_no_other_function_lays_out_an_answer():
+    import inspect
+
+    import agni.tables as tables
+
+    takers = set()
+    for name, fn in inspect.getmembers(tables, inspect.isfunction):
+        if name.startswith("_") or fn.__module__ != tables.__name__:
+            continue
+        hints = " ".join(str(p.annotation) for p in inspect.signature(fn).parameters.values())
+        if "_pb2." in hints and "tables_pb2." not in hints:
+            takers.add(name)
+    assert takers, "the sweep matched nothing, so it is not reading the annotations"
+    assert takers == set(STILL_TAKES_AN_ANSWER), f"functions taking an answer message: {sorted(takers)}"

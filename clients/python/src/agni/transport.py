@@ -23,7 +23,7 @@ from agni.errors import AgniError, CliUnsupported
 from agni.services import Rpc
 from agni.v1.checks import checks_pb2 as _checks  # noqa: F401  (registers PartSpec's imports)
 from agni.v1.param import param_pb2
-from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, validate_pb2
+from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, tables_pb2, validate_pb2
 
 M = TypeVar("M", bound=Message)
 
@@ -318,6 +318,10 @@ CLI_COMMANDS: Dict[str, CliCommand] = {
     ),
     "ReviewService/CreateReview": CliCommand(_review_argv, review_pb2.Review, stdin=_review_stdin),
     "DiffService/DiffDesigns": CliCommand(_diff_argv, diff_pb2.DiffDesignsResponse),
+    # Tabulate reads no design, so the request goes on stdin whole (agni issue 862).
+    "TableService/Tabulate": CliCommand(
+        lambda req: ["tabulate", "-", "--format", "json"], tables_pb2.TabulateResponse, stdin=lambda req: json_format.MessageToJson(req)
+    ),
     "DesignService/GetDesign": CliCommand(_design_argv, design_pb2.GetDesignResponse),
     "DesignService/TraceDesign": CliCommand(
         _trace_argv,
