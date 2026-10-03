@@ -6,22 +6,37 @@ viewer use, so a response here is the wire contract rather than a dict shaped li
 
 from agni.client import Client
 from agni.errors import AgniError, CliUnsupported
-from agni.tables import rows_as_dicts, set_sheets, tables_to_xlsx, to_rows
+from agni.tables import (
+    diff_sheets,
+    natural_key,
+    natural_sort,
+    review_sheet,
+    rows_as_dicts,
+    set_sheets,
+    tables_to_xlsx,
+    to_rows,
+    verdict_sheets,
+)
 from agni.transport import CLI_COMMANDS, CLI_ONLY, CliTransport, ConnectTransport, parse
 from agni.values import bindings
 
 __all__ = [
     "AgniError",
+    "bindings",
     "CLI_COMMANDS",
     "CLI_ONLY",
+    "Client",
     "CliTransport",
     "CliUnsupported",
-    "Client",
     "ConnectTransport",
-    "bindings",
+    "diff_sheets",
+    "natural_key",
+    "natural_sort",
     "parse",
+    "review_sheet",
     "rows_as_dicts",
     "set_sheets",
     "tables_to_xlsx",
     "to_rows",
+    "verdict_sheets",
 ]

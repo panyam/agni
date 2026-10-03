@@ -163,10 +163,12 @@ def _read_flags(req: Message) -> List[str]:
     return out
 
 
-def _check_argv(fmt: str) -> Callable[[Message], List[str]]:
+def _check_argv(fmt: str, verdicts: bool = False) -> Callable[[Message], List[str]]:
+    # --verdicts selects what `check` prints, not what it runs, and with json it prints the whole
+    # CheckDesign response, verdicts included, as a server returns it (agni issue 822).
     def argv(req: Message) -> List[str]:
         _only(req, ("uri", "rules", "board_uri", "as_named"))
-        out = ["check", req.uri, "--format", fmt]
+        out = ["check", req.uri, "--format", fmt] + (["--verdicts"] if verdicts else [])
         for r in req.rules:
             out += ["--rule", r]
         return out + _read_flags(req)
@@ -307,7 +309,7 @@ def _layout_argv(req: Message) -> List[str]:
 # CreateReview maps to `review`, whose json is the Review the rpc returns since agni issue 734. The
 # CLI stores nothing, so its review is unnamed; Get, List and Delete need a store and stay Connect only.
 CLI_COMMANDS: Dict[str, CliCommand] = {
-    "CheckService/CheckDesign": CliCommand(_check_argv("json"), checks_pb2.CheckDesignResponse),
+    "CheckService/CheckDesign": CliCommand(_check_argv("json", verdicts=True), checks_pb2.CheckDesignResponse),
     "CheckService/GetCheckReport": CliCommand(_check_argv("report"), checks_pb2.GetCheckReportResponse),
     "QueryService/RunQuery": CliCommand(_query_argv, query_pb2.RunQueryResponse),
     # A set with an unanswerable query prints every answer and exits 1, so the answer is still read.

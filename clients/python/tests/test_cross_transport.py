@@ -46,10 +46,6 @@ class Case(NamedTuple):
     normalize: Optional[Callable[[Message], None]] = None
 
 
-VERDICTS = (
-    "`check --format json` strips the considered set on purpose (writeCheckDesignJSON); "
-    "`--verdicts` asks for it as a bare list, which has no wire message"
-)
 UNSTORED = "the CLI stores nothing, so its review has no resource name (agni issue 734)"
 
 
@@ -123,12 +119,8 @@ _LIB = {
 }
 
 CASES: List[Case] = [
-    Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN), {"verdicts": VERDICTS}),
-    Case(
-        "CheckService/CheckDesign",
-        lambda c: c.check_design(uri=DESIGN, rules=["i2c-pull-up", "decoupling-present"]),
-        {"verdicts": VERDICTS},
-    ),
+    Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN)),
+    Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN, rules=["i2c-pull-up", "decoupling-present"])),
     Case("CheckService/GetCheckReport", lambda c: c.get_check_report(uri=DESIGN)),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c')),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?c, ?p, ?n) => ?n, count(distinct ?c)")),

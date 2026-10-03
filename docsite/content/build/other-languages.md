@@ -91,7 +91,7 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 
 | rpc | command |
 |---|---|
-| `CheckService/CheckDesign` | `check --format json` |
+| `CheckService/CheckDesign` | `check --verdicts --format json`, which prints the whole response, verdicts included |
 | `CheckService/GetCheckReport` | `check --format report` |
 | `QueryService/RunQuery` | `query --format json` |
 | `QueryService/RunQueries` | `query --set - --format json`, the set sent on stdin |
@@ -112,11 +112,9 @@ CLI stores nothing (agni issue 734). Getting, listing and deleting stored review
 ## Where the two transports differ today
 
 `clients/python/tests/test_cross_transport.py` sends the same request both ways and asserts the two
-messages are equal. That test is C31 checked from outside Go. Three known differences are declared in
+messages are equal. That test is C31 checked from outside Go. Two known differences are declared in
 it field by field, and each declaration fails once the difference goes away:
 
-- `CheckDesign` over the CLI carries no `verdicts`. `check --format json` strips the considered set on
-  purpose and `--verdicts` prints it as a bare list, which is not a wire message.
 - `CreateReview` over the CLI has an empty `name`, because the CLI stores nothing. The two runs also
   differ in `results.meta.created_at`, which the test clears on both sides before comparing.
 - `GetLayoutReport` on a design FOLDER answers an empty report from the server (agni issue 736).
@@ -137,6 +135,17 @@ turns a `RunQueriesResponse` into those pairs, one per query in the set's order,
 with an unanswered query unless asked to drop it, because a workbook missing a tab reads as a table
 that matched nothing. `clients/python/examples/audit_workbook.py` writes a five-sheet audit of the
 tutorial board this way.
+
+Three more helpers turn the other answers an audit needs into sheets, each returning those pairs.
+`diff_sheets` gives a diff one sheet per kind of net change plus one for components, and every kind
+gets its tab even when empty, so a workbook's layout does not move between runs. A near rename keeps
+the evidence it was matched on. `review_sheet` gives one row per checklist item, in the checklist's
+order, naming each finding behind a failed item, plus a summary sheet. `verdict_sheets` gives every
+verdict, passes included, with the witness that proves a pass, plus a count of each outcome per rule.
+It refuses a response that has findings and no verdicts, which is what `check --format json` prints
+without `--verdicts`. Engine order sorts text plainly, so `R10` lands before `R2`. `natural_sort` orders
+any table by named columns with the digits read as numbers, and the three helpers already sort that
+way. `clients/python/examples/revision_audit.py` builds the whole revision-audit workbook from them.
 
 The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts whose
 layout belongs to whoever reads it, so it stays in the client.

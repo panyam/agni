@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // runCheck drives a fresh check command and returns its output, so each case starts from clean flag
@@ -107,5 +111,28 @@ func TestVerdictCSVCarriesTheDerivedID(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing verdict id %q in:\n%s", want, out)
 		}
+	}
+}
+
+// `--verdicts --format json` is the CheckDesign response with its considered set, the wire message
+// C31 asks for, so the Python client's CLI transport reads verdicts as a server sends them (agni issue
+// 822). The findings stay in it, since --verdicts selects what is printed and not what was run.
+func TestVerdictJSONIsTheCheckDesignResponse(t *testing.T) {
+	out := runCheck(t, "--verdicts", "--format", "json", "testdata/conformance/showcase.fires.kicad_sch")
+	var resp webapi.CheckDesignResponse
+	if err := protojson.Unmarshal([]byte(out), &resp); err != nil {
+		t.Fatalf("--verdicts --format json is not a CheckDesignResponse: %v\n%.400s", err, out)
+	}
+	if len(resp.GetVerdicts()) == 0 || len(resp.GetFindings()) == 0 {
+		t.Errorf("got %d verdicts and %d findings, want both", len(resp.GetVerdicts()), len(resp.GetFindings()))
+	}
+	pass := 0
+	for _, v := range resp.GetVerdicts() {
+		if v.GetOutcome() == checkspb.Outcome_OUTCOME_PASS {
+			pass++
+		}
+	}
+	if pass == 0 {
+		t.Error("no passing verdict in the considered set")
 	}
 }
