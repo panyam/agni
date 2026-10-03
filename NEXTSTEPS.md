@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-03, at `e5fa07df` (PR 841).
+Last pruned 2026-10-03, at `016973d3` (PR 850).
 
 ## At a glance
 
@@ -17,12 +17,16 @@ Three missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (
 skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
 links rather than here. Log each exercise run on the mission issue.
 
-- **#843 `mission_revision_audit`**, 2 of 9 tickets closed. Exercise `make exercise-revision-audit`
-  last ran at `e5fa07df`: the query and findings tabs build, and Diff, Review and Verdicts are listed
-  as missing until #822. Next ready is #819, #822, #825 and #848, all P1.
+- **#843 `mission_revision_audit`**, 3 of 9 tickets closed. Exercise `make exercise-revision-audit`
+  last ran at `e5fa07df`, and PRs 841 and 850 have merged since: the query and findings tabs build,
+  and Diff, Review and Verdicts are listed as missing until #822. Next ready is #822, #825 and #848,
+  all P1.
 - **#844 `mission_real_board_tutorial`**, 0 of 4. Next is #564. The exercise has not run yet.
 - **#845 `mission_browser_review`**, 0 of 11. Next is #829. The exercise is a manual walk with no
   logged run yet.
+- **#851 `mission_public_demo`**, filed and NOT active yet (no worktree). The engine runs as wasm in
+  the browser for a dropped KiCad or EDIF design, and a read-only server answers seeded boards too
+  large for it. 0 of 9; start with #178 (revive the parked wasm build, #567), which unblocks #852.
 
 ## Open, ranked
 
@@ -40,9 +44,7 @@ links rather than here. Log each exercise run on the mission issue.
 5. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
-6. **Three small real bugs off any mission: #755 (`CheckService.fallback` is never assigned), #756
-   (a nil check after the call it guards), #605 (KiCad accepts `[hi:lo]` as a bus, which absorbed
-   #758).** #755 matters most.
+6. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 7. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
 8. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the

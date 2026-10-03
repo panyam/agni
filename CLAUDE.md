@@ -756,7 +756,8 @@ until the count is listed there on purpose (agni 727).
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
 and the command that exercises it. Several are active at once, one per worktree: #843
-`mission_revision_audit`, #844 `mission_real_board_tutorial`, #845 `mission_browser_review`. A
+`mission_revision_audit`, #844 `mission_real_board_tutorial`, #845 `mission_browser_review`, and #851
+`mission_public_demo` is filed and waits for a worktree. A
 mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
@@ -826,7 +827,8 @@ Never commit:
   This includes screenshots and PR images, which is why before/after captures come from the
   synthetic fixtures rather than a real board.
 - **Market, competitor, strategy, or opportunity analysis.** This repo is the engine, not the
-  business.
+  business. The same holds for issues, missions, PR bodies and the wiki, so a mission states the
+  outcome a person gets and never names a product it is measured against.
 - **Paths into private folders**, private corpus locations, or customer names, including in comments,
   test names, commit messages, and PR bodies.
 - **Vendor-licensed material** such as datasheet PDFs and extracted parameter documents. Facts
