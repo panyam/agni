@@ -11,9 +11,20 @@ import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 
+// engineFetch, when set, answers every client's requests in place of the network, which is how the
+// in-browser engine serves the same clients `agni serve` does (agni issue 178).
+let engineFetch: typeof globalThis.fetch | undefined;
+
+// useEngineFetch routes every client created after it through f. Call it before the page builds its
+// clients.
+export function useEngineFetch(f: typeof globalThis.fetch): void {
+  engineFetch = f;
+}
+
 // newTransport builds a Connect transport rooted at baseUrl. It defaults to "/" so the
 // app talks to the same origin that served it (the `agni serve` dev server).
 export function newTransport(baseUrl = "/") {
+  if (engineFetch) return createConnectTransport({ baseUrl: new URL(baseUrl, location.href).href, fetch: engineFetch });
   return createConnectTransport({ baseUrl });
 }
 

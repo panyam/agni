@@ -67,6 +67,11 @@ func Load(path string) (*Expectations, error) {
 	if err != nil {
 		return nil, err
 	}
+	return Parse(b)
+}
+
+// Parse parses a sidecar's bytes, for a host that reads them itself rather than by host path.
+func Parse(b []byte) (*Expectations, error) {
 	var e Expectations
 	if err := yaml.Unmarshal(b, &e); err != nil {
 		return nil, err

@@ -6,115 +6,31 @@ import (
 
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
-	"github.com/panyam/agni/stdlib/lib"
-	"github.com/panyam/agni/stdlib/profiles"
-	"github.com/panyam/jaala/datalog"
 )
 
-// osProjectConfig is the OS-backed service.ConfigResolver. It reads the interface profiles, seeded
-// parameters, symbol libraries and derived-relation libraries a project names, from the mounts. A
-// design's intent is not among them, since it arrives as a value the service compiles.
-//
-// It holds NO CACHE. An operator edits a profile or seeds a part while the server runs, and an index
-// answering with the previous version would produce a confident wrong verdict. If re-reading a large
-// parameter corpus per request ever costs too much, copy internal/projects/cache.go, which caches
-// and still stats every file it depends on before answering.
+// osProjectConfig is the OS-backed service.ConfigResolver: fshost.ConfigResolver over each mount's
+// os.DirFS, with symbol libraries spelled as host paths because the CLI's and the server's loaders
+// read the host filesystem.
 type osProjectConfig struct {
 	mounts []mounts.Mount
 }
 
-// ResolveConfig loads what an AnalysisConfig's URIs point at, whether it came from a project
-// descriptor or from a request.
-//
-// A tier that fails to load is an ERROR, not a skip, since an operator who wrote a profiles
-// directory and silently got the built-ins would read the clean report as a clean design (C24). A
-// tier the config does not name is not an error, because the loops below run zero times.
-func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
-	var out service.ResolvedConfig
-	// read records every host path this resolution opened, so the digest covers what was read
-	// rather than what the config named. One URI can resolve to different bytes on two servers.
-	var read []string
-	for _, uri := range cfg.GetProfileUris() {
-		dir, err := c.dir(uri)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
-		read = append(read, dir)
-		ps, err := profiles.LoadDir(dir)
-		if err != nil {
-			return service.ResolvedConfig{}, fmt.Errorf("%s profiles %s: %w", namespace, uri, err)
-		}
-		out.Sources = append(out.Sources, profiles.Source(sourceName(namespace), ps))
-		out.InterfaceProfiles = append(out.InterfaceProfiles, ps...)
-		out.Profiles = true
+// ResolveConfig loads what an AnalysisConfig's URIs point at. See fshost.ConfigResolver.
+func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
+	ms := make([]fshost.Mount, 0, len(c.mounts))
+	for _, m := range c.mounts {
+		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(m.Root)})
 	}
-	for _, uri := range cfg.GetParamUris() {
-		dir, err := c.dir(uri)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
-		read = append(read, dir)
-		set, err := param.LoadSet(os.DirFS(dir))
-		if err != nil {
-			return service.ResolvedConfig{}, fmt.Errorf("%s params %s: %w", namespace, uri, err)
-		}
-		out.Specs = set
-	}
-	for _, uri := range cfg.GetSymbolPathUris() {
-		dir, err := c.dir(uri)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
-		out.SymbolPaths = append(out.SymbolPaths, dir)
-	}
-	// A project's own library is read here and composed by the service (Overlay.Registry), so a module
-	// that does not parse or collides is reported when a query first runs over it, naming the file.
-	for _, uri := range cfg.GetLibraryUris() {
-		dir, err := c.dir(uri)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
-		read = append(read, dir)
-		mods, docs, err := lib.Read(os.DirFS(dir))
-		if err != nil {
-			return service.ResolvedConfig{}, fmt.Errorf("%s library %s: %w", namespace, uri, err)
-		}
-		for _, m := range mods {
-			out.Library = append(out.Library, service.LibraryModule{
-				Path: m.Path, Language: datalog.LanguageName, Text: m.Text, Source: strings.TrimSuffix(uri, "/") + "/" + m.File,
-			})
-		}
-		for p, d := range docs {
-			if out.LibraryDocs == nil {
-				out.LibraryDocs = map[string]string{}
-			}
-			out.LibraryDocs[p] = d
-		}
-	}
-	// A resolution that read nothing still gets a digest identifying it as such. Symbol paths go in
-	// as NAMES, since this call never opens them and statting a URI would fail.
-	digest, err := digestConfig(read, cfg.GetSymbolPathUris())
-	if err != nil {
-		return service.ResolvedConfig{}, fmt.Errorf("%s config digest: %w", namespace, err)
-	}
-	out.Digest = digest
-	return out, nil
-}
-
-// file resolves a config URI to a host file inside its mount.
-func (c *osProjectConfig) file(uri string) (string, error) {
-	u, err := artifact.Parse(uri)
-	if err != nil {
-		return "", err
-	}
-	return mounts.Resolve(c.mounts, u)
+	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u artifact.URI) (string, error) {
+		return mounts.Resolve(c.mounts, u)
+	}}
+	return r.ResolveConfig(ctx, cfg, namespace)
 }
 
 // dir resolves a project-config URI to a host directory inside its mount.
@@ -124,17 +40,6 @@ func (c *osProjectConfig) dir(uri string) (string, error) {
 		return "", err
 	}
 	return mounts.Resolve(c.mounts, u)
-}
-
-// sourceName is the catalog namespace a project's interface profiles appear under, so a
-// finding reads `gateway-profiles/can-esd-missing` and says which project asked for it.
-func sourceName(namespace string) string {
-	if id, ok := service.ProjectID(namespace); ok {
-		return id + "-profiles"
-	}
-	// A namespace that is not a project resource name is a request's. It keeps the `-profiles` suffix
-	// and cannot collide with a project's, because a project id can never be the literal "request".
-	return namespace + "-profiles"
 }
 
 // refuseProfilePathTheProjectOwns rejects a --profile-path naming a directory the design's own

@@ -46,7 +46,17 @@ const solidBuild = (b) => ({
   logLevel: "info",
 });
 
-const builds = appBundles.map(solidBuild);
+// The engine worker (agni issue 178) is a CLASSIC script, since it loads Go's wasm_exec.js with
+// importScripts, so it is an iife rather than an ES module, and it has no Solid in it.
+const workerBuild = {
+  entryPoints: ["src/wasm/worker.ts"],
+  bundle: true,
+  format: "iife",
+  outfile: "static/agni-worker.js",
+  logLevel: "info",
+};
+
+const builds = [...appBundles.map(solidBuild), workerBuild];
 
 if (watch) {
   for (const b of builds) {
