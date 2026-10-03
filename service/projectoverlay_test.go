@@ -72,7 +72,7 @@ func TestConfigDoesNotCrossProjects(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ov, err := r.Overlay(ctx, u, nil, Overlay{}, "")
+		ov, err := r.Overlay(ctx, u, nil, "")
 		if err != nil {
 			t.Fatalf("%s: %v", c.uri, err)
 		}
@@ -97,7 +97,7 @@ func TestNoProjectGetsNoProjectConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ov, err := r.Overlay(context.Background(), u, nil, Overlay{}, "")
+	ov, err := r.Overlay(context.Background(), u, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,12 +109,33 @@ func TestNoProjectGetsNoProjectConfig(t *testing.T) {
 	}
 }
 
-// TestFallbackAppliesOnlyWithoutAProject keeps every existing single-project deployment working. The
-// serve flags stay the default, and a design that resolves to a project stops using them.
-func TestFallbackAppliesOnlyWithoutAProject(t *testing.T) {
-	fallbackOv, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("deployment", "^DEP_")}}, "")
+// deploymentCatalog is the catalog a server started with `--conventions` builds: the built-ins with the
+// deployment's convention composed in, its rules tagged with the source name "deployment".
+func deploymentCatalog(t *testing.T) *check.Catalog {
+	t.Helper()
+	dep, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("deployment", "^DEP_")}}, "")
 	if err != nil {
 		t.Fatal(err)
+	}
+	base, err := check.DefaultCatalog().With(dep.Sources...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return base
+}
+
+func ruleSources(c *check.Catalog, name string) int {
+	return len(c.Filter(check.Facets{Tags: map[string][]string{check.KeySource: {name}}}))
+}
+
+// TestDeploymentConventionAppliesOnlyWithoutAProject keeps every single-project deployment working.
+// The serve flags reach a design through the catalog the services hold rather than through its
+// overlay, so a design in no project runs them, and a design whose project names a convention
+// replaces them (agni issue 755).
+func TestDeploymentConventionAppliesOnlyWithoutAProject(t *testing.T) {
+	base := deploymentCatalog(t)
+	if ruleSources(base, "deployment") == 0 {
+		t.Fatal("the deployment catalog carries no rule from the deployment convention")
 	}
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
@@ -122,21 +143,30 @@ func TestFallbackAppliesOnlyWithoutAProject(t *testing.T) {
 	ctx := context.Background()
 
 	loose, _ := artifact.Parse("mount://m/loose/board.edn")
-	ov, err := r.Overlay(ctx, loose, nil, fallbackOv, "")
+	ov, err := r.Overlay(ctx, loose, nil, "deployment")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !contains(sourceNames(ov), "deployment") {
-		t.Errorf("a design in no project = %v, want the deployment default", sourceNames(ov))
+	cat, err := ov.Catalog(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ruleSources(cat, "deployment") == 0 {
+		t.Error("a design in no project lost the deployment convention's rules")
 	}
 
 	owned, _ := artifact.Parse("mount://m/acme/board.edn")
-	ov, err = r.Overlay(ctx, owned, nil, fallbackOv, "")
+	ov, err = r.Overlay(ctx, owned, nil, "deployment")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if contains(sourceNames(ov), "deployment") {
-		t.Errorf("a design in a project = %v, want its project's config rather than the deployment default", sourceNames(ov))
+	cat, err = ov.Catalog(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ruleSources(cat, "deployment") != 0 || ruleSources(cat, "acme") == 0 {
+		t.Errorf("a design in a project ran deployment=%d acme=%d rules, want its project's convention alone",
+			ruleSources(cat, "deployment"), ruleSources(cat, "acme"))
 	}
 }
 
@@ -148,7 +178,7 @@ func TestRequestOverridesTheProject(t *testing.T) {
 	})
 	u, _ := artifact.Parse("mount://m/acme/board.edn")
 	ov, err := r.Overlay(context.Background(), u,
-		&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, Overlay{}, "")
+		&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,18 +192,22 @@ func TestRequestOverridesTheProject(t *testing.T) {
 	}
 }
 
-// TestNilResolverFallsBack checks that a deployment with no descriptors behaves exactly as it did
-// before projects existed, which is what lets this land without a migration.
-func TestNilResolverFallsBack(t *testing.T) {
-	fallbackOv, _ := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("deployment", "^DEP_")}}, "")
+// TestNilResolverKeepsTheDeploymentConvention checks that a deployment with no descriptors behaves
+// exactly as it did before projects existed, which is what lets this land without a migration.
+func TestNilResolverKeepsTheDeploymentConvention(t *testing.T) {
+	base := deploymentCatalog(t)
 	var r *ProjectResolver
 	u, _ := artifact.Parse("mount://m/any/board.edn")
-	ov, err := r.Overlay(context.Background(), u, nil, fallbackOv, "")
+	ov, err := r.Overlay(context.Background(), u, nil, "deployment")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !contains(sourceNames(ov), "deployment") {
-		t.Fatalf("nil resolver composed %v, want the deployment default", sourceNames(ov))
+	cat, err := ov.Catalog(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ruleSources(cat, "deployment") == 0 {
+		t.Fatal("nil resolver lost the deployment convention's rules")
 	}
 }
 
@@ -206,7 +240,7 @@ func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 	owned, _ := artifact.Parse("mount://m/acme/board.edn")
 	ctx := context.Background()
 
-	plain, err := r.Overlay(ctx, owned, &webapi.OverlayConfig{IgnoreProject: true}, Overlay{}, "")
+	plain, err := r.Overlay(ctx, owned, &webapi.OverlayConfig{IgnoreProject: true}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +253,7 @@ func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 
 	// It is the same answer a design in no project gets, so the comparison is like for like.
 	loose, _ := artifact.Parse("mount://m/loose/board.edn")
-	unowned, err := r.Overlay(ctx, loose, nil, Overlay{}, "")
+	unowned, err := r.Overlay(ctx, loose, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +270,7 @@ func TestIgnoreProjectKeepsTheRequestsOwnConvention(t *testing.T) {
 	})
 	u, _ := artifact.Parse("mount://m/acme/board.edn")
 	ov, err := r.Overlay(context.Background(), u,
-		&webapi.OverlayConfig{IgnoreProject: true, Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, Overlay{}, "")
+		&webapi.OverlayConfig{IgnoreProject: true, Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +301,7 @@ func (e *errStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design,
 // the project's lexicon would not have raised and 95 it would have.
 func TestOverlayRefusesMalformedDescriptor(t *testing.T) {
 	r := &ProjectResolver{Store: &errStore{err: errors.New(`design.yaml: name "My Board" is not a valid id`)}}
-	_, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, Overlay{}, "")
+	_, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, "")
 	if err == nil {
 		t.Fatal("a malformed descriptor composed cleanly; the run would silently use the built-in config")
 	}
@@ -286,7 +320,7 @@ func TestOverlayToleratesNoProject(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := &ProjectResolver{Store: store}
-			if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, Overlay{}, ""); err != nil {
+			if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, ""); err != nil {
 				t.Errorf("a design with no project failed to compose: %v", err)
 			}
 		})
@@ -298,7 +332,7 @@ func TestOverlayToleratesNoProject(t *testing.T) {
 // would defeat the one flag whose purpose is to run without project config.
 func TestOverlayIgnoreProjectSkipsResolution(t *testing.T) {
 	r := &ProjectResolver{Store: &errStore{err: errors.New("descriptor is broken")}}
-	if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{IgnoreProject: true}, Overlay{}, ""); err != nil {
+	if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{IgnoreProject: true}, ""); err != nil {
 		t.Errorf("ignore_project still consulted the store: %v", err)
 	}
 }

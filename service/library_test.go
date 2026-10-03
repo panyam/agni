@@ -75,7 +75,7 @@ func inlineReq(mods ...*webapi.LibraryModule) *webapi.OverlayConfig {
 // TestAnInlineLibraryJoinsTheVocabulary covers agni issue 788 below the wire: modules sent as values
 // compose with no resolver, so a host with none (the engine in WASM) still honours them.
 func TestAnInlineLibraryJoinsTheVocabulary(t *testing.T) {
-	o, err := OverlayFor(context.Background(), nil, nil, nil, nil, inlineReq(&webapi.LibraryModule{Path: "house", Text: housePMIC}), Overlay{}, "")
+	o, err := OverlayFor(context.Background(), nil, nil, nil, nil, inlineReq(&webapi.LibraryModule{Path: "house", Text: housePMIC}), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestAnInlineLibraryJoinsTheVocabulary(t *testing.T) {
 	if !reg.Vocabulary().Has("house.pmic_rail") {
 		t.Error("the inline module's member is not in the vocabulary")
 	}
-	none, err := OverlayFor(context.Background(), nil, nil, nil, nil, &webapi.OverlayConfig{}, Overlay{}, "")
+	none, err := OverlayFor(context.Background(), nil, nil, nil, nil, &webapi.OverlayConfig{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}

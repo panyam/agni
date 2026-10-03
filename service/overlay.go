@@ -263,15 +263,14 @@ func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 }
 
 // OverlayFor composes the engine inputs for one design: the project's config where the design
-// resolves to one, and the caller's fallback where it does not.
+// resolves to one, and nothing but the request's where it does not.
 //
 // A design that resolves to NO project gets no project config, so it cannot be checked against
 // another project's rules (#180). The motivating bug is on
 // docsite/content/architecture/projects-and-designs.md#three-tiers-of-configuration.
 //
-// `fallback` is the deployment default (the serve flags), used only for a design with no project.
-// baseConvention is as on ComposeOverlay. A REQUEST's own overlay wins over both.
-func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
+// baseConvention is as on ComposeOverlay. A REQUEST's own overlay wins over the project's.
+func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	// Seeded with every input this call can see. What a resolver reads is folded in below, where it is
 	// read, because only the resolver knows what it opened.
 	id := &overlayID{}
@@ -279,9 +278,8 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	id.addProto("request", req)
 	id.addProto("project", p)
 	id.addProto("design", d)
-	id.inherit("fallback", fallback)
 	if p == nil {
-		return overlayWithRequest(ctx, resolver, req, fallback, baseConvention, id)
+		return overlayWithRequest(ctx, resolver, req, Overlay{}, baseConvention, id)
 	}
 	// The project's config and the design's intent resolve TOGETHER, as one AnalysisConfig, so a run
 	// cannot compose one design's intent against another's profiles. What the project inherits is
@@ -487,7 +485,7 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.Intent = out.Intent || reqResolved.Intent || reqIntent != nil
 	out.conventionName = req.GetConfig().GetConventions().GetName()
 	// Set the base convention's NAME explicitly, since Overlay.Catalog drops the sources tagged with it.
-	// Inheriting whatever the fallback held would leave the server's convention running alongside the
+	// Inheriting whatever the base overlay held would leave the server's convention running alongside the
 	// request's (WS3-124). Only a request that SENDS a convention replaces the server's. One carrying
 	// only intent, profiles or library modules keeps it, or its rules would vanish from a run that
 	// never asked to change the naming vocabulary.

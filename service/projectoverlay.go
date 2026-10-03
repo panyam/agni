@@ -17,29 +17,31 @@ import (
 // Every surface that runs rules needs both or neither, so they are one constructor parameter. Wired
 // per surface, --conventions once reached `agni check` and not `agni review` (WS3-102, WS3-109).
 //
-// A nil resolver means this deployment resolves no projects, and every design falls back to the
-// caller's default, as on a server started with no descriptors.
+// A nil resolver means this deployment resolves no projects, and every design runs as one in no
+// project, as on a server started with no descriptors.
 type ProjectResolver struct {
 	Store  ProjectStore
 	Config ConfigResolver
 }
 
-// Overlay composes the config for one design, its project's where it has one and the fallback where it
-// does not, and the request's own on top of either.
+// Overlay composes the config for one design, its project's where it has one, and the request's own
+// on top. A design in no project gets the request's config alone. The serve flags reach it another
+// way, through the catalog and the datasheet provider the services hold and the process lexicon, so
+// an overlay never carries them (agni issue 755).
 //
-// Finding NO descriptor is not an error, since a loose file belongs to no project and runs against
-// the fallback, and neither is an unknown mount. A descriptor that EXISTS and does not parse is
+// Finding NO descriptor is not an error, since a loose file belongs to no project, and neither is an
+// unknown mount. A descriptor that EXISTS and does not parse is
 // returned as an error, as ResolveDesign reports it. Swallowing it ran the design against the
 // built-in vocabulary, which on one folder gave 40 findings the project's lexicon would not have
 // raised and missed 95 it would have (#307). A malformed descriptor for an UNRELATED design still
 // does not surface here. See docsite/content/architecture/projects-and-designs.md#resolution-is-an-interface-not-a-path-convention.
-func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
+func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	var p *webapi.Project
 	var d *webapi.Design
 	// A caller asking for the built-in catalog is treated as though the design belonged to no
 	// project, so resolution is skipped rather than its result filtered out afterwards.
 	if req.GetIgnoreProject() {
-		return OverlayFor(ctx, nil, nil, nil, nil, req, fallback, baseConvention)
+		return OverlayFor(ctx, nil, nil, nil, nil, req, baseConvention)
 	}
 	if r != nil && r.Store != nil {
 		design, project, err := r.Store.ResolveDesign(ctx, uri)
@@ -60,7 +62,7 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 	if r != nil {
 		store = r.Store
 	}
-	return OverlayFor(ctx, resolver, store, p, d, req, fallback, baseConvention)
+	return OverlayFor(ctx, resolver, store, p, d, req, baseConvention)
 }
 
 // RunProvenance is which config tiers a run actually had attached, the value a results document's

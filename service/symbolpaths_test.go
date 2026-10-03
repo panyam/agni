@@ -30,7 +30,7 @@ func TestSymbolPathsReachTheRead(t *testing.T) {
 		Name:   "projects/p",
 		Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/p/symbols"}},
 	}
-	ov, err := OverlayFor(context.Background(), symbolResolver{dirs: []string{"/host/p/symbols"}}, nil, project, &webapi.Design{}, nil, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), symbolResolver{dirs: []string{"/host/p/symbols"}}, nil, project, &webapi.Design{}, nil, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestSymbolPathsAccumulate(t *testing.T) {
 		Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/p/symbols"}},
 	}
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/extra"}}}
-	ov, err := OverlayFor(context.Background(), symbolResolver{dirs: []string{"/host/one"}}, nil, project, &webapi.Design{}, req, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), symbolResolver{dirs: []string{"/host/one"}}, nil, project, &webapi.Design{}, req, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestSymbolPathsAccumulate(t *testing.T) {
 // must not have.
 func TestSymbolPathsNeedAResolver(t *testing.T) {
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/symbols"}}}
-	if _, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, Overlay{}, ""); err == nil {
+	if _, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, ""); err == nil {
 		t.Error("a host that cannot resolve a symbol directory must refuse rather than read short")
 	}
 }

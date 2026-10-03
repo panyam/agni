@@ -21,10 +21,9 @@ import (
 // the same injected Loader the design service uses (C13). It was split out of DesignService
 // (WS9-026) and knows no transport.
 type CheckService struct {
-	// projects resolves a design to its project's config, nil when the deployment declares none.
-	// fallback is the default for a design with no project. See ProjectResolver.Overlay.
+	// projects resolves a design to its project's config, nil when the deployment declares none. See
+	// ProjectResolver.Overlay.
 	projects *ProjectResolver
-	fallback Overlay
 	loader   Loader
 	// catalog is the composed rule set the service lists and runs (WS3-006). It is injected so an
 	// embedder can compose its own sources beside the built-ins, e.g.
@@ -115,7 +114,7 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 	}
 	// A request convention replaces the server's (WS3-124), so listing the service's own catalog
 	// would show rules that will not run and hide the ones that will.
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +151,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		return nil, err
 	}
 	// Per-request overlay config (WS3-102) resolves through the same ComposeOverlay a review uses.
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +231,7 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 	// Through the project's overlay, as CheckDesign is, so the panel shows the same specs a check
 	// judges by. It used the server's corpus alone, which inside a project with its own params/
 	// showed a different spec than the verdict rested on, or none.
-	ov, err := s.projects.Overlay(ctx, u, nil, s.fallback, s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, u, nil, s.baseConvention)
 	if err != nil {
 		return nil, err
 	}

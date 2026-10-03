@@ -20,7 +20,7 @@ func (r digestResolver) ResolveConfig(context.Context, *webapi.AnalysisConfig, s
 // composition error so a caller can compare values directly.
 func idFor(t *testing.T, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, resolver ConfigResolver, base string) (string, bool) {
 	t.Helper()
-	o, err := OverlayFor(context.Background(), resolver, nil, p, d, req, Overlay{}, base)
+	o, err := OverlayFor(context.Background(), resolver, nil, p, d, req, base)
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
