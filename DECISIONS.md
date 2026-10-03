@@ -1219,6 +1219,11 @@ first is the recommendation, and it is recorded on #127 so the second is not wri
 it is the one that looks natural from inside the frontend and it would duplicate the escaping rules
 that are easy to get subtly wrong.
 
+**Amended by agni 862.** The second renderer arrived as the Python client's workbook, and the rows
+now travel as a projected `Table` message rather than as bytes, so a client encodes the engine's rows
+in any format it writes. `core/report.Table` stays this entry's rendering type for a query's markdown
+and html documents. See "An answer has one projection to rows, and a table is an encoding of it".
+
 ---
 
 ## An agniRun step boundary is declared, never inferred
@@ -1994,3 +1999,35 @@ project's default. `--checklist` takes a name, or a file for a manifest that is 
 
 **Reopen if** a checklist has to be edited by people who may not edit the rest of a project's config.
 One file then carries two audiences' permissions, which a separate file would not.
+
+## An answer has one projection to rows, and a table is an encoding of it
+
+**Question.** "A query view is a rendering type, not a wire type" kept `core/report.Table` off the
+wire because `RunQueryResponse` already was the answer, and said a second renderer would reopen it.
+The Python client's workbook helpers (agni issue 822) were that second renderer, and they reopened it
+the way the entry predicted: `verdict_sheets` and `check --verdicts --format csv` laid one run out in
+two sets of columns, and a diff came out as one table in the csv and a tab per kind in the workbook.
+
+**Answer, since agni 862: a table has two halves and agni owns the first.** Projecting an answer into
+rows decides which fields a reader needs, how a subject is spelled, how a tuple fits a cell and how
+rows order, and that is domain judgement made once, in `service/tabulate.go`. Encoding rows as csv,
+xlsx, markdown or html is format work, done wherever the bytes are written. So the rows travel: a
+`Table` message (columns with a type and an entity kind, rows of raw cells) and a `TableService.
+Tabulate` that projects an answer the caller already holds. The CLI's csv writers encode it, and so
+does a client's workbook. C35 holds the two together.
+
+- **Where the projections disagreed, the csv won**, because its headers are published and scripts
+  bind to them. The workbook took the csv's verdict columns and `kind:ref` spelling, and lost the
+  per-kind diff tabs when the diff moves over, since the one-table diff was itself a recorded choice.
+- **Order is a request, not a projection.** `order_by` names columns with a `-` for descending, and a
+  column's TYPE decides how it compares (`name` puts R2 before R10, `number` reads numbers), which a
+  request can override for a column the projection could not type. Empty `order_by` keeps run order,
+  so `TestCheckCSVMatchesJSON` still holds.
+- **Cells are raw on the wire.** Escaping is format-specific, so the csv encoder guards against
+  spreadsheet formulas and the xlsx encoder keeps a formula-shaped cell as text.
+- `core/report.Table` stays the rendering type for a query's markdown and html DOCUMENTS, which carry
+  a title and the question around the rows. Its csv no longer goes through it.
+
+**Reopen if** an encoder needs something the projection cannot carry as a cell, such as a link
+target or a style that depends on the cell's meaning. That belongs on `TableColumn` or as a second
+table, not in a client's re-derivation.

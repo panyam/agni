@@ -9,7 +9,7 @@ Enforceable architectural rules for this project. Background and rationale in
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
 that to being true, because a rule with nothing to run is not enforceable, and C6 went unchecked
-that way. A Verify is one of two things. Twenty are TESTS the gate runs, so a violation
+that way. A Verify is one of two things. Twenty-one are TESTS the gate runs, so a violation
 turns CI red. Thirteen are REVIEW questions, and each says what a reviewer should ask instead. That second
 number is the one to watch, because C32 joined the review column knowing its test was missing
 rather than by deciding a machine could not answer it, and left again once the test existed. So a
@@ -1126,3 +1126,22 @@ it ever requires one inside this repo. `TestDatasheetIsItsOwnModule` (`deps_test
 none generate into the root's `gen/`, and that no package of the root module imports one.
 `TestDatasheetProducerIsVisibleFromItsHost` is the positive control: inside the datasheet module,
 `agnids` depends on the pipeline and on a producer proto, so the names both checks look for are real.
+
+## C35: An answer has one projection to rows, and every table of it encodes that projection
+**Rule:** Turning a wire message into rows (which columns a reader needs, how an entity is spelled,
+how a relation's tuple fits one cell, how rows order) happens once, in `service/tabulate.go`, and the
+`TableService` serves it. Every table of that answer, `check --format csv`, `query --format csv` and
+a workbook a client writes, encodes those rows: its own escaping, styling and layout, and nothing
+that decides a cell. A client never derives rows from an answer message; it asks `Tabulate`.
+**Why:** a table is a view, and two views of one answer drifted the first time a second one was
+written. `check --verdicts --format csv` spelled a subject `net:SDA` under nine columns while the
+Python client's `verdict_sheets` spelled it `net SDA` under a different nine, so a csv and a workbook
+of one run disagreed, and a diff had a single table in one and a tab per kind in the other (agni
+issue 862). The projection is domain judgement, so it belongs to the engine. The encoding is format
+work, so it belongs to whoever writes the bytes.
+**Verify:** `TestCheckCSVIsTheTabulatedTable` and `TestQueryCSVIsTheTabulatedTable` (`cmd/agni`) hold
+every csv the CLI prints for a check run and a query to the table `agni tabulate` returns for the same
+answer, header, cells and order, and fail on a dropped column or an unordered row. In the Python
+client, `test_no_other_function_lays_out_an_answer` is a ratchet: the public functions of
+`agni.tables` that take an answer message are a fixed list, `diff_sheets` and `review_sheet` until the
+engine projects a diff and a review, so a new one fails.
