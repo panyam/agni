@@ -209,6 +209,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   machine understands it. The obvious probe is a trap, because `agni <cmd> --help` short-circuits
   before the config is loaded, so it accepts anything and proves nothing. Probe with a command that
   reads a design, and run the same probe with a deliberately bogus key first as a positive control.
+- **Every config YAML binds through `internal/yamlpb` against its proto**: a design's `intent:`, a
+  project's `conventions:`, a `--conventions` file, and a profile file (`ProfileDef`, or
+  `ProfileNamingMap` for an `override:` file; agni 827). Keys are proto field NAMES only, never the
+  camelCase JSON spelling, and an unknown key fails with its line. A new config file binds the same
+  way. Go structs with yaml tags are the bug shape, because they drop an unknown key silently, which is
+  how a misspelled `pull_up:` left a profile signal with no pull-up requirement and no error.
 - **A project DISCOVERS its analysis tiers, so a flag naming one is redundant and dropping the flag
   does not turn it off.** `project.yaml` carries the team's `conventions:` and its named
   `checklists:` as sections (agni 828), `internal/projects/descriptor.go` defaults the directories
@@ -449,6 +455,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   an empty set. The gate takes `samples-oracle`, the 19MB both-views corpus, because the cross-view
   tests read a board file and a test whose fixture is absent skips rather than fails. One stamp PER
   ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each other's work.
+- **The samples tarballs are built in `panyam/agni-samples` with its `make dist`**, which since
+  v0.1.1 runs on Linux as well as macOS. v0.1.0 was packed by macOS tar and carried a `._name`
+  AppleDouble shadow beside every file, and a shadow sorts ahead of the file it shadows, so any walk
+  over `tools/samples/` skips `._` names (the oracle's `globCorpus`, agni 812). The old Makefile also
+  wrote an EMPTY tarball under GNU tar that still passed `make verify`; it runs under `pipefail` now.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
   `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
   plugins pinned by version, so it needs network, and `pyproject.toml`'s `protobuf>=` floor moves with
@@ -606,6 +617,19 @@ domain because the domain is the CONSIDERED SET, passing and failing alike, and 
 failing subject has no proof to name, so no single query can both enumerate the failures and bind the
 evidence. On the ESD requirement the evidence is a SECOND head (`esd_by`) rather than a widened
 `esd_ok`, because the finding goal NEGATES `esd_ok` and a negated atom must stay unary.
+
+**Whether a connector faces the field is DECLARED in a design's intent, never classified** (agni
+831): `intent: components: {J1: {exposure: internal}}`. The same part is the module socket on one
+carrier and the cable entry on another, so `internal_connector` was removed as a class. The exposure
+rules ask `Model.ExposedConnector`, so intent reaches the MODEL as well as the catalog. It travels as
+a value (`Overlay.DesignIntent`) through `ov.ReadOptions()` into `BuildModel`, which means a model
+built without the design's overlay checks every connector as exposed. A request's intent
+(`--intent-path`) REPLACES the design's for that run, and there is no server-wide intent. Two
+neighbouring rules came out of the same work. Only a request that sends its OWN convention replaces
+the server's `--conventions`, where one carrying any other config used to drop it. And a surface that
+reads a profile rather than running it (the coverage panel, a review's interface-presence gate) asks
+`Overlay.ProfileIndex`, because a project's profile supersedes the built-in of its name and those
+surfaces described the built-in while the rules checked the project's (agni 833).
 
 **A thermistor is a `thermistor` AND a `resistor`**, the family shape `ferrite`/`inductor` already
 uses (agni 627). It classified UNKNOWN before, which emits no `component.class` row at all, so it fell

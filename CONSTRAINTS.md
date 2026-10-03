@@ -806,10 +806,11 @@ by two calls: make it one call returning both.
 
 ## C26: One schema per contract; a hand-written twin carries a round-trip guard
 **Rule:** A contract with both a YAML/authoring form and a wire form has ONE schema, the `.proto`,
-and YAML is authoring SYNTAX rather than a second schema (parse it by converting to JSON and binding
-with `protojson`, which also gives strict unknown-field rejection for free; `internal/yamlpb` does
-the conversion guided by the message, so a scalar takes its field's type and an error names its
-line). Where a hand-written Go
+and YAML is authoring SYNTAX rather than a second schema. Bind it with `internal/yamlpb`, which walks
+the YAML beside the message so a scalar takes its field's type, an unknown key fails naming its line,
+and protojson does the binding. The plain YAML-to-JSON-to-protojson route types a scalar by its
+spelling and reports a line in the intermediate JSON, and every config file had moved off it by agni
+827 (design intent, project conventions, `--conventions`, profile files). Where a hand-written Go
 twin genuinely must exist (a domain type that carries behaviour, an AST, a struct whose zero values
 mean something a message cannot express), the twin and its converter carry a **deep-equality
 round-trip test**: build a fixture with EVERY field set to a distinguishable non-zero value, go

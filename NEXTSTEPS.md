@@ -9,43 +9,41 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-01, at `f2a44ce9` (PR 754).
+Last pruned 2026-10-03, at `396cfe12` (PR 838).
 
 ## Open, ranked
 
-1. **The datasheet workstream: #749's loose ends.** #749's design is in: a published corpus with an
-   index (`datasheet/corpus`), `PartSpecService` read by `agni serve --params-url`, drafts keyed by
-   MPN in the corpus store, the workbench's draft list, New draft and Publish, and a project's
-   `params/` layered over the shared corpus per MPN. Open: #799 (the contract module, when a trigger
-   appears). The first release after #744 publishes `agnids` for the first time, so confirm an
-   anonymous pull of it then.
-2. **#564, move the tutorial ladder onto the Jetson board.** Every blocker is closed. Start by
-   deciding which view is the entry (`.kicad_sch` or `.kicad_pcb`) and which rungs need the big board.
-   The per-rung plan is the latest comment on the issue.
-3. **#724, restore rung 13's total.** #646 closed, so the CLI and the panel should now agree. Re-run
-   both before editing anything. This is small and can ride with #564.
-4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
+1. **#825, a docsite capture whose command fails renders as an empty block and the gate stays
+   green.** Rung 7 shipped this way. Its comment adds the `capture: none` case, which should demand
+   exit 0 too. Small, and every later docs or `demofeature` PR leans on captures being right.
+2. **#829, the viewer's checklist picker misses checklists a project inherits through `extends`.**
+   `agni review` resolves the chain and `ResolveDesign` does not. The issue has two fix shapes.
+3. **Three small real bugs: #755 (`CheckService.fallback` is never assigned), #756 (a nil check
+   after the call it guards), #758 (KiCad accepts `[hi:lo]` as a bus).** #755 matters most, and
+   PR 838's coverage rpc now passes that unassigned fallback like every other rpc.
+4. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Every
+   blocker is closed. Decide the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan
+   is the latest comment on #564. Re-run rung 13 in the CLI and the panel before editing it.
+5. **The `demofeature` track, #818 to #823.** #817 is done (PR 832). #818 (unchanged nets in a
+   diff) comes before the #822/#823 audit workbook it feeds. Each PR adds a docsite capture.
+6. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
-5. **#390 PR 1, the server caches check results.** Unblocked by PR 723 (`Overlay.Identity()`).
-   **The key in the issue body is wrong.** Read the corrections comment before writing any code.
-6. **#356, the run-wide highlight floods big boards.** Unblocked since #348.
-7. **#485, review report links are built from findings, not verdicts.**
-8. **#634, `agni query` has no viewer link and no `--server`.**
-9. **Where the CLI and the server disagree: #736, #737, #734.** The Python client's cross-transport
-   test declares #736 and #737 field by field and fails once each is fixed, so a fix also deletes its
-   declaration in `clients/python/tests/test_cross_transport.py`. #734 (review json onto the `Review`
-   proto) is what lets the Python CLI transport map `review`.
+7. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
+   corrections comment before writing any code.
+8. **#356 (the run-wide highlight floods big boards), #485 (review report links built from findings,
+   not verdicts), #634 (`agni query` has no viewer link), #736 (`GetLayoutReport` skips
+   `TierURIs`).** The Python client's cross-transport test declares #736 field by field, so its fix
+   also deletes that declaration in `clients/python/tests/test_cross_transport.py`.
 
-Later work is #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380, #456,
-#374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group, gzipped,
-in release binaries). The query language roadmap lives on
-panyam/jaala, where modules (#3) and aggregation inside rules (#4) come first, since they retire the
-self-join and pasted-preamble workarounds.
+Later work is #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380,
+#456, #374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group,
+gzipped, in release binaries). The query language roadmap lives on panyam/jaala, where modules (#3)
+and aggregation inside rules (#4) come first, since they retire the self-join and pasted-preamble
+workarounds.
 
-Issues #755 to #769 came out of reading every comment for PR #754. Three look like real bugs and are
-small: #755 (`CheckService.fallback` is never assigned), #756 (a nil check after the call it
-guards) and #758 (KiCad accepts `[hi:lo]` as a bus). #757 closed with #748.
-The rest are strings, proto comments, examples and rule semantics.
+#799 (the PartSpec contract module) waits for a second implementer or consumer. The first release
+since #744 publishes `agnids` for the first time, and `RELEASING.md`'s checklist now carries the
+anonymous-pull check that release owes.
 
 `OUT_OF_SCOPE.md` has five rows waiting on a decision about the ledger itself, not on code: the
 `core/svg` move, the `.edn` sniffing row (its WS6-008 ticket was wrong), the WS9-035 row that agni
@@ -66,7 +64,7 @@ Four items are gated, #677 (only the "declare a NEW class" half, gated on the cl
   decide from a netlist. The browser suite mounts it as `conformance=`.
 - **`severitySections` in `web/src/findings.ts` has no renderer, on purpose.** It is the parity oracle
   that pins the client against `GetCheckReport`. "Improving" it would hide the drift it exists to catch.
-- **Two failures in a fresh worktree are not yours.** `TestCheckWebAssets` and `TestCheckDatasheetAssets`
-  need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`).
+- **Two failures in a fresh worktree are not yours.** `TestCheckWebAssets` and, in the `datasheet`
+  module, `TestCheckWorkbenchAssets` need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`).
 - **The two `DesignHash` implementations differ on purpose** (see `OUT_OF_SCOPE.md`). Every caller now
   passes a resolved tier, so unifying them buys symmetry nobody can observe.
