@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 from typing import Callable, List, Tuple
 
-from agni import Client, CliTransport, ConnectTransport, diff_sheets, table_sheets, tables_to_xlsx
+from agni import Client, CliTransport, ConnectTransport, table_sheets, tables_to_xlsx
 from agni.tables import Rows, to_rows
 from agni.v1.webapi import query_pb2
 
@@ -58,7 +58,10 @@ def plan(client: Client, base: str, head: str) -> List[Tuple[str, Callable[[], L
         return [(n, to_rows(t)) for n, t in check if n in want]
 
     return [
-        ("Diff", lambda: diff_sheets(client.diff_designs(a_uri=base, b_uri=head, include_equal=True))),
+        ("Diff", lambda: [
+            (n, to_rows(t))
+            for n, t in table_sheets(client.tabulate(diff=client.diff_designs(a_uri=base, b_uri=head, include_equal=True)), {"diff": "Diff"})
+        ]),
         ("Audit", audit),
         ("Review", missing("#859 (ListChecklists, so the review runs the project's own checklist)")),
         ("Findings", lambda: checked("Findings")),
