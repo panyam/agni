@@ -56,7 +56,7 @@ const (
 // by ref des then field, and nets by kind then name), so two runs over the same pair produce the
 // same bytes without this writer sorting anything. Re-sorting here would create a second ordering
 // opinion that could drift from the one the text and json forms use.
-func writeDiffCSV(w io.Writer, rep *diff.Report) error {
+func writeDiffCSV(w io.Writer, rep *diff.Report, includeEqual bool) error {
 	c := rpt.NewCSVWriter(w)
 	c.Header(diffCSVColumns)
 
@@ -82,6 +82,13 @@ func writeDiffCSV(w io.Writer, rep *diff.Report) error {
 			row[12] = strconv.FormatFloat(e.NewCoverageSignificant, 'f', 3, 64)
 		}
 		c.Row(row)
+	}
+	if includeEqual {
+		for _, nc := range rep.Equal {
+			row := diffRow(classNetPrefix+string(nc.Kind), nc.Name)
+			row[8], row[9] = provFile(nc.OldProv), provFile(nc.NewProv)
+			c.Row(row)
+		}
 	}
 	return c.Finish()
 }

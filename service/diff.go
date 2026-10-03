@@ -83,7 +83,11 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	resp := DiffResponseProto(diff.Designs(a, b, RenameOptionsFromProto(req.GetNearRenames())))
+	rep := diff.Designs(a, b, RenameOptionsFromProto(req.GetNearRenames()))
+	resp := DiffResponseProto(rep)
+	if req.GetIncludeEqual() {
+		AppendEqualNets(resp, rep)
+	}
 	gA := BuildGeometry(ctx, s.loader, aURI, aOpts...)
 	gB := BuildGeometry(ctx, s.loader, bURI, bOpts...)
 	// Plain netlist models, NOT BuildModel. Diff runs no rules and annotateDiffSheets reads only
@@ -267,4 +271,15 @@ func RenameOptionsFromProto(p *webapi.NearRenameOptions) diff.RenameOptions {
 		opts.InsignificantClasses = p.GetInsignificantClasses()
 	}
 	return opts
+}
+
+// AppendEqualNets adds the nets that did not change to a response's report, as kind "equal" after
+// the changes (agni issue 818). The status maps are left alone, so a viewer tinting by status does
+// not mark every unchanged net.
+func AppendEqualNets(resp *webapi.DiffDesignsResponse, r *diff.Report) {
+	for _, nc := range r.Equal {
+		resp.Report.Nets = append(resp.Report.Nets, &webapi.DiffReport_NetChange{
+			Kind: string(nc.Kind), Name: nc.Name, OldProv: nc.OldProv, NewProv: nc.NewProv,
+		})
+	}
 }

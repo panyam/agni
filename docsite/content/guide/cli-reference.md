@@ -327,6 +327,8 @@ Structural diff between two revisions, over the IR. See
 | flag | what it does |
 |---|---|
 | `--format <fmt>` | `text` (default human summary), `json`, or `csv` (one row per change, with a `change_class` column naming which kind it is) |
+| `--rename-approx` | also pair a net renamed AND changed slightly with its old self, as `renamed-approx` with the evidence (see [Comparing revisions](../comparing-revisions/)) |
+| `--include-equal` | also report the nets that did not change: kind `equal` in `json`, `net-equal` rows in `csv`, and a count in `text`. Off by default, since most diffs are about what changed |
 
 ### `render <file>`
 

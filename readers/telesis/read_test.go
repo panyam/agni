@@ -447,8 +447,8 @@ func TestEmptySectionIsNotRecordedAsUnparsed(t *testing.T) {
 	}
 }
 
-// TestPartsSharingAFootprintKeepTheirOwnMPN covers agni issue 835. Two entries share the package
-// name TP_SMD with different MPNs, and a third repeats the first's MPN. Each part keeps the MPN its
+// TestPartsSharingAFootprintKeepTheirOwnMPN covers agni issue 835. Three entries share the package
+// name TP_SMD with three different MPNs, and one more repeats the first's MPN. Each part keeps the MPN its
 // own entry states; the later MPN gets a part type of its own that records the shared package, and
 // the repeat joins the first part type rather than making a third.
 func TestPartsSharingAFootprintKeepTheirOwnMPN(t *testing.T) {
@@ -456,6 +456,7 @@ func TestPartsSharingAFootprintKeepTheirOwnMPN(t *testing.T) {
 		"'TP_SMD' ! 'TP_SMALL' ;  TP1 TP2\n\n" +
 		"'TP_SMD' ! 'TP_LARGE' ;  TP3 TP4\n\n" +
 		"'TP_SMD' ! 'TP_SMALL' ;  TP5\n\n" +
+		"'TP_SMD' ! 'TP_MED' ;  TP6\n\n" +
 		"$NETS\n\n" +
 		"'N1' ;  TP1.1 TP3.1\n\n" +
 		"$END\n"
@@ -469,7 +470,7 @@ func TestPartsSharingAFootprintKeepTheirOwnMPN(t *testing.T) {
 			mpn[p.GetName()] = p.GetMpn()
 		}
 	}
-	want := map[string]string{"TP1": "TP_SMALL", "TP2": "TP_SMALL", "TP3": "TP_LARGE", "TP4": "TP_LARGE", "TP5": "TP_SMALL"}
+	want := map[string]string{"TP1": "TP_SMALL", "TP2": "TP_SMALL", "TP3": "TP_LARGE", "TP4": "TP_LARGE", "TP5": "TP_SMALL", "TP6": "TP_MED"}
 	for ref, w := range want {
 		c := compByRef(d, ref)
 		if c == nil {
@@ -479,8 +480,8 @@ func TestPartsSharingAFootprintKeepTheirOwnMPN(t *testing.T) {
 			t.Errorf("%s reads part type %q with MPN %q, want %q", ref, c.GetSections()[0].GetPartRef(), got, w)
 		}
 	}
-	if n := len(mpn); n != 2 {
-		t.Errorf("%d part types, want 2 (one per distinct MPN): %v", n, mpn)
+	if n := len(mpn); n != 3 {
+		t.Errorf("%d part types, want 3 (one per distinct MPN): %v", n, mpn)
 	}
 	if p := partByName(d, "TP_SMD:TP_LARGE"); p == nil || p.GetAttributes()["package"] != "TP_SMD" {
 		t.Errorf("the second MPN's part type does not record its package: %v", p)

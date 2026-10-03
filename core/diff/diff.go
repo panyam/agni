@@ -21,7 +21,8 @@ type ComponentChange struct {
 }
 
 // NetChangeKind classifies a net change, following the ground-truth taxonomy engineers use
-// (New / Deleted / rename / connectivity vs attribute-only). Equal nets are not reported.
+// (New / Deleted / rename / connectivity vs attribute-only). Equal nets are not changes, so they are
+// kept apart in Report.Equal and reported only when a caller asks (agni issue 818).
 type NetChangeKind string
 
 const (
@@ -35,6 +36,9 @@ const (
 	NetRenamedApprox NetChangeKind = "renamed-approx"
 	NetHard          NetChangeKind = "hard" // connectivity (pin membership) changed
 	NetSoft          NetChangeKind = "soft" // attribute-only change; connectivity identical
+	// NetEqual is a net present in both designs under one name with identical connectivity and
+	// attributes. It is never in Report.Nets, only in Report.Equal.
+	NetEqual NetChangeKind = "equal"
 )
 
 // NetChange is one classified net-level change. Name is the net's name in the design where
@@ -75,6 +79,10 @@ type Report struct {
 	ComponentsRemoved []string
 	ComponentsChanged []ComponentChange
 	Nets              []NetChange
+	// Equal holds the nets that did not change, as NetEqual entries sorted by name, so a revision
+	// report listing every net under its outcome need not rebuild them by subtracting the changes
+	// (agni issue 818). Render and the wire leave them out unless asked.
+	Equal []NetChange
 }
 
 // Designs diffs a (old) against b (new).
@@ -189,8 +197,11 @@ func diffNets(a, b *ir.Design, r *Report, ro RenameOptions) {
 			})
 		case ai.meta != bi.meta:
 			r.Nets = append(r.Nets, NetChange{Kind: NetSoft, Name: name, OldProv: ai.prov, NewProv: bi.prov})
+		default:
+			r.Equal = append(r.Equal, NetChange{Kind: NetEqual, Name: name, OldProv: ai.prov, NewProv: bi.prov})
 		}
 	}
+	sort.Slice(r.Equal, func(i, j int) bool { return r.Equal[i].Name < r.Equal[j].Name })
 
 	var deleted, added []string
 	for name := range an {

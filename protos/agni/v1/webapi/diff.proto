@@ -31,6 +31,11 @@ message DiffDesignsRequest {
   // candidates rather than recovering a fact, so a consumer opts in. An empty message runs it with
   // the calibrated thresholds; a field that is set overrides that one threshold.
   NearRenameOptions near_renames = 3;
+  // include_equal also reports every net that did not change, as kind "equal" after the changes,
+  // with its provenance on both sides (agni issue 818). Off by default, because most callers want
+  // what changed and a large board has thousands of unchanged nets. The status maps the viewer tints
+  // by are unaffected. A net's connections are in the design itself (GetDesign's read_mask).
+  bool include_equal = 4;
 }
 
 // NearRenameOptions tunes the near-rename pass. It matches nets by CONNECTIVITY, never by name: an
@@ -81,7 +86,8 @@ message DiffReport {
   // NetChange is one classified net change, kinds exactly diff.NetChangeKind: "new",
   // "deleted", "renamed" (same connection signature, different name), "renamed-approx" (a
   // near match the engine ASSIGNED rather than recovered, see approx below), "hard" (pin
-  // membership changed), "soft" (attribute-only). name is the net's name where it exists (the
+  // membership changed), "soft" (attribute-only), and "equal" (unchanged, only when the request set
+  // include_equal). name is the net's name where it exists (the
   // new name for a rename); old_name is set on both rename kinds. added/removed are
   // "refdes.pin" connection deltas, set on hard changes and on renamed-approx. old_prov/new_prov
   // locate the net in each revision's source, unset on the side where the net does not exist.

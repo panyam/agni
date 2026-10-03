@@ -1,0 +1,4 @@
+# The two tutorial revisions with the unchanged nets counted, beside the changes the summary lists.
+fixture: examples/tutorial-project
+script: |
+  agni diff --include-equal designs/gateway/gateway.edn designs/gateway/gateway-rev-b.edn
