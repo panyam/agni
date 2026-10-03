@@ -1,5 +1,10 @@
 # One net of the tutorial board's IR, asked for by mask: the net and every pin on it, as an analysis
 # reads them. The summary fields print as empty because the mask did not ask for them.
+#
+# The `sed` collapses protojson's colon spacing, which varies by build; see json-provenance.yaml for
+# why a JSON capture cannot be committed without it. `show` hides the pipe as plumbing.
 fixture: examples/tutorial-project
-script: |
+show: |
   agni stats designs/gateway/gateway.edn --format json --mask design.nets --net PMIC_EN
+script: |
+  agni stats designs/gateway/gateway.edn --format json --mask design.nets --net PMIC_EN | sed 's/":  */": /'
