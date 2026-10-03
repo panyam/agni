@@ -126,10 +126,12 @@ it field by field, and each declaration fails once the difference goes away:
 A table has two halves, and agni owns the first. Projecting an answer into rows (which columns, how
 a subject is spelled, how rows order) is the engine's call, made once and served by
 `TableService.Tabulate`. Writing the rows as a workbook is the client's. So a client never lays an
-answer out itself: `client.tabulate(check=…)`, `query=…` or `query_set=…` returns the engine's
-tables, which are the rows `agni check --format csv` and `agni query --format csv` print for the
+answer out itself: `client.tabulate(check=…)`, `query=…`, `query_set=…`, `diff=…` or `review=…`
+returns the engine's tables, which are the rows the matching `agni … --format csv` prints for the
 same answer, and C35 holds the two together. A check run gives `findings`, and when the response
-carries verdicts, `verdicts` and a per-rule `verdicts_by_rule`. `order_by` sorts them, as
+carries verdicts, `verdicts` and a per-rule `verdicts_by_rule`. A diff gives one `diff` table, a row
+per change with `change_class` naming its kind, and a review gives `review`, one row per item in the
+checklist's order, and a one-row `review_summary`. `order_by` sorts them, as
 `["rule", "-subject"]`, by each column's type, so a net or part column puts `R2` before `R10`, and
 `column_types` overrides a column the projection could not type, such as a query's count.
 
@@ -139,9 +141,6 @@ and an autofilter. It keeps a cell that starts with `=` as text, since a cell is
 file and must not run as a formula. It needs the `xlsx` extra, and tab names, colours and highlighted
 rows stay in the caller, which can reopen the file with openpyxl.
 `clients/python/examples/audit_workbook.py` writes a five-sheet audit of the tutorial board this way.
-
-`diff_sheets` and `review_sheet` still lay out a diff and a review in the client, until the engine
-projects those answers too (agni issue 862, part two).
 
 The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts whose
 layout belongs to whoever reads it, so it stays in the client.

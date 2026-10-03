@@ -1130,8 +1130,8 @@ none generate into the root's `gen/`, and that no package of the root module imp
 ## C35: An answer has one projection to rows, and every table of it encodes that projection
 **Rule:** Turning a wire message into rows (which columns a reader needs, how an entity is spelled,
 how a relation's tuple fits one cell, how rows order) happens once, in `service/tabulate.go`, and the
-`TableService` serves it. Every table of that answer, `check --format csv`, `query --format csv` and
-a workbook a client writes, encodes those rows: its own escaping, styling and layout, and nothing
+`TableService` serves it. Every table of that answer, `check`, `query`, `diff` and `review` with
+`--format csv`, and a workbook a client writes, encodes those rows: its own escaping, styling and layout, and nothing
 that decides a cell. A client never derives rows from an answer message; it asks `Tabulate`.
 **Why:** a table is a view, and two views of one answer drifted the first time a second one was
 written. `check --verdicts --format csv` spelled a subject `net:SDA` under nine columns while the
@@ -1139,9 +1139,10 @@ Python client's `verdict_sheets` spelled it `net SDA` under a different nine, so
 of one run disagreed, and a diff had a single table in one and a tab per kind in the other (agni
 issue 862). The projection is domain judgement, so it belongs to the engine. The encoding is format
 work, so it belongs to whoever writes the bytes.
-**Verify:** `TestCheckCSVIsTheTabulatedTable` and `TestQueryCSVIsTheTabulatedTable` (`cmd/agni`) hold
-every csv the CLI prints for a check run and a query to the table `agni tabulate` returns for the same
-answer, header, cells and order, and fail on a dropped column or an unordered row. In the Python
-client, `test_no_other_function_lays_out_an_answer` is a ratchet: the public functions of
-`agni.tables` that take an answer message are a fixed list, `diff_sheets` and `review_sheet` until the
-engine projects a diff and a review, so a new one fails.
+**Verify:** `TestCheckCSVIsTheTabulatedTable`, `TestQueryCSVIsTheTabulatedTable`,
+`TestDiffCSVIsTheTabulatedTable` and `TestReviewCSVIsTheTabulatedTable` (`cmd/agni`) hold every csv the
+CLI prints for an answer to the table `agni tabulate` returns for it, header, cells and order, and
+fail on a dropped column or an unordered row. In the Python client,
+`test_no_other_function_lays_out_an_answer` holds that the only public function of `agni.tables`
+taking an answer message is `rows_as_dicts`, which reads a query answer and lays out no table, so a
+new projection written in the client fails.
