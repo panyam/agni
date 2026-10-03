@@ -25,8 +25,9 @@ import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpre
 import { SvgView } from "./svgview.js";
 import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
-  projectClient,
+  projectClient, useEngineFetch,
 } from "./api.js";
+import { startEngine, mountSeed } from "./wasm/client.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
 import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
@@ -60,8 +61,41 @@ function isTextEntry(target: EventTarget | null): boolean {
 function syncUrl(loc: ViewerLocation): void {
   document.title = hasFile(loc) ? `${loc.path || loc.mount} — Agni` : "Agni viewer";
   if (restoring) return;
-  const url = locationToUrl(loc);
+  const url = withEngineParams(locationToUrl(loc));
   if (url !== window.location.pathname + window.location.search) window.history.pushState(null, "", url);
+}
+
+// engineParams are the query parameters that put this page on the in-browser engine. They ride along
+// on every URL the page pushes, so a refresh or a back/forward stays on the engine that holds the
+// design instead of asking a server that has never seen it.
+const engineParams = (() => {
+  const q = new URLSearchParams(window.location.search);
+  const out = new URLSearchParams();
+  for (const k of ["engine", "seed"]) {
+    const v = q.get(k);
+    if (v !== null) out.set(k, v);
+  }
+  return out;
+})();
+
+function withEngineParams(url: string): string {
+  if (!engineParams.size) return url;
+  const u = new URL(url, window.location.origin);
+  engineParams.forEach((v, k) => u.searchParams.set(k, v));
+  return u.pathname + u.search;
+}
+
+// startEngineFromUrl puts the page on the in-browser engine when the URL says `engine=wasm` (agni issue
+// 178): the engine loads in a worker, the design named by `seed` is mounted into it, and every client
+// the page builds afterwards talks to the worker instead of the server. It must finish before the app
+// root builds its clients. The assets sit beside this bundle, so the page works under any path prefix.
+async function startEngineFromUrl(): Promise<void> {
+  if (engineParams.get("engine") !== "wasm") return;
+  const asset = (name: string) => new URL(name, import.meta.url).href;
+  const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") });
+  const seed = engineParams.get("seed");
+  if (seed) await mountSeed(engine, seed);
+  useEngineFetch((input, init) => engine.fetch(input, init));
 }
 
 class AppRoot extends BaseComponent {
@@ -486,10 +520,13 @@ const dockApi = dockEl && parkEl && menuEl ? createViewerDock(dockEl, parkEl, me
 
 const bus = new EventBus();
 const controller = new LifecycleController(bus);
-const root = new AppRoot("app", document.body, bus);
-void controller
-  .initializeFromRoot(root)
+void startEngineFromUrl()
   .then(async () => {
+    const root = new AppRoot("app", document.body, bus);
+    await controller.initializeFromRoot(root);
+    return root;
+  })
+  .then(async (root) => {
     const presenter = root.presenter;
     if (!presenter) return;
     // applyUrl opens whatever the current URL addresses. The restoring flag keeps this replay from

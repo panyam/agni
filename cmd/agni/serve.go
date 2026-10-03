@@ -25,7 +25,6 @@ import (
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/render"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/paramclient"
 	"github.com/panyam/agni/internal/projects"
@@ -236,8 +235,6 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		enabledNative[t] = true
 	}
 	nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
-	wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(osWorkspace(mounts))))
-	mux.Handle(wsPath, wsHandler)
 	// ProjectService (agni issue 170) resolves the project/design descriptors in the mounts and
 	// needs no flag. A mount with no descriptors resolves to nothing, so one project's config never
 	// reaches another project's design.
@@ -249,10 +246,6 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// One resolver for every rule-running surface. Per-design config reaches a run through this,
 	// and the startup flags below are only the DEFAULT for a design with no project (agni issue 173).
 	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
-	prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projectStore)))
-	mux.Handle(prPath, prHandler)
-	dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style, projectResolver)))
-	mux.Handle(dsPath, dsHandler)
 	// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
 	// installed process-wide, at startup and never mutated after (C22). Its RULES join the catalog
 	// inside serveRuleServices. A request that names its own conventions REPLACES both halves for
@@ -291,16 +284,17 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		budget.Log("note: no query budget is enforced; queries costing more than %d work units are logged with a suggested cap. Pass --query-budget N to enforce one.", budget.Warn)
 	}
 	budgeted := connect.WithInterceptors(budget.Interceptor())
-	ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc), budgeted)
-	mux.Handle(ckPath, ckHandler)
-	diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
-	mux.Handle(diffPath, diffHandler)
-	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)), budgeted)
-	mux.Handle(qPath, qHandler)
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
-	// one composed catalog.
-	rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc), budgeted)
-	mux.Handle(rvPath, rvHandler)
+	// one composed catalog. The wasm engine registers through the same server.API.
+	apiPaths := server.API{
+		Workspace: service.NewWorkspaceService(osWorkspace(mounts)),
+		Project:   service.NewProjectService(projectStore),
+		Design:    service.NewDesignService(loader, nativeR, style, projectResolver),
+		Check:     checkSvc,
+		Diff:      service.NewDiffService(loader, projectResolver),
+		Query:     service.NewQueryService(loader, specs, projectResolver),
+		Review:    reviewSvc,
+	}.Register(mux, budgeted)
 	if assets.viewer {
 		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
 	}
@@ -316,7 +310,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	mux.Handle("GET /healthz", healthHandler())
 	switch {
 	case !assets.viewer:
-		mux.Handle("/", apiOnlyHandler([]string{wsPath, prPath, dsPath, ckPath, diffPath, qPath, rvPath}))
+		mux.Handle("/", apiOnlyHandler(apiPaths))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
 	default:
 		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/")}), mux)

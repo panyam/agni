@@ -1,17 +1,17 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
+	"github.com/panyam/agni/fshost"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/version"
@@ -197,16 +197,7 @@ func writeResults(path string, doc *checkspb.CheckResults) error {
 // It hashes the ENTRY file only, not a hierarchical design's sub-sheets or a project's sidecars, so a
 // matching hash means the same entry file and not the same design.
 func hashSource(path string) string {
-	f, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return ""
-	}
-	return "sha256:" + hex.EncodeToString(h.Sum(nil))
+	return fshost.ContentHash(os.DirFS(filepath.Dir(path)), filepath.Base(path))
 }
 
 // displayName shows an artifact URI to a person as its mount-relative path.

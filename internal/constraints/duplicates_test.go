@@ -28,6 +28,8 @@ import (
 var allowedDuplicateBodies = map[string]string{
 	"readers/edif/writer.go:sortedKeys + stdlib/rules/intent/strapgroups.go:sortedKeys": "the " +
 		"sort-a-map's-keys idiom; two copies cannot disagree about anything",
+	"core/check/naming/naming.go:Load + internal/expect/expect.go:Load": "read a file and hand the " +
+		"bytes to this package's own Parse; the shared shape is the idiom, and each parses a different type",
 }
 
 const minDuplicateLines = 6

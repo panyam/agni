@@ -13,3 +13,11 @@ static/landing.js.map
 *.local.pb
 shot*.png
 static/app.css
+
+# The in-browser engine (agni issue 178): the worker bundle, the wasm `make wasm` builds, Go's loader
+# script, and the seed `make wasm-seed` copies from the tutorial fixture.
+static/agni-worker.js
+static/agni-worker.js.map
+static/agni.wasm
+static/wasm_exec.js
+static/seed/

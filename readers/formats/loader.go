@@ -370,3 +370,46 @@ func (l *Loader) kicadSymOpener(schPath string) func(lib string) ([]byte, error)
 		return nil, fmt.Errorf("kicad symbol library %q not found (sym-lib-table + %d dir(s); pass --symbol-path)", lib, 1+len(l.SymbolPaths))
 	}
 }
+
+// SymbolsFor maps the services' faithful-symbols bool onto the --symbols value a geometry read
+// takes.
+func SymbolsFor(faithful bool) string {
+	if faithful {
+		return SymbolsFaithful
+	}
+	return SymbolsGlyph
+}
+
+// Companion returns a sibling <stem>.eds schematic for a NETLIST design, or "" when the design
+// already carries its own geometry (an .eds or .kicad_sch draws itself) or no sibling exists. It
+// checks names only and never parses the sibling. A netlist with one draws that schematic instead of
+// an auto-layout, while checks and queries still read the netlist, joined by net name (C21).
+//
+// It resolves through this loader's name space, so a server reading host paths and the wasm engine
+// reading an in-memory FS find the same companion for the same tree.
+func (l *Loader) Companion(name string) string {
+	if HasFaithful(name) {
+		return ""
+	}
+	sib := l.Sibling(name, strings.TrimSuffix(l.base(name), l.ext(name))+".eds")
+	if sib == name {
+		return ""
+	}
+	f, err := l.Open(sib)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	if st, err := f.Stat(); err != nil || st.IsDir() {
+		return ""
+	}
+	return sib
+}
+
+// ext takes the extension of a path in this loader's name space. See Sibling.
+func (l *Loader) ext(name string) string {
+	if l == nil || l.FS == nil {
+		return filepath.Ext(name)
+	}
+	return path.Ext(name)
+}

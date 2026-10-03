@@ -69,7 +69,7 @@ A few contract details bite if missed.
   model, and runs the same evaluator the CLI runs. The datasheet parameter relation answers only
   when the server has a corpus, from `agni serve --params <dir>` or the design's own project
   `params/`, and returns no rows otherwise. The evaluator is the dependency-free Go of the `jaala`
-  datalog module, so a later revision could evaluate it in the browser instead.
+  datalog module, which is why the in-browser engine below runs it unchanged.
 - **A design is named, a checklist is sent.** CreateReview carries the review manifest as a value
   while the design stays an artifact URI. A design is megabytes, needs a reader chosen by
   extension, and is re-requested across many calls, so the call names it and the server reads it
@@ -99,3 +99,40 @@ A few contract details bite if missed.
   just the manifest's name. A checklist is an editable file, so a name would resolve to whatever it
   says today, and last quarter's review would re-render against this quarter's questions with its
   outcomes intact underneath.
+
+## The same contract in the browser
+
+`agni serve` is one host for these services and the browser is another. `cmd/agni-wasm` builds the
+engine as WebAssembly, and the viewer runs it in a Web Worker when its URL carries `engine=wasm`,
+so a design dropped on the page is checked without leaving the visitor's machine (agni issue 178).
+The worker answers the same Connect paths with the same messages, and the page's clients reach it
+through the `fetch` a Connect transport takes, so no panel knows which host answered.
+
+```
+make wasm wasm-seed serve
+open http://localhost:8080/designs/tut/designs/gateway/view?engine=wasm&seed=/static/seed/tut.json
+```
+
+The page still comes from `agni serve` in that example, but the API does not. The tutorial project
+is mounted in the worker, which the server has never seen, so every answer on screen came from the
+engine in the page.
+
+Three choices in the host follow from the browser rather than from the contract.
+
+- **Files are pushed in before a request, never read during one.** The page hands the worker a
+  mount's files as bytes (`agniMount`), and every read is then served from memory through an
+  `fs.FS`. A browser can only produce bytes asynchronously, and an `fs.FS` read is synchronous, so
+  reading mid-request would block Go on a JavaScript promise inside a callback that pauses the event
+  loop the promise needs.
+- **A request is answered as a promise, on a goroutine of its own.** `agniHTTP` returns at once and
+  runs the handler beside it, for the same reason.
+- **A mount change recomposes the engine.** Each `agniMount` builds the services again over the new
+  mount table, through `agni.New`, which refuses a build missing the rule catalog. A browser bundle
+  that shipped without it would otherwise report every design clean.
+
+The browser and the server read through different adapters over one set of ports, `fshost` over
+in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with
+nothing erroring (C32). `TestWasmEngineAnswersAsTheServerDoes` asks both the questions the viewer
+asks on opening a design and requires identical answers, `make wasm-test` runs the exports under
+Node, and the browser suite opens the gateway on the engine and checks that no API request reaches
+the network.
