@@ -25,11 +25,7 @@ TUTORIAL = Path(__file__).resolve().parents[3] / "examples" / "tutorial-project"
 TABLES: List[Tuple[str, str]] = [
     ("Pin to net", "pin.net(?c, ?p, ?n) => ?c, ?p, ?n"),
     ("Part numbers", "component.mpn(?c, ?mpn) => ?c, ?mpn"),
-    (
-        "Test points per net",
-        'entity(?n, "net"), component.net(?tp, ?n), component.class(?tp, "test_point")'
-        " => ?n, count(distinct ?tp), list(distinct ?tp)",
-    ),
+    ("Test points per net", "net.test_point_count(?n, ?c) => ?n, ?c order by ?c, ?n"),
     ("Nets per component", "component.net_count(?c, ?k) => ?c, ?k"),
 ]
 

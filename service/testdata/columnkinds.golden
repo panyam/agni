@@ -72,6 +72,8 @@ net.route	arg2=path	kind=""	kindVar=""	ref=-
 net.signal_level	arg0=net	kind="net"	kindVar=""	ref=-
 net.signal_level	arg1=volts	kind=""	kindVar=""	ref=-
 net.switching	arg0=net	kind="net"	kindVar=""	ref=-
+net.test_point_count	arg0=n	kind="net"	kindVar=""	ref=-
+net.test_point_count	arg1=c	kind=""	kindVar=""	ref=-
 netclass.clearance	arg0=class	kind=""	kindVar=""	ref=-
 netclass.clearance	arg1=mm	kind=""	kindVar=""	ref=-
 netclass.track_width	arg0=class	kind=""	kindVar=""	ref=-

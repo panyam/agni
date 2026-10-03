@@ -85,6 +85,7 @@ Defined in Datalog over the relations above rather than projected from the desig
 | [`component.probed_one(r, probed, unprobed)`](component.probed_one/) | A two-terminal part with a test point on exactly one of its nets, naming the probed net and then the other, which is where a missing test point would go. |
 | [`component.two_terminal(r, a, b)`](component.two_terminal/) | A part on exactly two nets, with the nets in name order (?a < ?b) so each part answers once. The parts an in-circuit test measures across two nodes: resistors, capacitors, inductors, diodes. |
 | [`net.has_test_point(n)`](net.has_test_point/) | A net at least one test point sits on, so a probe can land on it during bring-up or in-circuit test. |
+| [`net.test_point_count(n, c)`](net.test_point_count/) | How many test points sit on each net, 0 for a net with none, so every net answers one row. |
 
 ## predicate
 
