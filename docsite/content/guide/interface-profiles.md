@@ -237,7 +237,15 @@ built-in profiles only, so an overlay profile's findings appear while its covera
 A profile that cannot do what it says is refused at load, with the error naming what was available.
 
 <details>
-<summary>The three load-time refusals, verbatim</summary>
+<summary>The four load-time refusals, verbatim</summary>
+
+A key the file's schema does not have. The schema is the `ProfileDef` message in
+`protos/agni/v1/checks/ruledef.proto`, so a misspelled key fails with its line rather than leaving
+the signal without the requirement it was meant to carry:
+
+```
+error: profiles: i2c.yaml: profile: line 3: unknown key "pull_up" in "signals[0]" (known: anchor, glob, name, prefix, pullup, regex, suffix)
+```
 
 A requirement type nothing registers:
 

@@ -409,3 +409,24 @@ func TestBuiltinsPassRequirementValidation(t *testing.T) {
 		}
 	}
 }
+
+// A profile file binds to checkspb.ProfileDef through yamlpb, so a key the schema lacks fails naming
+// its line instead of configuring nothing. A misspelled pullup used to decode into a Go struct that
+// dropped it, so the signal silently lost its pull-up requirement (agni issue 827).
+func TestProfileFileIsBoundToItsSchema(t *testing.T) {
+	_, err := Load(strings.NewReader("name: X\nsignals:\n  - {name: SDA, suffix: _SDA, anchor: true}\n  - {name: SCL, suffix: _SCL, pull_up: true}\n"))
+	if err == nil || !strings.Contains(err.Error(), "line 4") || !strings.Contains(err.Error(), `"pull_up"`) {
+		t.Errorf("a misspelled signal key should fail naming its line, got %v", err)
+	}
+	_, err = Load(strings.NewReader("override: CAN\nsufixes: {TXD: _TX}\n"))
+	if err == nil || !strings.Contains(err.Error(), "line 2") {
+		t.Errorf("a misspelled naming-map key should fail naming its line, got %v", err)
+	}
+	p, err := Load(strings.NewReader("name: X\nhost: {attr: interface, value: X, class: crystal}\nsignals:\n  - {name: A, suffix: _A, anchor: true, pullup: true}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.HostAttrKey != "interface" || p.HostAttrVal != "X" || p.HostClass != "crystal" || !p.Signals[0].PullUp {
+		t.Errorf("the host and pullup did not reach the profile: %+v", p)
+	}
+}

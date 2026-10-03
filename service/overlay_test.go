@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/stdlib/profiles"
 	"os"
 	"path/filepath"
 	"strings"
@@ -295,5 +296,30 @@ func TestRequestWithoutAConventionKeepsTheServers(t *testing.T) {
 	}
 	if !names["intent/module-missing"] {
 		t.Error("the request's intent did not compose")
+	}
+}
+
+// ProfileIndex layers an overlay's profiles over the base index by name, as their compiled source
+// supersedes the base rules, leaves the base untouched, and falls back to the built-ins for a nil base.
+func TestOverlayProfileIndex(t *testing.T) {
+	builtinCAN, ok := profiles.ByName("CAN")
+	if !ok {
+		t.Fatal("no built-in CAN profile")
+	}
+	base := map[string][]profiles.Profile{"CAN": {builtinCAN}}
+	mine := profiles.Profile{Name: "CAN", Signals: []profiles.Signal{{Name: "CANH", Suffix: "_BUSH", Anchor: true}}}
+	house := profiles.Profile{Name: "HOUSEBUS", Signals: []profiles.Signal{{Name: "A", Suffix: "_HA", Anchor: true}}}
+	got := Overlay{InterfaceProfiles: []profiles.Profile{mine, house}}.ProfileIndex(base)
+	if len(got["CAN"]) != 1 || got["CAN"][0].Signals[0].Suffix != "_BUSH" {
+		t.Errorf("the overlay's CAN should replace the base one, got %+v", got["CAN"])
+	}
+	if len(got["HOUSEBUS"]) != 1 {
+		t.Errorf("a profile only the overlay declares should be added, got %v", got["HOUSEBUS"])
+	}
+	if base["CAN"][0].Signals[0].Suffix == "_BUSH" || len(base) != 1 {
+		t.Error("ProfileIndex modified its base")
+	}
+	if fromNil := (Overlay{}).ProfileIndex(nil); len(fromNil) != len(profiles.Profiles) {
+		t.Errorf("a nil base should index the %d built-ins, got %d", len(profiles.Profiles), len(fromNil))
 	}
 }
