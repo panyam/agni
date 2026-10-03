@@ -302,3 +302,22 @@ func TestLexiconReadsBackItsPatterns(t *testing.T) {
 		t.Errorf("the effective set should carry the built-ins too, got %v", got)
 	}
 }
+
+// A convention file binds through internal/yamlpb, as a project's conventions: section does, so an
+// unknown key names its line, a scalar takes its field's type, and a bool field refuses a string
+// (agni issue 827).
+func TestParseBindsByField(t *testing.T) {
+	if _, err := Parse([]byte("name: house\nrules:\n  - name: r\n    alow: [\"^X\"]\n")); err == nil || !strings.Contains(err.Error(), "line 4") || !strings.Contains(err.Error(), `"alow"`) {
+		t.Errorf("a misspelled key should fail naming its line, got %v", err)
+	}
+	cfg, err := Parse([]byte("name: 2024\n"))
+	if err != nil || cfg.GetName() != "2024" {
+		t.Errorf("a numeric-looking name fills the string field, got %q, %v", cfg.GetName(), err)
+	}
+	if _, err := Parse([]byte("name: house\nrules:\n  - name: r\n    match_full: \"yes\"\n")); err == nil || !strings.Contains(err.Error(), "true or false") {
+		t.Errorf("a quoted string in a bool field should fail, got %v", err)
+	}
+	if cfg, err := Parse(nil); err != nil || cfg == nil {
+		t.Errorf("an empty file is an empty convention, got %v, %v", cfg, err)
+	}
+}

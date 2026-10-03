@@ -12,6 +12,7 @@ import (
 	"github.com/panyam/agni/core/param"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
@@ -40,6 +41,11 @@ type Overlay struct {
 	// Sources, and the value travels too because part of it is read by the MODEL rather than by a rule:
 	// which connectors are internal (agni issue 831).
 	DesignIntent *configpb.DesignIntent
+	// InterfaceProfiles are the profile VALUES behind the profile source in Sources: a project's own
+	// profiles/ and any a request's config names. Running a profile needs only its compiled rules, and
+	// these are for the surfaces that read a profile itself, the coverage panel and a review's
+	// interface-presence gate, so they see the profiles the run's rules came from (agni issue 833).
+	InterfaceProfiles []profiles.Profile
 	// Library and LibraryDocs are the project's own derived relations and their pages, composed into
 	// a query vocabulary by Registry.
 	Library     []LibraryModule
@@ -137,6 +143,32 @@ func (o Overlay) explainCollision(err error) error {
 		"server's --conventions to replace it)", err)
 }
 
+// ProfileIndex is the set of interface profiles this run's rules came from, keyed by name: base (the
+// built-ins and a deployment's --profile-path, already composed) with this overlay's own profiles
+// REPLACING a base profile of the same name, as their compiled source supersedes its rules. A
+// surface reading a profile rather than running it uses this, so it never describes an interface by
+// a definition the run did not check (agni issue 833). base is not modified.
+func (o Overlay) ProfileIndex(base map[string][]profiles.Profile) map[string][]profiles.Profile {
+	out := make(map[string][]profiles.Profile, len(base))
+	for name, ps := range base {
+		out[name] = ps
+	}
+	if base == nil {
+		for _, p := range profiles.Profiles {
+			out[p.Name] = append(out[p.Name], p)
+		}
+	}
+	replaced := map[string]bool{}
+	for _, p := range o.InterfaceProfiles {
+		if !replaced[p.Name] {
+			out[p.Name] = nil
+			replaced[p.Name] = true
+		}
+		out[p.Name] = append(out[p.Name], p)
+	}
+	return out
+}
+
 // ReadOptions is what the overlay contributes to each design READ: the naming lexicon, the symbol
 // paths, and the datasheet device-class lookup, each only when present.
 func (o Overlay) ReadOptions() []ReadOption {
@@ -205,6 +237,9 @@ type ResolvedConfig struct {
 	// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 	Profiles bool
 	Intent   bool
+	// InterfaceProfiles are the profile values compiled into Sources, nil when the config names none.
+	// See Overlay.InterfaceProfiles.
+	InterfaceProfiles []profiles.Profile
 	// Library is the project's own derived relations (agni issue 773), one module per file of a
 	// library directory, and LibraryDocs their optional reference pages keyed by member path. A query
 	// run under this config reads them through Overlay.Registry.
@@ -266,6 +301,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 			return Overlay{}, err
 		}
 		o.Sources, o.Specs, o.Profiles, o.Intent = cfg.Sources, cfg.Specs, cfg.Profiles, cfg.Intent
+		o.InterfaceProfiles = cfg.InterfaceProfiles
 		o.SymbolPaths = cfg.SymbolPaths
 		o.Library, o.LibraryDocs = cfg.Library, cfg.LibraryDocs
 		id.addDigest("project-config", cfg.Digest)
@@ -447,6 +483,7 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.Library = append(append(append([]LibraryModule{}, out.Library...), reqResolved.Library...), reqOv.Library...)
 	out.LibraryDocs = mergeDocs(mergeDocs(out.LibraryDocs, reqResolved.LibraryDocs), reqOv.LibraryDocs)
 	out.Profiles = out.Profiles || reqResolved.Profiles
+	out.InterfaceProfiles = append(append([]profiles.Profile{}, out.InterfaceProfiles...), reqResolved.InterfaceProfiles...)
 	out.Intent = out.Intent || reqResolved.Intent || reqIntent != nil
 	out.conventionName = req.GetConfig().GetConventions().GetName()
 	// Set the base convention's NAME explicitly, since Overlay.Catalog drops the sources tagged with it.

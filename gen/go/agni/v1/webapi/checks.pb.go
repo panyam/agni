@@ -987,7 +987,11 @@ func (x *ListRulesResponse) GetRules() []*RuleInfo {
 type GetInterfaceCoverageRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the design to project coverage over.
-	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	// overlay and as_named mean what they mean on CheckDesignRequest, so the coverage panel reads the
+	// design the way the check it sits beside does (agni issue 833).
+	Overlay       *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	AsNamed       bool           `protobuf:"varint,3,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1027,6 +1031,20 @@ func (x *GetInterfaceCoverageRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *GetInterfaceCoverageRequest) GetOverlay() *OverlayConfig {
+	if x != nil {
+		return x.Overlay
+	}
+	return nil
+}
+
+func (x *GetInterfaceCoverageRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 // SignalCoverage is one required interface signal's state (WS9-041). net is the matched net name,
@@ -1427,9 +1445,11 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
 	"\x11ListRulesResponse\x12.\n" +
-	"\x05rules\x18\x01 \x03(\v2\x18.agni.v1.webapi.RuleInfoR\x05rules\"/\n" +
+	"\x05rules\x18\x01 \x03(\v2\x18.agni.v1.webapi.RuleInfoR\x05rules\"\x83\x01\n" +
 	"\x1bGetInterfaceCoverageRequest\x12\x10\n" +
-	"\x03uri\x18\x01 \x01(\tR\x03uri\"L\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x127\n" +
+	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x19\n" +
+	"\bas_named\x18\x03 \x01(\bR\aasNamed\"L\n" +
 	"\x0eSignalCoverage\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03net\x18\x02 \x01(\tR\x03net\x12\x14\n" +
@@ -1519,29 +1539,30 @@ var file_agni_v1_webapi_checks_proto_depIdxs = []int32{
 	1,  // 9: agni.v1.webapi.ListRulesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
 	21, // 10: agni.v1.webapi.RuleInfo.tags:type_name -> agni.v1.webapi.RuleInfo.TagsEntry
 	12, // 11: agni.v1.webapi.ListRulesResponse.rules:type_name -> agni.v1.webapi.RuleInfo
-	15, // 12: agni.v1.webapi.InterfaceCoverage.signals:type_name -> agni.v1.webapi.SignalCoverage
-	16, // 13: agni.v1.webapi.GetInterfaceCoverageResponse.interfaces:type_name -> agni.v1.webapi.InterfaceCoverage
-	27, // 14: agni.v1.webapi.ComponentParams.spec:type_name -> agni.v1.param.PartSpec
-	19, // 15: agni.v1.webapi.GetComponentParamsResponse.components:type_name -> agni.v1.webapi.ComponentParams
-	11, // 16: agni.v1.webapi.CheckService.ListRules:input_type -> agni.v1.webapi.ListRulesRequest
-	0,  // 17: agni.v1.webapi.CheckService.CheckDesign:input_type -> agni.v1.webapi.CheckDesignRequest
-	8,  // 18: agni.v1.webapi.CheckService.GetExpectations:input_type -> agni.v1.webapi.GetExpectationsRequest
-	4,  // 19: agni.v1.webapi.CheckService.GetCheckReport:input_type -> agni.v1.webapi.GetCheckReportRequest
-	14, // 20: agni.v1.webapi.CheckService.GetInterfaceCoverage:input_type -> agni.v1.webapi.GetInterfaceCoverageRequest
-	18, // 21: agni.v1.webapi.CheckService.GetComponentParams:input_type -> agni.v1.webapi.GetComponentParamsRequest
-	6,  // 22: agni.v1.webapi.CheckService.GetNamingConvention:input_type -> agni.v1.webapi.GetNamingConventionRequest
-	13, // 23: agni.v1.webapi.CheckService.ListRules:output_type -> agni.v1.webapi.ListRulesResponse
-	2,  // 24: agni.v1.webapi.CheckService.CheckDesign:output_type -> agni.v1.webapi.CheckDesignResponse
-	10, // 25: agni.v1.webapi.CheckService.GetExpectations:output_type -> agni.v1.webapi.GetExpectationsResponse
-	5,  // 26: agni.v1.webapi.CheckService.GetCheckReport:output_type -> agni.v1.webapi.GetCheckReportResponse
-	17, // 27: agni.v1.webapi.CheckService.GetInterfaceCoverage:output_type -> agni.v1.webapi.GetInterfaceCoverageResponse
-	20, // 28: agni.v1.webapi.CheckService.GetComponentParams:output_type -> agni.v1.webapi.GetComponentParamsResponse
-	7,  // 29: agni.v1.webapi.CheckService.GetNamingConvention:output_type -> agni.v1.webapi.GetNamingConventionResponse
-	23, // [23:30] is the sub-list for method output_type
-	16, // [16:23] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	1,  // 12: agni.v1.webapi.GetInterfaceCoverageRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	15, // 13: agni.v1.webapi.InterfaceCoverage.signals:type_name -> agni.v1.webapi.SignalCoverage
+	16, // 14: agni.v1.webapi.GetInterfaceCoverageResponse.interfaces:type_name -> agni.v1.webapi.InterfaceCoverage
+	27, // 15: agni.v1.webapi.ComponentParams.spec:type_name -> agni.v1.param.PartSpec
+	19, // 16: agni.v1.webapi.GetComponentParamsResponse.components:type_name -> agni.v1.webapi.ComponentParams
+	11, // 17: agni.v1.webapi.CheckService.ListRules:input_type -> agni.v1.webapi.ListRulesRequest
+	0,  // 18: agni.v1.webapi.CheckService.CheckDesign:input_type -> agni.v1.webapi.CheckDesignRequest
+	8,  // 19: agni.v1.webapi.CheckService.GetExpectations:input_type -> agni.v1.webapi.GetExpectationsRequest
+	4,  // 20: agni.v1.webapi.CheckService.GetCheckReport:input_type -> agni.v1.webapi.GetCheckReportRequest
+	14, // 21: agni.v1.webapi.CheckService.GetInterfaceCoverage:input_type -> agni.v1.webapi.GetInterfaceCoverageRequest
+	18, // 22: agni.v1.webapi.CheckService.GetComponentParams:input_type -> agni.v1.webapi.GetComponentParamsRequest
+	6,  // 23: agni.v1.webapi.CheckService.GetNamingConvention:input_type -> agni.v1.webapi.GetNamingConventionRequest
+	13, // 24: agni.v1.webapi.CheckService.ListRules:output_type -> agni.v1.webapi.ListRulesResponse
+	2,  // 25: agni.v1.webapi.CheckService.CheckDesign:output_type -> agni.v1.webapi.CheckDesignResponse
+	10, // 26: agni.v1.webapi.CheckService.GetExpectations:output_type -> agni.v1.webapi.GetExpectationsResponse
+	5,  // 27: agni.v1.webapi.CheckService.GetCheckReport:output_type -> agni.v1.webapi.GetCheckReportResponse
+	17, // 28: agni.v1.webapi.CheckService.GetInterfaceCoverage:output_type -> agni.v1.webapi.GetInterfaceCoverageResponse
+	20, // 29: agni.v1.webapi.CheckService.GetComponentParams:output_type -> agni.v1.webapi.GetComponentParamsResponse
+	7,  // 30: agni.v1.webapi.CheckService.GetNamingConvention:output_type -> agni.v1.webapi.GetNamingConventionResponse
+	24, // [24:31] is the sub-list for method output_type
+	17, // [17:24] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_checks_proto_init() }
