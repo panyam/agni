@@ -167,6 +167,8 @@ CASES: List[Case] = [
     ),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET_WITH_TYPO)),
     Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn")),
+    # Unchanged nets, asked for (agni issue 818).
+    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn", include_equal=True)),
     # A near-rename, asked for (agni issue 817): rev C renames PMIC_EN and adds a pull-up to it.
     Case(
         "DiffService/DiffDesigns",

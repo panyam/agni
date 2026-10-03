@@ -52,6 +52,19 @@ pass matches by connectivity and never by name, so the thresholds are fractions 
 The Python client sends it as `diff_designs(..., near_renames={})`; overriding a threshold needs a
 server, since the CLI runs the defaults only.
 
+## Listing what did not change
+
+A diff reports changes, so a net that is the same in both revisions does not appear. A report that
+lists every net under its outcome, a revision workbook for instance, asks for the unchanged ones too
+with `--include-equal`. They come back as kind `equal` in `--format json`, as `net-equal` rows in
+`--format csv`, and as a count in the text summary:
+
+{{ agniRun "content/guide/runs/diff-include-equal.yaml" }}
+
+Every net of both revisions is then accounted for once: an unchanged net as `equal`, a changed one
+under its kind, and a rename as one entry covering its old and new names. The API takes it as
+`include_equal` on `DiffDesignsRequest`.
+
 ## In the viewer
 
 `agni serve` renders the same diff visually, so when you open two revisions the changed

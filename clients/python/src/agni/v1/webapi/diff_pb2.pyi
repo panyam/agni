@@ -8,14 +8,16 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DiffDesignsRequest(_message.Message):
-    __slots__ = ("a_uri", "b_uri", "near_renames")
+    __slots__ = ("a_uri", "b_uri", "near_renames", "include_equal")
     A_URI_FIELD_NUMBER: _ClassVar[int]
     B_URI_FIELD_NUMBER: _ClassVar[int]
     NEAR_RENAMES_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_EQUAL_FIELD_NUMBER: _ClassVar[int]
     a_uri: str
     b_uri: str
     near_renames: NearRenameOptions
-    def __init__(self, a_uri: _Optional[str] = ..., b_uri: _Optional[str] = ..., near_renames: _Optional[_Union[NearRenameOptions, _Mapping]] = ...) -> None: ...
+    include_equal: bool
+    def __init__(self, a_uri: _Optional[str] = ..., b_uri: _Optional[str] = ..., near_renames: _Optional[_Union[NearRenameOptions, _Mapping]] = ..., include_equal: _Optional[bool] = ...) -> None: ...
 
 class NearRenameOptions(_message.Message):
     __slots__ = ("min_old_coverage", "min_old_coverage_significant", "min_new_coverage", "min_new_coverage_significant", "max_added_significant_floor", "min_significant_endpoints", "insignificant_classes")

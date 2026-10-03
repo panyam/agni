@@ -270,8 +270,10 @@ def _design_argv(req: Message) -> List[str]:
 
 
 def _diff_argv(req: Message) -> List[str]:
-    _only(req, ("a_uri", "b_uri", "near_renames"))
+    _only(req, ("a_uri", "b_uri", "near_renames", "include_equal"))
     out = ["diff", req.a_uri, req.b_uri, "--format", "json"]
+    if req.include_equal:
+        out.append("--include-equal")
     if req.HasField("near_renames"):
         # --rename-approx runs the pass with the calibrated thresholds; the CLI has no flag for an
         # override, so one is refused rather than dropped.

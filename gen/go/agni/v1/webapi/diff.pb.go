@@ -34,7 +34,12 @@ type DiffDesignsRequest struct {
 	// is off, as `agni diff` is without --rename-approx: the pass ASSIGNS a best match among
 	// candidates rather than recovering a fact, so a consumer opts in. An empty message runs it with
 	// the calibrated thresholds; a field that is set overrides that one threshold.
-	NearRenames   *NearRenameOptions `protobuf:"bytes,3,opt,name=near_renames,json=nearRenames,proto3" json:"near_renames,omitempty"`
+	NearRenames *NearRenameOptions `protobuf:"bytes,3,opt,name=near_renames,json=nearRenames,proto3" json:"near_renames,omitempty"`
+	// include_equal also reports every net that did not change, as kind "equal" after the changes,
+	// with its provenance on both sides (agni issue 818). Off by default, because most callers want
+	// what changed and a large board has thousands of unchanged nets. The status maps the viewer tints
+	// by are unaffected. A net's connections are in the design itself (GetDesign's read_mask).
+	IncludeEqual  bool `protobuf:"varint,4,opt,name=include_equal,json=includeEqual,proto3" json:"include_equal,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -88,6 +93,13 @@ func (x *DiffDesignsRequest) GetNearRenames() *NearRenameOptions {
 		return x.NearRenames
 	}
 	return nil
+}
+
+func (x *DiffDesignsRequest) GetIncludeEqual() bool {
+	if x != nil {
+		return x.IncludeEqual
+	}
+	return false
 }
 
 // NearRenameOptions tunes the near-rename pass. It matches nets by CONNECTIVITY, never by name: an
@@ -460,7 +472,8 @@ func (x *DiffReport_ComponentChange) GetNew() string {
 // NetChange is one classified net change, kinds exactly diff.NetChangeKind: "new",
 // "deleted", "renamed" (same connection signature, different name), "renamed-approx" (a
 // near match the engine ASSIGNED rather than recovered, see approx below), "hard" (pin
-// membership changed), "soft" (attribute-only). name is the net's name where it exists (the
+// membership changed), "soft" (attribute-only), and "equal" (unchanged, only when the request set
+// include_equal). name is the net's name where it exists (the
 // new name for a rename); old_name is set on both rename kinds. added/removed are
 // "refdes.pin" connection deltas, set on hard changes and on renamed-approx. old_prov/new_prov
 // locate the net in each revision's source, unset on the side where the net does not exist.
@@ -813,11 +826,12 @@ var File_agni_v1_webapi_diff_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\n" +
-	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"\x84\x01\n" +
+	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"\xa9\x01\n" +
 	"\x12DiffDesignsRequest\x12\x13\n" +
 	"\x05a_uri\x18\x01 \x01(\tR\x04aUri\x12\x13\n" +
 	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\x12D\n" +
-	"\fnear_renames\x18\x03 \x01(\v2!.agni.v1.webapi.NearRenameOptionsR\vnearRenames\"\xe1\x04\n" +
+	"\fnear_renames\x18\x03 \x01(\v2!.agni.v1.webapi.NearRenameOptionsR\vnearRenames\x12#\n" +
+	"\rinclude_equal\x18\x04 \x01(\bR\fincludeEqual\"\xe1\x04\n" +
 	"\x11NearRenameOptions\x12-\n" +
 	"\x10min_old_coverage\x18\x01 \x01(\x01H\x00R\x0eminOldCoverage\x88\x01\x01\x12D\n" +
 	"\x1cmin_old_coverage_significant\x18\x02 \x01(\x01H\x01R\x19minOldCoverageSignificant\x88\x01\x01\x12-\n" +

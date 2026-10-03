@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -50,5 +51,31 @@ func TestDiffJSONAsksTheServiceForNearRenames(t *testing.T) {
 	}
 	if n := count(diffJSON(t, "--rename-approx", b, c)); n != 1 {
 		t.Errorf("with --rename-approx: %d renamed-approx entries, want 1", n)
+	}
+}
+
+// TestDiffIncludeEqual covers agni issue 818 on the CLI: --include-equal adds equal entries to the
+// json (through the service), net-equal rows to the csv, and a count to the text, and changes none
+// of them without the flag.
+func TestDiffIncludeEqual(t *testing.T) {
+	a, b := tutorialGateway+"gateway.edn", tutorialGateway+"gateway-rev-b.edn"
+	equal := 0
+	for _, n := range diffJSON(t, "--include-equal", a, b).GetReport().GetNets() {
+		if n.GetKind() == "equal" {
+			equal++
+		}
+	}
+	if equal == 0 {
+		t.Fatal("--include-equal json reported no equal nets")
+	}
+	csvOn := runCLI(t, diffCmd(), "--format", "csv", "--include-equal", a, b)
+	if got := strings.Count(csvOn, "net-equal,"); got != equal {
+		t.Errorf("csv has %d net-equal rows, json %d equal entries", got, equal)
+	}
+	if strings.Contains(runCLI(t, diffCmd(), "--format", "csv", a, b), "net-equal") {
+		t.Error("csv without --include-equal has net-equal rows")
+	}
+	if text := runCLI(t, diffCmd(), "--include-equal", a, b); !strings.Contains(text, "Unchanged nets: ") {
+		t.Errorf("text with --include-equal has no count:\n%s", text)
 	}
 }

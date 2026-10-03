@@ -12,7 +12,7 @@ import (
 // one message with the same content, sheet and placement maps included (agni issue 737).
 // EmitUnpopulated keeps empty lists and maps present, so a no-change diff is still a well-formed
 // object rather than fields that appear and vanish per run.
-func diffViaService(cmd *cobra.Command, a, b string, renameApprox bool) error {
+func diffViaService(cmd *cobra.Command, a, b string, renameApprox, includeEqual bool) error {
 	aURI, err := cliArgURI(a)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func diffViaService(cmd *cobra.Command, a, b string, renameApprox bool) error {
 		return err
 	}
 	svc := service.NewDiffService(&localLoader{loader: newLoader()}, cliProjects())
-	req := &webapi.DiffDesignsRequest{AUri: aURI, BUri: bURI}
+	req := &webapi.DiffDesignsRequest{AUri: aURI, BUri: bURI, IncludeEqual: includeEqual}
 	if renameApprox {
 		req.NearRenames = &webapi.NearRenameOptions{} // the calibrated thresholds
 	}

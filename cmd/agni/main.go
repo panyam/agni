@@ -1119,7 +1119,7 @@ func newEngine(overlay []profiles.Profile, extra []check.RuleSource, more ...agn
 
 func diffCmd() *cobra.Command {
 	var format string
-	var renameApprox bool
+	var renameApprox, includeEqual bool
 	c := &cobra.Command{
 		Use:   "diff <old> <new>",
 		Short: "Structural diff between two revisions of a design (over the IR)",
@@ -1129,7 +1129,7 @@ func diffCmd() *cobra.Command {
 			// issues 737 and 817): the CLI is a client of the rpc rather than a second composition
 			// of it, and the sheet and placement maps the service fills are in its output too.
 			if format == "json" {
-				return diffViaService(cmd, args[0], args[1], renameApprox)
+				return diffViaService(cmd, args[0], args[1], renameApprox, includeEqual)
 			}
 			a, err := readDesign(args[0])
 			if err != nil {
@@ -1144,10 +1144,13 @@ func diffCmd() *cobra.Command {
 			rep := diff.Designs(a, b, opts)
 			w := cmd.OutOrStdout()
 			if format == "csv" {
-				return writeDiffCSV(w, rep)
+				return writeDiffCSV(w, rep, includeEqual)
 			}
 			fmt.Fprintf(w, "diff %s -> %s\n\n", args[0], args[1])
 			fmt.Fprint(w, rep.Render(diffListLimit))
+			if includeEqual {
+				fmt.Fprintf(w, "\nUnchanged nets: %d\n", len(rep.Equal))
+			}
 			return nil
 		},
 		// Validated ahead of the read, so a misspelled format fails before two designs are parsed
@@ -1162,6 +1165,8 @@ func diffCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&format, "format", "text",
 		"output format: text (human summary), json (the DiffDesignsResponse wire shape the web API serves), or csv (one row per change)")
+	c.Flags().BoolVar(&includeEqual, "include-equal", false,
+		"also report the nets that did not change: as kind equal in --format json, as net-equal rows in csv, and as a count in text. Off by default")
 	c.Flags().BoolVar(&renameApprox, "rename-approx", false,
 		"also pair a net that was renamed AND changed slightly, reported as renamed-approx with the evidence behind each pairing. Off by default: this ASSIGNS a best match among candidates rather than recovering a fact, so a gate reading the output should opt in")
 	return c
