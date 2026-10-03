@@ -75,6 +75,22 @@ to test against.
 Four items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #667,
 #681 and #523.
 
+## docs/checkpoint-public-demo-mission
+
+- **Last touched**: 2026-10-03 (`/workspace/repos/projects/Agni/docs`)
+- **Ticket**: #851 `mission_public_demo`, first ticket #178.
+- **Why**: this clone is the mission's worktree. The branch carries the checkpoint that files the
+  mission into `CLAUDE.md` and this file, and should merge before the mission's first PR.
+- **Where it stopped**: the mission and tickets #852 to #858 are filed with blocked-by links, and
+  #178 and #717 carry the mission label, and #851 is `mission:active`. Nothing is coded.
+- **Next action**: push this branch and open its PR. Then branch `feat/178-wasm-engine` from
+  `origin/main` with `--no-track`, check out `ws14-007-wip` beside it, and work #567's checklist
+  (rewrite the four `internal/` imports, compose through `agni.New`, run in a Web Worker).
+- **Open questions**: where the static site and seeded boards are hosted (GitHub Pages or a CDN);
+  which open KiCad and EDIF boards to seed (#856); whether a static PartSpec corpus ships in the
+  bundle (#852 decides by size); the unit for the browser-or-server threshold, which must be
+  knowable before the read, so file size rather than component count (#852, #853).
+
 ## Worth knowing before the next change
 
 - **`reverse-blocking.undecided.kicad_sch` is the only fixture that reaches an inconclusive
