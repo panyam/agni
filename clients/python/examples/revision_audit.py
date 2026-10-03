@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 from typing import Callable, List, Tuple
 
-from agni import Client, CliTransport, ConnectTransport, set_sheets, tables_to_xlsx
+from agni import Client, CliTransport, ConnectTransport, diff_sheets, set_sheets, tables_to_xlsx, verdict_sheets
 from agni.tables import Rows, to_rows
 from agni.v1.webapi import query_pb2
 
@@ -46,12 +46,21 @@ def plan(client: Client, base: str, head: str) -> List[Tuple[str, Callable[[], L
         )
         return [(name, to_rows(t)) for name, t in set_sheets(client.run_queries(uri=head, set=audit))]
 
+    # One check answers both the findings and the verdicts tabs.
+    check = None
+
+    def checked():
+        nonlocal check
+        if check is None:
+            check = client.check_design(uri=head)
+        return check
+
     return [
-        ("Diff", missing("#818 (unchanged nets) and #822 (diff_sheets)")),
+        ("Diff", lambda: diff_sheets(client.diff_designs(a_uri=base, b_uri=head, include_equal=True))),
         ("Audit", audit),
-        ("Review", missing("#822 (review_sheet)")),
-        ("Findings", lambda: [("Findings", to_rows(client.check_design(uri=head)))]),
-        ("Verdicts", missing("#822 (verdict_sheets)")),
+        ("Review", missing("#859 (ListChecklists, so the review runs the project's own checklist)")),
+        ("Findings", lambda: [("Findings", to_rows(checked()))]),
+        ("Verdicts", lambda: verdict_sheets(checked())),
     ]
 
 
