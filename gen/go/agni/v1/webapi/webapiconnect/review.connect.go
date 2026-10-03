@@ -48,6 +48,9 @@ const (
 	// ReviewServiceGetReviewManifestProcedure is the fully-qualified name of the ReviewService's
 	// GetReviewManifest RPC.
 	ReviewServiceGetReviewManifestProcedure = "/agni.v1.webapi.ReviewService/GetReviewManifest"
+	// ReviewServiceListChecklistsProcedure is the fully-qualified name of the ReviewService's
+	// ListChecklists RPC.
+	ReviewServiceListChecklistsProcedure = "/agni.v1.webapi.ReviewService/ListChecklists"
 )
 
 // ReviewServiceClient is a client for the agni.v1.webapi.ReviewService service.
@@ -79,6 +82,15 @@ type ReviewServiceClient interface {
 	// validates, so a client learns its manifest is malformed once, here, rather than on every run. A
 	// caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
 	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
+	// ListChecklists returns the checklists a design's project declares, inherited ones included, in
+	// the order the project writes them, so the first is the project's default (agni issue 859). It is
+	// the one answer to "which checklists does this design have": `agni review --checklist <name>`,
+	// `agni checklists` and the viewer's picker all read it. A design in no project answers an empty
+	// project and no checklists, and a project declaring none answers its name and no checklists, since
+	// the fix differs (send a manifest, or add a checklists section). A descriptor that exists and does
+	// not parse is an error. The checklists are values, so a client runs one by sending it to
+	// CreateReview.
+	ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error)
 }
 
 // NewReviewServiceClient constructs a client for the agni.v1.webapi.ReviewService service. By
@@ -122,6 +134,12 @@ func NewReviewServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(reviewServiceMethods.ByName("GetReviewManifest")),
 			connect.WithClientOptions(opts...),
 		),
+		listChecklists: connect.NewClient[webapi.ListChecklistsRequest, webapi.ListChecklistsResponse](
+			httpClient,
+			baseURL+ReviewServiceListChecklistsProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("ListChecklists")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -132,6 +150,7 @@ type reviewServiceClient struct {
 	listReviews       *connect.Client[webapi.ListReviewsRequest, webapi.ListReviewsResponse]
 	deleteReview      *connect.Client[webapi.DeleteReviewRequest, emptypb.Empty]
 	getReviewManifest *connect.Client[webapi.GetReviewManifestRequest, webapi.GetReviewManifestResponse]
+	listChecklists    *connect.Client[webapi.ListChecklistsRequest, webapi.ListChecklistsResponse]
 }
 
 // CreateReview calls agni.v1.webapi.ReviewService.CreateReview.
@@ -157,6 +176,11 @@ func (c *reviewServiceClient) DeleteReview(ctx context.Context, req *connect.Req
 // GetReviewManifest calls agni.v1.webapi.ReviewService.GetReviewManifest.
 func (c *reviewServiceClient) GetReviewManifest(ctx context.Context, req *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error) {
 	return c.getReviewManifest.CallUnary(ctx, req)
+}
+
+// ListChecklists calls agni.v1.webapi.ReviewService.ListChecklists.
+func (c *reviewServiceClient) ListChecklists(ctx context.Context, req *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error) {
+	return c.listChecklists.CallUnary(ctx, req)
 }
 
 // ReviewServiceHandler is an implementation of the agni.v1.webapi.ReviewService service.
@@ -188,6 +212,15 @@ type ReviewServiceHandler interface {
 	// validates, so a client learns its manifest is malformed once, here, rather than on every run. A
 	// caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
 	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
+	// ListChecklists returns the checklists a design's project declares, inherited ones included, in
+	// the order the project writes them, so the first is the project's default (agni issue 859). It is
+	// the one answer to "which checklists does this design have": `agni review --checklist <name>`,
+	// `agni checklists` and the viewer's picker all read it. A design in no project answers an empty
+	// project and no checklists, and a project declaring none answers its name and no checklists, since
+	// the fix differs (send a manifest, or add a checklists section). A descriptor that exists and does
+	// not parse is an error. The checklists are values, so a client runs one by sending it to
+	// CreateReview.
+	ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error)
 }
 
 // NewReviewServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -227,6 +260,12 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(reviewServiceMethods.ByName("GetReviewManifest")),
 		connect.WithHandlerOptions(opts...),
 	)
+	reviewServiceListChecklistsHandler := connect.NewUnaryHandler(
+		ReviewServiceListChecklistsProcedure,
+		svc.ListChecklists,
+		connect.WithSchema(reviewServiceMethods.ByName("ListChecklists")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.ReviewService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ReviewServiceCreateReviewProcedure:
@@ -239,6 +278,8 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 			reviewServiceDeleteReviewHandler.ServeHTTP(w, r)
 		case ReviewServiceGetReviewManifestProcedure:
 			reviewServiceGetReviewManifestHandler.ServeHTTP(w, r)
+		case ReviewServiceListChecklistsProcedure:
+			reviewServiceListChecklistsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -266,4 +307,8 @@ func (UnimplementedReviewServiceHandler) DeleteReview(context.Context, *connect.
 
 func (UnimplementedReviewServiceHandler) GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.GetReviewManifest is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.ListChecklists is not implemented"))
 }

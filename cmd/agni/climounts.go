@@ -449,17 +449,17 @@ func cliProjectParent(ctx context.Context, arg string) (string, error) {
 // A descriptor that exists and does not PARSE is returned as an error, since the fix there is one
 // edit to that descriptor and not --checklist either.
 func cliProjectChecklists(ctx context.Context, arg string) ([]*webapi.NamedChecklist, string, error) {
-	_, p, err := cliResolveProject(ctx, arg)
-	if err != nil || p == nil {
-		return nil, "", err
-	}
-	// What the project inherits through extends is its own as much as what it writes, so a checklist
-	// a shared config project declares runs here too.
-	cfg, err := service.ResolveExtends(ctx, cliProjects().Store, p)
+	ws, err := workspace()
 	if err != nil {
 		return nil, "", err
 	}
-	return cfg.GetChecklists(), p.GetName(), nil
+	u, err := ws.URI(arg)
+	if err != nil {
+		return nil, "", err
+	}
+	// The resolver ListChecklists and the viewer's picker read, so the three cannot disagree about
+	// what a project declares, inherited checklists included (agni issues 829, 859).
+	return cliProjects().Checklists(ctx, u)
 }
 
 // relName returns the name provenance records for an absolute host path, which is its path within

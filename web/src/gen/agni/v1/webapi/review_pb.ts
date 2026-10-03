@@ -8,6 +8,8 @@ import type { CheckResults, ReviewManifest } from "../checks/checks_pb";
 import { file_agni_v1_checks_checks } from "../checks/checks_pb";
 import type { OverlayConfig } from "./checks_pb";
 import { file_agni_v1_webapi_checks } from "./checks_pb";
+import type { NamedChecklist } from "./config_pb";
+import { file_agni_v1_webapi_config } from "./config_pb";
 import type { EmptySchema } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
@@ -16,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpInUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMSLgoHc3VtbWFyeRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlJldmlld1N1bW1hcnkicgoNUmV2aWV3U3VtbWFyeRINCgV0b3RhbBgBIAEoBRIPCgdjb3ZlcmVkGAIgASgFEhAKCGFuc3dlcmVkGAMgASgFEgwKBHBhc3MYBCABKAUSDAoEZmFpbBgFIAEoBRITCgtwcm92aXNpb25hbBgGIAEoBSLtAQoTQ3JlYXRlUmV2aWV3UmVxdWVzdBIOCgZwYXJlbnQYBiABKAkSEgoKZGVzaWduX3VyaRgBIAEoCRIRCglib2FyZF91cmkYAiABKAkSFgoOcmF0aWZpZWRfZmxvb3IYAyABKAESLgoHb3ZlcmxheRgEIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSMAoIbWFuaWZlc3QYBSABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdBIQCghhc19uYW1lZBgHIAEoCBITCgt3b3JrX2J1ZGdldBgIIAEoAyIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiWwoSTGlzdFJldmlld3NSZXF1ZXN0Eg4KBnBhcmVudBgEIAEoCRIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkiVwoTTGlzdFJldmlld3NSZXNwb25zZRInCgdyZXZpZXdzGAEgAygLMhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSIjChNEZWxldGVSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiJwoYR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0EgsKA3VyaRgBIAEoCSJNChlHZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlEjAKCG1hbmlmZXN0GAEgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QysgMKDVJldmlld1NlcnZpY2USSwoMQ3JlYXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuQ3JlYXRlUmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJFCglHZXRSZXZpZXcSIC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3ElYKC0xpc3RSZXZpZXdzEiIuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXNwb25zZRJLCgxEZWxldGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5EZWxldGVSZXZpZXdSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EmgKEUdldFJldmlld01hbmlmZXN0EiguYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0GikuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpInUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMSLgoHc3VtbWFyeRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlJldmlld1N1bW1hcnkicgoNUmV2aWV3U3VtbWFyeRINCgV0b3RhbBgBIAEoBRIPCgdjb3ZlcmVkGAIgASgFEhAKCGFuc3dlcmVkGAMgASgFEgwKBHBhc3MYBCABKAUSDAoEZmFpbBgFIAEoBRITCgtwcm92aXNpb25hbBgGIAEoBSLtAQoTQ3JlYXRlUmV2aWV3UmVxdWVzdBIOCgZwYXJlbnQYBiABKAkSEgoKZGVzaWduX3VyaRgBIAEoCRIRCglib2FyZF91cmkYAiABKAkSFgoOcmF0aWZpZWRfZmxvb3IYAyABKAESLgoHb3ZlcmxheRgEIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSMAoIbWFuaWZlc3QYBSABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdBIQCghhc19uYW1lZBgHIAEoCBITCgt3b3JrX2J1ZGdldBgIIAEoAyIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiWwoSTGlzdFJldmlld3NSZXF1ZXN0Eg4KBnBhcmVudBgEIAEoCRIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkiVwoTTGlzdFJldmlld3NSZXNwb25zZRInCgdyZXZpZXdzGAEgAygLMhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSIjChNEZWxldGVSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiJwoYR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0EgsKA3VyaRgBIAEoCSJNChlHZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlEjAKCG1hbmlmZXN0GAEgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiKwoVTGlzdENoZWNrbGlzdHNSZXF1ZXN0EhIKCmRlc2lnbl91cmkYASABKAkiXQoWTGlzdENoZWNrbGlzdHNSZXNwb25zZRIPCgdwcm9qZWN0GAEgASgJEjIKCmNoZWNrbGlzdHMYAiADKAsyHi5hZ25pLnYxLndlYmFwaS5OYW1lZENoZWNrbGlzdDKTBAoNUmV2aWV3U2VydmljZRJLCgxDcmVhdGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EkUKCUdldFJldmlldxIgLmFnbmkudjEud2ViYXBpLkdldFJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSVgoLTGlzdFJldmlld3MSIi5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1Jlc3BvbnNlEksKDERlbGV0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZVJldmlld1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSaAoRR2V0UmV2aWV3TWFuaWZlc3QSKC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlEl8KDkxpc3RDaGVja2xpc3RzEiUuYWduaS52MS53ZWJhcGkuTGlzdENoZWNrbGlzdHNSZXF1ZXN0GiYuYWduaS52MS53ZWJhcGkuTGlzdENoZWNrbGlzdHNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_agni_v1_webapi_config, file_google_protobuf_empty]);
 
 /**
  * Review is one stored review run.
@@ -364,6 +366,51 @@ export const GetReviewManifestResponseSchema: GenMessage<GetReviewManifestRespon
   messageDesc(file_agni_v1_webapi_review, 8);
 
 /**
+ * @generated from message agni.v1.webapi.ListChecklistsRequest
+ */
+export type ListChecklistsRequest = Message<"agni.v1.webapi.ListChecklistsRequest"> & {
+  /**
+   * design_uri is the design whose project's checklists are listed. A URI's authority is a key the
+   * injected Loader resolves, never a host path.
+   *
+   * @generated from field: string design_uri = 1;
+   */
+  designUri: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListChecklistsRequest.
+ * Use `create(ListChecklistsRequestSchema)` to create a new message.
+ */
+export const ListChecklistsRequestSchema: GenMessage<ListChecklistsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 9);
+
+/**
+ * @generated from message agni.v1.webapi.ListChecklistsResponse
+ */
+export type ListChecklistsResponse = Message<"agni.v1.webapi.ListChecklistsResponse"> & {
+  /**
+   * project is the resource name of the design's project, "projects/{project}", empty when the
+   * design belongs to none.
+   *
+   * @generated from field: string project = 1;
+   */
+  project: string;
+
+  /**
+   * @generated from field: repeated agni.v1.webapi.NamedChecklist checklists = 2;
+   */
+  checklists: NamedChecklist[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListChecklistsResponse.
+ * Use `create(ListChecklistsResponseSchema)` to create a new message.
+ */
+export const ListChecklistsResponseSchema: GenMessage<ListChecklistsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 10);
+
+/**
  * ReviewService manages review RUNS as resources (WS9-053). A run used to be a call: you sent a
  * checklist and a design, got outcomes back, and nothing remained. That is the wrong shape for what
  * a review actually is. A checklist verdict is the artifact a team acts on over weeks, compares
@@ -453,6 +500,23 @@ export const ReviewService: GenService<{
     methodKind: "unary";
     input: typeof GetReviewManifestRequestSchema;
     output: typeof GetReviewManifestResponseSchema;
+  },
+  /**
+   * ListChecklists returns the checklists a design's project declares, inherited ones included, in
+   * the order the project writes them, so the first is the project's default (agni issue 859). It is
+   * the one answer to "which checklists does this design have": `agni review --checklist <name>`,
+   * `agni checklists` and the viewer's picker all read it. A design in no project answers an empty
+   * project and no checklists, and a project declaring none answers its name and no checklists, since
+   * the fix differs (send a manifest, or add a checklists section). A descriptor that exists and does
+   * not parse is an error. The checklists are values, so a client runs one by sending it to
+   * CreateReview.
+   *
+   * @generated from rpc agni.v1.webapi.ReviewService.ListChecklists
+   */
+  listChecklists: {
+    methodKind: "unary";
+    input: typeof ListChecklistsRequestSchema;
+    output: typeof ListChecklistsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_review, 0);

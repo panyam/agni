@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/param"
@@ -63,6 +64,55 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 		store = r.Store
 	}
 	return OverlayFor(ctx, resolver, store, p, d, req, baseConvention)
+}
+
+// Checklists returns the checklists a design's project declares, inherited ones included in the order
+// ResolveExtends composes them, and the project's name. A design in no project, or a deployment that
+// resolves none, returns (nil, "", nil), and a project declaring none returns (nil, name, nil), so a
+// caller can tell an operator which fix applies. A descriptor that exists and does not parse is an
+// error, as for Overlay.
+func (r *ProjectResolver) Checklists(ctx context.Context, uri artifact.URI) ([]*webapi.NamedChecklist, string, error) {
+	if r == nil || r.Store == nil {
+		return nil, "", nil
+	}
+	_, p, err := r.Store.ResolveDesign(ctx, uri)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return nil, "", nil
+	case err != nil:
+		return nil, "", err
+	case p == nil:
+		return nil, "", nil
+	}
+	cfg, err := ResolveExtends(ctx, r.Store, p)
+	if err != nil {
+		return nil, "", err
+	}
+	return cfg.GetChecklists(), p.GetName(), nil
+}
+
+// PickChecklist returns the checklist called name, or the first, which is the project's default, when
+// name is empty. It returns nil when there is none.
+func PickChecklist(lists []*webapi.NamedChecklist, name string) *webapi.NamedChecklist {
+	for _, c := range lists {
+		if name == "" || c.GetName() == name {
+			return c
+		}
+	}
+	return nil
+}
+
+// DeclaredChecklists names what a project does declare, for a message saying it lacks the one asked
+// for.
+func DeclaredChecklists(lists []*webapi.NamedChecklist) string {
+	if len(lists) == 0 {
+		return "which declares none"
+	}
+	names := make([]string, 0, len(lists))
+	for _, c := range lists {
+		names = append(names, c.GetName())
+	}
+	return "which declares " + strings.Join(names, ", ")
 }
 
 // RunProvenance is which config tiers a run actually had attached, the value a results document's
