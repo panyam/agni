@@ -3,10 +3,9 @@ package main
 import (
 	"io"
 
-	rpt "github.com/panyam/agni/core/report"
 	"strings"
 
-	"google.golang.org/protobuf/encoding/protojson"
+	rpt "github.com/panyam/agni/core/report"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
@@ -116,32 +115,4 @@ func subjectRefCell(s *checkspb.Subject) string {
 		return s.GetRef() + "." + s.GetPin()
 	}
 	return s.GetRef()
-}
-
-// writeVerdictJSON emits the verdicts as the wire form, so a consumer that needs the datasheet
-// citations the csv omits has them without a second run.
-//
-// It is a bare ARRAY rather than an envelope message. CheckResults is the persisted results-document
-// schema and has no verdicts field, and adding one for a print statement would change that contract
-// before anything stores a considered set.
-func writeVerdictJSON(w io.Writer, vs []*checkspb.Verdict) error {
-	mo := protojson.MarshalOptions{Multiline: true, Indent: "    "}
-	if _, err := io.WriteString(w, "[\n"); err != nil {
-		return err
-	}
-	for i, v := range vs {
-		b, err := mo.Marshal(v)
-		if err != nil {
-			return err
-		}
-		sep := ",\n"
-		if i == len(vs)-1 {
-			sep = "\n"
-		}
-		if _, err := io.WriteString(w, "  "+strings.ReplaceAll(string(b), "\n", "\n  ")+sep); err != nil {
-			return err
-		}
-	}
-	_, err := io.WriteString(w, "]\n")
-	return err
 }

@@ -91,7 +91,7 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 
 | rpc | command |
 |---|---|
-| `CheckService/CheckDesign` | `check --format json` |
+| `CheckService/CheckDesign` | `check --verdicts --format json`, which prints the whole response, verdicts included |
 | `CheckService/GetCheckReport` | `check --format report` |
 | `QueryService/RunQuery` | `query --format json` |
 | `QueryService/RunQueries` | `query --set - --format json`, the set sent on stdin |
@@ -112,11 +112,9 @@ CLI stores nothing (agni issue 734). Getting, listing and deleting stored review
 ## Where the two transports differ today
 
 `clients/python/tests/test_cross_transport.py` sends the same request both ways and asserts the two
-messages are equal. That test is C31 checked from outside Go. Three known differences are declared in
+messages are equal. That test is C31 checked from outside Go. Two known differences are declared in
 it field by field, and each declaration fails once the difference goes away:
 
-- `CheckDesign` over the CLI carries no `verdicts`. `check --format json` strips the considered set on
-  purpose and `--verdicts` prints it as a bare list, which is not a wire message.
 - `CreateReview` over the CLI has an empty `name`, because the CLI stores nothing. The two runs also
   differ in `results.meta.created_at`, which the test clears on both sides before comparing.
 - `GetLayoutReport` on a design FOLDER answers an empty report from the server (agni issue 736).

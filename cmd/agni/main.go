@@ -654,7 +654,7 @@ func checkCmd() *cobra.Command {
 							return err
 						}
 					case "json":
-						if err := writeVerdictJSON(cmd.OutOrStdout(), resp.GetVerdicts()); err != nil {
+						if err := marshalCheckDesign(cmd.OutOrStdout(), resp); err != nil {
 							return err
 						}
 					case "html":
@@ -788,6 +788,13 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 		// go vet's copylocks check rejects copying one by value.
 		resp = &webapi.CheckDesignResponse{Findings: resp.GetFindings(), Skipped: resp.GetSkipped()}
 	}
+	return marshalCheckDesign(w, resp)
+}
+
+// marshalCheckDesign prints the response as it stands. `--verdicts --format json` calls it with the
+// considered set in place, so that output is the whole CheckDesign response a server returns (agni
+// issue 822), and a client reading verdicts through the CLI parses the same message.
+func marshalCheckDesign(w io.Writer, resp *webapi.CheckDesignResponse) error {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
 	if err != nil {
 		return err
