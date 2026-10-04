@@ -72,27 +72,87 @@ export function startEngine(assets: EngineAssets): Promise<WasmEngine> {
   });
 }
 
-// SeedManifest names one mount's files under a base URL. It is the stand-in for the loaders #853
-// designs (dropped files, a static host), and only fetches what it lists.
-export interface SeedManifest {
+// A DesignFiles lists one design's files, as WorkspaceService.ListDesignFiles answers. The type is
+// structural so this module does not import the generated client.
+export interface DesignFiles {
   mount: string;
-  base: string;
-  files: string[];
+  files: { path: string; sha256: string }[];
 }
 
-// mountSeed fetches a manifest's files and mounts them.
-export async function mountSeed(engine: WasmEngine, manifestUrl: string): Promise<void> {
-  const res = await fetch(manifestUrl);
-  if (!res.ok) throw new Error(`seed ${manifestUrl}: ${res.status}`);
-  const m = (await res.json()) as SeedManifest;
-  const base = new URL(m.base, new URL(manifestUrl, location.href));
-  const files: Files = {};
-  await Promise.all(
-    m.files.map(async (p) => {
-      const r = await fetch(new URL(p, base));
-      if (!r.ok) throw new Error(`seed ${p}: ${r.status}`);
-      files[p] = new Uint8Array(await r.arrayBuffer());
-    }),
-  );
-  await engine.mount(m.mount, files);
+export interface DesignSource {
+  // list names a design's files, given a `mount://` URI naming the design.
+  list(uri: string): Promise<DesignFiles>;
+  // fetchFile returns one file's bytes.
+  fetchFile(mount: string, path: string): Promise<Uint8Array>;
+}
+
+// mountingFetch is the engine's fetch with the design's files brought in first (agni issue 853). A
+// design keeps its server URL under the in-browser engine: before a request reaches the worker,
+// every `mount://` URI in its body is listed through `source` and the files the worker does not
+// already hold, by hash, are fetched and mounted under the same mount name. Requests in `passthrough`
+// skip the worker entirely, which is where the calls naming the server's own mounts go.
+//
+// The body is read as Connect JSON, which is what the viewer's transport sends. A binary body names
+// no URI this can see, so it goes to the worker as is.
+export function mountingFetch(
+  engine: WasmEngine,
+  source: DesignSource,
+  passthrough: (url: URL) => boolean,
+  network: typeof globalThis.fetch,
+): typeof globalThis.fetch {
+  const held = new Map<string, Map<string, string>>(); // mount -> path -> sha256
+  const listed = new Map<string, Promise<void>>(); // uri -> the mount that brought it in
+
+  const bring = (uri: string): Promise<void> => {
+    let p = listed.get(uri);
+    if (!p) {
+      p = (async () => {
+        const set = await source.list(uri);
+        const have = held.get(set.mount) ?? new Map<string, string>();
+        const want = set.files.filter((f) => have.get(f.path) !== f.sha256);
+        if (!want.length) return;
+        const files: Files = {};
+        await Promise.all(
+          want.map(async (f) => {
+            files[f.path] = await source.fetchFile(set.mount, f.path);
+          }),
+        );
+        await engine.mount(set.mount, files);
+        for (const f of want) have.set(f.path, f.sha256);
+        held.set(set.mount, have);
+      })().catch((err: unknown) => {
+        // Forget a failed listing so the next request retries it. The request itself still goes to
+        // the engine, which answers not-found the way the server would.
+        listed.delete(uri);
+        console.warn(`could not bring ${uri} into the browser engine:`, err);
+      });
+      listed.set(uri, p);
+    }
+    return p;
+  };
+
+  return async (input, init) => {
+    const req = new Request(input, init);
+    if (passthrough(new URL(req.url))) return network(req);
+    const text = await req.clone().text();
+    const uris = new Set<string>();
+    try {
+      collectMountURIs(JSON.parse(text), uris);
+    } catch {
+      // not JSON, so nothing to bring in
+    }
+    await Promise.all([...uris].map(bring));
+    return engine.fetch(req);
+  };
+}
+
+// collectMountURIs finds every string value in a decoded JSON body that is a `mount://` URI.
+function collectMountURIs(v: unknown, out: Set<string>): void {
+  if (typeof v === "string") {
+    if (v.startsWith("mount://")) out.add(v);
+  } else if (Array.isArray(v)) {
+    for (const x of v) collectMountURIs(x, out);
+  } else if (v && typeof v === "object") {
+    for (const x of Object.values(v)) collectMountURIs(x, out);
+  }
 }

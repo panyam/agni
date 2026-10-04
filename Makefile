@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-seed wasm-test examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -224,7 +224,7 @@ web-test:
 # Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
 # The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
 # with a dev server you already have running.
-browser-test: ui wasm wasm-seed
+browser-test: ui wasm
 	cd web && pnpm run test:browser
 
 # The engine as WebAssembly (agni issue 178), for the viewer's `?engine=wasm` mode, which runs it in
@@ -233,11 +233,6 @@ browser-test: ui wasm wasm-seed
 wasm:
 	GOOS=js GOARCH=wasm $(GO) build -o web/static/agni.wasm ./cmd/agni-wasm
 	cp "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
-
-# The tutorial project as the wasm engine's seed, served at /static/seed/tut.json. Open it with
-#   make serve, then /designs/tut/designs/gateway/view?engine=wasm&seed=/static/seed/tut.json
-wasm-seed:
-	hack/wasm_seed.sh tut examples/tutorial-project
 
 # The wasm entry point under Node, as the browser's worker runs it: the exports take bytes and answer
 # without deadlocking. What the engine ANSWERS is held to the server's natively, by

@@ -55,7 +55,7 @@ func New(ms ...fshost.Mount) (*Engine, error) {
 	check, review := e.RuleServices(agni.RuleServiceDeps{Loader: host})
 	mux := http.NewServeMux()
 	paths := server.API{
-		Workspace: service.NewWorkspaceService(host.Workspace()),
+		Workspace: service.NewWorkspaceService(host.Workspace()).WithDesignFiles(resolver, host.Workspace()),
 		Project:   service.NewProjectService(store),
 		Design:    service.NewDesignService(host, nil, render.DefaultStyle, resolver),
 		Check:     check,

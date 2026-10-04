@@ -67,3 +67,29 @@ class ListDirResponse(_message.Message):
     ENTRIES_FIELD_NUMBER: _ClassVar[int]
     entries: _containers.RepeatedCompositeFieldContainer[DirEntry]
     def __init__(self, entries: _Optional[_Iterable[_Union[DirEntry, _Mapping]]] = ...) -> None: ...
+
+class ListDesignFilesRequest(_message.Message):
+    __slots__ = ("uri",)
+    URI_FIELD_NUMBER: _ClassVar[int]
+    uri: str
+    def __init__(self, uri: _Optional[str] = ...) -> None: ...
+
+class ListDesignFilesResponse(_message.Message):
+    __slots__ = ("mount", "files", "total_size")
+    MOUNT_FIELD_NUMBER: _ClassVar[int]
+    FILES_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_SIZE_FIELD_NUMBER: _ClassVar[int]
+    mount: str
+    files: _containers.RepeatedCompositeFieldContainer[DesignFile]
+    total_size: int
+    def __init__(self, mount: _Optional[str] = ..., files: _Optional[_Iterable[_Union[DesignFile, _Mapping]]] = ..., total_size: _Optional[int] = ...) -> None: ...
+
+class DesignFile(_message.Message):
+    __slots__ = ("path", "size", "sha256")
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    SIZE_FIELD_NUMBER: _ClassVar[int]
+    SHA256_FIELD_NUMBER: _ClassVar[int]
+    path: str
+    size: int
+    sha256: str
+    def __init__(self, path: _Optional[str] = ..., size: _Optional[int] = ..., sha256: _Optional[str] = ...) -> None: ...

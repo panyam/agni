@@ -1,17 +1,17 @@
-// The viewer on the in-browser engine (agni issue 178, mission 851).
+// One design, one URL, either engine (agni issues 178 and 853).
 //
-// `?engine=wasm` loads agni.wasm into a Web Worker, mounts the tutorial project from the seed, and
-// routes every Connect client to the worker. The server under test still serves the page and its
-// static files, and it does NOT mount the tutorial project, so a panel that reached the network for
-// its answer would get a not-found and the assertions below would fail. The request log is the
-// direct check: no API path leaves the page, which is the property the mission promises a visitor
-// whose design must not leave their machine.
+// The tutorial gateway is opened at its own `/designs/tut/...` URL twice: once on the server engine,
+// once with `?engine=wasm`, where the page loads agni.wasm into a Web Worker, brings the design's
+// files over from the server, and routes every analysis client to the worker. Both runs must find
+// the same thing. On wasm, the request log is the direct check that the analysis happened in the
+// page: the only API calls reaching the network are WorkspaceService's, which list the design's
+// files, and the bytes come from /raw/.
 //
-// What the engine answers is held to the server's by TestWasmEngineAnswersAsTheServerDoes in Go.
-// This asserts the page drives it: the drawing loads, checks run to findings, and a query answers.
+// What the engine answers is held to the server's, rule by rule, by TestWasmEngineAnswersAsTheServerDoes
+// in Go. This asserts the page drives it.
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
-import type { Browser } from "playwright-core";
+import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
 
 const base = (): string => inject("baseUrl");
@@ -24,40 +24,57 @@ afterAll(async () => {
   await browser?.close();
 });
 
+const gateway = "/designs/tut/designs/gateway/view";
 const apiPrefix = "/agni.v1.webapi.";
+const workspacePrefix = "/agni.v1.webapi.WorkspaceService/";
 
-describe("the viewer on the in-browser engine", () => {
-  it("opens, checks and queries a design with no API request leaving the page", async () => {
+// openAndCheck opens the gateway, runs every rule and a query, and returns the finding rows and every
+// path the page requested.
+async function openAndCheck(page: Page, query: string): Promise<{ rows: string[]; network: string[] }> {
+  const network: string[] = [];
+  page.on("request", (r) => network.push(new URL(r.url()).pathname));
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+
+  await page.goto(`${base()}${gateway}${query}`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
+  await expect.poll(() => page.locator("#readout").textContent(), { timeout: 60_000 }).not.toBe("no sheet loaded");
+  // Wait for the button to carry its rule count. The first sheet can draw before ListRules answers,
+  // and a click before then runs no rules at all (agni 868).
+  await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 60_000 }).toMatch(/\(\d+\)/);
+  await page.click(".checks-run");
+  await page.waitForSelector(".check-locate", { timeout: 60_000 });
+  const rows = await page.locator(".check-locate").allTextContents();
+
+  await page.fill("textarea.query-text", "net.has_test_point(?n) => ?n");
+  await page.click("button.query-run");
+  await page.waitForSelector(".query-row", { timeout: 60_000 });
+
+  expect(errors).toEqual([]);
+  return { rows, network };
+}
+
+describe("one design under both engines", () => {
+  it("finds the same thing on the server and in the browser, and on wasm sends only listings and files", async () => {
+    let server: { rows: string[]; network: string[] } = { rows: [], network: [] };
     await withPage(browser, async (page) => {
-      const network: string[] = [];
-      page.on("request", (r) => network.push(new URL(r.url()).pathname));
-      const errors: string[] = [];
-      page.on("pageerror", (e) => errors.push(String(e)));
+      server = await openAndCheck(page, "");
+    });
+    await withPage(browser, async (page) => {
+      const wasm = await openAndCheck(page, "?engine=wasm");
 
-      await page.goto(`${base()}/designs/tut/designs/gateway/view?engine=wasm&seed=/static/seed/tut.json`, {
-        waitUntil: "domcontentloaded",
-      });
-      await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
-      // The drawing loaded, so GetDesign and GetSheet were answered.
-      await expect
-        .poll(() => page.locator("#readout").textContent(), { timeout: 60_000 })
-        .not.toBe("no sheet loaded");
+      expect(server.rows.length, "the server run found nothing, so agreeing with it proves nothing").toBeGreaterThan(0);
+      expect([...wasm.rows].sort()).toEqual([...server.rows].sort());
 
-      // Wait for the button to carry its rule count. On this engine the first sheet can draw before
-      // ListRules answers, and a click before then runs no rules at all (agni 868).
-      await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 60_000 }).toMatch(/\(\d+\)/);
-      await page.click(".checks-run");
-      await page.waitForSelector(".check-locate", { timeout: 60_000 });
-      expect(await page.locator(".check-locate").count()).toBeGreaterThan(0);
+      // Positive controls: the server run did reach the network for its analysis, and the wasm run
+      // fetched the engine and the design's files, so the log is recording this page.
+      expect(server.network.some((p) => p.startsWith(`${apiPrefix}CheckService/`))).toBe(true);
+      expect(wasm.network.some((p) => p.endsWith("/agni.wasm"))).toBe(true);
+      expect(wasm.network.some((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toBe(true);
+      expect(wasm.network.some((p) => p === `${workspacePrefix}ListDesignFiles`)).toBe(true);
 
-      await page.fill("textarea.query-text", "net.has_test_point(?n) => ?n");
-      await page.click("button.query-run");
-      await page.waitForSelector(".query-row", { timeout: 60_000 });
-
-      expect(errors).toEqual([]);
-      // Positive control: the engine's own assets were fetched, so the log is recording this page.
-      expect(network.some((p) => p.endsWith("/agni.wasm"))).toBe(true);
-      expect(network.filter((p) => p.startsWith(apiPrefix))).toEqual([]);
+      const analysis = wasm.network.filter((p) => p.startsWith(apiPrefix) && !p.startsWith(workspacePrefix));
+      expect(analysis).toEqual([]);
     });
   });
 });

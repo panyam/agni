@@ -63,7 +63,7 @@ func servedParityMux(t *testing.T, ms []mounts.Mount) http.Handler {
 	}
 	mux := http.NewServeMux()
 	server.API{
-		Workspace: service.NewWorkspaceService(osWorkspace(ms)),
+		Workspace: service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)),
 		Project:   service.NewProjectService(resolver.Store),
 		Design:    service.NewDesignService(loader, nil, render.DefaultStyle, resolver),
 		Check:     check,
@@ -218,6 +218,10 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	}
 	ask("RunQuery", func(c parityClients) (proto.Message, error) {
 		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Uri: design, Query: query}))
+		return msgOf(r, err)
+	})
+	ask("ListDesignFiles", func(c parityClients) (proto.Message, error) {
+		r, err := c.ws.ListDesignFiles(ctx, connect.NewRequest(&webapi.ListDesignFilesRequest{Uri: design}))
 		return msgOf(r, err)
 	})
 	dir := design[:strings.LastIndex(design, "/")]
