@@ -34,11 +34,11 @@ function walk(dir: string): string[] {
 
 // storedZip writes a zip with no compression, enough for a browser to read and small enough to keep
 // here rather than add a dependency.
-function storedZip(root: string): Buffer {
+function storedZip(root: string, keep: (p: string) => boolean = () => true): Buffer {
   const locals: Buffer[] = [];
   const centrals: Buffer[] = [];
   let offset = 0;
-  for (const p of walk(root)) {
+  for (const p of walk(root).filter(keep)) {
     const name = Buffer.from(relative(root, p).split(sep).join("/"));
     const data = readFileSync(p);
     const crc = crc32(data);
@@ -138,6 +138,28 @@ describe("dropping files on the viewer", () => {
       // A netlist read without it would draw an auto-layout.
       await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 30_000 }).toContain("faithful");
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
+      expect(log.errors).toEqual([]);
+    });
+  });
+
+  // The descriptor for a design inside a zip cannot sit in the archive, so the page writes it to the
+  // mount's overlay (fshost.OverlayDir) and it reads as if it did.
+  it("declares and opens a design proposed from a zip with no design.yaml", async () => {
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(`${base()}/designs/local/view?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#drop-open:not([hidden])", { timeout: 60_000 });
+      const zip = storedZip(gateway, (p) => !p.endsWith("design.yaml"));
+      await page.setInputFiles("#drop-input", { name: "gateway.zip", mimeType: "application/zip", buffer: zip });
+
+      const dialog = page.locator("#drop-dialog");
+      await expect.poll(() => dialog.evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
+      expect(await dialog.locator(".drop-design-yaml").first().inputValue()).toContain("entry: gateway.edn");
+      await dialog.locator(".drop-design-open").first().click();
+
+      expect((await runChecks(page)).length).toBeGreaterThan(0);
+      expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/gateway\.zip\/gateway\.edn\/view/);
+      await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 30_000 }).toContain("faithful");
       expect(log.errors).toEqual([]);
     });
   });

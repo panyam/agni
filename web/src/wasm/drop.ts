@@ -12,6 +12,11 @@ import { mountOf, type Files, type WasmEngine } from "./client.js";
 // BROWSER_MOUNT is the mount dropped files go into, wasmengine.BrowserMount on the Go side.
 export const BROWSER_MOUNT = "local";
 
+// OVERLAY_DIR is where the page writes a design.yaml, fshost.OverlayDir on the Go side. A file there
+// reads over the same path in the browser mount, which is the only way to put a descriptor beside a
+// design that came out of a zip, since the mount refuses a file under a path that is a file.
+const OVERLAY_DIR = ".agni-overlay";
+
 export interface DropDeps {
   // engine holds the dropped files. Without one the page is on the server engine, and a drop is
   // refused with `refuse`'s reason rather than uploaded.
@@ -31,7 +36,7 @@ export function installDrop(d: DropDeps): void {
   d.button.hidden = false;
   d.button.addEventListener("click", () => d.input.click());
   d.input.addEventListener("change", () => {
-    if (d.input.files?.length) void bring(d, filesFromFileList(d.input.files));
+    if (d.input.files?.length) void bring(d, filesFromFileList(d.input.files)).catch((err: unknown) => d.refuse(`Could not read those files: ${String(err)}`));
     d.input.value = "";
   });
   d.target.addEventListener("dragover", (ev) => {
@@ -40,7 +45,7 @@ export function installDrop(d: DropDeps): void {
   d.target.addEventListener("drop", (ev) => {
     if (!ev.dataTransfer?.types.includes("Files")) return;
     ev.preventDefault();
-    void bring(d, filesFromDrop(ev.dataTransfer));
+    void bring(d, filesFromDrop(ev.dataTransfer)).catch((err: unknown) => d.refuse(`Could not read those files: ${String(err)}`));
   });
 }
 
@@ -94,11 +99,11 @@ function render(d: DropDeps, r: ProposeDesignsResponse): void {
     open.addEventListener("click", () => {
       void (async () => {
         if (declarable && yaml.value.trim() && d.engine) {
-          await d.engine.add(BROWSER_MOUNT, { [`${pd.folder}/design.yaml`]: new TextEncoder().encode(yaml.value) });
+          await d.engine.add(BROWSER_MOUNT, { [`${OVERLAY_DIR}/${pd.folder}/design.yaml`]: new TextEncoder().encode(yaml.value) });
         }
         dlg.close();
         d.open(mountOf(entry) === BROWSER_MOUNT ? path : entry);
-      })();
+      })().catch((err: unknown) => d.refuse(`Could not open ${path}: ${String(err)}`));
     });
     sec.append(open);
     dlg.append(sec);

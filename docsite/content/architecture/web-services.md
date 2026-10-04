@@ -132,7 +132,10 @@ under a folder of their own and nowhere else (agni issue 854). A `.zip` among th
 it was made from. The page asks the worker for `ProposeDesigns` over that folder and shows each
 proposal as its `design.yaml`, which the visitor can edit; opening one writes that descriptor into
 the mount and shows the design at `/designs/local/<folder>/<entry>/view` in the same page, without a
-reload, since the files exist only in that tab's worker. Every request naming `local` goes to the
+reload, since the files exist only in that tab's worker. The descriptor is written under the mount's
+`.agni-overlay/` folder, whose files read over the same paths (`fshost.OverlayDir`), because a design
+that came out of a zip sits under a path the mount holds as a file, and the mount refuses a file
+beneath a file. Every request naming `local` goes to the
 worker, workspace calls included, and none is ever listed on the server. On the `server` engine a
 `local` design is refused with a note rather than sent, because the server has never seen it and
 would need it uploaded, which a drop must not do by accident.

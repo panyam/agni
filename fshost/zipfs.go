@@ -3,8 +3,10 @@ package fshost
 import (
 	"archive/zip"
 	"bytes"
+	"io"
 	"io/fs"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -14,9 +16,17 @@ import (
 //
 // An archive is read whole on first use and kept, which suits a browser mount whose bytes are in
 // memory already. A file that ends in `.zip` but does not parse stays a plain file.
+//
+// A file at OverlayDir/<path> in fsys reads as <path>, over whatever is there, archives included, and
+// OverlayDir itself is hidden. It is how the page writes a design.yaml beside a design that came
+// out of a zip: the store under the browser mount refuses a path whose parent is a file, which is
+// what an archive is until it is expanded.
 func ExpandZips(fsys fs.FS) fs.FS {
 	return &zipFS{base: fsys, open: map[string]*zip.Reader{}}
 }
+
+// OverlayDir holds the files that read over an expanded tree. web/src/wasm/drop.ts writes into it.
+const OverlayDir = ".agni-overlay"
 
 type zipFS struct {
 	base fs.FS
@@ -72,7 +82,20 @@ func (z *zipFS) archive(cur fs.FS, name, prefix string) *zip.Reader {
 	return zr
 }
 
+// overlay returns the overlay's path for name, or "" when name is the overlay itself or the root.
+func overlay(name string) string {
+	if name == "." || name == OverlayDir || strings.HasPrefix(name, OverlayDir+"/") {
+		return ""
+	}
+	return OverlayDir + "/" + name
+}
+
 func (z *zipFS) Open(name string) (fs.File, error) {
+	if o := overlay(name); o != "" && fs.ValidPath(name) {
+		if st, err := fs.Stat(z.base, o); err == nil && !st.IsDir() {
+			return z.base.Open(o)
+		}
+	}
 	fsys, inner, err := z.resolve("open", name)
 	if err != nil {
 		return nil, err
@@ -101,10 +124,41 @@ func (z *zipFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return z.asDirs(name, des), nil
+	return z.merge(name, z.asDirs(name, des)), nil
+}
+
+// merge adds the overlay's entries for dir to a listing and hides the overlay itself, in name order.
+func (z *zipFS) merge(dir string, des []fs.DirEntry) []fs.DirEntry {
+	out := des[:0:0]
+	have := map[string]bool{}
+	for _, de := range des {
+		if dir == "." && de.Name() == OverlayDir {
+			continue
+		}
+		have[de.Name()] = true
+		out = append(out, de)
+	}
+	o := OverlayDir
+	if dir != "." {
+		o = overlay(dir)
+	}
+	if extra, err := fs.ReadDir(z.base, o); err == nil {
+		for _, de := range extra {
+			if !have[de.Name()] {
+				out = append(out, de)
+			}
+		}
+		sort.Slice(out, func(i, j int) bool { return out[i].Name() < out[j].Name() })
+	}
+	return out
 }
 
 func (z *zipFS) Stat(name string) (fs.FileInfo, error) {
+	if o := overlay(name); o != "" && fs.ValidPath(name) {
+		if st, err := fs.Stat(z.base, o); err == nil && !st.IsDir() {
+			return st, nil
+		}
+	}
 	fsys, inner, err := z.resolve("stat", name)
 	if err != nil {
 		return nil, err
@@ -138,11 +192,34 @@ func (z *zipFS) asDirs(dir string, des []fs.DirEntry) []fs.DirEntry {
 // does) reports archives as directories too.
 type zipDirFile struct {
 	fs.ReadDirFile
-	z   *zipFS
-	dir string
+	z    *zipFS
+	dir  string
+	list []fs.DirEntry
+	read bool
 }
 
+// ReadDir lists the whole directory once, merged with the overlay, and pages through it, so reading
+// through the file agrees with ReadDir on the FS.
 func (d *zipDirFile) ReadDir(n int) ([]fs.DirEntry, error) {
-	des, err := d.ReadDirFile.ReadDir(n)
-	return d.z.asDirs(d.dir, des), err
+	if !d.read {
+		des, err := d.ReadDirFile.ReadDir(-1)
+		if err != nil {
+			return nil, err
+		}
+		d.list, d.read = d.z.merge(d.dir, d.z.asDirs(d.dir, des)), true
+	}
+	if n <= 0 {
+		out := d.list
+		d.list = nil
+		return out, nil
+	}
+	if len(d.list) == 0 {
+		return nil, io.EOF
+	}
+	if n > len(d.list) {
+		n = len(d.list)
+	}
+	out := d.list[:n]
+	d.list = d.list[n:]
+	return out, nil
 }
