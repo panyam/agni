@@ -1,14 +1,21 @@
 // The page's side of the engine worker (agni issue 178). `fetch` is what a Connect transport takes in
 // place of the network's, so every generated client and every panel drives the in-browser engine
-// unchanged, and a design's bytes never leave the page.
-import type { EngineReply, EngineRequest, Files, Ready } from "./protocol.js";
+// unchanged, and a design's bytes never leave the page. The worker and its protocol are goapplib's
+// wasmhost (agni issue 863); this module adds what is agni's, bringing each design's files in as the
+// page first names it, and sending one the browser cannot hold to the server.
+import { addFiles, startWorker, workerFetch, workerMemory, type Files } from "@panyam/tsappkit/wasmhost";
+
+export type { Files };
+
+// The namespace the wasm build exports under, wasmengine.Namespace on the Go side.
+const namespace = "agni";
 
 export interface WasmEngine {
   // fetch answers one request in the worker, with the network's signature.
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-  // mount replaces one mount's files. Each buffer is TRANSFERRED to the worker, so it is empty here
-  // afterwards.
-  mount(name: string, files: Files): Promise<void>;
+  // add puts files into a mount, keeping what it already holds. Each buffer is TRANSFERRED to the
+  // worker, so it is empty here afterwards.
+  add(name: string, files: Files): Promise<void>;
   // memoryBytes is the engine's wasm memory, which never shrinks, so it is the peak so far.
   memoryBytes(): Promise<number>;
 }
@@ -21,62 +28,14 @@ export interface EngineAssets {
 
 // startEngine starts the worker and resolves once the engine has loaded, or rejects with why it could
 // not.
-export function startEngine(assets: EngineAssets): Promise<WasmEngine> {
-  const url = `${assets.worker}?${new URLSearchParams({ wasm: assets.wasm, exec: assets.exec })}`;
-  const worker = new Worker(url);
-  const pending = new Map<number, (r: EngineReply) => void>();
-  let next = 1;
-
-  // Unsent is a request before it has an id. Omit over a union keeps only the shared keys, so it is
-  // applied per member.
-  type Unsent = EngineRequest extends infer R ? (R extends EngineRequest ? Omit<R, "id"> : never) : never;
-  const call = (req: Unsent, transfer: Transferable[]): Promise<EngineReply> =>
-    new Promise((resolve) => {
-      const id = next++;
-      pending.set(id, resolve);
-      worker.postMessage({ ...req, id }, transfer);
-    });
-
-  const engine: WasmEngine = {
-    async fetch(input, init) {
-      const req = new Request(input, init);
-      const body = new Uint8Array(await req.arrayBuffer());
-      const headers: Record<string, string> = {};
-      req.headers.forEach((v, k) => (headers[k] = v));
-      const u = new URL(req.url);
-      const reply = await call({ kind: "http", method: req.method, url: u.pathname + u.search, headers, body }, [
-        body.buffer,
-      ]);
-      if (!reply.ok) throw new Error(reply.error);
-      return new Response(reply.body ? new Uint8Array(reply.body) : null, { status: reply.status, headers: reply.headers });
-    },
-    async memoryBytes() {
-      const reply = await call({ kind: "stats" }, []);
-      if (!reply.ok) throw new Error(reply.error);
-      return reply.memoryBytes ?? 0;
-    },
-    async mount(name, files) {
-      const reply = await call(
-        { kind: "mount", name, files },
-        Object.values(files).map((b) => b.buffer),
-      );
-      if (!reply.ok) throw new Error(reply.error);
-    },
+export async function startEngine(assets: EngineAssets): Promise<WasmEngine> {
+  const worker = await startWorker({ ...assets, ns: namespace });
+  const fetch = workerFetch(worker);
+  return {
+    fetch: (input, init) => fetch(input, init),
+    add: (name, files) => addFiles(worker, name, files),
+    memoryBytes: () => workerMemory(worker),
   };
-
-  return new Promise((resolve, reject) => {
-    worker.onmessage = (ev: MessageEvent<Ready | EngineReply>) => {
-      const m = ev.data;
-      if ("ready" in m) {
-        if (m.ready) resolve(engine);
-        else reject(new Error(m.error));
-        return;
-      }
-      pending.get(m.id)?.(m);
-      pending.delete(m.id);
-    };
-    worker.onerror = (ev) => reject(new Error(ev.message));
-  });
 }
 
 // A DesignFiles lists one design's files, as WorkspaceService.ListDesignFiles answers. The type is
@@ -155,7 +114,7 @@ export function mountingFetch(
             files[f.path] = await source.fetchFile(set.mount, f.path);
           }),
         );
-        await engine.mount(set.mount, files);
+        await engine.add(set.mount, files);
         for (const f of want) have.set(f.path, f.sha256);
         held.set(set.mount, have);
       })().catch((err: unknown) => {

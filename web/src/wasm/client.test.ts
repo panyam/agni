@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mountingFetch, type DesignFiles, type ServerFallback, type WasmEngine } from "./client.js";
-import type { Files } from "./protocol.js";
+import { mountingFetch, type DesignFiles, type Files, type ServerFallback, type WasmEngine } from "./client.js";
 
 // A recording engine, design source and network, so a test can see where each request went.
 function harness(listing: DesignFiles | Error) {
@@ -13,7 +12,7 @@ function harness(listing: DesignFiles | Error) {
       engineCalls.push(new URL((input as Request).url).pathname);
       return new Response("{}");
     },
-    mount: async (name: string, files: Files) => {
+    add: async (name: string, files: Files) => {
       mounted[name] = [...(mounted[name] ?? []), ...Object.keys(files)];
     },
     memoryBytes: async () => 0,

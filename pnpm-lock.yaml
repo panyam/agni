@@ -181,11 +181,11 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/tsappkit':
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: ^0.3.0
+        version: 0.3.0
       '@panyam/tsappkit-solid':
-        specifier: ^0.0.1
-        version: 0.0.1(@panyam/tsappkit@0.0.5)(solid-js@1.9.14)
+        specifier: ^0.0.4
+        version: 0.0.4(@panyam/tsappkit@0.3.0)(solid-js@1.9.14)
       pdfjs-dist:
         specifier: ^6.2.108
         version: 6.2.108
@@ -233,11 +233,11 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/tsappkit':
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: ^0.3.0
+        version: 0.3.0
       '@panyam/tsappkit-solid':
-        specifier: ^0.0.1
-        version: 0.0.1(@panyam/tsappkit@0.0.5)(solid-js@1.9.14)
+        specifier: ^0.0.4
+        version: 0.0.4(@panyam/tsappkit@0.3.0)(solid-js@1.9.14)
       dockview-core:
         specifier: ^1.17.2
         version: 1.17.2
@@ -768,14 +768,14 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@panyam/tsappkit-solid@0.0.1':
-    resolution: {integrity: sha512-WgdpYSVGPBRdHqdoADd8GnKykWf6jWgx+PN5osJJ9hhbuIBfDojYEq1nPHOchR/AbsYW/xedgcJcj9HWjbAM2Q==}
+  '@panyam/tsappkit-solid@0.0.4':
+    resolution: {integrity: sha512-xvJRHPMwmvnSSsyqdK6PSfV8iUK6hxPqc+96J1KIyROFA4b7QkaBOG4PwZxghadI0gtX46YfQKxLhkJIKt4hpg==}
     peerDependencies:
-      '@panyam/tsappkit': ^0.0.5
+      '@panyam/tsappkit': '>=0.0.5 <1.0.0'
       solid-js: ^1.9.0
 
-  '@panyam/tsappkit@0.0.5':
-    resolution: {integrity: sha512-bKBRgbxzE5ifnrpevcXcMsWkmMlQslvpeIDQ+aCB3zzu4DAjP0gYd8bs+u/DmHhiHKYVO7Ez22Rbtbchs7WiEw==}
+  '@panyam/tsappkit@0.3.0':
+    resolution: {integrity: sha512-1jibmmeZfvqhGFhLbL5kLt1yJ0d1izuKHDhnQczOyqLaenmC1gIrSzKNp0Cz3sFXSllihnAXvsbv3aWF5nBKBg==}
     peerDependencies:
       ace-builds: ^1.0.0
     peerDependenciesMeta:
@@ -1836,12 +1836,12 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@panyam/tsappkit-solid@0.0.1(@panyam/tsappkit@0.0.5)(solid-js@1.9.14)':
+  '@panyam/tsappkit-solid@0.0.4(@panyam/tsappkit@0.3.0)(solid-js@1.9.14)':
     dependencies:
-      '@panyam/tsappkit': 0.0.5
+      '@panyam/tsappkit': 0.3.0
       solid-js: 1.9.14
 
-  '@panyam/tsappkit@0.0.5': {}
+  '@panyam/tsappkit@0.3.0': {}
 
   '@rollup/rollup-android-arm-eabi@4.62.4':
     optional: true
