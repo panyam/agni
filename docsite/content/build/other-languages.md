@@ -144,7 +144,9 @@ checklist's order, and a one-row `review_summary`. `order_by` sorts them, as
 and an autofilter. It keeps a cell that starts with `=` as text, since a cell is a name off a design
 file and must not run as a formula. It needs the `xlsx` extra, and tab names, colours and highlighted
 rows stay in the caller, which can reopen the file with openpyxl.
-`clients/python/examples/audit_workbook.py` writes a five-sheet audit of the tutorial board this way.
+`clients/python/examples/audit_workbook.py` writes a five-sheet audit of the tutorial board this way. `clients/python/examples/revision_audit.py` is the full form: two revisions in one workbook, with
+the audit questions in `revision_audit.yaml` rather than the script, and a committed summary of every
+tab the client's tests compare on each run (agni issue 823).
 
 The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts whose
 layout belongs to whoever reads it, so it stays in the client.
