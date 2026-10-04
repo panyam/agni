@@ -160,6 +160,9 @@ describe("dropping files on the viewer", () => {
       expect((await runChecks(page)).length).toBeGreaterThan(0);
       expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/gateway\.zip\/gateway\.edn\/view/);
       await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 30_000 }).toContain("faithful");
+      // The zip carries the gateway's symbols/ beside the proposed design.yaml, and a design in no
+      // project still reads its own symbol library (agni issue 887), so every part is drawn.
+      expect((await page.locator("#undrawn-note").textContent())?.trim() ?? "").toBe("");
       expect(log.errors).toEqual([]);
     });
   });
