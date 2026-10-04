@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-04, at `098cc53a` (PR 884).
+Last pruned 2026-10-04, at `a5eced9f` (PR 889).
 
 ## At a glance
 
@@ -21,19 +21,21 @@ links rather than here. Log each exercise run on the mission issue.
   it before picking a ticket.
 - **#845 `mission_browser_review`**, 1 of 11 (#829 closed with #859). Next by the queue is #356. The
   exercise is a manual walk with no logged run yet.
-- **#851 `mission_public_demo`**, 4 of 15, in the `docs` clone. Exercise last ran at `098cc53a`:
-  broken at step 1 (no landing page, #856) and step 2 (no drop target, #854, in progress). Next is
-  #854, then #857.
-- This run: #843 `mission_revision_audit` closed (exercise passes, `make exercise-revision-audit`);
-  its leftovers #820 and #821 are `waiting`. Dropped the `docs/checkpoint-public-demo-mission`
-  thread (merged); its hosting and seeding questions live on #856.
+- **#851 `mission_public_demo`**, 6 of 16, in the `docs` clone. Exercise last ran at `a5eced9f`
+  (PR 889): steps 2 to 5 pass (drop a folder, a zip, an EDIF pair; check, trace, query; nothing about
+  the design on the network), and only step 1 fails, for want of the deployed landing page. #856
+  part one is PR 890 (`feat/856-static-demo`); part two wires it into the docs Pages deploy.
+- This run: #852, #853, #854, #863 and #887 closed through PRs 874, 881, 884, 886, 888 and 889.
+  #857 is now blocked by #856, since there is nothing to triage until the seeds are chosen.
 
 ## Open, ranked
 
 1. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
-2. **#854 and #857 on `mission_public_demo`**, the mission's two P1s, worked in the `docs` clone.
+2. **#856 part two on `mission_public_demo`**, after PR 890 merges: the docs workflow builds
+   `make demo-site` into the Pages artifact under `/agni/demo/` and runs `web/browser/site.spec.ts`
+   against it. Then #857 (triage the seeded boards' findings), #865, #868 and #127.
 3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
@@ -64,6 +66,21 @@ to test against.
 
 Four items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #667,
 #681 and #523.
+
+## feat/856-static-demo
+
+- **Last touched**: 2026-10-04 (`/workspace/repos/projects/Agni/docs`)
+- **Ticket**: #856, PR 890 (part one, open).
+- **Why**: the static demo, `agni site` and the viewer under a base path, so step 1 of #851's
+  exercise can run against a page served as plain files.
+- **Where it stopped**: PR 890 is green on `make testall`. Seeds are the tutorial gateway,
+  RoyalBlue54L Feather and the Jetson AGX Thor baseboard (`make demo-site`).
+- **Next action**: once PR 890 merges, branch part two from `origin/main` and add a step to
+  `.github/workflows/docs.yml` that runs `agni site docsite/dist/demo --base /agni/demo/ --seed ...`
+  before the artifact upload (`dist/` is served at `/agni/`), plus the site spec against that output.
+- **Open questions**: the docs workflow does not fetch the samples corpus today, so part two either
+  adds `make samples-oracle` to it or seeds only the tutorial there; the Jetson seed is a 92 MB
+  download per visit, which may want a lighter stand-in once #855's server can answer it instead.
 
 ## Worth knowing before the next change
 

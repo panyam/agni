@@ -271,6 +271,24 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `serve` takes `--mount` per folder and `--web-dir`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
+- **The engine also runs in the browser** (mission #851): `cmd/agni-wasm` on goapplib's `wasmhost`,
+  composed by `internal/wasmengine` over `fshost` (the service ports over `fs.FS` mounts). A design
+  keeps one URL, `/designs/<mount>/<path>/view`, and the ENGINE is a separate per-page choice:
+  `agni serve --engine wasm`, a page's `?engine=`, or a static page. On wasm the page lists a design's
+  files (`ListDesignFiles`), fetches them from `/raw/<mount>/<path>`, and sends one over
+  `--wasm-max-bytes` (128 MB, measured in #852 with `make wasm-bench`) to the server instead. Dropped
+  files go into the browser mount `local`, which nothing ever lists on a server, and
+  `ProposeDesigns` / `agni propose` group them into designs. `agni site` (`make demo-site`) writes
+  the whole thing as static files under a prefix. Architecture is in `architecture/web-services.md`,
+  "The same contract in the browser". `make wasm wasm-test` builds and smoke-tests it under Node.
+- **Four browser-engine traps.** Never block inside a `js.FuncOf` waiting on a JS promise (it pauses
+  the event loop the promise needs), which is why bytes are PUSHED into the worker before a request.
+  goutils' `memfs` refuses a file under a path that is a file, so a descriptor beside a design
+  that came out of a zip goes through `fshost`'s `.agni-overlay/`. The server and the worker read
+  through different adapters (`osLoader`, `fshost`), so `TestWasmEngineAnswersAsTheServerDoes` holds
+  them to identical answers; a new served question belongs in it. And `composition.test.ts` fills the
+  viewer shell's template fields itself, so a new `{{ .Field }}` in `ViewerPage.html` must be added to
+  its `servedFields` or the test throws.
 - **A command's `--format json` is protojson of that command's WIRE MESSAGE** (C31), so a script
   reading the CLI and a client reading the rpc parse one shape. `agni intake` is the one declared
   exception and its reasoning is on `intake.Skeleton`, because that type's confidentiality guarantee is
@@ -754,6 +772,7 @@ discovered.
 | A web viewer panel | 4, plus 2 more if it docks | `docsite/content/architecture/web-client.md` | `web/src/composition.test.ts`, `dock.test.ts` |
 | A canvas note strip (undrawn, stale-link) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples | the compiler for the `ViewSink` channel, `composition.test.ts` for the template hole |
 | A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
+| A field in the viewer shell (`ViewerPage.html`) | 3 (the template, the page struct in `cmd/agni/webpage.go`, `servedFields` in `web/src/composition.test.ts`) | `docsite/content/architecture/web-services.md` | `composition.test.ts` throws on an unfilled field; `agni site` renders the same struct |
 | A format reader | see the page | `docsite/content/build/format-reader.md` | see the page |
 | A check rule | see the page | `docsite/content/build/check-rule.md` | see the page |
 | A query relation | 7, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check`, `TestColumnKindsMatchGolden` |
