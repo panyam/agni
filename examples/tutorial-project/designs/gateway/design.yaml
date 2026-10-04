@@ -21,6 +21,13 @@ companions:
   - gateway.kicad_sch
   - gateway.kicad_pcb
 
+# The later revisions, each read with its own views (agni issue 848). Rev B adds the two I2C
+# pull-ups R4 and R5, so its board is not rev A's. Rev C is left undeclared on purpose: it reads
+# exactly as named, with no board, and a check of it says its board-tier rules did not run.
+revisions:
+  - entry: gateway-rev-b.edn
+    companions: [gateway-rev-b.kicad_pcb]
+
 # What the board is SUPPOSED to be, declared beside what it is. The engine has no built-in opinion
 # about a board's intended architecture, so an intent-bound review item reads needs-design-intent
 # until a section like this one exists. It is per-DESIGN, unlike profiles/ and params/ which are

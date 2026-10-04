@@ -135,7 +135,20 @@ message Design {
   AnalysisConfig config = 7;
 
   // intent_uri, which moved into config and is now config.intent.
+  // revisions are the design's other revisions, each with its own entry and the companions that are
+  // views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
+  // Naming a revision's entry reads it with its own companions, so a later netlist is checked against
+  // its own board rather than none, and a companion is never borrowed from another revision. A file
+  // in the folder that no revision lists still reads exactly as named.
+  repeated DesignRevision revisions = 8;
+
   reserved 6;
+}
+
+// DesignRevision is one declared revision of a design: its netlist entry and its own views.
+message DesignRevision {
+  string entry_uri = 1;
+  repeated string companion_uris = 2;
 }
 
 message GetProjectRequest {

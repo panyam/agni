@@ -336,12 +336,27 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 		}
 		d.Config.SymbolPathUris = resolved
 	}
-	for i, c := range d.GetCompanionUris() {
-		cu, err := base.Join(c)
+	join := func(rel string) (string, error) {
+		u, err := base.Join(rel)
 		if err != nil {
-			return "", nil, fmt.Errorf("%s: %w", name, err)
+			return "", fmt.Errorf("%s: %w", name, err)
 		}
-		d.CompanionUris[i] = cu.String()
+		return u.String(), nil
+	}
+	for i, c := range d.GetCompanionUris() {
+		if d.CompanionUris[i], err = join(c); err != nil {
+			return "", nil, err
+		}
+	}
+	for _, rev := range d.GetRevisions() {
+		if rev.EntryUri, err = join(rev.GetEntryUri()); err != nil {
+			return "", nil, err
+		}
+		for i, c := range rev.GetCompanionUris() {
+			if rev.CompanionUris[i], err = join(c); err != nil {
+				return "", nil, err
+			}
+		}
 	}
 	return id, d, nil
 }

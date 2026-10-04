@@ -1,4 +1,4 @@
-#agni-run 74a45f149d6c9770
+#agni-run 35cb06fe4c28a949
 n               provenance
 GND             designs/gateway/gateway.edn:GND
 PMIC_CORE_3V3   designs/gateway/gateway.edn:PMIC_CORE_3V3

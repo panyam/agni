@@ -413,10 +413,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   read exactly as named**, which is why companions are declared file by file rather than
   inferred. A later revision of the netlist sits in the same folder and is a legitimate analysis
   source, so inferring would turn a diff of two revisions into a diff of one against itself.
-  **The cost is that a later revision reads with NO board**, so its board-tier rules (copper-clearance,
-  track-width) do not run and nothing says so. On the tutorial, rev B shows 11 findings to rev A's 28,
-  and 13 of the 17 that vanish are those rules not running. Compare a revision's findings only against
-  a read with the same tiers, until #848 lets a descriptor declare each revision's own board.
+  **A later revision is declared under `revisions`, each with its own entry and companions** (agni
+  848), and reads with its own board. Before that it read with NO board and nothing said so: rev B
+  showed 11 findings to rev A's 28, and 13 of the 17 that vanished were board-tier rules not running.
+  An undeclared or board-less revision still reads with none, and `check` now says on stderr which
+  board-tier rules did not run (`check.NoBoardReason`), and `Tabulate` gives the run's `skipped`
+  table. A file belongs to one revision at most, so a board is never borrowed across revisions.
 - **A `.eds` is dual-capability, and its netlist is NOT the `.edn`'s.** An EDIF schematic export
   registers both a `Design` and a `Geometry` reader, because it carries nets joining portRefs in the
   same grammar, so every tool will parse it as a netlist without complaint. It counts DRAWN instances

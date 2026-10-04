@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/panyam/agni/artifact"
+	"slices"
 	"sort"
 	"strings"
 
@@ -159,6 +160,14 @@ func ResolveSources(d *webapi.Design, ref string, isDir, asNamed bool) Resolutio
 	if d == nil {
 		return plain
 	}
+	// A ref naming a declared revision's entry or one of its companions resolves against THAT
+	// revision, as though it were the design, so it gets its own companions and never another
+	// revision's (agni issue 848).
+	if !isDir {
+		if rev := RevisionOf(d, ref); rev != nil {
+			d = rev
+		}
+	}
 	r := Resolution{
 		NamedIsTheDesign: isDir && ref == d.GetUri(),
 		NamedIsTheEntry:  !isDir && ref == d.GetEntryUri(),
@@ -196,6 +205,22 @@ type Resolution struct {
 	// companion applies the declaration and changes nothing, which a caller narrating what it read
 	// distinguishes from a ref that was never resolved.
 	FromDeclaration bool
+}
+
+// RevisionOf returns the declared revision ref belongs to, as its entry or one of its companions,
+// shaped as a Design whose entry and companions are that revision's. It returns nil when ref is the
+// current revision's or belongs to none, so the design is resolved as it always was.
+func RevisionOf(d *webapi.Design, ref string) *webapi.Design {
+	for _, rev := range d.GetRevisions() {
+		if rev.GetEntryUri() != ref && !slices.Contains(rev.GetCompanionUris(), ref) {
+			continue
+		}
+		return &webapi.Design{
+			Name: d.GetName(), Title: d.GetTitle(), Uri: d.GetUri(), Config: d.GetConfig(),
+			EntryUri: rev.GetEntryUri(), CompanionUris: rev.GetCompanionUris(),
+		}
+	}
+	return nil
 }
 
 // IsCompanion reports whether ref is one of the views this design declared of itself.

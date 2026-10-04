@@ -42,7 +42,7 @@ def test_revision_audit_exercise_runs(tmp_path, isolated, monkeypatch):
     out = tmp_path / "audit.xlsx"
     mod.main(["-o", str(out), "--agni", AGNI])
     wb = openpyxl.load_workbook(out)
-    built = ["Diff"] + [name for name, _ in mod.TABLES] + ["Review", "Review summary", "Findings", "Verdicts", "Verdicts by rule"]
+    built = ["Diff"] + [name for name, _ in mod.TABLES] + ["Review", "Review summary", "Findings", "Skipped rules", "Verdicts", "Verdicts by rule"]
     assert wb.sheetnames == built
     for ws in wb.worksheets:
         assert ws.max_row > 1, f"{ws.title} is empty"

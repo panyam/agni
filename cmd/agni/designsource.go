@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mounts"
@@ -136,10 +139,16 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 	}
 	var note string
 	if namedIsTheDesign {
-		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(d.GetEntryUri()), descriptor)
+		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(tiers.NetlistURI), descriptor)
 	} else {
-		note = fmt.Sprintf("note: %s is a companion view declared by %s; analysis reads %s (the design's entry)",
-			path.Base(uriPath(named)), descriptor, path.Base(d.GetEntryUri()))
+		// The netlist the tiers resolved to, which for a revision's companion is that revision's entry
+		// rather than the design's (agni issue 848).
+		whose := "the design's entry"
+		if tiers.NetlistURI != d.GetEntryUri() {
+			whose = "its revision's entry"
+		}
+		note = fmt.Sprintf("note: %s is a companion view declared by %s; analysis reads %s (%s)",
+			path.Base(uriPath(named)), descriptor, path.Base(tiers.NetlistURI), whose)
 	}
 	if len(extra) > 0 {
 		note += ", with " + strings.Join(extra, " and ")
@@ -189,4 +198,24 @@ func uriPath(s string) string {
 		return u.Path
 	}
 	return filepath.ToSlash(s)
+}
+
+// noteNoBoard tells the operator when a check read no board, so a revision without copper does not
+// read as a revision with clean copper (agni issue 848). The response carries the same thing as
+// skipped rules; this is the line a person running the command sees. It names the rules and the fix,
+// since a later revision usually has a board somewhere that its design.yaml does not yet declare.
+func noteNoBoard(w io.Writer, named string, skipped []*webapi.SkippedRule) {
+	var rules []string
+	for _, s := range skipped {
+		if s.GetReason() == check.NoBoardReason {
+			rules = append(rules, s.GetName())
+		}
+	}
+	if len(rules) == 0 {
+		return
+	}
+	sort.Strings(rules)
+	fmt.Fprintf(w, "note: no board was read for %s, so %d board-tier rule(s) did not run: %s. "+
+		"If this revision has a board, declare it under its entry's revision in design.yaml (or pass --board-path).\n",
+		path.Base(named), len(rules), strings.Join(rules, ", "))
 }

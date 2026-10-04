@@ -20,20 +20,30 @@ class Project(_message.Message):
     def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ...) -> None: ...
 
 class Design(_message.Message):
-    __slots__ = ("name", "title", "uri", "entry_uri", "companion_uris", "config")
+    __slots__ = ("name", "title", "uri", "entry_uri", "companion_uris", "config", "revisions")
     NAME_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     ENTRY_URI_FIELD_NUMBER: _ClassVar[int]
     COMPANION_URIS_FIELD_NUMBER: _ClassVar[int]
     CONFIG_FIELD_NUMBER: _ClassVar[int]
+    REVISIONS_FIELD_NUMBER: _ClassVar[int]
     name: str
     title: str
     uri: str
     entry_uri: str
     companion_uris: _containers.RepeatedScalarFieldContainer[str]
     config: _config_pb2.AnalysisConfig
-    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., entry_uri: _Optional[str] = ..., companion_uris: _Optional[_Iterable[str]] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ...) -> None: ...
+    revisions: _containers.RepeatedCompositeFieldContainer[DesignRevision]
+    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., uri: _Optional[str] = ..., entry_uri: _Optional[str] = ..., companion_uris: _Optional[_Iterable[str]] = ..., config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., revisions: _Optional[_Iterable[_Union[DesignRevision, _Mapping]]] = ...) -> None: ...
+
+class DesignRevision(_message.Message):
+    __slots__ = ("entry_uri", "companion_uris")
+    ENTRY_URI_FIELD_NUMBER: _ClassVar[int]
+    COMPANION_URIS_FIELD_NUMBER: _ClassVar[int]
+    entry_uri: str
+    companion_uris: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, entry_uri: _Optional[str] = ..., companion_uris: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetProjectRequest(_message.Message):
     __slots__ = ("name",)

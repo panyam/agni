@@ -210,7 +210,14 @@ func TestOutFileNoteIsAbsolute(t *testing.T) {
 	// EvalSymlinks because a temp dir is under a symlinked /var on darwin, and the note reports the
 	// path Abs produced rather than the resolved one. Comparing the basename alone would pass on the
 	// relative spelling this test exists to reject.
-	got := strings.TrimSpace(strings.TrimPrefix(errOut.String(), "wrote "))
+	// The written-file note is the line that starts "wrote"; other notes (no board was read) may
+	// precede it on the same stream.
+	var got string
+	for _, line := range strings.Split(errOut.String(), "\n") {
+		if strings.HasPrefix(line, "wrote ") {
+			got = strings.TrimSpace(strings.TrimPrefix(line, "wrote "))
+		}
+	}
 	if !filepath.IsAbs(got) {
 		t.Errorf("note is not an absolute path: %q", errOut.String())
 	}
