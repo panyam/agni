@@ -192,6 +192,24 @@ project that declares none, each say so, since the fix differs.
 |---|---|
 | `--format <fmt>` | `text` (one checklist per line, the default marked) or `json` (the `ListChecklistsResponse` the `ListChecklists` rpc returns, each checklist carrying its manifest) |
 
+### `propose <folder|file.zip>`
+
+Group the files under a folder, or inside a `.zip`, into the designs they make, and print the
+`design.yaml` that would declare each, then every file no design reads and why. It's what the
+viewer shows when files are dropped on it, from the same code, so the two agree. A folder already
+holding a `design.yaml` is reported as declared rather than guessed over.
+
+The rules, briefly. A netlist claims the `.eds`, `.kicad_sch` and `.kicad_pcb` of its own name as its
+companions, and netlists sharing a first word (`board.edn`, `board-rev-b.edn`) are one design's
+revisions, never merged. A `.kicad_pro`, or a `.kicad_sch` no other sheet names as a child, makes a
+KiCad design with its child sheets and the board of its name. A `.kicad_pcb` that matches nothing is
+left unread with that reason. Write a printed proposal into the folder as its `design.yaml` to
+declare it.
+
+| flag | what it does |
+|---|---|
+| `--format <fmt>` | `text` (each `design.yaml`, then what is not read) or `json` (the `ProposeDesignsResponse` the `ProposeDesigns` rpc returns) |
+
 ### `start <design-file> [dir]`
 
 Scaffold a review project around an existing design file, so the commands above can stop taking

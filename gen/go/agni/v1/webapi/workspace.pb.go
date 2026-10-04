@@ -631,11 +631,269 @@ func (x *DesignFile) GetSha256() string {
 	return ""
 }
 
+type ProposeDesignsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only on
+	// a mount that expands archives (the browser's).
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposeDesignsRequest) Reset() {
+	*x = ProposeDesignsRequest{}
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposeDesignsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposeDesignsRequest) ProtoMessage() {}
+
+func (x *ProposeDesignsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposeDesignsRequest.ProtoReflect.Descriptor instead.
+func (*ProposeDesignsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ProposeDesignsRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+type ProposeDesignsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// designs are the proposed (or declared) designs, in path order.
+	Designs []*ProposedDesign `protobuf:"bytes,1,rep,name=designs,proto3" json:"designs,omitempty"`
+	// unread are the files no design reads, each with why.
+	Unread []*UnreadFile `protobuf:"bytes,2,rep,name=unread,proto3" json:"unread,omitempty"`
+	// support are files a design or its project reads without being a design file, such as a
+	// project's descriptor and config directories or a KiCad symbol library.
+	Support       []string `protobuf:"bytes,3,rep,name=support,proto3" json:"support,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposeDesignsResponse) Reset() {
+	*x = ProposeDesignsResponse{}
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposeDesignsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposeDesignsResponse) ProtoMessage() {}
+
+func (x *ProposeDesignsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposeDesignsResponse.ProtoReflect.Descriptor instead.
+func (*ProposeDesignsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ProposeDesignsResponse) GetDesigns() []*ProposedDesign {
+	if x != nil {
+		return x.Designs
+	}
+	return nil
+}
+
+func (x *ProposeDesignsResponse) GetUnread() []*UnreadFile {
+	if x != nil {
+		return x.Unread
+	}
+	return nil
+}
+
+func (x *ProposeDesignsResponse) GetSupport() []string {
+	if x != nil {
+		return x.Support
+	}
+	return nil
+}
+
+// ProposedDesign is one design a folder's files make.
+type ProposedDesign struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// folder is the design's folder, mount-relative, where its `design.yaml` would go.
+	Folder string `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	// design is the design as a descriptor would declare it: entry_uri, companion_uris and revisions
+	// are `mount://` URIs, and name is the entry's stem.
+	Design *Design `protobuf:"bytes,2,opt,name=design,proto3" json:"design,omitempty"`
+	// design_yaml is the `design.yaml` text that declares this design, for a person to read and edit.
+	DesignYaml string `protobuf:"bytes,3,opt,name=design_yaml,json=designYaml,proto3" json:"design_yaml,omitempty"`
+	// files are every file the design reads: its entry, companions, revisions, and a KiCad root's
+	// child sheets and libraries. Mount-relative.
+	Files []string `protobuf:"bytes,4,rep,name=files,proto3" json:"files,omitempty"`
+	// note says anything a reader should know before trusting the read, such as a schematic export
+	// standing in for a netlist, or a second design sharing a folder that can declare only one.
+	Note string `protobuf:"bytes,5,opt,name=note,proto3" json:"note,omitempty"`
+	// declared is true when the folder already held a `design.yaml`, which the proposal reports
+	// rather than replaces.
+	Declared      bool `protobuf:"varint,6,opt,name=declared,proto3" json:"declared,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProposedDesign) Reset() {
+	*x = ProposedDesign{}
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposedDesign) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposedDesign) ProtoMessage() {}
+
+func (x *ProposedDesign) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposedDesign.ProtoReflect.Descriptor instead.
+func (*ProposedDesign) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ProposedDesign) GetFolder() string {
+	if x != nil {
+		return x.Folder
+	}
+	return ""
+}
+
+func (x *ProposedDesign) GetDesign() *Design {
+	if x != nil {
+		return x.Design
+	}
+	return nil
+}
+
+func (x *ProposedDesign) GetDesignYaml() string {
+	if x != nil {
+		return x.DesignYaml
+	}
+	return ""
+}
+
+func (x *ProposedDesign) GetFiles() []string {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+func (x *ProposedDesign) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *ProposedDesign) GetDeclared() bool {
+	if x != nil {
+		return x.Declared
+	}
+	return false
+}
+
+// UnreadFile is a file no proposed design reads.
+type UnreadFile struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnreadFile) Reset() {
+	*x = UnreadFile{}
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnreadFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnreadFile) ProtoMessage() {}
+
+func (x *UnreadFile) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnreadFile.ProtoReflect.Descriptor instead.
+func (*UnreadFile) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *UnreadFile) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *UnreadFile) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_agni_v1_webapi_workspace_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\"A\n" +
+	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"A\n" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
@@ -667,16 +925,35 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"DesignFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04size\x18\x02 \x01(\x03R\x04size\x12\x16\n" +
-	"\x06sha256\x18\x03 \x01(\tR\x06sha256*T\n" +
+	"\x06sha256\x18\x03 \x01(\tR\x06sha256\")\n" +
+	"\x15ProposeDesignsRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"\xa0\x01\n" +
+	"\x16ProposeDesignsResponse\x128\n" +
+	"\adesigns\x18\x01 \x03(\v2\x1e.agni.v1.webapi.ProposedDesignR\adesigns\x122\n" +
+	"\x06unread\x18\x02 \x03(\v2\x1a.agni.v1.webapi.UnreadFileR\x06unread\x12\x18\n" +
+	"\asupport\x18\x03 \x03(\tR\asupport\"\xbf\x01\n" +
+	"\x0eProposedDesign\x12\x16\n" +
+	"\x06folder\x18\x01 \x01(\tR\x06folder\x12.\n" +
+	"\x06design\x18\x02 \x01(\v2\x16.agni.v1.webapi.DesignR\x06design\x12\x1f\n" +
+	"\vdesign_yaml\x18\x03 \x01(\tR\n" +
+	"designYaml\x12\x14\n" +
+	"\x05files\x18\x04 \x03(\tR\x05files\x12\x12\n" +
+	"\x04note\x18\x05 \x01(\tR\x04note\x12\x1a\n" +
+	"\bdeclared\x18\x06 \x01(\bR\bdeclared\"8\n" +
+	"\n" +
+	"UnreadFile\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason*T\n" +
 	"\bFileKind\x12\x19\n" +
 	"\x15FILE_KIND_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10FILE_KIND_DESIGN\x10\x01\x12\x17\n" +
-	"\x13FILE_KIND_DATASHEET\x10\x022\x97\x02\n" +
+	"\x13FILE_KIND_DATASHEET\x10\x022\xf8\x02\n" +
 	"\x10WorkspaceService\x12S\n" +
 	"\n" +
 	"ListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12J\n" +
 	"\aListDir\x12\x1e.agni.v1.webapi.ListDirRequest\x1a\x1f.agni.v1.webapi.ListDirResponse\x12b\n" +
-	"\x0fListDesignFiles\x12&.agni.v1.webapi.ListDesignFilesRequest\x1a'.agni.v1.webapi.ListDesignFilesResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x0fListDesignFiles\x12&.agni.v1.webapi.ListDesignFilesRequest\x1a'.agni.v1.webapi.ListDesignFilesResponse\x12_\n" +
+	"\x0eProposeDesigns\x12%.agni.v1.webapi.ProposeDesignsRequest\x1a&.agni.v1.webapi.ProposeDesignsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_workspace_proto_rawDescOnce sync.Once
@@ -691,7 +968,7 @@ func file_agni_v1_webapi_workspace_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_workspace_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_webapi_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_agni_v1_webapi_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_agni_v1_webapi_workspace_proto_goTypes = []any{
 	(FileKind)(0),                   // 0: agni.v1.webapi.FileKind
 	(*Mount)(nil),                   // 1: agni.v1.webapi.Mount
@@ -703,25 +980,35 @@ var file_agni_v1_webapi_workspace_proto_goTypes = []any{
 	(*ListDesignFilesRequest)(nil),  // 7: agni.v1.webapi.ListDesignFilesRequest
 	(*ListDesignFilesResponse)(nil), // 8: agni.v1.webapi.ListDesignFilesResponse
 	(*DesignFile)(nil),              // 9: agni.v1.webapi.DesignFile
+	(*ProposeDesignsRequest)(nil),   // 10: agni.v1.webapi.ProposeDesignsRequest
+	(*ProposeDesignsResponse)(nil),  // 11: agni.v1.webapi.ProposeDesignsResponse
+	(*ProposedDesign)(nil),          // 12: agni.v1.webapi.ProposedDesign
+	(*UnreadFile)(nil),              // 13: agni.v1.webapi.UnreadFile
+	(*Design)(nil),                  // 14: agni.v1.webapi.Design
 }
 var file_agni_v1_webapi_workspace_proto_depIdxs = []int32{
-	0, // 0: agni.v1.webapi.ListMountsRequest.opens:type_name -> agni.v1.webapi.FileKind
-	1, // 1: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
-	0, // 2: agni.v1.webapi.DirEntry.kind:type_name -> agni.v1.webapi.FileKind
-	0, // 3: agni.v1.webapi.ListDirRequest.opens:type_name -> agni.v1.webapi.FileKind
-	4, // 4: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
-	9, // 5: agni.v1.webapi.ListDesignFilesResponse.files:type_name -> agni.v1.webapi.DesignFile
-	2, // 6: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
-	5, // 7: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
-	7, // 8: agni.v1.webapi.WorkspaceService.ListDesignFiles:input_type -> agni.v1.webapi.ListDesignFilesRequest
-	3, // 9: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
-	6, // 10: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
-	8, // 11: agni.v1.webapi.WorkspaceService.ListDesignFiles:output_type -> agni.v1.webapi.ListDesignFilesResponse
-	9, // [9:12] is the sub-list for method output_type
-	6, // [6:9] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	0,  // 0: agni.v1.webapi.ListMountsRequest.opens:type_name -> agni.v1.webapi.FileKind
+	1,  // 1: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
+	0,  // 2: agni.v1.webapi.DirEntry.kind:type_name -> agni.v1.webapi.FileKind
+	0,  // 3: agni.v1.webapi.ListDirRequest.opens:type_name -> agni.v1.webapi.FileKind
+	4,  // 4: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
+	9,  // 5: agni.v1.webapi.ListDesignFilesResponse.files:type_name -> agni.v1.webapi.DesignFile
+	12, // 6: agni.v1.webapi.ProposeDesignsResponse.designs:type_name -> agni.v1.webapi.ProposedDesign
+	13, // 7: agni.v1.webapi.ProposeDesignsResponse.unread:type_name -> agni.v1.webapi.UnreadFile
+	14, // 8: agni.v1.webapi.ProposedDesign.design:type_name -> agni.v1.webapi.Design
+	2,  // 9: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
+	5,  // 10: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
+	7,  // 11: agni.v1.webapi.WorkspaceService.ListDesignFiles:input_type -> agni.v1.webapi.ListDesignFilesRequest
+	10, // 12: agni.v1.webapi.WorkspaceService.ProposeDesigns:input_type -> agni.v1.webapi.ProposeDesignsRequest
+	3,  // 13: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
+	6,  // 14: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
+	8,  // 15: agni.v1.webapi.WorkspaceService.ListDesignFiles:output_type -> agni.v1.webapi.ListDesignFilesResponse
+	11, // 16: agni.v1.webapi.WorkspaceService.ProposeDesigns:output_type -> agni.v1.webapi.ProposeDesignsResponse
+	13, // [13:17] is the sub-list for method output_type
+	9,  // [9:13] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_workspace_proto_init() }
@@ -729,13 +1016,14 @@ func file_agni_v1_webapi_workspace_proto_init() {
 	if File_agni_v1_webapi_workspace_proto != nil {
 		return
 	}
+	file_agni_v1_webapi_project_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_workspace_proto_rawDesc), len(file_agni_v1_webapi_workspace_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

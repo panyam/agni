@@ -14,3 +14,9 @@ func TestServiceNamesTheSameProjectDescriptor(t *testing.T) {
 		t.Errorf("service.ProjectDescriptorName = %q, projects.ProjectDescriptor = %q", service.ProjectDescriptorName, ProjectDescriptor)
 	}
 }
+
+func TestServiceNamesTheSameDesignDescriptor(t *testing.T) {
+	if service.DesignDescriptorName != DesignDescriptor {
+		t.Errorf("service.DesignDescriptorName = %q, projects.DesignDescriptor = %q", service.DesignDescriptorName, DesignDescriptor)
+	}
+}

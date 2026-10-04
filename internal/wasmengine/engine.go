@@ -25,6 +25,10 @@ import (
 // Namespace is the global the wasm build's exports live under, globalThis.agni.
 const Namespace = "agni"
 
+// BrowserMount is the mount a page puts dropped files in (agni issue 854). Its files exist only in
+// the visitor's browser, and a `.zip` in it reads as the folder it was made from.
+const BrowserMount = "local"
+
 // Build composes the engine over root, whose top-level directories are the mounts, which is how
 // goapplib's wasmhost holds them. It is the rebuild function cmd/agni-wasm hands the host.
 func Build(root fs.FS) (http.Handler, error) {
@@ -40,6 +44,9 @@ func Build(root fs.FS) (http.Handler, error) {
 		sub, err := fs.Sub(root, e.Name())
 		if err != nil {
 			return nil, err
+		}
+		if e.Name() == BrowserMount {
+			sub = fshost.ExpandZips(sub)
 		}
 		ms = append(ms, fshost.Mount{Name: e.Name(), FS: sub})
 	}
