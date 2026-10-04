@@ -138,7 +138,7 @@ def test_tabulate_a_review_keeps_checklist_order(client, tmp_path):
 def test_tabulate_gives_the_cli_csv_tables(client, tmp_path):
     out = client.tabulate(check=client.check_design(uri=DESIGN), order_by=["rule", "subjects"])
     tables = {t.name: t for t in out.tables}
-    assert list(tables) == ["findings", "verdicts", "verdicts_by_rule"]
+    assert list(tables) == ["findings", "verdicts", "verdicts_by_rule", "skipped"]
     header, rows = to_rows(tables["verdicts"])
     # The header `agni check --verdicts --format csv` publishes, and its kind:ref subject spelling.
     assert header == ["verdict_id", "url", "rule", "outcome", "subjects", "statement", "context", "terms", "reason"]

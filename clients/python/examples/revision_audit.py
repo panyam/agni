@@ -61,9 +61,11 @@ def plan(client: Client, base: str, head: str) -> List[Tuple[str, Callable[[], L
     def checked(name: str) -> List[Tuple[str, Rows]]:
         nonlocal check
         if check is None:
-            names = {"findings": "Findings", "verdicts": "Verdicts", "verdicts_by_rule": "Verdicts by rule"}
+            names = {"findings": "Findings", "verdicts": "Verdicts", "verdicts_by_rule": "Verdicts by rule", "skipped": "Skipped rules"}
             check = table_sheets(client.tabulate(check=client.check_design(uri=head)), names)
-        want = {"Findings": ["Findings"], "Verdicts": ["Verdicts", "Verdicts by rule"]}[name]
+        # Skipped rules sit beside the findings, so a reader sees which rules the run was silent on,
+        # such as a board-tier rule on a revision read with no board (agni issue 848).
+        want = {"Findings": ["Findings", "Skipped rules"], "Verdicts": ["Verdicts", "Verdicts by rule"]}[name]
         return [(n, to_rows(t)) for n, t in check if n in want]
 
     return [
