@@ -4,13 +4,15 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Design } from "./project_pb";
+import { file_agni_v1_webapi_project } from "./project_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSJtCghEaXJFbnRyeRIMCgRuYW1lGAEgASgJEg4KBmlzX2RpchgCIAEoCBIOCgZmb3JtYXQYAyABKAkSCwoDdXJpGAQgASgJEiYKBGtpbmQYBSABKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZCJMCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5IiUKFkxpc3REZXNpZ25GaWxlc1JlcXVlc3QSCwoDdXJpGAEgASgJImcKF0xpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEg0KBW1vdW50GAEgASgJEikKBWZpbGVzGAIgAygLMhouYWduaS52MS53ZWJhcGkuRGVzaWduRmlsZRISCgp0b3RhbF9zaXplGAMgASgDIjgKCkRlc2lnbkZpbGUSDAoEcGF0aBgBIAEoCRIMCgRzaXplGAIgASgDEg4KBnNoYTI1NhgDIAEoCSpUCghGaWxlS2luZBIZChVGSUxFX0tJTkRfVU5TUEVDSUZJRUQQABIUChBGSUxFX0tJTkRfREVTSUdOEAESFwoTRklMRV9LSU5EX0RBVEFTSEVFVBACMpcCChBXb3Jrc3BhY2VTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJKCgdMaXN0RGlyEh4uYWduaS52MS53ZWJhcGkuTGlzdERpclJlcXVlc3QaHy5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVzcG9uc2USYgoPTGlzdERlc2lnbkZpbGVzEiYuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbkZpbGVzUmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25GaWxlc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSJtCghEaXJFbnRyeRIMCgRuYW1lGAEgASgJEg4KBmlzX2RpchgCIAEoCBIOCgZmb3JtYXQYAyABKAkSCwoDdXJpGAQgASgJEiYKBGtpbmQYBSABKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZCJMCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5IiUKFkxpc3REZXNpZ25GaWxlc1JlcXVlc3QSCwoDdXJpGAEgASgJImcKF0xpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEg0KBW1vdW50GAEgASgJEikKBWZpbGVzGAIgAygLMhouYWduaS52MS53ZWJhcGkuRGVzaWduRmlsZRISCgp0b3RhbF9zaXplGAMgASgDIjgKCkRlc2lnbkZpbGUSDAoEcGF0aBgBIAEoCRIMCgRzaXplGAIgASgDEg4KBnNoYTI1NhgDIAEoCSIkChVQcm9wb3NlRGVzaWduc1JlcXVlc3QSCwoDdXJpGAEgASgJIoYBChZQcm9wb3NlRGVzaWduc1Jlc3BvbnNlEi8KB2Rlc2lnbnMYASADKAsyHi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlZERlc2lnbhIqCgZ1bnJlYWQYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5VbnJlYWRGaWxlEg8KB3N1cHBvcnQYAyADKAkijAEKDlByb3Bvc2VkRGVzaWduEg4KBmZvbGRlchgBIAEoCRImCgZkZXNpZ24YAiABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SEwoLZGVzaWduX3lhbWwYAyABKAkSDQoFZmlsZXMYBCADKAkSDAoEbm90ZRgFIAEoCRIQCghkZWNsYXJlZBgGIAEoCCIqCgpVbnJlYWRGaWxlEgwKBHBhdGgYASABKAkSDgoGcmVhc29uGAIgASgJKlQKCEZpbGVLaW5kEhkKFUZJTEVfS0lORF9VTlNQRUNJRklFRBAAEhQKEEZJTEVfS0lORF9ERVNJR04QARIXChNGSUxFX0tJTkRfREFUQVNIRUVUEAIy+AIKEFdvcmtzcGFjZVNlcnZpY2USUwoKTGlzdE1vdW50cxIhLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1Jlc3BvbnNlEkoKB0xpc3REaXISHi5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVxdWVzdBofLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXNwb25zZRJiCg9MaXN0RGVzaWduRmlsZXMSJi5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduRmlsZXNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbkZpbGVzUmVzcG9uc2USXwoOUHJvcG9zZURlc2lnbnMSJS5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlRGVzaWduc1JlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlRGVzaWduc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_project]);
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls;
@@ -305,6 +307,144 @@ export const DesignFileSchema: GenMessage<DesignFile> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_workspace, 8);
 
 /**
+ * @generated from message agni.v1.webapi.ProposeDesignsRequest
+ */
+export type ProposeDesignsRequest = Message<"agni.v1.webapi.ProposeDesignsRequest"> & {
+  /**
+   * uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only on
+   * a mount that expands archives (the browser's).
+   *
+   * @generated from field: string uri = 1;
+   */
+  uri: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ProposeDesignsRequest.
+ * Use `create(ProposeDesignsRequestSchema)` to create a new message.
+ */
+export const ProposeDesignsRequestSchema: GenMessage<ProposeDesignsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 9);
+
+/**
+ * @generated from message agni.v1.webapi.ProposeDesignsResponse
+ */
+export type ProposeDesignsResponse = Message<"agni.v1.webapi.ProposeDesignsResponse"> & {
+  /**
+   * designs are the proposed (or declared) designs, in path order.
+   *
+   * @generated from field: repeated agni.v1.webapi.ProposedDesign designs = 1;
+   */
+  designs: ProposedDesign[];
+
+  /**
+   * unread are the files no design reads, each with why.
+   *
+   * @generated from field: repeated agni.v1.webapi.UnreadFile unread = 2;
+   */
+  unread: UnreadFile[];
+
+  /**
+   * support are files a design or its project reads without being a design file, such as a
+   * project's descriptor and config directories or a KiCad symbol library.
+   *
+   * @generated from field: repeated string support = 3;
+   */
+  support: string[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.ProposeDesignsResponse.
+ * Use `create(ProposeDesignsResponseSchema)` to create a new message.
+ */
+export const ProposeDesignsResponseSchema: GenMessage<ProposeDesignsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 10);
+
+/**
+ * ProposedDesign is one design a folder's files make.
+ *
+ * @generated from message agni.v1.webapi.ProposedDesign
+ */
+export type ProposedDesign = Message<"agni.v1.webapi.ProposedDesign"> & {
+  /**
+   * folder is the design's folder, mount-relative, where its `design.yaml` would go.
+   *
+   * @generated from field: string folder = 1;
+   */
+  folder: string;
+
+  /**
+   * design is the design as a descriptor would declare it: entry_uri, companion_uris and revisions
+   * are `mount://` URIs, and name is the entry's stem.
+   *
+   * @generated from field: agni.v1.webapi.Design design = 2;
+   */
+  design?: Design | undefined;
+
+  /**
+   * design_yaml is the `design.yaml` text that declares this design, for a person to read and edit.
+   *
+   * @generated from field: string design_yaml = 3;
+   */
+  designYaml: string;
+
+  /**
+   * files are every file the design reads: its entry, companions, revisions, and a KiCad root's
+   * child sheets and libraries. Mount-relative.
+   *
+   * @generated from field: repeated string files = 4;
+   */
+  files: string[];
+
+  /**
+   * note says anything a reader should know before trusting the read, such as a schematic export
+   * standing in for a netlist, or a second design sharing a folder that can declare only one.
+   *
+   * @generated from field: string note = 5;
+   */
+  note: string;
+
+  /**
+   * declared is true when the folder already held a `design.yaml`, which the proposal reports
+   * rather than replaces.
+   *
+   * @generated from field: bool declared = 6;
+   */
+  declared: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ProposedDesign.
+ * Use `create(ProposedDesignSchema)` to create a new message.
+ */
+export const ProposedDesignSchema: GenMessage<ProposedDesign> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 11);
+
+/**
+ * UnreadFile is a file no proposed design reads.
+ *
+ * @generated from message agni.v1.webapi.UnreadFile
+ */
+export type UnreadFile = Message<"agni.v1.webapi.UnreadFile"> & {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.UnreadFile.
+ * Use `create(UnreadFileSchema)` to create a new message.
+ */
+export const UnreadFileSchema: GenMessage<UnreadFile> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 12);
+
+/**
  * FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
  * the READER: a browser cares which of its pages a file belongs to, not whether the netlist behind
  * it is EDIF or KiCad.
@@ -394,6 +534,20 @@ export const WorkspaceService: GenService<{
     methodKind: "unary";
     input: typeof ListDesignFilesRequestSchema;
     output: typeof ListDesignFilesResponseSchema;
+  },
+  /**
+   * ProposeDesigns groups the files under a folder that declares no design into the designs they
+   * make, for a page that was handed a drop of files and must show what it will read before it
+   * reads it (agni issue 854). A folder already holding a `design.yaml` is reported as declared and
+   * not re-guessed. Each proposal carries the `design.yaml` that would declare it, and every file
+   * no proposal reads is listed with the reason, so nothing is dropped silently.
+   *
+   * @generated from rpc agni.v1.webapi.WorkspaceService.ProposeDesigns
+   */
+  proposeDesigns: {
+    methodKind: "unary";
+    input: typeof ProposeDesignsRequestSchema;
+    output: typeof ProposeDesignsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_workspace, 0);

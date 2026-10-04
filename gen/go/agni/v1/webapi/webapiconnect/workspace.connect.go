@@ -42,6 +42,9 @@ const (
 	// WorkspaceServiceListDesignFilesProcedure is the fully-qualified name of the WorkspaceService's
 	// ListDesignFiles RPC.
 	WorkspaceServiceListDesignFilesProcedure = "/agni.v1.webapi.WorkspaceService/ListDesignFiles"
+	// WorkspaceServiceProposeDesignsProcedure is the fully-qualified name of the WorkspaceService's
+	// ProposeDesigns RPC.
+	WorkspaceServiceProposeDesignsProcedure = "/agni.v1.webapi.WorkspaceService/ProposeDesigns"
 )
 
 // WorkspaceServiceClient is a client for the agni.v1.webapi.WorkspaceService service.
@@ -63,6 +66,12 @@ type WorkspaceServiceClient interface {
 	// `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
 	// since a board that big is what the server's own engine is for.
 	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
+	// ProposeDesigns groups the files under a folder that declares no design into the designs they
+	// make, for a page that was handed a drop of files and must show what it will read before it
+	// reads it (agni issue 854). A folder already holding a `design.yaml` is reported as declared and
+	// not re-guessed. Each proposal carries the `design.yaml` that would declare it, and every file
+	// no proposal reads is listed with the reason, so nothing is dropped silently.
+	ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error)
 }
 
 // NewWorkspaceServiceClient constructs a client for the agni.v1.webapi.WorkspaceService service. By
@@ -94,6 +103,12 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(workspaceServiceMethods.ByName("ListDesignFiles")),
 			connect.WithClientOptions(opts...),
 		),
+		proposeDesigns: connect.NewClient[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse](
+			httpClient,
+			baseURL+WorkspaceServiceProposeDesignsProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("ProposeDesigns")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -102,6 +117,7 @@ type workspaceServiceClient struct {
 	listMounts      *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
 	listDir         *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
 	listDesignFiles *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
+	proposeDesigns  *connect.Client[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse]
 }
 
 // ListMounts calls agni.v1.webapi.WorkspaceService.ListMounts.
@@ -117,6 +133,11 @@ func (c *workspaceServiceClient) ListDir(ctx context.Context, req *connect.Reque
 // ListDesignFiles calls agni.v1.webapi.WorkspaceService.ListDesignFiles.
 func (c *workspaceServiceClient) ListDesignFiles(ctx context.Context, req *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error) {
 	return c.listDesignFiles.CallUnary(ctx, req)
+}
+
+// ProposeDesigns calls agni.v1.webapi.WorkspaceService.ProposeDesigns.
+func (c *workspaceServiceClient) ProposeDesigns(ctx context.Context, req *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error) {
+	return c.proposeDesigns.CallUnary(ctx, req)
 }
 
 // WorkspaceServiceHandler is an implementation of the agni.v1.webapi.WorkspaceService service.
@@ -138,6 +159,12 @@ type WorkspaceServiceHandler interface {
 	// `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
 	// since a board that big is what the server's own engine is for.
 	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
+	// ProposeDesigns groups the files under a folder that declares no design into the designs they
+	// make, for a page that was handed a drop of files and must show what it will read before it
+	// reads it (agni issue 854). A folder already holding a `design.yaml` is reported as declared and
+	// not re-guessed. Each proposal carries the `design.yaml` that would declare it, and every file
+	// no proposal reads is listed with the reason, so nothing is dropped silently.
+	ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error)
 }
 
 // NewWorkspaceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -165,6 +192,12 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		connect.WithSchema(workspaceServiceMethods.ByName("ListDesignFiles")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workspaceServiceProposeDesignsHandler := connect.NewUnaryHandler(
+		WorkspaceServiceProposeDesignsProcedure,
+		svc.ProposeDesigns,
+		connect.WithSchema(workspaceServiceMethods.ByName("ProposeDesigns")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.WorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkspaceServiceListMountsProcedure:
@@ -173,6 +206,8 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 			workspaceServiceListDirHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDesignFilesProcedure:
 			workspaceServiceListDesignFilesHandler.ServeHTTP(w, r)
+		case WorkspaceServiceProposeDesignsProcedure:
+			workspaceServiceProposeDesignsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -192,4 +227,8 @@ func (UnimplementedWorkspaceServiceHandler) ListDir(context.Context, *connect.Re
 
 func (UnimplementedWorkspaceServiceHandler) ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.ListDesignFiles is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.ProposeDesigns is not implemented"))
 }

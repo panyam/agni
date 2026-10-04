@@ -4,6 +4,8 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/webapi/project.proto";
+
 // The application tier is a set of services, one proto file per concern (workspace, design,
 // checks, diff, validate); the web layer is just a Connect (later grpc-gateway) translation
 // over them. Like the IR and the geometry sidecar, the contract is defined in proto and
@@ -34,6 +36,13 @@ service WorkspaceService {
   // `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
   // since a board that big is what the server's own engine is for.
   rpc ListDesignFiles(ListDesignFilesRequest) returns (ListDesignFilesResponse);
+
+  // ProposeDesigns groups the files under a folder that declares no design into the designs they
+  // make, for a page that was handed a drop of files and must show what it will read before it
+  // reads it (agni issue 854). A folder already holding a `design.yaml` is reported as declared and
+  // not re-guessed. Each proposal carries the `design.yaml` that would declare it, and every file
+  // no proposal reads is listed with the reason, so nothing is dropped silently.
+  rpc ProposeDesigns(ProposeDesignsRequest) returns (ProposeDesignsResponse);
 }
 
 // Mount is one configured root folder. Clients reference it by name in later calls;
@@ -161,4 +170,46 @@ message DesignFile {
   int64 size = 2;
   // sha256 is the file's content hash, "sha256:<hex>", so a client can tell a cached copy is current.
   string sha256 = 3;
+}
+
+message ProposeDesignsRequest {
+  // uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only on
+  // a mount that expands archives (the browser's).
+  string uri = 1;
+}
+
+message ProposeDesignsResponse {
+  // designs are the proposed (or declared) designs, in path order.
+  repeated ProposedDesign designs = 1;
+  // unread are the files no design reads, each with why.
+  repeated UnreadFile unread = 2;
+  // support are files a design or its project reads without being a design file, such as a
+  // project's descriptor and config directories or a KiCad symbol library.
+  repeated string support = 3;
+}
+
+// ProposedDesign is one design a folder's files make.
+message ProposedDesign {
+  // folder is the design's folder, mount-relative, where its `design.yaml` would go.
+  string folder = 1;
+  // design is the design as a descriptor would declare it: entry_uri, companion_uris and revisions
+  // are `mount://` URIs, and name is the entry's stem.
+  Design design = 2;
+  // design_yaml is the `design.yaml` text that declares this design, for a person to read and edit.
+  string design_yaml = 3;
+  // files are every file the design reads: its entry, companions, revisions, and a KiCad root's
+  // child sheets and libraries. Mount-relative.
+  repeated string files = 4;
+  // note says anything a reader should know before trusting the read, such as a schematic export
+  // standing in for a netlist, or a second design sharing a folder that can declare only one.
+  string note = 5;
+  // declared is true when the folder already held a `design.yaml`, which the proposal reports
+  // rather than replaces.
+  bool declared = 6;
+}
+
+// UnreadFile is a file no proposed design reads.
+message UnreadFile {
+  string path = 1;
+  string reason = 2;
 }

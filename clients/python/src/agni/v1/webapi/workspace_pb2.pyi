@@ -1,3 +1,4 @@
+from agni.v1.webapi import project_pb2 as _project_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -93,3 +94,43 @@ class DesignFile(_message.Message):
     size: int
     sha256: str
     def __init__(self, path: _Optional[str] = ..., size: _Optional[int] = ..., sha256: _Optional[str] = ...) -> None: ...
+
+class ProposeDesignsRequest(_message.Message):
+    __slots__ = ("uri",)
+    URI_FIELD_NUMBER: _ClassVar[int]
+    uri: str
+    def __init__(self, uri: _Optional[str] = ...) -> None: ...
+
+class ProposeDesignsResponse(_message.Message):
+    __slots__ = ("designs", "unread", "support")
+    DESIGNS_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_FIELD_NUMBER: _ClassVar[int]
+    SUPPORT_FIELD_NUMBER: _ClassVar[int]
+    designs: _containers.RepeatedCompositeFieldContainer[ProposedDesign]
+    unread: _containers.RepeatedCompositeFieldContainer[UnreadFile]
+    support: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, designs: _Optional[_Iterable[_Union[ProposedDesign, _Mapping]]] = ..., unread: _Optional[_Iterable[_Union[UnreadFile, _Mapping]]] = ..., support: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class ProposedDesign(_message.Message):
+    __slots__ = ("folder", "design", "design_yaml", "files", "note", "declared")
+    FOLDER_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_YAML_FIELD_NUMBER: _ClassVar[int]
+    FILES_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    DECLARED_FIELD_NUMBER: _ClassVar[int]
+    folder: str
+    design: _project_pb2.Design
+    design_yaml: str
+    files: _containers.RepeatedScalarFieldContainer[str]
+    note: str
+    declared: bool
+    def __init__(self, folder: _Optional[str] = ..., design: _Optional[_Union[_project_pb2.Design, _Mapping]] = ..., design_yaml: _Optional[str] = ..., files: _Optional[_Iterable[str]] = ..., note: _Optional[str] = ..., declared: _Optional[bool] = ...) -> None: ...
+
+class UnreadFile(_message.Message):
+    __slots__ = ("path", "reason")
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    path: str
+    reason: str
+    def __init__(self, path: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
