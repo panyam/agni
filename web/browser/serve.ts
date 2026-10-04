@@ -44,6 +44,9 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       // The conformance fixtures, for the one design in the tree whose check run reports an
       // INCONCLUSIVE finding (agni issue 350).
       "--mount", "conformance=cmd/agni/testdata/conformance",
+      // The tutorial project, which carries a descriptor, companions and project config, for the
+      // in-browser engine's spec to open under both engines (agni issue 853).
+      "--mount", "tut=examples/tutorial-project",
       // Named explicitly because a flag wins outright over agni.yaml. Without it a developer whose
       // ~/.config/agni/agni.yaml names a web_dir (another checkout's, say) runs these tests against
       // THAT viewer, which passes or fails for reasons unrelated to this tree.

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSJtCghEaXJFbnRyeRIMCgRuYW1lGAEgASgJEg4KBmlzX2RpchgCIAEoCBIOCgZmb3JtYXQYAyABKAkSCwoDdXJpGAQgASgJEiYKBGtpbmQYBSABKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZCJMCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5KlQKCEZpbGVLaW5kEhkKFUZJTEVfS0lORF9VTlNQRUNJRklFRBAAEhQKEEZJTEVfS0lORF9ERVNJR04QARIXChNGSUxFX0tJTkRfREFUQVNIRUVUEAIyswEKEFdvcmtzcGFjZVNlcnZpY2USUwoKTGlzdE1vdW50cxIhLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1Jlc3BvbnNlEkoKB0xpc3REaXISHi5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVxdWVzdBofLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSJtCghEaXJFbnRyeRIMCgRuYW1lGAEgASgJEg4KBmlzX2RpchgCIAEoCBIOCgZmb3JtYXQYAyABKAkSCwoDdXJpGAQgASgJEiYKBGtpbmQYBSABKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZCJMCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5IiUKFkxpc3REZXNpZ25GaWxlc1JlcXVlc3QSCwoDdXJpGAEgASgJImcKF0xpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEg0KBW1vdW50GAEgASgJEikKBWZpbGVzGAIgAygLMhouYWduaS52MS53ZWJhcGkuRGVzaWduRmlsZRISCgp0b3RhbF9zaXplGAMgASgDIjgKCkRlc2lnbkZpbGUSDAoEcGF0aBgBIAEoCRIMCgRzaXplGAIgASgDEg4KBnNoYTI1NhgDIAEoCSpUCghGaWxlS2luZBIZChVGSUxFX0tJTkRfVU5TUEVDSUZJRUQQABIUChBGSUxFX0tJTkRfREVTSUdOEAESFwoTRklMRV9LSU5EX0RBVEFTSEVFVBACMpcCChBXb3Jrc3BhY2VTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJKCgdMaXN0RGlyEh4uYWduaS52MS53ZWJhcGkuTGlzdERpclJlcXVlc3QaHy5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVzcG9uc2USYgoPTGlzdERlc2lnbkZpbGVzEiYuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbkZpbGVzUmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25GaWxlc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls;
@@ -219,6 +219,92 @@ export const ListDirResponseSchema: GenMessage<ListDirResponse> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_workspace, 5);
 
 /**
+ * @generated from message agni.v1.webapi.ListDesignFilesRequest
+ */
+export type ListDesignFilesRequest = Message<"agni.v1.webapi.ListDesignFilesRequest"> & {
+  /**
+   * uri names the design: its folder, its entry, a declared companion, or a loose file in a mount.
+   *
+   * @generated from field: string uri = 1;
+   */
+  uri: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListDesignFilesRequest.
+ * Use `create(ListDesignFilesRequestSchema)` to create a new message.
+ */
+export const ListDesignFilesRequestSchema: GenMessage<ListDesignFilesRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 6);
+
+/**
+ * @generated from message agni.v1.webapi.ListDesignFilesResponse
+ */
+export type ListDesignFilesResponse = Message<"agni.v1.webapi.ListDesignFilesResponse"> & {
+  /**
+   * mount is the mount every path below is relative to. A client mounts the files under this name,
+   * so the design keeps its URI whichever engine reads it.
+   *
+   * @generated from field: string mount = 1;
+   */
+  mount: string;
+
+  /**
+   * files are the design's files, sorted by path, each listed once.
+   *
+   * @generated from field: repeated agni.v1.webapi.DesignFile files = 2;
+   */
+  files: DesignFile[];
+
+  /**
+   * total_size is the sum of the files' sizes in bytes.
+   *
+   * @generated from field: int64 total_size = 3;
+   */
+  totalSize: bigint;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListDesignFilesResponse.
+ * Use `create(ListDesignFilesResponseSchema)` to create a new message.
+ */
+export const ListDesignFilesResponseSchema: GenMessage<ListDesignFilesResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 7);
+
+/**
+ * DesignFile is one file a design's analysis reads.
+ *
+ * @generated from message agni.v1.webapi.DesignFile
+ */
+export type DesignFile = Message<"agni.v1.webapi.DesignFile"> & {
+  /**
+   * path is relative to the mount, slash-separated.
+   *
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * @generated from field: int64 size = 2;
+   */
+  size: bigint;
+
+  /**
+   * sha256 is the file's content hash, "sha256:<hex>", so a client can tell a cached copy is current.
+   *
+   * @generated from field: string sha256 = 3;
+   */
+  sha256: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DesignFile.
+ * Use `create(DesignFileSchema)` to create a new message.
+ */
+export const DesignFileSchema: GenMessage<DesignFile> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 8);
+
+/**
  * FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
  * the READER: a browser cares which of its pages a file belongs to, not whether the netlist behind
  * it is EDIF or KiCad.
@@ -293,6 +379,21 @@ export const WorkspaceService: GenService<{
     methodKind: "unary";
     input: typeof ListDirRequestSchema;
     output: typeof ListDirResponseSchema;
+  },
+  /**
+   * ListDesignFiles lists every file a design's analysis reads, so a client that analyses it
+   * somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
+   * issue 853). That is the design's folder, its project's descriptor, and every config directory
+   * the project names. Each file is then fetched by its path under the server's read-only
+   * `/raw/<mount>/<path>` route. A set larger than the server's bound is refused with its size,
+   * since a board that big is what the server's own engine is for.
+   *
+   * @generated from rpc agni.v1.webapi.WorkspaceService.ListDesignFiles
+   */
+  listDesignFiles: {
+    methodKind: "unary";
+    input: typeof ListDesignFilesRequestSchema;
+    output: typeof ListDesignFilesResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_workspace, 0);

@@ -46,3 +46,12 @@ func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirE
 	}
 	return out, nil
 }
+
+// ReadFile reads one file inside its mount, for service.FileReader. A directory is an error.
+func (w *Workspace) ReadFile(_ context.Context, uri artifact.URI) ([]byte, error) {
+	abs, err := Resolve(w.ms, uri)
+	if err != nil {
+		return nil, err
+	}
+	return os.ReadFile(abs)
+}

@@ -18,6 +18,7 @@ documents are independent concerns with independent cadences.
 |---|---|---|
 | Workspace | ListMounts | the mount names a tree roots on; `opens` drops the ones holding nothing that client can open and returns how many, so the sidebar can account for a mount an operator configured and cannot find |
 | Workspace | ListDir | one directory level, each file labeled with its reader `format` and the `kind` of client that opens it (design, datasheet, or neither); `opens` declares what the caller can open, which drops folders with none of it anywhere beneath them (a bounded server-side walk, since one level of listing cannot see that far) and is what lets the two trees prune the same mounts to opposite answers |
+| Workspace | ListDesignFiles | every file a design's analysis reads (its folder, its project's descriptor, the config directories the project names) with a size and hash each, for a page analysing it in the browser to fetch from `/raw/<mount>/<path>`; refused over 64 MB |
 | Design | GetDesign | load and summarize one design: sheet list, effective layout, available layouts, native availability |
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
@@ -103,19 +104,28 @@ A few contract details bite if missed.
 ## The same contract in the browser
 
 `agni serve` is one host for these services and the browser is another. `cmd/agni-wasm` builds the
-engine as WebAssembly, and the viewer runs it in a Web Worker when its URL carries `engine=wasm`,
-so a design dropped on the page is checked without leaving the visitor's machine (agni issue 178).
-The worker answers the same Connect paths with the same messages, and the page's clients reach it
-through the `fetch` a Connect transport takes, so no panel knows which host answered.
+engine as WebAssembly, and the viewer runs it in a Web Worker, answering the same Connect paths with
+the same messages. The page's clients reach the worker through the `fetch` a Connect transport takes,
+so no panel knows which host answered (agni issue 178).
+
+A design keeps one URL whichever engine reads it, because the two choices are separate (agni issue
+853). The MOUNT in `/designs/<mount>/<path>` says where the design's files live, and the ENGINE,
+`server` or `wasm`, says who analyses them. `agni serve --engine wasm` writes the engine into the
+viewer's shell, and a page's `?engine=` overrides it.
 
 ```
-make wasm wasm-seed serve
-open http://localhost:8080/designs/tut/designs/gateway/view?engine=wasm&seed=/static/seed/tut.json
+make wasm serve EXTRA_MOUNTS="--mount tut=examples/tutorial-project"
+open http://localhost:8080/designs/tut/designs/gateway/view?engine=wasm
 ```
 
-The page still comes from `agni serve` in that example, but the API does not. The tutorial project
-is mounted in the worker, which the server has never seen, so every answer on screen came from the
-engine in the page.
+An engine can only analyse files it can reach. On the `wasm` engine the page brings a design's
+files over from the server the first time a request names it. `ListDesignFiles` lists exactly what
+the analysis reads (the design's folder, its project's descriptor, and the config directories the
+project names) with a hash per file, the page fetches each from the read-only `/raw/<mount>/<path>`
+route, and the worker mounts them under the same mount name. After that, nothing about the design
+crosses the network. Listings and file reads stay with the server, which owns the mount namespace,
+and every other service runs in the worker. A design dropped into the page, held only in the
+browser, can be analysed by the `wasm` engine alone, since the server engine would need it uploaded.
 
 Three choices in the host follow from the browser rather than from the contract.
 
@@ -126,13 +136,13 @@ Three choices in the host follow from the browser rather than from the contract.
   loop the promise needs.
 - **A request is answered as a promise, on a goroutine of its own.** `agniHTTP` returns at once and
   runs the handler beside it, for the same reason.
-- **A mount change recomposes the engine.** Each `agniMount` builds the services again over the new
-  mount table, through `agni.New`, which refuses a build missing the rule catalog. A browser bundle
-  that shipped without it would otherwise report every design clean.
+- **A mount change recomposes the engine.** Each `agniMount` adds its files to the mount and builds
+  the services again over the new mount table, through `agni.New`, which refuses a build missing the
+  rule catalog. A browser bundle that shipped without it would otherwise report every design clean.
 
 The browser and the server read through different adapters over one set of ports, `fshost` over
 in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with
 nothing erroring (C32). `TestWasmEngineAnswersAsTheServerDoes` asks both the questions the viewer
 asks on opening a design and requires identical answers, `make wasm-test` runs the exports under
-Node, and the browser suite opens the gateway on the engine and checks that no API request reaches
-the network.
+Node, and the browser suite opens one design under both engines, requires the same findings, and
+checks that on `wasm` only listings and file reads reach the network.

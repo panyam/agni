@@ -14,6 +14,9 @@ import (
 type serveApp struct {
 	mounts        []mounts.Mount
 	datasheetsURL string
+	// engine is which engine the viewer runs a design on, "server" or "wasm" (--engine, agni issue
+	// 853). The page carries it, and a `?engine=` on the URL overrides it.
+	engine string
 }
 
 // ViewerPage is the server-rendered work page of the web viewer. Its template
@@ -22,12 +25,20 @@ type serveApp struct {
 // goapplib maps this type to ViewerPage.html by name.
 type ViewerPage struct {
 	Title string
+	// Engine is the engine the page analyses its design on, written into the shell for the bundle
+	// to read. The mount in the URL says where the design's files live and this says who reads them,
+	// so a design keeps one URL under either (agni issue 853).
+	Engine string
 }
 
 // Load populates the page before render. The shell is static and per-file data arrives over
 // the Connect API, so there is nothing to fetch here yet.
 func (p *ViewerPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
 	p.Title = "Agni viewer"
+	p.Engine = app.Context.engine
+	if p.Engine == "" {
+		p.Engine = engineServer
+	}
 	return nil, false
 }
 

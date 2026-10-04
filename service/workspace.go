@@ -40,8 +40,7 @@ type DirEntry struct {
 
 // Workspace is the file-browsing port, serving the configured mounts and one level of listing
 // within a mount. Path containment is the adapter's responsibility. The server adapter is
-// os-backed. There is no WASM adapter, since a seeded single-design instance has no folder to
-// browse (WS9-011).
+// os-backed (mounts.Workspace) and the in-browser engine's is fshost's.
 type Workspace interface {
 	Mounts() []MountInfo
 	ListDir(ctx context.Context, uri artifact.URI) ([]DirEntry, error)
@@ -95,6 +94,9 @@ func opensSet(kinds []webapi.FileKind) map[webapi.FileKind]bool {
 // file I/O itself.
 type WorkspaceService struct {
 	ws Workspace
+	// projects and files serve ListDesignFiles, and are set by WithDesignFiles.
+	projects *ProjectResolver
+	files    FileReader
 }
 
 // NewWorkspaceService returns a WorkspaceService backed by ws.

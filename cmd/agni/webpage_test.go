@@ -258,3 +258,17 @@ func TestLandingLinksTheWorkbenchOnlyWhenConfigured(t *testing.T) {
 		t.Error("without --datasheets-url, the landing page still links a workbench this server does not serve")
 	}
 }
+
+// TestViewerPageCarriesItsEngine checks that `--engine` reaches the shell the bundle reads, and that
+// a server given none tells the page to use its own engine (agni issue 853).
+func TestViewerPageCarriesItsEngine(t *testing.T) {
+	for _, c := range []struct{ engine, want string }{{"", engineServer}, {engineWasm, engineWasm}} {
+		mux := http.NewServeMux()
+		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{engine: c.engine}), mux)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
+		if want := `data-engine="` + c.want + `"`; !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("engine %q: the shell does not carry %s", c.engine, want)
+		}
+	}
+}

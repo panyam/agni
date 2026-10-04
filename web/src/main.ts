@@ -27,7 +27,8 @@ import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, useEngineFetch,
 } from "./api.js";
-import { startEngine, mountSeed } from "./wasm/client.js";
+import { startEngine, mountingFetch } from "./wasm/client.js";
+import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
 import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
@@ -65,16 +66,13 @@ function syncUrl(loc: ViewerLocation): void {
   if (url !== window.location.pathname + window.location.search) window.history.pushState(null, "", url);
 }
 
-// engineParams are the query parameters that put this page on the in-browser engine. They ride along
-// on every URL the page pushes, so a refresh or a back/forward stays on the engine that holds the
-// design instead of asking a server that has never seen it.
+// engineParams are the query parameters that choose this page's engine. They ride along on every
+// URL the page pushes, so a refresh or a back/forward keeps the engine the visitor asked for.
 const engineParams = (() => {
   const q = new URLSearchParams(window.location.search);
   const out = new URLSearchParams();
-  for (const k of ["engine", "seed"]) {
-    const v = q.get(k);
-    if (v !== null) out.set(k, v);
-  }
+  const v = q.get("engine");
+  if (v !== null) out.set("engine", v);
   return out;
 })();
 
@@ -85,17 +83,40 @@ function withEngineParams(url: string): string {
   return u.pathname + u.search;
 }
 
-// startEngineFromUrl puts the page on the in-browser engine when the URL says `engine=wasm` (agni issue
-// 178): the engine loads in a worker, the design named by `seed` is mounted into it, and every client
-// the page builds afterwards talks to the worker instead of the server. It must finish before the app
-// root builds its clients. The assets sit beside this bundle, so the page works under any path prefix.
-async function startEngineFromUrl(): Promise<void> {
-  if (engineParams.get("engine") !== "wasm") return;
+// pageEngine is the engine this page analyses its design on: the URL's `engine=`, else the one the
+// server wrote into the shell (`agni serve --engine`), else the server.
+function pageEngine(): string {
+  return engineParams.get("engine") ?? document.querySelector<HTMLElement>(".app")?.dataset.engine ?? "server";
+}
+
+// startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine
+// loads in a worker, and every client the page builds afterwards talks to it, bringing in each
+// design's files from the server the first time a request names it. The design keeps the URL it has
+// under the server engine. Listings and file reads go to the server, which owns the mount namespace.
+// It must finish before the app root builds its clients. The assets sit beside this bundle, so the
+// page works under any path prefix.
+async function startPageEngine(): Promise<void> {
+  if (pageEngine() !== "wasm") return;
   const asset = (name: string) => new URL(name, import.meta.url).href;
   const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") });
-  const seed = engineParams.get("seed");
-  if (seed) await mountSeed(engine, seed);
-  useEngineFetch((input, init) => engine.fetch(input, init));
+  const network = globalThis.fetch.bind(globalThis);
+  const files = workspaceClient();
+  const workspacePath = `/${WorkspaceService.typeName}/`;
+  useEngineFetch(
+    mountingFetch(
+      engine,
+      {
+        list: (uri) => files.listDesignFiles({ uri }),
+        fetchFile: async (mount, path) => {
+          const res = await network(new URL(`/raw/${encodeURIComponent(mount)}/${path.split("/").map(encodeURIComponent).join("/")}`, location.href));
+          if (!res.ok) throw new Error(`${mount}/${path}: ${res.status}`);
+          return new Uint8Array(await res.arrayBuffer());
+        },
+      },
+      (url) => url.pathname.startsWith(workspacePath),
+      network,
+    ),
+  );
 }
 
 class AppRoot extends BaseComponent {
@@ -520,7 +541,7 @@ const dockApi = dockEl && parkEl && menuEl ? createViewerDock(dockEl, parkEl, me
 
 const bus = new EventBus();
 const controller = new LifecycleController(bus);
-void startEngineFromUrl()
+void startPageEngine()
   .then(async () => {
     const root = new AppRoot("app", document.body, bus);
     await controller.initializeFromRoot(root);

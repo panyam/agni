@@ -39,6 +39,9 @@ const (
 	// WorkspaceServiceListDirProcedure is the fully-qualified name of the WorkspaceService's ListDir
 	// RPC.
 	WorkspaceServiceListDirProcedure = "/agni.v1.webapi.WorkspaceService/ListDir"
+	// WorkspaceServiceListDesignFilesProcedure is the fully-qualified name of the WorkspaceService's
+	// ListDesignFiles RPC.
+	WorkspaceServiceListDesignFilesProcedure = "/agni.v1.webapi.WorkspaceService/ListDesignFiles"
 )
 
 // WorkspaceServiceClient is a client for the agni.v1.webapi.WorkspaceService service.
@@ -53,6 +56,13 @@ type WorkspaceServiceClient interface {
 	// mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
 	// subdirectories holding nothing the caller can open, at any depth.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
+	// ListDesignFiles lists every file a design's analysis reads, so a client that analyses it
+	// somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
+	// issue 853). That is the design's folder, its project's descriptor, and every config directory
+	// the project names. Each file is then fetched by its path under the server's read-only
+	// `/raw/<mount>/<path>` route. A set larger than the server's bound is refused with its size,
+	// since a board that big is what the server's own engine is for.
+	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
 }
 
 // NewWorkspaceServiceClient constructs a client for the agni.v1.webapi.WorkspaceService service. By
@@ -78,13 +88,20 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(workspaceServiceMethods.ByName("ListDir")),
 			connect.WithClientOptions(opts...),
 		),
+		listDesignFiles: connect.NewClient[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse](
+			httpClient,
+			baseURL+WorkspaceServiceListDesignFilesProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("ListDesignFiles")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // workspaceServiceClient implements WorkspaceServiceClient.
 type workspaceServiceClient struct {
-	listMounts *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
-	listDir    *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
+	listMounts      *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
+	listDir         *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
+	listDesignFiles *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
 }
 
 // ListMounts calls agni.v1.webapi.WorkspaceService.ListMounts.
@@ -95,6 +112,11 @@ func (c *workspaceServiceClient) ListMounts(ctx context.Context, req *connect.Re
 // ListDir calls agni.v1.webapi.WorkspaceService.ListDir.
 func (c *workspaceServiceClient) ListDir(ctx context.Context, req *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
 	return c.listDir.CallUnary(ctx, req)
+}
+
+// ListDesignFiles calls agni.v1.webapi.WorkspaceService.ListDesignFiles.
+func (c *workspaceServiceClient) ListDesignFiles(ctx context.Context, req *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error) {
+	return c.listDesignFiles.CallUnary(ctx, req)
 }
 
 // WorkspaceServiceHandler is an implementation of the agni.v1.webapi.WorkspaceService service.
@@ -109,6 +131,13 @@ type WorkspaceServiceHandler interface {
 	// mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
 	// subdirectories holding nothing the caller can open, at any depth.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
+	// ListDesignFiles lists every file a design's analysis reads, so a client that analyses it
+	// somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
+	// issue 853). That is the design's folder, its project's descriptor, and every config directory
+	// the project names. Each file is then fetched by its path under the server's read-only
+	// `/raw/<mount>/<path>` route. A set larger than the server's bound is refused with its size,
+	// since a board that big is what the server's own engine is for.
+	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
 }
 
 // NewWorkspaceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -130,12 +159,20 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		connect.WithSchema(workspaceServiceMethods.ByName("ListDir")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workspaceServiceListDesignFilesHandler := connect.NewUnaryHandler(
+		WorkspaceServiceListDesignFilesProcedure,
+		svc.ListDesignFiles,
+		connect.WithSchema(workspaceServiceMethods.ByName("ListDesignFiles")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.WorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkspaceServiceListMountsProcedure:
 			workspaceServiceListMountsHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListDirProcedure:
 			workspaceServiceListDirHandler.ServeHTTP(w, r)
+		case WorkspaceServiceListDesignFilesProcedure:
+			workspaceServiceListDesignFilesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -151,4 +188,8 @@ func (UnimplementedWorkspaceServiceHandler) ListMounts(context.Context, *connect
 
 func (UnimplementedWorkspaceServiceHandler) ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.ListDir is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.ListDesignFiles is not implemented"))
 }

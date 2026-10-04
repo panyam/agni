@@ -63,6 +63,7 @@ func serveCmd() *cobra.Command {
 	var reviewStorePath string
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
+	var engine string
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -79,10 +80,12 @@ func serveCmd() *cobra.Command {
 				profilePath: profilePath, conventions: conventions,
 				reviewStorePath: reviewStorePath,
 				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
+				engine:          engine,
 			})
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
+	c.Flags().StringVar(&engine, "engine", engineServer, "which engine the viewer analyses a design on: "+engineServer+", or "+engineWasm+" to run it in the visitor's browser over the design's files (needs `make wasm`); a page's ?engine= overrides it")
 	c.Flags().StringVar(&webDir, "web-dir", "",
 		"directory holding the viewer's OWN assets (templates/ and the built static/*.js), not a folder "+
 			"of designs to browse: mount those with --mount name=path. Defaults to "+defaultWebDir+
@@ -141,10 +144,22 @@ type viewerOpts struct {
 
 	// datasheetsURL is where the datasheets workbench is served, for the landing page's links.
 	datasheetsURL string
+
+	// engine is the viewer's default engine, engineServer or engineWasm (agni issue 853).
+	engine string
 }
+
+// The two engines a viewer page can analyse its design on.
+const (
+	engineServer = "server"
+	engineWasm   = "wasm"
+)
 
 // runViewer builds and runs the viewer server for both `serve` and `open`.
 func runViewer(cmd *cobra.Command, o viewerOpts) error {
+	if o.engine != "" && o.engine != engineServer && o.engine != engineWasm {
+		return fmt.Errorf("--engine %q: want %s or %s", o.engine, engineServer, engineWasm)
+	}
 	addr, webDir, mountRoot := o.addr, o.webDir, o.mountRoot
 	nativeTools, theme := o.nativeTools, o.theme
 	paramsDir, profilePath, conventions := o.paramsDir, o.profilePath, o.conventions
@@ -287,7 +302,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
 	apiPaths := server.API{
-		Workspace: service.NewWorkspaceService(osWorkspace(mounts)),
+		Workspace: service.NewWorkspaceService(osWorkspace(mounts)).WithDesignFiles(projectResolver, osFiles(mounts)),
 		Project:   service.NewProjectService(projectStore),
 		Design:    service.NewDesignService(loader, nativeR, style, projectResolver),
 		Check:     checkSvc,
@@ -308,12 +323,16 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// the query panel resolves a relation Detail's image refs.
 	mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
 	mux.Handle("GET /healthz", healthHandler())
+	// A design's files, read-only, for a page analysing it in the browser (agni issue 853). The
+	// API already serves everything in a mount through its answers, so this exposes no file a client
+	// could not reach before; ListDesignFiles says which ones a design needs.
+	mux.Handle("GET /raw/", rawFileHandler(mounts))
 	switch {
 	case !assets.viewer:
 		mux.Handle("/", apiOnlyHandler(apiPaths))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
 	default:
-		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/")}), mux)
+		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine}), mux)
 	}
 
 	srv := &http.Server{Addr: addr, Handler: mux}
@@ -645,3 +664,6 @@ func themeNames() []string {
 // osWorkspace is the OS-backed listing over a mount table. It is a function rather than a call at the
 // use site because runViewer's local mount table shadows the mounts package there.
 func osWorkspace(ms []mounts.Mount) service.Workspace { return mounts.NewWorkspace(ms) }
+
+// osFiles reads files inside the mounts, for ListDesignFiles.
+func osFiles(ms []mounts.Mount) service.FileReader { return mounts.NewWorkspace(ms) }

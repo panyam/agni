@@ -199,8 +199,14 @@ func (h *Host) MountInfo() []service.MountInfo {
 	return out
 }
 
-// Workspace returns the service.Workspace over this host's mounts.
-func (h *Host) Workspace() service.Workspace { return workspace{h} }
+// Workspace returns the service.Workspace over this host's mounts. It is also the host's
+// service.FileReader.
+func (h *Host) Workspace() interface {
+	service.Workspace
+	service.FileReader
+} {
+	return workspace{h}
+}
 
 type workspace struct{ h *Host }
 
@@ -222,4 +228,13 @@ func (w workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEn
 		out = append(out, service.DirEntry{Name: de.Name(), IsDir: de.IsDir()})
 	}
 	return out, nil
+}
+
+// ReadFile reads one file inside its mount, for service.FileReader.
+func (w workspace) ReadFile(_ context.Context, uri artifact.URI) ([]byte, error) {
+	n, err := w.h.name(uri)
+	if err != nil {
+		return nil, err
+	}
+	return fs.ReadFile(w.h.root, n)
 }
