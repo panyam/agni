@@ -16,5 +16,10 @@ packages:
 # keep and breaks an install on the version that reads it.
 allowBuilds:
   esbuild: true
+# Our own packages, published the day agni moved onto them (agni issue 863), so they are too new for
+# the release-age guard. Drop each entry once its version is past the guard's age.
+minimumReleaseAgeExclude:
+  - '@panyam/tsappkit-solid@0.0.4'
+  - '@panyam/tsappkit@0.3.0'
 onlyBuiltDependencies:
   - esbuild

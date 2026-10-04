@@ -4,6 +4,7 @@
 package wasmengine
 
 import (
+	"io/fs"
 	"net/http"
 
 	"github.com/panyam/agni"
@@ -20,6 +21,34 @@ import (
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // registers the built-in EE rule catalog (anonymous source)
 	_ "github.com/panyam/agni/stdlib/rules/datalog" // registers the "dl" datalog-authored rule source
 )
+
+// Namespace is the global the wasm build's exports live under, globalThis.agni.
+const Namespace = "agni"
+
+// Build composes the engine over root, whose top-level directories are the mounts, which is how
+// goapplib's wasmhost holds them. It is the rebuild function cmd/agni-wasm hands the host.
+func Build(root fs.FS) (http.Handler, error) {
+	entries, err := fs.ReadDir(root, ".")
+	if err != nil {
+		return nil, err
+	}
+	var ms []fshost.Mount
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		sub, err := fs.Sub(root, e.Name())
+		if err != nil {
+			return nil, err
+		}
+		ms = append(ms, fshost.Mount{Name: e.Name(), FS: sub})
+	}
+	eng, err := New(ms...)
+	if err != nil {
+		return nil, err
+	}
+	return eng.Handler, nil
+}
 
 // Engine is one composition over one mount table. The browser rebuilds it when a mount changes,
 // which is cheaper to reason about than services caching a project tree that moved under them.

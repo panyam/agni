@@ -9,22 +9,46 @@ import (
 	"strings"
 	"syscall/js"
 	"testing"
+
+	"github.com/panyam/agni/internal/wasmengine"
+	"github.com/panyam/goapplib/wasmhost"
 )
 
-// This runs under Node (`make wasm-test`), as the browser's worker will: the tutorial project goes in
-// through agniMount and a check report comes out of agniHTTP's Promise. What the report SAYS is held
-// to the server's by TestWasmEngineAnswersAsTheServerDoes in cmd/agni, natively. This is the part that
-// needs a JavaScript host: that the exports exist, take bytes, and answer without deadlocking.
+// This runs under Node (`make wasm-test`), as the browser's worker does: the tutorial project goes in
+// through globalThis.agni.add and a check report comes out of globalThis.agni.http, both Promises.
+// What the report SAYS is held to the server's by TestWasmEngineAnswersAsTheServerDoes in cmd/agni,
+// natively. This is the part that needs a JavaScript host: that the exports exist under agni's
+// namespace, take bytes, and answer without deadlocking.
+
+// await blocks the test until p settles. The test body is not a js.FuncOf callback, so blocking here
+// lets the event loop run the Promise's work.
+func await(t *testing.T, p js.Value) js.Value {
+	t.Helper()
+	type settled struct {
+		v   js.Value
+		err string
+	}
+	done := make(chan settled, 1)
+	ok := js.FuncOf(func(_ js.Value, a []js.Value) any { done <- settled{v: a[0]}; return nil })
+	fail := js.FuncOf(func(_ js.Value, a []js.Value) any { done <- settled{err: a[0].Call("toString").String()}; return nil })
+	defer ok.Release()
+	defer fail.Release()
+	p.Call("then", ok, fail)
+	s := <-done
+	if s.err != "" {
+		t.Fatal(s.err)
+	}
+	return s.v
+}
 
 func TestEngineAnswersThroughTheJSExports(t *testing.T) {
-	s := &state{mounts: map[string]map[string][]byte{}}
-	s.recompose()
-	if s.err != nil {
-		t.Fatalf("compose: %v", s.err)
+	h := wasmhost.New(wasmengine.Namespace)
+	if err := h.Rebuild(wasmengine.Build); err != nil {
+		t.Fatalf("compose: %v", err)
 	}
-	mount, serve := js.FuncOf(s.mount), js.FuncOf(s.serve)
-	defer mount.Release()
-	defer serve.Release()
+	release := h.Export()
+	defer release()
+	agni := js.Global().Get(wasmengine.Namespace)
 
 	root := filepath.Join("..", "..", "examples", "tutorial-project")
 	files := js.Global().Get("Object").New()
@@ -47,45 +71,24 @@ func TestEngineAnswersThroughTheJSExports(t *testing.T) {
 	if err != nil || n == 0 {
 		t.Fatalf("read the fixture: %d files, %v", n, err)
 	}
-	if res := mount.Invoke("tut", files); !res.IsNull() && !res.IsUndefined() {
-		t.Fatalf("agniMount: %s", res.Call("toString").String())
-	}
+	await(t, agni.Call("add", "tut", files))
 
 	body := []byte(`{"uri":"mount://tut/designs/gateway"}`)
 	arr := js.Global().Get("Uint8Array").New(len(body))
 	js.CopyBytesToJS(arr, body)
 	headers := js.Global().Get("Object").New()
 	headers.Set("Content-Type", "application/json")
-	promise := serve.Invoke("POST", "/agni.v1.webapi.CheckService/GetCheckReport", headers, arr)
+	res := await(t, agni.Call("http", "POST", "/agni.v1.webapi.CheckService/GetCheckReport", headers, arr))
 
-	type result struct {
-		status int
-		body   string
-		err    string
+	out := make([]byte, res.Get("body").Get("length").Int())
+	js.CopyBytesToGo(out, res.Get("body"))
+	if status := res.Get("status").Int(); status != 200 {
+		t.Fatalf("GetCheckReport: status %d, body %.300s", status, out)
 	}
-	done := make(chan result, 1)
-	onOK := js.FuncOf(func(_ js.Value, a []js.Value) any {
-		b := make([]byte, a[0].Get("body").Get("length").Int())
-		js.CopyBytesToGo(b, a[0].Get("body"))
-		done <- result{status: a[0].Get("status").Int(), body: string(b)}
-		return nil
-	})
-	onErr := js.FuncOf(func(_ js.Value, a []js.Value) any {
-		done <- result{err: a[0].Call("toString").String()}
-		return nil
-	})
-	defer onOK.Release()
-	defer onErr.Release()
-	promise.Call("then", onOK, onErr)
-	r := <-done
-
-	if r.err != "" || r.status != 200 {
-		t.Fatalf("GetCheckReport: status %d, err %q, body %.300s", r.status, r.err, r.body)
+	if !strings.Contains(string(out), "gateway-profiles/") {
+		t.Errorf("GetCheckReport carries no rule from the project's own profiles, so the project config did not reach the engine:\n%.500s", out)
 	}
-	if !strings.Contains(r.body, "gateway-profiles/") {
-		t.Errorf("GetCheckReport carries no rule from the project's own profiles, so the project config did not reach the engine:\n%.500s", r.body)
-	}
-	if c := strings.Count(r.body, `"sourceFile":"designs/gateway/gateway.edn"`); c == 0 {
-		t.Errorf("GetCheckReport has no finding located in designs/gateway/gateway.edn:\n%.500s", r.body)
+	if !strings.Contains(string(out), `"sourceFile":"designs/gateway/gateway.edn"`) {
+		t.Errorf("GetCheckReport has no finding located in designs/gateway/gateway.edn:\n%.500s", out)
 	}
 }
