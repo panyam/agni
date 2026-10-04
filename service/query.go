@@ -219,7 +219,9 @@ func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, sourc
 	if err != nil {
 		return nil, err
 	}
-	model, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOver(s.specs), ov.ReadOptions()...)
+	// Kept between requests when the loader caches (agni issue 895), so a second query on a design
+	// costs its evaluation rather than a read and a projection of every relation.
+	model, baseOver, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +232,7 @@ func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, sourc
 	if err != nil {
 		return nil, err
 	}
-	return &designRead{u: u, source: source, model: model, base: query.NewBaseFrom(reg, model), reg: reg, ov: ov, gu: gu}, nil
+	return &designRead{u: u, source: source, model: model, base: baseOver(reg), reg: reg, ov: ov, gu: gu}, nil
 }
 
 // geometry loads the schematic geometry on first use and returns the sheet index and the entities it

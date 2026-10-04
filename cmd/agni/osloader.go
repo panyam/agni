@@ -19,28 +19,29 @@ import (
 )
 
 // osLoader is the OS-backed service.Loader adapter. It resolves an artifact.URI to a host path under
-// its mount root and reads it through the engine's formats.Loader (via readerFor).
+// its mount root and reads it through the engine's formats.Loader, via service.LoaderIn, which also
+// records the files a cached read depends on (agni issue 895).
 type osLoader struct {
 	mounts []mounts.Mount
 	loader *formats.Loader
 }
 
-func (l *osLoader) Design(_ context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+func (l *osLoader) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
-	return readerFor(l.loader, opts...).ReadDesign(abs)
+	return service.LoaderIn(ctx, l.loader, opts...).ReadDesign(abs)
 }
 
-func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
+func (l *osLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
-	// Through readerFor, as in Design, because a project's declared symbol library changes what the
+	// Through LoaderIn, as in Design, because a project's declared symbol library changes what the
 	// geometry read CONTAINS and arrives as a read option (agni issue 347).
-	reader := readerFor(l.loader, opts...)
+	reader := service.LoaderIn(ctx, l.loader, opts...)
 	// The companion is what GetDesign, GetSheet and HighlightSheet draw, so all three funnel through
 	// here (WS1-047). The sibling sits in the SAME mount dir as the already-contained abs, so it needs
 	// no extra containment check.
@@ -50,12 +51,12 @@ func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, 
 	return reader.ResolveGeometry(abs, layout, nil, symbolsFor(faithfulSymbols))
 }
 
-func (l *osLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
+func (l *osLoader) Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
-	return readerFor(l.loader, opts...).ConversionReport(abs, symbolsFor(faithfulSymbols), nil)
+	return service.LoaderIn(ctx, l.loader, opts...).ConversionReport(abs, symbolsFor(faithfulSymbols), nil)
 }
 
 // Expectations loads the design's `<path>.expect.yaml` sidecar. No sidecar is the normal case, so a
@@ -82,7 +83,7 @@ func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeom
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.BoardGeometry(abs)
+	return service.LoaderIn(ctx, l.loader).BoardGeometry(abs)
 }
 
 // Manifest resolves and parses a review checklist manifest (YAML) under the mount (WS9-047). Unlike

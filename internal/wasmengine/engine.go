@@ -76,8 +76,15 @@ type Engine struct {
 // are processes), no review store (nothing a visitor drops is kept), no datasheet corpus yet (#852
 // decides whether one ships), and no query budget, since the only person waiting on a query is the
 // one who asked it.
+// designCache is how many reads the browser engine keeps: fewer than a server, since a tab's memory
+// is the visitor's.
+const designCache = 8
+
 func New(ms ...fshost.Mount) (*Engine, error) {
-	host := fshost.New(ms...)
+	// Every read goes through one cache, so a second request on a design costs its answer rather than
+	// a re-parse (agni issue 895). The engine is rebuilt on every mount change, which drops the cache.
+	files := fshost.New(ms...)
+	host := service.NewCachingLoader(files, service.NewDesignCache(designCache))
 	trees := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
 		trees = append(trees, projects.Tree{Mount: m.Name, FS: m.FS})
@@ -91,7 +98,7 @@ func New(ms ...fshost.Mount) (*Engine, error) {
 	check, review := e.RuleServices(agni.RuleServiceDeps{Loader: host})
 	mux := http.NewServeMux()
 	paths := server.API{
-		Workspace: service.NewWorkspaceService(host.Workspace()).WithDesignFiles(resolver, host.Workspace()),
+		Workspace: service.NewWorkspaceService(files.Workspace()).WithDesignFiles(resolver, files.Workspace()),
 		Project:   service.NewProjectService(store),
 		Design:    service.NewDesignService(host, nil, render.DefaultStyle, resolver),
 		Check:     check,

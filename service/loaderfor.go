@@ -1,6 +1,10 @@
 package service
 
-import "github.com/panyam/agni/readers/formats"
+import (
+	"context"
+
+	"github.com/panyam/agni/readers/formats"
+)
 
 // LoaderFor picks the formats.Loader one read should use. A read with no options gets the shared
 // loader, and any other read gets a COPY carrying its options. The shared loader is never mutated, so
@@ -36,5 +40,36 @@ func LoaderFor(base *formats.Loader, opts ...ReadOption) *formats.Loader {
 	if o.DeviceClassFor != nil {
 		cp.DeviceClassFor = o.DeviceClassFor
 	}
+	return &cp
+}
+
+type touchedKey struct{}
+
+// withTouched carries a recorder for the reads made under ctx (see LoaderIn).
+func withTouched(ctx context.Context, t *formats.Touched) context.Context {
+	return context.WithValue(ctx, touchedKey{}, t)
+}
+
+// touchedFrom is the recorder ctx carries, or nil.
+func touchedFrom(ctx context.Context) *formats.Touched {
+	t, _ := ctx.Value(touchedKey{}).(*formats.Touched)
+	return t
+}
+
+// LoaderIn is LoaderFor for a read made on behalf of ctx. When a DesignCache is building an entry,
+// ctx carries the recorder the read's files go into, and this hands it to the Loader. A host's
+// Design, Geometry, Report and Board reads go through this, and a read that does not is simply never
+// cached.
+func LoaderIn(ctx context.Context, base *formats.Loader, opts ...ReadOption) *formats.Loader {
+	l := LoaderFor(base, opts...)
+	t := touchedFrom(ctx)
+	if t == nil {
+		return l
+	}
+	cp := formats.Loader{}
+	if l != nil {
+		cp = *l
+	}
+	cp.Touched = t
 	return &cp
 }

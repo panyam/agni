@@ -165,7 +165,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOver(s.specs), ov.ReadOptions()...)
+	m, _, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
 	if err != nil {
 		return nil, err
 	}

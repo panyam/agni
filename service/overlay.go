@@ -185,6 +185,11 @@ func (o Overlay) ReadOptions() []ReadOption {
 	if o.DesignIntent != nil {
 		opts = append(opts, WithDesignIntent(o.DesignIntent))
 	}
+	// Last, naming every option above, so a read under these options can be cached (agni issue
+	// 895). An overlay that cannot identify itself adds nothing and its reads are never cached.
+	if id, ok := o.Identity(); ok && id != "" {
+		opts = append(opts, WithIdentity(id, len(opts)))
+	}
 	return opts
 }
 

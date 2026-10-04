@@ -263,6 +263,18 @@ scoping, and no session isolation, so anyone who can reach the port sees every m
 can reach `agnids` can write through the datasheets workbench. That is the right trade for localhost and the wrong one for a
 shared host. Put it behind something that authenticates before you expose it.
 
+## Kept reads
+
+The server keeps what it read between requests, so a second query, check or drawing on a design
+costs its own work rather than another parse of every file. On a 1,834-component KiCad board, a
+repeated net count went from 656 ms to 2.5 ms and a one-rule check from 1.35 s to 18 ms.
+
+A kept read is checked on every use against each file it opened, walked or looked for and did not
+find: the entry, every sub-sheet, a declared companion, the board and the symbol libraries. Edit any
+of them and the next request reads the design again. A read whose project configuration cannot be
+identified is never kept. `--design-cache <n>` sets how many reads are kept (default 12), and 0 keeps
+none.
+
 ## A work budget for served queries
 
 A query that joins two large relations can run for minutes on a big board, and a shared server

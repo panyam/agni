@@ -51,6 +51,11 @@ type Loader struct {
 	// only the caller's mount table knows which mount contains a file, and `CheckReport.source`
 	// already promises a mount-relative path.
 	SourceName func(string) string
+	// Touched, when set, records every name this loader opens, reads, walks or fails to find, so a
+	// host can keep the read's result and later check it is still current (agni issue 895). A reader
+	// that reaches its bytes around Open and ReadFile escapes it, which is one more reason they must
+	// not.
+	Touched *Touched
 	// DeviceClassFor answers the vendor device_class a datasheet states for an MPN, or "" for a part
 	// with no seeded spec. Nil means the read has no datasheet corpus, the ordinary case, and every
 	// component is classified by convention alone.
@@ -71,7 +76,11 @@ type Loader struct {
 // *os.File already satisfies fs.File, so a caller that sniffs a header keeps the io.Reader it peeks
 // at. The returned file is the caller's to Close.
 func (l *Loader) Open(name string) (fs.File, error) {
-	if l == nil || l.FS == nil {
+	if l == nil {
+		return os.Open(name)
+	}
+	l.Touched.note(l.FS, name)
+	if l.FS == nil {
 		return os.Open(name)
 	}
 	return l.FS.Open(name)
@@ -80,7 +89,11 @@ func (l *Loader) Open(name string) (fs.File, error) {
 // ReadFile is Open plus a full read, for the readers that want bytes rather than a stream: anything
 // parsed twice, and the multi-file walks that hand whole sub-files to a parser.
 func (l *Loader) ReadFile(name string) ([]byte, error) {
-	if l == nil || l.FS == nil {
+	if l == nil {
+		return os.ReadFile(name)
+	}
+	l.Touched.note(l.FS, name)
+	if l.FS == nil {
 		return os.ReadFile(name)
 	}
 	return fs.ReadFile(l.FS, name)
@@ -125,6 +138,18 @@ func (l *Loader) base(name string) string {
 // whole tree; on the host filesystem it is the given directory. A missing or unreadable root is
 // skipped by the caller's walk function, matching filepath.WalkDir's error-in, nil-out convention.
 func (l *Loader) walkDir(root string, fn fs.WalkDirFunc) error {
+	if l != nil && l.Touched != nil {
+		// Every directory the walk visits, the root included even when it is missing, since a
+		// symbol found by name in a walked tree changes when a file is added there.
+		l.Touched.note(l.FS, root)
+		inner := fn
+		fn = func(name string, e fs.DirEntry, err error) error {
+			if e != nil && e.IsDir() {
+				l.Touched.note(l.FS, name)
+			}
+			return inner(name, e, err)
+		}
+	}
 	if l == nil || l.FS == nil {
 		return filepath.WalkDir(root, fn)
 	}

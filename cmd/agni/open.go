@@ -74,6 +74,7 @@ func openCmd() *cobra.Command {
 					openBanner(cmd.ErrOrStderr(), urls[0], m, src.NetlistURI, view)
 				},
 				requireViewer: true,
+				designCache:   defaultDesignCache,
 			})
 		},
 	}
