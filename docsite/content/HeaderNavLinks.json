@@ -81,7 +81,11 @@
   {
     "name": "Demos",
     "url": "demos/",
-    "icon": "play"
+    "icon": "play",
+    "children": [
+      { "name": "Open a board in your browser", "url": "demo/" },
+      { "name": "Playgrounds", "url": "demos/" }
+    ]
   },
   {
     "name": "Reference",

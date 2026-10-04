@@ -134,6 +134,12 @@ func TestEveryPageIsReachable(t *testing.T) {
 	}
 }
 
+// builtBeside maps a header URL that is no docsite page to the root Makefile line writing it into
+// dist, so the entry fails here once nothing builds it.
+var builtBeside = map[string]string{
+	"demo/": "DEMO_OUT=docsite/dist/demo/",
+}
+
 // TestHeaderNavLinksResolve fails when HeaderNavLinks.json points at content that is not there. It
 // is the top-of-page nav, so a stale entry is a 404 on the most visible surface the site has.
 func TestHeaderNavLinksResolve(t *testing.T) {
@@ -151,6 +157,13 @@ func TestHeaderNavLinksResolve(t *testing.T) {
 	check := func(name, url string) {
 		if url == "" {
 			return // Home
+		}
+		if why, ok := builtBeside[url]; ok {
+			mk := read(t, "../Makefile")
+			if !strings.Contains(mk, why) {
+				t.Errorf("HeaderNavLinks entry %q points at %q, which the root Makefile no longer writes (%q)", name, url, why)
+			}
+			return
 		}
 		clean := strings.Trim(url, "/")
 		if _, err := os.Stat(filepath.Join(contentDir, clean+".md")); err == nil {

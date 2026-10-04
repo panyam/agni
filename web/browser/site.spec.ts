@@ -3,11 +3,15 @@
 // server anywhere. Every asset has to load under the prefix, because a page served at the wrong root
 // still returns 200 and renders with no CSS, and every answer has to come from the engine in the
 // page, since there is nothing else to answer.
+//
+// With AGNI_SITE_DIR set, the spec serves that already-built demo instead of building its own. The
+// docs workflow sets it, so the files checked are the files Pages publishes, and a seed the site
+// carries beyond the gate's two is opened as well.
 
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { execFileSync } from "node:child_process";
-import { createReadStream, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { createReadStream, existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { extname, join, normalize, resolve } from "node:path";
@@ -20,6 +24,7 @@ let browser: Browser;
 let server: Server;
 let base = "";
 let out = "";
+const prebuilt = process.env.AGNI_SITE_DIR ? resolve(process.env.AGNI_SITE_DIR) : "";
 
 const types: Record<string, string> = {
   ".html": "text/html",
@@ -29,18 +34,31 @@ const types: Record<string, string> = {
   ".wasm": "application/wasm",
 };
 
+// seeded is every board the spec opens. The gate builds the first two; a prebuilt site that lists
+// another mount must carry it too, so the published demo is checked seed by seed.
+const seeded = [
+  ["Sample Board", "gateway"],
+  ["RoyalBlue54L-Feather", "royalblue"],
+  ["jetson-agx-thor-baseboard", "jetson"],
+] as const;
+
 beforeAll(async () => {
-  out = mkdtempSync(join(tmpdir(), "agni-site-"));
-  const home = mkdtempSync(join(tmpdir(), "agni-home-"));
-  execFileSync(
-    "go",
-    [
-      "run", "./cmd/agni", "site", out, "--base", prefix,
-      "--seed", "gateway=examples/tutorial-project",
-      "--seed", "royalblue=tools/samples/boards/royalblue54L-feather",
-    ],
-    { cwd: repo, env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home }, stdio: "pipe" },
-  );
+  if (prebuilt) {
+    if (!existsSync(join(prebuilt, "index.html"))) throw new Error(`AGNI_SITE_DIR=${prebuilt} holds no index.html`);
+    out = prebuilt;
+  } else {
+    out = mkdtempSync(join(tmpdir(), "agni-site-"));
+    const home = mkdtempSync(join(tmpdir(), "agni-home-"));
+    execFileSync(
+      "go",
+      [
+        "run", "./cmd/agni", "site", out, "--base", prefix,
+        "--seed", "gateway=examples/tutorial-project",
+        "--seed", "royalblue=tools/samples/boards/royalblue54L-feather",
+      ],
+      { cwd: repo, env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home }, stdio: "pipe" },
+    );
+  }
   // A plain file server: a path under the prefix maps to the built folder, a folder serves its
   // index.html, and anything else is a 404, as a static host answers.
   server = createServer((req, res) => {
@@ -71,7 +89,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await browser?.close();
   server?.close();
-  if (out) rmSync(out, { recursive: true, force: true });
+  if (out && !prebuilt) rmSync(out, { recursive: true, force: true });
 });
 
 function record(page: Page) {
@@ -106,11 +124,16 @@ describe("the static demo under /agni/demo/", () => {
     });
   });
 
-  for (const [title, mount] of [
-    ["Sample Board", "gateway"],
-    ["RoyalBlue54L-Feather", "royalblue"],
-  ] as const) {
-    it(`opens and checks ${title} in the page, with nothing to call but files`, async () => {
+  it("carries a listing for each seed it opens, and opens each seed it carries", () => {
+    const listed = readdirSync(join(out, "files")).map((f) => f.replace(/\.json$/, "")).sort();
+    const opened = seeded.map(([, mount]) => mount).filter((m) => listed.includes(m)).sort();
+    expect(opened).toEqual(listed);
+    expect(listed).toEqual(expect.arrayContaining(["gateway", "royalblue"]));
+  });
+
+  for (const [title, mount] of seeded) {
+    it(`opens and checks ${title} in the page, with nothing to call but files`, async (ctx) => {
+      if (!existsSync(join(out, "files", `${mount}.json`))) ctx.skip();
       await withPage(browser, async (page) => {
         const log = record(page);
         await page.goto(base, { waitUntil: "domcontentloaded" });
