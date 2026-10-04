@@ -44,6 +44,21 @@ run against, and it is a copyable starting point for your own project.
 
 It is not a Go module and has no `main.go`. Drive it with `make review` from inside the folder.
 
+## Client examples, also off the ladder
+
+These are scripts over the Python client (`clients/python`) rather than Go walkthroughs, because their
+point is that agni answers and a short script lays the answers out.
+
+- [`revision_audit.py`](../clients/python/examples/revision_audit.py) writes one workbook comparing
+  the tutorial gateway's two revisions and auditing the newer one: the diff, the audit tables
+  [`revision_audit.yaml`](../clients/python/examples/revision_audit.yaml) asks (including one from
+  the project's own library), the project's review checklist, and the check run's findings, skipped
+  rules and verdicts. Every judgement lives in that YAML, the project, or the engine, and the script
+  stays near a hundred lines. Its summary of every tab is committed as
+  [`revision_audit.summary.md`](../clients/python/examples/revision_audit.summary.md) and compared
+  on every run. `make exercise-revision-audit` runs it.
+- [`audit_workbook.py`](../clients/python/examples/audit_workbook.py) is the smaller one-design form.
+
 ## The extension modules, also off the ladder
 
 [`extension/`](extension/) and [`extension-template/`](extension-template/) are Go modules that
