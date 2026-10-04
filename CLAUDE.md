@@ -230,7 +230,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the corpus in place. A `conventions.yaml`, `review.yaml` or `intent.yaml` left in the old place is
   a load ERROR naming where its content goes, because a read that skipped it would drop a tier.
   `--checklist` takes a project checklist's NAME, or a file ending `.yaml`/`.yml`, and with neither
-  the first checklist the project writes runs.
+  the first checklist the project writes runs. **Which checklists a design has is ONE answer,
+  `ReviewService.ListChecklists`** (`agni checklists <design>`), inherited ones first, read by the
+  CLI's `--checklist`, the viewer's picker and clients alike (agni 859). A client runs one by sending
+  its manifest to `CreateReview`, which takes values only (C22); `GetReviewManifest` stays for a
+  checklist FILE beside a design in no project.
 - **Between a project tier and its flag, the project wins, and for the datasheet corpus it wins PER
   MPN (`Overlay.SpecsOver`, agni 749).** That is the opposite of the mount rule above, deliberately,
   because a project owns its parameters the way it owns its profiles. The project's `params/` is
@@ -358,8 +362,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   plus `--title`. markdown and html carry the title, the design and THE QUERY above the answer, so a
   saved view states the question it answers; csv deliberately carries no preamble, because its first
   row has to be the header something binds to. An empty result is never an empty artifact. The
-  renderer is `core/report.Table`, which is also where the csv escaping for every command now lives,
-  having moved down out of `cmd/` rather than being copied a third time (agni issue 380).
+  markdown and html documents render `core/report.Table`; the csv encodes the engine's projection,
+  as every csv does (next bullet).
   **`--set <file>` asks a named SET of queries over one read** (agni 729): one document with a
   section per query, csv refused, and a non-zero exit AFTER writing when any query failed.
   `RunQueries` answers each query exactly as `RunQuery` would, because both call the same `answer`
@@ -373,6 +377,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   reads a constant or bound value there as a number: `"3"` against a count is 3 and `"abc"` is
   refused. An UNDECLARED position keeps a value as given, so a text constant compared with an untyped
   number answers nothing rather than failing (panyam/jaala#65).
+- **An answer's ROWS are the engine's, and every table encodes them** (C35, agni 862).
+  `service/tabulate.go` projects a check run (`findings`, `verdicts`, `verdicts_by_rule`, `skipped`),
+  a query or set, a diff and a review into `Table` messages, which `TableService.Tabulate` serves and
+  every `--format csv` encodes. A client asks `Tabulate` rather than laying an answer out; the Python
+  client's `agni.tables` only encodes, and a ratchet test holds that. `order_by` (`["rule",
+  "-subject"]`, `--order-by` on the CLI) sorts by each column's TYPE, so a `name` column puts R2 before
+  R10, and `column_types` overrides one. Cells travel raw: the csv encoder guards formulas and
+  `tables_to_xlsx` keeps a cell starting `=` as text. `check --verdicts --format json` is the whole
+  CheckDesign response, verdicts included.
 - **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/list`
   group by the projection's plain columns; `count(distinct ?x)` reduces the SET of values instead.
   The trap is that a goal joining two things yields one binding per combination, so on
@@ -491,7 +504,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `python3 examples/…` fails with `No module named 'agni'`. Its CLI transport runs whatever `agni` is
   on PATH unless given `--agni` (or `AGNI_BIN`), which is the stale-binary trap above. A make target
   that runs a client script uses `$(PY_VENV)/bin/python` and `--agni $(CURDIR)/bin/agni`, as
-  `python-test` and `exercise-revision-audit` do.
+  `python-test` and `exercise-revision-audit` do. `clients/python/examples/revision_audit.summary.md`
+  is a golden the client's tests regenerate and compare (also under `make examples-test`);
+  `AGNI_UPDATE_GOLDEN=1` rewrites it, and its diff is the review.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
   and `examples/tutorial-project/README.md` for the fixture the docsite tutorial runs on).
 - **`AGNI_EXAMPLE_DESIGN` points every example at a board this repo cannot carry.** Each example asks
@@ -577,7 +592,9 @@ commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fi
 `agni serve` on :8080 fails three verdict-link tests, so reproduce against unmodified `main` before
 reporting a regression), plus what a run leaves behind and the generated-code rules.
 **`tutorial-runs-check` regenerates captures and does not read the prose quoting them**, so a
-tutorial can cite numbers a change moved and the gate stays green.
+tutorial can cite numbers a change moved and the gate stays green. A capture step that exits non-zero
+and captures nothing is a build error unless its spec sets `exit: true` (agni 825). A checkout from
+before agni 853 may hold an untracked `web/static/seed/` that `fixture-copies-check` flags; delete it.
 
 **A design's tiers are resolved ONCE, in `service.ResolveSources`, and both surfaces call it.** For
 most of 2026 they did not, because `SourcesFor` alone was shared, and the half above it, deciding
@@ -694,6 +711,12 @@ hit in one sitting and are silent. A plain `check.NewModel` used to be a fourth,
 `component.mpn` empty, until agni 748 made every model join the design's MPNs. Each returns an empty or partial answer rather than an error,
 which reads as "the design does not have that".
 
+- **The CLI's mount table is parsed ONCE per process** (`cliWSOnce`), so in a `cmd/agni` test the first
+  test to resolve a mount fixes it for every later one. A test whose output names a design by its path
+  within a mount, or that needs an `agni.yaml` mount, calls `freshWorkspace(t)` (or `withMount`).
+  Without it a test passes alone and fails in the package run; agni 869 looked like a review scoring
+  differently after a diff and was only `review/can-broken.edn` printed for `can-broken.edn`. One
+  more order dependency is parked as #875; `-shuffle=on` finds them.
 - **A bare reader skips what `formats.Loader` runs.** The Loader is where the format-neutral passes
   run, so `classify.StampMPN` never fires and every component's `mpn` is empty, which empties the
   whole datasheet tier. This is agni issue 228's shape, and it recurred in `examples/common` (issue 618)
@@ -757,9 +780,9 @@ until the count is listed there on purpose (agni 727).
 ## Issues and missions
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
-and the command that exercises it. Several are active at once, one per worktree: #843
-`mission_revision_audit`, #844 `mission_real_board_tutorial`, #845 `mission_browser_review`, #851
-`mission_public_demo`. A
+and the command that exercises it. Several are active at once, one per worktree: #844
+`mission_real_board_tutorial`, #845 `mission_browser_review`, #851 `mission_public_demo`. #843
+`mission_revision_audit` closed on 2026-10-04; its exercise lives on as the example it built. A
 mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
