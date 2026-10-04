@@ -1,5 +1,6 @@
-#agni-run 237e5982b4d0311d
+#agni-run 0ac5fb3672fc80e8
 note: gateway-profiles supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, profile/can-termination-missing, profile/can-signal-dangling, profile/can-esd-missing
+note: no board was read for gateway.kicad_sch, so 6 board-tier rule(s) did not run: annular-width, copper-clearance, hole-size, netclass-track-width, netclass-via-drill, track-width. If this revision has a board, declare it under its entry's revision in design.yaml (or pass --board-path).
 findings by rule:
   bulk-cap               1
   cap-voltage            1
@@ -10,6 +11,5 @@ findings by rule:
   esd-clamp-not-tvs      1
   esd-protection         1
   fet-vdss-below-switched-rail 1
-  floating-input         1
 ...
 114 finding(s) total

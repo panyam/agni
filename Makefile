@@ -189,7 +189,7 @@ python-test: agni python-venv
 	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
 
 # The revision-audit mission's exercise (agni issue 843): two revisions of the tutorial gateway into one
-# workbook plus a markdown summary, which lists any tab still missing with the issue that fills it.
+# workbook plus a markdown summary of every tab, the example agni issue 823 finished.
 # It runs the checkout's binary and the client's venv, so neither a stale agni on PATH nor a python3
 # without the client changes what it reports. Writes outside the repo, under EXERCISE_OUT.
 EXERCISE_OUT ?= /tmp/agni-exercise
@@ -445,11 +445,13 @@ EXAMPLE_MODS := $(dir $(wildcard examples/*/go.mod))
 datasheet-test:
 	cd datasheet && $(GO) vet ./... && $(GO) test ./...
 
-examples-test:
+examples-test: agni python-venv
 	@for d in $(EXAMPLE_MODS); do \
 		echo "== $$d =="; \
 		( cd $$d && $(GO) build ./... && $(GO) test ./... ) || exit 1; \
 	done
+	@echo "== clients/python/examples =="
+	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q tests/test_example.py
 	@echo "examples: all modules build + test OK"
 
 # =============================================================================

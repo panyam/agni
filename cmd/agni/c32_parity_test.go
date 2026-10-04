@@ -91,14 +91,15 @@ func TestC32SurfacesResolveOneDesignAlike(t *testing.T) {
 // THE POSITIVE CONTROL, and the reason this file is not just an equality assertion.
 //
 // A test that only compares the two surfaces passes on a tree where resolution is entirely broken,
-// because both return the ref they were handed and the refs match. `gateway-rev-b.edn` is a later
-// revision sitting in the same folder and deliberately NOT declared a companion, so it must be read
-// exactly as named on both surfaces. If the test above ever starts passing vacuously, this one is
+// because both return the ref they were handed and the refs match. `gateway-rev-c.edn` is a later
+// revision sitting in the same folder and deliberately NOT declared, as a revision or a companion, so
+// it must be read exactly as named on both surfaces. (Rev B is declared with its own board since agni
+// issue 848, so it no longer serves.) If the test above ever starts passing vacuously, this one is
 // what still distinguishes "resolved to the design" from "resolved to nothing".
 func TestC32LeavesAnUndeclaredSiblingAlone(t *testing.T) {
-	sibling := filepath.Join(c32Design, "gateway-rev-b.edn")
+	sibling := filepath.Join(c32Design, "gateway-rev-c.edn")
 	cli := tiersFromCLI(t, sibling)
-	if !strings.HasSuffix(cli.NetlistURI, "gateway-rev-b.edn") {
+	if !strings.HasSuffix(cli.NetlistURI, "gateway-rev-c.edn") {
 		t.Errorf("an undeclared revision was redirected: netlist %q", cli.NetlistURI)
 	}
 	if cli.GeometryURI != cli.NetlistURI || cli.BoardURI != cli.NetlistURI {

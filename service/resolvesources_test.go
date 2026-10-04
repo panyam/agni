@@ -106,3 +106,60 @@ func TestAsNamedDoesNotApplyToTheDesignItself(t *testing.T) {
 		t.Errorf("naming the design must still read its entry, got %q", got.NetlistURI)
 	}
 }
+
+// withRevisions is a design whose rev B declares its own board and whose rev C declares none, the
+// shape agni issue 848 adds.
+func withRevisions() *webapi.Design {
+	return &webapi.Design{
+		Uri:           "mount://m/d",
+		EntryUri:      "mount://m/d/board.edn",
+		CompanionUris: []string{"mount://m/d/board.kicad_sch", "mount://m/d/board.kicad_pcb"},
+		Revisions: []*webapi.DesignRevision{
+			{EntryUri: "mount://m/d/board-rev-b.edn", CompanionUris: []string{"mount://m/d/board-rev-b.kicad_pcb"}},
+			{EntryUri: "mount://m/d/board-rev-c.edn"},
+		},
+	}
+}
+
+// A later revision is read with ITS board, so its board-tier rules run against its own copper rather
+// than not at all, and never against the current revision's (agni issue 848).
+func TestARevisionReadsItsOwnCompanions(t *testing.T) {
+	d := withRevisions()
+	for _, tc := range []struct {
+		ref            string
+		netlist, board string
+	}{
+		{"mount://m/d/board-rev-b.edn", "mount://m/d/board-rev-b.edn", "mount://m/d/board-rev-b.kicad_pcb"},
+		// Naming the revision's board reads the revision's netlist, as a companion of the entry does.
+		{"mount://m/d/board-rev-b.kicad_pcb", "mount://m/d/board-rev-b.edn", "mount://m/d/board-rev-b.kicad_pcb"},
+		// A revision with no board gets none, rather than borrowing the current revision's.
+		{"mount://m/d/board-rev-c.edn", "mount://m/d/board-rev-c.edn", "mount://m/d/board-rev-c.edn"},
+		// The design itself is still its current revision.
+		{"mount://m/d/board.edn", "mount://m/d/board.edn", "mount://m/d/board.kicad_pcb"},
+	} {
+		got := ResolveSources(d, tc.ref, false, false)
+		if got.NetlistURI != tc.netlist || got.BoardURI != tc.board {
+			t.Errorf("%s: netlist %s board %s, want netlist %s board %s", tc.ref, got.NetlistURI, got.BoardURI, tc.netlist, tc.board)
+		}
+		if !got.FromDeclaration {
+			t.Errorf("%s: a declared revision applies its declaration", tc.ref)
+		}
+	}
+	// A rev C read never picks up rev A's schematic either.
+	if got := ResolveSources(d, "mount://m/d/board-rev-c.edn", false, false); got.GeometryURI != "mount://m/d/board-rev-c.edn" {
+		t.Errorf("rev C geometry = %s, want its own entry", got.GeometryURI)
+	}
+}
+
+// A file the descriptor lists nowhere is still read exactly as named, the rule agni 528 set and 848
+// keeps: revisions are declared, never discovered.
+func TestAnUndeclaredRevisionStillReadsAsNamed(t *testing.T) {
+	ref := "mount://m/d/board-rev-d.edn"
+	got := ResolveSources(withRevisions(), ref, false, false)
+	if got.NetlistURI != ref || got.BoardURI != ref || got.FromDeclaration {
+		t.Errorf("an undeclared sibling resolved to %+v, want it read as named", got)
+	}
+	if as := ResolveSources(withRevisions(), "mount://m/d/board-rev-b.edn", false, true); as.BoardURI != "mount://m/d/board-rev-b.edn" {
+		t.Errorf("--as-named on a revision = %+v, want the file alone", as)
+	}
+}

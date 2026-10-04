@@ -213,6 +213,17 @@ func ReviewTables(rv *webapi.Review) []*webapi.Table {
 	return []*webapi.Table{items, summary}
 }
 
+// SkippedTable is the selected rules that could not run on this design and why, so a workbook of a
+// run says which rules it is silent on. A revision read with no board lists its board-tier rules here
+// (agni issue 848). The reason is check.Available's own words.
+func SkippedTable(skipped []*webapi.SkippedRule) *webapi.Table {
+	t := &webapi.Table{Name: "skipped", Columns: []*webapi.TableColumn{{Name: "rule"}, {Name: "reason"}}}
+	for _, s := range skipped {
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: []string{s.GetName(), s.GetReason()}})
+	}
+	return t
+}
+
 // verdictOutcomes are the outcome columns of the per-rule count, in the order a reader triages them.
 var verdictOutcomes = []checkspb.Outcome{
 	checkspb.Outcome_OUTCOME_PASS, checkspb.Outcome_OUTCOME_FAIL, checkspb.Outcome_OUTCOME_INCONCLUSIVE,
@@ -337,6 +348,7 @@ func (TableService) Tabulate(_ context.Context, req *webapi.TabulateRequest) (*w
 		if vs := a.Check.GetVerdicts(); len(vs) > 0 {
 			tables = append(tables, VerdictsTable(vs, nil), VerdictCountsTable(vs))
 		}
+		tables = append(tables, SkippedTable(a.Check.GetSkipped()))
 	case *webapi.TabulateRequest_Diff:
 		tables = append(tables, DiffTable(a.Diff))
 	case *webapi.TabulateRequest_Review:

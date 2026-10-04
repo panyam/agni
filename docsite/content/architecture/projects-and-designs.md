@@ -107,13 +107,29 @@ Companions are declared **file by file**, never inferred from "everything beside
 revision of the netlist sits in the same folder and is a legitimate analysis source in its own
 right; an inferred rule would turn a diff of two revisions into a diff of one against itself.
 
+A later revision is declared the same way, under `revisions`, each with its own entry and its own
+companions (agni issue 848):
+
+```yaml
+revisions:
+  - entry: gateway-rev-b.edn
+    companions: [gateway-rev-b.kicad_pcb]
+```
+
+Naming a revision's entry, or one of its companions, reads that revision with its own views, so rev
+B's board-tier rules run against rev B's copper. A file belongs to one revision at most, so a board
+is never borrowed by a netlist it was not drawn for. A revision with no board declared, or one not
+declared at all, reads with none, and a check of it says on stderr which board-tier rules did not
+run, since "no copper was read" and "the copper is clean" otherwise look the same.
+
 What that buys at the CLI:
 
 ```
 agni check designs/gateway                    # names the DESIGN: the entry's netlist, the companion's copper
 agni check designs/gateway/gateway.kicad_pcb  # names a companion: reads the entry, and says so
 agni check designs/gateway/gateway.edn        # names the ENTRY: the same design, so the same tiers
-agni check designs/gateway/gateway-rev-b.edn  # names an undeclared sibling: exactly that file
+agni check designs/gateway/gateway-rev-b.edn  # names a declared REVISION: rev B's netlist, rev B's copper
+agni check designs/gateway/gateway-rev-c.edn  # names an undeclared sibling: exactly that file, no board
 ```
 
 The first form is the one worth reaching for, because a netlist carries no copper
@@ -126,7 +142,7 @@ The third form is the same design as the first. Naming the entry is naming the d
 descriptor is what says so, and a run therefore draws on the companion's sheets whether the caller
 typed the folder or the filename inside it. Until agni issue 528 it did not, so a design whose
 faithful geometry lived in a companion rendered its auto-layout under one spelling and its real
-schematic under the other. The file-by-file rule above is what the fourth form protects, and the
+schematic under the other. The file-by-file rule above is what the fifth form protects, and the
 entry is by definition not the file it protects.
 
 The second form is the old warning turned into behaviour. It fires for any format rather than only

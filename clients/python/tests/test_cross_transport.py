@@ -120,6 +120,8 @@ _LIB = {
 
 CASES: List[Case] = [
     Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN)),
+    # A declared revision reads its own board on both surfaces (agni issue 848).
+    Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN + "/gateway-rev-b.edn")),
     Case("CheckService/CheckDesign", lambda c: c.check_design(uri=DESIGN, rules=["i2c-pull-up", "decoupling-present"])),
     Case("CheckService/GetCheckReport", lambda c: c.get_check_report(uri=DESIGN)),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c')),

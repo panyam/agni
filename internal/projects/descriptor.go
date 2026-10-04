@@ -67,6 +67,10 @@ type designYAML struct {
 	Title      string   `yaml:"title"`
 	Entry      string   `yaml:"entry"`
 	Companions []string `yaml:"companions,omitempty"`
+	// Revisions are the design's other revisions, each its own entry with its own companions, so a
+	// later netlist is read with its own board (agni issue 848). The top-level entry is the current
+	// one. A file belongs to one revision at most.
+	Revisions []revisionYAML `yaml:"revisions,omitempty"`
 	// Intent is this design's declared architecture, written inline (agni issue 824). It is per-DESIGN,
 	// where conventions and profiles describe the team. Only its presence is read here; the intent
 	// package parses it, from this same file, when a run composes the design's config.
@@ -74,6 +78,11 @@ type designYAML struct {
 	// Symbols is this design's own symbol library, optional and defaulting to `symbols` beside the
 	// descriptor.
 	Symbols *string `yaml:"symbols,omitempty"`
+}
+
+type revisionYAML struct {
+	Entry      string   `yaml:"entry"`
+	Companions []string `yaml:"companions,omitempty"`
 }
 
 // The conventional directory names used when a descriptor declares none, matching the layout of
@@ -271,6 +280,35 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 		}
 		seen[clean] = true
 		out.CompanionUris = append(out.CompanionUris, clean)
+	}
+	// Each revision is its own entry and views, checked against every file already declared, so no
+	// file is two revisions' at once and a board is never borrowed by a netlist it was not drawn for.
+	for i, r := range y.Revisions {
+		where := fmt.Sprintf("revisions[%d]", i)
+		if r.Entry == "" {
+			return "", nil, fmt.Errorf("%s: %s: entry is required (name the revision's netlist; its views go under companions)", DesignDescriptor, where)
+		}
+		rev := &webapi.DesignRevision{}
+		for j, f := range append([]string{r.Entry}, r.Companions...) {
+			field := where + ".entry"
+			if j > 0 {
+				field = where + ".companions"
+			}
+			if err := validRel(field, f); err != nil {
+				return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
+			}
+			clean := CleanRel(f)
+			if seen[clean] {
+				return "", nil, fmt.Errorf("%s: %q is listed twice (a file belongs to one revision, as its entry or one of its companions)", DesignDescriptor, f)
+			}
+			seen[clean] = true
+			if j == 0 {
+				rev.EntryUri = clean
+			} else {
+				rev.CompanionUris = append(rev.CompanionUris, clean)
+			}
+		}
+		out.Revisions = append(out.Revisions, rev)
 	}
 	// A design's config carries only its intent and symbols (see Design.config). Conventions,
 	// profiles and parameters describe the team and live on the Project.
