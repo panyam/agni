@@ -1,5 +1,6 @@
 from agni.v1.checks import checks_pb2 as _checks_pb2
 from agni.v1.webapi import checks_pb2 as _checks_pb2_1
+from agni.v1.webapi import config_pb2 as _config_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
@@ -97,3 +98,17 @@ class GetReviewManifestResponse(_message.Message):
     MANIFEST_FIELD_NUMBER: _ClassVar[int]
     manifest: _checks_pb2.ReviewManifest
     def __init__(self, manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ...) -> None: ...
+
+class ListChecklistsRequest(_message.Message):
+    __slots__ = ("design_uri",)
+    DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
+    design_uri: str
+    def __init__(self, design_uri: _Optional[str] = ...) -> None: ...
+
+class ListChecklistsResponse(_message.Message):
+    __slots__ = ("project", "checklists")
+    PROJECT_FIELD_NUMBER: _ClassVar[int]
+    CHECKLISTS_FIELD_NUMBER: _ClassVar[int]
+    project: str
+    checklists: _containers.RepeatedCompositeFieldContainer[_config_pb2.NamedChecklist]
+    def __init__(self, project: _Optional[str] = ..., checklists: _Optional[_Iterable[_Union[_config_pb2.NamedChecklist, _Mapping]]] = ...) -> None: ...

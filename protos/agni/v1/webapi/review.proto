@@ -6,6 +6,7 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
 import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/config.proto";
 import "google/protobuf/empty.proto";
 
 // This file: ReviewService, the transport-neutral analogue of `agni review` (WS9-047). Review is
@@ -64,6 +65,16 @@ service ReviewService {
   // validates, so a client learns its manifest is malformed once, here, rather than on every run. A
   // caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
   rpc GetReviewManifest(GetReviewManifestRequest) returns (GetReviewManifestResponse);
+
+  // ListChecklists returns the checklists a design's project declares, inherited ones included, in
+  // the order the project writes them, so the first is the project's default (agni issue 859). It is
+  // the one answer to "which checklists does this design have": `agni review --checklist <name>`,
+  // `agni checklists` and the viewer's picker all read it. A design in no project answers an empty
+  // project and no checklists, and a project declaring none answers its name and no checklists, since
+  // the fix differs (send a manifest, or add a checklists section). A descriptor that exists and does
+  // not parse is an error. The checklists are values, so a client runs one by sending it to
+  // CreateReview.
+  rpc ListChecklists(ListChecklistsRequest) returns (ListChecklistsResponse);
 }
 
 // Review is one stored review run.
@@ -202,3 +213,16 @@ message GetReviewManifestResponse {
 // agni.v1.checks alongside Finding, because a checklist and its per-item outcomes are the review
 // layer's core artifacts rather than facts about this transport. The manifest joined them in WS9-053,
 // when a stored run had to embed the checklist it scored.
+
+message ListChecklistsRequest {
+  // design_uri is the design whose project's checklists are listed. A URI's authority is a key the
+  // injected Loader resolves, never a host path.
+  string design_uri = 1;
+}
+
+message ListChecklistsResponse {
+  // project is the resource name of the design's project, "projects/{project}", empty when the
+  // design belongs to none.
+  string project = 1;
+  repeated NamedChecklist checklists = 2;
+}

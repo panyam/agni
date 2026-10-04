@@ -641,11 +641,111 @@ func (x *GetReviewManifestResponse) GetManifest() *checks.ReviewManifest {
 	return nil
 }
 
+type ListChecklistsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// design_uri is the design whose project's checklists are listed. A URI's authority is a key the
+	// injected Loader resolves, never a host path.
+	DesignUri     string `protobuf:"bytes,1,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChecklistsRequest) Reset() {
+	*x = ListChecklistsRequest{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChecklistsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChecklistsRequest) ProtoMessage() {}
+
+func (x *ListChecklistsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChecklistsRequest.ProtoReflect.Descriptor instead.
+func (*ListChecklistsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListChecklistsRequest) GetDesignUri() string {
+	if x != nil {
+		return x.DesignUri
+	}
+	return ""
+}
+
+type ListChecklistsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// project is the resource name of the design's project, "projects/{project}", empty when the
+	// design belongs to none.
+	Project       string            `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	Checklists    []*NamedChecklist `protobuf:"bytes,2,rep,name=checklists,proto3" json:"checklists,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChecklistsResponse) Reset() {
+	*x = ListChecklistsResponse{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChecklistsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChecklistsResponse) ProtoMessage() {}
+
+func (x *ListChecklistsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChecklistsResponse.ProtoReflect.Descriptor instead.
+func (*ListChecklistsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListChecklistsResponse) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *ListChecklistsResponse) GetChecklists() []*NamedChecklist {
+	if x != nil {
+		return x.Checklists
+	}
+	return nil
+}
+
 var File_agni_v1_webapi_review_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x8d\x01\n" +
+	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x8d\x01\n" +
 	"\x06Review\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
 	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\x127\n" +
@@ -684,13 +784,22 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x18GetReviewManifestRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"W\n" +
 	"\x19GetReviewManifestResponse\x12:\n" +
-	"\bmanifest\x18\x01 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest2\xb2\x03\n" +
+	"\bmanifest\x18\x01 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\"6\n" +
+	"\x15ListChecklistsRequest\x12\x1d\n" +
+	"\n" +
+	"design_uri\x18\x01 \x01(\tR\tdesignUri\"r\n" +
+	"\x16ListChecklistsResponse\x12\x18\n" +
+	"\aproject\x18\x01 \x01(\tR\aproject\x12>\n" +
+	"\n" +
+	"checklists\x18\x02 \x03(\v2\x1e.agni.v1.webapi.NamedChecklistR\n" +
+	"checklists2\x93\x04\n" +
 	"\rReviewService\x12K\n" +
 	"\fCreateReview\x12#.agni.v1.webapi.CreateReviewRequest\x1a\x16.agni.v1.webapi.Review\x12E\n" +
 	"\tGetReview\x12 .agni.v1.webapi.GetReviewRequest\x1a\x16.agni.v1.webapi.Review\x12V\n" +
 	"\vListReviews\x12\".agni.v1.webapi.ListReviewsRequest\x1a#.agni.v1.webapi.ListReviewsResponse\x12K\n" +
 	"\fDeleteReview\x12#.agni.v1.webapi.DeleteReviewRequest\x1a\x16.google.protobuf.Empty\x12h\n" +
-	"\x11GetReviewManifest\x12(.agni.v1.webapi.GetReviewManifestRequest\x1a).agni.v1.webapi.GetReviewManifestResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x11GetReviewManifest\x12(.agni.v1.webapi.GetReviewManifestRequest\x1a).agni.v1.webapi.GetReviewManifestResponse\x12_\n" +
+	"\x0eListChecklists\x12%.agni.v1.webapi.ListChecklistsRequest\x1a&.agni.v1.webapi.ListChecklistsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_review_proto_rawDescOnce sync.Once
@@ -704,7 +813,7 @@ func file_agni_v1_webapi_review_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_review_proto_rawDescData
 }
 
-var file_agni_v1_webapi_review_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_agni_v1_webapi_review_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_agni_v1_webapi_review_proto_goTypes = []any{
 	(*Review)(nil),                    // 0: agni.v1.webapi.Review
 	(*ReviewSummary)(nil),             // 1: agni.v1.webapi.ReviewSummary
@@ -715,33 +824,39 @@ var file_agni_v1_webapi_review_proto_goTypes = []any{
 	(*DeleteReviewRequest)(nil),       // 6: agni.v1.webapi.DeleteReviewRequest
 	(*GetReviewManifestRequest)(nil),  // 7: agni.v1.webapi.GetReviewManifestRequest
 	(*GetReviewManifestResponse)(nil), // 8: agni.v1.webapi.GetReviewManifestResponse
-	(*checks.CheckResults)(nil),       // 9: agni.v1.checks.CheckResults
-	(*OverlayConfig)(nil),             // 10: agni.v1.webapi.OverlayConfig
-	(*checks.ReviewManifest)(nil),     // 11: agni.v1.checks.ReviewManifest
-	(*emptypb.Empty)(nil),             // 12: google.protobuf.Empty
+	(*ListChecklistsRequest)(nil),     // 9: agni.v1.webapi.ListChecklistsRequest
+	(*ListChecklistsResponse)(nil),    // 10: agni.v1.webapi.ListChecklistsResponse
+	(*checks.CheckResults)(nil),       // 11: agni.v1.checks.CheckResults
+	(*OverlayConfig)(nil),             // 12: agni.v1.webapi.OverlayConfig
+	(*checks.ReviewManifest)(nil),     // 13: agni.v1.checks.ReviewManifest
+	(*NamedChecklist)(nil),            // 14: agni.v1.webapi.NamedChecklist
+	(*emptypb.Empty)(nil),             // 15: google.protobuf.Empty
 }
 var file_agni_v1_webapi_review_proto_depIdxs = []int32{
-	9,  // 0: agni.v1.webapi.Review.results:type_name -> agni.v1.checks.CheckResults
+	11, // 0: agni.v1.webapi.Review.results:type_name -> agni.v1.checks.CheckResults
 	1,  // 1: agni.v1.webapi.Review.summary:type_name -> agni.v1.webapi.ReviewSummary
-	10, // 2: agni.v1.webapi.CreateReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	11, // 3: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
+	12, // 2: agni.v1.webapi.CreateReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	13, // 3: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
 	0,  // 4: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
-	11, // 5: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
-	2,  // 6: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
-	3,  // 7: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
-	4,  // 8: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
-	6,  // 9: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
-	7,  // 10: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
-	0,  // 11: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
-	0,  // 12: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
-	5,  // 13: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
-	12, // 14: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
-	8,  // 15: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
-	11, // [11:16] is the sub-list for method output_type
-	6,  // [6:11] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	13, // 5: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
+	14, // 6: agni.v1.webapi.ListChecklistsResponse.checklists:type_name -> agni.v1.webapi.NamedChecklist
+	2,  // 7: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
+	3,  // 8: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
+	4,  // 9: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
+	6,  // 10: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
+	7,  // 11: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
+	9,  // 12: agni.v1.webapi.ReviewService.ListChecklists:input_type -> agni.v1.webapi.ListChecklistsRequest
+	0,  // 13: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
+	0,  // 14: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
+	5,  // 15: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
+	15, // 16: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
+	8,  // 17: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
+	10, // 18: agni.v1.webapi.ReviewService.ListChecklists:output_type -> agni.v1.webapi.ListChecklistsResponse
+	13, // [13:19] is the sub-list for method output_type
+	7,  // [7:13] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_review_proto_init() }
@@ -750,13 +865,14 @@ func file_agni_v1_webapi_review_proto_init() {
 		return
 	}
 	file_agni_v1_webapi_checks_proto_init()
+	file_agni_v1_webapi_config_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_review_proto_rawDesc), len(file_agni_v1_webapi_review_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

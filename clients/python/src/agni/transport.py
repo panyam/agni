@@ -247,6 +247,11 @@ def _review_argv(req: Message) -> List[str]:
     return out
 
 
+def _checklists_argv(req: Message) -> List[str]:
+    _only(req, ("design_uri",))
+    return ["checklists", req.design_uri, "--format", "json"]
+
+
 def _review_stdin(req: Message) -> str:
     # A manifest file puts an item's binding (rule, query, present...) on the item itself, where the
     # wire nests it under `binding`, so it is lifted back out. JSON is YAML, so `--checklist -` reads it.
@@ -317,6 +322,7 @@ CLI_COMMANDS: Dict[str, CliCommand] = {
         _query_set_argv, query_pb2.RunQueriesResponse, stdin=_query_set_stdin, answers_on_failure=True
     ),
     "ReviewService/CreateReview": CliCommand(_review_argv, review_pb2.Review, stdin=_review_stdin),
+    "ReviewService/ListChecklists": CliCommand(_checklists_argv, review_pb2.ListChecklistsResponse),
     "DiffService/DiffDesigns": CliCommand(_diff_argv, diff_pb2.DiffDesignsResponse),
     # Tabulate reads no design, so the request goes on stdin whole (agni issue 862).
     "TableService/Tabulate": CliCommand(

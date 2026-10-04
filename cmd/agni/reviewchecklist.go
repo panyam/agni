@@ -68,9 +68,9 @@ func resolveChecklist(ctx context.Context, name string, designs []string) (revie
 			unowned = append(unowned, d)
 			continue
 		}
-		c := pickChecklist(lists, name)
+		c := service.PickChecklist(lists, name)
 		if c == nil {
-			missing = append(missing, fmt.Sprintf("%s (%s, %s)", d, project, declaredChecklists(lists)))
+			missing = append(missing, fmt.Sprintf("%s (%s, %s)", d, project, service.DeclaredChecklists(lists)))
 			continue
 		}
 		key := project + ":" + c.GetName()
@@ -113,30 +113,6 @@ func resolveChecklist(ctx context.Context, name string, designs []string) (revie
 	}
 	return man, fmt.Sprintf("note: running the checklist %q %s declares; pass --checklist to run a different one.\n",
 		checklist, project), nil
-}
-
-// pickChecklist returns the checklist called name, or the first when name is empty, nil when there
-// is none.
-func pickChecklist(lists []*webapi.NamedChecklist, name string) *webapi.NamedChecklist {
-	for _, c := range lists {
-		if name == "" || c.GetName() == name {
-			return c
-		}
-	}
-	return nil
-}
-
-// declaredChecklists names what a project does declare, for the message that says it lacks the one
-// asked for.
-func declaredChecklists(lists []*webapi.NamedChecklist) string {
-	if len(lists) == 0 {
-		return "which declares none"
-	}
-	names := make([]string, 0, len(lists))
-	for _, c := range lists {
-		names = append(names, c.GetName())
-	}
-	return "which declares " + strings.Join(names, ", ")
 }
 
 // describeSplit renders "key for design, design; key for design" in sorted order, so the same

@@ -99,6 +99,12 @@ class Client:
         """Score a checklist. Connect only until agni issue 734 lands."""
         return self.call("ReviewService", "CreateReview", request, **fields)  # type: ignore[return-value]
 
+    def list_checklists(self, request: Optional[review_pb2.ListChecklistsRequest] = None, **fields) -> review_pb2.ListChecklistsResponse:
+        """The checklists the design's project declares, inherited ones included, the project's
+        default first. Each carries its manifest, which ``create_review(manifest=...)`` runs. An
+        empty ``project`` means the design belongs to none."""
+        return self.call("ReviewService", "ListChecklists", request, **fields)  # type: ignore[return-value]
+
     def get_review_manifest(self, request: Optional[review_pb2.GetReviewManifestRequest] = None, **fields) -> review_pb2.GetReviewManifestResponse:
         return self.call("ReviewService", "GetReviewManifest", request, **fields)  # type: ignore[return-value]
 
