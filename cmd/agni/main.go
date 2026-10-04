@@ -596,6 +596,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
 				// Provenance comes off the composed overlay, not the flags, or a project declaring
 				// conventions, profiles and params records `run: {}` when no flag was passed. The flag
 				// values are the DEPLOYMENT half of the union and the overlay adds the project's half.
@@ -643,6 +644,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
 				// --verdicts selects the CONSIDERED SET instead of the violations, which is what each
 				// rule concluded about every subject it looked at, passes included. --fail-on still reads
 				// the findings, since a pass is not a gate condition.

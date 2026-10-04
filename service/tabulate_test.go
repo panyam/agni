@@ -90,8 +90,9 @@ func TestTabulateACheckGivesFindingsThenVerdicts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(out.GetTables()) != 3 || out.GetTables()[0].GetName() != "findings" || out.GetTables()[1].GetName() != "verdicts" || out.GetTables()[2].GetName() != "verdicts_by_rule" {
-		t.Fatalf("tables = %v, want findings, verdicts, verdicts_by_rule", out.GetTables())
+	if len(out.GetTables()) != 4 || out.GetTables()[0].GetName() != "findings" || out.GetTables()[1].GetName() != "verdicts" ||
+		out.GetTables()[2].GetName() != "verdicts_by_rule" || out.GetTables()[3].GetName() != "skipped" {
+		t.Fatalf("tables = %v, want findings, verdicts, verdicts_by_rule, skipped", out.GetTables())
 	}
 	if got, want := firsts(out.GetTables()[2]), "r/1/1/0/0/0/2"; got != want {
 		t.Errorf("verdicts_by_rule = %q, want %q", got, want)
@@ -102,8 +103,21 @@ func TestTabulateACheckGivesFindingsThenVerdicts(t *testing.T) {
 	// A response with no verdicts gives findings alone rather than an empty verdicts table.
 	resp.Verdicts = nil
 	out, _ = TableService{}.Tabulate(context.Background(), &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Check{Check: resp}})
-	if len(out.GetTables()) != 1 {
-		t.Errorf("a stripped response gave %d tables, want findings alone", len(out.GetTables()))
+	if len(out.GetTables()) != 2 || out.GetTables()[1].GetName() != "skipped" {
+		t.Errorf("a stripped response gave %v, want findings and skipped, no verdicts table", out.GetTables())
+	}
+}
+
+// A run that skipped rules says which and why, so a workbook of a board-less revision lists the
+// board-tier rules it is silent on (agni issue 848).
+func TestTabulateACheckListsItsSkippedRules(t *testing.T) {
+	resp := &webapi.CheckDesignResponse{Skipped: []*webapi.SkippedRule{{Name: "copper-clearance", Reason: "design carries no board geometry (WS1-006 sidecar)"}}}
+	out, err := TableService{}.Tabulate(context.Background(), &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Check{Check: resp}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := firsts(out.GetTables()[len(out.GetTables())-1]); got != "copper-clearance/design carries no board geometry (WS1-006 sidecar)" {
+		t.Errorf("skipped = %q", got)
 	}
 }
 

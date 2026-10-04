@@ -271,6 +271,11 @@ var boardFormats = map[string]bool{
 	"ipc-2581":  true,
 }
 
+// NoBoardReason is the reason Available gives a rule that reads the board tier when the run attached
+// no board. A caller saying "no board was read" compares against it rather than a copy of the text
+// (agni issue 848).
+const NoBoardReason = "design carries no board geometry (WS1-006 sidecar)"
+
 // Available reports whether r can produce meaningful findings over m, and if not, a short reason a
 // UI can show. It derives from r.Reads, so a rule is unavailable when it reads a fact whose tier is
 // absent for this design. m is nil for the design-less catalog listing, where the param tier is
@@ -294,7 +299,7 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 			// board-format sidecar, or `agni review --board-path`, WS3-089), so a netlist entry
 			// ungates too. SourceFormat is the coarse fallback. A board-capable format may ship a
 			// geometry-less export, and its empty tier keeps the rules silent.
-			return false, "design carries no board geometry (WS1-006 sidecar)"
+			return false, NoBoardReason
 		}
 	}
 	// Source-format capability gate (WS3-096). A rule inferring a defect from the ABSENCE of a
