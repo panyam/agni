@@ -9,55 +9,45 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-03, at `016973d3` (PR 850).
+Last pruned 2026-10-04, at `098cc53a` (PR 884).
 
 ## At a glance
 
-Four missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
+Three missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
 skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
 links rather than here. Log each exercise run on the mission issue.
 
-- **#843 `mission_revision_audit`**, 3 of 9 tickets closed. Exercise `make exercise-revision-audit`
-  last ran at `e5fa07df`, and PRs 841 and 850 have merged since: the query and findings tabs build,
-  and Diff, Review and Verdicts are listed as missing until #822. Next ready is #822, #825 and #848,
-  all P1.
-- **#844 `mission_real_board_tutorial`**, 0 of 4. Next is #564. The exercise has not run yet.
-- **#845 `mission_browser_review`**, 0 of 11. Next is #829. The exercise is a manual walk with no
-  logged run yet.
-- **#851 `mission_public_demo`**, active in the `docs` clone. The engine runs as wasm in
-  the browser for a dropped KiCad or EDIF design, and a read-only server answers seeded boards too
-  large for it. 0 of 9; start with #178 (revive the parked wasm build, #567), which unblocks #852.
+- **#844 `mission_real_board_tutorial`**, 0 of 4. Next is #564. The exercise has not run yet, so run
+  it before picking a ticket.
+- **#845 `mission_browser_review`**, 1 of 11 (#829 closed with #859). Next by the queue is #356. The
+  exercise is a manual walk with no logged run yet.
+- **#851 `mission_public_demo`**, 4 of 15, in the `docs` clone. Exercise last ran at `098cc53a`:
+  broken at step 1 (no landing page, #856) and step 2 (no drop target, #854, in progress). Next is
+  #854, then #857.
+- This run: #843 `mission_revision_audit` closed (exercise passes, `make exercise-revision-audit`);
+  its leftovers #820 and #821 are `waiting`. Dropped the `docs/checkpoint-public-demo-mission`
+  thread (merged); its hosting and seeding questions live on #856.
 
 ## Open, ranked
 
-1. **#848, declare a design's revisions each with its own board.** Found by the revision-audit
-   exercise: `gateway-rev-b.edn` is an undeclared sibling, so it reads with no board and 13 of rev
-   A's 28 findings (copper-clearance, track-width) silently do not run. Needs a
-   `gateway-rev-b.kicad_pcb` fixture carrying R4 and R5, which restamps the tutorial captures.
-2. **#822, the `agni.tables` diff, review and verdict sheets.** #818 landed (PR 841), so the diff
-   sheet can use the `equal` kind. Update the Diff line in `revision_audit.py`'s `plan()` from
-   `missing` to the real builder, which still cites #818.
-3. **#825, a docsite capture whose command fails renders as an empty block and the gate stays
-   green.** Its comment adds the `capture: none` case. #823's checked summary capture leans on it.
-4. **#829, the viewer's checklist picker misses checklists a project inherits through `extends`.**
-   `agni review` resolves the chain and `ResolveDesign` does not. The issue has two fix shapes.
-5. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
+1. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
-6. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
-7. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
+2. **#854 and #857 on `mission_public_demo`**, the mission's two P1s, worked in the `docs` clone.
+3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
+4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
-8. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
+5. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
    corrections comment before writing any code.
-9. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
+6. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
    test declares #736 field by field, so its fix also deletes that declaration in
    `clients/python/tests/test_cross_transport.py`.
 
 Later work is #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380,
 #456, #374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group,
-gzipped, in release binaries). The query language roadmap lives on panyam/jaala, where modules (#3)
-and aggregation inside rules (#4) come first, since they retire the self-join and pasted-preamble
-workarounds.
+gzipped, in release binaries). The query language roadmap lives on panyam/jaala. Modules (jaala#3)
+and aggregation inside rules (jaala#4) have both landed, and agni tracks the latest jaala, so a
+derived question goes in `stdlib/lib` before it becomes a Go relation.
 
 #799 (the PartSpec contract module) waits for a second implementer or consumer. The first release
 since #744 publishes `agnids` for the first time, and `RELEASING.md`'s checklist now carries the
@@ -74,22 +64,6 @@ to test against.
 
 Four items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #667,
 #681 and #523.
-
-## docs/checkpoint-public-demo-mission
-
-- **Last touched**: 2026-10-03 (`/workspace/repos/projects/Agni/docs`)
-- **Ticket**: #851 `mission_public_demo`, first ticket #178.
-- **Why**: this clone is the mission's worktree. The branch carries the checkpoint that files the
-  mission into `CLAUDE.md` and this file, and should merge before the mission's first PR.
-- **Where it stopped**: the mission and tickets #852 to #858 are filed with blocked-by links, and
-  #178 and #717 carry the mission label, and #851 is `mission:active`. Nothing is coded.
-- **Next action**: push this branch and open its PR. Then branch `feat/178-wasm-engine` from
-  `origin/main` with `--no-track`, check out `ws14-007-wip` beside it, and work #567's checklist
-  (rewrite the four `internal/` imports, compose through `agni.New`, run in a Web Worker).
-- **Open questions**: where the static site and seeded boards are hosted (GitHub Pages or a CDN);
-  which open KiCad and EDIF boards to seed (#856); whether a static PartSpec corpus ships in the
-  bundle (#852 decides by size); the unit for the browser-or-server threshold, which must be
-  knowable before the read, so file size rather than component count (#852, #853).
 
 ## Worth knowing before the next change
 
