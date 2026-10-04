@@ -431,6 +431,7 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |
+| `--design-cache <n>` | how many reads the server keeps between requests (a design, a drawing, a board or a built model, each counting once), each checked against its files on every use (default 12; 0 keeps none; see [Kept reads](../running-the-server/#kept-reads)) |
 
 ### `healthcheck`
 

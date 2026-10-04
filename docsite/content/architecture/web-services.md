@@ -102,6 +102,27 @@ A few contract details bite if missed.
   says today, and last quarter's review would re-render against this quarter's questions with its
   outcomes intact underneath.
 
+## Kept reads
+
+`service.DesignCache` keeps what a request read, in two layers (agni issue 895). `CachingLoader`
+wraps a host's loader and keeps the parsed design, each drawing and the board, handing every caller
+a copy, since `check.NewModel` stamps datasheet classes into the design it is given.
+`BuildModelCached` keeps the check model and its fact base on top, SHARED rather than copied, which
+is safe because rules only read a model and its memo is built for concurrent use. The query, check,
+report, coverage and review surfaces read through it.
+
+An entry's key is what was asked, and its validity is what the read touched. A host's reads go
+through `service.LoaderIn`, which hands the `formats.Loader` a `formats.Touched` recorder, and the
+recorder stamps every name the read opens, walks or fails to find. A hit re-stamps those names, so a
+sub-sheet, a companion or a symbol library invalidates an entry without anyone listing it. Two rules
+keep it from serving a wrong answer. Read options carry an identity only when `Overlay.ReadOptions`
+could compute one (`WithIdentity`), and a read under options with none, or with an option the
+identity does not cover, is never kept. A read that recorded nothing went around the Loader and is
+never kept either. A new host must read through `LoaderIn`, or its reads are simply never cached.
+
+The server and the browser engine run the same cache. The browser engine is rebuilt on every mount
+change, which drops it. The wire contract stays stateless, so no client holds a session.
+
 ## The same contract in the browser
 
 `agni serve` is one host for these services and the browser is another. `cmd/agni-wasm` builds the

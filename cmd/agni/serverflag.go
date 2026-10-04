@@ -147,6 +147,7 @@ func serveSelf(cmd *cobra.Command, spec serverSpec) error {
 		banner: func(urls []string, n int) {
 			fmt.Fprintf(cmd.ErrOrStderr(), "serving %d mount(s) at %s so the links above resolve (Ctrl-C to stop)\n", n, urls[0])
 		},
+		designCache: defaultDesignCache,
 	})
 }
 

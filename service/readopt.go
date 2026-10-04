@@ -29,33 +29,49 @@ type ReadOptions struct {
 	// the design declares internal (agni issue 831). It rides the read options because every surface
 	// that builds a model already passes Overlay.ReadOptions, so none can miss it.
 	Intent *configpb.DesignIntent
+	// Identity names everything the options above were composed from, so a cache can key a read on
+	// it (agni issue 895). Set by WithIdentity, which Overlay.ReadOptions appends when its overlay
+	// can identify itself. Empty means the options cannot be told apart from any others, and a read
+	// under them is never cached.
+	Identity string
+
+	// fields counts the options above that were applied, and identityCovers how many of them the
+	// identity was computed over. A caller that adds an option the identity does not know about
+	// leaves the two unequal, so the identity no longer describes the read.
+	fields, identityCovers int
 }
 
 // ReadOption configures one read.
 type ReadOption func(*ReadOptions)
 
+// WithIdentity names the options before it: covers is how many options the identity describes, which
+// must be every one the read applies or the identity is not used (see ReadOptions.Identity).
+func WithIdentity(id string, covers int) ReadOption {
+	return func(o *ReadOptions) { o.Identity, o.identityCovers = id, covers }
+}
+
 // WithLexicon stamps the design being read with a project's naming vocabulary (WS3-106) instead of
 // the built-in one, so which nets count as rails and grounds follows the request's conventions.
 func WithLexicon(lex *classify.Lexicon) ReadOption {
-	return func(o *ReadOptions) { o.Lexicon = lex }
+	return func(o *ReadOptions) { o.Lexicon = lex; o.fields++ }
 }
 
 // WithSymbolPaths adds a config's symbol search directories to one read, so a design whose project
 // declares its libraries resolves them without the caller passing a flag.
 func WithSymbolPaths(dirs []string) ReadOption {
-	return func(o *ReadOptions) { o.SymbolPaths = append(o.SymbolPaths, dirs...) }
+	return func(o *ReadOptions) { o.SymbolPaths = append(o.SymbolPaths, dirs...); o.fields++ }
 }
 
 // WithDeviceClasses supplies the datasheet device-class lookup for one read, so a design read inside
 // a project that declares a params tier carries the classes only its corpus can establish.
 func WithDeviceClasses(f func(mpn string) string) ReadOption {
-	return func(o *ReadOptions) { o.DeviceClassFor = f }
+	return func(o *ReadOptions) { o.DeviceClassFor = f; o.fields++ }
 }
 
 // WithDesignIntent carries a design's declared intent to the model BuildModel builds (see
 // ReadOptions.Intent).
 func WithDesignIntent(di *configpb.DesignIntent) ReadOption {
-	return func(o *ReadOptions) { o.Intent = di }
+	return func(o *ReadOptions) { o.Intent = di; o.fields++ }
 }
 
 // ReadOpts resolves options to a value, for a loader implementation to read. Exported because the

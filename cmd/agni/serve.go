@@ -65,6 +65,7 @@ func serveCmd() *cobra.Command {
 	var queryBudget, queryBudgetWarn int64
 	var engine string
 	var wasmMaxBytes int64
+	var designCache int
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -83,6 +84,7 @@ func serveCmd() *cobra.Command {
 				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
 				engine:          engine,
 				wasmMaxBytes:    wasmMaxBytes,
+				designCache:     designCache,
 			})
 		},
 	}
@@ -97,6 +99,7 @@ func serveCmd() *cobra.Command {
 			"what the last two are for")
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().Int64Var(&queryBudget, "query-budget", 0, "cap each query's work, in the units a fact base counts (comparisons plus generator rows), for queries and query-backed rules alike; a request may ask for less but never more. 0 enforces nothing, so a deployment can watch what its queries cost first (see --query-budget-warn)")
+	c.Flags().IntVar(&designCache, "design-cache", defaultDesignCache, "how many reads to keep between requests: a design, a drawing, a board or a built model each count once, so one design asked for by queries and the viewer holds about four. Each is checked against its files on every use and read again when one changed. 0 keeps none")
 	c.Flags().Int64Var(&queryBudgetWarn, "query-budget-warn", defaultQueryBudgetWarn, "log each query whose work passes this, with a suggested --query-budget; 0 logs nothing")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
 	c.Flags().StringVar(&datasheetsURL, "datasheets-url", "", "where the datasheets workbench is served, e.g. http://host:8090 for a running `agnids serve`; the landing page links its Datasheets card and datasheet recents there, and hides both when this is empty")
@@ -153,6 +156,9 @@ type viewerOpts struct {
 
 	// wasmMaxBytes is the largest design the page analyses in the browser (agni issue 852).
 	wasmMaxBytes int64
+	// designCache is how many reads (a design, a drawing, a board, a built model) the server keeps
+	// between requests (agni issue 895). 0 keeps none.
+	designCache int
 }
 
 // The two engines a viewer page can analyse its design on.
@@ -167,6 +173,10 @@ const (
 // bytes are a proxy for cost that was calibrated on KiCad alone, where a board file is most of the
 // size; an EDIF netlist of the same byte count may cost more.
 const defaultWasmMaxBytes = 128 << 20
+
+// defaultDesignCache keeps two or three large designs warm with each one's drawing and model, which is
+// what a person moving between a few boards in the viewer asks for (agni issue 895).
+const defaultDesignCache = 12
 
 // runViewer builds and runs the viewer server for both `serve` and `open`.
 func runViewer(cmd *cobra.Command, o viewerOpts) error {
@@ -252,7 +262,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// (/agni.v1.webapi.WorkspaceService/). Static assets live under /static/, and the goapplib
 	// page catches the rest at "/". The services are the transport-neutral service package
 	// implementations, which internal/server wraps for Connect (C13).
-	loader := &osLoader{mounts: mounts, loader: newLoader()}
+	loader := service.NewCachingLoader(&osLoader{mounts: mounts, loader: newLoader()}, service.NewDesignCache(o.designCache))
 	// Tier-1 fallback, as in resolveWebDir. The flag wins OUTRIGHT, so an operator who named the
 	// renderers answers for the whole set and agni.yaml cannot widen it.
 	if len(nativeTools) == 0 {

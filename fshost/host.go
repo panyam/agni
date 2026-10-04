@@ -81,22 +81,22 @@ func (h *Host) name(uri artifact.URI) (string, error) {
 }
 
 // Design reads the netlist IR.
-func (h *Host) Design(_ context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+func (h *Host) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
 	}
-	return service.LoaderFor(h.loader, opts...).ReadDesign(n)
+	return service.LoaderIn(ctx, h.loader, opts...).ReadDesign(n)
 }
 
 // Geometry draws a netlist's companion schematic where it has one, else the design's own geometry or
 // an auto-layout.
-func (h *Host) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
+func (h *Host) Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
 	}
-	reader := service.LoaderFor(h.loader, opts...)
+	reader := service.LoaderIn(ctx, h.loader, opts...)
 	if comp := reader.Companion(n); comp != "" {
 		return reader.FaithfulGeometry(comp)
 	}
@@ -104,12 +104,12 @@ func (h *Host) Geometry(_ context.Context, uri artifact.URI, layout string, fait
 }
 
 // Report classifies how an auto-layout draws each component.
-func (h *Host) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
+func (h *Host) Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
 	}
-	return service.LoaderFor(h.loader, opts...).ConversionReport(n, formats.SymbolsFor(faithfulSymbols), nil)
+	return service.LoaderIn(ctx, h.loader, opts...).ConversionReport(n, formats.SymbolsFor(faithfulSymbols), nil)
 }
 
 // Expectations loads a `<design>.expect.yaml` sidecar, and (nil, nil) when there is none.
@@ -129,12 +129,12 @@ func (h *Host) Expectations(_ context.Context, uri artifact.URI) (*expect.Expect
 }
 
 // Board reads the physical board sidecar for a format that carries one, and (nil, nil) otherwise.
-func (h *Host) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+func (h *Host) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
 	n, err := h.name(uri)
 	if err != nil {
 		return nil, err
 	}
-	return h.loader.BoardGeometry(n)
+	return service.LoaderIn(ctx, h.loader).BoardGeometry(n)
 }
 
 // Manifest parses a review checklist. Absent is an error, since a manifest is a required input.
