@@ -27,7 +27,8 @@ import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, useEngineFetch,
 } from "./api.js";
-import { startEngine, mountingFetch } from "./wasm/client.js";
+import { startEngine, mountingFetch, type WasmEngine } from "./wasm/client.js";
+import { BROWSER_MOUNT, installDrop } from "./wasm/drop.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
@@ -107,23 +108,71 @@ function showEngineNote(text: string): void {
   el.hidden = false;
 }
 
+// refuseBrowserMounts answers, on the server engine, every request naming a dropped design with a
+// refusal and a note rather than sending it, since the server has never seen those files (agni issue
+// 854). Requests about the server's own mounts pass.
+function refuseBrowserMounts(): void {
+  const reason = "A dropped design is analysed in the browser and never sent to the server, so it needs the browser engine";
+  const network = globalThis.fetch.bind(globalThis);
+  if (currentLocation().mount === BROWSER_MOUNT) showEngineNote(`${reason}.`);
+  useEngineFetch(async (input, init) => {
+    const req = new Request(input, init);
+    const body = await req.clone().text();
+    if (body.includes(`"mount://${BROWSER_MOUNT}/`) || body.includes(`"mount://${BROWSER_MOUNT}"`)) {
+      showEngineNote(`${reason}.`);
+      return new Response(JSON.stringify({ code: "failed_precondition", message: reason }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return network(req);
+  });
+}
+
+// installPageDrop wires dropping files on the page (agni issue 854). On the server engine a drop is
+// refused with the reason, so a visitor's files never leave the browser by accident.
+function installPageDrop(engine: WasmEngine | undefined): void {
+  const dialog = document.getElementById("drop-dialog") as HTMLDialogElement | null;
+  const button = document.getElementById("drop-open");
+  const input = document.getElementById("drop-input") as HTMLInputElement | null;
+  if (!dialog || !button || !input) return;
+  const files = workspaceClient();
+  installDrop({
+    engine,
+    propose: (uri) => files.proposeDesigns({ uri }),
+    open: (path) => {
+      const segs = [BROWSER_MOUNT, ...path.split("/")].map(encodeURIComponent).join("/");
+      window.history.pushState(null, "", withEngineParams(`/designs/${segs}/view`));
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    },
+    refuse: (reason) => showEngineNote(`${reason}.`),
+    target: document.body,
+    dialog,
+    button,
+    input,
+  });
+}
+
 // startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine
 // loads in a worker, and every client the page builds afterwards talks to it, bringing in each
 // design's files from the server the first time a request names it. The design keeps the URL it has
 // under the server engine. Listings and file reads go to the server, which owns the mount namespace.
 // It must finish before the app root builds its clients. The assets sit beside this bundle, so the
 // page works under any path prefix.
-async function startPageEngine(): Promise<void> {
-  if (pageEngine() !== "wasm") return;
+async function startPageEngine(): Promise<WasmEngine | undefined> {
+  if (pageEngine() !== "wasm") {
+    refuseBrowserMounts();
+    return undefined;
+  }
   const asset = (name: string) => new URL(name, import.meta.url).href;
   const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") });
   const network = globalThis.fetch.bind(globalThis);
   const files = workspaceClient();
   const workspacePath = `/${WorkspaceService.typeName}/`;
   useEngineFetch(
-    mountingFetch(
+    mountingFetch({
       engine,
-      {
+      source: {
         list: (uri) => files.listDesignFiles({ uri }),
         fetchFile: async (mount, path) => {
           const res = await network(new URL(`/raw/${encodeURIComponent(mount)}/${path.split("/").map(encodeURIComponent).join("/")}`, location.href));
@@ -131,12 +180,14 @@ async function startPageEngine(): Promise<void> {
           return new Uint8Array(await res.arrayBuffer());
         },
       },
-      (url) => url.pathname.startsWith(workspacePath),
       network,
-      wasmMaxBytes(),
-      (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),
-    ),
+      passthrough: (url) => url.pathname.startsWith(workspacePath),
+      browserMounts: new Set([BROWSER_MOUNT]),
+      maxBytes: wasmMaxBytes(),
+      onServer: (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),
+    }),
   );
+  return engine;
 }
 
 class AppRoot extends BaseComponent {
@@ -562,14 +613,20 @@ const dockApi = dockEl && parkEl && menuEl ? createViewerDock(dockEl, parkEl, me
 const bus = new EventBus();
 const controller = new LifecycleController(bus);
 void startPageEngine()
-  .then(async () => {
+  .then(async (engine) => {
     const root = new AppRoot("app", document.body, bus);
     await controller.initializeFromRoot(root);
-    return root;
+    return { root, engine };
   })
-  .then(async (root) => {
+  .then(async ({ root, engine }) => {
     const presenter = root.presenter;
     if (!presenter) return;
+    installPageDrop(engine);
+    const here = currentLocation();
+    if (engine && here.mount === BROWSER_MOUNT && hasFile(here)) {
+      // A reload empties the worker, and a dropped design existed nowhere else.
+      showEngineNote("Dropped files live only in the tab they were dropped into, and a reload empties it: drop them again.");
+    }
     // applyUrl opens whatever the current URL addresses. The restoring flag keeps this replay from
     // pushing a duplicate history entry (see syncUrl); it runs once at boot (deep-link refresh) and
     // again on every popstate (browser back/forward).

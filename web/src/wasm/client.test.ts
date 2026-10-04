@@ -49,7 +49,7 @@ const ask = (f: typeof globalThis.fetch, rpc: string, uri: string) =>
 describe("mountingFetch", () => {
   it("brings a design's files in once, then answers in the worker", async () => {
     const h = harness(listing);
-    const f = mountingFetch(h.engine, h.source, () => false, h.network, 10_000);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
     await ask(f, "CheckService/GetCheckReport", "mount://tut/designs/gateway");
     await ask(f, "QueryService/RunQuery", "mount://tut/designs/gateway");
     expect(h.mounted).toEqual({ tut: ["designs/gateway/gateway.edn", "project.yaml"] });
@@ -61,7 +61,7 @@ describe("mountingFetch", () => {
   it("sends a design over the size threshold to the server, says why once, and keeps it there", async () => {
     const h = harness(listing);
     const told: ServerFallback[] = [];
-    const f = mountingFetch(h.engine, h.source, () => false, h.network, 1000, (x) => told.push(x));
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 1000, onServer: (x) => told.push(x) });
     await ask(f, "CheckService/GetCheckReport", "mount://tut/designs/gateway");
     await ask(f, "QueryService/RunQuery", "mount://tut/designs/gateway");
     expect(h.fetched).toEqual([]);
@@ -74,7 +74,7 @@ describe("mountingFetch", () => {
   it("sends a design whose listing fails to the server", async () => {
     const h = harness(new Error("resource exhausted"));
     const told: ServerFallback[] = [];
-    const f = mountingFetch(h.engine, h.source, () => false, h.network, 10_000, (x) => told.push(x));
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000, onServer: (x) => told.push(x) });
     await ask(f, "DesignService/GetDesign", "mount://tut/designs/gateway");
     expect(h.networkCalls).toEqual(["/agni.v1.webapi.DesignService/GetDesign"]);
     expect(told[0].reason).toMatch(/could not be listed/);
@@ -82,9 +82,25 @@ describe("mountingFetch", () => {
 
   it("passes the requests it is told to straight to the network", async () => {
     const h = harness(listing);
-    const f = mountingFetch(h.engine, h.source, (u) => u.pathname.includes("WorkspaceService"), h.network, 10_000);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000, passthrough: (u) => u.pathname.includes("WorkspaceService") });
     await ask(f, "WorkspaceService/ListMounts", "mount://tut");
     expect(h.networkCalls).toEqual(["/agni.v1.webapi.WorkspaceService/ListMounts"]);
+    expect(h.fetched).toEqual([]);
+  });
+
+  it("answers a browser mount in the worker, listing nothing on the server, even for workspace calls", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({
+      engine: h.engine,
+      source: h.source,
+      network: h.network,
+      passthrough: (u) => u.pathname.includes("WorkspaceService"),
+      browserMounts: new Set(["local"]),
+    });
+    await ask(f, "WorkspaceService/ProposeDesigns", "mount://local/abc");
+    await ask(f, "CheckService/GetCheckReport", "mount://local/abc/x.edn");
+    expect(h.engineCalls).toEqual(["/agni.v1.webapi.WorkspaceService/ProposeDesigns", "/agni.v1.webapi.CheckService/GetCheckReport"]);
+    expect(h.networkCalls).toEqual([]);
     expect(h.fetched).toEqual([]);
   });
 });

@@ -37,6 +37,12 @@
     /* The viewer's breadcrumb, at the head of the same strip. Sized to its content so the tab
        strip keeps the bar's free width, and bottom-padded to sit on the tabs' baseline. */
     .vw-crumb { flex: 0 0 auto; padding: 0 0 5px 8px; color: #999; font-size: 12px; white-space: nowrap; }
+    .drop-open { flex: 0 0 auto; margin: 0 0 5px 8px; font-size: 12px; }
+    .drop-dialog { max-width: 720px; width: 90vw; max-height: 85vh; overflow: auto; }
+    .drop-design { border-top: 1px solid #ddd; padding: 8px 0; }
+    .drop-design-note { color: #8a5a00; font-size: 12px; margin: 4px 0; }
+    .drop-design-yaml { width: 100%; font-family: monospace; font-size: 12px; box-sizing: border-box; }
+    .drop-unread { font-size: 12px; color: #666; }
     .engine-note { flex: 0 1 auto; padding: 0 0 5px 8px; color: #8a5a00; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* WS9-049: the visited-sheet tab strip. It takes the bar's free width (so the Compare/Panels
        chrome stays right-aligned) and scrolls horizontally rather than wrapping the bar taller. */

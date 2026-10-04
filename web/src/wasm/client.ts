@@ -60,11 +60,29 @@ export interface DesignSource {
   fetchFile(mount: string, path: string): Promise<Uint8Array>;
 }
 
+// MountingOptions configures mountingFetch.
+export interface MountingOptions {
+  engine: WasmEngine;
+  source: DesignSource;
+  // network is the page's own fetch, for whatever the worker does not answer.
+  network: typeof globalThis.fetch;
+  // passthrough names requests that go to the network whatever they name, the calls about the
+  // server's own mounts.
+  passthrough?: (url: URL) => boolean;
+  // browserMounts are mounts whose files exist only in the page (agni issue 854). A request naming
+  // one goes to the worker, passthrough or not, and its design is never listed on the server, which
+  // has never seen it.
+  browserMounts?: Set<string>;
+  // maxBytes is the largest design the worker takes; a bigger one goes to the server.
+  maxBytes?: number;
+  // onServer hears, once per design, that it went to the server and why.
+  onServer?: (f: ServerFallback) => void;
+}
+
 // mountingFetch is the engine's fetch with the design's files brought in first (agni issue 853). A
 // design keeps its server URL under the in-browser engine: before a request reaches the worker,
 // every `mount://` URI in its body is listed through `source` and the files the worker does not
-// already hold, by hash, are fetched and mounted under the same mount name. Requests in `passthrough`
-// skip the worker entirely, which is where the calls naming the server's own mounts go.
+// already hold, by hash, are fetched and added under the same mount name.
 //
 // A design whose file set is over `maxBytes`, or whose listing fails, is analysed by the server
 // instead, and `onServer` hears why once per design. Every later request naming it goes to the
@@ -72,16 +90,14 @@ export interface DesignSource {
 //
 // The body is read as Connect JSON, which is what the viewer's transport sends. A binary body names
 // no URI this can see, so it goes to the worker as is.
-export function mountingFetch(
-  engine: WasmEngine,
-  source: DesignSource,
-  passthrough: (url: URL) => boolean,
-  network: typeof globalThis.fetch,
-  maxBytes = Number.POSITIVE_INFINITY,
-  onServer: (f: ServerFallback) => void = () => {},
-): typeof globalThis.fetch {
+export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
+  const { engine, source, network } = o;
+  const passthrough = o.passthrough ?? (() => false);
+  const browserMounts = o.browserMounts ?? new Set<string>();
+  const maxBytes = o.maxBytes ?? Number.POSITIVE_INFINITY;
+  const onServer = o.onServer ?? (() => {});
   const held = new Map<string, Map<string, string>>(); // mount -> path -> sha256
-  const listed = new Map<string, Promise<void>>(); // uri -> the mount that brought it in
+  const listed = new Map<string, Promise<void>>(); // uri -> the listing that brought it in
   const onServerSide = new Set<string>(); // uris analysed by the server engine
   const toServer = (uri: string, reason: string) => {
     if (onServerSide.has(uri)) return;
@@ -130,23 +146,24 @@ export function mountingFetch(
 
   return async (input, init) => {
     const req = new Request(input, init);
-    if (passthrough(new URL(req.url))) return network(req);
-    const text = await req.clone().text();
     const uris = new Set<string>();
     try {
-      collectMountURIs(JSON.parse(text), uris);
+      collectMountURIs(JSON.parse(await req.clone().text()), uris);
     } catch {
       // not JSON, so nothing to bring in
     }
+    const inBrowser = [...uris].some((u) => browserMounts.has(mountOf(u)));
+    if (inBrowser) return engine.fetch(req);
+    if (passthrough(new URL(req.url))) return network(req);
     await Promise.all([...uris].map(bring));
     if ([...uris].some((u) => onServerSide.has(u))) return network(req);
     return engine.fetch(req);
   };
 }
 
-function mb(bytes: number): string {
-  if (bytes < 1 << 20) return `${Math.ceil(bytes / 1024)} KB`;
-  return `${Math.round(bytes / (1 << 20))} MB`;
+// mountOf is a `mount://` URI's mount name.
+export function mountOf(uri: string): string {
+  return uri.replace(/^mount:\/\//, "").split("/")[0];
 }
 
 // collectMountURIs finds every string value in a decoded JSON body that is a `mount://` URI.
@@ -158,4 +175,10 @@ function collectMountURIs(v: unknown, out: Set<string>): void {
   } else if (v && typeof v === "object") {
     for (const x of Object.values(v)) collectMountURIs(x, out);
   }
+}
+
+// mb writes a size for a person, in KB under a megabyte.
+function mb(bytes: number): string {
+  if (bytes < 1 << 20) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${Math.round(bytes / (1 << 20))} MB`;
 }

@@ -14,6 +14,10 @@
     <!-- agni issue 852: set when the page asked for the browser engine and a design went to the
          server instead, with the reason. -->
     <div id="engine-note" class="engine-note" role="status" hidden></div>
+    <!-- agni issue 854: open files from the visitor's machine into the browser engine, the keyboard
+         route to the same place a drag onto the page goes. Shown by the bundle. -->
+    <button id="drop-open" class="drop-open" type="button" hidden>Open files…</button>
+    <input id="drop-input" type="file" multiple hidden />
     <!-- WS9-049: the visited-sheet tab strip island mounts here. It is NOT the design's sheet
          list (that is the Sheets panel); a sheet earns a tab the first time it is shown. -->
     <div id="sheet-tabs" class="sheet-tabs-host" data-component="sheet-tabs"></div>
@@ -107,6 +111,9 @@
     <span class="render-busy-label">rendering…</span>
   </div>
 </div>
+<!-- agni issue 854: the designs a drop of files makes, each as an editable design.yaml, filled by
+     the bundle. -->
+<dialog id="drop-dialog" class="drop-dialog"></dialog>
 {{ end }}
 
 {{ define "AppScript" }}
