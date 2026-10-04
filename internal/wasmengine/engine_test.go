@@ -4,11 +4,16 @@ import (
 	"context"
 	"io/fs"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
+	"github.com/panyam/agni/fshost"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/goapplib/wasmhost"
 )
 
@@ -79,5 +84,42 @@ func TestBuildServesThroughWasmhost(t *testing.T) {
 	}
 	if body := checkReport(t, h); !strings.Contains(body, "gateway-profiles/") || !strings.Contains(body, `"sourceFile":"designs/gateway/gateway.edn"`) {
 		t.Errorf("after adding the project's files, the report lacks its profile rules or its locators:\n%.400s", body)
+	}
+}
+
+// TestADesignInNoProjectDrawsWithItsOwnSymbols mounts the tutorial gateway's folder on its own, the
+// way a visitor drops it, with its design.yaml but no project.yaml above it. Its symbol library
+// beside the descriptor must draw every part, and its declared intent must run (agni issue 887). The
+// same folder inside its project drew 0 undrawn placements and on its own drew 19.
+func TestADesignInNoProjectDrawsWithItsOwnSymbols(t *testing.T) {
+	dir := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(readTree(t, dir))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	ctx := context.Background()
+	d, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Uri: "mount://m"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(d.Msg.GetUndrawn()); n != 0 {
+		t.Errorf("%d placements undrawn, so the design's own symbols/ did not reach the read", n)
+	}
+	c, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Uri: "mount://m"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	intent := 0
+	for _, s := range c.Msg.GetReport().GetSections() {
+		for _, g := range s.GetRules() {
+			if strings.HasPrefix(g.GetRule(), "intent/") {
+				intent++
+			}
+		}
+	}
+	if intent == 0 {
+		t.Error("no finding from the design's declared intent, which deliberately misdeclares a rail and must fail")
 	}
 }

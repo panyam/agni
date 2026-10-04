@@ -46,8 +46,9 @@ Intent is per-**design**, unlike naming conventions, interface profiles and seed
 are per-project. Each board has its own intended architecture, so the declaration lives with the
 board rather than with the team, in the one file that already says which files the board is.
 
+A design that belongs to no project still runs the intent its own `design.yaml` declares.
 `--intent-path` on `check` and `review` names a file in the same shape, a `name` and an `intent:`
-section, for a design that belongs to no project or to try a declaration before committing it. It
+section, for a design with no `design.yaml`, or to try a declaration before committing it. It
 rides the request as the declaration's value, so on a design that already declares intent it REPLACES
 that declaration for the run rather than being added to it, the way a request's naming convention
 replaces the project's. A server takes no intent flag, since intent is per design and a flag would

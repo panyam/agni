@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -65,5 +66,29 @@ func TestSymbolPathsNeedAResolver(t *testing.T) {
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/symbols"}}}
 	if _, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, ""); err == nil {
 		t.Error("a host that cannot resolve a symbol directory must refuse rather than read short")
+	}
+}
+
+// TestADesignInNoProjectKeepsItsOwnConfig is agni issue 887: a design.yaml with no project.yaml
+// above it still declares its symbol library and its intent, and both must reach the run. Before, a
+// projectless design composed nothing of its own, so it drew with its externally-symboled parts
+// missing and its intent rules never ran, with no error to say so.
+func TestADesignInNoProjectKeepsItsOwnConfig(t *testing.T) {
+	design := &webapi.Design{
+		Name: "designs/g",
+		Config: &webapi.AnalysisConfig{
+			SymbolPathUris: []string{"mount://m/g/symbols"},
+			Intent:         &configpb.DesignIntent{Modules: []*configpb.IntentModule{{Name: "MCU", Class: "ic"}}},
+		},
+	}
+	ov, err := OverlayFor(context.Background(), symbolResolver{dirs: []string{"/host/g/symbols"}}, nil, nil, design, nil, "")
+	if err != nil {
+		t.Fatalf("OverlayFor: %v", err)
+	}
+	if got := ReadOpts(ov.ReadOptions()...); len(got.SymbolPaths) != 1 || got.SymbolPaths[0] != "/host/g/symbols" {
+		t.Errorf("the design's own symbol library must reach the read, got %v", got.SymbolPaths)
+	}
+	if !ov.Intent || ov.DesignIntent == nil {
+		t.Errorf("the design's own intent must compose, got Intent=%v", ov.Intent)
 	}
 }

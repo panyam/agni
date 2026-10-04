@@ -384,7 +384,11 @@ finding the engine's opinion or my project's" is a question a reviewer will ask.
 
 A design that resolves to no project is a normal state, not a failure. It gets the plain viewer and
 the built-in catalog, and since a design with no project has no project
-config to apply, it cannot be checked against another project's rules.
+config to apply, it cannot be checked against another project's rules. A `design.yaml` in no project
+still brings its own config, its `symbols/` library and its `intent:`, which compose under the
+design's own name exactly as they would under a project (agni issue 887). Until that fix a
+projectless design applied its companions and silently dropped both, so a dropped folder drew its
+schematic with every externally-symboled part missing.
 
 **A project's own library of derived relations resolves through the same edge** (agni issue 773).
 `lib/` beside `project.yaml` is discovered like `profiles/`, travels as `library_uris`, and is read

@@ -278,9 +278,13 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	id.addProto("request", req)
 	id.addProto("project", p)
 	id.addProto("design", d)
-	if p == nil {
+	if p == nil && d == nil {
 		return overlayWithRequest(ctx, resolver, req, Overlay{}, baseConvention, id)
 	}
+	// A design in no project still has config of its own, its symbol library and its intent, which
+	// compose here exactly as they do under a project, with nothing inherited (agni issue 887). A
+	// design dropped into the browser rarely comes with a project.yaml.
+	//
 	// The project's config and the design's intent resolve TOGETHER, as one AnalysisConfig, so a run
 	// cannot compose one design's intent against another's profiles. What the project inherits is
 	// layered in first, so `merged` is its whole config and not only its own descriptor's.
@@ -294,7 +298,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	id.addProto("inherited-config", merged)
 	var o Overlay
 	if resolver != nil {
-		cfg, err := resolver.ResolveConfig(ctx, merged, projectNamespace(p))
+		cfg, err := resolver.ResolveConfig(ctx, merged, configNamespace(p, d))
 		if err != nil {
 			return Overlay{}, err
 		}
@@ -304,7 +308,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		o.Library, o.LibraryDocs = cfg.Library, cfg.LibraryDocs
 		id.addDigest("project-config", cfg.Digest)
 	} else if configNeedsResolver(merged) {
-		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, p.GetName())
+		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, configNamespace(p, d))
 	}
 	// The design's intent arrives as a value and compiles here, with no I/O, on any host.
 	if src, err := intentSource(merged, d.GetName()); err != nil {
@@ -332,6 +336,15 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 //
 // It is the project's resource name so that two projects on one server do not collide.
 func projectNamespace(p *webapi.Project) string { return p.GetName() }
+
+// configNamespace is the namespace a design's composed config resolves under: its project's, or the
+// design's own resource name when it is in no project.
+func configNamespace(p *webapi.Project, d *webapi.Design) string {
+	if p != nil {
+		return projectNamespace(p)
+	}
+	return d.GetName()
+}
 
 // requestNamespace is the source name a REQUEST's profiles are registered under.
 //
