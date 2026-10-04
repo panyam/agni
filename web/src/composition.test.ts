@@ -32,14 +32,26 @@ import { join } from "node:path";
 // the holes and their ids are the contract between the server-rendered page and main.ts, and a test
 // carrying its own copy of the markup would keep passing after the page changed underneath it.
 //
-// The block is static HTML (the only `{{ }}` in the file are the define/end wrappers themselves), so
-// slicing it out needs no template engine. If that stops being true this throws rather than quietly
-// testing a fragment.
+// The block is HTML with a few fields the server fills (the engine, its size limit, the base path
+// and the host), so slicing it out needs no template engine as long as each field is filled with
+// what `agni serve` renders by default. A field this does not know throws rather than leaving
+// `{{ ... }}` in an attribute the bundle reads, which would test a page no server ever sends.
+const servedFields: Record<string, string> = {
+  "{{ .Engine }}": "server",
+  "{{ .WasmMaxBytes }}": "134217728",
+  "{{ .Base }}": "/",
+  "{{ .Host }}": "",
+};
+
 function pageBody(): string {
   const src = readFileSync(join(process.cwd(), "templates/ViewerPage.html"), "utf8");
   const m = /\{\{ define "Body" \}\}([\s\S]*?)\n\{\{ end \}\}/.exec(src);
   if (!m) throw new Error("ViewerPage.html has no Body block; the composition test cannot run");
-  return m[1];
+  let body = m[1];
+  for (const [field, value] of Object.entries(servedFields)) body = body.split(field).join(value);
+  const left = /\{\{[^}]*\}\}/.exec(body);
+  if (left) throw new Error(`ViewerPage.html's Body has a field this test does not fill: ${left[0]}`);
+  return body;
 }
 
 function readSrc(name: string): string {

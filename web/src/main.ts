@@ -27,12 +27,12 @@ import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, useEngineFetch,
 } from "./api.js";
-import { startEngine, mountingFetch, type WasmEngine } from "./wasm/client.js";
+import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
 import { BROWSER_MOUNT, installDrop } from "./wasm/drop.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
-import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
+import { appBase, currentLocation, hasFile, locationToUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { LocateReason } from "./query.js";
 import { delayedBusy } from "./busy.js";
@@ -89,7 +89,22 @@ function withEngineParams(url: string): string {
 // pageEngine is the engine this page analyses its design on: the URL's `engine=`, else the one the
 // server wrote into the shell (`agni serve --engine`), else the server.
 function pageEngine(): string {
+  // A page served as plain files has no server to analyse anything, so it runs in the browser.
+  if (onStaticHost) return "wasm";
   return engineParams.get("engine") ?? document.querySelector<HTMLElement>(".app")?.dataset.engine ?? "server";
+}
+
+// The shell says where the app is served and whether an agni server is behind it (agni issue 856).
+// Both are read before anything builds or reads a URL.
+const shell = document.querySelector<HTMLElement>(".app")?.dataset ?? {};
+const onStaticHost = shell.host === "static";
+setBase(shell.base || "/");
+setStaticHost(onStaticHost);
+
+// fileURL is where one of a mount's files is fetched from: the server's read-only /raw/ route, or
+// the same path under the static site's raw/ folder, which `agni site` writes with that layout.
+function fileURL(mount: string, path: string): URL {
+  return new URL(`${appBase()}raw/${encodeURIComponent(mount)}/${path.split("/").map(encodeURIComponent).join("/")}`, location.href);
 }
 
 // wasmMaxBytes is the largest design the page analyses in the browser: the URL's `wasm-max-bytes=`,
@@ -142,7 +157,7 @@ function installPageDrop(engine: WasmEngine | undefined): void {
     propose: (uri) => files.proposeDesigns({ uri }),
     open: (path) => {
       const segs = [BROWSER_MOUNT, ...path.split("/")].map(encodeURIComponent).join("/");
-      window.history.pushState(null, "", withEngineParams(`/designs/${segs}/view`));
+      window.history.pushState(null, "", withEngineParams(`${appBase()}designs/${segs}/view`));
       window.dispatchEvent(new PopStateEvent("popstate"));
     },
     refuse: (reason) => showEngineNote(`${reason}.`),
@@ -173,15 +188,24 @@ async function startPageEngine(): Promise<WasmEngine | undefined> {
     mountingFetch({
       engine,
       source: {
-        list: (uri) => files.listDesignFiles({ uri }),
+        // A static site lists each mount whole, in files/<mount>.json beside its raw/ folder, since a
+        // seeded mount is one design and there is no server to ask.
+        list: onStaticHost
+          ? async (uri) => {
+              const res = await network(new URL(`${appBase()}files/${encodeURIComponent(mountOf(uri))}.json`, location.href));
+              if (!res.ok) throw new Error(`${mountOf(uri)}: ${res.status}`);
+              return (await res.json()) as DesignFiles;
+            }
+          : (uri) => files.listDesignFiles({ uri }),
         fetchFile: async (mount, path) => {
-          const res = await network(new URL(`/raw/${encodeURIComponent(mount)}/${path.split("/").map(encodeURIComponent).join("/")}`, location.href));
+          const res = await network(fileURL(mount, path));
           if (!res.ok) throw new Error(`${mount}/${path}: ${res.status}`);
           return new Uint8Array(await res.arrayBuffer());
         },
       },
       network,
-      passthrough: (url) => url.pathname.startsWith(workspacePath),
+      // With no server, workspace calls are the worker's too.
+      passthrough: (url) => !onStaticHost && url.pathname.startsWith(workspacePath),
       browserMounts: new Set([BROWSER_MOUNT]),
       maxBytes: wasmMaxBytes(),
       onServer: (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),

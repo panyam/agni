@@ -1,0 +1,51 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "HeadExtra" }}
+<style>
+  .st-app { max-width: 860px; margin: 0 auto; padding: 40px 20px 60px; }
+  .st-app h1 { font-size: 20px; margin: 0 0 4px; color: #222; }
+  .st-tagline { color: #555; margin: 0 0 24px; }
+  .st-private { border-left: 3px solid #2563eb; background: #f8faff; padding: 10px 14px; margin: 0 0 28px; color: #333; }
+  .st-section h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin: 0 0 8px; border-top: 1px solid #e5e5e5; padding-top: 10px; }
+  .st-section { margin-bottom: 30px; }
+  .st-list { list-style: none; margin: 0; padding: 0; }
+  .st-row { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+  .st-link { font-weight: 600; color: #1d4ed8; text-decoration: none; }
+  .st-link:hover { text-decoration: underline; }
+  .st-meta { color: #777; font-size: 12px; margin-top: 2px; }
+  .st-open { display: inline-block; border: 1px solid #2563eb; border-radius: 6px; padding: 8px 14px; color: #1d4ed8; text-decoration: none; font-weight: 600; }
+  .st-open:hover { background: #f8faff; }
+</style>
+{{ end }}
+
+{{ define "Body" }}
+<div class="st-app">
+  <h1>Agni</h1>
+  <p class="st-tagline">Check a KiCad or EDIF design in your browser, with its findings drawn on the schematic, and trace and query it, with nothing installed.</p>
+
+  <p class="st-private">Everything here runs in your browser. A design you open from your own machine is read
+    there and is never uploaded anywhere; the examples below are downloaded once, like any page.</p>
+
+  <div class="st-section">
+    <h2>Open your own design</h2>
+    <a class="st-open" href="{{ .Base }}designs/local/view/">Open files…</a>
+    <div class="st-meta">A KiCad project folder, an EDIF netlist with its schematic export, or a zip of either.</div>
+  </div>
+
+  <div class="st-section">
+    <h2>Or open an example</h2>
+    <ul class="st-list">
+      {{ range .Seeds }}
+      <li class="st-row">
+        <a class="st-link" href="{{ $.Base }}{{ .Href }}">{{ .Title }}</a>
+        <div class="st-meta">{{ .Format }} · {{ .Size }}{{ if .Licence }} · {{ .Licence }}{{ end }}{{ if .Note }} · {{ .Note }}{{ end }}</div>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</div>
+{{ end }}
+
+{{ define "AppScript" }}{{ end }}
+
+{{ define "SitePage" }}{{ template "BasePage" . }}{{ end }}

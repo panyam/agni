@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench demo-site wasm-bench demo-site examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -241,6 +241,19 @@ BOARD ?= examples/tutorial-project
 DESIGN ?= designs/gateway
 wasm-bench: agni ui wasm
 	cd web && node browser/bench.mjs $(abspath $(BOARD)) $(DESIGN)
+
+# The browser-only public demo as static files (agni issue 856): a landing page over the seeded
+# boards, the viewer at each, the drop page, and the built engine, served under DEMO_BASE. Seeds come
+# from the tutorial and the fetched samples corpus, whose licences travel with them.
+#   make demo-site && python3 -m http.server -d $(DEMO_ROOT) 8000   then /agni/demo/
+DEMO_ROOT ?= /tmp/agni-demo-site
+DEMO_BASE ?= /agni/demo/
+DEMO_SEEDS ?= --seed gateway=examples/tutorial-project \
+	--seed royalblue=tools/samples/boards/royalblue54L-feather \
+	--seed jetson=tools/samples/boards/jetson-agx-thor-baseboard
+demo-site: ui wasm samples-oracle
+	rm -rf $(DEMO_ROOT)
+	$(GO) run ./cmd/agni site $(DEMO_ROOT)$(DEMO_BASE) --base $(DEMO_BASE) $(DEMO_SEEDS)
 
 # The wasm entry point under Node, as the browser's worker runs it: the exports take bytes and answer
 # without deadlocking. What the engine ANSWERS is held to the server's natively, by

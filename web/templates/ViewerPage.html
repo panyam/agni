@@ -1,16 +1,16 @@
 {{# include "./BasePage.html" #}}
 
 {{ define "HeadExtra" }}
-<link rel="stylesheet" href="/static/app.css" />
+<link rel="stylesheet" href="{{ .Base }}static/app.css" />
 {{ end }}
 
 {{ define "Body" }}
-<div class="app" data-engine="{{ .Engine }}" data-wasm-max-bytes="{{ .WasmMaxBytes }}">
+<div class="app" data-engine="{{ .Engine }}" data-wasm-max-bytes="{{ .WasmMaxBytes }}" data-base="{{ .Base }}" data-host="{{ .Host }}">
   <div class="sheet-nav-bar">
     <!-- The way back. A design is the deepest page in the app and the only one you can reach by a
          shared link, so it is the page most likely to be somebody's first, and it had no route out
          of itself. "Designs" returns to the folder browser, "Agni" to the landing page. -->
-    <nav class="vw-crumb"><a class="ld-home" href="/">Agni</a> / <a class="ld-home" href="/designs/">Designs</a></nav>
+    <nav class="vw-crumb"><a class="ld-home" href="{{ .Base }}">Agni</a> / <a class="ld-home" href="{{ .Base }}designs/">Designs</a></nav>
     <!-- agni issue 852: set when the page asked for the browser engine and a design went to the
          server instead, with the reason. -->
     <div id="engine-note" class="engine-note" role="status" hidden></div>
@@ -117,7 +117,7 @@
 {{ end }}
 
 {{ define "AppScript" }}
-<script type="module" src="/static/app.js"></script>
+<script type="module" src="{{ .Base }}static/app.js"></script>
 {{ end }}
 
 {{ define "ViewerPage" }}{{ template "BasePage" . }}{{ end }}

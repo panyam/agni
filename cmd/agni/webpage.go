@@ -20,6 +20,13 @@ type serveApp struct {
 	// wasmMaxBytes is the largest design file set the page analyses in the browser (--wasm-max-bytes,
 	// agni issue 852). A bigger design goes to the server engine.
 	wasmMaxBytes int64
+	// base is the path the pages are served under, "/" for `agni serve` and the static demo's prefix
+	// for `agni site` (agni issue 856).
+	base string
+	// static marks pages written as plain files for a host with no agni server behind it.
+	static bool
+	// siteSeeds are the example boards the static demo's landing page lists.
+	siteSeeds []siteSeed
 }
 
 // ViewerPage is the server-rendered work page of the web viewer. Its template
@@ -36,6 +43,13 @@ type ViewerPage struct {
 	// design's size from ListDesignFiles before reading anything, and sends a bigger one to the
 	// server engine, saying why.
 	WasmMaxBytes int64
+	// Base is the path the page is served under, ending in "/". Every asset and link in the shell
+	// goes through it, because a page served under a prefix with root-relative assets returns 200
+	// and renders with no CSS (agni issue 856).
+	Base string
+	// Host is "static" when the page is a plain file with no agni server behind it, so the bundle
+	// reads every design's files as static files and answers everything in the worker.
+	Host string
 }
 
 // Load populates the page before render. The shell is static and per-file data arrives over
@@ -49,6 +63,10 @@ func (p *ViewerPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[
 	p.WasmMaxBytes = app.Context.wasmMaxBytes
 	if p.WasmMaxBytes <= 0 {
 		p.WasmMaxBytes = defaultWasmMaxBytes
+	}
+	p.Base = app.Context.basePath()
+	if app.Context.static {
+		p.Host = "static"
 	}
 	return nil, false
 }
@@ -155,4 +173,12 @@ func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app)))
 	// The retired /files/ space (WS9-049) redirects rather than 404s, so shared links keep resolving.
 	mux.HandleFunc("/files/", redirectLegacyFiles)
+}
+
+// basePath is the path the pages are served under, "/" unless set, always ending in "/".
+func (a *serveApp) basePath() string {
+	if a.base == "" {
+		return "/"
+	}
+	return strings.TrimSuffix(a.base, "/") + "/"
 }

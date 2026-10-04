@@ -210,6 +210,20 @@ declare it.
 |---|---|
 | `--format <fmt>` | `text` (each `design.yaml`, then what is not read) or `json` (the `ProposeDesignsResponse` the `ProposeDesigns` rpc returns) |
 
+### `site <outdir>`
+
+Write the browser-only demo as plain files for a static host: a landing page listing the seeded
+example boards, the viewer at each seeded design and at the drop page, the built viewer and wasm
+engine, and each seed's files with a listing of them. Every page runs the engine in the visitor's
+browser, so no agni server is involved. `make demo-site` runs it over the tutorial and the samples
+corpus. Run `make ui wasm` first, since the command copies the built assets.
+
+| flag | what it does |
+|---|---|
+| `--base <path>` | the path the site is served under, such as `/agni/demo/`; every asset and link goes through it |
+| `--seed <name>=<folder>` | an example board (repeatable); the folder becomes mount `<name>`, and its `LICENSE` line is shown beside it |
+| `--web-dir <dir>` | the viewer's own templates and built `static/` |
+
 ### `start <design-file> [dir]`
 
 Scaffold a review project around an existing design file, so the commands above can stop taking

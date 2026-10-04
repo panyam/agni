@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { emptyLocation, hasDir, hasFile, locationToUrl, parseUrl, type ViewerLocation } from "./router.js";
+import { emptyLocation, hasDir, hasFile, locationToUrl, parseUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -178,3 +178,23 @@ function splitHref(url: string): [string, string] {
   const i = url.indexOf("?");
   return i < 0 ? [url, ""] : [url.slice(0, i), url.slice(i)];
 }
+
+describe("the router under a base path, on a static host (agni issue 856)", () => {
+  it("builds and reads every URL under the base, and reads <...>/view/ as the design", () => {
+    setBase("/agni/demo/");
+    setStaticHost(true);
+    try {
+      const loc = parseUrl("/agni/demo/designs/rb/board.kicad_sch/view/", "?sheet=root");
+      expect(hasFile(loc)).toBe(true);
+      expect(loc.mount).toBe("rb");
+      expect(loc.path).toBe("board.kicad_sch");
+      expect(loc.sheet).toBe("root");
+      expect(locationToUrl(loc)).toBe("/agni/demo/designs/rb/board.kicad_sch/view?sheet=root");
+      expect(hasFile(parseUrl("/designs/rb/board.kicad_sch/view", ""))).toBe(false);
+      expect(locationToUrl(parseUrl("/agni/demo/", ""))).toBe("/agni/demo/");
+    } finally {
+      setBase("/");
+      setStaticHost(false);
+    }
+  });
+});

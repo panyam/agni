@@ -140,6 +140,13 @@ worker, workspace calls included, and none is ever listed on the server. On the 
 `local` design is refused with a note rather than sent, because the server has never seen it and
 would need it uploaded, which a drop must not do by accident.
 
+With no agni server at all, `agni site` writes the same pages as plain files for a static host
+(agni issue 856). The shell then says it is static (`data-host`) and gives its path prefix
+(`data-base`), so every asset and link goes under the prefix, workspace calls go to the worker too,
+and a seeded mount's files come from `files/<mount>.json`, a listing in `ListDesignFiles`' shape,
+and the files under `raw/<mount>/`. A static host serves a design's page as `…/view/index.html`, so
+on such a page the router reads an address ending `/view/` as the design.
+
 A design too big for the browser goes to the server engine instead, and the page says so in its top
 bar. The page learns a design's size from `ListDesignFiles` before it reads anything, and compares it
 with `agni serve --wasm-max-bytes` (default 128 MB), which a page's `?wasm-max-bytes=` overrides. A
