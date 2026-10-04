@@ -7,7 +7,7 @@
 // separate pages with separate entries so each page downloads only what it uses: the browse page
 // carries neither dockview nor the WebGL renderer. The datasheets workbench, and pdf.js with it, is
 // built from datasheet/web, its own package (agni issue 744).
-import { readFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import * as esbuild from "esbuild";
 import { solidPlugin } from "esbuild-plugin-solid";
@@ -46,16 +46,6 @@ const solidBuild = (b) => ({
   logLevel: "info",
 });
 
-// The engine worker (agni issue 178) is a CLASSIC script, since it loads Go's wasm_exec.js with
-// importScripts, so it is an iife rather than an ES module, and it has no Solid in it.
-const workerBuild = {
-  entryPoints: ["src/wasm/worker.ts"],
-  bundle: true,
-  format: "iife",
-  outfile: "static/agni-worker.js",
-  logLevel: "info",
-};
-
 // The wasm bench's page entry (agni issue 852), loaded only by browser/bench.mjs.
 const benchBuild = {
   entryPoints: ["src/wasm/bench.ts"],
@@ -65,7 +55,15 @@ const benchBuild = {
   logLevel: "info",
 };
 
-const builds = [...appBundles.map(solidBuild), workerBuild, benchBuild];
+const builds = [...appBundles.map(solidBuild), benchBuild];
+
+// The engine worker (agni issues 178 and 863) is goapplib's wasmhost worker, shipped prebuilt as a
+// classic script because it loads Go's wasm_exec.js with importScripts. It is copied beside the
+// bundles rather than bundled, so the page names it by URL.
+// static/ isn't in the repo, and esbuild only creates it when it writes the bundles below, so a fresh
+// checkout (CI, the Docker build) needs it made before the copy.
+mkdirSync("static", { recursive: true });
+copyFileSync(require.resolve("@panyam/tsappkit/wasmhost/worker.js"), "static/agni-worker.js");
 
 if (watch) {
   for (const b of builds) {

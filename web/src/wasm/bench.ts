@@ -7,7 +7,7 @@ import { DesignService } from "../gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "../gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "../gen/agni/v1/webapi/query_pb.js";
 import { startEngine } from "./client.js";
-import type { Files } from "./protocol.js";
+import type { Files } from "./client.js";
 
 export interface BenchArgs {
   // mount is the server mount holding the board, and files its paths within it, fetched from /raw/.
@@ -40,7 +40,7 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
 
   // Mounted under the same name as natively, so the URIs the two halves ask about match.
   t = performance.now();
-  await engine.mount("bench", files);
+  await engine.add("bench", files);
   const composeMS = performance.now() - t;
 
   const transport = createConnectTransport({ baseUrl: location.origin, fetch: (i, init) => engine.fetch(i, init) });

@@ -137,18 +137,21 @@ BOARD=<folder> DESIGN=<path>`): on a 97 MB KiCad board of 1834 components the br
 same 590 findings. The bytes stand in for cost, and that calibration is KiCad's, where the board file
 is most of the size, so an EDIF netlist of the same size may cost more.
 
-Three choices in the host follow from the browser rather than from the contract.
+The host is goapplib's `wasmhost`, which `cmd/agni-wasm` runs with `wasmhost.ServeRebuild` and the
+page reaches through `@panyam/tsappkit/wasmhost` (agni issue 863). Three of its choices follow from
+the browser rather than from the contract.
 
 - **Files are pushed in before a request, never read during one.** The page hands the worker a
-  mount's files as bytes (`agniMount`), and every read is then served from memory through an
-  `fs.FS`. A browser can only produce bytes asynchronously, and an `fs.FS` read is synchronous, so
+  mount's files as bytes (`globalThis.agni.add`), and every read is then served from memory through
+  an `fs.FS`. A browser can only produce bytes asynchronously, and an `fs.FS` read is synchronous, so
   reading mid-request would block Go on a JavaScript promise inside a callback that pauses the event
   loop the promise needs.
-- **A request is answered as a promise, on a goroutine of its own.** `agniHTTP` returns at once and
-  runs the handler beside it, for the same reason.
-- **A mount change recomposes the engine.** Each `agniMount` adds its files to the mount and builds
-  the services again over the new mount table, through `agni.New`, which refuses a build missing the
-  rule catalog. A browser bundle that shipped without it would otherwise report every design clean.
+- **A request is answered as a promise, on a goroutine of its own.** `globalThis.agni.http` returns
+  at once and runs the handler beside it, for the same reason.
+- **A mount change recomposes the engine.** Each `add` keeps the files the mount already holds and
+  builds the services again (`wasmengine.Build`), through `agni.New`, which refuses a build missing
+  the rule catalog. A browser bundle that shipped without it would otherwise report every design
+  clean.
 
 The browser and the server read through different adapters over one set of ports, `fshost` over
 in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with

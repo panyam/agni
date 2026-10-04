@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	connectrpc.com/connect v1.20.0
-	github.com/panyam/goapplib v0.1.1
+	github.com/panyam/goapplib v0.5.0
 	github.com/panyam/servicekit v0.1.5
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -18,7 +18,7 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/panyam/gocurrent v0.1.1 // indirect
-	github.com/panyam/goutils v0.1.13 // indirect
+	github.com/panyam/goutils v0.1.14 // indirect
 	github.com/panyam/jaala v0.1.19
 	github.com/panyam/templar v0.1.2 // indirect
 	golang.org/x/sys v0.47.0 // indirect
