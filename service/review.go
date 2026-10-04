@@ -209,6 +209,22 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	return ReviewOf(name, doc), nil
 }
 
+// ListChecklists answers which checklists the design's project declares, inherited ones included (agni
+// issue 859). It reads the project through the resolver CreateReview's overlay uses and opens no file,
+// so it serves a host with no filesystem as CreateReview does. See ProjectResolver.Checklists for what
+// an absent project and an empty one each answer.
+func (s *ReviewService) ListChecklists(ctx context.Context, req *webapi.ListChecklistsRequest) (*webapi.ListChecklistsResponse, error) {
+	u, err := ParseArtifactURI(req.GetDesignUri())
+	if err != nil {
+		return nil, err
+	}
+	lists, project, err := s.projects.Checklists(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	return &webapi.ListChecklistsResponse{Project: project, Checklists: lists}, nil
+}
+
 // ReviewOf is the Review resource for a stored document, with its summary computed from the
 // document's item outcomes (agni issue 734). Every rpc returning a review builds it here, so the
 // summary is never stored and a document written before the field existed answers with one. The CLI

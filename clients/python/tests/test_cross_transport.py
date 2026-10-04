@@ -172,6 +172,8 @@ CASES: List[Case] = [
         {"name": UNSTORED},
         _run_time,
     ),
+    # Which checklists the design's project declares (agni issue 859).
+    Case("ReviewService/ListChecklists", lambda c: c.list_checklists(design_uri=DESIGN)),
     # The engine's tables for an answer (agni issue 862). Each side tabulates the answer IT got, so
     # this also holds the two answers to one projection.
     Case("TableService/Tabulate", lambda c: c.tabulate(check=c.check_design(uri=DESIGN), order_by=["rule", "-subject"])),

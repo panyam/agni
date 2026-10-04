@@ -97,6 +97,7 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 | `QueryService/RunQueries` | `query --set - --format json`, the set sent on stdin |
 | `DiffService/DiffDesigns` | `diff --format json` |
 | `TableService/Tabulate` | `tabulate -`, the request sent on stdin |
+| `ReviewService/ListChecklists` | `checklists --format json` |
 | `DesignService/TraceDesign` | `trace --format json` |
 | `DesignService/GetLayoutReport` | `render --report --report-format json` |
 
@@ -108,7 +109,10 @@ request over Connect does (agni issue 788). `validate`
 and `params` print a wire message with no rpc behind it, and `CliTransport.run` reads them. `intake`
 is C31's declared exception and has no wire message. `create_review` runs `agni review`, sending the
 manifest on stdin, and answers the same `Review` as the server except that it is unnamed, because the
-CLI stores nothing (agni issue 734). Getting, listing and deleting stored reviews need a server.
+CLI stores nothing (agni issue 734). Getting, listing and deleting stored reviews need a server. To
+run a project's own checklist, ask `list_checklists(design_uri=…)` for the checklists its project
+declares, inherited ones included, and send one's `manifest` to `create_review`; the first is the
+project's default (agni issue 859).
 
 ## Where the two transports differ today
 

@@ -5,13 +5,22 @@ import { NO_PROJECT_LABEL, PLAIN_LABEL, projectLabel, type ProjectState } from "
 
 // A viewer harness wired with a ProjectService whose resolution the test controls. Everything else
 // is stubbed to the minimum the presenter touches on open.
-function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDir: boolean }[] = []) {
+function harness(
+  resolve: unknown,
+  dirEntries: { name: string; uri: string; isDir: boolean }[] = [],
+  listed?: { project: string; checklists: { name: string; manifest?: { name: string } }[] },
+) {
   const onProject = vi.fn();
   const onConvention = vi.fn();
   const onReview = vi.fn();
   const listReviews = vi.fn(async () => ({ reviews: [] }));
   const createReview = vi.fn(async (_req: unknown) => ({ name: "reviews/r1" }));
   const getReviewManifest = vi.fn(async (_req: unknown) => ({ manifest: { name: "from a file" } }));
+  // ListChecklists answers from the project's COMPOSED config. By default that is what the resolved
+  // project declares itself; a test passes `listed` for a project that inherits more.
+  const declared = (resolve as { project?: { name?: string; config?: { checklists?: unknown[] } } })?.project;
+  const listChecklists = vi.fn(async (_req: unknown) =>
+    listed ?? { project: declared?.name ?? "", checklists: declared?.config?.checklists ?? [] });
   const resolveDesign = vi.fn(async () => resolve);
   const listRules = vi.fn(async () => ({ rules: [{ name: "bulk-cap", severity: "warning", summary: "", available: true }] }));
   const checkDesign = vi.fn(async () => ({ findings: [] }));
@@ -51,13 +60,13 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
     },
     undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { listReviews, createReview, getReviewManifest } as any,
+    { listReviews, createReview, getReviewManifest, listChecklists } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { listDir } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { resolveDesign } as any,
   );
-  return { presenter, onProject, onConvention, onReview, resolveDesign, listRules, checkDesign, listDir, createReview, getReviewManifest };
+  return { presenter, onProject, onConvention, onReview, resolveDesign, listRules, checkDesign, listDir, createReview, getReviewManifest, listChecklists };
 }
 
 // last is the most recent state the bar was pushed, which is what a user is actually looking at.
@@ -193,6 +202,20 @@ describe("the config pickers offer one kind each", () => {
     const h = harness(inProject);
     await h.presenter.openFile("m", "d/gateway.edn");
     expect(refs(h.onReview, "checklists")).toEqual(["review", "house"]);
+  });
+
+  // A project's own descriptor does not hold what it inherits through extends, so the picker missed
+  // a shared checklist the CLI ran (agni issue 829). It now lists through ListChecklists, which
+  // answers from the composed config, and a checklist that only arrives by inheritance is offered.
+  it("offers the checklists a project inherits through extends", async () => {
+    const bare = { ...inProject, project: { ...inProject.project, config: { profileUris: ["mount://m/profiles"] } } };
+    const h = harness(bare, [{ name: "stray.yaml", uri: "mount://m/d/stray.yaml", isDir: false }], {
+      project: "projects/gateway",
+      checklists: [{ name: "shared", manifest: { name: "Team checklist" } }, { name: "review", manifest: { name: "Sample Board design review" } }],
+    });
+    await h.presenter.openFile("m", "d/gateway.edn");
+    expect(h.listChecklists).toHaveBeenCalledWith({ designUri: artifactUri("m", "d/gateway.edn") });
+    expect(refs(h.onReview, "checklists")).toEqual(["shared", "review"]);
   });
 
   // A project checklist is already a value, so running it reads nothing.

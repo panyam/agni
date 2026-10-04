@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import re
 from pathlib import Path
 
 import openpyxl
@@ -43,7 +42,7 @@ def test_revision_audit_exercise_runs(tmp_path, isolated, monkeypatch):
     out = tmp_path / "audit.xlsx"
     mod.main(["-o", str(out), "--agni", AGNI])
     wb = openpyxl.load_workbook(out)
-    built = ["Diff"] + [name for name, _ in mod.TABLES] + ["Findings", "Verdicts", "Verdicts by rule"]
+    built = ["Diff"] + [name for name, _ in mod.TABLES] + ["Review", "Review summary", "Findings", "Verdicts", "Verdicts by rule"]
     assert wb.sheetnames == built
     for ws in wb.worksheets:
         assert ws.max_row > 1, f"{ws.title} is empty"
@@ -51,5 +50,5 @@ def test_revision_audit_exercise_runs(tmp_path, isolated, monkeypatch):
     summary = out.with_suffix(".md").read_text()
     for name in built:
         assert f"## {name}\n" in summary, f"summary has no section for {name}"
-    # The review tab waits on a way to ask for the project's checklist (agni issue 859), and says so.
-    assert re.findall(r"## (\w+)\n\nmissing: .*#\d+", summary) == ["Review"]
+    # Every tab group the mission needs is built (agni issues 818, 822, 859).
+    assert "missing:" not in summary
