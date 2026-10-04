@@ -17,6 +17,9 @@ type serveApp struct {
 	// engine is which engine the viewer runs a design on, "server" or "wasm" (--engine, agni issue
 	// 853). The page carries it, and a `?engine=` on the URL overrides it.
 	engine string
+	// wasmMaxBytes is the largest design file set the page analyses in the browser (--wasm-max-bytes,
+	// agni issue 852). A bigger design goes to the server engine.
+	wasmMaxBytes int64
 }
 
 // ViewerPage is the server-rendered work page of the web viewer. Its template
@@ -29,6 +32,10 @@ type ViewerPage struct {
 	// to read. The mount in the URL says where the design's files live and this says who reads them,
 	// so a design keeps one URL under either (agni issue 853).
 	Engine string
+	// WasmMaxBytes is the largest design file set the page analyses in the browser. The page learns a
+	// design's size from ListDesignFiles before reading anything, and sends a bigger one to the
+	// server engine, saying why.
+	WasmMaxBytes int64
 }
 
 // Load populates the page before render. The shell is static and per-file data arrives over
@@ -38,6 +45,10 @@ func (p *ViewerPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[
 	p.Engine = app.Context.engine
 	if p.Engine == "" {
 		p.Engine = engineServer
+	}
+	p.WasmMaxBytes = app.Context.wasmMaxBytes
+	if p.WasmMaxBytes <= 0 {
+		p.WasmMaxBytes = defaultWasmMaxBytes
 	}
 	return nil, false
 }

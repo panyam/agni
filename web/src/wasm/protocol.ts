@@ -6,10 +6,12 @@ export type Files = Record<string, Uint8Array>;
 
 export type EngineRequest =
   | { id: number; kind: "mount"; name: string; files: Files }
-  | { id: number; kind: "http"; method: string; url: string; headers: Record<string, string>; body: Uint8Array };
+  | { id: number; kind: "http"; method: string; url: string; headers: Record<string, string>; body: Uint8Array }
+  // stats asks how much memory the engine holds, for measurement (agni issue 852).
+  | { id: number; kind: "stats" };
 
 export type EngineReply =
-  | { id: number; ok: true; status?: number; headers?: Record<string, string>; body?: Uint8Array }
+  | { id: number; ok: true; status?: number; headers?: Record<string, string>; body?: Uint8Array; memoryBytes?: number }
   | { id: number; ok: false; error: string };
 
 // Ready is the worker's first message, once the engine has composed, or the reason it could not load.

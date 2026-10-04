@@ -71,8 +71,10 @@ function syncUrl(loc: ViewerLocation): void {
 const engineParams = (() => {
   const q = new URLSearchParams(window.location.search);
   const out = new URLSearchParams();
-  const v = q.get("engine");
-  if (v !== null) out.set("engine", v);
+  for (const k of ["engine", "wasm-max-bytes"]) {
+    const v = q.get(k);
+    if (v !== null) out.set(k, v);
+  }
   return out;
 })();
 
@@ -87,6 +89,22 @@ function withEngineParams(url: string): string {
 // server wrote into the shell (`agni serve --engine`), else the server.
 function pageEngine(): string {
   return engineParams.get("engine") ?? document.querySelector<HTMLElement>(".app")?.dataset.engine ?? "server";
+}
+
+// wasmMaxBytes is the largest design the page analyses in the browser: the URL's `wasm-max-bytes=`,
+// else the server's `--wasm-max-bytes` from the shell (agni issue 852).
+function wasmMaxBytes(): number {
+  const v = engineParams.get("wasm-max-bytes") ?? document.querySelector<HTMLElement>(".app")?.dataset.wasmMaxBytes;
+  const n = Number(v);
+  return v && Number.isFinite(n) && n > 0 ? n : Number.POSITIVE_INFINITY;
+}
+
+// showEngineNote says, in the top bar, that a design left the engine the page asked for.
+function showEngineNote(text: string): void {
+  const el = document.getElementById("engine-note");
+  if (!el) return;
+  el.textContent = text;
+  el.hidden = false;
 }
 
 // startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine
@@ -115,6 +133,8 @@ async function startPageEngine(): Promise<void> {
       },
       (url) => url.pathname.startsWith(workspacePath),
       network,
+      wasmMaxBytes(),
+      (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),
     ),
   );
 }

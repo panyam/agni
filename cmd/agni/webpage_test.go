@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -269,6 +270,16 @@ func TestViewerPageCarriesItsEngine(t *testing.T) {
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
 		if want := `data-engine="` + c.want + `"`; !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("engine %q: the shell does not carry %s", c.engine, want)
+		}
+	}
+	// The browser engine's size limit travels the same way, defaulting to the measured one (agni 852).
+	for _, c := range []struct{ max, want int64 }{{0, defaultWasmMaxBytes}, {1000, 1000}} {
+		mux := http.NewServeMux()
+		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{wasmMaxBytes: c.max}), mux)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
+		if want := fmt.Sprintf(`data-wasm-max-bytes="%d"`, c.want); !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("--wasm-max-bytes %d: the shell does not carry %s", c.max, want)
 		}
 	}
 }

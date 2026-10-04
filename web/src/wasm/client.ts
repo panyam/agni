@@ -9,6 +9,8 @@ export interface WasmEngine {
   // mount replaces one mount's files. Each buffer is TRANSFERRED to the worker, so it is empty here
   // afterwards.
   mount(name: string, files: Files): Promise<void>;
+  // memoryBytes is the engine's wasm memory, which never shrinks, so it is the peak so far.
+  memoryBytes(): Promise<number>;
 }
 
 export interface EngineAssets {
@@ -48,6 +50,11 @@ export function startEngine(assets: EngineAssets): Promise<WasmEngine> {
       if (!reply.ok) throw new Error(reply.error);
       return new Response(reply.body ? new Uint8Array(reply.body) : null, { status: reply.status, headers: reply.headers });
     },
+    async memoryBytes() {
+      const reply = await call({ kind: "stats" }, []);
+      if (!reply.ok) throw new Error(reply.error);
+      return reply.memoryBytes ?? 0;
+    },
     async mount(name, files) {
       const reply = await call(
         { kind: "mount", name, files },
@@ -77,6 +84,14 @@ export function startEngine(assets: EngineAssets): Promise<WasmEngine> {
 export interface DesignFiles {
   mount: string;
   files: { path: string; sha256: string }[];
+  totalSize: bigint | number;
+}
+
+// Placement says where one request's design is analysed. A design the worker cannot hold goes to the
+// server engine with the reason, so the page can say why (agni issue 852).
+export interface ServerFallback {
+  uri: string;
+  reason: string;
 }
 
 export interface DesignSource {
@@ -92,6 +107,10 @@ export interface DesignSource {
 // already hold, by hash, are fetched and mounted under the same mount name. Requests in `passthrough`
 // skip the worker entirely, which is where the calls naming the server's own mounts go.
 //
+// A design whose file set is over `maxBytes`, or whose listing fails, is analysed by the server
+// instead, and `onServer` hears why once per design. Every later request naming it goes to the
+// network, so one design never has its answers split between two engines.
+//
 // The body is read as Connect JSON, which is what the viewer's transport sends. A binary body names
 // no URI this can see, so it goes to the worker as is.
 export function mountingFetch(
@@ -99,15 +118,34 @@ export function mountingFetch(
   source: DesignSource,
   passthrough: (url: URL) => boolean,
   network: typeof globalThis.fetch,
+  maxBytes = Number.POSITIVE_INFINITY,
+  onServer: (f: ServerFallback) => void = () => {},
 ): typeof globalThis.fetch {
   const held = new Map<string, Map<string, string>>(); // mount -> path -> sha256
   const listed = new Map<string, Promise<void>>(); // uri -> the mount that brought it in
+  const onServerSide = new Set<string>(); // uris analysed by the server engine
+  const toServer = (uri: string, reason: string) => {
+    if (onServerSide.has(uri)) return;
+    onServerSide.add(uri);
+    onServer({ uri, reason });
+  };
 
   const bring = (uri: string): Promise<void> => {
     let p = listed.get(uri);
     if (!p) {
       p = (async () => {
-        const set = await source.list(uri);
+        let set: DesignFiles;
+        try {
+          set = await source.list(uri);
+        } catch (err) {
+          toServer(uri, `its files could not be listed for the browser (${String(err)})`);
+          return;
+        }
+        const size = Number(set.totalSize);
+        if (size > maxBytes) {
+          toServer(uri, `its files are ${mb(size)}, over the ${mb(maxBytes)} the browser engine takes`);
+          return;
+        }
         const have = held.get(set.mount) ?? new Map<string, string>();
         const want = set.files.filter((f) => have.get(f.path) !== f.sha256);
         if (!want.length) return;
@@ -142,8 +180,14 @@ export function mountingFetch(
       // not JSON, so nothing to bring in
     }
     await Promise.all([...uris].map(bring));
+    if ([...uris].some((u) => onServerSide.has(u))) return network(req);
     return engine.fetch(req);
   };
+}
+
+function mb(bytes: number): string {
+  if (bytes < 1 << 20) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${Math.round(bytes / (1 << 20))} MB`;
 }
 
 // collectMountURIs finds every string value in a decoded JSON body that is a `mount://` URI.
