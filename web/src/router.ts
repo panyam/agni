@@ -55,7 +55,34 @@ export interface ViewerLocation {
   traceHops: number;
 }
 
-const DESIGNS_PREFIX = "/designs/";
+// base is the path the app is served under, "/" on `agni serve` and "/agni/demo/" on the static
+// demo (agni issue 856). The page writes it into the shell (data-base on .app) and the boot code
+// passes it to setBase before anything builds or reads a URL.
+let base = "/";
+
+// setBase sets the path every URL the router builds or reads sits under. It always ends in "/".
+export function setBase(b: string): void {
+  base = b.endsWith("/") ? b : `${b}/`;
+}
+
+// staticHost marks a page served as plain files (agni issue 856). Such a host serves a design's
+// page as <...>/view/index.html, at an address ending "/view/", and browses no folders, so on it
+// that address is the design rather than a folder named "view".
+let staticHost = false;
+
+// setStaticHost turns on reading "<...>/view/" as a design, for a page served as plain files.
+export function setStaticHost(on: boolean): void {
+  staticHost = on;
+}
+
+// appBase is the path the app is served under, for code building URLs outside the router.
+export function appBase(): string {
+  return base;
+}
+
+function designsPrefix(): string {
+  return `${base}designs/`;
+}
 
 // VIEW_SEGMENT terminates a design's work-page URL, telling a FILE location from a FOLDER one
 // without depending on the path's shape. A folder ends in "/" and a design ends in "/view". The
@@ -93,9 +120,9 @@ function isRenderMode(s: string | null): s is RenderMode {
 export function locationToUrl(loc: ViewerLocation): string {
   if (hasDir(loc)) {
     const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
-    return DESIGNS_PREFIX + segs.join("/") + "/";
+    return designsPrefix() + segs.join("/") + "/";
   }
-  if (!hasFile(loc)) return "/";
+  if (!hasFile(loc)) return base;
   const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
   const params = new URLSearchParams();
   if (loc.sheet) params.set("sheet", loc.sheet);
@@ -112,7 +139,7 @@ export function locationToUrl(loc: ViewerLocation): string {
   // Only alongside its trace, and only when it is not the server default.
   if (loc.trace && loc.traceHops > 0) params.set("hops", String(loc.traceHops));
   const q = params.toString();
-  return DESIGNS_PREFIX + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
+  return designsPrefix() + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
 }
 
 // parseUrl reads a location back out of a pathname+search pair (as read from window.location). The
@@ -122,8 +149,9 @@ export function locationToUrl(loc: ViewerLocation): string {
 // the empty location.
 export function parseUrl(pathname: string, search: string): ViewerLocation {
   const loc = emptyLocation();
-  if (!pathname.startsWith(DESIGNS_PREFIX)) return loc;
-  const rest = pathname.slice(DESIGNS_PREFIX.length);
+  if (!pathname.startsWith(designsPrefix())) return loc;
+  let rest = pathname.slice(designsPrefix().length);
+  if (staticHost && rest.endsWith(`/${VIEW_SEGMENT}/`)) rest = rest.slice(0, -1);
   const isDir = rest.endsWith("/");
   const segs = rest
     .split("/")
