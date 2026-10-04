@@ -18,5 +18,6 @@ static/app.css
 # loader script.
 static/agni-worker.js
 static/agni-worker.js.map
+static/agni-bench.js
 static/agni.wasm
 static/wasm_exec.js

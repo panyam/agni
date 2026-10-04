@@ -60,7 +60,7 @@ type WorkspaceServiceClient interface {
 	// somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
 	// issue 853). That is the design's folder, its project's descriptor, and every config directory
 	// the project names. Each file is then fetched by its path under the server's read-only
-	// `/raw/<mount>/<path>` route. A set larger than the server's bound is refused with its size,
+	// `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
 	// since a board that big is what the server's own engine is for.
 	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
 }
@@ -135,7 +135,7 @@ type WorkspaceServiceHandler interface {
 	// somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
 	// issue 853). That is the design's folder, its project's descriptor, and every config directory
 	// the project names. Each file is then fetched by its path under the server's read-only
-	// `/raw/<mount>/<path>` route. A set larger than the server's bound is refused with its size,
+	// `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
 	// since a board that big is what the server's own engine is for.
 	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
 }

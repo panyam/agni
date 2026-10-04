@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -233,6 +233,14 @@ browser-test: ui wasm
 wasm:
 	GOOS=js GOARCH=wasm $(GO) build -o web/static/agni.wasm ./cmd/agni-wasm
 	cp "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
+
+# Measure the engine on one board natively and in a Chromium Web Worker, side by side (agni issue
+# 852). Not in the gate: a real board takes minutes and lives in the samples corpus.
+#   make wasm-bench BOARD=tools/samples/boards/royalblue54L-feather DESIGN=RoyalBlue54L-Feather.kicad_sch
+BOARD ?= examples/tutorial-project
+DESIGN ?= designs/gateway
+wasm-bench: agni ui wasm
+	cd web && node browser/bench.mjs $(abspath $(BOARD)) $(DESIGN)
 
 # The wasm entry point under Node, as the browser's worker runs it: the exports take bytes and answer
 # without deadlocking. What the engine ANSWERS is held to the server's natively, by

@@ -25,8 +25,11 @@ type FileReader interface {
 const ProjectDescriptorName = "project.yaml"
 
 // DesignFilesMaxBytes bounds a design's file set. A set over it is refused rather than truncated,
-// because a partial set analyses as a design missing its board or its profiles and reads clean.
-const DesignFilesMaxBytes = 64 << 20
+// because a partial set analyses as a design missing its board or its profiles and reads clean. It
+// sits above the largest set the in-browser engine was measured to handle (a 97 MB KiCad board in
+// agni issue 852), so the page's own threshold, not this bound, decides which designs go to the
+// browser.
+const DesignFilesMaxBytes = 256 << 20
 
 // designFilesMaxDirs bounds the walk, for a design folder that turns out to hold a vendored tree.
 const designFilesMaxDirs = 2000

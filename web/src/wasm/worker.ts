@@ -30,6 +30,9 @@ const params = new URLSearchParams(self.location.search);
 const wasmUrl = params.get("wasm") ?? "agni.wasm";
 const execUrl = params.get("exec") ?? "wasm_exec.js";
 
+// memory is the engine's linear memory. It only grows, so its size is the engine's peak.
+let memory: WebAssembly.Memory | undefined;
+
 async function boot(): Promise<void> {
   importScripts(execUrl);
   const go = new self.Go();
@@ -37,6 +40,7 @@ async function boot(): Promise<void> {
     self.agniReady = resolve;
   });
   const { instance } = await WebAssembly.instantiateStreaming(fetch(wasmUrl), go.importObject);
+  memory = instance.exports.mem as WebAssembly.Memory;
   void go.run(instance);
   await ready;
 }
@@ -50,6 +54,10 @@ self.onmessage = async (ev) => {
   await booted;
   const req = ev.data;
   try {
+    if (req.kind === "stats") {
+      self.postMessage({ id: req.id, ok: true, memoryBytes: memory?.buffer.byteLength ?? 0 } satisfies EngineReply);
+      return;
+    }
     if (req.kind === "mount") {
       const err = self.agniMount?.(req.name, req.files);
       if (err) throw err;

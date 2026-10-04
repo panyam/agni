@@ -56,7 +56,16 @@ const workerBuild = {
   logLevel: "info",
 };
 
-const builds = [...appBundles.map(solidBuild), workerBuild];
+// The wasm bench's page entry (agni issue 852), loaded only by browser/bench.mjs.
+const benchBuild = {
+  entryPoints: ["src/wasm/bench.ts"],
+  bundle: true,
+  format: "esm",
+  outfile: "static/agni-bench.js",
+  logLevel: "info",
+};
+
+const builds = [...appBundles.map(solidBuild), workerBuild, benchBuild];
 
 if (watch) {
   for (const b of builds) {

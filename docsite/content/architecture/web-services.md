@@ -18,7 +18,7 @@ documents are independent concerns with independent cadences.
 |---|---|---|
 | Workspace | ListMounts | the mount names a tree roots on; `opens` drops the ones holding nothing that client can open and returns how many, so the sidebar can account for a mount an operator configured and cannot find |
 | Workspace | ListDir | one directory level, each file labeled with its reader `format` and the `kind` of client that opens it (design, datasheet, or neither); `opens` declares what the caller can open, which drops folders with none of it anywhere beneath them (a bounded server-side walk, since one level of listing cannot see that far) and is what lets the two trees prune the same mounts to opposite answers |
-| Workspace | ListDesignFiles | every file a design's analysis reads (its folder, its project's descriptor, the config directories the project names) with a size and hash each, for a page analysing it in the browser to fetch from `/raw/<mount>/<path>`; refused over 64 MB |
+| Workspace | ListDesignFiles | every file a design's analysis reads (its folder, its project's descriptor, the config directories the project names) with a size and hash each, for a page analysing it in the browser to fetch from `/raw/<mount>/<path>`; refused over 256 MB |
 | Design | GetDesign | load and summarize one design: sheet list, effective layout, available layouts, native availability |
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
@@ -126,6 +126,16 @@ route, and the worker mounts them under the same mount name. After that, nothing
 crosses the network. Listings and file reads stay with the server, which owns the mount namespace,
 and every other service runs in the worker. A design dropped into the page, held only in the
 browser, can be analysed by the `wasm` engine alone, since the server engine would need it uploaded.
+
+A design too big for the browser goes to the server engine instead, and the page says so in its top
+bar. The page learns a design's size from `ListDesignFiles` before it reads anything, and compares it
+with `agni serve --wasm-max-bytes` (default 128 MB), which a page's `?wasm-max-bytes=` overrides. A
+design whose listing fails goes to the server too. The default comes from measuring the engine in a
+Chromium worker against the same composition run natively (agni issue 852, `make wasm-bench
+BOARD=<folder> DESIGN=<path>`): on a 97 MB KiCad board of 1834 components the browser read it in
+2.4 s, ran the catalog in 8.8 s and peaked at 451 MB, four to five times the native time with the
+same 590 findings. The bytes stand in for cost, and that calibration is KiCad's, where the board file
+is most of the size, so an EDIF netlist of the same size may cost more.
 
 Three choices in the host follow from the browser rather than from the contract.
 

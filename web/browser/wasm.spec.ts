@@ -77,4 +77,18 @@ describe("one design under both engines", () => {
       expect(analysis).toEqual([]);
     });
   });
+
+  // agni issue 852: a design over the page's size limit is analysed on the server instead, the page
+  // says so, and the answers are the server's.
+  it("sends a design over the browser's size limit to the server and says why", async () => {
+    await withPage(browser, async (page) => {
+      const over = await openAndCheck(page, "?engine=wasm&wasm-max-bytes=1000");
+      expect(over.rows.length).toBeGreaterThan(0);
+      expect(over.network.some((p) => p.startsWith(`${apiPrefix}CheckService/`))).toBe(true);
+      expect(over.network.some((p) => p.startsWith("/raw/"))).toBe(false);
+      const note = page.locator("#engine-note");
+      await expect.poll(() => note.isVisible()).toBe(true);
+      expect(await note.textContent()).toMatch(/Analysed on the server: its files are .* over the 1 KB the browser engine takes/);
+    });
+  });
 });

@@ -64,6 +64,7 @@ func serveCmd() *cobra.Command {
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
 	var engine string
+	var wasmMaxBytes int64
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -81,11 +82,13 @@ func serveCmd() *cobra.Command {
 				reviewStorePath: reviewStorePath,
 				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
 				engine:          engine,
+				wasmMaxBytes:    wasmMaxBytes,
 			})
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
 	c.Flags().StringVar(&engine, "engine", engineServer, "which engine the viewer analyses a design on: "+engineServer+", or "+engineWasm+" to run it in the visitor's browser over the design's files (needs `make wasm`); a page's ?engine= overrides it")
+	c.Flags().Int64Var(&wasmMaxBytes, "wasm-max-bytes", defaultWasmMaxBytes, "on the wasm engine, the largest design (its ListDesignFiles total, in bytes) the page analyses in the browser; a bigger one goes to the server engine and the page says so")
 	c.Flags().StringVar(&webDir, "web-dir", "",
 		"directory holding the viewer's OWN assets (templates/ and the built static/*.js), not a folder "+
 			"of designs to browse: mount those with --mount name=path. Defaults to "+defaultWebDir+
@@ -147,6 +150,9 @@ type viewerOpts struct {
 
 	// engine is the viewer's default engine, engineServer or engineWasm (agni issue 853).
 	engine string
+
+	// wasmMaxBytes is the largest design the page analyses in the browser (agni issue 852).
+	wasmMaxBytes int64
 }
 
 // The two engines a viewer page can analyse its design on.
@@ -154,6 +160,13 @@ const (
 	engineServer = "server"
 	engineWasm   = "wasm"
 )
+
+// defaultWasmMaxBytes is where the browser engine stops by default, measured in agni issue 852. A
+// 97 MB KiCad board (1834 components) checked in 8.8 s in a Chromium worker at a 451 MB peak, 4 to 5
+// times its native time, so 128 MB keeps a board of that class in the browser with some margin. The
+// bytes are a proxy for cost that was calibrated on KiCad alone, where a board file is most of the
+// size; an EDIF netlist of the same byte count may cost more.
+const defaultWasmMaxBytes = 128 << 20
 
 // runViewer builds and runs the viewer server for both `serve` and `open`.
 func runViewer(cmd *cobra.Command, o viewerOpts) error {
@@ -332,7 +345,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		mux.Handle("/", apiOnlyHandler(apiPaths))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
 	default:
-		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine}), mux)
+		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes}), mux)
 	}
 
 	srv := &http.Server{Addr: addr, Handler: mux}
