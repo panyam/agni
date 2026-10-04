@@ -1,22 +1,30 @@
 name: docs
 
-# Build the s3gen documentation site from docsite/ and publish it to GitHub Pages.
+# Build the s3gen documentation site from docsite/, with the static demo (agni issue 856) at
+# /agni/demo/, and publish both to GitHub Pages. `make docs-deploy` dispatches this on main.
 # Requires Pages to be enabled for the repo with the source set to "GitHub Actions"
 # (Settings -> Pages -> Build and deployment -> Source: GitHub Actions).
 
 on:
+  # Every merge to main, with no path filter, because the demo carries the engine as wasm and the
+  # viewer, so nearly any change to the repo changes what Pages serves.
   push:
     branches: [main]
-    paths:
-      - docsite/**
-      - .github/workflows/docs.yml
   # The BUILD half runs on a pull request too, because until it did, a docsite change could only be
   # validated by merging it: this workflow had no pull_request trigger and Pages serves its artifact,
   # so the first execution of any change to it was against the live site. Deploying stays on main.
+  # A pull request touching only the engine is not listed, since ci.yml's browser-test runs the same
+  # site spec on it.
   pull_request:
     paths:
       - docsite/**
       - .github/workflows/docs.yml
+      - Makefile
+      - hack/samples.pin
+      - cmd/agni/site*.go
+      - web/templates/SitePage.html
+      - web/browser/site.spec.ts
+      - web/vitest.site.config.ts
   workflow_dispatch:
 
 permissions:
@@ -34,24 +42,47 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version-file: go.mod
 
       - uses: pnpm/action-setup@v4
         with:
           # The version is the project's, not this workflow's: it comes from `packageManager` in
           # docsite/package.json, so a developer's pnpm and CI's cannot drift apart silently. The path is
-          # relative to the repository root, which is what this input requires, and there is no
-          # package.json at that root to fall back on.
+          # relative to the repository root, which is what this input requires.
           package_json_file: docsite/package.json
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: docsite/pnpm-lock.yaml
+          cache-dependency-path: |
+            docsite/pnpm-lock.yaml
+            pnpm-lock.yaml
 
+      # Two installs, because the docsite is its own pnpm project and the demo's viewer is the root
+      # workspace's (web/, web-shared/, datasheet/web/).
       - name: Install docsite dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      # Chromium for the demo's browser spec, as ci.yml installs it for the gate's.
+      - name: Cache the Chromium build
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium
+        run: pnpm exec playwright-core install --with-deps chromium
+        working-directory: web
+
+      # The demo's seeds beyond the tutorial come from the samples corpus, cached on its pin as ci.yml
+      # caches it.
+      - uses: actions/cache@v4
+        with:
+          path: tools/samples
+          key: samples-${{ hashFiles('hack/samples.pin') }}
 
       # `make build`, not the steps by hand. This workflow used to re-implement the build and had
       # already drifted twice: it never ran the esbuild components step (so a page with
@@ -59,8 +90,13 @@ jobs:
       # includeFile returns "" for a file that is not there), and when search landed it did not
       # build the index either, so the deployed site had a search box over a 404. One definition
       # of what a build is, in the Makefile, the way ci.yml does it for testall.
-      - name: Build the site
-        run: make build
+      #
+      # `make docs-site` from the root does that build, writes the demo into dist/demo/ (served at
+      # /agni/demo/), and runs the demo's browser spec against those files, so what is checked is
+      # what is uploaded.
+      - name: Build the site and the demo
+        run: make docs-site
+        working-directory: .
 
       - name: Disable Jekyll
         run: touch dist/.nojekyll

@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench demo-site wasm-bench demo-site examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -246,14 +246,32 @@ wasm-bench: agni ui wasm
 # boards, the viewer at each, the drop page, and the built engine, served under DEMO_BASE. Seeds come
 # from the tutorial and the fetched samples corpus, whose licences travel with them.
 #   make demo-site && python3 -m http.server -d $(DEMO_ROOT) 8000   then /agni/demo/
+# DEMO_OUT is the folder written, which defaults to the base's place under DEMO_ROOT; docs-site points
+# it into the docsite's dist instead, which is served at /agni/.
 DEMO_ROOT ?= /tmp/agni-demo-site
 DEMO_BASE ?= /agni/demo/
+DEMO_OUT ?= $(DEMO_ROOT)$(DEMO_BASE)
 DEMO_SEEDS ?= --seed gateway=examples/tutorial-project \
 	--seed royalblue=tools/samples/boards/royalblue54L-feather \
 	--seed jetson=tools/samples/boards/jetson-agx-thor-baseboard
 demo-site: ui wasm samples-oracle
-	rm -rf $(DEMO_ROOT)
-	$(GO) run ./cmd/agni site $(DEMO_ROOT)$(DEMO_BASE) --base $(DEMO_BASE) $(DEMO_SEEDS)
+	rm -rf $(DEMO_OUT)
+	$(GO) run ./cmd/agni site $(DEMO_OUT) --base $(DEMO_BASE) $(DEMO_SEEDS)
+
+# The docs site as Pages serves it: the docsite under /agni/ with the demo at /agni/demo/, then the
+# static demo's browser spec against the files written. docs.yml runs exactly this. Preview it under
+# the prefix, since at a server's root every asset 404s (docsite/README.md):
+#   mkdir -p /tmp/agni-docs && ln -sfn $$PWD/docsite/dist /tmp/agni-docs/agni
+#   python3 -m http.server -d /tmp/agni-docs 8000   then /agni/ and /agni/demo/
+docs-site:
+	$(MAKE) -C docsite build
+	$(MAKE) demo-site DEMO_OUT=docsite/dist/demo/
+	cd web && AGNI_SITE_DIR=$(CURDIR)/docsite/dist/demo pnpm exec vitest run -c vitest.site.config.ts
+
+# Publish the docs site. Pages serves only the docs.yml workflow's artifact, so a deploy is that
+# workflow run on main, followed here until it finishes.
+docs-deploy:
+	./hack/docs_deploy.sh
 
 # The wasm entry point under Node, as the browser's worker runs it: the exports take bytes and answer
 # without deadlocking. What the engine ANSWERS is held to the server's natively, by
@@ -376,10 +394,10 @@ demo: ui
 
 # Documentation site. The live site is the s3gen app in docsite/, which owns its own targets
 # (make -C docsite run|build|gh-pages) and deploys via the docs.yml GitHub Actions workflow on
-# any push to main touching docsite/**. ghserve/ghbuild are thin aliases to the docsite targets
-# for muscle memory; there is no local publish target here on purpose (the workflow is the
-# canonical deploy). Regenerate the rule/relation catalog with catalog-docs first if the engine
-# catalog changed.
+# every push to main. ghserve/ghbuild are thin aliases to the docsite targets for muscle memory.
+# docs-site builds what Pages serves, the demo included, and docs-deploy publishes by dispatching
+# that workflow, since Pages serves only its artifact. Regenerate the rule/relation catalog with
+# catalog-docs first if the engine catalog changed.
 ghserve:
 	$(MAKE) -C docsite run
 

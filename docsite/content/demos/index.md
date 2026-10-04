@@ -4,6 +4,9 @@ description: "Interactive playgrounds that run in your browser."
 playground: viewer
 ---
 
+[The demo]({{.Site.PathPrefix}}/demo/) opens a few example boards, or a design you drop on it, in the
+viewer with the engine running in your browser. A dropped design never leaves the page.
+
 The goal for this section is a set of playgrounds you can drive in the browser, right inside
 the docs:
 

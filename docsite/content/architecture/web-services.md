@@ -147,6 +147,13 @@ and a seeded mount's files come from `files/<mount>.json`, a listing in `ListDes
 and the files under `raw/<mount>/`. A static host serves a design's page as `…/view/index.html`, so
 on such a page the router reads an address ending `/view/` as the design.
 
+The public demo is this site, deployed with the docs. `make docs-site` builds the docsite into
+`docsite/dist`, which Pages serves at `/agni/`, writes the demo into `dist/demo/` under the base
+`/agni/demo/`, and runs `web/browser/site.spec.ts` against those files. The docs workflow runs that
+target and uploads the result, on every merge to main, and `make docs-deploy` dispatches the same run
+by hand. The spec opens every seed the built site lists, so a seed added to `DEMO_SEEDS` is checked
+on its first deploy.
+
 A design too big for the browser goes to the server engine instead, and the page says so in its top
 bar. The page learns a design's size from `ListDesignFiles` before it reads anything, and compares it
 with `agni serve --wasm-max-bytes` (default 128 MB), which a page's `?wasm-max-bytes=` overrides. A
