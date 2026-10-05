@@ -73,13 +73,14 @@ def tables_to_xlsx(path: str, sheets: Sequence[Tuple[str, Table]]) -> None:
         ws.append(header)
         for cell in ws[1]:
             cell.font = bold
-        for r in rows:
+        for i, r in enumerate(rows, start=2):
             ws.append(r)
             # openpyxl reads a string starting with "=" as a formula, and a cell here is a name off a
-            # design file, so every cell is kept as the text it is.
-            for cell in ws[ws.max_row]:
-                if cell.data_type == "f":
-                    cell.data_type = "s"
+            # design file, so every cell is kept as the text it is. ws.cell is a direct lookup, where
+            # ws.max_row and ws[row] scan the whole sheet and made the write quadratic (agni 907).
+            for j, value in enumerate(r, start=1):
+                if isinstance(value, str) and value.startswith("="):
+                    ws.cell(row=i, column=j).data_type = "s"
         ws.freeze_panes = "A2"
         if header:
             ws.auto_filter.ref = f"A1:{get_column_letter(len(header))}{len(rows) + 1}"

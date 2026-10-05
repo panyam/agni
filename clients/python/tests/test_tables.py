@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 import openpyxl
 import pytest
 
@@ -70,6 +72,20 @@ def test_xlsx_keeps_a_formula_shaped_cell_as_text(tmp_path):
     ws = openpyxl.load_workbook(out)["Nets"]
     assert ws["A2"].data_type == "s" and ws["A2"].value == '=HYPERLINK("x")'
     assert ws["A3"].value == "+5V"
+
+
+def test_xlsx_writes_a_large_sheet_in_linear_time(tmp_path):
+    # A check run's verdicts table carries every pass, 20,018 rows on one real board. Guarding each row
+    # through ws.max_row made the write quadratic, 87 s for that sheet; linear it is well under a second
+    # (agni 907). The bound is generous so a slow machine passes and the quadratic version does not.
+    rows = [[f"rule-{i % 26}", "pass", f"R{i}", f"net-{i}", "x" * 30] for i in range(20000)]
+    rows[7][3] = "=1+1"
+    start = time.monotonic()
+    tables_to_xlsx(str(tmp_path / "big.xlsx"), [("Verdicts", (["rule", "outcome", "ref", "net", "statement"], rows))])
+    assert time.monotonic() - start < 10
+    ws = openpyxl.load_workbook(tmp_path / "big.xlsx", read_only=True)["Verdicts"]
+    cells = [row for row in ws.iter_rows(min_row=9, max_row=9, values_only=True)][0]
+    assert cells[3] == "=1+1"
 
 
 # ---- natural order, and the diff, review and verdict sheets (agni issue 822) ----
