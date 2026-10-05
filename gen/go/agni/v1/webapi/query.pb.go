@@ -348,7 +348,11 @@ type RunQueryResponse struct {
 	Query  string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
 	Source string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
 	// work is what answering this query cost, in the units a work budget counts, so a deployment can
-	// see which queries are expensive and choose a budget from evidence (agni issue 792).
+	// see which queries are expensive and choose a budget from evidence (agni issue 792). It is what
+	// THIS request spent: a server keeps a design's fact base between requests (agni issue 895), and
+	// a derived relation an earlier query already worked out is reused rather than derived again
+	// (panyam/jaala#140), so the same query can cost less on a warm server than on a cold read. A
+	// cold read costs at least this much.
 	Work int64 `protobuf:"varint,6,opt,name=work,proto3" json:"work,omitempty"`
 	// bindings echo the request's, so an answer to a parameterized query still states the whole
 	// question it answers.

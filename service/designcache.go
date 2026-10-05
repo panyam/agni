@@ -308,7 +308,7 @@ func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI art
 	}
 	c := cacheOf(loader)
 	id, ok := optsKey(opts)
-	if _, remote := specs.(param.Prefetcher); c == nil || !ok || remote {
+	if c == nil || !ok || param.Fetches(specs) {
 		return fresh()
 	}
 	key := cacheKey("model", uri.String(), boardURI.String(), id)

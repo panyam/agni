@@ -80,3 +80,26 @@ var (
 	_ Prefetcher  = Layered(nil)
 	_ CorpusNamer = Layered(nil)
 )
+
+// Fetches reports whether reading p goes beyond the process: whether p, or any layer of a Layered,
+// fetches over the network (a Prefetcher other than Layered itself). A local set, a nil provider, and
+// a Layered of only those do not. Layered implements Prefetch to forward to its layers, so asking
+// whether a provider is a Prefetcher says nothing about whether it fetches; a cache deciding whether
+// an answer can outlive the request asks this instead (agni issue 895).
+func Fetches(p ParamProvider) bool {
+	switch v := p.(type) {
+	case nil:
+		return false
+	case Layered:
+		for _, layer := range v {
+			if Fetches(layer.Provider) {
+				return true
+			}
+		}
+		return false
+	case Prefetcher:
+		return true
+	}
+	return false
+}
+

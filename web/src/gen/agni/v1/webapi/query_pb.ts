@@ -266,7 +266,11 @@ export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
 
   /**
    * work is what answering this query cost, in the units a work budget counts, so a deployment can
-   * see which queries are expensive and choose a budget from evidence (agni issue 792).
+   * see which queries are expensive and choose a budget from evidence (agni issue 792). It is what
+   * THIS request spent: a server keeps a design's fact base between requests (agni issue 895), and
+   * a derived relation an earlier query already worked out is reused rather than derived again
+   * (panyam/jaala#140), so the same query can cost less on a warm server than on a cold read. A
+   * cold read costs at least this much.
    *
    * @generated from field: int64 work = 6;
    */
