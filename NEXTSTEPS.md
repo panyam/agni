@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-05, at `5c3b7363` (PR 899).
+Last pruned 2026-10-05, at `70b1cfc4` (PR 925).
 
 ## At a glance
 
@@ -23,11 +23,12 @@ links rather than here. Log each exercise run on the mission issue.
   #902 is the viewer's next shape: a Properties panel for any selection (it replaces Details) and a
   query panel holding named tabs that its Ask rows open. #745 (open a query set as tabs) and #717's
   viewer half fold into it; #904 (area selection) follows it and jaala#132 (bind a set of values).
-- **#851 `mission_public_demo`**, 8 of 23. Exercise last ran at `5c3b7363` (PR 899): step 1 works on
-  the deployed page, short of a board the server answers (#855) and a real EDIF seed (#880). #857
-  (P1, triage the seeded boards' findings) is next.
-- This run: dropped the `feat/856-static-demo` thread (#856 closed through PRs 890 and 892). Filed
-  #902, #904, #905 and jaala#132; closed #893 as a duplicate of #718.
+- **#851 `mission_public_demo`**, 10 of 29. Exercise last ran at `70b1cfc4` (PR 925): `make
+  demo-site` builds, the static site's spec passes, and a reload restores a parsed design (Run checks
+  5.8 s first visit, 4.0 s after). The manual walk waits on #878. #857 (P1) is next by the queue, and
+  #868 then #918 by the mission's last comment.
+- This run: #907 (`tables_to_xlsx` was quadratic in its rows, 87 s for a 20,018-row verdicts sheet)
+  closed through PR 908. No thread changed.
 
 ## Open, ranked
 
