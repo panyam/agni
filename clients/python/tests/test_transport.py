@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from agni import CLI_ONLY, AgniError, CliUnsupported, Client, parse
+from agni.transport import _unknown_field_paths
 from agni.v1.param import param_pb2
 from agni.v1.webapi import checks_pb2, query_pb2, validate_pb2
 
@@ -82,3 +83,16 @@ def test_cli_only_commands_parse_as_their_message(cli: Client):
     assert len(rep.ListFields()) > 0
     spec = t.run(["params", "ACME-LDO-1V8", "--params", str(FIXTURE / "params"), "--format", "json"], param_pb2.PartSpec)
     assert spec.mpn == "ACME-LDO-1V8"
+
+
+def test_strict_binary_names_a_field_the_message_lacks():
+    """The binary decoder keeps a field it does not know rather than failing, so strict has to look
+    for one, nested ones included, which is where a newer server's additions usually land."""
+    known = query_pb2.RunQueryResponse(columns=["c"], rows=[query_pb2.QueryRow(cells=["x"])])
+    raw = known.SerializeToString()
+    unknown_top = raw + b"\xb8\x3e\x01"  # field 999, varint 1
+    row = query_pb2.QueryRow(cells=["x"]).SerializeToString() + b"\xb8\x3e\x01"
+    unknown_nested = query_pb2.RunQueryResponse(columns=["c"]).SerializeToString() + b"\x12" + bytes([len(row)]) + row
+    assert _unknown_field_paths(query_pb2.RunQueryResponse.FromString(raw)) == []
+    assert _unknown_field_paths(query_pb2.RunQueryResponse.FromString(unknown_top)) == ["RunQueryResponse (field 999)"]
+    assert _unknown_field_paths(query_pb2.RunQueryResponse.FromString(unknown_nested)) == ["RunQueryResponse.rows[0] (field 999)"]

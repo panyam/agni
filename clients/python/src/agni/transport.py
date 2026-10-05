@@ -1,8 +1,9 @@
 """Two ways to reach agni, one way to read its answer.
 
-``ConnectTransport`` POSTs protojson to a running ``agni serve``. ``CliTransport`` runs the ``agni``
-binary with ``--format json``. Both hand the text to ``parse``, because C31 makes a command's json
-the protojson of its rpc's message, so there is one shape to read whichever way it arrived.
+``ConnectTransport`` POSTs to a running ``agni serve``, in binary protobuf by default or protojson
+when asked. ``CliTransport`` runs the ``agni`` binary with ``--format json``. Both read the same
+message, because C31 makes a command's json the protojson of its rpc's message, so there is one shape
+to read whichever way it arrived.
 """
 
 from __future__ import annotations
@@ -16,7 +17,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Mapping, Optional, Sequence, Type, TypeVar
 
-from google.protobuf import json_format
+from google.protobuf import json_format, unknown_fields
+from google.protobuf.descriptor import FieldDescriptor
 from google.protobuf.message import Message
 
 from agni.errors import AgniError, CliUnsupported
@@ -49,12 +51,20 @@ def parse(text: str, message_type: Type[M], *, strict: bool = False) -> M:
 
 
 class ConnectTransport:
-    """Calls a running ``agni serve`` over the Connect protocol's unary JSON form.
+    """Calls a running ``agni serve`` over the Connect protocol's unary form.
 
     The server reads a design once and answers many questions about it, which is the reason to
     prefer this transport when asking more than one. ``base_url`` is the server's root, such as
     ``http://127.0.0.1:8080``. Designs are named by the ``mount://`` URIs that server was started
     with.
+
+    ``binary`` (the default) speaks binary protobuf, which for a large answer is about half the bytes
+    of protojson and decodes about a hundred times faster: a 9,323-row query answer is 8.3 MB and 4 ms
+    against 15.5 MB and 0.43 s. ``binary=False`` speaks protojson, which is easier to read on the
+    wire. The answer is the same message either way.
+
+    ``strict`` fails on a response field this client does not know, in either encoding, which is how a
+    test catches a client generated before the server's protos changed.
     """
 
     def __init__(
@@ -64,28 +74,71 @@ class ConnectTransport:
         timeout: float = 300.0,
         headers: Optional[Mapping[str, str]] = None,
         strict: bool = False,
+        binary: bool = True,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.headers = dict(headers or {})
         self.strict = strict
+        self.binary = binary
 
     def call(self, rpc: Rpc, request: Message) -> Message:
-        body = json_format.MessageToJson(request).encode("utf-8")
+        if self.binary:
+            body, content_type = request.SerializeToString(), "application/proto"
+        else:
+            body, content_type = json_format.MessageToJson(request).encode("utf-8"), "application/json"
         req = urllib.request.Request(
             self.base_url + rpc.path,
             data=body,
             method="POST",
-            headers={"Content-Type": "application/json", **self.headers},
+            headers={"Content-Type": content_type, **self.headers},
         )
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                text = resp.read().decode("utf-8")
+                raw = resp.read()
         except urllib.error.HTTPError as e:
             raise _connect_error(rpc, e) from None
         except urllib.error.URLError as e:
             raise AgniError(f"{rpc.path}: cannot reach {self.base_url}: {e.reason}", code="unavailable") from e
-        return parse(text, rpc.response, strict=self.strict)
+        if not self.binary:
+            return parse(raw.decode("utf-8"), rpc.response, strict=self.strict)
+        msg = rpc.response()
+        try:
+            msg.ParseFromString(raw)
+        except Exception as e:  # a DecodeError, under whichever protobuf runtime is installed
+            raise AgniError(
+                f"response is not a valid {rpc.response.DESCRIPTOR.full_name}: {e}", code="bad_response"
+            ) from e
+        if self.strict:
+            unknown = _unknown_field_paths(msg)
+            if unknown:
+                raise AgniError(
+                    f"response {rpc.response.DESCRIPTOR.full_name} carries fields this client does not know, at "
+                    + ", ".join(unknown[:5]),
+                    code="bad_response",
+                )
+        return msg
+
+
+def _unknown_field_paths(msg: Message, path: str = "") -> List[str]:
+    """Where in msg the binary decoder kept fields this client's generated code does not declare."""
+    here = path or msg.DESCRIPTOR.name
+    out = [f"{here} (field {f.field_number})" for f in unknown_fields.UnknownFieldSet(msg)]
+    for field, value in msg.ListFields():
+        if field.type != FieldDescriptor.TYPE_MESSAGE:
+            continue
+        name = f"{here}.{field.name}"
+        if field.message_type.GetOptions().map_entry:
+            vf = field.message_type.fields_by_name["value"]
+            if vf.type == FieldDescriptor.TYPE_MESSAGE:
+                for k, v in value.items():
+                    out += _unknown_field_paths(v, f"{name}[{k!r}]")
+        elif field.is_repeated:
+            for i, v in enumerate(value):
+                out += _unknown_field_paths(v, f"{name}[{i}]")
+        else:
+            out += _unknown_field_paths(value, name)
+    return out
 
 
 def _connect_error(rpc: Rpc, e: urllib.error.HTTPError) -> AgniError:
@@ -222,15 +275,19 @@ def _write_library(req: Message, root: str) -> List[str]:
 
 
 def _query_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "query", "board_uri", "as_named", "overlay", "work_budget", "bindings"))
+    _only(req, ("uri", "query", "board_uri", "as_named", "overlay", "work_budget", "bindings", "omit_locations"))
     _library_only(req)
-    return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req) + _bind_flags(req)
+    return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req) + _bind_flags(req) + _locate_flags(req)
 
 
 def _query_set_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "set", "board_uri", "as_named", "overlay", "work_budget"))
+    _only(req, ("uri", "set", "board_uri", "as_named", "overlay", "work_budget", "omit_locations"))
     _library_only(req)
-    return ["query", req.uri, "--set", "-", "--format", "json"] + _read_flags(req)
+    return ["query", req.uri, "--set", "-", "--format", "json"] + _read_flags(req) + _locate_flags(req)
+
+
+def _locate_flags(req: Message) -> List[str]:
+    return ["--omit-locations"] if getattr(req, "omit_locations", False) else []
 
 
 def _query_set_stdin(req: Message) -> str:

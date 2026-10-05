@@ -59,7 +59,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), BindingsFromProto(req.GetBindings()))
+	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), BindingsFromProto(req.GetBindings()), req.GetOmitLocations())
 	if err != nil {
 		if stopped(err) {
 			return nil, err
@@ -118,7 +118,7 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 			res.Error = err.Error()
 			continue
 		}
-		resp, err := s.answer(ctx, d, q, nq.Query, nq.Bind)
+		resp, err := s.answer(ctx, d, q, nq.Query, nq.Bind, req.GetOmitLocations())
 		if err != nil {
 			if stopped(err) {
 				return nil, err
@@ -253,7 +253,7 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 // answer evaluates one query over a read and assembles its response, echoing queryText as the
 // response's query. An error is the evaluator's (a malformed or unanswerable query), and the caller
 // decides what it means for the call.
-func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind map[string]query.Value) (*webapi.RunQueryResponse, error) {
+func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind map[string]query.Value, omitLocations bool) (*webapi.RunQueryResponse, error) {
 	// Work is measured on this read's own fact base, so it is this query's alone, and reported so a
 	// deployment can see what its queries cost before it sets a budget (agni issue 792).
 	before := d.base.Work()
@@ -289,9 +289,12 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 			break
 		}
 	}
-	// A navigable cell missing from drawnComps/drawnNets gets a locate reason (WS9-039).
+	// A navigable cell missing from drawnComps/drawnNets gets a locate reason (WS9-039). A caller
+	// that draws nothing asks for no locations, which skips the drawing and most of the response's
+	// bytes (omit_locations).
+	locate := navigable && !omitLocations
 	var drawnComps, drawnNets map[string]bool
-	if navigable {
+	if locate {
 		ix, drawnComps, drawnNets = d.geometry(ctx, s.loader)
 	}
 	for _, r := range rows {
@@ -301,8 +304,10 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		}
 		row := &webapi.QueryRow{Cells: cells, Cites: portableCites(r.Cites, d.u.Path)}
 		if navigable {
-			row.CellSheets = make([]*webapi.CellSheets, len(cols))
-			row.CellReasons = make([]checkspb.LocateReason, len(cols))
+			if locate {
+				row.CellSheets = make([]*webapi.CellSheets, len(cols))
+				row.CellReasons = make([]checkspb.LocateReason, len(cols))
+			}
 			for i := range cols {
 				// A polymorphic column takes its kind from THIS row's binding of the kind variable
 				// and puts it on the wire so the client types the cell the same way (agni issue 338).
@@ -327,6 +332,9 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 					if ref == "" {
 						kind = ""
 					}
+				}
+				if !locate {
+					continue
 				}
 				cs := &webapi.CellSheets{}
 				if kind != "" {
