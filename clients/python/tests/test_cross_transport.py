@@ -44,9 +44,21 @@ class Case(NamedTuple):
     # Clears, on both responses, what two runs of one request legitimately differ in, such as when
     # each was made.
     normalize: Optional[Callable[[Message], None]] = None
+    # A query's work is what this request spent, which on a server that keeps a design's fact base
+    # depends on what earlier requests already derived (agni issue 895, panyam/jaala#140), while the
+    # CLI starts cold every time. So it is compared only where a case says the two must agree.
+    compare_work: bool = False
 
 
 UNSTORED = "the CLI stores nothing, so its review has no resource name (agni issue 734)"
+
+
+def _clear_work(msg: Message) -> None:
+    if msg.DESCRIPTOR.name == "RunQueryResponse":
+        msg.work = 0
+    elif msg.DESCRIPTOR.name == "RunQueriesResponse":
+        for r in msg.results:
+            r.result.work = 0
 
 
 def _run_time(rv: Message) -> None:
@@ -128,8 +140,9 @@ CASES: List[Case] = [
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?c, ?p, ?n) => ?n, count(distinct ?c)")),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='pin.net(?c, ?p, "NO_SUCH_NET") => ?c')),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET)),
-    # A budget the query fits in answers alike, work included (agni issue 792).
-    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c', work_budget=10_000_000)),
+    # A budget the query fits in answers alike, work included (agni issue 792). It reads base
+    # relations only, so a kept fact base gives it nothing to reuse.
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c', work_budget=10_000_000), compare_work=True),
     # Bound variables answer alike, text and number, quoting included (agni issue 793).
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"}))),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3.0}))),
@@ -220,6 +233,9 @@ def test_same_request_same_message(case: Case, cli: Client, connect: Client):
     if case.normalize:
         case.normalize(got_cli)
         case.normalize(got_srv)
+    if not case.compare_work:
+        _clear_work(got_cli)
+        _clear_work(got_srv)
     assert got_cli == got_srv
 
 
