@@ -297,12 +297,41 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	if locate {
 		ix, drawnComps, drawnNets = d.geometry(ctx, s.loader)
 	}
+	// Each entity the cells name is located once and kept in resp.Entities, and each citation once
+	// in resp.Sources, so a net on a thousand rows costs one entry rather than a thousand copies of
+	// its sheets (agni issue 916). Rows point into both.
+	entityAt := map[string]int32{}
+	entity := func(kind, ref, pin string) int32 {
+		key := kind + "\x00" + ref + "\x00" + pin
+		if n, ok := entityAt[key]; ok {
+			return n
+		}
+		e := &webapi.AnswerEntity{Kind: kind, Ref: ref, Pin: pin}
+		if locate {
+			e.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kind, Ref: ref, Pin: pin})
+			e.Reason = cellReason(d.model, kind, ref, drawnComps, drawnNets, len(e.SheetIds) > 0)
+		}
+		resp.Entities = append(resp.Entities, e)
+		n := int32(len(resp.Entities))
+		entityAt[key] = n
+		return n
+	}
+	sourceAt := map[string]int32{}
 	for _, r := range rows {
 		cells := make([]string, len(cols))
 		for i, c := range cols {
 			cells[i] = r.Bind[c].S
 		}
 		row := &webapi.QueryRow{Cells: cells, Cites: portableCites(r.Cites, d.u.Path)}
+		for _, c := range row.Cites {
+			n, ok := sourceAt[c]
+			if !ok {
+				resp.Sources = append(resp.Sources, c)
+				n = int32(len(resp.Sources) - 1)
+				sourceAt[c] = n
+			}
+			row.CiteIndex = append(row.CiteIndex, n)
+		}
 		if navigable {
 			if locate {
 				row.CellSheets = make([]*webapi.CellSheets, len(cols))
@@ -333,13 +362,26 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 						kind = ""
 					}
 				}
+				var n int32
+				if kind != "" {
+					pin := ""
+					if kind == check.KindPin {
+						pin = cells[i]
+					}
+					n = entity(kind, ref, pin)
+					if row.CellEntity == nil {
+						row.CellEntity = make([]int32, len(cols))
+					}
+					row.CellEntity[i] = n
+				}
 				if !locate {
 					continue
 				}
 				cs := &webapi.CellSheets{}
-				if kind != "" {
-					cs.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kind, Ref: ref, Pin: cells[i]})
-					row.CellReasons[i] = cellReason(d.model, kind, ref, drawnComps, drawnNets, len(cs.SheetIds) > 0)
+				if n > 0 {
+					e := resp.Entities[n-1]
+					cs.SheetIds = e.SheetIds
+					row.CellReasons[i] = e.Reason
 				}
 				row.CellSheets[i] = cs
 			}

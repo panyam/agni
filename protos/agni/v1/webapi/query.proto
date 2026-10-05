@@ -148,6 +148,26 @@ message QueryRow {
   // from a sibling column, from a constant in the query, or from a variable the projection dropped.
   // Empty for every column that is not a pin column.
   repeated string cell_refs = 6;
+  // cell_entity aligns with cells: for an entity cell, 1 + its index in RunQueryResponse.entities,
+  // where its sheets and locate reason are kept once for every row naming it; 0 for a scalar cell
+  // (agni issue 916). Empty when the answer has no entity column.
+  repeated int32 cell_entity = 7;
+  // cite_index is the row's citations as indices into RunQueryResponse.sources, in cites' order, so
+  // a source cited by every row is one string on the response rather than one per row (agni 916).
+  repeated int32 cite_index = 8;
+}
+
+// AnswerEntity is one entity an answer's cells name, with where it is drawn, kept once on the
+// response however many rows name it (agni issue 916). kind is net, component or pin; ref is the
+// net or ref_des, and for a pin the component; pin is the pin's name, empty otherwise.
+message AnswerEntity {
+  string kind = 1;
+  string ref = 2;
+  string pin = 3;
+  // The sheets this entity is drawn on, as CellSheets.sheet_ids. Empty when the answer omitted
+  // locations or the entity is drawn nowhere, which reason then says.
+  repeated string sheet_ids = 4;
+  agni.v1.checks.LocateReason reason = 5;
 }
 
 // CellSheets is one cell's sheet membership (WS9-038), a message wrapper because proto has no
@@ -188,6 +208,12 @@ message RunQueryResponse {
   // bindings echo the request's, so an answer to a parameterized query still states the whole
   // question it answers.
   map<string, QueryValue> bindings = 7;
+  // entities is every distinct entity the answer's cells name, which QueryRow.cell_entity points
+  // into (agni issue 916). With omit_locations their sheet_ids and reason are empty.
+  repeated AnswerEntity entities = 8;
+  // sources is every distinct citation the answer's rows carry, which QueryRow.cite_index points
+  // into (agni issue 916).
+  repeated string sources = 9;
 }
 
 // QueryValue is a value bound to a query variable. Where the schema types the variable's position,
