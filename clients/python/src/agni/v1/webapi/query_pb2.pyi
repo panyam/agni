@@ -36,20 +36,38 @@ class RunQueryRequest(_message.Message):
     def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ...) -> None: ...
 
 class QueryRow(_message.Message):
-    __slots__ = ("cells", "cites", "cell_sheets", "cell_reasons", "cell_kinds", "cell_refs")
+    __slots__ = ("cells", "cites", "cell_sheets", "cell_reasons", "cell_kinds", "cell_refs", "cell_entity", "cite_index")
     CELLS_FIELD_NUMBER: _ClassVar[int]
     CITES_FIELD_NUMBER: _ClassVar[int]
     CELL_SHEETS_FIELD_NUMBER: _ClassVar[int]
     CELL_REASONS_FIELD_NUMBER: _ClassVar[int]
     CELL_KINDS_FIELD_NUMBER: _ClassVar[int]
     CELL_REFS_FIELD_NUMBER: _ClassVar[int]
+    CELL_ENTITY_FIELD_NUMBER: _ClassVar[int]
+    CITE_INDEX_FIELD_NUMBER: _ClassVar[int]
     cells: _containers.RepeatedScalarFieldContainer[str]
     cites: _containers.RepeatedScalarFieldContainer[str]
     cell_sheets: _containers.RepeatedCompositeFieldContainer[CellSheets]
     cell_reasons: _containers.RepeatedScalarFieldContainer[_checks_pb2.LocateReason]
     cell_kinds: _containers.RepeatedScalarFieldContainer[str]
     cell_refs: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cites: _Optional[_Iterable[str]] = ..., cell_sheets: _Optional[_Iterable[_Union[CellSheets, _Mapping]]] = ..., cell_reasons: _Optional[_Iterable[_Union[_checks_pb2.LocateReason, str]]] = ..., cell_kinds: _Optional[_Iterable[str]] = ..., cell_refs: _Optional[_Iterable[str]] = ...) -> None: ...
+    cell_entity: _containers.RepeatedScalarFieldContainer[int]
+    cite_index: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cites: _Optional[_Iterable[str]] = ..., cell_sheets: _Optional[_Iterable[_Union[CellSheets, _Mapping]]] = ..., cell_reasons: _Optional[_Iterable[_Union[_checks_pb2.LocateReason, str]]] = ..., cell_kinds: _Optional[_Iterable[str]] = ..., cell_refs: _Optional[_Iterable[str]] = ..., cell_entity: _Optional[_Iterable[int]] = ..., cite_index: _Optional[_Iterable[int]] = ...) -> None: ...
+
+class AnswerEntity(_message.Message):
+    __slots__ = ("kind", "ref", "pin", "sheet_ids", "reason")
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    REF_FIELD_NUMBER: _ClassVar[int]
+    PIN_FIELD_NUMBER: _ClassVar[int]
+    SHEET_IDS_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    ref: str
+    pin: str
+    sheet_ids: _containers.RepeatedScalarFieldContainer[str]
+    reason: _checks_pb2.LocateReason
+    def __init__(self, kind: _Optional[str] = ..., ref: _Optional[str] = ..., pin: _Optional[str] = ..., sheet_ids: _Optional[_Iterable[str]] = ..., reason: _Optional[_Union[_checks_pb2.LocateReason, str]] = ...) -> None: ...
 
 class CellSheets(_message.Message):
     __slots__ = ("sheet_ids",)
@@ -58,7 +76,7 @@ class CellSheets(_message.Message):
     def __init__(self, sheet_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class RunQueryResponse(_message.Message):
-    __slots__ = ("columns", "rows", "column_kinds", "query", "source", "work", "bindings")
+    __slots__ = ("columns", "rows", "column_kinds", "query", "source", "work", "bindings", "entities", "sources")
     class BindingsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -73,6 +91,8 @@ class RunQueryResponse(_message.Message):
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     WORK_FIELD_NUMBER: _ClassVar[int]
     BINDINGS_FIELD_NUMBER: _ClassVar[int]
+    ENTITIES_FIELD_NUMBER: _ClassVar[int]
+    SOURCES_FIELD_NUMBER: _ClassVar[int]
     columns: _containers.RepeatedScalarFieldContainer[str]
     rows: _containers.RepeatedCompositeFieldContainer[QueryRow]
     column_kinds: _containers.RepeatedScalarFieldContainer[str]
@@ -80,7 +100,9 @@ class RunQueryResponse(_message.Message):
     source: str
     work: int
     bindings: _containers.MessageMap[str, QueryValue]
-    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ...) -> None: ...
+    entities: _containers.RepeatedCompositeFieldContainer[AnswerEntity]
+    sources: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., entities: _Optional[_Iterable[_Union[AnswerEntity, _Mapping]]] = ..., sources: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class QueryValue(_message.Message):
     __slots__ = ("text", "number")

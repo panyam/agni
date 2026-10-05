@@ -279,10 +279,46 @@ func QueryTable(name string, resp *webapi.RunQueryResponse) *webapi.Table {
 	}
 	t.Columns = append(t.Columns, &webapi.TableColumn{Name: rpt.ProvenanceColumn})
 	for _, r := range resp.GetRows() {
-		cells := append(append(make([]string, 0, len(r.GetCells())+1), r.GetCells()...), strings.Join(r.GetCites(), " ; "))
+		cells := append(append(make([]string, 0, len(r.GetCells())+1), r.GetCells()...), strings.Join(RowCites(resp, r), " ; "))
 		t.Rows = append(t.Rows, &webapi.TableRow{Cells: cells})
 	}
 	return t
+}
+
+// RowCites is a row's citations, read through the response's sources table when the row carries
+// indices into it (agni issue 916) and from the row's own list when it does not, so an answer from
+// either side of that change reads the same.
+func RowCites(resp *webapi.RunQueryResponse, r *webapi.QueryRow) []string {
+	idx := r.GetCiteIndex()
+	if len(idx) == 0 {
+		return r.GetCites()
+	}
+	src := resp.GetSources()
+	out := make([]string, 0, len(idx))
+	for _, i := range idx {
+		if int(i) < len(src) {
+			out = append(out, src[i])
+		}
+	}
+	return out
+}
+
+// IndexSources fills a response's sources table and each row's cite_index from the rows' own cites,
+// for an answer built outside answer (agni issue 916).
+func IndexSources(resp *webapi.RunQueryResponse) {
+	at := map[string]int32{}
+	for _, r := range resp.GetRows() {
+		r.CiteIndex = r.CiteIndex[:0]
+		for _, c := range r.GetCites() {
+			n, ok := at[c]
+			if !ok {
+				resp.Sources = append(resp.Sources, c)
+				n = int32(len(resp.Sources) - 1)
+				at[c] = n
+			}
+			r.CiteIndex = append(r.CiteIndex, n)
+		}
+	}
 }
 
 // OutcomeWord is a verdict outcome as the lower-case word every surface prints. An unrecognised value

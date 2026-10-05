@@ -26,6 +26,33 @@ describe("resultFromResponse", () => {
     expect(row.cellSheets[2]).toEqual([]); // a scalar cell resolves to no badges
   });
 
+  it("reads locations and citations from the response's tables, as it reads them from the rows (agni 916)", () => {
+    const resolve = (ids: string[]) => ids.map((id) => ({ id, name: id.toUpperCase() }));
+    const perRow = {
+      columns: ["r", "n"],
+      columnKinds: ["component", "net"],
+      rows: [
+        { cells: ["R1", "SDA"], cites: ["a.edn"], cellSheets: [{ sheetIds: ["s2"] }, { sheetIds: ["s1", "s2"] }], cellReasons: [0, 0] },
+        { cells: ["R2", "SDA"], cites: ["a.edn"], cellSheets: [{ sheetIds: [] }, { sheetIds: ["s1", "s2"] }], cellReasons: [LocateReason.NO_GEOMETRY, 0] },
+      ],
+    } as never;
+    const tables = {
+      columns: ["r", "n"],
+      columnKinds: ["component", "net"],
+      entities: [
+        { kind: "component", ref: "R1", pin: "", sheetIds: ["s2"], reason: 0 },
+        { kind: "net", ref: "SDA", pin: "", sheetIds: ["s1", "s2"], reason: 0 },
+        { kind: "component", ref: "R2", pin: "", sheetIds: [], reason: LocateReason.NO_GEOMETRY },
+      ],
+      sources: ["a.edn"],
+      rows: [
+        { cells: ["R1", "SDA"], cites: [], citeIndex: [0], cellEntity: [1, 2] },
+        { cells: ["R2", "SDA"], cites: [], citeIndex: [0], cellEntity: [3, 2] },
+      ],
+    } as never;
+    expect(resultFromResponse(tables, resolve).rows).toEqual(resultFromResponse(perRow, resolve).rows);
+  });
+
   it("defaults to empty kinds and no badges when the response omits them", () => {
     const result = resultFromResponse({ columns: ["r"], rows: [{ cells: ["R1"], cites: [] }] } as never);
     expect(result.columnKinds).toEqual([]);
