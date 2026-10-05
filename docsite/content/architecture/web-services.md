@@ -200,6 +200,19 @@ the browser rather than from the contract.
   builds the services again (`wasmengine.Build`), through `agni.New`, which refuses a build missing
   the rule catalog. A browser bundle that shipped without it would otherwise report every design
   clean.
+- **The engine runs as two workers, one per kind of request** (agni issue 911). Go's wasm build has
+  one thread per worker, so a request that runs the rule catalog holds its worker until it finishes,
+  and on a single worker a query asked during "Run checks" waited for the whole run. The page starts
+  two lanes (`startLane`): `jobs` answers the requests in `JOB_RPCS` (`CheckDesign`,
+  `GetCheckReport`, `GetInterfaceCoverage`, `CreateReview`, `DiffDesigns`) and `serve` answers
+  everything else. Each lane holds its own copy of the design and reads it on its first request,
+  so memory doubles. On the Jetson AGX Thor baseboard in Chromium, a query asked half a second into
+  the first check answered in 135 to 145 ms on two lanes against 2.6 to 5.9 s on one worker, and the
+  two workers held about 850 MB against one's 455 MB (`make wasm-bench` prints both configurations).
+  Aborting a request ends its lane's worker and starts an empty one, which brings
+  the design's files in again on its next request. Files dropped on the page are kept by the page
+  (`WasmEngine.add`) and copied into every worker, replacements included, since nothing else could
+  bring them back.
 
 The browser and the server read through different adapters over one set of ports, `fshost` over
 in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with

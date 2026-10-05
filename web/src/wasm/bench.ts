@@ -17,12 +17,14 @@ export interface BenchArgs {
   query: string;
   countComponents: string;
   countNets: string;
+  // oneLane runs every request on one worker, as the engine did before #911, for the comparison.
+  oneLane?: boolean;
 }
 
 async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const asset = (name: string) => new URL(name, import.meta.url).href;
   let t = performance.now();
-  const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") });
+  const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") }, { oneLane: a.oneLane });
   const bootMS = performance.now() - t;
 
   t = performance.now();
@@ -44,6 +46,7 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const composeMS = performance.now() - t;
 
   const transport = createConnectTransport({ baseUrl: location.origin, fetch: (i, init) => engine.fetch(i, init) });
+  const jobsOnly = createClient(CheckService, createConnectTransport({ baseUrl: location.origin, fetch: (i, init) => engine.lanes.jobs.fetch(i, init) }));
   const design = createClient(DesignService, transport);
   const checks = createClient(CheckService, transport);
   const query = createClient(QueryService, transport);
@@ -57,6 +60,31 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const components = await count(a.countComponents);
   const nets = await count(a.countNets);
 
+  // The first check is the one a visitor waits on, so every measurement under it happens while it
+  // runs: a query asked mid-run (#900 wants under 300ms), then an abort, and how long until the jobs
+  // lane answers again. A later check would reuse what this one memoized and prove nothing. On one
+  // worker an abort ends the only worker, so the next request reads the design again.
+  const ctl = new AbortController();
+  t = performance.now();
+  let firstCheckMS = -1; // stays -1 when the abort ended it
+  const started = t;
+  const running = checks.getCheckReport({ uri }, { signal: ctl.signal }).then(
+    () => void (firstCheckMS = performance.now() - started),
+    () => undefined,
+  );
+  await new Promise((r) => setTimeout(r, 500));
+  let t2 = performance.now();
+  await query.runQuery({ uri, query: a.query });
+  const queryDuringCheckMS = performance.now() - t2;
+  const stillRunning = await Promise.race([running.then(() => false), new Promise<boolean>((r) => setTimeout(() => r(true), 0))]);
+  t2 = performance.now();
+  ctl.abort();
+  await running;
+  await jobsOnly.listRules({});
+  const abortToAnswerMS = performance.now() - t2;
+
+  // A check after the abort. On two lanes it runs on a fresh worker, so it reads the design again.
+  // On one worker it reuses the first check's work unless the abort landed.
   t = performance.now();
   const report = (await checks.getCheckReport({ uri })).report;
   const checkMS = performance.now() - t;
@@ -64,6 +92,7 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   t = performance.now();
   const rows = (await query.runQuery({ uri, query: a.query })).rows.length;
   const queryMS = performance.now() - t;
+  const mem = await engine.memoryBytes();
 
   return {
     host: "wasm (Chromium worker)",
@@ -80,7 +109,13 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
     findings: (report?.sections ?? []).reduce((n, s) => n + s.count, 0),
     query_ms: Math.round(queryMS),
     query_rows: rows,
-    peak_mb: Math.round((await engine.memoryBytes()) / (1 << 20)),
+    query_during_check_ms: Math.round(queryDuringCheckMS),
+    check_still_running: stillRunning ? "yes" : "no",
+    first_check_ms: firstCheckMS < 0 ? "aborted" : Math.round(firstCheckMS),
+    abort_to_answer_ms: Math.round(abortToAnswerMS),
+    serve_mb: Math.round(mem.serve / (1 << 20)),
+    jobs_mb: a.oneLane ? 0 : Math.round(mem.jobs / (1 << 20)),
+    peak_mb: Math.round((a.oneLane ? mem.serve : mem.serve + mem.jobs) / (1 << 20)),
   };
 }
 

@@ -50,25 +50,33 @@ try {
     await new Promise((r) => setTimeout(r, 200));
   }
   const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto(`${base}/healthz`);
-  await page.addScriptTag({ url: "/static/agni-bench.js", type: "module" });
-  await page.waitForFunction(() => typeof globalThis.agniBench === "function");
-  const wasm = await page.evaluate(
-    (a) => globalThis.agniBench(a),
-    { mount: "board", files, design, query: native.query, countComponents: native.count_components, countNets: native.count_nets },
-  );
+  // Each configuration in a fresh page, so neither inherits the other's workers.
+  const run = async (oneLane) => {
+    const page = await browser.newPage();
+    await page.goto(`${base}/healthz`);
+    await page.addScriptTag({ url: "/static/agni-bench.js", type: "module" });
+    await page.waitForFunction(() => typeof globalThis.agniBench === "function");
+    const out = await page.evaluate(
+      (a) => globalThis.agniBench(a),
+      { mount: "board", files, design, query: native.query, countComponents: native.count_components, countNets: native.count_nets, oneLane },
+    );
+    await page.close();
+    return out;
+  };
+  const one = await run(true);
+  const wasm = await run(false);
   await browser.close();
 
-  const rows = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "rules", "findings", "query_ms", "query_rows", "peak_mb"];
-  console.log(`| ${board} | native | wasm | wasm / native |`);
-  console.log("|---|---|---|---|");
+  const rows = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "rules", "findings", "query_ms", "query_rows",
+    "query_during_check_ms", "check_still_running", "first_check_ms", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
+  console.log(`| ${board} | native | wasm, one worker | wasm, two lanes | lanes / native |`);
+  console.log("|---|---|---|---|---|");
   for (const r of rows) {
     const n = native[r], w = wasm[r];
     const ratio = r.endsWith("_ms") && n > 0 && w !== undefined ? (w / n).toFixed(1) + "x" : "";
-    console.log(`| ${r} | ${n ?? ""} | ${w ?? ""} | ${ratio} |`);
+    console.log(`| ${r} | ${n ?? ""} | ${one[r] ?? ""} | ${w ?? ""} | ${ratio} |`);
   }
-  console.log(JSON.stringify({ native, wasm }));
+  console.log(JSON.stringify({ native, one, wasm }));
 } finally {
   server.kill();
 }

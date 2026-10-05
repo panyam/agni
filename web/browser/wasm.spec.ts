@@ -75,6 +75,11 @@ describe("one design under both engines", () => {
 
       const analysis = wasm.network.filter((p) => p.startsWith(apiPrefix) && !p.startsWith(workspacePrefix));
       expect(analysis).toEqual([]);
+
+      // Two lanes (agni issue 911): the checks ran on a worker of their own, so each worker fetched
+      // the design's files, and a query never waits behind a check.
+      expect(page.workers().filter((w) => new URL(w.url()).pathname.endsWith("/agni-worker.js"))).toHaveLength(2);
+      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toHaveLength(2);
     });
   });
 
