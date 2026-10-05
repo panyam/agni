@@ -10,6 +10,8 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/service"
 )
 
@@ -128,5 +130,41 @@ func TestACopyIsHandedOut(t *testing.T) {
 	}
 	if len(d2.GetNets()) == 0 {
 		t.Fatal("a caller's edit to the design it was handed reached the cache")
+	}
+}
+
+// TestAModelIsKeptWhenTheCorpusIsLocal builds a project design's model twice with a local shared
+// corpus, as `agni serve --params` has. SpecsOver wraps every corpus in a Layered, which implements
+// Prefetch, and the cache used to read that as a remote corpus and rebuild the model and its fact
+// base on every request: about 250 ms per query on a 3,980-component board.
+func TestAModelIsKeptWhenTheCorpusIsLocal(t *testing.T) {
+	ms := []Mount{{Name: "m", FS: os.DirFS(filepath.Join("..", "examples", "tutorial-project"))}}
+	trees := []projects.Tree{{Mount: "m", FS: ms[0].FS}}
+	res := &service.ProjectResolver{Store: projects.NewFSStore(trees...), Config: &ConfigResolver{Mounts: ms}}
+	loader := service.NewCachingLoader(New(ms...), service.NewDesignCache(8))
+	ctx := context.Background()
+	u := artifact.URI{Mount: "m", Path: "designs/gateway"}
+	ov, err := res.Overlay(ctx, u, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := ov.Identity(); !ok {
+		t.Fatal("the tutorial project's overlay does not identify, so no model could be kept and this proves nothing")
+	}
+	nu, bu, _, err := res.TierURIs(ctx, u, artifact.URI{}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shared := param.ParamSet{}
+	first, _, err := service.BuildModelCached(ctx, loader, nu, bu, ov, shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, _, err := service.BuildModelCached(ctx, loader, nu, bu, ov, shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != second {
+		t.Error("the second request rebuilt the model, so a local corpus was treated as one fetched over the network")
 	}
 }
