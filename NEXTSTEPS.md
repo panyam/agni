@@ -23,20 +23,16 @@ links rather than here. Log each exercise run on the mission issue.
   #902 is the viewer's next shape: a Properties panel for any selection (it replaces Details) and a
   query panel holding named tabs that its Ask rows open. #745 (open a query set as tabs) and #717's
   viewer half fold into it; #904 (area selection) follows it and jaala#132 (bind a set of values).
-- **#851 `mission_public_demo`**, 10 of 29. Exercise last ran at `bd0ba7c9` (PR 921): step 1 works on
-  the deployed page, short of a board the server answers (#855) and a real EDIF seed (#880). #857
-  (P1, triage the seeded boards' findings) is next. Snappiness is #896, #897, #914 and #922; check
-  #900 and #901 against #911, which another worktree closed, before starting either.
-- **#909 `mission_ask`**, filed, not active: ask a design questions through an LLM and get answers
-  that cite the rows. #910 (P1, MCP on `agni serve`) is its first ticket.
-- This run: PRs 899, 912, 913, 915, 917, 920 and 921 merged, closing #895 and #916; agni follows
-  jaala v0.1.23 (jaala#139, #140). Filed #909, #910, #914 and #922, and jaala#147 (Explain).
 - **#851 `mission_public_demo`**, 10 of 29. Exercise last ran at `70b1cfc4` (PR 925): `make
   demo-site` builds, the static site's spec passes, and a reload restores a parsed design (Run checks
   5.8 s first visit, 4.0 s after). The manual walk waits on #878. #857 (P1) is next by the queue, and
-  #868 then #918 by the mission's last comment.
-- This run: #907 (`tables_to_xlsx` was quadratic in its rows, 87 s for a 20,018-row verdicts sheet)
-  closed through PR 908. No thread changed.
+  #868 then #918 by the mission's last comment. Snappiness is #896, #897, #914 and #922; check #900
+  and #901 against #911 (closed by PR 925) before starting either.
+- **#909 `mission_ask`**, filed, not active: ask a design questions through an LLM and get answers
+  that cite the rows. #910 (P1, MCP on `agni serve`) is its first ticket.
+- This run: PRs 899, 912, 913, 915, 917, 920 and 921 merged, closing #895 and #916; agni follows
+  jaala v0.1.23 (jaala#139, #140). Filed #909, #910, #914 and #922, and jaala#147 (Explain). #907
+  (`tables_to_xlsx` was quadratic in its rows) closed through PR 908.
 
 ## Open, ranked
 
