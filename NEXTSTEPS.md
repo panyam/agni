@@ -13,7 +13,7 @@ Last pruned 2026-10-05, at `70b1cfc4` (PR 925).
 
 ## At a glance
 
-Three missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
+Three missions are active, one per worktree, and a fourth is filed. `MISSION=mission_<slug> queue.sh` (the retriage
 skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
 links rather than here. Log each exercise run on the mission issue.
 
@@ -26,9 +26,13 @@ links rather than here. Log each exercise run on the mission issue.
 - **#851 `mission_public_demo`**, 10 of 29. Exercise last ran at `70b1cfc4` (PR 925): `make
   demo-site` builds, the static site's spec passes, and a reload restores a parsed design (Run checks
   5.8 s first visit, 4.0 s after). The manual walk waits on #878. #857 (P1) is next by the queue, and
-  #868 then #918 by the mission's last comment.
-- This run: #907 (`tables_to_xlsx` was quadratic in its rows, 87 s for a 20,018-row verdicts sheet)
-  closed through PR 908. No thread changed.
+  #868 then #918 by the mission's last comment. Snappiness is #896, #897, #914 and #922; check #900
+  and #901 against #911 (closed by PR 925) before starting either.
+- **#909 `mission_ask`**, filed, not active: ask a design questions through an LLM and get answers
+  that cite the rows. #910 (P1, MCP on `agni serve`) is its first ticket.
+- This run: PRs 899, 912, 913, 915, 917, 920 and 921 merged, closing #895 and #916; agni follows
+  jaala v0.1.23 (jaala#139, #140). Filed #909, #910, #914 and #922, and jaala#147 (Explain). #907
+  (`tables_to_xlsx` was quadratic in its rows) closed through PR 908.
 
 ## Open, ranked
 
@@ -36,12 +40,18 @@ links rather than here. Log each exercise run on the mission issue.
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
 2. **#857 on `mission_public_demo`** (triage the seeded boards' findings), then #865, #868 and #127.
+   For snappiness, #896 (a starting-point query with a limit) and #897 (check one net or part) both
+   build on #895's kept model; #914 (per-request timings) would have named the last two slow paths
+   in one log line each.
 3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
 5. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
-   corrections comment before writing any code.
-6. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
+   corrections comment before writing any code. #895 now keeps the model and fact base, so a repeated
+   check pays only rule evaluation; measure that before building a result cache on top.
+6. **#910 on `mission_ask`**, MCP tools over the existing services. Every service is transport-neutral,
+   so it is an adapter, not new analysis.
+7. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
    test declares #736 field by field, so its fix also deletes that declaration in
    `clients/python/tests/test_cross_transport.py`.
 
