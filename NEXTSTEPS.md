@@ -9,11 +9,11 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-05, at `5c3b7363` (PR 899).
+Last pruned 2026-10-05, at `70b1cfc4` (PR 925).
 
 ## At a glance
 
-Three missions are active, one per worktree. `MISSION=mission_<slug> queue.sh` (the retriage
+Three missions are active, one per worktree, and a fourth is filed. `MISSION=mission_<slug> queue.sh` (the retriage
 skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
 links rather than here. Log each exercise run on the mission issue.
 
@@ -23,11 +23,14 @@ links rather than here. Log each exercise run on the mission issue.
   #902 is the viewer's next shape: a Properties panel for any selection (it replaces Details) and a
   query panel holding named tabs that its Ask rows open. #745 (open a query set as tabs) and #717's
   viewer half fold into it; #904 (area selection) follows it and jaala#132 (bind a set of values).
-- **#851 `mission_public_demo`**, 8 of 23. Exercise last ran at `5c3b7363` (PR 899): step 1 works on
+- **#851 `mission_public_demo`**, 10 of 29. Exercise last ran at `bd0ba7c9` (PR 921): step 1 works on
   the deployed page, short of a board the server answers (#855) and a real EDIF seed (#880). #857
-  (P1, triage the seeded boards' findings) is next.
-- This run: dropped the `feat/856-static-demo` thread (#856 closed through PRs 890 and 892). Filed
-  #902, #904, #905 and jaala#132; closed #893 as a duplicate of #718.
+  (P1, triage the seeded boards' findings) is next. Snappiness is #896, #897, #914 and #922; check
+  #900 and #901 against #911, which another worktree closed, before starting either.
+- **#909 `mission_ask`**, filed, not active: ask a design questions through an LLM and get answers
+  that cite the rows. #910 (P1, MCP on `agni serve`) is its first ticket.
+- This run: PRs 899, 912, 913, 915, 917, 920 and 921 merged, closing #895 and #916; agni follows
+  jaala v0.1.23 (jaala#139, #140). Filed #909, #910, #914 and #922, and jaala#147 (Explain).
 
 ## Open, ranked
 
@@ -35,12 +38,18 @@ links rather than here. Log each exercise run on the mission issue.
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
 2. **#857 on `mission_public_demo`** (triage the seeded boards' findings), then #865, #868 and #127.
+   For snappiness, #896 (a starting-point query with a limit) and #897 (check one net or part) both
+   build on #895's kept model; #914 (per-request timings) would have named the last two slow paths
+   in one log line each.
 3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
 5. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
-   corrections comment before writing any code.
-6. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
+   corrections comment before writing any code. #895 now keeps the model and fact base, so a repeated
+   check pays only rule evaluation; measure that before building a result cache on top.
+6. **#910 on `mission_ask`**, MCP tools over the existing services. Every service is transport-neutral,
+   so it is an adapter, not new analysis.
+7. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
    test declares #736 field by field, so its fix also deletes that declaration in
    `clients/python/tests/test_cross_transport.py`.
 

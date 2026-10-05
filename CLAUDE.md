@@ -551,6 +551,20 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   its mounts. Point `HOME` and `XDG_CONFIG_HOME` at a temp dir and run from an empty working directory
   (`TestOpenStillRequiresTheViewer`, `clients/python/tests/conftest.py`). CI has no such file, so this
   is also green in CI and red on a developer's machine.
+- **A server and the browser engine keep what a request read** (agni 895, `service.DesignCache`;
+  "Kept reads" in `architecture/web-services.md`). Validity is the files the read touched, recorded by
+  `formats.Loader` through `service.LoaderIn`, so a new host that reads around `LoaderIn` is never
+  cached rather than served stale. **Whether a corpus fetches over the network is `param.Fetches`,
+  never a `Prefetcher` type assertion**: `SpecsOver` wraps every corpus in a `Layered`, which always
+  implements `Prefetch`, and asking the interface kept no model for any project with `params/` (agni
+  915). With the fact base kept, **a query's `work` is what THIS request spent**, so a warm server can
+  report less than a cold CLI, and the cross-transport test compares `work` only where they must agree.
+- **A query answer keeps each entity and citation once** (agni 916): `RunQueryResponse.entities` and
+  `sources`, with rows pointing in through `cell_entity` and `cite_index`. Read a cell's location with
+  `service.CellLocation` and a row's citations with `service.RowCites`. The viewer's tests write
+  fixtures row by row and normalize them through `web/src/testwire.ts`. The Python client speaks
+  binary protobuf by default (`ConnectTransport(url, binary=False)` for JSON), and `omit_locations` on
+  a query drops the drawing-derived fields for a caller that draws nothing (agni 917).
 
 ## Engine gotchas
 
@@ -843,6 +857,18 @@ all exit 0.**
 - **`catalog-docs-check` reads `git status`, not a diff against a temp copy.** Regenerating is not
   enough, because the generated file has to be COMMITTED or the gate stays red on a tree that is
   correct. The same is true of `tutorial-runs`.
+
+Three more that cost a session time:
+
+- **Undo a red-check by restoring a copy of the file, never with `git checkout <file>`.** The checkout
+  also throws away the uncommitted change under test, and the next run passes over nothing. Copy the
+  file aside before breaking it.
+- **`go test -cpuprofile` leaves `<pkg>.test`, a 30 MB binary, in the working directory**, untracked and
+  not ignored. Delete it before staging, and never `git add -A`.
+- **Time two tools on the same clock.** A timer started inside Python, after the interpreter and the
+  client library load, is not comparable with another tool's launch-to-exit time. Compare launch to
+  exit on an idle machine (check `/proc/loadavg`; a shared box running other sessions' fuzz tests made
+  every number meaningless), or say which clock a number is.
 
 ## Architectural constraints
 
