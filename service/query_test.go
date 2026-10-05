@@ -618,7 +618,7 @@ func TestListRelationsCarriesTheLibrary(t *testing.T) {
 	if got := tp.GetSignature(); got != "net.has_test_point(n: net)" {
 		t.Errorf("signature = %q, want net.has_test_point(n: net)", got)
 	}
-	if len(tp.GetDefinition()) != 1 || !strings.Contains(tp.GetDefinition()[0], "_test_points(?n, _)") {
+	if len(tp.GetDefinition()) != 1 || !strings.Contains(tp.GetDefinition()[0], "component.class(?tp, \"test_point\")") {
 		t.Errorf("definition = %q, want its one clause", tp.GetDefinition())
 	}
 }

@@ -12,12 +12,12 @@ import (
 	_ "github.com/panyam/agni/stdlib/lib" // registers the shipped derived relations, probed_* among them
 )
 
-// The probed_* library members ask net.has_test_point about one net at a time. When that member
-// joined component.net and component.class itself, every net asked about re-read every test point,
-// so the cost grew as parts times test points: on the 1123-component sample board probed_both cost
-// 518,388 units of work and probed_one 826,335, and on a 3,973-component board 7 million and 6.5 s.
-// Read off _test_points, which is worked out once for every net, they cost 7,230 and 14,287 here.
-// The ceilings below sit well above that and far below the old cost.
+// The probed_* library members ask net.has_test_point about one net at a time. Until jaala v0.1.23
+// the engine re-ran that member's join for every net asked about (panyam/jaala#139), so the cost grew
+// as parts times test points: on the 1123-component sample board probed_both cost 518,388 units of
+// work and probed_one 826,335, and on a 3,973-component board 7 million and 6.5 s. With the member
+// derived once per query they cost 5,799 and 12,741 here. The ceilings sit well above that and far
+// below the old cost, so a regression in the member or in the engine fails here.
 func TestProbedMembersCostLinearlyOnTheSampleBoard(t *testing.T) {
 	const path = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch"
 	if _, err := os.Stat(path); err != nil {

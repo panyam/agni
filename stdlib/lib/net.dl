@@ -1,11 +1,7 @@
 # Derived net members. Each file in stdlib/lib is one module, registered at the path its name gives.
 
-# has_test_point reads _test_points rather than joining component.net and component.class itself.
-# That relation is worked out once for every net, where the join was re-run for each net asked
-# about, which made probed_both cost 7 million units of work on a 3,973-component board.
-
 # A net at least one test point sits on, so a probe can land on it during bring-up or in-circuit test.
-has_test_point(?n: net) :- _test_points(?n, _);
+has_test_point(?n: net) :- component.net(?tp, ?n), component.class(?tp, "test_point");
 
 # How many test points sit on each net, 0 for a net with none, so every net answers one row.
 test_point_count(?n: net, ?c: number) :- _test_points(?n, ?c);

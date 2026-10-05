@@ -23,9 +23,9 @@ func Number(f float64) Value { return ns.N(f) }
 // name the goal does not use when the query is evaluated, so a misspelled binding fails rather than
 // leaving the variable free.
 func Bind(vals map[string]Value) datalog.Option {
-	m := make(map[datalog.Var]ns.Value, len(vals))
+	m := make(map[datalog.Var][]ns.Value, len(vals))
 	for k, v := range vals {
-		m[datalog.Var(strings.TrimPrefix(k, "?"))] = v
+		m[datalog.Var(strings.TrimPrefix(k, "?"))] = []ns.Value{v}
 	}
 	return datalog.Bind(m)
 }
