@@ -6,6 +6,7 @@ package wasmengine
 import (
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/panyam/agni"
 	"github.com/panyam/agni/core/render"
@@ -13,6 +14,7 @@ import (
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/version"
+	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/service"
 
 	_ "github.com/panyam/agni/stdlib/lib"           // registers the shipped derived relations (net.has_test_point, ...)
@@ -30,8 +32,25 @@ const Namespace = "agni"
 const BrowserMount = "local"
 
 // Build composes the engine over root, whose top-level directories are the mounts, which is how
-// goapplib's wasmhost holds them. It is the rebuild function cmd/agni-wasm hands the host.
-func Build(root fs.FS) (http.Handler, error) {
+// goapplib's wasmhost holds them, with nothing kept past the worker.
+func Build(root fs.FS) (http.Handler, error) { return BuildWith(Options{})(root) }
+
+// BuildWith is Build with options, the rebuild function cmd/agni-wasm hands the host.
+func BuildWith(o Options) func(fs.FS) (http.Handler, error) {
+	return func(root fs.FS) (http.Handler, error) {
+		ms, err := mountsOf(root)
+		if err != nil {
+			return nil, err
+		}
+		eng, err := NewWith(o, ms...)
+		if err != nil {
+			return nil, err
+		}
+		return eng.Handler, nil
+	}
+}
+
+func mountsOf(root fs.FS) ([]fshost.Mount, error) {
 	entries, err := fs.ReadDir(root, ".")
 	if err != nil {
 		return nil, err
@@ -50,11 +69,39 @@ func Build(root fs.FS) (http.Handler, error) {
 		}
 		ms = append(ms, fshost.Mount{Name: e.Name(), FS: sub})
 	}
-	eng, err := New(ms...)
-	if err != nil {
-		return nil, err
+	return ms, nil
+}
+
+// Options configures an engine beyond its mount table.
+type Options struct {
+	// Store keeps every parsed design, drawing and board past the worker, so another worker over the
+	// same files (a reload, a second lane, a lane's replacement) restores them rather than reading
+	// them again (agni issue 911). In the browser it is wasmhost.BrowserCache. Nil keeps nothing.
+	Store service.BlobStore
+	// Version names the engine that wrote what Store holds. Empty means StoreVersion().
+	Version string
+}
+
+// buildID is stamped by `make wasm` from the uncommitted changes in the tree, so a developer's dirty
+// build does not restore what a different dirty build of the same commit parsed.
+var buildID string
+
+// StoreVersion names this build for the persistent tier: the commit, the uncommitted changes when
+// there are any, and the layout of what is stored. It is empty, which persists nothing, for a build
+// that cannot say what it was built from, since one could read a file differently from another and
+// share a name with it.
+func StoreVersion() string {
+	v := version.Version()
+	switch {
+	case v == "unknown" || v == "(devel)":
+		return ""
+	case strings.HasSuffix(v, "+dirty"):
+		if buildID == "" {
+			return ""
+		}
+		v += "." + buildID
 	}
-	return eng.Handler, nil
+	return "design-store-1 " + v
 }
 
 // Engine is one composition over one mount table. The browser rebuilds it when a mount changes,
@@ -66,6 +113,8 @@ type Engine struct {
 	Paths []string
 	// Warnings are the legitimate absences agni.New reports, such as no datasheet corpus.
 	Warnings []string
+	// Cache is the design cache every service reads through, for its counters.
+	Cache *service.DesignCache
 }
 
 // New composes the engine over ms through agni.New, which refuses a build missing the rule catalog
@@ -80,11 +129,22 @@ type Engine struct {
 // is the visitor's.
 const designCache = 8
 
-func New(ms ...fshost.Mount) (*Engine, error) {
+func New(ms ...fshost.Mount) (*Engine, error) { return NewWith(Options{}, ms...) }
+
+// NewWith is New with options.
+func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	// Every read goes through one cache, so a second request on a design costs its answer rather than
-	// a re-parse (agni issue 895). The engine is rebuilt on every mount change, which drops the cache.
+	// a re-parse (agni issue 895). The engine is rebuilt on every mount change, which drops the
+	// in-memory entries and keeps what Store holds.
 	files := fshost.New(ms...)
-	host := service.NewCachingLoader(files, service.NewDesignCache(designCache))
+	if o.Version == "" {
+		o.Version = StoreVersion()
+	}
+	root := files.Root()
+	cache := service.NewDesignCache(designCache).Persist(o.Store, func(fp []byte) (*formats.Touched, bool) {
+		return formats.CheckFingerprint(root, fp)
+	}, o.Version)
+	host := service.NewCachingLoader(files, cache)
 	trees := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
 		trees = append(trees, projects.Tree{Mount: m.Name, FS: m.FS})
@@ -106,5 +166,5 @@ func New(ms ...fshost.Mount) (*Engine, error) {
 		Query:     service.NewQueryService(host, nil, resolver),
 		Review:    review,
 	}.Register(mux)
-	return &Engine{Handler: mux, Paths: paths, Warnings: e.Warnings()}, nil
+	return &Engine{Handler: mux, Paths: paths, Warnings: e.Warnings(), Cache: cache}, nil
 }

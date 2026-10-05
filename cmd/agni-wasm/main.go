@@ -8,6 +8,11 @@
 // unmount} as Promises, keeps every mount under one root fs.FS, and rebuilds the engine after each
 // mount change, so no service holds a project tree that has since been replaced. The page adds a
 // design's files the first time a request names it (agni issue 853), which is why it uses `add`.
+//
+// Every parsed design, drawing and board is also kept in the origin's private file system
+// (wasmhost.BrowserCache), which every worker of the page shares and a reload keeps, so a second lane,
+// a lane's replacement or the next visit restores a design rather than reading it again (agni issue
+// 911).
 package main
 
 import (
@@ -16,5 +21,5 @@ import (
 )
 
 func main() {
-	wasmhost.ServeRebuild(wasmengine.Namespace, wasmengine.Build)
+	wasmhost.ServeRebuild(wasmengine.Namespace, wasmengine.BuildWith(wasmengine.Options{Store: wasmhost.BrowserCache()}))
 }
