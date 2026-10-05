@@ -55,7 +55,7 @@ net.has_test_point(?n) => count(?n)
 `net.has_test_point(n: net)`, a derived relation in the `net` module, defined in Datalog in [`stdlib/lib/net.dl`](https://github.com/panyam/agni/blob/main/stdlib/lib/net.dl). In a clause, a bare name is another member of the same module and a dotted name is a full path.
 
 ```
-has_test_point(?n: net) :- _test_points(?n, _);
+has_test_point(?n: net) :- component.net(?tp, ?n), component.class(?tp, "test_point");
 ```
 
 `agni query --relations net.has_test_point` prints the same definition. [Adding a library member](../../../build/library-member/) explains how the library is built.
