@@ -143,6 +143,9 @@ CASES: List[Case] = [
     # A budget the query fits in answers alike, work included (agni issue 792). It reads base
     # relations only, so a kept fact base gives it nothing to reuse.
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query='component.class(?c, "resistor") => ?c', work_budget=10_000_000), compare_work=True),
+    # An answer without its locations answers alike: no sheets or reasons on either transport.
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?r, ?p, ?n) => ?n, ?r, ?p", omit_locations=True)),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET, omit_locations=True)),
     # Bound variables answer alike, text and number, quoting included (agni issue 793).
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"}))),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3.0}))),
@@ -237,6 +240,39 @@ def test_same_request_same_message(case: Case, cli: Client, connect: Client):
         _clear_work(got_cli)
         _clear_work(got_srv)
     assert got_cli == got_srv
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.rpc)
+def test_binary_and_json_answer_alike(case: Case, connect: Client, connect_json: Client):
+    """ConnectTransport speaks binary protobuf by default and protojson on request; one server must
+    give one message either way."""
+    got_bin, got_json = case.ask(connect), case.ask(connect_json)
+    # A field the CLI leaves empty differs between two server calls too (a stored review's name).
+    for name in case.cli_leaves_empty:
+        got_bin.ClearField(name)
+        got_json.ClearField(name)
+    if case.normalize:
+        case.normalize(got_bin)
+        case.normalize(got_json)
+    _clear_work(got_bin)
+    _clear_work(got_json)
+    assert got_bin == got_json
+
+
+def test_omitting_locations_drops_only_the_locations(connect: Client):
+    """omit_locations leaves out cell_sheets and cell_reasons and nothing else: the cells, the
+    citations, and the kinds and refs that type the answer are the full answer's."""
+    q = "pin.net(?r, ?p, ?n) => ?n, ?r, ?p"
+    full = connect.run_query(uri=DESIGN, query=q)
+    bare = connect.run_query(uri=DESIGN, query=q, omit_locations=True)
+    assert len(full.rows) > 0 and any(len(c.sheet_ids) for r in full.rows for c in r.cell_sheets), "the full answer locates nothing, so this proves nothing"
+    assert all(not r.cell_sheets and not r.cell_reasons for r in bare.rows)
+    for row in full.rows:
+        row.ClearField("cell_sheets")
+        row.ClearField("cell_reasons")
+    full.work = bare.work = 0
+    assert full == bare
+    assert len(bare.SerializeToString()) < len(connect.run_query(uri=DESIGN, query=q).SerializeToString())
 
 
 def test_layout_report_for_the_folder_diverges_as_declared(cli: Client, connect: Client):

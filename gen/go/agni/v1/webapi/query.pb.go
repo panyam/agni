@@ -73,7 +73,12 @@ type RunQueryRequest struct {
 	// a constant, so a caller asking about one net or part sends the same query text every time and the
 	// value as data, with nothing to escape or splice. A binding naming a variable the goal does not use
 	// is refused as an invalid argument. Rules are unaffected: their variables are their own.
-	Bindings      map[string]*QueryValue `protobuf:"bytes,7,rep,name=bindings,proto3" json:"bindings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Bindings map[string]*QueryValue `protobuf:"bytes,7,rep,name=bindings,proto3" json:"bindings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// omit_locations leaves out where each answer cell is drawn: no cell_sheets and no cell_reasons,
+	// and the drawing is not loaded to find them. For a caller that draws nothing, such as a script
+	// writing a workbook, they are most of an answer's bytes: 7.4 of 8.3 MB on a 9,323-row pin listing.
+	// Cell kinds and pin refs are still filled, since they type the answer.
+	OmitLocations bool `protobuf:"varint,8,opt,name=omit_locations,json=omitLocations,proto3" json:"omit_locations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -155,6 +160,13 @@ func (x *RunQueryRequest) GetBindings() map[string]*QueryValue {
 		return x.Bindings
 	}
 	return nil
+}
+
+func (x *RunQueryRequest) GetOmitLocations() bool {
+	if x != nil {
+		return x.OmitLocations
+	}
+	return false
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
@@ -1278,7 +1290,9 @@ type RunQueriesRequest struct {
 	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
 	// a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
 	// deployment's own budget, never raise it, and zero leaves that budget as it is. Each query in the set has the whole budget; one past it reports that in its own result.
-	WorkBudget    int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
+	WorkBudget int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
+	// omit_locations is RunQueryRequest's, for every query in the set.
+	OmitLocations bool `protobuf:"varint,7,opt,name=omit_locations,json=omitLocations,proto3" json:"omit_locations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1353,6 +1367,13 @@ func (x *RunQueriesRequest) GetWorkBudget() int64 {
 		return x.WorkBudget
 	}
 	return 0
+}
+
+func (x *RunQueriesRequest) GetOmitLocations() bool {
+	if x != nil {
+		return x.OmitLocations
+	}
+	return false
 }
 
 type RunQueriesResponse struct {
@@ -1501,7 +1522,7 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xef\x02\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x96\x03\n" +
 	"\x0fRunQueryRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
@@ -1510,7 +1531,8 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\bas_named\x18\x05 \x01(\bR\aasNamed\x12\x1f\n" +
 	"\vwork_budget\x18\x06 \x01(\x03R\n" +
 	"workBudget\x12I\n" +
-	"\bbindings\x18\a \x03(\v2-.agni.v1.webapi.RunQueryRequest.BindingsEntryR\bbindings\x1aW\n" +
+	"\bbindings\x18\a \x03(\v2-.agni.v1.webapi.RunQueryRequest.BindingsEntryR\bbindings\x12%\n" +
+	"\x0eomit_locations\x18\b \x01(\bR\romitLocations\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
 	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xf0\x01\n" +
@@ -1601,7 +1623,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\bbindings\x18\x04 \x03(\v2(.agni.v1.webapi.NamedQuery.BindingsEntryR\bbindings\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xe3\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\x8a\x02\n" +
 	"\x11RunQueriesRequest\x12*\n" +
 	"\x03set\x18\x01 \x01(\v2\x18.agni.v1.webapi.QuerySetR\x03set\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\x127\n" +
@@ -1609,7 +1631,8 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
 	"\bas_named\x18\x05 \x01(\bR\aasNamed\x12\x1f\n" +
 	"\vwork_budget\x18\x06 \x01(\x03R\n" +
-	"workBudget\"\x9a\x01\n" +
+	"workBudget\x12%\n" +
+	"\x0eomit_locations\x18\a \x01(\bR\romitLocations\"\x9a\x01\n" +
 	"\x12RunQueriesResponse\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n" +
 	"\bpreamble\x18\x02 \x01(\tR\bpreamble\x12\x16\n" +

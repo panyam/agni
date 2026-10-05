@@ -96,3 +96,9 @@ def server(agni_bin, isolated, tmp_path_factory):
 @pytest.fixture(scope="session")
 def connect(server):
     return Client(ConnectTransport(server, strict=True))
+
+
+@pytest.fixture(scope="session")
+def connect_json(server):
+    """The same server over protojson, the encoding ConnectTransport speaks with binary=False."""
+    return Client(ConnectTransport(server, strict=True, binary=False))

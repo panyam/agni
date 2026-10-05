@@ -83,9 +83,17 @@ CLI transport the same request runs `agni stats --format json --mask ...`.
 the design again, and on a large board that read is the slow part. `run_queries` asks many queries
 in one call, so over either transport a whole audit costs one read.
 
-**The Connect transport** posts JSON to `/agni.v1.webapi.<Service>/<Method>`. The server reads a
-design once and answers many questions about it. `agni serve` with no web dir serves the API alone,
-so an installed binary needs no viewer assets for this.
+**The Connect transport** posts to `/agni.v1.webapi.<Service>/<Method>`, in binary protobuf by
+default and in JSON with `ConnectTransport(url, binary=False)`. The message is the same either way.
+Binary is the default because a large answer is about half the bytes and decodes about a hundred
+times faster in Python: a 9,323-row query answer is 8.3 MB and 4 ms, against 15.5 MB and 0.43 s as
+JSON. The server reads a design once and answers many questions about it. `agni serve` with no web
+dir serves the API alone, so an installed binary needs no viewer assets for this.
+
+A query's answer carries where each cell is drawn (`cell_sheets`, `cell_reasons`), which is most of a
+large answer's size and of no use to a script that draws nothing. `omit_locations=True` on
+`run_query` or `run_queries` (`--omit-locations` on the CLI) leaves them out and skips loading the
+drawing; the cells, citations, kinds and refs are unchanged.
 
 The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py` is the table:
 

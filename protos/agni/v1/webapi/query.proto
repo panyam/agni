@@ -97,6 +97,11 @@ message RunQueryRequest {
   // value as data, with nothing to escape or splice. A binding naming a variable the goal does not use
   // is refused as an invalid argument. Rules are unaffected: their variables are their own.
   map<string, QueryValue> bindings = 7;
+  // omit_locations leaves out where each answer cell is drawn: no cell_sheets and no cell_reasons,
+  // and the drawing is not loaded to find them. For a caller that draws nothing, such as a script
+  // writing a workbook, they are most of an answer's bytes: 7.4 of 8.3 MB on a 9,323-row pin listing.
+  // Cell kinds and pin refs are still filled, since they type the answer.
+  bool omit_locations = 8;
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
@@ -357,6 +362,8 @@ message RunQueriesRequest {
   // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
   // deployment's own budget, never raise it, and zero leaves that budget as it is. Each query in the set has the whole budget; one past it reports that in its own result.
   int64 work_budget = 6;
+  // omit_locations is RunQueryRequest's, for every query in the set.
+  bool omit_locations = 7;
 }
 
 message RunQueriesResponse {
