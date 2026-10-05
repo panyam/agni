@@ -31,6 +31,12 @@ links rather than here. Log each exercise run on the mission issue.
   that cite the rows. #910 (P1, MCP on `agni serve`) is its first ticket.
 - This run: PRs 899, 912, 913, 915, 917, 920 and 921 merged, closing #895 and #916; agni follows
   jaala v0.1.23 (jaala#139, #140). Filed #909, #910, #914 and #922, and jaala#147 (Explain).
+- **#851 `mission_public_demo`**, 10 of 29. Exercise last ran at `70b1cfc4` (PR 925): `make
+  demo-site` builds, the static site's spec passes, and a reload restores a parsed design (Run checks
+  5.8 s first visit, 4.0 s after). The manual walk waits on #878. #857 (P1) is next by the queue, and
+  #868 then #918 by the mission's last comment.
+- This run: #907 (`tables_to_xlsx` was quadratic in its rows, 87 s for a 20,018-row verdicts sheet)
+  closed through PR 908. No thread changed.
 
 ## Open, ranked
 
