@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-04, at `a5eced9f` (PR 889).
+Last pruned 2026-10-05, at `5c3b7363` (PR 899).
 
 ## At a glance
 
@@ -19,23 +19,22 @@ links rather than here. Log each exercise run on the mission issue.
 
 - **#844 `mission_real_board_tutorial`**, 0 of 4. Next is #564. The exercise has not run yet, so run
   it before picking a ticket.
-- **#845 `mission_browser_review`**, 1 of 11 (#829 closed with #859). Next by the queue is #356. The
-  exercise is a manual walk with no logged run yet.
-- **#851 `mission_public_demo`**, 6 of 16, in the `docs` clone. Exercise last ran at `a5eced9f`
-  (PR 889): steps 2 to 5 pass (drop a folder, a zip, an EDIF pair; check, trace, query; nothing about
-  the design on the network), and only step 1 fails, for want of the deployed landing page. #856
-  part one is PR 890 (`feat/856-static-demo`); part two wires it into the docs Pages deploy.
-- This run: #852, #853, #854, #863 and #887 closed through PRs 874, 881, 884, 886, 888 and 889.
-  #857 is now blocked by #856, since there is nothing to triage until the seeds are chosen.
+- **#845 `mission_browser_review`**, 1 of 14. The exercise is a manual walk with no logged run yet.
+  #902 is the viewer's next shape: a Properties panel for any selection (it replaces Details) and a
+  query panel holding named tabs that its Ask rows open. #745 (open a query set as tabs) and #717's
+  viewer half fold into it; #904 (area selection) follows it and jaala#132 (bind a set of values).
+- **#851 `mission_public_demo`**, 8 of 23. Exercise last ran at `5c3b7363` (PR 899): step 1 works on
+  the deployed page, short of a board the server answers (#855) and a real EDIF seed (#880). #857
+  (P1, triage the seeded boards' findings) is next.
+- This run: dropped the `feat/856-static-demo` thread (#856 closed through PRs 890 and 892). Filed
+  #902, #904, #905 and jaala#132; closed #893 as a duplicate of #718.
 
 ## Open, ranked
 
 1. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
-2. **#856 part two on `mission_public_demo`**, after PR 890 merges: the docs workflow builds
-   `make demo-site` into the Pages artifact under `/agni/demo/` and runs `web/browser/site.spec.ts`
-   against it. Then #857 (triage the seeded boards' findings), #865, #868 and #127.
+2. **#857 on `mission_public_demo`** (triage the seeded boards' findings), then #865, #868 and #127.
 3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
@@ -62,25 +61,10 @@ row whose trigger is "never".
 
 Issue #718 (EDIF descends into sub-cells) is waiting on input. The only hierarchical netlist anywhere is the
 synthetic `readers/edif/testdata/hier.edn`. Do not start it until there is a real multi-cell netlist
-to test against.
+to test against. #893 was a duplicate; its extra points are a comment on #718.
 
 Four items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #667,
 #681 and #523.
-
-## feat/856-static-demo
-
-- **Last touched**: 2026-10-04 (`/workspace/repos/projects/Agni/docs`)
-- **Ticket**: #856, PR 890 (part one, open).
-- **Why**: the static demo, `agni site` and the viewer under a base path, so step 1 of #851's
-  exercise can run against a page served as plain files.
-- **Where it stopped**: PR 890 is green on `make testall`. Seeds are the tutorial gateway,
-  RoyalBlue54L Feather and the Jetson AGX Thor baseboard (`make demo-site`).
-- **Next action**: once PR 890 merges, branch part two from `origin/main` and add a step to
-  `.github/workflows/docs.yml` that runs `agni site docsite/dist/demo --base /agni/demo/ --seed ...`
-  before the artifact upload (`dist/` is served at `/agni/`), plus the site spec against that output.
-- **Open questions**: the docs workflow does not fetch the samples corpus today, so part two either
-  adds `make samples-oracle` to it or seeds only the tutorial there; the Jetson seed is a 92 MB
-  download per visit, which may want a lighter stand-in once #855's server can answer it instead.
 
 ## Worth knowing before the next change
 

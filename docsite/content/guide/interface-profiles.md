@@ -40,7 +40,10 @@ stay quiet:
 {{ agniRun "content/guide/runs/profile-i2c-clean.yaml" }}
 
 Rules from `--profile-path` are namespaced `profile-overlay/`, so an overlay rule is never
-mistaken for a built-in one.
+mistaken for a built-in one. A profile sent with a request (`AnalysisConfig.profile_uris`) is
+namespaced `request-profiles/`, so a client choosing rules by name asks for
+`request-profiles/<name>-missing-pullup`. Asking for `profile/<name>-missing-pullup` instead runs
+nothing and reports no error today (#905).
 
 ```mermaid
 flowchart LR
