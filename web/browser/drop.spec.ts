@@ -5,11 +5,10 @@
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { crc32 } from "node:zlib";
 import { launch, withPage } from "./browser.js";
+import { storedZip, walk } from "./storedzip.js";
 
 const base = (): string => inject("baseUrl");
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -24,53 +23,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await browser?.close();
 });
-
-function walk(dir: string): string[] {
-  return readdirSync(dir).flatMap((n) => {
-    const p = join(dir, n);
-    return statSync(p).isDirectory() ? walk(p) : [p];
-  });
-}
-
-// storedZip writes a zip with no compression, enough for a browser to read and small enough to keep
-// here rather than add a dependency.
-function storedZip(root: string, keep: (p: string) => boolean = () => true): Buffer {
-  const locals: Buffer[] = [];
-  const centrals: Buffer[] = [];
-  let offset = 0;
-  for (const p of walk(root).filter(keep)) {
-    const name = Buffer.from(relative(root, p).split(sep).join("/"));
-    const data = readFileSync(p);
-    const crc = crc32(data);
-    const local = Buffer.alloc(30);
-    local.writeUInt32LE(0x04034b50, 0);
-    local.writeUInt16LE(20, 4);
-    local.writeUInt32LE(crc, 14);
-    local.writeUInt32LE(data.length, 18);
-    local.writeUInt32LE(data.length, 22);
-    local.writeUInt16LE(name.length, 26);
-    locals.push(local, name, data);
-    const central = Buffer.alloc(46);
-    central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE(20, 4);
-    central.writeUInt16LE(20, 6);
-    central.writeUInt32LE(crc, 16);
-    central.writeUInt32LE(data.length, 20);
-    central.writeUInt32LE(data.length, 24);
-    central.writeUInt16LE(name.length, 28);
-    central.writeUInt32LE(offset, 42);
-    centrals.push(central, name);
-    offset += 30 + name.length + data.length;
-  }
-  const cd = Buffer.concat(centrals);
-  const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(centrals.length / 2, 8);
-  end.writeUInt16LE(centrals.length / 2, 10);
-  end.writeUInt32LE(cd.length, 12);
-  end.writeUInt32LE(offset, 16);
-  return Buffer.concat([...locals, cd, end]);
-}
 
 function record(page: Page): { network: string[]; errors: string[] } {
   const log = { network: [] as string[], errors: [] as string[] };
@@ -112,6 +64,28 @@ describe("dropping files on the viewer", () => {
       // The design never touched the server: no analysis call, no listing, no file read.
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.network.some((p) => p.startsWith("/raw/"))).toBe(false);
+      expect(log.errors).toEqual([]);
+    });
+  });
+
+  // A file picker can pick only files, so a folder arrives through a second input that carries
+  // webkitdirectory, with each file's path inside the folder, as a dragged folder's are (agni 878).
+  it("opens a folder picked whole, with the design its design.yaml declares", async () => {
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(`${base()}/designs/local/view?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
+      await page.setInputFiles("#drop-folder-input", gateway);
+
+      const dialog = page.locator("#drop-dialog");
+      await expect.poll(() => dialog.evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
+      expect(await dialog.textContent()).toContain("declared by its design.yaml");
+      await dialog.locator(".drop-design-open").first().click();
+
+      expect((await runChecks(page)).length).toBeGreaterThan(0);
+      expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/gateway\//);
+      await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 30_000 }).toContain("faithful");
+      expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.errors).toEqual([]);
     });
   });

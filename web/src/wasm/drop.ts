@@ -29,16 +29,17 @@ export interface DropDeps {
   dialog: HTMLDialogElement;
   button: HTMLElement;
   input: HTMLInputElement;
+  // folderButton and folderInput pick a whole folder (agni issue 878). The input carries
+  // webkitdirectory, so each file arrives with its path inside the folder, as a dragged folder does.
+  folderButton?: HTMLElement;
+  folderInput?: HTMLInputElement;
 }
 
-// installDrop wires the drop target, the "Open files" button and the proposal dialog.
+// installDrop wires the drop target, the "Open files" and "Open folder" buttons and the proposal
+// dialog.
 export function installDrop(d: DropDeps): void {
-  d.button.hidden = false;
-  d.button.addEventListener("click", () => d.input.click());
-  d.input.addEventListener("change", () => {
-    if (d.input.files?.length) void bring(d, filesFromFileList(d.input.files)).catch((err: unknown) => d.refuse(`Could not read those files: ${String(err)}`));
-    d.input.value = "";
-  });
+  pick(d, d.button, d.input);
+  if (d.folderButton && d.folderInput) pick(d, d.folderButton, d.folderInput);
   d.target.addEventListener("dragover", (ev) => {
     if (ev.dataTransfer?.types.includes("Files")) ev.preventDefault();
   });
@@ -46,6 +47,16 @@ export function installDrop(d: DropDeps): void {
     if (!ev.dataTransfer?.types.includes("Files")) return;
     ev.preventDefault();
     void bring(d, filesFromDrop(ev.dataTransfer)).catch((err: unknown) => d.refuse(`Could not read those files: ${String(err)}`));
+  });
+}
+
+// pick shows a button that opens a file input, and brings in whatever the input picks.
+function pick(d: DropDeps, button: HTMLElement, input: HTMLInputElement): void {
+  button.hidden = false;
+  button.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    if (input.files?.length) void bring(d, filesFromFileList(input.files)).catch((err: unknown) => d.refuse(`Could not read those files: ${String(err)}`));
+    input.value = "";
   });
 }
 
