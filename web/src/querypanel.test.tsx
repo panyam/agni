@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { queryPanelIsland } from "./querypanel.jsx";
 import { type ExampleItem, type QueryResult, type RelationItem, LocateReason, emptyResult, errorResult, resultFromResponse } from "./query.js";
+import { resultFromWire } from "./testwire.js";
 
 // chips reads the binding chips under the box as [name label, value] pairs.
 function chips(el: HTMLElement): [string, string][] {
@@ -28,7 +29,7 @@ function mountPanel() {
 // cells, the shape the locate tests drive.
 function pushLocatable(push: (s: QueryResult) => void) {
   push(
-    resultFromResponse(
+    resultFromWire(
       {
         columns: ["r", "n", "v"],
         columnKinds: ["component", "net", ""],
@@ -78,7 +79,7 @@ describe("querypanel", () => {
   it("renders columns and rows, and reveals a row's provenance on expand", () => {
     const { el, push } = mountPanel();
     push(
-      resultFromResponse({
+      resultFromWire({
         columns: ["r", "n"],
         rows: [{ cells: ["R1", "SDA"], cites: ["x.edn:SDA"] }],
       } as never),
@@ -96,7 +97,7 @@ describe("querypanel", () => {
 
   it("shows 'No results.' when a run matched nothing", () => {
     const { el, push } = mountPanel();
-    push(resultFromResponse({ columns: ["r"], rows: [] } as never));
+    push(resultFromWire({ columns: ["r"], rows: [] } as never));
     expect(el.querySelector(".query-empty")!.textContent).toContain("No results");
     expect(el.querySelector(".query-table")).toBeNull();
   });
@@ -180,7 +181,7 @@ describe("querypanel", () => {
   it("caps a cell's sheet badges and counts the rest, still locating from a revealed one", () => {
     const { el, push, onLocate } = mountPanel();
     push(
-      resultFromResponse(
+      resultFromWire(
         {
           columns: ["n"],
           columnKinds: ["net"],
@@ -250,7 +251,7 @@ describe("querypanel", () => {
   it("sorts result rows by a clicked column (numeric-aware), cycling asc → desc → natural", () => {
     const { el, push } = mountPanel();
     push(
-      resultFromResponse({
+      resultFromWire({
         columns: ["n", "v"],
         rows: [
           { cells: ["A", "10"], cites: [] },
@@ -278,7 +279,7 @@ describe("querypanel", () => {
   it("keeps a row's provenance expansion attached to that row after a re-sort", () => {
     const { el, push } = mountPanel();
     push(
-      resultFromResponse({
+      resultFromWire({
         columns: ["n", "v"],
         rows: [
           { cells: ["A", "10"], cites: ["cite-A"] },
@@ -328,7 +329,7 @@ describe("resizable result columns", () => {
 
   it("gives every data column a grip and no width until one is dragged", () => {
     const h = mountPanel();
-    h.push(resultFromResponse({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
+    h.push(resultFromWire({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
 
     expect(grips(h.el)).toHaveLength(2);
     // A colgroup entry per column plus the citation gutter; unset widths mean equal shares.
@@ -338,7 +339,7 @@ describe("resizable result columns", () => {
 
   it("applies a dragged width to that column alone", () => {
     const h = mountPanel();
-    h.push(resultFromResponse({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
+    h.push(resultFromWire({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
 
     drag(grips(h.el)[0], 100, 260);
     expect(cols(h.el)[1].style.width).not.toBe("");
@@ -349,7 +350,7 @@ describe("resizable result columns", () => {
   // target.
   it("does not sort while resizing", () => {
     const h = mountPanel();
-    h.push(resultFromResponse({ columns: ["?r", "?n"], rows: [{ cells: ["B", "x"], cites: [] }, { cells: ["A", "y"], cites: [] }] } as never));
+    h.push(resultFromWire({ columns: ["?r", "?n"], rows: [{ cells: ["B", "x"], cites: [] }, { cells: ["A", "y"], cites: [] }] } as never));
     const before = h.el.querySelector(".query-sort-ind");
 
     drag(grips(h.el)[0], 100, 200);
@@ -433,7 +434,7 @@ describe("querypanel search", () => {
   // entity(?name, ?kind) comes back as.
   const pushSearchResult = (push: (s: QueryResult) => void) =>
     push(
-      resultFromResponse(
+      resultFromWire(
         {
           columns: ["name", "kind"],
           columnKinds: ["", ""],
@@ -524,7 +525,7 @@ describe("querypanel search", () => {
 describe("querypanel you-are-here", () => {
   const pushMultiSheet = (push: (s: QueryResult) => void) =>
     push(
-      resultFromResponse(
+      resultFromWire(
         {
           columns: ["r", "n"],
           columnKinds: ["component", "net"],
@@ -587,7 +588,7 @@ describe("querypanel you-are-here", () => {
   it("reveals the current sheet's badge even when the cap would have hidden it", () => {
     const { el, push, panel } = mountPanel();
     push(
-      resultFromResponse(
+      resultFromWire(
         {
           columns: ["n"],
           columnKinds: ["net"],
@@ -610,7 +611,7 @@ describe("querypanel you-are-here", () => {
   it("marks every row that names the entity on screen", () => {
     const { el, push, panel } = mountPanel();
     push(
-      resultFromResponse(
+      resultFromWire(
         {
           columns: ["r", "n"],
           columnKinds: ["component", "net"],
@@ -651,7 +652,7 @@ describe("querypanel findings beside the selection", () => {
 
   const pushResults = (push: (s: QueryResult) => void) =>
     push(
-      resultFromResponse(
+      resultFromWire(
         {
           columns: ["r", "n"],
           columnKinds: ["component", "net"],
@@ -736,7 +737,7 @@ describe("querypanel findings beside the selection", () => {
 
   it("shows no set count for a result with nothing locatable in it", () => {
     const { el, push, panel } = mountPanel();
-    push(resultFromResponse({ columns: ["v"], columnKinds: [""], rows: [{ cells: ["3.3"], cites: [] }] } as never));
+    push(resultFromWire({ columns: ["v"], columnKinds: [""], rows: [{ cells: ["3.3"], cites: [] }] } as never));
     pushChecks(panel);
     expect(footer(el)).toBeNull();
   });
@@ -747,7 +748,7 @@ describe("querypanel findings beside the selection", () => {
 describe("querypanel pin cells", () => {
   const pushPins = (push: (s: QueryResult) => void) =>
     push(
-      resultFromResponse(
+      resultFromWire(
         {
           columns: ["ref", "pin", "net"],
           columnKinds: ["component", "pin", "net"],

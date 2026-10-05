@@ -90,10 +90,12 @@ times faster in Python: a 9,323-row query answer is 8.3 MB and 4 ms, against 15.
 JSON. The server reads a design once and answers many questions about it. `agni serve` with no web
 dir serves the API alone, so an installed binary needs no viewer assets for this.
 
-A query's answer carries where each cell is drawn (`cell_sheets`, `cell_reasons`), which is most of a
-large answer's size and of no use to a script that draws nothing. `omit_locations=True` on
-`run_query` or `run_queries` (`--omit-locations` on the CLI) leaves them out and skips loading the
-drawing; the cells, citations, kinds and refs are unchanged.
+A query's answer keeps each entity its cells name once, in `entities`, with the sheets it is drawn on
+and why it cannot be located, and each citation once, in `sources`. Each row points into both
+(`cell_entity`, `cite_index`), so a net named on a thousand rows is sent once (agni issue 916).
+`omit_locations=True` on `run_query` or `run_queries` (`--omit-locations` on the CLI) leaves out the
+sheets and reasons for a script that draws nothing, and skips loading the drawing; the entities, cells
+and citations are unchanged.
 
 The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py` is the table:
 

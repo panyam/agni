@@ -135,7 +135,8 @@ func TestTabulateRefusesASetWithAFailedQuery(t *testing.T) {
 func TestQueryTableTypesEntityColumnsAndAppendsProvenance(t *testing.T) {
 	tb := QueryTable("q", &webapi.RunQueryResponse{
 		Columns: []string{"n", "count(r)"}, ColumnKinds: []string{"net", ""},
-		Rows: []*webapi.QueryRow{{Cells: []string{"GND", "3"}, Cites: []string{"a", "b"}}},
+		Rows:    []*webapi.QueryRow{{Cells: []string{"GND", "3"}, CiteIndex: []int32{0, 1}}},
+		Sources: []string{"a", "b"},
 	})
 	if got := tb.GetColumns(); len(got) != 3 || got[0].GetType() != webapi.ColumnType_COLUMN_TYPE_NAME || got[0].GetKind() != "net" || got[2].GetName() != "provenance" {
 		t.Errorf("columns = %v, want n as a net name, count, then provenance", got)

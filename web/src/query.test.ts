@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { bindingsInUse, cellKind, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
   it("carries column kinds and resolves each navigable cell's sheet badges via the resolver", () => {
@@ -14,7 +15,7 @@ describe("resultFromResponse", () => {
         },
       ],
     } as never;
-    const result = resultFromResponse(resp, (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })));
+    const result = resultFromWire(resp, (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })));
     expect(result.columnKinds).toEqual(["component", "net", ""]);
     const row = result.rows[0];
     expect(row.cells).toEqual(["R1", "SDA", "3.3"]);
@@ -26,7 +27,7 @@ describe("resultFromResponse", () => {
     expect(row.cellSheets[2]).toEqual([]); // a scalar cell resolves to no badges
   });
 
-  it("reads locations and citations from the response's tables, as it reads them from the rows (agni 916)", () => {
+  it("reads locations and citations from the response's tables (agni 916)", () => {
     const resolve = (ids: string[]) => ids.map((id) => ({ id, name: id.toUpperCase() }));
     const perRow = {
       columns: ["r", "n"],
@@ -50,11 +51,11 @@ describe("resultFromResponse", () => {
         { cells: ["R2", "SDA"], cites: [], citeIndex: [0], cellEntity: [3, 2] },
       ],
     } as never;
-    expect(resultFromResponse(tables, resolve).rows).toEqual(resultFromResponse(perRow, resolve).rows);
+    expect(resultFromResponse(tables, resolve).rows).toEqual(resultFromWire(perRow, resolve).rows);
   });
 
   it("defaults to empty kinds and no badges when the response omits them", () => {
-    const result = resultFromResponse({ columns: ["r"], rows: [{ cells: ["R1"], cites: [] }] } as never);
+    const result = resultFromWire({ columns: ["r"], rows: [{ cells: ["R1"], cites: [] }] } as never);
     expect(result.columnKinds).toEqual([]);
     expect(result.rows[0].cellSheets).toEqual([[]]);
   });
@@ -81,13 +82,13 @@ describe("resultFromResponse cell kinds", () => {
         { cells: ["DATA[1:0]", "bus"], cites: [], cellKinds: ["bus", ""] },
       ],
     } as never;
-    const result = resultFromResponse(resp);
+    const result = resultFromWire(resp);
     expect(result.rows[0].cellKinds).toEqual(["component", ""]);
     expect(result.rows[1].cellKinds).toEqual(["bus", ""]);
   });
 
   it("pads to one entry per cell when the response omits them, so an ordinary query costs nothing", () => {
-    const result = resultFromResponse({
+    const result = resultFromWire({
       columns: ["r", "n"],
       columnKinds: ["component", "net"],
       rows: [{ cells: ["R1", "SDA"], cites: [] }],
@@ -98,7 +99,7 @@ describe("resultFromResponse cell kinds", () => {
 
 describe("cellKind", () => {
   const result = (columnKinds: string[], cellKinds: string[]) =>
-    resultFromResponse({
+    resultFromWire({
       columns: columnKinds.map((_, i) => `c${i}`),
       columnKinds,
       rows: [{ cells: cellKinds.map((_, i) => `v${i}`), cites: [], cellKinds }],

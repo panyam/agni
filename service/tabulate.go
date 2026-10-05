@@ -285,17 +285,11 @@ func QueryTable(name string, resp *webapi.RunQueryResponse) *webapi.Table {
 	return t
 }
 
-// RowCites is a row's citations, read through the response's sources table when the row carries
-// indices into it (agni issue 916) and from the row's own list when it does not, so an answer from
-// either side of that change reads the same.
+// RowCites is a row's citations, read through the response's sources table (agni issue 916).
 func RowCites(resp *webapi.RunQueryResponse, r *webapi.QueryRow) []string {
-	idx := r.GetCiteIndex()
-	if len(idx) == 0 {
-		return r.GetCites()
-	}
 	src := resp.GetSources()
-	out := make([]string, 0, len(idx))
-	for _, i := range idx {
+	out := make([]string, 0, len(r.GetCiteIndex()))
+	for _, i := range r.GetCiteIndex() {
 		if int(i) < len(src) {
 			out = append(out, src[i])
 		}
@@ -303,21 +297,38 @@ func RowCites(resp *webapi.RunQueryResponse, r *webapi.QueryRow) []string {
 	return out
 }
 
-// IndexSources fills a response's sources table and each row's cite_index from the rows' own cites,
-// for an answer built outside answer (agni issue 916).
-func IndexSources(resp *webapi.RunQueryResponse) {
-	at := map[string]int32{}
-	for _, r := range resp.GetRows() {
-		r.CiteIndex = r.CiteIndex[:0]
-		for _, c := range r.GetCites() {
-			n, ok := at[c]
-			if !ok {
-				resp.Sources = append(resp.Sources, c)
-				n = int32(len(resp.Sources) - 1)
-				at[c] = n
-			}
-			r.CiteIndex = append(r.CiteIndex, n)
+// CellLocation is where an answer cell's entity is drawn and why it cannot be located, read
+// through the response's entity table (agni issue 916). A scalar cell has neither.
+func CellLocation(resp *webapi.RunQueryResponse, r *webapi.QueryRow, i int) ([]string, checkspb.LocateReason) {
+	ce := r.GetCellEntity()
+	if i >= len(ce) || ce[i] <= 0 || int(ce[i]) > len(resp.GetEntities()) {
+		return nil, checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
+	}
+	e := resp.GetEntities()[ce[i]-1]
+	return e.GetSheetIds(), e.GetReason()
+}
+
+// SourceTable keeps a response's citations once and points each row at them (agni issue 916).
+type SourceTable struct {
+	resp *webapi.RunQueryResponse
+	at   map[string]int32
+}
+
+// NewSourceTable starts the sources table of resp.
+func NewSourceTable(resp *webapi.RunQueryResponse) *SourceTable {
+	return &SourceTable{resp: resp, at: map[string]int32{}}
+}
+
+// Cite records row's citations, adding each new one to the response's sources.
+func (t *SourceTable) Cite(row *webapi.QueryRow, cites []string) {
+	for _, c := range cites {
+		n, ok := t.at[c]
+		if !ok {
+			t.resp.Sources = append(t.resp.Sources, c)
+			n = int32(len(t.resp.Sources) - 1)
+			t.at[c] = n
 		}
+		row.CiteIndex = append(row.CiteIndex, n)
 	}
 }
 

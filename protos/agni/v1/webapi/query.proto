@@ -97,31 +97,24 @@ message RunQueryRequest {
   // value as data, with nothing to escape or splice. A binding naming a variable the goal does not use
   // is refused as an invalid argument. Rules are unaffected: their variables are their own.
   map<string, QueryValue> bindings = 7;
-  // omit_locations leaves out where each answer cell is drawn: no cell_sheets and no cell_reasons,
-  // and the drawing is not loaded to find them. For a caller that draws nothing, such as a script
-  // writing a workbook, they are most of an answer's bytes: 7.4 of 8.3 MB on a 9,323-row pin listing.
-  // Cell kinds and pin refs are still filled, since they type the answer.
+  // omit_locations leaves out where each answer entity is drawn: its AnswerEntity.sheet_ids and
+  // reason stay empty, and the drawing is not loaded to find them, for a caller that draws nothing,
+  // such as a script writing a workbook. The entities themselves, and cell kinds and pin refs, are
+  // still filled, since they type the answer.
   bool omit_locations = 8;
 }
 
-// QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
-// provenance of the base facts that produced the row (the same citations the CLI prints), kept a
-// separate list so a client can show them on demand rather than widen the results table.
+// QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns. Its provenance
+// (the citations of the base facts that produced it) and each entity cell's location are kept once
+// on the response and pointed to from here (agni issue 916), so a value shared by many rows is sent
+// once.
 message QueryRow {
   repeated string cells = 1;
-  repeated string cites = 2;
-  // cell_sheets aligns positionally with cells (WS9-038): the sheet ids each navigable cell's entity
-  // lives on, so the panel can render an inline sheet badge per cell and navigate on click. Sheet
-  // ids only (the client resolves names, as it does for Finding.sheets); empty for a scalar cell, an
-  // unresolved entity, or a single-sheet design. A row with no navigable cells omits it entirely.
-  repeated CellSheets cell_sheets = 3;
-  // cell_reasons aligns positionally with cells (WS9-039): why a navigable cell's entity is not
-  // highlightable in the faithful view — set ONLY for an entity the loaded geometry does not draw
-  // (a `#` virtual power/flag symbol, a power rail with no drawn wire, an unknown ref/net, or any
-  // other undrawn entity), with the reason classified from design facts. UNSPECIFIED means the
-  // entity IS drawn (it will highlight). Populated only when faithful geometry is loaded; the panel
-  // additionally shows it only on a faithful layout, since an auto-layout draws every entity.
-  repeated agni.v1.checks.LocateReason cell_reasons = 4;
+  // cites (2), cell_sheets (3) and cell_reasons (4) were per-row copies of what the response now keeps
+  // once: a row's citations are cite_index into RunQueryResponse.sources, and an entity cell's sheets
+  // and locate reason are its RunQueryResponse.entities entry, through cell_entity (agni issue 916).
+  reserved 2, 3, 4;
+  reserved "cites", "cell_sheets", "cell_reasons";
   // cell_kinds aligns positionally with cells and OVERRIDES column_kinds for this row (agni issue
   // 338), set only where a column's kind cannot be a column property at all.
   //
@@ -164,16 +157,10 @@ message AnswerEntity {
   string kind = 1;
   string ref = 2;
   string pin = 3;
-  // The sheets this entity is drawn on, as CellSheets.sheet_ids. Empty when the answer omitted
+  // The sheet ids this entity is drawn on, for the client to resolve to names. Empty when the answer omitted
   // locations or the entity is drawn nowhere, which reason then says.
   repeated string sheet_ids = 4;
   agni.v1.checks.LocateReason reason = 5;
-}
-
-// CellSheets is one cell's sheet membership (WS9-038), a message wrapper because proto has no
-// repeated-of-repeated. sheet_ids is empty for a non-navigable or unlocated cell.
-message CellSheets {
-  repeated string sheet_ids = 1;
 }
 
 message RunQueryResponse {

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkivQIKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEj8KCGJpbmRpbmdzGAcgAygLMi0uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0LkJpbmRpbmdzRW50cnkSFgoOb21pdF9sb2NhdGlvbnMYCCABKAgaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASLdAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSDQoFY2l0ZXMYAiADKAkSLwoLY2VsbF9zaGVldHMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5DZWxsU2hlZXRzEjIKDGNlbGxfcmVhc29ucxgEIAMoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbhISCgpjZWxsX2tpbmRzGAUgAygJEhEKCWNlbGxfcmVmcxgGIAMoCRITCgtjZWxsX2VudGl0eRgHIAMoBRISCgpjaXRlX2luZGV4GAggAygFIncKDEFuc3dlckVudGl0eRIMCgRraW5kGAEgASgJEgsKA3JlZhgCIAEoCRILCgNwaW4YAyABKAkSEQoJc2hlZXRfaWRzGAQgAygJEiwKBnJlYXNvbhgFIAEoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbiIfCgpDZWxsU2hlZXRzEhEKCXNoZWV0X2lkcxgBIAMoCSLeAgoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkSDQoFcXVlcnkYBCABKAkSDgoGc291cmNlGAUgASgJEgwKBHdvcmsYBiABKAMSQAoIYmluZGluZ3MYByADKAsyLi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlLkJpbmRpbmdzRW50cnkSLgoIZW50aXRpZXMYCCADKAsyHC5hZ25pLnYxLndlYmFwaS5BbnN3ZXJFbnRpdHkSDwoHc291cmNlcxgJIAMoCRpLCg1CaW5kaW5nc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEud2ViYXBpLlF1ZXJ5VmFsdWU6AjgBIjYKClF1ZXJ5VmFsdWUSDgoEdGV4dBgBIAEoCUgAEhAKBm51bWJlchgCIAEoAUgAQgYKBGtpbmQiYQoUTGlzdFJlbGF0aW9uc1JlcXVlc3QSDAoEcGF0aBgBIAEoCRILCgN1cmkYAiABKAkSLgoHb3ZlcmxheRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcigAEKDFJlbGF0aW9uSW5mbxIMCgRuYW1lGAEgASgJEgwKBGFyZ3MYAiADKAkSDwoHc3VtbWFyeRgDIAEoCRIMCgRraW5kGAQgASgJEg4KBmRldGFpbBgFIAEoCRIRCglzaWduYXR1cmUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCSLHAQoNUmVsYXRpb25FbnRyeRIMCgRwYXRoGAEgASgJEhIKCmVudHJ5X2tpbmQYAiABKAkSEQoJc2lnbmF0dXJlGAMgASgJEgsKA2RvYxgEIAEoCRIOCgZkZXRhaWwYBSABKAkSDgoGbW9kdWxlGAYgASgJEhIKCmRlZmluaXRpb24YByADKAkSEAoIaW5mZXJyZWQYCCADKAkSLgoHbWVtYmVycxgJIAMoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiPQoMRXhhbXBsZVF1ZXJ5Eg0KBWxhYmVsGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkiSgoLRW50aXR5UXVlcnkSDAoEa2luZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJEg0KBWJpbmRzGAQgAygJIkwKC1NlYXJjaFF1ZXJ5Eg0KBXF1ZXJ5GAEgASgJEg8KB3RlYWNoZXMYAiABKAkSDAoEYmluZBgDIAEoCRIPCgdwYXR0ZXJuGAQgASgJIo4CChVMaXN0UmVsYXRpb25zUmVzcG9uc2USLwoJcmVsYXRpb25zGAEgAygLMhwuYWduaS52MS53ZWJhcGkuUmVsYXRpb25JbmZvEi4KCGV4YW1wbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuRXhhbXBsZVF1ZXJ5EjMKDmVudGl0eV9xdWVyaWVzGAMgAygLMhsuYWduaS52MS53ZWJhcGkuRW50aXR5UXVlcnkSMQoMc2VhcmNoX3F1ZXJ5GAQgASgLMhsuYWduaS52MS53ZWJhcGkuU2VhcmNoUXVlcnkSLAoFZW50cnkYBSABKAsyHS5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkVudHJ5IlgKCFF1ZXJ5U2V0Eg0KBXRpdGxlGAEgASgJEhAKCHByZWFtYmxlGAIgASgJEisKB3F1ZXJpZXMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5IscBCgpOYW1lZFF1ZXJ5EgwKBG5hbWUYASABKAkSDQoFcXVlcnkYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSOgoIYmluZGluZ3MYBCADKAsyKC5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5LkJpbmRpbmdzRW50cnkaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASLJAQoRUnVuUXVlcmllc1JlcXVlc3QSJQoDc2V0GAEgASgLMhguYWduaS52MS53ZWJhcGkuUXVlcnlTZXQSCwoDdXJpGAIgASgJEi4KB292ZXJsYXkYAyABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3VyaRgEIAEoCRIQCghhc19uYW1lZBgFIAEoCBITCgt3b3JrX2J1ZGdldBgGIAEoAxIWCg5vbWl0X2xvY2F0aW9ucxgHIAEoCCJ4ChJSdW5RdWVyaWVzUmVzcG9uc2USDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSDgoGc291cmNlGAMgASgJEjEKB3Jlc3VsdHMYBCADKAsyIC5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5UmVzdWx0InYKEE5hbWVkUXVlcnlSZXN1bHQSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIwCgZyZXN1bHQYAyABKAsyIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlEg0KBWVycm9yGAQgASgJMpACCgxRdWVyeVNlcnZpY2USTQoIUnVuUXVlcnkSHy5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlcXVlc3QaIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlElMKClJ1blF1ZXJpZXMSIS5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXNwb25zZRJcCg1MaXN0UmVsYXRpb25zEiQuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkivQIKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEj8KCGJpbmRpbmdzGAcgAygLMi0uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0LkJpbmRpbmdzRW50cnkSFgoOb21pdF9sb2NhdGlvbnMYCCABKAgaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASKdAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkSEwoLY2VsbF9lbnRpdHkYByADKAUSEgoKY2l0ZV9pbmRleBgIIAMoBUoECAIQA0oECAMQBEoECAQQBVIFY2l0ZXNSC2NlbGxfc2hlZXRzUgxjZWxsX3JlYXNvbnMidwoMQW5zd2VyRW50aXR5EgwKBGtpbmQYASABKAkSCwoDcmVmGAIgASgJEgsKA3BpbhgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkSLAoGcmVhc29uGAUgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uIt4CChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAxJACghiaW5kaW5ncxgHIAMoCzIuLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2UuQmluZGluZ3NFbnRyeRIuCghlbnRpdGllcxgIIAMoCzIcLmFnbmkudjEud2ViYXBpLkFuc3dlckVudGl0eRIPCgdzb3VyY2VzGAkgAygJGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEiNgoKUXVlcnlWYWx1ZRIOCgR0ZXh0GAEgASgJSAASEAoGbnVtYmVyGAIgASgBSABCBgoEa2luZCJhChRMaXN0UmVsYXRpb25zUmVxdWVzdBIMCgRwYXRoGAEgASgJEgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyKAAQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCXNpZ25hdHVyZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJIscBCg1SZWxhdGlvbkVudHJ5EgwKBHBhdGgYASABKAkSEgoKZW50cnlfa2luZBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkSCwoDZG9jGAQgASgJEg4KBmRldGFpbBgFIAEoCRIOCgZtb2R1bGUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCRIQCghpbmZlcnJlZBgIIAMoCRIuCgdtZW1iZXJzGAkgAygLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSI9CgxFeGFtcGxlUXVlcnkSDQoFbGFiZWwYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSJKCgtFbnRpdHlRdWVyeRIMCgRraW5kGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkSDQoFYmluZHMYBCADKAkiTAoLU2VhcmNoUXVlcnkSDQoFcXVlcnkYASABKAkSDwoHdGVhY2hlcxgCIAEoCRIMCgRiaW5kGAMgASgJEg8KB3BhdHRlcm4YBCABKAkijgIKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkSMwoOZW50aXR5X3F1ZXJpZXMYAyADKAsyGy5hZ25pLnYxLndlYmFwaS5FbnRpdHlRdWVyeRIxCgxzZWFyY2hfcXVlcnkYBCABKAsyGy5hZ25pLnYxLndlYmFwaS5TZWFyY2hRdWVyeRIsCgVlbnRyeRgFIAEoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiWAoIUXVlcnlTZXQSDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSKwoHcXVlcmllcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkixwEKCk5hbWVkUXVlcnkSDAoEbmFtZRgBIAEoCRINCgVxdWVyeRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI6CghiaW5kaW5ncxgEIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkuQmluZGluZ3NFbnRyeRpLCg1CaW5kaW5nc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEud2ViYXBpLlF1ZXJ5VmFsdWU6AjgBIskBChFSdW5RdWVyaWVzUmVxdWVzdBIlCgNzZXQYASABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBILCgN1cmkYAiABKAkSLgoHb3ZlcmxheRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSEQoJYm9hcmRfdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEhYKDm9taXRfbG9jYXRpb25zGAcgASgIIngKElJ1blF1ZXJpZXNSZXNwb25zZRINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIOCgZzb3VyY2UYAyABKAkSMQoHcmVzdWx0cxgEIAMoCzIgLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnlSZXN1bHQidgoQTmFtZWRRdWVyeVJlc3VsdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEjAKBnJlc3VsdBgDIAEoCzIgLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USDQoFZXJyb3IYBCABKAkykAIKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USUwoKUnVuUXVlcmllcxIhLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1Jlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -105,10 +105,10 @@ export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
   bindings: { [key: string]: QueryValue };
 
   /**
-   * omit_locations leaves out where each answer cell is drawn: no cell_sheets and no cell_reasons,
-   * and the drawing is not loaded to find them. For a caller that draws nothing, such as a script
-   * writing a workbook, they are most of an answer's bytes: 7.4 of 8.3 MB on a 9,323-row pin listing.
-   * Cell kinds and pin refs are still filled, since they type the answer.
+   * omit_locations leaves out where each answer entity is drawn: its AnswerEntity.sheet_ids and
+   * reason stay empty, and the drawing is not loaded to find them, for a caller that draws nothing,
+   * such as a script writing a workbook. The entities themselves, and cell kinds and pin refs, are
+   * still filled, since they type the answer.
    *
    * @generated from field: bool omit_locations = 8;
    */
@@ -123,9 +123,10 @@ export const RunQueryRequestSchema: GenMessage<RunQueryRequest> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 0);
 
 /**
- * QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
- * provenance of the base facts that produced the row (the same citations the CLI prints), kept a
- * separate list so a client can show them on demand rather than widen the results table.
+ * QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns. Its provenance
+ * (the citations of the base facts that produced it) and each entity cell's location are kept once
+ * on the response and pointed to from here (agni issue 916), so a value shared by many rows is sent
+ * once.
  *
  * @generated from message agni.v1.webapi.QueryRow
  */
@@ -134,33 +135,6 @@ export type QueryRow = Message<"agni.v1.webapi.QueryRow"> & {
    * @generated from field: repeated string cells = 1;
    */
   cells: string[];
-
-  /**
-   * @generated from field: repeated string cites = 2;
-   */
-  cites: string[];
-
-  /**
-   * cell_sheets aligns positionally with cells (WS9-038): the sheet ids each navigable cell's entity
-   * lives on, so the panel can render an inline sheet badge per cell and navigate on click. Sheet
-   * ids only (the client resolves names, as it does for Finding.sheets); empty for a scalar cell, an
-   * unresolved entity, or a single-sheet design. A row with no navigable cells omits it entirely.
-   *
-   * @generated from field: repeated agni.v1.webapi.CellSheets cell_sheets = 3;
-   */
-  cellSheets: CellSheets[];
-
-  /**
-   * cell_reasons aligns positionally with cells (WS9-039): why a navigable cell's entity is not
-   * highlightable in the faithful view — set ONLY for an entity the loaded geometry does not draw
-   * (a `#` virtual power/flag symbol, a power rail with no drawn wire, an unknown ref/net, or any
-   * other undrawn entity), with the reason classified from design facts. UNSPECIFIED means the
-   * entity IS drawn (it will highlight). Populated only when faithful geometry is loaded; the panel
-   * additionally shows it only on a faithful layout, since an auto-layout draws every entity.
-   *
-   * @generated from field: repeated agni.v1.checks.LocateReason cell_reasons = 4;
-   */
-  cellReasons: LocateReason[];
 
   /**
    * cell_kinds aligns positionally with cells and OVERRIDES column_kinds for this row (agni issue
@@ -247,7 +221,7 @@ export type AnswerEntity = Message<"agni.v1.webapi.AnswerEntity"> & {
   pin: string;
 
   /**
-   * The sheets this entity is drawn on, as CellSheets.sheet_ids. Empty when the answer omitted
+   * The sheet ids this entity is drawn on, for the client to resolve to names. Empty when the answer omitted
    * locations or the entity is drawn nowhere, which reason then says.
    *
    * @generated from field: repeated string sheet_ids = 4;
@@ -266,26 +240,6 @@ export type AnswerEntity = Message<"agni.v1.webapi.AnswerEntity"> & {
  */
 export const AnswerEntitySchema: GenMessage<AnswerEntity> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 2);
-
-/**
- * CellSheets is one cell's sheet membership (WS9-038), a message wrapper because proto has no
- * repeated-of-repeated. sheet_ids is empty for a non-navigable or unlocated cell.
- *
- * @generated from message agni.v1.webapi.CellSheets
- */
-export type CellSheets = Message<"agni.v1.webapi.CellSheets"> & {
-  /**
-   * @generated from field: repeated string sheet_ids = 1;
-   */
-  sheetIds: string[];
-};
-
-/**
- * Describes the message agni.v1.webapi.CellSheets.
- * Use `create(CellSheetsSchema)` to create a new message.
- */
-export const CellSheetsSchema: GenMessage<CellSheets> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 3);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryResponse
@@ -377,7 +331,7 @@ export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
  * Use `create(RunQueryResponseSchema)` to create a new message.
  */
 export const RunQueryResponseSchema: GenMessage<RunQueryResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 4);
+  messageDesc(file_agni_v1_webapi_query, 3);
 
 /**
  * QueryValue is a value bound to a query variable. Where the schema types the variable's position,
@@ -412,7 +366,7 @@ export type QueryValue = Message<"agni.v1.webapi.QueryValue"> & {
  * Use `create(QueryValueSchema)` to create a new message.
  */
 export const QueryValueSchema: GenMessage<QueryValue> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 5);
+  messageDesc(file_agni_v1_webapi_query, 4);
 
 /**
  * @generated from message agni.v1.webapi.ListRelationsRequest
@@ -452,7 +406,7 @@ export type ListRelationsRequest = Message<"agni.v1.webapi.ListRelationsRequest"
  * Use `create(ListRelationsRequestSchema)` to create a new message.
  */
 export const ListRelationsRequestSchema: GenMessage<ListRelationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 6);
+  messageDesc(file_agni_v1_webapi_query, 5);
 
 /**
  * RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
@@ -514,7 +468,7 @@ export type RelationInfo = Message<"agni.v1.webapi.RelationInfo"> & {
  * Use `create(RelationInfoSchema)` to create a new message.
  */
 export const RelationInfoSchema: GenMessage<RelationInfo> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 7);
+  messageDesc(file_agni_v1_webapi_query, 6);
 
 /**
  * RelationEntry is one place in the namespace tree, for drill-down: a module listing what it holds,
@@ -592,7 +546,7 @@ export type RelationEntry = Message<"agni.v1.webapi.RelationEntry"> & {
  * Use `create(RelationEntrySchema)` to create a new message.
  */
 export const RelationEntrySchema: GenMessage<RelationEntry> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 8);
+  messageDesc(file_agni_v1_webapi_query, 7);
 
 /**
  * ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
@@ -623,7 +577,7 @@ export type ExampleQuery = Message<"agni.v1.webapi.ExampleQuery"> & {
  * Use `create(ExampleQuerySchema)` to create a new message.
  */
 export const ExampleQuerySchema: GenMessage<ExampleQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 9);
+  messageDesc(file_agni_v1_webapi_query, 8);
 
 /**
  * EntityQuery is the preset a viewer runs when the reader CLICKS an entity in the drawing: the
@@ -674,7 +628,7 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
  * Use `create(EntityQuerySchema)` to create a new message.
  */
 export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 10);
+  messageDesc(file_agni_v1_webapi_query, 9);
 
 /**
  * SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
@@ -721,7 +675,7 @@ export type SearchQuery = Message<"agni.v1.webapi.SearchQuery"> & {
  * Use `create(SearchQuerySchema)` to create a new message.
  */
 export const SearchQuerySchema: GenMessage<SearchQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 11);
+  messageDesc(file_agni_v1_webapi_query, 10);
 
 /**
  * @generated from message agni.v1.webapi.ListRelationsResponse
@@ -771,7 +725,7 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
  * Use `create(ListRelationsResponseSchema)` to create a new message.
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 12);
+  messageDesc(file_agni_v1_webapi_query, 11);
 
 /**
  * QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values
@@ -806,7 +760,7 @@ export type QuerySet = Message<"agni.v1.webapi.QuerySet"> & {
  * Use `create(QuerySetSchema)` to create a new message.
  */
 export const QuerySetSchema: GenMessage<QuerySet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 13);
+  messageDesc(file_agni_v1_webapi_query, 12);
 
 /**
  * NamedQuery is one entry of a QuerySet. name is unique within the set and identifies the entry's
@@ -847,7 +801,7 @@ export type NamedQuery = Message<"agni.v1.webapi.NamedQuery"> & {
  * Use `create(NamedQuerySchema)` to create a new message.
  */
 export const NamedQuerySchema: GenMessage<NamedQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 14);
+  messageDesc(file_agni_v1_webapi_query, 13);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesRequest
@@ -903,7 +857,7 @@ export type RunQueriesRequest = Message<"agni.v1.webapi.RunQueriesRequest"> & {
  * Use `create(RunQueriesRequestSchema)` to create a new message.
  */
 export const RunQueriesRequestSchema: GenMessage<RunQueriesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 15);
+  messageDesc(file_agni_v1_webapi_query, 14);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesResponse
@@ -941,7 +895,7 @@ export type RunQueriesResponse = Message<"agni.v1.webapi.RunQueriesResponse"> & 
  * Use `create(RunQueriesResponseSchema)` to create a new message.
  */
 export const RunQueriesResponseSchema: GenMessage<RunQueriesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 16);
+  messageDesc(file_agni_v1_webapi_query, 15);
 
 /**
  * NamedQueryResult is one query's answer, or why it has none. Exactly one of result and error is set.
@@ -978,7 +932,7 @@ export type NamedQueryResult = Message<"agni.v1.webapi.NamedQueryResult"> & {
  * Use `create(NamedQueryResultSchema)` to create a new message.
  */
 export const NamedQueryResultSchema: GenMessage<NamedQueryResult> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 17);
+  messageDesc(file_agni_v1_webapi_query, 16);
 
 /**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004

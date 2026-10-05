@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"os"
@@ -448,7 +449,7 @@ func TestQueryJSONIsTheWireMessage(t *testing.T) {
 	if len(resp.GetRows()) == 0 {
 		t.Fatal("no rows")
 	}
-	if len(resp.GetRows()[0].GetCites()) == 0 {
+	if len(service.RowCites(&resp, resp.GetRows()[0])) == 0 {
 		t.Error("provenance is not kept per row, so an answer cannot be traced back to its source")
 	}
 	// The column kinds the hand-rolled shape dropped, which is what makes a cell locatable.
