@@ -11,28 +11,20 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { execFileSync } from "node:child_process";
-import { createReadStream, existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
-import { createServer, type Server } from "node:http";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { extname, join, normalize, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
+import { serveStatic, type StaticServer } from "./staticserver.js";
 
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const prefix = "/agni/demo/";
 let browser: Browser;
-let server: Server;
+let site: StaticServer | undefined;
 let base = "";
 let out = "";
 const prebuilt = process.env.AGNI_SITE_DIR ? resolve(process.env.AGNI_SITE_DIR) : "";
-
-const types: Record<string, string> = {
-  ".html": "text/html",
-  ".js": "text/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".wasm": "application/wasm",
-};
 
 // seeded is every board the spec opens. The gate builds the first two; a prebuilt site that lists
 // another mount must carry it too, so the published demo is checked seed by seed.
@@ -59,36 +51,14 @@ beforeAll(async () => {
       { cwd: repo, env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home }, stdio: "pipe" },
     );
   }
-  // A plain file server: a path under the prefix maps to the built folder, a folder serves its
-  // index.html, and anything else is a 404, as a static host answers.
-  server = createServer((req, res) => {
-    const path = decodeURIComponent(new URL(req.url ?? "/", "http://x").pathname);
-    if (!path.startsWith(prefix)) {
-      res.writeHead(404).end();
-      return;
-    }
-    let file = normalize(join(out, path.slice(prefix.length)));
-    if (!file.startsWith(out)) {
-      res.writeHead(404).end();
-      return;
-    }
-    if (existsSync(file) && statSync(file).isDirectory()) file = join(file, "index.html");
-    if (!existsSync(file)) {
-      res.writeHead(404).end();
-      return;
-    }
-    res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream" });
-    createReadStream(file).pipe(res);
-  });
-  await new Promise<void>((ok) => server.listen(0, "127.0.0.1", ok));
-  const addr = server.address();
-  base = `http://127.0.0.1:${typeof addr === "object" && addr ? addr.port : 0}${prefix}`;
+  site = await serveStatic(out, prefix);
+  base = site.base;
   browser = await launch();
 }, 300_000);
 
 afterAll(async () => {
   await browser?.close();
-  server?.close();
+  site?.close();
   if (out && !prebuilt) rmSync(out, { recursive: true, force: true });
 });
 

@@ -18,6 +18,11 @@
          route to the same place a drag onto the page goes. Shown by the bundle. -->
     <button id="drop-open" class="drop-open" type="button" hidden>Open files…</button>
     <input id="drop-input" type="file" multiple hidden />
+    <!-- agni issue 878: a folder picked whole, the keyboard route to dragging a folder on. A file
+         picker can only pick files, so without this a visitor with a KiCad project folder had to
+         zip it first or select every file in it. -->
+    <button id="drop-folder" class="drop-open" type="button" hidden>Open folder…</button>
+    <input id="drop-folder-input" type="file" webkitdirectory multiple hidden />
     <!-- WS9-049: the visited-sheet tab strip island mounts here. It is NOT the design's sheet
          list (that is the Sheets panel); a sheet earns a tab the first time it is shown. -->
     <div id="sheet-tabs" class="sheet-tabs-host" data-component="sheet-tabs"></div>

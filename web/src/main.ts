@@ -151,6 +151,8 @@ function installPageDrop(engine: WasmEngine | undefined): void {
   const button = document.getElementById("drop-open");
   const input = document.getElementById("drop-input") as HTMLInputElement | null;
   if (!dialog || !button || !input) return;
+  const folderButton = document.getElementById("drop-folder") ?? undefined;
+  const folderInput = (document.getElementById("drop-folder-input") as HTMLInputElement | null) ?? undefined;
   const files = workspaceClient();
   installDrop({
     engine,
@@ -165,6 +167,8 @@ function installPageDrop(engine: WasmEngine | undefined): void {
     dialog,
     button,
     input,
+    folderButton,
+    folderInput,
   });
 }
 
