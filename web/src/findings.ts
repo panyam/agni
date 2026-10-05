@@ -126,6 +126,10 @@ export interface FindingsState {
   pending: number;
   // running is true while a check run is in flight, so the panel disables the Run button.
   running: boolean;
+  // catalogLoading is true from the moment a design starts opening until its rule catalog
+  // (ListRules) answers. The first sheet can draw before then, and a Run pressed in that window has
+  // no ruleset to run, so the panel disables the button and says why (agni 868).
+  catalogLoading: boolean;
   // skipped names the selected rules that could NOT run on this design, and why. A rule whose fact
   // tier the design lacks (a board rule on a netlist, a datasheet rule with no corpus) is gated before it
   // evaluates and produces no findings, so without this list an unanswered question reads as a clean
@@ -501,12 +505,14 @@ export function tallySeverities(findings: FindingItem[]): SeverityTally {
 // CheckedState is how much of the current ruleset has actually run, which decides whether a count
 // beside an entity means anything. Without it a zero reads as "this entity is clean" when nobody has
 // pressed Run.
-export type CheckedState = "no-rules" | "running" | "not-run" | "partial" | "complete";
+export type CheckedState = "loading" | "no-rules" | "running" | "not-run" | "partial" | "complete";
 
 // checkedState classifies a pushed FindingsState. `partial` gets its own name because a half-run
 // ruleset gives real findings and an understated count at once, so the count has to read as a floor.
-export function checkedState(s: { ruleCount: number; pending: number; running: boolean }): CheckedState {
+// `loading` comes before `no-rules` because a catalog that has not arrived selects nothing yet.
+export function checkedState(s: { ruleCount: number; pending: number; running: boolean; catalogLoading?: boolean }): CheckedState {
   if (s.running) return "running";
+  if (s.catalogLoading) return "loading";
   if (s.ruleCount === 0) return "no-rules";
   if (s.pending >= s.ruleCount) return "not-run";
   return s.pending > 0 ? "partial" : "complete";

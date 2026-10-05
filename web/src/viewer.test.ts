@@ -123,6 +123,13 @@ async function openAndCheck(h: ReturnType<typeof harness>, mount: string, path: 
   await h.presenter.runChecks();
 }
 
+// deferred hands out a promise and its resolver, so a test can hold a call open while it acts.
+function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
 // lastReport returns the argument of the most recent onReport push.
 function lastReport(h: ReturnType<typeof harness>) {
   const calls = h.onReport.mock.calls;
@@ -987,6 +994,50 @@ describe("on-demand checks (WS9)", () => {
     expect(fs.findings).toHaveLength(0);
     expect(fs.ruleCount).toBe(2);
     expect(fs.pending).toBe(2); // both selected rules await a run
+  });
+
+  // The first sheet draws before ListRules answers, and a Run pressed in that window used to run an
+  // empty selection and then be overwritten by the catalog's "Press Run checks" state (agni 868).
+  it("a Run pressed before the catalog arrives runs nothing, and the panel says the catalog is loading", async () => {
+    const h = harness();
+    const catalog = deferred<Awaited<ReturnType<typeof h.listRules>>>();
+    h.listRules.mockReturnValueOnce(catalog.promise);
+    const opening = h.presenter.openFile("m", "board.edn");
+    await vi.waitFor(() => expect(h.listRules).toHaveBeenCalledOnce());
+    expect(h.navA.setState).toHaveBeenCalled(); // the sheet is up, so the button is visible
+    expect(lastFindings(h).catalogLoading).toBe(true);
+
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+
+    catalog.resolve(await h.listRules.getMockImplementation()!({ uri: "" }));
+    await opening;
+    expect(lastFindings(h).catalogLoading).toBe(false);
+    await h.presenter.runChecks();
+    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net", "diff-pair-naming"] });
+  });
+
+  it("a Run pressed while a second design's catalog loads does not run the first design's rules on it", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "a.edn");
+    const catalog = deferred<Awaited<ReturnType<typeof h.listRules>>>();
+    h.listRules.mockReturnValueOnce(catalog.promise);
+    const opening = h.presenter.openFile("m", "b.edn");
+    await vi.waitFor(() => expect(h.listRules).toHaveBeenCalledTimes(2));
+
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+
+    catalog.resolve({ rules: [] });
+    await opening;
+  });
+
+  it("an open that fails before the catalog loads leaves Run enabled", async () => {
+    const h = harness();
+    h.getDesign.mockRejectedValueOnce(new Error("unreadable"));
+    await h.presenter.openFile("m", "broken.edn");
+    expect(h.listRules).not.toHaveBeenCalled();
+    expect(lastFindings(h).catalogLoading).toBe(false);
   });
 
   it("runChecks evaluates the current selection and clears the running flag", async () => {

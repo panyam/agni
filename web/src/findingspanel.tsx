@@ -114,13 +114,14 @@ function ChecksPanel(props: {
   const runLabel = () => {
     const s = props.state();
     if (s.running) return "Running…";
+    if (s.catalogLoading) return "Loading rules…";
     return s.pending > 0 ? `Run checks (${s.pending})` : "Run checks";
   };
 
   return (
     <div class="checks">
       <div class="checks-toolbar">
-        <button type="button" class="checks-run" disabled={props.state().running} onClick={() => props.onRun()}>
+        <button type="button" class="checks-run" disabled={props.state().running || props.state().catalogLoading} onClick={() => props.onRun()}>
           {runLabel()}
         </button>
         <label class="checks-groupby">
@@ -175,7 +176,10 @@ function ChecksPanel(props: {
         </div>
       </Show>
 
-      <Show when={props.state().ruleCount > 0} fallback={<div class="findings-empty">No rules selected.</div>}>
+      <Show
+        when={props.state().ruleCount > 0}
+        fallback={<div class="findings-empty">{props.state().catalogLoading ? "Loading rules…" : "No rules selected."}</div>}
+      >
         <Show
           when={props.state().findings.length > 0}
           fallback={
@@ -410,6 +414,7 @@ export function findingsPanelIsland(
     ruleCount: 0,
     pending: 0,
     running: false,
+    catalogLoading: false,
     skipped: [],
     ruleSummaries: {},
   });

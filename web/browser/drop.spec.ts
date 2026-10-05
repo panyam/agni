@@ -32,8 +32,7 @@ function record(page: Page): { network: string[]; errors: string[] } {
 }
 
 async function runChecks(page: Page): Promise<string[]> {
-  await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 60_000 }).toMatch(/\(\d+\)/);
-  await page.click(".checks-run");
+  await page.click(".checks-run", { timeout: 60_000 });
   await page.waitForSelector(".check-locate", { timeout: 60_000 });
   return page.locator(".check-locate").allTextContents();
 }
