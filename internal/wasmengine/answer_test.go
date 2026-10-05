@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http/httptest"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -30,14 +29,15 @@ func gatewayQuery(t *testing.T, req *webapi.RunQueryRequest) *webapi.RunQueryRes
 	return r.Msg
 }
 
-// TestAnAnswersTablesSayWhatItsRowsSay holds the normalized answer (agni issue 916) to the per-row
-// fields it replaces: every entity cell's entry carries that cell's sheets and reason, every row's
-// citations are its source indices, and an entity named on many rows is kept once.
-func TestAnAnswersTablesSayWhatItsRowsSay(t *testing.T) {
+// TestAnAnswerKeepsEachEntityAndSourceOnce holds the normalized answer (agni issue 916): every entity
+// cell points at an entry naming that cell's entity, every citation index resolves, an entity named
+// on many rows is kept once, and the answer still locates its cells.
+func TestAnAnswerKeepsEachEntityAndSourceOnce(t *testing.T) {
 	r := gatewayQuery(t, &webapi.RunQueryRequest{Query: `pin.net(?r, ?p, ?n) => ?n, ?r, ?p`})
-	if len(r.GetRows()) == 0 || len(r.GetEntities()) == 0 {
-		t.Fatalf("%d rows and %d entities, so nothing below is checked", len(r.GetRows()), len(r.GetEntities()))
+	if len(r.GetRows()) == 0 || len(r.GetEntities()) == 0 || len(r.GetSources()) == 0 {
+		t.Fatalf("%d rows, %d entities, %d sources, so nothing below is checked", len(r.GetRows()), len(r.GetEntities()), len(r.GetSources()))
 	}
+	kinds := r.GetColumnKinds()
 	located, cells := 0, 0
 	for ri, row := range r.GetRows() {
 		if len(row.GetCellEntity()) != len(row.GetCells()) {
@@ -49,23 +49,29 @@ func TestAnAnswersTablesSayWhatItsRowsSay(t *testing.T) {
 			}
 			cells++
 			e := r.GetEntities()[n-1]
-			if !slices.Equal(e.GetSheetIds(), row.GetCellSheets()[i].GetSheetIds()) || e.GetReason() != row.GetCellReasons()[i] {
-				t.Fatalf("row %d cell %d: entity %v disagrees with the row's sheets %v and reason %v", ri, i, e, row.GetCellSheets()[i].GetSheetIds(), row.GetCellReasons()[i])
+			want := row.GetCells()[i]
+			if kinds[i] == "pin" {
+				if e.GetPin() != want || e.GetRef() != row.GetCellRefs()[i] {
+					t.Fatalf("row %d cell %d: entity %v, want pin %q of %q", ri, i, e, want, row.GetCellRefs()[i])
+				}
+			} else if e.GetRef() != want || e.GetKind() != kinds[i] {
+				t.Fatalf("row %d cell %d: entity %v, want %s %q", ri, i, e, kinds[i], want)
 			}
 			if len(e.GetSheetIds()) > 0 {
 				located++
 			}
 		}
-		var cites []string
-		for _, ci := range row.GetCiteIndex() {
-			cites = append(cites, r.GetSources()[ci])
+		if len(row.GetCiteIndex()) == 0 {
+			t.Fatalf("row %d carries no citation", ri)
 		}
-		if !slices.Equal(cites, row.GetCites()) {
-			t.Fatalf("row %d: sources %v, cites %v", ri, cites, row.GetCites())
+		for _, ci := range row.GetCiteIndex() {
+			if int(ci) >= len(r.GetSources()) {
+				t.Fatalf("row %d: cite index %d past %d sources", ri, ci, len(r.GetSources()))
+			}
 		}
 	}
 	if located == 0 {
-		t.Fatal("no entity cell is located on a sheet, so the sheets were never compared")
+		t.Fatal("no entity is located on a sheet, so the answer lost its locations")
 	}
 	if len(r.GetEntities()) >= cells {
 		t.Errorf("%d entities for %d entity cells: an entity named on several rows was kept more than once", len(r.GetEntities()), cells)

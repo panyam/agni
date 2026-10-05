@@ -316,27 +316,15 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		entityAt[key] = n
 		return n
 	}
-	sourceAt := map[string]int32{}
+	sources := NewSourceTable(resp)
 	for _, r := range rows {
 		cells := make([]string, len(cols))
 		for i, c := range cols {
 			cells[i] = r.Bind[c].S
 		}
-		row := &webapi.QueryRow{Cells: cells, Cites: portableCites(r.Cites, d.u.Path)}
-		for _, c := range row.Cites {
-			n, ok := sourceAt[c]
-			if !ok {
-				resp.Sources = append(resp.Sources, c)
-				n = int32(len(resp.Sources) - 1)
-				sourceAt[c] = n
-			}
-			row.CiteIndex = append(row.CiteIndex, n)
-		}
+		row := &webapi.QueryRow{Cells: cells}
+		sources.Cite(row, portableCites(r.Cites, d.u.Path))
 		if navigable {
-			if locate {
-				row.CellSheets = make([]*webapi.CellSheets, len(cols))
-				row.CellReasons = make([]checkspb.LocateReason, len(cols))
-			}
 			for i := range cols {
 				// A polymorphic column takes its kind from THIS row's binding of the kind variable
 				// and puts it on the wire so the client types the cell the same way (agni issue 338).
@@ -362,28 +350,16 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 						kind = ""
 					}
 				}
-				var n int32
 				if kind != "" {
 					pin := ""
 					if kind == check.KindPin {
 						pin = cells[i]
 					}
-					n = entity(kind, ref, pin)
 					if row.CellEntity == nil {
 						row.CellEntity = make([]int32, len(cols))
 					}
-					row.CellEntity[i] = n
+					row.CellEntity[i] = entity(kind, ref, pin)
 				}
-				if !locate {
-					continue
-				}
-				cs := &webapi.CellSheets{}
-				if n > 0 {
-					e := resp.Entities[n-1]
-					cs.SheetIds = e.SheetIds
-					row.CellReasons[i] = e.Reason
-				}
-				row.CellSheets[i] = cs
 			}
 		}
 		resp.Rows = append(resp.Rows, row)

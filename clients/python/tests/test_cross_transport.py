@@ -260,16 +260,17 @@ def test_binary_and_json_answer_alike(case: Case, connect: Client, connect_json:
 
 
 def test_omitting_locations_drops_only_the_locations(connect: Client):
-    """omit_locations leaves out cell_sheets and cell_reasons and nothing else: the cells, the
-    citations, and the kinds and refs that type the answer are the full answer's."""
+    """omit_locations leaves out where each entity is drawn (its sheet_ids and reason) and nothing
+    else: the cells, the citations, the entities themselves and the kinds and refs that type the
+    answer are the full answer's (agni issues 916, 917)."""
     q = "pin.net(?r, ?p, ?n) => ?n, ?r, ?p"
     full = connect.run_query(uri=DESIGN, query=q)
     bare = connect.run_query(uri=DESIGN, query=q, omit_locations=True)
-    assert len(full.rows) > 0 and any(len(c.sheet_ids) for r in full.rows for c in r.cell_sheets), "the full answer locates nothing, so this proves nothing"
-    assert all(not r.cell_sheets and not r.cell_reasons for r in bare.rows)
-    for row in full.rows:
-        row.ClearField("cell_sheets")
-        row.ClearField("cell_reasons")
+    assert len(full.rows) > 0 and any(e.sheet_ids for e in full.entities), "the full answer locates nothing, so this proves nothing"
+    assert bare.entities and all(not e.sheet_ids and not e.reason for e in bare.entities)
+    for e in full.entities:
+        e.ClearField("sheet_ids")
+        e.ClearField("reason")
     full.work = bare.work = 0
     assert full == bare
     assert len(bare.SerializeToString()) < len(connect.run_query(uri=DESIGN, query=q).SerializeToString())

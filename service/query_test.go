@@ -61,7 +61,7 @@ func TestRunQueryReturnsRowsAndProvenance(t *testing.T) {
 	}
 	// Every answer row carries the provenance of the facts that produced it.
 	for _, row := range resp.GetRows() {
-		if len(row.GetCites()) == 0 {
+		if len(RowCites(resp, row)) == 0 {
 			t.Errorf("row %v carries no provenance", row.GetCells())
 		}
 	}
@@ -224,8 +224,7 @@ func TestRunQueryPerRowKindDrivesSheetsAndReasons(t *testing.T) {
 	sheets := map[string][]string{}
 	reasons := map[string]checkspb.LocateReason{}
 	for _, row := range resp.GetRows() {
-		sheets[row.GetCells()[0]] = row.GetCellSheets()[0].GetSheetIds()
-		reasons[row.GetCells()[0]] = row.GetCellReasons()[0]
+		sheets[row.GetCells()[0]], reasons[row.GetCells()[0]] = CellLocation(resp, row, 0)
 	}
 	for _, name := range []string{"U1", "SDA"} {
 		if !slices.Equal(sheets[name], []string{"s1"}) {
@@ -385,8 +384,7 @@ func TestRunQueryPinResolvesThroughItsComponent(t *testing.T) {
 	reasons := map[string]checkspb.LocateReason{}
 	for _, row := range resp.GetRows() {
 		ref := row.GetCells()[0]
-		sheets[ref] = row.GetCellSheets()[1].GetSheetIds()
-		reasons[ref] = row.GetCellReasons()[1]
+		sheets[ref], reasons[ref] = CellLocation(resp, row, 1)
 	}
 	if got := sheets["U1"]; !slices.Equal(got, []string{"s1"}) {
 		t.Errorf("U1's pin sheets = %v, want its component's [s1]", got)
@@ -424,7 +422,7 @@ func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
 	var r1sheets []string
 	for _, row := range resp.GetRows() {
 		if row.GetCells()[0] == "R1" {
-			r1sheets = row.GetCellSheets()[0].GetSheetIds() // cell 0 is the component column
+			r1sheets, _ = CellLocation(resp, row, 0) // cell 0 is the component column
 		}
 	}
 	if len(r1sheets) != 1 || r1sheets[0] != "s2" {
@@ -445,7 +443,7 @@ func TestRunQueryNetCellSheetsFromNetlist(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, row := range resp.GetRows() {
-		got := row.GetCellSheets()[1].GetSheetIds() // cell 1 is the net column (SDA)
+		got, _ := CellLocation(resp, row, 1) // cell 1 is the net column (SDA)
 		if len(got) != 2 || got[0] != "s1" || got[1] != "s2" {
 			t.Errorf("net cell sheets = %v, want [s1 s2]", got)
 		}
@@ -477,10 +475,12 @@ func TestRunQueryCellReasons(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, row := range resp.GetRows() {
-		reasons := row.GetCellReasons()
-		if len(reasons) != 2 {
-			t.Fatalf("cell_reasons = %v, want 2 aligned to cells", reasons)
+		if len(row.GetCellEntity()) != 2 {
+			t.Fatalf("cell_entity = %v, want 2 aligned to cells", row.GetCellEntity())
 		}
+		_, r0 := CellLocation(resp, row, 0)
+		_, r1 := CellLocation(resp, row, 1)
+		reasons := []checkspb.LocateReason{r0, r1}
 		// the net column: the drawn SIG is UNSPECIFIED, the undrawn GND is a power rail.
 		wantNet := checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
 		if row.GetCells()[1] == "GND" {

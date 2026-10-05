@@ -216,19 +216,18 @@ export function resultFromResponse(
   return {
     columns: resp.columns,
     columnKinds: resp.columnKinds ?? [],
-    // An entity cell's sheets and reason, and a row's citations, come from the response's tables
-    // when the row points into them (agni issue 916), and from the row's own fields when it does not.
+    // An entity cell's sheets and reason, and a row's citations, are kept once on the response and
+    // the row points into them (agni issue 916).
     rows: resp.rows.map((r) => {
       const entity = (i: number) => {
         const n = r.cellEntity?.[i] ?? 0;
         return n > 0 ? resp.entities?.[n - 1] : undefined;
       };
-      const cites = r.citeIndex?.length ? r.citeIndex.map((i) => resp.sources?.[i] ?? "") : r.cites;
       return {
         cells: r.cells,
-        cites,
-        cellSheets: r.cells.map((_, i) => resolveSheets(entity(i)?.sheetIds ?? r.cellSheets?.[i]?.sheetIds ?? [])),
-        cellReasons: r.cells.map((_, i) => entity(i)?.reason ?? r.cellReasons?.[i] ?? LocateReason.UNSPECIFIED),
+        cites: (r.citeIndex ?? []).map((i) => resp.sources?.[i] ?? ""),
+        cellSheets: r.cells.map((_, i) => resolveSheets(entity(i)?.sheetIds ?? [])),
+        cellReasons: r.cells.map((_, i) => entity(i)?.reason ?? LocateReason.UNSPECIFIED),
         cellKinds: r.cells.map((_, i) => r.cellKinds?.[i] ?? ""),
         cellRefs: r.cells.map((_, i) => r.cellRefs?.[i] ?? ""),
       };

@@ -181,7 +181,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
 				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
 				OmitLocations: queryOmitLocations,
-				Bindings: service.BindingsProto(bind),
+				Bindings:      service.BindingsProto(bind),
 			})
 			if err != nil {
 				return err
@@ -463,14 +463,16 @@ func respFromRows(q query.Query, rows []query.Row, queryText, corpus string) *we
 	for _, c := range cols {
 		resp.Columns = append(resp.Columns, string(c))
 	}
+	sources := service.NewSourceTable(resp)
 	for _, r := range rows {
 		cells := make([]string, 0, len(cols))
 		for _, c := range cols {
 			cells = append(cells, r.Bind[c].S)
 		}
-		resp.Rows = append(resp.Rows, &webapi.QueryRow{Cells: cells, Cites: r.Cites})
+		row := &webapi.QueryRow{Cells: cells}
+		sources.Cite(row, r.Cites)
+		resp.Rows = append(resp.Rows, row)
 	}
-	service.IndexSources(resp)
 	return resp
 }
 
