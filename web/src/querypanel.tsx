@@ -39,7 +39,7 @@ function resolveRelationImages(md: string): string {
 // emptyFindings is the state before the presenter has pushed anything. It has no rules selected, so
 // the count reads "no rules selected" rather than "no findings".
 function emptyFindings(): FindingsState {
-  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 0, pending: 0, running: false, skipped: [], ruleSummaries: {} };
+  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 0, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {} };
 }
 
 // FindingsCount says what is already CHECKED about a selection, for one entity or for a whole answer
@@ -61,6 +61,8 @@ function FindingsCount(props: {
   const where = (): string => (props.scope ? ` across ${props.scope}` : "");
   const label = (): string => {
     switch (props.state) {
+      case "loading":
+        return "loading rules…";
       case "no-rules":
         return "no rules selected";
       case "running":
@@ -316,7 +318,9 @@ function QueryPanel(props: {
     const st = props.findings();
     const state = checkedState(st);
     const head =
-      state === "not-run"
+      state === "loading"
+        ? "The rule catalog has not loaded yet, so this is not a count of anything."
+        : state === "not-run"
         ? "No rule has run yet, so this is not a count of anything."
         : state === "partial"
           ? `${st.pending} selected rule(s) have not run, so this count is a floor.`

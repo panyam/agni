@@ -185,6 +185,10 @@ export class ViewerPresenter {
   // checksRunning is true while runChecks is in flight (the on-demand Run), so the panel disables its
   // Run button and the presenter guards against a re-entrant run.
   private checksRunning = false;
+  // catalogLoading is true while the open design's rule catalog has not arrived. A new design sets it
+  // before its first sheet draws, since that sheet can draw before ListRules answers, and until then
+  // selectedRules is empty or still the previous design's (agni 868).
+  private catalogLoading = false;
 
   // rules is the catalog for the open design (ListRules), and selectedRules the active ruleset the
   // user has checked, the subset CheckDesign runs. It defaults to every available rule so a design
@@ -445,6 +449,8 @@ export class ViewerPresenter {
     if (newFile) {
       this.linkHash = "";
       this.views.staleLinkNote(null);
+      this.catalogLoading = true;
+      this.pushFindings();
     }
     this.mount = mount;
     this.path = path;
@@ -504,6 +510,11 @@ export class ViewerPresenter {
       this.views.summary(`error: ${String(e)}`);
     } finally {
       this.setBusy(false);
+      // An open that failed before loadRules would otherwise leave Run disabled for good.
+      if (this.catalogLoading) {
+        this.catalogLoading = false;
+        this.pushFindings();
+      }
     }
   }
 
@@ -570,6 +581,10 @@ export class ViewerPresenter {
   // to every available rule, and pushes both to the rules panel. A failure leaves an empty catalog
   // (the panel shows "No rules.") rather than erroring the open.
   private async loadRules(mount: string, path: string): Promise<void> {
+    if (!this.catalogLoading) {
+      this.catalogLoading = true;
+      this.pushFindings();
+    }
     try {
       const resp = await this.checks.listRules({ uri: artifactUri(mount, path), overlay: this.overlay() });
       this.rules = resp.rules.map((r) => ({
@@ -589,6 +604,7 @@ export class ViewerPresenter {
     }
     this.rulesByName = new Map(this.rules.map((r) => [r.name, r]));
     this.selectedRules = defaultSelection(this.rules);
+    this.catalogLoading = false;
     this.pushRules();
   }
 
@@ -639,9 +655,10 @@ export class ViewerPresenter {
   // runChecks is the on-demand check trigger (the Run button). It fetches the selected rules not
   // yet cached, reconciles the expectation sidecar (a full run), and refreshes interface coverage.
   // It is the only place a design is evaluated, so a large design does not stall the open.
-  // Re-entrancy and no-open-file are guarded, and running disables the button meanwhile.
+  // Re-entrancy, a catalog still loading and no-open-file are guarded, and running disables the
+  // button meanwhile.
   async runChecks(): Promise<void> {
-    if (this.checksRunning || !this.mount || !this.path) return;
+    if (this.checksRunning || this.catalogLoading || !this.mount || !this.path) return;
     this.checksRunning = true;
     this.pushFindings(); // reflect running=true (disables the Run button)
     this.setBusy(true, "running checks…");
@@ -749,6 +766,7 @@ export class ViewerPresenter {
       ruleCount: this.selectedRules.length,
       pending,
       running: this.checksRunning,
+      catalogLoading: this.catalogLoading,
       // Only the SELECTED rules, since a rule nobody ticked being unavailable is not news. Sorted so
       // the list is stable across runs rather than following response order.
       skipped: this.selectedRules

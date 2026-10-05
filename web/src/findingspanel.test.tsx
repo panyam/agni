@@ -8,7 +8,7 @@ function f(over: Partial<FindingItem>): FindingItem {
 }
 
 function state(over: Partial<FindingsState>): FindingsState {
-  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 1, pending: 0, running: false, skipped: [], ruleSummaries: {}, ...over };
+  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 1, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {}, ...over };
 }
 
 function mountPanel(over: Partial<FindingsState>) {
@@ -83,6 +83,16 @@ describe("checks panel Run button (on-demand checks)", () => {
     const run = el.querySelector<HTMLButtonElement>("button.checks-run")!;
     expect(run.disabled).toBe(true);
     expect(run.textContent).toContain("Running");
+  });
+
+  // A design's first sheet can draw before its catalog arrives, and a Run pressed then ran nothing
+  // (agni 868). The empty state says the same thing as the button rather than "No rules selected.".
+  it("disables the button and reads Loading rules until the catalog arrives", () => {
+    const { el } = mountPanel({ findings: [], ruleCount: 0, catalogLoading: true });
+    const run = el.querySelector<HTMLButtonElement>("button.checks-run")!;
+    expect(run.disabled).toBe(true);
+    expect(run.textContent).toBe("Loading rules…");
+    expect(el.querySelector(".findings-empty")!.textContent).toBe("Loading rules…");
   });
 });
 

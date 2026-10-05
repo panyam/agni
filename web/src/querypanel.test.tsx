@@ -682,6 +682,15 @@ describe("querypanel findings beside the selection", () => {
     expect(bar(el).textContent).not.toContain("no findings");
   });
 
+  // Before the catalog arrives nothing is selected, and "no rules selected" would blame the user
+  // for a selection the viewer has not made yet (agni 868).
+  it("says the rules are loading while the catalog has not arrived", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel, { findings: [], ruleCount: 0, catalogLoading: true });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("loading rules…");
+  });
+
   it("marks a half-run ruleset as a floor, not a total", () => {
     const { el, panel } = mountPanel();
     pushChecks(panel, { pending: 1 });

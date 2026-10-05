@@ -39,10 +39,8 @@ async function openAndCheck(page: Page, query: string): Promise<{ rows: string[]
   await page.goto(`${base()}${gateway}${query}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
   await expect.poll(() => page.locator("#readout").textContent(), { timeout: 60_000 }).not.toBe("no sheet loaded");
-  // Wait for the button to carry its rule count. The first sheet can draw before ListRules answers,
-  // and a click before then runs no rules at all (agni 868).
-  await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 60_000 }).toMatch(/\(\d+\)/);
-  await page.click(".checks-run");
+  // Run stays disabled until the rule catalog arrives, and a click waits for it to enable (agni 868).
+  await page.click(".checks-run", { timeout: 60_000 });
   await page.waitForSelector(".check-locate", { timeout: 60_000 });
   const rows = await page.locator(".check-locate").allTextContents();
 

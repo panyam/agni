@@ -378,6 +378,7 @@ describe("tallySeverities", () => {
 describe("checkedState", () => {
   it("names the state a count can be read in", () => {
     expect(checkedState({ ruleCount: 0, pending: 0, running: false })).toBe("no-rules");
+    expect(checkedState({ ruleCount: 0, pending: 0, running: false, catalogLoading: true })).toBe("loading");
     expect(checkedState({ ruleCount: 4, pending: 4, running: true })).toBe("running");
     expect(checkedState({ ruleCount: 4, pending: 4, running: false })).toBe("not-run");
     expect(checkedState({ ruleCount: 4, pending: 1, running: false })).toBe("partial");
