@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -261,6 +261,16 @@ DEMO_SEEDS ?= --seed gateway=examples/tutorial-project \
 demo-site: ui wasm samples-oracle
 	rm -rf $(DEMO_OUT)
 	$(GO) run ./cmd/agni site $(DEMO_OUT) --base $(DEMO_BASE) $(DEMO_SEEDS)
+
+# The public demo walk, mission #851's exercise (agni issue 878): builds the static demo, serves it
+# under DEMO_BASE, and walks it in Chromium, printing one row per step and writing them as markdown
+# for the mission log. A step with nothing to run against yet prints "not available" with its ticket,
+# and the run fails only on a step that exists. DEMO_URL walks a deployed demo instead of building one.
+# Not in the gate: Jetson alone takes minutes. EXERCISE_FLAGS passes --only <mount,...> or --control.
+#   make exercise-public-demo
+#   make exercise-public-demo DEMO_URL=https://panyam.github.io/agni/demo/
+exercise-public-demo: $(if $(DEMO_URL),,demo-site)
+	cd web && node browser/exercise.mjs $(if $(DEMO_URL),--url $(DEMO_URL),--site $(DEMO_OUT) --prefix $(DEMO_BASE)) --out $(EXERCISE_OUT)/public-demo.md $(EXERCISE_FLAGS)
 
 # The docs site as Pages serves it: the docsite under /agni/ with the demo at /agni/demo/, then the
 # static demo's browser spec against the files written. docs.yml runs exactly this. Preview it under

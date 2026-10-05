@@ -823,7 +823,7 @@ mission is blocked by each ticket it needs, and its tickets carry its `mission_<
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
 each mission's next ready ticket. Each mission has an exercise in its issue body, a make target where one exists
-(`make exercise-revision-audit`), and after a mission PR merges, run it and log the result as a
+(`make exercise-revision-audit`, and `make exercise-public-demo` for #851, which walks the built static demo or, with `DEMO_URL`, the deployed one), and after a mission PR merges, run it and log the result as a
 comment on the mission issue.
 
 ## Working in this repo
