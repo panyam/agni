@@ -1,5 +1,7 @@
+// The public demo exercise's report logic (web/browser/exercise-report.ts), tested here because
+// the unit run reads src/ and its config is held identical to the workbench's (hack/fixture_copies.txt).
 import { describe, expect, it } from "vitest";
-import { classify, exitCode, leaks, markersFrom, table, type Row } from "./exercise-report.js";
+import { classify, exitCode, leaks, markersFrom, table, type Row } from "../browser/exercise-report.js";
 
 const row = (status: Row["status"]): Row => ({ step: "s", design: "d", status, detail: "" });
 

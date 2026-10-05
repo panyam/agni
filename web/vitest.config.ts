@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [solid()],
   resolve: { conditions: ["development", "browser"] },
   test: {
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "browser/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     server: { deps: { inline: [/solid-js/, /@panyam\/tsappkit-solid/] } },
   },
 });
