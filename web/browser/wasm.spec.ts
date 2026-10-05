@@ -96,4 +96,34 @@ describe("one design under both engines", () => {
       expect(await note.textContent()).toMatch(/Analysed on the server: its files are .* over the 1 KB the browser engine takes/);
     });
   });
+
+  // agni issue 911: every worker keeps what it read in the origin's private file system, and a
+  // reloaded page restores from it. A read stores its result again, which rewrites the blob, so a
+  // reload that restored leaves every blob as it was.
+  it("restores a reloaded design from the browser's cache instead of reading it again", async () => {
+    await withPage(browser, async (page) => {
+      await openAndCheck(page, "?engine=wasm");
+      const before = await storedBlobs(page);
+      expect(Object.keys(before).length, "the first open stored nothing, so an unchanged store proves nothing").toBeGreaterThanOrEqual(2);
+
+      // Opening the same address again starts new workers over the same storage, as a reload does.
+      const again = await openAndCheck(page, "?engine=wasm");
+      expect(again.rows.length).toBeGreaterThan(0);
+      expect(await storedBlobs(page)).toEqual(before);
+    });
+  });
 });
+
+// storedBlobs lists the engine's cache, wasmhost/agni in the origin's private file system, by name
+// and last write.
+async function storedBlobs(page: Page): Promise<Record<string, number>> {
+  return page.evaluate(async () => {
+    const root = await navigator.storage.getDirectory();
+    const dir = await (await root.getDirectoryHandle("wasmhost")).getDirectoryHandle("agni");
+    const out: Record<string, number> = {};
+    for await (const [name, h] of (dir as unknown as { entries(): AsyncIterable<[string, FileSystemFileHandle]> }).entries()) {
+      if (!name.startsWith(".")) out[name] = (await h.getFile()).lastModified;
+    }
+    return out;
+  });
+}

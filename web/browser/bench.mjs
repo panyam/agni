@@ -50,33 +50,37 @@ try {
     await new Promise((r) => setTimeout(r, 200));
   }
   const browser = await chromium.launch();
-  // Each configuration in a fresh page, so neither inherits the other's workers.
-  const run = async (oneLane) => {
-    const page = await browser.newPage();
+  // Each configuration in a context of its own, so none restores what another stored in the browser's
+  // cache. "reload" is a second page in the lanes run's context, as a visitor reloading the board.
+  const SERVE_MAX_BYTES = Number(process.env.SERVE_MAX_MB ?? 700) * (1 << 20);
+  const run = async (ctx, cfg) => {
+    const page = await ctx.newPage();
     await page.goto(`${base}/healthz`);
     await page.addScriptTag({ url: "/static/agni-bench.js", type: "module" });
     await page.waitForFunction(() => typeof globalThis.agniBench === "function");
     const out = await page.evaluate(
       (a) => globalThis.agniBench(a),
-      { mount: "board", files, design, query: native.query, countComponents: native.count_components, countNets: native.count_nets, oneLane },
+      { mount: "board", files, design, query: native.query, countComponents: native.count_components, countNets: native.count_nets, ...cfg },
     );
     await page.close();
     return out;
   };
-  const one = await run(true);
-  const wasm = await run(false);
+  const one = await run(await browser.newContext(), { oneLane: true });
+  const lanesCtx = await browser.newContext();
+  const wasm = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES });
+  const reload = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES });
   await browser.close();
 
   const rows = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "rules", "findings", "query_ms", "query_rows",
-    "query_during_check_ms", "check_still_running", "first_check_ms", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
-  console.log(`| ${board} | native | wasm, one worker | wasm, two lanes | lanes / native |`);
-  console.log("|---|---|---|---|---|");
+    "query_during_check_ms", "check_still_running", "first_check_ms", "lane_restarts", "query_after_restart_ms", "serve_mb_after_restart", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
+  console.log(`| ${board} | native | wasm, one worker | two lanes, serve limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | the same reloaded, limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | lanes / native |`);
+  console.log("|---|---|---|---|---|---|");
   for (const r of rows) {
     const n = native[r], w = wasm[r];
     const ratio = r.endsWith("_ms") && n > 0 && w !== undefined ? (w / n).toFixed(1) + "x" : "";
-    console.log(`| ${r} | ${n ?? ""} | ${one[r] ?? ""} | ${w ?? ""} | ${ratio} |`);
+    console.log(`| ${r} | ${n ?? ""} | ${one[r] ?? ""} | ${w ?? ""} | ${reload[r] ?? ""} | ${ratio} |`);
   }
-  console.log(JSON.stringify({ native, one, wasm }));
+  console.log(JSON.stringify({ native, one, wasm, reload }));
 } finally {
   server.kill();
 }

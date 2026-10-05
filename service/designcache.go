@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,14 +37,39 @@ import (
 // around the formats.Loader and nothing could tell when it went stale.
 //
 // It is the same code in `agni serve` and the browser engine. In the browser the engine is rebuilt
-// on every mount change, which drops its cache with it.
+// on every mount change, which drops its in-memory entries with it, and the parsed design, drawing and
+// board are also kept in a BlobStore that outlives the worker (see Persist).
 type DesignCache struct {
-	mu      sync.Mutex
-	max     int
-	entries map[string]*cacheEntry
-	tick    uint64
-	hits    atomic.Int64
-	misses  atomic.Int64
+	mu       sync.Mutex
+	max      int
+	entries  map[string]*cacheEntry
+	tick     uint64
+	hits     atomic.Int64
+	misses   atomic.Int64
+	restored atomic.Int64
+	store    *persistTier
+}
+
+// A BlobStore keeps bytes across processes, for a DesignCache's persistent tier (agni issue 911). It
+// is the shape of goapplib's wasmhost.Cache, which the browser engine hands it, so this package names
+// no host. Any error from Get, a miss included, means the read runs again, and an error from Put
+// means only that the next process reads again too. A key is 64 lowercase hex digits.
+type BlobStore interface {
+	Get(ctx context.Context, key string) ([]byte, error)
+	Put(ctx context.Context, key string, b []byte) error
+}
+
+// A FingerprintCheck reports whether a stored read's content fingerprint (formats.Touched.Fingerprint)
+// still matches the files the host serves now, and if so returns a recorder of those names as they
+// stamp now. It is the host's, because only the host can open the files (C13);
+// formats.CheckFingerprint over the Loader's FS is the usual one.
+type FingerprintCheck func(fp []byte) (*formats.Touched, bool)
+
+// persistTier is where a DesignCache keeps its proto layers past the process.
+type persistTier struct {
+	store   BlobStore
+	check   FingerprintCheck
+	version string
 }
 
 type cacheEntry struct {
@@ -59,6 +87,30 @@ func NewDesignCache(max int) *DesignCache {
 	return &DesignCache{max: max, entries: map[string]*cacheEntry{}}
 }
 
+// Persist keeps the cache's parsed designs, drawings and boards in store as well, so another process
+// over the same files restores them rather than reading them again (agni issue 911). The model and
+// fact base are rebuilt from a restored design, at about a tenth of a read's cost, because they have
+// no serialized form and C8 keeps it that way.
+//
+// A stored entry carries a content fingerprint of every name its read touched
+// (formats.Touched.Fingerprint) and is used only when check says they all read the same now, so a file
+// edited, added or removed since reads again, as it does in memory. version names what wrote the entry: an engine that reads a file differently must pass a
+// different one, or it restores what the older engine parsed. An empty version persists nothing.
+func (c *DesignCache) Persist(store BlobStore, check FingerprintCheck, version string) *DesignCache {
+	if c != nil && store != nil && check != nil && version != "" {
+		c.store = &persistTier{store: store, check: check, version: version}
+	}
+	return c
+}
+
+// Restored is how many misses were answered from the persistent tier rather than by a read.
+func (c *DesignCache) Restored() int64 {
+	if c == nil {
+		return 0
+	}
+	return c.restored.Load()
+}
+
 // Stats reports hits and misses since the cache was made, for a log line or a test.
 func (c *DesignCache) Stats() (hits, misses int64) {
 	if c == nil {
@@ -71,6 +123,12 @@ func (c *DesignCache) Stats() (hits, misses int64) {
 // What the value's read touched is merged into the caller's recorder (see withTouched), so a value
 // built from another cached value stays checkable against both reads' files.
 func (c *DesignCache) get(ctx context.Context, key string, build func(context.Context) (any, error)) (any, error) {
+	return c.getPersisted(ctx, key, nil, build)
+}
+
+// getPersisted is get with a codec for values the persistent tier may keep. On a miss it tries the
+// store before building, and stores what it built.
+func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *protoCodec, build func(context.Context) (any, error)) (any, error) {
 	if c == nil || c.max <= 0 || key == "" {
 		return build(ctx)
 	}
@@ -114,7 +172,15 @@ func (c *DesignCache) get(ctx context.Context, key string, build func(context.Co
 
 		// The build runs under the caller's context, so a cancelled request stops it, and the entry
 		// it leaves is an error that is never served (the next caller builds again).
-		e.val, e.err = build(withTouched(ctx, e.touched))
+		if v, t, ok := c.restore(ctx, key, codec); ok {
+			e.val, e.touched = v, t
+			c.restored.Add(1)
+		} else {
+			e.val, e.err = build(withTouched(ctx, e.touched))
+			if e.err == nil {
+				c.save(ctx, key, codec, e.val, e.touched)
+			}
+		}
 		if e.err == nil && e.touched.Len() == 0 {
 			// Nothing recorded, so nothing could say when this went stale. Serve it to this caller
 			// alone.
@@ -136,6 +202,91 @@ func (c *DesignCache) get(ctx context.Context, key string, build func(context.Co
 		return e.val, e.err
 	}
 }
+
+// storeKey is key's name in the persistent tier: the hash of the writer's version and key, so an
+// entry another engine version wrote is never found.
+func (p *persistTier) storeKey(key string) string {
+	h := sha256.Sum256([]byte(p.version + "\x00" + key))
+	return hex.EncodeToString(h[:])
+}
+
+// restore returns key's value from the persistent tier when its fingerprint still matches the files.
+func (c *DesignCache) restore(ctx context.Context, key string, codec *protoCodec) (any, *formats.Touched, bool) {
+	if c.store == nil || codec == nil {
+		return nil, nil, false
+	}
+	b, err := c.store.store.Get(ctx, c.store.storeKey(key))
+	if err != nil {
+		return nil, nil, false
+	}
+	n, k := binary.Uvarint(b)
+	if k <= 0 || uint64(len(b)-k) < n {
+		return nil, nil, false
+	}
+	fp, payload := b[k:k+int(n)], b[k+int(n):]
+	t, ok := c.store.check(fp)
+	if !ok {
+		return nil, nil, false
+	}
+	v, err := codec.decode(payload)
+	if err != nil {
+		return nil, nil, false
+	}
+	return v, t, true
+}
+
+// save stores a value the persistent tier may keep. A read that cannot be fingerprinted, or a store
+// that refuses, leaves only the in-memory entry.
+func (c *DesignCache) save(ctx context.Context, key string, codec *protoCodec, v any, t *formats.Touched) {
+	if c.store == nil || codec == nil {
+		return
+	}
+	fp, ok := t.Fingerprint()
+	if !ok {
+		return
+	}
+	payload, err := codec.encode(v)
+	if err != nil {
+		return
+	}
+	b := binary.AppendUvarint(make([]byte, 0, binary.MaxVarintLen64+len(fp)+len(payload)), uint64(len(fp)))
+	b = append(append(b, fp...), payload...)
+	_ = c.store.store.Put(ctx, c.store.storeKey(key), b)
+}
+
+// protoCodec writes one of the cache's proto layers for the persistent tier. A layer may be absent (a
+// design with no board), which is a value worth keeping too, so the first byte says which.
+type protoCodec struct{ empty func() proto.Message }
+
+func (pc *protoCodec) encode(v any) ([]byte, error) {
+	m, _ := v.(proto.Message)
+	if m == nil || !m.ProtoReflect().IsValid() {
+		return []byte{0}, nil
+	}
+	b, err := proto.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	return append([]byte{1}, b...), nil
+}
+
+func (pc *protoCodec) decode(b []byte) (any, error) {
+	m := pc.empty()
+	if len(b) == 0 || b[0] == 0 {
+		// The typed nil each loader method returns for an absent layer.
+		return m.ProtoReflect().Type().Zero().Interface(), nil
+	}
+	if err := proto.Unmarshal(b[1:], m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+var (
+	designCodec   = &protoCodec{empty: func() proto.Message { return &ir.Design{} }}
+	geometryCodec = &protoCodec{empty: func() proto.Message { return &geom.SchematicGeometry{} }}
+	boardCodec    = &protoCodec{empty: func() proto.Message { return &geom.BoardGeometry{} }}
+)
 
 func (c *DesignCache) evictLocked() {
 	for len(c.entries) > c.max {
@@ -196,7 +347,7 @@ func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...Re
 	if !ok {
 		return l.CacheableLoader.Design(ctx, uri, opts...)
 	}
-	v, err := l.cache.get(ctx, key, func(ctx context.Context) (any, error) {
+	v, err := l.cache.getPersisted(ctx, key, designCodec, func(ctx context.Context) (any, error) {
 		return l.CacheableLoader.Design(ctx, uri, opts...)
 	})
 	if err != nil {
@@ -215,7 +366,7 @@ func (l *CachingLoader) Geometry(ctx context.Context, uri artifact.URI, layout s
 	if !ok {
 		return l.CacheableLoader.Geometry(ctx, uri, layout, faithfulSymbols, opts...)
 	}
-	v, err := l.cache.get(ctx, key, func(ctx context.Context) (any, error) {
+	v, err := l.cache.getPersisted(ctx, key, geometryCodec, func(ctx context.Context) (any, error) {
 		return l.CacheableLoader.Geometry(ctx, uri, layout, faithfulSymbols, opts...)
 	})
 	if err != nil || v == nil {
@@ -234,7 +385,7 @@ func (l *CachingLoader) Board(ctx context.Context, uri artifact.URI) (*geom.Boar
 	if !ok {
 		return l.CacheableLoader.Board(ctx, uri)
 	}
-	v, err := l.cache.get(ctx, key, func(ctx context.Context) (any, error) {
+	v, err := l.cache.getPersisted(ctx, key, boardCodec, func(ctx context.Context) (any, error) {
 		return l.CacheableLoader.Board(ctx, uri)
 	})
 	if err != nil || v == nil {

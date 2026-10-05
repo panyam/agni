@@ -227,11 +227,15 @@ web-test:
 browser-test: ui wasm
 	cd web && pnpm run test:browser
 
+# WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
+# build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).
+WASM_BUILD_ID = $(shell git diff HEAD 2>/dev/null | sha256sum | cut -c1-16)
+
 # The engine as WebAssembly (agni issue 178), for the viewer's `?engine=wasm` mode, which runs it in
 # a Web Worker with no server answering the API. Writes the wasm and Go's loader script beside the
 # viewer bundle; both are gitignored build output.
 wasm:
-	GOOS=js GOARCH=wasm $(GO) build -o web/static/agni.wasm ./cmd/agni-wasm
+	GOOS=js GOARCH=wasm $(GO) build -ldflags "-X github.com/panyam/agni/internal/wasmengine.buildID=$(WASM_BUILD_ID)" -o web/static/agni.wasm ./cmd/agni-wasm
 	cp "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
 
 # Measure the engine on one board natively and in a Chromium Web Worker, side by side (agni issue

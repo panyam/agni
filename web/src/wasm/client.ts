@@ -73,6 +73,14 @@ export interface EngineOptions {
   // oneLane runs both kinds of request on one worker, as the engine did before #911. For measuring
   // what the lanes buy; no page sets it.
   oneLane?: boolean;
+  // serveMaxBytes is the serve lane's memory limit (startLane's maxMemoryBytes). Wasm memory never
+  // shrinks, so a worker that read a large design keeps the read's peak for the rest of the visit.
+  // Past the limit, once idle, the lane starts a fresh worker, which restores the design from the
+  // browser's cache on its next request rather than reading it (agni issue 911). Size it above what a
+  // restored design needs, or the lane restarts after every request. Unset means no limit.
+  serveMaxBytes?: number;
+  // onRestart hears that a lane replaced its worker for passing its limit, and what it held.
+  onRestart?: (lane: LaneName, memoryBytes: number) => void;
 }
 
 // startEngine starts the lanes and resolves once each has loaded, or rejects with why one could not.
@@ -107,7 +115,12 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
     memoryBytes: async () => workerMemory(await lane.worker()),
   });
 
-  const serve = engineLane(startLane(start));
+  const serve = engineLane(
+    startLane(start, {
+      maxMemoryBytes: opts.serveMaxBytes,
+      onRestart: ({ memoryBytes }) => opts.onRestart?.("serve", memoryBytes),
+    }),
+  );
   const jobs = opts.oneLane ? serve : engineLane(startLane(start));
   const lanes: Record<LaneName, EngineLane> = { serve, jobs };
   await Promise.all([serve.holder(), jobs.holder()]);

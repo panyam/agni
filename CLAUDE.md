@@ -276,7 +276,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   keeps one URL, `/designs/<mount>/<path>/view`, and the ENGINE is a separate per-page choice:
   `agni serve --engine wasm`, a page's `?engine=`, or a static page. On wasm the page lists a design's
   files (`ListDesignFiles`), fetches them from `/raw/<mount>/<path>`, and sends one over
-  `--wasm-max-bytes` (128 MB, measured in #852 with `make wasm-bench`) to the server instead. Dropped
+  `--wasm-max-bytes` (128 MB, measured in #852 with `make wasm-bench`) to the server instead. The
+  engine runs as a `serve` and a `jobs` worker (#911), and every worker keeps what it parsed in the
+  origin's private file system, keyed on `wasmengine.StoreVersion`, so a wasm built with plain `go
+  build` from a dirty tree persists nothing, and one built by `make wasm` names its uncommitted diff. Dropped
   files go into the browser mount `local`, which nothing ever lists on a server, and
   `ProposeDesigns` / `agni propose` group them into designs. `agni site` (`make demo-site`) writes
   the whole thing as static files under a prefix. Architecture is in `architecture/web-services.md`,

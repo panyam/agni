@@ -168,6 +168,13 @@ function installPageDrop(engine: WasmEngine | undefined): void {
   });
 }
 
+// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issue 911). A restored Jetson AGX Thor
+// baseboard holds about 320 MB and a fresh read of it about 390 MB, so one open of the largest seeded
+// board never trips it, and a worker that has crept past it across several designs is replaced by one
+// that restores the open design from the browser's cache. A tighter limit would restart a worker
+// whose restored design alone is over it after every request.
+const SERVE_LANE_MAX_BYTES = 512 << 20;
+
 // startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine
 // loads in a worker, and every client the page builds afterwards talks to it, bringing in each
 // design's files from the server the first time a request names it. The design keeps the URL it has
@@ -180,7 +187,13 @@ async function startPageEngine(): Promise<WasmEngine | undefined> {
     return undefined;
   }
   const asset = (name: string) => new URL(name, import.meta.url).href;
-  const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") });
+  const engine = await startEngine(
+    { worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") },
+    {
+      serveMaxBytes: SERVE_LANE_MAX_BYTES,
+      onRestart: (lane, bytes) => console.info(`agni: the ${lane} worker held ${Math.round(bytes / (1 << 20))} MB and was replaced`),
+    },
+  );
   const network = globalThis.fetch.bind(globalThis);
   const files = workspaceClient();
   const workspacePath = `/${WorkspaceService.typeName}/`;

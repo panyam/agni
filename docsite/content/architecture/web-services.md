@@ -210,9 +210,23 @@ the browser rather than from the contract.
   the first check answered in 135 to 145 ms on two lanes against 2.6 to 5.9 s on one worker, and the
   two workers held about 850 MB against one's 455 MB (`make wasm-bench` prints both configurations).
   Aborting a request ends its lane's worker and starts an empty one, which brings
-  the design's files in again on its next request. Files dropped on the page are kept by the page
+  the design's files in again on its next request and restores the design from the browser's cache
+  (next bullet) rather than reading it. Files dropped on the page are kept by the page
   (`WasmEngine.add`) and copied into every worker, replacements included, since nothing else could
   bring them back.
+- **A parsed design outlives the worker that read it** (agni issue 911). The design cache keeps its
+  proto layers (the design, its drawings, its board) in the origin's private file system as well,
+  through goapplib's `wasmhost.BrowserCache`, which every worker of the page shares and a reload
+  keeps. A second lane, a replacement worker or the next visit restores a design instead of reading
+  it, and rebuilds the model and fact base from it, which have no serialized form (C8). On the Jetson
+  baseboard a reloaded open took 100 to 140 ms against 2.1 to 2.7 s for a read, and left the serve
+  worker at about 280 MB against about 390 MB. A stored entry carries a content fingerprint of every
+  name its read touched (`formats.Touched.Fingerprint`, a size and CRC-64 per file), checked on
+  restore, so a file edited, added or removed since is read again. It is keyed on
+  `wasmengine.StoreVersion`, the commit plus a hash of the uncommitted changes that `make wasm`
+  stamps, so a build that reads a file differently never restores another build's parse. A dirty
+  build without that stamp persists nothing. The serve lane also has a memory limit (512 MB), past
+  which, once idle, it is replaced by a worker that restores on its next request.
 
 The browser and the server read through different adapters over one set of ports, `fshost` over
 in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with

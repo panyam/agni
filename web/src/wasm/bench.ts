@@ -19,12 +19,19 @@ export interface BenchArgs {
   countNets: string;
   // oneLane runs every request on one worker, as the engine did before #911, for the comparison.
   oneLane?: boolean;
+  // serveMaxBytes is the serve lane's memory limit, unset for none.
+  serveMaxBytes?: number;
 }
 
 async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const asset = (name: string) => new URL(name, import.meta.url).href;
+  let restarts = 0;
   let t = performance.now();
-  const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") }, { oneLane: a.oneLane });
+  const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") }, {
+    oneLane: a.oneLane,
+    serveMaxBytes: a.serveMaxBytes,
+    onRestart: () => restarts++,
+  });
   const bootMS = performance.now() - t;
 
   t = performance.now();
@@ -94,6 +101,18 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const queryMS = performance.now() - t;
   const mem = await engine.memoryBytes();
 
+  // With a limit, the serve lane restarts once idle past it, and its next request restores the design
+  // from the browser's cache rather than reading it (agni issue 911).
+  let queryAfterRestartMS = -1;
+  let restoredMB = -1;
+  if (a.serveMaxBytes) {
+    await new Promise((r) => setTimeout(r, 1000));
+    t = performance.now();
+    await query.runQuery({ uri, query: a.query });
+    queryAfterRestartMS = performance.now() - t;
+    restoredMB = Math.round((await engine.memoryBytes()).serve / (1 << 20));
+  }
+
   return {
     host: "wasm (Chromium worker)",
     files: a.files.length,
@@ -109,6 +128,9 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
     findings: (report?.sections ?? []).reduce((n, s) => n + s.count, 0),
     query_ms: Math.round(queryMS),
     query_rows: rows,
+    lane_restarts: restarts,
+    query_after_restart_ms: queryAfterRestartMS < 0 ? "" : Math.round(queryAfterRestartMS),
+    serve_mb_after_restart: restoredMB < 0 ? "" : restoredMB,
     query_during_check_ms: Math.round(queryDuringCheckMS),
     check_still_running: stillRunning ? "yes" : "no",
     first_check_ms: firstCheckMS < 0 ? "aborted" : Math.round(firstCheckMS),
