@@ -182,3 +182,35 @@ func TestNoInternalConnectorClass(t *testing.T) {
 		t.Error("internal_connector is still a class a lexicon may extend")
 	}
 }
+
+// A suppressor's part number decides it, whichever symbol it sits under (agni issue 934). On the
+// Jetson baseboard the TPD4E05U06 arrays are U parts and the PESD5Z5.0F and ESDA25P35 diodes carry only
+// their part number, so esd-protection saw no TVS on 59 lines that each touch one.
+func TestClassifyTVSFamilies(t *testing.T) {
+	mpn := func(ref, part string) *ir.Component {
+		return &ir.Component{RefDes: ref, Attributes: map[string]string{"MPN": part}}
+	}
+	for _, tc := range []struct {
+		name string
+		c    *ir.Component
+		want ComponentClass
+	}{
+		{"an ESD array under an IC symbol", mpn("U16", "TPD4E05U06QDQARQ1"), ClassTVS},
+		{"a single-channel ESD diode", mpn("D37", "TPD1E0B04DPYR"), ClassTVS},
+		{"a TVS diode known only by part number", mpn("D8", "PESD5Z5.0F"), ClassTVS},
+		{"a VBUS clamp", mpn("D7", "ESDA25P35-1U1M"), ClassTVS},
+		{"a family named in the Value", &ir.Component{RefDes: "U3", Attributes: map[string]string{"Value": "TPD3E001DRLR"}}, ClassTVS},
+		// The bare word stays a diode-only refinement, since an IC's description mentioning ESD
+		// protection does not make it a suppressor.
+		{"an IC whose description mentions ESD", &ir.Component{RefDes: "U21", Attributes: map[string]string{"Description": "USB 3.2 hub with ESD protection"}}, ClassIC},
+		// A family prefix only moves a part within the families a suppressor can sit under.
+		{"a resistor whose value starts like a family", mpn("R5", "SMAJ-100R"), ClassResistor},
+		{"an ordinary diode", mpn("D2", "BAT54"), ClassDiode},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := Classify(tc.c, nil); got != tc.want {
+				t.Errorf("Classify = %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
