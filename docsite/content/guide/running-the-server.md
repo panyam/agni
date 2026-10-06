@@ -299,3 +299,32 @@ board. On a public 1,123-part sample board the heaviest shipped example query co
 million units. `agni query --format json` and the `RunQuery` response report what an answer cost
 as `work`. A served request also stops when its caller goes away, which returns `canceled` rather
 than an error about the request.
+
+## Where a request's time goes
+
+A slow request can say where its time went. `--slow-request <duration>` logs one line for every
+request over it, naming the stage that took the most, the tier that answered each cached read, and
+the slowest rules. These two lines are the tutorial project's board, asked twice with
+`--slow-request 1ms`:
+
+```
+slow request: /agni.v1.webapi.CheckService/CheckDesign took 87ms, over 1ms; slowest stage resolve.overlay 44ms; cache model=built design=built board=built geometry=built; slowest rules profile/emmc-signal-missing 3ms, profile/spi_nor-signal-missing 3ms, dl/power-pin-mistyped 2ms, profile/pcie-signal-missing 2ms, profile/emmc-host-incomplete 2ms
+slow request: /agni.v1.webapi.CheckService/CheckDesign took 29ms, over 1ms; slowest stage resolve.overlay 17ms; cache model=memory geometry=memory; slowest rules profile/emmc-signal-missing 2ms, profile/emmc-signal-dangling 1ms, profile/emmc-host-incomplete 1ms, gateway-profiles/can-host-incomplete 1ms, gateway-profiles/can-esd-missing 1ms
+```
+
+The second request found the model in memory, so it read nothing, and the cache column is what says
+so. A cache layer reading `built` on every request is a design the server is failing to keep. When
+evaluating a query was the slowest stage, the line carries that query's plan as well.
+
+Any client can ask for the same breakdown on a single request by sending an `Agni-Timing: 1` header
+(`Agni-Timing: explain` adds each query's plan). The response then carries it in an `Agni-Timing`
+header, as the `RequestTiming` message in protojson, and as a `Server-Timing` header, which a
+browser's network panel draws as a bar per stage. It travels in headers rather than in the
+response, because a number that varied on every run would make every saved answer differ from the
+last. The viewer asks for it when its address carries `?timing` (or `?timing=explain`) and logs each
+request's breakdown to the console, and the browser engine answers it just as the server does. The
+CLI's `--timing` on `check`, `query`, `trace` and `review` prints it from the same record, and
+`query --explain` prints the plans alone.
+
+Stages nest, so `build.model` includes the reads beneath it (`read.netlist`, `read.board`) and the
+model it builds, and the stage list says when each started as well as how long it took.

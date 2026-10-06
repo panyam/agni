@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+// This file: where one request's time went (agni issue 914).
+//
+// A timed request carries it back in its `Agni-Timing` response header as this message in protojson,
+// beside a `Server-Timing` header a browser's network panel shows. A client asks for it with an
+// `Agni-Timing` request header, and the CLI's --timing reads the same record in-process. It travels in
+// a header rather than a response field, because a timing that varied on every run inside a response
+// would make every saved answer and `--format json` output differ run to run.
+
+// RequestTiming is one request's breakdown.
+message RequestTiming {
+  // procedure is the rpc, such as "/agni.v1.webapi.CheckService/CheckDesign".
+  string procedure = 1;
+  // total_micros is the whole request, as the transport saw it.
+  int64 total_micros = 2;
+  // stages are the named spans in the order they started. They nest, so a parent's time includes its
+  // children's: "build.model" includes "read.netlist", "read.board" and "model".
+  repeated TimedStage stages = 3;
+  // lookups say which tier answered each cached read, in the order the reads happened.
+  repeated CacheLookup lookups = 4;
+  // rules are the rule evaluations, slowest first, capped at the slowest twenty with every rule's
+  // time still counted in rules_micros.
+  repeated RuleTiming rules = 5;
+  // rules_evaluated is how many rules ran, of which `rules` lists the slowest.
+  int32 rules_evaluated = 6;
+  // plans are the query plans the request's evaluations ran, when it asked for them.
+  repeated QueryPlan plans = 7;
+}
+
+message TimedStage {
+  string name = 1;
+  int64 start_micros = 2;
+  int64 micros = 3;
+}
+
+message CacheLookup {
+  // layer is what was read: "design", "geometry", "board" or "model".
+  string layer = 1;
+  // source is the tier that answered: "memory" (kept in this process), "store" (the persistent tier,
+  // such as the browser's), "built" (read and built now) or "uncached" (this host keeps nothing).
+  string source = 2;
+}
+
+message RuleTiming {
+  string rule = 1;
+  int64 micros = 2;
+}
+
+message QueryPlan {
+  string query = 1;
+  // plan is jaala's Explain report as text.
+  string plan = 2;
+}

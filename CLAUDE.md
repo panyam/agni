@@ -662,6 +662,13 @@ no-route too, since the two nets that fail to join are drawn somewhere and that 
 someone goes looking for; empty then means drawn nowhere rather than nobody looked. The CLI takes
 the sheet off the response rather than choosing, which is C32 at one more call site.
 
+**Measure a slow request before optimising it** (agni 914). `--timing` on `check`/`query`/`trace`/`review`
+prints each stage, which cache tier answered each read and the slowest rules; `query --explain`
+prints the plan; `agni serve --slow-request 2s` logs the same per request; and an `Agni-Timing: 1`
+header (the viewer's `?timing`, the exercise's `--timing`) returns it from the server or the browser
+engine. A stage is recorded with `timing.Begin(ctx, "name")()` from `core/timing`, a no-op when
+nobody asked, and the record travels in headers so no answer changes run to run.
+
 **A rule's `Eval` takes the caller's context, and a run stops when the context is done** (agni 795).
 `check.Run`, `RunVerdicts` and `review.Run` return `ctx.Err()` rather than the findings so far, which
 would read as a clean remainder; `RunBackground` is the context-free form for tests and one-shot

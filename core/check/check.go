@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/panyam/agni/core/timing"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
@@ -355,6 +357,7 @@ func RunAll(ctx context.Context, m Model, rules []*Rule) ([]Finding, []Verdict, 
 // as Run always has; verdicts never did, so a gated rule that states a considered set is still
 // evaluated for its verdicts, and only then. Each rule's Eval runs at most once.
 func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts bool) ([]Finding, []Verdict, error) {
+	defer timing.Begin(ctx, "rules")()
 	var fs []Finding
 	var vs []Verdict
 	gate := func(*Rule) (Finding, bool) { return Finding{}, false }
@@ -380,7 +383,9 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 		if !wantFindings && !needVerdicts {
 			continue
 		}
+		began := time.Now()
 		evaluated := r.Eval(ctx, m)
+		timing.Ruled(ctx, r.Name, time.Since(began))
 		if wantFindings && !gated {
 			for _, f := range VerdictsToFindings(evaluated) {
 				f.Rule, f.Severity = r.Name, r.Severity

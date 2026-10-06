@@ -68,6 +68,7 @@ Run the rule catalog and report findings. See
 | `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
 | `--params <dir>` | load a datasheet parameter set, enabling datasheet-backed rules (see [Datasheets](../datasheets/)) |
 | `--board-path <file>` | attach a board that is NOT a declared companion of the design, so board-tier rules resolve instead of finding no copper |
+| `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 
 ### `review <file>...`
 
@@ -128,6 +129,7 @@ run. Exit codes:
 | `0` | the run completed and no gate tripped |
 | `2` | a gate tripped |
 | `1` | the run itself failed: an unreadable design, an invalid manifest, an unknown outcome name |
+| `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 
 `check --fail-on` uses the same codes, so one CI script can treat every gate in this CLI alike, reading
 `2` as problems in the design and `1` as the tool failing to do its job.
@@ -341,6 +343,8 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--omit-locations` | leave out where each answer entity is drawn (its `sheetIds` and `reason` in `--format json`'s `entities`) and skip loading the drawing, for a script that draws nothing |
 | `--budget <work>` | stop a query once it has done this much work and report it as over budget rather than answer late. 0, the default, sets none. `--format json` reports the work an answer cost as `work`, which is how to choose one (see [Running the server](../running-the-server/#a-work-budget-for-served-queries)) |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default). A view is a thing to hand to someone, so it wants a filename rather than a redirect. The written-file note goes to stderr |
+| `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
+| `--explain` | print each query's evaluation plan to stderr: the order each rule body ran its literals in, the work and rows each produced, and how each relation was read and which index answered it. The tool for a query that is slower than it should be (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 
 ### `trace <file>`
 
@@ -365,6 +369,7 @@ pins that are not connected.
 | `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
 | `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not, which it says so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
+| `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 
 ### `tabulate <request.json|->`
 
@@ -433,6 +438,7 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |
 | `--design-cache <n>` | how many reads the server keeps between requests (a design, a drawing, a board or a built model, each counting once), each checked against its files on every use (default 12; 0 keeps none; see [Kept reads](../running-the-server/#kept-reads)) |
+| `--slow-request <duration>` | log every request that takes longer than this, such as `2s`, naming the stage that took the most, which cache tier answered each read, the slowest rules, and the query plan when evaluating was the slowest stage (0, the default, logs none; see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 
 ### `healthcheck`
 
