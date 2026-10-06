@@ -277,6 +277,20 @@ mints the mount and serves it, the two cannot disagree.
 The page needs no JavaScript and loads nothing from the network, so it survives being emailed,
 committed, or opened from a `file://` path.
 
+## Save a report from the viewer
+
+Once every selected rule has run, the checks panel offers **Save report** and **Save JSON**. Save
+report downloads the page `agni check --format html` writes, and Save JSON the results document
+`agni check --results-out` writes, which `agni results` can re-render later and which names the
+engine build that produced it. Neither runs anything again. The engine renders the run the panel
+already holds, through the same code the CLI calls (the `RenderCheckReport` rpc), so a saved file and
+the CLI's differ only in when they were written and in how each names the design.
+
+On the browser-only demo the engine runs in the page, so saving a design you dropped sends nothing
+anywhere. Its rows link back into the viewer you saved it from. A design opened from your own files
+gets no links, and the page says why, because the browser keeps those files only in the tab that
+opened them.
+
 ## Where to go next
 
 - [Datasheets](../datasheets/) turns on the rules that compare your design against a part's

@@ -176,7 +176,20 @@ async function walkDesign(page, design) {
     const head = (await page.locator(".trace-headline, .trace-error").first().textContent())?.trim() ?? "";
     return { status: kind === "trace-route" || kind === "trace-noroute" ? "ok" : "fail", detail: `${ref.first}.1 to ${ref.first}.2: ${head}` };
   });
-  add("4. save the report", design, "not available", "#127, no report export in the viewer");
+  await step("4. save the report", design, async () => {
+    if ((await page.locator(".checks-save").count()) === 0) return { status: "not available", detail: "this viewer has no Save report (#127)" };
+    const save = async (format) => {
+      const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 120_000 }), page.click(`.checks-save[data-format="${format}"]`)]);
+      return { name: dl.suggestedFilename(), text: readFileSync(await dl.path(), "utf8") };
+    };
+    const html = await save("html");
+    const json = await save("json");
+    if (!html.text.includes("<html")) throw new Error(`${html.name} is not an HTML page`);
+    const doc = JSON.parse(json.text);
+    if (!doc.meta?.producerVersion) throw new Error(`${json.name} names no producer version`);
+    const kb = (t) => `${Math.max(1, Math.round(t.length / 1024))} KB`;
+    return { detail: `${html.name} ${kb(html.text)}, ${json.name} ${kb(json.text)} with ${doc.findings?.length ?? 0} findings, version ${doc.meta.producerVersion}` };
+  });
 }
 
 // network is step 5 for one page: the split of what it fetched, failing on any analysis call, and,
