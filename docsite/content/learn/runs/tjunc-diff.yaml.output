@@ -1,4 +1,4 @@
-#agni-run 7190eca0b6706ac2
+#agni-run fdd54bf8c45147b0
 diff readers/kicad/testdata/tjunc.kicad_sch -> readers/kicad/testdata/tjunc_dotted.kicad_sch
 
 Components: +0  -0  ~0

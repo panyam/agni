@@ -184,15 +184,18 @@ func TestGroupBusCrossesSheetBoundary(t *testing.T) {
 	}
 }
 
-// TestGroupBusNeedsADeclaredAlias is the false-positive control, and the reason recognition is a
-// table lookup rather than a tighter pattern.
+// TestGroupBusRecognition is the false-positive control for what counts as a group bus.
 //
-// KiCad renders `_{...}` as a subscript, so `A_{1}` and `3V3_{OUT}` are ordinary scalar labels with
-// the exact shape of a group bus. No pattern separates them from `I2C0{I2C}`; what separates them is
-// that no `bus_alias` declares `1` or `OUT`. The jetson baseboard carries over a hundred distinct
-// subscript groups and not one names an alias, so the lookup is exact where a pattern could only
-// guess.
-func TestGroupBusNeedsADeclaredAlias(t *testing.T) {
+// KiCad renders `_{...}` as a subscript, `^{...}` as a superscript and `~{...}` as an overbar, so
+// `A_{1}`, `3V3_{OUT}` and `SWD_TRG.~{RESET}` are ordinary scalar labels with the shape of a group bus.
+// The jetson baseboard carries over a hundred distinct subscript labels. What separates them from a
+// group is the character before the brace, and reading one as a group would join nets across a sheet
+// boundary that the design keeps apart.
+//
+// The braces of a group either name a bus_alias or list members inline (agni issue 936), so
+// `I2C0{SPI}` with no SPI alias is a one-member group, `I2C0.SPI`, as it is to KiCad. Recognition was
+// an alias lookup until the RoyalBlue54L Feather, whose every sheet crossing is an inline list.
+func TestGroupBusRecognition(t *testing.T) {
 	aliases := map[string][]string{"I2C": {"SDA", "SCL"}}
 	for _, tc := range []struct {
 		name    string
@@ -205,7 +208,12 @@ func TestGroupBusNeedsADeclaredAlias(t *testing.T) {
 		{name: "I2C_{SYS}{I2C}", prefix: "I2C_{SYS}", isGroup: true},
 		{name: "A_{1}"},
 		{name: "3V3_{OUT}"},
-		{name: "I2C0{SPI}"},
+		{name: "V^{2}"},
+		{name: "SWD_TRG.~{RESET}"},
+		{name: "~{RESET}"},
+		{name: "I2C0{SPI}", prefix: "I2C0", isGroup: true},
+		{name: "ANALOG{A[0..5]}", prefix: "ANALOG", isGroup: true},
+		{name: "SWD_TRG{~{RESET}, SWDIO, SWDCLK}", prefix: "SWD_TRG", isGroup: true},
 		{name: "I2C0"},
 		{name: "DATA[0..1]"},
 	} {
@@ -218,6 +226,22 @@ func TestGroupBusNeedsADeclaredAlias(t *testing.T) {
 				t.Errorf("groupBus(%q) prefix = %q, want %q", tc.name, prefix, tc.prefix)
 			}
 		})
+	}
+}
+
+// An inline member list expands a vector member and keeps a member's own formatting braces whole,
+// so each member names the net KiCad does (`ANALOG.A0`, `SWD_TRG.~{RESET}`).
+func TestGroupBusInlineMembers(t *testing.T) {
+	for name, want := range map[string][]string{
+		"ANALOG{A[0..5]}":                  {"A0", "A1", "A2", "A3", "A4", "A5"},
+		"DIG{D5 D6 D[9..13]}":              {"D5", "D6", "D9", "D10", "D11", "D12", "D13"},
+		"SPI{SCK, MOSI, MISO}":             {"SCK", "MOSI", "MISO"},
+		"SWD_TRG{~{RESET}, SWDIO, SWDCLK}": {"~{RESET}", "SWDIO", "SWDCLK"},
+	} {
+		_, got, ok := groupBus(name, nil)
+		if !ok || strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Errorf("groupBus(%q) members = %v (group %v), want %v", name, got, ok, want)
+		}
 	}
 }
 
@@ -241,5 +265,41 @@ func TestBusMembersAscending(t *testing.T) {
 		if strings.Join(got, ",") != strings.Join(c.want, ",") {
 			t.Errorf("busMembersAscending(%q) = %v, want %v", c.in, got, c.want)
 		}
+	}
+}
+
+// TestInlineGroupBusesCrossTheFeathersSheets holds the RoyalBlue54L Feather to KiCad's own netlist for
+// every signal that crosses a sheet through an inline group bus (agni issue 936). The Feather joins its
+// header, MCU, PMIC and debugger sheets with groups whose members are listed in the braces, such as
+// `ANALOG{A[0..5]}`, over bare bus wires between sibling sheet pins. Recognising only alias groups kept
+// both sides of every crossing as one-pin nets, and the two spellings of one I2C bus,
+// `I2C{SCL, SDA}` and `I2C_54{SCL, SDA}`, are one net to KiCad because they share member names.
+func TestInlineGroupBusesCrossTheFeathersSheets(t *testing.T) {
+	dir := filepath.Join("..", "..", "tools", "samples", "boards", "royalblue54L-feather")
+	root, err := os.ReadFile(filepath.Join(dir, "RoyalBlue54L-Feather.kicad_sch"))
+	if err != nil {
+		t.Fatalf("the samples corpus is missing (make samples): %v", err)
+	}
+	d, complete, err := ReadSchematicHierarchyNets("RoyalBlue54L-Feather.kicad_sch", root, func(rel string) ([]byte, error) {
+		return os.ReadFile(filepath.Join(dir, filepath.FromSlash(rel)))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !complete {
+		t.Fatal("hierarchy walk did not complete; a sub-sheet did not open")
+	}
+	ours, ref := pinNets(d), readOracle(t, "royalblue_busgroups.oracle")
+	shared := 0
+	for p := range ref {
+		if _, ok := ours[p]; ok {
+			shared++
+		}
+	}
+	if shared < len(ref)*9/10 {
+		t.Fatalf("only %d of the oracle's %d pins are in the read, so the comparison below checks too little", shared, len(ref))
+	}
+	if bad := disagreements(ours, ref); len(bad) > 0 {
+		t.Errorf("net partition disagrees with KiCad's:\n  %s", strings.Join(bad, "\n  "))
 	}
 }

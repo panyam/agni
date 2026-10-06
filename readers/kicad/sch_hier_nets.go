@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
@@ -99,27 +100,87 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 // TestHierBusMembersDoNotCross is the control.
 var kicadBusVectorRe = regexp.MustCompile(`^(.*)\[(\d+)\.\.(\d+)\]$`)
 
-// kicadGroupBusRe matches KiCad's OTHER bus spelling `PREFIX{ALIAS}`, whose members come from a
-// `bus_alias` declaration and are named `PREFIX.MEMBER`.
+// groupBus splits a group bus label, KiCad's `PREFIX{...}` spelling, into the prefix its members are
+// named under (`PREFIX.MEMBER`) and its members, reporting false for anything that is not one.
 //
-// The prefix is greedy because the alias is the LAST brace group and a prefix may carry a `_{...}`
-// subscript of its own, as in `I2C_{SYS}{I2C}`, 33 of the jetson baseboard's 224 group-bus
-// occurrences. A plain subscript label matches too, so a match is a group bus only when groupBus finds
-// the trailing group among the declared aliases.
-var kicadGroupBusRe = regexp.MustCompile(`^(.+)\{([^{}]+)\}$`)
-
-// groupBus splits a group bus label into the prefix its members are named under and the member list
-// its alias declares, reporting false for anything that is not a group bus in this file.
+// The braces either name a `bus_alias`, as the jetson baseboard writes `I2C7{I2C}`, or list the members
+// inline, separated by spaces or commas, as the RoyalBlue54L Feather writes `ANALOG{A[0..5]}`,
+// `DIG{D5 D6 D[9..13]}` and `SWD_TRG{~{RESET}, SWDIO, SWDCLK}`. A listed member may be a vector,
+// which expands, and may carry formatting braces of its own (agni issue 936). The group is the LAST
+// top-level brace pair, so a prefix may carry a subscript, as in `I2C_{SYS}{I2C}`, 33 of the jetson
+// baseboard's 224 group-bus occurrences.
+//
+// A brace pair right after `_`, `^` or `~` is KiCad's subscript, superscript or overbar, so `V_{OUT}`
+// and `SWD_TRG.~{RESET}` are scalar labels. Reading one as a group would promote a member across a
+// sheet boundary and join nets the design keeps apart.
 func groupBus(name string, aliases map[string][]string) (prefix string, members []string, ok bool) {
-	m := kicadGroupBusRe.FindStringSubmatch(name)
-	if m == nil {
+	open := lastBraceGroup(name)
+	if open <= 0 {
 		return "", nil, false
 	}
-	members, ok = aliases[m[2]]
-	if !ok || len(members) == 0 {
+	prefix, inner := name[:open], name[open+1:len(name)-1]
+	if strings.ContainsAny(prefix[len(prefix)-1:], "_^~") {
 		return "", nil, false
 	}
-	return m[1], members, true
+	if members, ok := aliases[inner]; ok && len(members) > 0 {
+		return prefix, members, true
+	}
+	for _, m := range splitGroupMembers(inner) {
+		if v := busMembersAscending(m); v != nil {
+			members = append(members, v...)
+		} else {
+			members = append(members, m)
+		}
+	}
+	if len(members) == 0 {
+		return "", nil, false
+	}
+	return prefix, members, true
+}
+
+// lastBraceGroup is the index of the `{` that opens a trailing top-level brace pair in name, or -1 when
+// name does not end in one.
+func lastBraceGroup(name string) int {
+	if !strings.HasSuffix(name, "}") {
+		return -1
+	}
+	depth := 0
+	for i := len(name) - 1; i >= 0; i-- {
+		switch name[i] {
+		case '}':
+			depth++
+		case '{':
+			depth--
+			if depth == 0 {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+// splitGroupMembers splits an inline member list at spaces and commas outside any formatting braces.
+func splitGroupMembers(inner string) []string {
+	var out []string
+	depth, start := 0, 0
+	flush := func(end int) {
+		if m := strings.TrimSpace(inner[start:end]); m != "" {
+			out = append(out, m)
+		}
+	}
+	for i, r := range inner {
+		switch {
+		case r == '{':
+			depth++
+		case r == '}':
+			depth--
+		case depth == 0 && (r == ' ' || r == ','):
+			flush(i)
+			start = i + 1
+		}
+	}
+	flush(len(inner))
+	return out
 }
 
 // busMembersAscending expands a KiCad vector bus into its members by ASCENDING index, the order two
@@ -200,11 +261,44 @@ func sheetBusNames(root *node, aliases map[string][]string) map[netgraph.Point]s
 		if name, ok := nearestBusLabel(pin, adj, labelAt); ok {
 			out[pin] = name
 		} else if _, onIt := adj[pin]; onIt {
-			// Nothing labels the branch, so the pin names it and the members still cross as spelled.
+			// Nothing labels the branch, so the pins on it name it. A GROUP bus joining sibling sheets
+			// takes one name for the whole bus, so members of the same name meet even when the two
+			// sheets spell the group differently: kicad-cli joins the Feather's `I2C{SCL, SDA}` and
+			// `I2C_54{SCL, SDA}` across one bare bus wire (agni issue 936). Anything else keeps its own
+			// name and its members cross as spelled.
 			out[pin] = pinName
+			if _, _, ok := groupBus(pinName, aliases); ok {
+				out[pin] = groupBusNameOf(pin, adj, pinAt, aliases)
+			}
 		}
 	}
 	return out
+}
+
+// groupBusNameOf is the name an unlabelled bus carries: the first, in sorted order, of the group-bus
+// pins it connects, which is every pin reachable from start along the bus.
+func groupBusNameOf(start netgraph.Point, adj map[netgraph.Point][]netgraph.Point, pinAt map[netgraph.Point]string, aliases map[string][]string) string {
+	best := pinAt[start]
+	seen := map[netgraph.Point]bool{start: true}
+	frontier := []netgraph.Point{start}
+	for len(frontier) > 0 {
+		var next []netgraph.Point
+		for _, p := range frontier {
+			if name, ok := pinAt[p]; ok && name < best {
+				if _, _, group := groupBus(name, aliases); group {
+					best = name
+				}
+			}
+			for _, q := range adj[p] {
+				if !seen[q] {
+					seen[q] = true
+					next = append(next, q)
+				}
+			}
+		}
+		frontier = next
+	}
+	return best
 }
 
 // isBusLabel reports whether a label names a bus this walk acts on, in either of KiCad's two

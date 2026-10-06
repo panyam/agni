@@ -14,104 +14,49 @@ findings:
     - class: design-choice
       why: CC1 and CC2 of the debug USB-C port carry no clamp, which is common on a USB 2.0 port whose CC lines only see the cable's pull-down.
       subjects:
-        - net:/Debugger/USB.CC1
-        - net:/Debugger/USB.CC2
+        - net:USB.CC1
+        - net:USB.CC2
     - class: design-choice
       why: A Feather's header pins go straight to the MCU with no ESD protection, as is usual for a development board whose pins are meant to be wired by hand.
       subjects:
-        - net:/Connectors/ANALOG.A0
-        - net:/Connectors/ANALOG.A1
-        - net:/Connectors/ANALOG.A2
-        - net:/Connectors/ANALOG.A3
-        - net:/Connectors/ANALOG.A4
-        - net:/Connectors/ANALOG.A5
-        - net:/Connectors/DIG.D10
-        - net:/Connectors/DIG.D11
-        - net:/Connectors/DIG.D12
-        - net:/Connectors/DIG.D13
-        - net:/Connectors/DIG.D5
-        - net:/Connectors/DIG.D6
-        - net:/Connectors/DIG.D9
         - net:/Connectors/ENABLE
-        - net:/Connectors/I2C.SCL
-        - net:/Connectors/I2C.SDA
         - net:/Connectors/SHPHLD
-        - net:/Connectors/SPI.MISO
-        - net:/Connectors/SPI.MOSI
-        - net:/Connectors/SPI.SCK
-        - net:/Connectors/UART.RX
-        - net:/Connectors/UART.TX
+        - net:ANALOG.A0
+        - net:ANALOG.A1
+        - net:ANALOG.A2
+        - net:ANALOG.A3
+        - net:ANALOG.A4
+        - net:ANALOG.A5
+        - net:DIG.D10
+        - net:DIG.D11
+        - net:DIG.D12
+        - net:DIG.D13
+        - net:DIG.D5
+        - net:DIG.D6
+        - net:DIG.D9
+        - net:I2C_54.SCL
+        - net:I2C_54.SDA
+        - net:SPI.MISO
+        - net:SPI.MOSI
+        - net:SPI.SCK
         - net:SWD_TRG.~{RESET}
-  i2c-pull-up:
-    - class: false-positive
-      why: The sheets join through KiCad bus groups on sheet pins, and agni keeps each side of the crossing as its own net, so this signal reads as half of itself. The header and PMIC I2C nets are cut off from the MCU side.
-      ticket: 936
-      subjects:
-        - net:/Connectors/I2C.SCL
-        - net:/Connectors/I2C.SDA
-        - net:/nPM1300/NPM1300.SCL
-        - net:/nPM1300/NPM1300.SDA
+        - net:UART_TRG.RX
+        - net:UART_TRG.TX
   power-input-not-driven:
-    - class: false-positive
-      why: The sheets join through KiCad bus groups on sheet pins, and agni keeps each side of the crossing as its own net, so this signal reads as half of itself. The PMIC's VBUS input is cut off from the USB-C connector on the debugger sheet.
-      ticket: 936
-      subjects:
-        - net:/nPM1300/USB.VBUS
     - class: false-positive
       why: The debugger's nRF52833 runs from VDDH, and its internal regulator drives these VDD pins, which the symbol types power_in.
       ticket: 935
       subjects:
         - net:/Debugger/nRF52_VDD
-  single-pin-net:
-    - class: false-positive
-      why: The sheets join through KiCad bus groups on sheet pins, and agni keeps each side of the crossing as its own net, so this signal reads as half of itself. Each of these nets has its other pin on the sheet across the boundary.
-      ticket: 936
+    - class: defect
+      why: VBUS arrives through the USB-C connector, whose pins are passive, and no power flag marks the net as fed, so the nPM1300's VBUS input has no driver on the schematic. KiCad's ERC reports the same. Harmless electrically; the net was split by agni issue 936 until it was read whole.
       subjects:
-        - net:/Connectors/ANALOG.A0
-        - net:/Connectors/ANALOG.A1
-        - net:/Connectors/ANALOG.A2
-        - net:/Connectors/ANALOG.A3
-        - net:/Connectors/ANALOG.A4
-        - net:/Connectors/ANALOG.A5
-        - net:/Connectors/DIG.D10
-        - net:/Connectors/DIG.D11
-        - net:/Connectors/DIG.D12
-        - net:/Connectors/DIG.D13
-        - net:/Connectors/DIG.D5
-        - net:/Connectors/DIG.D6
-        - net:/Connectors/DIG.D9
-        - net:/Connectors/SPI.MISO
-        - net:/Connectors/SPI.MOSI
-        - net:/Connectors/SPI.SCK
-        - net:/Connectors/UART.RX
-        - net:/Connectors/UART.TX
-        - net:/Debugger/SWD_TRG.SWDCLK
-        - net:/Debugger/SWD_TRG.SWDIO
-        - net:/Debugger/SWD_TRG.~{RESET}
-        - net:/Debugger/UART_TRG.RX
-        - net:/Debugger/UART_TRG.TX
-        - net:/Debugger/USB.CC1
-        - net:/nPM1300/NPM1300.INT
-        - net:/nPM1300/NPM1300.SCL
-        - net:/nPM1300/NPM1300.SDA
-        - net:/nPM1300/USB.CC1
-        - net:/nPM1300/USB.CC2
-        - net:/nRF54L15/ANALOG.A0
-        - net:/nRF54L15/ANALOG.A1
-        - net:/nRF54L15/ANALOG.A2
-        - net:/nRF54L15/ANALOG.A3
-        - net:/nRF54L15/ANALOG.A4
-        - net:/nRF54L15/ANALOG.A5
-        - net:/nRF54L15/DIG.D10
-        - net:/nRF54L15/DIG.D12
-        - net:/nRF54L15/DIG.D13
-        - net:/nRF54L15/DIG.D5
-        - net:/nRF54L15/DIG.D6
-        - net:/nRF54L15/DIG.D9
-        - net:/nRF54L15/NPM1300.INT
-        - net:/nRF54L15/UART_TRG.RX
-        - net:/nRF54L15/UART_TRG.TX
-        - net:SWD_TRG.~{RESET}
+        - net:USB.VBUS
+  reverse-blocking-absent:
+    - class: design-choice
+      why: VBUS from the USB-C port feeds the nPM1300's VBUS input directly, and the design relies on the PMIC's own input stage and power path to keep the battery from back-feeding the port. Not checked against the nPM1300 datasheet.
+      subjects:
+        - net:USB.VBUS
   unconnected-component:
     - class: false-positive
       why: Mounting holes and the logo have no pins, so none landing on a net says nothing.
