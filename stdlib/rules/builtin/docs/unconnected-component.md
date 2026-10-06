@@ -18,6 +18,13 @@ wasted cost and board area. Both are worth surfacing.
 
 ![Flagged: R9 with no pin on any net; fine: U1 with pins wired to nets](images/unconnected-component.svg)
 
+### Parts with no pins
+
+A mounting hole, a logo or a module's assembly symbol declares no pins, so "none of its pins land on a
+net" is true of it and says nothing. Such a part is not considered (agni issue 937). A part whose read
+carries no pin list at all, as a hand-built or pin-less netlist gives, still fails when nothing
+connects to it, because its pins are unknown rather than absent.
+
 ### Section-aware
 
 Connections key on ref_des, and the IR groups all of a physical part's

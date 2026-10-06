@@ -60,6 +60,11 @@ func unconnectedComponentVerdicts(ctx context.Context, m check.Model) []check.Ve
 		case c.RefDes == "":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the part carries no reference designator, so there is no identity to judge its connectivity by"
+		case !m.IsConnected(c.RefDes) && m.IsPinlessPart(c.RefDes):
+			// A mounting hole, a logo or a module's assembly symbol has no pins, so "none land on a net"
+			// is true of it vacuously (agni issue 937). A part whose pins are merely unknown still fails.
+			v.Outcome = check.NotConsidered
+			v.Reason = "the part has no pins, so there is nothing for it to connect"
 		case m.IsConnected(c.RefDes):
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{

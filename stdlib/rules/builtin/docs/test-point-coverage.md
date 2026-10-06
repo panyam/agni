@@ -37,7 +37,8 @@ but is a high-impedance sense point that must not be probed (a test point would 
 shift the regulated output), so it is EXCLUDED (WS3-067); the feedback patterns are naming-lexicon
 config a project extends (WS3-069). A switch node is excluded for the same reason, since a probe
 there loads the highest dV/dt node in the design, and control and gate-drive nets such as a mode
-strap or an enable are excluded because they are not rails (agni 680). Severity is info because DFT
+strap or an enable are excluded because they are not rails (agni 680). A divider tap into a sense pin
+named for the rail it senses (VBUS_MON_UP) is excluded for the same reason (agni 935). Severity is info because DFT
 posture is a per-project policy. The reviewer decides, and the rule surfaces the rails.
 
 ### Query structure

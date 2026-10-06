@@ -120,7 +120,8 @@ highlights the right instance rather than all of them.
 
 Proven vocabulary goes in the Spec AST. Anything multi-clause goes behind a registered SpecFunc that
 declares its own reads and primitives, so the derived reads still cover the code behind that
-boundary. The example is one FFI (`has_test_points`, the channel gate) plus existing facts:
+boundary. The example is two FFIs (`has_test_points`, the channel gate, and `not_a_supply`, which
+recognises a floating pad or a divider tap by structure) plus existing facts:
 
     Over: nets
     Scope: has_test_points(design)
@@ -128,6 +129,7 @@ boundary. The example is one FFI (`has_test_points`, the channel gate) plus exis
        and (global(N) or power_driven(N) or rail_name(N) or ground_name(N))
        and not feedback_name(N) and not switching_name(N)
        and not control_name(N) and not gate_drive_name(N)
+       and not not_a_supply(N)
     Where: not exists T in N.connections where class(T) == test_point
 
 Bind it with `spec.Rule(check.Rule{...})`. `Reads` and `Primitives` derive from the body, so they cannot

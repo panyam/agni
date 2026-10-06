@@ -86,7 +86,10 @@ reports its path as unblocked rather than guessing which way the part faces.
 ### When it passes or does not apply
 
 - No connector on the net, since the rule is about what enters the board.
-- No power input reachable from it.
+- No power input reachable from it. A connector's own pins are not loads, although a receptacle's
+  symbol types VBUS power_in, so a source port driven by a load switch reaches none (agni issue 935).
+- A transistor touching the path only through its gate, such as a FET sensing VBUS for presence
+  detection, is not in the path and makes nothing inconclusive.
 - A transistor on the path that a seeded datasheet identifies as an ideal-diode / ORing controller
   (above). An UNIDENTIFIED transistor gives an inconclusive finding instead.
 - Ground and read-gap (external) nets, excluded up front.

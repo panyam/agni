@@ -125,7 +125,9 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 			if m.HasClass(ref, check.ClassIdealDiodeController) {
 				return pathProtected, ref
 			}
-			if transistor == "" && m.ComponentClass(ref) == check.ClassTransistor {
+			// A transistor touching the path only through its GATE draws no current from it, as a FET
+			// whose gate senses VBUS for presence detection does on a source port (agni issue 935).
+			if transistor == "" && m.ComponentClass(ref) == check.ClassTransistor && m.PinRole(ref, c.GetPinRef()) != check.RoleGate {
 				transistor = ref
 			}
 		}
@@ -187,10 +189,14 @@ const (
 	pathNoLoad
 )
 
-// hasPowerInput reports whether a net carries a real power-input pin (virtual power symbols excluded).
+// hasPowerInput reports whether a net carries a real power-input pin, meaning a load. Virtual power
+// symbols are excluded, and so is a connector's own pin: a USB-C receptacle's symbol types VBUS
+// power_in, but the connector is where power enters or leaves the board, and counting it made every
+// source port's VBUS read as a load reached through passives alone (agni issue 935).
 func hasPowerInput(m check.Model, n *ir.Net) bool {
 	return check.Exists(n.GetConnections(), func(c *ir.Connection) bool {
-		return !check.IsVirtualRef(c.GetComponentRef()) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+		ref := c.GetComponentRef()
+		return !check.IsVirtualRef(ref) && !m.HasClass(ref, check.ClassConnector) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 	})
 }
 
