@@ -8,9 +8,16 @@ import (
 // collectBuses records the NAMED buses on one schematic sheet as BusNotModeled diagnostics (WS1-034),
 // each carrying its member-signal set so the bus-not-modeled rule can tell a resolved bus (every
 // member already a net, via the member labels KiCad requires on the taps) from one whose members are
-// unmodeled. A bus is named either by a range-bus LABEL, whose members expand from the range, or by a
-// `bus_alias` with an explicit member list. The `bus`/`bus_entry` wire geometry carries no name of its
-// own, so it is not flagged directly. Deduped by bus name within the sheet.
+// unmodeled. A bus is named by a range-bus LABEL, whose members expand from the range. The `bus`/
+// `bus_entry` wire geometry carries no name of its own, so it is not flagged directly. Deduped by bus
+// name within the sheet.
+//
+// A `bus_alias` declaration is not a bus. It is a member list a group bus uses (`I2C7{I2C}`), and its
+// members become nets only as `PREFIX.MEMBER` where a group uses it, never under their bare names.
+// Recording each declaration as a bus qualified its members by whichever sheet declared it
+// (`/M.2/TX0+`), which no net ever matches, so every alias on the jetson baseboard read as 16 unmodeled
+// buses (agni issue 939). Group buses are not recorded here at all; judging one would mean checking
+// each PREFIX.MEMBER, and KiCad lets a group leave members unbroken-out.
 //
 // The label test is netgraph.IsBusName, which accepts `DATA[7..0]` and also xschem's `DATA[7:0]`.
 // KiCad itself reads the colon form as a plain scalar (kicadBusVectorRe in sch_hier_nets.go).
@@ -55,10 +62,6 @@ func collectBuses(root *node, src string, qualify func(string) string) []*ir.Bus
 				add("bus", name, netgraph.ExpandBusName(name))
 			}
 		}
-	}
-	// An explicitly listed bus, `(bus_alias "NAME" (members "A" "B" ...))`.
-	for _, a := range root.Children("bus_alias") {
-		add("bus_alias", unescapeName(atomOf(a.Arg(1))), aliasMembers(a))
 	}
 	return out
 }

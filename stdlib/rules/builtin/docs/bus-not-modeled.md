@@ -2,10 +2,10 @@
 
 ### What it means
 
-A bus on the schematic (a gEDA `U` segment, a KiCad `bus` / `bus_alias`, an
+A bus on the schematic (a gEDA `U` segment, a KiCad range-bus label, an
 xschem `NAME[n:0]` label, or an EDIF `array` port) whose member signals are NOT all resolved into
 distinct nets. The bus names a set of members (a range `DATA[7:0]` expands to `DATA0..DATA7`, and
-KiCad spells it `DATA[0..7]`, or a `bus_alias` lists them); the finding fires when one or more of
+KiCad spells it `DATA[0..7]`); the finding fires when one or more of
 those members is not a net in the read, or when the reader could not determine the members at all.
 
 ### Why engineers want it
@@ -33,6 +33,11 @@ port), the case where connectivity really is lost. Verified against `kicad-cli s
 a flat bussed sheet produces exactly the member nets, so the rule stays silent on it.
 
 ### Scope note
+
+A KiCad `bus_alias` declaration is a member list, not a bus. Its members become nets only as
+`PREFIX.MEMBER` where a group bus (`I2C7{I2C}`) uses it, so the declaration is not checked, and
+checking it by its bare member names fired on every alias of the Jetson baseboard (agni issue 939).
+Group buses are not checked either, since KiCad lets a group leave members unbroken-out.
 
 The rule detects a bus and checks its members, and stops there. Actually EXPANDING a bus
 across a sheet boundary (a hierarchical bus port) into crossing member nets is the remaining WS1-034

@@ -6,9 +6,10 @@ import (
 )
 
 // TestCollectBuses checks that the reader records NAMED buses with their member set (WS1-034). The
-// alias fixture yields the bus_alias "DATA" with its explicit members; the resolved fixture yields
-// the range-bus "DATA[1:0]" with the range-expanded members. The bare bus/bus_entry wire geometry
-// is not flagged on its own (the label/alias names the bus).
+// resolved fixture yields the range-bus "DATA[1:0]" with the range-expanded members. The alias fixture
+// only DECLARES `bus_alias "DATA"` and draws no bus that uses it, so it records nothing: a declaration
+// is a member list, not a bus (agni issue 939). The bare bus/bus_entry wire geometry is not flagged on
+// its own.
 func TestCollectBuses(t *testing.T) {
 	cases := []struct {
 		fixture     string
@@ -16,7 +17,7 @@ func TestCollectBuses(t *testing.T) {
 		wantLabel   string
 		wantMembers []string
 	}{
-		{"bus.kicad_sch", "bus_alias", "DATA", []string{"DATA0", "DATA1"}},
+		{"bus.kicad_sch", "", "", nil},
 		{"bus_resolved.kicad_sch", "bus", "DATA[1:0]", []string{"DATA1", "DATA0"}},
 	}
 	for _, tc := range cases {
@@ -25,6 +26,12 @@ func TestCollectBuses(t *testing.T) {
 			t.Fatalf("%s: %v", tc.fixture, err)
 		}
 		bs := d.GetInputDiagnostics().GetUnmodeledBuses()
+		if tc.wantLabel == "" {
+			if len(bs) != 0 {
+				t.Errorf("%s: an alias declaration was recorded as a bus: %v", tc.fixture, bs)
+			}
+			continue
+		}
 		if len(bs) != 1 {
 			t.Fatalf("%s: unmodeled buses = %d, want 1", tc.fixture, len(bs))
 		}
