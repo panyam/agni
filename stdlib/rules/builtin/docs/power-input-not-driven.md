@@ -27,6 +27,10 @@ power pin cannot distinguish source from sink, so the rule reports its nets not-
 flag on the net, recorded by the reader, counts as driven. A net that continues onto a sheet the read
 did not open is not judged, since its feed may be there.
 
+A lone exposed pad and a divider tap into a sense pin are not considered either. Both carry a pin a
+vendor symbol types power_in, and neither draws a supply, as decoupling-present's page describes (agni
+issue 935).
+
 Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS. EDIF's port
 grammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types
 (the `design.types_power_out` fact). There a rail's driver reads as a plain input, so "no power source"

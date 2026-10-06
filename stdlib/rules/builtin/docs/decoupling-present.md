@@ -47,6 +47,15 @@ switch node, and the advice to fit a capacitor there would short the switch to g
 The inductor only disqualifies alongside a transistor. On its own it is an LC or ferrite FILTER, and
 a filtered supply is a rail that genuinely wants decoupling on the far side.
 
+Two more shapes carry a power-input pin and draw no supply, and this rule and power-input-not-driven
+both leave them alone (agni issue 935). An **exposed thermal pad left unconnected** (a pin named `EP`,
+`EPAD`, `PAD` or `THERMAL_PAD` alone on its net) is allowed to float by many parts' datasheets, and
+vendor symbols type it power_in. Only the pad's name exempts it, because a VDD pin left unwired is the
+forgotten connection these rules exist for. A **divider tap into a sense pin**, a net of resistors
+whose legs run to a supply and to ground beside a power_in pin, is a measurement (a USB hub's
+VBUS-detect input), not a supply. A supply fed through a single series resistor or a 0 Ohm link
+still wants its decoupling, so a divider needs both legs.
+
 Both are proxies for a question this rule cannot ask yet. "The switching node of a buck converter"
 is a topology question, an inductor between a switch node and an output with the capacitor beyond
 it, which is the topology pattern work in agni issue 374. Expect these class checks to be replaced

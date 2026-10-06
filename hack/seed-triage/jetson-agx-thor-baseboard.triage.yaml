@@ -31,18 +31,6 @@ findings:
         - bus:USB
         - bus:USBSS
   decoupling-present:
-    - class: false-positive
-      why: An exposed thermal pad left unconnected, which its datasheet allows; the symbol types the pad power_in, so it reads as a rail.
-      ticket: 935
-      subjects:
-        - net:unconnected-(U29-PadEP)
-        - net:unconnected-(U43-Pad25)
-        - net:unconnected-(U71-Pad17)
-    - class: false-positive
-      why: VBUS_MON_UP is the USB hub's VBUS-sense input behind a divider, not a rail.
-      ticket: 935
-      subjects:
-        - net:/USB Hub/VBUS_MON_UP
     - class: design-choice
       why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
       subjects:
@@ -119,34 +107,17 @@ findings:
         - net:/USB Debug, PD/DEBUG_SDA
         - net:I2C_{SYS}.SCL
         - net:I2C_{SYS}.SDA
-  power-input-not-driven:
-    - class: false-positive
-      why: An exposed thermal pad left unconnected, which its datasheet allows; the symbol types the pad power_in.
-      ticket: 935
-      subjects:
-        - net:unconnected-(U29-PadEP)
-        - net:unconnected-(U43-Pad25)
-        - net:unconnected-(U71-Pad17)
-    - class: false-positive
-      why: VBUS_MON_UP is the USB hub's VBUS-sense input, driven through a divider from VBUS, which the symbol types power_in.
-      ticket: 935
-      subjects:
-        - net:/USB Hub/VBUS_MON_UP
   rail-not-classified:
     - class: needs-intent
       why: FTDI_3V3 is the FT230X's 3.3 V regulator output, a real rail whose name the built-in vocabulary does not match; a project would declare it in its conventions lexicon.
       subjects:
         - net:/USB Debug, PD/FTDI_3V3
   reverse-blocking-absent:
-    - class: false-positive
-      why: These USB-C ports are sources driven by an AP22615 load switch, and the power input the rule reaches is the connector's own VBUS pin, so there is no inbound path to block.
-      ticket: 935
+    - class: needs-intent
+      why: 'These two ports are dual-role: VBUS reaches the TPS65988 PD controller (and on the debug port its LDO), which blocks reverse flow with its own internal power-path FETs. A netlist cannot show that; a datasheet device class marking the TPS65988 as a power-path controller would let the rule credit it.'
       subjects:
-        - net:/Recovery USB/USBC2_VBUS
         - net:/USB DP Alt mode/USBC1_VBUS
         - net:/USB Debug, PD/USBC0_VBUS
-        - net:/USB Hub/USBC3_VBUS
-        - net:/USB Hub/USBC4_VBUS
   single-pin-net:
     - class: defect
       why: Two unused FMC pins (J18 B24, B25) lack the no-connect flag every other unused pin on the connector carries; KiCad's own netlist also leaves them unconnected. Harmless electrically.
@@ -154,11 +125,6 @@ findings:
         - net:N$202
         - net:N$203
   test-point-coverage:
-    - class: false-positive
-      why: VBUS_MON_UP is the USB hub's VBUS-sense input behind a divider, not a rail; it reads as one because the symbol types the pin power_in.
-      ticket: 935
-      subjects:
-        - net:/USB Hub/VBUS_MON_UP
     - class: design-choice
       why: The board puts test points on its main rails, not on each converter's internal supply and output nodes, the FMC rails or the debug bridge's 3.3 V.
       subjects:
@@ -187,11 +153,3 @@ findings:
         - net:/Power/VIN_PWR_ON
         - net:/SoM_IO2/TC_VCC
         - net:/USB Debug, PD/FTDI_3V3
-  unconnected-component:
-    - class: false-positive
-      why: A1 and A2 are M.2 standoffs and A3 the module's assembly symbol, none with pins.
-      ticket: 937
-      subjects:
-        - component:A1
-        - component:A2
-        - component:A3

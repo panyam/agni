@@ -71,6 +71,8 @@ func notARail(m check.Model, n *ir.Net) string {
 //     ground is adequately decoupled, which this rule cannot support.
 //   - A net driving a transistor's GATE is a control node (agni issue 382).
 //   - A net carrying an inductor beside a transistor is a switching node (agni issue 382).
+//   - A lone exposed pad and a divider tap into a sense pin carry a power_in pin and draw no supply
+//     (notASupply, agni issue 935).
 //
 // An EXTERNAL net is NotConsidered instead. It is a rail that feeds supply pins, and its capacitor may
 // be drawn on a sheet this read did not open.
@@ -86,8 +88,8 @@ func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdi
 		if !hasPowerIn || m.IsGroundNet(n) {
 			continue // not a rail feeding a supply pin, or the reference the decoupling returns to
 		}
-		if notARail(m, n) != "" {
-			continue // a control or switching node, which is not a rail however its pins are typed
+		if notARail(m, n) != "" || notASupply(m, n) != "" {
+			continue // a control or switching node, a floating pad or a sense tap, none a rail however its pins are typed
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}

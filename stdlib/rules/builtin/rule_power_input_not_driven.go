@@ -82,6 +82,11 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 					{Label: "drivers", Value: strconv.Itoa(drivers)},
 				},
 			}
+		case notASupply(m, n) != "":
+			// A lone exposed pad and a divider tap carry a power_in pin and draw no supply, so an absent
+			// driver says nothing about an unfed rail (agni issue 935).
+			v.Outcome = check.NotConsidered
+			v.Reason = notASupply(m, n)
 		default:
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{

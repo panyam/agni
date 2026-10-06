@@ -43,9 +43,8 @@ findings:
         - net:UART_TRG.RX
         - net:UART_TRG.TX
   power-input-not-driven:
-    - class: false-positive
-      why: The debugger's nRF52833 runs from VDDH, and its internal regulator drives these VDD pins, which the symbol types power_in.
-      ticket: 935
+    - class: needs-intent
+      why: The debugger's nRF52833 runs from VDDH, and in that mode its internal regulator drives these VDD pins, which the symbol types power_in. That is the part's pin function, a datasheet fact the run has no parameter set for (agni issue 935).
       subjects:
         - net:/Debugger/nRF52_VDD
     - class: defect
@@ -57,16 +56,6 @@ findings:
       why: VBUS from the USB-C port feeds the nPM1300's VBUS input directly, and the design relies on the PMIC's own input stage and power path to keep the battery from back-feeding the port. Not checked against the nPM1300 datasheet.
       subjects:
         - net:USB.VBUS
-  unconnected-component:
-    - class: false-positive
-      why: Mounting holes and the logo have no pins, so none landing on a net says nothing.
-      ticket: 937
-      subjects:
-        - component:H1
-        - component:H2
-        - component:H3
-        - component:H4
-        - component:LOGO1
   unspecified-pin-with-driver:
     - class: defect
       why: The nRF52833 symbol leaves pin 20 (SWDIO side of the debug header) with no electrical type, a symbol-library gap that is harmless electrically and hides the pin from direction checks.

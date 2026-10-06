@@ -1,6 +1,9 @@
 package builtin
 
-import "github.com/panyam/agni/core/check"
+import (
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
 
 // testPointCoverage is the DFT (design-for-test) presence rule, asking that rails and ground be
 // probe-able. Spec-only plus one declared FFI, per the twin discipline in
@@ -22,6 +25,15 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 				}
 			}
 			return false
+		},
+	})
+	check.RegisterSpecFunc("not_a_supply", &check.SpecFunc{
+		// A lone exposed pad or a divider tap into a sense pin, which a rail-shaped name can make look
+		// like a rail to probe (agni issue 935). See notASupply.
+		Reads:      []string{"on_net", "pin.electrical_type", "component.class"},
+		Primitives: []string{"select", "traverse"},
+		Fn: func(m check.Model, ents map[string]any, _ []any) any {
+			return notASupply(m, ents["net"].(*ir.Net)) != ""
 		},
 	})
 	spec := &check.Spec{
@@ -57,6 +69,8 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 			// configures the 12V converter and is not 12V.
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "control_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "gate_drive_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
+			// A divider tap named for the rail it senses (VBUS_MON_UP) is not a rail either.
+			check.Not{X: check.IsTrue{T: check.Call{Fn: "not_a_supply"}}},
 		}},
 		// THE VIOLATION, and the only clause that is one, is an in-scope rail with no test point on
 		// it. A pass means the rail carries one.
