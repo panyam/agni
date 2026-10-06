@@ -326,8 +326,12 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 		resp.Sheets = append(resp.Sheets, &webapi.SheetRef{Id: sh.GetId(), Name: sh.GetName(), ParentId: sh.GetParentId()})
 	}
 	// A file with a board sidecar lists the physical board as one more sheet, after the
-	// drawable ones, regardless of the layout axis (the board is faithful by nature).
-	if b, err := s.loader.Board(ctx, bu); err == nil && b != nil {
+	// drawable ones, regardless of the layout axis (the board is faithful by nature). Listing it
+	// reads no copper: whether the board tier's artifact is a board format decides it, and the board
+	// is read when its sheet is asked for. Reading it here parsed the Jetson baseboard's 85 MB board
+	// on every open, and in the browser that held the first sheet and the rule catalog back by about
+	// 30 seconds (agni issue 943).
+	if formats.HasBoard(bu.Path) {
 		resp.Sheets = append(resp.Sheets, &webapi.SheetRef{Id: boardSheetID, Name: "Board"})
 	}
 	if layout == faithfulLayout {

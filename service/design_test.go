@@ -550,6 +550,49 @@ func TestGetDesignListsBoardSheet(t *testing.T) {
 	}
 }
 
+// countingBoardLoader counts its board reads, which on a real board are the expensive part of a read.
+type countingBoardLoader struct {
+	boardLoader
+	reads *int
+}
+
+func (b countingBoardLoader) Board(ctx context.Context, u artifact.URI) (*geom.BoardGeometry, error) {
+	*b.reads++
+	return b.boardLoader.Board(ctx, u)
+}
+
+// TestGetDesignListsTheBoardWithoutReadingIt holds GetDesign to listing the Board sheet from the
+// board tier's format alone (agni issue 943). Reading the board here parsed an 85 MB file on every
+// open of the Jetson seed, before the first sheet or the rule catalog could answer.
+func TestGetDesignListsTheBoardWithoutReadingIt(t *testing.T) {
+	reads := 0
+	ld := countingBoardLoader{
+		boardLoader: boardLoader{
+			fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
+			board:      testBoard(),
+		},
+		reads: &reads,
+	}
+	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.kicad_pcb"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(resp.GetSheets()); n != 2 || resp.GetSheets()[1].GetId() != "board" {
+		t.Fatalf("sheets = %v, want the drawable sheet and the board", resp.GetSheets())
+	}
+	if reads != 0 {
+		t.Errorf("GetDesign read the board %d times to list it, want none", reads)
+	}
+	// Positive control: the counter does count, since opening the board sheet reads it.
+	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG}); err != nil {
+		t.Fatal(err)
+	}
+	if reads == 0 {
+		t.Fatal("opening the board sheet read no board, so the counter proves nothing")
+	}
+}
+
 func TestGetSheetBoard(t *testing.T) {
 	ld := boardLoader{
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
