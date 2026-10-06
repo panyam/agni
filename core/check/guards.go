@@ -477,7 +477,8 @@ func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 			ref := c.ComponentRef
 			// A resistor may appear once per PATH, not once per walk, since two bus segments can
 			// reach the same rail through different resistors.
-			if cur.used[ref] || !m.HasClass(ref, ClassResistor) {
+			// An unfitted resistor pulls nothing, so a do-not-populate alternative is no pull-up (agni 938).
+			if cur.used[ref] || !m.HasClass(ref, ClassResistor) || !m.IsFitted(ref) {
 				continue
 			}
 			for _, other := range resistorNets[ref] {
@@ -554,7 +555,8 @@ func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
 		}
 		for _, c := range cur.net.Connections {
 			ref := c.ComponentRef
-			if cur.used[ref] || !m.HasClass(ref, ClassResistor) {
+			// An unfitted resistor pulls nothing, so a do-not-populate alternative is no pull-up (agni 938).
+			if cur.used[ref] || !m.HasClass(ref, ClassResistor) || !m.IsFitted(ref) {
 				continue
 			}
 			for _, other := range resistorNets[ref] {
