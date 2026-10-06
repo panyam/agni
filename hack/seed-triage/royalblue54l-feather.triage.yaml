@@ -42,6 +42,12 @@ findings:
         - net:SWD_TRG.~{RESET}
         - net:UART_TRG.RX
         - net:UART_TRG.TX
+  i2c-pull-up:
+    - class: design-choice
+      why: Both pull-ups on the main I2C bus, R2 and R3, are marked do-not-populate, so the board ships relying on the device plugged into the STEMMA QT port or the nRF54L15's internal pull-ups. Surfaced once DNP parts stopped counting as pull-ups (agni issue 938).
+      subjects:
+        - net:I2C_54.SCL
+        - net:I2C_54.SDA
   power-input-not-driven:
     - class: needs-intent
       why: The debugger's nRF52833 runs from VDDH, and in that mode its internal regulator drives these VDD pins, which the symbol types power_in. That is the part's pin function, a datasheet fact the run has no parameter set for (agni issue 935).

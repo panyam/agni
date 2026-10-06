@@ -258,6 +258,20 @@ subject is a reader diagnostic should declare the matching capability.
 
 </details>
 
+### Parts marked do-not-populate
+
+A part a design marks do-not-populate (KiCad's `dnp` flag) stays in the netlist, because its footprint
+and its nets are real and a later build may fit it. What changes is what a rule may CREDIT it with. A
+rule that counts a part as doing something electrical, such as a resistor pulling a line up, asks
+`Model.IsFitted` first, since an unfitted part does nothing. The pull-up walks behind `i2c-pull-up`,
+the split-rail and redundant-pull-up rules, the interface profiles and the coverage panel all ask it
+(agni issue 938). A DNP footprint is often the alternative of an assembly option, as on a camera line
+pulled to 1.8 V by one fitted resistor beside a DNP one to 3.3 V, and counting both read as a line
+pulled to two rails.
+
+The same question applies wherever a part is credited, a decoupling capacitor, a TVS on a connector
+line, a series part a reach walk crosses, and those rules do not ask it yet.
+
 ## The evaluation model
 
 Rules evaluate over the neutral IR, producing findings tied to provenance so each violation

@@ -20,5 +20,16 @@ func parse(r io.Reader) (*node, error) {
 	return sexpr.Parse(r, sexpr.KiCadStrings)
 }
 
+// boardSkips are the board subtrees no reader of a .kicad_pcb reads. A zone's fill is the copper
+// KiCad last computed for it, and the board reads keep only the zone's authored outline, so its fill
+// points, about a fifth of a large board's atoms, are left out at parse (agni issue 946). The census
+// parses without skipping, and classifies filled_polygon as a known drop.
+var boardSkips = []string{"filled_polygon"}
+
+// parseBoard parses a .kicad_pcb, leaving out boardSkips.
+func parseBoard(r io.Reader) (*node, error) {
+	return sexpr.ParseSkipping(r, sexpr.KiCadStrings, boardSkips...)
+}
+
 // atomOf returns the text of an atom node, or "" for a list or nil.
 func atomOf(n *node) string { return n.Text() }

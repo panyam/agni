@@ -9,27 +9,6 @@ findings:
       why: N$54 is the module's PMIC backup-battery input through D1 and R6, which the module decouples on its own side.
       subjects:
         - net:N$54
-  bus-not-modeled:
-    - class: false-positive
-      why: Each bus names a member under a sheet the bus may not be drawn on (/M.2/TX0+ for PCIe, DP and RGMII), which reads as a resolution error in the read, not as a gap in the design.
-      ticket: 939
-      subjects:
-        - bus:CAM_CTRL
-        - bus:CAN
-        - bus:CSI
-        - bus:DP
-        - bus:GPIO
-        - bus:HDMI
-        - bus:I2C
-        - bus:I2S
-        - bus:M2_E
-        - bus:PCIe
-        - bus:RGMII
-        - bus:SFI
-        - bus:SPI
-        - bus:UART
-        - bus:USB
-        - bus:USBSS
   decoupling-present:
     - class: design-choice
       why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
@@ -84,25 +63,21 @@ findings:
         - net:I2C8.SDA
         - net:I2C_{CAM}.SCL
         - net:I2C_{CAM}.SDA
-  i2c-pull-up-split-rail:
-    - class: false-positive
-      why: The second pull-up on each line (R161, R170) is marked do-not-populate, an assembly option between 1.8 V and 3.3 V cameras; only one is fitted.
-      ticket: 938
+    - class: needs-intent
+      why: Each of these SoM I2C lines at 1.8 V has a 2.2 kOhm pull-up footprint marked do-not-populate (R357, R358 and their neighbours) and runs through an NTS0104 level translator, which carries its own 10 kOhm pull-ups; that is a datasheet fact this run has no parameter set for. Surfaced once DNP parts stopped counting as pull-ups (agni issue 938).
       subjects:
-        - net:/CSI/SCL_CAM0
-        - net:/CSI/SCL_CAM1
-        - net:/CSI/SCL_CAM2
-        - net:/CSI/SCL_CAM3
-        - net:/CSI/SDA_CAM0
-        - net:/CSI/SDA_CAM1
-        - net:/CSI/SDA_CAM2
-        - net:/CSI/SDA_CAM3
+        - net:/SoM_IO/I2C0_SCL_1V8
+        - net:/SoM_IO/I2C0_SDA_1V8
+        - net:/SoM_IO/I2C2_SCL_1V8
+        - net:/SoM_IO/I2C2_SDA_1V8
+        - net:/SoM_IO/I2C3_SCL_1V8
+        - net:/SoM_IO/I2C3_SDA_1V8
+        - net:/SoM_IO/I2C5_SCL_1V8
+        - net:/SoM_IO/I2C5_SDA_1V8
   i2c-redundant-pull-up:
     - class: design-choice
       why: Three sheets each bring their own pull-up onto the shared system I2C bus (4.7 k, 2.2 k and 200 k), about 1.5 kOhm together, which keeps the sink current near 2.2 mA at 3.3 V, inside the bus's 3 mA limit.
       subjects:
-        - net:/Recovery USB/USBC2_I2C_SCL
-        - net:/Recovery USB/USBC2_I2C_SDA
         - net:/USB Debug, PD/DEBUG_SCL
         - net:/USB Debug, PD/DEBUG_SDA
         - net:I2C_{SYS}.SCL

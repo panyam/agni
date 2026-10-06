@@ -23,7 +23,7 @@ const kicadNativeIDKind = "kicad-uuid"
 // component therefore has no ComponentSections. sourceFile is recorded in provenance only;
 // the caller owns file I/O so the core stays runtime-agnostic (CONSTRAINTS C1).
 func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
-	root, err := parse(r)
+	root, err := parseBoard(r)
 	if err != nil {
 		return nil, err
 	}

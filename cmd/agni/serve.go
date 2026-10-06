@@ -63,6 +63,7 @@ func serveCmd() *cobra.Command {
 	var reviewStorePath string
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
+	var slowRequest time.Duration
 	var engine string
 	var wasmMaxBytes int64
 	var designCache int
@@ -82,6 +83,7 @@ func serveCmd() *cobra.Command {
 				profilePath: profilePath, conventions: conventions,
 				reviewStorePath: reviewStorePath,
 				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
+				slowRequest:     slowRequest,
 				engine:          engine,
 				wasmMaxBytes:    wasmMaxBytes,
 				designCache:     designCache,
@@ -101,6 +103,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().Int64Var(&queryBudget, "query-budget", 0, "cap each query's work, in the units a fact base counts (comparisons plus generator rows), for queries and query-backed rules alike; a request may ask for less but never more. 0 enforces nothing, so a deployment can watch what its queries cost first (see --query-budget-warn)")
 	c.Flags().IntVar(&designCache, "design-cache", defaultDesignCache, "how many reads to keep between requests: a design, a drawing, a board or a built model each count once, so one design asked for by queries and the viewer holds about four. Each is checked against its files on every use and read again when one changed. 0 keeps none")
 	c.Flags().Int64Var(&queryBudgetWarn, "query-budget-warn", defaultQueryBudgetWarn, "log each query whose work passes this, with a suggested --query-budget; 0 logs nothing")
+	c.Flags().DurationVar(&slowRequest, "slow-request", 0, "log each request that takes longer than this (e.g. 2s), with the stage that took the most, which cache tier answered each read, its slowest rules, and its query plan when evaluating was the slowest stage; 0 logs nothing. A client can ask for any request's breakdown with an Agni-Timing header")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
 	c.Flags().StringVar(&datasheetsURL, "datasheets-url", "", "where the datasheets workbench is served, e.g. http://host:8090 for a running `agnids serve`; the landing page links its Datasheets card and datasheet recents there, and hides both when this is empty")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
@@ -132,6 +135,8 @@ type viewerOpts struct {
 	// budget is the work budget every query the server evaluates runs under, and the threshold above
 	// which a query's cost is logged (agni issue 792).
 	budget server.Budget
+	// slowRequest is --slow-request: requests over it are logged with where their time went.
+	slowRequest time.Duration
 	// listener, when non-nil, is a listener the caller already BOUND, and the server serves on it
 	// instead of binding addr itself. `--server self` holds the port from the moment the flag is
 	// parsed, so a taken port fails before the command does its work and nothing can take the port
@@ -332,6 +337,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Diff:      service.NewDiffService(loader, projectResolver),
 		Query:     service.NewQueryService(loader, specs, projectResolver),
 		Review:    reviewSvc,
+		Timing:    server.Timing{Slow: o.slowRequest, Log: budget.Log},
 	}.Register(mux, budgeted)
 	if assets.viewer {
 		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))

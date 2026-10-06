@@ -7,6 +7,7 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/timing"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
@@ -37,6 +38,7 @@ type ProjectResolver struct {
 // raised and missed 95 it would have (#307). A malformed descriptor for an UNRELATED design still
 // does not surface here. See docsite/content/architecture/projects-and-designs.md#resolution-is-an-interface-not-a-path-convention.
 func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
+	defer timing.Begin(ctx, "resolve.overlay")()
 	var p *webapi.Project
 	var d *webapi.Design
 	// A caller asking for the built-in catalog is treated as though the design belonged to no
@@ -210,6 +212,7 @@ func (r *ProjectResolver) Sources(ctx context.Context, uri artifact.URI, asNamed
 // boardOverride is the request's own board_uri and it WINS over the design's declaration, matching
 // `--board-path` on the CLI. A zero override, which is nearly every call, leaves the declared board.
 func (r *ProjectResolver) TierURIs(ctx context.Context, u artifact.URI, boardOverride artifact.URI, asNamed bool) (netlist, board, geometry artifact.URI, err error) {
+	defer timing.Begin(ctx, "resolve.tiers")()
 	src, err := r.Sources(ctx, u, asNamed)
 	if err != nil {
 		return u, boardOverride, u, err

@@ -44,6 +44,11 @@ topology and the reason a one-hop test would report a false positive on it. Past
 accumulated series resistance is comparable to the pull-up, so the node no longer returns high in
 the time the bus needs and there is nothing worth crediting.
 
+A resistor marked do-not-populate is not crossed, because an unfitted part pulls nothing (agni issue
+938). A line whose only pull-up footprint is DNP fails, which is right when the design relies on
+pull-ups the netlist does not show (inside a level translator, on a plugged-in module) and is worth
+recording as such.
+
 The walk crosses resistors only and never crosses ground, because a resistor to ground is a
 pull-DOWN, and counting it would pass the bus this rule exists to catch.
 

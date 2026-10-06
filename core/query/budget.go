@@ -54,3 +54,11 @@ func EvalOptions(ctx context.Context) []datalog.Option {
 	}
 	return nil
 }
+
+// ExplainReport is what an evaluation asked to explain itself fills: the plan each rule body ran
+// in, where its work went, and how each relation was read (jaala's Explain, panyam/jaala#147).
+type ExplainReport = datalog.Report
+
+// Explain asks an evaluation to fill r with its plan. It costs time in proportion to the rules and
+// literals a query runs, not its tuples, so `agni query --explain` and a timed request can afford it.
+func Explain(r *ExplainReport) datalog.Option { return datalog.Explain(r) }

@@ -25,7 +25,7 @@ import (
 // nanometers (unit_nm=1), Y-flipped to the geom contract's Y-up frame; rotations stay
 // verbatim (see the proto contract). The caller owns file I/O (C1).
 func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, error) {
-	root, err := parse(r)
+	root, err := parseBoard(r)
 	if err != nil {
 		return nil, err
 	}

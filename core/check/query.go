@@ -22,6 +22,7 @@ type irModel struct {
 	pinDir    map[string]ir.PinDirection  // "refdes\x00pin" -> direction
 	pinName   map[string]string           // "refdes\x00pin" -> declared pin name (for role derivation)
 	pinless   map[string]bool             // ref-des whose resolved part types declare no pins at all
+	unfitted  map[string]bool             // ref-des the design marks do-not-populate
 	pins      []PinInst                   // every part-type pin of every component, dedup by designator
 	pinConn   map[string]bool             // "refdes\x00pin" present in some net's connections
 	pinNet    map[string]string           // "refdes\x00pin" -> first net name it appears on
@@ -99,6 +100,12 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	// the index the ingestion classify pass uses (WS3-071), so part resolution never drifts.
 	parts := classify.PartIndex(d)
 	for _, c := range d.Components {
+		if dnpMarked(c) {
+			if m.unfitted == nil {
+				m.unfitted = map[string]bool{}
+			}
+			m.unfitted[c.RefDes] = true
+		}
 		declared := 0
 		var first *ir.PartType
 		for _, s := range c.Sections {
@@ -378,6 +385,24 @@ func (m *irModel) PinName(refDes, pin string) string { return m.pinName[refDes+"
 // IsPinlessPart reports whether a component's part type is known and declares no pins (see
 // model.Model). A component with no resolved part type is not pinless, since its pins are unknown.
 func (m *irModel) IsPinlessPart(refDes string) bool { return m.pinless[refDes] }
+
+// IsFitted reports whether a component is assembled onto the board (see model.Model).
+func (m *irModel) IsFitted(refDes string) bool { return !m.unfitted[refDes] }
+
+// dnpMarked reports whether a component carries a do-not-populate flag, KiCad's `dnp` property set to
+// yes (the KiCad reader records it as the `dnp` attribute). The key is matched without regard to case
+// so another format recording the same flag joins without a change here.
+func dnpMarked(c *ir.Component) bool {
+	for k, v := range c.GetAttributes() {
+		if strings.EqualFold(k, "dnp") {
+			switch strings.ToLower(strings.TrimSpace(v)) {
+			case "yes", "true", "1":
+				return true
+			}
+		}
+	}
+	return false
+}
 
 func (m *irModel) PinNetName(refDes, pin string) string { return m.pinNet[refDes+"\x00"+pin] }
 

@@ -1,7 +1,7 @@
 // Connect clients for the WS9 web API. The service contracts are generated from proto
 // (CONSTRAINTS C2), and this module only wires a browser transport onto them. The view layer
 // calls these clients instead of hand-rolling fetch/JSON.
-import { createClient, type Client } from "@connectrpc/connect";
+import { createClient, type Client, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
@@ -21,11 +21,37 @@ export function useEngineFetch(f: typeof globalThis.fetch): void {
   engineFetch = f;
 }
 
+// timingMode is the page address's ?timing value: "" when absent, "explain" to ask for query plans
+// too, anything else for the timings alone (agni issue 914).
+function timingMode(): string {
+  try {
+    const v = new URLSearchParams(globalThis.location?.search ?? "").get("timing");
+    return v === null ? "" : v || "1";
+  } catch {
+    return "";
+  }
+}
+
+// timingInterceptor asks each request where its time went, with the Agni-Timing header, and logs the
+// breakdown the engine sends back as "agni timing <rpc>: <RequestTiming as JSON>". The browser engine
+// answers it as a server does, so the same breakdown shows for a design read in the page.
+export function timingInterceptor(mode: string): Interceptor {
+  return (next) => async (req) => {
+    req.header.set("Agni-Timing", mode);
+    const res = await next(req);
+    const t = res.header.get("Agni-Timing");
+    if (t) console.info(`agni timing ${req.method.name}: ${t}`);
+    return res;
+  };
+}
+
 // newTransport builds a Connect transport rooted at baseUrl. It defaults to "/" so the
 // app talks to the same origin that served it (the `agni serve` dev server).
 export function newTransport(baseUrl = "/") {
-  if (engineFetch) return createConnectTransport({ baseUrl: new URL(baseUrl, location.href).href, fetch: engineFetch });
-  return createConnectTransport({ baseUrl });
+  const mode = timingMode();
+  const interceptors = mode ? [timingInterceptor(mode)] : [];
+  if (engineFetch) return createConnectTransport({ baseUrl: new URL(baseUrl, location.href).href, fetch: engineFetch, interceptors });
+  return createConnectTransport({ baseUrl, interceptors });
 }
 
 // workspaceClient returns a typed client for WorkspaceService (mounts and their contents).

@@ -14,6 +14,7 @@ import (
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/core/timing"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/readers/formats"
@@ -129,7 +130,10 @@ func (c *DesignCache) get(ctx context.Context, key string, build func(context.Co
 // getPersisted is get with a codec for values the persistent tier may keep. On a miss it tries the
 // store before building, and stores what it built.
 func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *protoCodec, build func(context.Context) (any, error)) (any, error) {
+	layer, _, _ := strings.Cut(key, "\x00")
 	if c == nil || c.max <= 0 || key == "" {
+		timing.Cached(ctx, layer, "uncached")
+		defer timing.Begin(ctx, "build."+layer)()
 		return build(ctx)
 	}
 	outer := touchedFrom(ctx)
@@ -148,6 +152,7 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 			if e.err == nil && e.touched.Unchanged() {
 				c.hits.Add(1)
 				outer.Merge(e.touched)
+				timing.Cached(ctx, layer, "memory")
 				return e.val, nil
 			}
 			// Stale, or the build failed: drop it, unless someone already replaced it, and go again.
@@ -172,11 +177,21 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 
 		// The build runs under the caller's context, so a cancelled request stops it, and the entry
 		// it leaves is an error that is never served (the next caller builds again).
-		if v, t, ok := c.restore(ctx, key, codec); ok {
+		endRestore := func() {}
+		if c.store != nil {
+			endRestore = timing.Begin(ctx, "restore."+layer)
+		}
+		v, t, ok := c.restore(ctx, key, codec)
+		endRestore()
+		if ok {
 			e.val, e.touched = v, t
 			c.restored.Add(1)
+			timing.Cached(ctx, layer, "store")
 		} else {
+			timing.Cached(ctx, layer, "built")
+			endBuild := timing.Begin(ctx, "build."+layer)
 			e.val, e.err = build(withTouched(ctx, e.touched))
+			endBuild()
 			if e.err == nil {
 				c.save(ctx, key, codec, e.val, e.touched)
 			}
@@ -428,11 +443,17 @@ type builtModel struct {
 // base returns the fact base over reg, built once. The registry is the overlay's, and the overlay is
 // in the model's key, so one model rarely sees more than one.
 func (b *builtModel) base(reg *facts.Registry) *query.Base {
+	return b.baseFor(context.Background(), reg)
+}
+
+// baseFor is base, timing the projection as the request's "factbase" stage when it builds one.
+func (b *builtModel) baseFor(ctx context.Context, reg *facts.Registry) *query.Base {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if qb, ok := b.bases[reg]; ok {
 		return qb
 	}
+	defer timing.Begin(ctx, "factbase")()
 	qb := query.NewBaseFrom(reg, b.model)
 	b.bases[reg] = qb
 	return qb
@@ -455,7 +476,7 @@ func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI art
 			return nil, nil, err
 		}
 		b := &builtModel{model: m, bases: map[*facts.Registry]*query.Base{}}
-		return m, b.base, nil
+		return m, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
 	}
 	c := cacheOf(loader)
 	id, ok := optsKey(opts)
@@ -474,5 +495,5 @@ func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI art
 		return nil, nil, err
 	}
 	b := v.(*builtModel)
-	return b.model, b.base, nil
+	return b.model, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
 }
