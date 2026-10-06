@@ -282,13 +282,29 @@ const NoBoardReason = "design carries no board geometry (WS1-006 sidecar)"
 // absent and board and capability rules are available. The review runner treats the result as an
 // authoritative per-run gate, not only a listing hint.
 func Available(r *Rule, m Model) (ok bool, reason string) {
+	return available(r, m, m != nil && m.HasParams())
+}
+
+// ListedAvailable is Available for a catalog listed against a design without building its model, as
+// ListRules does, given whether the run would carry a datasheet parameter set. Only a run can say
+// whether a board or a source capability is present, so those gate nothing here, as with a nil model.
+// The parameter set is known before any read, from the design's project and the host's own corpus,
+// and asking a nil model instead called every datasheet-tier rule unavailable on a project with
+// params/, so a viewer selecting only available rules never ran them (agni issue 940).
+func ListedAvailable(r *Rule, params bool) (ok bool, reason string) {
+	return available(r, nil, params)
+}
+
+// available is the shared gate: params says whether the run carries a datasheet parameter set, and m,
+// when non-nil, answers the board and capability questions.
+func available(r *Rule, m Model, params bool) (ok bool, reason string) {
 	for _, fact := range r.Reads {
 		if slices.Contains(r.OptionalReads, fact) {
 			// Read only to EXEMPT findings (esd-protection crediting an IC's ESD rating), so an
 			// absent tier never gates. See Rule.OptionalReads.
 			continue
 		}
-		if TierOf(fact) == TierParam && (m == nil || !m.HasParams()) {
+		if TierOf(fact) == TierParam && !params {
 			// The params tier is a per-run injection (check --params, WithParamProvider), not a
 			// property of the design. When one IS attached the rule must run, or a seeded
 			// datasheet ask in a review could never pass or fail.

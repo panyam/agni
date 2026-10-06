@@ -165,14 +165,20 @@ no separate list of built-ins to consult.
 
 A part's class comes from two signals: its ref-des prefix (`R`, `TP`, `RT`) and the words in its
 part name and attributes (`ferrite`, `tvs`, `crystal`). The `class` block extends both, keyed by the
-class it teaches:
+class it teaches.
+
+A third signal is built in and not extended here. A part whose part number belongs to a common ESD or
+TVS family (`TPD4E05U06`, `PESD5Z5.0F`, `ESDA25P35`, `USBLC6`, `SMAJ`, and their neighbours) is a `tvs`
+whether it sits under a diode, an IC or an unknown symbol, because an ESD array is often drawn as a
+`U` part and a TVS diode often carries nothing but its part number. The bare words `tvs` and `esd`
+only refine a diode, since an IC whose description mentions ESD protection is still an IC.
 
 ```yaml
 lexicon:
   class:
     thermistor: { prefixes: ["TH"] }         # your house writes TH12, not RT12
     zener:      { prefixes: ["Z"] }
-    tvs:        { patterns: ["^pesd"] }      # a part-number family with no "tvs" in its name
+    tvs:        { patterns: ["^acmeesd"] }   # a house part-number family the built-in list lacks
 ```
 
 A board that plugs into another one has connectors facing nothing a user touches, and those are not a

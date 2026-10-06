@@ -84,3 +84,35 @@ func TestGetComponentParamsLayersTheProjectAndNamesTheCorpus(t *testing.T) {
 		t.Errorf("panel = %v, want %v", got, want)
 	}
 }
+
+// ListRules lists a datasheet-tier rule as available when the run would carry a parameter set, from
+// the design's project or the server's own corpus. It asked without either and called every such rule
+// unavailable, so a viewer, which runs only the available rules, never ran them on a project with
+// params/ (agni issue 940).
+func TestListRulesCountsTheParameterSetARunWouldCarry(t *testing.T) {
+	const rule = "supply-exceeds-abs-max"
+	listed := func(svc *CheckService) *webapi.RuleInfo {
+		t.Helper()
+		resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d/board.edn"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, r := range resp.GetRules() {
+			if r.GetName() == rule {
+				return r
+			}
+		}
+		t.Fatalf("%s is not in the catalog", rule)
+		return nil
+	}
+	inProject := &ProjectResolver{Store: projectWithParams{}, Config: &recordingResolver{specs: param.ParamSet{"LDO": {Mpn: "LDO"}}}}
+	if r := listed(NewCheckService(fakeLoader{}, check.DefaultCatalog(), nil, "", nil, inProject)); !r.GetAvailable() {
+		t.Errorf("in a project with params, %s unavailable: %s", rule, r.GetUnavailableReason())
+	}
+	if r := listed(NewCheckService(fakeLoader{}, check.DefaultCatalog(), param.ParamSet{"LDO": {Mpn: "LDO"}}, "", nil, nil)); !r.GetAvailable() {
+		t.Errorf("on a server with a corpus, %s unavailable: %s", rule, r.GetUnavailableReason())
+	}
+	if r := listed(NewCheckService(fakeLoader{}, check.DefaultCatalog(), nil, "", nil, nil)); r.GetAvailable() || r.GetUnavailableReason() != "needs a seeded datasheet parameter set" {
+		t.Errorf("with no parameter set anywhere, %s = available %v, reason %q", rule, r.GetAvailable(), r.GetUnavailableReason())
+	}
+}

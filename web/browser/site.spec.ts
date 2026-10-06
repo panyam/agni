@@ -173,6 +173,21 @@ describe("the static demo under /agni/demo/", () => {
     });
   });
 
+  // The viewer runs the rules ListRules calls available, and ListRules called every datasheet-tier rule
+  // unavailable without a model, so the gateway's project params never reached a check in the page
+  // (agni issue 940). These two read the datasheet tier and fire on the gateway in the CLI.
+  it("runs the gateway's datasheet-tier rules, which its project's params make available", async () => {
+    await withPage(browser, async (page) => {
+      await page.goto(base, { waitUntil: "domcontentloaded" });
+      await page.click("text=Sample Board");
+      await checks(page);
+      const table = (await page.locator(".checks-table").textContent()) ?? "";
+      for (const rule of ["supply-exceeds-abs-max", "gateway-profiles/can-esd-missing"]) {
+        expect(table).toContain(rule);
+      }
+    });
+  });
+
   it("opens a dropped design from the landing page's Open files", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
