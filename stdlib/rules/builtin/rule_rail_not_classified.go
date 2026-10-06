@@ -77,9 +77,9 @@ var railNotClassified = &check.Rule{
 	Impact: "Every rail-quantified rule and the net.nominal_voltage fact answer over nets carrying the rail role, " +
 		"which is stamped from the naming lexicon. A house convention the built-in vocabulary does not match leaves " +
 		"those rails invisible, and the run reports clean because the rules had nothing to quantify over rather than " +
-		"because the board is right. Declaring the project's rail patterns under `--conventions` restores them. " +
+		"because the board is right. Declaring the project's rail patterns in its conventions lexicon restores them. " +
 		"This says nothing about the design being wrong: it reports that the analysis is running with less than it should.",
-	Remedy:     "Declare the project's rail naming patterns under `--conventions` so the rail rules can see this net. This does not report a fault in the design, only that the analysis is running with less than it should.",
+	Remedy:     "Declare the project's rail naming patterns in its conventions lexicon so the rail rules can see this net. This does not report a fault in the design, only that the analysis is running with less than it should.",
 	Primitives: []string{"select", "traverse", "pin-role"},
 	Reads:      []string{"net.name", "net.role", "pin.type", "on_net"},
 	Tags: map[string]string{
@@ -141,7 +141,7 @@ func railNotClassifiedVerdicts(ctx context.Context, m check.Model) []check.Verdi
 				Subject: check.NetEntity(rc.net),
 				Prov:    rc.net.GetProv(),
 				Message: fmt.Sprintf(
-					"net %q declares %gV in its name and feeds %d supply pin(s) (e.g. %s), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in a --conventions lexicon",
+					"net %q declares %gV in its name and feeds %d supply pin(s) (e.g. %s), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in the project's conventions lexicon",
 					rc.net.GetName(), rc.volts, rc.supplies, rc.supplyPin),
 				// The supply pin the message offers as evidence. The subject is the net, so without
 				// this the pin that makes it look like a rail is named in prose and reachable nowhere

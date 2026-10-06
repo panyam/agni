@@ -24,7 +24,7 @@ var symbolUnresolved = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A symbol reference did not resolve, so its placements carry no pins.",
 	Impact:     "A component whose symbol fails to load keeps its reference designator and loses its pins, and a part with no pins has no connections. The netlist is then missing every connection those parts make, which is indistinguishable from a design where they were never drawn: connectivity rules go quiet and report a clean pass over an incomplete read. The reader already suppresses dangling-endpoint findings for the same reason (a missing pin turns a real wire end into a phantom dangle), so without this the only visible effect of a lost symbol is that the design reports LESS.",
-	Remedy:     "Re-run with `--symbol-path` pointing at the library that holds the symbol. Until it resolves, the part has no pins, so every connectivity result over it rests on an incomplete read.",
+	Remedy:     "Re-read with the library that holds the symbol on the symbol search path. Until it resolves, the part has no pins, so every connectivity result over it rests on an incomplete read.",
 	Primitives: []string{"select"},
 	Reads:      []string{"reader.unresolved_symbol"},
 	Tags: map[string]string{
@@ -45,7 +45,7 @@ func unresolvedMessage(u *ir.UnresolvedSymbol) string {
 	// The remedy lives HERE and only here. Every connectivity rule emits a companion inconclusive
 	// finding that points back to this one, so repeating the fix on each of them would print the
 	// same paragraph twenty times and bury the single finding that names the cause.
-	const remedy = " Re-run with --symbol-path pointing at the library that holds it."
+	const remedy = " Re-read with the library that holds it on the symbol search path."
 	refs := u.GetRefDes()
 	if len(refs) == 0 {
 		return fmt.Sprintf("symbol %q did not resolve; pins unknown.", u.GetSymref()) + remedy

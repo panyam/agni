@@ -52,7 +52,7 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 	}
 	// This rule is the ONE place the remedy is stated. The connectivity rules gated by the same
 	// cause point here rather than each repeating it, so if it is missing here it is nowhere.
-	if !strings.Contains(fs[0].Message, "--symbol-path") {
+	if !strings.Contains(fs[0].Message, "symbol search path") {
 		t.Errorf("message %q does not say how to fix it", fs[0].Message)
 	}
 }

@@ -5,7 +5,7 @@ description: "A symbol reference did not resolve, so its placements carry no pin
 
 ### Remedy
 
-Re-run with `--symbol-path` pointing at the library that holds the symbol. Until it resolves, the part has no pins, so every connectivity result over it rests on an incomplete read.
+Re-read with the library that holds the symbol on the symbol search path. Until it resolves, the part has no pins, so every connectivity result over it rests on an incomplete read.
 
 ### What it means
 
