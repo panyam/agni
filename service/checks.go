@@ -122,9 +122,12 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 	if err != nil {
 		return nil, err
 	}
+	// Whether the run would carry a parameter set is known without a read: the project's params/ or this
+	// host's own corpus (agni issue 940).
+	params := ov.SpecsOver(s.specs) != nil
 	resp := &webapi.ListRulesResponse{}
 	for _, r := range cat.Rules() {
-		ok, reason := check.Available(r, nil)
+		ok, reason := check.ListedAvailable(r, params)
 		resp.Rules = append(resp.Rules, &webapi.RuleInfo{
 			Name:              r.Name,
 			Severity:          r.Severity,
