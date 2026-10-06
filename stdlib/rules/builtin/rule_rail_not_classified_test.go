@@ -51,7 +51,7 @@ func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
 	if check.EntityRef(fs[0].Subject) != "PMIC_CORE_3V3" {
 		t.Errorf("finding must name the unclassified rail, got %q", fs[0].Subject)
 	}
-	for _, want := range []string{"3.3", "supply pin", "--conventions"} {
+	for _, want := range []string{"3.3", "supply pin", "conventions lexicon"} {
 		if !strings.Contains(fs[0].Message, want) {
 			t.Errorf("message must mention %q so the fix is actionable, got %q", want, fs[0].Message)
 		}

@@ -99,11 +99,12 @@ reports provisional.
 And with the corpus moved aside again, so the rule has no seeded spec for U2 at all:
 
 ```
-| P4 | no part is operated above its absolute-maximum supply voltage | not-applicable | needs a seeded datasheet parameter set (check --params) |
+| P4 | no part is operated above its absolute-maximum supply voltage | not-applicable | needs a seeded datasheet parameter set |
 ```
 
-The remedy names the flag because that is the route for a design read on its own. Inside a project
-that declares `params/`, the fix is to seed the part rather than to pass anything.
+The reason names what is missing rather than a flag, because the same words reach the browser,
+where there is no command line. A design read on its own gets a parameter set from `--params`.
+Inside a project that declares `params/`, the fix is to seed the part rather than to pass anything.
 
 One item can land in three distinct states: decided on trusted data, decided on untrusted data, and not
 decidable at all. None of them is a pass.

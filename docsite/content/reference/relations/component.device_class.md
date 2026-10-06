@@ -1,6 +1,6 @@
 ---
 title: "component.device_class"
-description: "the device class the part's datasheet declares (authoritative over the ref-des/keyword class; needs --params)"
+description: "the device class the part's datasheet declares (authoritative over the ref-des/keyword class; needs datasheet parameters)"
 ---
 
 ### What it is

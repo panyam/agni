@@ -111,6 +111,7 @@ function ReviewPanel(props: {
   onSelectChecklist: (ref: string) => void;
   onCreate: () => void;
   onLocate: (kind: string, subject: string) => void;
+  staticHost: boolean;
 }) {
   const run = () => selectedRun(props.state());
   return (
@@ -118,10 +119,15 @@ function ReviewPanel(props: {
       <Show
         when={props.state().storeConfigured}
         fallback={
-          <div class="rv-empty">
-            This server does not keep review runs. Start it with <code>--review-store &lt;dir&gt;</code> to
-            run a checklist and keep the result.
-          </div>
+          <Show
+            when={!props.staticHost}
+            fallback={<div class="rv-empty">This demo does not keep review runs, so a checklist cannot be run here.</div>}
+          >
+            <div class="rv-empty">
+              This server does not keep review runs. Start it with <code>--review-store &lt;dir&gt;</code> to
+              run a checklist and keep the result.
+            </div>
+          </Show>
         }
       >
         <div class="rv-controls">
@@ -216,6 +222,7 @@ export function reviewPanelIsland(
     onCreate: () => void;
     onLocate: (kind: string, subject: string) => void;
   },
+  opts: { staticHost?: boolean } = {},
 ): { island: SolidIsland; view: ReviewView } {
   const [state, setState] = signalView<ReviewState>(emptyReview());
   const island = new SolidIsland(
@@ -228,6 +235,7 @@ export function reviewPanelIsland(
         onSelectChecklist={handlers.onSelectChecklist}
         onCreate={handlers.onCreate}
         onLocate={handlers.onLocate}
+        staticHost={opts.staticHost ?? false}
       />
     ),
     eventBus,

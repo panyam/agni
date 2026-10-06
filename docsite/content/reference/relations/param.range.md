@@ -1,6 +1,6 @@
 ---
 title: "param.range"
-description: "a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params)"
+description: "a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs datasheet parameters)"
 ---
 
 ### What it is

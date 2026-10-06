@@ -80,6 +80,30 @@ async function checks(page: Page): Promise<number> {
   return page.locator(".check-locate").count();
 }
 
+// serverOrFlagText lists every text node and hover text on the page that names a server or a
+// command-line flag, hidden panels included, since a visitor to the static demo has neither (agni
+// 894). Reading the DOM rather than innerText reaches the tabs that are not in front.
+async function serverOrFlagText(page: Page): Promise<string[]> {
+  await page.waitForSelector(".review .rv-empty, .review .rv-controls", { state: "attached", timeout: 60_000 });
+  return page.evaluate(() => {
+    const re = /\bserver\b|\bserve\b|--[a-z][a-z-]+/i;
+    const out = new Set<string>();
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walk.nextNode()) {
+      const n = walk.currentNode;
+      const t = (n.textContent ?? "").trim();
+      if (t && re.test(t) && !n.parentElement?.closest("script, style")) out.add(t);
+    }
+    for (const el of document.querySelectorAll("[title], [placeholder], [aria-label]")) {
+      for (const a of ["title", "placeholder", "aria-label"]) {
+        const v = el.getAttribute(a);
+        if (v && re.test(v)) out.add(`${a}: ${v}`);
+      }
+    }
+    return [...out];
+  });
+}
+
 describe("the static demo under /agni/demo/", () => {
   it("lists the seeded boards with every asset loading under the prefix", async () => {
     await withPage(browser, async (page) => {
@@ -110,6 +134,7 @@ describe("the static demo under /agni/demo/", () => {
         expect(await checks(page)).toBeGreaterThan(0);
         expect(new URL(page.url()).pathname).toContain(`${prefix}designs/${mount}/`);
         expect(await page.locator("#design-summary").textContent()).toContain("faithful");
+        expect(await serverOrFlagText(page)).toEqual([]);
         expect(log.api).toEqual([]);
         expect(log.failed).toEqual([]);
         expect(log.errors).toEqual([]);

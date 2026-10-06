@@ -30,14 +30,24 @@ export function emptyConvention(): ConventionState {
 // request carrying no convention is answered under the deployment's.
 export const SERVER_DEFAULT_LABEL = "server's convention";
 
+// STATIC_DEFAULT_LABEL is the same choice on a page served as plain files, which has no server. A
+// request with no convention is then answered under the design's project convention when it has one
+// and the built-in vocabulary otherwise, so the label names neither (agni 894).
+export const STATIC_DEFAULT_LABEL = "default convention";
+
+// defaultLabel picks between the two by where the page is served.
+export function defaultLabel(staticHost = false): string {
+  return staticHost ? STATIC_DEFAULT_LABEL : SERVER_DEFAULT_LABEL;
+}
+
 // activeLabel is the one-line statement of which vocabulary produced the answers on screen.
 //
 // A request convention REPLACES the server's, so switching can stop the deployment's rules running
 // entirely. A rule that stops running produces no findings, which looks like a design that improved,
 // and nothing in a findings list tells "this got fixed" from "we stopped asking".
-export function activeLabel(s: ConventionState): string {
+export function activeLabel(s: ConventionState, staticHost = false): string {
   if (s.busy) return "resolving…";
-  if (!s.active) return SERVER_DEFAULT_LABEL;
+  if (!s.active) return defaultLabel(staticHost);
   return s.name || s.active;
 }
 

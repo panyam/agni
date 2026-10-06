@@ -207,7 +207,7 @@ func TestCapVoltageDerivedReads(t *testing.T) {
 	if !slices.Contains(capVoltage.Primitives, "param-join") {
 		t.Errorf("derived Primitives missing param-join: %v", capVoltage.Primitives)
 	}
-	if ok, reason := check.Available(capVoltage, nil); ok || !strings.Contains(reason, "--params") {
+	if ok, reason := check.Available(capVoltage, nil); ok || !strings.Contains(reason, "datasheet parameter set") {
 		t.Errorf("cap-voltage must gate on the params layer at catalog level, got %v %q", ok, reason)
 	}
 }

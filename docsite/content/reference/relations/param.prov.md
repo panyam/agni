@@ -1,6 +1,6 @@
 ---
 title: "param.prov"
-description: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from. The page is a locator and binds as a string, not a number (needs --params)"
+description: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from. The page is a locator and binds as a string, not a number (needs datasheet parameters)"
 ---
 
 ### What it is

@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { conventionBarIsland } from "./conventionbar.jsx";
-import { type ConventionState, emptyConvention, SERVER_DEFAULT_LABEL } from "./conventions.js";
+import { type ConventionState, emptyConvention, SERVER_DEFAULT_LABEL, STATIC_DEFAULT_LABEL } from "./conventions.js";
 
-function mount(over: Partial<ConventionState> = {}) {
+function mount(over: Partial<ConventionState> = {}, staticHost = false) {
   const onSelect = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const bar = conventionBarIsland(el, null, { onSelect });
+  const bar = conventionBarIsland(el, null, { onSelect }, { staticHost });
   bar.island.activate();
   bar.view.setState({ ...emptyConvention(), ...over });
   return { el, onSelect, setState: bar.view.setState };
@@ -19,6 +19,14 @@ const choices = [
 ];
 
 describe("conventionBar", () => {
+  it("names no server on a static page, in the picker or the active label", () => {
+    const { el } = mount({ choices }, true);
+    const pick = el.querySelector(".convbar-pick") as HTMLSelectElement;
+    expect(pick.options[0].text).toBe(STATIC_DEFAULT_LABEL);
+    expect(el.querySelector(".convbar-active")?.textContent).toBe(STATIC_DEFAULT_LABEL);
+    expect(el.textContent).not.toMatch(/server/i);
+  });
+
   it("offers the server's convention plus every config beside the design", () => {
     const { el } = mount({ choices });
     const pick = el.querySelector(".convbar-pick") as HTMLSelectElement;

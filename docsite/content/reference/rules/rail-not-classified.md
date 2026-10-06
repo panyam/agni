@@ -5,7 +5,7 @@ description: "A net named for a voltage feeds a supply pin but is not classified
 
 ### Remedy
 
-Declare the project's rail naming patterns under `--conventions` so the rail rules can see this net. This does not report a fault in the design, only that the analysis is running with less than it should.
+Declare the project's rail naming patterns in its conventions lexicon so the rail rules can see this net. This does not report a fault in the design, only that the analysis is running with less than it should.
 
 ### What it means
 

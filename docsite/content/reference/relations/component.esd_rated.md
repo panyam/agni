@@ -1,6 +1,6 @@
 ---
 title: "component.esd_rated"
-description: "the part carries a datasheet ESD rating at or above the credit floor (needs --params)"
+description: "the part carries a datasheet ESD rating at or above the credit floor (needs datasheet parameters)"
 ---
 
 ### What it is

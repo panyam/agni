@@ -29,7 +29,7 @@ func TestReviewCmd(t *testing.T) {
 		"| 202 | termination strategy | fail |",
 		"| 198 | bus signals present | fail |",
 		"| 196 | transceiver selection | not-automated | manual review — needs the design-intent contract |",
-		"| 197 | voltage compatibility | not-applicable | needs a seeded datasheet parameter set (check --params)",
+		"| 197 | voltage compatibility | not-applicable | needs a seeded datasheet parameter set",
 		"| b1 | track widths | not-applicable | design carries no board geometry",
 		"| h1 | no forbidden MPN | pass |",
 	} {

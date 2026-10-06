@@ -1,6 +1,6 @@
 ---
 title: "part.audience"
-description: "a team/license entitled to see a part's datasheet data (record-only, needs --params)"
+description: "a team/license entitled to see a part's datasheet data (record-only, needs datasheet parameters)"
 ---
 
 ### What it is

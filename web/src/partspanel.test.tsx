@@ -3,11 +3,11 @@ import { describe, it, expect, vi } from "vitest";
 import { partsPanelIsland } from "./partspanel.jsx";
 import type { PartsState } from "./parts.js";
 
-function mount(state: PartsState) {
+function mount(state: PartsState, staticHost = false) {
   const onLocate = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = partsPanelIsland(el, null, { onLocate });
+  const panel = partsPanelIsland(el, null, { onLocate }, { staticHost });
   panel.island.activate();
   panel.view.setState(state);
   return { el, onLocate };
@@ -157,5 +157,11 @@ describe("partsPanel", () => {
   it("shows an empty hint when no parts are datasheet-backed", () => {
     const { el } = mount({ parts: [] });
     expect(el.querySelector(".parts-empty")).toBeTruthy();
+    expect(el.querySelector(".parts-empty")!.textContent).toContain("--params");
+  });
+
+  it("leaves the flag out of the empty hint on a static page", () => {
+    const { el } = mount({ parts: [] }, true);
+    expect(el.querySelector(".parts-empty")!.textContent).toBe("No datasheet-backed parts in this design.");
   });
 });

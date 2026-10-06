@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { reviewPanelIsland } from "./reviewpanel.jsx";
 import { type ReviewState, type ReviewRunView, emptyReview, outcomeClass, OUTCOME_PASS } from "./review.js";
 
-function mount(state: Partial<ReviewState>) {
+function mount(state: Partial<ReviewState>, staticHost = false) {
   const handlers = {
     onSelectRun: vi.fn(),
     onSelectChecklist: vi.fn(),
@@ -12,7 +12,7 @@ function mount(state: Partial<ReviewState>) {
   };
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = reviewPanelIsland(el, null, handlers);
+  const panel = reviewPanelIsland(el, null, handlers, { staticHost });
   panel.island.activate();
   panel.view.setState({ ...emptyReview(), ...state });
   return { el, handlers, setState: panel.view.setState };
@@ -126,6 +126,12 @@ describe("reviewPanel empty states", () => {
     expect(el.textContent).toContain("--review-store");
     expect(el.querySelector(".rv-run")).toBeNull();
     expect(el.querySelector(".rv-checklist")).toBeNull();
+  });
+
+  it("names neither a server nor a flag on a static page, and offers no run control", () => {
+    const { el } = mount({ storeConfigured: false }, true);
+    expect(el.textContent).toBe("This demo does not keep review runs, so a checklist cannot be run here.");
+    expect(el.querySelector(".rv-run")).toBeNull();
   });
 
   it("invites a first run when the design simply has none", () => {

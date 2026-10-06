@@ -1,6 +1,6 @@
 ---
 title: "param.pin"
-description: "a pin the part's datasheet declares, keyed by its spec-local id, with the printed name and its function (power_input / ground / bidirectional / no_connect / ...; needs --params)"
+description: "a pin the part's datasheet declares, keyed by its spec-local id, with the printed name and its function (power_input / ground / bidirectional / no_connect / ...; needs datasheet parameters)"
 ---
 
 ### What it is
