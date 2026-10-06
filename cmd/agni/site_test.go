@@ -75,6 +75,40 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 	}
 }
 
+// TestSiteSeedsAFolderThatIsItselfADesign seeds the gateway's own folder, whose design.yaml declares
+// the design at the folder's root. The viewer addresses a design by its path within its mount, so the
+// folder goes one level down and its design gets a page and a listing that agree.
+func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
+	out := t.TempDir()
+	seed := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	if err := writeSite(out, fakeWebDir(t), "/", []string{"gw=" + seed}, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "designs", "gw", "gateway", "view", "index.html")); err != nil {
+		t.Errorf("no viewer page for the design: %v", err)
+	}
+	landing, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil || !strings.Contains(string(landing), `href="/designs/gw/gateway/view/"`) {
+		t.Errorf("landing page does not link the design: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(out, "files", "gw.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listing webapi.ListDesignFilesResponse
+	if err := protojson.Unmarshal(b, &listing); err != nil || len(listing.GetFiles()) == 0 {
+		t.Fatalf("listing: %v %v", err, listing.GetFiles())
+	}
+	for _, f := range listing.GetFiles() {
+		if !strings.HasPrefix(f.GetPath(), "gateway/") {
+			t.Errorf("listed %s outside the design's folder", f.GetPath())
+		}
+		if _, err := os.Stat(filepath.Join(out, "raw", "gw", filepath.FromSlash(f.GetPath()))); err != nil {
+			t.Errorf("listed %s is not under raw/: %v", f.GetPath(), err)
+		}
+	}
+}
+
 func TestSiteRefusesWithoutABuiltEngine(t *testing.T) {
 	web := fakeWebDir(t)
 	os.Remove(filepath.Join(web, "static", "agni.wasm"))

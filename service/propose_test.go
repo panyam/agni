@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -166,14 +167,38 @@ func TestProposeAZipAsItsFolder(t *testing.T) {
 	}
 }
 
+// withoutDescriptors hides every design.yaml, so a folder that declares itself reads as one dropped
+// without a descriptor.
+type withoutDescriptors struct{ fs.FS }
+
+func (w withoutDescriptors) Open(name string) (fs.File, error) {
+	if filepath.Base(name) == "design.yaml" {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
+	return w.FS.Open(name)
+}
+
+func (w withoutDescriptors) ReadDir(name string) ([]fs.DirEntry, error) {
+	all, err := fs.ReadDir(w.FS, name)
+	out := all[:0]
+	for _, e := range all {
+		if e.Name() != "design.yaml" {
+			out = append(out, e)
+		}
+	}
+	return out, err
+}
+
 // TestProposeARealKicadBoard runs the rules over a fetched sample board with a hierarchy of sheets in
-// a subfolder, so the sheet walk meets a real file rather than a fixture written for it.
+// a subfolder, so the sheet walk meets a real file rather than a fixture written for it. The corpus
+// declares the board since agni-samples v0.1.2, and its descriptors are hidden here because the
+// proposal rules are what a visitor's dropped copy of the folder meets.
 func TestProposeARealKicadBoard(t *testing.T) {
 	dir := filepath.Join("..", "tools", "samples", "boards", "royalblue54L-feather")
 	if _, err := os.Stat(dir); err != nil {
 		t.Fatalf("the samples corpus is missing (make samples): %v", err)
 	}
-	host := fshost.New(fshost.Mount{Name: "s", FS: os.DirFS(dir)})
+	host := fshost.New(fshost.Mount{Name: "s", FS: withoutDescriptors{os.DirFS(dir)}})
 	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(nil, host.Workspace())
 	r, err := svc.ProposeDesigns(context.Background(), &webapi.ProposeDesignsRequest{Uri: "mount://s"})
 	if err != nil {

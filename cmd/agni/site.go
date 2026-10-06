@@ -92,7 +92,14 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		if !ok || name == "" || dir == "" || strings.ContainsAny(name, "/ ") {
 			return fmt.Errorf("--seed %q must be name=folder, the name one path element", spec)
 		}
-		listing, err := copySeed(dir, filepath.Join(out, "raw", name), name)
+		// A seed folder that declares a design at its own root goes one folder down in its mount, since a
+		// design is addressed by its path within the mount and the mount root has none (agni 857).
+		under := ""
+		if _, err := os.Stat(filepath.Join(dir, "design.yaml")); err == nil {
+			under = filepath.Base(filepath.Clean(dir))
+		}
+		root := filepath.Join(out, "raw", name)
+		listing, err := copySeed(dir, filepath.Join(root, under), name, under)
 		if err != nil {
 			return fmt.Errorf("--seed %s: %w", name, err)
 		}
@@ -106,7 +113,7 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		if err := os.WriteFile(filepath.Join(out, "files", name+".json"), []byte(b), 0o644); err != nil {
 			return err
 		}
-		designs, err := seedDesigns(dir, name)
+		designs, err := seedDesigns(root, name)
 		if err != nil {
 			return fmt.Errorf("--seed %s: %w", name, err)
 		}
@@ -156,8 +163,9 @@ func renderPage(h http.Handler) ([]byte, error) {
 }
 
 // copySeed copies a seed folder's files, dotfiles skipped, and returns their listing in the shape
-// ListDesignFiles answers, which is what the page reads on a static host.
-func copySeed(src, dst, mount string) (*webapi.ListDesignFilesResponse, error) {
+// ListDesignFiles answers, which is what the page reads on a static host. under is the folder dst
+// sits at within the mount, "" for its root, and prefixes every listed path.
+func copySeed(src, dst, mount, under string) (*webapi.ListDesignFilesResponse, error) {
 	resp := &webapi.ListDesignFilesResponse{Mount: mount}
 	fsys := os.DirFS(src)
 	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
@@ -184,7 +192,7 @@ func copySeed(src, dst, mount string) (*webapi.ListDesignFilesResponse, error) {
 		if err := os.WriteFile(target, b, 0o644); err != nil {
 			return err
 		}
-		resp.Files = append(resp.Files, &webapi.DesignFile{Path: p, Size: int64(len(b)), Sha256: fshost.ContentHash(fsys, p)})
+		resp.Files = append(resp.Files, &webapi.DesignFile{Path: path.Join(under, p), Size: int64(len(b)), Sha256: fshost.ContentHash(fsys, p)})
 		resp.TotalSize += int64(len(b))
 		return nil
 	})

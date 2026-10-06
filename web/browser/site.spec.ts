@@ -30,8 +30,8 @@ const prebuilt = process.env.AGNI_SITE_DIR ? resolve(process.env.AGNI_SITE_DIR) 
 // another mount must carry it too, so the published demo is checked seed by seed.
 const seeded = [
   ["Sample Board", "gateway"],
-  ["RoyalBlue54L-Feather", "royalblue"],
-  ["jetson-agx-thor-baseboard", "jetson"],
+  ["RoyalBlue54L Feather", "royalblue"],
+  ["Jetson AGX Thor baseboard", "jetson"],
 ] as const;
 
 beforeAll(async () => {
