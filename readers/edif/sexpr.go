@@ -59,18 +59,32 @@ var canonical = func() map[string]string {
 // an exact match found nothing in its files and they read as empty designs. Every EDIF list opens
 // with a keyword, so only heads change and names and strings keep their case. A keyword the reader
 // never looks up keeps its spelling, since nothing asks for it.
-func canonicalize(n *node) {
-	if n == nil || !n.IsList {
-		return
-	}
-	if len(n.Kids) > 0 {
-		if h := n.Kids[0]; !h.IsList && !h.Quoted {
-			if k, ok := canonical[strings.ToLower(h.Atom)]; ok {
-				h.Atom = k
+//
+// A respelled head is a new node in the list rather than an edit of the old one, because sexpr shares
+// one node among every atom spelled the same, and the same word may be a name elsewhere in the file,
+// as in `(Net Net ...)` (agni issue 945).
+func canonicalize(root *node) {
+	respelled := map[string]*node{}
+	var walk func(n *node)
+	walk = func(n *node) {
+		if n == nil || !n.IsList {
+			return
+		}
+		if len(n.Kids) > 0 {
+			if h := n.Kids[0]; !h.IsList && !h.Quoted {
+				if k, ok := canonical[strings.ToLower(h.Atom)]; ok && k != h.Atom {
+					c := respelled[k]
+					if c == nil {
+						c = &node{Atom: k}
+						respelled[k] = c
+					}
+					n.Kids[0] = c
+				}
 			}
 		}
+		for _, k := range n.Kids {
+			walk(k)
+		}
 	}
-	for _, k := range n.Kids {
-		canonicalize(k)
-	}
+	walk(root)
 }
