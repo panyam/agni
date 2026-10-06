@@ -191,6 +191,10 @@ type Model interface {
 	// board tier (WS3-008): each net's routed copper from the board-geometry sidecar.
 	// Empty when the model was built without a board; see check.WithBoard.
 	BoardNets() []BoardNet
+	// board_rules (agni issue 933): the copper minimums the design declares, today from a KiCad
+	// project's board.design_settings.rules. The zero value when it declares none, so a rule can fall
+	// back to a fabrication floor of its own.
+	BoardRules() BoardRules
 	// component.class: the MOST-SPECIFIC device class from the normalized device_classes set
 	// (WS3-071), stamped once at ingestion by the classify pass and refined by part-type data.
 	// ClassUnknown when the design carries no usable signal, so class-quantified rules skip

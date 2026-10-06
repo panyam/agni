@@ -7,8 +7,9 @@ annular-width  1 fail, 4 pass
     pass  THIN       passes because thin is 0, not >= 1
 
 copper-clearance  1 fail
-    fail  CLOSE_A + CLOSE_B  copper of "CLOSE_A" and "CLOSE_B" closer than 0.127mm at 1
-                             place(s); worst gap 0.040mm near (10.00, -12.00)mm
+    fail  CLOSE_A + CLOSE_B  copper of "CLOSE_A" and "CLOSE_B" closer than the 0.127mm
+                             fabrication floor at 1 place(s); worst gap 0.040mm near (10.00,
+                             -12.00)mm
 
 track-width  1 fail, 4 pass
     fail  THIN       net has 1 track segment(s) narrower than the 0.127mm fabrication floor

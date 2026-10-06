@@ -99,13 +99,24 @@ func TestQueryNetClassCLI(t *testing.T) {
 		t.Errorf("project design.has_netclass: want one row:\n%s", mk)
 	}
 
-	// The same board read as a bare schematic never sees the project file, so it has no classes and
-	// no marker.
-	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "net.netclass(?n, ?c) => ?n, ?c"); !strings.Contains(bare, "no results") {
-		t.Errorf("schematic-only read must yield no net classes:\n%s", bare)
+	// The same board named by its schematic reads the project beside it, so it has the same classes
+	// and the marker (agni issue 933).
+	sch := run("testdata/conformance/showcase.passes.kicad_sch", "net.netclass(?n, ?c) => ?n, ?c")
+	for _, want := range []string{"USB_D+", "HighSpeed", "VBUS_PROT", "Power", "Critical", "Differential", "8 result(s)"} {
+		if !strings.Contains(sch, want) {
+			t.Errorf("schematic read of a project missing %q:\n%s", want, sch)
+		}
 	}
-	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "design.has_netclass(?p) => ?p"); !strings.Contains(bare, "no results") {
-		t.Errorf("schematic-only read must yield no design.has_netclass marker:\n%s", bare)
+	if mk := run("testdata/conformance/showcase.passes.kicad_sch", "design.has_netclass(?p) => ?p"); !strings.Contains(mk, "1 result(s)") {
+		t.Errorf("schematic read of a project: want the design.has_netclass marker:\n%s", mk)
+	}
+	// A schematic with no project beside it has no classes and no marker.
+	alone := isolatedDesign(t, "testdata/conformance/showcase.passes.kicad_sch")
+	if bare := run(alone, "net.netclass(?n, ?c) => ?n, ?c"); !strings.Contains(bare, "no results") {
+		t.Errorf("a schematic with no project must yield no net classes:\n%s", bare)
+	}
+	if bare := run(alone, "design.has_netclass(?p) => ?p"); !strings.Contains(bare, "no results") {
+		t.Errorf("a schematic with no project must yield no design.has_netclass marker:\n%s", bare)
 	}
 }
 
@@ -118,8 +129,8 @@ func TestQuerySpecLibRequiresParams(t *testing.T) {
 }
 
 // TestQueryNetClassDefsCLI (WS3-111) covers the declared-constraint path end to end, which no unit
-// test can, because the definitions live only in the .kicad_pro, so they reach the IR through the
-// PROJECT entry point and are invisible when the same board is opened as a bare .kicad_sch.
+// test can, because the definitions live only in the .kicad_pro. They reach the IR whichever of the
+// project's files the read starts from, and not at all from a schematic with no project beside it.
 func TestQueryNetClassDefsCLI(t *testing.T) {
 	run := func(path, q string) string {
 		t.Helper()
@@ -157,9 +168,16 @@ func TestQueryNetClassDefsCLI(t *testing.T) {
 		t.Error("project design.has_netclass_defs: want one row")
 	}
 
-	// The same board read as a bare schematic never sees the project file.
-	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "design.has_netclass_defs(?p) => ?p"); !strings.Contains(bare, "no results") {
-		t.Errorf("schematic-only read must yield no netclass definitions:\n%s", bare)
+	// Named by its schematic, the board reads the same definitions from the project beside it, and a
+	// schematic with no project has none (agni issue 933).
+	sch := run("testdata/conformance/showcase.passes.kicad_sch", `net.declared_track_width(?n, ?mm) => ?n, ?mm`)
+	for _, want := range []string{"USB_D+", "net_settings:Differential", "net_settings:Default"} {
+		if !strings.Contains(sch, want) {
+			t.Errorf("schematic read of a project missing declared width %q:\n%s", want, sch)
+		}
+	}
+	if bare := run(isolatedDesign(t, "testdata/conformance/showcase.passes.kicad_sch"), "design.has_netclass_defs(?p) => ?p"); !strings.Contains(bare, "no results") {
+		t.Errorf("a schematic with no project must yield no netclass definitions:\n%s", bare)
 	}
 }
 

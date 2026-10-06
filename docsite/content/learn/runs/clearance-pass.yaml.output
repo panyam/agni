@@ -1,6 +1,6 @@
 #agni-run baae38947585be2e
 copper-clearance  1 pass
     pass  GND + SIG  copper of "GND" and "SIG" comes close enough to measure in 1 place(s) on a
-                     shared layer and never within 0.127mm
+                     shared layer and never within the 0.127mm fabrication floor
 
 1 verdicts across 1 rule(s), 1 pass

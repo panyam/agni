@@ -111,11 +111,11 @@
 
 | severity | inconclusive | rule | kind | subject | pin | net_id | message | source_file | native_id | context |
 |---|---|---|---|---|---|---|---|---|---|---|
-| error | false | copper-clearance | net | CAN1_CANH |  |  | copper of "CAN1_CANH" and "I2C_SCL" closer than 0.127mm at 1 place(s); worst gap -0.175mm near (5.00, -84.00)mm |  |  | neighbour=I2C_SCL |
-| error | false | copper-clearance | net | CAN1_CANL |  |  | copper of "CAN1_CANL" and "I2C_SDA" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -85.50)mm |  |  | neighbour=I2C_SDA |
-| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_CORE_3V3" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm |  |  | neighbour=PMIC_CORE_3V3 |
-| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_PG" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm |  |  | neighbour=PMIC_PG |
-| error | false | copper-clearance | net | CAN1_TXD |  |  | copper of "CAN1_TXD" and "PMIC_MAIN_12V0" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm |  |  | neighbour=PMIC_MAIN_12V0 |
+| error | false | copper-clearance | net | CAN1_CANH |  |  | copper of "CAN1_CANH" and "I2C_SCL" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.175mm near (5.00, -84.00)mm |  |  | neighbour=I2C_SCL |
+| error | false | copper-clearance | net | CAN1_CANL |  |  | copper of "CAN1_CANL" and "I2C_SDA" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -85.50)mm |  |  | neighbour=I2C_SDA |
+| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_CORE_3V3" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm |  |  | neighbour=PMIC_CORE_3V3 |
+| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_PG" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm |  |  | neighbour=PMIC_PG |
+| error | false | copper-clearance | net | CAN1_TXD |  |  | copper of "CAN1_TXD" and "PMIC_MAIN_12V0" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm |  |  | neighbour=PMIC_MAIN_12V0 |
 
 ## Skipped rules
 

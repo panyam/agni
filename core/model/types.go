@@ -151,6 +151,16 @@ type BoardVia struct {
 // Annular is the copper ring width around the drill: (Size - Drill) / 2.
 func (v BoardVia) Annular() int64 { return (v.Size - v.Drill) / 2 }
 
+// BoardRules are the board-wide minimums a design declares for its copper, in nanometres, the
+// process the designer routed the board for (agni issue 933). Zero means the design declares no such
+// minimum, and a rule then falls back to its own default rather than to zero.
+type BoardRules struct {
+	TrackWidthNm int64
+	ClearanceNm  int64
+	DrillNm      int64
+	AnnularNm    int64
+}
+
 // Reach is a bounded series-walk neighborhood (WS3-011), the nets reachable from a start net
 // by crossing SERIES PASS ELEMENTS, in BFS order (start first), plus the ref-des set of the
 // elements crossed. See Model.Reach for why protection rules need it. Parent records how each
