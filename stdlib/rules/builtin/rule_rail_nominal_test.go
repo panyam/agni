@@ -173,7 +173,7 @@ func TestRailNominalReadsMillivoltRows(t *testing.T) {
 // rule to not-applicable without a seeded set, so a review item bound to it reads n/a
 // (not a hollow pass) until params are supplied.
 func TestRailNominalGating(t *testing.T) {
-	if ok, reason := check.Available(railNominalOutOfRecommended, nil); ok || !strings.Contains(reason, "--params") {
+	if ok, reason := check.Available(railNominalOutOfRecommended, nil); ok || !strings.Contains(reason, "datasheet parameter set") {
 		t.Errorf("rail-nominal must gate on the params layer at catalog level, got %v %q", ok, reason)
 	}
 }
