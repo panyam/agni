@@ -58,7 +58,11 @@ func init() {
 			// external markings never resolve. Only the .kicad_pro read is a completeness witness
 			// (WS1-017).
 			d, _, err := kicad.ReadSchematicHierarchyNetsWithSymbols(path, content, l.sheetOpener(path), l.kicadSymOpener(path))
-			return d, err
+			if err != nil {
+				return nil, err
+			}
+			annotateFromProject(l, d, kicadProjectOf(path))
+			return d, nil
 		},
 		Geometry: func(l *Loader, path string) (*geom.SchematicGeometry, error) {
 			return readKicadHierarchy(l, path)
@@ -73,7 +77,12 @@ func init() {
 				return nil, err
 			}
 			defer f.Close()
-			return kicad.Read(f, path)
+			d, err := kicad.Read(f, path)
+			if err != nil {
+				return nil, err
+			}
+			annotateFromProject(l, d, kicadProjectOf(path))
+			return d, nil
 		},
 		Board: func(l *Loader, path string) (*geom.BoardGeometry, error) {
 			f, err := l.Open(path)
@@ -125,19 +134,35 @@ func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Net-class membership lives only in the .kicad_pro (net_settings), not the sch/pcb the
-	// readers consume, so populate ir.Net.net_class here in the I/O layer (WS1-037, C1).
-	//
-	// The same net_settings block also declares, per class, the clearance / track width / via
-	// sizes its nets are SUPPOSED to route at (WS3-111), to set against the copper the board
-	// tier projects. Both passes decode the whole file, so each gets its own reader over one
-	// buffer. An fs.File is not required to be an io.Seeker (WS1-049), and two independent
-	// readers also make the passes order-independent.
-	if data, err := l.ReadFile(proPath); err == nil {
-		kicad.AnnotateNetClasses(d, kicad.ParseNetClasses(bytes.NewReader(data)))
-		kicad.AnnotateNetClassDefs(d, kicad.ParseNetClassDefs(bytes.NewReader(data)))
-	}
+	annotateFromProject(l, d, proPath)
 	return d, nil
+}
+
+// kicadProjectOf is the .kicad_pro a schematic or board belongs to: the one sharing its stem. A
+// sub-sheet has a stem of its own and so no project, which is right, because it is one sheet of a
+// larger design rather than the design.
+func kicadProjectOf(path string) string {
+	return strings.TrimSuffix(path, filepath.Ext(path)) + ".kicad_pro"
+}
+
+// annotateFromProject applies what only the .kicad_pro declares, whichever of the project's files the
+// read began from (agni issue 933). The schematic and the board carry neither of these, so reading
+// either without its project dropped them, and a design named by its schematic checked its copper
+// against fixed floors and none of its own rules.
+//
+// Net-class membership and per-class routing constraints come from net_settings (WS1-037, WS3-111),
+// and the board-wide minimums from board.design_settings.rules. Each pass decodes the whole file, so
+// each gets its own reader over one buffer. An fs.File is not required to be an io.Seeker (WS1-049),
+// and independent readers also make the passes order-independent. A project that is absent or
+// unreadable leaves the design as read.
+func annotateFromProject(l *Loader, d *ir.Design, proPath string) {
+	data, err := l.ReadFile(proPath)
+	if err != nil {
+		return
+	}
+	kicad.AnnotateNetClasses(d, kicad.ParseNetClasses(bytes.NewReader(data)))
+	kicad.AnnotateNetClassDefs(d, kicad.ParseNetClassDefs(bytes.NewReader(data)))
+	kicad.AnnotateBoardRules(d, kicad.ParseBoardRules(bytes.NewReader(data)))
 }
 
 // sheetOpener resolves a schematic's sub-sheet Sheetfile references against its own

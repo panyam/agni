@@ -19,6 +19,7 @@ type (
 	PinNetConflict = model.PinNetConflict
 	BoardNet       = model.BoardNet
 	BoardSeg       = model.BoardSeg
+	BoardRules     = model.BoardRules
 	BoardVia       = model.BoardVia
 	Reach          = model.Reach
 	ReachStep      = model.ReachStep

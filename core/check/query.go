@@ -1,7 +1,9 @@
 package check
 
 import (
+	"math"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -391,8 +393,41 @@ func (m *irModel) NetClassDefs() []*ir.Constraint {
 }
 
 // kicadNetClassKind mirrors kicad.ConstraintKindNetClass. Duplicated rather than imported because
-// core must not depend on a reader (C1); the two are pinned together by TestNetClassKindAgrees.
+// core must not depend on a reader (C1); TestConstraintKindsAgree in readers/formats pins the two.
 const kicadNetClassKind = "netclass"
+
+// NetClassConstraintKind and BoardRulesConstraintKind are the ir.Constraint kinds this model reads,
+// exported so a reader's own constants can be held to them by a test outside core.
+const (
+	NetClassConstraintKind   = kicadNetClassKind
+	BoardRulesConstraintKind = "board_rules"
+)
+
+// BoardRules returns the copper minimums the design declares (see model.Model), the zero value when
+// it declares none. A value that does not parse as a positive number of millimetres is left unset,
+// so a rule falls back to its own floor rather than checking against nonsense.
+func (m *irModel) BoardRules() BoardRules {
+	var r BoardRules
+	for _, c := range m.d.GetConstraints() {
+		if c.GetKind() != BoardRulesConstraintKind {
+			continue
+		}
+		mm := func(k string) int64 {
+			v, err := strconv.ParseFloat(c.GetParams()[k], 64)
+			if err != nil || v <= 0 {
+				return 0
+			}
+			return int64(math.Round(v * 1e6))
+		}
+		r = BoardRules{
+			TrackWidthNm: mm("min_track_width"),
+			ClearanceNm:  mm("min_clearance"),
+			DrillNm:      mm("min_through_hole_diameter"),
+			AnnularNm:    mm("min_via_annular_width"),
+		}
+	}
+	return r
+}
 
 func (m *irModel) BoardNets() []BoardNet { return m.boardNets }
 
