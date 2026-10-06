@@ -248,6 +248,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   command should get a tier rather than resolving the project a second time.
 - `make natrender FILE=... OUT=...` and `make natopen FILE=...` drive the native tools over the
   `natup` container. Both take paths INSIDE it, so they must fall under a `NATIVE_DOCKER_MOUNTS` dir.
+  The image carries xschem, Lepton and gerbv and NOT KiCad, so `kicad-cli` for an oracle comes from a
+  KiCad install on the machine (KiCad's Ubuntu PPA has no arm64 build; Flathub's does).
 - `make setup` builds the docling venv the datasheet tooling runs in, then `make pdf2doc`,
   `make pdf2doc-all`, `make datasheets-status` and `make dsserve` work over `DATASHEET_DIR`. The
   tools live in `datasheet/tools/`, so those targets `cd datasheet` first. The venv is found by
@@ -515,6 +517,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   an empty set. The gate takes `samples-oracle`, the 19MB both-views corpus, because the cross-view
   tests read a board file and a test whose fixture is absent skips rather than fails. One stamp PER
   ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each other's work.
+  Since v0.1.2 the oracle corpus carries a `design.yaml` per real design (entry, board companion,
+  internal connectors) and the tutorial tarball does not, because a declared companion missing from
+  a tarball fails every read and that tarball leaves the boards out.
+- **The public demo's seeds have a verdict for every finding** in `hack/seed-triage/<design>.triage.yaml`
+  (agni 857), and `TestSeedTriage` fails on any finding that appears, disappears or sits untriaged.
+  A change that moves a seed's findings regenerates the records with `make seed-triage` and
+  classifies each new group (`defect`, `design-choice`, `needs-intent`, or `false-positive` with its
+  ticket). A class is a judgement in its `why` unless an oracle backs it; #967 is checking them
+  against KiCad's own ERC and DRC.
 - **The samples tarballs are built in `panyam/agni-samples` with its `make dist`**, which since
   v0.1.1 runs on Linux as well as macOS. v0.1.0 was packed by macOS tar and carried a `._name`
   AppleDouble shadow beside every file, and a shadow sorts ahead of the file it shadows, so any walk
@@ -754,6 +765,13 @@ class (`regulator`, which the tutorial corpus really states) sorts BEHIND the ke
 than displacing it. **A second tier must never be the ONLY tier in the set**, because EMPTY is the
 signal that tells a consumer to re-derive, which is why `WithParamProvider` runs the convention pass
 first on a design that reaches it unstamped.
+
+**A KiCad design reads its same-stem `.kicad_pro` whichever of its files names it** (agni 933):
+net classes, class definitions and the board's own minimums (`board_rules`, which the copper rules
+check against before their fixed floors). A sub-sheet has a stem of its own, so it reads alone.
+**A do-not-populate part stays in the netlist, and a rule crediting a part asks `Model.IsFitted`**
+(agni 938). Only the pull-up walks ask so far; #961 tracks the rest, and
+`architecture/rules-and-checks.md` states the policy.
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
 so `12V_FB`, `12V_SW`, `12V_MODE1` and `12V_VDRV` all match the rail vocabulary and none carries 12V.
