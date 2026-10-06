@@ -18,8 +18,8 @@ import (
 // A cross-entity/spatial vocabulary needs more rules than this one behind it before it
 // earns AST nodes (the WS3-003 earn-it guard;
 // docsite/content/architecture/rules-and-checks.md). This rule and its O(S²) walk are
-// the standing evidence for the WS3-004 spatial-index question; BenchmarkCopperClearance
-// tracks the cost.
+// what the WS3-004 spatial-index question was about. It sweeps each layer's segments in x order
+// rather than comparing every pair (agni issue 963), and BenchmarkCopperClearance tracks the cost.
 // clearanceEpsilonNm is how far under the floor a measured gap may sit and still meet it, KiCad's own
 // DRC epsilon (its DRCEpsilon advanced setting, 0.0005mm by default). A gap between diagonal tracks is
 // irrational in nanometres, so copper routed exactly at the minimum measures a nanometre or two under
@@ -66,52 +66,88 @@ var copperClearance = &check.Rule{
 // present only as vias and pads was never measured.
 func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	floor, floorDesc := floorFor(m, "clearance")
+	// idx is a segment's place in the board's own order, which decides ties below.
 	type flatSeg struct {
-		net string
-		s   check.BoardSeg
+		net                    string
+		s                      check.BoardSeg
+		idx                    int
+		minX, maxX, minY, maxY int64
 	}
 	var segs []flatSeg
 	for _, bn := range m.BoardNets() {
 		for _, s := range bn.Segments {
-			segs = append(segs, flatSeg{net: bn.Net, s: s})
+			segs = append(segs, flatSeg{
+				net: bn.Net, s: s, idx: len(segs),
+				minX: min64(s.A.X, s.B.X), maxX: max64(s.A.X, s.B.X),
+				minY: min64(s.A.Y, s.B.Y), maxY: max64(s.A.Y, s.B.Y),
+			})
 		}
 	}
 	type pairKey struct{ a, b string }
 	type worst struct {
 		gap   int64
 		at    *geom.Point
+		ai    int // the segment pair the worst gap was measured at, in board order
+		bi    int
 		count int
 		near  int // pairs that came within the bounding-box reject but cleared the floor
 	}
 	pairs := map[pairKey]*worst{}
 	var order []pairKey
+	// measure is one segment pair, a before b in board order.
+	measure := func(a, b *flatSeg) {
+		if a.net == b.net || !bboxNear(a.s, b.s, floor) {
+			return // too far apart to be worth measuring, so this pair is not a subject
+		}
+		k := pairKey{a.net, b.net}
+		if k.a > k.b {
+			k.a, k.b = k.b, k.a // the pair is symmetric, so its name is canonical
+		}
+		w := pairs[k]
+		if w == nil {
+			w = &worst{gap: floor}
+			pairs[k] = w
+			order = append(order, k)
+		}
+		gap := segDistNm(a.s.A, a.s.B, b.s.A, b.s.B) - (a.s.Width+b.s.Width)/2
+		if gap >= floor-clearanceEpsilonNm {
+			w.near++
+			return
+		}
+		w.count++
+		// The worst gap, and among equal gaps the pair that comes first in board order, so the place a
+		// finding names does not depend on the order the sweep met the pairs in.
+		if w.at == nil || gap < w.gap || (gap == w.gap && (a.idx < w.ai || (a.idx == w.ai && b.idx < w.bi))) {
+			w.gap, w.at, w.ai, w.bi = gap, a.s.A, a.idx, b.idx
+		}
+	}
+	// A sweep per layer (agni issue 963). Comparing every segment with every other was O(S^2), about
+	// 197 million pairs and a second natively on the Jetson baseboard's 19,835 segments, nearly all
+	// rejected by the bounding box. Sorted by left edge, a segment only meets the ones that start
+	// before its right edge plus the farthest reach bboxNear allows, so the pairs measured are the same
+	// set the full walk measured.
+	byLayer := map[string][]*flatSeg{}
+	widest := map[string]int64{}
 	for i := range segs {
-		for j := i + 1; j < len(segs); j++ {
-			a, b := segs[i], segs[j]
-			if a.net == b.net || a.s.Layer != b.s.Layer {
-				continue
-			}
-			if !bboxNear(a.s, b.s, floor) {
-				continue // too far apart to be worth measuring, so this pair is not a subject
-			}
-			k := pairKey{a.net, b.net}
-			if k.a > k.b {
-				k.a, k.b = k.b, k.a // the pair is symmetric, so its name is canonical
-			}
-			w := pairs[k]
-			if w == nil {
-				w = &worst{gap: floor}
-				pairs[k] = w
-				order = append(order, k)
-			}
-			gap := segDistNm(a.s.A, a.s.B, b.s.A, b.s.B) - (a.s.Width+b.s.Width)/2
-			if gap >= floor-clearanceEpsilonNm {
-				w.near++
-				continue
-			}
-			w.count++
-			if w.at == nil || gap < w.gap {
-				w.gap, w.at = gap, a.s.A
+		sg := &segs[i]
+		byLayer[sg.s.Layer] = append(byLayer[sg.s.Layer], sg)
+		widest[sg.s.Layer] = max64(widest[sg.s.Layer], sg.s.Width)
+	}
+	for layer, ls := range byLayer {
+		sort.Slice(ls, func(i, j int) bool { return ls[i].minX < ls[j].minX })
+		for p, a := range ls {
+			// bboxNear pads by floor + (a.Width+b.Width)/2, which never exceeds this; the extra
+			// nanometre covers the integer halving.
+			reach := a.maxX + floor + (a.s.Width+widest[layer])/2 + 1
+			for _, b := range ls[p+1:] {
+				if b.minX > reach {
+					break
+				}
+				if a.idx < b.idx {
+					measure(a, b)
+				} else {
+					measure(b, a)
+				}
 			}
 		}
 	}
