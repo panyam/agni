@@ -20,14 +20,20 @@ import (
 // docsite/content/architecture/rules-and-checks.md). This rule and its O(S²) walk are
 // the standing evidence for the WS3-004 spatial-index question; BenchmarkCopperClearance
 // tracks the cost.
+// clearanceEpsilonNm is how far under the floor a measured gap may sit and still meet it, KiCad's own
+// DRC epsilon (its DRCEpsilon advanced setting, 0.0005mm by default). A gap between diagonal tracks is
+// irrational in nanometres, so copper routed exactly at the minimum measures a nanometre or two under
+// it, which KiCad passes and a strict comparison failed (16 pairs on the Jetson baseboard, agni 933).
+const clearanceEpsilonNm = 500
+
 var copperClearance = &check.Rule{
 	Name:       "copper-clearance",
 	Severity:   "error",
-	Summary:    "Copper of two different nets sits closer than the 0.127mm fabrication floor.",
+	Summary:    "Copper of two different nets sits closer than the minimum the board declares, or the 0.127mm fabrication floor when it declares none.",
 	Impact:     "Sub-clearance copper either fails DFM at order time or ships as a latent short: etch variance and solder bridging turn a too-tight gap into a connection the netlist never had. It is the defect DRC exists for.",
 	Remedy:     "Pull the two nets apart to the fab's minimum clearance. A gap below it is a short waiting on etch variance or a solder bridge.",
 	Primitives: []string{"select", "geometry-distance"},
-	Reads:      []string{"board.copper"},
+	Reads:      []string{"board.copper", "board.rules"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryBoard,
 		check.KeyTier:         "P",
@@ -59,6 +65,7 @@ var copperClearance = &check.Rule{
 // A net with no track segments therefore appears in no pair. This rule compares SEGMENTS, so a net
 // present only as vias and pads was never measured.
 func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	floor, floorDesc := floorFor(m, "clearance")
 	type flatSeg struct {
 		net string
 		s   check.BoardSeg
@@ -84,7 +91,7 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			if a.net == b.net || a.s.Layer != b.s.Layer {
 				continue
 			}
-			if !bboxNear(a.s, b.s, minClearanceNm) {
+			if !bboxNear(a.s, b.s, floor) {
 				continue // too far apart to be worth measuring, so this pair is not a subject
 			}
 			k := pairKey{a.net, b.net}
@@ -93,12 +100,12 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			}
 			w := pairs[k]
 			if w == nil {
-				w = &worst{gap: minClearanceNm}
+				w = &worst{gap: floor}
 				pairs[k] = w
 				order = append(order, k)
 			}
 			gap := segDistNm(a.s.A, a.s.B, b.s.A, b.s.B) - (a.s.Width+b.s.Width)/2
-			if gap >= minClearanceNm {
+			if gap >= floor-clearanceEpsilonNm {
 				w.near++
 				continue
 			}
@@ -126,15 +133,15 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		if w.count == 0 {
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
-				Statement: fmt.Sprintf("copper of %q and %q comes close enough to measure in %d place(s) on a shared layer and never within 0.127mm",
-					k.a, k.b, w.near),
+				Statement: fmt.Sprintf("copper of %q and %q comes close enough to measure in %d place(s) on a shared layer and never within the %s",
+					k.a, k.b, w.near, floorDesc),
 				Terms: []check.WitnessTerm{{Label: "places measured", Value: strconv.Itoa(w.near)}},
 			}
 			out = append(out, v)
 			continue
 		}
-		msg := fmt.Sprintf("copper of %q and %q closer than 0.127mm at %d place(s); worst gap %.3fmm near (%.2f, %.2f)mm",
-			k.a, k.b, w.count, float64(w.gap)/1e6, float64(w.at.X)/1e6, float64(w.at.Y)/1e6)
+		msg := fmt.Sprintf("copper of %q and %q closer than the %s at %d place(s); worst gap %.3fmm near (%.2f, %.2f)mm",
+			k.a, k.b, floorDesc, w.count, float64(w.gap)/1e6, float64(w.at.X)/1e6, float64(w.at.Y)/1e6)
 		v.Outcome = check.Fail
 		v.Witness = &check.Witness{
 			Statement: msg,
