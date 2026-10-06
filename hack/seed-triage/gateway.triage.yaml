@@ -1,0 +1,82 @@
+# Every failing or inconclusive verdict the full catalog makes on this seeded design, each with
+# a judgement (agni issue 857). TestSeedTriage fails on any difference from what the engine finds,
+# and `make seed-triage` drafts new findings as untriaged. Classes: defect, design-choice,
+# needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
+design: examples/tutorial-project/designs/gateway
+findings:
+  copper-clearance:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:CAN1_CANH|net:I2C_SCL
+        - net:CAN1_CANL|net:I2C_SDA
+        - net:CAN1_RXD|net:PMIC_CORE_3V3
+        - net:CAN1_RXD|net:PMIC_PG
+        - net:CAN1_TXD|net:MCU_NRST
+        - net:CAN1_TXD|net:PMIC_MAIN_12V0
+        - net:GND|net:XTAL_OUT
+        - net:MCU_NRST|net:PMIC_MAIN_12V0
+        - net:PMIC_CORE_3V3|net:PMIC_PG
+        - net:PMIC_EN|net:PMIC_IO_1V8
+        - net:PMIC_EN|net:XTAL_IN
+        - net:PMIC_IO_1V8|net:XTAL_IN
+  decoupling-present:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:PMIC_MAIN_12V0
+  esd-protection:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:CAN1_CANH
+        - net:CAN1_CANL
+  gateway-profiles/can-esd-missing:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:CAN1_CANH
+        - net:CAN1_CANL
+  gateway-profiles/can-host-incomplete:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - component:U4|signal:STB
+  gateway/signal-net-naming:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:XTAL_IN
+        - net:XTAL_OUT
+  i2c-pull-up:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:I2C_SCL
+        - net:I2C_SDA
+  intent/voltage-domain-mismatch:
+    - class: defect
+      why: design.yaml declares PMIC_IO_1V8 in the 3.3 V core domain on purpose, so the intent check has a real deviation to report.
+      subjects:
+        - net:PMIC_IO_1V8
+  reverse-blocking-absent:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:PMIC_MAIN_12V0
+  supply-exceeds-abs-max:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - pin:U2.1
+  test-point-coverage:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:GND
+        - net:PMIC_MAIN_12V0
+  track-width:
+    - class: defect
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      subjects:
+        - net:CAN1_CANH
