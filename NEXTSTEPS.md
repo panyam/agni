@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-05, at `70b1cfc4` (PR 925).
+Last pruned 2026-10-06, at `8672b53d` (PR 966).
 
 ## At a glance
 
@@ -19,41 +19,42 @@ links rather than here. Log each exercise run on the mission issue.
 
 - **#844 `mission_real_board_tutorial`**, 0 of 4. Next is #564. The exercise has not run yet, so run
   it before picking a ticket.
-- **#845 `mission_browser_review`**, 1 of 14. The exercise is a manual walk with no logged run yet.
-  #902 is the viewer's next shape: a Properties panel for any selection (it replaces Details) and a
-  query panel holding named tabs that its Ask rows open. #745 (open a query set as tabs) and #717's
-  viewer half fold into it; #904 (area selection) follows it and jaala#132 (bind a set of values).
-- **#851 `mission_public_demo`**, 11 of 30. Exercise last ran at `70b1cfc4` (PR 925). Retriaged
-  2026-10-05: the five P1s are #857 (triage the seeded boards' findings), #928 (a real EDIF seed,
-  which #880's threshold measurement and step 3 of the exercise need), #878 (script the walk, so it
-  gets run), #868 and #894 (both visible on the deployed page). #127 (save the report) and #918
-  (Cancel) are next. #900 closed through PRs 919 and 925; #901 is narrowed to the server-side store
-  and left the mission. Whether launch needs a hosted server (#855) waits on #880 measuring #928's
-  board.
-- **#909 `mission_ask`**, filed, not active: ask a design questions through an LLM and get answers
-  that cite the rows. #910 (P1, MCP on `agni serve`) is its first ticket.
-- This run: PRs 899, 912, 913, 915, 917, 920 and 921 merged, closing #895 and #916; agni follows
-  jaala v0.1.23 (jaala#139, #140). Filed #909, #910, #914 and #922, and jaala#147 (Explain). #907
-  (`tables_to_xlsx` was quadratic in its rows) closed through PR 908.
+- **#845 `mission_browser_review`**, 2 of 16. The exercise is a manual walk with no logged run yet.
+  #902 (a Properties panel and query tabs) is the viewer's next shape; #956 (Save CSV through
+  `Tabulate`) serves this mission and #851 both.
+- **#851 `mission_public_demo`**, 29 of 48, no P1 left. Exercise last ran at `8672b53d` (PR 966),
+  the first with `make exercise-public-demo EXERCISE_FLAGS=--timing`: 59 steps ok. Jetson's
+  `CheckDesign` takes 13.4 s in the browser, the board read 7.3 s of it, and a further 10 s of Run
+  checks happens outside that request (#968). Next ready: #898, #956, #865. #949 (one geometry per
+  library footprint) is `waiting` on numbers that now exist: reading and building Jetson's board is
+  its largest cost, so consider un-parking it. The EDIF seed is `waiting` on a licensed pair (#928),
+  and a hosted server on #880.
+- **#909 `mission_ask`**, filed, not active. #910 (P1, MCP on `agni serve`) is its first ticket.
+- This run: PRs 929, 944, 948, 952, 955, 965 and 966 merged (#878, #941, #943, #945, #127, #914,
+  #946, #963), and other sessions closed #857, #868, #894, #933, #934 and #940. #928 parked after a
+  search for a licensed EDIF pair found none (recorded on it). Filed #941, #945, #946, #949, #956,
+  #959, #963, #964 and #968.
 
 ## Open, ranked
 
 1. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
-2. **#857 on `mission_public_demo`** (triage the seeded boards' findings), with #928, #878, #868 and #894, then #127 and #918.
-   For snappiness, #896 (a starting-point query with a limit) and #897 (check one net or part) both
-   build on #895's kept model; #914 (per-request timings) would have named the last two slow paths
-   in one log line each.
-3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
-4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
+2. **Jetson's Run checks on `mission_public_demo`.** #968 (the 10 s outside `CheckDesign`) first,
+   since it is the largest unmeasured part; then the board read (#949 if its geometry dominates,
+   measured with `--timing`) and the interface-profile rules, whose slowest are
+   `emmc-signal-missing` and `spi_nor-signal-missing`. #964 (the overlay recomposed per request) is
+   the gateway's biggest cost. Measure with `--timing` or `?timing` before changing anything.
+3. **#898, #956 and #865 on `mission_public_demo`**, then #918 (Cancel on Run checks), #896 and #897.
+4. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
+5. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
-5. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
-   corrections comment before writing any code. #895 now keeps the model and fact base, so a repeated
-   check pays only rule evaluation; measure that before building a result cache on top.
-6. **#910 on `mission_ask`**, MCP tools over the existing services. Every service is transport-neutral,
+6. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
+   corrections comment before writing any code. #895 keeps the model and fact base, so a repeated
+   check pays only rule evaluation; measure that with `--timing` before building a result cache.
+7. **#910 on `mission_ask`**, MCP tools over the existing services. Every service is transport-neutral,
    so it is an adapter, not new analysis.
-7. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
+8. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
    test declares #736 field by field, so its fix also deletes that declaration in
    `clients/python/tests/test_cross_transport.py`.
 

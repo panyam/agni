@@ -256,7 +256,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - `make -C docsite preview PAGE=learn/03-why-every-chip-needs-capacitors` folds one built page into a
   self-contained HTML file, for reviewing a branch before it merges. Use it rather than
   `make -C docsite gh-pages`, which is DEAD because Pages serves the `docs.yml` workflow artifact
-  (`build_type: workflow`), so force-pushing that branch changes nothing.
+  (`build_type: workflow`), so force-pushing that branch changes nothing. Pages deploys run one at a
+  time, so a run stuck at `waiting` on the `github-pages` environment (no reviewer exists to approve
+  it) holds every later deploy at `pending`; cancel the stuck run with `gh run cancel <id>`, since a
+  later deploy carries its commit.
 - `make -C docsite figures` re-renders the schematics `learn/` embeds. Outside the gate, because a
   render depends on the engine build and nothing checks its output for staleness (agni issue 453).
   `make tutorial-runs` is no longer outside it, because `tutorial-runs-check` regenerates every
@@ -311,6 +314,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   carries the QUESTION, so it needs no content hash. Three outcomes stay apart: a route, no route
   within the radius, and an endpoint naming nothing the design has, which exits non-zero because a pin
   spelled wrong and two pins genuinely unconnected are opposite problems.
+- **A check run is SAVED through `CheckService.RenderCheckReport`, from the run the caller holds**
+  (agni 127). `check --results-out` (the `CheckResults` document) and `check --verdicts --format html`
+  write through it, and so do the viewer's Save report and Save JSON, which send the panel's run
+  instead of running anything again. A new way to save a run calls it rather than rendering. The
+  document's JSON is protojson, whose whitespace varies between builds on purpose, so two builds'
+  documents compare as parsed JSON, never as bytes; one build's two hosts compare as bytes
+  (`TestWasmEngineAnswersAsTheServerDoes`).
 - **There are two HTML reports, on different axes, sharing one stylesheet.** `check --format html`
   is the verdict report, rule-major, and implies `--verdicts`. `review --format html` is the
   checklist, question-major, in the manifest's order with every finding per item. Both take
@@ -360,6 +370,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `Lookup` returns no error, so a remote provider is a `param.Prefetcher` and `service.BuildModel`
   fetches the design's MPNs there, where an unreachable corpus is `ErrUnavailable` instead of every
   part reading as unseeded. A new model-building path that skips `Prefetch` gets no datasheet tier.
+- **EDIF keywords are case-insensitive, and the reader folds them at parse** (agni 941). Altium's
+  EDIF For PCB writes `(Net`, `(PortRef`, `(Instance`, and an exact match read its files as empty
+  designs with no error. `readers/edif/sexpr.go` respells each list's head from `keywords`, and
+  `TestEveryLookedUpKeywordIsCanonicalized` fails when a new lookup's keyword is missing from that
+  table. Altium also writes no `(designator ...)` and names each instance by its ref-des, so a file
+  in which NO instance carries a designator takes the instance's name as its ref-des.
+- **`internal/sexpr` shares every identical atom between nodes** (agni 945), which is how an 80 MB
+  board holds under 4 times its size, so never assign a parsed node's `Atom`; put a new node in its
+  parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out of the
+  tree, and the KiCad board reads skip `filled_polygon` (agni 946); the census parses unskipped.
 - **`emit --format edif` writes for a reader that is NOT ours, and that is a stricter target than the
   round trip.** Our reader resolves references after parsing the whole file, accepts any atom as an
   identifier, and reads a port reference as a pin designator when nothing maps it, so a writer leaning
@@ -661,6 +681,11 @@ by net first put a route on a sheet carrying the middle net and none of the part
 no-route too, since the two nets that fail to join are drawn somewhere and that is the picture
 someone goes looking for; empty then means drawn nowhere rather than nobody looked. The CLI takes
 the sheet off the response rather than choosing, which is C32 at one more call site.
+
+**Opening a design must not parse its board** (agni 943). `GetDesign` lists the Board sheet from the
+board tier's format (`formats.HasBoard`), and the board is read when its sheet is opened or a
+board-tier rule runs. Reading it on open made the Jetson seed's first sheet and rule catalog wait
+about 30 s in the browser, since everything on the worker queues behind the request that opens.
 
 **Measure a slow request before optimising it** (agni 914). `--timing` on `check`/`query`/`trace`/`review`
 prints each stage, which cache tier answered each read and the slowest rules; `query --explain`
