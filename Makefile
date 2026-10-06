@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -258,6 +258,12 @@ DEMO_OUT ?= $(DEMO_ROOT)$(DEMO_BASE)
 DEMO_SEEDS ?= --seed gateway=examples/tutorial-project \
 	--seed royalblue=tools/samples/boards/royalblue54L-feather \
 	--seed jetson=tools/samples/boards/jetson-agx-thor-baseboard
+# Rewrite the seeded boards' triage records (hack/seed-triage, agni issue 857) against what the engine
+# finds now: vanished findings drop out and new ones land as untriaged, which TestSeedTriage fails on
+# until someone classifies them.
+seed-triage: samples-oracle
+	AGNI_SEED_TRIAGE_UPDATE=1 $(GO) test ./cmd/agni/ -run TestSeedTriage -count=1
+
 demo-site: ui wasm samples-oracle
 	rm -rf $(DEMO_OUT)
 	$(GO) run ./cmd/agni site $(DEMO_OUT) --base $(DEMO_BASE) $(DEMO_SEEDS)

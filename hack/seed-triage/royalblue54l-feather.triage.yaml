@@ -1,0 +1,136 @@
+# Every failing or inconclusive verdict the full catalog makes on this seeded design, each with
+# a judgement (agni issue 857). TestSeedTriage fails on any difference from what the engine finds,
+# and `make seed-triage` drafts new findings as untriaged. Classes: defect, design-choice,
+# needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
+design: tools/samples/boards/royalblue54L-feather
+findings:
+  crystal-load-caps:
+    - class: design-choice
+      why: The nRF54L15 provides configurable internal load capacitance for its crystal, so Y1 needs none on the board.
+      subjects:
+        - pin:Y1.1
+        - pin:Y1.2
+  esd-protection:
+    - class: false-positive
+      why: A TPD3E001 array (U3) clamps D+, D- and VBUS, and classifies as an ic rather than a TVS.
+      ticket: 934
+      subjects:
+        - net:/Debugger/D+
+        - net:/Debugger/D-
+        - net:/Debugger/USB.VBUS
+    - class: design-choice
+      why: CC1 and CC2 of the debug USB-C port carry no clamp, which is common on a USB 2.0 port whose CC lines only see the cable's pull-down.
+      subjects:
+        - net:/Debugger/USB.CC1
+        - net:/Debugger/USB.CC2
+    - class: design-choice
+      why: A Feather's header pins go straight to the MCU with no ESD protection, as is usual for a development board whose pins are meant to be wired by hand.
+      subjects:
+        - net:/Connectors/ANALOG.A0
+        - net:/Connectors/ANALOG.A1
+        - net:/Connectors/ANALOG.A2
+        - net:/Connectors/ANALOG.A3
+        - net:/Connectors/ANALOG.A4
+        - net:/Connectors/ANALOG.A5
+        - net:/Connectors/DIG.D10
+        - net:/Connectors/DIG.D11
+        - net:/Connectors/DIG.D12
+        - net:/Connectors/DIG.D13
+        - net:/Connectors/DIG.D5
+        - net:/Connectors/DIG.D6
+        - net:/Connectors/DIG.D9
+        - net:/Connectors/ENABLE
+        - net:/Connectors/I2C.SCL
+        - net:/Connectors/I2C.SDA
+        - net:/Connectors/SHPHLD
+        - net:/Connectors/SPI.MISO
+        - net:/Connectors/SPI.MOSI
+        - net:/Connectors/SPI.SCK
+        - net:/Connectors/UART.RX
+        - net:/Connectors/UART.TX
+        - net:SWD_TRG.~{RESET}
+  i2c-pull-up:
+    - class: false-positive
+      why: The sheets join through KiCad bus groups on sheet pins, and agni keeps each side of the crossing as its own net, so this signal reads as half of itself. The header and PMIC I2C nets are cut off from the MCU side.
+      ticket: 936
+      subjects:
+        - net:/Connectors/I2C.SCL
+        - net:/Connectors/I2C.SDA
+        - net:/nPM1300/NPM1300.SCL
+        - net:/nPM1300/NPM1300.SDA
+  power-input-not-driven:
+    - class: false-positive
+      why: The sheets join through KiCad bus groups on sheet pins, and agni keeps each side of the crossing as its own net, so this signal reads as half of itself. The PMIC's VBUS input is cut off from the USB-C connector on the debugger sheet.
+      ticket: 936
+      subjects:
+        - net:/nPM1300/USB.VBUS
+    - class: false-positive
+      why: The debugger's nRF52833 runs from VDDH, and its internal regulator drives these VDD pins, which the symbol types power_in.
+      ticket: 935
+      subjects:
+        - net:/Debugger/nRF52_VDD
+  single-pin-net:
+    - class: false-positive
+      why: The sheets join through KiCad bus groups on sheet pins, and agni keeps each side of the crossing as its own net, so this signal reads as half of itself. Each of these nets has its other pin on the sheet across the boundary.
+      ticket: 936
+      subjects:
+        - net:/Connectors/ANALOG.A0
+        - net:/Connectors/ANALOG.A1
+        - net:/Connectors/ANALOG.A2
+        - net:/Connectors/ANALOG.A3
+        - net:/Connectors/ANALOG.A4
+        - net:/Connectors/ANALOG.A5
+        - net:/Connectors/DIG.D10
+        - net:/Connectors/DIG.D11
+        - net:/Connectors/DIG.D12
+        - net:/Connectors/DIG.D13
+        - net:/Connectors/DIG.D5
+        - net:/Connectors/DIG.D6
+        - net:/Connectors/DIG.D9
+        - net:/Connectors/SPI.MISO
+        - net:/Connectors/SPI.MOSI
+        - net:/Connectors/SPI.SCK
+        - net:/Connectors/UART.RX
+        - net:/Connectors/UART.TX
+        - net:/Debugger/SWD_TRG.SWDCLK
+        - net:/Debugger/SWD_TRG.SWDIO
+        - net:/Debugger/SWD_TRG.~{RESET}
+        - net:/Debugger/UART_TRG.RX
+        - net:/Debugger/UART_TRG.TX
+        - net:/Debugger/USB.CC1
+        - net:/nPM1300/NPM1300.INT
+        - net:/nPM1300/NPM1300.SCL
+        - net:/nPM1300/NPM1300.SDA
+        - net:/nPM1300/USB.CC1
+        - net:/nPM1300/USB.CC2
+        - net:/nRF54L15/ANALOG.A0
+        - net:/nRF54L15/ANALOG.A1
+        - net:/nRF54L15/ANALOG.A2
+        - net:/nRF54L15/ANALOG.A3
+        - net:/nRF54L15/ANALOG.A4
+        - net:/nRF54L15/ANALOG.A5
+        - net:/nRF54L15/DIG.D10
+        - net:/nRF54L15/DIG.D12
+        - net:/nRF54L15/DIG.D13
+        - net:/nRF54L15/DIG.D5
+        - net:/nRF54L15/DIG.D6
+        - net:/nRF54L15/DIG.D9
+        - net:/nRF54L15/NPM1300.INT
+        - net:/nRF54L15/UART_TRG.RX
+        - net:/nRF54L15/UART_TRG.TX
+        - net:SWD_TRG.~{RESET}
+  unconnected-component:
+    - class: false-positive
+      why: Mounting holes and the logo have no pins, so none landing on a net says nothing.
+      ticket: 937
+      subjects:
+        - component:H1
+        - component:H2
+        - component:H3
+        - component:H4
+        - component:LOGO1
+  unspecified-pin-with-driver:
+    - class: defect
+      why: The nRF52833 symbol leaves pin 20 (SWDIO side of the debug header) with no electrical type, a symbol-library gap that is harmless electrically and hides the pin from direction checks.
+      subjects:
+        - net:N$18

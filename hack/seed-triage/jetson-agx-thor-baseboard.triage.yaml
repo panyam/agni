@@ -1,0 +1,1595 @@
+# Every failing or inconclusive verdict the full catalog makes on this seeded design, each with
+# a judgement (agni issue 857). TestSeedTriage fails on any difference from what the engine finds,
+# and `make seed-triage` drafts new findings as untriaged. Classes: defect, design-choice,
+# needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
+design: tools/samples/boards/jetson-agx-thor-baseboard
+findings:
+  bulk-cap:
+    - class: design-choice
+      why: N$54 is the module's PMIC backup-battery input through D1 and R6, which the module decouples on its own side.
+      subjects:
+        - net:N$54
+  bus-not-modeled:
+    - class: false-positive
+      why: Each bus names a member under a sheet the bus may not be drawn on (/M.2/TX0+ for PCIe, DP and RGMII), which reads as a resolution error in the read, not as a gap in the design.
+      ticket: 939
+      subjects:
+        - bus:CAM_CTRL
+        - bus:CAN
+        - bus:CSI
+        - bus:DP
+        - bus:GPIO
+        - bus:HDMI
+        - bus:I2C
+        - bus:I2S
+        - bus:M2_E
+        - bus:PCIe
+        - bus:RGMII
+        - bus:SFI
+        - bus:SPI
+        - bus:UART
+        - bus:USB
+        - bus:USBSS
+  copper-clearance:
+    - class: false-positive
+      why: The smallest gap is 0.100 mm, the minimum clearance the board declares (most of these are diff pairs on its 0.10 mm pair-gap rule); agni checks a fixed 0.127 mm floor instead.
+      ticket: 933
+      subjects:
+        - net:+1V15|net:+1V8
+        - net:+1V15|net:/SoM_IO/~{PDC_I2C1_IRQ}
+        - net:+1V8|net:Net-(J10-Pad42)
+        - net:+3V3_AON|net:/DCDC/VIN_PWR_ON
+        - net:+3V3|net:/CSI/CAM_CTRL.CSIA_FLG
+        - net:+5V_AON|net:+5V_SOM
+        - net:+5V_AON|net:/DCDC/5V_{AON}_OUT
+        - net:+5V_AON|net:/SoM_Power/~{SOM_PRSNT}
+        - net:+5V_SOM|net:/DCDC/CARRIER_PWR_ON
+        - net:+5V|net:/CSI/CAM_CTRL.CSIB_FLG
+        - net:+5V|net:/DCDC/5V_OUT
+        - net:+5V|net:/USB Debug, PD/DEBUG_SCL
+        - net:/CSI/CAM0.CSI2_CLK+|net:/CSI/CAM0.CSI2_CLK-
+        - net:/CSI/CAM0.CSI2_CLK+|net:/CSI/CAM0.CSI2_D1+
+        - net:/CSI/CAM0.CSI2_D0+|net:/CSI/CAM0.CSI2_D0-
+        - net:/CSI/CAM0.CSI2_D0-|net:/Expansion connector/GPIO.USER_LED0
+        - net:/CSI/CAM0.CSI2_D1+|net:/CSI/CAM0.CSI2_D1-
+        - net:/CSI/CAM0.CSI2_D1-|net:/CSI/CAM0.CSI3_D0+
+        - net:/CSI/CAM0.CSI3_D0+|net:/CSI/CAM0.CSI3_D0-
+        - net:/CSI/CAM0.CSI3_D0-|net:/CSI/CAM0.CSI3_D1-
+        - net:/CSI/CAM0.CSI3_D1+|net:/CSI/CAM0.CSI3_D1-
+        - net:/CSI/CAM0.CSI3_D1+|net:/CSI/CAM1.CSI0_D1-
+        - net:/CSI/CAM1.CSI0_CLK+|net:/CSI/CAM1.CSI0_CLK-
+        - net:/CSI/CAM1.CSI0_D0+|net:/CSI/CAM1.CSI0_D0-
+        - net:/CSI/CAM1.CSI0_D0-|net:/CSI/CAM1.CSI0_D1+
+        - net:/CSI/CAM1.CSI0_D1+|net:/CSI/CAM1.CSI0_D1-
+        - net:/CSI/CAM1.CSI1_D0+|net:/CSI/CAM1.CSI1_D0-
+        - net:/CSI/CAM1.CSI1_D0-|net:/CSI/CAM1.CSI1_D1+
+        - net:/CSI/CAM1.CSI1_D1+|net:/CSI/CAM1.CSI1_D1-
+        - net:/CSI/CAM2.CSI4_CLK+|net:/CSI/CAM2.CSI4_CLK-
+        - net:/CSI/CAM2.CSI4_D0+|net:/CSI/CAM2.CSI4_D0-
+        - net:/CSI/CAM2.CSI4_D0+|net:/CSI/CAM3.CSI6_D1-
+        - net:/CSI/CAM2.CSI4_D1+|net:/CSI/CAM2.CSI4_D1-
+        - net:/CSI/CAM2.CSI5_D0+|net:/CSI/CAM2.CSI5_D0-
+        - net:/CSI/CAM2.CSI5_D1+|net:/CSI/CAM2.CSI5_D1-
+        - net:/CSI/CAM2.CSI5_D1+|net:/SoM_IO2/JTAG_TDO
+        - net:/CSI/CAM3.CSI6_CLK+|net:/CSI/CAM3.CSI6_CLK-
+        - net:/CSI/CAM3.CSI6_D0+|net:/CSI/CAM3.CSI6_D0-
+        - net:/CSI/CAM3.CSI6_D1+|net:/CSI/CAM3.CSI6_D1-
+        - net:/CSI/CAM3.CSI7_D0+|net:/CSI/CAM3.CSI7_D0-
+        - net:/CSI/CAM3.CSI7_D1+|net:/CSI/CAM3.CSI7_D1-
+        - net:/CSI/CAM_CTRL.CSIA_FLG|net:/CSI/CAM_CTRL.CSIA_PEN
+        - net:/CSI/CAM_CTRL.CSIA_PEN|net:/Expansion connector/ADDR1
+        - net:/CSI/CAM_CTRL.VSYNC_CAM0|net:/CSI/CAM_CTRL.VSYNC_CAM1
+        - net:/CSI/CAM_CTRL.VSYNC_CAM2|net:/CSI/CAM_CTRL.VSYNC_CAM3
+        - net:/CSI/CAM_CTRL.VSYNC_CAM2|net:/Expansion connector/FMC_PG_C2M
+        - net:/CSI/CAM_CTRL.VSYNC_CAM2|net:/I2C_{SYS}.SDA
+        - net:/CSI/CAM_CTRL.VSYNC_CAM3|net:/DCDC/VIN_PWR_ON
+        - net:/CSI/CAM_CTRL.VSYNC_CAM3|net:/Peripherals/FAN_PWM
+        - net:/CSI/CAM_CTRL.VSYNC_CAM3|net:Net-(J10-Pad39)
+        - net:/CSI/I2C_{CAM}.SCL|net:/CSI/I2C_{CAM}.SDA
+        - net:/CSI/I2C_{CAM}.SCL|net:/Expansion connector/GPIO.USER_BTN0
+        - net:/CSI/I2C_{CAM}.SDA|net:/Peripherals/FAN_TACH
+        - net:/DCDC/12V_VDD|net:VCC
+        - net:/DCDC/16V_OUT|net:SYS_VIN_HV
+        - net:/DCDC/20V_FB|net:/DCDC/20V_OUT
+        - net:/DCDC/3V3_VDD|net:GND
+        - net:/DCDC/3V3_VDD|net:VCC
+        - net:/DCDC/5V_{AON}_EN|net:/DCDC/5V_{AON}_OUT
+        - net:/DCDC/VIN_PWR_ON|net:/I2C_{SYS}.SCL
+        - net:/DCDC/VIN_PWR_ON|net:/Peripherals/I2C_{CONN}.SCL
+        - net:/DCDC/~{VDDIN_PWR_BAD}|net:/SoM_Power/~{SYS_RESET}
+        - net:/DCDC/~{VDDIN_PWR_BAD}|net:VCC
+        - net:/Expansion connector/+3V3_AUX|net:/Expansion connector/CAN2.DOUT
+        - net:/Expansion connector/+3V3_AUX|net:/M.2/~{PEWAKE}
+        - net:/Expansion connector/ADDR0|net:/Expansion connector/ADDR1
+        - net:/Expansion connector/CAN0.DIN|net:/Expansion connector/CAN1.DOUT
+        - net:/Expansion connector/CAN0.DIN|net:/Expansion connector/DP2.HPD
+        - net:/Expansion connector/CAN1.DIN|net:/Expansion connector/CAN1.DOUT
+        - net:/Expansion connector/CAN1.DOUT|net:/Expansion connector/UART2.CTS
+        - net:/Expansion connector/CAN2.DOUT|net:/Expansion connector/SPI1.MOSI
+        - net:/Expansion connector/CAN3.DIN|net:/Expansion connector/CAN3.DOUT
+        - net:/Expansion connector/CAN3.DIN|net:/Expansion connector/SPI3.~{CS0}
+        - net:/Expansion connector/CAN3.DIN|net:Net-(J1A-SYSTEM_OC_N)
+        - net:/Expansion connector/CAN3.DOUT|net:/Expansion connector/GPIO.USER_BTN1
+        - net:/Expansion connector/CAN3.DOUT|net:/I2C_{SYS}.SDA
+        - net:/Expansion connector/CAN3.DOUT|net:/SoM_IO2/JTAG_TRST_N
+        - net:/Expansion connector/FMC_PG_C2M|net:/Expansion connector/GPIO.MCLK03
+        - net:/Expansion connector/FMC_PG_C2M|net:/SoM_IO/I2C1_SDA_1V8
+        - net:/Expansion connector/FMC_PG_M2C|net:/Expansion connector/FMC_PRSNT_M2C_L
+        - net:/Expansion connector/FMC_PRSNT_M2C_L|net:Net-(J1A-FSI_GPIO03)
+        - net:/Expansion connector/FMC_PRSNT_M2C_L|net:Net-(J1A-SYSTEM_OC_N)
+        - net:/Expansion connector/GPIO.MCLK01|net:/Expansion connector/I2S3.SDOUT
+        - net:/Expansion connector/GPIO.USER_BTN0|net:/Expansion connector/GPIO.USER_LED1
+        - net:/Expansion connector/GPIO.USER_BTN1|net:/Expansion connector/I2C7.SDA
+        - net:/Expansion connector/GPIO.USER_LED0|net:/SoM_IO/M2_E_W_DIS_2_1V8
+        - net:/Expansion connector/GPIO.USER_LED0|net:/SoM_IO/USBC2_PEN_1V8
+        - net:/Expansion connector/GPIO.USER_LED1|net:/Expansion connector/SPI1.~{CS0}
+        - net:/Expansion connector/I2C8.SCL|net:/Expansion connector/I2C8.SDA
+        - net:/Expansion connector/I2C8.SDA|net:/SoM_IO/I2C5_SDA_1V8
+        - net:/Expansion connector/I2S2.CLK|net:/Expansion connector/I2S2.FS
+        - net:/Expansion connector/I2S2.CLK|net:/Expansion connector/I2S3.CLK
+        - net:/Expansion connector/I2S2.SDIN|net:/Expansion connector/I2S2.SDOUT
+        - net:/Expansion connector/PCIe_{C2x1}.TX0+|net:/Expansion connector/PCIe_{C2x1}.TX0-
+        - net:/Expansion connector/PCIe_{C3x2}.CLK+|net:/Expansion connector/PCIe_{C3x2}.CLK-
+        - net:/Expansion connector/PCIe_{C3x2}.~{CLKREQ}|net:/Expansion connector/PCIe_{C3x2}.~{RST}
+        - net:/Expansion connector/SPI1.MISO|net:/Expansion connector/SPI1.SCK
+        - net:/Expansion connector/SPI1.SCK|net:/Peripherals/FAN_TACH
+        - net:/Expansion connector/UART2.CTS|net:/Expansion connector/UART2.RX
+        - net:/Expansion connector/UART2.RTS|net:/Expansion connector/UART2.TX
+        - net:/Expansion connector/UART2.RTS|net:/Expansion connector/UART5.TX
+        - net:/Expansion connector/UART2.RX|net:/Expansion connector/UART5.RX
+        - net:/Expansion connector/UART5.CTS|net:/Expansion connector/UART5.RTS
+        - net:/Expansion connector/UART5.CTS|net:/Expansion connector/UART5.RX
+        - net:/Expansion connector/UART5.RTS|net:/Expansion connector/UART5.TX
+        - net:/I2C_{SYS}.SCL|net:/I2C_{SYS}.SDA
+        - net:/M.2/M2_E.W_DIS_1|net:/M.2/M2_E.W_DIS_2
+        - net:/M.2/PCIe_{C1x1}.CLK+|net:/M.2/PCIe_{C1x1}.CLK-
+        - net:/M.2/PCIe_{C1x1}.RX0+|net:/M.2/PCIe_{C1x1}.RX0-
+        - net:/M.2/PCIe_{C1x1}.TX0+|net:/M.2/PCIe_{C1x1}.TX0-
+        - net:/M.2/PCIe_{C5x4}.CLK+|net:/M.2/PCIe_{C5x4}.CLK-
+        - net:/M.2/PCIe_{C5x4}.~{CLKREQ}|net:/M.2/PCIe_{C5x4}.~{RST}
+        - net:/M.2/PCIe_{C5x4}.~{CLKREQ}|net:/SoM_IO/SFP_LEDY_1V8
+        - net:/M.2/PCIe_{C5x4}.~{RST}|net:/SoM_IO/USBC2_ID_1V8
+        - net:/M.2/USB3.D+|net:/M.2/USB3.D-
+        - net:/Peripherals/FAN_PWM|net:/SoM_Power/~{SYS_RESET}
+        - net:/Peripherals/FAN_TACH|net:/SoM_IO/I2C2_SCL_1V8
+        - net:/Peripherals/I2C_CONN_PEN|net:/SoM_Power/~{SYS_RESET}
+        - net:/Peripherals/I2C_{CONN}.SCL|net:/Peripherals/I2C_{CONN}.SDA
+        - net:/Peripherals/I2C_{CONN}.SDA|net:/SoM_IO/I2C2_SDA_1V8
+        - net:/Recovery USB/USB0.D+|net:/Recovery USB/USB0.D-
+        - net:/Recovery USB/USBC2_CONN_TX2_N|net:/Recovery USB/USBC2_CONN_TX2_P
+        - net:/Recovery USB/USBC2_CONN_TX2_P|net:/Recovery USB/USBC2_RX2_P
+        - net:/Recovery USB/USBC2_PEN|net:/SFP/SFP_LEDG
+        - net:/Recovery USB/USBC2_RX2_N|net:/Recovery USB/USBC2_RX2_P
+        - net:/Recovery USB/USBSS0.RX+|net:/Recovery USB/USBSS0.RX-
+        - net:/Recovery USB/USBSS0.TX+|net:/Recovery USB/USBSS0.TX-
+        - net:/SoM_IO/I2C0_SCL_1V8|net:/SoM_IO/I2C0_SDA_1V8
+        - net:/SoM_IO/I2C2_SCL_1V8|net:/SoM_IO/I2C2_SDA_1V8
+        - net:/SoM_IO/SFP_LEDG_1V8|net:/SoM_IO/~{PDC_I2C1_IRQ}_1V8
+        - net:/SoM_IO/SFP_LEDY_1V8|net:/SoM_IO/USBC2_ID_1V8
+        - net:/SoM_IO/UART1.RX|net:/SoM_IO/UART1.TX
+        - net:/SoM_IO/UART3_DEBUG_RX_1V8|net:/SoM_IO/UART3_DEBUG_TX_1V8
+        - net:/SoM_IO/USBC2_ID_1V8|net:/SoM_IO/USBC2_VBUS_DET_1V8
+        - net:/SoM_IO/USBC2_VBUS_DET_1V8|net:/SoM_IO/~{PDC_I2C1_IRQ}_1V8
+        - net:/SoM_IO/~{USBC2_INT}_1V8|net:GND
+        - net:/SoM_IO2/DP0.AUX_C+|net:/SoM_IO2/DP0.AUX_C-
+        - net:/SoM_IO2/DP0.HPD|net:Net-(J10-Pad42)
+        - net:/SoM_IO2/DP0.TX0_C+|net:/SoM_IO2/DP0.TX0_C-
+        - net:/SoM_IO2/DP0.TX1_C+|net:/SoM_IO2/DP0.TX1_C-
+        - net:/SoM_IO2/DP0.TX1_C-|net:/SoM_IO2/DP0.TX2_C+
+        - net:/SoM_IO2/DP0.TX2_C+|net:/SoM_IO2/DP0.TX2_C-
+        - net:/SoM_IO2/DP0.TX2_C-|net:/SoM_IO2/DP0.TX3_C+
+        - net:/SoM_IO2/DP0.TX3_C+|net:/SoM_IO2/DP0.TX3_C-
+        - net:/SoM_IO2/DP1.AUX_C+|net:/SoM_IO2/DP1.AUX_C-
+        - net:/SoM_IO2/DP1.TX0_C+|net:/SoM_IO2/DP1.TX0_C-
+        - net:/SoM_IO2/DP1.TX0_C+|net:/SoM_IO2/DP1.TX1_C-
+        - net:/SoM_IO2/DP1.TX1_C+|net:/SoM_IO2/DP1.TX1_C-
+        - net:/SoM_IO2/DP1.TX2_C+|net:/SoM_IO2/DP1.TX2_C-
+        - net:/SoM_IO2/DP1.TX3_C+|net:/SoM_IO2/DP1.TX3_C-
+        - net:/SoM_IO2/DP2.TX0_C+|net:/SoM_IO2/DP2.TX0_C-
+        - net:/SoM_IO2/DP2.TX1_C+|net:/SoM_IO2/DP2.TX1_C-
+        - net:/SoM_IO2/DP2.TX1_C+|net:/SoM_IO2/DP2.TX3_C-
+        - net:/SoM_IO2/DP2.TX2_C+|net:/SoM_IO2/DP2.TX2_C-
+        - net:/SoM_IO2/DP2.TX3_C+|net:/SoM_IO2/DP2.TX3_C-
+        - net:/SoM_IO2/DP3.AUX_C+|net:/SoM_IO2/DP3.AUX_C-
+        - net:/SoM_IO2/DP3.TX0_C+|net:/SoM_IO2/DP3.TX0_C-
+        - net:/SoM_IO2/DP3.TX1_C+|net:/SoM_IO2/DP3.TX1_C-
+        - net:/SoM_IO2/DP3.TX1_C-|net:/SoM_IO2/DP3.TX2_C-
+        - net:/SoM_IO2/DP3.TX2_C+|net:/SoM_IO2/DP3.TX2_C-
+        - net:/SoM_IO2/DP3.TX3_C+|net:/SoM_IO2/DP3.TX3_C-
+        - net:/SoM_IO2/PCIe_{C2x1}R_CLK+|net:/SoM_IO2/PCIe_{C2x1}R_CLK-
+        - net:/SoM_IO2/SFI_REFCLK+|net:/SoM_IO2/SFI_REFCLK-
+        - net:/SoM_IO2/TC_VCC|net:GND
+        - net:/SoM_IO2/USB1.D+|net:/SoM_IO2/USB1.D-
+        - net:/SoM_IO2/USB2.D+|net:/SoM_IO2/USB2.D-
+        - net:/SoM_IO2/USBSS1.RX+|net:/SoM_IO2/USBSS1.RX-
+        - net:/SoM_IO2/USBSS1.TX+|net:/SoM_IO2/USBSS1.TX-
+        - net:/SoM_IO2/USBSS2.RX+|net:/SoM_IO2/USBSS2.RX-
+        - net:/SoM_IO2/USBSS2.TX+|net:/SoM_IO2/USBSS2.TX-
+        - net:/SoM_Power/~{MODULE_SHDN}|net:/SoM_Power/~{SOM_POWER_BTN}
+        - net:/USB DP Alt mode/USBC1_CC2|net:/USB Debug, PD/USBC0_5V_PEN
+        - net:/USB DP Alt mode/USBC1_CONN_TX1_N|net:/USB DP Alt mode/USBC1_CONN_TX1_P
+        - net:/USB DP Alt mode/USBC1_CONN_TX2_N|net:/USB DP Alt mode/USBC1_CONN_TX2_P
+        - net:/USB DP Alt mode/USBC1_CTL0|net:/USB DP Alt mode/USBC1_CTL1
+        - net:/USB DP Alt mode/USBC1_CTL1|net:/USB Debug, PD/DEBUG_SCL
+        - net:/USB DP Alt mode/USBC1_RX1_N|net:/USB DP Alt mode/USBC1_RX1_P
+        - net:/USB Debug, PD/PDC_I2C3_SCL|net:/USB Debug, PD/PDC_I2C3_SDA
+        - net:/USB Debug, PD/PDC_MISO|net:/USB Debug, PD/PDC_MOSI
+        - net:/USB Debug, PD/PDC_MOSI|net:/USB Debug, PD/PDC_SCLK
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.SCK|net:/USB Debug, PD/SPI_{HUB_DEBUG}.~{CS0}
+        - net:/USB Hub/CFG_STRAP1|net:/USB Hub/CFG_STRAP2
+        - net:/USB Hub/CFG_STRAP2|net:/USB Hub/CFG_STRAP3
+        - net:/USB Hub/HUB_SPI_CE_N|net:/USB Hub/HUB_SPI_CLK
+        - net:/USB Hub/HUB_SPI_D0|net:/USB Hub/HUB_SPI_D1
+        - net:/USB Hub/TEST3|net:Net-(U21-PF19)
+        - net:/USB Hub/USBC3_CONN_TX1_N|net:/USB Hub/USBC3_CONN_TX1_P
+        - net:/USB Hub/USBC3_D+|net:/USB Hub/USBC3_D-
+        - net:/USB Hub/USBC3_RX_{1}+|net:/USB Hub/USBC3_RX_{1}-
+        - net:/USB Hub/USBC4_CONN_TX1_N|net:/USB Hub/USBC4_CONN_TX1_P
+        - net:/USB Hub/USBC4_D+|net:/USB Hub/USBC4_D-
+        - net:/USB Hub/USBC4_RX_{1}+|net:/USB Hub/USBC4_RX_{1}-
+        - net:Net-(Q5-G)|net:VCC
+        - net:Net-(U21-USB2DN_DP3)|net:Net-(U21-USB3DN_RXDP3)
+  decoupling-present:
+    - class: false-positive
+      why: An exposed thermal pad left unconnected, which its datasheet allows; the symbol types the pad power_in, so it reads as a rail.
+      ticket: 935
+      subjects:
+        - net:unconnected-(U29-PadEP)
+        - net:unconnected-(U43-Pad25)
+        - net:unconnected-(U71-Pad17)
+    - class: false-positive
+      why: VBUS_MON_UP is the USB hub's VBUS-sense input behind a divider, not a rail.
+      ticket: 935
+      subjects:
+        - net:/USB Hub/VBUS_MON_UP
+    - class: design-choice
+      why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
+      subjects:
+        - net:N$54
+  esd-protection:
+    - class: design-choice
+      why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, its low-speed control pins (TX_FAULT, TX_DISABLE, rate select) go through 1 kOhm or 0 Ohm series parts, and SH is the cage shield returned to ground through an RC network; the module protects its own end.
+      subjects:
+        - net:/SFP/SFI_CONN_RX_N
+        - net:/SFP/SFI_CONN_RX_P
+        - net:/SFP/SFI_CONN_TX_N
+        - net:/SFP/SFI_CONN_TX_P
+        - net:/SFP/SH
+        - net:N$131
+        - net:N$133
+        - net:N$135
+        - net:N$136
+        - net:N$137
+    - class: false-positive
+      why: Each of these lines has a pin of one of the board's TPD4E05U06 arrays or PESD5Z5.0F/ESDA25P35 TVS diodes on it, which classify as ic and diode, so the rule sees no TVS.
+      ticket: 934
+      subjects:
+        - net:/Recovery USB/USBC2_CC1
+        - net:/Recovery USB/USBC2_CC2
+        - net:/Recovery USB/USBC2_CONN_TX1_N
+        - net:/Recovery USB/USBC2_CONN_TX1_P
+        - net:/Recovery USB/USBC2_CONN_TX2_N
+        - net:/Recovery USB/USBC2_CONN_TX2_P
+        - net:/Recovery USB/USBC2_RX1_N
+        - net:/Recovery USB/USBC2_RX1_P
+        - net:/Recovery USB/USBC2_RX2_N
+        - net:/Recovery USB/USBC2_RX2_P
+        - net:/SFP/SCL_SFP
+        - net:/SFP/SDA_SFP
+        - net:/SFP/SFP_MOD_ABS
+        - net:/USB DP Alt mode/USBC1_CC1
+        - net:/USB DP Alt mode/USBC1_CC2
+        - net:/USB DP Alt mode/USBC1_CONN_TX1_N
+        - net:/USB DP Alt mode/USBC1_CONN_TX1_P
+        - net:/USB DP Alt mode/USBC1_CONN_TX2_N
+        - net:/USB DP Alt mode/USBC1_CONN_TX2_P
+        - net:/USB DP Alt mode/USBC1_RX1_N
+        - net:/USB DP Alt mode/USBC1_RX1_P
+        - net:/USB DP Alt mode/USBC1_RX2_N
+        - net:/USB DP Alt mode/USBC1_RX2_P
+        - net:/USB DP Alt mode/USBC1_SBU_N
+        - net:/USB DP Alt mode/USBC1_SBU_P
+        - net:/USB Debug, PD/USBC0_CC1
+        - net:/USB Debug, PD/USBC0_CC2
+        - net:/USB Debug, PD/USBC0_D_N
+        - net:/USB Debug, PD/USBC0_D_P
+        - net:/USB Hub/USBC3_CC_{1}
+        - net:/USB Hub/USBC3_CC_{2}
+        - net:/USB Hub/USBC3_CONN_TX1_N
+        - net:/USB Hub/USBC3_CONN_TX1_P
+        - net:/USB Hub/USBC3_CONN_TX2_N
+        - net:/USB Hub/USBC3_CONN_TX2_P
+        - net:/USB Hub/USBC3_D+
+        - net:/USB Hub/USBC3_D-
+        - net:/USB Hub/USBC3_RX_{1}+
+        - net:/USB Hub/USBC3_RX_{1}-
+        - net:/USB Hub/USBC3_RX_{2}+
+        - net:/USB Hub/USBC3_RX_{2}-
+        - net:/USB Hub/USBC4_CC_{1}
+        - net:/USB Hub/USBC4_CC_{2}
+        - net:/USB Hub/USBC4_CONN_TX1_N
+        - net:/USB Hub/USBC4_CONN_TX1_P
+        - net:/USB Hub/USBC4_CONN_TX2_N
+        - net:/USB Hub/USBC4_CONN_TX2_P
+        - net:/USB Hub/USBC4_D+
+        - net:/USB Hub/USBC4_D-
+        - net:/USB Hub/USBC4_RX_{1}+
+        - net:/USB Hub/USBC4_RX_{1}-
+        - net:/USB Hub/USBC4_RX_{2}+
+        - net:/USB Hub/USBC4_RX_{2}-
+        - net:I2C_{CONN}.SCL
+        - net:I2C_{CONN}.SDA
+        - net:USB0.D+
+        - net:USB0.D-
+        - net:USB1.D+
+        - net:USB1.D-
+  hole-size:
+    - class: false-positive
+      why: Every flagged via is drilled at 0.1 mm, the minimum the board declares; agni checks a fixed 0.2 mm floor instead.
+      ticket: 933
+      subjects:
+        - net:+12V
+        - net:+1V15
+        - net:+1V8
+        - net:+20V
+        - net:+3V3
+        - net:+3V3_AON
+        - net:+5V
+        - net:+5V_AON
+        - net:+5V_SOM
+        - net:/CSI/CAM0.CSI2_CLK+
+        - net:/CSI/CAM0.CSI2_CLK-
+        - net:/CSI/CAM0.CSI2_D0+
+        - net:/CSI/CAM0.CSI2_D0-
+        - net:/CSI/CAM0.CSI2_D1+
+        - net:/CSI/CAM0.CSI2_D1-
+        - net:/CSI/CAM0.CSI3_D0+
+        - net:/CSI/CAM0.CSI3_D0-
+        - net:/CSI/CAM0.CSI3_D1+
+        - net:/CSI/CAM0.CSI3_D1-
+        - net:/CSI/CAM1.CSI0_CLK+
+        - net:/CSI/CAM1.CSI0_CLK-
+        - net:/CSI/CAM1.CSI0_D0+
+        - net:/CSI/CAM1.CSI0_D0-
+        - net:/CSI/CAM1.CSI0_D1+
+        - net:/CSI/CAM1.CSI0_D1-
+        - net:/CSI/CAM1.CSI1_D0+
+        - net:/CSI/CAM1.CSI1_D0-
+        - net:/CSI/CAM1.CSI1_D1+
+        - net:/CSI/CAM1.CSI1_D1-
+        - net:/CSI/CAM2.CSI4_CLK+
+        - net:/CSI/CAM2.CSI4_CLK-
+        - net:/CSI/CAM2.CSI4_D0+
+        - net:/CSI/CAM2.CSI4_D0-
+        - net:/CSI/CAM2.CSI4_D1+
+        - net:/CSI/CAM2.CSI4_D1-
+        - net:/CSI/CAM2.CSI5_D0+
+        - net:/CSI/CAM2.CSI5_D0-
+        - net:/CSI/CAM2.CSI5_D1+
+        - net:/CSI/CAM2.CSI5_D1-
+        - net:/CSI/CAM3.CSI6_CLK+
+        - net:/CSI/CAM3.CSI6_CLK-
+        - net:/CSI/CAM3.CSI6_D0+
+        - net:/CSI/CAM3.CSI6_D0-
+        - net:/CSI/CAM3.CSI6_D1+
+        - net:/CSI/CAM3.CSI6_D1-
+        - net:/CSI/CAM3.CSI7_D0+
+        - net:/CSI/CAM3.CSI7_D0-
+        - net:/CSI/CAM3.CSI7_D1+
+        - net:/CSI/CAM3.CSI7_D1-
+        - net:/CSI/CAM_CTRL.CSIA_FLG
+        - net:/CSI/CAM_CTRL.CSIA_PEN
+        - net:/CSI/CAM_CTRL.CSIB_FLG
+        - net:/CSI/CAM_CTRL.CSIB_PEN
+        - net:/CSI/CAM_CTRL.VSYNC_CAM0
+        - net:/CSI/CAM_CTRL.VSYNC_CAM1
+        - net:/CSI/CAM_CTRL.VSYNC_CAM2
+        - net:/CSI/CAM_CTRL.VSYNC_CAM3
+        - net:/CSI/CSIA_3V3
+        - net:/CSI/CSIA_5V
+        - net:/CSI/I2C_{CAM}.SCL
+        - net:/CSI/I2C_{CAM}.SDA
+        - net:/CSI/SCL_CAM0
+        - net:/CSI/SCL_CAM1
+        - net:/CSI/SCL_CAM2
+        - net:/CSI/SCL_CAM3
+        - net:/CSI/SDA_CAM0
+        - net:/CSI/SDA_CAM1
+        - net:/CSI/SDA_CAM2
+        - net:/CSI/SDA_CAM3
+        - net:/CSI/VSYNC_CAM0_3V3
+        - net:/CSI/VSYNC_CAM1_3V3
+        - net:/CSI/VSYNC_CAM2_3V3
+        - net:/CSI/VSYNC_CAM3_3V3
+        - net:/DCDC/12V_OUT
+        - net:/DCDC/16V_OUT
+        - net:/DCDC/20V_EN
+        - net:/DCDC/20V_OUT
+        - net:/DCDC/3V3_OUT
+        - net:/DCDC/5V_OUT
+        - net:/DCDC/5V_{AON}_BOOT
+        - net:/DCDC/5V_{AON}_MODE1
+        - net:/DCDC/5V_{AON}_MODE2
+        - net:/DCDC/5V_{AON}_OUT
+        - net:/DCDC/5V_{AON}_PHASE
+        - net:/DCDC/CARRIER_PWR_ON
+        - net:/DCDC/VIN_PWR_ON
+        - net:/DCDC/~{VDDIN_PWR_BAD}
+        - net:/Expansion connector/+3V3_AUX
+        - net:/Expansion connector/+3V3_FMC
+        - net:/Expansion connector/+V_{ADJ}
+        - net:/Expansion connector/ADDR0
+        - net:/Expansion connector/ADDR1
+        - net:/Expansion connector/CAN0.DIN
+        - net:/Expansion connector/CAN0.DOUT
+        - net:/Expansion connector/CAN1.DIN
+        - net:/Expansion connector/CAN1.DOUT
+        - net:/Expansion connector/CAN2.DIN
+        - net:/Expansion connector/CAN2.DOUT
+        - net:/Expansion connector/CAN3.DIN
+        - net:/Expansion connector/CAN3.DOUT
+        - net:/Expansion connector/DP1.HPD
+        - net:/Expansion connector/DP2.AUX+
+        - net:/Expansion connector/DP2.AUX-
+        - net:/Expansion connector/DP2.HPD
+        - net:/Expansion connector/DP2.TX0+
+        - net:/Expansion connector/DP2.TX0-
+        - net:/Expansion connector/DP2.TX1+
+        - net:/Expansion connector/DP2.TX1-
+        - net:/Expansion connector/DP2.TX2+
+        - net:/Expansion connector/DP2.TX2-
+        - net:/Expansion connector/DP2.TX3+
+        - net:/Expansion connector/DP2.TX3-
+        - net:/Expansion connector/DP3.AUX+
+        - net:/Expansion connector/DP3.AUX-
+        - net:/Expansion connector/DP3.HPD
+        - net:/Expansion connector/DP3.TX0+
+        - net:/Expansion connector/DP3.TX0-
+        - net:/Expansion connector/DP3.TX1+
+        - net:/Expansion connector/DP3.TX1-
+        - net:/Expansion connector/DP3.TX2+
+        - net:/Expansion connector/DP3.TX2-
+        - net:/Expansion connector/DP3.TX3+
+        - net:/Expansion connector/DP3.TX3-
+        - net:/Expansion connector/FMC_PG_C2M
+        - net:/Expansion connector/FMC_PG_M2C
+        - net:/Expansion connector/FMC_PRESENT
+        - net:/Expansion connector/FMC_PRSNT_M2C_L
+        - net:/Expansion connector/GPIO.18
+        - net:/Expansion connector/GPIO.20
+        - net:/Expansion connector/GPIO.21
+        - net:/Expansion connector/GPIO.27
+        - net:/Expansion connector/GPIO.MCLK01
+        - net:/Expansion connector/GPIO.MCLK02
+        - net:/Expansion connector/GPIO.MCLK03
+        - net:/Expansion connector/GPIO.USER_BTN0
+        - net:/Expansion connector/GPIO.USER_BTN1
+        - net:/Expansion connector/GPIO.USER_LED0
+        - net:/Expansion connector/GPIO.USER_LED1
+        - net:/Expansion connector/I2C0.SCL
+        - net:/Expansion connector/I2C0.SDA
+        - net:/Expansion connector/I2C7.SCL
+        - net:/Expansion connector/I2C7.SDA
+        - net:/Expansion connector/I2C8.SCL
+        - net:/Expansion connector/I2C8.SDA
+        - net:/Expansion connector/I2S2.CLK
+        - net:/Expansion connector/I2S2.FS
+        - net:/Expansion connector/I2S2.SDIN
+        - net:/Expansion connector/I2S2.SDOUT
+        - net:/Expansion connector/I2S3.CLK
+        - net:/Expansion connector/I2S3.FS
+        - net:/Expansion connector/I2S3.SDIN
+        - net:/Expansion connector/I2S3.SDOUT
+        - net:/Expansion connector/PCIe_{C2x1}.CLK+
+        - net:/Expansion connector/PCIe_{C2x1}.CLK-
+        - net:/Expansion connector/PCIe_{C2x1}.TX0+
+        - net:/Expansion connector/PCIe_{C2x1}.TX0-
+        - net:/Expansion connector/PCIe_{C2x1}.~{CLKREQ}
+        - net:/Expansion connector/PCIe_{C2x1}.~{RST}
+        - net:/Expansion connector/PCIe_{C3x2}.CLK+
+        - net:/Expansion connector/PCIe_{C3x2}.CLK-
+        - net:/Expansion connector/PCIe_{C3x2}.RX0+
+        - net:/Expansion connector/PCIe_{C3x2}.RX0-
+        - net:/Expansion connector/PCIe_{C3x2}.RX1+
+        - net:/Expansion connector/PCIe_{C3x2}.RX1-
+        - net:/Expansion connector/PCIe_{C3x2}.TX0+
+        - net:/Expansion connector/PCIe_{C3x2}.TX0-
+        - net:/Expansion connector/PCIe_{C3x2}.TX1+
+        - net:/Expansion connector/PCIe_{C3x2}.TX1-
+        - net:/Expansion connector/PCIe_{C3x2}.~{CLKREQ}
+        - net:/Expansion connector/PCIe_{C3x2}.~{RST}
+        - net:/Expansion connector/PER0_C2_N
+        - net:/Expansion connector/PER0_C2_P
+        - net:/Expansion connector/SPI1.MISO
+        - net:/Expansion connector/SPI1.MOSI
+        - net:/Expansion connector/SPI1.SCK
+        - net:/Expansion connector/SPI1.~{CS0}
+        - net:/Expansion connector/SPI1.~{CS1}
+        - net:/Expansion connector/SPI2.MISO
+        - net:/Expansion connector/SPI2.MOSI
+        - net:/Expansion connector/SPI2.SCK
+        - net:/Expansion connector/SPI2.~{CS0}
+        - net:/Expansion connector/SPI3.MISO
+        - net:/Expansion connector/SPI3.MOSI
+        - net:/Expansion connector/SPI3.SCK
+        - net:/Expansion connector/SPI3.~{CS0}
+        - net:/Expansion connector/SPI3.~{CS1}
+        - net:/Expansion connector/UART2.CTS
+        - net:/Expansion connector/UART2.RTS
+        - net:/Expansion connector/UART2.RX
+        - net:/Expansion connector/UART2.TX
+        - net:/Expansion connector/UART5.CTS
+        - net:/Expansion connector/UART5.RTS
+        - net:/Expansion connector/UART5.RX
+        - net:/Expansion connector/UART5.TX
+        - net:/I2C_{SYS}.SCL
+        - net:/I2C_{SYS}.SDA
+        - net:/M.2/M2_E.W_DIS_1
+        - net:/M.2/M2_E.W_DIS_2
+        - net:/M.2/M2_E_PET0_N
+        - net:/M.2/M2_E_PET0_P
+        - net:/M.2/PCIe_{C1x1}.CLK+
+        - net:/M.2/PCIe_{C1x1}.CLK-
+        - net:/M.2/PCIe_{C1x1}.RX0+
+        - net:/M.2/PCIe_{C1x1}.RX0-
+        - net:/M.2/PCIe_{C1x1}.TX0+
+        - net:/M.2/PCIe_{C1x1}.TX0-
+        - net:/M.2/PCIe_{C1x1}.~{CLKREQ}
+        - net:/M.2/PCIe_{C1x1}.~{RST}
+        - net:/M.2/PCIe_{C5x4}.CLK+
+        - net:/M.2/PCIe_{C5x4}.CLK-
+        - net:/M.2/PCIe_{C5x4}.RX0+
+        - net:/M.2/PCIe_{C5x4}.RX0-
+        - net:/M.2/PCIe_{C5x4}.RX1+
+        - net:/M.2/PCIe_{C5x4}.RX1-
+        - net:/M.2/PCIe_{C5x4}.RX2+
+        - net:/M.2/PCIe_{C5x4}.RX2-
+        - net:/M.2/PCIe_{C5x4}.RX3+
+        - net:/M.2/PCIe_{C5x4}.RX3-
+        - net:/M.2/PCIe_{C5x4}.TX0+
+        - net:/M.2/PCIe_{C5x4}.TX0-
+        - net:/M.2/PCIe_{C5x4}.TX1+
+        - net:/M.2/PCIe_{C5x4}.TX1-
+        - net:/M.2/PCIe_{C5x4}.TX2+
+        - net:/M.2/PCIe_{C5x4}.TX2-
+        - net:/M.2/PCIe_{C5x4}.TX3+
+        - net:/M.2/PCIe_{C5x4}.TX3-
+        - net:/M.2/PCIe_{C5x4}.~{CLKREQ}
+        - net:/M.2/PCIe_{C5x4}.~{RST}
+        - net:/M.2/SUSCLK
+        - net:/M.2/USB3.D+
+        - net:/M.2/USB3.D-
+        - net:/M.2/~{PEWAKE}
+        - net:/Peripherals/FAN_PWM
+        - net:/Peripherals/FAN_TACH
+        - net:/Peripherals/GPIO_EXP_IRQ
+        - net:/Peripherals/I2C_CONN_PEN
+        - net:/Peripherals/I2C_{CONN}.SCL
+        - net:/Peripherals/I2C_{CONN}.SDA
+        - net:/Peripherals/TPM_IRQ
+        - net:/Peripherals/TPM_RST
+        - net:/Power/USBPD1_HV
+        - net:/Power/USBPD2_HV
+        - net:/Recovery USB/USB0.D+
+        - net:/Recovery USB/USB0.D-
+        - net:/Recovery USB/USBC2_ADDR
+        - net:/Recovery USB/USBC2_CC1
+        - net:/Recovery USB/USBC2_CC2
+        - net:/Recovery USB/USBC2_CONN_TX2_N
+        - net:/Recovery USB/USBC2_CONN_TX2_P
+        - net:/Recovery USB/USBC2_FAULT_N
+        - net:/Recovery USB/USBC2_I2C_SCL
+        - net:/Recovery USB/USBC2_I2C_SDA
+        - net:/Recovery USB/USBC2_ID
+        - net:/Recovery USB/USBC2_I_MODE
+        - net:/Recovery USB/USBC2_PEN
+        - net:/Recovery USB/USBC2_PORT
+        - net:/Recovery USB/USBC2_RX2_N
+        - net:/Recovery USB/USBC2_RX2_P
+        - net:/Recovery USB/USBC2_VBUS
+        - net:/Recovery USB/USBC2_VBUS_DET
+        - net:/Recovery USB/USBC2_VBUS_DET_MUX
+        - net:/Recovery USB/USBSS0.RX+
+        - net:/Recovery USB/USBSS0.RX-
+        - net:/Recovery USB/USBSS0.TX+
+        - net:/Recovery USB/USBSS0.TX-
+        - net:/Recovery USB/~{USBC2_INT_R}
+        - net:/Recovery USB/~{USBC2_INT}
+        - net:/SFP/I2C_{SFP}.SCL
+        - net:/SFP/I2C_{SFP}.SDA
+        - net:/SFP/MOD_ABS
+        - net:/SFP/SCL_SFP
+        - net:/SFP/SDA_SFP
+        - net:/SFP/SFI.RX+
+        - net:/SFP/SFI.RX-
+        - net:/SFP/SFI.TX+
+        - net:/SFP/SFI.TX-
+        - net:/SFP/SFP_LEDG
+        - net:/SFP/SFP_LEDY
+        - net:/SFP/SFP_MOD_ABS
+        - net:/SFP/SH
+        - net:/SoM_IO/GPIO_EXP_IRQ_1V8
+        - net:/SoM_IO/I2C0_SCL_1V8
+        - net:/SoM_IO/I2C0_SDA_1V8
+        - net:/SoM_IO/I2C1_SCL_1V8
+        - net:/SoM_IO/I2C1_SDA_1V8
+        - net:/SoM_IO/I2C2_SCL_1V8
+        - net:/SoM_IO/I2C2_SDA_1V8
+        - net:/SoM_IO/I2C3_SCL_1V8
+        - net:/SoM_IO/I2C3_SDA_1V8
+        - net:/SoM_IO/I2C5_SCL_1V8
+        - net:/SoM_IO/I2C5_SDA_1V8
+        - net:/SoM_IO/I2S_{M.2}.CLK
+        - net:/SoM_IO/I2S_{M.2}.FS
+        - net:/SoM_IO/I2S_{M.2}.SDIN
+        - net:/SoM_IO/I2S_{M.2}.SDOUT
+        - net:/SoM_IO/M2_E_W_DIS_2_1V8
+        - net:/SoM_IO/SFP_LEDG_1V8
+        - net:/SoM_IO/SFP_LEDY_1V8
+        - net:/SoM_IO/UART1.CTS
+        - net:/SoM_IO/UART1.RTS
+        - net:/SoM_IO/UART1.RX
+        - net:/SoM_IO/UART1.TX
+        - net:/SoM_IO/UART3_DEBUG.RX
+        - net:/SoM_IO/UART3_DEBUG.TX
+        - net:/SoM_IO/UART3_DEBUG_RX_1V8
+        - net:/SoM_IO/UART3_DEBUG_TX_1V8
+        - net:/SoM_IO/USBC1_FLG
+        - net:/SoM_IO/USBC1_FLG_1V8
+        - net:/SoM_IO/USBC2_ID_1V8
+        - net:/SoM_IO/USBC2_PEN_1V8
+        - net:/SoM_IO/USBC2_VBUS_DET_1V8
+        - net:/SoM_IO/~{PDC_I2C1_IRQ}
+        - net:/SoM_IO/~{PDC_I2C1_IRQ}_1V8
+        - net:/SoM_IO2/DP0.AUX+
+        - net:/SoM_IO2/DP0.AUX-
+        - net:/SoM_IO2/DP0.AUX_C+
+        - net:/SoM_IO2/DP0.AUX_C-
+        - net:/SoM_IO2/DP0.HPD
+        - net:/SoM_IO2/DP0.TX0_C+
+        - net:/SoM_IO2/DP0.TX0_C-
+        - net:/SoM_IO2/DP0.TX1_C+
+        - net:/SoM_IO2/DP0.TX1_C-
+        - net:/SoM_IO2/DP0.TX2_C+
+        - net:/SoM_IO2/DP0.TX2_C-
+        - net:/SoM_IO2/DP0.TX3_C+
+        - net:/SoM_IO2/DP0.TX3_C-
+        - net:/SoM_IO2/DP1.AUX_C+
+        - net:/SoM_IO2/DP1.AUX_C-
+        - net:/SoM_IO2/DP1.TX0_C+
+        - net:/SoM_IO2/DP1.TX0_C-
+        - net:/SoM_IO2/DP1.TX1_C+
+        - net:/SoM_IO2/DP1.TX1_C-
+        - net:/SoM_IO2/DP1.TX2_C+
+        - net:/SoM_IO2/DP1.TX2_C-
+        - net:/SoM_IO2/DP1.TX3_C+
+        - net:/SoM_IO2/DP1.TX3_C-
+        - net:/SoM_IO2/DP2.TX0_C+
+        - net:/SoM_IO2/DP2.TX0_C-
+        - net:/SoM_IO2/DP2.TX1_C+
+        - net:/SoM_IO2/DP2.TX1_C-
+        - net:/SoM_IO2/DP2.TX2_C+
+        - net:/SoM_IO2/DP2.TX2_C-
+        - net:/SoM_IO2/DP2.TX3_C+
+        - net:/SoM_IO2/DP2.TX3_C-
+        - net:/SoM_IO2/DP3.AUX_C+
+        - net:/SoM_IO2/DP3.AUX_C-
+        - net:/SoM_IO2/DP3.TX0_C+
+        - net:/SoM_IO2/DP3.TX0_C-
+        - net:/SoM_IO2/DP3.TX1_C+
+        - net:/SoM_IO2/DP3.TX1_C-
+        - net:/SoM_IO2/DP3.TX2_C+
+        - net:/SoM_IO2/DP3.TX2_C-
+        - net:/SoM_IO2/DP3.TX3_C+
+        - net:/SoM_IO2/DP3.TX3_C-
+        - net:/SoM_IO2/JTAG_TCK
+        - net:/SoM_IO2/JTAG_TDI
+        - net:/SoM_IO2/JTAG_TDO
+        - net:/SoM_IO2/JTAG_TMS
+        - net:/SoM_IO2/JTAG_TRST_N
+        - net:/SoM_IO2/NVDBG_SEL
+        - net:/SoM_IO2/NVJTAG_SEL
+        - net:/SoM_IO2/PCIe_{C2x1}R_CLK+
+        - net:/SoM_IO2/PCIe_{C2x1}R_CLK-
+        - net:/SoM_IO2/SFI_REFCLK+
+        - net:/SoM_IO2/SFI_REFCLK-
+        - net:/SoM_IO2/TC_JTAG_TRST_N
+        - net:/SoM_IO2/TC_VCC
+        - net:/SoM_IO2/USB1.D+
+        - net:/SoM_IO2/USB1.D-
+        - net:/SoM_IO2/USB2.D+
+        - net:/SoM_IO2/USB2.D-
+        - net:/SoM_IO2/USBSS1.RX+
+        - net:/SoM_IO2/USBSS1.RX-
+        - net:/SoM_IO2/USBSS1.TX+
+        - net:/SoM_IO2/USBSS1.TX-
+        - net:/SoM_IO2/USBSS2.RX+
+        - net:/SoM_IO2/USBSS2.RX-
+        - net:/SoM_IO2/USBSS2.TX+
+        - net:/SoM_IO2/USBSS2.TX-
+        - net:/SoM_Power/MODULE_POWER_ON
+        - net:/SoM_Power/~{FORCE_RECOVERY}
+        - net:/SoM_Power/~{MODULE_SHDN}
+        - net:/SoM_Power/~{MOD_SLEEP}
+        - net:/SoM_Power/~{SLEEP_REQ}
+        - net:/SoM_Power/~{SOM_POWER_BTN}
+        - net:/SoM_Power/~{SOM_PRSNT}
+        - net:/SoM_Power/~{SYS_RESET}
+        - net:/USB DP Alt mode/HPDIN
+        - net:/USB DP Alt mode/USBC1_5V_PEN
+        - net:/USB DP Alt mode/USBC1_CC1
+        - net:/USB DP Alt mode/USBC1_CC2
+        - net:/USB DP Alt mode/USBC1_CONN_TX1_N
+        - net:/USB DP Alt mode/USBC1_CONN_TX1_P
+        - net:/USB DP Alt mode/USBC1_CONN_TX2_N
+        - net:/USB DP Alt mode/USBC1_CONN_TX2_P
+        - net:/USB DP Alt mode/USBC1_CTL0
+        - net:/USB DP Alt mode/USBC1_CTL1
+        - net:/USB DP Alt mode/USBC1_DPEQ0
+        - net:/USB DP Alt mode/USBC1_DPEQ1
+        - net:/USB DP Alt mode/USBC1_EQ0
+        - net:/USB DP Alt mode/USBC1_EQ1
+        - net:/USB DP Alt mode/USBC1_FLIP
+        - net:/USB DP Alt mode/USBC1_I2C_EN
+        - net:/USB DP Alt mode/USBC1_RX1_N
+        - net:/USB DP Alt mode/USBC1_RX1_P
+        - net:/USB DP Alt mode/USBC1_SBU_N
+        - net:/USB DP Alt mode/USBC1_SBU_P
+        - net:/USB DP Alt mode/USBC1_SSEQ0
+        - net:/USB DP Alt mode/USBC1_SSEQ1
+        - net:/USB DP Alt mode/USBC1_VBUS
+        - net:/USB DP Alt mode/USBC_HPD
+        - net:/USB Debug, PD/DEBUG_SCL
+        - net:/USB Debug, PD/DEBUG_SDA
+        - net:/USB Debug, PD/FTDI_3V3
+        - net:/USB Debug, PD/FTDI_CBUS0{slash}SDA
+        - net:/USB Debug, PD/FTDI_CBUS3{slash}SCL
+        - net:/USB Debug, PD/FTDI_CBUS_EN
+        - net:/USB Debug, PD/FTDI_LED_RX
+        - net:/USB Debug, PD/FTDI_LED_TX
+        - net:/USB Debug, PD/MISO
+        - net:/USB Debug, PD/MOSI
+        - net:/USB Debug, PD/PDC_ADCIN1
+        - net:/USB Debug, PD/PDC_ADCIN2
+        - net:/USB Debug, PD/PDC_HPD2
+        - net:/USB Debug, PD/PDC_I2C1_IRQn
+        - net:/USB Debug, PD/PDC_I2C2_IRQn
+        - net:/USB Debug, PD/PDC_I2C2_SCL
+        - net:/USB Debug, PD/PDC_I2C2_SDA
+        - net:/USB Debug, PD/PDC_LDO_3V3
+        - net:/USB Debug, PD/PDC_MISO
+        - net:/USB Debug, PD/PDC_MOSI
+        - net:/USB Debug, PD/PDC_SCLK
+        - net:/USB Debug, PD/SCK
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.MISO
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.MOSI
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.SCK
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.~{CS0}
+        - net:/USB Debug, PD/USBC0_5V_PEN
+        - net:/USB Debug, PD/USBC0_CC1
+        - net:/USB Debug, PD/USBC0_CC2
+        - net:/USB Debug, PD/USBC0_D_N
+        - net:/USB Debug, PD/USBC0_D_P
+        - net:/USB Debug, PD/USBC0_VBUS
+        - net:/USB Debug, PD/~{CS}
+        - net:/USB Debug, PD/~{PDC_CS}
+        - net:/USB Hub/DP1_DISCH
+        - net:/USB Hub/DP1_VCONN1
+        - net:/USB Hub/DP1_VCONN2
+        - net:/USB Hub/DP2_DISCH
+        - net:/USB Hub/DP2_VCONN1
+        - net:/USB Hub/DP2_VCONN2
+        - net:/USB Hub/HUB_SPI_CE_N
+        - net:/USB Hub/HUB_SPI_CLK
+        - net:/USB Hub/HUB_SPI_D0
+        - net:/USB Hub/HUB_SPI_D1
+        - net:/USB Hub/HUB_SPI_D2
+        - net:/USB Hub/HUB_SPI_D3
+        - net:/USB Hub/HUB_~{WP}
+        - net:/USB Hub/PRT_CTL1
+        - net:/USB Hub/PRT_CTL2
+        - net:/USB Hub/PRT_CTL3
+        - net:/USB Hub/PRT_CTL4
+        - net:/USB Hub/USBC3_CC_{1}
+        - net:/USB Hub/USBC3_CC_{2}
+        - net:/USB Hub/USBC3_CONN_TX1_N
+        - net:/USB Hub/USBC3_CONN_TX1_P
+        - net:/USB Hub/USBC3_D+
+        - net:/USB Hub/USBC3_D-
+        - net:/USB Hub/USBC3_RX_{1}+
+        - net:/USB Hub/USBC3_RX_{1}-
+        - net:/USB Hub/USBC3_VBUS
+        - net:/USB Hub/USBC3_VBUS_MON
+        - net:/USB Hub/USBC4_CC_{1}
+        - net:/USB Hub/USBC4_CC_{2}
+        - net:/USB Hub/USBC4_CONN_TX1_N
+        - net:/USB Hub/USBC4_CONN_TX1_P
+        - net:/USB Hub/USBC4_D+
+        - net:/USB Hub/USBC4_D-
+        - net:/USB Hub/USBC4_RX_{1}+
+        - net:/USB Hub/USBC4_RX_{1}-
+        - net:/USB Hub/USBC4_VBUS
+        - net:FLASH_PWR
+        - net:GND
+        - net:Net-(D1-C)
+        - net:Net-(D10-A)
+        - net:Net-(D12-A)
+        - net:Net-(D3-A)
+        - net:Net-(D31-A)
+        - net:Net-(D35-C)
+        - net:Net-(D36-C)
+        - net:Net-(D4-A)
+        - net:Net-(D40-A)
+        - net:Net-(D40-C)
+        - net:Net-(D42-A)
+        - net:Net-(D43-A)
+        - net:Net-(D43-C)
+        - net:Net-(D54-A)
+        - net:Net-(D6-A)
+        - net:Net-(D61-A)
+        - net:Net-(D63-A)
+        - net:Net-(J10-Pad39)
+        - net:Net-(J10-Pad40)
+        - net:Net-(J10-Pad41)
+        - net:Net-(J10-Pad42)
+        - net:Net-(J11-Pad39)
+        - net:Net-(J11-Pad40)
+        - net:Net-(J11-Pad41)
+        - net:Net-(J11-Pad42)
+        - net:Net-(J12-RS0)
+        - net:Net-(J12-RS1)
+        - net:Net-(J12-RX_{LOS})
+        - net:Net-(J12-TX_{DISABLE})
+        - net:Net-(J12-TX_{FAULT})
+        - net:Net-(J18-PadB01)
+        - net:Net-(J18-PadB40)
+        - net:Net-(J18-PadH02)
+        - net:Net-(J18-PadJ39)
+        - net:Net-(J18-PadK40)
+        - net:Net-(J1A-FSI_GPIO03)
+        - net:Net-(J1A-GPIO30)
+        - net:Net-(J1A-GPIO31)
+        - net:Net-(J1A-GPIO39)
+        - net:Net-(J1A-GPIO56)
+        - net:Net-(J1A-MODULE_POWER_GOOD)
+        - net:Net-(J1A-MV_LSW_MON)
+        - net:Net-(J1A-PERIPHERAL_RESET_N)
+        - net:Net-(J1A-POWER_INT_N)
+        - net:Net-(J1A-SYSTEM_OC_N)
+        - net:Net-(J1A-THERM_ALERT_N)
+        - net:Net-(J1A-THERM_SHDN_REQ_N)
+        - net:Net-(J1A-UFS0_REF_CLK)
+        - net:Net-(J1A-UFS0_RST_N)
+        - net:Net-(J1A-VCOMP_ALERT_N)
+        - net:Net-(J1A-VM_INT_N)
+        - net:Net-(J1A-VM_SLEEP_N)
+        - net:Net-(Q19-D)
+        - net:Net-(Q2-G)
+        - net:Net-(Q22-D)
+        - net:Net-(Q28-G)
+        - net:Net-(U21-USB2DN_DM3)
+        - net:Net-(U21-USB2DN_DM4)
+        - net:Net-(U21-USB2DN_DP3)
+        - net:Net-(U21-USB2DN_DP4)
+        - net:Net-(U21-USB3DN_RXDM3)
+        - net:Net-(U21-USB3DN_RXDP3)
+        - net:Net-(U23-FLG)
+        - net:Net-(U30A-HPD1)
+        - net:Net-(U33-CAD_SNK{slash}RSVD1)
+        - net:Net-(U34-RXD)
+        - net:Net-(U34-TXD)
+        - net:SYS_VIN_HV
+        - net:VCC
+        - net:VCC_IN
+  i2c-pull-up:
+    - class: needs-intent
+      why: These lines pass through an NTS0102 level translator, which carries its own 10 kOhm pull-ups on both sides; that is a datasheet fact this run has no parameter set for.
+      subjects:
+        - net:/USB Debug, PD/FTDI_CBUS0/SDA
+        - net:/USB Debug, PD/FTDI_CBUS3/SCL
+    - class: design-choice
+      why: The TPS65988's third I2C port is unused and brought to a test point only.
+      subjects:
+        - net:/USB Debug, PD/PDC_I2C3_SCL
+        - net:/USB Debug, PD/PDC_I2C3_SDA
+    - class: design-choice
+      why: The mux's downstream camera channels are pulled up on the camera modules at the far end of the FFCs.
+      subjects:
+        - net:/CSI/MUX_I2C_4_SCL
+        - net:/CSI/MUX_I2C_4_SDA
+        - net:/CSI/MUX_I2C_5_SCL
+        - net:/CSI/MUX_I2C_5_SDA
+        - net:/CSI/MUX_I2C_6_SCL
+        - net:/CSI/MUX_I2C_6_SDA
+        - net:/CSI/MUX_I2C_7_SCL
+        - net:/CSI/MUX_I2C_7_SDA
+    - class: design-choice
+      why: These buses come straight from the module connector (the camera bus through the 0 Ohm R163 into the mux), and the carrier relies on pull-ups inside the module. Not checked against the module's pinout, so this rests on the carrier having no footprint for them.
+      subjects:
+        - net:/CSI/I2C_MUX_SCL
+        - net:/CSI/I2C_MUX_SDA
+        - net:/SoM_IO/I2C1_SCL_1V8
+        - net:/SoM_IO/I2C1_SDA_1V8
+        - net:I2C7.SCL
+        - net:I2C7.SDA
+        - net:I2C8.SCL
+        - net:I2C8.SDA
+        - net:I2C_{CAM}.SCL
+        - net:I2C_{CAM}.SDA
+  i2c-pull-up-split-rail:
+    - class: false-positive
+      why: The second pull-up on each line (R161, R170) is marked do-not-populate, an assembly option between 1.8 V and 3.3 V cameras; only one is fitted.
+      ticket: 938
+      subjects:
+        - net:/CSI/SCL_CAM0
+        - net:/CSI/SCL_CAM1
+        - net:/CSI/SCL_CAM2
+        - net:/CSI/SCL_CAM3
+        - net:/CSI/SDA_CAM0
+        - net:/CSI/SDA_CAM1
+        - net:/CSI/SDA_CAM2
+        - net:/CSI/SDA_CAM3
+  i2c-redundant-pull-up:
+    - class: design-choice
+      why: Three sheets each bring their own pull-up onto the shared system I2C bus (4.7 k, 2.2 k and 200 k), about 1.5 kOhm together, which keeps the sink current near 2.2 mA at 3.3 V, inside the bus's 3 mA limit.
+      subjects:
+        - net:/Recovery USB/USBC2_I2C_SCL
+        - net:/Recovery USB/USBC2_I2C_SDA
+        - net:/USB Debug, PD/DEBUG_SCL
+        - net:/USB Debug, PD/DEBUG_SDA
+        - net:I2C_{SYS}.SCL
+        - net:I2C_{SYS}.SDA
+  input-protection:
+    - class: false-positive
+      why: 'These USB-C ports are sources: an AP22615 load switch drives VBUS out to the cable, and the power input the rule reaches is the connector''s own VBUS pin, which its symbol types power_in. A PESD5Z5.0F or ESDA25P35 clamp sits on each.'
+      ticket: 935
+      subjects:
+        - net:/Recovery USB/USBC2_VBUS
+        - net:/USB DP Alt mode/USBC1_VBUS
+        - net:/USB Debug, PD/USBC0_VBUS
+        - net:/USB Hub/USBC3_VBUS
+        - net:/USB Hub/USBC4_VBUS
+  power-input-not-driven:
+    - class: false-positive
+      why: An exposed thermal pad left unconnected, which its datasheet allows; the symbol types the pad power_in.
+      ticket: 935
+      subjects:
+        - net:unconnected-(U29-PadEP)
+        - net:unconnected-(U43-Pad25)
+        - net:unconnected-(U71-Pad17)
+    - class: false-positive
+      why: VBUS_MON_UP is the USB hub's VBUS-sense input, driven through a divider from VBUS, which the symbol types power_in.
+      ticket: 935
+      subjects:
+        - net:/USB Hub/VBUS_MON_UP
+  rail-not-classified:
+    - class: needs-intent
+      why: FTDI_3V3 is the FT230X's 3.3 V regulator output, a real rail whose name the built-in vocabulary does not match; a project would declare it in its conventions lexicon.
+      subjects:
+        - net:/USB Debug, PD/FTDI_3V3
+  reverse-blocking-absent:
+    - class: false-positive
+      why: These USB-C ports are sources driven by an AP22615 load switch, and the power input the rule reaches is the connector's own VBUS pin, so there is no inbound path to block.
+      ticket: 935
+      subjects:
+        - net:/Recovery USB/USBC2_VBUS
+        - net:/USB DP Alt mode/USBC1_VBUS
+        - net:/USB Debug, PD/USBC0_VBUS
+        - net:/USB Hub/USBC3_VBUS
+        - net:/USB Hub/USBC4_VBUS
+  single-pin-net:
+    - class: defect
+      why: Two unused FMC pins (J18 B24, B25) lack the no-connect flag every other unused pin on the connector carries; KiCad's own netlist also leaves them unconnected. Harmless electrically.
+      subjects:
+        - net:N$202
+        - net:N$203
+  test-point-coverage:
+    - class: false-positive
+      why: VBUS_MON_UP is the USB hub's VBUS-sense input behind a divider, not a rail; it reads as one because the symbol types the pin power_in.
+      ticket: 935
+      subjects:
+        - net:/USB Hub/VBUS_MON_UP
+    - class: design-choice
+      why: The board puts test points on its main rails, not on each converter's internal supply and output nodes, the FMC rails or the debug bridge's 3.3 V.
+      subjects:
+        - net:/DCDC/12V_OUT
+        - net:/DCDC/12V_VDD
+        - net:/DCDC/16V_OUT
+        - net:/DCDC/16V_VDD
+        - net:/DCDC/1V15_OUT
+        - net:/DCDC/1V8_OUT
+        - net:/DCDC/20V_OUT
+        - net:/DCDC/20V_VDD
+        - net:/DCDC/3V3_OUT
+        - net:/DCDC/3V3_VDD
+        - net:/DCDC/5V_OUT
+        - net:/DCDC/5V_VDD
+        - net:/DCDC/5V_{AON}_OUT
+        - net:/DCDC/5V_{AON}_VDD
+        - net:/Expansion connector/+12V_FMC
+        - net:/Expansion connector/+3V3_AUX
+        - net:/Expansion connector/+3V3_FMC
+        - net:/Expansion connector/+5V_FMC
+        - net:/Expansion connector/+VCC_FMC
+        - net:/Expansion connector/+V_{ADJ}
+        - net:/M.2/3V3_M2
+        - net:/Power/3V3_LDO
+        - net:/Power/VIN_PWR_ON
+        - net:/SoM_IO2/TC_VCC
+        - net:/USB Debug, PD/FTDI_3V3
+  track-width:
+    - class: false-positive
+      why: Every flagged track is 0.1 or 0.125 mm, above the 0.0969 mm minimum the board declares in its .kicad_pro; agni checks a fixed 0.127 mm floor instead.
+      ticket: 933
+      subjects:
+        - net:+12V
+        - net:+1V15
+        - net:+1V8
+        - net:+20V
+        - net:+3V3
+        - net:+3V3_AON
+        - net:+5V
+        - net:+5V_AON
+        - net:+5V_SOM
+        - net:/CSI/CAM0.CSI2_CLK+
+        - net:/CSI/CAM0.CSI2_CLK-
+        - net:/CSI/CAM0.CSI2_D0+
+        - net:/CSI/CAM0.CSI2_D0-
+        - net:/CSI/CAM0.CSI2_D1+
+        - net:/CSI/CAM0.CSI2_D1-
+        - net:/CSI/CAM0.CSI3_D0+
+        - net:/CSI/CAM0.CSI3_D0-
+        - net:/CSI/CAM0.CSI3_D1+
+        - net:/CSI/CAM0.CSI3_D1-
+        - net:/CSI/CAM1.CSI0_CLK+
+        - net:/CSI/CAM1.CSI0_CLK-
+        - net:/CSI/CAM1.CSI0_D0+
+        - net:/CSI/CAM1.CSI0_D0-
+        - net:/CSI/CAM1.CSI0_D1+
+        - net:/CSI/CAM1.CSI0_D1-
+        - net:/CSI/CAM1.CSI1_D0+
+        - net:/CSI/CAM1.CSI1_D0-
+        - net:/CSI/CAM1.CSI1_D1+
+        - net:/CSI/CAM1.CSI1_D1-
+        - net:/CSI/CAM2.CSI4_CLK+
+        - net:/CSI/CAM2.CSI4_CLK-
+        - net:/CSI/CAM2.CSI4_D0+
+        - net:/CSI/CAM2.CSI4_D0-
+        - net:/CSI/CAM2.CSI4_D1+
+        - net:/CSI/CAM2.CSI4_D1-
+        - net:/CSI/CAM2.CSI5_D0+
+        - net:/CSI/CAM2.CSI5_D0-
+        - net:/CSI/CAM2.CSI5_D1+
+        - net:/CSI/CAM2.CSI5_D1-
+        - net:/CSI/CAM3.CSI6_CLK+
+        - net:/CSI/CAM3.CSI6_CLK-
+        - net:/CSI/CAM3.CSI6_D0+
+        - net:/CSI/CAM3.CSI6_D0-
+        - net:/CSI/CAM3.CSI6_D1+
+        - net:/CSI/CAM3.CSI6_D1-
+        - net:/CSI/CAM3.CSI7_D0+
+        - net:/CSI/CAM3.CSI7_D0-
+        - net:/CSI/CAM3.CSI7_D1+
+        - net:/CSI/CAM3.CSI7_D1-
+        - net:/CSI/CAM_CTRL.CSIA_FLG
+        - net:/CSI/CAM_CTRL.CSIA_PEN
+        - net:/CSI/CAM_CTRL.CSIB_FLG
+        - net:/CSI/CAM_CTRL.CSIB_PEN
+        - net:/CSI/CAM_CTRL.VSYNC_CAM0
+        - net:/CSI/CAM_CTRL.VSYNC_CAM1
+        - net:/CSI/CAM_CTRL.VSYNC_CAM2
+        - net:/CSI/CAM_CTRL.VSYNC_CAM3
+        - net:/CSI/CSIA_3V3
+        - net:/CSI/CSIA_3V3_ISET
+        - net:/CSI/CSIA_5V
+        - net:/CSI/CSIA_5V_ISET
+        - net:/CSI/CSIA_I2C_VCC
+        - net:/CSI/CSIB_3V3
+        - net:/CSI/CSIB_3V3_ISET
+        - net:/CSI/CSIB_5V
+        - net:/CSI/CSIB_5V_ISET
+        - net:/CSI/CSIB_I2C_VCC
+        - net:/CSI/I2C_MUX_A0
+        - net:/CSI/I2C_MUX_RESET
+        - net:/CSI/I2C_MUX_SCL
+        - net:/CSI/I2C_MUX_SDA
+        - net:/CSI/I2C_{CAM}.SCL
+        - net:/CSI/I2C_{CAM}.SDA
+        - net:/CSI/MUX_I2C_4_SCL
+        - net:/CSI/MUX_I2C_4_SDA
+        - net:/CSI/MUX_I2C_5_SCL
+        - net:/CSI/MUX_I2C_5_SDA
+        - net:/CSI/MUX_I2C_6_SCL
+        - net:/CSI/MUX_I2C_6_SDA
+        - net:/CSI/MUX_I2C_7_SCL
+        - net:/CSI/MUX_I2C_7_SDA
+        - net:/CSI/SCL_CAM0
+        - net:/CSI/SCL_CAM1
+        - net:/CSI/SCL_CAM2
+        - net:/CSI/SCL_CAM3
+        - net:/CSI/SDA_CAM0
+        - net:/CSI/SDA_CAM1
+        - net:/CSI/SDA_CAM2
+        - net:/CSI/SDA_CAM3
+        - net:/CSI/VSYNC_CAM0_3V3
+        - net:/CSI/VSYNC_CAM1_3V3
+        - net:/CSI/VSYNC_CAM2_3V3
+        - net:/CSI/VSYNC_CAM3_3V3
+        - net:/DCDC/16V_OUT
+        - net:/DCDC/16V_VDD
+        - net:/DCDC/1V15_FB
+        - net:/DCDC/1V15_OUT
+        - net:/DCDC/20V_EN
+        - net:/DCDC/20V_OUT
+        - net:/DCDC/3V3_OUT
+        - net:/DCDC/5V_OUT
+        - net:/DCDC/5V_{AON}_EN
+        - net:/DCDC/5V_{AON}_OUT
+        - net:/DCDC/CARRIER_PWR_ON
+        - net:/DCDC/VIN_PWR_ON
+        - net:/DCDC/~{VDDIN_PWR_BAD}
+        - net:/Expansion connector/ADDR0
+        - net:/Expansion connector/ADDR1
+        - net:/Expansion connector/CAN0.DIN
+        - net:/Expansion connector/CAN0.DOUT
+        - net:/Expansion connector/CAN1.DIN
+        - net:/Expansion connector/CAN1.DOUT
+        - net:/Expansion connector/CAN2.DIN
+        - net:/Expansion connector/CAN2.DOUT
+        - net:/Expansion connector/CAN3.DIN
+        - net:/Expansion connector/CAN3.DOUT
+        - net:/Expansion connector/DP1.HPD
+        - net:/Expansion connector/DP1.TX2+
+        - net:/Expansion connector/DP1.TX2-
+        - net:/Expansion connector/DP1.TX3+
+        - net:/Expansion connector/DP1.TX3-
+        - net:/Expansion connector/DP2.HPD
+        - net:/Expansion connector/DP3.HPD
+        - net:/Expansion connector/FMC_PG_C2M
+        - net:/Expansion connector/FMC_PG_M2C
+        - net:/Expansion connector/FMC_PRESENT
+        - net:/Expansion connector/FMC_PRSNT_M2C_L
+        - net:/Expansion connector/GPIO.18
+        - net:/Expansion connector/GPIO.20
+        - net:/Expansion connector/GPIO.21
+        - net:/Expansion connector/GPIO.27
+        - net:/Expansion connector/GPIO.MCLK01
+        - net:/Expansion connector/GPIO.MCLK02
+        - net:/Expansion connector/GPIO.MCLK03
+        - net:/Expansion connector/GPIO.USER_BTN0
+        - net:/Expansion connector/GPIO.USER_BTN1
+        - net:/Expansion connector/GPIO.USER_LED0
+        - net:/Expansion connector/GPIO.USER_LED1
+        - net:/Expansion connector/I2C0.SCL
+        - net:/Expansion connector/I2C0.SDA
+        - net:/Expansion connector/I2C7.SCL
+        - net:/Expansion connector/I2C7.SDA
+        - net:/Expansion connector/I2C8.SCL
+        - net:/Expansion connector/I2C8.SDA
+        - net:/Expansion connector/I2S2.CLK
+        - net:/Expansion connector/I2S2.FS
+        - net:/Expansion connector/I2S2.SDIN
+        - net:/Expansion connector/I2S2.SDOUT
+        - net:/Expansion connector/I2S3.CLK
+        - net:/Expansion connector/I2S3.FS
+        - net:/Expansion connector/I2S3.SDIN
+        - net:/Expansion connector/I2S3.SDOUT
+        - net:/Expansion connector/PCIe_{C2x1}.~{CLKREQ}
+        - net:/Expansion connector/PCIe_{C2x1}.~{RST}
+        - net:/Expansion connector/PCIe_{C3x2}.~{CLKREQ}
+        - net:/Expansion connector/PCIe_{C3x2}.~{RST}
+        - net:/Expansion connector/PET0_C2_N
+        - net:/Expansion connector/PET0_C2_P
+        - net:/Expansion connector/SPI1.MISO
+        - net:/Expansion connector/SPI1.MOSI
+        - net:/Expansion connector/SPI1.SCK
+        - net:/Expansion connector/SPI1.~{CS0}
+        - net:/Expansion connector/SPI1.~{CS1}
+        - net:/Expansion connector/SPI2.MISO
+        - net:/Expansion connector/SPI2.MOSI
+        - net:/Expansion connector/SPI2.SCK
+        - net:/Expansion connector/SPI2.~{CS0}
+        - net:/Expansion connector/SPI3.MISO
+        - net:/Expansion connector/SPI3.MOSI
+        - net:/Expansion connector/SPI3.SCK
+        - net:/Expansion connector/SPI3.~{CS0}
+        - net:/Expansion connector/SPI3.~{CS1}
+        - net:/Expansion connector/UART2.CTS
+        - net:/Expansion connector/UART2.RTS
+        - net:/Expansion connector/UART2.RX
+        - net:/Expansion connector/UART2.TX
+        - net:/Expansion connector/UART5.CTS
+        - net:/Expansion connector/UART5.RTS
+        - net:/Expansion connector/UART5.RX
+        - net:/Expansion connector/UART5.TX
+        - net:/I2C_{SYS}.SCL
+        - net:/I2C_{SYS}.SDA
+        - net:/M.2/M2_E.W_DIS_1
+        - net:/M.2/M2_E.W_DIS_2
+        - net:/M.2/M2_E_SUSCLK
+        - net:/M.2/M2_E_W_DIS_1
+        - net:/M.2/M2_E_W_DIS_2
+        - net:/M.2/M2_M_SMB_CLK
+        - net:/M.2/M2_M_SMB_DATA
+        - net:/M.2/M2_M_SUSCLK
+        - net:/M.2/PCIe_{C1x1}.~{CLKREQ}
+        - net:/M.2/PCIe_{C1x1}.~{RST}
+        - net:/M.2/PCIe_{C5x4}.~{CLKREQ}
+        - net:/M.2/PCIe_{C5x4}.~{RST}
+        - net:/M.2/SUSCLK
+        - net:/M.2/USB3.D+
+        - net:/M.2/USB3.D-
+        - net:/M.2/~{CLKREQ_E}
+        - net:/M.2/~{CLKREQ_M}
+        - net:/M.2/~{LED_1}
+        - net:/M.2/~{LED_2}
+        - net:/M.2/~{M2_E_ALERT}
+        - net:/M.2/~{M2_M_ALERT}
+        - net:/M.2/~{PERST_E}
+        - net:/M.2/~{PERST_M}
+        - net:/M.2/~{PEWAKE_E}
+        - net:/M.2/~{PEWAKE_M}
+        - net:/M.2/~{PEWAKE}
+        - net:/Peripherals/FAN_PWM
+        - net:/Peripherals/FAN_TACH
+        - net:/Peripherals/GPIOEX_P0_0
+        - net:/Peripherals/GPIOEX_P0_1
+        - net:/Peripherals/GPIOEX_P0_2
+        - net:/Peripherals/GPIOEX_P0_3
+        - net:/Peripherals/GPIOEX_P0_4
+        - net:/Peripherals/GPIOEX_P0_5
+        - net:/Peripherals/GPIOEX_P0_6
+        - net:/Peripherals/GPIOEX_P0_7
+        - net:/Peripherals/GPIO_EXP_IRQ
+        - net:/Peripherals/I2C_CONN1_3V3
+        - net:/Peripherals/I2C_CONN2_3V3
+        - net:/Peripherals/I2C_CONN_PEN
+        - net:/Peripherals/I2C_{CONN}.SCL
+        - net:/Peripherals/I2C_{CONN}.SDA
+        - net:/Peripherals/TPM_IRQ
+        - net:/Peripherals/TPM_RST
+        - net:/Power/USBPD1_HV
+        - net:/Power/USBPD2_HV
+        - net:/Recovery USB/USB0.D+
+        - net:/Recovery USB/USB0.D-
+        - net:/Recovery USB/USBC2_ADDR
+        - net:/Recovery USB/USBC2_CC1
+        - net:/Recovery USB/USBC2_CC2
+        - net:/Recovery USB/USBC2_DIR
+        - net:/Recovery USB/USBC2_FAULT_N
+        - net:/Recovery USB/USBC2_I2C_SCL
+        - net:/Recovery USB/USBC2_I2C_SDA
+        - net:/Recovery USB/USBC2_ID
+        - net:/Recovery USB/USBC2_ISET
+        - net:/Recovery USB/USBC2_I_MODE
+        - net:/Recovery USB/USBC2_PEN
+        - net:/Recovery USB/USBC2_PORT
+        - net:/Recovery USB/USBC2_VBUS
+        - net:/Recovery USB/USBC2_VBUS_DET
+        - net:/Recovery USB/USBC2_VBUS_DET_MUX
+        - net:/Recovery USB/~{USBC2_EN_CC}
+        - net:/Recovery USB/~{USBC2_EN_MUX}
+        - net:/Recovery USB/~{USBC2_INT_R}
+        - net:/Recovery USB/~{USBC2_INT}
+        - net:/SFP/I2C_{SFP}.SCL
+        - net:/SFP/I2C_{SFP}.SDA
+        - net:/SFP/MOD_ABS
+        - net:/SFP/SCL_SFP
+        - net:/SFP/SDA_SFP
+        - net:/SFP/SFP_LEDG
+        - net:/SFP/SFP_LEDY
+        - net:/SFP/SFP_MOD_ABS
+        - net:/SoM_IO/GPIO_EXP_IRQ_1V8
+        - net:/SoM_IO/I2C0_SCL_1V8
+        - net:/SoM_IO/I2C0_SDA_1V8
+        - net:/SoM_IO/I2C1_SCL_1V8
+        - net:/SoM_IO/I2C1_SDA_1V8
+        - net:/SoM_IO/I2C2_SCL_1V8
+        - net:/SoM_IO/I2C2_SDA_1V8
+        - net:/SoM_IO/I2C3_SCL_1V8
+        - net:/SoM_IO/I2C3_SDA_1V8
+        - net:/SoM_IO/I2C5_SCL_1V8
+        - net:/SoM_IO/I2C5_SDA_1V8
+        - net:/SoM_IO/I2S_{M.2}.CLK
+        - net:/SoM_IO/I2S_{M.2}.FS
+        - net:/SoM_IO/I2S_{M.2}.SDIN
+        - net:/SoM_IO/I2S_{M.2}.SDOUT
+        - net:/SoM_IO/M2_E_W_DIS_1_1V8
+        - net:/SoM_IO/M2_E_W_DIS_2_1V8
+        - net:/SoM_IO/SFP_LEDG_1V8
+        - net:/SoM_IO/SFP_LEDY_1V8
+        - net:/SoM_IO/UART1.RTS
+        - net:/SoM_IO/UART1.RX
+        - net:/SoM_IO/UART1.TX
+        - net:/SoM_IO/UART3_DEBUG.RX
+        - net:/SoM_IO/UART3_DEBUG.TX
+        - net:/SoM_IO/UART3_DEBUG_RX_1V8
+        - net:/SoM_IO/UART3_DEBUG_TX_1V8
+        - net:/SoM_IO/USBC1_FLG
+        - net:/SoM_IO/USBC1_FLG_1V8
+        - net:/SoM_IO/USBC2_ID_1V8
+        - net:/SoM_IO/USBC2_PEN_1V8
+        - net:/SoM_IO/USBC2_VBUS_DET_1V8
+        - net:/SoM_IO/~{PDC_I2C1_IRQ}
+        - net:/SoM_IO/~{PDC_I2C1_IRQ}_1V8
+        - net:/SoM_IO/~{USBC2_INT}_1V8
+        - net:/SoM_IO2/DP0.HPD
+        - net:/SoM_IO2/JTAG_TCK
+        - net:/SoM_IO2/JTAG_TDI
+        - net:/SoM_IO2/JTAG_TDO
+        - net:/SoM_IO2/JTAG_TMS
+        - net:/SoM_IO2/JTAG_TRST_N
+        - net:/SoM_IO2/NVDBG_SEL
+        - net:/SoM_IO2/NVJTAG_SEL
+        - net:/SoM_IO2/TC_JTAG_TCK
+        - net:/SoM_IO2/TC_JTAG_TDI
+        - net:/SoM_IO2/TC_JTAG_TDO
+        - net:/SoM_IO2/TC_JTAG_TMS
+        - net:/SoM_IO2/TC_JTAG_TRST_N
+        - net:/SoM_IO2/USB1.D+
+        - net:/SoM_IO2/USB1.D-
+        - net:/SoM_IO2/USB2.D+
+        - net:/SoM_IO2/USB2.D-
+        - net:/SoM_Power/MODULE_POWER_ON
+        - net:/SoM_Power/~{FORCE_RECOVERY}
+        - net:/SoM_Power/~{FORCE_SHDN}
+        - net:/SoM_Power/~{MODULE_SHDN}
+        - net:/SoM_Power/~{MOD_SLEEP}
+        - net:/SoM_Power/~{SOM_POWER_BTN}
+        - net:/SoM_Power/~{SOM_PRSNT}
+        - net:/SoM_Power/~{SYS_RESET}
+        - net:/USB DP Alt mode/HPDIN
+        - net:/USB DP Alt mode/USBC1_5V_PEN
+        - net:/USB DP Alt mode/USBC1_CC1
+        - net:/USB DP Alt mode/USBC1_CC2
+        - net:/USB DP Alt mode/USBC1_CTL0
+        - net:/USB DP Alt mode/USBC1_CTL1
+        - net:/USB DP Alt mode/USBC1_DPEQ0
+        - net:/USB DP Alt mode/USBC1_DPEQ1
+        - net:/USB DP Alt mode/USBC1_EQ0
+        - net:/USB DP Alt mode/USBC1_EQ1
+        - net:/USB DP Alt mode/USBC1_FLIP
+        - net:/USB DP Alt mode/USBC1_I2C_EN
+        - net:/USB DP Alt mode/USBC1_SSEQ0
+        - net:/USB DP Alt mode/USBC1_SSEQ1
+        - net:/USB DP Alt mode/USBC1_VBUS
+        - net:/USB DP Alt mode/USBC_HPD
+        - net:/USB Debug, PD/DEBUG_SCL
+        - net:/USB Debug, PD/DEBUG_SDA
+        - net:/USB Debug, PD/FTDI_3V3
+        - net:/USB Debug, PD/FTDI_CBUS0{slash}SDA
+        - net:/USB Debug, PD/FTDI_CBUS3{slash}SCL
+        - net:/USB Debug, PD/FTDI_CBUS_EN
+        - net:/USB Debug, PD/FTDI_LED_RX
+        - net:/USB Debug, PD/FTDI_LED_TX
+        - net:/USB Debug, PD/MISO
+        - net:/USB Debug, PD/MOSI
+        - net:/USB Debug, PD/PDC_ADCIN1
+        - net:/USB Debug, PD/PDC_ADCIN2
+        - net:/USB Debug, PD/PDC_GPIO14
+        - net:/USB Debug, PD/PDC_GPIO15
+        - net:/USB Debug, PD/PDC_HPD2
+        - net:/USB Debug, PD/PDC_I2C1_IRQn
+        - net:/USB Debug, PD/PDC_I2C2_IRQn
+        - net:/USB Debug, PD/PDC_I2C2_SCL
+        - net:/USB Debug, PD/PDC_I2C2_SDA
+        - net:/USB Debug, PD/PDC_I2C3_SCL
+        - net:/USB Debug, PD/PDC_I2C3_SDA
+        - net:/USB Debug, PD/PDC_MISO
+        - net:/USB Debug, PD/PDC_MOSI
+        - net:/USB Debug, PD/PDC_RESET
+        - net:/USB Debug, PD/PDC_SCLK
+        - net:/USB Debug, PD/SCK
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.MISO
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.MOSI
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.SCK
+        - net:/USB Debug, PD/SPI_{HUB_DEBUG}.~{CS0}
+        - net:/USB Debug, PD/USBC0_5V_PEN
+        - net:/USB Debug, PD/USBC0_CC1
+        - net:/USB Debug, PD/USBC0_CC2
+        - net:/USB Debug, PD/USBC0_D_P
+        - net:/USB Debug, PD/USBC0_FLG
+        - net:/USB Debug, PD/USBC0_ISET
+        - net:/USB Debug, PD/USBC0_VBUS
+        - net:/USB Debug, PD/~{CS}
+        - net:/USB Debug, PD/~{PDC_CS}
+        - net:/USB Debug, PD/~{PDC_I2C3_IRQ}
+        - net:/USB Hub/CFG_STRAP1
+        - net:/USB Hub/CFG_STRAP2
+        - net:/USB Hub/CFG_STRAP3
+        - net:/USB Hub/DP1_DISCH
+        - net:/USB Hub/DP1_VCONN1
+        - net:/USB Hub/DP1_VCONN2
+        - net:/USB Hub/DP2_DISCH
+        - net:/USB Hub/DP2_VCONN1
+        - net:/USB Hub/DP2_VCONN2
+        - net:/USB Hub/HUB_SPI_CE_N
+        - net:/USB Hub/HUB_SPI_CLK
+        - net:/USB Hub/HUB_SPI_D0
+        - net:/USB Hub/HUB_SPI_D1
+        - net:/USB Hub/HUB_SPI_D2
+        - net:/USB Hub/HUB_SPI_D3
+        - net:/USB Hub/HUB_~{HOLD}
+        - net:/USB Hub/HUB_~{WP}
+        - net:/USB Hub/PRT_CTL1
+        - net:/USB Hub/PRT_CTL2
+        - net:/USB Hub/PRT_CTL3
+        - net:/USB Hub/PRT_CTL4
+        - net:/USB Hub/TEST1
+        - net:/USB Hub/TEST2
+        - net:/USB Hub/TEST3
+        - net:/USB Hub/USBC3_CC_{1}
+        - net:/USB Hub/USBC3_CC_{2}
+        - net:/USB Hub/USBC3_D+
+        - net:/USB Hub/USBC3_D-
+        - net:/USB Hub/USBC3_ISET
+        - net:/USB Hub/USBC3_VBUS
+        - net:/USB Hub/USBC3_VBUS_MON
+        - net:/USB Hub/USBC4_CC_{1}
+        - net:/USB Hub/USBC4_CC_{2}
+        - net:/USB Hub/USBC4_D+
+        - net:/USB Hub/USBC4_D-
+        - net:/USB Hub/USBC4_ISET
+        - net:/USB Hub/USBC4_VBUS
+        - net:/USB Hub/USBC4_VBUS_MON
+        - net:/USB Hub/~{RESET}
+        - net:FLASH_PWR
+        - net:GND
+        - net:Net-(D1-C)
+        - net:Net-(D10-A)
+        - net:Net-(D12-A)
+        - net:Net-(D14-C)
+        - net:Net-(D16-A)
+        - net:Net-(D18-A)
+        - net:Net-(D19-A)
+        - net:Net-(D20-A)
+        - net:Net-(D21-A)
+        - net:Net-(D24-A)
+        - net:Net-(D25-A)
+        - net:Net-(D26-A)
+        - net:Net-(D27-A)
+        - net:Net-(D28-A)
+        - net:Net-(D29-A)
+        - net:Net-(D3-A)
+        - net:Net-(D30-C)
+        - net:Net-(D31-A)
+        - net:Net-(D32-A)
+        - net:Net-(D32-C)
+        - net:Net-(D33-A)
+        - net:Net-(D34-A)
+        - net:Net-(D35-A)
+        - net:Net-(D35-C)
+        - net:Net-(D36-A)
+        - net:Net-(D36-C)
+        - net:Net-(D4-A)
+        - net:Net-(D40-A)
+        - net:Net-(D40-C)
+        - net:Net-(D41-A)
+        - net:Net-(D42-A)
+        - net:Net-(D43-A)
+        - net:Net-(D43-C)
+        - net:Net-(D44-A)
+        - net:Net-(D47-A)
+        - net:Net-(D49-A)
+        - net:Net-(D51-A)
+        - net:Net-(D52-A)
+        - net:Net-(D52-C)
+        - net:Net-(D54-A)
+        - net:Net-(D57-A)
+        - net:Net-(D57-C)
+        - net:Net-(D58-A)
+        - net:Net-(D58-C)
+        - net:Net-(D59-A)
+        - net:Net-(D59-C)
+        - net:Net-(D6-A)
+        - net:Net-(D60-A)
+        - net:Net-(D60-C)
+        - net:Net-(D61-A)
+        - net:Net-(D63-A)
+        - net:Net-(J10-Pad39)
+        - net:Net-(J10-Pad40)
+        - net:Net-(J10-Pad41)
+        - net:Net-(J10-Pad42)
+        - net:Net-(J11-Pad39)
+        - net:Net-(J11-Pad40)
+        - net:Net-(J11-Pad41)
+        - net:Net-(J11-Pad42)
+        - net:Net-(J12-RS0)
+        - net:Net-(J12-RS1)
+        - net:Net-(J12-RX_{LOS})
+        - net:Net-(J12-TX_{DISABLE})
+        - net:Net-(J12-TX_{FAULT})
+        - net:Net-(J18-PadB01)
+        - net:Net-(J18-PadH01)
+        - net:Net-(J18-PadH02)
+        - net:Net-(J18-PadJ39)
+        - net:Net-(J18-PadK01)
+        - net:Net-(J18-PadK40)
+        - net:Net-(J18-PadL01)
+        - net:Net-(J18-PadL32)
+        - net:Net-(J18-PadL33)
+        - net:Net-(J1A-FSI_GPIO03)
+        - net:Net-(J1A-GPIO31)
+        - net:Net-(J1A-GPIO56)
+        - net:Net-(J1A-MODULE_POWER_GOOD)
+        - net:Net-(J1A-MV_LSW_MON)
+        - net:Net-(J1A-PERIPHERAL_RESET_N)
+        - net:Net-(J1A-SYSTEM_OC_N)
+        - net:Net-(J1A-THERM_ALERT_N)
+        - net:Net-(J1A-UFS0_REF_CLK)
+        - net:Net-(J1A-UFS0_RST_N)
+        - net:Net-(J1A-VCOMP_ALERT_N)
+        - net:Net-(J1A-VM_INT_N)
+        - net:Net-(J1A-VM_SLEEP_N)
+        - net:Net-(Q1-D)
+        - net:Net-(Q17-D)
+        - net:Net-(Q18-D)
+        - net:Net-(Q19-D)
+        - net:Net-(Q21-D1)
+        - net:Net-(Q22-D)
+        - net:Net-(Q22-G)
+        - net:Net-(Q26-D1)
+        - net:Net-(Q27-D1)
+        - net:Net-(Q28-G)
+        - net:Net-(Q29-D1)
+        - net:Net-(Q34-D)
+        - net:Net-(Q35-D)
+        - net:Net-(Q37-G)
+        - net:Net-(R265-Pad1)
+        - net:Net-(R300-Pad2)
+        - net:Net-(R307-Pad2)
+        - net:Net-(R406-Pad2)
+        - net:Net-(U21-PF19)
+        - net:Net-(U21-PF26)
+        - net:Net-(U21-RBIAS)
+        - net:Net-(U21-USB2DN_DM3)
+        - net:Net-(U21-USB2DN_DM4)
+        - net:Net-(U21-USB2DN_DP3)
+        - net:Net-(U21-USB2DN_DP4)
+        - net:Net-(U21-USB3DN_RXDM3)
+        - net:Net-(U21-USB3DN_RXDP3)
+        - net:Net-(U21-XTALI)
+        - net:Net-(U22-IN+)
+        - net:Net-(U22-IN-)
+        - net:Net-(U23-FLG)
+        - net:Net-(U30A-HPD1)
+        - net:Net-(U33-CAD_SNK{slash}RSVD1)
+        - net:Net-(U34-RXD)
+        - net:Net-(U34-TXD)
+        - net:Net-(U34-~{RESET})
+        - net:Net-(U35-EN)
+        - net:Net-(U35-ISET)
+        - net:Net-(U40-EN)
+        - net:Net-(U50-IN+)
+        - net:Net-(U50-IN-)
+        - net:Net-(U53-ISET)
+        - net:Net-(U55-ISET)
+        - net:Net-(U59-B1Y)
+        - net:Net-(U59-B2Y)
+        - net:Net-(U59-B3Y)
+        - net:Net-(U59-B4)
+        - net:Net-(U60-IN+)
+        - net:Net-(U60-IN-)
+        - net:Net-(U66-IN+)
+        - net:Net-(U66-IN-)
+        - net:Net-(U70-OUT)
+        - net:Net-(U70-~{CLR})
+        - net:Net-(U70-~{INT})
+        - net:Net-(U71-ADDR)
+        - net:Net-(U71-~{RESET})
+        - net:Net-(U72-CT)
+        - net:Net-(U72-~{MR})
+        - net:Net-(U74-2Y)
+        - net:Net-(U76-IN+)
+        - net:Net-(U76-IN-)
+        - net:Net-(Y5-EN)
+        - net:SYS_VIN_HV
+        - net:VCC
+  unconnected-component:
+    - class: false-positive
+      why: A1 and A2 are M.2 standoffs and A3 the module's assembly symbol, none with pins.
+      ticket: 937
+      subjects:
+        - component:A1
+        - component:A2
+        - component:A3
