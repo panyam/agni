@@ -139,6 +139,9 @@ reader.unresolved_symbol	arg0=ref_des	kind="component"	kindVar=""	ref=-
 reader.unresolved_symbol	arg1=symref	kind=""	kindVar=""	ref=-
 str.contains	arg0=string	kind=""	kindVar=""	ref=-
 str.contains	arg1=substring	kind=""	kindVar=""	ref=-
+str.distance	arg0=string	kind=""	kindVar=""	ref=-
+str.distance	arg1=other	kind=""	kindVar=""	ref=-
+str.distance	arg2=distance	kind=""	kindVar=""	ref=-
 str.glob	arg0=string	kind=""	kindVar=""	ref=-
 str.glob	arg1=pattern	kind=""	kindVar=""	ref=-
 str.match	arg0=string	kind=""	kindVar=""	ref=-

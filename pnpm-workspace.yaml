@@ -19,7 +19,7 @@ allowBuilds:
 # Our own packages, published the day agni moved onto them (agni issue 863), so they are too new for
 # the release-age guard. Drop each entry once its version is past the guard's age.
 minimumReleaseAgeExclude:
-  - '@panyam/tsappkit-solid@0.6.8'
-  - '@panyam/tsappkit@0.6.8'
+  - '@panyam/tsappkit-solid@0.7.3'
+  - '@panyam/tsappkit@0.7.3'
 onlyBuiltDependencies:
   - esbuild
