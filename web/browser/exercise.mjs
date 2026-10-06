@@ -102,9 +102,12 @@ async function step(name, design, body) {
 }
 
 // opened waits for a design's first sheet and its rule catalog. A click on Run checks before the
-// catalog arrives runs nothing (agni 868), so the walk waits for the button's rule count.
+// catalog arrives runs nothing (agni 868), so the walk waits for the button's rule count. A sheet
+// counts as drawn when the readout reports what it drew, SVG elements or WebGL primitives. Any other
+// change is a status line (a browser without WebGL2 says so the moment the canvas mounts), and
+// timing that hid a 38-second blank page on the Jetson seed (agni issue 943).
 async function opened(page) {
-  await poll(async () => (await page.locator("#readout").textContent()) !== "no sheet loaded" && (await page.locator("#readout").count()) > 0);
+  await poll(async () => /^(SVG — \d+ elements|sheet \S+ — \d+ primitives)/.test((await page.locator("#readout").textContent()) ?? ""));
   const drawn = performance.now();
   await poll(async () => /\(\d+\)/.test((await page.locator(".checks-run").textContent()) ?? ""));
   return drawn;
