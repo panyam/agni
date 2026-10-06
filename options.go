@@ -100,8 +100,8 @@ func WithConfigResolver(c service.ConfigResolver) Option {
 	return func(b *builder) { b.config = c }
 }
 
-// WithProducerVersion stamps the build identity onto a review's results document, so a stored run
-// records which engine produced it. An embedder passes its own version string; the CLI passes the
+// WithProducerVersion stamps the build identity onto every results document the engine writes, a
+// stored review run and a saved check report alike, so the document records which engine produced it. An embedder passes its own version string; the CLI passes the
 // engine's.
 func WithProducerVersion(v string) Option {
 	return func(b *builder) { b.version = v }

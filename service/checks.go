@@ -39,6 +39,8 @@ type CheckService struct {
 	// conventions backs GetNamingConvention alone, so it is a narrow port rather than a Loader
 	// method, like ReviewLoader. A host that cannot resolve a stored convention passes nil.
 	conventions ConventionLoader
+	// env is the deployment provenance a document written by RenderCheckReport records. See WithEnv.
+	env ReviewEnv
 	// profiles is the deployment's interface-profile index (the built-ins and any --profile-path),
 	// the one ReviewService holds, for GetInterfaceCoverage. Nil means the built-ins alone.
 	profiles map[string][]profiles.Profile

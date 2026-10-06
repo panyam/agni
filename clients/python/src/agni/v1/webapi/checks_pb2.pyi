@@ -3,12 +3,22 @@ from agni.v1.config import naming_pb2 as _naming_pb2
 from agni.v1.webapi import config_pb2 as _config_pb2
 from agni.v1.param import param_pb2 as _param_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class CheckReportFormat(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    CHECK_REPORT_FORMAT_UNSPECIFIED: _ClassVar[CheckReportFormat]
+    CHECK_REPORT_FORMAT_RESULTS_JSON: _ClassVar[CheckReportFormat]
+    CHECK_REPORT_FORMAT_HTML: _ClassVar[CheckReportFormat]
+CHECK_REPORT_FORMAT_UNSPECIFIED: CheckReportFormat
+CHECK_REPORT_FORMAT_RESULTS_JSON: CheckReportFormat
+CHECK_REPORT_FORMAT_HTML: CheckReportFormat
 
 class CheckDesignRequest(_message.Message):
     __slots__ = ("rules", "overlay", "uri", "board_uri", "as_named", "work_budget")
@@ -71,6 +81,46 @@ class GetCheckReportResponse(_message.Message):
     REPORT_FIELD_NUMBER: _ClassVar[int]
     report: _checks_pb2.CheckReport
     def __init__(self, report: _Optional[_Union[_checks_pb2.CheckReport, _Mapping]] = ...) -> None: ...
+
+class ReportLinks(_message.Message):
+    __slots__ = ("url_base", "design_uri", "withheld")
+    URL_BASE_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
+    WITHHELD_FIELD_NUMBER: _ClassVar[int]
+    url_base: str
+    design_uri: str
+    withheld: str
+    def __init__(self, url_base: _Optional[str] = ..., design_uri: _Optional[str] = ..., withheld: _Optional[str] = ...) -> None: ...
+
+class RenderCheckReportRequest(_message.Message):
+    __slots__ = ("uri", "overlay", "rules", "run", "format", "links", "board_uri", "as_named")
+    URI_FIELD_NUMBER: _ClassVar[int]
+    OVERLAY_FIELD_NUMBER: _ClassVar[int]
+    RULES_FIELD_NUMBER: _ClassVar[int]
+    RUN_FIELD_NUMBER: _ClassVar[int]
+    FORMAT_FIELD_NUMBER: _ClassVar[int]
+    LINKS_FIELD_NUMBER: _ClassVar[int]
+    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
+    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    uri: str
+    overlay: OverlayConfig
+    rules: _containers.RepeatedScalarFieldContainer[str]
+    run: CheckDesignResponse
+    format: CheckReportFormat
+    links: ReportLinks
+    board_uri: str
+    as_named: bool
+    def __init__(self, uri: _Optional[str] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., rules: _Optional[_Iterable[str]] = ..., run: _Optional[_Union[CheckDesignResponse, _Mapping]] = ..., format: _Optional[_Union[CheckReportFormat, str]] = ..., links: _Optional[_Union[ReportLinks, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+
+class RenderCheckReportResponse(_message.Message):
+    __slots__ = ("content", "content_type", "filename")
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    content: bytes
+    content_type: str
+    filename: str
+    def __init__(self, content: _Optional[bytes] = ..., content_type: _Optional[str] = ..., filename: _Optional[str] = ...) -> None: ...
 
 class GetNamingConventionRequest(_message.Message):
     __slots__ = ("uri",)

@@ -5,16 +5,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/fshost"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/service"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -156,31 +153,6 @@ func renderReviewResults(w io.Writer, name string, doc *checkspb.CheckResults, f
 	return err
 }
 
-// resultsDoc assembles a document from one run. Callers supply the findings, the rules that ran and
-// which overlay tiers were attached, and this stamps the producer identity and the design's revision
-// hash.
-//
-// The hash is computed here rather than by the check service, because the service is filesystem-free
-// and resolves an artifact.URI through an injected loader without reading bytes itself (C13).
-func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding, skipped []*checkspb.SkippedRule, run *checkspb.RunConfig) *checkspb.CheckResults {
-	return &checkspb.CheckResults{
-		Meta: &checkspb.ResultsMeta{
-			Schema:          results.Schema,
-			Producer:        results.Producer,
-			ProducerVersion: version.Version(),
-			CreatedAt:       time.Now().UTC().Format(time.RFC3339),
-			// A native run records what it could NOT check as well as what it found. See
-			// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
-			CoverageAxis: true,
-		},
-		Design:   &checkspb.DesignRef{Source: source, ContentHash: hashSource(localOf(source))},
-		Run:      run,
-		Catalog:  results.RuleRecords(rules),
-		Skipped:  skipped,
-		Findings: findings,
-	}
-}
-
 // writeResults marshals a document to path.
 func writeResults(path string, doc *checkspb.CheckResults) error {
 	b, err := results.Marshal(doc)
@@ -236,23 +208,7 @@ func forDisplay(rep *checkspb.CheckReport) *checkspb.CheckReport {
 	return out
 }
 
-// skippedProtos converts the served response's skipped list to the document's.
-//
-// Two messages for one idea, because the wire API and the results DOCUMENT are separate contracts.
-// agni.v1.checks declares no service and imports no transport, so a document can be re-read by
-// something that never spoke to this server. One shared message would make it import the web API.
-func skippedProtos(in []*webapi.SkippedRule) []*checkspb.SkippedRule {
-	if len(in) == 0 {
-		return nil
-	}
-	out := make([]*checkspb.SkippedRule, len(in))
-	for i, s := range in {
-		out[i] = &checkspb.SkippedRule{Name: s.GetName(), Reason: s.GetReason()}
-	}
-	return out
-}
-
-// skippedFromDoc is skippedProtos in the other direction, for re-rendering a stored document.
+// skippedFromDoc is service.SkippedRuleDocs in the other direction, for re-rendering a stored document.
 func skippedFromDoc(in []*checkspb.SkippedRule) []*webapi.SkippedRule {
 	if len(in) == 0 {
 		return nil

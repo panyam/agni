@@ -14,7 +14,7 @@ import (
 
 // buildChecklist maps one review run onto the shared report model.
 //
-// The mapping lives in the CLI, as buildVerdictReport's does, so core/report never imports
+// The mapping lives in the CLI, as service.VerdictReport's does, so core/report never imports
 // core/review.
 //
 // Area and item ORDER is the manifest's, untouched. The check report sorts rules worst-first because

@@ -183,6 +183,14 @@ func (a *Check) GetCheckReport(ctx context.Context, req *connect.Request[webapi.
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Check) RenderCheckReport(ctx context.Context, req *connect.Request[webapi.RenderCheckReportRequest]) (*connect.Response[webapi.RenderCheckReportResponse], error) {
+	resp, err := a.svc.RenderCheckReport(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Check) GetInterfaceCoverage(ctx context.Context, req *connect.Request[webapi.GetInterfaceCoverageRequest]) (*connect.Response[webapi.GetInterfaceCoverageResponse], error) {
 	resp, err := a.svc.GetInterfaceCoverage(ctx, req.Msg)
 	if err != nil {
