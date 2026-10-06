@@ -8,7 +8,7 @@ function f(over: Partial<FindingItem>): FindingItem {
 }
 
 function state(over: Partial<FindingsState>): FindingsState {
-  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 1, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {}, ...over };
+  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 1, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {}, saveNote: "", ...over };
 }
 
 function mountPanel(over: Partial<FindingsState>) {
@@ -16,12 +16,13 @@ function mountPanel(over: Partial<FindingsState>) {
   const onLocateContext = vi.fn();
   const onRun = vi.fn();
   const onSelectVerdict = vi.fn();
+  const onSave = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = findingsPanelIsland(el, null, { onSelect, onLocateContext, onRun, onSelectVerdict });
+  const panel = findingsPanelIsland(el, null, { onSelect, onLocateContext, onRun, onSelectVerdict, onSave });
   panel.island.activate();
   panel.view.setState(state(over));
-  return { el, panel, onSelect, onLocateContext, onRun, onSelectVerdict };
+  return { el, panel, onSelect, onLocateContext, onRun, onSelectVerdict, onSave };
 }
 
 beforeEach(() => document.body.replaceChildren());
@@ -398,5 +399,31 @@ describe("an inconclusive row in the checks panel", () => {
     sel.value = "severity";
     sel.dispatchEvent(new Event("change"));
     expect([...el.querySelectorAll(".check-group-name")].map((n) => n.textContent)).toEqual(["error", "unresolved"]);
+  });
+});
+
+describe("saving a check report (agni issue 127)", () => {
+  const save = (el: HTMLElement, format: string) => el.querySelector<HTMLButtonElement>(`.checks-save[data-format="${format}"]`);
+
+  it("offers both forms once every selected rule has run, and saves the one clicked", () => {
+    const { el, onSave } = mountPanel({ ruleCount: 3, pending: 0 });
+    expect(save(el, "html")?.disabled).toBe(false);
+    expect(save(el, "json")?.disabled).toBe(false);
+    save(el, "json")?.click();
+    save(el, "html")?.click();
+    expect(onSave.mock.calls).toEqual([["json"], ["html"]]);
+  });
+
+  it("holds the save back while a rule is unrun, a run is going, or the catalog is loading", () => {
+    for (const over of [{ ruleCount: 3, pending: 1 }, { ruleCount: 3, running: true }, { ruleCount: 3, catalogLoading: true }, { ruleCount: 0 }]) {
+      const { el } = mountPanel(over);
+      expect(save(el, "html")?.disabled, JSON.stringify(over)).toBe(true);
+      document.body.replaceChildren();
+    }
+  });
+
+  it("says why a save failed", () => {
+    const { el } = mountPanel({ ruleCount: 1, saveNote: "Could not save the report: boom" });
+    expect(el.querySelector(".checks-save-note")?.textContent).toBe("Could not save the report: boom");
   });
 });

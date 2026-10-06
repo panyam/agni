@@ -39,7 +39,7 @@ function resolveRelationImages(md: string): string {
 // emptyFindings is the state before the presenter has pushed anything. It has no rules selected, so
 // the count reads "no rules selected" rather than "no findings".
 function emptyFindings(): FindingsState {
-  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 0, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {} };
+  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 0, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {}, saveNote: "" };
 }
 
 // FindingsCount says what is already CHECKED about a selection, for one entity or for a whole answer
