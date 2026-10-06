@@ -1,0 +1,43 @@
+# KiCad's own answer for the RoyalBlue54L Feather's bus-group signals (agni issue 936), from the pad nets
+# of tools/samples/boards/royalblue54L-feather/RoyalBlue54L-Feather.kicad_pcb (agni-samples v0.1.2).
+#
+# The board file is malformed as a whole (agni issue 681), but each footprint's pads still carry the net
+# KiCad assigned at layout, which is KiCad's netlist of the schematic. Regenerate by reading every
+# (footprint ...) block's Reference property and each (pad "N" ... (net "NAME")) inside it, keeping the
+# nets that cross a sheet through an inline group bus: ANALOG{A[0..5]}, DIG{D5 D6 D[9..13]},
+# SPI{SCK, MOSI, MISO}, UART{TX, RX}, I2C{SCL, SDA} with I2C_54{SCL, SDA}, NPM1300{SCL, SDA, INT},
+# SWD_TRG{~{RESET}, SWDIO, SWDCLK} and USB{VBUS, CC1, CC2}.  Do not hand-edit: the point of the file is
+# that we did not choose the answer.
+#
+# Net names are KiCad's and are not compared; the test compares which pins share a net.
+#
+# <net name>  <ref>.<pin> ...
+/Connectors/ANALOG.A0          J1.5 U1.E9
+/Connectors/ANALOG.A1          J1.6 U1.F8
+/Connectors/ANALOG.A2          J1.7 U1.F9
+/Connectors/ANALOG.A3          J1.8 U1.G9
+/Connectors/ANALOG.A4          J1.9 U1.B4
+/Connectors/ANALOG.A5          J1.10 U1.B5
+/Connectors/DIG.D10            J2.7 U1.K6
+/Connectors/DIG.D11            J2.6 SW2.1 U1.J4
+/Connectors/DIG.D12            J2.5 U1.J5
+/Connectors/DIG.D13            J2.4 U1.J6
+/Connectors/DIG.D5             J2.10 U1.B6
+/Connectors/DIG.D6             J2.9 U1.K4
+/Connectors/DIG.D9             J2.8 U1.K5
+/Connectors/I2C.SCL            J2.11 J5.4 R2.2 U1.G8
+/Connectors/I2C.SDA            J2.12 J5.3 R3.2 U1.B3
+/Connectors/SPI.MISO           J1.13 U1.K9 U4.2
+/Connectors/SPI.MOSI           J1.12 U1.J8 U4.5
+/Connectors/SPI.SCK            J1.11 U1.J9 U4.6
+/Connectors/UART.RX            J1.14 U1.A3 U6.14
+/Connectors/UART.TX            J1.15 U1.B2 U6.13
+/Debugger/SWD_TRG.SWDCLK       TP3.1 U1.K3 U6.10
+/Debugger/SWD_TRG.SWDIO        TP1.1 U1.J3 U6.11
+/Debugger/SWD_TRG.~{RESET}     J1.1 SW1.2 TP2.1 U1.G2 U6.12
+/Debugger/USB.CC1              J3.A5 U2.23
+/Debugger/USB.CC2              J3.B5 TP6.1 U2.24
+/Debugger/USB.VBUS             C5.1 J3.A4 J3.A9 J3.B4 J3.B9 TP5.1 U2.21 U3.5
+/nPM1300/NPM1300.INT           U1.K2 U2.7
+/nPM1300/NPM1300.SCL           R5.2 U1.J2 U2.14
+/nPM1300/NPM1300.SDA           R7.2 U1.H2 U2.13
