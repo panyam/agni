@@ -320,7 +320,8 @@ rather than "no results":
 net.ground(?n), component.net(?tp,?n), component.class(?tp,"test_point") => count(distinct ?tp)
 ```
 
-`count` over nothing is `0`, `list` is empty, and `min`, `max` and `sum` have no value, as in SQL.
+`count` and `sum` over nothing are `0` and `list` is empty. `min` and `max` have no number to report,
+so their cells are absent.
 A projection that does group, such as `=> ?n, count(?r)`, still answers nothing when nothing
 matched, because there is no net to name a group after.
 
