@@ -8,8 +8,9 @@
 // It is a report, not a test. A step with nothing to run against yet prints "not available" with the
 // ticket that adds it, and the run exits non-zero only when a step that exists fails. The browser
 // suite's site.spec.ts and drop.spec.ts stay the gate's assertions. --only <mount,...> limits the
-// seeds opened, and --control sends one of a dropped design's names from the page, which step 5 must
-// then report as a failure (its positive control).
+// seeds opened, --timing breaks each design's Run checks down by stage and rule, and --control sends
+// one of a dropped design's names from the page, which step 5 must then report as a failure (its
+// positive control).
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -30,6 +31,14 @@ const url = flag("--url");
 const out = flag("--out");
 const only = flag("--only")?.split(",");
 const control = args.includes("--control");
+// --timing opens every design with ?timing=1, so the page asks each request where its time went
+// (agni issue 914), and adds a row breaking Run checks down for each design.
+const timed = args.includes("--timing");
+const timedURL = (href) => {
+  const u = new URL(href, base);
+  if (timed) u.searchParams.set("timing", "1");
+  return u.href;
+};
 if (!siteDir === !url) {
   console.error("usage: node browser/exercise.mjs (--site <built demo folder> | --url <deployed demo>) [--prefix /agni/demo/] [--out report.md] [--only m1,m2] [--control]");
   process.exit(2);
@@ -62,7 +71,11 @@ const browser = await chromium.launch().catch((e) => {
 
 // record keeps every request a page makes, with its body, for the network split and step 5.
 function record(page) {
-  const log = { requests: [], failed: [], errors: [] };
+  const log = { requests: [], failed: [], errors: [], timings: [] };
+  page.on("console", (m) => {
+    const t = m.text();
+    if (t.startsWith("agni timing ")) log.timings.push(t);
+  });
   page.on("request", (r) => log.requests.push({ url: r.url(), method: r.method(), body: r.postData() ?? "" }));
   page.on("response", (r) => {
     if (r.status() >= 400) log.failed.push(`${r.status()} ${new URL(r.url()).pathname}`);
@@ -138,6 +151,29 @@ async function checks(page, design) {
     const n = await page.locator(".check-locate").count();
     return { ms, detail: `${n} finding rows, longest frame gap ${Math.round(gap)} ms`, n };
   });
+}
+
+// checksTiming adds the row breaking the design's last Run checks down: its total, its widest stages,
+// its slowest rules and which cache tier answered each read. Only with --timing.
+function checksTiming(log, design) {
+  if (!timed) return;
+  const line = log.timings.filter((t) => t.startsWith("agni timing CheckDesign: ")).pop();
+  if (!line) {
+    add("checks timing", design, "fail", "the page logged no CheckDesign timing, so ?timing did not reach the engine");
+    return;
+  }
+  const t = JSON.parse(line.slice("agni timing CheckDesign: ".length));
+  const ms = (us) => `${Math.round(Number(us ?? 0) / 1000)} ms`;
+  const stages = [...(t.stages ?? [])].sort((a, b) => Number(b.micros ?? 0) - Number(a.micros ?? 0)).slice(0, 4);
+  const rules = (t.rules ?? []).slice(0, 3);
+  const cache = (t.lookups ?? []).map((l) => `${l.layer}=${l.source}`).join(" ");
+  add(
+    "checks timing",
+    design,
+    "ok",
+    `stages ${stages.map((s) => `${s.name} ${ms(s.micros)}`).join(", ")}; slowest rules ${rules.map((r) => `${r.rule} ${ms(r.micros)}`).join(", ")}; cache ${cache || "none"}`,
+    Number(t.totalMicros ?? 0) / 1000,
+  );
 }
 
 // walkDesign is step 4 on one open design: a finding into the drawing, a query, a trace and a saved
@@ -229,11 +265,12 @@ for (const seed of seeds) {
   const log = record(page);
   const t = performance.now();
   const ok = await step("1. open", seed.title, async () => {
-    await page.goto(new URL(seed.href, base).href, { waitUntil: "domcontentloaded" });
+    await page.goto(timedURL(seed.href), { waitUntil: "domcontentloaded" });
     const drawn = await opened(page);
     return { ms: drawn - t, detail: `first sheet drawn; rule catalog after ${Math.round(since(t))} ms; ${seed.meta.trim()}` };
   });
   if (ok && (await checks(page, seed.title))) {
+    checksTiming(log, seed.title);
     await walkDesign(page, seed.title);
     await step("1. reopen after a reload", seed.title, async () => {
       const t2 = performance.now();
@@ -251,7 +288,7 @@ for (const seed of seeds) {
 async function drop(design, input, files, markers) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const log = record(page);
-  await page.goto(new URL("designs/local/view/", base).href, { waitUntil: "domcontentloaded" });
+  await page.goto(timedURL("designs/local/view/"), { waitUntil: "domcontentloaded" });
   const button = input === "#drop-folder-input" ? "#drop-folder" : "#drop-open";
   const ready = await page
     .waitForSelector(`${button}:not([hidden])`, { timeout: 60_000 })
@@ -275,7 +312,10 @@ async function drop(design, input, files, markers) {
       await opened(page);
       return { ms: since(t), detail: `drop to first sheet drawn; ${new URL(page.url()).pathname}` };
     });
-    if (ok && (await checks(page, design))) await walkDesign(page, design);
+    if (ok && (await checks(page, design))) {
+      checksTiming(log, design);
+      await walkDesign(page, design);
+    }
   }
   if (control) await page.evaluate((m) => fetch(`${location.origin}/collect?n=${encodeURIComponent(m)}`).catch(() => undefined), markers[0]);
   network(log, design, markers);
