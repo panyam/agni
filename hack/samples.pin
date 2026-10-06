@@ -12,6 +12,6 @@
 # run `make samples`. A checksum that does not match is a hard failure, never a warning, because a
 # fixture that silently fails to arrive turns every test that reads it into a test that proves
 # nothing.
-VERSION v0.1.1
-862856b9c5afd4693a0c6f3f48f0235400861ec47672c0a82d95763d11d2f300  tutorial-board
-67f6dc43fd6d2ff24aad6fe88ff2c75bd791730566a1295ff5f1c3f69929c30f  oracle-corpus
+VERSION v0.1.2
+6e87ad06f728218057fbd1fd926565820853eba274ae9a7b3857d0dc58850ed3  tutorial-board
+a3d9cc3e36c8a03c5ce96cdeee0aa72b78ea4f8cc38b16b666d9c38c083d7aa1  oracle-corpus
