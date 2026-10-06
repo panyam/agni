@@ -1,6 +1,6 @@
 ---
 title: "param.unit"
-description: "the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params)"
+description: "the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs datasheet parameters)"
 ---
 
 ### What it is

@@ -401,7 +401,7 @@ class AppRoot extends BaseComponent {
       onSymbols: (faithful) => void presenter.setSymbols(faithful),
       onBoardLayers: (side) => presenter.setBoardLayers(side),
       onClearHighlights: () => void presenter.clearHighlights(),
-    });
+    }, { staticHost: onStaticHost });
     // Escape clears the highlight. It lives here and not in pagegestures, which routes only the
     // datasheet workbench's keys and never sees this canvas (agni issue 348). An open picker owns
     // Escape, and so does a text field the reader is typing in.
@@ -481,12 +481,12 @@ class AppRoot extends BaseComponent {
     // the same component-highlight path a finding uses.
     const parts = partsPanelIsland(partsEl, this._eventBus, {
       onLocate: (refDes) => void presenter.locateEntity("component", refDes),
-    });
+    }, { staticHost: onStaticHost });
     // In the naming-vocabulary bar (WS9-128), choosing a convention re-runs everything under it, since
     // a request convention replaces the server's rather than adding to it.
     const conventionBar = conventionBarIsland(conventionEl, this._eventBus, {
       onSelect: (ref) => void presenter.setConvention(ref),
-    });
+    }, { staticHost: onStaticHost });
     // The project bar (agni issue 175) names the project whose config produced what is on screen, and
     // offers an opt-out that re-runs the design under the built-in catalog so the difference shows.
     const projectBar = projectBarIsland(projectEl, this._eventBus, {
@@ -499,7 +499,7 @@ class AppRoot extends BaseComponent {
       onSelectChecklist: (ref) => presenter.setChecklist(ref),
       onCreate: () => void presenter.createReview(),
       onLocate: (kind, subject) => void presenter.locateEntity(kind, subject),
-    });
+    }, { staticHost: onStaticHost });
     // The relation catalog (WS9-037) is static per build and design-independent, so fetch it once
     // at startup and push it to the panel's picker; a failure just leaves the picker empty (the
     // panel falls back to the syntax hint).

@@ -1,6 +1,6 @@
 ---
 title: "param.max"
-description: "a datasheet parameter's max value for a part, in its SI base unit (needs --params)"
+description: "a datasheet parameter's max value for a part, in its SI base unit (needs datasheet parameters)"
 ---
 
 ### What it is

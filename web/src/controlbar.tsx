@@ -20,6 +20,7 @@ function Controls(props: {
   onSymbols: (faithful: boolean) => void;
   onBoardLayers: (side: string) => void;
   onClearHighlights: () => void;
+  staticHost: boolean;
 }) {
   // The faithful-symbols toggle is only meaningful for an auto-layout of a design that ships
   // symbols; the faithful layout already draws them, and native has its own pages.
@@ -37,7 +38,9 @@ function Controls(props: {
               disabled={nativeDisabled(m.mode)}
               title={
                 nativeDisabled(m.mode)
-                  ? "no native renderer for this format (or not enabled with --enable-native)"
+                  ? props.staticHost
+                    ? "native rendering is not available in this demo"
+                    : "no native renderer for this format (or not enabled with --enable-native)"
                   : ""
               }
               onClick={() => props.onMode(m.mode)}
@@ -104,6 +107,7 @@ export function controlBarIsland(
     onBoardLayers: (side: string) => void;
     onClearHighlights: () => void;
   },
+  opts: { staticHost?: boolean } = {},
 ): { island: SolidIsland; view: ControlsView } {
   const [state, setState] = signalView<ControlsState>({
     mode: "svg",
@@ -127,6 +131,7 @@ export function controlBarIsland(
         onSymbols={handlers.onSymbols}
         onBoardLayers={handlers.onBoardLayers}
         onClearHighlights={handlers.onClearHighlights}
+        staticHost={opts.staticHost ?? false}
       />
     ),
     eventBus,

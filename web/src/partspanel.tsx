@@ -60,7 +60,7 @@ function fmtCitation(p: Parameter): string {
 // ref-des locates the component on the canvas (onLocate); the ▸ toggle expands the row into its
 // parameter tree (name/symbol, value, limit-kind, conditions, citation). A design with no joined
 // specs shows an empty-state hint.
-function PartsPanel(props: { state: () => PartsState; onLocate: (refDes: string) => void }) {
+function PartsPanel(props: { state: () => PartsState; onLocate: (refDes: string) => void; staticHost: boolean }) {
   const [open, setOpen] = createSignal<Set<string>>(new Set());
   const toggle = (ref: string) =>
     setOpen((s) => {
@@ -73,7 +73,13 @@ function PartsPanel(props: { state: () => PartsState; onLocate: (refDes: string)
     <div class="parts">
       <Show
         when={props.state().parts.length > 0}
-        fallback={<div class="parts-empty">No datasheet-backed parts in this design. Serve with --params to enable.</div>}
+        fallback={
+          <div class="parts-empty">
+            {props.staticHost
+              ? "No datasheet-backed parts in this design."
+              : "No datasheet-backed parts in this design. Serve with --params to enable."}
+          </div>
+        }
       >
         <For each={props.state().parts}>
           {(part) => (
@@ -133,8 +139,14 @@ export function partsPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   handlers: { onLocate: (refDes: string) => void },
+  opts: { staticHost?: boolean } = {},
 ): { island: SolidIsland; view: PartsView } {
   const [state, setState] = signalView<PartsState>(emptyParts());
-  const island = new SolidIsland("parts", el, () => <PartsPanel state={state} onLocate={handlers.onLocate} />, eventBus);
+  const island = new SolidIsland(
+    "parts",
+    el,
+    () => <PartsPanel state={state} onLocate={handlers.onLocate} staticHost={opts.staticHost ?? false} />,
+    eventBus,
+  );
   return { island, view: { setState } };
 }

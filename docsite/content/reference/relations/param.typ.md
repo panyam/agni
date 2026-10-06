@@ -1,6 +1,6 @@
 ---
 title: "param.typ"
-description: "a datasheet parameter's TYPICAL value in the SI base unit, the third member of the min/typ/max triple. A typical value is what the part usually does, never a guaranteed limit, so it is its own relation rather than a column on param.range (needs --params)"
+description: "a datasheet parameter's TYPICAL value in the SI base unit, the third member of the min/typ/max triple. A typical value is what the part usually does, never a guaranteed limit, so it is its own relation rather than a column on param.range (needs datasheet parameters)"
 ---
 
 ### What it is

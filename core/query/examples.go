@@ -91,7 +91,7 @@ var examples = []ExampleQuery{
 	{
 		Label:   "Rails above a part's recommended maximum",
 		Query:   `component.mpn(?ref, ?mpn), param.range(?mpn, ?sym, "recommended_operating", ?min, ?max), component.net(?ref, ?net), net.nominal_voltage(?net, ?v), ?v > ?max => ?ref, ?net, ?v, ?max`,
-		Teaches: "datasheet range: join a two-sided limit (by kind) against the design's rail voltage (needs --params)",
+		Teaches: "datasheet range: join a two-sided limit (by kind) against the design's rail voltage (needs datasheet parameters)",
 	},
 }
 

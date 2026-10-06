@@ -15,7 +15,7 @@ const base: ControlsState = {
   hasHighlights: false,
 };
 
-function mount(over: Partial<ControlsState> = {}) {
+function mount(over: Partial<ControlsState> = {}, staticHost = false) {
   const onClearHighlights = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
@@ -25,7 +25,7 @@ function mount(over: Partial<ControlsState> = {}) {
     onSymbols: vi.fn(),
     onBoardLayers: vi.fn(),
     onClearHighlights,
-  });
+  }, { staticHost });
   bar.island.activate();
   bar.view.setState({ ...base, ...over });
   return { el, onClearHighlights, clear: () => el.querySelector(".clear-highlights") as HTMLButtonElement | null };
@@ -56,5 +56,19 @@ describe("the clear-highlight control", () => {
     // The two are one affordance. A reader who finds the button should not have to discover Escape
     // separately, and a reader who tries Escape first should find the button confirms it.
     expect(mount({ hasHighlights: true }).clear()!.title).toContain("Escape");
+  });
+});
+
+describe("the native mode button", () => {
+  const native = (el: HTMLElement) => [...el.querySelectorAll<HTMLButtonElement>(".mode-btn")].find((b) => b.textContent === "Native")!;
+
+  it("names the flag that enables it on a server", () => {
+    expect(native(mount({ nativeAvailable: false }).el).title).toContain("--enable-native");
+  });
+
+  it("names no flag on a static page", () => {
+    const b = native(mount({ nativeAvailable: false }, true).el);
+    expect(b.disabled).toBe(true);
+    expect(b.title).toBe("native rendering is not available in this demo");
   });
 });

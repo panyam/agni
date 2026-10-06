@@ -7,8 +7,8 @@ import {
   activeLabel,
   conventionError,
   emptyConvention,
+  defaultLabel,
   isOverridden,
-  SERVER_DEFAULT_LABEL,
 } from "./conventions.js";
 
 // ConventionBar is the top-bar control that chooses the naming vocabulary a run is answered under,
@@ -18,7 +18,7 @@ import {
 // deployment's rules running. A rule that stops running produces no findings, which in a findings
 // list looks the same as a design that got better. The bar takes a distinct style while a request
 // convention is applied so that state stays visible on screen.
-function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: string) => void }) {
+function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: string) => void; staticHost: boolean }) {
   return (
     <div class={`convbar${isOverridden(props.state()) ? " convbar-overridden" : ""}`}>
       <span class="convbar-label" title="the naming vocabulary these answers were computed under">
@@ -30,10 +30,10 @@ function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: st
         disabled={props.state().busy}
         onChange={(e) => props.onSelect(e.currentTarget.value)}
       >
-        <option value="">{SERVER_DEFAULT_LABEL}</option>
+        <option value="">{defaultLabel(props.staticHost)}</option>
         <For each={props.state().choices}>{(c) => <option value={c.ref}>{c.label}</option>}</For>
       </select>
-      <span class="convbar-active">{activeLabel(props.state())}</span>
+      <span class="convbar-active">{activeLabel(props.state(), props.staticHost)}</span>
       <Show when={props.state().error}>
         <span class="convbar-error" role="alert" title={props.state().error}>
           {conventionError(props.state().error)}
@@ -44,17 +44,19 @@ function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: st
 }
 
 // conventionBarIsland mounts the bar and returns its command-down view. onSelect carries the intent
-// up, with the convention ref the user chose or "" to go back to the server's.
+// up, with the convention ref the user chose or "" to go back to the server's. staticHost labels that
+// default for a page with no server behind it.
 export function conventionBarIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   handlers: { onSelect: (ref: string) => void },
+  opts: { staticHost?: boolean } = {},
 ): { island: SolidIsland; view: ConventionBarView } {
   const [state, setState] = signalView<ConventionState>(emptyConvention());
   const island = new SolidIsland(
     "conventionbar",
     el,
-    () => <ConventionBar state={state} onSelect={handlers.onSelect} />,
+    () => <ConventionBar state={state} onSelect={handlers.onSelect} staticHost={opts.staticHost ?? false} />,
     eventBus,
   );
   return { island, view: { setState } };
