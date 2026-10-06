@@ -97,6 +97,11 @@ type Model interface {
 	// mounting hole, a logo or a module's assembly symbol does (agni issue 937). False for a component
 	// whose part type the read does not carry, since its pins are then unknown rather than absent.
 	IsPinlessPart(refDes string) bool
+	// IsFitted reports whether a component is assembled onto the board, false for a part the design
+	// marks do-not-populate. A DNP part stays in the netlist, since its footprint and nets are real, but
+	// a rule crediting a part with doing something electrical (a resistor pulling a line up) asks this
+	// first, because an unfitted part does nothing (agni issue 938).
+	IsFitted(refDes string) bool
 	// on_net: whether a ref_des appears on at least one net (section-aware).
 	IsConnected(refDes string) bool
 	// membership: whether a ref_des is known to the design at all, either a listed component or a
