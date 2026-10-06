@@ -15,8 +15,8 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/panyam/goapplib v0.6.8 h1:EH7yxwf6Q/fss/4lgJPEpMqzVz9f6b4EdxxyOY1q0KI=
-github.com/panyam/goapplib v0.6.8/go.mod h1:q3xn/XC8JvDA9uvO6MISz5jBSBrDPW4i+wF1iIFym7o=
+github.com/panyam/goapplib v0.7.3 h1:az8di14E4FAfxAX2aCedejhxA6WHTw/c0+xnLXR14ik=
+github.com/panyam/goapplib v0.7.3/go.mod h1:ajFDa3MfAgPCjfVDOk8pfgKr9Rt6JC18NbAmcrwXiJk=
 github.com/panyam/gocurrent v0.1.1 h1:UFFCkAxYNdGL4RuUCYBneWCS0jIlquIpvgvDcezegaU=
 github.com/panyam/gocurrent v0.1.1/go.mod h1:jIIhcNfNnnIe2JXH8aY2+ba+/5G1fzwCWoZXdcMNw6o=
 github.com/panyam/goutils v0.1.14 h1:PWM5jAzTSVHjWXbHD0CaifskSETFKHKaKIK5HrOg/uE=

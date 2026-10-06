@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	connectrpc.com/connect v1.20.0
-	github.com/panyam/goapplib v0.6.8
+	github.com/panyam/goapplib v0.7.3
 	github.com/panyam/servicekit v0.1.5
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
