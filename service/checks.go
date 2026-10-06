@@ -11,6 +11,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/core/timing"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -201,7 +202,10 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		Verdicts: VerdictProtos(verdicts),
 		Skipped:  skipped,
 	}
-	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...), m)
+	g := BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...)
+	endLocate := timing.Begin(ctx, "locate")
+	AnnotateSheets(resp.Findings, g, m)
+	endLocate()
 	return resp, nil
 }
 

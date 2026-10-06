@@ -11,6 +11,7 @@ import (
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/core/timing"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -261,7 +262,19 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	if len(bind) > 0 {
 		opts = append(opts, query.Bind(bind))
 	}
+	// A timed request that asked for plans gets this evaluation's (agni issue 914), recorded even when
+	// the evaluation stops at its budget, since that is when the plan is most wanted.
+	var plan *query.ExplainReport
+	if timing.Explaining(ctx) {
+		plan = &query.ExplainReport{}
+		opts = append(opts, query.Explain(plan))
+	}
+	endEval := timing.Begin(ctx, "evaluate")
 	rows, err := s.eval.Eval(ctx, q, d.base, opts...)
+	endEval()
+	if plan != nil {
+		timing.Planned(ctx, queryText, plan.String())
+	}
 	if err != nil {
 		return nil, err
 	}

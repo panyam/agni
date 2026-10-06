@@ -7,6 +7,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/timing"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -36,6 +37,7 @@ type GeometryLoader interface {
 // misses a project's declared symbol library, so findings land on sheets missing the components they
 // name.
 func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) *geom.SchematicGeometry {
+	defer timing.Begin(ctx, "read.geometry")()
 	g, err := loader.Geometry(ctx, uri, layoutForFile(uri.Path, ""), false, opts...)
 	if err != nil {
 		return nil
@@ -53,7 +55,9 @@ func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI,
 // nothing would report the board items clean without checking them. A design's OWN path carrying no
 // board (a netlist) is the normal nil-board case.
 func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
+	endRead := timing.Begin(ctx, "read.netlist")
 	d, err := loader.Design(ctx, uri, opts...)
+	endRead()
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -61,7 +65,9 @@ func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.
 	if !boardURI.IsZero() {
 		boardFrom = boardURI
 	}
+	endBoard := timing.Begin(ctx, "read.board")
 	bg, err := loader.Board(ctx, boardFrom)
+	endBoard()
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -76,7 +82,10 @@ func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.
 		for _, c := range d.GetComponents() {
 			mpns = append(mpns, c.GetMpn())
 		}
-		if err := p.Prefetch(ctx, mpns); err != nil {
+		endFetch := timing.Begin(ctx, "prefetch.params")
+		err := p.Prefetch(ctx, mpns)
+		endFetch()
+		if err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
 		}
 	}
@@ -90,5 +99,6 @@ func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.
 	if ro.Intent != nil {
 		mopts = append(mopts, check.WithIntent(ro.Intent))
 	}
+	defer timing.Begin(ctx, "model")()
 	return check.NewModel(d, mopts...), nil
 }

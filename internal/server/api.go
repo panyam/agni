@@ -19,6 +19,9 @@ type API struct {
 	Diff      *service.DiffService
 	Query     *service.QueryService
 	Review    *service.ReviewService
+	// Timing times the requests that ask, and logs the slow ones (agni issue 914). Its zero value
+	// still answers a request that asks with the Agni-Timing header.
+	Timing Timing
 }
 
 // Register mounts every service on mux and returns the paths it registered, in a fixed order.
@@ -30,13 +33,16 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 		mux.Handle(p, h)
 		paths = append(paths, p)
 	}
-	add(webapiconnect.NewWorkspaceServiceHandler(NewWorkspace(a.Workspace)))
-	add(webapiconnect.NewProjectServiceHandler(NewProject(a.Project)))
-	add(webapiconnect.NewDesignServiceHandler(NewDesign(a.Design)))
-	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queryOpts...))
-	add(webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff)))
-	add(webapiconnect.NewTableServiceHandler(NewTable()))
-	add(webapiconnect.NewQueryServiceHandler(NewQuery(a.Query), queryOpts...))
-	add(webapiconnect.NewReviewServiceHandler(NewReview(a.Review), queryOpts...))
+	// Timing wraps every handler, outermost, so a request's total includes the budget's own work.
+	timed := connect.WithInterceptors(a.Timing.Interceptor())
+	queried := append([]connect.HandlerOption{timed}, queryOpts...)
+	add(webapiconnect.NewWorkspaceServiceHandler(NewWorkspace(a.Workspace), timed))
+	add(webapiconnect.NewProjectServiceHandler(NewProject(a.Project), timed))
+	add(webapiconnect.NewDesignServiceHandler(NewDesign(a.Design), timed))
+	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
+	add(webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff), timed))
+	add(webapiconnect.NewTableServiceHandler(NewTable(), timed))
+	add(webapiconnect.NewQueryServiceHandler(NewQuery(a.Query), queried...))
+	add(webapiconnect.NewReviewServiceHandler(NewReview(a.Review), queried...))
 	return paths
 }
