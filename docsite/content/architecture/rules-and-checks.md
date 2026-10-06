@@ -227,7 +227,7 @@ rather than inferred.
 |---|---|---|---|---|
 | `design.types_power_out` | the format types power-OUTPUT pins, so a rail's driver is visible | EDIF (INPUT, OUTPUT and INOUT only) and IPC-2581 (no pin electrical types) | `power-input-not-driven` | `design.types_power_out`, also a spec fact |
 | `nc_channel` | the design can mark a pin intentionally open, by a NO_CONNECT pin type or an nc-marker net name | EDIF netlists | `unconnected-pin`, `power-pin-mistyped` | `design.has_nc_channel`, spec fact `design.nc_channel` |
-| `netclass` | nets carry tool-assigned net-class membership (WS3-105) | EDIF, IPC-2581, a bare `.kicad_sch`, and a KiCad project that declares no classes | any rule scoped by net class | `design.has_netclass`, also a spec fact |
+| `netclass` | nets carry tool-assigned net-class membership (WS3-105) | EDIF, IPC-2581, a `.kicad_sch` or `.kicad_pcb` with no same-stem `.kicad_pro`, and a KiCad project that declares no classes | any rule scoped by net class | `design.has_netclass`, also a spec fact |
 | `netclass_defs` | the design declares what a class routes at, its clearance, track width and via sizes (WS3-111) | everything `netclass` is missing on, plus a project that assigns classes and defines none | `netclass-track-width`, `netclass-via-drill` | `design.has_netclass_defs` |
 | `ref_des_collisions` | the READER looked for duplicate reference designators | EDIF, gEDA, xschem | `duplicate-ref-des` | none, the gate reads `InputDiagnostics.supplied` |
 | `junction_taps` | the READER examined wire ends landing on wire bodies and recorded both halves | every format except KiCad | `wire-no-junction` | none, the gate reads `InputDiagnostics.supplied` |
