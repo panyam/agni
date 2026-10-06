@@ -11,13 +11,6 @@ findings:
         - pin:Y1.1
         - pin:Y1.2
   esd-protection:
-    - class: false-positive
-      why: A TPD3E001 array (U3) clamps D+, D- and VBUS, and classifies as an ic rather than a TVS.
-      ticket: 934
-      subjects:
-        - net:/Debugger/D+
-        - net:/Debugger/D-
-        - net:/Debugger/USB.VBUS
     - class: design-choice
       why: CC1 and CC2 of the debug USB-C port carry no clamp, which is common on a USB 2.0 port whose CC lines only see the cable's pull-down.
       subjects:

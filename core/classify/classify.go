@@ -1,6 +1,7 @@
 package classify
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 
@@ -78,6 +79,26 @@ var tokenClasses = map[string]ComponentClass{
 	"oscillator": ClassClock,
 }
 
+// tvsFamilies are part-number families that are ESD or transient-voltage suppressors whatever their
+// symbol says (agni issue 934). A board's ESD arrays often sit under an IC symbol (TPD4E05U06 as U16)
+// and its TVS diodes under a plain diode with only the part number in their properties (PESD5Z5.0F),
+// so neither the ref-des prefix nor a "tvs" word reaches them. A family is matched at the START of a
+// token of the part's text, which includes its MPN property.
+//
+// Only a family match promotes an IC. The bare words "tvs" and "esd" keep refining a diode alone,
+// because an IC's free-text description mentioning "ESD protection" says nothing about what it is.
+var tvsFamilies = regexp.MustCompile(`^(tpd\d+e|pesd|esda|esd\d|usblc|rclamp|prtr|sp05|sm712|smaj|smbj|smcj|p6ke)`)
+
+// isTVSFamily reports whether any token names a known suppressor family.
+func isTVSFamily(tokens []string) bool {
+	for _, t := range tokens {
+		if tvsFamilies.MatchString(t) {
+			return true
+		}
+	}
+	return false
+}
+
 // Classify derives the component.class fact. The ref-des prefix convention gives the base
 // class, and part-type data (the part's designator_prefix, then whole-token hints in its
 // name/kind and the component's Value attribute) overrides or refines it. A token hint may
@@ -103,7 +124,13 @@ func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 
 	// Collect the SET of hints (WS3-070), not the first, so the generic "diode" in a "Tvs Diode"
 	// description cannot shadow the "tvs" refinement whichever order they tokenize in.
-	hints := l.class().HintsFor(classTokens(pt, c))
+	tokens := classTokens(pt, c)
+	hints := l.class().HintsFor(tokens)
+
+	// A suppressor's part number decides it on a diode, an IC or an unknown part.
+	if (base == ClassDiode || base == ClassIC || base == ClassUnknown || base == "") && isTVSFamily(tokens) {
+		return ClassTVS
+	}
 
 	// Clock family (WS10-015), scoped to clock candidates so the supply-pin signal never promotes an
 	// arbitrary powered IC such as an MCU. A supply pin marks an ACTIVE oscillator. Without one the part

@@ -28,21 +28,22 @@ func TestDefaultClassVocab(t *testing.T) {
 }
 
 // TestClassVocabConfigExtendsClassification checks that a project pattern added to the tvs class
-// lets an ESD-array MPN family classify as TVS, where the default (no tvs/esd word) leaves it a
-// plain diode.
+// lets an ESD-array MPN family classify as TVS, where the default (no tvs/esd word, and a family the
+// built-in list does not know) leaves it a plain diode. The family is made up, since PESD became a
+// built-in one (agni issue 934).
 func TestClassVocabConfigExtendsClassification(t *testing.T) {
 	defer SetActiveClassVocab(nil)
-	part := &ir.Component{RefDes: "D5", Attributes: map[string]string{"Part Name": "PESD2ETH1GT"}}
+	part := &ir.Component{RefDes: "D5", Attributes: map[string]string{"Part Name": "QZSD2ETH1GT"}}
 	if got := Classify(part, &ir.PartType{}); got != ClassDiode {
-		t.Fatalf("default: a PESD part with no tvs/esd word stays diode, got %s", got)
+		t.Fatalf("default: a part with no tvs/esd word and no known family stays diode, got %s", got)
 	}
-	cv, err := BuildClassVocab(map[ComponentClass]*configpb.ClassVocab{ClassTVS: {Patterns: []string{"^pesd"}}})
+	cv, err := BuildClassVocab(map[ComponentClass]*configpb.ClassVocab{ClassTVS: {Patterns: []string{"^qzsd"}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
 	SetActiveClassVocab(cv)
 	if got := Classify(part, &ir.PartType{}); got != ClassTVS {
-		t.Errorf("with tvs:[^pesd], the PESD part should classify TVS, got %s", got)
+		t.Errorf("with tvs:[^qzsd], the QZSD part should classify TVS, got %s", got)
 	}
 	if got := Classify(&ir.Component{RefDes: "R1"}, &ir.PartType{}); got != ClassResistor {
 		t.Errorf("built-in classification kept alongside the override, got %s", got)
