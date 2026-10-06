@@ -117,12 +117,16 @@ func extract(root *node, src string) *ir.Design {
 	// keyed by their internal id so they are not merged together.
 	var insts []*node
 	collect(scope, "instance", &insts)
+	namedByInstance := !anyDesignator(insts)
 	refByID := make(map[string]string, len(insts))
 	pinsByID := make(map[string]map[string][]string, len(insts))
 	byKey := make(map[string]*ir.Component, len(insts))
 	var order []string
 	for _, in := range insts {
 		refDes, sec, id, pinMap := instanceOf(in, src)
+		if refDes == "" && namedByInstance {
+			refDes = parseName(in.Arg(1)).best()
+		}
 		if id != "" && refDes != "" {
 			refByID[id] = refDes
 		}
@@ -300,6 +304,20 @@ func mapDirection(raw string) ir.PinDirection {
 	default:
 		return ir.PinDirection_PIN_DIRECTION_UNSPECIFIED
 	}
+}
+
+// anyDesignator reports whether any instance states its reference designator in a (designator ...)
+// list. A producer that writes none, such as Altium's EDIF For PCB export, names each instance by its
+// reference designator instead, so Read takes the instance's name then (agni issue 941). A producer
+// that writes designators leaves them off power and off-page symbols on purpose, so the name is
+// never used for an instance in a file that has any.
+func anyDesignator(insts []*node) bool {
+	for _, in := range insts {
+		if in.Child("designator") != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // instanceOf converts an EDIF (instance ...) node into one ComponentSection. It returns

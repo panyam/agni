@@ -331,6 +331,7 @@ func keywordDisplay(n *node, keyword string) *node {
 // the canonical geom convention "<h> <v>" (h in {left,right}, v in {top,bottom}, each omitted
 // when centered). E.g. LOWERLEFT -> "left bottom", CENTERLEFT -> "left", CENTERCENTER -> "".
 func canonicalJustify(code string) string {
+	code = strings.ToUpper(code)
 	h, v := "", ""
 	switch {
 	case strings.Contains(code, "LEFT"):
@@ -898,7 +899,7 @@ func transformOf(tn *node) *geom.Transform {
 // applyOrientation maps an EDIF orientation code onto rotation/mirror. Mirror is
 // applied before rotation (matching the EDIF MxR90 composition).
 func applyOrientation(code string, t *geom.Transform) {
-	switch code {
+	switch strings.ToUpper(code) {
 	case "R90":
 		t.RotationDeg = 90
 	case "R180":
@@ -989,7 +990,7 @@ func ptOf(n *node) *geom.Point {
 // orientationDeg maps an EDIF orientation code to a rotation in degrees CCW, ignoring
 // mirror (used for labels, which do not mirror).
 func orientationDeg(code string) int32 {
-	switch code {
+	switch strings.ToUpper(code) {
 	case "R90", "MXR90", "MYR90":
 		return 90
 	case "R180":
@@ -1020,7 +1021,7 @@ func distanceUnitNm(root *node) int64 {
 	collect(root, "scale", &scales)
 	for _, s := range scales {
 		u := s.Child("unit")
-		if u == nil || atom(u.Arg(1)) != "DISTANCE" {
+		if u == nil || !strings.EqualFold(atom(u.Arg(1)), "DISTANCE") {
 			continue
 		}
 		// (scale <numUnits> <meters> (unit DISTANCE)); meters may be an (e m exp) form.
