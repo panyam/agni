@@ -171,3 +171,43 @@ func TestAltiumCasedNetlistReads(t *testing.T) {
 		}
 	}
 }
+
+// TestKeywordNamedIdentifiersKeepTheirCase covers a net and an instance named like keywords, `Net`
+// and `Instance`, in a file that also writes those keywords in Altium's case. The parser shares one
+// node among every atom spelled the same (agni issue 945), so respelling a head in place would
+// respell the names with it, and the net would read as `net` and the part as `instance`.
+func TestKeywordNamedIdentifiersKeepTheirCase(t *testing.T) {
+	src := string(readFixture(t, "altium-case.edn"))
+	for old, repl := range map[string]string{
+		"(Net VOUT":        "(Net Net",
+		"(Instance R2\n":   "(Instance Instance\n",
+		"(InstanceRef R2)": "(InstanceRef Instance)",
+	} {
+		if !strings.Contains(src, old) {
+			t.Fatalf("altium-case.edn no longer holds %q", old)
+		}
+		src = strings.ReplaceAll(src, old, repl)
+	}
+	d, err := Read(strings.NewReader(src), "keyword-names.edn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	refs := map[string]bool{}
+	for _, c := range d.GetComponents() {
+		refs[c.GetRefDes()] = true
+	}
+	if !refs["Instance"] || len(refs) != 3 {
+		t.Errorf("components %v, want R1, C1 and Instance", refs)
+	}
+	pins := map[string][]string{}
+	for _, n := range d.GetNets() {
+		for _, c := range n.GetConnections() {
+			pins[n.GetName()] = append(pins[n.GetName()], c.GetComponentRef()+"."+c.GetPinRef())
+		}
+	}
+	got := pins["Net"]
+	slices.Sort(got)
+	if strings.Join(got, " ") != "Instance.1 R1.2" {
+		t.Errorf("net Net joins %v, want Instance.1 R1.2; nets read %v", got, pins)
+	}
+}
