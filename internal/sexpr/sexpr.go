@@ -123,11 +123,25 @@ const (
 // small clean board. A KiCad demo with 349 surplus parens read as 2 of its 71 footprints (agni issue
 // 562).
 func Parse(r io.Reader, mode StringMode) (*Node, error) {
+	return ParseSkipping(r, mode)
+}
+
+// ParseSkipping is Parse leaving out every list whose head is one of skip, wherever it sits. A
+// skipped list is still tokenized, so its strings cannot unbalance the parse, but it builds no node
+// and its parent's Kids hold nothing for it. A reader names what it never reads, such as a KiCad
+// board's zone fills, which are about a fifth of a large board's atoms (agni issue 946).
+func ParseSkipping(r io.Reader, mode StringMode, skip ...string) (*Node, error) {
 	src, err := readAll(r)
 	if err != nil {
 		return nil, err
 	}
 	t := &tokenizer{src: src, mode: mode}
+	if len(skip) > 0 {
+		t.skip = make(map[string]bool, len(skip))
+		for _, s := range skip {
+			t.skip[s] = true
+		}
+	}
 	tok, err := t.scan()
 	if err != nil {
 		return nil, err
@@ -213,6 +227,8 @@ type tokenizer struct {
 
 	atoms  map[string]*Node // the shared bare atoms, by text
 	quoted map[string]*Node // the shared quoted atoms, by text
+
+	skip map[string]bool // heads of the lists ParseSkipping leaves out
 }
 
 // line is the 1-based line of the next unread byte, which is where Parse's own errors point. It is
@@ -404,6 +420,13 @@ func (t *tokenizer) parseList() (*Node, error) {
 			n.Kids = t.closeList(base)
 			return n, nil
 		case tokLParen:
+			skipped, err := t.skipped()
+			if err != nil {
+				return nil, err
+			}
+			if skipped {
+				continue
+			}
 			child, err := t.parseList()
 			if err != nil {
 				return nil, err
@@ -413,6 +436,38 @@ func (t *tokenizer) parseList() (*Node, error) {
 			t.stack = append(t.stack, t.atom(tok.text, tok.kind == tokString))
 		}
 	}
+}
+
+// skipped reads past the list just opened when its head is one ParseSkipping leaves out, and reports
+// whether it did. Otherwise it leaves the position where it was, so the list parses as usual.
+func (t *tokenizer) skipped() (bool, error) {
+	if len(t.skip) == 0 {
+		return false, nil
+	}
+	at := t.pos
+	head, err := t.scan()
+	if err != nil {
+		return false, err
+	}
+	if head.kind != tokAtom || !t.skip[head.text] {
+		t.pos = at
+		return false, nil
+	}
+	for depth := 1; depth > 0; {
+		tok, err := t.scan()
+		if err != nil {
+			return false, err
+		}
+		switch tok.kind {
+		case tokEOF:
+			return false, fmt.Errorf("sexpr: unexpected EOF inside list")
+		case tokLParen:
+			depth++
+		case tokRParen:
+			depth--
+		}
+	}
+	return true, nil
 }
 
 // node returns a zeroed Node from the current slab, starting a new slab when it runs out.
