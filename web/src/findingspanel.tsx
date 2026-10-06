@@ -52,7 +52,16 @@ function ChecksPanel(props: {
   // onSelectVerdict focuses a verdict by its derived id (see viewer.ts locateVerdict). A passing
   // verdict has no finding, so onSelect's lookup by subject cannot serve it.
   onSelectVerdict: (id: string) => void;
+  // onSave saves the run as the check report page or the results document (agni issue 127). Absent,
+  // the panel offers no save.
+  onSave?: (format: "html" | "json") => void;
 }) {
+  // A report describes a run, so it can be saved only once every selected rule has run and nothing
+  // is running.
+  const canSave = () => {
+    const s = props.state();
+    return !s.running && !s.catalogLoading && s.ruleCount > 0 && s.pending === 0;
+  };
   // mode is panel-local view state picking which table shows. Two tables rather than one with extra
   // rows, because a findings row is a violation and anything counting rows would count passes as
   // defects.
@@ -124,6 +133,14 @@ function ChecksPanel(props: {
         <button type="button" class="checks-run" disabled={props.state().running || props.state().catalogLoading} onClick={() => props.onRun()}>
           {runLabel()}
         </button>
+        <Show when={props.onSave}>
+          <button type="button" class="checks-save" data-format="html" disabled={!canSave()} title="Save this run as a self-contained report page" onClick={() => props.onSave?.("html")}>
+            Save report
+          </button>
+          <button type="button" class="checks-save" data-format="json" disabled={!canSave()} title="Save this run as a results document, for scripts and archives" onClick={() => props.onSave?.("json")}>
+            Save JSON
+          </button>
+        </Show>
         <label class="checks-groupby">
           Group by{" "}
           <select value={axis()} onChange={(e) => setAxis(e.currentTarget.value as GroupAxis)}>
@@ -146,6 +163,10 @@ function ChecksPanel(props: {
           focused={() => props.state().focusedVerdict}
           onSelectVerdict={props.onSelectVerdict}
         />
+      </Show>
+
+      <Show when={props.state().saveNote !== ""}>
+        <div class="checks-save-note" role="status">{props.state().saveNote}</div>
       </Show>
 
       <Show when={props.locateNote() !== ""}>
@@ -404,6 +425,7 @@ export function findingsPanelIsland(
     onLocateContext: (kind: string, subject: string, pin: string) => void;
     onRun: () => void;
     onSelectVerdict: (id: string) => void;
+    onSave?: (format: "html" | "json") => void;
   },
 ): { island: SolidIsland; view: FindingsView } {
   const [state, setState] = signalView<FindingsState>({
@@ -417,6 +439,7 @@ export function findingsPanelIsland(
     catalogLoading: false,
     skipped: [],
     ruleSummaries: {},
+    saveNote: "",
   });
   const [locateNote, setLocateNote] = signalView<string>("");
   // A fresh check run clears any stale locate note from the previous selection.
@@ -435,6 +458,7 @@ export function findingsPanelIsland(
         onLocateContext={handlers.onLocateContext}
         onRun={handlers.onRun}
         onSelectVerdict={handlers.onSelectVerdict}
+        onSave={handlers.onSave}
       />
     ),
     eventBus,

@@ -11,7 +11,7 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -141,6 +141,37 @@ describe("the static demo under /agni/demo/", () => {
       });
     });
   }
+
+  // A report saved from the viewer is written by the engine in the page, in the forms agni check writes,
+  // and nothing leaves for a server to do it (agni issue 127).
+  it("saves a check run as the report page and the results document", async () => {
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(base, { waitUntil: "domcontentloaded" });
+      await page.click("text=Sample Board");
+      const rows = await checks(page);
+      const saved = async (format: string) => {
+        const [dl] = await Promise.all([page.waitForEvent("download"), page.click(`.checks-save[data-format="${format}"]`)]);
+        return { name: dl.suggestedFilename(), text: readFileSync(await dl.path(), "utf8") };
+      };
+      const json = await saved("json");
+      expect(json.name).toMatch(/\.agni-check\.json$/);
+      const doc = JSON.parse(json.text);
+      expect(doc.meta.producer).toBe("agni");
+      expect(doc.meta.producerVersion ?? "").not.toBe("");
+      expect(doc.design.contentHash ?? "").toMatch(/^sha256:/);
+      expect(doc.findings.length).toBeGreaterThan(0);
+      expect(doc.catalog.length).toBeGreaterThan(0);
+      const html = await saved("html");
+      expect(html.name).toMatch(/\.agni-check\.html$/);
+      expect(html.text).toContain("<html");
+      expect(rows).toBeGreaterThan(0);
+      // Its rows link back into this viewer, under the demo's own prefix.
+      expect(html.text).toMatch(new RegExp(`${prefix}designs/gateway/[^"]*/view\\?verdict=`));
+      expect(log.api).toEqual([]);
+      expect(log.errors).toEqual([]);
+    });
+  });
 
   // The viewer runs the rules ListRules calls available, and ListRules called every datasheet-tier rule
   // unavailable without a model, so the gateway's project params never reached a check in the page

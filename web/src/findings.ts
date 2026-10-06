@@ -138,6 +138,8 @@ export interface FindingsState {
   // ruleSummaries maps a rule name to its catalog one-liner, shown as a group-header subtitle. A rule
   // absent from the map renders none.
   ruleSummaries: Record<string, string>;
+  // saveNote says why the last report save failed, "" when it did not (agni issue 127).
+  saveNote: string;
 }
 
 // VerdictItem is the view-side shape of one verdict (the wire checks.Verdict without the proto

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -216,6 +217,32 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 			t.Errorf("GetCheckReport: no rule from %q, so the project's own config is not on the compared path", ruleFrom)
 		}
 	}
+	// A saved report is rendered from the run the page holds (agni issue 127), so each host renders its
+	// own run, and the files must be the same bytes apart from when they were written.
+	for _, format := range []webapi.CheckReportFormat{webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON, webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML} {
+		render := func(c parityClients) (string, error) {
+			run, err := c.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Uri: design}))
+			if err != nil {
+				return "", err
+			}
+			r, err := c.check.RenderCheckReport(ctx, connect.NewRequest(&webapi.RenderCheckReportRequest{Uri: design, Run: run.Msg, Format: format}))
+			if err != nil {
+				return "", err
+			}
+			return writtenAt.ReplaceAllString(string(r.Msg.GetContent()), "<time>"), nil
+		}
+		a, errA := render(served)
+		b, errB := render(wasm)
+		if errA != nil || errB != nil {
+			t.Fatalf("RenderCheckReport %s: served err %v, wasm err %v", format, errA, errB)
+		}
+		if len(a) < 200 {
+			t.Fatalf("RenderCheckReport %s: %d bytes, so two near-empty files would compare equal", format, len(a))
+		}
+		if a != b {
+			t.Errorf("RenderCheckReport %s: the wasm engine writes a different file from the server", format)
+		}
+	}
 	ask("RunQuery", func(c parityClients) (proto.Message, error) {
 		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Uri: design, Query: query}))
 		return msgOf(r, err)
@@ -230,6 +257,10 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		return msgOf(r, err)
 	})
 }
+
+// writtenAt matches the moment a saved report records it was written, the one part two hosts writing
+// the same run cannot share: a document's created_at and a verdict page's generated line.
+var writtenAt = regexp.MustCompile(`"createdAt":\s*"[^"]*"|\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(Z| UTC)`)
 
 func msgOf[T any](r *connect.Response[T], err error) (proto.Message, error) {
 	if err != nil {

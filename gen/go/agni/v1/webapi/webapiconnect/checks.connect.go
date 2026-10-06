@@ -44,6 +44,9 @@ const (
 	// CheckServiceGetCheckReportProcedure is the fully-qualified name of the CheckService's
 	// GetCheckReport RPC.
 	CheckServiceGetCheckReportProcedure = "/agni.v1.webapi.CheckService/GetCheckReport"
+	// CheckServiceRenderCheckReportProcedure is the fully-qualified name of the CheckService's
+	// RenderCheckReport RPC.
+	CheckServiceRenderCheckReportProcedure = "/agni.v1.webapi.CheckService/RenderCheckReport"
 	// CheckServiceGetInterfaceCoverageProcedure is the fully-qualified name of the CheckService's
 	// GetInterfaceCoverage RPC.
 	CheckServiceGetInterfaceCoverageProcedure = "/agni.v1.webapi.CheckService/GetInterfaceCoverage"
@@ -80,6 +83,12 @@ type CheckServiceClient interface {
 	// summary baked in. The report is its own message (not a client-side pivot of CheckDesign)
 	// so the CLI's markdown/report formats and the web report panel render one canonical shape.
 	GetCheckReport(context.Context, *connect.Request[webapi.GetCheckReportRequest]) (*connect.Response[webapi.GetCheckReportResponse], error)
+	// RenderCheckReport writes a check run the caller already holds as a file to keep (agni issue
+	// 127): the CheckResults document `agni check --results-out` writes, or the verdict report
+	// `agni check --verdicts --format html` writes. It runs no rules. The engine renders the bytes, so a
+	// report saved from the viewer and one written by the CLI are the same file apart from their
+	// timestamps, and no second renderer exists to drift from this one.
+	RenderCheckReport(context.Context, *connect.Request[webapi.RenderCheckReportRequest]) (*connect.Response[webapi.RenderCheckReportResponse], error)
 	// GetInterfaceCoverage projects the interface-profile mechanism (WS3-034) into a per-interface
 	// coverage matrix (WS9-041): for every DETECTED interface profile (its in-use confidence gate
 	// holds — two of its signals are present, or a host declares it), each required signal with its
@@ -141,6 +150,12 @@ func NewCheckServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(checkServiceMethods.ByName("GetCheckReport")),
 			connect.WithClientOptions(opts...),
 		),
+		renderCheckReport: connect.NewClient[webapi.RenderCheckReportRequest, webapi.RenderCheckReportResponse](
+			httpClient,
+			baseURL+CheckServiceRenderCheckReportProcedure,
+			connect.WithSchema(checkServiceMethods.ByName("RenderCheckReport")),
+			connect.WithClientOptions(opts...),
+		),
 		getInterfaceCoverage: connect.NewClient[webapi.GetInterfaceCoverageRequest, webapi.GetInterfaceCoverageResponse](
 			httpClient,
 			baseURL+CheckServiceGetInterfaceCoverageProcedure,
@@ -168,6 +183,7 @@ type checkServiceClient struct {
 	checkDesign          *connect.Client[webapi.CheckDesignRequest, webapi.CheckDesignResponse]
 	getExpectations      *connect.Client[webapi.GetExpectationsRequest, webapi.GetExpectationsResponse]
 	getCheckReport       *connect.Client[webapi.GetCheckReportRequest, webapi.GetCheckReportResponse]
+	renderCheckReport    *connect.Client[webapi.RenderCheckReportRequest, webapi.RenderCheckReportResponse]
 	getInterfaceCoverage *connect.Client[webapi.GetInterfaceCoverageRequest, webapi.GetInterfaceCoverageResponse]
 	getComponentParams   *connect.Client[webapi.GetComponentParamsRequest, webapi.GetComponentParamsResponse]
 	getNamingConvention  *connect.Client[webapi.GetNamingConventionRequest, webapi.GetNamingConventionResponse]
@@ -191,6 +207,11 @@ func (c *checkServiceClient) GetExpectations(ctx context.Context, req *connect.R
 // GetCheckReport calls agni.v1.webapi.CheckService.GetCheckReport.
 func (c *checkServiceClient) GetCheckReport(ctx context.Context, req *connect.Request[webapi.GetCheckReportRequest]) (*connect.Response[webapi.GetCheckReportResponse], error) {
 	return c.getCheckReport.CallUnary(ctx, req)
+}
+
+// RenderCheckReport calls agni.v1.webapi.CheckService.RenderCheckReport.
+func (c *checkServiceClient) RenderCheckReport(ctx context.Context, req *connect.Request[webapi.RenderCheckReportRequest]) (*connect.Response[webapi.RenderCheckReportResponse], error) {
+	return c.renderCheckReport.CallUnary(ctx, req)
 }
 
 // GetInterfaceCoverage calls agni.v1.webapi.CheckService.GetInterfaceCoverage.
@@ -233,6 +254,12 @@ type CheckServiceHandler interface {
 	// summary baked in. The report is its own message (not a client-side pivot of CheckDesign)
 	// so the CLI's markdown/report formats and the web report panel render one canonical shape.
 	GetCheckReport(context.Context, *connect.Request[webapi.GetCheckReportRequest]) (*connect.Response[webapi.GetCheckReportResponse], error)
+	// RenderCheckReport writes a check run the caller already holds as a file to keep (agni issue
+	// 127): the CheckResults document `agni check --results-out` writes, or the verdict report
+	// `agni check --verdicts --format html` writes. It runs no rules. The engine renders the bytes, so a
+	// report saved from the viewer and one written by the CLI are the same file apart from their
+	// timestamps, and no second renderer exists to drift from this one.
+	RenderCheckReport(context.Context, *connect.Request[webapi.RenderCheckReportRequest]) (*connect.Response[webapi.RenderCheckReportResponse], error)
 	// GetInterfaceCoverage projects the interface-profile mechanism (WS3-034) into a per-interface
 	// coverage matrix (WS9-041): for every DETECTED interface profile (its in-use confidence gate
 	// holds — two of its signals are present, or a host declares it), each required signal with its
@@ -290,6 +317,12 @@ func NewCheckServiceHandler(svc CheckServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(checkServiceMethods.ByName("GetCheckReport")),
 		connect.WithHandlerOptions(opts...),
 	)
+	checkServiceRenderCheckReportHandler := connect.NewUnaryHandler(
+		CheckServiceRenderCheckReportProcedure,
+		svc.RenderCheckReport,
+		connect.WithSchema(checkServiceMethods.ByName("RenderCheckReport")),
+		connect.WithHandlerOptions(opts...),
+	)
 	checkServiceGetInterfaceCoverageHandler := connect.NewUnaryHandler(
 		CheckServiceGetInterfaceCoverageProcedure,
 		svc.GetInterfaceCoverage,
@@ -318,6 +351,8 @@ func NewCheckServiceHandler(svc CheckServiceHandler, opts ...connect.HandlerOpti
 			checkServiceGetExpectationsHandler.ServeHTTP(w, r)
 		case CheckServiceGetCheckReportProcedure:
 			checkServiceGetCheckReportHandler.ServeHTTP(w, r)
+		case CheckServiceRenderCheckReportProcedure:
+			checkServiceRenderCheckReportHandler.ServeHTTP(w, r)
 		case CheckServiceGetInterfaceCoverageProcedure:
 			checkServiceGetInterfaceCoverageHandler.ServeHTTP(w, r)
 		case CheckServiceGetComponentParamsProcedure:
@@ -347,6 +382,10 @@ func (UnimplementedCheckServiceHandler) GetExpectations(context.Context, *connec
 
 func (UnimplementedCheckServiceHandler) GetCheckReport(context.Context, *connect.Request[webapi.GetCheckReportRequest]) (*connect.Response[webapi.GetCheckReportResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.CheckService.GetCheckReport is not implemented"))
+}
+
+func (UnimplementedCheckServiceHandler) RenderCheckReport(context.Context, *connect.Request[webapi.RenderCheckReportRequest]) (*connect.Response[webapi.RenderCheckReportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.CheckService.RenderCheckReport is not implemented"))
 }
 
 func (UnimplementedCheckServiceHandler) GetInterfaceCoverage(context.Context, *connect.Request[webapi.GetInterfaceCoverageRequest]) (*connect.Response[webapi.GetInterfaceCoverageResponse], error) {

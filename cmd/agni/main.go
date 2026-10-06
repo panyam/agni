@@ -27,6 +27,7 @@ import (
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/render"
 	rpt "github.com/panyam/agni/core/report"
+	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -546,7 +547,7 @@ func checkCmd() *cobra.Command {
 			// adds the request's convention and the project's own rules. CheckDesign and GetCheckReport
 			// select by name, so without the project's rules `--rule gateway/signal-net-naming` would
 			// report "no rules selected" for a rule that runs.
-			resolveAgainst, runOverlay, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
+			resolveAgainst, _, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
 			// Noted against the run's catalog rather than the flag-built one, so a project's own
 			// supersessions are reported too (C25, agni issue 450).
 			if err == nil {
@@ -576,7 +577,8 @@ func checkCmd() *cobra.Command {
 				specs = set
 			}
 			ll := &localLoader{loader: newLoader()}
-			svc := service.NewCheckService(ll, catalog, specs, "", nil, cliProjects())
+			svc := service.NewCheckService(ll, catalog, specs, "", nil, cliProjects()).
+				WithEnv(service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""})
 			ctx := cmd.Context()
 			// Addressed once, since every request below names the same two artifacts.
 			designURI, err := cliArgURI(args[0])
@@ -597,17 +599,21 @@ func checkCmd() *cobra.Command {
 					return err
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
-				// Provenance comes off the composed overlay, not the flags, or a project declaring
-				// conventions, profiles and params records `run: {}` when no flag was passed. The flag
-				// values are the DEPLOYMENT half of the union and the overlay adds the project's half.
-				doc := resultsDoc(designURI, selected, resp.GetFindings(), skippedProtos(resp.GetSkipped()), service.RunConfigProto(
-					runOverlay.Provenance(service.RunProvenance{
-						Params:      paramsDir != "",
-						Profiles:    profilePath != "",
-						Intent:      intentPath != "",
-						Conventions: overlay.GetConfig().GetConventions().GetName(),
-					}), 0))
-				if err := writeResults(resultsOut, doc); err != nil {
+				// The document is the one the viewer saves (agni issue 127): the service writes it from
+				// this run, with provenance off the composed overlay and the deployment flags the env
+				// carries, and the terminal output is rendered back from the same bytes.
+				rendered, err := svc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{
+					Uri: designURI, Overlay: overlay, Rules: names, Run: resp, BoardUri: boardURI, AsNamed: readAsNamed,
+					Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON,
+				})
+				if err != nil {
+					return err
+				}
+				if err := os.WriteFile(resultsOut, rendered.GetContent(), 0o644); err != nil {
+					return err
+				}
+				doc, err := results.Parse(rendered.GetContent())
+				if err != nil {
 					return err
 				}
 				if err := renderCheckResults(cmd.OutOrStdout(), doc, format); err != nil {
@@ -667,11 +673,19 @@ func checkCmd() *cobra.Command {
 						// resolveAgainst, NOT catalog, because the report has to read the catalog the RUN
 						// used. `catalog` lacks the project's rules and the --conventions rules, which would
 						// then render under a bare name with no summary, impact or remedy (agni issue 411).
-						if err := writeVerdictHTML(cmd.OutOrStdout(), resp, resolveAgainst.Rules(), meta); err != nil {
+						rendered, err := svc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{
+							Uri: designURI, Overlay: overlay, Rules: names, Run: resp, BoardUri: boardURI, AsNamed: readAsNamed,
+							Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML,
+							Links:  &webapi.ReportLinks{UrlBase: meta.URLBase, DesignUri: linkURI(meta.MountPath), Withheld: meta.LinksWithheld},
+						})
+						if err != nil {
+							return err
+						}
+						if _, err := cmd.OutOrStdout().Write(rendered.GetContent()); err != nil {
 							return err
 						}
 					default:
-						writeVerdictText(cmd.OutOrStdout(), buildVerdictReport(resp, resolveAgainst.Rules(), meta))
+						writeVerdictText(cmd.OutOrStdout(), service.VerdictReport(resp, resolveAgainst.Rules(), meta))
 					}
 					failFindings = resp.GetFindings()
 					break
@@ -1287,4 +1301,13 @@ func sortedKeys(m map[string]int) []string {
 	}
 	sort.Strings(ks)
 	return ks
+}
+
+// linkURI addresses the design a report links to as one artifact URI (C22), from the mount path the
+// CLI's link resolution produced. Empty stays empty, which emits no links.
+func linkURI(mountPath string) string {
+	if mountPath == "" {
+		return ""
+	}
+	return "mount://" + mountPath
 }

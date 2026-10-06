@@ -20,7 +20,7 @@ import { reviewPanelIsland } from "./reviewpanel.js";
 import { conventionBarIsland } from "./conventionbar.js";
 import { projectBarIsland } from "./projectbar.js";
 import { partsPanelIsland } from "./partspanel.js";
-import { ViewerPresenter, type RenderView } from "./viewer.js";
+import { ViewerPresenter, type RenderView, type SavedFile } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
 import { SvgView } from "./svgview.js";
 import { compareButton } from "./compare.js";
@@ -424,6 +424,7 @@ class AppRoot extends BaseComponent {
       // A verdict is addressed by its derived id, not by subject, because a passing verdict has no
       // finding for selectFinding to look up and two rules can hold verdicts about one subject.
       onSelectVerdict: (id) => void presenter.locateVerdict(id),
+      onSave: (format) => void presenter.saveReport(format),
     });
     // The rules panel is the catalog of what the engine can assert; ticking rules sets the active
     // ruleset, which the presenter re-runs the checks over.
@@ -533,6 +534,10 @@ class AppRoot extends BaseComponent {
         staleLinkNote: setStaleLinkNote,
         rules: rules.view,
         report: setReport,
+        // A saved report goes to the visitor's machine as a download, and its rows link back to this
+        // viewer under the page's own base (agni issue 127).
+        download: saveFile,
+        linkBase: new URL(appBase(), location.href).href,
         // Every location report also feeds the Compare chrome, since the open design is side A of any
         // comparison and Compare stays disabled until one is open.
         location: (loc) => {
@@ -591,6 +596,20 @@ class AppRoot extends BaseComponent {
     );
     return children;
   }
+}
+
+// saveFile hands a file the presenter wrote to the browser as a download (agni issue 127). It goes
+// through an object URL rather than a data: URL, because a report on a large board runs to megabytes.
+function saveFile(file: SavedFile): void {
+  const url = URL.createObjectURL(new Blob([file.content as BlobPart], { type: file.contentType }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file.filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoked on the next turn, since a click starts the download asynchronously in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function setSummary(text: string): void {

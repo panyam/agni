@@ -2,7 +2,8 @@ import { Code, ConnectError, type Client } from "@connectrpc/connect";
 import { emptyProject, type ProjectState, type ProjectBarView } from "./project.js";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
-import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
+import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckDesignResponse } from "./gen/agni/v1/webapi/checks_pb.js";
+import { BROWSER_MOUNT } from "./wasm/drop.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
@@ -149,6 +150,18 @@ export interface ViewSink {
   // projectBar states which project the open design resolved to and whether the built-in catalog is
   // in effect (agni issue 175). Optional like the rest; a host without it never says.
   projectBar?: ProjectBarView;
+  // download hands a file the presenter wrote to the host to save, and linkBase is the viewer's own
+  // base URL, which a saved report's rows link back to (agni issue 127). Optional like the panels;
+  // saveReport no-ops when the host offers no download.
+  download?: (file: SavedFile) => void;
+  linkBase?: string;
+}
+
+// SavedFile is one file the presenter asks the host to save.
+export interface SavedFile {
+  filename: string;
+  contentType: string;
+  content: Uint8Array;
 }
 
 // ViewerPresenter coordinates the viewer's semantic loop. An opened file is loaded (GetDesign), its
@@ -488,6 +501,7 @@ export class ViewerPresenter {
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
       this.findingCache.clear(); // findings are per-design; a new file starts a fresh cache
       this.verdictCache.clear();
+      this.runCache.clear();
       this.skippedCache.clear(); // and so is which rules could not run, since a new design has new tiers
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
@@ -686,11 +700,14 @@ export class ViewerPresenter {
         for (const n of missing) {
           this.findingCache.set(n, []); // mark computed (even if it fired nothing)
           this.verdictCache.set(n, []);
+          this.runCache.set(n, { findings: [], verdicts: [] });
           this.skippedCache.delete(n); // a rerun may have made it runnable (a board was attached)
         }
         // ?? [] because a hand-built response (a test stub, an older server) may omit it, and a
         // missing field must degrade to "nothing was skipped" rather than throwing mid-run.
         for (const sk of resp.skipped ?? []) this.skippedCache.set(sk.name, sk.reason);
+        for (const f of resp.findings) this.runCache.get(f.rule)?.findings.push(f);
+        for (const v of resp.verdicts ?? []) this.runCache.get(v.rule)?.verdicts.push(v);
         for (const f of resp.findings) {
           this.findingCache.get(f.rule)?.push({
             rule: f.rule,
@@ -774,6 +791,7 @@ export class ViewerPresenter {
         .map((n) => ({ rule: n, reason: this.skippedCache.get(n) ?? "" }))
         .sort((a, b) => a.rule.localeCompare(b.rule)),
       ruleSummaries,
+      saveNote: this.saveNote,
     };
     this.views.findings.setState(state);
     // The query panel projects the SAME state onto whatever is selected (agni issue 259), so an
@@ -787,6 +805,49 @@ export class ViewerPresenter {
   // Cached for the same reason, since checks are on-demand and per rule, so a rule's gated-ness is
   // learned when it first runs and has to survive until the design changes.
   private skippedCache = new Map<string, string>();
+
+  // runCache keeps each rule's findings and verdicts as the engine sent them, beside the display
+  // caches, so a saved report is written from the run itself rather than from what the panel shows
+  // (agni issue 127). It is filled and cleared with them.
+  private runCache = new Map<string, { findings: CheckDesignResponse["findings"]; verdicts: CheckDesignResponse["verdicts"] }>();
+  private saveNote = "";
+
+  // saveReport writes the selection's run as a file to keep, the check report page or the results
+  // document, the same bytes `agni check` writes. The engine renders it from the run the page holds,
+  // so saving runs no rules. It needs every selected rule run, which the panel enforces by enabling
+  // the control only then.
+  async saveReport(format: "html" | "json"): Promise<void> {
+    if (!this.mount || !this.path || !this.views.download) return;
+    const selected = new Set(this.selectedRules);
+    // Catalog order, which is the order one run over the selection returns its findings in.
+    const names = this.rules.map((r) => r.name).filter((n) => selected.has(n));
+    if (names.length === 0 || names.some((n) => !this.runCache.has(n))) return;
+    const run = create(CheckDesignResponseSchema, {
+      findings: names.flatMap((n) => this.runCache.get(n)?.findings ?? []),
+      verdicts: names.flatMap((n) => this.runCache.get(n)?.verdicts ?? []),
+      skipped: names.filter((n) => this.skippedCache.has(n)).map((n) => ({ name: n, reason: this.skippedCache.get(n) ?? "" })),
+    });
+    // A dropped design lives in this tab's worker alone, so a link to it would open nothing later.
+    const links =
+      this.mount === BROWSER_MOUNT
+        ? { withheld: "This design was opened from the reader's own files, which the browser keeps only in the tab that opened them, so a link to it would open nothing." }
+        : { urlBase: this.views.linkBase ?? "", designUri: artifactUri(this.mount, this.path) };
+    try {
+      const resp = await this.checks.renderCheckReport({
+        uri: artifactUri(this.mount, this.path),
+        overlay: this.overlay(),
+        rules: names,
+        run,
+        format: format === "html" ? CheckReportFormat.HTML : CheckReportFormat.RESULTS_JSON,
+        links,
+      });
+      this.views.download({ filename: resp.filename, contentType: resp.contentType, content: resp.content });
+      this.saveNote = "";
+    } catch (err) {
+      this.saveNote = `Could not save the report: ${err instanceof Error ? err.message : String(err)}`;
+    }
+    this.pushFindings();
+  }
 
   private expectations: RuleExpectationItem[] = [];
   private expectationFindings: FindingItem[] = [];
@@ -910,6 +971,7 @@ export class ViewerPresenter {
   // with no naming problems.
   private async reloadForConvention(): Promise<void> {
     this.findingCache.clear();
+    this.runCache.clear();
     // A verdict is keyed by rule name, which is what a convention changes, so a surviving verdict
     // could claim coverage for a rule nobody ran.
     this.verdictCache.clear();

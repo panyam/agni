@@ -24,6 +24,61 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CheckReportFormat names the file RenderCheckReport writes.
+type CheckReportFormat int32
+
+const (
+	CheckReportFormat_CHECK_REPORT_FORMAT_UNSPECIFIED CheckReportFormat = 0
+	// The CheckResults document, as results.Marshal writes it: findings, skipped rules, the catalog
+	// snapshot, the run's provenance, the producer version and the design's content hash. The durable,
+	// machine-readable record of a run, and what `agni results` re-renders.
+	CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON CheckReportFormat = 1
+	// The self-contained verdict report page: every rule's considered set, passes included. A
+	// CheckResults document cannot carry it, because it holds findings and not verdicts.
+	CheckReportFormat_CHECK_REPORT_FORMAT_HTML CheckReportFormat = 2
+)
+
+// Enum value maps for CheckReportFormat.
+var (
+	CheckReportFormat_name = map[int32]string{
+		0: "CHECK_REPORT_FORMAT_UNSPECIFIED",
+		1: "CHECK_REPORT_FORMAT_RESULTS_JSON",
+		2: "CHECK_REPORT_FORMAT_HTML",
+	}
+	CheckReportFormat_value = map[string]int32{
+		"CHECK_REPORT_FORMAT_UNSPECIFIED":  0,
+		"CHECK_REPORT_FORMAT_RESULTS_JSON": 1,
+		"CHECK_REPORT_FORMAT_HTML":         2,
+	}
+)
+
+func (x CheckReportFormat) Enum() *CheckReportFormat {
+	p := new(CheckReportFormat)
+	*p = x
+	return p
+}
+
+func (x CheckReportFormat) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CheckReportFormat) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_checks_proto_enumTypes[0].Descriptor()
+}
+
+func (CheckReportFormat) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_checks_proto_enumTypes[0]
+}
+
+func (x CheckReportFormat) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CheckReportFormat.Descriptor instead.
+func (CheckReportFormat) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{0}
+}
+
 type CheckDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// rules names the subset of rules to run (by RuleInfo.name); empty runs the full catalog, so an
@@ -491,6 +546,244 @@ func (x *GetCheckReportResponse) GetReport() *checks.CheckReport {
 	return nil
 }
 
+// ReportLinks says whether the HTML report's rows link back into a viewer, and where. Only the caller
+// knows which viewer will open the file later, so it is a request value and never inferred.
+type ReportLinks struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// url_base is the viewer's base URL, such as "http://localhost:8080" or a static demo's
+	// "https://example.org/agni/demo". Empty emits no links.
+	UrlBase string `protobuf:"bytes,1,opt,name=url_base,json=urlBase,proto3" json:"url_base,omitempty"`
+	// design_uri is the design as that viewer addresses it, "mount://<mount>/<path>". Empty emits no
+	// links.
+	DesignUri string `protobuf:"bytes,2,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
+	// withheld is why links were asked for and refused, carried into the page because whoever opens the
+	// saved file later never saw the reason (agni issue 626).
+	Withheld      string `protobuf:"bytes,3,opt,name=withheld,proto3" json:"withheld,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportLinks) Reset() {
+	*x = ReportLinks{}
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportLinks) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportLinks) ProtoMessage() {}
+
+func (x *ReportLinks) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportLinks.ProtoReflect.Descriptor instead.
+func (*ReportLinks) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ReportLinks) GetUrlBase() string {
+	if x != nil {
+		return x.UrlBase
+	}
+	return ""
+}
+
+func (x *ReportLinks) GetDesignUri() string {
+	if x != nil {
+		return x.DesignUri
+	}
+	return ""
+}
+
+func (x *ReportLinks) GetWithheld() string {
+	if x != nil {
+		return x.Withheld
+	}
+	return ""
+}
+
+type RenderCheckReportRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// uri names the design the run read, as CheckDesignRequest.uri did. It decides the project whose
+	// catalog the report describes and the netlist tier whose content hash it records.
+	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	// overlay is the per-request config the run used, the same value CheckDesignRequest carried.
+	Overlay *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	// rules is the selection the run used, empty meaning the whole catalog, as CheckDesignRequest.rules.
+	Rules []string `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
+	// run is the CheckDesign answer to write out. Nothing is re-run.
+	Run    *CheckDesignResponse `protobuf:"bytes,4,opt,name=run,proto3" json:"run,omitempty"`
+	Format CheckReportFormat    `protobuf:"varint,5,opt,name=format,proto3,enum=agni.v1.webapi.CheckReportFormat" json:"format,omitempty"`
+	// links applies to CHECK_REPORT_FORMAT_HTML only.
+	Links *ReportLinks `protobuf:"bytes,6,opt,name=links,proto3" json:"links,omitempty"`
+	// board_uri and as_named have CheckDesignRequest's meaning and must match the run's request, since
+	// they decide which netlist tier the content hash is taken from.
+	BoardUri      string `protobuf:"bytes,7,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
+	AsNamed       bool   `protobuf:"varint,8,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderCheckReportRequest) Reset() {
+	*x = RenderCheckReportRequest{}
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderCheckReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderCheckReportRequest) ProtoMessage() {}
+
+func (x *RenderCheckReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderCheckReportRequest.ProtoReflect.Descriptor instead.
+func (*RenderCheckReportRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RenderCheckReportRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+func (x *RenderCheckReportRequest) GetOverlay() *OverlayConfig {
+	if x != nil {
+		return x.Overlay
+	}
+	return nil
+}
+
+func (x *RenderCheckReportRequest) GetRules() []string {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+func (x *RenderCheckReportRequest) GetRun() *CheckDesignResponse {
+	if x != nil {
+		return x.Run
+	}
+	return nil
+}
+
+func (x *RenderCheckReportRequest) GetFormat() CheckReportFormat {
+	if x != nil {
+		return x.Format
+	}
+	return CheckReportFormat_CHECK_REPORT_FORMAT_UNSPECIFIED
+}
+
+func (x *RenderCheckReportRequest) GetLinks() *ReportLinks {
+	if x != nil {
+		return x.Links
+	}
+	return nil
+}
+
+func (x *RenderCheckReportRequest) GetBoardUri() string {
+	if x != nil {
+		return x.BoardUri
+	}
+	return ""
+}
+
+func (x *RenderCheckReportRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
+}
+
+type RenderCheckReportResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Content []byte                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
+	// content_type is "application/json" or "text/html; charset=utf-8".
+	ContentType string `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// filename is a name to save under, from the design and the format, such as "gateway.agni-check.json".
+	Filename      string `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderCheckReportResponse) Reset() {
+	*x = RenderCheckReportResponse{}
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderCheckReportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderCheckReportResponse) ProtoMessage() {}
+
+func (x *RenderCheckReportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderCheckReportResponse.ProtoReflect.Descriptor instead.
+func (*RenderCheckReportResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RenderCheckReportResponse) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+func (x *RenderCheckReportResponse) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *RenderCheckReportResponse) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
 type GetNamingConventionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the stored convention config, a key the Loader resolves, never a host path.
@@ -501,7 +794,7 @@ type GetNamingConventionRequest struct {
 
 func (x *GetNamingConventionRequest) Reset() {
 	*x = GetNamingConventionRequest{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -513,7 +806,7 @@ func (x *GetNamingConventionRequest) String() string {
 func (*GetNamingConventionRequest) ProtoMessage() {}
 
 func (x *GetNamingConventionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -526,7 +819,7 @@ func (x *GetNamingConventionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamingConventionRequest.ProtoReflect.Descriptor instead.
 func (*GetNamingConventionRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetNamingConventionRequest) GetUri() string {
@@ -545,7 +838,7 @@ type GetNamingConventionResponse struct {
 
 func (x *GetNamingConventionResponse) Reset() {
 	*x = GetNamingConventionResponse{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -557,7 +850,7 @@ func (x *GetNamingConventionResponse) String() string {
 func (*GetNamingConventionResponse) ProtoMessage() {}
 
 func (x *GetNamingConventionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -570,7 +863,7 @@ func (x *GetNamingConventionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamingConventionResponse.ProtoReflect.Descriptor instead.
 func (*GetNamingConventionResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetNamingConventionResponse) GetConvention() *config.NamingConvention {
@@ -590,7 +883,7 @@ type GetExpectationsRequest struct {
 
 func (x *GetExpectationsRequest) Reset() {
 	*x = GetExpectationsRequest{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -602,7 +895,7 @@ func (x *GetExpectationsRequest) String() string {
 func (*GetExpectationsRequest) ProtoMessage() {}
 
 func (x *GetExpectationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -615,7 +908,7 @@ func (x *GetExpectationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExpectationsRequest.ProtoReflect.Descriptor instead.
 func (*GetExpectationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetExpectationsRequest) GetUri() string {
@@ -642,7 +935,7 @@ type RuleExpectation struct {
 
 func (x *RuleExpectation) Reset() {
 	*x = RuleExpectation{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -654,7 +947,7 @@ func (x *RuleExpectation) String() string {
 func (*RuleExpectation) ProtoMessage() {}
 
 func (x *RuleExpectation) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -667,7 +960,7 @@ func (x *RuleExpectation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuleExpectation.ProtoReflect.Descriptor instead.
 func (*RuleExpectation) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *RuleExpectation) GetRule() string {
@@ -712,7 +1005,7 @@ type GetExpectationsResponse struct {
 
 func (x *GetExpectationsResponse) Reset() {
 	*x = GetExpectationsResponse{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -724,7 +1017,7 @@ func (x *GetExpectationsResponse) String() string {
 func (*GetExpectationsResponse) ProtoMessage() {}
 
 func (x *GetExpectationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -737,7 +1030,7 @@ func (x *GetExpectationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExpectationsResponse.ProtoReflect.Descriptor instead.
 func (*GetExpectationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetExpectationsResponse) GetExpectations() []*RuleExpectation {
@@ -778,7 +1071,7 @@ type ListRulesRequest struct {
 
 func (x *ListRulesRequest) Reset() {
 	*x = ListRulesRequest{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -790,7 +1083,7 @@ func (x *ListRulesRequest) String() string {
 func (*ListRulesRequest) ProtoMessage() {}
 
 func (x *ListRulesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -803,7 +1096,7 @@ func (x *ListRulesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRulesRequest.ProtoReflect.Descriptor instead.
 func (*ListRulesRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListRulesRequest) GetOverlay() *OverlayConfig {
@@ -842,7 +1135,7 @@ type RuleInfo struct {
 
 func (x *RuleInfo) Reset() {
 	*x = RuleInfo{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -854,7 +1147,7 @@ func (x *RuleInfo) String() string {
 func (*RuleInfo) ProtoMessage() {}
 
 func (x *RuleInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -867,7 +1160,7 @@ func (x *RuleInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuleInfo.ProtoReflect.Descriptor instead.
 func (*RuleInfo) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RuleInfo) GetName() string {
@@ -949,7 +1242,7 @@ type ListRulesResponse struct {
 
 func (x *ListRulesResponse) Reset() {
 	*x = ListRulesResponse{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -961,7 +1254,7 @@ func (x *ListRulesResponse) String() string {
 func (*ListRulesResponse) ProtoMessage() {}
 
 func (x *ListRulesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -974,7 +1267,7 @@ func (x *ListRulesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRulesResponse.ProtoReflect.Descriptor instead.
 func (*ListRulesResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListRulesResponse) GetRules() []*RuleInfo {
@@ -998,7 +1291,7 @@ type GetInterfaceCoverageRequest struct {
 
 func (x *GetInterfaceCoverageRequest) Reset() {
 	*x = GetInterfaceCoverageRequest{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1010,7 +1303,7 @@ func (x *GetInterfaceCoverageRequest) String() string {
 func (*GetInterfaceCoverageRequest) ProtoMessage() {}
 
 func (x *GetInterfaceCoverageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1023,7 +1316,7 @@ func (x *GetInterfaceCoverageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInterfaceCoverageRequest.ProtoReflect.Descriptor instead.
 func (*GetInterfaceCoverageRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetInterfaceCoverageRequest) GetUri() string {
@@ -1061,7 +1354,7 @@ type SignalCoverage struct {
 
 func (x *SignalCoverage) Reset() {
 	*x = SignalCoverage{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1073,7 +1366,7 @@ func (x *SignalCoverage) String() string {
 func (*SignalCoverage) ProtoMessage() {}
 
 func (x *SignalCoverage) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1086,7 +1379,7 @@ func (x *SignalCoverage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignalCoverage.ProtoReflect.Descriptor instead.
 func (*SignalCoverage) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SignalCoverage) GetName() string {
@@ -1124,7 +1417,7 @@ type InterfaceCoverage struct {
 
 func (x *InterfaceCoverage) Reset() {
 	*x = InterfaceCoverage{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1136,7 +1429,7 @@ func (x *InterfaceCoverage) String() string {
 func (*InterfaceCoverage) ProtoMessage() {}
 
 func (x *InterfaceCoverage) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1149,7 +1442,7 @@ func (x *InterfaceCoverage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InterfaceCoverage.ProtoReflect.Descriptor instead.
 func (*InterfaceCoverage) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *InterfaceCoverage) GetProfile() string {
@@ -1182,7 +1475,7 @@ type GetInterfaceCoverageResponse struct {
 
 func (x *GetInterfaceCoverageResponse) Reset() {
 	*x = GetInterfaceCoverageResponse{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1194,7 +1487,7 @@ func (x *GetInterfaceCoverageResponse) String() string {
 func (*GetInterfaceCoverageResponse) ProtoMessage() {}
 
 func (x *GetInterfaceCoverageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1207,7 +1500,7 @@ func (x *GetInterfaceCoverageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInterfaceCoverageResponse.ProtoReflect.Descriptor instead.
 func (*GetInterfaceCoverageResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetInterfaceCoverageResponse) GetInterfaces() []*InterfaceCoverage {
@@ -1227,7 +1520,7 @@ type GetComponentParamsRequest struct {
 
 func (x *GetComponentParamsRequest) Reset() {
 	*x = GetComponentParamsRequest{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1239,7 +1532,7 @@ func (x *GetComponentParamsRequest) String() string {
 func (*GetComponentParamsRequest) ProtoMessage() {}
 
 func (x *GetComponentParamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1252,7 +1545,7 @@ func (x *GetComponentParamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetComponentParamsRequest.ProtoReflect.Descriptor instead.
 func (*GetComponentParamsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetComponentParamsRequest) GetUri() string {
@@ -1278,7 +1571,7 @@ type ComponentParams struct {
 
 func (x *ComponentParams) Reset() {
 	*x = ComponentParams{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1290,7 +1583,7 @@ func (x *ComponentParams) String() string {
 func (*ComponentParams) ProtoMessage() {}
 
 func (x *ComponentParams) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1303,7 +1596,7 @@ func (x *ComponentParams) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentParams.ProtoReflect.Descriptor instead.
 func (*ComponentParams) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ComponentParams) GetRefDes() string {
@@ -1343,7 +1636,7 @@ type GetComponentParamsResponse struct {
 
 func (x *GetComponentParamsResponse) Reset() {
 	*x = GetComponentParamsResponse{}
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1355,7 +1648,7 @@ func (x *GetComponentParamsResponse) String() string {
 func (*GetComponentParamsResponse) ProtoMessage() {}
 
 func (x *GetComponentParamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_checks_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_checks_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1368,7 +1661,7 @@ func (x *GetComponentParamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetComponentParamsResponse.ProtoReflect.Descriptor instead.
 func (*GetComponentParamsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetComponentParamsResponse) GetComponents() []*ComponentParams {
@@ -1408,7 +1701,25 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
 	"\bas_named\x18\x05 \x01(\bR\aasNamed\"M\n" +
 	"\x16GetCheckReportResponse\x123\n" +
-	"\x06report\x18\x01 \x01(\v2\x1b.agni.v1.checks.CheckReportR\x06report\".\n" +
+	"\x06report\x18\x01 \x01(\v2\x1b.agni.v1.checks.CheckReportR\x06report\"c\n" +
+	"\vReportLinks\x12\x19\n" +
+	"\burl_base\x18\x01 \x01(\tR\aurlBase\x12\x1d\n" +
+	"\n" +
+	"design_uri\x18\x02 \x01(\tR\tdesignUri\x12\x1a\n" +
+	"\bwithheld\x18\x03 \x01(\tR\bwithheld\"\xd8\x02\n" +
+	"\x18RenderCheckReportRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x127\n" +
+	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x14\n" +
+	"\x05rules\x18\x03 \x03(\tR\x05rules\x125\n" +
+	"\x03run\x18\x04 \x01(\v2#.agni.v1.webapi.CheckDesignResponseR\x03run\x129\n" +
+	"\x06format\x18\x05 \x01(\x0e2!.agni.v1.webapi.CheckReportFormatR\x06format\x121\n" +
+	"\x05links\x18\x06 \x01(\v2\x1b.agni.v1.webapi.ReportLinksR\x05links\x12\x1b\n" +
+	"\tboard_uri\x18\a \x01(\tR\bboardUri\x12\x19\n" +
+	"\bas_named\x18\b \x01(\bR\aasNamed\"t\n" +
+	"\x19RenderCheckReportResponse\x12\x18\n" +
+	"\acontent\x18\x01 \x01(\fR\acontent\x12!\n" +
+	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x1a\n" +
+	"\bfilename\x18\x03 \x01(\tR\bfilename\".\n" +
 	"\x1aGetNamingConventionRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"_\n" +
 	"\x1bGetNamingConventionResponse\x12@\n" +
@@ -1473,12 +1784,17 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x1aGetComponentParamsResponse\x12?\n" +
 	"\n" +
 	"components\x18\x01 \x03(\v2\x1f.agni.v1.webapi.ComponentParamsR\n" +
-	"components2\xcd\x05\n" +
+	"components*|\n" +
+	"\x11CheckReportFormat\x12#\n" +
+	"\x1fCHECK_REPORT_FORMAT_UNSPECIFIED\x10\x00\x12$\n" +
+	" CHECK_REPORT_FORMAT_RESULTS_JSON\x10\x01\x12\x1c\n" +
+	"\x18CHECK_REPORT_FORMAT_HTML\x10\x022\xb7\x06\n" +
 	"\fCheckService\x12P\n" +
 	"\tListRules\x12 .agni.v1.webapi.ListRulesRequest\x1a!.agni.v1.webapi.ListRulesResponse\x12V\n" +
 	"\vCheckDesign\x12\".agni.v1.webapi.CheckDesignRequest\x1a#.agni.v1.webapi.CheckDesignResponse\x12b\n" +
 	"\x0fGetExpectations\x12&.agni.v1.webapi.GetExpectationsRequest\x1a'.agni.v1.webapi.GetExpectationsResponse\x12_\n" +
-	"\x0eGetCheckReport\x12%.agni.v1.webapi.GetCheckReportRequest\x1a&.agni.v1.webapi.GetCheckReportResponse\x12q\n" +
+	"\x0eGetCheckReport\x12%.agni.v1.webapi.GetCheckReportRequest\x1a&.agni.v1.webapi.GetCheckReportResponse\x12h\n" +
+	"\x11RenderCheckReport\x12(.agni.v1.webapi.RenderCheckReportRequest\x1a).agni.v1.webapi.RenderCheckReportResponse\x12q\n" +
 	"\x14GetInterfaceCoverage\x12+.agni.v1.webapi.GetInterfaceCoverageRequest\x1a,.agni.v1.webapi.GetInterfaceCoverageResponse\x12k\n" +
 	"\x12GetComponentParams\x12).agni.v1.webapi.GetComponentParamsRequest\x1a*.agni.v1.webapi.GetComponentParamsResponse\x12n\n" +
 	"\x13GetNamingConvention\x12*.agni.v1.webapi.GetNamingConventionRequest\x1a+.agni.v1.webapi.GetNamingConventionResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
@@ -1495,74 +1811,85 @@ func file_agni_v1_webapi_checks_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_checks_proto_rawDescData
 }
 
-var file_agni_v1_webapi_checks_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_agni_v1_webapi_checks_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_agni_v1_webapi_checks_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_agni_v1_webapi_checks_proto_goTypes = []any{
-	(*CheckDesignRequest)(nil),           // 0: agni.v1.webapi.CheckDesignRequest
-	(*OverlayConfig)(nil),                // 1: agni.v1.webapi.OverlayConfig
-	(*CheckDesignResponse)(nil),          // 2: agni.v1.webapi.CheckDesignResponse
-	(*SkippedRule)(nil),                  // 3: agni.v1.webapi.SkippedRule
-	(*GetCheckReportRequest)(nil),        // 4: agni.v1.webapi.GetCheckReportRequest
-	(*GetCheckReportResponse)(nil),       // 5: agni.v1.webapi.GetCheckReportResponse
-	(*GetNamingConventionRequest)(nil),   // 6: agni.v1.webapi.GetNamingConventionRequest
-	(*GetNamingConventionResponse)(nil),  // 7: agni.v1.webapi.GetNamingConventionResponse
-	(*GetExpectationsRequest)(nil),       // 8: agni.v1.webapi.GetExpectationsRequest
-	(*RuleExpectation)(nil),              // 9: agni.v1.webapi.RuleExpectation
-	(*GetExpectationsResponse)(nil),      // 10: agni.v1.webapi.GetExpectationsResponse
-	(*ListRulesRequest)(nil),             // 11: agni.v1.webapi.ListRulesRequest
-	(*RuleInfo)(nil),                     // 12: agni.v1.webapi.RuleInfo
-	(*ListRulesResponse)(nil),            // 13: agni.v1.webapi.ListRulesResponse
-	(*GetInterfaceCoverageRequest)(nil),  // 14: agni.v1.webapi.GetInterfaceCoverageRequest
-	(*SignalCoverage)(nil),               // 15: agni.v1.webapi.SignalCoverage
-	(*InterfaceCoverage)(nil),            // 16: agni.v1.webapi.InterfaceCoverage
-	(*GetInterfaceCoverageResponse)(nil), // 17: agni.v1.webapi.GetInterfaceCoverageResponse
-	(*GetComponentParamsRequest)(nil),    // 18: agni.v1.webapi.GetComponentParamsRequest
-	(*ComponentParams)(nil),              // 19: agni.v1.webapi.ComponentParams
-	(*GetComponentParamsResponse)(nil),   // 20: agni.v1.webapi.GetComponentParamsResponse
-	nil,                                  // 21: agni.v1.webapi.RuleInfo.TagsEntry
-	(*AnalysisConfig)(nil),               // 22: agni.v1.webapi.AnalysisConfig
-	(*checks.Finding)(nil),               // 23: agni.v1.checks.Finding
-	(*checks.Verdict)(nil),               // 24: agni.v1.checks.Verdict
-	(*checks.CheckReport)(nil),           // 25: agni.v1.checks.CheckReport
-	(*config.NamingConvention)(nil),      // 26: agni.v1.config.NamingConvention
-	(*param.PartSpec)(nil),               // 27: agni.v1.param.PartSpec
+	(CheckReportFormat)(0),               // 0: agni.v1.webapi.CheckReportFormat
+	(*CheckDesignRequest)(nil),           // 1: agni.v1.webapi.CheckDesignRequest
+	(*OverlayConfig)(nil),                // 2: agni.v1.webapi.OverlayConfig
+	(*CheckDesignResponse)(nil),          // 3: agni.v1.webapi.CheckDesignResponse
+	(*SkippedRule)(nil),                  // 4: agni.v1.webapi.SkippedRule
+	(*GetCheckReportRequest)(nil),        // 5: agni.v1.webapi.GetCheckReportRequest
+	(*GetCheckReportResponse)(nil),       // 6: agni.v1.webapi.GetCheckReportResponse
+	(*ReportLinks)(nil),                  // 7: agni.v1.webapi.ReportLinks
+	(*RenderCheckReportRequest)(nil),     // 8: agni.v1.webapi.RenderCheckReportRequest
+	(*RenderCheckReportResponse)(nil),    // 9: agni.v1.webapi.RenderCheckReportResponse
+	(*GetNamingConventionRequest)(nil),   // 10: agni.v1.webapi.GetNamingConventionRequest
+	(*GetNamingConventionResponse)(nil),  // 11: agni.v1.webapi.GetNamingConventionResponse
+	(*GetExpectationsRequest)(nil),       // 12: agni.v1.webapi.GetExpectationsRequest
+	(*RuleExpectation)(nil),              // 13: agni.v1.webapi.RuleExpectation
+	(*GetExpectationsResponse)(nil),      // 14: agni.v1.webapi.GetExpectationsResponse
+	(*ListRulesRequest)(nil),             // 15: agni.v1.webapi.ListRulesRequest
+	(*RuleInfo)(nil),                     // 16: agni.v1.webapi.RuleInfo
+	(*ListRulesResponse)(nil),            // 17: agni.v1.webapi.ListRulesResponse
+	(*GetInterfaceCoverageRequest)(nil),  // 18: agni.v1.webapi.GetInterfaceCoverageRequest
+	(*SignalCoverage)(nil),               // 19: agni.v1.webapi.SignalCoverage
+	(*InterfaceCoverage)(nil),            // 20: agni.v1.webapi.InterfaceCoverage
+	(*GetInterfaceCoverageResponse)(nil), // 21: agni.v1.webapi.GetInterfaceCoverageResponse
+	(*GetComponentParamsRequest)(nil),    // 22: agni.v1.webapi.GetComponentParamsRequest
+	(*ComponentParams)(nil),              // 23: agni.v1.webapi.ComponentParams
+	(*GetComponentParamsResponse)(nil),   // 24: agni.v1.webapi.GetComponentParamsResponse
+	nil,                                  // 25: agni.v1.webapi.RuleInfo.TagsEntry
+	(*AnalysisConfig)(nil),               // 26: agni.v1.webapi.AnalysisConfig
+	(*checks.Finding)(nil),               // 27: agni.v1.checks.Finding
+	(*checks.Verdict)(nil),               // 28: agni.v1.checks.Verdict
+	(*checks.CheckReport)(nil),           // 29: agni.v1.checks.CheckReport
+	(*config.NamingConvention)(nil),      // 30: agni.v1.config.NamingConvention
+	(*param.PartSpec)(nil),               // 31: agni.v1.param.PartSpec
 }
 var file_agni_v1_webapi_checks_proto_depIdxs = []int32{
-	1,  // 0: agni.v1.webapi.CheckDesignRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	22, // 1: agni.v1.webapi.OverlayConfig.config:type_name -> agni.v1.webapi.AnalysisConfig
-	23, // 2: agni.v1.webapi.CheckDesignResponse.findings:type_name -> agni.v1.checks.Finding
-	3,  // 3: agni.v1.webapi.CheckDesignResponse.skipped:type_name -> agni.v1.webapi.SkippedRule
-	24, // 4: agni.v1.webapi.CheckDesignResponse.verdicts:type_name -> agni.v1.checks.Verdict
-	1,  // 5: agni.v1.webapi.GetCheckReportRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	25, // 6: agni.v1.webapi.GetCheckReportResponse.report:type_name -> agni.v1.checks.CheckReport
-	26, // 7: agni.v1.webapi.GetNamingConventionResponse.convention:type_name -> agni.v1.config.NamingConvention
-	9,  // 8: agni.v1.webapi.GetExpectationsResponse.expectations:type_name -> agni.v1.webapi.RuleExpectation
-	1,  // 9: agni.v1.webapi.ListRulesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	21, // 10: agni.v1.webapi.RuleInfo.tags:type_name -> agni.v1.webapi.RuleInfo.TagsEntry
-	12, // 11: agni.v1.webapi.ListRulesResponse.rules:type_name -> agni.v1.webapi.RuleInfo
-	1,  // 12: agni.v1.webapi.GetInterfaceCoverageRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	15, // 13: agni.v1.webapi.InterfaceCoverage.signals:type_name -> agni.v1.webapi.SignalCoverage
-	16, // 14: agni.v1.webapi.GetInterfaceCoverageResponse.interfaces:type_name -> agni.v1.webapi.InterfaceCoverage
-	27, // 15: agni.v1.webapi.ComponentParams.spec:type_name -> agni.v1.param.PartSpec
-	19, // 16: agni.v1.webapi.GetComponentParamsResponse.components:type_name -> agni.v1.webapi.ComponentParams
-	11, // 17: agni.v1.webapi.CheckService.ListRules:input_type -> agni.v1.webapi.ListRulesRequest
-	0,  // 18: agni.v1.webapi.CheckService.CheckDesign:input_type -> agni.v1.webapi.CheckDesignRequest
-	8,  // 19: agni.v1.webapi.CheckService.GetExpectations:input_type -> agni.v1.webapi.GetExpectationsRequest
-	4,  // 20: agni.v1.webapi.CheckService.GetCheckReport:input_type -> agni.v1.webapi.GetCheckReportRequest
-	14, // 21: agni.v1.webapi.CheckService.GetInterfaceCoverage:input_type -> agni.v1.webapi.GetInterfaceCoverageRequest
-	18, // 22: agni.v1.webapi.CheckService.GetComponentParams:input_type -> agni.v1.webapi.GetComponentParamsRequest
-	6,  // 23: agni.v1.webapi.CheckService.GetNamingConvention:input_type -> agni.v1.webapi.GetNamingConventionRequest
-	13, // 24: agni.v1.webapi.CheckService.ListRules:output_type -> agni.v1.webapi.ListRulesResponse
-	2,  // 25: agni.v1.webapi.CheckService.CheckDesign:output_type -> agni.v1.webapi.CheckDesignResponse
-	10, // 26: agni.v1.webapi.CheckService.GetExpectations:output_type -> agni.v1.webapi.GetExpectationsResponse
-	5,  // 27: agni.v1.webapi.CheckService.GetCheckReport:output_type -> agni.v1.webapi.GetCheckReportResponse
-	17, // 28: agni.v1.webapi.CheckService.GetInterfaceCoverage:output_type -> agni.v1.webapi.GetInterfaceCoverageResponse
-	20, // 29: agni.v1.webapi.CheckService.GetComponentParams:output_type -> agni.v1.webapi.GetComponentParamsResponse
-	7,  // 30: agni.v1.webapi.CheckService.GetNamingConvention:output_type -> agni.v1.webapi.GetNamingConventionResponse
-	24, // [24:31] is the sub-list for method output_type
-	17, // [17:24] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	2,  // 0: agni.v1.webapi.CheckDesignRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	26, // 1: agni.v1.webapi.OverlayConfig.config:type_name -> agni.v1.webapi.AnalysisConfig
+	27, // 2: agni.v1.webapi.CheckDesignResponse.findings:type_name -> agni.v1.checks.Finding
+	4,  // 3: agni.v1.webapi.CheckDesignResponse.skipped:type_name -> agni.v1.webapi.SkippedRule
+	28, // 4: agni.v1.webapi.CheckDesignResponse.verdicts:type_name -> agni.v1.checks.Verdict
+	2,  // 5: agni.v1.webapi.GetCheckReportRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	29, // 6: agni.v1.webapi.GetCheckReportResponse.report:type_name -> agni.v1.checks.CheckReport
+	2,  // 7: agni.v1.webapi.RenderCheckReportRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	3,  // 8: agni.v1.webapi.RenderCheckReportRequest.run:type_name -> agni.v1.webapi.CheckDesignResponse
+	0,  // 9: agni.v1.webapi.RenderCheckReportRequest.format:type_name -> agni.v1.webapi.CheckReportFormat
+	7,  // 10: agni.v1.webapi.RenderCheckReportRequest.links:type_name -> agni.v1.webapi.ReportLinks
+	30, // 11: agni.v1.webapi.GetNamingConventionResponse.convention:type_name -> agni.v1.config.NamingConvention
+	13, // 12: agni.v1.webapi.GetExpectationsResponse.expectations:type_name -> agni.v1.webapi.RuleExpectation
+	2,  // 13: agni.v1.webapi.ListRulesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	25, // 14: agni.v1.webapi.RuleInfo.tags:type_name -> agni.v1.webapi.RuleInfo.TagsEntry
+	16, // 15: agni.v1.webapi.ListRulesResponse.rules:type_name -> agni.v1.webapi.RuleInfo
+	2,  // 16: agni.v1.webapi.GetInterfaceCoverageRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	19, // 17: agni.v1.webapi.InterfaceCoverage.signals:type_name -> agni.v1.webapi.SignalCoverage
+	20, // 18: agni.v1.webapi.GetInterfaceCoverageResponse.interfaces:type_name -> agni.v1.webapi.InterfaceCoverage
+	31, // 19: agni.v1.webapi.ComponentParams.spec:type_name -> agni.v1.param.PartSpec
+	23, // 20: agni.v1.webapi.GetComponentParamsResponse.components:type_name -> agni.v1.webapi.ComponentParams
+	15, // 21: agni.v1.webapi.CheckService.ListRules:input_type -> agni.v1.webapi.ListRulesRequest
+	1,  // 22: agni.v1.webapi.CheckService.CheckDesign:input_type -> agni.v1.webapi.CheckDesignRequest
+	12, // 23: agni.v1.webapi.CheckService.GetExpectations:input_type -> agni.v1.webapi.GetExpectationsRequest
+	5,  // 24: agni.v1.webapi.CheckService.GetCheckReport:input_type -> agni.v1.webapi.GetCheckReportRequest
+	8,  // 25: agni.v1.webapi.CheckService.RenderCheckReport:input_type -> agni.v1.webapi.RenderCheckReportRequest
+	18, // 26: agni.v1.webapi.CheckService.GetInterfaceCoverage:input_type -> agni.v1.webapi.GetInterfaceCoverageRequest
+	22, // 27: agni.v1.webapi.CheckService.GetComponentParams:input_type -> agni.v1.webapi.GetComponentParamsRequest
+	10, // 28: agni.v1.webapi.CheckService.GetNamingConvention:input_type -> agni.v1.webapi.GetNamingConventionRequest
+	17, // 29: agni.v1.webapi.CheckService.ListRules:output_type -> agni.v1.webapi.ListRulesResponse
+	3,  // 30: agni.v1.webapi.CheckService.CheckDesign:output_type -> agni.v1.webapi.CheckDesignResponse
+	14, // 31: agni.v1.webapi.CheckService.GetExpectations:output_type -> agni.v1.webapi.GetExpectationsResponse
+	6,  // 32: agni.v1.webapi.CheckService.GetCheckReport:output_type -> agni.v1.webapi.GetCheckReportResponse
+	9,  // 33: agni.v1.webapi.CheckService.RenderCheckReport:output_type -> agni.v1.webapi.RenderCheckReportResponse
+	21, // 34: agni.v1.webapi.CheckService.GetInterfaceCoverage:output_type -> agni.v1.webapi.GetInterfaceCoverageResponse
+	24, // 35: agni.v1.webapi.CheckService.GetComponentParams:output_type -> agni.v1.webapi.GetComponentParamsResponse
+	11, // 36: agni.v1.webapi.CheckService.GetNamingConvention:output_type -> agni.v1.webapi.GetNamingConventionResponse
+	29, // [29:37] is the sub-list for method output_type
+	21, // [21:29] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_checks_proto_init() }
@@ -1576,13 +1903,14 @@ func file_agni_v1_webapi_checks_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_checks_proto_rawDesc), len(file_agni_v1_webapi_checks_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   22,
+			NumEnums:      1,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_agni_v1_webapi_checks_proto_goTypes,
 		DependencyIndexes: file_agni_v1_webapi_checks_proto_depIdxs,
+		EnumInfos:         file_agni_v1_webapi_checks_proto_enumTypes,
 		MessageInfos:      file_agni_v1_webapi_checks_proto_msgTypes,
 	}.Build()
 	File_agni_v1_webapi_checks_proto = out.File
