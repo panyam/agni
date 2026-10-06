@@ -106,9 +106,17 @@ type Unclassified struct {
 // classification coverage. filesByPath maps a display path to its raw bytes.
 func (m Manifest) Audit(filesByPath map[string][]byte) []Unclassified {
 	var out []Unclassified
+	// EDIF keywords are case-insensitive, and the reader folds them (agni issue 941), so an Altium
+	// export's (PortRef is the portRef construct and not a new one.
+	folded := map[string]bool{}
+	if m.Kind == KindEDIF {
+		for k := range m.Entries {
+			folded[strings.ToLower(k)] = true
+		}
+	}
 	for path, data := range filesByPath {
 		for _, tok := range Enumerate(data, m.Kind) {
-			if _, ok := m.Entries[tok]; !ok {
+			if _, ok := m.Entries[tok]; !ok && !folded[strings.ToLower(tok)] {
 				out = append(out, Unclassified{Token: tok, File: path})
 			}
 		}
