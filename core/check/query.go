@@ -21,6 +21,7 @@ type irModel struct {
 	d         *ir.Design
 	pinDir    map[string]ir.PinDirection  // "refdes\x00pin" -> direction
 	pinName   map[string]string           // "refdes\x00pin" -> declared pin name (for role derivation)
+	pinless   map[string]bool             // ref-des whose resolved part types declare no pins at all
 	pins      []PinInst                   // every part-type pin of every component, dedup by designator
 	pinConn   map[string]bool             // "refdes\x00pin" present in some net's connections
 	pinNet    map[string]string           // "refdes\x00pin" -> first net name it appears on
@@ -98,6 +99,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	// the index the ingestion classify pass uses (WS3-071), so part resolution never drifts.
 	parts := classify.PartIndex(d)
 	for _, c := range d.Components {
+		declared := 0
 		var first *ir.PartType
 		for _, s := range c.Sections {
 			p := parts[s.LibraryRef+"/"+s.PartRef]
@@ -110,6 +112,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 			if first == nil {
 				first = p
 			}
+			declared += len(p.Pins)
 			for _, pin := range p.Pins {
 				key := c.RefDes + "\x00" + pin.Designator
 				if _, seen := m.pinDir[key]; !seen {
@@ -125,6 +128,12 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 			}
 		}
 		m.classSet[c.RefDes] = m.componentClassesOf(c, first)
+		if first != nil && declared == 0 {
+			if m.pinless == nil {
+				m.pinless = map[string]bool{}
+			}
+			m.pinless[c.RefDes] = true
+		}
 	}
 	// A duplicated ref-des puts one (ref, pin) key in several nets, since each placement gets
 	// its own copper. duplicate-ref-des reports the root cause, so pin-net-conflict skips those pins.
@@ -365,6 +374,10 @@ func (m *irModel) PinRole(refDes, pin string) PinRole {
 // Model interface because the datasheet pin join leads with the NAME, since a designator is the pin's
 // position in one package and the same die in another body renumbers it.
 func (m *irModel) PinName(refDes, pin string) string { return m.pinName[refDes+"\x00"+pin] }
+
+// IsPinlessPart reports whether a component's part type is known and declares no pins (see
+// model.Model). A component with no resolved part type is not pinless, since its pins are unknown.
+func (m *irModel) IsPinlessPart(refDes string) bool { return m.pinless[refDes] }
 
 func (m *irModel) PinNetName(refDes, pin string) string { return m.pinNet[refDes+"\x00"+pin] }
 

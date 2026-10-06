@@ -93,6 +93,10 @@ type Model interface {
 	// die ships in a different package, the name is die-relative, so a datasheet join leads with it;
 	// see param.ResolvePin for the precedence.
 	PinName(refDes, pin string) string
+	// IsPinlessPart reports whether a component resolves to a part type that declares no pins, as a
+	// mounting hole, a logo or a module's assembly symbol does (agni issue 937). False for a component
+	// whose part type the read does not carry, since its pins are then unknown rather than absent.
+	IsPinlessPart(refDes string) bool
 	// on_net: whether a ref_des appears on at least one net (section-aware).
 	IsConnected(refDes string) bool
 	// membership: whether a ref_des is known to the design at all, either a listed component or a
