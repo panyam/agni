@@ -306,9 +306,9 @@ func argTypeProtos(ts []ns.ArgType) []*checkspb.DatalogArgType {
 
 func argTypesFromProto(ps []*checkspb.DatalogArgType) []ns.ArgType {
 	var out []ns.ArgType
-	for _, p := range ps {
+	for _, at := range ps {
 		out = append(out, ns.ArgType{
-			Kind: p.GetKind(), KindFrom: p.GetKindFrom(), Owner: p.GetOwner(), Type: p.GetType(), Unit: p.GetUnit(), Domain: p.GetDomain(),
+			Kind: at.GetKind(), KindFrom: at.GetKindFrom(), Owner: at.GetOwner(), Type: at.GetType(), Unit: at.GetUnit(), Domain: at.GetDomain(),
 		})
 	}
 	return out
