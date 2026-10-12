@@ -289,8 +289,9 @@ export class ViewerPresenter {
   // the panel shows inline rather than as a toast. The busy flag rides in the pushed result so the
   // panel disables Run while a query runs.
   //
-  // bindings are the values the query's variables are bound to (agni issue 793), sent as text.
-  async runQuery(text: string, bindings: Record<string, string> = {}): Promise<void> {
+  // bindings are the values the query's variables are bound to (agni issue 793), sent as text. limit
+  // caps the rows (agni issue 896), 0 for the whole answer.
+  async runQuery(text: string, bindings: Record<string, string> = {}, limit = 0): Promise<void> {
     if (!this.views.query || !this.query) return;
     if (!this.mount || !this.path) {
       this.views.query.setState(errorResult("Open a design first."));
@@ -302,7 +303,7 @@ export class ViewerPresenter {
       // screen were computed under, and a Query panel answering under the server's would contradict
       // it (WS3-113).
       const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, { kind: { case: "text" as const, value } }]));
-      const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay(), bindings: wire });
+      const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay(), bindings: wire, limit });
       this.views.query.setState(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
       this.views.query.setState(errorResult(e instanceof Error ? e.message : String(e)));

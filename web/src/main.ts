@@ -439,7 +439,7 @@ class AppRoot extends BaseComponent {
     // The datalog query panel (WS9-036) runs an ad-hoc query. The presenter evaluates
     // it over the open design and pushes results back through query.view.
     const query = queryPanelIsland(queryEl, this._eventBus, {
-      onRun: (text, bindings) => void presenter.runQuery(text, bindings),
+      onRun: (text, bindings, limit) => void presenter.runQuery(text, bindings, limit),
       onLocate: (kind, subject, sheet, reason, pin) => void presenter.locateEntity(kind, subject, sheet, reason, pin ?? ""),
       // onInspect opens the check results for the selected entity through the EXISTING finding focus
       // (agni issue 259). Nothing re-evaluates, since selectFinding focuses a subject within the

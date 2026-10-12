@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { queryPanelIsland } from "./querypanel.jsx";
-import { type ExampleItem, type QueryResult, type RelationItem, LocateReason, emptyResult, errorResult, resultFromResponse } from "./query.js";
+import { type ExampleItem, type QueryResult, type RelationItem, LocateReason, STARTING_POINT_LIMIT, emptyResult, errorResult, resultFromResponse } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 
 // chips reads the binding chips under the box as [name label, value] pairs.
@@ -391,7 +391,7 @@ describe("walking from a result row", () => {
 
     el.querySelector<HTMLButtonElement>(".query-ask")!.click();
     const asked = "component.net(?ref, ?net) => ?ref";
-    expect(onRun).toHaveBeenCalledWith(asked, { net: "SDA" });
+    expect(onRun).toHaveBeenCalledWith(asked, { net: "SDA" }, STARTING_POINT_LIMIT);
     // The query stays in the box, editable, because the hop is meant to teach the sentence that
     // made it, and the value it was asked about shows beside it (agni issue 793).
     expect(box(el).value).toBe(asked);
@@ -923,6 +923,46 @@ describe("bound values", () => {
     panel.view.setQuery(PRESET.query, { net: "GND" });
     expect(box(el).value).toBe(PRESET.query);
     expect(chips(el)).toEqual([["?net =", "GND"]]);
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" }, STARTING_POINT_LIMIT);
+  });
+});
+
+// agni issue 896: a question about one picked entity asks for the first rows, says how many the
+// limit left out, and "show all" asks the same question again without it.
+describe("a limited answer", () => {
+  const PRESET = { kind: "net", query: "pin.net(?ref, ?pin, ?net) => ?ref, ?pin", teaches: "t", binds: ["net"] };
+  const limited = (total: number): QueryResult => ({
+    ...emptyResult(),
+    ran: true,
+    columns: ["ref", "pin"],
+    columnKinds: ["", ""],
+    rows: [
+      { cells: ["U1", "1"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""] },
+      { cells: ["U2", "4"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""] },
+    ],
+    total,
+  });
+  const count = (el: HTMLElement) => el.querySelector(".query-count")!.textContent ?? "";
+  const showAll = (el: HTMLElement) => el.querySelector<HTMLButtonElement>(".query-show-all");
+
+  it("says how many rows the limit left out, and show all asks again without the limit", () => {
+    const { el, panel, onRun, push } = mountPanel();
+    panel.view.setQuery(PRESET.query, { net: "GND" });
+    push(limited(1229));
+    expect(count(el)).toContain("2 of 1229 result(s)");
+    // The reader editing the box does not change which question show all asks.
+    const box = el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+    box.value = "component.net(?ref, ?net) => ?ref";
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    showAll(el)!.click();
     expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" });
+  });
+
+  it("offers nothing more when the answer is whole", () => {
+    const { el, push } = mountPanel();
+    push(limited(0));
+    expect(count(el)).toContain("2 result(s)");
+    expect(count(el)).not.toContain(" of ");
+    expect(showAll(el)).toBeNull();
   });
 });
