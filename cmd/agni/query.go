@@ -176,12 +176,16 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				return err
 			}
 			if setPath != "" {
+				if queryLimit != 0 {
+					return fmt.Errorf("--limit caps one query's answer; a set's queries write their own limit")
+				}
 				return runQuerySet(cmd, svc, setPath, designURI, boardURI, overlay, format, title)
 			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
 				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
 				OmitLocations: queryOmitLocations,
 				Bindings:      service.BindingsProto(bind),
+				Limit:         queryLimit,
 			})
 			if err != nil {
 				return err
@@ -197,6 +201,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().BoolVar(&showRelations, "relations", false, "print the namespace tree of everything a query can call and exit. A path argument narrows it: a module (`net`) lists its members, a member (`net.has_test_point`) prints its signature, kind, doc and, for a derived relation, its definition")
 	c.Flags().StringVar(&format, "format", "text", "output format: text (the aligned terminal table), csv (spreadsheet-safe, header row, table only), json (rows with their citations kept apart), markdown or html (a VIEW: the question above its answer, ready to hand to someone). markdown and html carry the query; csv deliberately does not, because its first row has to be the header")
 	outFileFlag(c, &outPath)
+	c.Flags().Int32Var(&queryLimit, "limit", 0, "answer only the first N rows and say how many were left out (agni issue 896); where the query writes its own limit, the smaller applies. Not taken with --set")
 	c.Flags().BoolVar(&queryOmitLocations, "omit-locations", false, "leave out where each answer cell is drawn (its sheets and locate reason) and skip loading the drawing; for a script that draws nothing, this is most of a large json answer's size")
 	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so a net or part column puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
@@ -330,6 +335,9 @@ func printExamples(w io.Writer) {
 // queryOmitLocations is `agni query --omit-locations`, carried on both the single query and the set.
 var queryOmitLocations bool
 
+// queryLimit is `agni query --limit`, RunQueryRequest.limit.
+var queryLimit int32
+
 // renderTable writes a query answer in the requested format. One dispatch for both evaluation paths
 // (the service and the --speclib direct one), so a format can never work on one and not the other.
 func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rpt.Table, orderBy []string) error {
@@ -444,7 +452,7 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 // provenance.source_file, and a new output format has to keep the rule itself.
 func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source string) rpt.Table {
 	t := rpt.Table{Title: title, Query: queryText, Source: source, Columns: resp.GetColumns(),
-		Bindings: query.FormatBindings(service.BindingsFromProto(resp.GetBindings()))}
+		Bindings: query.FormatBindings(service.BindingsFromProto(resp.GetBindings())), Total: int(resp.GetTotal())}
 	for _, r := range resp.GetRows() {
 		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r), Why: r.GetCellWhy()})
 	}

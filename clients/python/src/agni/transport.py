@@ -275,9 +275,10 @@ def _write_library(req: Message, root: str) -> List[str]:
 
 
 def _query_argv(req: Message) -> List[str]:
-    _only(req, ("uri", "query", "board_uri", "as_named", "overlay", "work_budget", "bindings", "omit_locations"))
+    _only(req, ("uri", "query", "board_uri", "as_named", "overlay", "work_budget", "bindings", "omit_locations", "limit"))
     _library_only(req)
-    return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req) + _bind_flags(req) + _locate_flags(req)
+    limit = ["--limit", str(req.limit)] if req.limit else []
+    return ["query", req.uri, req.query, "--format", "json"] + _read_flags(req) + _bind_flags(req) + _locate_flags(req) + limit
 
 
 def _query_set_argv(req: Message) -> List[str]:

@@ -25,7 +25,7 @@
 {{if .Error}}
 <p class="note">Could not answer: {{.Error}}</p>
 {{else if .Body}}
-<div class="sub">{{len .Body}} result(s)</div>
+<div class="sub">{{.Count}}</div>
 <table>
   <thead>
     <tr>{{range .Header}}<th>{{.}}</th>{{end}}</tr>

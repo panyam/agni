@@ -3,6 +3,7 @@ package report
 import (
 	"bytes"
 	"encoding/csv"
+	"io"
 	"strings"
 	"testing"
 )
@@ -256,5 +257,35 @@ func TestAnAbsentCellPrintsWhyAndCSVStaysRaw(t *testing.T) {
 	}
 	if strings.Contains(csv.String(), "absent") {
 		t.Errorf("csv cell carries the reason, want it raw:\n%s", csv.String())
+	}
+}
+
+// TestALimitedTableSaysHowManyRowsItLeftOut covers agni issue 896: a page of an answer is never
+// printed as though it were the whole answer, and csv stays the bare table.
+func TestALimitedTableSaysHowManyRowsItLeftOut(t *testing.T) {
+	tab := Table{Query: "q", Columns: []string{"ref"}, Rows: []TableRow{{Cells: []string{"U1"}}, {Cells: []string{"U2"}}}, Total: 1229}
+	for name, render := range map[string]func(io.Writer, Table) error{"text": TableText, "markdown": TableMarkdown, "html": TableHTML} {
+		var b strings.Builder
+		if err := render(&b, tab); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(b.String(), "2 of 1229 result(s), 1227 left out by the limit") {
+			t.Errorf("%s does not say how many rows the limit left out:\n%s", name, b.String())
+		}
+	}
+	var b strings.Builder
+	if err := TableCSV(&b, tab); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(b.String(), "1229") {
+		t.Errorf("csv carries the count, want the bare table:\n%s", b.String())
+	}
+	tab.Total = 0
+	b.Reset()
+	if err := TableText(&b, tab); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), "\n2 result(s)\n") {
+		t.Errorf("a whole answer's count changed:\n%s", b.String())
 	}
 }

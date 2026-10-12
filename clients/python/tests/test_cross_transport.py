@@ -146,6 +146,8 @@ CASES: List[Case] = [
     # An answer without its locations answers alike: no sheets or reasons on either transport.
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?r, ?p, ?n) => ?n, ?r, ?p", omit_locations=True)),
     Case("QueryService/RunQueries", lambda c: c.run_queries(uri=DESIGN, set=_SET, omit_locations=True)),
+    # A request's limit cuts the answer and both transports report the same total (agni issue 896).
+    Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="pin.net(?r, ?p, ?n) => ?n, ?r, ?p order by ?n, ?r, ?p", limit=5)),
     # Bound variables answer alike, text and number, quoting included (agni issue 793).
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"}))),
     Case("QueryService/RunQuery", lambda c: c.run_query(uri=DESIGN, query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3.0}))),

@@ -60,6 +60,12 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, err
 	}
+	if n := int(req.GetLimit()); n < 0 {
+		return nil, fmt.Errorf("%w: limit %d is negative", ErrInvalidArgument, n)
+	} else if n > 0 && (q.Limit == 0 || n < q.Limit) {
+		// The smaller limit applies, so a request can narrow a query that writes its own.
+		q.Limit = n
+	}
 	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), BindingsFromProto(req.GetBindings()), req.GetOmitLocations())
 	if err != nil {
 		if stopped(err) {
@@ -269,6 +275,12 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		plan = &query.ExplainReport{}
 		opts = append(opts, query.Explain(plan))
 	}
+	// A page of the answer says how many rows it left out (agni issue 896). Without an offset or a
+	// limit every row is returned, so nothing is counted.
+	total := -1
+	if q.Limit > 0 || q.Offset > 0 || len(q.After) > 0 {
+		opts = append(opts, query.Total(&total))
+	}
 	endEval := timing.Begin(ctx, "evaluate")
 	table, err := s.eval.EvalTable(ctx, q, d.base, opts...)
 	endEval()
@@ -286,6 +298,9 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	resp := &webapi.RunQueryResponse{
 		Columns: make([]string, len(cols)), ColumnKinds: kinds,
 		Query: queryText, Source: d.source, Work: work, Bindings: BindingsProto(bind),
+	}
+	if total >= 0 {
+		resp.Total = int32(total)
 	}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
