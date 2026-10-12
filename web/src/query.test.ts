@@ -3,6 +3,14 @@ import { bindingsInUse, cellKind, formatBinding, groupRelations, searchBindings,
 import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
+  // agni issue 896: total survives only when the limit actually left rows out.
+  it("keeps the answer's total when a limit cut it, and none when the answer is whole", () => {
+    const resp = (total: number) => ({ columns: ["r"], columnKinds: [""], rows: [{ cells: ["R1"] }], total }) as never;
+    expect(resultFromResponse(resp(1229)).total).toBe(1229);
+    expect(resultFromResponse(resp(1)).total).toBe(0);
+    expect(resultFromResponse(resp(0)).total).toBe(0);
+  });
+
   it("carries column kinds and resolves each navigable cell's sheet badges via the resolver", () => {
     const resp = {
       columns: ["r", "n", "v"],

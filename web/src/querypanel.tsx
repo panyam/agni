@@ -16,6 +16,7 @@ import {
   searchBindings,
   groupRelations,
   relationTemplate,
+  STARTING_POINT_LIMIT,
 } from "./query.js";
 import {
   type CheckedState,
@@ -137,7 +138,7 @@ function QueryPanel(props: {
   setSelection: (sel: Selection | null) => void;
   currentSheet: () => string;
   findings: () => FindingsState;
-  onRun: (text: string, bindings: Record<string, string>) => void;
+  onRun: (text: string, bindings: Record<string, string>, limit?: number) => void;
   onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
 }) {
@@ -146,6 +147,21 @@ function QueryPanel(props: {
   // click and shown as chips under the box, so the box keeps the query as the server wrote it and
   // the values stay visible and editable beside it.
   const [bindings, setBindings] = createSignal<Record<string, string>>({});
+  // lastRun is the question the answer on screen is for, so "show all" asks the same one again
+  // without its limit even after the reader has started editing the box.
+  let lastRun: { text: string; bindings: Record<string, string> } = { text: "", bindings: {} };
+  // ask runs a query and remembers it. A question about one picked entity passes
+  // STARTING_POINT_LIMIT (agni issue 896); every other run asks for the whole answer.
+  const ask = (q: string, b: Record<string, string>, limit?: number) => {
+    lastRun = { text: q, bindings: b };
+    if (limit) props.onRun(q, b, limit);
+    else props.onRun(q, b);
+  };
+  const showAll = () => {
+    if (props.state().loading) return;
+    resetForRun();
+    props.onRun(lastRun.text, lastRun.bindings);
+  };
   // inUse is the bindings the current text still names, which are the ones a run sends and the
   // chips show.
   const inUse = () => bindingsInUse(text(), bindings());
@@ -191,7 +207,7 @@ function QueryPanel(props: {
     setText(p.text);
     setBindings(p.bindings);
     setDrawerOpen(false);
-    props.onRun(p.text, p.bindings);
+    ask(p.text, p.bindings, STARTING_POINT_LIMIT);
   });
 
   // drawerOpen controls the slide-in helper drawer (examples, relations, reference), which keeps
@@ -225,7 +241,7 @@ function QueryPanel(props: {
     const q = text().trim();
     if (q === "" || props.state().loading) return;
     resetForRun();
-    props.onRun(q, bindingsInUse(q, bindings()));
+    ask(q, bindingsInUse(q, bindings()));
   };
   // runExample fills the textarea with a starter query AND runs it (WS14-002), leaving the query in
   // the box to edit.
@@ -234,7 +250,7 @@ function QueryPanel(props: {
     setBindings({});
     if (props.state().loading) return;
     resetForRun();
-    props.onRun(e.query, {});
+    ask(e.query, {});
   };
   // doSearch fills the box with the datalog that answers the reader's name, binds the pattern, runs
   // it, and switches the panel BACK to query mode, so the reader sees the query and its binding and
@@ -248,7 +264,7 @@ function QueryPanel(props: {
     setBindings(b);
     setMode("query");
     resetForRun();
-    props.onRun(s.query, b);
+    ask(s.query, b);
   };
   // presetFor is the served click-to-ask query for a selection's kind, or undefined before the
   // catalog has arrived (or for a kind the server writes no preset for).
@@ -262,7 +278,7 @@ function QueryPanel(props: {
     setText(preset.query);
     setBindings(b);
     resetForRun();
-    props.onRun(preset.query, b);
+    ask(preset.query, b, STARTING_POINT_LIMIT);
   };
   // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
   // selects it, so one answer becomes the subject of the next question. A kind with no selection
@@ -768,7 +784,12 @@ function QueryPanel(props: {
               </tbody>
             </table>
             <div class="query-count">
-              {props.state().rows.length} result(s)
+              <Show when={props.state().total > 0} fallback={<>{props.state().rows.length} result(s)</>}>
+                {props.state().rows.length} of {props.state().total} result(s){" "}
+                <button type="button" class="query-show-all" onClick={showAll} title="Run the same question again without the limit.">
+                  show all
+                </button>
+              </Show>
               {/* The set case. The answers on screen ARE a selection, which is why findingsFor takes
                   a set rather than one subject. */}
               <Show when={resultSubjects().length > 0}>
@@ -796,7 +817,7 @@ export function queryPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   handlers: {
-    onRun: (text: string, bindings: Record<string, string>) => void;
+    onRun: (text: string, bindings: Record<string, string>, limit?: number) => void;
     onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
     // onInspect opens the check results for one entity. Optional like onLocate, since an embedding
     // host may mount the query panel with no checks panel (C13).

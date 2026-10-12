@@ -62,3 +62,9 @@ type ExplainReport = datalog.Report
 // Explain asks an evaluation to fill r with its plan. It costs time in proportion to the rules and
 // literals a query runs, not its tuples, so `agni query --explain` and a timed request can afford it.
 func Explain(r *ExplainReport) datalog.Option { return datalog.Explain(r) }
+
+// Total asks an evaluation to set *n to how many rows its answer has before any offset and limit, so
+// a caller showing the first rows can say how many it left out (agni issue 896). A limit with no
+// order by then solves the whole goal, since counting needs every row, though it still keeps only the
+// rows it returns.
+func Total(n *int) datalog.Option { return datalog.Total(n) }

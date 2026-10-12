@@ -12,7 +12,7 @@
 <h1>{{if .Title}}{{.Title}}{{else}}agni query{{end}}</h1>
 <div class="sub">
   {{if .Source}}{{.Source}}{{end}}
-  {{if .Body}} · {{len .Body}} result(s){{end}}
+  {{if .Body}} · {{.Count}}{{end}}
 </div>
 
 {{if .Query}}<pre class="q">{{.Query}}</pre>{{end}}

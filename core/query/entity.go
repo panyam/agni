@@ -44,11 +44,12 @@ func EntityQueries() []EntityQuery {
 		},
 		{
 			Kind: "net",
-			// component.net answers WHO is on the net and pin.net answers through which terminal;
-			// the join turns a list of parts into a wiring list.
-			Query:   `component.net(?ref, ?net), pin.net(?ref, ?pin, ?net) => ?ref, ?pin`,
+			// pin.net already names the part and the terminal, so this is one indexed lookup on the
+			// bound net. It used to join component.net first, which added no row and cost one probe
+			// per row: 140 ms against 6 ms for the 1229 pins on a large board's GND (agni issue 896).
+			Query:   `pin.net(?ref, ?pin, ?net) => ?ref, ?pin`,
 			Binds:   []string{"net"},
-			Teaches: "join: a shared ?ref connects the parts on a net to the pins that land on it",
+			Teaches: "a bound argument: with ?net given, pin.net answers only that net's pins",
 		},
 		{
 			Kind:    "bus",

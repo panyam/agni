@@ -79,6 +79,14 @@ type RunQueryRequest struct {
 	// such as a script writing a workbook. The entities themselves, and cell kinds and pin refs, are
 	// still filled, since they type the answer.
 	OmitLocations bool `protobuf:"varint,8,opt,name=omit_locations,json=omitLocations,proto3" json:"omit_locations,omitempty"`
+	// limit caps the rows the answer returns, for a caller that wants the first page of a large answer
+	// fast, such as a click on a net carrying a thousand pins (agni issue 896). It goes into evaluation
+	// rather than being a slice of the full answer, so only the rows returned are kept, located and
+	// sent. The goal is still solved whole, because total counts every row. Where the query text
+	// writes its own `limit`, the smaller of the two applies.
+	// Zero leaves the query's own limit, if any, as it is. RunQueryResponse.total says how many rows
+	// the limit left out.
+	Limit         int32 `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -167,6 +175,13 @@ func (x *RunQueryRequest) GetOmitLocations() bool {
 		return x.OmitLocations
 	}
 	return false
+}
+
+func (x *RunQueryRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns. Its provenance
@@ -407,7 +422,12 @@ type RunQueryResponse struct {
 	Entities []*AnswerEntity `protobuf:"bytes,8,rep,name=entities,proto3" json:"entities,omitempty"`
 	// sources is every distinct citation the answer's rows carry, which QueryRow.cite_index points
 	// into (agni issue 916).
-	Sources       []string `protobuf:"bytes,9,rep,name=sources,proto3" json:"sources,omitempty"`
+	Sources []string `protobuf:"bytes,9,rep,name=sources,proto3" json:"sources,omitempty"`
+	// total is how many rows the answer has before any offset and limit, the query's own or the
+	// request's (agni issue 896), so a caller showing the first rows can say how many it left out.
+	// It is filled only when a limit or offset applied, and zero otherwise, since without one every
+	// row is in rows.
+	Total         int32 `protobuf:"varint,10,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -503,6 +523,13 @@ func (x *RunQueryResponse) GetSources() []string {
 		return x.Sources
 	}
 	return nil
+}
+
+func (x *RunQueryResponse) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
 }
 
 // QueryValue is a value bound to a query variable. Where the schema types the variable's position,
@@ -1575,7 +1602,7 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x96\x03\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xac\x03\n" +
 	"\x0fRunQueryRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
@@ -1585,7 +1612,8 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\vwork_budget\x18\x06 \x01(\x03R\n" +
 	"workBudget\x12I\n" +
 	"\bbindings\x18\a \x03(\v2-.agni.v1.webapi.RunQueryRequest.BindingsEntryR\bbindings\x12%\n" +
-	"\x0eomit_locations\x18\b \x01(\bR\romitLocations\x1aW\n" +
+	"\x0eomit_locations\x18\b \x01(\bR\romitLocations\x12\x14\n" +
+	"\x05limit\x18\t \x01(\x05R\x05limit\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
 	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xeb\x01\n" +
@@ -1604,7 +1632,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x10\n" +
 	"\x03pin\x18\x03 \x01(\tR\x03pin\x12\x1b\n" +
 	"\tsheet_ids\x18\x04 \x03(\tR\bsheetIds\x124\n" +
-	"\x06reason\x18\x05 \x01(\x0e2\x1c.agni.v1.checks.LocateReasonR\x06reason\"\xb8\x03\n" +
+	"\x06reason\x18\x05 \x01(\x0e2\x1c.agni.v1.checks.LocateReasonR\x06reason\"\xce\x03\n" +
 	"\x10RunQueryResponse\x12\x18\n" +
 	"\acolumns\x18\x01 \x03(\tR\acolumns\x12,\n" +
 	"\x04rows\x18\x02 \x03(\v2\x18.agni.v1.webapi.QueryRowR\x04rows\x12!\n" +
@@ -1614,7 +1642,9 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x04work\x18\x06 \x01(\x03R\x04work\x12J\n" +
 	"\bbindings\x18\a \x03(\v2..agni.v1.webapi.RunQueryResponse.BindingsEntryR\bbindings\x128\n" +
 	"\bentities\x18\b \x03(\v2\x1c.agni.v1.webapi.AnswerEntityR\bentities\x12\x18\n" +
-	"\asources\x18\t \x03(\tR\asources\x1aW\n" +
+	"\asources\x18\t \x03(\tR\asources\x12\x14\n" +
+	"\x05total\x18\n" +
+	" \x01(\x05R\x05total\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
 	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"D\n" +

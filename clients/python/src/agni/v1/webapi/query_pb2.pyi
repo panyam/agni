@@ -9,7 +9,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class RunQueryRequest(_message.Message):
-    __slots__ = ("query", "overlay", "board_uri", "uri", "as_named", "work_budget", "bindings", "omit_locations")
+    __slots__ = ("query", "overlay", "board_uri", "uri", "as_named", "work_budget", "bindings", "omit_locations", "limit")
     class BindingsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -25,6 +25,7 @@ class RunQueryRequest(_message.Message):
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     BINDINGS_FIELD_NUMBER: _ClassVar[int]
     OMIT_LOCATIONS_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
     query: str
     overlay: _checks_pb2_1.OverlayConfig
     board_uri: str
@@ -33,7 +34,8 @@ class RunQueryRequest(_message.Message):
     work_budget: int
     bindings: _containers.MessageMap[str, QueryValue]
     omit_locations: bool
-    def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ...) -> None: ...
+    limit: int
+    def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ..., limit: _Optional[int] = ...) -> None: ...
 
 class QueryRow(_message.Message):
     __slots__ = ("cells", "cell_kinds", "cell_refs", "cell_entity", "cite_index", "cell_why")
@@ -66,7 +68,7 @@ class AnswerEntity(_message.Message):
     def __init__(self, kind: _Optional[str] = ..., ref: _Optional[str] = ..., pin: _Optional[str] = ..., sheet_ids: _Optional[_Iterable[str]] = ..., reason: _Optional[_Union[_checks_pb2.LocateReason, str]] = ...) -> None: ...
 
 class RunQueryResponse(_message.Message):
-    __slots__ = ("columns", "rows", "column_kinds", "query", "source", "work", "bindings", "entities", "sources")
+    __slots__ = ("columns", "rows", "column_kinds", "query", "source", "work", "bindings", "entities", "sources", "total")
     class BindingsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -83,6 +85,7 @@ class RunQueryResponse(_message.Message):
     BINDINGS_FIELD_NUMBER: _ClassVar[int]
     ENTITIES_FIELD_NUMBER: _ClassVar[int]
     SOURCES_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_FIELD_NUMBER: _ClassVar[int]
     columns: _containers.RepeatedScalarFieldContainer[str]
     rows: _containers.RepeatedCompositeFieldContainer[QueryRow]
     column_kinds: _containers.RepeatedScalarFieldContainer[str]
@@ -92,7 +95,8 @@ class RunQueryResponse(_message.Message):
     bindings: _containers.MessageMap[str, QueryValue]
     entities: _containers.RepeatedCompositeFieldContainer[AnswerEntity]
     sources: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., entities: _Optional[_Iterable[_Union[AnswerEntity, _Mapping]]] = ..., sources: _Optional[_Iterable[str]] = ...) -> None: ...
+    total: int
+    def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., entities: _Optional[_Iterable[_Union[AnswerEntity, _Mapping]]] = ..., sources: _Optional[_Iterable[str]] = ..., total: _Optional[int] = ...) -> None: ...
 
 class QueryValue(_message.Message):
     __slots__ = ("text", "number")

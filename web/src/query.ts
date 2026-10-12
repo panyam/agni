@@ -38,7 +38,15 @@ export interface QueryResult {
   error: string;
   loading: boolean;
   ran: boolean;
+  // total is how many rows the answer had when a limit cut it to rows (agni issue 896), and 0 when
+  // rows is the whole answer. The panel then says how many it left out and offers the rest.
+  total: number;
 }
+
+// STARTING_POINT_LIMIT caps the rows a question about one picked entity asks for (agni issue 896), so
+// a click on a ground net carrying a thousand pins draws the first fifty fast and offers the rest
+// rather than waiting for all of them.
+export const STARTING_POINT_LIMIT = 50;
 
 // RelationItem is one entry in the relation picker (WS9-037). It holds the name, the arg labels a
 // template inserts as ?arg, a one-line summary (hover), a kind for grouping, and (WS14-005) the
@@ -202,7 +210,7 @@ export function groupRelations(rels: RelationItem[]): { key: string; label: stri
 // emptyResult is the initial state (nothing run yet) and the reset the panel shows while a query
 // is in flight.
 export function emptyResult(loading = false): QueryResult {
-  return { columns: [], columnKinds: [], rows: [], error: "", loading, ran: false };
+  return { columns: [], columnKinds: [], rows: [], error: "", loading, ran: false, total: 0 };
 }
 
 // resultFromResponse projects a RunQueryResponse into panel state. The injected resolver turns
@@ -235,12 +243,13 @@ export function resultFromResponse(
     error: "",
     loading: false,
     ran: true,
+    total: resp.total > resp.rows.length ? resp.total : 0,
   };
 }
 
 // errorResult wraps a failure message (a parse error, or an unloadable design) as panel state.
 export function errorResult(message: string): QueryResult {
-  return { columns: [], columnKinds: [], rows: [], error: message, loading: false, ran: true };
+  return { columns: [], columnKinds: [], rows: [], error: message, loading: false, ran: true, total: 0 };
 }
 
 // reasonMessage renders a locate reason (WS9-039) as the explanation shown when clicking a cell

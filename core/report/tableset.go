@@ -117,6 +117,7 @@ func TableSetHTML(w io.Writer, s TableSet) error {
 		v.Sections = append(v.Sections, tableSetSectionView{
 			Name: sec.Name, Description: sec.Description, Error: sec.Error,
 			Query: t.Query, Bindings: t.Bindings, Header: t.header(), Body: t.bodyRows(),
+			Count: t.Count(),
 		})
 	}
 	if err := tm.Execute(w, v); err != nil {
@@ -137,4 +138,5 @@ type tableSetSectionView struct {
 	Bindings                        []string
 	Header                          []string
 	Body                            [][]string
+	Count                           string
 }

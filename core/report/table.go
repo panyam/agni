@@ -30,6 +30,19 @@ type Table struct {
 	// them; every renderer appends it as the last column.
 	Columns []string
 	Rows    []TableRow
+	// Total is how many rows the answer had before a limit cut it to Rows (agni issue 896), zero when
+	// nothing was cut. The count line then says how many were left out, so a page is never read as the
+	// whole answer.
+	Total int
+}
+
+// Count is the line stating how many rows the view holds, and how many the answer had when a limit
+// left some out.
+func (t Table) Count() string {
+	if t.Total > len(t.Rows) {
+		return fmt.Sprintf("%d of %d result(s), %d left out by the limit", len(t.Rows), t.Total, t.Total-len(t.Rows))
+	}
+	return fmt.Sprintf("%d result(s)", len(t.Rows))
 }
 
 // TableRow is one answer: a cell per column, plus the provenance of the facts that produced it.
@@ -78,7 +91,7 @@ func TableText(w io.Writer, t Table) error {
 	if err := tw.Flush(); err != nil {
 		return err
 	}
-	_, err := fmt.Fprintf(w, "\n%d result(s)\n", len(t.Rows))
+	_, err := fmt.Fprintf(w, "\n%s\n", t.Count())
 	return err
 }
 
@@ -124,7 +137,7 @@ func TableMarkdown(w io.Writer, t Table) error {
 	for _, r := range t.Rows {
 		bw.printf("| %s |\n", strings.Join(mdEscapeAll(r.cells()), " | "))
 	}
-	bw.printf("\n%d result(s)\n", len(t.Rows))
+	bw.printf("\n%s\n", t.Count())
 	return bw.err
 }
 
