@@ -333,7 +333,7 @@ func (r *Registry) membersOf(want ns.EntryKind, kind string) []RelationInfo {
 				info := RelationInfo{Name: e.Path, Summary: e.Doc, Kind: kind, Definition: e.Definition}
 				for _, a := range e.Args {
 					info.Args = append(info.Args, a.Name)
-					if k := argKindOf(a.ArgType); k.Entity != "" || k.KindArg != "" || k.OwnerArg != "" || len(k.ValidOptions) > 0 {
+					if k := argKindOf(a.ArgType); k.Entity != "" || k.KindArg != "" || k.OwnerArg != "" || len(k.ValidOptions) > 0 || k.Unit != "" {
 						if info.ArgKinds == nil {
 							info.ArgKinds = map[string]ArgKind{}
 						}
@@ -352,8 +352,8 @@ func (r *Registry) membersOf(want ns.EntryKind, kind string) []RelationInfo {
 }
 
 // ArgTypes maps a catalog entry's per-argument declarations onto the vocabulary's signature, position
-// by position: an entity kind, a kind taken per row from another argument, an owner argument, and a
-// closed vocabulary of values.
+// by position: an entity kind, a kind taken per row from another argument, an owner argument, a
+// closed vocabulary of values, and a unit.
 func ArgTypes(labels []string, kinds map[string]ArgKind) []ns.ArgType {
 	if len(kinds) == 0 {
 		return nil
@@ -361,7 +361,7 @@ func ArgTypes(labels []string, kinds map[string]ArgKind) []ns.ArgType {
 	out := make([]ns.ArgType, len(labels))
 	for i, l := range labels {
 		k := kinds[l]
-		out[i] = ns.ArgType{Kind: k.Entity, KindFrom: k.KindArg, Owner: k.OwnerArg, Domain: k.ValidOptions}
+		out[i] = ns.ArgType{Kind: k.Entity, KindFrom: k.KindArg, Owner: k.OwnerArg, Domain: k.ValidOptions, Unit: k.Unit}
 	}
 	return out
 }
@@ -388,7 +388,7 @@ func numericTypes(types []ns.ArgType, fields []Field) []ns.ArgType {
 }
 
 func argKindOf(t ns.ArgType) ArgKind {
-	return ArgKind{Entity: t.Kind, KindArg: t.KindFrom, OwnerArg: t.Owner, ValidOptions: t.Domain}
+	return ArgKind{Entity: t.Kind, KindArg: t.KindFrom, OwnerArg: t.Owner, ValidOptions: t.Domain, Unit: t.Unit}
 }
 
 // SchemaOf resolves a relation's positional layout. An extension relation resolves exactly like a

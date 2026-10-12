@@ -446,7 +446,7 @@ func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source stri
 	t := rpt.Table{Title: title, Query: queryText, Source: source, Columns: resp.GetColumns(),
 		Bindings: query.FormatBindings(service.BindingsFromProto(resp.GetBindings()))}
 	for _, r := range resp.GetRows() {
-		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r)})
+		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r), Why: r.GetCellWhy()})
 	}
 	return t
 }

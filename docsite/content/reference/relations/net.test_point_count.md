@@ -22,10 +22,9 @@ one contact there. Reading the whole table at once shows both.
 
 It is a grouped count with the empty groups filled in. A plain `count(distinct ?tp)` grouped by net
 gives no row for a net with nothing to count, so the uncovered nets would need a second query and a
-merge. This member is two clauses over one private helper: the helper counts the test points on each
-covered net, and the second clause gives `0` to every net the helper has no row for. The helper is
-separate because a rule that aggregates must be its relation's only rule. Every net answers exactly
-once.
+merge. This member counts inside the clause instead, with a body aggregate, `?c = count(distinct ?tp)
+: { ... }`, reduced once for every net `entity(?n, "net")` gives. A net with no test point gets a
+count over nothing, which is `0`. Every net answers exactly once.
 
 ### Datalog
 
@@ -46,8 +45,7 @@ net.test_point_count(?n, ?c), ?c > 1 => ?n, ?c
 `net.test_point_count(n: net, c: number)`, a derived relation in the `net` module, defined in Datalog in [`stdlib/lib/net.dl`](https://github.com/panyam/agni/blob/main/stdlib/lib/net.dl). In a clause, a bare name is another member of the same module and a dotted name is a full path.
 
 ```
-test_point_count(?n: net, ?c: number) :- _test_points(?n, ?c);
-test_point_count(?n: net, 0) :- entity(?n, "net"), not _test_points(?n, _);
+test_point_count(?n: net, ?c: number) :- entity(?n, "net"), ?c = count(distinct ?tp) : { component.net(?tp, ?n), component.class(?tp, "test_point") };
 ```
 
 `agni query --relations net.test_point_count` prints the same definition. [Adding a library member](../../../build/library-member/) explains how the library is built.

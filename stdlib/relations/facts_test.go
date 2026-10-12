@@ -1028,16 +1028,8 @@ var numericRelationControl = []string{
 // The rule is that a number in Num or Min carries its dimension, or its relation is on the short
 // list above.
 func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
-	spec := typSpec("ACME-33", "A", 0.000042)
-	d := supplyDesign("+5V", false, "ACME-33")
-	d.Constraints = []*ir.Constraint{
-		netClassDef("Power", 1, map[string]string{"track_width": "0.8", "via_drill": "0.4", "clearance": "0.2", "via_diameter": "0.6"}),
-	}
-	d.Nets[0].NetClasses = []string{"Power"}
-	m := check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
-
 	seen := map[string]bool{}
-	for _, f := range Facts(m) {
+	for _, f := range Facts(everyNumericFamily()) {
 		if f.Num == nil && f.Min == nil {
 			continue
 		}
@@ -1055,6 +1047,59 @@ func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
 			t.Errorf("the sweep saw no numeric row from %q, so this fixture does not exercise it and a "+
 				"clean result there proves nothing", rel)
 		}
+	}
+}
+
+// everyNumericFamily is a model publishing a row from every numeric relation family: a datasheet
+// parameter, a rail voltage, a net class and the board.
+func everyNumericFamily() check.Model {
+	spec := typSpec("ACME-33", "A", 0.000042)
+	d := supplyDesign("+5V", false, "ACME-33")
+	d.Constraints = []*ir.Constraint{
+		netClassDef("Power", 1, map[string]string{"track_width": "0.8", "via_drill": "0.4", "clearance": "0.2", "via_diameter": "0.6"}),
+	}
+	d.Nets[0].NetClasses = []string{"Power"}
+	return check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
+}
+
+// perRowUnitRelations publish numbers whose unit varies from row to row, as a datasheet's parameters
+// do, so they declare none and the engine reads each value's own.
+var perRowUnitRelations = map[string]bool{
+	RelParam: true, RelParamRange: true, RelParamTyp: true, RelParamPinRange: true, RelParamPinRelation: true,
+}
+
+// TestEveryDimensionedRelationDeclaresItsUnit holds each relation's declared unit to the rows it
+// projects. The engine refuses an ordering comparison between two declared units (volts against
+// millimetres), so a declaration that disagreed with its rows would refuse a sound query, and a
+// relation that declared nothing would let the unsound one answer empty.
+func TestEveryDimensionedRelationDeclaresItsUnit(t *testing.T) {
+	declared := map[string]string{}
+	for _, info := range builtinCatalog {
+		for _, k := range info.ArgKinds {
+			if k.Unit != "" {
+				declared[info.Name] = k.Unit
+			}
+		}
+	}
+	checked := 0
+	for _, f := range Facts(everyNumericFamily()) {
+		if f.BaseUnit == "" {
+			continue
+		}
+		if perRowUnitRelations[f.Relation] {
+			if u := declared[f.Relation]; u != "" {
+				t.Errorf("%s varies its unit per row but declares %q", f.Relation, u)
+			}
+			continue
+		}
+		checked++
+		if u := declared[f.Relation]; u != f.BaseUnit {
+			t.Errorf("%s publishes %q and declares %q; declare the unit its rows carry, or list it in "+
+				"perRowUnitRelations if they vary", f.Relation, f.BaseUnit, u)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no row with a fixed unit was checked, so the fixture proves nothing")
 	}
 }
 

@@ -55,6 +55,11 @@ type ArgKind struct {
 	// Strings rather than a typed enum because this package imports nothing. A registration site
 	// computes the list from whatever generated enum owns the vocabulary, so it cannot drift.
 	ValidOptions []string
+	// Unit is the base unit every number in a numeric argument is in ("V", "mm"), for a relation whose
+	// rows all share one. The engine refuses an ordering comparison between two arguments declaring
+	// different units (volts against millimetres) rather than answering nothing. Leave it empty where
+	// rows vary, as a datasheet parameter's do, since the engine then reads each value's own unit.
+	Unit string
 }
 
 // Relation kinds. A picker groups by these in KindOrder. KindPredicate is here rather than with any

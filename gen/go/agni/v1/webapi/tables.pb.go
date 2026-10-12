@@ -144,8 +144,12 @@ func (x *TableColumn) GetKind() string {
 }
 
 type TableRow struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cells         []string               `protobuf:"bytes,1,rep,name=cells,proto3" json:"cells,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Cells []string               `protobuf:"bytes,1,rep,name=cells,proto3" json:"cells,omitempty"`
+	// cell_why aligns with cells and says why an empty cell is absent, such as a sum over numbers in
+	// different units, and "" for every other cell. Empty when no cell in the row has a reason. The cell
+	// itself stays empty, so a csv encoder writes it raw.
+	CellWhy       []string `protobuf:"bytes,2,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,6 +187,13 @@ func (*TableRow) Descriptor() ([]byte, []int) {
 func (x *TableRow) GetCells() []string {
 	if x != nil {
 		return x.Cells
+	}
+	return nil
+}
+
+func (x *TableRow) GetCellWhy() []string {
+	if x != nil {
+		return x.CellWhy
 	}
 	return nil
 }
@@ -462,9 +473,10 @@ const file_agni_v1_webapi_tables_proto_rawDesc = "" +
 	"\vTableColumn\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12.\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1a.agni.v1.webapi.ColumnTypeR\x04type\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\" \n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\";\n" +
 	"\bTableRow\x12\x14\n" +
-	"\x05cells\x18\x01 \x03(\tR\x05cells\"\x80\x01\n" +
+	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x19\n" +
+	"\bcell_why\x18\x02 \x03(\tR\acellWhy\"\x80\x01\n" +
 	"\x05Table\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x125\n" +
 	"\acolumns\x18\x02 \x03(\v2\x1b.agni.v1.webapi.TableColumnR\acolumns\x12,\n" +

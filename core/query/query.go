@@ -42,7 +42,13 @@ type (
 	Var       = datalog.Var
 	Value     = ns.Value
 	Aggregate = datalog.Aggregate
-	Row       = datalog.Row
+	// BodyAggregate is an aggregate bound inside a clause: `?c = count(?n) : { pin(?r, ?n, _) }`.
+	BodyAggregate = datalog.BodyAggregate
+	// Order is one `order by` item.
+	Order = datalog.Order
+	// Table is an answer as columns and rows of values (Evaluator.EvalTable).
+	Table = datalog.Table
+	Row   = datalog.Row
 	// Base is a design's queryable fact base. Build one with NewBase.
 	Base = datalog.Base
 	// Evaluator answers a Query over a Base.

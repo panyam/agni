@@ -2,7 +2,10 @@ package query
 
 import (
 	"reflect"
+	"slices"
 	"testing"
+
+	"github.com/panyam/jaala/ns"
 )
 
 // fullQuery is a VALID datalog program touching every node and every field the wire form carries.
@@ -11,7 +14,9 @@ import (
 // naming a relation that resolves to nothing fails on decode and never reaches the comparison. The
 // program therefore defines its own relation (big_net) and otherwise names catalog ones.
 //
-// Aggregate.Distinct and Query.Having (agni issue 613) are here for the same reason.
+// Aggregate.Distinct and Query.Having (agni issue 613) are here for the same reason, and so are the
+// body aggregate, the head types and paging, which the wire form dropped without an error until it
+// carried them. TestQueryProtoKnowsEveryEngineField is what notices the next field.
 //
 // Value is the field set most worth covering. It carries four independent things (a string, an
 // optional number, an absent marker, and a base unit), and absent in particular exists because an
@@ -38,8 +43,18 @@ func fullQuery() Query {
 					Op:    "!=",
 					Right: Term{Const: &Value{Absent: true}},
 				}},
+				{Agg: &BodyAggregate{
+					Result: "k",
+					Agg:    Aggregate{Func: "count", Var: "p", Distinct: true},
+					Body: Body{Literals: []Literal{
+						{Pos: &Atom{Relation: "pin.net", Args: []Term{{Var: "r"}, {Var: "p"}, {Var: "n"}}}},
+					}},
+				}},
 			}},
 			Hops: 2,
+			HeadTypes: []ns.ArgType{
+				{Kind: "net", KindFrom: "k", Owner: "o", Type: ns.TypeNumber, Unit: "V", Domain: []string{"a", "b"}},
+			},
 		}},
 		Goal:   Body{Literals: []Literal{{Pos: &Atom{Relation: "big_net", Args: []Term{{Var: "n"}}}}}},
 		Select: []Term{{Var: "n"}, {Agg: &Aggregate{Func: "count", Var: "n"}}, {Agg: &Aggregate{Func: "list", Var: "n", Distinct: true}}},
@@ -51,6 +66,10 @@ func fullQuery() Query {
 			Op:    ">=",
 			Right: Term{Const: &Value{S: "2", Num: &two}},
 		}},
+		OrderBy: []Order{{Term: Term{Var: "n"}, Desc: true}},
+		After:   []Value{{S: "GND"}},
+		Limit:   50,
+		Offset:  10,
 	}
 }
 
@@ -69,5 +88,44 @@ func TestQueryProtoRoundTrip(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("round trip lost or changed a field:\n got %#v\nwant %#v", got, want)
+	}
+}
+
+// TestQueryProtoKnowsEveryEngineField fails when the engine adds a field to its query IR that this
+// ledger, and so the wire form, has not been taught. The round trip cannot notice one, since fullQuery
+// leaves an unknown field zero on both sides. Adding a name here means carrying it in QueryProto and
+// filling it in fullQuery.
+func TestQueryProtoKnowsEveryEngineField(t *testing.T) {
+	carried := map[reflect.Type][]string{
+		reflect.TypeFor[Query]():         {"Rules", "Goal", "Select", "Having", "OrderBy", "After", "Limit", "Offset"},
+		reflect.TypeFor[Rule]():          {"Head", "Body", "Hops", "HeadTypes"},
+		reflect.TypeFor[Body]():          {"Literals"},
+		reflect.TypeFor[Literal]():       {"Pos", "Neg", "Compare", "Agg"},
+		reflect.TypeFor[BodyAggregate](): {"Result", "Agg", "Body"},
+		reflect.TypeFor[Atom]():          {"Relation", "Args"},
+		reflect.TypeFor[Compare]():       {"Left", "Op", "Right"},
+		reflect.TypeFor[Term]():          {"Var", "Const", "Agg"},
+		reflect.TypeFor[Aggregate]():     {"Func", "Var", "Distinct"},
+		reflect.TypeFor[Order]():         {"Term", "Desc"},
+		reflect.TypeFor[Value]():         {"S", "Num", "Absent", "BaseUnit"},
+		reflect.TypeFor[ns.ArgType]():    {"Kind", "KindFrom", "Owner", "Type", "Unit", "Domain"},
+	}
+	for typ, names := range carried {
+		var exported []string
+		for f := range typ.Fields() {
+			if f.IsExported() {
+				exported = append(exported, f.Name)
+			}
+		}
+		for _, f := range exported {
+			if !slices.Contains(names, f) {
+				t.Errorf("%s.%s is not carried by the wire form", typ.Name(), f)
+			}
+		}
+		for _, n := range names {
+			if !slices.Contains(exported, n) {
+				t.Errorf("%s.%s is in the ledger but the engine has no such field", typ.Name(), n)
+			}
+		}
 	}
 }

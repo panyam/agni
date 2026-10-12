@@ -148,6 +148,9 @@ message QueryRow {
   // cite_index is the row's citations as indices into RunQueryResponse.sources, in cites' order, so
   // a source cited by every row is one string on the response rather than one per row (agni 916).
   repeated int32 cite_index = 8;
+  // cell_why aligns with cells and says why an aggregate cell is absent, such as a sum over numbers in
+  // different units; "" for every other cell. Empty when no cell in the row has a reason.
+  repeated string cell_why = 9;
 }
 
 // AnswerEntity is one entity an answer's cells name, with where it is drawn, kept once on the

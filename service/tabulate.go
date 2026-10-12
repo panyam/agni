@@ -266,7 +266,8 @@ func VerdictCountsTable(verdicts []*checkspb.Verdict) *webapi.Table {
 }
 
 // QueryTable is a query answer's columns, then its provenance as the last column, the shape `query
-// --format csv` prints. A column the answer types as an entity kind orders as a name.
+// --format csv` prints. A column the answer types as an entity kind orders as a name, and a row's
+// cell_why carries the reason an aggregate cell is absent.
 func QueryTable(name string, resp *webapi.RunQueryResponse) *webapi.Table {
 	t := &webapi.Table{Name: name}
 	kinds := resp.GetColumnKinds()
@@ -280,7 +281,11 @@ func QueryTable(name string, resp *webapi.RunQueryResponse) *webapi.Table {
 	t.Columns = append(t.Columns, &webapi.TableColumn{Name: rpt.ProvenanceColumn})
 	for _, r := range resp.GetRows() {
 		cells := append(append(make([]string, 0, len(r.GetCells())+1), r.GetCells()...), strings.Join(RowCites(resp, r), " ; "))
-		t.Rows = append(t.Rows, &webapi.TableRow{Cells: cells})
+		row := &webapi.TableRow{Cells: cells}
+		if why := r.GetCellWhy(); len(why) > 0 {
+			row.CellWhy = append(append(make([]string, 0, len(cells)), why...), "")
+		}
+		t.Rows = append(t.Rows, row)
 	}
 	return t
 }

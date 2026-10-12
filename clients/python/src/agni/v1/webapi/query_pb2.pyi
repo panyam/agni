@@ -36,18 +36,20 @@ class RunQueryRequest(_message.Message):
     def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ...) -> None: ...
 
 class QueryRow(_message.Message):
-    __slots__ = ("cells", "cell_kinds", "cell_refs", "cell_entity", "cite_index")
+    __slots__ = ("cells", "cell_kinds", "cell_refs", "cell_entity", "cite_index", "cell_why")
     CELLS_FIELD_NUMBER: _ClassVar[int]
     CELL_KINDS_FIELD_NUMBER: _ClassVar[int]
     CELL_REFS_FIELD_NUMBER: _ClassVar[int]
     CELL_ENTITY_FIELD_NUMBER: _ClassVar[int]
     CITE_INDEX_FIELD_NUMBER: _ClassVar[int]
+    CELL_WHY_FIELD_NUMBER: _ClassVar[int]
     cells: _containers.RepeatedScalarFieldContainer[str]
     cell_kinds: _containers.RepeatedScalarFieldContainer[str]
     cell_refs: _containers.RepeatedScalarFieldContainer[str]
     cell_entity: _containers.RepeatedScalarFieldContainer[int]
     cite_index: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cell_kinds: _Optional[_Iterable[str]] = ..., cell_refs: _Optional[_Iterable[str]] = ..., cell_entity: _Optional[_Iterable[int]] = ..., cite_index: _Optional[_Iterable[int]] = ...) -> None: ...
+    cell_why: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cell_kinds: _Optional[_Iterable[str]] = ..., cell_refs: _Optional[_Iterable[str]] = ..., cell_entity: _Optional[_Iterable[int]] = ..., cite_index: _Optional[_Iterable[int]] = ..., cell_why: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class AnswerEntity(_message.Message):
     __slots__ = ("kind", "ref", "pin", "sheet_ids", "reason")

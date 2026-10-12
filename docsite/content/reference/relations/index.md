@@ -94,6 +94,8 @@ Defined in Datalog over the relations above rather than projected from the desig
 | `absent(value)` | reports whether the field carried no value at all, which is different from an empty string and from zero; `not absent(?x)` reads "this field is stated" |
 | [`net.reaches(from, net, hops?)`](net.reaches/) | transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two |
 | [`net.route(from, net, path)`](net.route/) | the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one |
+| `num.unit(number, unit)` | binds the number's unit ("V", "A"), or absent for a number without one; the number must be bound |
+| `num.value(number, value)` | binds the number without its unit, so 5 V and 5 A both bind 5; the number must be bound |
 | `str.contains(string, substring)` | reports whether a string contains a substring |
 | `str.distance(string, other, distance)` | binds the edit (Levenshtein) distance between two strings, in characters; both strings must be bound |
 | `str.glob(string, pattern)` | reports whether the whole string matches a SQLite-style glob (`*` any run, `?` one character, `[a-z]` or `[^a-z]` one of a class, `[[]` a literal `[`) |

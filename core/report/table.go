@@ -38,6 +38,9 @@ type TableRow struct {
 	// Cites are the fact citations behind this row, rendered as one trailing column rather than as
 	// a footnote.
 	Cites []string
+	// Why aligns with Cells and says why an empty cell is absent, such as a sum over numbers in
+	// different units. A renderer prints the reason in the cell, so an absent answer is never a blank.
+	Why []string
 }
 
 // ProvenanceColumn is the name of the trailing column every renderer appends. Exported so a caller
@@ -51,7 +54,13 @@ func (t Table) header() []string {
 
 // cells returns one row's emitted cells, provenance joined into the trailing one.
 func (r TableRow) cells() []string {
-	return append(append(make([]string, 0, len(r.Cells)+1), r.Cells...), strings.Join(r.Cites, " ; "))
+	out := append(make([]string, 0, len(r.Cells)+1), r.Cells...)
+	for i, why := range r.Why {
+		if why != "" && i < len(out) && out[i] == "" {
+			out[i] = "absent: " + why
+		}
+	}
+	return append(out, strings.Join(r.Cites, " ; "))
 }
 
 // TableText writes the aligned terminal table: the projected columns plus provenance, then the
@@ -85,6 +94,7 @@ func TableCSV(w io.Writer, t Table) error {
 	c := NewCSVWriter(w)
 	c.Header(t.header())
 	for _, r := range t.Rows {
+		r.Why = nil // a csv cell travels raw, so an absent one stays empty
 		c.Row(r.cells())
 	}
 	return c.Finish()

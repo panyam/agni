@@ -156,12 +156,12 @@ func TestDeclaredArgKindsAreCoherent(t *testing.T) {
 				t.Errorf("%s/%s takes its kind from %q, which is not one of its arguments %v", ri.Name, label, k.KindArg, ri.Args)
 			case k.OwnerArg != "" && !args[k.OwnerArg]:
 				t.Errorf("%s/%s names owner %q, which is not one of its arguments %v", ri.Name, label, k.OwnerArg, ri.Args)
-			case k.KindArg == "" && k.Entity == "" && len(k.ValidOptions) == 0:
-				// Domain joined Entity and KindArg as a third thing an ArgKind can say (agni 696).
-				// The column names no entity but holds a closed set of values. The invariant is
-				// unchanged (an ArgKind that says NOTHING should be omitted); what counts as saying
-				// something grew.
-				t.Errorf("%s/%s declares no Entity, KindArg or Domain, so it says nothing; omit it instead", ri.Name, label)
+			case k.KindArg == "" && k.Entity == "" && len(k.ValidOptions) == 0 && k.Unit == "":
+				// Domain (agni 696) and Unit (agni 972) joined Entity and KindArg as things an ArgKind
+				// can say. The invariant is unchanged: an ArgKind that says NOTHING should be omitted.
+				t.Errorf("%s/%s declares no Entity, KindArg, Domain or Unit, so it says nothing; omit it instead", ri.Name, label)
+			case k.Unit != "" && (k.Entity != "" || k.KindArg != ""):
+				t.Errorf("%s/%s declares a Unit on an entity column; a unit belongs on a number", ri.Name, label)
 			case len(k.ValidOptions) > 0 && k.Entity != "":
 				// An entity column's values are names the design chose, so they cannot also be a closed
 				// set the engine defines. Declaring both would reject every real net or part.

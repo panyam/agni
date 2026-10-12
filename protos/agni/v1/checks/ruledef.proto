@@ -237,15 +237,30 @@ message ContextVar {
 }
 
 // DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to
-// solve, with select naming the answer columns.
+// solve, with select naming the answer columns. Every field of the engine's query is carried, and
+// TestQueryProtoCarriesEveryField fails when the engine grows one this message does not.
 message DatalogQuery {
   repeated DatalogRule rules = 1;
   DatalogBody goal = 2;
   repeated DatalogTerm select = 3;
   // having filters the GROUPS the select's aggregates form, after the reduce. Each is a
-  // DatalogCompare whose left term is an aggregate, which is why it needs no message of its own: a
-  // group filter and a body comparison differ in WHEN they run, not in what they say.
+  // DatalogCompare whose left term is an aggregate.
   repeated DatalogCompare having = 4;
+  // order_by sorts the answer by select columns, after the reduce and the having filter.
+  repeated DatalogOrder order_by = 5;
+  // after keeps the rows strictly after these values in the order_by columns, one per column, so a
+  // page continues from the last row of the one before it.
+  repeated DatalogValue after = 6;
+  // limit keeps at most this many rows after skipping offset of them; 0 is no limit. offset needs an
+  // order_by.
+  int32 limit = 7;
+  int32 offset = 8;
+}
+
+// DatalogOrder is one order-by item: a select column, ascending unless desc.
+message DatalogOrder {
+  DatalogTerm term = 1;
+  bool desc = 2;
 }
 
 // DatalogRule derives its head for every binding satisfying its body. Disjunction is several rules
@@ -254,6 +269,21 @@ message DatalogRule {
   DatalogAtom head = 1;
   DatalogBody body = 2;
   int32 hops = 3; // 0 runs to fixpoint; a positive value bounds recursion depth
+  // head_types are the types the rule declares for its head's arguments, by position, as written in
+  // `has_test_point(?n: net)`. A zero entry declares nothing for that argument.
+  repeated DatalogArgType head_types = 4;
+}
+
+// DatalogArgType is a declared argument type: an entity kind (kind, or kind_from naming the head
+// variable that carries each row's kind, with owner naming the variable that locates it), or a
+// scalar type with its unit. domain lists the values the argument may take, when it is closed.
+message DatalogArgType {
+  string kind = 1;
+  string kind_from = 2;
+  string owner = 3;
+  string type = 4;
+  string unit = 5;
+  repeated string domain = 6;
 }
 
 // DatalogBody is an implicit conjunction of literals.
@@ -261,14 +291,24 @@ message DatalogBody {
   repeated DatalogLiteral literals = 1;
 }
 
-// DatalogLiteral is exactly one of a positive atom, a negated atom (stratified negation), or a
-// comparison built-in.
+// DatalogLiteral is exactly one of a positive atom, a negated atom (stratified negation), a
+// comparison built-in, or a body aggregate.
 message DatalogLiteral {
   oneof literal {
     DatalogAtom pos = 1;
     DatalogAtom neg = 2;
     DatalogCompare compare = 3;
+    DatalogBodyAggregate agg = 4;
   }
+}
+
+// DatalogBodyAggregate binds result to an aggregate over the bindings of body, reduced once per value
+// of the variables body shares with the rest of the clause: `part(?r), ?c = count(?n) : { pin(?r, ?n,
+// _) }` counts each part's pins, and a part with no pins counts 0.
+message DatalogBodyAggregate {
+  string result = 1; // the variable bound, without its leading "?"
+  DatalogAggregate agg = 2;
+  DatalogBody body = 3;
 }
 
 // DatalogAtom applies a relation to argument terms. The relation is a fact relation, a built-in, or a
@@ -321,9 +361,7 @@ message DatalogValue {
 message DatalogAggregate {
   string func = 1; // count | min | max | sum | list
   string var = 2;
-  // distinct reduces var's distinct VALUES rather than one entry per binding. Uniform across every
-  // func: bare spellings stay binding-wise, so an encoded query written before this field decodes to
-  // the same answer it always gave.
+  // distinct reduces var's distinct VALUES rather than one entry per binding, for every func.
   bool distinct = 3;
 }
 
