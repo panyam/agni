@@ -400,6 +400,12 @@ net.pin_count(?n, ?c) => ?n, ?c order by ?c desc, ?n limit 10
 `offset` skips rows and `after` continues from the last row of the page before, by value. Both need
 an `order by`.
 
+A limited answer says how many rows it left out, as `10 of 1617 result(s), 1607 left out by the
+limit` under the table and as `total` in `--format json`. `--limit 10` on the command line (`limit`
+on the `RunQuery` request) caps an answer without editing the query, and where the query writes its
+own `limit` the smaller applies. Counting the total solves the whole goal, so a limit saves the rows
+kept, located and sent rather than the solving.
+
 ### Units
 
 A voltage carries volts and a board width carries millimetres, and a relation whose numbers all share
@@ -616,6 +622,11 @@ searched for or clicked. The values show as chips under the box, one per variabl
 stays the same sentence whatever you picked. Edit a chip's value to ask about something else, or
 remove it to leave the variable free and widen the question. Editing a bound variable out of the
 query drops its chip.
+
+A question about one thing you clicked asks for its first 50 rows, so a click on a ground net with a
+thousand pins draws quickly. The count under the answer then reads `50 of 1229 result(s)` with a
+**show all** button that asks the same question again without the limit. A query you write and run
+yourself is never cut.
 
 You do not have to memorize the vocabulary. Below the query box the panel lists every relation as a
 **click-to-insert chip**, grouped by kind (Netlist, Board, Datasheet, Predicates, and any extension
