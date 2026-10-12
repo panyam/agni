@@ -270,7 +270,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		opts = append(opts, query.Explain(plan))
 	}
 	endEval := timing.Begin(ctx, "evaluate")
-	rows, err := s.eval.Eval(ctx, q, d.base, opts...)
+	table, err := s.eval.EvalTable(ctx, q, d.base, opts...)
 	endEval()
 	if plan != nil {
 		timing.Planned(ctx, queryText, plan.String())
@@ -329,21 +329,41 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		entityAt[key] = n
 		return n
 	}
+	// The table's columns are the query's, so a variable a kind or a pin's ref is read from is found
+	// by its column.
+	colAt := make(map[query.Var]int, len(table.Columns))
+	for i, c := range table.Columns {
+		colAt[c] = i
+	}
 	sources := NewSourceTable(resp)
-	for _, r := range rows {
+	for ri, values := range table.Rows {
+		bound := func(v query.Var) query.Value {
+			if i, ok := colAt[v]; ok {
+				return values[i]
+			}
+			return query.Value{}
+		}
 		cells := make([]string, len(cols))
 		for i, c := range cols {
-			cells[i] = r.Bind[c].S
+			cells[i] = bound(c).S
 		}
 		row := &webapi.QueryRow{Cells: cells}
-		sources.Cite(row, portableCites(r.Cites, d.u.Path))
+		if table.Why != nil && table.Why[ri] != nil {
+			row.CellWhy = make([]string, len(cols))
+			for i, c := range cols {
+				if j, ok := colAt[c]; ok {
+					row.CellWhy[i] = table.Why[ri][j]
+				}
+			}
+		}
+		sources.Cite(row, portableCites(table.Cites[ri], d.u.Path))
 		if navigable {
 			for i := range cols {
 				// A polymorphic column takes its kind from THIS row's binding of the kind variable
 				// and puts it on the wire so the client types the cell the same way (agni issue 338).
 				kind := kinds[i]
 				if v := kindVars[i]; v != "" {
-					kind = entityKind(r.Bind[v].S)
+					kind = entityKind(bound(v).S)
 					if row.CellKinds == nil {
 						row.CellKinds = make([]string, len(cols))
 					}
@@ -353,7 +373,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 				// is on and whether it is drawn.
 				ref := cells[i]
 				if kind == check.KindPin {
-					ref = termValue(refTerms[i], r.Bind)
+					ref = termValue(refTerms[i], bound)
 					if row.CellRefs == nil {
 						row.CellRefs = make([]string, len(cols))
 					}
@@ -480,12 +500,12 @@ func columnKindsIn(reg *facts.Registry, q query.Query) (kinds []string, kindVars
 
 // termValue resolves a term against one answer row. A constant yields itself and a variable yields
 // its binding, which the row keeps even when the projection dropped the column.
-func termValue(t query.Term, bind map[query.Var]query.Value) string {
+func termValue(t query.Term, bound func(query.Var) query.Value) string {
 	if t.Const != nil {
 		return t.Const.S
 	}
 	if t.Var != "" {
-		return bind[t.Var].S
+		return bound(t.Var).S
 	}
 	return ""
 }

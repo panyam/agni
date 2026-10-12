@@ -241,3 +241,20 @@ func TestAViewStatesItsBindings(t *testing.T) {
 		t.Errorf("a set section that could not answer does not state its binding:\n%s", set.String())
 	}
 }
+
+func TestAnAbsentCellPrintsWhyAndCSVStaysRaw(t *testing.T) {
+	tab := Table{Columns: []string{"m", "sum(v)"}, Rows: []TableRow{{Cells: []string{"U1", ""}, Why: []string{"", "mixed units: A, V"}}}}
+	var text, csv strings.Builder
+	if err := TableText(&text, tab); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(text.String(), "absent: mixed units: A, V") {
+		t.Errorf("text table does not state the reason:\n%s", text.String())
+	}
+	if err := TableCSV(&csv, tab); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(csv.String(), "absent") {
+		t.Errorf("csv cell carries the reason, want it raw:\n%s", csv.String())
+	}
+}

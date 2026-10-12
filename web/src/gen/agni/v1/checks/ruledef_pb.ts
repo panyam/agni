@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/checks/ruledef.proto.
  */
 export const file_agni_v1_checks_ruledef: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL2NoZWNrcy9ydWxlZGVmLnByb3RvEg5hZ25pLnYxLmNoZWNrcyJQCghSdWxlRGVjaxIMCgRuYW1lGAEgASgJEg4KBnNvdXJjZRgCIAEoCRImCgVydWxlcxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLlJ1bGVEZWYilgEKB1J1bGVEZWYSKAoEc3BlYxgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNSdWxlSAASKgoFcXVlcnkYAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5RdWVyeVJ1bGVIABItCgdwcm9maWxlGAMgASgLMhouYWduaS52MS5jaGVja3MuUHJvZmlsZURlZkgAQgYKBGJvZHki/wEKCFJ1bGVNZXRhEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRIOCgZpbXBhY3QYBCABKAkSDgoGZGV0YWlsGAUgASgJEjAKBHRhZ3MYBiADKAsyIi5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YS5UYWdzRW50cnkSFgoOb3B0aW9uYWxfcmVhZHMYByADKAkSGwoTcmVxdWlyZXNfY2FwYWJpbGl0eRgIIAMoCRIOCgZyZW1lZHkYCSABKAkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiWgoIU3BlY1J1bGUSJgoEbWV0YRgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlJ1bGVNZXRhEiYKBGJvZHkYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keSLxAQoIU3BlY0JvZHkSDAoEb3ZlchgBIAEoCRIuCgNsZXQYAiADKAsyIS5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keS5MZXRFbnRyeRInCgV3aGVyZRgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByEg8KB21lc3NhZ2UYBCABKAkSJwoFc2NvcGUYBSABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwchpECghMZXRFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybToCOAEitAEKCFNwZWNUZXJtEiYKA2xpdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlNwZWNMaXRIABIOCgRmYWN0GAIgASgJSAASDQoDdmFyGAMgASgJSAASKAoEY2FsbBgEIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNDYWxsSAASLwoIY291bnRfb2YYBSABKAsyGy5hZ25pLnYxLmNoZWNrcy5TcGVjQ291bnRPZkgAQgYKBHRlcm0iOQoHU3BlY0xpdBILCgFzGAEgASgJSAASCwoBaRgCIAEoA0gAEgsKAWIYAyABKAhIAEIHCgV2YWx1ZSI+CghTcGVjQ2FsbBIKCgJmbhgBIAEoCRImCgRhcmdzGAIgAygLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm0iRAoLU3BlY0NvdW50T2YSDAoEb3ZlchgBIAEoCRInCgV3aGVyZRgCIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIu4CCghTcGVjRXhwchIrCgNhbmQYASABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwckxpc3RIABIqCgJvchgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByTGlzdEgAEicKA25vdBgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHBySAASJgoDY21wGAQgASgLMhcuYWduaS52MS5jaGVja3MuU3BlY0NtcEgAEiQKAmluGAUgASgLMhYuYWduaS52MS5jaGVja3MuU3BlY0luSAASKgoFbWF0Y2gYBiABKAsyGS5hZ25pLnYxLmNoZWNrcy5TcGVjTWF0Y2hIABIxCglleGlzdHNfaW4YByABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhpc3RzSW5IABIrCgdpc190cnVlGAggASgLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm1IAEIGCgRleHByIjQKDFNwZWNFeHByTGlzdBIkCgJ4cxgBIAMoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIl8KB1NwZWNDbXASIwoBbBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgoKAm9wGAIgASgJEiMKAXIYAyABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybSI6CgZTcGVjSW4SIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgsKA3NldBgCIAMoCSJBCglTcGVjTWF0Y2gSIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEg8KB3BhdHRlcm4YAiABKAkiRQoMU3BlY0V4aXN0c0luEgwKBG92ZXIYASABKAkSJwoFd2hlcmUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwciLtAQoJUXVlcnlSdWxlEiYKBG1ldGEYASABKAsyGC5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YRIrCgVxdWVyeRgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dRdWVyeRIMCgRraW5kGAMgASgJEhMKC3N1YmplY3RfdmFyGAQgASgJEg8KB3Bpbl92YXIYBSABKAkSDwoHbWVzc2FnZRgGIAEoCRIUCgxwYXJhbV9zeW1ib2wYByABKAkSMAoMY29udGV4dF92YXJzGAggAygLMhouYWduaS52MS5jaGVja3MuQ29udGV4dFZhciI1CgpDb250ZXh0VmFyEgsKA3ZhchgBIAEoCRIMCgRraW5kGAIgASgJEgwKBHJvbGUYAyABKAkiwgEKDERhdGFsb2dRdWVyeRIqCgVydWxlcxgBIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dSdWxlEikKBGdvYWwYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQm9keRIrCgZzZWxlY3QYAyADKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIuCgZoYXZpbmcYBCADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZSJxCgtEYXRhbG9nUnVsZRIpCgRoZWFkGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b20SKQoEYm9keRgCIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5EgwKBGhvcHMYAyABKAUiPwoLRGF0YWxvZ0JvZHkSMAoIbGl0ZXJhbHMYASADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nTGl0ZXJhbCKmAQoORGF0YWxvZ0xpdGVyYWwSKgoDcG9zGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b21IABIqCgNuZWcYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQXRvbUgAEjEKB2NvbXBhcmUYAyABKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZUgAQgkKB2xpdGVyYWwiSgoLRGF0YWxvZ0F0b20SEAoIcmVsYXRpb24YASABKAkSKQoEYXJncxgCIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtInMKDkRhdGFsb2dDb21wYXJlEikKBGxlZnQYASABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIKCgJvcBgCIAEoCRIqCgVyaWdodBgDIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtIocBCgtEYXRhbG9nVGVybRINCgN2YXIYASABKAlIABIwCghjb25zdGFudBgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dWYWx1ZUgAEi8KA2FnZxgDIAEoCzIgLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dBZ2dyZWdhdGVIAEIGCgR0ZXJtIlYKDERhdGFsb2dWYWx1ZRIJCgFzGAEgASgJEhAKA251bRgCIAEoAUgAiAEBEg4KBmFic2VudBgDIAEoCBIRCgliYXNlX3VuaXQYBCABKAlCBgoEX251bSI/ChBEYXRhbG9nQWdncmVnYXRlEgwKBGZ1bmMYASABKAkSCwoDdmFyGAIgASgJEhAKCGRpc3RpbmN0GAMgASgIIusBCgpQcm9maWxlRGVmEgwKBG5hbWUYASABKAkSLgoHc2lnbmFscxgCIAMoCzIdLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVTaWduYWwSOAoMcmVxdWlyZW1lbnRzGAUgAygLMiIuYWduaS52MS5jaGVja3MuUHJvZmlsZVJlcXVpcmVtZW50EikKBGhvc3QYByABKAsyGy5hZ25pLnYxLmNoZWNrcy5Qcm9maWxlSG9zdEoECAMQBEoECAQQBUoECAYQB1INaG9zdF9hdHRyX2tleVINaG9zdF9hdHRyX3ZhbFIKaG9zdF9jbGFzcyI5CgtQcm9maWxlSG9zdBIMCgRhdHRyGAEgASgJEg0KBXZhbHVlGAIgASgJEg0KBWNsYXNzGAMgASgJIpcBChBQcm9maWxlTmFtaW5nTWFwEhAKCG92ZXJyaWRlGAEgASgJEkAKCHN1ZmZpeGVzGAIgAygLMi4uYWduaS52MS5jaGVja3MuUHJvZmlsZU5hbWluZ01hcC5TdWZmaXhlc0VudHJ5Gi8KDVN1ZmZpeGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ6Cg1Qcm9maWxlU2lnbmFsEgwKBG5hbWUYASABKAkSDgoGcHJlZml4GAIgASgJEg4KBnN1ZmZpeBgDIAEoCRIMCgRnbG9iGAQgASgJEg0KBXJlZ2V4GAUgASgJEg4KBnB1bGx1cBgGIAEoCBIOCgZhbmNob3IYByABKAgikQEKElByb2ZpbGVSZXF1aXJlbWVudBIMCgR0eXBlGAEgASgJEj4KBnBhcmFtcxgCIAMoCzIuLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVSZXF1aXJlbWVudC5QYXJhbXNFbnRyeRotCgtQYXJhbXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY2hlY2tzYgZwcm90bzM");
+  fileDesc("ChxhZ25pL3YxL2NoZWNrcy9ydWxlZGVmLnByb3RvEg5hZ25pLnYxLmNoZWNrcyJQCghSdWxlRGVjaxIMCgRuYW1lGAEgASgJEg4KBnNvdXJjZRgCIAEoCRImCgVydWxlcxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLlJ1bGVEZWYilgEKB1J1bGVEZWYSKAoEc3BlYxgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNSdWxlSAASKgoFcXVlcnkYAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5RdWVyeVJ1bGVIABItCgdwcm9maWxlGAMgASgLMhouYWduaS52MS5jaGVja3MuUHJvZmlsZURlZkgAQgYKBGJvZHki/wEKCFJ1bGVNZXRhEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRIOCgZpbXBhY3QYBCABKAkSDgoGZGV0YWlsGAUgASgJEjAKBHRhZ3MYBiADKAsyIi5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YS5UYWdzRW50cnkSFgoOb3B0aW9uYWxfcmVhZHMYByADKAkSGwoTcmVxdWlyZXNfY2FwYWJpbGl0eRgIIAMoCRIOCgZyZW1lZHkYCSABKAkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiWgoIU3BlY1J1bGUSJgoEbWV0YRgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlJ1bGVNZXRhEiYKBGJvZHkYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keSLxAQoIU3BlY0JvZHkSDAoEb3ZlchgBIAEoCRIuCgNsZXQYAiADKAsyIS5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keS5MZXRFbnRyeRInCgV3aGVyZRgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByEg8KB21lc3NhZ2UYBCABKAkSJwoFc2NvcGUYBSABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwchpECghMZXRFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybToCOAEitAEKCFNwZWNUZXJtEiYKA2xpdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlNwZWNMaXRIABIOCgRmYWN0GAIgASgJSAASDQoDdmFyGAMgASgJSAASKAoEY2FsbBgEIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNDYWxsSAASLwoIY291bnRfb2YYBSABKAsyGy5hZ25pLnYxLmNoZWNrcy5TcGVjQ291bnRPZkgAQgYKBHRlcm0iOQoHU3BlY0xpdBILCgFzGAEgASgJSAASCwoBaRgCIAEoA0gAEgsKAWIYAyABKAhIAEIHCgV2YWx1ZSI+CghTcGVjQ2FsbBIKCgJmbhgBIAEoCRImCgRhcmdzGAIgAygLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm0iRAoLU3BlY0NvdW50T2YSDAoEb3ZlchgBIAEoCRInCgV3aGVyZRgCIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIu4CCghTcGVjRXhwchIrCgNhbmQYASABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwckxpc3RIABIqCgJvchgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByTGlzdEgAEicKA25vdBgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHBySAASJgoDY21wGAQgASgLMhcuYWduaS52MS5jaGVja3MuU3BlY0NtcEgAEiQKAmluGAUgASgLMhYuYWduaS52MS5jaGVja3MuU3BlY0luSAASKgoFbWF0Y2gYBiABKAsyGS5hZ25pLnYxLmNoZWNrcy5TcGVjTWF0Y2hIABIxCglleGlzdHNfaW4YByABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhpc3RzSW5IABIrCgdpc190cnVlGAggASgLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm1IAEIGCgRleHByIjQKDFNwZWNFeHByTGlzdBIkCgJ4cxgBIAMoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIl8KB1NwZWNDbXASIwoBbBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgoKAm9wGAIgASgJEiMKAXIYAyABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybSI6CgZTcGVjSW4SIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgsKA3NldBgCIAMoCSJBCglTcGVjTWF0Y2gSIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEg8KB3BhdHRlcm4YAiABKAkiRQoMU3BlY0V4aXN0c0luEgwKBG92ZXIYASABKAkSJwoFd2hlcmUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwciLtAQoJUXVlcnlSdWxlEiYKBG1ldGEYASABKAsyGC5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YRIrCgVxdWVyeRgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dRdWVyeRIMCgRraW5kGAMgASgJEhMKC3N1YmplY3RfdmFyGAQgASgJEg8KB3Bpbl92YXIYBSABKAkSDwoHbWVzc2FnZRgGIAEoCRIUCgxwYXJhbV9zeW1ib2wYByABKAkSMAoMY29udGV4dF92YXJzGAggAygLMhouYWduaS52MS5jaGVja3MuQ29udGV4dFZhciI1CgpDb250ZXh0VmFyEgsKA3ZhchgBIAEoCRIMCgRraW5kGAIgASgJEgwKBHJvbGUYAyABKAkivgIKDERhdGFsb2dRdWVyeRIqCgVydWxlcxgBIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dSdWxlEikKBGdvYWwYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQm9keRIrCgZzZWxlY3QYAyADKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIuCgZoYXZpbmcYBCADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZRIuCghvcmRlcl9ieRgFIAMoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dPcmRlchIrCgVhZnRlchgGIAMoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dWYWx1ZRINCgVsaW1pdBgHIAEoBRIOCgZvZmZzZXQYCCABKAUiRwoMRGF0YWxvZ09yZGVyEikKBHRlcm0YASABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIMCgRkZXNjGAIgASgIIqUBCgtEYXRhbG9nUnVsZRIpCgRoZWFkGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b20SKQoEYm9keRgCIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5EgwKBGhvcHMYAyABKAUSMgoKaGVhZF90eXBlcxgEIAMoCzIeLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dBcmdUeXBlImwKDkRhdGFsb2dBcmdUeXBlEgwKBGtpbmQYASABKAkSEQoJa2luZF9mcm9tGAIgASgJEg0KBW93bmVyGAMgASgJEgwKBHR5cGUYBCABKAkSDAoEdW5pdBgFIAEoCRIOCgZkb21haW4YBiADKAkiPwoLRGF0YWxvZ0JvZHkSMAoIbGl0ZXJhbHMYASADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nTGl0ZXJhbCLbAQoORGF0YWxvZ0xpdGVyYWwSKgoDcG9zGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b21IABIqCgNuZWcYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQXRvbUgAEjEKB2NvbXBhcmUYAyABKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZUgAEjMKA2FnZxgEIAEoCzIkLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5QWdncmVnYXRlSABCCQoHbGl0ZXJhbCKAAQoURGF0YWxvZ0JvZHlBZ2dyZWdhdGUSDgoGcmVzdWx0GAEgASgJEi0KA2FnZxgCIAEoCzIgLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dBZ2dyZWdhdGUSKQoEYm9keRgDIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5IkoKC0RhdGFsb2dBdG9tEhAKCHJlbGF0aW9uGAEgASgJEikKBGFyZ3MYAiADKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybSJzCg5EYXRhbG9nQ29tcGFyZRIpCgRsZWZ0GAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ1Rlcm0SCgoCb3AYAiABKAkSKgoFcmlnaHQYAyABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybSKHAQoLRGF0YWxvZ1Rlcm0SDQoDdmFyGAEgASgJSAASMAoIY29uc3RhbnQYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVmFsdWVIABIvCgNhZ2cYAyABKAsyIC5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQWdncmVnYXRlSABCBgoEdGVybSJWCgxEYXRhbG9nVmFsdWUSCQoBcxgBIAEoCRIQCgNudW0YAiABKAFIAIgBARIOCgZhYnNlbnQYAyABKAgSEQoJYmFzZV91bml0GAQgASgJQgYKBF9udW0iPwoQRGF0YWxvZ0FnZ3JlZ2F0ZRIMCgRmdW5jGAEgASgJEgsKA3ZhchgCIAEoCRIQCghkaXN0aW5jdBgDIAEoCCLrAQoKUHJvZmlsZURlZhIMCgRuYW1lGAEgASgJEi4KB3NpZ25hbHMYAiADKAsyHS5hZ25pLnYxLmNoZWNrcy5Qcm9maWxlU2lnbmFsEjgKDHJlcXVpcmVtZW50cxgFIAMoCzIiLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVSZXF1aXJlbWVudBIpCgRob3N0GAcgASgLMhsuYWduaS52MS5jaGVja3MuUHJvZmlsZUhvc3RKBAgDEARKBAgEEAVKBAgGEAdSDWhvc3RfYXR0cl9rZXlSDWhvc3RfYXR0cl92YWxSCmhvc3RfY2xhc3MiOQoLUHJvZmlsZUhvc3QSDAoEYXR0chgBIAEoCRINCgV2YWx1ZRgCIAEoCRINCgVjbGFzcxgDIAEoCSKXAQoQUHJvZmlsZU5hbWluZ01hcBIQCghvdmVycmlkZRgBIAEoCRJACghzdWZmaXhlcxgCIAMoCzIuLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVOYW1pbmdNYXAuU3VmZml4ZXNFbnRyeRovCg1TdWZmaXhlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiegoNUHJvZmlsZVNpZ25hbBIMCgRuYW1lGAEgASgJEg4KBnByZWZpeBgCIAEoCRIOCgZzdWZmaXgYAyABKAkSDAoEZ2xvYhgEIAEoCRINCgVyZWdleBgFIAEoCRIOCgZwdWxsdXAYBiABKAgSDgoGYW5jaG9yGAcgASgIIpEBChJQcm9maWxlUmVxdWlyZW1lbnQSDAoEdHlwZRgBIAEoCRI+CgZwYXJhbXMYAiADKAsyLi5hZ25pLnYxLmNoZWNrcy5Qcm9maWxlUmVxdWlyZW1lbnQuUGFyYW1zRW50cnkaLQoLUGFyYW1zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2NoZWNrc2IGcHJvdG8z");
 
 /**
  * PROVISIONAL: nothing consumes this schema yet, so names and shape may change until a front-end or a
@@ -692,7 +692,8 @@ export const ContextVarSchema: GenMessage<ContextVar> = /*@__PURE__*/
 
 /**
  * DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to
- * solve, with select naming the answer columns.
+ * solve, with select naming the answer columns. Every field of the engine's query is carried, and
+ * TestQueryProtoCarriesEveryField fails when the engine grows one this message does not.
  *
  * @generated from message agni.v1.checks.DatalogQuery
  */
@@ -714,12 +715,39 @@ export type DatalogQuery = Message<"agni.v1.checks.DatalogQuery"> & {
 
   /**
    * having filters the GROUPS the select's aggregates form, after the reduce. Each is a
-   * DatalogCompare whose left term is an aggregate, which is why it needs no message of its own: a
-   * group filter and a body comparison differ in WHEN they run, not in what they say.
+   * DatalogCompare whose left term is an aggregate.
    *
    * @generated from field: repeated agni.v1.checks.DatalogCompare having = 4;
    */
   having: DatalogCompare[];
+
+  /**
+   * order_by sorts the answer by select columns, after the reduce and the having filter.
+   *
+   * @generated from field: repeated agni.v1.checks.DatalogOrder order_by = 5;
+   */
+  orderBy: DatalogOrder[];
+
+  /**
+   * after keeps the rows strictly after these values in the order_by columns, one per column, so a
+   * page continues from the last row of the one before it.
+   *
+   * @generated from field: repeated agni.v1.checks.DatalogValue after = 6;
+   */
+  after: DatalogValue[];
+
+  /**
+   * limit keeps at most this many rows after skipping offset of them; 0 is no limit. offset needs an
+   * order_by.
+   *
+   * @generated from field: int32 limit = 7;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: int32 offset = 8;
+   */
+  offset: number;
 };
 
 /**
@@ -728,6 +756,30 @@ export type DatalogQuery = Message<"agni.v1.checks.DatalogQuery"> & {
  */
 export const DatalogQuerySchema: GenMessage<DatalogQuery> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 17);
+
+/**
+ * DatalogOrder is one order-by item: a select column, ascending unless desc.
+ *
+ * @generated from message agni.v1.checks.DatalogOrder
+ */
+export type DatalogOrder = Message<"agni.v1.checks.DatalogOrder"> & {
+  /**
+   * @generated from field: agni.v1.checks.DatalogTerm term = 1;
+   */
+  term?: DatalogTerm | undefined;
+
+  /**
+   * @generated from field: bool desc = 2;
+   */
+  desc: boolean;
+};
+
+/**
+ * Describes the message agni.v1.checks.DatalogOrder.
+ * Use `create(DatalogOrderSchema)` to create a new message.
+ */
+export const DatalogOrderSchema: GenMessage<DatalogOrder> = /*@__PURE__*/
+  messageDesc(file_agni_v1_checks_ruledef, 18);
 
 /**
  * DatalogRule derives its head for every binding satisfying its body. Disjunction is several rules
@@ -752,6 +804,14 @@ export type DatalogRule = Message<"agni.v1.checks.DatalogRule"> & {
    * @generated from field: int32 hops = 3;
    */
   hops: number;
+
+  /**
+   * head_types are the types the rule declares for its head's arguments, by position, as written in
+   * `has_test_point(?n: net)`. A zero entry declares nothing for that argument.
+   *
+   * @generated from field: repeated agni.v1.checks.DatalogArgType head_types = 4;
+   */
+  headTypes: DatalogArgType[];
 };
 
 /**
@@ -759,7 +819,53 @@ export type DatalogRule = Message<"agni.v1.checks.DatalogRule"> & {
  * Use `create(DatalogRuleSchema)` to create a new message.
  */
 export const DatalogRuleSchema: GenMessage<DatalogRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 18);
+  messageDesc(file_agni_v1_checks_ruledef, 19);
+
+/**
+ * DatalogArgType is a declared argument type: an entity kind (kind, or kind_from naming the head
+ * variable that carries each row's kind, with owner naming the variable that locates it), or a
+ * scalar type with its unit. domain lists the values the argument may take, when it is closed.
+ *
+ * @generated from message agni.v1.checks.DatalogArgType
+ */
+export type DatalogArgType = Message<"agni.v1.checks.DatalogArgType"> & {
+  /**
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string kind_from = 2;
+   */
+  kindFrom: string;
+
+  /**
+   * @generated from field: string owner = 3;
+   */
+  owner: string;
+
+  /**
+   * @generated from field: string type = 4;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string unit = 5;
+   */
+  unit: string;
+
+  /**
+   * @generated from field: repeated string domain = 6;
+   */
+  domain: string[];
+};
+
+/**
+ * Describes the message agni.v1.checks.DatalogArgType.
+ * Use `create(DatalogArgTypeSchema)` to create a new message.
+ */
+export const DatalogArgTypeSchema: GenMessage<DatalogArgType> = /*@__PURE__*/
+  messageDesc(file_agni_v1_checks_ruledef, 20);
 
 /**
  * DatalogBody is an implicit conjunction of literals.
@@ -778,11 +884,11 @@ export type DatalogBody = Message<"agni.v1.checks.DatalogBody"> & {
  * Use `create(DatalogBodySchema)` to create a new message.
  */
 export const DatalogBodySchema: GenMessage<DatalogBody> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 19);
+  messageDesc(file_agni_v1_checks_ruledef, 21);
 
 /**
- * DatalogLiteral is exactly one of a positive atom, a negated atom (stratified negation), or a
- * comparison built-in.
+ * DatalogLiteral is exactly one of a positive atom, a negated atom (stratified negation), a
+ * comparison built-in, or a body aggregate.
  *
  * @generated from message agni.v1.checks.DatalogLiteral
  */
@@ -808,6 +914,12 @@ export type DatalogLiteral = Message<"agni.v1.checks.DatalogLiteral"> & {
      */
     value: DatalogCompare;
     case: "compare";
+  } | {
+    /**
+     * @generated from field: agni.v1.checks.DatalogBodyAggregate agg = 4;
+     */
+    value: DatalogBodyAggregate;
+    case: "agg";
   } | { case: undefined; value?: undefined };
 };
 
@@ -816,7 +928,40 @@ export type DatalogLiteral = Message<"agni.v1.checks.DatalogLiteral"> & {
  * Use `create(DatalogLiteralSchema)` to create a new message.
  */
 export const DatalogLiteralSchema: GenMessage<DatalogLiteral> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 20);
+  messageDesc(file_agni_v1_checks_ruledef, 22);
+
+/**
+ * DatalogBodyAggregate binds result to an aggregate over the bindings of body, reduced once per value
+ * of the variables body shares with the rest of the clause: `part(?r), ?c = count(?n) : { pin(?r, ?n,
+ * _) }` counts each part's pins, and a part with no pins counts 0.
+ *
+ * @generated from message agni.v1.checks.DatalogBodyAggregate
+ */
+export type DatalogBodyAggregate = Message<"agni.v1.checks.DatalogBodyAggregate"> & {
+  /**
+   * the variable bound, without its leading "?"
+   *
+   * @generated from field: string result = 1;
+   */
+  result: string;
+
+  /**
+   * @generated from field: agni.v1.checks.DatalogAggregate agg = 2;
+   */
+  agg?: DatalogAggregate | undefined;
+
+  /**
+   * @generated from field: agni.v1.checks.DatalogBody body = 3;
+   */
+  body?: DatalogBody | undefined;
+};
+
+/**
+ * Describes the message agni.v1.checks.DatalogBodyAggregate.
+ * Use `create(DatalogBodyAggregateSchema)` to create a new message.
+ */
+export const DatalogBodyAggregateSchema: GenMessage<DatalogBodyAggregate> = /*@__PURE__*/
+  messageDesc(file_agni_v1_checks_ruledef, 23);
 
 /**
  * DatalogAtom applies a relation to argument terms. The relation is a fact relation, a built-in, or a
@@ -841,7 +986,7 @@ export type DatalogAtom = Message<"agni.v1.checks.DatalogAtom"> & {
  * Use `create(DatalogAtomSchema)` to create a new message.
  */
 export const DatalogAtomSchema: GenMessage<DatalogAtom> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 21);
+  messageDesc(file_agni_v1_checks_ruledef, 24);
 
 /**
  * DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. Numeric when
@@ -873,7 +1018,7 @@ export type DatalogCompare = Message<"agni.v1.checks.DatalogCompare"> & {
  * Use `create(DatalogCompareSchema)` to create a new message.
  */
 export const DatalogCompareSchema: GenMessage<DatalogCompare> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 22);
+  messageDesc(file_agni_v1_checks_ruledef, 25);
 
 /**
  * DatalogTerm is a variable, a constant, or an aggregate over the group formed by the projection's
@@ -913,7 +1058,7 @@ export type DatalogTerm = Message<"agni.v1.checks.DatalogTerm"> & {
  * Use `create(DatalogTermSchema)` to create a new message.
  */
 export const DatalogTermSchema: GenMessage<DatalogTerm> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 23);
+  messageDesc(file_agni_v1_checks_ruledef, 26);
 
 /**
  * DatalogValue is a scalar fact value. A fact carries a string and, when numeric, a number, so a bound
@@ -962,7 +1107,7 @@ export type DatalogValue = Message<"agni.v1.checks.DatalogValue"> & {
  * Use `create(DatalogValueSchema)` to create a new message.
  */
 export const DatalogValueSchema: GenMessage<DatalogValue> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 24);
+  messageDesc(file_agni_v1_checks_ruledef, 27);
 
 /**
  * DatalogAggregate reduces a variable over each group of the projection's plain-variable columns.
@@ -983,9 +1128,7 @@ export type DatalogAggregate = Message<"agni.v1.checks.DatalogAggregate"> & {
   var: string;
 
   /**
-   * distinct reduces var's distinct VALUES rather than one entry per binding. Uniform across every
-   * func: bare spellings stay binding-wise, so an encoded query written before this field decodes to
-   * the same answer it always gave.
+   * distinct reduces var's distinct VALUES rather than one entry per binding, for every func.
    *
    * @generated from field: bool distinct = 3;
    */
@@ -997,7 +1140,7 @@ export type DatalogAggregate = Message<"agni.v1.checks.DatalogAggregate"> & {
  * Use `create(DatalogAggregateSchema)` to create a new message.
  */
 export const DatalogAggregateSchema: GenMessage<DatalogAggregate> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 25);
+  messageDesc(file_agni_v1_checks_ruledef, 28);
 
 /**
  * ProfileDef is one interface definition (SPI-NOR, eMMC, CAN, ...): its required signals, an optional
@@ -1042,7 +1185,7 @@ export type ProfileDef = Message<"agni.v1.checks.ProfileDef"> & {
  * Use `create(ProfileDefSchema)` to create a new message.
  */
 export const ProfileDefSchema: GenMessage<ProfileDef> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 26);
+  messageDesc(file_agni_v1_checks_ruledef, 29);
 
 /**
  * ProfileHost binds an interface to its host component, by a declared attribute (interface=SPI_NOR),
@@ -1080,7 +1223,7 @@ export type ProfileHost = Message<"agni.v1.checks.ProfileHost"> & {
  * Use `create(ProfileHostSchema)` to create a new message.
  */
 export const ProfileHostSchema: GenMessage<ProfileHost> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 27);
+  messageDesc(file_agni_v1_checks_ruledef, 30);
 
 /**
  * ProfileNamingMap re-binds a built-in profile's signals to a project's net-name suffixes without
@@ -1111,7 +1254,7 @@ export type ProfileNamingMap = Message<"agni.v1.checks.ProfileNamingMap"> & {
  * Use `create(ProfileNamingMapSchema)` to create a new message.
  */
 export const ProfileNamingMapSchema: GenMessage<ProfileNamingMap> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 28);
+  messageDesc(file_agni_v1_checks_ruledef, 31);
 
 /**
  * ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
@@ -1171,7 +1314,7 @@ export type ProfileSignal = Message<"agni.v1.checks.ProfileSignal"> & {
  * Use `create(ProfileSignalSchema)` to create a new message.
  */
 export const ProfileSignalSchema: GenMessage<ProfileSignal> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 29);
+  messageDesc(file_agni_v1_checks_ruledef, 32);
 
 /**
  * ProfileRequirement is one declared check: a registered requirement-type name plus its parameters.
@@ -1199,5 +1342,5 @@ export type ProfileRequirement = Message<"agni.v1.checks.ProfileRequirement"> & 
  * Use `create(ProfileRequirementSchema)` to create a new message.
  */
 export const ProfileRequirementSchema: GenMessage<ProfileRequirement> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_ruledef, 30);
+  messageDesc(file_agni_v1_checks_ruledef, 33);
 

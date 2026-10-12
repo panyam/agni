@@ -211,26 +211,60 @@ class ContextVar(_message.Message):
     def __init__(self, var: _Optional[str] = ..., kind: _Optional[str] = ..., role: _Optional[str] = ...) -> None: ...
 
 class DatalogQuery(_message.Message):
-    __slots__ = ("rules", "goal", "select", "having")
+    __slots__ = ("rules", "goal", "select", "having", "order_by", "after", "limit", "offset")
     RULES_FIELD_NUMBER: _ClassVar[int]
     GOAL_FIELD_NUMBER: _ClassVar[int]
     SELECT_FIELD_NUMBER: _ClassVar[int]
     HAVING_FIELD_NUMBER: _ClassVar[int]
+    ORDER_BY_FIELD_NUMBER: _ClassVar[int]
+    AFTER_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    OFFSET_FIELD_NUMBER: _ClassVar[int]
     rules: _containers.RepeatedCompositeFieldContainer[DatalogRule]
     goal: DatalogBody
     select: _containers.RepeatedCompositeFieldContainer[DatalogTerm]
     having: _containers.RepeatedCompositeFieldContainer[DatalogCompare]
-    def __init__(self, rules: _Optional[_Iterable[_Union[DatalogRule, _Mapping]]] = ..., goal: _Optional[_Union[DatalogBody, _Mapping]] = ..., select: _Optional[_Iterable[_Union[DatalogTerm, _Mapping]]] = ..., having: _Optional[_Iterable[_Union[DatalogCompare, _Mapping]]] = ...) -> None: ...
+    order_by: _containers.RepeatedCompositeFieldContainer[DatalogOrder]
+    after: _containers.RepeatedCompositeFieldContainer[DatalogValue]
+    limit: int
+    offset: int
+    def __init__(self, rules: _Optional[_Iterable[_Union[DatalogRule, _Mapping]]] = ..., goal: _Optional[_Union[DatalogBody, _Mapping]] = ..., select: _Optional[_Iterable[_Union[DatalogTerm, _Mapping]]] = ..., having: _Optional[_Iterable[_Union[DatalogCompare, _Mapping]]] = ..., order_by: _Optional[_Iterable[_Union[DatalogOrder, _Mapping]]] = ..., after: _Optional[_Iterable[_Union[DatalogValue, _Mapping]]] = ..., limit: _Optional[int] = ..., offset: _Optional[int] = ...) -> None: ...
+
+class DatalogOrder(_message.Message):
+    __slots__ = ("term", "desc")
+    TERM_FIELD_NUMBER: _ClassVar[int]
+    DESC_FIELD_NUMBER: _ClassVar[int]
+    term: DatalogTerm
+    desc: bool
+    def __init__(self, term: _Optional[_Union[DatalogTerm, _Mapping]] = ..., desc: _Optional[bool] = ...) -> None: ...
 
 class DatalogRule(_message.Message):
-    __slots__ = ("head", "body", "hops")
+    __slots__ = ("head", "body", "hops", "head_types")
     HEAD_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
     HOPS_FIELD_NUMBER: _ClassVar[int]
+    HEAD_TYPES_FIELD_NUMBER: _ClassVar[int]
     head: DatalogAtom
     body: DatalogBody
     hops: int
-    def __init__(self, head: _Optional[_Union[DatalogAtom, _Mapping]] = ..., body: _Optional[_Union[DatalogBody, _Mapping]] = ..., hops: _Optional[int] = ...) -> None: ...
+    head_types: _containers.RepeatedCompositeFieldContainer[DatalogArgType]
+    def __init__(self, head: _Optional[_Union[DatalogAtom, _Mapping]] = ..., body: _Optional[_Union[DatalogBody, _Mapping]] = ..., hops: _Optional[int] = ..., head_types: _Optional[_Iterable[_Union[DatalogArgType, _Mapping]]] = ...) -> None: ...
+
+class DatalogArgType(_message.Message):
+    __slots__ = ("kind", "kind_from", "owner", "type", "unit", "domain")
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    KIND_FROM_FIELD_NUMBER: _ClassVar[int]
+    OWNER_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    UNIT_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    kind_from: str
+    owner: str
+    type: str
+    unit: str
+    domain: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, kind: _Optional[str] = ..., kind_from: _Optional[str] = ..., owner: _Optional[str] = ..., type: _Optional[str] = ..., unit: _Optional[str] = ..., domain: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class DatalogBody(_message.Message):
     __slots__ = ("literals",)
@@ -239,14 +273,26 @@ class DatalogBody(_message.Message):
     def __init__(self, literals: _Optional[_Iterable[_Union[DatalogLiteral, _Mapping]]] = ...) -> None: ...
 
 class DatalogLiteral(_message.Message):
-    __slots__ = ("pos", "neg", "compare")
+    __slots__ = ("pos", "neg", "compare", "agg")
     POS_FIELD_NUMBER: _ClassVar[int]
     NEG_FIELD_NUMBER: _ClassVar[int]
     COMPARE_FIELD_NUMBER: _ClassVar[int]
+    AGG_FIELD_NUMBER: _ClassVar[int]
     pos: DatalogAtom
     neg: DatalogAtom
     compare: DatalogCompare
-    def __init__(self, pos: _Optional[_Union[DatalogAtom, _Mapping]] = ..., neg: _Optional[_Union[DatalogAtom, _Mapping]] = ..., compare: _Optional[_Union[DatalogCompare, _Mapping]] = ...) -> None: ...
+    agg: DatalogBodyAggregate
+    def __init__(self, pos: _Optional[_Union[DatalogAtom, _Mapping]] = ..., neg: _Optional[_Union[DatalogAtom, _Mapping]] = ..., compare: _Optional[_Union[DatalogCompare, _Mapping]] = ..., agg: _Optional[_Union[DatalogBodyAggregate, _Mapping]] = ...) -> None: ...
+
+class DatalogBodyAggregate(_message.Message):
+    __slots__ = ("result", "agg", "body")
+    RESULT_FIELD_NUMBER: _ClassVar[int]
+    AGG_FIELD_NUMBER: _ClassVar[int]
+    BODY_FIELD_NUMBER: _ClassVar[int]
+    result: str
+    agg: DatalogAggregate
+    body: DatalogBody
+    def __init__(self, result: _Optional[str] = ..., agg: _Optional[_Union[DatalogAggregate, _Mapping]] = ..., body: _Optional[_Union[DatalogBody, _Mapping]] = ...) -> None: ...
 
 class DatalogAtom(_message.Message):
     __slots__ = ("relation", "args")

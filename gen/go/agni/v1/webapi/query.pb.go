@@ -208,7 +208,10 @@ type QueryRow struct {
 	CellEntity []int32 `protobuf:"varint,7,rep,packed,name=cell_entity,json=cellEntity,proto3" json:"cell_entity,omitempty"`
 	// cite_index is the row's citations as indices into RunQueryResponse.sources, in cites' order, so
 	// a source cited by every row is one string on the response rather than one per row (agni 916).
-	CiteIndex     []int32 `protobuf:"varint,8,rep,packed,name=cite_index,json=citeIndex,proto3" json:"cite_index,omitempty"`
+	CiteIndex []int32 `protobuf:"varint,8,rep,packed,name=cite_index,json=citeIndex,proto3" json:"cite_index,omitempty"`
+	// cell_why aligns with cells and says why an aggregate cell is absent, such as a sum over numbers in
+	// different units; "" for every other cell. Empty when no cell in the row has a reason.
+	CellWhy       []string `protobuf:"bytes,9,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -274,6 +277,13 @@ func (x *QueryRow) GetCellEntity() []int32 {
 func (x *QueryRow) GetCiteIndex() []int32 {
 	if x != nil {
 		return x.CiteIndex
+	}
+	return nil
+}
+
+func (x *QueryRow) GetCellWhy() []string {
+	if x != nil {
+		return x.CellWhy
 	}
 	return nil
 }
@@ -1578,7 +1588,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x0eomit_locations\x18\b \x01(\bR\romitLocations\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xd0\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xeb\x01\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x1d\n" +
 	"\n" +
@@ -1587,7 +1597,8 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\vcell_entity\x18\a \x03(\x05R\n" +
 	"cellEntity\x12\x1d\n" +
 	"\n" +
-	"cite_index\x18\b \x03(\x05R\tciteIndexJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x05citesR\vcell_sheetsR\fcell_reasons\"\x99\x01\n" +
+	"cite_index\x18\b \x03(\x05R\tciteIndex\x12\x19\n" +
+	"\bcell_why\x18\t \x03(\tR\acellWhyJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x05citesR\vcell_sheetsR\fcell_reasons\"\x99\x01\n" +
 	"\fAnswerEntity\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x10\n" +

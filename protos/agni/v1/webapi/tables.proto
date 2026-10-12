@@ -53,6 +53,10 @@ message TableColumn {
 
 message TableRow {
   repeated string cells = 1;
+  // cell_why aligns with cells and says why an empty cell is absent, such as a sum over numbers in
+  // different units, and "" for every other cell. Empty when no cell in the row has a reason. The cell
+  // itself stays empty, so a csv encoder writes it raw.
+  repeated string cell_why = 2;
 }
 
 // Table is one projected table. Cells are raw, so an encoder applies its own escaping (a csv writer

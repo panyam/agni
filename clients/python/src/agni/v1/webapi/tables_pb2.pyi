@@ -33,10 +33,12 @@ class TableColumn(_message.Message):
     def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[ColumnType, str]] = ..., kind: _Optional[str] = ...) -> None: ...
 
 class TableRow(_message.Message):
-    __slots__ = ("cells",)
+    __slots__ = ("cells", "cell_why")
     CELLS_FIELD_NUMBER: _ClassVar[int]
+    CELL_WHY_FIELD_NUMBER: _ClassVar[int]
     cells: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, cells: _Optional[_Iterable[str]] = ...) -> None: ...
+    cell_why: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cell_why: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Table(_message.Message):
     __slots__ = ("name", "columns", "rows")

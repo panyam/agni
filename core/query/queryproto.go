@@ -2,7 +2,9 @@ package query
 
 import (
 	"fmt"
+
 	"github.com/panyam/agni/core/facts"
+	"github.com/panyam/jaala/ns"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
@@ -20,9 +22,10 @@ func QueryProto(q Query) *checkspb.DatalogQuery {
 	out := &checkspb.DatalogQuery{Goal: bodyProto(q.Goal)}
 	for _, r := range q.Rules {
 		out.Rules = append(out.Rules, &checkspb.DatalogRule{
-			Head: atomProto(r.Head),
-			Body: bodyProto(r.Body),
-			Hops: int32(r.Hops),
+			Head:      atomProto(r.Head),
+			Body:      bodyProto(r.Body),
+			Hops:      int32(r.Hops),
+			HeadTypes: argTypeProtos(r.HeadTypes),
 		})
 	}
 	for _, t := range q.Select {
@@ -31,6 +34,13 @@ func QueryProto(q Query) *checkspb.DatalogQuery {
 	for _, h := range q.Having {
 		out.Having = append(out.Having, compareProto(h))
 	}
+	for _, o := range q.OrderBy {
+		out.OrderBy = append(out.OrderBy, &checkspb.DatalogOrder{Term: qtermProto(o.Term), Desc: o.Desc})
+	}
+	for _, v := range q.After {
+		out.After = append(out.After, valueProto(v))
+	}
+	out.Limit, out.Offset = int32(q.Limit), int32(q.Offset)
 	return out
 }
 
@@ -49,7 +59,7 @@ func QueryFromProto(p *checkspb.DatalogQuery) (Query, error) {
 		if err != nil {
 			return Query{}, err
 		}
-		q.Rules = append(q.Rules, Rule{Head: head, Body: body, Hops: int(pr.GetHops())})
+		q.Rules = append(q.Rules, Rule{Head: head, Body: body, Hops: int(pr.GetHops()), HeadTypes: argTypesFromProto(pr.GetHeadTypes())})
 	}
 	goal, err := bodyFromProto(p.GetGoal())
 	if err != nil {
@@ -70,6 +80,17 @@ func QueryFromProto(p *checkspb.DatalogQuery) (Query, error) {
 		}
 		q.Having = append(q.Having, c)
 	}
+	for _, o := range p.GetOrderBy() {
+		t, err := qtermFromProto(o.GetTerm())
+		if err != nil {
+			return Query{}, err
+		}
+		q.OrderBy = append(q.OrderBy, Order{Term: t, Desc: o.GetDesc()})
+	}
+	for _, v := range p.GetAfter() {
+		q.After = append(q.After, valueFromProto(v))
+	}
+	q.Limit, q.Offset = int(p.GetLimit()), int(p.GetOffset())
 	if err := ValidateRelations(q); err != nil {
 		return Query{}, err
 	}
@@ -93,7 +114,8 @@ func ValidateRelationsFrom(reg *facts.Registry, q Query) error {
 	for _, r := range q.Rules {
 		known[r.Head.Relation] = true
 	}
-	check := func(b Body, where string) error {
+	var check func(b Body, where string) error
+	check = func(b Body, where string) error {
 		for _, lit := range b.Literals {
 			var rel string
 			switch {
@@ -101,6 +123,11 @@ func ValidateRelationsFrom(reg *facts.Registry, q Query) error {
 				rel = lit.Pos.Relation
 			case lit.Neg != nil:
 				rel = lit.Neg.Relation
+			case lit.Agg != nil:
+				if err := check(lit.Agg.Body, where); err != nil {
+					return err
+				}
+				continue
 			default:
 				continue
 			}
@@ -134,6 +161,12 @@ func bodyProto(b Body) *checkspb.DatalogBody {
 			out.Literals = append(out.Literals, &checkspb.DatalogLiteral{
 				Literal: &checkspb.DatalogLiteral_Compare{Compare: compareProto(*lit.Compare)},
 			})
+		case lit.Agg != nil:
+			out.Literals = append(out.Literals, &checkspb.DatalogLiteral{
+				Literal: &checkspb.DatalogLiteral_Agg{Agg: &checkspb.DatalogBodyAggregate{
+					Result: string(lit.Agg.Result), Agg: aggregateProto(lit.Agg.Agg), Body: bodyProto(lit.Agg.Body),
+				}},
+			})
 		}
 	}
 	return out
@@ -161,6 +194,14 @@ func bodyFromProto(p *checkspb.DatalogBody) (Body, error) {
 				return Body{}, err
 			}
 			b.Literals = append(b.Literals, Literal{Compare: &c})
+		case *checkspb.DatalogLiteral_Agg:
+			body, err := bodyFromProto(l.Agg.GetBody())
+			if err != nil {
+				return Body{}, err
+			}
+			b.Literals = append(b.Literals, Literal{Agg: &BodyAggregate{
+				Result: Var(l.Agg.GetResult()), Agg: aggregateFromProto(l.Agg.GetAgg()), Body: body,
+			}})
 		default:
 			return Body{}, fmt.Errorf("query: literal is empty (no variant set)")
 		}
@@ -210,15 +251,9 @@ func atomFromProto(p *checkspb.DatalogAtom) (Atom, error) {
 func qtermProto(t Term) *checkspb.DatalogTerm {
 	switch {
 	case t.Agg != nil:
-		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Agg{Agg: &checkspb.DatalogAggregate{
-			Func: t.Agg.Func, Var: string(t.Agg.Var), Distinct: t.Agg.Distinct,
-		}}}
+		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Agg{Agg: aggregateProto(*t.Agg)}}
 	case t.Const != nil:
-		v := &checkspb.DatalogValue{S: t.Const.S, Absent: t.Const.Absent, BaseUnit: t.Const.BaseUnit}
-		if t.Const.Num != nil {
-			v.Num = t.Const.Num
-		}
-		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Constant{Constant: v}}
+		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Constant{Constant: valueProto(*t.Const)}}
 	default:
 		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Var{Var: string(t.Var)}}
 	}
@@ -229,16 +264,54 @@ func qtermFromProto(p *checkspb.DatalogTerm) (Term, error) {
 	case *checkspb.DatalogTerm_Var:
 		return Term{Var: Var(t.Var)}, nil
 	case *checkspb.DatalogTerm_Constant:
-		v := &Value{S: t.Constant.GetS(), Absent: t.Constant.GetAbsent(), BaseUnit: t.Constant.GetBaseUnit()}
-		if t.Constant.Num != nil {
-			n := t.Constant.GetNum()
-			v.Num = &n
-		}
-		return Term{Const: v}, nil
+		v := valueFromProto(t.Constant)
+		return Term{Const: &v}, nil
 	case *checkspb.DatalogTerm_Agg:
-		return Term{Agg: &Aggregate{Func: t.Agg.GetFunc(), Var: Var(t.Agg.GetVar()), Distinct: t.Agg.GetDistinct()}}, nil
+		a := aggregateFromProto(t.Agg)
+		return Term{Agg: &a}, nil
 	}
 	return Term{}, fmt.Errorf("query: term is empty (no variant set)")
+}
+
+func aggregateProto(a Aggregate) *checkspb.DatalogAggregate {
+	return &checkspb.DatalogAggregate{Func: a.Func, Var: string(a.Var), Distinct: a.Distinct}
+}
+
+func aggregateFromProto(p *checkspb.DatalogAggregate) Aggregate {
+	return Aggregate{Func: p.GetFunc(), Var: Var(p.GetVar()), Distinct: p.GetDistinct()}
+}
+
+func valueProto(v Value) *checkspb.DatalogValue {
+	return &checkspb.DatalogValue{S: v.S, Num: v.Num, Absent: v.Absent, BaseUnit: v.BaseUnit}
+}
+
+func valueFromProto(p *checkspb.DatalogValue) Value {
+	v := Value{S: p.GetS(), Absent: p.GetAbsent(), BaseUnit: p.GetBaseUnit()}
+	if p.Num != nil {
+		n := p.GetNum()
+		v.Num = &n
+	}
+	return v
+}
+
+func argTypeProtos(ts []ns.ArgType) []*checkspb.DatalogArgType {
+	var out []*checkspb.DatalogArgType
+	for _, t := range ts {
+		out = append(out, &checkspb.DatalogArgType{
+			Kind: t.Kind, KindFrom: t.KindFrom, Owner: t.Owner, Type: t.Type, Unit: t.Unit, Domain: t.Domain,
+		})
+	}
+	return out
+}
+
+func argTypesFromProto(ps []*checkspb.DatalogArgType) []ns.ArgType {
+	var out []ns.ArgType
+	for _, p := range ps {
+		out = append(out, ns.ArgType{
+			Kind: p.GetKind(), KindFrom: p.GetKindFrom(), Owner: p.GetOwner(), Type: p.GetType(), Unit: p.GetUnit(), Domain: p.GetDomain(),
+		})
+	}
+	return out
 }
 
 // FindingQueryProto encodes the row-to-finding mapping that turns a datalog program into a rule.

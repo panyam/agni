@@ -82,6 +82,10 @@ netclass.via_diameter	arg0=class	kind=""	kindVar=""	ref=-
 netclass.via_diameter	arg1=mm	kind=""	kindVar=""	ref=-
 netclass.via_drill	arg0=class	kind=""	kindVar=""	ref=-
 netclass.via_drill	arg1=mm	kind=""	kindVar=""	ref=-
+num.unit	arg0=number	kind=""	kindVar=""	ref=-
+num.unit	arg1=unit	kind=""	kindVar=""	ref=-
+num.value	arg0=number	kind=""	kindVar=""	ref=-
+num.value	arg1=value	kind=""	kindVar=""	ref=-
 param.max	arg0=mpn	kind=""	kindVar=""	ref=-
 param.max	arg1=symbol	kind=""	kindVar=""	ref=-
 param.max	arg2=max	kind=""	kindVar=""	ref=-
