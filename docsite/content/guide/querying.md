@@ -374,6 +374,47 @@ The defined relation keeps `?r` and drops `?other`, so its tuples are already on
 and a plain `count` matches `count(distinct ?r)`. Drop `?r` from the head too and you are counting
 nets, not parts, which is the mistake this idiom is easiest to make.
 
+### Count inside a clause (body aggregates)
+
+A grouped count leaves out every group with nothing to count. A body aggregate counts inside the
+clause instead, once for each value the rest of the clause gives the shared variable, so the empty
+groups answer `0`. Every net with the number of test points on it:
+
+```
+entity(?n, "net"), ?c = count(distinct ?tp) : { component.net(?tp, ?n), component.class(?tp, "test_point") } => ?n, ?c
+```
+
+The variable the braces share with the clause (`?n` here) has to be bound outside them by a relation
+as well as inside them. `net.test_point_count` in the shipped library is this clause.
+
+### Sort and page an answer (order by, limit)
+
+`order by` sorts by projected columns, `desc` reverses one, and `limit` keeps the first rows. With an
+`order by`, the evaluation holds only the page while it runs, so asking for the ten busiest nets on
+a large board does not build the whole answer first:
+
+```
+net.pin_count(?n, ?c) => ?n, ?c order by ?c desc, ?n limit 10
+```
+
+`offset` skips rows and `after` continues from the last row of the page before, by value. Both need
+an `order by`.
+
+### Units
+
+A voltage carries volts and a board width carries millimetres, and a relation whose numbers all share
+a unit declares it. Comparing two different units is refused before the query runs, since volts are
+never less than millimetres:
+
+```
+net.max_voltage(?n, ?v), board.track_width(?n, ?w), ?v < ?w => ?n
+```
+
+A datasheet parameter's unit varies from row to row, so its relations declare none and each value
+keeps its own. An aggregate over numbers in different units, such as `sum` over one part's limits in
+volts and amps, answers absent, and the cell says why (`absent: mixed units: A, V`). `num.value` and
+`num.unit` take a number apart when a question really does mean the bare number.
+
 ### Use the shipped library (derived relations)
 
 Some questions come up often enough that agni ships them as relations of their own, defined in
