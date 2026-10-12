@@ -198,6 +198,38 @@ async function walkDesign(page, design) {
     const first = ((await button.count()) ? await button.textContent() : await cell.textContent())?.trim() ?? "";
     return { detail: `${n} resistors, first ${first}`, first };
   });
+  // A click on a net asks for its first rows and says how many it left out (agni issue 896). The
+  // busiest net is the case that used to answer whole, so the time runs from the ask to its count.
+  await step("4. ask about the busiest net", design, async () => {
+    await page.fill("textarea.query-text", "net.pin_count(?n, ?c) => ?n, ?c order by ?c desc limit 1");
+    await page.click("button.query-run");
+    await page.waitForSelector(".query-row, .query-empty, .query-error", { timeout: 120_000 });
+    if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").textContent());
+    const locate = page.locator(".query-row td:nth-child(2) .query-locate").first();
+    if ((await locate.count()) === 0) return { status: "not available", detail: "no net to select" };
+    const net = (await locate.textContent())?.trim() ?? "";
+    await locate.click();
+    await page.waitForSelector(".query-ask:not([disabled])", { timeout: 60_000 });
+    const before = (await page.locator(".query-count").textContent()) ?? "";
+    const t = performance.now();
+    await page.click(".query-ask");
+    // Waited for in the page on every frame, since the walk's 50 ms poll is coarser than the answer.
+    await page.waitForFunction(
+      (prev) => {
+        const c = document.querySelector(".query-count")?.textContent ?? "";
+        if (document.querySelector(".query-error, .query-empty")) return true;
+        return c !== prev && /result\(s\)/.test(c);
+      },
+      before,
+      { polling: "raf", timeout: 120_000 },
+    );
+    const ms = since(t);
+    if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").textContent());
+    if (await page.locator(".query-empty").count()) return { status: "fail", detail: `${net}: the net's question answered nothing (#975 where pin.net is empty)`, ms };
+    const count = (await page.locator(".query-count").textContent()) ?? "";
+    const head = count.match(/^\s*(\d+( of \d+)? result\(s\))/)?.[1] ?? count.trim();
+    return { detail: `${net}: ${head}`, ms };
+  });
   await step("4. trace", design, async () => {
     if (!ref?.first) return { status: "not available", detail: "no resistor to trace across" };
     await page.locator(".dv-default-tab-content", { hasText: /^Trace$/ }).first().click();
