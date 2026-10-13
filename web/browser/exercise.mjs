@@ -178,7 +178,7 @@ function checksTiming(log, design) {
 
 // walkDesign is step 4 on one open design: a finding into the drawing, a query, a trace and a saved
 // report.
-async function walkDesign(page, design) {
+async function walkDesign(page, design, log) {
   await step("4. finding into the drawing", design, async () => {
     if ((await page.locator(".check-locate").count()) === 0) return { status: "not available", detail: "no findings to click" };
     await page.locator(".check-locate").first().click();
@@ -229,6 +229,28 @@ async function walkDesign(page, design) {
     const count = (await page.locator(".query-count").textContent()) ?? "";
     const head = count.match(/^\s*(\d+( of \d+)? result\(s\))/)?.[1] ?? count.trim();
     return { detail: `${net}: ${head}`, ms };
+  });
+  // The worker keeps what it read between questions (agni issue 974). One replaced after every
+  // request fetched the design's files again for the next, so a question asked twice must fetch none.
+  await step("4. ask again", design, async () => {
+    const before = log.requests.length;
+    await page.fill("textarea.query-text", 'component.class(?r, "resistor") => ?r limit 7');
+    const shown = (await page.locator(".query-count").textContent()) ?? "";
+    const t = performance.now();
+    await page.click("button.query-run");
+    await page.waitForFunction(
+      (prev) => {
+        const c = document.querySelector(".query-count")?.textContent ?? "";
+        return document.querySelector(".query-error, .query-empty") || (c !== prev && /result\(s\)/.test(c));
+      },
+      shown,
+      { polling: "raf", timeout: 120_000 },
+    );
+    const ms = since(t);
+    if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").textContent());
+    const refetched = log.requests.slice(before).filter((r) => r.url.includes("/raw/")).length;
+    if (refetched) return { status: "fail", detail: `fetched ${refetched} of the design's files again (#974)`, ms };
+    return { detail: "no file fetched again", ms };
   });
   await step("4. trace", design, async () => {
     if (!ref?.first) return { status: "not available", detail: "no resistor to trace across" };
@@ -303,7 +325,7 @@ for (const seed of seeds) {
   });
   if (ok && (await checks(page, seed.title))) {
     checksTiming(log, seed.title);
-    await walkDesign(page, seed.title);
+    await walkDesign(page, seed.title, log);
     await step("1. reopen after a reload", seed.title, async () => {
       const t2 = performance.now();
       await page.reload({ waitUntil: "domcontentloaded" });
@@ -346,7 +368,7 @@ async function drop(design, input, files, markers) {
     });
     if (ok && (await checks(page, design))) {
       checksTiming(log, design);
-      await walkDesign(page, design);
+      await walkDesign(page, design, log);
     }
   }
   if (control) await page.evaluate((m) => fetch(`${location.origin}/collect?n=${encodeURIComponent(m)}`).catch(() => undefined), markers[0]);

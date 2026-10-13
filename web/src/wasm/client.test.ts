@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { laneFor, mountingFetch, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
+import { laneFor, memoryVerdict, mountingFetch, watchMemory, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
 
 // A recording engine of two lanes, design source and network, so a test can see where each request
 // went. `replace` swaps a lane's worker for an empty one, as an abort does.
@@ -163,5 +163,73 @@ describe("laneFor", () => {
     expect(at("/agni.v1.webapi.CheckService/ListRules")).toBe("serve");
     expect(at("/agni.v1.webapi.QueryService/RunQuery")).toBe("serve");
     expect(at("/agni.v1.webapi.DesignService/GetSheet")).toBe("serve");
+  });
+});
+
+// A lane of fake workers whose memory a test sets, recording each restart.
+function memoryLane(held: number[]) {
+  let worker = {} as Worker;
+  const workers = [worker];
+  const lane = {
+    fetch: async () => new Response("{}"),
+    worker: async () => worker,
+    restart: async () => {
+      worker = {} as Worker;
+      workers.push(worker);
+    },
+    close: () => {},
+  };
+  // held[i] is what the i-th measurement reads.
+  let i = 0;
+  const measure = async () => held[Math.min(i++, held.length - 1)];
+  return { lane, workers, measure };
+}
+
+const MB = 1 << 20;
+const settle = () => new Promise((r) => setTimeout(r, 0));
+
+describe("watchMemory", () => {
+  it("replaces a worker past the limit once, then keeps a replacement whose restored design is over it", async () => {
+    // Jetson's measurements in agni issue 974: 977 MB after a fresh read, 548 MB restored, each time.
+    const m = memoryLane([977 * MB, 548 * MB, 548 * MB, 548 * MB]);
+    const restarts: number[] = [];
+    const f = watchMemory(m.lane, { limit: 512 * MB, measure: m.measure, onRestart: (b) => restarts.push(b) });
+    for (let i = 0; i < 4; i++) {
+      await (await f.fetch("http://h/q")).text();
+      await settle();
+    }
+    expect(restarts).toEqual([977 * MB]);
+    expect(m.workers).toHaveLength(2);
+  });
+
+  it("still replaces a raised worker that creeps past the raised limit", async () => {
+    const m = memoryLane([977 * MB, 548 * MB, 600 * MB, 900 * MB]);
+    const restarts: number[] = [];
+    const f = watchMemory(m.lane, { limit: 512 * MB, measure: m.measure, onRestart: (b) => restarts.push(b) });
+    for (let i = 0; i < 4; i++) {
+      await (await f.fetch("http://h/q")).text();
+      await settle();
+    }
+    expect(restarts).toEqual([977 * MB, 900 * MB]);
+  });
+
+  it("measures only once the body has been read", async () => {
+    const m = memoryLane([977 * MB]);
+    const restarts: number[] = [];
+    const f = watchMemory(m.lane, { limit: 512 * MB, measure: m.measure, onRestart: (b) => restarts.push(b) });
+    const res = await f.fetch("http://h/q");
+    await settle();
+    expect(restarts).toEqual([]);
+    await res.text();
+    await settle();
+    expect(restarts).toEqual([977 * MB]);
+  });
+});
+
+describe("memoryVerdict", () => {
+  it("keeps under the limit, raises for a fresh replacement, restarts otherwise", () => {
+    expect(memoryVerdict({ limit: 512, fresh: true }, 500, 256)).toEqual({ verdict: "keep", limit: 512 });
+    expect(memoryVerdict({ limit: 512, fresh: true }, 548, 256)).toEqual({ verdict: "raise", limit: 804 });
+    expect(memoryVerdict({ limit: 512, fresh: false }, 548, 256)).toEqual({ verdict: "restart", limit: 512 });
   });
 });
