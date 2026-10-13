@@ -234,14 +234,18 @@ async function walkDesign(page, design, log) {
   // request fetched the design's files again for the next, so a question asked twice must fetch none.
   await step("4. ask again", design, async () => {
     const before = log.requests.length;
-    await page.fill("textarea.query-text", 'component.class(?r, "resistor") => ?r limit 7');
-    const shown = (await page.locator(".query-count").textContent()) ?? "";
+    // Every design has a net, so this answers rows wherever the walk got this far, and its count
+    // differs from the last step's. The last step may have answered nothing, which shows no count
+    // and leaves an empty-answer note that must not satisfy the wait.
+    await page.fill("textarea.query-text", "net.pin_count(?n, ?c) => ?n, ?c order by ?c desc limit 2");
+    const counted = page.locator(".query-count");
+    const shown = (await counted.count()) ? ((await counted.textContent()) ?? "") : "";
     const t = performance.now();
     await page.click("button.query-run");
     await page.waitForFunction(
       (prev) => {
         const c = document.querySelector(".query-count")?.textContent ?? "";
-        return document.querySelector(".query-error, .query-empty") || (c !== prev && /result\(s\)/.test(c));
+        return document.querySelector(".query-error") || (c !== prev && /result\(s\)/.test(c));
       },
       shown,
       { polling: "raf", timeout: 120_000 },
