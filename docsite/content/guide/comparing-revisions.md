@@ -74,6 +74,17 @@ formats render via auto-layout, where node positions shift when the node set cha
 those revisions are compared side by side rather than overlaid.
 [The web app](../../architecture/web-app/) page covers the visual diff in detail.
 
+While a comparison is open, the **Tables** panel offers it as a table, a row per change in the
+taxonomy above. They are the rows `agni diff --format csv` writes, because the engine lays them out
+(the `Tabulate` rpc) and the panel only shows them. Tick **near-renames** for `--rename-approx` and
+**unchanged nets** for `--include-equal`. Click a column heading to sort, which asks the engine for
+that order, so a ref-des column puts R2 before R10. A net or a part in the table is a link that finds
+it on the drawing, and **Save CSV** downloads the table as the CLI would write it. The same panel
+also runs the checks over either revision and shows each run's findings and verdicts.
+
+The browser-only demo cannot open a comparison yet, because its Compare picker lists no designs
+(agni issue 978).
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/) runs the rule catalog on either revision.

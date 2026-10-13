@@ -286,6 +286,13 @@ engine build that produced it. Neither runs anything again. The engine renders t
 already holds, through the same code the CLI calls (the `RenderCheckReport` rpc), so a saved file and
 the CLI's differ only in when they were written and in how each names the design.
 
+**Save CSV** downloads two files, `<design>.findings.csv` and `<design>.verdicts.csv`, holding the
+rows `agni check --format csv` and `agni check --verdicts --format csv` write. The engine lays the run
+out as tables (the `Tabulate` rpc) and writes them (the `Encode` rpc), with the same code the CLI
+uses, so a cell a spreadsheet would read as a formula is guarded in both. The rows are in the panel's
+rule order, which can differ from the CLI's, and are otherwise the same. The **Tables** panel shows
+the same run as tables before you save, one tab per table, and saves whichever is on screen.
+
 On the browser-only demo the engine runs in the page, so saving a design you dropped sends nothing
 anywhere. Its rows link back into the viewer you saved it from. A design opened from your own files
 gets no links, and the page says why, because the browser keeps those files only in the tab that
