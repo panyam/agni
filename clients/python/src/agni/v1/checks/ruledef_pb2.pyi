@@ -313,14 +313,26 @@ class DatalogCompare(_message.Message):
     def __init__(self, left: _Optional[_Union[DatalogTerm, _Mapping]] = ..., op: _Optional[str] = ..., right: _Optional[_Union[DatalogTerm, _Mapping]] = ...) -> None: ...
 
 class DatalogTerm(_message.Message):
-    __slots__ = ("var", "constant", "agg")
+    __slots__ = ("var", "constant", "agg", "expr")
     VAR_FIELD_NUMBER: _ClassVar[int]
     CONSTANT_FIELD_NUMBER: _ClassVar[int]
     AGG_FIELD_NUMBER: _ClassVar[int]
+    EXPR_FIELD_NUMBER: _ClassVar[int]
     var: str
     constant: DatalogValue
     agg: DatalogAggregate
-    def __init__(self, var: _Optional[str] = ..., constant: _Optional[_Union[DatalogValue, _Mapping]] = ..., agg: _Optional[_Union[DatalogAggregate, _Mapping]] = ...) -> None: ...
+    expr: DatalogExpr
+    def __init__(self, var: _Optional[str] = ..., constant: _Optional[_Union[DatalogValue, _Mapping]] = ..., agg: _Optional[_Union[DatalogAggregate, _Mapping]] = ..., expr: _Optional[_Union[DatalogExpr, _Mapping]] = ...) -> None: ...
+
+class DatalogExpr(_message.Message):
+    __slots__ = ("op", "func", "args")
+    OP_FIELD_NUMBER: _ClassVar[int]
+    FUNC_FIELD_NUMBER: _ClassVar[int]
+    ARGS_FIELD_NUMBER: _ClassVar[int]
+    op: str
+    func: str
+    args: _containers.RepeatedCompositeFieldContainer[DatalogTerm]
+    def __init__(self, op: _Optional[str] = ..., func: _Optional[str] = ..., args: _Optional[_Iterable[_Union[DatalogTerm, _Mapping]]] = ...) -> None: ...
 
 class DatalogValue(_message.Message):
     __slots__ = ("s", "num", "absent", "base_unit")

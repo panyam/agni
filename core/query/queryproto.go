@@ -254,6 +254,12 @@ func qtermProto(t Term) *checkspb.DatalogTerm {
 		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Agg{Agg: aggregateProto(*t.Agg)}}
 	case t.Const != nil:
 		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Constant{Constant: valueProto(*t.Const)}}
+	case t.Expr != nil:
+		e := &checkspb.DatalogExpr{Op: t.Expr.Op, Func: t.Expr.Func}
+		for _, a := range t.Expr.Args {
+			e.Args = append(e.Args, qtermProto(a))
+		}
+		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Expr{Expr: e}}
 	default:
 		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Var{Var: string(t.Var)}}
 	}
@@ -269,6 +275,16 @@ func qtermFromProto(p *checkspb.DatalogTerm) (Term, error) {
 	case *checkspb.DatalogTerm_Agg:
 		a := aggregateFromProto(t.Agg)
 		return Term{Agg: &a}, nil
+	case *checkspb.DatalogTerm_Expr:
+		e := Expr{Op: t.Expr.GetOp(), Func: t.Expr.GetFunc()}
+		for _, pa := range t.Expr.GetArgs() {
+			a, err := qtermFromProto(pa)
+			if err != nil {
+				return Term{}, err
+			}
+			e.Args = append(e.Args, a)
+		}
+		return Term{Expr: &e}, nil
 	}
 	return Term{}, fmt.Errorf("query: term is empty (no variant set)")
 }

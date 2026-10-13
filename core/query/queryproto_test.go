@@ -43,6 +43,15 @@ func fullQuery() Query {
 					Op:    "!=",
 					Right: Term{Const: &Value{Absent: true}},
 				}},
+				// An expression, nested, with a call and a negation, since each is a different Op.
+				{Compare: &Compare{
+					Left: Term{Var: "h"},
+					Op:   "=",
+					Right: Term{Expr: &Expr{Op: "*", Args: []Term{
+						{Expr: &Expr{Op: "call", Func: "half", Args: []Term{{Var: "v"}}}},
+						{Expr: &Expr{Op: "neg", Args: []Term{{Const: &Value{Num: &num}}}}},
+					}}},
+				}},
 				{Agg: &BodyAggregate{
 					Result: "k",
 					Agg:    Aggregate{Func: "count", Var: "p", Distinct: true},
@@ -104,7 +113,8 @@ func TestQueryProtoKnowsEveryEngineField(t *testing.T) {
 		reflect.TypeFor[BodyAggregate](): {"Result", "Agg", "Body"},
 		reflect.TypeFor[Atom]():          {"Relation", "Args"},
 		reflect.TypeFor[Compare]():       {"Left", "Op", "Right"},
-		reflect.TypeFor[Term]():          {"Var", "Const", "Agg"},
+		reflect.TypeFor[Term]():          {"Var", "Const", "Agg", "Expr"},
+		reflect.TypeFor[Expr]():          {"Op", "Func", "Args"},
 		reflect.TypeFor[Aggregate]():     {"Func", "Var", "Distinct"},
 		reflect.TypeFor[Order]():         {"Term", "Desc"},
 		reflect.TypeFor[Value]():         {"S", "Num", "Absent", "BaseUnit"},
