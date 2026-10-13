@@ -326,14 +326,27 @@ message DatalogCompare {
   DatalogTerm right = 3;
 }
 
-// DatalogTerm is a variable, a constant, or an aggregate over the group formed by the projection's
-// plain-variable columns.
+// DatalogTerm is a variable, a constant, an aggregate over the group formed by the projection's
+// plain-variable columns, or an expression, which only a comparison's operand may hold.
 message DatalogTerm {
   oneof term {
     string var = 1; // the logic variable name, without its leading "?"
     DatalogValue constant = 2;
     DatalogAggregate agg = 3;
+    DatalogExpr expr = 4;
   }
+}
+
+// DatalogExpr is arithmetic over terms, or a call to a function relation, as a query writes it
+// (`?w = ?v * ?i`, `?w = power(?v, ?i)`). The engine lowers it to calls of the num functions and the
+// named relation before evaluating, so the wire carries it as written and each host lowers it the
+// same way.
+message DatalogExpr {
+  // op is "+", "-", "*" or "/" over two args, "neg" over one, or "call" of func.
+  string op = 1;
+  // func names the function relation a call invokes, empty for an operator.
+  string func = 2;
+  repeated DatalogTerm args = 3;
 }
 
 // DatalogValue is a scalar fact value. A fact carries a string and, when numeric, a number, so a bound

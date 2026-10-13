@@ -421,6 +421,36 @@ keeps its own. An aggregate over numbers in different units, such as `sum` over 
 volts and amps, answers absent, and the cell says why (`absent: mixed units: A, V`). `num.value` and
 `num.unit` take a number apart when a question really does mean the bare number.
 
+A constant can carry its unit, so `?v >= 3.3V` and `?v > 3000mV` ask the same thing, since a prefix is
+folded into the base unit before anything compares. A constant in the wrong unit is refused the same
+way a relation's is, and `?v > 3mm` against a voltage fails with `compares number[V] with number[m],
+which never holds`.
+
+### Arithmetic
+
+A comparison can compute. `+`, `-`, `*` and `/` work on numbers, with parentheses and unary minus,
+and `?x = expression` binds a new variable to the result:
+
+```
+net.max_voltage(?n, ?v), ?mv = ?v * 1000 => ?n, ?mv order by ?mv desc
+```
+
+An expression can sit on either side of any comparison, so `net.pin_count(?n, ?c), ?c * 2 > 20 => ?n`
+needs no variable of its own. Each operator is a function relation underneath (`num.mul` for `*`,
+and so on), and those run in whichever direction their bound values allow, so `?v = ?i * ?r` finds
+whichever of the three is missing. That is also why the order an expression is written in doesn't
+matter.
+
+A one-rule relation whose head ends in its result works as a function, called with that last
+argument left off:
+
+```
+headroom(?v, ?h) :- ?h = 5V - ?v; net.max_voltage(?n, ?v), ?h = headroom(?v), ?h > 0V => ?n, ?h
+```
+
+The same rule still works as a relation, `headroom(?v, ?h)`. A computed number prints every digit
+the float has, so `5V - 3.3V` shows as `1.7000000000000002` for now.
+
 ### Use the shipped library (derived relations)
 
 Some questions come up often enough that agni ships them as relations of their own, defined in

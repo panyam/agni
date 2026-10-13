@@ -46,6 +46,8 @@ type (
 	BodyAggregate = datalog.BodyAggregate
 	// Order is one `order by` item.
 	Order = datalog.Order
+	// Expr is arithmetic or a function call, legal as a comparison's operand: `?w = ?v * ?i`.
+	Expr = datalog.Expr
 	// Table is an answer as columns and rows of values (Evaluator.EvalTable).
 	Table = datalog.Table
 	Row   = datalog.Row

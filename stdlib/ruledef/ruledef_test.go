@@ -7,6 +7,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/stdlib/profiles"
 	_ "github.com/panyam/agni/stdlib/relations" // registers the fact relations a query definition names
 )
@@ -193,5 +194,34 @@ func TestMarshalParseRoundTripsADeck(t *testing.T) {
 	}
 	if got.GetName() != d.GetName() || got.GetSource() != d.GetSource() || len(got.GetRules()) != 1 {
 		t.Errorf("deck changed: %+v", got)
+	}
+}
+
+// TestARuleWithArithmeticSurvivesTheWire sends a query rule written with an expression through its
+// definition and back, then runs it. The wire form dropped an expression until it carried
+// DatalogExpr, which left the comparison with an empty operand, so the round trip alone is not
+// enough; the compiled rule has to answer as the parsed one does.
+func TestARuleWithArithmeticSurvivesTheWire(t *testing.T) {
+	q, err := query.Parse(`net.pin_count(?n, ?c), ?c * 2 > 4 => ?n`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rules, err := Compile(QueryDef(query.FindingQuery{Rule: meta("busy-net"), Query: q, Kind: check.KindNet, SubjectVar: "n", Message: "busy"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn := func(ref string) *ir.Connection { return &ir.Connection{ComponentRef: ref, PinRef: "1"} }
+	m := check.NewModel(&ir.Design{Nets: []*ir.Net{
+		{Name: "BUSY", Connections: []*ir.Connection{conn("R1"), conn("R2"), conn("R3")}},
+		{Name: "QUIET", Connections: []*ir.Connection{conn("R4")}},
+	}})
+	var failed []string
+	for _, v := range rules[0].Eval(t.Context(), m) {
+		if v.Outcome == check.Fail {
+			failed = append(failed, v.Subjects[0].Ref)
+		}
+	}
+	if strings.Join(failed, ",") != "BUSY" {
+		t.Errorf("the rule found %v; want only BUSY, the net whose 3 connections doubled pass 4", failed)
 	}
 }
