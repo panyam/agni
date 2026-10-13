@@ -297,6 +297,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   them to identical answers; a new served question belongs in it. And `composition.test.ts` fills the
   viewer shell's template fields itself, so a new `{{ .Field }}` in `ViewerPage.html` must be added to
   its `servedFields` or the test throws.
+- **A browser worker replaced after every request keeps nothing in memory.** `DesignCache`'s memory
+  entries die with the worker, and its replacement fetches the design's files again, so the serve
+  lane's limit is `watchMemory` in `web/src/wasm/client.ts`, which raises the limit for a replacement
+  rather than replacing it again (agni 974). The console line `the serve worker held N MB and was
+  replaced` after every query is the symptom; measure before tightening `SERVE_LANE_MAX_BYTES`.
 - **A command's `--format json` is protojson of that command's WIRE MESSAGE** (C31), so a script
   reading the CLI and a client reading the rpc parse one shape. `agni intake` is the one declared
   exception and its reasoning is on `intake.Skeleton`, because that type's confidentiality guarantee is
