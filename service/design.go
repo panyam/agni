@@ -92,7 +92,18 @@ const boardSheetID = "board"
 
 // boardFor loads the board sidecar for a sheet request, classifying "this file has no
 // board" as not-found (the caller asked for a sheet that does not exist).
-func (s *DesignService) boardFor(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+//
+// It reads the board at the design's resolved board tier, which is where GetDesign looked when it
+// listed the sheet (C32). Reading at the request URI refused the Board sheet of every design named
+// by its folder or its netlist entry, since neither is the board (agni issue 865).
+func (s *DesignService) boardFor(ctx context.Context, uri artifact.URI, asNamed bool) (*geom.BoardGeometry, error) {
+	src, err := s.projects.Sources(ctx, uri, asNamed)
+	if err != nil {
+		return nil, err
+	}
+	if uri, err = ParseArtifactURI(src.BoardURI); err != nil {
+		return nil, err
+	}
 	b, err := s.loader.Board(ctx, uri)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
@@ -433,7 +444,7 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	// envelope matches the schematic pack so the canvas draws it with one extra draw mode.
 	// NATIVE has no board pages and answers with the SVG document.
 	if req.GetSheet() == boardSheetID {
-		b, err := s.boardFor(ctx, u)
+		b, err := s.boardFor(ctx, u, req.GetAsNamed())
 		if err != nil {
 			return nil, err
 		}
@@ -525,7 +536,7 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	// transparent SVG framed exactly like the BoardSVG base or as primitive-index groups over the
 	// SAME PackBoard primitive table the PACKED GetSheet returned.
 	if req.GetSheet() == boardSheetID {
-		b, err := s.boardFor(ctx, u)
+		b, err := s.boardFor(ctx, u, req.GetAsNamed())
 		if err != nil {
 			return nil, err
 		}
