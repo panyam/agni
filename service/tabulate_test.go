@@ -173,3 +173,40 @@ func TestReviewTablesKeepChecklistOrderAndNameEachFiring(t *testing.T) {
 		t.Errorf("review_summary = %q", got)
 	}
 }
+
+// TestATableSaysEachCellsKindWhereItsColumnCannot covers agni issue 898: a column that names a part on
+// one row and a net on the next carries no kind, so each row names its own, which is what lets the
+// viewer locate a diff's subject or a finding's.
+func TestATableSaysEachCellsKindWhereItsColumnCannot(t *testing.T) {
+	diff := DiffTable(&webapi.DiffDesignsResponse{Report: &webapi.DiffReport{
+		ComponentsAdded: []string{"R4"},
+		Nets:            []*webapi.DiffReport_NetChange{{Kind: "renamed", Name: "SDA", OldName: "I2C_SDA"}, {Kind: "hard", Name: "SCL"}},
+	}})
+	got := map[string][]string{}
+	for _, r := range diff.GetRows() {
+		got[r.GetCells()[1]] = r.GetCellKinds()
+	}
+	if len(got) != 3 {
+		t.Fatalf("diff rows = %v, want three", got)
+	}
+	for subject, want := range map[string][3]string{"R4": {"", "component", ""}, "SDA": {"", "net", "net"}, "SCL": {"", "net", ""}} {
+		k := got[subject]
+		if len(k) != len(DiffColumns) || k[0] != want[0] || k[1] != want[1] || k[2] != want[2] {
+			t.Errorf("%s: cell_kinds = %v, want %v then empty", subject, k, want)
+		}
+	}
+	if diff.GetColumns()[1].GetKind() != "" {
+		t.Errorf("the subject column claims kind %q, though its rows name two kinds", diff.GetColumns()[1].GetKind())
+	}
+
+	findings := FindingsTable([]*checkspb.Finding{
+		{Rule: "r", Subject: &checkspb.Subject{Kind: "net", Ref: "GND"}},
+		{Rule: "r", Subject: &checkspb.Subject{Kind: "pin", Ref: "U1", Pin: "3"}},
+	})
+	if k := findings.GetRows()[0].GetCellKinds(); len(k) != len(FindingColumns) || k[4] != "net" {
+		t.Errorf("a net finding's cell_kinds = %v, want net at the subject", k)
+	}
+	if k := findings.GetRows()[1].GetCellKinds(); k != nil {
+		t.Errorf("a pin finding's cell_kinds = %v, want none, since a pin needs its part to be found", k)
+	}
+}

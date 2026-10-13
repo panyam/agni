@@ -11,16 +11,51 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class TableEncoding(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    TABLE_ENCODING_UNSPECIFIED: _ClassVar[TableEncoding]
+    TABLE_ENCODING_CSV: _ClassVar[TableEncoding]
+
 class ColumnType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     COLUMN_TYPE_UNSPECIFIED: _ClassVar[ColumnType]
     COLUMN_TYPE_TEXT: _ClassVar[ColumnType]
     COLUMN_TYPE_NAME: _ClassVar[ColumnType]
     COLUMN_TYPE_NUMBER: _ClassVar[ColumnType]
+TABLE_ENCODING_UNSPECIFIED: TableEncoding
+TABLE_ENCODING_CSV: TableEncoding
 COLUMN_TYPE_UNSPECIFIED: ColumnType
 COLUMN_TYPE_TEXT: ColumnType
 COLUMN_TYPE_NAME: ColumnType
 COLUMN_TYPE_NUMBER: ColumnType
+
+class EncodeTablesRequest(_message.Message):
+    __slots__ = ("tables", "encoding", "stem")
+    TABLES_FIELD_NUMBER: _ClassVar[int]
+    ENCODING_FIELD_NUMBER: _ClassVar[int]
+    STEM_FIELD_NUMBER: _ClassVar[int]
+    tables: _containers.RepeatedCompositeFieldContainer[Table]
+    encoding: TableEncoding
+    stem: str
+    def __init__(self, tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ..., encoding: _Optional[_Union[TableEncoding, str]] = ..., stem: _Optional[str] = ...) -> None: ...
+
+class EncodedTable(_message.Message):
+    __slots__ = ("name", "filename", "content_type", "content")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    filename: str
+    content_type: str
+    content: bytes
+    def __init__(self, name: _Optional[str] = ..., filename: _Optional[str] = ..., content_type: _Optional[str] = ..., content: _Optional[bytes] = ...) -> None: ...
+
+class EncodeTablesResponse(_message.Message):
+    __slots__ = ("files",)
+    FILES_FIELD_NUMBER: _ClassVar[int]
+    files: _containers.RepeatedCompositeFieldContainer[EncodedTable]
+    def __init__(self, files: _Optional[_Iterable[_Union[EncodedTable, _Mapping]]] = ...) -> None: ...
 
 class TableColumn(_message.Message):
     __slots__ = ("name", "type", "kind")
@@ -33,12 +68,14 @@ class TableColumn(_message.Message):
     def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[ColumnType, str]] = ..., kind: _Optional[str] = ...) -> None: ...
 
 class TableRow(_message.Message):
-    __slots__ = ("cells", "cell_why")
+    __slots__ = ("cells", "cell_why", "cell_kinds")
     CELLS_FIELD_NUMBER: _ClassVar[int]
     CELL_WHY_FIELD_NUMBER: _ClassVar[int]
+    CELL_KINDS_FIELD_NUMBER: _ClassVar[int]
     cells: _containers.RepeatedScalarFieldContainer[str]
     cell_why: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cell_why: _Optional[_Iterable[str]] = ...) -> None: ...
+    cell_kinds: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cell_why: _Optional[_Iterable[str]] = ..., cell_kinds: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Table(_message.Message):
     __slots__ = ("name", "columns", "rows")

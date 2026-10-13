@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"strings"
@@ -10,6 +11,9 @@ import (
 	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // orderFixture is the design the order-sensitive tests run on. It has to produce ENOUGH findings
@@ -189,4 +193,40 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestTheEncodeRPCWritesTheCLIsCSV covers agni issue 956: a check run tabulated and encoded through
+// the TableService, as the viewer saves one, is byte for byte what `check --format csv` writes.
+func TestTheEncodeRPCWritesTheCLIsCSV(t *testing.T) {
+	run := func(args ...string) []byte {
+		t.Helper()
+		cmd := checkCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs(append(args, orderFixture))
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("check %v: %v", args, err)
+		}
+		return out.Bytes()
+	}
+	cli := run("--format", "csv")
+	var resp webapi.CheckDesignResponse
+	if err := protojson.Unmarshal(run("--verdicts", "--format", "json"), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetFindings()) == 0 {
+		t.Fatal("the fixture has no findings, so two header rows would compare equal")
+	}
+	var ts service.TableService
+	tab, err := ts.Tabulate(context.Background(), &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Check{Check: &resp}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	enc, err := ts.Encode(context.Background(), &webapi.EncodeTablesRequest{Tables: tab.GetTables()[:1], Encoding: webapi.TableEncoding_TABLE_ENCODING_CSV})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := enc.GetFiles()[0]; got.GetName() != "findings" || !bytes.Equal(got.GetContent(), cli) {
+		t.Errorf("Encode wrote %s:\n%s\ncheck --format csv wrote:\n%s", got.GetName(), got.GetContent(), cli)
+	}
 }

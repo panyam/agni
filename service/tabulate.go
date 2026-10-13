@@ -1,12 +1,15 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/panyam/agni/core/check"
 	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -74,9 +77,21 @@ func FindingsTable(findings []*checkspb.Finding) *webapi.Table {
 			prov.GetSourceFile(),
 			prov.GetNativeId(),
 			contextCell(f.GetContext()),
-		}})
+		}, CellKinds: subjectKinds(len(FindingColumns), 4, s.GetKind())})
 	}
 	return t
+}
+
+// subjectKinds is a row's cell_kinds when the cell at i names a net or a part, the two kinds a viewer
+// locates by a cell alone, and nil otherwise. A pin needs its part as well, and a bus has no single
+// place, so their rows carry none.
+func subjectKinds(n, i int, kind string) []string {
+	if kind != check.KindNet && kind != check.KindComponent {
+		return nil
+	}
+	out := make([]string, n)
+	out[i] = kind
+	return out
 }
 
 // VerdictsTable is one row per verdict, passes included, in run order. link gives a verdict's viewer
@@ -135,17 +150,19 @@ func DiffTable(resp *webapi.DiffDesignsResponse) *webapi.Table {
 		r[0], r[1] = class, subject
 		return r
 	}
+	// The subject is a part on a component row and a net on a net row, so each row says which.
+	part := func() []string { return subjectKinds(len(DiffColumns), 1, check.KindComponent) }
 	rep := resp.GetReport()
 	for _, ref := range rep.GetComponentsAdded() {
-		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-added", ref)})
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-added", ref), CellKinds: part()})
 	}
 	for _, ref := range rep.GetComponentsRemoved() {
-		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-removed", ref)})
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-removed", ref), CellKinds: part()})
 	}
 	for _, cc := range rep.GetComponentsChanged() {
 		r := row("component-changed", cc.GetRefDes())
 		r[3], r[4], r[5] = cc.GetField(), cc.GetOld(), cc.GetNew()
-		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r})
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r, CellKinds: part()})
 	}
 	for _, nc := range rep.GetNets() {
 		r := row("net-"+nc.GetKind(), nc.GetName())
@@ -157,7 +174,11 @@ func DiffTable(resp *webapi.DiffDesignsResponse) *webapi.Table {
 			r[11] = strconv.FormatFloat(e.GetOldCoverageSignificant(), 'f', 3, 64)
 			r[12] = strconv.FormatFloat(e.GetNewCoverageSignificant(), 'f', 3, 64)
 		}
-		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r})
+		kinds := subjectKinds(len(DiffColumns), 1, check.KindNet)
+		if r[2] != "" {
+			kinds[2] = check.KindNet
+		}
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r, CellKinds: kinds})
 	}
 	return t
 }
@@ -284,6 +305,10 @@ func QueryTable(name string, resp *webapi.RunQueryResponse) *webapi.Table {
 		row := &webapi.TableRow{Cells: cells}
 		if why := r.GetCellWhy(); len(why) > 0 {
 			row.CellWhy = append(append(make([]string, 0, len(cells)), why...), "")
+		}
+		// A polymorphic column types each row's cell itself (agni issue 338), and the table keeps it.
+		if ks := r.GetCellKinds(); len(ks) > 0 {
+			row.CellKinds = append(append(make([]string, 0, len(cells)), ks...), "")
 		}
 		t.Rows = append(t.Rows, row)
 	}
@@ -426,6 +451,47 @@ func (TableService) Tabulate(_ context.Context, req *webapi.TabulateRequest) (*w
 		return nil, err
 	}
 	return &webapi.TabulateResponse{Tables: tables}, nil
+}
+
+// Encode writes each table as a file in the requested encoding (agni issue 956). An unspecified
+// encoding is ErrInvalidArgument, and so is a table with no name, since its file would have none.
+func (TableService) Encode(_ context.Context, req *webapi.EncodeTablesRequest) (*webapi.EncodeTablesResponse, error) {
+	if req.GetEncoding() != webapi.TableEncoding_TABLE_ENCODING_CSV {
+		return nil, fmt.Errorf("%w: Encode needs an encoding, and writes csv", ErrInvalidArgument)
+	}
+	out := &webapi.EncodeTablesResponse{}
+	for _, t := range req.GetTables() {
+		if t.GetName() == "" {
+			return nil, fmt.Errorf("%w: a table to encode needs a name, which names its file", ErrInvalidArgument)
+		}
+		var b bytes.Buffer
+		if err := WriteTableCSV(&b, t); err != nil {
+			return nil, err
+		}
+		filename := t.GetName() + ".csv"
+		if stem := req.GetStem(); stem != "" {
+			filename = stem + "." + filename
+		}
+		out.Files = append(out.Files, &webapi.EncodedTable{Name: t.GetName(), Filename: filename, ContentType: "text/csv; charset=utf-8", Content: b.Bytes()})
+	}
+	return out, nil
+}
+
+// WriteTableCSV writes one table as csv, its column names as the header row and every cell guarded
+// against spreadsheet formulas (rpt.SanitizeCell). It is the one csv encoding of a Table, which
+// `--format csv` on every command and the Encode rpc both write, so a file saved from the viewer and
+// one written by the CLI are the same bytes. It writes the rows in the order they are in.
+func WriteTableCSV(w io.Writer, t *webapi.Table) error {
+	c := rpt.NewCSVWriter(w)
+	header := make([]string, 0, len(t.GetColumns()))
+	for _, col := range t.GetColumns() {
+		header = append(header, col.GetName())
+	}
+	c.Header(header)
+	for _, r := range t.GetRows() {
+		c.Row(r.GetCells())
+	}
+	return c.Finish()
 }
 
 // OrderTables sorts each table by orderBy, as TabulateRequest.order_by describes, with types

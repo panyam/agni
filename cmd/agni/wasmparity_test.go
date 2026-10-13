@@ -105,6 +105,7 @@ type parityClients struct {
 	check  webapiconnect.CheckServiceClient
 	query  webapiconnect.QueryServiceClient
 	ws     webapiconnect.WorkspaceServiceClient
+	table  webapiconnect.TableServiceClient
 }
 
 func newParityClients(t *testing.T, h http.Handler) parityClients {
@@ -117,6 +118,7 @@ func newParityClients(t *testing.T, h http.Handler) parityClients {
 		check:  webapiconnect.NewCheckServiceClient(c, srv.URL),
 		query:  webapiconnect.NewQueryServiceClient(c, srv.URL),
 		ws:     webapiconnect.NewWorkspaceServiceClient(c, srv.URL),
+		table:  webapiconnect.NewTableServiceClient(c, srv.URL),
 	}
 }
 
@@ -243,6 +245,23 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 			t.Errorf("RenderCheckReport %s: the wasm engine writes a different file from the server", format)
 		}
 	}
+	// A run saved as csv is tabulated and encoded by whichever host the page runs on (agni issue 956),
+	// so both lay out and write one run identically. The run is the server's, sent to each.
+	run, err := served.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Uri: design}))
+	if err != nil {
+		t.Fatalf("CheckDesign: %v", err)
+	}
+	tabulated := ask("Tabulate", func(c parityClients) (proto.Message, error) {
+		r, err := c.table.Tabulate(ctx, connect.NewRequest(&webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Check{Check: run.Msg}}))
+		return msgOf(r, err)
+	}).(*webapi.TabulateResponse)
+	if len(tabulated.GetTables()) == 0 || (ruleFrom != "" && len(tabulated.GetTables()[0].GetRows()) == 0) {
+		t.Fatal("Tabulate: no rows, so two empty tables would compare equal")
+	}
+	ask("Encode", func(c parityClients) (proto.Message, error) {
+		r, err := c.table.Encode(ctx, connect.NewRequest(&webapi.EncodeTablesRequest{Tables: tabulated.GetTables(), Encoding: webapi.TableEncoding_TABLE_ENCODING_CSV}))
+		return msgOf(r, err)
+	})
 	ask("RunQuery", func(c parityClients) (proto.Message, error) {
 		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Uri: design, Query: query}))
 		return msgOf(r, err)

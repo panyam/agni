@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 
-	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
@@ -22,21 +21,13 @@ func writeCheckCSV(w io.Writer, findings []*checkspb.Finding, orderBy ...string)
 
 // writeTableCSV encodes a projected table as csv, ordered by orderBy first. The rows are the
 // TableService's, so a csv and a workbook built from one answer carry the same cells (agni issue
-// 862); escaping against spreadsheet formulas happens here, in the encoder.
+// 862); escaping against spreadsheet formulas happens in service.WriteTableCSV, the encoder the
+// Encode rpc shares, so a file the viewer saves is these bytes.
 func writeTableCSV(w io.Writer, t *webapi.Table, orderBy []string) error {
 	if err := service.OrderTables([]*webapi.Table{t}, orderBy, nil); err != nil {
 		return err
 	}
-	c := rpt.NewCSVWriter(w)
-	header := make([]string, 0, len(t.GetColumns()))
-	for _, col := range t.GetColumns() {
-		header = append(header, col.GetName())
-	}
-	c.Header(header)
-	for _, r := range t.GetRows() {
-		c.Row(r.GetCells())
-	}
-	return c.Finish()
+	return service.WriteTableCSV(w, t)
 }
 
 func columnNames(cs []webapi.TableColumn) []string {
