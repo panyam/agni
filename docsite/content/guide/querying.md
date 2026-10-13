@@ -448,8 +448,14 @@ argument left off:
 headroom(?v, ?h) :- ?h = 5V - ?v; net.max_voltage(?n, ?v), ?h = headroom(?v), ?h > 0V => ?n, ?h
 ```
 
-The same rule still works as a relation, `headroom(?v, ?h)`. A computed number prints every digit
-the float has, so `5V - 3.3V` shows as `1.7000000000000002` for now.
+The same rule still works as a relation, `headroom(?v, ?h)`.
+
+A computed number keeps the error of the floating-point arithmetic behind it, so `5V - 3.3V` shows as
+`1.7000000000000002` for now. It also does not equal the constant it looks like, and
+`5V - ?v = 1.7V` answers nothing for a 3.3 V net. Compare a computed number with a margin rather than
+with `=`, as in `?h > 1.69V, ?h < 1.71V`, and be wary of a boundary such as `>= 1.7V` that a value
+can miss by its last digit. The engine fixing this is
+[panyam/jaala#216](https://github.com/panyam/jaala/issues/216).
 
 ### Use the shipped library (derived relations)
 
