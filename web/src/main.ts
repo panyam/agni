@@ -176,11 +176,11 @@ function installPageDrop(engine: WasmEngine | undefined): void {
   });
 }
 
-// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issue 911). A restored Jetson AGX Thor
-// baseboard holds about 320 MB and a fresh read of it about 390 MB, so one open of the largest seeded
-// board never trips it, and a worker that has crept past it across several designs is replaced by one
-// that restores the open design from the browser's cache. A tighter limit would restart a worker
-// whose restored design alone is over it after every request.
+// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issues 911, 974). A worker that has
+// crept past it across several designs is replaced by one that restores the open design from the
+// browser's cache. A Jetson AGX Thor baseboard holds 977 MB after a fresh read and 548 MB restored,
+// over this limit, so its replacement raises the limit rather than being replaced after every request
+// (memoryVerdict in wasm/client.ts).
 const SERVE_LANE_MAX_BYTES = 512 << 20;
 
 // startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine

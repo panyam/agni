@@ -226,7 +226,11 @@ the browser rather than from the contract.
   `wasmengine.StoreVersion`, the commit plus a hash of the uncommitted changes that `make wasm`
   stamps, so a build that reads a file differently never restores another build's parse. A dirty
   build without that stamp persists nothing. The serve lane also has a memory limit (512 MB), past
-  which, once idle, it is replaced by a worker that restores on its next request.
+  which, once idle, it is replaced by a worker that restores on its next request. A replacement that
+  passes the limit for the first time raises it to what it holds plus 256 MB (half the limit), because a
+  successor would restore the same design to the same size. Before that (agni issue 974) a restored
+  Jetson baseboard at 548 MB was replaced after every request, and each query fetched the design's
+  files again and restored its board.
 
 The browser and the server read through different adapters over one set of ports, `fshost` over
 in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with
