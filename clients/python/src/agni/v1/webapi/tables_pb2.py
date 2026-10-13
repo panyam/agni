@@ -28,7 +28,7 @@ from agni.v1.webapi import query_pb2 as agni_dot_v1_dot_webapi_dot_query__pb2
 from agni.v1.webapi import review_pb2 as agni_dot_v1_dot_webapi_dot_review__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/tables.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x19\x61gni/v1/webapi/diff.proto\x1a\x1a\x61gni/v1/webapi/query.proto\x1a\x1b\x61gni/v1/webapi/review.proto\"e\n\x0bTableColumn\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12.\n\x04type\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x04type\x12\x12\n\x04kind\x18\x03 \x01(\tR\x04kind\";\n\x08TableRow\x12\x14\n\x05\x63\x65lls\x18\x01 \x03(\tR\x05\x63\x65lls\x12\x19\n\x08\x63\x65ll_why\x18\x02 \x03(\tR\x07\x63\x65llWhy\"\x80\x01\n\x05Table\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x35\n\x07\x63olumns\x18\x02 \x03(\x0b\x32\x1b.agni.v1.webapi.TableColumnR\x07\x63olumns\x12,\n\x04rows\x18\x03 \x03(\x0b\x32\x18.agni.v1.webapi.TableRowR\x04rows\"\x8e\x04\n\x0fTabulateRequest\x12;\n\x05\x63heck\x18\x01 \x01(\x0b\x32#.agni.v1.webapi.CheckDesignResponseH\x00R\x05\x63heck\x12\x38\n\x05query\x18\x02 \x01(\x0b\x32 .agni.v1.webapi.RunQueryResponseH\x00R\x05query\x12\x41\n\tquery_set\x18\x03 \x01(\x0b\x32\".agni.v1.webapi.RunQueriesResponseH\x00R\x08querySet\x12\x39\n\x04\x64iff\x18\x06 \x01(\x0b\x32#.agni.v1.webapi.DiffDesignsResponseH\x00R\x04\x64iff\x12\x30\n\x06review\x18\x07 \x01(\x0b\x32\x16.agni.v1.webapi.ReviewH\x00R\x06review\x12\x19\n\x08order_by\x18\x04 \x03(\tR\x07orderBy\x12S\n\x0c\x63olumn_types\x18\x05 \x03(\x0b\x32\x30.agni.v1.webapi.TabulateRequest.ColumnTypesEntryR\x0b\x63olumnTypes\x1aZ\n\x10\x43olumnTypesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x30\n\x05value\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x05value:\x02\x38\x01\x42\x08\n\x06\x61nswer\"A\n\x10TabulateResponse\x12-\n\x06tables\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.TableR\x06tables*m\n\nColumnType\x12\x1b\n\x17\x43OLUMN_TYPE_UNSPECIFIED\x10\x00\x12\x14\n\x10\x43OLUMN_TYPE_TEXT\x10\x01\x12\x14\n\x10\x43OLUMN_TYPE_NAME\x10\x02\x12\x16\n\x12\x43OLUMN_TYPE_NUMBER\x10\x03\x32]\n\x0cTableService\x12M\n\x08Tabulate\x12\x1f.agni.v1.webapi.TabulateRequest\x1a .agni.v1.webapi.TabulateResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/tables.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x19\x61gni/v1/webapi/diff.proto\x1a\x1a\x61gni/v1/webapi/query.proto\x1a\x1b\x61gni/v1/webapi/review.proto\"\x93\x01\n\x13\x45ncodeTablesRequest\x12-\n\x06tables\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.TableR\x06tables\x12\x39\n\x08\x65ncoding\x18\x02 \x01(\x0e\x32\x1d.agni.v1.webapi.TableEncodingR\x08\x65ncoding\x12\x12\n\x04stem\x18\x03 \x01(\tR\x04stem\"{\n\x0c\x45ncodedTable\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n\x08\x66ilename\x18\x02 \x01(\tR\x08\x66ilename\x12!\n\x0c\x63ontent_type\x18\x03 \x01(\tR\x0b\x63ontentType\x12\x18\n\x07\x63ontent\x18\x04 \x01(\x0cR\x07\x63ontent\"J\n\x14\x45ncodeTablesResponse\x12\x32\n\x05\x66iles\x18\x01 \x03(\x0b\x32\x1c.agni.v1.webapi.EncodedTableR\x05\x66iles\"e\n\x0bTableColumn\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12.\n\x04type\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x04type\x12\x12\n\x04kind\x18\x03 \x01(\tR\x04kind\"Z\n\x08TableRow\x12\x14\n\x05\x63\x65lls\x18\x01 \x03(\tR\x05\x63\x65lls\x12\x19\n\x08\x63\x65ll_why\x18\x02 \x03(\tR\x07\x63\x65llWhy\x12\x1d\n\ncell_kinds\x18\x03 \x03(\tR\tcellKinds\"\x80\x01\n\x05Table\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x35\n\x07\x63olumns\x18\x02 \x03(\x0b\x32\x1b.agni.v1.webapi.TableColumnR\x07\x63olumns\x12,\n\x04rows\x18\x03 \x03(\x0b\x32\x18.agni.v1.webapi.TableRowR\x04rows\"\x8e\x04\n\x0fTabulateRequest\x12;\n\x05\x63heck\x18\x01 \x01(\x0b\x32#.agni.v1.webapi.CheckDesignResponseH\x00R\x05\x63heck\x12\x38\n\x05query\x18\x02 \x01(\x0b\x32 .agni.v1.webapi.RunQueryResponseH\x00R\x05query\x12\x41\n\tquery_set\x18\x03 \x01(\x0b\x32\".agni.v1.webapi.RunQueriesResponseH\x00R\x08querySet\x12\x39\n\x04\x64iff\x18\x06 \x01(\x0b\x32#.agni.v1.webapi.DiffDesignsResponseH\x00R\x04\x64iff\x12\x30\n\x06review\x18\x07 \x01(\x0b\x32\x16.agni.v1.webapi.ReviewH\x00R\x06review\x12\x19\n\x08order_by\x18\x04 \x03(\tR\x07orderBy\x12S\n\x0c\x63olumn_types\x18\x05 \x03(\x0b\x32\x30.agni.v1.webapi.TabulateRequest.ColumnTypesEntryR\x0b\x63olumnTypes\x1aZ\n\x10\x43olumnTypesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x30\n\x05value\x18\x02 \x01(\x0e\x32\x1a.agni.v1.webapi.ColumnTypeR\x05value:\x02\x38\x01\x42\x08\n\x06\x61nswer\"A\n\x10TabulateResponse\x12-\n\x06tables\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.TableR\x06tables*G\n\rTableEncoding\x12\x1e\n\x1aTABLE_ENCODING_UNSPECIFIED\x10\x00\x12\x16\n\x12TABLE_ENCODING_CSV\x10\x01*m\n\nColumnType\x12\x1b\n\x17\x43OLUMN_TYPE_UNSPECIFIED\x10\x00\x12\x14\n\x10\x43OLUMN_TYPE_TEXT\x10\x01\x12\x14\n\x10\x43OLUMN_TYPE_NAME\x10\x02\x12\x16\n\x12\x43OLUMN_TYPE_NUMBER\x10\x03\x32\xb2\x01\n\x0cTableService\x12M\n\x08Tabulate\x12\x1f.agni.v1.webapi.TabulateRequest\x1a .agni.v1.webapi.TabulateResponse\x12S\n\x06\x45ncode\x12#.agni.v1.webapi.EncodeTablesRequest\x1a$.agni.v1.webapi.EncodeTablesResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,20 +38,28 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._loaded_options = None
   _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_options = b'8\001'
-  _globals['_COLUMNTYPE']._serialized_start=1051
-  _globals['_COLUMNTYPE']._serialized_end=1160
-  _globals['_TABLECOLUMN']._serialized_start=160
-  _globals['_TABLECOLUMN']._serialized_end=261
-  _globals['_TABLEROW']._serialized_start=263
-  _globals['_TABLEROW']._serialized_end=322
-  _globals['_TABLE']._serialized_start=325
-  _globals['_TABLE']._serialized_end=453
-  _globals['_TABULATEREQUEST']._serialized_start=456
-  _globals['_TABULATEREQUEST']._serialized_end=982
-  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_start=882
-  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_end=972
-  _globals['_TABULATERESPONSE']._serialized_start=984
-  _globals['_TABULATERESPONSE']._serialized_end=1049
-  _globals['_TABLESERVICE']._serialized_start=1162
-  _globals['_TABLESERVICE']._serialized_end=1255
+  _globals['_TABLEENCODING']._serialized_start=1433
+  _globals['_TABLEENCODING']._serialized_end=1504
+  _globals['_COLUMNTYPE']._serialized_start=1506
+  _globals['_COLUMNTYPE']._serialized_end=1615
+  _globals['_ENCODETABLESREQUEST']._serialized_start=161
+  _globals['_ENCODETABLESREQUEST']._serialized_end=308
+  _globals['_ENCODEDTABLE']._serialized_start=310
+  _globals['_ENCODEDTABLE']._serialized_end=433
+  _globals['_ENCODETABLESRESPONSE']._serialized_start=435
+  _globals['_ENCODETABLESRESPONSE']._serialized_end=509
+  _globals['_TABLECOLUMN']._serialized_start=511
+  _globals['_TABLECOLUMN']._serialized_end=612
+  _globals['_TABLEROW']._serialized_start=614
+  _globals['_TABLEROW']._serialized_end=704
+  _globals['_TABLE']._serialized_start=707
+  _globals['_TABLE']._serialized_end=835
+  _globals['_TABULATEREQUEST']._serialized_start=838
+  _globals['_TABULATEREQUEST']._serialized_end=1364
+  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_start=1264
+  _globals['_TABULATEREQUEST_COLUMNTYPESENTRY']._serialized_end=1354
+  _globals['_TABULATERESPONSE']._serialized_start=1366
+  _globals['_TABULATERESPONSE']._serialized_end=1431
+  _globals['_TABLESERVICE']._serialized_start=1618
+  _globals['_TABLESERVICE']._serialized_end=1796
 # @@protoc_insertion_point(module_scope)

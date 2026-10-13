@@ -139,6 +139,7 @@ function QueryPanel(props: {
   currentSheet: () => string;
   findings: () => FindingsState;
   onRun: (text: string, bindings: Record<string, string>, limit?: number) => void;
+  onSaveCSV?: () => void;
   onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
 }) {
@@ -790,6 +791,12 @@ function QueryPanel(props: {
                   show all
                 </button>
               </Show>
+              <Show when={props.onSaveCSV}>
+                {" "}
+                <button type="button" class="query-save-csv" title="Save this answer as a csv file, the same file agni query writes as csv" onClick={() => props.onSaveCSV?.()}>
+                  Save CSV
+                </button>
+              </Show>
               {/* The set case. The answers on screen ARE a selection, which is why findingsFor takes
                   a set rather than one subject. */}
               <Show when={resultSubjects().length > 0}>
@@ -818,6 +825,8 @@ export function queryPanelIsland(
   eventBus: EventBus | null,
   handlers: {
     onRun: (text: string, bindings: Record<string, string>, limit?: number) => void;
+    // onSaveCSV saves the answer on screen as csv (agni issue 956). Absent, the panel offers no save.
+    onSaveCSV?: () => void;
     onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
     // onInspect opens the check results for one entity. Optional like onLocate, since an embedding
     // host may mount the query panel with no checks panel (C13).
@@ -873,6 +882,7 @@ export function queryPanelIsland(
         currentSheet={currentSheet}
         findings={findings}
         onRun={handlers.onRun}
+        onSaveCSV={handlers.onSaveCSV}
         onLocate={onLocate}
         onInspect={onInspect}
       />

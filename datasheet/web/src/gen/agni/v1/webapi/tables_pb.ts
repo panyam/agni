@@ -18,7 +18,92 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/tables.proto.
  */
 export const file_agni_v1_webapi_tables: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS90YWJsZXMucHJvdG8SDmFnbmkudjEud2ViYXBpIlMKC1RhYmxlQ29sdW1uEgwKBG5hbWUYASABKAkSKAoEdHlwZRgCIAEoDjIaLmFnbmkudjEud2ViYXBpLkNvbHVtblR5cGUSDAoEa2luZBgDIAEoCSIrCghUYWJsZVJvdxINCgVjZWxscxgBIAMoCRIQCghjZWxsX3doeRgCIAMoCSJrCgVUYWJsZRIMCgRuYW1lGAEgASgJEiwKB2NvbHVtbnMYAiADKAsyGy5hZ25pLnYxLndlYmFwaS5UYWJsZUNvbHVtbhImCgRyb3dzGAMgAygLMhguYWduaS52MS53ZWJhcGkuVGFibGVSb3cixgMKD1RhYnVsYXRlUmVxdWVzdBI0CgVjaGVjaxgBIAEoCzIjLmFnbmkudjEud2ViYXBpLkNoZWNrRGVzaWduUmVzcG9uc2VIABIxCgVxdWVyeRgCIAEoCzIgLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2VIABI3CglxdWVyeV9zZXQYAyABKAsyIi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVzcG9uc2VIABIzCgRkaWZmGAYgASgLMiMuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZUgAEigKBnJldmlldxgHIAEoCzIWLmFnbmkudjEud2ViYXBpLlJldmlld0gAEhAKCG9yZGVyX2J5GAQgAygJEkYKDGNvbHVtbl90eXBlcxgFIAMoCzIwLmFnbmkudjEud2ViYXBpLlRhYnVsYXRlUmVxdWVzdC5Db2x1bW5UeXBlc0VudHJ5Gk4KEENvbHVtblR5cGVzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgOMhouYWduaS52MS53ZWJhcGkuQ29sdW1uVHlwZToCOAFCCAoGYW5zd2VyIjkKEFRhYnVsYXRlUmVzcG9uc2USJQoGdGFibGVzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuVGFibGUqbQoKQ29sdW1uVHlwZRIbChdDT0xVTU5fVFlQRV9VTlNQRUNJRklFRBAAEhQKEENPTFVNTl9UWVBFX1RFWFQQARIUChBDT0xVTU5fVFlQRV9OQU1FEAISFgoSQ09MVU1OX1RZUEVfTlVNQkVSEAMyXQoMVGFibGVTZXJ2aWNlEk0KCFRhYnVsYXRlEh8uYWduaS52MS53ZWJhcGkuVGFidWxhdGVSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuVGFidWxhdGVSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_checks, file_agni_v1_webapi_diff, file_agni_v1_webapi_query, file_agni_v1_webapi_review]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS90YWJsZXMucHJvdG8SDmFnbmkudjEud2ViYXBpInsKE0VuY29kZVRhYmxlc1JlcXVlc3QSJQoGdGFibGVzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuVGFibGUSLwoIZW5jb2RpbmcYAiABKA4yHS5hZ25pLnYxLndlYmFwaS5UYWJsZUVuY29kaW5nEgwKBHN0ZW0YAyABKAkiVQoMRW5jb2RlZFRhYmxlEgwKBG5hbWUYASABKAkSEAoIZmlsZW5hbWUYAiABKAkSFAoMY29udGVudF90eXBlGAMgASgJEg8KB2NvbnRlbnQYBCABKAwiQwoURW5jb2RlVGFibGVzUmVzcG9uc2USKwoFZmlsZXMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5FbmNvZGVkVGFibGUiUwoLVGFibGVDb2x1bW4SDAoEbmFtZRgBIAEoCRIoCgR0eXBlGAIgASgOMhouYWduaS52MS53ZWJhcGkuQ29sdW1uVHlwZRIMCgRraW5kGAMgASgJIj8KCFRhYmxlUm93Eg0KBWNlbGxzGAEgAygJEhAKCGNlbGxfd2h5GAIgAygJEhIKCmNlbGxfa2luZHMYAyADKAkiawoFVGFibGUSDAoEbmFtZRgBIAEoCRIsCgdjb2x1bW5zGAIgAygLMhsuYWduaS52MS53ZWJhcGkuVGFibGVDb2x1bW4SJgoEcm93cxgDIAMoCzIYLmFnbmkudjEud2ViYXBpLlRhYmxlUm93IsYDCg9UYWJ1bGF0ZVJlcXVlc3QSNAoFY2hlY2sYASABKAsyIy5hZ25pLnYxLndlYmFwaS5DaGVja0Rlc2lnblJlc3BvbnNlSAASMQoFcXVlcnkYAiABKAsyIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlSAASNwoJcXVlcnlfc2V0GAMgASgLMiIuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1Jlc3BvbnNlSAASMwoEZGlmZhgGIAEoCzIjLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2VIABIoCgZyZXZpZXcYByABKAsyFi5hZ25pLnYxLndlYmFwaS5SZXZpZXdIABIQCghvcmRlcl9ieRgEIAMoCRJGCgxjb2x1bW5fdHlwZXMYBSADKAsyMC5hZ25pLnYxLndlYmFwaS5UYWJ1bGF0ZVJlcXVlc3QuQ29sdW1uVHlwZXNFbnRyeRpOChBDb2x1bW5UeXBlc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoDjIaLmFnbmkudjEud2ViYXBpLkNvbHVtblR5cGU6AjgBQggKBmFuc3dlciI5ChBUYWJ1bGF0ZVJlc3BvbnNlEiUKBnRhYmxlcxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLlRhYmxlKkcKDVRhYmxlRW5jb2RpbmcSHgoaVEFCTEVfRU5DT0RJTkdfVU5TUEVDSUZJRUQQABIWChJUQUJMRV9FTkNPRElOR19DU1YQASptCgpDb2x1bW5UeXBlEhsKF0NPTFVNTl9UWVBFX1VOU1BFQ0lGSUVEEAASFAoQQ09MVU1OX1RZUEVfVEVYVBABEhQKEENPTFVNTl9UWVBFX05BTUUQAhIWChJDT0xVTU5fVFlQRV9OVU1CRVIQAzKyAQoMVGFibGVTZXJ2aWNlEk0KCFRhYnVsYXRlEh8uYWduaS52MS53ZWJhcGkuVGFidWxhdGVSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuVGFidWxhdGVSZXNwb25zZRJTCgZFbmNvZGUSIy5hZ25pLnYxLndlYmFwaS5FbmNvZGVUYWJsZXNSZXF1ZXN0GiQuYWduaS52MS53ZWJhcGkuRW5jb2RlVGFibGVzUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_checks, file_agni_v1_webapi_diff, file_agni_v1_webapi_query, file_agni_v1_webapi_review]);
+
+/**
+ * @generated from message agni.v1.webapi.EncodeTablesRequest
+ */
+export type EncodeTablesRequest = Message<"agni.v1.webapi.EncodeTablesRequest"> & {
+  /**
+   * @generated from field: repeated agni.v1.webapi.Table tables = 1;
+   */
+  tables: Table[];
+
+  /**
+   * @generated from field: agni.v1.webapi.TableEncoding encoding = 2;
+   */
+  encoding: TableEncoding;
+
+  /**
+   * stem prefixes each file's name, as `<stem>.<table name>.csv`, so a saved file says which design
+   * it came from. Empty gives `<table name>.csv`.
+   *
+   * @generated from field: string stem = 3;
+   */
+  stem: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.EncodeTablesRequest.
+ * Use `create(EncodeTablesRequestSchema)` to create a new message.
+ */
+export const EncodeTablesRequestSchema: GenMessage<EncodeTablesRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_tables, 0);
+
+/**
+ * EncodedTable is one table written as a file.
+ *
+ * @generated from message agni.v1.webapi.EncodedTable
+ */
+export type EncodedTable = Message<"agni.v1.webapi.EncodedTable"> & {
+  /**
+   * name is the table's own name, so a caller can match a file to the table it encoded.
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string filename = 2;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: string content_type = 3;
+   */
+  contentType: string;
+
+  /**
+   * @generated from field: bytes content = 4;
+   */
+  content: Uint8Array;
+};
+
+/**
+ * Describes the message agni.v1.webapi.EncodedTable.
+ * Use `create(EncodedTableSchema)` to create a new message.
+ */
+export const EncodedTableSchema: GenMessage<EncodedTable> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_tables, 1);
+
+/**
+ * @generated from message agni.v1.webapi.EncodeTablesResponse
+ */
+export type EncodeTablesResponse = Message<"agni.v1.webapi.EncodeTablesResponse"> & {
+  /**
+   * files align with the request's tables, one per table.
+   *
+   * @generated from field: repeated agni.v1.webapi.EncodedTable files = 1;
+   */
+  files: EncodedTable[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.EncodeTablesResponse.
+ * Use `create(EncodeTablesResponseSchema)` to create a new message.
+ */
+export const EncodeTablesResponseSchema: GenMessage<EncodeTablesResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_tables, 2);
 
 /**
  * @generated from message agni.v1.webapi.TableColumn
@@ -48,7 +133,7 @@ export type TableColumn = Message<"agni.v1.webapi.TableColumn"> & {
  * Use `create(TableColumnSchema)` to create a new message.
  */
 export const TableColumnSchema: GenMessage<TableColumn> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_tables, 0);
+  messageDesc(file_agni_v1_webapi_tables, 3);
 
 /**
  * @generated from message agni.v1.webapi.TableRow
@@ -67,6 +152,16 @@ export type TableRow = Message<"agni.v1.webapi.TableRow"> & {
    * @generated from field: repeated string cell_why = 2;
    */
   cellWhy: string[];
+
+  /**
+   * cell_kinds aligns with cells and names the entity kind of a cell whose column names different kinds
+   * on different rows ("net", "component"), such as a diff's subject, which is a part on one row and a
+   * net on the next (agni issue 898). "" for a cell its column's kind already types, or that names no
+   * entity. Empty when no cell in the row needs one. A viewer locates a cell by it; an encoder ignores it.
+   *
+   * @generated from field: repeated string cell_kinds = 3;
+   */
+  cellKinds: string[];
 };
 
 /**
@@ -74,7 +169,7 @@ export type TableRow = Message<"agni.v1.webapi.TableRow"> & {
  * Use `create(TableRowSchema)` to create a new message.
  */
 export const TableRowSchema: GenMessage<TableRow> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_tables, 1);
+  messageDesc(file_agni_v1_webapi_tables, 4);
 
 /**
  * Table is one projected table. Cells are raw, so an encoder applies its own escaping (a csv writer
@@ -106,7 +201,7 @@ export type Table = Message<"agni.v1.webapi.Table"> & {
  * Use `create(TableSchema)` to create a new message.
  */
 export const TableSchema: GenMessage<Table> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_tables, 2);
+  messageDesc(file_agni_v1_webapi_tables, 5);
 
 /**
  * @generated from message agni.v1.webapi.TabulateRequest
@@ -182,7 +277,7 @@ export type TabulateRequest = Message<"agni.v1.webapi.TabulateRequest"> & {
  * Use `create(TabulateRequestSchema)` to create a new message.
  */
 export const TabulateRequestSchema: GenMessage<TabulateRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_tables, 3);
+  messageDesc(file_agni_v1_webapi_tables, 6);
 
 /**
  * @generated from message agni.v1.webapi.TabulateResponse
@@ -199,7 +294,35 @@ export type TabulateResponse = Message<"agni.v1.webapi.TabulateResponse"> & {
  * Use `create(TabulateResponseSchema)` to create a new message.
  */
 export const TabulateResponseSchema: GenMessage<TabulateResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_tables, 4);
+  messageDesc(file_agni_v1_webapi_tables, 7);
+
+/**
+ * TableEncoding names a file format Encode writes.
+ *
+ * @generated from enum agni.v1.webapi.TableEncoding
+ */
+export enum TableEncoding {
+  /**
+   * Unspecified is refused, so a caller always says which file it wants.
+   *
+   * @generated from enum value: TABLE_ENCODING_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * CSV is RFC 4180 with the header row first and nothing before it, each cell guarded against
+   * spreadsheet formula execution as `agni check --format csv` guards it.
+   *
+   * @generated from enum value: TABLE_ENCODING_CSV = 1;
+   */
+  CSV = 1,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.TableEncoding.
+ */
+export const TableEncodingSchema: GenEnum<TableEncoding> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_tables, 0);
 
 /**
  * ColumnType says how a column's cells compare when rows are ordered by it. Cells are always strings
@@ -243,7 +366,7 @@ export enum ColumnType {
  * Describes the enum agni.v1.webapi.ColumnType.
  */
 export const ColumnTypeSchema: GenEnum<ColumnType> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_tables, 0);
+  enumDesc(file_agni_v1_webapi_tables, 1);
 
 /**
  * TableService projects an answer the caller already holds into tables. It reads no design and keeps
@@ -265,6 +388,19 @@ export const TableService: GenService<{
     methodKind: "unary";
     input: typeof TabulateRequestSchema;
     output: typeof TabulateResponseSchema;
+  },
+  /**
+   * Encode writes tables as files, for a caller that wants the bytes `--format csv` writes without
+   * an encoder of its own, such as the viewer saving a table (agni issue 956). It is the encoder the
+   * CLI uses, so a cell a spreadsheet would read as a formula is guarded the same way everywhere. It
+   * encodes the tables as sent, in their order, and reads no design.
+   *
+   * @generated from rpc agni.v1.webapi.TableService.Encode
+   */
+  encode: {
+    methodKind: "unary";
+    input: typeof EncodeTablesRequestSchema;
+    output: typeof EncodeTablesResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_tables, 0);

@@ -16,6 +16,8 @@ import { sheetOverviewPanelIsland } from "./sheetoverviewpanel.js";
 import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
 import { tracePanelIsland } from "./tracepanel.js";
+import { tablesPanelIsland } from "./tablespanel.js";
+import { TablesPresenter, type TablesSourceKey } from "./tables.js";
 import { reviewPanelIsland } from "./reviewpanel.js";
 import { conventionBarIsland } from "./conventionbar.js";
 import { projectBarIsland } from "./projectbar.js";
@@ -26,7 +28,9 @@ import { SvgView } from "./svgview.js";
 import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, useEngineFetch,
+  tableClient,
 } from "./api.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
 import { BROWSER_MOUNT, installDrop } from "./wasm/drop.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
@@ -257,6 +261,7 @@ class AppRoot extends BaseComponent {
     const queryEl = document.getElementById("query-panel");
     const coverageEl = document.getElementById("coverage-panel");
     const traceEl = document.getElementById("trace-panel");
+    const tablesEl = document.getElementById("tables-panel");
     const reviewEl = document.getElementById("review-panel");
     const conventionEl = document.getElementById("convention-bar");
     const projectEl = document.getElementById("project-bar");
@@ -267,7 +272,7 @@ class AppRoot extends BaseComponent {
     if (!compareEl || !diffBarEl || !diffSvgA || !diffSvgB || !diffPhA || !diffPhB || !diffChangesEl)
       return children;
     if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl || !reviewEl || !conventionEl) return children;
-    if (!traceEl) return children;
+    if (!traceEl || !tablesEl) return children;
     if (!projectEl) return children;
 
     const busyEl = document.getElementById("render-busy");
@@ -376,7 +381,51 @@ class AppRoot extends BaseComponent {
     const diffPresenter = new DiffPresenter(diffClient(), designClient(), diffView, (s) => {
       diffPanel.view.setState(s);
       diffChanges.view.setState(s);
+      tablesPresenter.setCompareOpen(s.active && s.error === "");
     });
+
+    // The Tables panel (agni issues 898 and 956) shows an answer the page already holds as Tabulate's
+    // tables and saves them as csv through Encode. Its answers come from the presenters that hold
+    // them, and a comparison's from the open pair, asked again with the panel's diff options.
+    const tables = tablesPanelIsland(tablesEl, this._eventBus, {
+      onSource: (key, opts) => void tablesPresenter.show(key, opts),
+      onSelect: (i) => tablesPresenter.select(i),
+      onSort: (col) => void tablesPresenter.sortBy(col),
+      onSave: () => void tablesPresenter.saveActive(),
+      onLocate: (kind, subject) => {
+        void presenter.locateEntity(kind, subject);
+        if (dockApi) dockApi.getPanel("canvas")?.api.setActive();
+      },
+    });
+    const sideLabel = (r: { path: string }) => r.path.split("/").filter(Boolean).pop() ?? r.path;
+    const tablesPresenter = new TablesPresenter(
+      tableClient(),
+      tables.view,
+      {
+        answer: async (source: TablesSourceKey, opts) => {
+          if (source === "checks") {
+            const answer = presenter.checksAnswer();
+            return { answer, label: "Checks", stem: presenter.designStem(), reason: "Run the checks first. The tables are the run on screen." };
+          }
+          const pair = diffPresenter.sides();
+          if (!pair) return { label: "Comparison", stem: "", reason: "Open a comparison with Compare first." };
+          const stem = `${sideLabel(pair.a).replace(/\.[^.]+$/, "")}-vs-${sideLabel(pair.b).replace(/\.[^.]+$/, "")}`;
+          if (source === "compare") {
+            const resp = await diffClient().diffDesigns({
+              aUri: artifactUri(pair.a.mount, pair.a.path),
+              bUri: artifactUri(pair.b.mount, pair.b.path),
+              nearRenames: opts.nearRenames ? {} : undefined,
+              includeEqual: opts.equal,
+            });
+            return { answer: { case: "diff", value: resp }, label: `${sideLabel(pair.a)} to ${sideLabel(pair.b)}`, stem };
+          }
+          const side = source === "compare-a" ? pair.a : pair.b;
+          const run = await checksClient().checkDesign({ uri: artifactUri(side.mount, side.path), rules: [], overlay: presenter.overlayConfig() });
+          return { answer: { case: "check", value: run }, label: `Checks on ${sideLabel(side)}`, stem: sideLabel(side).replace(/\.[^.]+$/, "") };
+        },
+      },
+      saveFile,
+    );
 
     // Compare chrome (WS9-049 phase 3). The button opens a picker, and the picker reports a design to
     // compare against. openFile is the open design, side A of any comparison the user starts.
@@ -424,7 +473,8 @@ class AppRoot extends BaseComponent {
       // A verdict is addressed by its derived id, not by subject, because a passing verdict has no
       // finding for selectFinding to look up and two rules can hold verdicts about one subject.
       onSelectVerdict: (id) => void presenter.locateVerdict(id),
-      onSave: (format) => void presenter.saveReport(format),
+      onSave: (format) =>
+        void (format === "csv" ? presenter.saveChecksCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n)) : presenter.saveReport(format)),
     });
     // The rules panel is the catalog of what the engine can assert; ticking rules sets the active
     // ruleset, which the presenter re-runs the checks over.
@@ -440,6 +490,7 @@ class AppRoot extends BaseComponent {
     // it over the open design and pushes results back through query.view.
     const query = queryPanelIsland(queryEl, this._eventBus, {
       onRun: (text, bindings, limit) => void presenter.runQuery(text, bindings, limit),
+      onSaveCSV: () => void presenter.saveQueryCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n)),
       onLocate: (kind, subject, sheet, reason, pin) => void presenter.locateEntity(kind, subject, sheet, reason, pin ?? ""),
       // onInspect opens the check results for the selected entity through the EXISTING finding focus
       // (agni issue 259). Nothing re-evaluates, since selectFinding focuses a subject within the
@@ -589,6 +640,7 @@ class AppRoot extends BaseComponent {
       query.island,
       coverage.island,
       trace.island,
+      tables.island,
       review.island,
       conventionBar.island,
       projectBar.island,

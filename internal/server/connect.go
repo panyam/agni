@@ -241,6 +241,14 @@ func (a *Table) Tabulate(ctx context.Context, req *connect.Request[webapi.Tabula
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Table) Encode(ctx context.Context, req *connect.Request[webapi.EncodeTablesRequest]) (*connect.Response[webapi.EncodeTablesResponse], error) {
+	resp, err := a.svc.Encode(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Query adapts service.QueryService to the generated Connect handler interface.
 type Query struct {
 	webapiconnect.UnimplementedQueryServiceHandler

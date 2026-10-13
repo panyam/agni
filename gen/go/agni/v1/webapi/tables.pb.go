@@ -21,6 +21,56 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// TableEncoding names a file format Encode writes.
+type TableEncoding int32
+
+const (
+	// Unspecified is refused, so a caller always says which file it wants.
+	TableEncoding_TABLE_ENCODING_UNSPECIFIED TableEncoding = 0
+	// CSV is RFC 4180 with the header row first and nothing before it, each cell guarded against
+	// spreadsheet formula execution as `agni check --format csv` guards it.
+	TableEncoding_TABLE_ENCODING_CSV TableEncoding = 1
+)
+
+// Enum value maps for TableEncoding.
+var (
+	TableEncoding_name = map[int32]string{
+		0: "TABLE_ENCODING_UNSPECIFIED",
+		1: "TABLE_ENCODING_CSV",
+	}
+	TableEncoding_value = map[string]int32{
+		"TABLE_ENCODING_UNSPECIFIED": 0,
+		"TABLE_ENCODING_CSV":         1,
+	}
+)
+
+func (x TableEncoding) Enum() *TableEncoding {
+	p := new(TableEncoding)
+	*p = x
+	return p
+}
+
+func (x TableEncoding) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TableEncoding) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_tables_proto_enumTypes[0].Descriptor()
+}
+
+func (TableEncoding) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_tables_proto_enumTypes[0]
+}
+
+func (x TableEncoding) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TableEncoding.Descriptor instead.
+func (TableEncoding) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{0}
+}
+
 // ColumnType says how a column's cells compare when rows are ordered by it. Cells are always strings
 // on the wire; the type decides the ordering and nothing else.
 type ColumnType int32
@@ -65,11 +115,11 @@ func (x ColumnType) String() string {
 }
 
 func (ColumnType) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_tables_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_webapi_tables_proto_enumTypes[1].Descriptor()
 }
 
 func (ColumnType) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_tables_proto_enumTypes[0]
+	return &file_agni_v1_webapi_tables_proto_enumTypes[1]
 }
 
 func (x ColumnType) Number() protoreflect.EnumNumber {
@@ -78,7 +128,184 @@ func (x ColumnType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ColumnType.Descriptor instead.
 func (ColumnType) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{1}
+}
+
+type EncodeTablesRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Tables   []*Table               `protobuf:"bytes,1,rep,name=tables,proto3" json:"tables,omitempty"`
+	Encoding TableEncoding          `protobuf:"varint,2,opt,name=encoding,proto3,enum=agni.v1.webapi.TableEncoding" json:"encoding,omitempty"`
+	// stem prefixes each file's name, as `<stem>.<table name>.csv`, so a saved file says which design
+	// it came from. Empty gives `<table name>.csv`.
+	Stem          string `protobuf:"bytes,3,opt,name=stem,proto3" json:"stem,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EncodeTablesRequest) Reset() {
+	*x = EncodeTablesRequest{}
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EncodeTablesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EncodeTablesRequest) ProtoMessage() {}
+
+func (x *EncodeTablesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EncodeTablesRequest.ProtoReflect.Descriptor instead.
+func (*EncodeTablesRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *EncodeTablesRequest) GetTables() []*Table {
+	if x != nil {
+		return x.Tables
+	}
+	return nil
+}
+
+func (x *EncodeTablesRequest) GetEncoding() TableEncoding {
+	if x != nil {
+		return x.Encoding
+	}
+	return TableEncoding_TABLE_ENCODING_UNSPECIFIED
+}
+
+func (x *EncodeTablesRequest) GetStem() string {
+	if x != nil {
+		return x.Stem
+	}
+	return ""
+}
+
+// EncodedTable is one table written as a file.
+type EncodedTable struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name is the table's own name, so a caller can match a file to the table it encoded.
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Filename      string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	ContentType   string `protobuf:"bytes,3,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Content       []byte `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EncodedTable) Reset() {
+	*x = EncodedTable{}
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EncodedTable) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EncodedTable) ProtoMessage() {}
+
+func (x *EncodedTable) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EncodedTable.ProtoReflect.Descriptor instead.
+func (*EncodedTable) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *EncodedTable) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *EncodedTable) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *EncodedTable) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *EncodedTable) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+type EncodeTablesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// files align with the request's tables, one per table.
+	Files         []*EncodedTable `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EncodeTablesResponse) Reset() {
+	*x = EncodeTablesResponse{}
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EncodeTablesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EncodeTablesResponse) ProtoMessage() {}
+
+func (x *EncodeTablesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EncodeTablesResponse.ProtoReflect.Descriptor instead.
+func (*EncodeTablesResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *EncodeTablesResponse) GetFiles() []*EncodedTable {
+	if x != nil {
+		return x.Files
+	}
+	return nil
 }
 
 type TableColumn struct {
@@ -94,7 +321,7 @@ type TableColumn struct {
 
 func (x *TableColumn) Reset() {
 	*x = TableColumn{}
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -106,7 +333,7 @@ func (x *TableColumn) String() string {
 func (*TableColumn) ProtoMessage() {}
 
 func (x *TableColumn) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -119,7 +346,7 @@ func (x *TableColumn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TableColumn.ProtoReflect.Descriptor instead.
 func (*TableColumn) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TableColumn) GetName() string {
@@ -149,14 +376,19 @@ type TableRow struct {
 	// cell_why aligns with cells and says why an empty cell is absent, such as a sum over numbers in
 	// different units, and "" for every other cell. Empty when no cell in the row has a reason. The cell
 	// itself stays empty, so a csv encoder writes it raw.
-	CellWhy       []string `protobuf:"bytes,2,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
+	CellWhy []string `protobuf:"bytes,2,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
+	// cell_kinds aligns with cells and names the entity kind of a cell whose column names different kinds
+	// on different rows ("net", "component"), such as a diff's subject, which is a part on one row and a
+	// net on the next (agni issue 898). "" for a cell its column's kind already types, or that names no
+	// entity. Empty when no cell in the row needs one. A viewer locates a cell by it; an encoder ignores it.
+	CellKinds     []string `protobuf:"bytes,3,rep,name=cell_kinds,json=cellKinds,proto3" json:"cell_kinds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TableRow) Reset() {
 	*x = TableRow{}
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -168,7 +400,7 @@ func (x *TableRow) String() string {
 func (*TableRow) ProtoMessage() {}
 
 func (x *TableRow) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -181,7 +413,7 @@ func (x *TableRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TableRow.ProtoReflect.Descriptor instead.
 func (*TableRow) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TableRow) GetCells() []string {
@@ -194,6 +426,13 @@ func (x *TableRow) GetCells() []string {
 func (x *TableRow) GetCellWhy() []string {
 	if x != nil {
 		return x.CellWhy
+	}
+	return nil
+}
+
+func (x *TableRow) GetCellKinds() []string {
+	if x != nil {
+		return x.CellKinds
 	}
 	return nil
 }
@@ -212,7 +451,7 @@ type Table struct {
 
 func (x *Table) Reset() {
 	*x = Table{}
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -224,7 +463,7 @@ func (x *Table) String() string {
 func (*Table) ProtoMessage() {}
 
 func (x *Table) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -237,7 +476,7 @@ func (x *Table) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Table.ProtoReflect.Descriptor instead.
 func (*Table) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Table) GetName() string {
@@ -287,7 +526,7 @@ type TabulateRequest struct {
 
 func (x *TabulateRequest) Reset() {
 	*x = TabulateRequest{}
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -299,7 +538,7 @@ func (x *TabulateRequest) String() string {
 func (*TabulateRequest) ProtoMessage() {}
 
 func (x *TabulateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -312,7 +551,7 @@ func (x *TabulateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TabulateRequest.ProtoReflect.Descriptor instead.
 func (*TabulateRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TabulateRequest) GetAnswer() isTabulateRequest_Answer {
@@ -430,7 +669,7 @@ type TabulateResponse struct {
 
 func (x *TabulateResponse) Reset() {
 	*x = TabulateResponse{}
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +681,7 @@ func (x *TabulateResponse) String() string {
 func (*TabulateResponse) ProtoMessage() {}
 
 func (x *TabulateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_tables_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_tables_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +694,7 @@ func (x *TabulateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TabulateResponse.ProtoReflect.Descriptor instead.
 func (*TabulateResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_tables_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *TabulateResponse) GetTables() []*Table {
@@ -469,14 +708,27 @@ var File_agni_v1_webapi_tables_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_tables_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/tables.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x19agni/v1/webapi/diff.proto\x1a\x1aagni/v1/webapi/query.proto\x1a\x1bagni/v1/webapi/review.proto\"e\n" +
+	"\x1bagni/v1/webapi/tables.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x19agni/v1/webapi/diff.proto\x1a\x1aagni/v1/webapi/query.proto\x1a\x1bagni/v1/webapi/review.proto\"\x93\x01\n" +
+	"\x13EncodeTablesRequest\x12-\n" +
+	"\x06tables\x18\x01 \x03(\v2\x15.agni.v1.webapi.TableR\x06tables\x129\n" +
+	"\bencoding\x18\x02 \x01(\x0e2\x1d.agni.v1.webapi.TableEncodingR\bencoding\x12\x12\n" +
+	"\x04stem\x18\x03 \x01(\tR\x04stem\"{\n" +
+	"\fEncodedTable\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12!\n" +
+	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x18\n" +
+	"\acontent\x18\x04 \x01(\fR\acontent\"J\n" +
+	"\x14EncodeTablesResponse\x122\n" +
+	"\x05files\x18\x01 \x03(\v2\x1c.agni.v1.webapi.EncodedTableR\x05files\"e\n" +
 	"\vTableColumn\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12.\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1a.agni.v1.webapi.ColumnTypeR\x04type\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\";\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\"Z\n" +
 	"\bTableRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x19\n" +
-	"\bcell_why\x18\x02 \x03(\tR\acellWhy\"\x80\x01\n" +
+	"\bcell_why\x18\x02 \x03(\tR\acellWhy\x12\x1d\n" +
+	"\n" +
+	"cell_kinds\x18\x03 \x03(\tR\tcellKinds\"\x80\x01\n" +
 	"\x05Table\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x125\n" +
 	"\acolumns\x18\x02 \x03(\v2\x1b.agni.v1.webapi.TableColumnR\acolumns\x12,\n" +
@@ -494,15 +746,19 @@ const file_agni_v1_webapi_tables_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\x0e2\x1a.agni.v1.webapi.ColumnTypeR\x05value:\x028\x01B\b\n" +
 	"\x06answer\"A\n" +
 	"\x10TabulateResponse\x12-\n" +
-	"\x06tables\x18\x01 \x03(\v2\x15.agni.v1.webapi.TableR\x06tables*m\n" +
+	"\x06tables\x18\x01 \x03(\v2\x15.agni.v1.webapi.TableR\x06tables*G\n" +
+	"\rTableEncoding\x12\x1e\n" +
+	"\x1aTABLE_ENCODING_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12TABLE_ENCODING_CSV\x10\x01*m\n" +
 	"\n" +
 	"ColumnType\x12\x1b\n" +
 	"\x17COLUMN_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10COLUMN_TYPE_TEXT\x10\x01\x12\x14\n" +
 	"\x10COLUMN_TYPE_NAME\x10\x02\x12\x16\n" +
-	"\x12COLUMN_TYPE_NUMBER\x10\x032]\n" +
+	"\x12COLUMN_TYPE_NUMBER\x10\x032\xb2\x01\n" +
 	"\fTableService\x12M\n" +
-	"\bTabulate\x12\x1f.agni.v1.webapi.TabulateRequest\x1a .agni.v1.webapi.TabulateResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\bTabulate\x12\x1f.agni.v1.webapi.TabulateRequest\x1a .agni.v1.webapi.TabulateResponse\x12S\n" +
+	"\x06Encode\x12#.agni.v1.webapi.EncodeTablesRequest\x1a$.agni.v1.webapi.EncodeTablesResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_tables_proto_rawDescOnce sync.Once
@@ -516,41 +772,50 @@ func file_agni_v1_webapi_tables_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_tables_proto_rawDescData
 }
 
-var file_agni_v1_webapi_tables_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_webapi_tables_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_agni_v1_webapi_tables_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agni_v1_webapi_tables_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_agni_v1_webapi_tables_proto_goTypes = []any{
-	(ColumnType)(0),             // 0: agni.v1.webapi.ColumnType
-	(*TableColumn)(nil),         // 1: agni.v1.webapi.TableColumn
-	(*TableRow)(nil),            // 2: agni.v1.webapi.TableRow
-	(*Table)(nil),               // 3: agni.v1.webapi.Table
-	(*TabulateRequest)(nil),     // 4: agni.v1.webapi.TabulateRequest
-	(*TabulateResponse)(nil),    // 5: agni.v1.webapi.TabulateResponse
-	nil,                         // 6: agni.v1.webapi.TabulateRequest.ColumnTypesEntry
-	(*CheckDesignResponse)(nil), // 7: agni.v1.webapi.CheckDesignResponse
-	(*RunQueryResponse)(nil),    // 8: agni.v1.webapi.RunQueryResponse
-	(*RunQueriesResponse)(nil),  // 9: agni.v1.webapi.RunQueriesResponse
-	(*DiffDesignsResponse)(nil), // 10: agni.v1.webapi.DiffDesignsResponse
-	(*Review)(nil),              // 11: agni.v1.webapi.Review
+	(TableEncoding)(0),           // 0: agni.v1.webapi.TableEncoding
+	(ColumnType)(0),              // 1: agni.v1.webapi.ColumnType
+	(*EncodeTablesRequest)(nil),  // 2: agni.v1.webapi.EncodeTablesRequest
+	(*EncodedTable)(nil),         // 3: agni.v1.webapi.EncodedTable
+	(*EncodeTablesResponse)(nil), // 4: agni.v1.webapi.EncodeTablesResponse
+	(*TableColumn)(nil),          // 5: agni.v1.webapi.TableColumn
+	(*TableRow)(nil),             // 6: agni.v1.webapi.TableRow
+	(*Table)(nil),                // 7: agni.v1.webapi.Table
+	(*TabulateRequest)(nil),      // 8: agni.v1.webapi.TabulateRequest
+	(*TabulateResponse)(nil),     // 9: agni.v1.webapi.TabulateResponse
+	nil,                          // 10: agni.v1.webapi.TabulateRequest.ColumnTypesEntry
+	(*CheckDesignResponse)(nil),  // 11: agni.v1.webapi.CheckDesignResponse
+	(*RunQueryResponse)(nil),     // 12: agni.v1.webapi.RunQueryResponse
+	(*RunQueriesResponse)(nil),   // 13: agni.v1.webapi.RunQueriesResponse
+	(*DiffDesignsResponse)(nil),  // 14: agni.v1.webapi.DiffDesignsResponse
+	(*Review)(nil),               // 15: agni.v1.webapi.Review
 }
 var file_agni_v1_webapi_tables_proto_depIdxs = []int32{
-	0,  // 0: agni.v1.webapi.TableColumn.type:type_name -> agni.v1.webapi.ColumnType
-	1,  // 1: agni.v1.webapi.Table.columns:type_name -> agni.v1.webapi.TableColumn
-	2,  // 2: agni.v1.webapi.Table.rows:type_name -> agni.v1.webapi.TableRow
-	7,  // 3: agni.v1.webapi.TabulateRequest.check:type_name -> agni.v1.webapi.CheckDesignResponse
-	8,  // 4: agni.v1.webapi.TabulateRequest.query:type_name -> agni.v1.webapi.RunQueryResponse
-	9,  // 5: agni.v1.webapi.TabulateRequest.query_set:type_name -> agni.v1.webapi.RunQueriesResponse
-	10, // 6: agni.v1.webapi.TabulateRequest.diff:type_name -> agni.v1.webapi.DiffDesignsResponse
-	11, // 7: agni.v1.webapi.TabulateRequest.review:type_name -> agni.v1.webapi.Review
-	6,  // 8: agni.v1.webapi.TabulateRequest.column_types:type_name -> agni.v1.webapi.TabulateRequest.ColumnTypesEntry
-	3,  // 9: agni.v1.webapi.TabulateResponse.tables:type_name -> agni.v1.webapi.Table
-	0,  // 10: agni.v1.webapi.TabulateRequest.ColumnTypesEntry.value:type_name -> agni.v1.webapi.ColumnType
-	4,  // 11: agni.v1.webapi.TableService.Tabulate:input_type -> agni.v1.webapi.TabulateRequest
-	5,  // 12: agni.v1.webapi.TableService.Tabulate:output_type -> agni.v1.webapi.TabulateResponse
-	12, // [12:13] is the sub-list for method output_type
-	11, // [11:12] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	7,  // 0: agni.v1.webapi.EncodeTablesRequest.tables:type_name -> agni.v1.webapi.Table
+	0,  // 1: agni.v1.webapi.EncodeTablesRequest.encoding:type_name -> agni.v1.webapi.TableEncoding
+	3,  // 2: agni.v1.webapi.EncodeTablesResponse.files:type_name -> agni.v1.webapi.EncodedTable
+	1,  // 3: agni.v1.webapi.TableColumn.type:type_name -> agni.v1.webapi.ColumnType
+	5,  // 4: agni.v1.webapi.Table.columns:type_name -> agni.v1.webapi.TableColumn
+	6,  // 5: agni.v1.webapi.Table.rows:type_name -> agni.v1.webapi.TableRow
+	11, // 6: agni.v1.webapi.TabulateRequest.check:type_name -> agni.v1.webapi.CheckDesignResponse
+	12, // 7: agni.v1.webapi.TabulateRequest.query:type_name -> agni.v1.webapi.RunQueryResponse
+	13, // 8: agni.v1.webapi.TabulateRequest.query_set:type_name -> agni.v1.webapi.RunQueriesResponse
+	14, // 9: agni.v1.webapi.TabulateRequest.diff:type_name -> agni.v1.webapi.DiffDesignsResponse
+	15, // 10: agni.v1.webapi.TabulateRequest.review:type_name -> agni.v1.webapi.Review
+	10, // 11: agni.v1.webapi.TabulateRequest.column_types:type_name -> agni.v1.webapi.TabulateRequest.ColumnTypesEntry
+	7,  // 12: agni.v1.webapi.TabulateResponse.tables:type_name -> agni.v1.webapi.Table
+	1,  // 13: agni.v1.webapi.TabulateRequest.ColumnTypesEntry.value:type_name -> agni.v1.webapi.ColumnType
+	8,  // 14: agni.v1.webapi.TableService.Tabulate:input_type -> agni.v1.webapi.TabulateRequest
+	2,  // 15: agni.v1.webapi.TableService.Encode:input_type -> agni.v1.webapi.EncodeTablesRequest
+	9,  // 16: agni.v1.webapi.TableService.Tabulate:output_type -> agni.v1.webapi.TabulateResponse
+	4,  // 17: agni.v1.webapi.TableService.Encode:output_type -> agni.v1.webapi.EncodeTablesResponse
+	16, // [16:18] is the sub-list for method output_type
+	14, // [14:16] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_tables_proto_init() }
@@ -562,7 +827,7 @@ func file_agni_v1_webapi_tables_proto_init() {
 	file_agni_v1_webapi_diff_proto_init()
 	file_agni_v1_webapi_query_proto_init()
 	file_agni_v1_webapi_review_proto_init()
-	file_agni_v1_webapi_tables_proto_msgTypes[3].OneofWrappers = []any{
+	file_agni_v1_webapi_tables_proto_msgTypes[6].OneofWrappers = []any{
 		(*TabulateRequest_Check)(nil),
 		(*TabulateRequest_Query)(nil),
 		(*TabulateRequest_QuerySet)(nil),
@@ -574,8 +839,8 @@ func file_agni_v1_webapi_tables_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_tables_proto_rawDesc), len(file_agni_v1_webapi_tables_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   6,
+			NumEnums:      2,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

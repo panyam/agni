@@ -4,7 +4,8 @@ import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckDesignResponse } from "./gen/agni/v1/webapi/checks_pb.js";
 import { BROWSER_MOUNT } from "./wasm/drop.js";
-import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
+import { QueryService, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import type { TableAnswer } from "./tables.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import type { ResolveDesignResponse } from "./gen/agni/v1/webapi/project_pb.js";
@@ -291,6 +292,10 @@ export class ViewerPresenter {
   //
   // bindings are the values the query's variables are bound to (agni issue 793), sent as text. limit
   // caps the rows (agni issue 896), 0 for the whole answer.
+  // lastQuery is the answer the query panel shows, kept as the engine sent it so the Tables panel and
+  // Save CSV tabulate that answer rather than running the query again (agni issues 898 and 956).
+  private lastQuery: RunQueryResponse | undefined;
+
   async runQuery(text: string, bindings: Record<string, string> = {}, limit = 0): Promise<void> {
     if (!this.views.query || !this.query) return;
     if (!this.mount || !this.path) {
@@ -304,8 +309,10 @@ export class ViewerPresenter {
       // it (WS3-113).
       const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, { kind: { case: "text" as const, value } }]));
       const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay(), bindings: wire, limit });
+      this.lastQuery = resp;
       this.views.query.setState(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
+      this.lastQuery = undefined;
       this.views.query.setState(errorResult(e instanceof Error ? e.message : String(e)));
     }
   }
@@ -466,6 +473,7 @@ export class ViewerPresenter {
       this.catalogLoading = true;
       this.pushFindings();
     }
+    if (mount !== this.mount || path !== this.path) this.lastQuery = undefined;
     this.mount = mount;
     this.path = path;
     this.setBusy(true, "loading design…");
@@ -819,15 +827,9 @@ export class ViewerPresenter {
   // the control only then.
   async saveReport(format: "html" | "json"): Promise<void> {
     if (!this.mount || !this.path || !this.views.download) return;
-    const selected = new Set(this.selectedRules);
-    // Catalog order, which is the order one run over the selection returns its findings in.
-    const names = this.rules.map((r) => r.name).filter((n) => selected.has(n));
-    if (names.length === 0 || names.some((n) => !this.runCache.has(n))) return;
-    const run = create(CheckDesignResponseSchema, {
-      findings: names.flatMap((n) => this.runCache.get(n)?.findings ?? []),
-      verdicts: names.flatMap((n) => this.runCache.get(n)?.verdicts ?? []),
-      skipped: names.filter((n) => this.skippedCache.has(n)).map((n) => ({ name: n, reason: this.skippedCache.get(n) ?? "" })),
-    });
+    const held = this.heldRun();
+    if (!held) return;
+    const { names, run } = held;
     // A dropped design lives in this tab's worker alone, so a link to it would open nothing later.
     const links =
       this.mount === BROWSER_MOUNT
@@ -850,6 +852,56 @@ export class ViewerPresenter {
     this.pushFindings();
   }
 
+  // heldRun is the selection's run as one CheckDesignResponse, assembled from what each rule returned,
+  // or undefined until every selected rule has run. A saved report, a saved csv and the Tables panel
+  // all start from it, so none of them runs a rule.
+  private heldRun(): { names: string[]; run: CheckDesignResponse } | undefined {
+    const selected = new Set(this.selectedRules);
+    // Catalog order, which is the order one run over the selection returns its findings in.
+    const names = this.rules.map((r) => r.name).filter((n) => selected.has(n));
+    if (names.length === 0 || names.some((n) => !this.runCache.has(n))) return undefined;
+    const run = create(CheckDesignResponseSchema, {
+      findings: names.flatMap((n) => this.runCache.get(n)?.findings ?? []),
+      verdicts: names.flatMap((n) => this.runCache.get(n)?.verdicts ?? []),
+      skipped: names.filter((n) => this.skippedCache.has(n)).map((n) => ({ name: n, reason: this.skippedCache.get(n) ?? "" })),
+    });
+    return { names, run };
+  }
+
+  // checksAnswer is the held run as an answer for Tabulate, undefined until the selection has run.
+  checksAnswer(): TableAnswer | undefined {
+    const held = this.heldRun();
+    return held ? { case: "check", value: held.run } : undefined;
+  }
+
+  // queryAnswer is the query panel's answer for Tabulate, undefined before a query has answered.
+  queryAnswer(): TableAnswer | undefined {
+    return this.lastQuery ? { case: "query", value: this.lastQuery } : undefined;
+  }
+
+  // designStem names a saved file after the open design, its file name without the extension.
+  designStem(): string {
+    const base = (this.path ?? "").split("/").filter(Boolean).pop() ?? "";
+    return base.replace(/\.[^.]+$/, "") || "agni";
+  }
+
+  // saveChecksCSV saves the held run's findings and verdicts as csv through save, the Tables
+  // presenter's saveAnswer (agni issue 956), and shows a failure where Save report shows its own.
+  async saveChecksCSV(save: (answer: TableAnswer, stem: string, names: string[]) => Promise<string>): Promise<void> {
+    const answer = this.checksAnswer();
+    if (!answer) return;
+    this.saveNote = await save(answer, this.designStem(), ["findings", "verdicts"]);
+    this.pushFindings();
+  }
+
+  // saveQueryCSV saves the query panel's answer as csv the same way.
+  async saveQueryCSV(save: (answer: TableAnswer, stem: string, names: string[]) => Promise<string>): Promise<void> {
+    const answer = this.queryAnswer();
+    if (!answer) return;
+    const note = await save(answer, this.designStem(), []);
+    if (note) this.views.query?.setLocateNote(note);
+  }
+
   private expectations: RuleExpectationItem[] = [];
   private expectationFindings: FindingItem[] = [];
   private hasSidecar = false;
@@ -864,6 +916,13 @@ export class ViewerPresenter {
   // conventionRef is the ref it was resolved from, so the UI can name it.
   private convention: NamingConvention | null = null;
   private conventionRef = "";
+
+  // overlayConfig is overlay for a rule-running call the composition root makes on the page's behalf,
+  // such as the Tables panel running the checks over a comparison's side, so it checks under the
+  // convention the page shows.
+  overlayConfig(): OverlayConfig | undefined {
+    return this.overlay();
+  }
 
   // overlay is what every rule-running call carries. Every call site that runs rules goes through
   // it, so one that did not would stand out from its neighbours.

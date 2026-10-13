@@ -35,6 +35,8 @@ const (
 const (
 	// TableServiceTabulateProcedure is the fully-qualified name of the TableService's Tabulate RPC.
 	TableServiceTabulateProcedure = "/agni.v1.webapi.TableService/Tabulate"
+	// TableServiceEncodeProcedure is the fully-qualified name of the TableService's Encode RPC.
+	TableServiceEncodeProcedure = "/agni.v1.webapi.TableService/Encode"
 )
 
 // TableServiceClient is a client for the agni.v1.webapi.TableService service.
@@ -45,6 +47,11 @@ type TableServiceClient interface {
 	// answered query; a set with a query that failed is an invalid argument naming
 	// it, since a missing table reads as a question that matched nothing.
 	Tabulate(context.Context, *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error)
+	// Encode writes tables as files, for a caller that wants the bytes `--format csv` writes without
+	// an encoder of its own, such as the viewer saving a table (agni issue 956). It is the encoder the
+	// CLI uses, so a cell a spreadsheet would read as a formula is guarded the same way everywhere. It
+	// encodes the tables as sent, in their order, and reads no design.
+	Encode(context.Context, *connect.Request[webapi.EncodeTablesRequest]) (*connect.Response[webapi.EncodeTablesResponse], error)
 }
 
 // NewTableServiceClient constructs a client for the agni.v1.webapi.TableService service. By
@@ -64,17 +71,29 @@ func NewTableServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(tableServiceMethods.ByName("Tabulate")),
 			connect.WithClientOptions(opts...),
 		),
+		encode: connect.NewClient[webapi.EncodeTablesRequest, webapi.EncodeTablesResponse](
+			httpClient,
+			baseURL+TableServiceEncodeProcedure,
+			connect.WithSchema(tableServiceMethods.ByName("Encode")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // tableServiceClient implements TableServiceClient.
 type tableServiceClient struct {
 	tabulate *connect.Client[webapi.TabulateRequest, webapi.TabulateResponse]
+	encode   *connect.Client[webapi.EncodeTablesRequest, webapi.EncodeTablesResponse]
 }
 
 // Tabulate calls agni.v1.webapi.TableService.Tabulate.
 func (c *tableServiceClient) Tabulate(ctx context.Context, req *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error) {
 	return c.tabulate.CallUnary(ctx, req)
+}
+
+// Encode calls agni.v1.webapi.TableService.Encode.
+func (c *tableServiceClient) Encode(ctx context.Context, req *connect.Request[webapi.EncodeTablesRequest]) (*connect.Response[webapi.EncodeTablesResponse], error) {
+	return c.encode.CallUnary(ctx, req)
 }
 
 // TableServiceHandler is an implementation of the agni.v1.webapi.TableService service.
@@ -85,6 +104,11 @@ type TableServiceHandler interface {
 	// answered query; a set with a query that failed is an invalid argument naming
 	// it, since a missing table reads as a question that matched nothing.
 	Tabulate(context.Context, *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error)
+	// Encode writes tables as files, for a caller that wants the bytes `--format csv` writes without
+	// an encoder of its own, such as the viewer saving a table (agni issue 956). It is the encoder the
+	// CLI uses, so a cell a spreadsheet would read as a formula is guarded the same way everywhere. It
+	// encodes the tables as sent, in their order, and reads no design.
+	Encode(context.Context, *connect.Request[webapi.EncodeTablesRequest]) (*connect.Response[webapi.EncodeTablesResponse], error)
 }
 
 // NewTableServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -100,10 +124,18 @@ func NewTableServiceHandler(svc TableServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(tableServiceMethods.ByName("Tabulate")),
 		connect.WithHandlerOptions(opts...),
 	)
+	tableServiceEncodeHandler := connect.NewUnaryHandler(
+		TableServiceEncodeProcedure,
+		svc.Encode,
+		connect.WithSchema(tableServiceMethods.ByName("Encode")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.TableService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TableServiceTabulateProcedure:
 			tableServiceTabulateHandler.ServeHTTP(w, r)
+		case TableServiceEncodeProcedure:
+			tableServiceEncodeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -115,4 +147,8 @@ type UnimplementedTableServiceHandler struct{}
 
 func (UnimplementedTableServiceHandler) Tabulate(context.Context, *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.TableService.Tabulate is not implemented"))
+}
+
+func (UnimplementedTableServiceHandler) Encode(context.Context, *connect.Request[webapi.EncodeTablesRequest]) (*connect.Response[webapi.EncodeTablesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.TableService.Encode is not implemented"))
 }

@@ -414,10 +414,19 @@ describe("saving a check report (agni issue 127)", () => {
     expect(onSave.mock.calls).toEqual([["json"], ["html"]]);
   });
 
+  // agni issue 956: csv is a third form, under the same gate.
+  it("offers the csv form beside them and saves it when clicked", () => {
+    const { el, onSave } = mountPanel({ ruleCount: 3, pending: 0 });
+    expect(save(el, "csv")?.disabled).toBe(false);
+    save(el, "csv")?.click();
+    expect(onSave.mock.calls).toEqual([["csv"]]);
+  });
+
   it("holds the save back while a rule is unrun, a run is going, or the catalog is loading", () => {
     for (const over of [{ ruleCount: 3, pending: 1 }, { ruleCount: 3, running: true }, { ruleCount: 3, catalogLoading: true }, { ruleCount: 0 }]) {
       const { el } = mountPanel(over);
       expect(save(el, "html")?.disabled, JSON.stringify(over)).toBe(true);
+      expect(save(el, "csv")?.disabled, JSON.stringify(over)).toBe(true);
       document.body.replaceChildren();
     }
   });

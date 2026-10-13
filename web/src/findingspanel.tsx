@@ -52,9 +52,9 @@ function ChecksPanel(props: {
   // onSelectVerdict focuses a verdict by its derived id (see viewer.ts locateVerdict). A passing
   // verdict has no finding, so onSelect's lookup by subject cannot serve it.
   onSelectVerdict: (id: string) => void;
-  // onSave saves the run as the check report page or the results document (agni issue 127). Absent,
-  // the panel offers no save.
-  onSave?: (format: "html" | "json") => void;
+  // onSave saves the run as the check report page or the results document (agni issue 127), or as
+  // csv tables (agni issue 956). Absent, the panel offers no save.
+  onSave?: (format: "html" | "json" | "csv") => void;
 }) {
   // A report describes a run, so it can be saved only once every selected rule has run and nothing
   // is running.
@@ -139,6 +139,9 @@ function ChecksPanel(props: {
           </button>
           <button type="button" class="checks-save" data-format="json" disabled={!canSave()} title="Save this run as a results document, for scripts and archives" onClick={() => props.onSave?.("json")}>
             Save JSON
+          </button>
+          <button type="button" class="checks-save" data-format="csv" disabled={!canSave()} title="Save this run's findings and verdicts as csv files, the same files agni check writes as csv" onClick={() => props.onSave?.("csv")}>
+            Save CSV
           </button>
         </Show>
         <label class="checks-groupby">
@@ -425,7 +428,7 @@ export function findingsPanelIsland(
     onLocateContext: (kind: string, subject: string, pin: string) => void;
     onRun: () => void;
     onSelectVerdict: (id: string) => void;
-    onSave?: (format: "html" | "json") => void;
+    onSave?: (format: "html" | "json" | "csv") => void;
   },
 ): { island: SolidIsland; view: FindingsView } {
   const [state, setState] = signalView<FindingsState>({

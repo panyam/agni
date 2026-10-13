@@ -10,6 +10,7 @@ import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
+import { TableService } from "./gen/agni/v1/webapi/tables_pb.js";
 
 // engineFetch, when set, answers every client's requests in place of the network, which is how the
 // in-browser engine serves the same clients `agni serve` does (agni issue 178).
@@ -86,6 +87,12 @@ export function projectClient(baseUrl?: string): Client<typeof ProjectService> {
 // fact base, the same engine `agni query` runs; WS9-036, WS3-029).
 export function queryClient(baseUrl?: string): Client<typeof QueryService> {
   return createClient(QueryService, newTransport(baseUrl));
+}
+
+// tableClient returns a typed client for TableService (an answer projected into tables, and tables
+// encoded as files; agni issues 898 and 956).
+export function tableClient(baseUrl?: string): Client<typeof TableService> {
+  return createClient(TableService, newTransport(baseUrl));
 }
 
 // reviewClient returns a typed client for ReviewService (review runs as resources, plus

@@ -173,6 +173,44 @@ describe("the static demo under /agni/demo/", () => {
     });
   });
 
+  // A run saved as csv is Tabulate's tables encoded by the engine in the page, so the findings file
+  // holds the rows `agni check --format csv` writes for the same design (agni issue 956). The viewer
+  // assembles its run rule by rule in the panel's order, so the rows are compared as a set.
+  it("saves a check run as csv, the rows agni check --format csv writes", async () => {
+    const home = mkdtempSync(join(tmpdir(), "agni-home-"));
+    const want = execFileSync("go", ["run", "./cmd/agni", "check", "examples/tutorial-project/designs/gateway", "--format", "csv"], {
+      cwd: repo,
+      env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+      .trimEnd()
+      .split("\n");
+    expect(want.length).toBeGreaterThan(2);
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(base, { waitUntil: "domcontentloaded" });
+      await page.click("text=Sample Board");
+      await checks(page);
+      const files = new Map<string, string>();
+      const two = new Promise<void>((done) => {
+        page.on("download", async (dl) => {
+          files.set(dl.suggestedFilename(), readFileSync(await dl.path(), "utf8"));
+          if (files.size === 2) done();
+        });
+      });
+      await page.click('.checks-save[data-format="csv"]');
+      await two;
+      expect([...files.keys()].sort()).toEqual(["gateway.findings.csv", "gateway.verdicts.csv"]);
+      const got = files.get("gateway.findings.csv")!.trimEnd().split("\n");
+      expect(got[0]).toBe(want[0]);
+      expect(got.slice(1).sort()).toEqual(want.slice(1).sort());
+      expect(files.get("gateway.verdicts.csv")!.split("\n")[0]).toBe("verdict_id,url,rule,outcome,subjects,statement,context,terms,reason");
+      expect(log.api).toEqual([]);
+      expect(log.errors).toEqual([]);
+    });
+  });
+
   // The viewer runs the rules ListRules calls available, and ListRules called every datasheet-tier rule
   // unavailable without a model, so the gateway's project params never reached a check in the page
   // (agni issue 940). These two read the datasheet tier and fire on the gateway in the CLI.

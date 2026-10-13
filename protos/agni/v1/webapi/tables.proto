@@ -15,7 +15,9 @@ import "agni/v1/webapi/review.proto";
 // decides which fields a reader needs, how an entity is spelled and how rows sort, and that is the
 // engine's call, made once. Writing rows as csv, xlsx, markdown or html is an encoding, and it stays
 // with whoever writes the bytes. So every table agni emits, `check --format csv` and a workbook built
-// by a client alike, carries the rows this service projects, and no client derives its own.
+// by a client alike, carries the rows this service projects, and no client derives its own. A caller
+// with no encoder of its own, such as the viewer, asks Encode for the csv the CLI writes (agni issue
+// 956), so the formula guard is one implementation rather than one per language.
 
 // TableService projects an answer the caller already holds into tables. It reads no design and keeps
 // no state, so the request carries the answer itself.
@@ -26,6 +28,42 @@ service TableService {
   // answered query; a set with a query that failed is an invalid argument naming
   // it, since a missing table reads as a question that matched nothing.
   rpc Tabulate(TabulateRequest) returns (TabulateResponse);
+  // Encode writes tables as files, for a caller that wants the bytes `--format csv` writes without
+  // an encoder of its own, such as the viewer saving a table (agni issue 956). It is the encoder the
+  // CLI uses, so a cell a spreadsheet would read as a formula is guarded the same way everywhere. It
+  // encodes the tables as sent, in their order, and reads no design.
+  rpc Encode(EncodeTablesRequest) returns (EncodeTablesResponse);
+}
+
+// TableEncoding names a file format Encode writes.
+enum TableEncoding {
+  // Unspecified is refused, so a caller always says which file it wants.
+  TABLE_ENCODING_UNSPECIFIED = 0;
+  // CSV is RFC 4180 with the header row first and nothing before it, each cell guarded against
+  // spreadsheet formula execution as `agni check --format csv` guards it.
+  TABLE_ENCODING_CSV = 1;
+}
+
+message EncodeTablesRequest {
+  repeated Table tables = 1;
+  TableEncoding encoding = 2;
+  // stem prefixes each file's name, as `<stem>.<table name>.csv`, so a saved file says which design
+  // it came from. Empty gives `<table name>.csv`.
+  string stem = 3;
+}
+
+// EncodedTable is one table written as a file.
+message EncodedTable {
+  // name is the table's own name, so a caller can match a file to the table it encoded.
+  string name = 1;
+  string filename = 2;
+  string content_type = 3;
+  bytes content = 4;
+}
+
+message EncodeTablesResponse {
+  // files align with the request's tables, one per table.
+  repeated EncodedTable files = 1;
 }
 
 // ColumnType says how a column's cells compare when rows are ordered by it. Cells are always strings
@@ -57,6 +95,11 @@ message TableRow {
   // different units, and "" for every other cell. Empty when no cell in the row has a reason. The cell
   // itself stays empty, so a csv encoder writes it raw.
   repeated string cell_why = 2;
+  // cell_kinds aligns with cells and names the entity kind of a cell whose column names different kinds
+  // on different rows ("net", "component"), such as a diff's subject, which is a part on one row and a
+  // net on the next (agni issue 898). "" for a cell its column's kind already types, or that names no
+  // entity. Empty when no cell in the row needs one. A viewer locates a cell by it; an encoder ignores it.
+  repeated string cell_kinds = 3;
 }
 
 // Table is one projected table. Cells are raw, so an encoder applies its own escaping (a csv writer

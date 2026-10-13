@@ -966,3 +966,31 @@ describe("a limited answer", () => {
     expect(showAll(el)).toBeNull();
   });
 });
+
+// agni issue 956: the answer on screen saves as csv when the host offers it.
+describe("saving an answer as csv", () => {
+  const answered = (): QueryResult => ({
+    ...emptyResult(),
+    ran: true,
+    columns: ["ref"],
+    columnKinds: [""],
+    rows: [{ cells: ["U1"], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""] }],
+  });
+
+  it("offers Save CSV beside the count and asks the host to save", () => {
+    const onSaveCSV = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onSaveCSV });
+    panel.island.activate();
+    panel.view.setState(answered());
+    el.querySelector<HTMLButtonElement>(".query-count .query-save-csv")!.click();
+    expect(onSaveCSV).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no save when the host has none", () => {
+    const { el, push } = mountPanel();
+    push(answered());
+    expect(el.querySelector(".query-save-csv")).toBeNull();
+  });
+});

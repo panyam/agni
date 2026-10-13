@@ -41,6 +41,9 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   // The trace panel (agni issue 600) follows one pin to another and lights the route on the
   // canvas. It tabs with Query (see defaultLayout).
   { id: "trace", title: "Trace", defaultOpen: true },
+  // The Tables panel (agni issues 898 and 956) shows an answer as the tables Tabulate projects and
+  // saves them as csv. It tabs with Query and Trace, the other answers in the bottom strip.
+  { id: "tables", title: "Tables", defaultOpen: true },
   // The datasheet-params panel (WS9-035), a per-component parameter tree tabbed with Details since
   // both answer "what is this thing I selected". Populated only when serve was started with --params.
   { id: "parts", title: "Parts", defaultOpen: true },
@@ -203,6 +206,7 @@ export function defaultLayout(api: DockviewApi): void {
   // panels that already exist, so naming one the layout has not placed yet throws rather than
   // deferring. Both are questions a reader asks ABOUT the drawing, so they share a strip.
   api.addPanel({ id: "trace", component: "trace", title: "Trace", position: { direction: "within", referencePanel: "query" } });
+  api.addPanel({ id: "tables", component: "tables", title: "Tables", position: { direction: "within", referencePanel: "query" } });
 
   // Diff and Changes are placed at boot rather than opened on demand. Both render an empty state
   // naming the Compare button, so a reader who clicks one learns the feature exists instead of
