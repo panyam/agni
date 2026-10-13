@@ -188,11 +188,6 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		}
 	}
 	for _, s := range sheets {
-		if s.GetId() == "board" {
-			// GetSheet reads the board at the request URI rather than the resolved board tier, so both
-			// hosts refuse the sheet GetDesign lists (agni 865). Drop this skip with that fix.
-			continue
-		}
 		ask("GetSheet "+s.GetId(), func(c parityClients) (proto.Message, error) {
 			r, err := c.design.GetSheet(ctx, connect.NewRequest(&webapi.GetSheetRequest{Uri: design, Sheet: s.GetId()}))
 			return msgOf(r, err)
