@@ -79,6 +79,7 @@ describe("default layout opening tabs", () => {
     // Trace is added within the query group and after it, so dockview would otherwise leave Trace
     // active. Regression guard for the v0.2.0 defect where the query surface booted hidden.
     expect(added.indexOf("trace")).toBeGreaterThan(added.indexOf("query"));
+    expect(added.indexOf("tables")).toBeGreaterThan(added.indexOf("query"));
     expect(activated).toContain("query");
   });
 
@@ -110,6 +111,7 @@ describe("panel registry", () => {
       "query",
       "review",
       "rules",
+      "tables",
       "trace",
     ]);
   });

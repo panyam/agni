@@ -288,6 +288,12 @@ export class DiffPresenter {
 
   // close ends the comparison and resets to the inactive state. It only clears the
   // presenter's state, and the host closes the dock panel.
+  // sides is the open comparison's two designs, old then new, or null when none is open or it failed.
+  // The Tables panel asks for the comparison's table and each side's checks from them (agni issue 898).
+  sides(): { a: DiffFileRef; b: DiffFileRef } | null {
+    return this.active && this.error === "" ? { a: this.aRef, b: this.bRef } : null;
+  }
+
   close(): void {
     this.aRef = { mount: "", path: "" };
     this.bRef = { mount: "", path: "" };
