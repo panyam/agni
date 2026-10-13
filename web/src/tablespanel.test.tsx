@@ -52,9 +52,9 @@ describe("tablesPanel", () => {
 
   it("offers the comparison's sources only while a comparison is open", () => {
     const sources = (el: HTMLElement) => [...el.querySelectorAll(".tables-source")].map((b) => b.getAttribute("data-source"));
-    expect(sources(mount().el)).toEqual(["checks", "query"]);
+    expect(sources(mount().el)).toEqual(["checks"]);
     document.body.replaceChildren();
-    expect(sources(mount({ compareOpen: true }).el)).toEqual(["checks", "query", "compare", "compare-a", "compare-b"]);
+    expect(sources(mount({ compareOpen: true }).el)).toEqual(["checks", "compare", "compare-a", "compare-b"]);
   });
 
   it("asks for the comparison again with near-renames when the box is ticked", () => {

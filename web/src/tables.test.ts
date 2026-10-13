@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { TableSchema, TableEncoding, type EncodeTablesRequest, type TabulateRequest } from "./gen/agni/v1/webapi/tables_pb.js";
-import { RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { CheckDesignResponseSchema } from "./gen/agni/v1/webapi/checks_pb.js";
 import { type SavedTable, type TableAnswer, type TableClient, type TablesState, TablesPresenter, nextOrder } from "./tables.js";
 
 // The tests here cover agni issues 898 and 956: the panel shows Tabulate's tables for an answer the
@@ -10,7 +10,7 @@ import { type SavedTable, type TableAnswer, type TableClient, type TablesState, 
 const table = (name: string, rows: string[][]) =>
   create(TableSchema, { name, columns: [{ name: "net" }], rows: rows.map((cells) => ({ cells })) });
 
-const answer: TableAnswer = { case: "query", value: create(RunQueryResponseSchema, { columns: ["net"] }) };
+const answer: TableAnswer = { case: "check", value: create(CheckDesignResponseSchema, {}) };
 
 // harness's has is null for a source with no answer, since undefined would take the default.
 function harness(has: TableAnswer | null = answer) {
@@ -31,7 +31,7 @@ function harness(has: TableAnswer | null = answer) {
   const p = new TablesPresenter(
     client,
     { setState: (s) => (state = s) },
-    { answer: async () => ({ answer: has ?? undefined, label: "Query", stem: "gateway", reason: "Run a query first." }) },
+    { answer: async () => ({ answer: has ?? undefined, label: "Checks", stem: "gateway", reason: "Run the checks first." }) },
     (f) => saved.push(f),
   );
   return { p, tabulated, encoded, saved, state: () => state! };
@@ -40,7 +40,7 @@ function harness(has: TableAnswer | null = answer) {
 describe("TablesPresenter", () => {
   it("shows the tables Tabulate projects from the source's answer", async () => {
     const h = harness();
-    await h.p.show("query");
+    await h.p.show("checks");
     expect(h.tabulated).toHaveLength(1);
     expect(h.tabulated[0].answer).toBe(answer);
     expect(h.state().tables.map((t) => t.name)).toEqual(["findings", "verdicts"]);
@@ -50,15 +50,15 @@ describe("TablesPresenter", () => {
 
   it("says why when the source has no answer yet, and asks Tabulate nothing", async () => {
     const h = harness(null);
-    await h.p.show("query");
+    await h.p.show("checks");
     expect(h.tabulated).toHaveLength(0);
     expect(h.state().tables).toEqual([]);
-    expect(h.state().error).toBe("Run a query first.");
+    expect(h.state().error).toBe("Run the checks first.");
   });
 
   it("orders by asking Tabulate again, ascending and then descending", async () => {
     const h = harness();
-    await h.p.show("query");
+    await h.p.show("checks");
     await h.p.sortBy("net");
     await h.p.sortBy("net");
     expect(h.tabulated.slice(1).map((r) => r.orderBy)).toEqual([["net"], ["-net"]]);
@@ -68,7 +68,7 @@ describe("TablesPresenter", () => {
 
   it("saves the table on screen through Encode as csv, named for the design", async () => {
     const h = harness();
-    await h.p.show("query");
+    await h.p.show("checks");
     h.p.select(1);
     await h.p.saveActive();
     expect(h.encoded).toHaveLength(1);
@@ -90,7 +90,7 @@ describe("TablesPresenter", () => {
     h.p.setCompareOpen(false);
     expect(h.state().tables).toEqual([]);
     expect(h.state().source).toBe("");
-    await h.p.show("query");
+    await h.p.show("checks");
     h.p.setCompareOpen(false);
     expect(h.state().tables).toHaveLength(2);
   });

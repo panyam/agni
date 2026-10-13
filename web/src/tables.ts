@@ -1,6 +1,7 @@
 // The Tables panel's presenter (agni issues 898 and 956). It shows the tables TableService.Tabulate
-// projects from an answer the page already holds, a check run, a query answer or a revision
-// comparison, and saves any of them through TableService.Encode.
+// projects from an answer the page already holds, a check run or a revision comparison, and saves
+// any of them through TableService.Encode. A query answer is the query panel's to show, so it is no
+// source here, though saveAnswer serves that panel's Save CSV.
 //
 // It lays nothing out and encodes nothing itself. The rows are Tabulate's and the order is the one
 // Tabulate's order_by applies with each column's type (so R2 sorts before R10), and a saved file is
@@ -24,7 +25,7 @@ export interface SavedTable {
 
 // TablesSourceKey names where the panel's tables come from. The comparison and the two sides' check
 // runs exist only while a comparison is open.
-export type TablesSourceKey = "checks" | "query" | "compare" | "compare-a" | "compare-b";
+export type TablesSourceKey = "checks" | "compare" | "compare-a" | "compare-b";
 
 // CompareOptions are the two diff options a comparison's table reports on request, as `agni diff
 // --rename-approx --include-equal` does.

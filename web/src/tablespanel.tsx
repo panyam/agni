@@ -10,7 +10,6 @@ const LOCATABLE = new Set(["net", "component"]);
 // SOURCES are the buttons that choose what the panel shows. The comparison's appear while one is open.
 const SOURCES: { key: TablesSourceKey; label: string; title: string; compare: boolean }[] = [
   { key: "checks", label: "Checks", title: "The check run on screen, as its findings, verdicts and skipped rules", compare: false },
-  { key: "query", label: "Query", title: "The query answer on screen", compare: false },
   { key: "compare", label: "Comparison", title: "What changed between the two revisions, a row per change", compare: true },
   { key: "compare-a", label: "Checks, old", title: "The checks run over the comparison's old side", compare: true },
   { key: "compare-b", label: "Checks, new", title: "The checks run over the comparison's new side", compare: true },

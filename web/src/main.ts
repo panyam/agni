@@ -407,10 +407,6 @@ class AppRoot extends BaseComponent {
             const answer = presenter.checksAnswer();
             return { answer, label: "Checks", stem: presenter.designStem(), reason: "Run the checks first. The tables are the run on screen." };
           }
-          if (source === "query") {
-            const answer = presenter.queryAnswer();
-            return { answer, label: "Query", stem: presenter.designStem(), reason: "Run a query first. The table is the answer on screen." };
-          }
           const pair = diffPresenter.sides();
           if (!pair) return { label: "Comparison", stem: "", reason: "Open a comparison with Compare first." };
           const stem = `${sideLabel(pair.a).replace(/\.[^.]+$/, "")}-vs-${sideLabel(pair.b).replace(/\.[^.]+$/, "")}`;
