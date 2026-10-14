@@ -315,3 +315,28 @@ func TestPlaceholderFootprintsSkipped(t *testing.T) {
 		t.Errorf("artifacts disagree: %d placements vs %d components", len(g.Placements), len(d.Components))
 	}
 }
+
+// A footprint's graphics on the silkscreen, fab and courtyard layers are drawn, and a library's own
+// artwork on the user layers is not (agni issue 946).
+func TestFootprintUserLayerArtIsNotDrawn(t *testing.T) {
+	line := func(layer string) string {
+		return `(fp_line (start -1 0) (end 1 0) (stroke (width 0.1) (type solid)) (layer "` + layer + `"))`
+	}
+	var b strings.Builder
+	b.WriteString("(kicad_pcb (version 20240108) (generator test)\n(footprint \"Lib:C_0402\" (layer \"F.Cu\") (at 10 10)\n(property \"Reference\" \"C1\" (at 0 -1 0))\n")
+	for _, l := range []string{"F.SilkS", "B.SilkS", "F.Fab", "B.Fab", "F.CrtYd", "B.CrtYd", "User.9", "User.5", "Dwgs.User", "Cmts.User", "Eco1.User"} {
+		b.WriteString(line(l) + "\n")
+	}
+	b.WriteString("))\n")
+	g, err := ReadBoardGeometry(strings.NewReader(b.String()), "art.kicad_pcb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, gr := range g.Graphics {
+		got = append(got, gr.GetLayer())
+	}
+	if strings.Join(got, " ") != "F.SilkS B.SilkS F.Fab B.Fab F.CrtYd B.CrtYd" {
+		t.Fatalf("drawn footprint graphics on %q, want the six silkscreen, fab and courtyard layers alone", got)
+	}
+}
