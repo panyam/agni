@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -245,6 +245,18 @@ BOARD ?= examples/tutorial-project
 DESIGN ?= designs/gateway
 wasm-bench: agni ui wasm
 	cd web && node browser/bench.mjs $(abspath $(BOARD)) $(DESIGN)
+
+# What each layer of an open design holds on the heap (the files, the IR, the drawing, the board, the
+# check model, the fact base), from a fresh read and from a restore, natively and then compiled to wasm
+# under Node, where the live heap matches native and the runtime's memory is the worker's (agni issue
+# 981). Not in the gate, for the same reason as wasm-bench. env -i because the wasm runtime copies the
+# whole environment into its memory and refuses one over its limit.
+#   make wasm-layers BOARD=tools/samples/boards/jetson-agx-thor-baseboard DESIGN=.
+wasm-layers:
+	$(GO) run ./tools/wasmbench --layers --dir $(abspath $(BOARD)) --design $(DESIGN)
+	tmp=$$(mktemp -d) && GOOS=js GOARCH=wasm $(GO) build -o $$tmp/wasmbench.wasm ./tools/wasmbench && \
+	env -i PATH="$$PATH" HOME=$$tmp node "$$($(GO) env GOROOT)/lib/wasm/wasm_exec_node.js" $$tmp/wasmbench.wasm \
+		--layers --dir $(abspath $(BOARD)) --design $(DESIGN); rc=$$?; rm -rf $$tmp; exit $$rc
 
 # The browser-only public demo as static files (agni issue 856): a landing page over the seeded
 # boards, the viewer at each, the drop page, and the built engine, served under DEMO_BASE. Seeds come
