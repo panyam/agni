@@ -90,3 +90,35 @@ func TestARequestThatAsksIsToldWhereItsTimeWent(t *testing.T) {
 		t.Errorf("a second worker's design came from %q, want the store", got)
 	}
 }
+
+// TestCoverageIsToldWhereItsTimeWent holds GetInterfaceCoverage to a breakdown naming its time per
+// interface profile, since on a large board it is a third of Run checks and its stages said nothing
+// (agni issue 968).
+func TestCoverageIsToldWhereItsTimeWent(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	req := connect.NewRequest(&webapi.GetInterfaceCoverageRequest{Uri: "mount://m"})
+	req.Header().Set("Agni-Timing", "1")
+	resp, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).GetInterfaceCoverage(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rt webapi.RequestTiming
+	if err := protojson.Unmarshal([]byte(resp.Header().Get("Agni-Timing")), &rt); err != nil {
+		t.Fatal(err)
+	}
+	stage := false
+	for _, s := range rt.GetStages() {
+		stage = stage || s.GetName() == "coverage"
+	}
+	profiles := 0
+	for _, r := range rt.GetRules() {
+		if strings.HasPrefix(r.GetRule(), "coverage/") {
+			profiles++
+		}
+	}
+	if !stage || profiles == 0 {
+		t.Errorf("coverage stage %v, %d profiles timed; want the stage and every profile walked", stage, profiles)
+	}
+}

@@ -61,7 +61,25 @@ describe("timing interceptor", () => {
     const call = timingInterceptor("explain")(next as never) as unknown as (r: typeof req) => Promise<typeof res>;
     expect(await call(req)).toBe(res);
     expect(req.header.get("Agni-Timing")).toBe("explain");
-    expect(info).toHaveBeenCalledWith('agni timing CheckDesign: {"totalMicros":"1200"}');
+    const line = String(info.mock.calls[0][0]);
+    expect(line.startsWith("agni timing CheckDesign: ")).toBe(true);
+    const t = JSON.parse(line.slice("agni timing CheckDesign: ".length));
+    expect(t.totalMicros).toBe("1200");
+    // The page's own clock rides along, so the time a request waited outside the engine shows.
+    expect(typeof t.page.startMs).toBe("number");
+    expect(t.page.wallMs).toBeGreaterThanOrEqual(0);
+    info.mockRestore();
+  });
+
+  it("logs a request that failed, with the page's clock and the error", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const call = timingInterceptor("1")((async () => {
+      throw new Error("no netlist");
+    }) as never) as unknown as (r: object) => Promise<unknown>;
+    await expect(call({ header: new Headers(), method: { name: "GetExpectations" } })).rejects.toThrow("no netlist");
+    const t = JSON.parse(String(info.mock.calls[0][0]).slice("agni timing GetExpectations: ".length));
+    expect(t.error).toBe("no netlist");
+    expect(typeof t.page.wallMs).toBe("number");
     info.mockRestore();
   });
 
