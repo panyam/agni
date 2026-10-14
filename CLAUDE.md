@@ -715,7 +715,14 @@ prints each stage, which cache tier answered each read and the slowest rules; `q
 prints the plan; `agni serve --slow-request 2s` logs the same per request; and an `Agni-Timing: 1`
 header (the viewer's `?timing`, the exercise's `--timing`) returns it from the server or the browser
 engine. A stage is recorded with `timing.Begin(ctx, "name")()` from `core/timing`, a no-op when
-nobody asked, and the record travels in headers so no answer changes run to run.
+nobody asked, and the record travels in headers so no answer changes run to run. Under `?timing` the
+page also logs each request's start and wall time on its own clock, and the exercise's `--timing`
+turns them into a `checks breakdown` row, every request of a Run checks plus the page's own time
+(agni 968). **A browser worker's MEMORY is measured with `make wasm-layers`** (what each layer of an
+open design holds, native and wasm, with `GOGC` and `GOMEMLIMIT` passed through) **and `make
+wasm-bench`** (each lane's wasm memory beside its live Go heap). Wasm memory never shrinks, and
+collecting harder does not lower it reliably: a lower GOGC or a memory limit peaked HIGHER than the
+default on Jetson (agni 988, recorded on `cmd/agni-wasm`'s `main`).
 
 **A rule's `Eval` takes the caller's context, and a run stops when the context is done** (agni 795).
 `check.Run`, `RunVerdicts` and `review.Run` return `ctx.Err()` rather than the findings so far, which
@@ -886,7 +893,8 @@ issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with it
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
 each mission's next ready ticket. Each mission has an exercise in its issue body, a make target where one exists
 (`make exercise-revision-audit`, and `make exercise-public-demo` for #851, which walks the built static demo or, with `DEMO_URL`, the deployed one), and after a mission PR merges, run it and log the result as a
-comment on the mission issue.
+comment on the mission issue. Against the deployed demo, wait for the `docs.yml` run and then about a
+minute more, since a walk started as Pages flips served the first seed a 180 s timeout once.
 
 ## Working in this repo
 
@@ -920,7 +928,11 @@ all exit 0.**
   enough, because the generated file has to be COMMITTED or the gate stays red on a tree that is
   correct. The same is true of `tutorial-runs`.
 
-Three more that cost a session time:
+Four more that cost a session time:
+
+- **A new test file can replace an existing one of the same name.** `service/boardtier_test.go`
+  was written over in agni 987 and the gate stayed green, because the test it held was simply gone.
+  `git status` showing `M` for a file you meant to create is the sign; check the name first.
 
 - **Undo a red-check by restoring a copy of the file, never with `git checkout <file>`.** The checkout
   also throws away the uncommitted change under test, and the next run passes over nothing. Copy the

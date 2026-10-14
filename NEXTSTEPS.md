@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-13, at `d642633b` (PR 983).
+Last pruned 2026-10-14, at `c523cc61` (PR 997).
 
 ## At a glance
 
@@ -21,36 +21,39 @@ links rather than here. Log each exercise run on the mission issue.
   it before picking a ticket.
 - **#845 `mission_browser_review`**, 4 of 16. The exercise is a manual walk with no logged run yet.
   #902 (a Properties panel and query tabs) is the viewer's next shape.
-- **#851 `mission_public_demo`**, 35 of 53, no P1 left. Exercise last ran at `d642633b` (PR 983)
-  against the deployed page: 67 steps ok, the one failure is #975 (the companion pair's busiest net).
-  Since #974 (PR 982) the browser keeps its serve worker between requests, so a Jetson query
-  answers in about 125 ms and a trace in about 210 ms where each took seconds. Next ready: #978
-  (the static Compare picker is empty), then #981 (what the worker's 548 MB on Jetson is made of,
-  deciding between a jaala fact store and reading the board lazily). Jetson's Run checks still
-  takes about 18 to 22 s deployed (#968). #949 is `waiting`; the board read is Jetson's largest
-  cost, so consider un-parking it with #981's numbers. The EDIF seed is `waiting` on a licensed
-  pair (#928), and a hosted server on #880.
+- **#851 `mission_public_demo`**, 41 of 59, no P1 left. Exercise last ran at `612ec266` (PR 995)
+  against the deployed page: 81 steps ok, the one failure is #975 (the companion pair's busiest
+  net); PR 997 (jaala v0.1.48) merged since and changes no capture. On Jetson, Run checks takes
+  about 6.8 s deployed (CheckDesign 6.6 s, coverage 150 ms since #985), and the serve worker holds
+  332 MB with 122 MB live after a query (#987). What's left of the memory work is #994 (a reloaded
+  page's jobs worker at 1.6 GB, 600 MB above the same path in Node) and #992 (the serve worker still
+  receives the board's 85 MB file). Queue's next ready is #897. The EDIF seed is `waiting` on a
+  licensed pair (#928), and a hosted server on #880.
 - **Seed triage on #851** (`hack/seed-triage/`, closed #857): no seed record holds a false positive.
   Two follow-ups are filed: #961 (the rules besides the pull-up walks that still credit a DNP part)
   and #967 (check the records against KiCad's ERC and DRC). #967's first run already disagrees:
   KiCad's DRC reports 357 `clearance` violations on Jetson where agni reports none against the
   board's declared 0.1 mm, most likely the netclass and `.kicad_dru` rules agni does not read.
 - **#909 `mission_ask`**, filed, not active. #910 (P1, MCP on `agni serve`) is its first ticket.
-- This run: PRs 977, 979, 980, 982 and 983 merged (#865, #898, #956, #974, and jaala v0.1.38 then
-  v0.1.44). Filed #978, #981 and panyam/jaala#216 (a computed number misses `=`, which
-  `guide/querying.md` now warns about).
+- This run: PRs 986, 989, 991, 993, 995 and 997 merged (#968, #981, #985, #987, #988, #990, #996, and
+  jaala v0.1.48, goapplib v0.7.6). Filed #992, #994, #998 (agni commands sending their request to a
+  running server) and #999 (jaala stores, a datasheet per store, `waiting`), and goapplib #117 and
+  #121, both shipped.
 
 ## Open, ranked
 
 1. **#564, move the tutorial ladder onto the Jetson board, with #724 (rung 13's total).** Decide
    the entry view (`.kicad_sch` or `.kicad_pcb`) first; the per-rung plan is the latest comment on
    #564. Re-run rung 13 in the CLI and the panel before editing it.
-2. **Jetson's Run checks on `mission_public_demo`.** #968 (the 10 s outside `CheckDesign`) first,
-   since it is the largest unmeasured part; then the board read (#949 if its geometry dominates,
-   measured with `--timing`) and the interface-profile rules, whose slowest are
-   `emmc-signal-missing` and `spi_nor-signal-missing`. #964 (the overlay recomposed per request) is
-   the gateway's biggest cost. Measure with `--timing` or `?timing` before changing anything.
-3. **#978, then #981, on `mission_public_demo`**, then #918 (Cancel on Run checks) and #897.
+2. **Jetson on `mission_public_demo`.** #946 first: since #987 the board is read inside Run checks
+   (about 3.1 s of CheckDesign's 6 s on a first visit), so skipping the board subtrees no reader
+   reads is the largest lever left there, and #949 (`waiting`) is its next step. Then #994, which
+   measures the reloaded jobs worker step by step before proposing a fix, and #992, whose open
+   question is the protocol: the page pushes files before a request and cannot tell whether a query
+   needs the board, so the worker probably answers "needs the board's files" and the page retries.
+   Measure with `make wasm-bench`, `make wasm-layers` and the exercise's `--timing`.
+3. **#978 (the static Compare picker is empty), #918 (Cancel on Run checks) and #897**, on
+   `mission_public_demo`.
 4. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 5. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
@@ -63,7 +66,7 @@ links rather than here. Log each exercise run on the mission issue.
    test declares #736 field by field, so its fix also deletes that declaration in
    `clients/python/tests/test_cross_transport.py`.
 
-Later work is #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380,
+Later work is #998 (`--remote`, off any mission), #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380,
 #456, #374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group,
 gzipped, in release binaries). The query language roadmap lives on panyam/jaala. Modules (jaala#3)
 and aggregation inside rules (jaala#4) have both landed, and agni tracks the latest jaala, so a
