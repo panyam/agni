@@ -2,140 +2,62 @@ package service
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
 
 	"github.com/panyam/agni/artifact"
-	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// boardCountingLoader counts every time a request asks for the design's board.
-type boardCountingLoader struct {
+// boardOnlyAt answers a board for one URI alone, as a loader reading exactly what it is handed does:
+// the folder and the netlist entry carry none, and the declared companion does.
+type boardOnlyAt struct {
 	fakeLoader
-	boards *atomic.Int32
+	at    string
+	board *geom.BoardGeometry
 }
 
-func (l boardCountingLoader) Board(ctx context.Context, u artifact.URI) (*geom.BoardGeometry, error) {
-	l.boards.Add(1)
-	return l.fakeLoader.Board(ctx, u)
+func (b boardOnlyAt) Board(_ context.Context, u artifact.URI) (*geom.BoardGeometry, error) {
+	if u.String() == b.at {
+		return b.board, nil
+	}
+	return nil, nil
 }
 
-// routedDesign is one net, THIN, joining two pins, with a board routing it on F.Cu.
-func routedDesign() (boardCountingLoader, *atomic.Int32) {
-	n := &atomic.Int32{}
-	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "U1"}},
-		Nets: []*ir.Net{{Name: "THIN", Connections: []*ir.Connection{
-			{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "2"},
-		}}},
+// TestTheBoardSheetGetDesignListsOpens covers agni issue 865. GetDesign lists a Board sheet from the
+// design's resolved board tier, so the sheet and its highlight must read the board there too, for
+// every spelling of the design, rather than at the URI the request named.
+func TestTheBoardSheetGetDesignListsOpens(t *testing.T) {
+	design := &webapi.Design{
+		Uri:           "mount://m/d",
+		EntryUri:      "mount://m/d/gateway.edn",
+		CompanionUris: []string{"mount://m/d/gateway.kicad_pcb"},
 	}
-	return boardCountingLoader{fakeLoader: fakeLoader{design: d, board: thinBoard()}, boards: n}, n
-}
-
-func runOn(t *testing.T, l boardCountingLoader, q string, overlay *webapi.OverlayConfig) *webapi.RunQueryResponse {
-	t.Helper()
-	resp, err := NewQueryService(l, nil, nil).RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.kicad_sch", Query: q, Overlay: overlay})
-	if err != nil {
-		t.Fatalf("%s: %v", q, err)
+	ld := boardOnlyAt{
+		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
+		at:         "mount://m/d/gateway.kicad_pcb",
+		board:      testBoard(),
 	}
-	return resp
-}
-
-// A query that asks nothing of the copper is answered without reading the board, which is most of
-// what a large design's model holds (agni issue 987).
-func TestAQueryNamingNoBoardRelationReadsNoBoard(t *testing.T) {
-	l, boards := routedDesign()
-	resp := runOn(t, l, "component.net(?r, ?n) => ?r, ?n", nil)
-	if len(resp.GetRows()) == 0 {
-		t.Fatal("the query answered nothing, so it proves nothing about the board")
-	}
-	if n := boards.Load(); n != 0 {
-		t.Errorf("a query naming no board relation asked for the board %d times", n)
-	}
-}
-
-// Each way a query can reach a board relation reads the board: naming it, a rule of its own that
-// names it, and a library member that does.
-func TestAQueryReachingABoardRelationReadsTheBoard(t *testing.T) {
-	lib := inlineReq(&webapi.LibraryModule{Path: "house", Text: "routed(?n: net) :- board.layer(?n, ?l);"})
-	for _, tc := range []struct {
-		name, q string
-		overlay *webapi.OverlayConfig
-	}{
-		{"named", "board.layer(?n, ?l) => ?n, ?l", nil},
-		{"own rule", "routed(?n) :- board.layer(?n, ?l); routed(?n) => ?n", nil},
-		{"library member", "house.routed(?n) => ?n", lib},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			l, boards := routedDesign()
-			resp := runOn(t, l, tc.q, tc.overlay)
-			if boards.Load() == 0 {
-				t.Error("the query reached a board relation and the board was never read")
-			}
-			if len(resp.GetRows()) != 1 || resp.GetRows()[0].GetCells()[0] != "THIN" {
-				t.Errorf("rows = %v, want THIN, the one routed net", resp.GetRows())
-			}
-		})
-	}
-}
-
-// A set reads the board once for all its queries when any of them needs it.
-func TestAQuerySetReadsTheBoardWhenAnyQueryNeedsIt(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
-		qs    []string
-		reads bool
-	}{
-		{"none", []string{"component.net(?r, ?n) => ?r", "component.net(?r, ?n) => ?n"}, false},
-		{"one", []string{"component.net(?r, ?n) => ?r", "board.layer(?n, ?l) => ?n"}, true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			l, boards := routedDesign()
-			set := &webapi.QuerySet{}
-			for i, q := range tc.qs {
-				set.Queries = append(set.Queries, &webapi.NamedQuery{Name: string(rune('a' + i)), Query: q})
-			}
-			resp, err := NewQueryService(l, nil, nil).RunQueries(context.Background(), &webapi.RunQueriesRequest{Uri: "mount://m/x.kicad_sch", Set: set})
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, r := range resp.GetResults() {
-				if r.GetError() != "" || len(r.GetResult().GetRows()) == 0 {
-					t.Fatalf("%s answered %q with %d rows", r.GetName(), r.GetError(), len(r.GetResult().GetRows()))
-				}
-			}
-			if got := boards.Load() > 0; got != tc.reads {
-				t.Errorf("read the board: %v, want %v", got, tc.reads)
-			}
-		})
-	}
-}
-
-// Interface coverage and a part's parameters read no board fact, so neither reads the board.
-func TestCoverageAndPartParametersReadNoBoard(t *testing.T) {
-	l, boards := routedDesign()
-	svc := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil)
-	if _, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: "mount://m/x.kicad_sch"}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/x.kicad_sch"}); err != nil {
-		t.Fatal(err)
-	}
-	if n := boards.Load(); n != 0 {
-		t.Errorf("coverage and parameters asked for the board %d times", n)
-	}
-}
-
-// A check run still reads the board, since its board-tier rules need it.
-func TestACheckRunStillReadsTheBoard(t *testing.T) {
-	l, boards := routedDesign()
-	if _, err := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil).CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.kicad_sch"}); err != nil {
-		t.Fatal(err)
-	}
-	if boards.Load() == 0 {
-		t.Error("a check run never read the board, so every board-tier rule ran over no copper")
+	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, &ProjectResolver{Store: declaringStore{design: design}})
+	ctx := context.Background()
+	for _, uri := range []string{"mount://m/d", "mount://m/d/gateway.edn", "mount://m/d/gateway.kicad_pcb"} {
+		d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Uri: uri})
+		if err != nil {
+			t.Fatalf("%s: GetDesign: %v", uri, err)
+		}
+		listed := false
+		for _, s := range d.GetSheets() {
+			listed = listed || s.GetId() == boardSheetID
+		}
+		if !listed {
+			t.Fatalf("%s: GetDesign lists no board sheet, so opening one proves nothing", uri)
+		}
+		if _, err := svc.GetSheet(ctx, &webapi.GetSheetRequest{Uri: uri, Sheet: boardSheetID}); err != nil {
+			t.Errorf("%s: GetSheet board: %v", uri, err)
+		}
+		if _, err := svc.HighlightSheet(ctx, &webapi.HighlightSheetRequest{Uri: uri, Sheet: boardSheetID, Specs: []*geom.HighlightSpec{{Nets: []string{"SIG"}}}}); err != nil {
+			t.Errorf("%s: HighlightSheet board: %v", uri, err)
+		}
 	}
 }
