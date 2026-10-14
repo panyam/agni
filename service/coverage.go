@@ -35,7 +35,7 @@ func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.Get
 	if err != nil {
 		return nil, err
 	}
-	m, bases, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
+	m, bases, err := BuildModelCachedTier(ctx, s.loader, nu, bu, ov, s.specs, SkipBoard)
 	if err != nil {
 		return nil, err
 	}

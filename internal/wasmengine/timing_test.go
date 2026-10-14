@@ -132,6 +132,25 @@ func TestCoverageReadsTheModelsFactBase(t *testing.T) {
 	}
 }
 
+// TestCoverageAfterAChecksRunBuildsNoSecondModel holds the board-less coverage request to the model a
+// check run already kept with the board, which answers it as well, so a server that has run checks
+// builds no second model for the coverage panel (agni issue 987).
+func TestCoverageAfterAChecksRunBuildsNoSecondModel(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	if rt, _ := timedCheck(t, eng, true); lookup(rt, "model") != "built" {
+		t.Fatalf("the check run's model came from %q, want built", lookup(rt, "model"))
+	}
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	rt := coverageTiming(t, srv)
+	if got := lookup(rt, "model"); got != "memory" {
+		t.Errorf("coverage after a check run took its model from %q, want the check run's, from memory", got)
+	}
+	if n := stageCount(rt, "build.model"); n != 0 {
+		t.Errorf("coverage after a check run built %d models of its own", n)
+	}
+}
+
 // TestCoverageIsToldWhereItsTimeWent holds GetInterfaceCoverage to a breakdown naming its time per
 // interface profile, since on a large board it is a third of Run checks and its stages said nothing
 // (agni issue 968).

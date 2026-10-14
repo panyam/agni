@@ -704,6 +704,11 @@ the sheet off the response rather than choosing, which is C32 at one more call s
 board tier's format (`formats.HasBoard`), and the board is read when its sheet is opened or a
 board-tier rule runs. Reading it on open made the Jetson seed's first sheet and rule catalog wait
 about 30 s in the browser, since everything on the worker queues behind the request that opens.
+**Nor must a query that asks nothing of the copper** (agni 987). A model is built with a
+`BoardTier`: rule runs pass `ReadBoard`, a query passes it only when `query.ReadsFrom` names a
+`board.*` relation (`boardTierFor`, which sees through its rules and library members), and coverage
+and part parameters pass `SkipBoard`. On Jetson the board is 385 of the 547 MB a model with it holds.
+A new surface that builds a model chooses its tier, because `BuildModelCached` reads the board.
 
 **Measure a slow request before optimising it** (agni 914). `--timing` on `check`/`query`/`trace`/`review`
 prints each stage, which cache tier answered each read and the slowest rules; `query --explain`

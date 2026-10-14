@@ -127,6 +127,38 @@ func (c *DesignCache) get(ctx context.Context, key string, build func(context.Co
 	return c.getPersisted(ctx, key, nil, build)
 }
 
+// peek returns key's value when it is already built and its files are unchanged, without building it
+// or waiting for a build in progress. It is for a caller that can use a value a different request
+// left, and builds something cheaper of its own otherwise.
+func (c *DesignCache) peek(ctx context.Context, key string) (any, bool) {
+	if c == nil || c.max <= 0 || key == "" {
+		return nil, false
+	}
+	c.mu.Lock()
+	e, ok := c.entries[key]
+	if ok {
+		c.tick++
+		e.used = c.tick
+	}
+	c.mu.Unlock()
+	if !ok {
+		return nil, false
+	}
+	select {
+	case <-e.ready:
+	default:
+		return nil, false
+	}
+	if e.err != nil || !e.touched.Unchanged() {
+		return nil, false
+	}
+	c.hits.Add(1)
+	touchedFrom(ctx).Merge(e.touched)
+	layer, _, _ := strings.Cut(key, "\x00")
+	timing.Cached(ctx, layer, "memory")
+	return e.val, true
+}
+
 // getPersisted is get with a codec for values the persistent tier may keep. On a miss it tries the
 // store before building, and stores what it built.
 func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *protoCodec, build func(context.Context) (any, error)) (any, error) {
@@ -468,10 +500,18 @@ func (b *builtModel) baseFor(ctx context.Context, reg *facts.Registry) *query.Ba
 // It returns the fact base too, built on first use, so a query does not pay 100ms to project every
 // relation again.
 func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider) (check.Model, func(*facts.Registry) *query.Base, error) {
+	return BuildModelCachedTier(ctx, loader, uri, boardURI, ov, serverSpecs, ReadBoard)
+}
+
+// BuildModelCachedTier is BuildModelCached with the board tier chosen by the caller. The two tiers
+// are kept apart, and a SkipBoard request takes a model already kept WITH the board when there is
+// one, since that model answers everything the board-less one would, so a server that has run checks
+// on a design builds no second model for its coverage panel (agni issues 985, 987).
+func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (check.Model, func(*facts.Registry) *query.Base, error) {
 	specs := ov.SpecsOver(serverSpecs)
 	opts := ov.ReadOptions()
 	fresh := func() (check.Model, func(*facts.Registry) *query.Base, error) {
-		m, err := BuildModel(ctx, loader, uri, boardURI, specs, opts...)
+		m, err := BuildModelTier(ctx, loader, uri, boardURI, specs, board, opts...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -483,9 +523,17 @@ func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI art
 	if c == nil || !ok || param.Fetches(specs) {
 		return fresh()
 	}
-	key := cacheKey("model", uri.String(), boardURI.String(), id)
+	withBoard := cacheKey("model", uri.String(), boardURI.String(), id)
+	key := withBoard
+	if board == SkipBoard {
+		if v, ok := c.peek(ctx, withBoard); ok {
+			b := v.(*builtModel)
+			return b.model, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
+		}
+		key = cacheKey("model", uri.String(), "", id, "noboard")
+	}
 	v, err := c.get(ctx, key, func(ctx context.Context) (any, error) {
-		m, err := BuildModel(ctx, loader, uri, boardURI, specs, opts...)
+		m, err := BuildModelTier(ctx, loader, uri, boardURI, specs, board, opts...)
 		if err != nil {
 			return nil, err
 		}
