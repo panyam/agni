@@ -49,6 +49,7 @@ type DesignCache struct {
 	misses   atomic.Int64
 	restored atomic.Int64
 	store    *persistTier
+	loaded   func()
 }
 
 // A BlobStore keeps bytes across processes, for a DesignCache's persistent tier (agni issue 911). It
@@ -100,6 +101,18 @@ func NewDesignCache(max int) *DesignCache {
 func (c *DesignCache) Persist(store BlobStore, check FingerprintCheck, version string) *DesignCache {
 	if c != nil && store != nil && check != nil && version != "" {
 		c.store = &persistTier{store: store, check: check, version: version}
+	}
+	return c
+}
+
+// AfterLoad runs loaded after each layer the cache reads, builds or restores, before the value is
+// served. The browser engine passes runtime.GC (agni issue 1000): wasm memory never shrinks, so the
+// garbage a board's parse leaves becomes the floor the rules stage grows from, and one collection
+// there took the Jetson seed's check from a 1.34 GB peak to 805 MB. A server leaves it unset, since
+// its memory is returned to the system and a full collection per layer would cost every request.
+func (c *DesignCache) AfterLoad(loaded func()) *DesignCache {
+	if c != nil {
+		c.loaded = loaded
 	}
 	return c
 }
@@ -227,6 +240,11 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 			if e.err == nil {
 				c.save(ctx, key, codec, e.val, e.touched)
 			}
+		}
+		if c.loaded != nil {
+			endCollect := timing.Begin(ctx, "collect."+layer)
+			c.loaded()
+			endCollect()
 		}
 		if e.err == nil && e.touched.Len() == 0 {
 			// Nothing recorded, so nothing could say when this went stale. Serve it to this caller

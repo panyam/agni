@@ -203,3 +203,32 @@ func TestHostWhollyAbsent(t *testing.T) {
 		t.Fatalf("wholly-absent bus: want 6 host-incomplete findings, got %d", got)
 	}
 }
+
+// A net carrying no connection is not a signal, whatever its name. SPI_IO2 exists only by name, so
+// IO2 is still missing, and OTHER_CS, which carries the anchor's suffix, anchors nothing.
+func TestAnUnwiredNetIsNoSignal(t *testing.T) {
+	d := spinorBroken()
+	d.Nets = append(d.Nets, net("SPI_IO2"), net("OTHER_CS"))
+	var anchors []string
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(SPINOR)) {
+		if f.Rule == "spi_nor-signal-missing" {
+			anchors = append(anchors, check.EntityRef(f.Subject)+" "+f.Message)
+		}
+	}
+	if len(anchors) != 1 || !strings.HasPrefix(anchors[0], "SPI_CS ") || !strings.Contains(anchors[0], "IO2") {
+		t.Fatalf("want one IO2 finding anchored at SPI_CS, got %q", anchors)
+	}
+}
+
+// Presence binds each net once, through net.pin_count, rather than once per connection through
+// component.net, which on a large board is four times the bindings and the allocation (agni issue
+// 1000).
+func TestPresenceBindsEachNetOnce(t *testing.T) {
+	var text strings.Builder
+	for _, r := range SPINOR.presenceRules() {
+		text.WriteString(r.String() + "\n")
+	}
+	if !strings.Contains(text.String(), "net.pin_count") || strings.Contains(text.String(), "component.net") {
+		t.Fatalf("presence rules should bind nets through net.pin_count alone:\n%s", text.String())
+	}
+}

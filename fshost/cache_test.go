@@ -168,3 +168,16 @@ func TestAModelIsKeptWhenTheCorpusIsLocal(t *testing.T) {
 		t.Error("the second request rebuilt the model, so a local corpus was treated as one fetched over the network")
 	}
 }
+
+// TestAfterLoadRunsOncePerRead covers agni issue 1000: the browser engine collects after each layer
+// the cache reads, and a hit, which made nothing, collects nothing.
+func TestAfterLoadRunsOncePerRead(t *testing.T) {
+	_, l, c := hierCopy(t)
+	loads := 0
+	c.AfterLoad(func() { loads++ })
+	netNames(t, l)
+	netNames(t, l)
+	if _, misses := c.Stats(); loads != int(misses) || loads != 1 {
+		t.Fatalf("AfterLoad ran %d times over %d reads, want once per read", loads, misses)
+	}
+}
