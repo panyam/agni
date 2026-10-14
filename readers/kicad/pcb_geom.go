@@ -102,6 +102,9 @@ func boardGraphics(root *node) []*geom.BoardGraphic {
 		place := func(p *geom.Point) *geom.Point { return geomath.ComposePlacement(origin, rot, back, p) }
 		for _, base := range graphicHeads {
 			for _, n := range fp.Children("fp_" + base) {
+				if !footprintLayerDrawn(atomOf(n.Child("layer").Arg(1))) {
+					continue
+				}
 				if gr := boardGraphicOf(n, base, place, ref); gr != nil {
 					out = append(out, gr)
 				}
@@ -120,6 +123,19 @@ func boardGraphics(root *node) []*geom.BoardGraphic {
 		}
 	}
 	return out
+}
+
+// footprintLayerDrawn reports whether a footprint's graphic on layer belongs in the board drawing:
+// the silkscreen, fab and courtyard outlines that place a part. A footprint library's own artwork
+// on the user layers (User.1 to User.9, Dwgs.User, Cmts.User, Eco1/Eco2.User) is not, and one
+// vendor library draws hundreds of lines per passive there, 322,600 of the Jetson seed's 326,626
+// footprint lines and about 56 of its board file's 85 MB (agni issue 946).
+func footprintLayerDrawn(layer string) bool {
+	switch layer {
+	case "F.SilkS", "B.SilkS", "F.Fab", "B.Fab", "F.CrtYd", "B.CrtYd":
+		return true
+	}
+	return false
 }
 
 // boardGraphicOf builds one BoardGraphic from a KiCad graphic node. place maps a Y-flipped
