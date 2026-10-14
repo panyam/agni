@@ -28,10 +28,11 @@ import { SvgView } from "./svgview.js";
 import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, useEngineFetch,
-  tableClient,
+  tableClient, timingMode,
 } from "./api.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
+import { fetchFile } from "./wasm/fetchfile.js";
 import { BROWSER_MOUNT, installDrop } from "./wasm/drop.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
@@ -127,6 +128,13 @@ function showEngineNote(text: string): void {
   el.hidden = false;
 }
 
+// hideEngineNote clears the top bar's note when it is still about `about`, such as a file whose
+// stalled fetch went through on a later attempt.
+function hideEngineNote(about: string): void {
+  const el = document.getElementById("engine-note");
+  if (el?.textContent?.includes(about)) el.hidden = true;
+}
+
 // refuseBrowserMounts answers, on the server engine, every request naming a dropped design with a
 // refusal and a note rather than sending it, since the server has never seen those files (agni issue
 // 854). Requests about the server's own mounts pass.
@@ -205,6 +213,7 @@ async function startPageEngine(): Promise<WasmEngine | undefined> {
     },
   );
   const network = globalThis.fetch.bind(globalThis);
+  const timed = timingMode() !== "";
   const files = workspaceClient();
   const workspacePath = `/${WorkspaceService.typeName}/`;
   useEngineFetch(
@@ -220,11 +229,19 @@ async function startPageEngine(): Promise<WasmEngine | undefined> {
               return (await res.json()) as DesignFiles;
             }
           : (uri) => files.listDesignFiles({ uri }),
-        fetchFile: async (mount, path) => {
-          const res = await network(fileURL(mount, path));
-          if (!res.ok) throw new Error(`${mount}/${path}: ${res.status}`);
-          return new Uint8Array(await res.arrayBuffer());
-        },
+        // A transfer that stops sending is abandoned and asked for again, and the top bar says which
+        // file is slow, rather than the page waiting on it forever (agni issue 1002).
+        fetchFile: (mount, path) =>
+          fetchFile(network, fileURL(mount, path), {
+            onStall: (s) =>
+              showEngineNote(
+                `Fetching ${path} stalled after ${Math.round(s.bytes / (1 << 20))} MB; ${s.attempt < s.attempts ? `asking again (${s.attempt + 1} of ${s.attempts})` : "giving up"}.`,
+              ),
+            onDone: (d) => {
+              if (d.attempts > 1) hideEngineNote(path);
+              if (timed) console.info(`agni fetch ${mount}/${path}: ${JSON.stringify({ bytes: d.bytes, ms: Math.round(d.ms), attempts: d.attempts })}`);
+            },
+          }),
       },
       network,
       // With no server, workspace calls are the worker's too.

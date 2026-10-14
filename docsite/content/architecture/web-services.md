@@ -153,7 +153,11 @@ the analysis reads (the design's folder, its project's descriptor, and the confi
 project names) with a hash per file, the page fetches each from the read-only `/raw/<mount>/<path>`
 route, and the worker mounts them under the same mount name. After that, nothing about the design
 crosses the network. Listings and file reads stay with the server, which owns the mount namespace,
-and every other service runs in the worker.
+and every other service runs in the worker. A file whose transfer sends no bytes for 30 s is
+abandoned and asked for again, up to three attempts, and the top bar names the file meanwhile
+(`web/src/wasm/fetchfile.ts`, agni issue 1002), because a fetch has no timeout of its own and
+seeds on the deployed demo timed out at 180 s on their first open with nothing saying why. Under `?timing` the page logs each file as `agni fetch <file>`
+with its size, time and attempts.
 
 Files dropped on the page, or picked with its "Open files" button, go into the browser mount `local`
 under a folder of their own and nowhere else (agni issue 854). A `.zip` among them reads as the folder
