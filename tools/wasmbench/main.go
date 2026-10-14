@@ -7,6 +7,9 @@
 //	go run ./tools/wasmbench --dir tools/samples/boards/royalblue54L-feather --design RoyalBlue54L-Feather.kicad_sch
 //
 // It prints one JSON object, so the make target can join it with the browser's.
+//
+// With --layers it prints instead what each layer of the open design holds on the heap, from a fresh
+// read and from a restore (agni issue 981). `make wasm-layers` runs that natively and compiled to wasm.
 package main
 
 import (
@@ -65,10 +68,20 @@ type Result struct {
 func main() {
 	dir := flag.String("dir", "", "the board's folder, mounted whole")
 	design := flag.String("design", "", "the design to open, relative to --dir (a file or a folder)")
+	layers := flag.Bool("layers", false, "print what each layer of an open design holds on the heap instead of timing the questions")
 	flag.Parse()
 	if *dir == "" || *design == "" {
-		fmt.Fprintln(os.Stderr, "usage: wasmbench --dir <folder> --design <path within it>")
+		fmt.Fprintln(os.Stderr, "usage: wasmbench --dir <folder> --design <path within it> [--layers]")
 		os.Exit(2)
+	}
+	if *layers {
+		r, err := Layers(*dir, *design)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "wasmbench:", err)
+			os.Exit(1)
+		}
+		json.NewEncoder(os.Stdout).Encode(r)
+		return
 	}
 	r, err := Run(*dir, *design)
 	if err != nil {
@@ -82,26 +95,11 @@ func main() {
 // time measures parsing rather than the disk.
 func Run(dir, design string) (Result, error) {
 	res := Result{Host: "native", Query: Query, CountComponents: CountComponents, CountNets: CountNets}
-	files := map[string][]byte{}
-	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(dir, p)
-		if err != nil {
-			return err
-		}
-		files[filepath.ToSlash(rel)] = b
-		res.Bytes += int64(len(b))
-		return nil
-	})
+	files, n, err := readDir(dir)
 	if err != nil {
 		return res, err
 	}
+	res.Bytes = n
 	res.Files = len(files)
 
 	t := time.Now()
@@ -163,6 +161,30 @@ func Run(dir, design string) (Result, error) {
 
 	res.PeakMB = peakMB()
 	return res, nil
+}
+
+// readDir reads a folder into memory, keyed by slash paths relative to it, as the browser holds a
+// mounted folder.
+func readDir(dir string) (map[string][]byte, int64, error) {
+	files := map[string][]byte{}
+	var n int64
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(dir, p)
+		if err != nil {
+			return err
+		}
+		files[filepath.ToSlash(rel)] = b
+		n += int64(len(b))
+		return nil
+	})
+	return files, n, err
 }
 
 // peakMB is the process's peak resident set on Linux (VmHWM), and otherwise the memory the Go
