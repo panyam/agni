@@ -111,6 +111,13 @@ a copy, since `check.NewModel` stamps datasheet classes into the design it is gi
 is safe because rules only read a model and its memo is built for concurrent use. The query, check,
 report, coverage and review surfaces read through it.
 
+The browser engine also collects garbage after each layer the cache reads, builds or restores
+(`DesignCache.AfterLoad`, agni issue 1000), shown as a `collect.<layer>` stage under `Agni-Timing`. A
+worker's wasm memory never shrinks, so without it the rules stage grew past what a board's parse left
+behind instead of reusing it, and a Jetson check peaked at 1343 MB rather than 805. A server sets no
+hook, since its memory goes back to the system and a full collection per layer would cost every
+request.
+
 An entry's key is what was asked, and its validity is what the read touched. A host's reads go
 through `service.LoaderIn`, which hands the `formats.Loader` a `formats.Touched` recorder, and the
 recorder stamps every name the read opens, walks or fails to find. A hit re-stamps those names, so a

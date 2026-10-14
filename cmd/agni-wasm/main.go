@@ -27,6 +27,11 @@ import (
 // cost 14% on Run checks. 35 and 25 peaked higher than 100 in wasm (1619 and
 // 1506 MB), and so did a GOMEMLIMIT of 700 to 900 MiB (1325 to 1738 MB). `make wasm-layers` with GOGC
 // or GOMEMLIMIT set and `make wasm-bench` measure it again.
+//
+// What does lower the peak is one collection at the right moment. The engine collects after each layer
+// its DesignCache reads or restores (service.DesignCache.AfterLoad, agni issue 1000), which took the same
+// check from 1343 to 805 MB on a first visit, since the rules then reuse what the board's parse left
+// rather than growing past it.
 func main() {
 	wasmhost.ServeRebuild(wasmengine.Namespace, wasmengine.BuildWith(wasmengine.Options{Store: wasmhost.BrowserCache()}))
 }

@@ -725,7 +725,9 @@ turns them into a `checks breakdown` row, every request of a Run checks plus the
 open design holds, native and wasm, with `GOGC` and `GOMEMLIMIT` passed through) **and `make
 wasm-bench`** (each lane's wasm memory beside its live Go heap). Wasm memory never shrinks, and
 collecting harder does not lower it reliably: a lower GOGC or a memory limit peaked HIGHER than the
-default on Jetson (agni 988, recorded on `cmd/agni-wasm`'s `main`). **Which stage raised a peak** is
+default on Jetson (agni 988, recorded on `cmd/agni-wasm`'s `main`). One collection after each layer
+the cache reads does (`DesignCache.AfterLoad`, which only the browser engine sets): Jetson's check
+went from 1343 to 805 MB (agni 1000). **Which stage raised a peak** is
 `Agni-Timing: memory` (the page's `?timing=memory`, the CLI's `--timing-memory`): each stage carries
 the memory as it ended and each rule what it allocated, and `make wasm-bench` prints both for a
 Jetson check (agni 994).

@@ -334,8 +334,7 @@ func (p Profile) lname() string { return strings.ToLower(strings.ReplaceAll(p.Na
 func (p Profile) presenceRules() []query.Rule {
 	var rules []query.Rule
 	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("n")))},
-			netMatch(query.V("n"), s)...)
+		body := append(wiredNet(query.V("n")), netMatch(query.V("n"), s)...)
 		rules = append(rules, query.Def(query.Rel("has_signal", query.Str(s.Name)), body...))
 	}
 	rules = append(rules, query.Def(query.Rel("in_use", query.V("x")),
@@ -343,6 +342,17 @@ func (p Profile) presenceRules() []query.Rule {
 		query.Pos(query.Rel("has_signal", query.V("y"))),
 		query.Cmp(query.V("x"), "!=", query.V("y"))))
 	return rules
+}
+
+// wiredNet binds n to each net carrying at least one connection, once per net. It is the set of nets
+// component.net names, read from net.pin_count, whose one row per net replaces component.net's one
+// row per connection: on the Jetson seed 1,355 rows rather than 5,426, each of which the evaluator
+// bound and ran the name match on (agni issue 1000).
+func wiredNet(n query.Term) []query.Literal {
+	return []query.Literal{
+		query.Pos(query.Rel("net.pin_count", n, query.V("wired_pins"))),
+		query.Cmp(query.V("wired_pins"), ">", query.Num(0)),
+	}
 }
 
 func (p Profile) tags() map[string]string {
@@ -382,8 +392,7 @@ func (p Profile) signalMissingRule() *check.Rule {
 		n++
 		// The anchor net is matched by the anchor signal's FULL matcher (suffix + optional prefix), so a
 		// prefix-named interface anchors only on its own nets and not a foreign same-suffix serdes.
-		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("a")))},
-			netMatch(query.V("a"), *anchorSig)...)
+		body := append(wiredNet(query.V("a")), netMatch(query.V("a"), *anchorSig)...)
 		scope := append(append([]query.Literal{}, body...), query.Pos(query.Rel("in_use", query.V("iu"))))
 		scope = append(scope, guard...)
 		body = append(body,
@@ -569,8 +578,7 @@ func anySignalMatches(net string, signals []Signal) bool {
 func (p Profile) danglingRule() *check.Rule {
 	rules := p.presenceRules()
 	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("component.net", query.V("r"), query.V("n")))},
-			netMatch(query.V("n"), s)...)
+		body := append(wiredNet(query.V("n")), netMatch(query.V("n"), s)...)
 		rules = append(rules, query.Def(query.Rel("sig_net", query.V("n")), body...))
 	}
 	rules = append(rules, query.Def(query.Rel("dangling", query.V("n")),

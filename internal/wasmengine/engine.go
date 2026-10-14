@@ -6,6 +6,7 @@ package wasmengine
 import (
 	"io/fs"
 	"net/http"
+	"runtime"
 	"strings"
 
 	"github.com/panyam/agni"
@@ -143,7 +144,7 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	root := files.Root()
 	cache := service.NewDesignCache(designCache).Persist(o.Store, func(fp []byte) (*formats.Touched, bool) {
 		return formats.CheckFingerprint(root, fp)
-	}, o.Version)
+	}, o.Version).AfterLoad(runtime.GC)
 	host := service.NewCachingLoader(files, cache)
 	trees := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
