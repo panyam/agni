@@ -245,7 +245,7 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 		return nil, err
 	}
 	specs := ov.SpecsOver(s.specs)
-	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, specs, ov.ReadOptions()...)
+	m, err := BuildModelTier(ctx, s.loader, u, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

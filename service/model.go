@@ -55,6 +55,26 @@ func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI,
 // nothing would report the board items clean without checking them. A design's OWN path carrying no
 // board (a netlist) is the normal nil-board case.
 func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
+	return BuildModelTier(ctx, loader, uri, boardURI, specs, ReadBoard, opts...)
+}
+
+// A BoardTier says whether a model reads the design's board. On a large board the board's geometry,
+// and the per-net copper the model builds from it, are most of what a model holds (385 of 547 MB on
+// the Jetson seed, agni issue 987), so a request that asks nothing of the copper skips it.
+type BoardTier bool
+
+const (
+	// ReadBoard reads the board tier, as every rule run does.
+	ReadBoard BoardTier = true
+	// SkipBoard builds the model without one, so it reports HasBoard false and every board.*
+	// relation is empty. Only for a request that reads no board fact: a query naming no board.*
+	// relation (see boardTierFor), interface coverage, or a part's parameters.
+	SkipBoard BoardTier = false
+)
+
+// BuildModelTier is BuildModel with the board tier chosen by the caller. With SkipBoard the loader is
+// never asked for a board, boardURI included.
+func BuildModelTier(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, board BoardTier, opts ...ReadOption) (check.Model, error) {
 	endRead := timing.Begin(ctx, "read.netlist")
 	d, err := loader.Design(ctx, uri, opts...)
 	endRead()
@@ -65,13 +85,16 @@ func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.
 	if !boardURI.IsZero() {
 		boardFrom = boardURI
 	}
-	endBoard := timing.Begin(ctx, "read.board")
-	bg, err := loader.Board(ctx, boardFrom)
-	endBoard()
-	if err != nil {
-		return nil, ClassifyLoadErr(err)
+	var bg *geom.BoardGeometry
+	if board == ReadBoard {
+		endBoard := timing.Begin(ctx, "read.board")
+		bg, err = loader.Board(ctx, boardFrom)
+		endBoard()
+		if err != nil {
+			return nil, ClassifyLoadErr(err)
+		}
 	}
-	if !boardURI.IsZero() && bg == nil {
+	if board == ReadBoard && !boardURI.IsZero() && bg == nil {
 		return nil, fmt.Errorf("%w: board_uri %q carries no board geometry", ErrInvalidArgument, boardURI)
 	}
 	// A corpus reached over a network fetches the design's parts here, where a failure can be an

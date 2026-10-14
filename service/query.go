@@ -56,7 +56,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed())
+	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed(), q)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,14 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 	if err := set.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed())
+	// The board is read when any query in the set reads it, so the set still answers over one read.
+	var qs []query.Query
+	for i := range set.Queries {
+		if q, err := set.Compile(i); err == nil {
+			qs = append(qs, q)
+		}
+	}
+	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed(), qs...)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +215,9 @@ type designRead struct {
 	drawnNets  map[string]bool
 }
 
-// read resolves the design's tiers, composes its overlay, and builds the model and fact base once.
-func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, source string, overlay *webapi.OverlayConfig, asNamed bool) (*designRead, error) {
+// read resolves the design's tiers, composes its overlay, and builds the model and fact base once,
+// with the board tier only when one of qs reads it (agni issue 987).
+func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, source string, overlay *webapi.OverlayConfig, asNamed bool, qs ...query.Query) (*designRead, error) {
 	// The overlay is composed BEFORE the read because its lexicon has to reach the READ (see
 	// readopt.go), which decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113).
 	// Its RULES half is ignored and no base convention is passed, since a query composes no catalog
@@ -226,12 +234,6 @@ func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, sourc
 	if err != nil {
 		return nil, err
 	}
-	// Kept between requests when the loader caches (agni issue 895), so a second query on a design
-	// costs its evaluation rather than a read and a projection of every relation.
-	model, baseOver, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
-	if err != nil {
-		return nil, err
-	}
 	// The project's own library joins the vocabulary here, so every query surface that reads through
 	// this function sees it (agni issue 773). A library that does not compose fails the read rather
 	// than answering without it.
@@ -239,7 +241,26 @@ func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, sourc
 	if err != nil {
 		return nil, err
 	}
+	// Kept between requests when the loader caches (agni issue 895), so a second query on a design
+	// costs its evaluation rather than a read and a projection of every relation.
+	model, baseOver, err := BuildModelCachedTier(ctx, s.loader, nu, bu, ov, s.specs, boardTierFor(reg, qs...))
+	if err != nil {
+		return nil, err
+	}
 	return &designRead{u: u, source: source, model: model, base: baseOver(reg), reg: reg, ov: ov, gu: gu}, nil
+}
+
+// boardTierFor is ReadBoard when any of qs reads a board.* relation, its own rules and the library
+// members it calls included, since query.ReadsFrom links them over reg first.
+func boardTierFor(reg *facts.Registry, qs ...query.Query) BoardTier {
+	for _, q := range qs {
+		for _, rel := range query.ReadsFrom(reg, q) {
+			if check.TierOf(rel) == check.TierBoard {
+				return ReadBoard
+			}
+		}
+	}
+	return SkipBoard
 }
 
 // geometry loads the schematic geometry on first use and returns the sheet index and the entities it
