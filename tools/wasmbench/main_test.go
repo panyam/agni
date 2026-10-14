@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -39,5 +40,25 @@ func TestLayersMeasuresEachLayer(t *testing.T) {
 	}
 	if r.RestoredReads == 0 {
 		t.Error("the second pass restored nothing from the store, so it measured a second read")
+	}
+}
+
+// TestLayersMeasuresADesignWithNoBoard covers a design declaring no board companion, whose model the
+// tool used to build with its own schematic named as an explicit board, which BuildModel refuses.
+func TestLayersMeasuresADesignWithNoBoard(t *testing.T) {
+	dir := t.TempDir()
+	b, err := os.ReadFile(filepath.Join("..", "..", "readers", "kicad", "testdata", "bus_resolved.kicad_sch"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "bus_resolved.kicad_sch"), b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Layers(dir, "bus_resolved.kicad_sch")
+	if err != nil {
+		t.Fatalf("a design with no board failed to measure: %v", err)
+	}
+	if len(r.Restored) == 0 || r.Restored[len(r.Restored)-1].HeapMB <= 0 {
+		t.Errorf("the restored pass measured nothing: %+v", r.Restored)
 	}
 }

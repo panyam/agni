@@ -250,12 +250,13 @@ wasm-bench: agni ui wasm
 # check model, the fact base), from a fresh read and from a restore, natively and then compiled to wasm
 # under Node, where the live heap matches native and the runtime's memory is the worker's (agni issue
 # 981). Not in the gate, for the same reason as wasm-bench. env -i because the wasm runtime copies the
-# whole environment into its memory and refuses one over its limit.
+# whole environment into its memory and refuses one over its limit, with GOGC and GOMEMLIMIT passed
+# through so a sweep reaches the wasm half too (agni issue 988).
 #   make wasm-layers BOARD=tools/samples/boards/jetson-agx-thor-baseboard DESIGN=.
 wasm-layers:
 	$(GO) run ./tools/wasmbench --layers --dir $(abspath $(BOARD)) --design $(DESIGN)
 	tmp=$$(mktemp -d) && GOOS=js GOARCH=wasm $(GO) build -o $$tmp/wasmbench.wasm ./tools/wasmbench && \
-	env -i PATH="$$PATH" HOME=$$tmp node "$$($(GO) env GOROOT)/lib/wasm/wasm_exec_node.js" $$tmp/wasmbench.wasm \
+	env -i PATH="$$PATH" HOME=$$tmp $(if $(GOGC),GOGC=$(GOGC)) $(if $(GOMEMLIMIT),GOMEMLIMIT=$(GOMEMLIMIT)) node "$$($(GO) env GOROOT)/lib/wasm/wasm_exec_node.js" $$tmp/wasmbench.wasm \
 		--layers --dir $(abspath $(BOARD)) --design $(DESIGN); rc=$$?; rm -rf $$tmp; exit $$rc
 
 # The browser-only public demo as static files (agni issue 856): a landing page over the seeded
@@ -308,8 +309,11 @@ docs-deploy:
 # The wasm entry point under Node, as the browser's worker runs it: the exports take bytes and answer
 # without deadlocking. What the engine ANSWERS is held to the server's natively, by
 # TestWasmEngineAnswersAsTheServerDoes in cmd/agni.
+# env -i because the wasm runtime copies the whole environment into its memory and refuses one over its
+# limit, which a developer's 7.5 KB shell passes and CI's does not, so the target failed only locally.
 wasm-test:
-	GOOS=js GOARCH=wasm $(GO) test -exec="$$($(GO) env GOROOT)/lib/wasm/go_js_wasm_exec" ./cmd/agni-wasm/ -count=1
+	env -i PATH="$$PATH" HOME="$$HOME" GOPATH="$$($(GO) env GOPATH)" GOCACHE="$$($(GO) env GOCACHE)" GOMODCACHE="$$($(GO) env GOMODCACHE)" \
+		GOOS=js GOARCH=wasm $(GO) test -exec="$$($(GO) env GOROOT)/lib/wasm/go_js_wasm_exec" ./cmd/agni-wasm/ -count=1
 
 # Regenerate the docsite rule + relation catalog (issue 14) from the shipped engine catalog and
 # the embedded per-rule/per-relation Detail markdown. The stdlib docs stay the source of truth;

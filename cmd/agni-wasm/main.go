@@ -20,6 +20,13 @@ import (
 	"github.com/panyam/goapplib/wasmhost"
 )
 
+// The collector runs at Go's default GOGC of 100 on purpose (agni issue 988). Wasm memory never shrinks,
+// so a lower GOGC looked like a way to hold a worker near its live heap, and in Node it is: a Jetson
+// check run peaks at 1020 MB at 50 against 1364 MB at 100. In Chromium it saved 130 MB on a first
+// visit's jobs worker, nothing on a reloaded page's (1609 and 1614 MB, a peak Node does not show), and
+// cost 14% on Run checks. 35 and 25 peaked higher than 100 in wasm (1619 and
+// 1506 MB), and so did a GOMEMLIMIT of 700 to 900 MiB (1325 to 1738 MB). `make wasm-layers` with GOGC
+// or GOMEMLIMIT set and `make wasm-bench` measure it again.
 func main() {
 	wasmhost.ServeRebuild(wasmengine.Namespace, wasmengine.BuildWith(wasmengine.Options{Store: wasmhost.BrowserCache()}))
 }
