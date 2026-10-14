@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/timing.proto\x12\x0e\x61gni.v1.webapi\"\xc7\x02\n\rRequestTiming\x12\x1c\n\tprocedure\x18\x01 \x01(\tR\tprocedure\x12!\n\x0ctotal_micros\x18\x02 \x01(\x03R\x0btotalMicros\x12\x32\n\x06stages\x18\x03 \x03(\x0b\x32\x1a.agni.v1.webapi.TimedStageR\x06stages\x12\x35\n\x07lookups\x18\x04 \x03(\x0b\x32\x1b.agni.v1.webapi.CacheLookupR\x07lookups\x12\x30\n\x05rules\x18\x05 \x03(\x0b\x32\x1a.agni.v1.webapi.RuleTimingR\x05rules\x12\'\n\x0frules_evaluated\x18\x06 \x01(\x05R\x0erulesEvaluated\x12/\n\x05plans\x18\x07 \x03(\x0b\x32\x19.agni.v1.webapi.QueryPlanR\x05plans\"[\n\nTimedStage\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12!\n\x0cstart_micros\x18\x02 \x01(\x03R\x0bstartMicros\x12\x16\n\x06micros\x18\x03 \x01(\x03R\x06micros\";\n\x0b\x43\x61\x63heLookup\x12\x14\n\x05layer\x18\x01 \x01(\tR\x05layer\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source\"8\n\nRuleTiming\x12\x12\n\x04rule\x18\x01 \x01(\tR\x04rule\x12\x16\n\x06micros\x18\x02 \x01(\x03R\x06micros\"5\n\tQueryPlan\x12\x14\n\x05query\x18\x01 \x01(\tR\x05query\x12\x12\n\x04plan\x18\x02 \x01(\tR\x04planB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/timing.proto\x12\x0e\x61gni.v1.webapi\"\xc7\x02\n\rRequestTiming\x12\x1c\n\tprocedure\x18\x01 \x01(\tR\tprocedure\x12!\n\x0ctotal_micros\x18\x02 \x01(\x03R\x0btotalMicros\x12\x32\n\x06stages\x18\x03 \x03(\x0b\x32\x1a.agni.v1.webapi.TimedStageR\x06stages\x12\x35\n\x07lookups\x18\x04 \x03(\x0b\x32\x1b.agni.v1.webapi.CacheLookupR\x07lookups\x12\x30\n\x05rules\x18\x05 \x03(\x0b\x32\x1a.agni.v1.webapi.RuleTimingR\x05rules\x12\'\n\x0frules_evaluated\x18\x06 \x01(\x05R\x0erulesEvaluated\x12/\n\x05plans\x18\x07 \x03(\x0b\x32\x19.agni.v1.webapi.QueryPlanR\x05plans\"\x97\x01\n\nTimedStage\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12!\n\x0cstart_micros\x18\x02 \x01(\x03R\x0bstartMicros\x12\x16\n\x06micros\x18\x03 \x01(\x03R\x06micros\x12\x1b\n\tsys_bytes\x18\x04 \x01(\x03R\x08sysBytes\x12\x1d\n\nheap_bytes\x18\x05 \x01(\x03R\theapBytes\";\n\x0b\x43\x61\x63heLookup\x12\x14\n\x05layer\x18\x01 \x01(\tR\x05layer\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source\"Y\n\nRuleTiming\x12\x12\n\x04rule\x18\x01 \x01(\tR\x04rule\x12\x16\n\x06micros\x18\x02 \x01(\x03R\x06micros\x12\x1f\n\x0b\x61lloc_bytes\x18\x03 \x01(\x03R\nallocBytes\"5\n\tQueryPlan\x12\x14\n\x05query\x18\x01 \x01(\tR\x05query\x12\x12\n\x04plan\x18\x02 \x01(\tR\x04planB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,12 +34,12 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_REQUESTTIMING']._serialized_start=48
   _globals['_REQUESTTIMING']._serialized_end=375
-  _globals['_TIMEDSTAGE']._serialized_start=377
-  _globals['_TIMEDSTAGE']._serialized_end=468
-  _globals['_CACHELOOKUP']._serialized_start=470
-  _globals['_CACHELOOKUP']._serialized_end=529
-  _globals['_RULETIMING']._serialized_start=531
-  _globals['_RULETIMING']._serialized_end=587
-  _globals['_QUERYPLAN']._serialized_start=589
-  _globals['_QUERYPLAN']._serialized_end=642
+  _globals['_TIMEDSTAGE']._serialized_start=378
+  _globals['_TIMEDSTAGE']._serialized_end=529
+  _globals['_CACHELOOKUP']._serialized_start=531
+  _globals['_CACHELOOKUP']._serialized_end=590
+  _globals['_RULETIMING']._serialized_start=592
+  _globals['_RULETIMING']._serialized_end=681
+  _globals['_QUERYPLAN']._serialized_start=683
+  _globals['_QUERYPLAN']._serialized_end=736
 # @@protoc_insertion_point(module_scope)

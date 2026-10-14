@@ -9,6 +9,7 @@ package timing
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -21,6 +22,10 @@ type Recorder struct {
 	// Explain asks query evaluations to record their plans (jaala's Explain), which costs time in
 	// proportion to the rules and literals a query runs.
 	Explain bool
+	// Memory asks each stage to record the process's memory as it ends (agni issue 994). Reading it
+	// stops the world briefly, so only a request asking for it pays. In wasm, whose memory only grows,
+	// the stage whose end first shows a higher Sys is the one that raised the peak.
+	Memory bool
 
 	mu      sync.Mutex
 	start   time.Time
@@ -36,6 +41,11 @@ type Stage struct {
 	// Start is the span's offset from the start of the request.
 	Start time.Duration
 	Dur   time.Duration
+	// Sys and HeapAlloc are runtime.MemStats' figures as the stage ended, zero unless the Recorder
+	// asked for Memory. Sys is what the runtime has obtained, which in wasm is the memory's size, and
+	// HeapAlloc includes garbage not yet collected, since no collection is forced.
+	Sys       uint64
+	HeapAlloc uint64
 }
 
 // Lookup is which tier answered one cached read: "memory" (kept in this process), "store" (the
@@ -45,10 +55,13 @@ type Lookup struct {
 	Source string
 }
 
-// RuleTime is how long one rule's evaluation took.
+// RuleTime is how long one rule's evaluation took, and, when the Recorder asked for Memory, how many
+// bytes it allocated, collected or not. Allocation is read process-wide, so a rule run while another
+// request allocates is charged for both.
 type RuleTime struct {
-	Name string
-	Dur  time.Duration
+	Name  string
+	Dur   time.Duration
+	Alloc uint64
 }
 
 // Plan is one query evaluation's plan, as jaala's Explain renders it.
@@ -79,8 +92,14 @@ func Begin(ctx context.Context, name string) func() {
 	}
 	t := time.Now()
 	return func() {
+		st := Stage{Name: name, Start: t.Sub(r.start), Dur: time.Since(t)}
+		if r.Memory {
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			st.Sys, st.HeapAlloc = m.Sys, m.HeapAlloc
+		}
 		r.mu.Lock()
-		r.stages = append(r.stages, Stage{Name: name, Start: t.Sub(r.start), Dur: time.Since(t)})
+		r.stages = append(r.stages, st)
 		r.mu.Unlock()
 	}
 }
@@ -101,6 +120,36 @@ func Ruled(ctx context.Context, rule string, d time.Duration) {
 		r.rules = append(r.rules, RuleTime{Name: rule, Dur: d})
 		r.mu.Unlock()
 	}
+}
+
+// BeginRule starts timing one rule and returns the function that records it under name, with the
+// bytes it allocated when the Recorder asked for Memory (agni issue 994). It is Ruled for a caller
+// that wants allocation too.
+func BeginRule(ctx context.Context) func(name string) {
+	r := From(ctx)
+	if r == nil {
+		return func(string) {}
+	}
+	t := time.Now()
+	var before uint64
+	if r.Memory {
+		before = totalAlloc()
+	}
+	return func(name string) {
+		rt := RuleTime{Name: name, Dur: time.Since(t)}
+		if r.Memory {
+			rt.Alloc = totalAlloc() - before
+		}
+		r.mu.Lock()
+		r.rules = append(r.rules, rt)
+		r.mu.Unlock()
+	}
+}
+
+func totalAlloc() uint64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.TotalAlloc
 }
 
 // Explaining reports whether the request asked for query plans.
@@ -162,7 +211,11 @@ func (s Snapshot) Text(topRules int) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "total %s\n", round(s.Total))
 	for _, st := range s.Stages {
-		fmt.Fprintf(&b, "  %-24s %10s  at %s\n", st.Name, round(st.Dur), round(st.Start))
+		fmt.Fprintf(&b, "  %-24s %10s  at %s", st.Name, round(st.Dur), round(st.Start))
+		if st.Sys > 0 {
+			fmt.Fprintf(&b, "  sys %d MB, heap %d MB", st.Sys>>20, st.HeapAlloc>>20)
+		}
+		b.WriteString("\n")
 	}
 	if len(s.Lookups) > 0 {
 		parts := make([]string, len(s.Lookups))
@@ -178,7 +231,11 @@ func (s Snapshot) Text(topRules int) string {
 	if len(rules) > 0 {
 		fmt.Fprintf(&b, "  slowest rules (%d of %d):\n", len(rules), len(s.Rules))
 		for _, r := range rules {
-			fmt.Fprintf(&b, "    %-40s %10s\n", r.Name, round(r.Dur))
+			fmt.Fprintf(&b, "    %-40s %10s", r.Name, round(r.Dur))
+			if r.Alloc > 0 {
+				fmt.Fprintf(&b, "  allocated %d MB", r.Alloc>>20)
+			}
+			b.WriteString("\n")
 		}
 	}
 	for _, p := range s.Plans {

@@ -182,3 +182,31 @@ func TestCoverageIsToldWhereItsTimeWent(t *testing.T) {
 		t.Errorf("coverage stage %v, %d profiles timed; want the stage and every profile walked", stage, profiles)
 	}
 }
+
+// TestARequestAskingForMemoryIsToldEachStagesMemory covers the header's "memory" value (agni issue
+// 994): each stage carries the memory as it ended, and a request asking only for timing gets none.
+func TestARequestAskingForMemoryIsToldEachStagesMemory(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	for _, ask := range []string{"memory", "1"} {
+		req := connect.NewRequest(&webapi.CheckDesignRequest{Uri: "mount://m"})
+		req.Header().Set("Agni-Timing", ask)
+		resp, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).CheckDesign(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rt webapi.RequestTiming
+		if err := protojson.Unmarshal([]byte(resp.Header().Get("Agni-Timing")), &rt); err != nil {
+			t.Fatal(err)
+		}
+		if len(rt.GetStages()) == 0 {
+			t.Fatalf("%s: no stages, so the memory figures prove nothing", ask)
+		}
+		for _, st := range rt.GetStages() {
+			if got := st.GetSysBytes() > 0; got != (ask == "memory") {
+				t.Errorf("Agni-Timing %q: stage %s reports %d bytes", ask, st.GetName(), st.GetSysBytes())
+			}
+		}
+	}
+}

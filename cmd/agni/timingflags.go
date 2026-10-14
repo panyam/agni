@@ -13,18 +13,21 @@ import (
 // the command runs collects what a served request would report in its Agni-Timing header. The
 // breakdown goes to stderr, so a timed run still pipes its answer.
 func withTiming(c *cobra.Command, explain bool) *cobra.Command {
-	var timed, explained bool
+	var timed, explained, memory bool
 	c.Flags().BoolVar(&timed, "timing", false, "print where the run's time went to stderr: each stage, which cache tier answered each read, and the slowest rules")
+	c.Flags().BoolVar(&memory, "timing-memory", false, "--timing, with the process's memory as each stage ended (Sys and the heap), to find which stage raised the peak")
 	if explain {
 		c.Flags().BoolVar(&explained, "explain", false, "print each query's evaluation plan to stderr: the order each rule body ran in, where its work went, and how each relation was read")
 	}
 	inner := c.RunE
 	c.RunE = func(cmd *cobra.Command, args []string) error {
+		timed = timed || memory
 		if !timed && !explained {
 			return inner(cmd, args)
 		}
 		rec := timing.New()
 		rec.Explain = explained
+		rec.Memory = memory
 		cmd.SetContext(timing.With(cmd.Context(), rec))
 		err := inner(cmd, args)
 		s := rec.Snapshot()
