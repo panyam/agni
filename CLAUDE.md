@@ -733,7 +733,12 @@ the cache reads does (`DesignCache.AfterLoad`, which only the browser engine set
 went from 1343 to 805 MB (agni 1000). **Which stage raised a peak** is
 `Agni-Timing: memory` (the page's `?timing=memory`, the CLI's `--timing-memory`): each stage carries
 the memory as it ended and each rule what it allocated, and `make wasm-bench` prints both for a
-Jetson check (agni 994).
+Jetson check (agni 994). **Two of the bench's rows mislead.** The one-worker `check_ms` is a check
+after an aborted one, so it reuses the first run's work or not depending on where the abort landed,
+and moved from 2.3 s to 5.0 s between identical runs. `query_after_restart_ms` with `lane_restarts`
+0 is the same query repeated on a warm worker. Compare a page's wall time with the engine's
+`totalMicros` before blaming the engine, since a warm Jetson query once spent 60 of its 100 ms
+outside it (agni 1007).
 
 **A rule's `Eval` takes the caller's context, and a run stops when the context is done** (agni 795).
 `check.Run`, `RunVerdicts` and `review.Run` return `ctx.Err()` rather than the findings so far, which
@@ -905,7 +910,10 @@ filed.** A P1 states which P1 it displaces, since the cap is five per mission. N
 each mission's next ready ticket. Each mission has an exercise in its issue body, a make target where one exists
 (`make exercise-revision-audit`, and `make exercise-public-demo` for #851, which walks the built static demo or, with `DEMO_URL`, the deployed one), and after a mission PR merges, run it and log the result as a
 comment on the mission issue. Against the deployed demo, wait for the `docs.yml` run and then about a
-minute more, since a walk started as Pages flips served the first seed a 180 s timeout once.
+minute more, since a walk started as Pages flips served the first seed a 180 s timeout once. Pages
+serves the design files with `max-age=600` and a fresh deploy's are uncached, so Jetson's 85 MB board
+arrives at about 3 MB/s on the first walk after a deploy. The open row names the slowest file fetch,
+and a timed-out open names the files still pending (agni 1002).
 
 ## Working in this repo
 
