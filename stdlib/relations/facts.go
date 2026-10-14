@@ -180,53 +180,77 @@ const (
 // fabricates.
 func Facts(m check.Model) []facts.Row {
 	var out []facts.Row
-	out = append(out, netMaxVoltageFacts(m)...)
-	out = append(out, netNominalVoltageFacts(m)...)
-	out = append(out, netSignalLevelFacts(m)...)
-	out = append(out, componentMPNFacts(m)...)
-	out = append(out, paramFacts(m)...)
-	out = append(out, paramRangeFacts(m)...)
-	out = append(out, paramTypFacts(m)...)
-	out = append(out, paramUnitFacts(m)...)
-	out = append(out, paramProvFacts(m)...)
-	out = append(out, paramPinFacts(m)...)
-	out = append(out, paramPinRangeFacts(m)...)
-	out = append(out, paramPinRelationFacts(m)...)
-	out = append(out, audienceFacts(m)...)
-	out = append(out, entityFacts(m)...)
-	out = append(out, componentOnNetFacts(m)...)
-	out = append(out, pinFacts(m)...)
-	out = append(out, netPinCountFacts(m)...)
-	out = append(out, componentNetCountFacts(m)...)
-	out = append(out, ncChannelFacts(m)...)
-	out = append(out, typesPowerOutFacts(m)...)
-	out = append(out, railFacts(m)...)
-	out = append(out, feedbackFacts(m)...)
-	out = append(out, switchingFacts(m)...)
-	out = append(out, netRoleFacts(m)...)
-	out = append(out, netAttrFacts(m)...)
-	out = append(out, componentAttrFacts(m)...)
-	out = append(out, componentClassFacts(m)...)
-	out = append(out, esdRatedFacts(m)...)
-	out = append(out, componentDeviceClassFacts(m)...)
-	out = append(out, netGroundFacts(m)...)
-	out = append(out, netExternalFacts(m)...)
-	out = append(out, busFacts(m)...)
-	out = append(out, unresolvedSymbolFacts(m)...)
-	out = append(out, refDesCollisionFacts(m)...)
-	out = append(out, pinNetConflictFacts(m)...)
-	out = append(out, netBusLikeFacts(m)...)
-	out = append(out, externalSignalNetFacts(m)...)
-	out = append(out, netBiasFacts(m)...)
-	out = append(out, netACCoupledFacts(m)...)
-	out = append(out, netNetClassFacts(m)...)
-	out = append(out, hasNetClassFacts(m)...)
-	out = append(out, netClassDefFacts(m)...)
-	out = append(out, hasNetClassDefsFacts(m)...)
-	out = append(out, netDeclaredFacts(m)...)
-	out = append(out, boardFacts(m)...)
+	for _, g := range modelGroups {
+		out = append(out, g.Project(m)...)
+	}
 	sortFacts(out)
 	return out
+}
+
+// modelGroups are the projectors Facts runs, in its order, each with the relations it emits, so a
+// fact base can run one only when a query reads one of its relations (facts.Projection). A projector
+// that starts emitting a new relation lists it here, or that relation reads as empty in every query;
+// TestEveryProjectorGroupEmitsOnlyWhatItLists and TestEveryRelationHasOneProjectorGroup hold it.
+var modelGroups = sortedGroups([]facts.ProjectorGroup{
+	{Relations: []string{RelNetMaxVoltage}, Project: netMaxVoltageFacts},
+	{Relations: []string{RelNetNominalVoltage}, Project: netNominalVoltageFacts},
+	{Relations: []string{RelNetSignalLevel}, Project: netSignalLevelFacts},
+	{Relations: []string{RelComponentMPN}, Project: componentMPNFacts},
+	{Relations: []string{RelParam}, Project: paramFacts},
+	{Relations: []string{RelParamRange}, Project: paramRangeFacts},
+	{Relations: []string{RelParamTyp}, Project: paramTypFacts},
+	{Relations: []string{RelParamUnit}, Project: paramUnitFacts},
+	{Relations: []string{RelParamProv}, Project: paramProvFacts},
+	{Relations: []string{RelParamPin}, Project: paramPinFacts},
+	{Relations: []string{RelParamPinRange}, Project: paramPinRangeFacts},
+	{Relations: []string{RelParamPinRelation}, Project: paramPinRelationFacts},
+	{Relations: []string{RelPartAudience}, Project: audienceFacts},
+	{Relations: []string{RelEntity}, Project: entityFacts},
+	{Relations: []string{RelComponentOnNet}, Project: componentOnNetFacts},
+	{Relations: []string{RelPin, RelPinName, RelPinNet, RelPinRole, RelPinType}, Project: pinFacts},
+	{Relations: []string{RelNetPinCount}, Project: netPinCountFacts},
+	{Relations: []string{RelComponentNetCount}, Project: componentNetCountFacts},
+	{Relations: []string{RelHasNCChannel}, Project: ncChannelFacts},
+	{Relations: []string{RelTypesPowerOut}, Project: typesPowerOutFacts},
+	{Relations: []string{RelRail}, Project: railFacts},
+	{Relations: []string{RelFeedback}, Project: feedbackFacts},
+	{Relations: []string{RelSwitching}, Project: switchingFacts},
+	{Relations: []string{RelNetRole}, Project: netRoleFacts},
+	{Relations: []string{RelNetAttr}, Project: netAttrFacts},
+	{Relations: []string{RelComponentAttr}, Project: componentAttrFacts},
+	{Relations: []string{RelComponentClass}, Project: componentClassFacts},
+	{Relations: []string{RelEsdRated}, Project: esdRatedFacts},
+	{Relations: []string{RelComponentDeviceClass}, Project: componentDeviceClassFacts},
+	{Relations: []string{RelNetGround}, Project: netGroundFacts},
+	{Relations: []string{RelNetExternal}, Project: netExternalFacts},
+	{Relations: []string{RelBus}, Project: busFacts},
+	{Relations: []string{RelUnresolvedSymbol}, Project: unresolvedSymbolFacts},
+	{Relations: []string{RelRefDesCollision}, Project: refDesCollisionFacts},
+	{Relations: []string{RelPinNetConflict}, Project: pinNetConflictFacts},
+	{Relations: []string{RelNetBusLike}, Project: netBusLikeFacts},
+	{Relations: []string{RelExternalSignalNet}, Project: externalSignalNetFacts},
+	{Relations: []string{RelNetBias}, Project: netBiasFacts},
+	{Relations: []string{RelNetACCoupled}, Project: netACCoupledFacts},
+	{Relations: []string{RelNetNetClass}, Project: netNetClassFacts},
+	{Relations: []string{RelHasNetClass}, Project: hasNetClassFacts},
+	{Relations: []string{RelNetClassClearance, RelNetClassTrackWidth, RelNetClassViaDiameter, RelNetClassViaDrill}, Project: netClassDefFacts},
+	{Relations: []string{RelHasNetClassDefs}, Project: hasNetClassDefsFacts},
+	{Relations: []string{RelNetDeclaredTrackWidth, RelNetDeclaredViaDrill}, Project: netDeclaredFacts},
+	{Relations: []string{RelBoardLayer, RelBoardTrackWidth, RelBoardViaDrill}, Project: boardFacts},
+})
+
+// sortedGroups orders each group's rows as Facts orders the whole, so a relation read alone lists its
+// rows exactly as Facts does.
+func sortedGroups(gs []facts.ProjectorGroup) []facts.ProjectorGroup {
+	for i, g := range gs {
+		project := g.Project
+		gs[i].Project = func(m check.Model) []facts.Row {
+			out := project(m)
+			sortFacts(out)
+			return out
+		}
+	}
+	return gs
 }
 
 // sortFacts orders fact rows by (relation, subject, object), for both Facts and SpecLibFacts.

@@ -18,10 +18,14 @@ import (
 // from there and this type only serves rows. env carries the design to the generators registered in
 // the fact layer (facts.EnvOf); its Model is nil for a spec-library base and a validation base, which
 // have no design, so the circuit walks read nothing through it.
+//
+// A design's rows come from proj, a relation at a time as the engine first reads each, so a query
+// projects only the relations it names. A spec-library base has no design and fills rows instead.
 type modelSource struct {
 	reg   *facts.Registry
 	vocab *ns.Vocabulary
 	env   *facts.Env
+	proj  *facts.Projection
 	rows  map[string][]facts.Row
 }
 
@@ -42,6 +46,9 @@ func (s *modelSource) Schema(rel string) (ns.Schema, bool) {
 func (s *modelSource) Tuples(rel string) []ns.Tuple {
 	fields, _ := s.reg.SchemaOf(rel)
 	rows := s.rows[rel]
+	if s.proj != nil {
+		rows = s.proj.Rows(rel)
+	}
 	out := make([]ns.Tuple, len(rows))
 	for i, f := range rows {
 		vals := make([]Value, len(fields))
@@ -98,13 +105,13 @@ func ftoa(f float64) string { return strconv.FormatFloat(f, 'g', -1, 64) }
 // matched nothing. Registry.Installed separates the two.
 func NewBase(m check.Model) *Base { return NewBaseFrom(facts.DefaultRegistry(), m) }
 
-// NewBaseFrom projects a Model into its fact base over the given relation vocabulary and indexes it
-// for querying. The registry is captured, so what this base can answer is fixed at construction.
+// NewBaseFrom is a Model's fact base over the given relation vocabulary. It projects nothing up
+// front: each relation is projected, and indexed by the engine, the first time a query reads it, so a
+// query naming two relations never pays for the rest. The registry is captured, so what this base can
+// answer is fixed at construction.
 func NewBaseFrom(reg *facts.Registry, m check.Model) *Base {
 	s := newModelSource(reg, m)
-	for _, f := range reg.Rows(m) {
-		s.rows[f.Relation] = append(s.rows[f.Relation], f)
-	}
+	s.proj = reg.Projection(m)
 	return mustBase(s)
 }
 

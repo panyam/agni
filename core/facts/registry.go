@@ -46,10 +46,14 @@ type SpecLibProjector func([]*parampb.PartSpec) []Row
 // The built-ins arrive as one payload because their projector is a single monolithic pass that
 // several relations share. One relation at a time is the EXTENSION shape (WithRelation). The rule side
 // does the same (check.RegisterBuiltins).
+//
+// Groups splits Model into the projectors it runs, each with the relations it emits, so a Projection
+// computes only the relations a query reads. Model stays the whole pass, which Rows runs.
 type BuiltinFacts struct {
 	Schema  map[string][]Field
 	Catalog []RelationInfo
 	Model   Projector
+	Groups  []ProjectorGroup
 	SpecLib SpecLibProjector
 	Doc     func(name string) string
 }

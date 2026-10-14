@@ -23,6 +23,7 @@ func init() {
 		Schema:  builtinSchema,
 		Catalog: builtinCatalog,
 		Model:   Facts,
+		Groups:  modelGroups,
 		SpecLib: SpecLibFacts,
 		Doc:     RelationDoc,
 	})
