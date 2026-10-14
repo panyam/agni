@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/panyam/agni/artifact"
 	"sort"
+	"time"
 
+	"github.com/panyam/agni/core/timing"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/profiles"
 )
@@ -43,9 +45,14 @@ func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.Get
 	}
 	sort.Strings(names)
 	resp := &webapi.GetInterfaceCoverageResponse{}
+	// Timed per profile as a rule is, so a request's breakdown names the profile its time went to
+	// (agni issue 968).
+	defer timing.Begin(ctx, "coverage")()
 	for _, name := range names {
 		for _, p := range index[name] {
+			start := time.Now()
 			cov := profiles.Coverage(ctx, p, m)
+			timing.Ruled(ctx, "coverage/"+p.Name, time.Since(start))
 			if cov == nil {
 				continue
 			}

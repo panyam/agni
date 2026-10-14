@@ -1,7 +1,7 @@
 // The public demo exercise's report logic (web/browser/exercise-report.ts), tested here because
 // the unit run reads src/ and its config is held identical to the workbench's (hack/fixture_copies.txt).
 import { describe, expect, it } from "vitest";
-import { classify, exitCode, leaks, markersFrom, table, type Row } from "../browser/exercise-report.js";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, table, type Row } from "../browser/exercise-report.js";
 
 const row = (status: Row["status"]): Row => ({ step: "s", design: "d", status, detail: "" });
 
@@ -49,5 +49,29 @@ describe("the public demo exercise's report", () => {
     ]);
     expect(out).toContain("| 1. open | gateway | ok | 840 ms | 25 findings |");
     expect(out).toContain("| not available |  | #127 \\| export |");
+  });
+  it("splits a Run checks between its requests and the page's own work", () => {
+    const line = (rpc: string, t: object) => `agni timing ${rpc}: ${JSON.stringify(t)}`;
+    const lines = [
+      line("GetDesign", { totalMicros: "1000", page: { startMs: 50, wallMs: 10 } }),
+      line("CheckDesign", { totalMicros: "6000000", stages: [{ name: "read", micros: "1000000" }, { name: "rules", micros: "5000000" }], page: { startMs: 110, wallMs: 7000 } }),
+      line("GetExpectations", { page: { startMs: 7200, wallMs: 100 }, error: "no netlist" }),
+      line("GetInterfaceCoverage", { totalMicros: "1500000", rules: [{ rule: "coverage/emmc", micros: "900000" }, { rule: "coverage/can", micros: "10000" }], page: { startMs: 7300, wallMs: 2000 } }),
+      // Overlaps the coverage request, so the 500 ms it shares counts once.
+      line("HighlightSheet", { totalMicros: "400000", page: { startMs: 8800, wallMs: 1000 } }),
+      line("GetSheet", { totalMicros: "1000" }),
+      "agni timing RunQuery: not json",
+    ];
+    const b = checksBreakdown(lines, 100, 10100);
+    expect(b.requests.map((r) => r.rpc)).toEqual(["CheckDesign", "GetExpectations", "GetInterfaceCoverage", "HighlightSheet"]);
+    expect(b.totalMs).toBe(10000);
+    expect(b.inRequestsMs).toBe(7000 + 100 + 2000 + 500);
+    expect(b.pageMs).toBe(400);
+    expect(b.requests[0]).toMatchObject({ offsetMs: 10, wallMs: 7000, engineMs: 6000, widest: "rules 5000 ms" });
+    expect(b.requests[1]).toMatchObject({ error: "no netlist" });
+    expect(breakdownDetail(b)).toBe(
+      "4 requests: CheckDesign at +10 ms took 7.0 s (engine 6.0 s, rules 5000 ms); GetExpectations at +7.1 s took 100 ms (failed: no netlist); " +
+        "GetInterfaceCoverage at +7.2 s took 2.0 s (engine 1.5 s, slowest coverage/emmc 900 ms); HighlightSheet at +8.7 s took 1.0 s (engine 400 ms); in requests 9.6 s, page outside them 400 ms",
+    );
   });
 });

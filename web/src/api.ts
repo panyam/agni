@@ -36,14 +36,39 @@ function timingMode(): string {
 // timingInterceptor asks each request where its time went, with the Agni-Timing header, and logs the
 // breakdown the engine sends back as "agni timing <rpc>: <RequestTiming as JSON>". The browser engine
 // answers it as a server does, so the same breakdown shows for a design read in the page.
+//
+// The logged JSON also carries `page`, the request's start and wall time on the page's clock, so the
+// time a request spent waiting outside the engine (queued behind a worker, or in transit) is the
+// difference from totalMicros (agni issue 968). A request that throws is logged with its `error`, since
+// its time counts as much as an answered one's.
 export function timingInterceptor(mode: string): Interceptor {
   return (next) => async (req) => {
     req.header.set("Agni-Timing", mode);
-    const res = await next(req);
+    const start = performance.now();
+    const page = () => ({ startMs: start, wallMs: performance.now() - start });
+    let res;
+    try {
+      res = await next(req);
+    } catch (e) {
+      console.info(`agni timing ${req.method.name}: ${JSON.stringify({ page: page(), error: e instanceof Error ? e.message : String(e) })}`);
+      throw e;
+    }
     const t = res.header.get("Agni-Timing");
-    if (t) console.info(`agni timing ${req.method.name}: ${t}`);
+    if (t) console.info(`agni timing ${req.method.name}: ${withPage(t, page())}`);
     return res;
   };
+}
+
+// withPage adds the page's clock to the engine's breakdown, or leaves a breakdown that is not a JSON
+// object as it came.
+function withPage(t: string, page: { startMs: number; wallMs: number }): string {
+  try {
+    const v = JSON.parse(t);
+    if (v && typeof v === "object" && !Array.isArray(v)) return JSON.stringify({ ...v, page });
+  } catch {
+    // Logged as sent.
+  }
+  return t;
 }
 
 // newTransport builds a Connect transport rooted at baseUrl. It defaults to "/" so the

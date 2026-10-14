@@ -16,7 +16,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { classify, exitCode, leaks, markersFrom, table } from "./exercise-report.ts";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, table } from "./exercise-report.ts";
 import { serveStatic } from "./staticserver.ts";
 import { storedZip, walk } from "./storedzip.ts";
 
@@ -132,7 +132,7 @@ async function opened(page) {
 async function checks(page, design) {
   return step("checks", design, async () => {
     await page.evaluate(() => {
-      const g = (window.__gap = { max: 0, last: performance.now(), on: true });
+      const g = (window.__gap = { max: 0, last: performance.now(), on: true, t0: performance.now() });
       const tick = (t) => {
         g.max = Math.max(g.max, t - g.last);
         g.last = t;
@@ -144,19 +144,25 @@ async function checks(page, design) {
     await page.click(".checks-run");
     await poll(async () => (await page.locator(".checks-run").textContent())?.trim() === "Run checks");
     const ms = since(t);
-    const gap = await page.evaluate(() => {
+    // t0 and t1 are on the page's clock, which the timing lines' starts are on too.
+    const { gap, t0, t1 } = await page.evaluate(() => {
       window.__gap.on = false;
-      return window.__gap.max;
+      return { gap: window.__gap.max, t0: window.__gap.t0, t1: performance.now() };
     });
     const n = await page.locator(".check-locate").count();
-    return { ms, detail: `${n} finding rows, longest frame gap ${Math.round(gap)} ms`, n };
+    return { ms, detail: `${n} finding rows, longest frame gap ${Math.round(gap)} ms`, n, t0, t1 };
   });
 }
 
-// checksTiming adds the row breaking the design's last Run checks down: its total, its widest stages,
-// its slowest rules and which cache tier answered each read. Only with --timing.
-function checksTiming(log, design) {
+// checksTiming adds two rows for the design's last Run checks. "checks timing" breaks its CheckDesign
+// down: its total, its widest stages, its slowest rules and which cache tier answered each read.
+// "checks breakdown" accounts for the whole click-to-reset time: every request the run made, when it
+// started, how long the page waited and how much of that the engine spent, and the time the page
+// spent outside every request (agni issue 968). Only with --timing.
+function checksTiming(log, design, run) {
   if (!timed) return;
+  const b = checksBreakdown(log.timings, run.t0, run.t1);
+  add("checks breakdown", design, b.requests.length ? "ok" : "fail", b.requests.length ? breakdownDetail(b) : "the page logged no timed request during Run checks", b.totalMs);
   const line = log.timings.filter((t) => t.startsWith("agni timing CheckDesign: ")).pop();
   if (!line) {
     add("checks timing", design, "fail", "the page logged no CheckDesign timing, so ?timing did not reach the engine");
@@ -327,8 +333,9 @@ for (const seed of seeds) {
     const drawn = await opened(page);
     return { ms: drawn - t, detail: `first sheet drawn; rule catalog after ${Math.round(since(t))} ms; ${seed.meta.trim()}` };
   });
-  if (ok && (await checks(page, seed.title))) {
-    checksTiming(log, seed.title);
+  const run = ok && (await checks(page, seed.title));
+  if (run) {
+    checksTiming(log, seed.title, run);
     await walkDesign(page, seed.title, log);
     await step("1. reopen after a reload", seed.title, async () => {
       const t2 = performance.now();
@@ -370,8 +377,9 @@ async function drop(design, input, files, markers) {
       await opened(page);
       return { ms: since(t), detail: `drop to first sheet drawn; ${new URL(page.url()).pathname}` };
     });
-    if (ok && (await checks(page, design))) {
-      checksTiming(log, design);
+    const run = ok && (await checks(page, design));
+    if (run) {
+      checksTiming(log, design, run);
       await walkDesign(page, design, log);
     }
   }
