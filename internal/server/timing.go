@@ -14,7 +14,7 @@ import (
 
 // TimingHeader is the request header that asks for a request's timing, and the response header that
 // carries it back as a RequestTiming in protojson. A value containing "explain" also asks each query
-// evaluation for its plan.
+// evaluation for its plan, and one containing "memory" asks each stage for the memory as it ended.
 const TimingHeader = "Agni-Timing"
 
 // Timing times requests and reports where their time went (agni issue 914). A request is timed when
@@ -43,6 +43,7 @@ func (t Timing) Interceptor() connect.UnaryInterceptorFunc {
 			// A slow-logged request records its plans too, since whether it will be slow is only known
 			// at the end, and a plan costs time in proportion to the query's rules, not its tuples.
 			rec.Explain = strings.Contains(asked, "explain") || logging
+			rec.Memory = strings.Contains(asked, "memory")
 			resp, err := next(timing.With(ctx, rec), req)
 			snap := rec.Snapshot()
 			proc := req.Spec().Procedure

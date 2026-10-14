@@ -124,10 +124,17 @@ func (x *RequestTiming) GetPlans() []*QueryPlan {
 }
 
 type TimedStage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	StartMicros   int64                  `protobuf:"varint,2,opt,name=start_micros,json=startMicros,proto3" json:"start_micros,omitempty"`
-	Micros        int64                  `protobuf:"varint,3,opt,name=micros,proto3" json:"micros,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	StartMicros int64                  `protobuf:"varint,2,opt,name=start_micros,json=startMicros,proto3" json:"start_micros,omitempty"`
+	Micros      int64                  `protobuf:"varint,3,opt,name=micros,proto3" json:"micros,omitempty"`
+	// sys_bytes and heap_bytes are the process's memory as the stage ended (runtime.MemStats' Sys and
+	// HeapAlloc), set only when the request asked for memory (an Agni-Timing value containing
+	// "memory", agni issue 994). In the browser engine Sys is the wasm memory's size, which never
+	// shrinks, so the first stage ending with a higher figure is the one that raised the peak.
+	// heap_bytes counts garbage not yet collected.
+	SysBytes      int64 `protobuf:"varint,4,opt,name=sys_bytes,json=sysBytes,proto3" json:"sys_bytes,omitempty"`
+	HeapBytes     int64 `protobuf:"varint,5,opt,name=heap_bytes,json=heapBytes,proto3" json:"heap_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -179,6 +186,20 @@ func (x *TimedStage) GetStartMicros() int64 {
 func (x *TimedStage) GetMicros() int64 {
 	if x != nil {
 		return x.Micros
+	}
+	return 0
+}
+
+func (x *TimedStage) GetSysBytes() int64 {
+	if x != nil {
+		return x.SysBytes
+	}
+	return 0
+}
+
+func (x *TimedStage) GetHeapBytes() int64 {
+	if x != nil {
+		return x.HeapBytes
 	}
 	return 0
 }
@@ -239,9 +260,13 @@ func (x *CacheLookup) GetSource() string {
 }
 
 type RuleTiming struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rule          string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
-	Micros        int64                  `protobuf:"varint,2,opt,name=micros,proto3" json:"micros,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Rule   string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
+	Micros int64                  `protobuf:"varint,2,opt,name=micros,proto3" json:"micros,omitempty"`
+	// alloc_bytes is what the rule allocated, collected or not, when the request asked for memory
+	// (agni issue 994). It is read process-wide, so a rule run beside another request is charged for
+	// both.
+	AllocBytes    int64 `protobuf:"varint,3,opt,name=alloc_bytes,json=allocBytes,proto3" json:"alloc_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -286,6 +311,13 @@ func (x *RuleTiming) GetRule() string {
 func (x *RuleTiming) GetMicros() int64 {
 	if x != nil {
 		return x.Micros
+	}
+	return 0
+}
+
+func (x *RuleTiming) GetAllocBytes() int64 {
+	if x != nil {
+		return x.AllocBytes
 	}
 	return 0
 }
@@ -355,19 +387,24 @@ const file_agni_v1_webapi_timing_proto_rawDesc = "" +
 	"\alookups\x18\x04 \x03(\v2\x1b.agni.v1.webapi.CacheLookupR\alookups\x120\n" +
 	"\x05rules\x18\x05 \x03(\v2\x1a.agni.v1.webapi.RuleTimingR\x05rules\x12'\n" +
 	"\x0frules_evaluated\x18\x06 \x01(\x05R\x0erulesEvaluated\x12/\n" +
-	"\x05plans\x18\a \x03(\v2\x19.agni.v1.webapi.QueryPlanR\x05plans\"[\n" +
+	"\x05plans\x18\a \x03(\v2\x19.agni.v1.webapi.QueryPlanR\x05plans\"\x97\x01\n" +
 	"\n" +
 	"TimedStage\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
 	"\fstart_micros\x18\x02 \x01(\x03R\vstartMicros\x12\x16\n" +
-	"\x06micros\x18\x03 \x01(\x03R\x06micros\";\n" +
+	"\x06micros\x18\x03 \x01(\x03R\x06micros\x12\x1b\n" +
+	"\tsys_bytes\x18\x04 \x01(\x03R\bsysBytes\x12\x1d\n" +
+	"\n" +
+	"heap_bytes\x18\x05 \x01(\x03R\theapBytes\";\n" +
 	"\vCacheLookup\x12\x14\n" +
 	"\x05layer\x18\x01 \x01(\tR\x05layer\x12\x16\n" +
-	"\x06source\x18\x02 \x01(\tR\x06source\"8\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\"Y\n" +
 	"\n" +
 	"RuleTiming\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x16\n" +
-	"\x06micros\x18\x02 \x01(\x03R\x06micros\"5\n" +
+	"\x06micros\x18\x02 \x01(\x03R\x06micros\x12\x1f\n" +
+	"\valloc_bytes\x18\x03 \x01(\x03R\n" +
+	"allocBytes\"5\n" +
 	"\tQueryPlan\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x12\n" +
 	"\x04plan\x18\x02 \x01(\tR\x04planB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"

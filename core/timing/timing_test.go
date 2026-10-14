@@ -65,3 +65,42 @@ func TestAPlanIsRecordedOnlyWhenAsked(t *testing.T) {
 		t.Errorf("plans = %+v", p)
 	}
 }
+
+// TestARecorderReadsMemoryOnlyWhenAsked holds the memory figures to the request that asked for them
+// (agni issue 994), since reading them stops the world and a timed request that did not ask must not
+// pay for it.
+func TestARecorderReadsMemoryOnlyWhenAsked(t *testing.T) {
+	for _, asked := range []bool{true, false} {
+		r := New()
+		r.Memory = asked
+		ctx := With(context.Background(), r)
+		Begin(ctx, "read")()
+		st := r.Snapshot().Stages
+		if len(st) != 1 {
+			t.Fatalf("recorded %d stages, want 1", len(st))
+		}
+		if got := st[0].Sys > 0 && st[0].HeapAlloc > 0; got != asked {
+			t.Errorf("Memory %v: stage memory sys %d heap %d, want it recorded only when asked", asked, st[0].Sys, st[0].HeapAlloc)
+		}
+	}
+}
+
+// TestARuleIsChargedWhatItAllocatesWhenMemoryIsAsked covers BeginRule (agni issue 994).
+func TestARuleIsChargedWhatItAllocatesWhenMemoryIsAsked(t *testing.T) {
+	for _, asked := range []bool{true, false} {
+		r := New()
+		r.Memory = asked
+		done := BeginRule(With(context.Background(), r))
+		sink = make([]byte, 8<<20)
+		done("big")
+		rules := r.Snapshot().Rules
+		if len(rules) != 1 || rules[0].Name != "big" {
+			t.Fatalf("rules = %+v, want the one rule", rules)
+		}
+		if got := rules[0].Alloc >= 8<<20; got != asked {
+			t.Errorf("Memory %v: charged %d bytes for an 8 MB allocation", asked, rules[0].Alloc)
+		}
+	}
+}
+
+var sink []byte

@@ -108,9 +108,25 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const abortToAnswerMS = performance.now() - t2;
 
   // A check after the abort. On two lanes it runs on a fresh worker, so it reads the design again.
-  // On one worker it reuses the first check's work unless the abort landed.
+  // On one worker it reuses the first check's work unless the abort landed. It asks for each stage's
+  // memory (agni issue 994), and the jobs worker's memory is read first, with the design's files in
+  // it and nothing else, so the stages' figures say which one raised the peak.
+  const jobsBytesBeforeCheck = await engine.lanes.jobs.memoryBytes();
+  let stageMemory = "";
+  let allocRules = "";
   t = performance.now();
-  const report = (await checks.getCheckReport({ uri })).report;
+  const report = (
+    await checks.getCheckReport(
+      { uri },
+      {
+        headers: { "Agni-Timing": "memory" },
+        onHeader: (h) => {
+          stageMemory = memoryStages(h.get("Agni-Timing"), jobsBytesBeforeCheck);
+          allocRules = allocators(h.get("Agni-Timing"));
+        },
+      },
+    )
+  ).report;
   const checkMS = performance.now() - t;
 
   t = performance.now();
@@ -156,6 +172,9 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
     serve_live_mb_after_read: read ? mb(read.heap?.heapAlloc) : "",
     stats_gc_ms: statsGcMS < 0 ? "" : Math.round(statsGcMS),
     serve_idle_checks: seen.join("; "),
+    jobs_mb_before_check: mb(jobsBytesBeforeCheck),
+    check_memory_stages: stageMemory,
+    check_alloc_rules: allocRules,
     serve_mb: Math.round(mem.serve / (1 << 20)),
     jobs_mb: a.oneLane ? 0 : Math.round(mem.jobs / (1 << 20)),
     peak_mb: Math.round((a.oneLane ? mem.serve : mem.serve + mem.jobs) / (1 << 20)),
@@ -166,4 +185,38 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
 
 function mb(bytes: number | undefined): number | string {
   return bytes === undefined ? "" : Math.round(bytes / (1 << 20));
+}
+
+// memoryStages renders a RequestTiming's per-stage memory as "stage MB (+growth)" in the order the
+// stages ended, keeping only the stages that raised the wasm memory past `before` and every stage
+// before them, since it never shrinks and the rest add nothing (agni issue 994).
+function memoryStages(header: string | null, before: number): string {
+  if (!header) return "";
+  const t = JSON.parse(header) as { stages?: { name: string; startMicros?: string; micros?: string; sysBytes?: string }[] };
+  const ended = (t.stages ?? [])
+    .filter((st) => st.sysBytes !== undefined)
+    .map((st) => ({ name: st.name, end: Number(st.startMicros ?? 0) + Number(st.micros ?? 0), sys: Number(st.sysBytes) }))
+    .sort((a, b) => a.end - b.end);
+  const out: string[] = [];
+  let peak = before;
+  for (const st of ended) {
+    if (st.sys > peak) {
+      out.push(`${st.name} ${mb(st.sys)} (+${mb(st.sys - peak)})`);
+      peak = st.sys;
+    }
+  }
+  return out.join("; ");
+}
+
+// allocators names the five rules of a RequestTiming that allocated most, as "rule MB".
+function allocators(header: string | null): string {
+  if (!header) return "";
+  const t = JSON.parse(header) as { rules?: { rule: string; allocBytes?: string }[] };
+  return (t.rules ?? [])
+    .map((r) => ({ rule: r.rule, alloc: Number(r.allocBytes ?? 0) }))
+    .filter((r) => r.alloc > 0)
+    .sort((a, b) => b.alloc - a.alloc)
+    .slice(0, 5)
+    .map((r) => `${r.rule} ${mb(r.alloc)}`)
+    .join("; ");
 }

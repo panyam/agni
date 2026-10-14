@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/panyam/agni/core/timing"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -383,9 +382,9 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 		if !wantFindings && !needVerdicts {
 			continue
 		}
-		began := time.Now()
+		ruled := timing.BeginRule(ctx)
 		evaluated := r.Eval(ctx, m)
-		timing.Ruled(ctx, r.Name, time.Since(began))
+		ruled(r.Name)
 		if wantFindings && !gated {
 			for _, f := range VerdictsToFindings(evaluated) {
 				f.Rule, f.Severity = r.Name, r.Severity

@@ -36,6 +36,13 @@ message TimedStage {
   string name = 1;
   int64 start_micros = 2;
   int64 micros = 3;
+  // sys_bytes and heap_bytes are the process's memory as the stage ended (runtime.MemStats' Sys and
+  // HeapAlloc), set only when the request asked for memory (an Agni-Timing value containing
+  // "memory", agni issue 994). In the browser engine Sys is the wasm memory's size, which never
+  // shrinks, so the first stage ending with a higher figure is the one that raised the peak.
+  // heap_bytes counts garbage not yet collected.
+  int64 sys_bytes = 4;
+  int64 heap_bytes = 5;
 }
 
 message CacheLookup {
@@ -49,6 +56,10 @@ message CacheLookup {
 message RuleTiming {
   string rule = 1;
   int64 micros = 2;
+  // alloc_bytes is what the rule allocated, collected or not, when the request asked for memory
+  // (agni issue 994). It is read process-wide, so a rule run beside another request is charged for
+  // both.
+  int64 alloc_bytes = 3;
 }
 
 message QueryPlan {

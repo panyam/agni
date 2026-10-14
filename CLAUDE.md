@@ -539,6 +539,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   over `tools/samples/` skips `._` names (the oracle's `globCorpus`, agni 812). The old Makefile also
   wrote an EMPTY tarball under GNU tar that still passed `make verify`; it runs under `pipefail` now.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
+  Run `make proto` and `make proto-check` under the pinned Go (`GOTOOLCHAIN=go1.26.4`) when yours is newer,
+  because `protoc-gen-go` formats comments with the Go that built it, and 1.27 rewrote comments in
+  generated files the change never touched (agni 994).
   `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
   plugins pinned by version, so it needs network, and `pyproject.toml`'s `protobuf>=` floor moves with
   the plugin version. **The protos are TWO buf modules in one workspace** (the root `buf.yaml`): the
@@ -722,7 +725,10 @@ turns them into a `checks breakdown` row, every request of a Run checks plus the
 open design holds, native and wasm, with `GOGC` and `GOMEMLIMIT` passed through) **and `make
 wasm-bench`** (each lane's wasm memory beside its live Go heap). Wasm memory never shrinks, and
 collecting harder does not lower it reliably: a lower GOGC or a memory limit peaked HIGHER than the
-default on Jetson (agni 988, recorded on `cmd/agni-wasm`'s `main`).
+default on Jetson (agni 988, recorded on `cmd/agni-wasm`'s `main`). **Which stage raised a peak** is
+`Agni-Timing: memory` (the page's `?timing=memory`, the CLI's `--timing-memory`): each stage carries
+the memory as it ended and each rule what it allocated, and `make wasm-bench` prints both for a
+Jetson check (agni 994).
 
 **A rule's `Eval` takes the caller's context, and a run stops when the context is done** (agni 795).
 `check.Run`, `RunVerdicts` and `review.Run` return `ctx.Err()` rather than the findings so far, which

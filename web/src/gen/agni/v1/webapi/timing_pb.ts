@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/timing.proto.
  */
 export const file_agni_v1_webapi_timing: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS90aW1pbmcucHJvdG8SDmFnbmkudjEud2ViYXBpIoACCg1SZXF1ZXN0VGltaW5nEhEKCXByb2NlZHVyZRgBIAEoCRIUCgx0b3RhbF9taWNyb3MYAiABKAMSKgoGc3RhZ2VzGAMgAygLMhouYWduaS52MS53ZWJhcGkuVGltZWRTdGFnZRIsCgdsb29rdXBzGAQgAygLMhsuYWduaS52MS53ZWJhcGkuQ2FjaGVMb29rdXASKQoFcnVsZXMYBSADKAsyGi5hZ25pLnYxLndlYmFwaS5SdWxlVGltaW5nEhcKD3J1bGVzX2V2YWx1YXRlZBgGIAEoBRIoCgVwbGFucxgHIAMoCzIZLmFnbmkudjEud2ViYXBpLlF1ZXJ5UGxhbiJACgpUaW1lZFN0YWdlEgwKBG5hbWUYASABKAkSFAoMc3RhcnRfbWljcm9zGAIgASgDEg4KBm1pY3JvcxgDIAEoAyIsCgtDYWNoZUxvb2t1cBINCgVsYXllchgBIAEoCRIOCgZzb3VyY2UYAiABKAkiKgoKUnVsZVRpbWluZxIMCgRydWxlGAEgASgJEg4KBm1pY3JvcxgCIAEoAyIoCglRdWVyeVBsYW4SDQoFcXVlcnkYASABKAkSDAoEcGxhbhgCIAEoCUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS90aW1pbmcucHJvdG8SDmFnbmkudjEud2ViYXBpIoACCg1SZXF1ZXN0VGltaW5nEhEKCXByb2NlZHVyZRgBIAEoCRIUCgx0b3RhbF9taWNyb3MYAiABKAMSKgoGc3RhZ2VzGAMgAygLMhouYWduaS52MS53ZWJhcGkuVGltZWRTdGFnZRIsCgdsb29rdXBzGAQgAygLMhsuYWduaS52MS53ZWJhcGkuQ2FjaGVMb29rdXASKQoFcnVsZXMYBSADKAsyGi5hZ25pLnYxLndlYmFwaS5SdWxlVGltaW5nEhcKD3J1bGVzX2V2YWx1YXRlZBgGIAEoBRIoCgVwbGFucxgHIAMoCzIZLmFnbmkudjEud2ViYXBpLlF1ZXJ5UGxhbiJnCgpUaW1lZFN0YWdlEgwKBG5hbWUYASABKAkSFAoMc3RhcnRfbWljcm9zGAIgASgDEg4KBm1pY3JvcxgDIAEoAxIRCglzeXNfYnl0ZXMYBCABKAMSEgoKaGVhcF9ieXRlcxgFIAEoAyIsCgtDYWNoZUxvb2t1cBINCgVsYXllchgBIAEoCRIOCgZzb3VyY2UYAiABKAkiPwoKUnVsZVRpbWluZxIMCgRydWxlGAEgASgJEg4KBm1pY3JvcxgCIAEoAxITCgthbGxvY19ieXRlcxgDIAEoAyIoCglRdWVyeVBsYW4SDQoFcXVlcnkYASABKAkSDAoEcGxhbhgCIAEoCUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
 
 /**
  * RequestTiming is one request's breakdown.
@@ -95,6 +95,22 @@ export type TimedStage = Message<"agni.v1.webapi.TimedStage"> & {
    * @generated from field: int64 micros = 3;
    */
   micros: bigint;
+
+  /**
+   * sys_bytes and heap_bytes are the process's memory as the stage ended (runtime.MemStats' Sys and
+   * HeapAlloc), set only when the request asked for memory (an Agni-Timing value containing
+   * "memory", agni issue 994). In the browser engine Sys is the wasm memory's size, which never
+   * shrinks, so the first stage ending with a higher figure is the one that raised the peak.
+   * heap_bytes counts garbage not yet collected.
+   *
+   * @generated from field: int64 sys_bytes = 4;
+   */
+  sysBytes: bigint;
+
+  /**
+   * @generated from field: int64 heap_bytes = 5;
+   */
+  heapBytes: bigint;
 };
 
 /**
@@ -144,6 +160,15 @@ export type RuleTiming = Message<"agni.v1.webapi.RuleTiming"> & {
    * @generated from field: int64 micros = 2;
    */
   micros: bigint;
+
+  /**
+   * alloc_bytes is what the rule allocated, collected or not, when the request asked for memory
+   * (agni issue 994). It is read process-wide, so a rule run beside another request is charged for
+   * both.
+   *
+   * @generated from field: int64 alloc_bytes = 3;
+   */
+  allocBytes: bigint;
 };
 
 /**

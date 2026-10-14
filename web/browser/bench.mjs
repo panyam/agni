@@ -74,7 +74,7 @@ try {
   await browser.close();
 
   const rows = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "rules", "findings", "query_ms", "query_rows",
-    "query_during_check_ms", "check_still_running", "first_check_ms", "lane_restarts", "serve_mb_after_read", "serve_live_mb_after_read", "stats_gc_ms", "query_after_restart_ms", "serve_mb_after_restart", "serve_idle_checks", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
+    "query_during_check_ms", "check_still_running", "first_check_ms", "lane_restarts", "serve_mb_after_read", "serve_live_mb_after_read", "stats_gc_ms", "query_after_restart_ms", "serve_mb_after_restart", "serve_idle_checks", "jobs_mb_before_check", "check_memory_stages", "check_alloc_rules", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
   console.log(`| ${board} | native | wasm, one worker | two lanes, serve limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | the same reloaded, limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | lanes / native |`);
   console.log("|---|---|---|---|---|---|");
   for (const r of rows) {

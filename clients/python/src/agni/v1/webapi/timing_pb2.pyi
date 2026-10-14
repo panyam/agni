@@ -25,14 +25,18 @@ class RequestTiming(_message.Message):
     def __init__(self, procedure: _Optional[str] = ..., total_micros: _Optional[int] = ..., stages: _Optional[_Iterable[_Union[TimedStage, _Mapping]]] = ..., lookups: _Optional[_Iterable[_Union[CacheLookup, _Mapping]]] = ..., rules: _Optional[_Iterable[_Union[RuleTiming, _Mapping]]] = ..., rules_evaluated: _Optional[int] = ..., plans: _Optional[_Iterable[_Union[QueryPlan, _Mapping]]] = ...) -> None: ...
 
 class TimedStage(_message.Message):
-    __slots__ = ("name", "start_micros", "micros")
+    __slots__ = ("name", "start_micros", "micros", "sys_bytes", "heap_bytes")
     NAME_FIELD_NUMBER: _ClassVar[int]
     START_MICROS_FIELD_NUMBER: _ClassVar[int]
     MICROS_FIELD_NUMBER: _ClassVar[int]
+    SYS_BYTES_FIELD_NUMBER: _ClassVar[int]
+    HEAP_BYTES_FIELD_NUMBER: _ClassVar[int]
     name: str
     start_micros: int
     micros: int
-    def __init__(self, name: _Optional[str] = ..., start_micros: _Optional[int] = ..., micros: _Optional[int] = ...) -> None: ...
+    sys_bytes: int
+    heap_bytes: int
+    def __init__(self, name: _Optional[str] = ..., start_micros: _Optional[int] = ..., micros: _Optional[int] = ..., sys_bytes: _Optional[int] = ..., heap_bytes: _Optional[int] = ...) -> None: ...
 
 class CacheLookup(_message.Message):
     __slots__ = ("layer", "source")
@@ -43,12 +47,14 @@ class CacheLookup(_message.Message):
     def __init__(self, layer: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
 
 class RuleTiming(_message.Message):
-    __slots__ = ("rule", "micros")
+    __slots__ = ("rule", "micros", "alloc_bytes")
     RULE_FIELD_NUMBER: _ClassVar[int]
     MICROS_FIELD_NUMBER: _ClassVar[int]
+    ALLOC_BYTES_FIELD_NUMBER: _ClassVar[int]
     rule: str
     micros: int
-    def __init__(self, rule: _Optional[str] = ..., micros: _Optional[int] = ...) -> None: ...
+    alloc_bytes: int
+    def __init__(self, rule: _Optional[str] = ..., micros: _Optional[int] = ..., alloc_bytes: _Optional[int] = ...) -> None: ...
 
 class QueryPlan(_message.Message):
     __slots__ = ("query", "plan")
