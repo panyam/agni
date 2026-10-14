@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { laneFor, memoryVerdict, mountingFetch, watchMemory, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
+import { laneFor, mountingFetch, wouldShrink, SHRINK_RATIO, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
 
 // A recording engine of two lanes, design source and network, so a test can see where each request
 // went. `replace` swaps a lane's worker for an empty one, as an abort does.
@@ -25,6 +25,7 @@ function harness(listing: DesignFiles | Error) {
       laneMounted[name].push(...Object.keys(files));
     },
     memoryBytes: async () => 0,
+    stats: async () => ({ memoryBytes: 0 }),
   });
   const lanes = { serve: lane("serve"), jobs: lane("jobs") };
   const engine: WasmEngine = {
@@ -32,6 +33,7 @@ function harness(listing: DesignFiles | Error) {
     add: async () => {},
     lanes,
     memoryBytes: async () => ({ serve: 0, jobs: 0 }),
+    stats: async () => ({ serve: { memoryBytes: 0 }, jobs: { memoryBytes: 0 } }),
   };
   const replace = (name: LaneName) => {
     workers[name] = {};
@@ -166,70 +168,26 @@ describe("laneFor", () => {
   });
 });
 
-// A lane of fake workers whose memory a test sets, recording each restart.
-function memoryLane(held: number[]) {
-  let worker = {} as Worker;
-  const workers = [worker];
-  const lane = {
-    fetch: async () => new Response("{}"),
-    worker: async () => worker,
-    restart: async () => {
-      worker = {} as Worker;
-      workers.push(worker);
-    },
-    close: () => {},
-  };
-  // held[i] is what the i-th measurement reads.
-  let i = 0;
-  const measure = async () => held[Math.min(i++, held.length - 1)];
-  return { lane, workers, measure };
-}
-
 const MB = 1 << 20;
-const settle = () => new Promise((r) => setTimeout(r, 0));
-
-describe("watchMemory", () => {
-  it("replaces a worker past the limit once, then keeps a replacement whose restored design is over it", async () => {
-    // Jetson's measurements in agni issue 974: 977 MB after a fresh read, 548 MB restored, each time.
-    const m = memoryLane([977 * MB, 548 * MB, 548 * MB, 548 * MB]);
-    const restarts: number[] = [];
-    const f = watchMemory(m.lane, { limit: 512 * MB, measure: m.measure, onRestart: (b) => restarts.push(b) });
-    for (let i = 0; i < 4; i++) {
-      await (await f.fetch("http://h/q")).text();
-      await settle();
-    }
-    expect(restarts).toEqual([977 * MB]);
-    expect(m.workers).toHaveLength(2);
-  });
-
-  it("still replaces a raised worker that creeps past the raised limit", async () => {
-    const m = memoryLane([977 * MB, 548 * MB, 600 * MB, 900 * MB]);
-    const restarts: number[] = [];
-    const f = watchMemory(m.lane, { limit: 512 * MB, measure: m.measure, onRestart: (b) => restarts.push(b) });
-    for (let i = 0; i < 4; i++) {
-      await (await f.fetch("http://h/q")).text();
-      await settle();
-    }
-    expect(restarts).toEqual([977 * MB, 900 * MB]);
-  });
-
-  it("measures only once the body has been read", async () => {
-    const m = memoryLane([977 * MB]);
-    const restarts: number[] = [];
-    const f = watchMemory(m.lane, { limit: 512 * MB, measure: m.measure, onRestart: (b) => restarts.push(b) });
-    const res = await f.fetch("http://h/q");
-    await settle();
-    expect(restarts).toEqual([]);
-    await res.text();
-    await settle();
-    expect(restarts).toEqual([977 * MB]);
-  });
+const held = (memory: number, live?: number) => ({
+  memoryBytes: memory * MB,
+  heap: live === undefined ? undefined : { heapAlloc: live * MB, heapInuse: live * MB, totalAlloc: 0, sys: memory * MB, numGC: 1 },
 });
 
-describe("memoryVerdict", () => {
-  it("keeps under the limit, raises for a fresh replacement, restarts otherwise", () => {
-    expect(memoryVerdict({ limit: 512, fresh: true }, 500, 256)).toEqual({ verdict: "keep", limit: 512 });
-    expect(memoryVerdict({ limit: 512, fresh: true }, 548, 256)).toEqual({ verdict: "raise", limit: 804 });
-    expect(memoryVerdict({ limit: 512, fresh: false }, 548, 256)).toEqual({ verdict: "restart", limit: 512 });
+// The serve lane replaces a worker past its limit only when wouldShrink says so (agni issue 990).
+// The figures are the Jetson seed's serve worker, measured with make wasm-bench.
+const [FRESH_MB, FRESH_LIVE_MB, RESTORED_MB, RESTORED_LIVE_MB] = [971, 377, 545, 386];
+describe("wouldShrink", () => {
+  it("replaces a worker holding a fresh read's garbage", () => {
+    expect(wouldShrink(held(FRESH_MB, FRESH_LIVE_MB), SHRINK_RATIO)).toBe(true);
+  });
+  it("keeps a worker whose restored design is most of what it holds, as a replacement would restore the same", () => {
+    expect(wouldShrink(held(RESTORED_MB, RESTORED_LIVE_MB), SHRINK_RATIO)).toBe(false);
+  });
+  it("replaces a worker that crept up through requests that each dropped what they made", () => {
+    expect(wouldShrink(held(900, 300), SHRINK_RATIO)).toBe(true);
+  });
+  it("keeps a worker that reports no heap, built against goapplib before 0.7.4", () => {
+    expect(wouldShrink(held(977), SHRINK_RATIO)).toBe(false);
   });
 });

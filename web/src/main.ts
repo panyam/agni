@@ -176,11 +176,10 @@ function installPageDrop(engine: WasmEngine | undefined): void {
   });
 }
 
-// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issues 911, 974). A worker that has
-// crept past it across several designs is replaced by one that restores the open design from the
-// browser's cache. A Jetson AGX Thor baseboard holds 977 MB after a fresh read and 548 MB restored,
-// over this limit, so its replacement raises the limit rather than being replaced after every request
-// (memoryVerdict in wasm/client.ts).
+// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issues 911, 974, 990). A worker that has
+// crept past it is replaced, when its live heap says a replacement would come back smaller
+// (wouldShrink in wasm/client.ts), by one that restores the open design from the browser's cache. A
+// worker that is past it only because the open design is that large is kept.
 const SERVE_LANE_MAX_BYTES = 512 << 20;
 
 // startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine
@@ -199,7 +198,10 @@ async function startPageEngine(): Promise<WasmEngine | undefined> {
     { worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") },
     {
       serveMaxBytes: SERVE_LANE_MAX_BYTES,
-      onRestart: (lane, bytes) => console.info(`agni: the ${lane} worker held ${Math.round(bytes / (1 << 20))} MB and was replaced`),
+      onRestart: (lane, s) =>
+        console.info(
+          `agni: the ${lane} worker held ${Math.round(s.memoryBytes / (1 << 20))} MB, ${Math.round((s.heap?.heapAlloc ?? 0) / (1 << 20))} MB of it live, and was replaced`,
+        ),
     },
   );
   const network = globalThis.fetch.bind(globalThis);
