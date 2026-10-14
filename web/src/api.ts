@@ -24,7 +24,7 @@ export function useEngineFetch(f: typeof globalThis.fetch): void {
 
 // timingMode is the page address's ?timing value: "" when absent, "explain" to ask for query plans
 // too, anything else for the timings alone (agni issue 914).
-function timingMode(): string {
+export function timingMode(): string {
   try {
     const v = new URLSearchParams(globalThis.location?.search ?? "").get("timing");
     return v === null ? "" : v || "1";

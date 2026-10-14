@@ -16,7 +16,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, table } from "./exercise-report.ts";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, pendingFiles, slowestFetch, table } from "./exercise-report.ts";
 import { serveStatic } from "./staticserver.ts";
 import { storedZip, walk } from "./storedzip.ts";
 
@@ -71,12 +71,24 @@ const browser = await chromium.launch().catch((e) => {
 
 // record keeps every request a page makes, with its body, for the network split and step 5.
 function record(page) {
-  const log = { requests: [], failed: [], errors: [], timings: [] };
+  const log = { requests: [], failed: [], errors: [], timings: [], fetches: [] };
   page.on("console", (m) => {
     const t = m.text();
     if (t.startsWith("agni timing ")) log.timings.push(t);
+    if (t.startsWith("agni fetch ")) log.fetches.push(t);
   });
-  page.on("request", (r) => log.requests.push({ url: r.url(), method: r.method(), body: r.postData() ?? "" }));
+  const seen = new Map();
+  page.on("request", (r) => {
+    const s = { url: r.url(), method: r.method(), body: r.postData() ?? "", startMs: performance.now() };
+    seen.set(r, s);
+    log.requests.push(s);
+  });
+  const ended = (r) => {
+    const s = seen.get(r);
+    if (s) s.endMs = performance.now();
+  };
+  page.on("requestfinished", ended);
+  page.on("requestfailed", ended);
   page.on("response", (r) => {
     if (r.status() >= 400) log.failed.push(`${r.status()} ${new URL(r.url()).pathname}`);
   });
@@ -330,8 +342,11 @@ for (const seed of seeds) {
   const t = performance.now();
   const ok = await step("1. open", seed.title, async () => {
     await page.goto(timedURL(seed.href), { waitUntil: "domcontentloaded" });
-    const drawn = await opened(page);
-    return { ms: drawn - t, detail: `first sheet drawn; rule catalog after ${Math.round(since(t))} ms; ${seed.meta.trim()}` };
+    const drawn = await opened(page).catch((e) => {
+      throw new Error(`${e.message}, ${pendingFiles(log.requests, prefix, performance.now())}`);
+    });
+    const slow = slowestFetch(log.fetches);
+    return { ms: drawn - t, detail: `first sheet drawn; rule catalog after ${Math.round(since(t))} ms; ${seed.meta.trim()}${slow ? `; ${slow}` : ""}` };
   });
   const run = ok && (await checks(page, seed.title));
   if (run) {

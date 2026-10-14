@@ -37,6 +37,41 @@ export interface SeenRequest {
   url: string;
   method: string;
   body: string;
+  // startMs is when the page sent it, on the exercise's clock, and endMs when its response finished
+  // or it failed; a request still unanswered has none.
+  startMs?: number;
+  endMs?: number;
+}
+
+// slowestFetch reads the page's `agni fetch <file>: {bytes, ms, attempts}` lines and names the file
+// that took longest, with its size, time and any retries, or "" when the page logged none.
+export function slowestFetch(lines: readonly string[]): string {
+  let best: { file: string; bytes: number; ms: number; attempts: number } | undefined;
+  for (const l of lines) {
+    const m = /^agni fetch (.+?): (\{.*\})$/.exec(l);
+    if (!m) continue;
+    try {
+      const v = JSON.parse(m[2]);
+      if (!best || v.ms > best.ms) best = { file: m[1], ...v };
+    } catch {
+      // A line that is not ours is skipped.
+    }
+  }
+  if (!best) return "";
+  const mb = (best.bytes / (1 << 20)).toFixed(1);
+  return `slowest file ${best.file} ${mb} MB in ${(best.ms / 1000).toFixed(1)} s${best.attempts > 1 ? ` after ${best.attempts} attempts` : ""}`;
+}
+
+// pendingFiles names each design file the page asked for and never received, with how long it had
+// waited at nowMs, so a timed-out open says which file it was waiting on (agni issue 1002).
+export function pendingFiles(requests: readonly SeenRequest[], prefix: string, nowMs: number): string {
+  const waiting = requests.filter((r) => r.startMs !== undefined && r.endMs === undefined && classify(new URL(r.url).pathname, prefix) === "file");
+  if (waiting.length === 0) return "no design file pending";
+  const name = (u: string) => {
+    const p = new URL(u).pathname;
+    return decodeURIComponent(p.slice(p.indexOf("/raw/") >= 0 ? p.indexOf("/raw/") + 5 : 0));
+  };
+  return `waiting on ${waiting.map((r) => `${name(r.url)} (${Math.round((nowMs - (r.startMs ?? nowMs)) / 1000)} s)`).join(", ")}`;
 }
 
 // leaks returns each request whose address or body carries one of a dropped design's names. A

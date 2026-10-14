@@ -1,7 +1,7 @@
 // The public demo exercise's report logic (web/browser/exercise-report.ts), tested here because
 // the unit run reads src/ and its config is held identical to the workbench's (hack/fixture_copies.txt).
 import { describe, expect, it } from "vitest";
-import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, table, type Row } from "../browser/exercise-report.js";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, pendingFiles, slowestFetch, table, type Row } from "../browser/exercise-report.js";
 
 const row = (status: Row["status"]): Row => ({ step: "s", design: "d", status, detail: "" });
 
@@ -73,5 +73,28 @@ describe("the public demo exercise's report", () => {
       "4 requests: CheckDesign at +10 ms took 7.0 s (engine 6.0 s, rules 5000 ms); GetExpectations at +7.1 s took 100 ms (failed: no netlist); " +
         "GetInterfaceCoverage at +7.2 s took 2.0 s (engine 1.5 s, slowest coverage/emmc 900 ms); HighlightSheet at +8.7 s took 1.0 s (engine 400 ms); in requests 9.6 s, page outside them 400 ms",
     );
+  });
+
+  it("names the design files a timed-out open was still waiting on", () => {
+    const prefix = "/agni/demo/";
+    const req = (path: string, startMs: number, endMs?: number) => ({ url: `https://h${path}`, method: "GET", body: "", startMs, endMs });
+    const requests = [
+      req("/agni/demo/raw/jetson/board/b.kicad_pcb", 1_000),
+      req("/agni/demo/raw/jetson/board/b.kicad_sch", 1_000, 3_000),
+      req("/agni/demo/files/jetson.json", 500, 900),
+      req("/agni/demo/app.js", 0),
+    ];
+    expect(pendingFiles(requests, prefix, 181_000)).toBe("waiting on jetson/board/b.kicad_pcb (180 s)");
+    expect(pendingFiles(requests.slice(1), prefix, 181_000)).toBe("no design file pending");
+  });
+
+  it("names the slowest file fetch the page logged", () => {
+    const lines = [
+      'agni fetch jetson/b.kicad_sch: {"bytes":1048576,"ms":900,"attempts":1}',
+      'agni fetch jetson/b.kicad_pcb: {"bytes":88080384,"ms":31200,"attempts":2}',
+      "agni timing GetDesign: {}",
+    ];
+    expect(slowestFetch(lines)).toBe("slowest file jetson/b.kicad_pcb 84.0 MB in 31.2 s after 2 attempts");
+    expect(slowestFetch([])).toBe("");
   });
 });
