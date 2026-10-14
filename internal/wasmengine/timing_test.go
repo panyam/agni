@@ -91,6 +91,47 @@ func TestARequestThatAsksIsToldWhereItsTimeWent(t *testing.T) {
 	}
 }
 
+// coverageTiming asks GetInterfaceCoverage of the gateway for its breakdown.
+func coverageTiming(t *testing.T, srv *httptest.Server) *webapi.RequestTiming {
+	t.Helper()
+	req := connect.NewRequest(&webapi.GetInterfaceCoverageRequest{Uri: "mount://m"})
+	req.Header().Set("Agni-Timing", "1")
+	resp, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).GetInterfaceCoverage(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rt webapi.RequestTiming
+	if err := protojson.Unmarshal([]byte(resp.Header().Get("Agni-Timing")), &rt); err != nil {
+		t.Fatal(err)
+	}
+	return &rt
+}
+
+func stageCount(rt *webapi.RequestTiming, name string) int {
+	n := 0
+	for _, s := range rt.GetStages() {
+		if s.GetName() == name {
+			n++
+		}
+	}
+	return n
+}
+
+// TestCoverageReadsTheModelsFactBase holds interface coverage to the fact base the model keeps, built
+// once for every profile and kept for the next request. Building one per profile was a third of
+// Jetson's Run checks (agni issue 985).
+func TestCoverageReadsTheModelsFactBase(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	if n := stageCount(coverageTiming(t, srv), "factbase"); n != 1 {
+		t.Errorf("the first coverage request built the model's fact base %d times, want once", n)
+	}
+	if n := stageCount(coverageTiming(t, srv), "factbase"); n != 0 {
+		t.Errorf("the second coverage request built the fact base %d times, want it kept from the first", n)
+	}
+}
+
 // TestCoverageIsToldWhereItsTimeWent holds GetInterfaceCoverage to a breakdown naming its time per
 // interface profile, since on a large board it is a third of Run checks and its stages said nothing
 // (agni issue 968).

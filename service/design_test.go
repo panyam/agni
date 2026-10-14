@@ -174,6 +174,38 @@ func TestGetInterfaceCoverage(t *testing.T) {
 	}
 }
 
+// TestGetInterfaceCoverageFindsADeclaredHost covers the one path that asks the fact base: an interface
+// with no signal present, detected because a component declares it. That base is the model's kept one
+// since agni issue 985, where each profile used to project its own.
+func TestGetInterfaceCoverageFindsADeclaredHost(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U2", Attributes: map[string]string{"interface": "CAN"}}},
+		Nets:       []*ir.Net{{Name: "GND", Connections: []*ir.Connection{{ComponentRef: "U2", PinRef: "9"}}}},
+	}
+	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
+	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: "mount://m/x.edn"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var can *webapi.InterfaceCoverage
+	for _, ic := range resp.GetInterfaces() {
+		if ic.GetProfile() == "CAN" {
+			can = ic
+		}
+	}
+	if can == nil {
+		t.Fatalf("a component declaring interface=CAN detected no CAN interface: %+v", resp.GetInterfaces())
+	}
+	if len(can.GetSignals()) == 0 {
+		t.Fatal("the declared CAN interface listed no signals")
+	}
+	for _, sig := range can.GetSignals() {
+		if sig.GetState() != "missing" {
+			t.Errorf("%s = %s, want missing, since nothing is wired", sig.GetName(), sig.GetState())
+		}
+	}
+}
+
 // TestListRules maps the injected catalog to RuleInfo: every rule reports its tags, the facts it
 // reads, and its availability (the built-ins are topology rules, so all available).
 func TestListRules(t *testing.T) {

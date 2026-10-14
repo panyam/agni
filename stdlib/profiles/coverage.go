@@ -38,8 +38,15 @@ type InterfaceCoverage struct {
 // declares the interface via its host attribute. It uses the same signal matcher (matcher.go) and the
 // same check.PullUpReachesRail the profile rules decide on, so the panel and the findings cannot
 // drift; see InUse in present.go for why they must agree.
-func Coverage(ctx context.Context, p Profile, m check.Model) *InterfaceCoverage {
-	base := query.NewBase(m)
+//
+// base supplies the fact base the host binding is asked of, and is called only for an interface with
+// fewer than two signals present. Pass the one the model keeps (service.BuildModelCached), since
+// projecting a base costs about 50ms on a large board and a caller walks every profile (agni issue
+// 985). A nil base builds one from the default registry on each call.
+func Coverage(ctx context.Context, p Profile, m check.Model, base func() *query.Base) *InterfaceCoverage {
+	if base == nil {
+		base = func() *query.Base { return query.NewBase(m) }
+	}
 	nets := make([]*ir.Net, len(p.Signals))
 	present := 0
 	anchor := ""
@@ -106,12 +113,12 @@ func reachesRail(m check.Model, net string) bool {
 // hostDeclares reports whether a component declares this interface via its host attribute
 // (interface=<name>), the WS3-042 host binding, which detects an interface independently of the
 // in-use gate.
-func hostDeclares(ctx context.Context, base *query.Base, p Profile) bool {
+func hostDeclares(ctx context.Context, base func() *query.Base, p Profile) bool {
 	if !p.HasHost() {
 		return false
 	}
 	q := query.Build(p.hostRules(),
 		[]query.Literal{query.Pos(query.Rel("host", query.V("ref")))}, query.V("ref"))
-	rows, err := query.Default.Eval(ctx, q, base, query.EvalOptions(ctx)...)
+	rows, err := query.Default.Eval(ctx, q, base(), query.EvalOptions(ctx)...)
 	return err == nil && len(rows) > 0
 }
