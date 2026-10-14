@@ -108,8 +108,12 @@ func layerPass(mfs fs.FS, store service.BlobStore, design string) ([]Layer, int6
 	if err != nil {
 		return nil, 0, err
 	}
-	if bu.IsZero() {
-		bu = nu
+	// A design declaring no board companion has its board read from its own URI, as BuildModel does
+	// with no board URI. Passing that URI to BuildModel would make it an explicit board, which is an
+	// error when the file carries none.
+	boardFrom := bu
+	if boardFrom.IsZero() {
+		boardFrom = nu
 	}
 	opts := ov.ReadOptions()
 
@@ -154,7 +158,7 @@ func layerPass(mfs fs.FS, store service.BlobStore, design string) ([]Layer, int6
 			probe, err = service.BuildModel(ctx, noBoard{loader}, nu, artifact.URI{}, ov.SpecsOver(nil), opts...)
 			return
 		}},
-		{"board geometry", func() (err error) { bg, err = loader.Board(ctx, bu); return }},
+		{"board geometry", func() (err error) { bg, err = loader.Board(ctx, boardFrom); return }},
 		// BuildModel through the cache reads the design and board again, and both are hits, so this
 		// step is the model alone.
 		{"check model", func() (err error) {
