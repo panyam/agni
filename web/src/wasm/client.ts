@@ -10,9 +10,9 @@
 // The jobs lane takes the requests that run rules or compare designs, and the serve lane everything
 // else. Aborting a request on a lane ends that lane's worker and starts a fresh one, which is the only
 // way to stop a Go job that never yields.
-import { startLane, workerMemory, addFiles, type Files, type Lane } from "@panyam/tsappkit/wasmhost";
+import { startLane, workerMemory, workerStats, addFiles, type Files, type Lane, type WorkerStats } from "@panyam/tsappkit/wasmhost";
 
-export type { Files };
+export type { Files, WorkerStats };
 
 // The namespace the wasm build exports under, wasmengine.Namespace on the Go side.
 const namespace = "agni";
@@ -48,6 +48,9 @@ export interface EngineLane {
   // TRANSFERRED, so it is empty here afterwards.
   add(holder: object, name: string, files: Files): Promise<void>;
   memoryBytes(): Promise<number>;
+  // stats is the worker's wasm memory and its live Go heap, collecting garbage first, which pauses
+  // the worker. For measuring; the lane's own limit asks the same at idle moments.
+  stats(): Promise<WorkerStats>;
 }
 
 export interface WasmEngine {
@@ -61,6 +64,8 @@ export interface WasmEngine {
   lanes: Record<LaneName, EngineLane>;
   // memoryBytes is each lane's wasm memory, which never shrinks, so it is the peak so far.
   memoryBytes(): Promise<Record<LaneName, number>>;
+  // stats is each lane's memory beside its live heap (EngineLane.stats).
+  stats(): Promise<Record<LaneName, WorkerStats>>;
 }
 
 export interface EngineAssets {
@@ -75,13 +80,20 @@ export interface EngineOptions {
   oneLane?: boolean;
   // serveMaxBytes is the serve lane's memory limit. Wasm memory never shrinks, so a worker that read
   // a large design keeps the read's peak for the rest of the visit. Past the limit, once idle, the
-  // lane starts a fresh worker, which restores the design from the browser's cache on its next
-  // request rather than reading it (agni issue 911). A replacement that passes the limit the first
-  // time raises it instead (see memoryVerdict), so a design whose restored state alone is over it is
-  // not read again after every request (agni issue 974). Unset means no limit.
+  // lane replaces the worker only when a fresh one would come back smaller (wouldShrink), and the
+  // fresh one restores the design from the browser's cache on its next request rather than reading
+  // it (agni issue 911). A worker whose live heap is most of its memory is kept however far past the
+  // limit it is, since its replacement would restore the same state, which is what made the Jetson
+  // seed replace its worker after every request (agni issue 974). Unset means no limit.
   serveMaxBytes?: number;
+  // serveShrinkRatio is wouldShrink's ratio for the serve lane, SHRINK_RATIO when unset. For measuring.
+  serveShrinkRatio?: number;
   // onRestart hears that a lane replaced its worker for passing its limit, and what it held.
-  onRestart?: (lane: LaneName, memoryBytes: number) => void;
+  onRestart?: (lane: LaneName, stats: WorkerStats) => void;
+  // onServeStats hears every measurement the serve lane takes of an idle worker past its limit, and
+  // whether it replaces the worker. For measuring: a caller asking the worker itself at the same
+  // moment races the lane, which may end the worker under it.
+  onServeStats?: (stats: WorkerStats, replaced: boolean) => void;
 }
 
 // startEngine starts the lanes and resolves once each has loaded, or rejects with why one could not.
@@ -114,17 +126,25 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
     holder: () => lane.worker(),
     add: (holder, name, files) => addFiles(holder as Worker, name, files),
     memoryBytes: async () => workerMemory(await lane.worker()),
+    stats: async () => workerStats(await lane.worker(), { gc: true }),
   });
 
-  const serveLane = startLane(start);
+  const ratio = opts.serveShrinkRatio ?? SHRINK_RATIO;
   const serve = engineLane(
-    opts.serveMaxBytes === undefined
-      ? serveLane
-      : watchMemory(serveLane, {
-          limit: opts.serveMaxBytes,
-          measure: workerMemory,
-          onRestart: (memoryBytes) => opts.onRestart?.("serve", memoryBytes),
-        }),
+    startLane(
+      start,
+      opts.serveMaxBytes === undefined
+        ? undefined
+        : {
+            maxMemoryBytes: opts.serveMaxBytes,
+            restartIf: (s) => {
+              const replace = wouldShrink(s, ratio);
+              opts.onServeStats?.(s, replace);
+              return replace;
+            },
+            onRestart: (s) => opts.onRestart?.("serve", s),
+          },
+    ),
   );
   const jobs = opts.oneLane ? serve : engineLane(startLane(start));
   const lanes: Record<LaneName, EngineLane> = { serve, jobs };
@@ -149,113 +169,24 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
       const [s, j] = await Promise.all([serve.memoryBytes(), jobs.memoryBytes()]);
       return { serve: s, jobs: j };
     },
-  };
-}
-
-// A MemoryState is what a lane's memory limit decides on: the limit as it stands, and whether the
-// current worker replaced one and has not yet passed the limit.
-export interface MemoryState {
-  limit: number;
-  fresh: boolean;
-}
-
-// memoryVerdict decides what a lane does with a worker found holding `bytes` while idle. Under the
-// limit it keeps it. Past it, a worker that read its designs is replaced, so its successor restores
-// them from the browser's cache at a fraction of a read's peak. But a replacement past the limit
-// for the first time is holding what the open design needs once restored, and a successor would hold
-// the same, so the limit rises to that plus `headroom` and the worker stays. On the Jetson seed the
-// restored state is 548 MB, over the 512 MB limit, and replacing the worker after every request made
-// each query fetch the design's 92 MB of files and restore its board again (agni issue 974).
-export function memoryVerdict(s: MemoryState, bytes: number, headroom: number): { verdict: "keep" | "restart" | "raise"; limit: number } {
-  if (bytes <= s.limit) return { verdict: "keep", limit: s.limit };
-  if (s.fresh) return { verdict: "raise", limit: bytes + headroom };
-  return { verdict: "restart", limit: s.limit };
-}
-
-// WatchOptions configures watchMemory.
-export interface WatchOptions {
-  limit: number;
-  // headroom is how far past a replacement's restored state the raised limit sits. Half the limit
-  // when unset.
-  headroom?: number;
-  measure: (w: Worker) => Promise<number>;
-  onRestart?: (memoryBytes: number) => void;
-}
-
-// watchMemory is a lane whose worker is measured each time it goes idle, a request having ended and
-// its body been read, and replaced or kept as memoryVerdict says. It takes the place of startLane's
-// maxMemoryBytes, which replaces a worker past a fixed limit however little a successor would save.
-export function watchMemory(lane: Lane, o: WatchOptions): Lane {
-  const headroom = o.headroom ?? o.limit / 2;
-  const state: MemoryState = { limit: o.limit, fresh: false };
-  let inFlight = 0;
-  const idle = async (of: Worker) => {
-    let bytes: number;
-    try {
-      bytes = await o.measure(of);
-    } catch {
-      return;
-    }
-    if (inFlight !== 0 || (await lane.worker()) !== of) return;
-    const v = memoryVerdict(state, bytes, headroom);
-    state.limit = v.limit;
-    if (v.verdict === "raise") state.fresh = false;
-    if (v.verdict !== "restart") return;
-    o.onRestart?.(bytes);
-    await lane.restart().catch(() => {});
-    state.fresh = true;
-  };
-  return {
-    ...lane,
-    fetch: async (input, init) => {
-      const w = await lane.worker();
-      inFlight++;
-      let ended = false;
-      const end = () => {
-        if (ended) return;
-        ended = true;
-        inFlight--;
-        if (inFlight === 0) void idle(w);
-      };
-      let res: Response;
-      try {
-        res = await lane.fetch(input, init);
-      } catch (err) {
-        end();
-        throw err;
-      }
-      return untilBodyEnds(res, end);
+    stats: async () => {
+      const s = await serve.stats();
+      return { serve: s, jobs: jobs === serve ? s : await jobs.stats() };
     },
   };
 }
 
-// untilBodyEnds is res with `end` called once its body has been read, cancelled or failed, which is
-// when the worker that wrote it is idle.
-function untilBodyEnds(res: Response, end: () => void): Response {
-  if (!res.body) {
-    end();
-    return res;
-  }
-  const reader = res.body.getReader();
-  const body = new ReadableStream<Uint8Array>({
-    async pull(ctl) {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          ctl.close();
-          end();
-        } else ctl.enqueue(value);
-      } catch (err) {
-        end();
-        ctl.error(err);
-      }
-    },
-    cancel(reason) {
-      end();
-      return reader.cancel(reason);
-    },
-  });
-  return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+// SHRINK_RATIO is how small a worker's live heap must be beside its memory before replacing it pays.
+// On the Jetson seed the serve worker holds 377 MB live in 971 MB after a fresh read (0.39), and 386 MB
+// in 545 MB once restored (0.71), so this sits between the two (make wasm-bench, agni issue 990).
+export const SHRINK_RATIO = 0.55;
+
+// wouldShrink reports whether a fresh worker would come back smaller than this one: its live heap is
+// what a replacement restores, and its wasm memory is what it holds now, which never shrinks. A
+// worker that reports no heap (a wasm built against goapplib before 0.7.4) is kept, since nothing
+// says a replacement would be smaller (agni issue 990).
+export function wouldShrink(s: WorkerStats, ratio: number): boolean {
+  return s.heap !== undefined && s.heap.heapAlloc < s.memoryBytes * ratio;
 }
 
 // A DesignFiles lists one design's files, as WorkspaceService.ListDesignFiles answers. The type is

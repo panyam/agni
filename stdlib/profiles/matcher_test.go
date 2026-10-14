@@ -83,7 +83,7 @@ func TestCoverageRespectsMatcher(t *testing.T) {
 	// Put the foreign net FIRST so a suffix-only scan reaches it before the profile's own CS net.
 	d.Nets = []*ir.Net{d.Nets[3], d.Nets[0], d.Nets[1], d.Nets[2]}
 
-	cov := Coverage(context.Background(), pulledProfile(), check.NewModel(d))
+	cov := Coverage(context.Background(), pulledProfile(), check.NewModel(d), nil)
 	if cov == nil {
 		t.Fatal("the prefixed bus is in use and should be detected")
 	}

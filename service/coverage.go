@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/core/timing"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/profiles"
@@ -34,10 +35,17 @@ func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.Get
 	if err != nil {
 		return nil, err
 	}
-	m, _, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
+	m, bases, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
 	if err != nil {
 		return nil, err
 	}
+	reg, err := ov.Registry()
+	if err != nil {
+		return nil, err
+	}
+	// The model's own fact base, built on first use and kept, so the profiles share one and a request
+	// after a check run or a query builds none (agni issue 985).
+	base := func() *query.Base { return bases(reg) }
 	index := ov.ProfileIndex(s.profiles)
 	names := make([]string, 0, len(index))
 	for name := range index {
@@ -51,7 +59,7 @@ func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.Get
 	for _, name := range names {
 		for _, p := range index[name] {
 			start := time.Now()
-			cov := profiles.Coverage(ctx, p, m)
+			cov := profiles.Coverage(ctx, p, m, base)
 			timing.Ruled(ctx, "coverage/"+p.Name, time.Since(start))
 			if cov == nil {
 				continue

@@ -53,6 +53,8 @@ try {
   // Each configuration in a context of its own, so none restores what another stored in the browser's
   // cache. "reload" is a second page in the lanes run's context, as a visitor reloading the board.
   const SERVE_MAX_BYTES = Number(process.env.SERVE_MAX_MB ?? 700) * (1 << 20);
+  // SERVE_SHRINK overrides the serve lane's wouldShrink ratio, to measure where it should sit.
+  const SERVE_SHRINK = process.env.SERVE_SHRINK === undefined ? undefined : Number(process.env.SERVE_SHRINK);
   const run = async (ctx, cfg) => {
     const page = await ctx.newPage();
     await page.goto(`${base}/healthz`);
@@ -67,12 +69,12 @@ try {
   };
   const one = await run(await browser.newContext(), { oneLane: true });
   const lanesCtx = await browser.newContext();
-  const wasm = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES });
-  const reload = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES });
+  const wasm = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES, serveShrinkRatio: SERVE_SHRINK });
+  const reload = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES, serveShrinkRatio: SERVE_SHRINK });
   await browser.close();
 
   const rows = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "rules", "findings", "query_ms", "query_rows",
-    "query_during_check_ms", "check_still_running", "first_check_ms", "lane_restarts", "query_after_restart_ms", "serve_mb_after_restart", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
+    "query_during_check_ms", "check_still_running", "first_check_ms", "lane_restarts", "serve_mb_after_read", "serve_live_mb_after_read", "stats_gc_ms", "query_after_restart_ms", "serve_mb_after_restart", "serve_idle_checks", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
   console.log(`| ${board} | native | wasm, one worker | two lanes, serve limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | the same reloaded, limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | lanes / native |`);
   console.log("|---|---|---|---|---|---|");
   for (const r of rows) {

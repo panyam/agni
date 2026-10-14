@@ -7,7 +7,7 @@ import { DesignService } from "../gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "../gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "../gen/agni/v1/webapi/query_pb.js";
 import { startEngine } from "./client.js";
-import type { Files } from "./client.js";
+import type { Files, WorkerStats } from "./client.js";
 
 export interface BenchArgs {
   // mount is the server mount holding the board, and files its paths within it, fetched from /raw/.
@@ -21,16 +21,22 @@ export interface BenchArgs {
   oneLane?: boolean;
   // serveMaxBytes is the serve lane's memory limit, unset for none.
   serveMaxBytes?: number;
+  // serveShrinkRatio overrides the lane's wouldShrink ratio, for measuring where it should sit.
+  serveShrinkRatio?: number;
 }
 
 async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const asset = (name: string) => new URL(name, import.meta.url).href;
   let restarts = 0;
+  // Each idle measurement the serve lane took past its limit, as "memory MB/live MB decision".
+  const seen: string[] = [];
   let t = performance.now();
   const engine = await startEngine({ worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") }, {
     oneLane: a.oneLane,
     serveMaxBytes: a.serveMaxBytes,
+    serveShrinkRatio: a.serveShrinkRatio,
     onRestart: () => restarts++,
+    onServeStats: (st, replaced) => seen.push(`${mb(st.memoryBytes)}/${mb(st.heap?.heapAlloc)} ${replaced ? "replaced" : "kept"}`),
   });
   const bootMS = performance.now() - t;
 
@@ -66,6 +72,17 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const count = async (q: string) => Number((await query.runQuery({ uri, query: q })).rows[0]?.cells[0] ?? 0);
   const components = await count(a.countComponents);
   const nets = await count(a.countNets);
+  // The worker after reading the design and building its model: its memory beside its live heap, and
+  // how long the collection that measures it takes, which a lane with a limit pays at every idle moment
+  // (agni issue 990). Asked directly only on one lane, which has no limit, since asking a worker a
+  // lane is measuring races the lane's own decision to end it.
+  let read: WorkerStats | undefined;
+  let statsGcMS = -1;
+  if (a.oneLane) {
+    t = performance.now();
+    read = await engine.lanes.serve.stats();
+    statsGcMS = performance.now() - t;
+  }
 
   // The first check is the one a visitor waits on, so every measurement under it happens while it
   // runs: a query asked mid-run (#900 wants under 300ms), then an abort, and how long until the jobs
@@ -135,6 +152,10 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
     check_still_running: stillRunning ? "yes" : "no",
     first_check_ms: firstCheckMS < 0 ? "aborted" : Math.round(firstCheckMS),
     abort_to_answer_ms: Math.round(abortToAnswerMS),
+    serve_mb_after_read: read ? mb(read.memoryBytes) : "",
+    serve_live_mb_after_read: read ? mb(read.heap?.heapAlloc) : "",
+    stats_gc_ms: statsGcMS < 0 ? "" : Math.round(statsGcMS),
+    serve_idle_checks: seen.join("; "),
     serve_mb: Math.round(mem.serve / (1 << 20)),
     jobs_mb: a.oneLane ? 0 : Math.round(mem.jobs / (1 << 20)),
     peak_mb: Math.round((a.oneLane ? mem.serve : mem.serve + mem.jobs) / (1 << 20)),
@@ -142,3 +163,7 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
 }
 
 (globalThis as unknown as { agniBench: typeof bench }).agniBench = bench;
+
+function mb(bytes: number | undefined): number | string {
+  return bytes === undefined ? "" : Math.round(bytes / (1 << 20));
+}

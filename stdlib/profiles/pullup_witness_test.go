@@ -134,7 +134,7 @@ func TestAProfileFailureStatesTheRadiusItSearchedTo(t *testing.T) {
 // looks at before the findings.
 func TestCoverageAgreesWithTheRuleOnADirectPullUp(t *testing.T) {
 	m := check.NewModel(directPullUpDesign("SPI_CS"))
-	cov := Coverage(context.Background(), spiProfile(), m)
+	cov := Coverage(context.Background(), spiProfile(), m, nil)
 	if cov == nil {
 		t.Fatal("the interface was not detected, so this proves nothing")
 	}
