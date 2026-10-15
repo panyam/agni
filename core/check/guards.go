@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -133,18 +134,38 @@ func ICESDCredit(m Model, n *ir.Net) (string, *Witness) {
 	return "", nil
 }
 
-// IntentionallyUnconnected reports whether a net's lack of connections is deliberate, meaning its
-// name is a tool no-connect marker or a connected pin resolves to the NO_CONNECT electrical type.
+// IntentionallyUnconnected reports whether a net's lack of connections is deliberate: a pin on it
+// carries the format's no-connect flag, a connected pin resolves to the NO_CONNECT electrical type,
+// or the designer named it as a no-connect. A tool's own stub name is not evidence, because KiCad
+// names every unlabelled one-pin net "unconnected-(...)", flagged or not (agni issue 1019).
 func IntentionallyUnconnected(m Model, n *ir.Net) bool {
-	switch name := strings.ToLower(n.Name); {
-	case strings.HasPrefix(name, "unconnected"),
-		strings.HasPrefix(name, "no_connect"),
-		strings.HasPrefix(name, "nc_"):
+	if NoConnectMarked(n) {
 		return true
 	}
 	return Exists(n.Connections, func(c *ir.Connection) bool {
 		return m.PinDir(c.ComponentRef, c.PinRef) == ir.PinDirection_PIN_DIRECTION_NO_CONNECT
 	})
+}
+
+// ToolNetNamePattern matches the names a tool gives a net no designer named: an EDIF or synthetic
+// "N$1", "$N1", and KiCad's "Net-(R1-Pad2)" and "unconnected-(J1A-MID0-PadK40)". A KiCad name is
+// built from a pin's own name, so a rule that reads meaning from a net's name must skip these, or the
+// pin name inside reads as the designer's (agni issue 1019).
+const ToolNetNamePattern = `^(N\$|unconnected-\(|Net-\(|\$)`
+
+var toolNetName = regexp.MustCompile(ToolNetNamePattern)
+
+// IsToolNetName reports whether a net's name is one a tool made up rather than one a designer gave it.
+func IsToolNetName(name string) bool { return toolNetName.MatchString(name) }
+
+// NoConnectMarked reports whether a net carries a designer's no-connect: the reader's flag attribute,
+// or a name the designer chose to say so (NC_..., no_connect...).
+func NoConnectMarked(n *ir.Net) bool {
+	if n.Attributes[netgraph.AttrNoConnect] == "true" {
+		return true
+	}
+	name := strings.ToLower(n.Name)
+	return strings.HasPrefix(name, "no_connect") || strings.HasPrefix(name, "nc_")
 }
 
 // IsGroundName matches the ground-rail naming conventions (GND and variants, VSS, EARTH). Ground pins

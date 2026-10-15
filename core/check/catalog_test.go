@@ -2,6 +2,7 @@ package check
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/netgraph"
 	"testing"
 
 	"github.com/panyam/agni/core/param"
@@ -25,9 +26,10 @@ func TestAvailableCapability(t *testing.T) {
 		t.Errorf("nc rule on EDIF: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
 
-	// KiCad source types power outputs; a nc-marker net name gives the no-connect channel.
+	// KiCad source types power outputs; a no-connect-flagged net gives the no-connect channel.
 	kicad := NewModel(&ir.Design{SourceFormat: "kicad-sch",
-		Nets: []*ir.Net{{Name: "unconnected-(U1-PAD1)", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}}})
+		Nets: []*ir.Net{{Name: "unconnected-(U1-PAD1)", Attributes: map[string]string{netgraph.AttrNoConnect: "true"},
+			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}}})
 	if ok, _ := Available(powerRule, kicad); !ok {
 		t.Error("power rule on KiCad: want available")
 	}

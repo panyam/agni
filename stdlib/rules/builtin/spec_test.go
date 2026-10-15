@@ -80,9 +80,9 @@ func specParityFixture() *ir.Design {
 			tnet("LVDS_P", "U1.3"),
 			tnet("USB_D+", "U1.3"),
 			tnet("USB_D-", "U1.2"),
-			// stubs: real, tool-marked, NO_CONNECT-pinned
+			// stubs: real, no-connect-flagged, NO_CONNECT-pinned
 			tnet("STUB", "R1.1"),
-			tnet("unconnected-(U1-Pad4)", "U1.4"),
+			flaggedNet("unconnected-(U1-Pad4)", "U1.4"),
 			tnet("NCNET", "U2.4"),
 			// pin-level shapes: U3 partially wired (bare pins 2,3,5), NC pin wired into a real net
 			tnet("U3_PWR", "U3.1", "REG1.1"),

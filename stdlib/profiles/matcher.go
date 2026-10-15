@@ -2,6 +2,7 @@ package profiles
 
 import (
 	"fmt"
+	"github.com/panyam/agni/core/check"
 	"strings"
 
 	"github.com/panyam/agni/core/query"
@@ -30,14 +31,18 @@ import (
 // generated rule that selects a signal's net goes through here (presence, the completeness anchor,
 // host-present, pull-up, and dangling), so a discriminating matcher is applied uniformly and no rule
 // can latch onto a foreign net that merely shares a suffix.
+//
+// A net a tool named, "N$1" or KiCad's "unconnected-(J1I-SGMII0_MDIO-PadE7)", matches no signal: a
+// KiCad name carries a pin's own name, and a pin called MDIO is not a net someone wired as MDIO.
 func netMatch(v query.Term, s Signal) []query.Literal {
+	designer := query.Neg(query.Rel("str.match", v, query.Str(check.ToolNetNamePattern)))
 	switch {
 	case s.Glob != "":
-		return []query.Literal{query.Pos(query.Rel("str.glob", v, query.Str(s.Glob)))}
+		return []query.Literal{query.Pos(query.Rel("str.glob", v, query.Str(s.Glob))), designer}
 	case s.Regex != "":
-		return []query.Literal{query.Pos(query.Rel("str.match", v, query.Str(s.Regex)))}
+		return []query.Literal{query.Pos(query.Rel("str.match", v, query.Str(s.Regex))), designer}
 	}
-	var lits []query.Literal
+	lits := []query.Literal{designer}
 	if s.Suffix != "" {
 		lits = append(lits, query.Pos(query.Rel("str.suffix", v, query.Str(s.Suffix))))
 	}
@@ -51,6 +56,9 @@ func netMatch(v query.Term, s Signal) []query.Literal {
 // signal's declared form. A signal with NO matcher matches nothing. That is the safe direction for the
 // presence gates, which take a Profile directly and so are not covered by Compile's validation.
 func netMatchesSignal(name string, s Signal) bool {
+	if check.IsToolNetName(name) {
+		return false
+	}
 	switch {
 	case s.Glob != "":
 		re, err := query.CompileGlob(s.Glob)

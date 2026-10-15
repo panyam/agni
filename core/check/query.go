@@ -155,11 +155,8 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		if len(n.NetClasses) > 0 {
 			m.netClass = true
 		}
-		switch name := strings.ToLower(n.Name); {
-		case strings.HasPrefix(name, "unconnected"),
-			strings.HasPrefix(name, "no_connect"),
-			strings.HasPrefix(name, "nc_"):
-			m.ncChannel = true // same marker vocabulary as IntentionallyUnconnected
+		if NoConnectMarked(n) {
+			m.ncChannel = true // the same evidence IntentionallyUnconnected reads
 		}
 		for _, c := range n.Connections {
 			m.connected[c.ComponentRef] = true

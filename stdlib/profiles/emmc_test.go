@@ -215,3 +215,19 @@ func TestEMMCWithoutItsAnchorIsNotInUse(t *testing.T) {
 		t.Fatalf("no CMD anchor, so no eMMC bus: want 0 findings, got %d: %+v", len(fs), fs)
 	}
 }
+
+// A net a tool named after a pin is not a net a designer named, so a profile matches none. KiCad
+// names a module's unwired MDIO pin's stub "unconnected-(J1I-SGMII0_MDIO-PadE7)", which carries the
+// signal name and is no MDIO bus (agni issue 1019).
+func TestToolNamedNetsMatchNoSignal(t *testing.T) {
+	d := &ir.Design{
+		Components: comps("J1"),
+		Nets: []*ir.Net{
+			net("unconnected-(J1I-SGMII0_MDIO-PadE7)", "J1.E7"),
+			net("unconnected-(J1I-SGMII0_MDC-PadE6)", "J1.E6"),
+		},
+	}
+	if fs := check.RunBackground(check.NewModel(d), Compile(MDIO)); len(fs) != 0 {
+		t.Fatalf("tool-named stubs are not an MDIO bus: want 0 findings, got %d: %+v", len(fs), fs)
+	}
+}
