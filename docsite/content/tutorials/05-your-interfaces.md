@@ -102,14 +102,14 @@ confirm your file covers each one the built-in contributed, or that you meant to
 Compare the last line of the two runs on this page:
 
 ```
-without profiles/   27 finding(s)   257 subject(s) considered by 36 rule(s)
-with profiles/      28 finding(s)   258 subject(s) considered by 36 rule(s)
+without profiles/   27 finding(s)   255 subject(s) considered by 35 rule(s)
+with profiles/      28 finding(s)   256 subject(s) considered by 35 rule(s)
 ```
 
 One more finding and one more subject, and both of them are the `STB` line you added. The counts
 moved by exactly the size of the change you made.
 
-Supersession shows up here as the rule count holding at 36. Four built-in CAN rules left and four of
+Supersession shows up here as the rule count holding at 35. Four built-in CAN rules left and four of
 yours arrived, so the same number of rules has an opinion about this board. They are now your
 rules.
 
