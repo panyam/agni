@@ -82,8 +82,6 @@ gh-pages: build
 TUT = examples/tutorial-project/designs/gateway
 JETSON = tools/samples/boards/jetson-agx-thor-baseboard
 designs: ## Re-render the tutorial board images the docs embed
-	@cd .. && go run ./cmd/agni render $(TUT)/gateway.kicad_sch --symbol-path $(TUT)/symbols \
-	  -o docsite/static/designs/gateway-schematic.svg
 	# LAYERED, matching the run on rung 3 rather than beating it. force draws the better picture and
 	# is not bit-identical across architectures (agni issue 472), so a page whose command produced it
 	# would carry a capture the gate cannot check. The command and the figure agreeing is worth more
