@@ -1,16 +1,16 @@
-#agni-run e500e63d5ed71155
-n                                  provenance
-/CSI/CSIA_3V3                      designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/CSI/CSIA_5V                       designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/CSI/CSIB_3V3                      designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/CSI/CSIB_5V                       designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/CSI/VSYNC_CAM0_3V3                designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/Peripherals/FAN_VDD               designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/Recovery USB/USBC2_VBUS           designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/SoM_IO/I2C0_SCL_1V8               designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/SoM_IO/I2C0_SDA_1V8               designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/USB DP Alt mode/USBC1_VBUS        designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/USB Debug, PD/PDC_LDO_3V3         designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/USB Debug, PD/USBC0_VBUS          designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/USB Hub/USBC3_VBUS                designs/jetson/jetson-agx-thor-baseboard.kicad_sch
-/USB Hub/USBC4_VBUS                designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+#agni-run 8f12b12afe92b1ad
+n                                           provenance
+/CSI/CSIA_3V3                               designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/CSI/CSIA_5V                                designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/CSI/CSIB_3V3                               designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/CSI/CSIB_5V                                designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/CSI/VSYNC_CAM0_3V3                         designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/Peripherals/FAN_VDD                        designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/Recovery USB/USBC2_VBUS                    designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/SoM_IO/I2C0_SCL_1V8                        designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/SoM_IO/I2C0_SDA_1V8                        designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/USB DP Alt mode/USBC1_VBUS                 designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/USB Debug, PD/PDC_LDO_3V3                  designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/USB Debug, PD/USBC0_VBUS                   designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/USB Hub/USBC3_VBUS                         designs/jetson/jetson-agx-thor-baseboard.kicad_sch
+/USB Hub/USBC4_VBUS                         designs/jetson/jetson-agx-thor-baseboard.kicad_sch

@@ -12,7 +12,7 @@
 ## error
 
 ### i2c-pull-up — An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.
-- `SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
+- `/SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
 
 ## warning
 
@@ -33,8 +33,8 @@
 ## info
 
 ### esd-protection — An externally-exposed signal net (on a connector) has no TVS device.
-- `USB_D+` — externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
-- `USB_D-` — externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
+- `/USB_D+` — externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
+- `/USB_D-` — externally-exposed signal net has no ESD protection (showcase.fires.kicad_sch)
 
 ### test-point-coverage — A power rail or ground net has no test point, on a board that uses them.
 - `GND` — rail carries no test point; bring-up and factory test cannot probe it (showcase.fires.kicad_sch)

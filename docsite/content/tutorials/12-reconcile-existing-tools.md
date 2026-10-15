@@ -25,18 +25,17 @@ KiCad 10.0.6 found 578 violations. Import them:
 
 Read the summary slowly, because it is the import telling you how far to trust what follows.
 
-**605 of 957 attached to an entity.** A vendor report names things in prose, so importing it means
-resolving "Track [/CSI/CAM0.CSI2_CLK+] on In2.Cu" to the net your design calls that. There are more
-findings than violations because a clearance violation names two items, and each becomes a finding.
+**871 of 957 attached to an entity.** A vendor report names things in prose, so importing it means
+resolving "Track [/CSI/CAM0.CSI2_CLK+] on In2.Cu" to the net your design calls that. That works only
+because agni names a KiCad schematic's nets exactly as KiCad does, including the sheet path on a bus
+member drawn on a sub-sheet. There are more findings than violations because a clearance violation
+names two items, and each becomes a finding.
 
 **The rest are named, with a reason.** Ten are board outline geometry, which belongs to no component
-or net. Seventy-five are shapes the import does not recognize yet, unplated holes and arcs of track among
-them. And 267
-name a net the loaded design does not contain, which on this board means something specific: KiCad
-names a bus member drawn on a sub-sheet with the sheet's path, `/CSI/CAM0.CSI2_CLK+`, and agni's
-schematic read names the same net `CAM0.CSI2_CLK+`. Two tools reading one board disagree on what to
-call a net, and the import says so in a line you can count, rather than dropping the finding. That
-disagreement is tracked in [agni issue 1019](https://github.com/panyam/agni/issues/1019).
+or net. Seventy-five are shapes the import does not recognize yet, unplated holes and arcs of track
+among them. One names a footprint, `REF**`, that is on the board and in no schematic. Nothing is
+dropped quietly, which matters because a silently discarded finding is worse than one that was never
+imported.
 
 **The document carries no coverage axis.** This is the same idea as [rung
 9](../09-read-the-verdicts/), applied to somebody else's tool. A vendor report is a flat list of

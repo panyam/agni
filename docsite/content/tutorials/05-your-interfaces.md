@@ -19,8 +19,8 @@ own. The first number counts the profile rules with any verdict at all:
 
 None. The board has four PCIe links, to the two M.2 sockets and the FMC+ header, and the shipped PCIe
 profile says nothing about any of them. It recognizes a PCIe signal by a suffix such as `_PETP` or
-`_REFCLKN`, and this board draws each link as a KiCad bus whose members are named `PCIe_{C1x1}.TX0+`
-and `PCIe_{C5x4}.RX3-`. Nothing on the board looks like PCIe to it, so it reports nothing, and a
+`_REFCLKN`, and this board draws each link as a KiCad bus whose members are named
+`/M.2/PCIe_{C1x1}.TX0+` and `/Expansion connector/PCIe_{C2x1}.RX0-`. Nothing on the board looks like PCIe to it, so it reports nothing, and a
 findings list cannot tell you that apart from four healthy links.
 
 ## Absence is not a pass
@@ -40,14 +40,14 @@ the bus", and on this board the answer is no.
 ```yaml
 name: PCIe
 signals:
-  - {name: TXP,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]\+$', anchor: true}
-  - {name: TXN,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]-$'}
-  - {name: RXP,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]\+$'}
-  - {name: RXN,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]-$'}
-  - {name: CLKP,   regex: '^PCIe_\{C[0-9]x[0-9]\}\.CLK\+$'}
-  - {name: CLKN,   regex: '^PCIe_\{C[0-9]x[0-9]\}\.CLK-$'}
-  - {name: RST,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.~\{RST\}$'}
-  - {name: CLKREQ, regex: '^PCIe_\{C[0-9]x[0-9]\}\.~\{CLKREQ\}$'}
+  - {name: TXP,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]\+$', anchor: true}
+  - {name: TXN,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]-$'}
+  - {name: RXP,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]\+$'}
+  - {name: RXN,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]-$'}
+  - {name: CLKP,   regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.CLK\+$'}
+  - {name: CLKN,   regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.CLK-$'}
+  - {name: RST,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.~\{RST\}$'}
+  - {name: CLKREQ, regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.~\{CLKREQ\}$'}
 requirements:
   - {type: signal-missing}
   - {type: signal-dangling}
@@ -56,7 +56,8 @@ requirements:
 
 A signal says how a net is recognized as playing that role. A `suffix` is the readable default, and a
 `regex` is the escape hatch for naming a suffix cannot express, such as a bus member whose role sits
-after a dot. `anchor: true` marks the signal whose presence means the bus exists.
+after a dot. `(^|/)` lets the member carry the sheet path KiCad puts in front of a name drawn on a
+sub-sheet. `anchor: true` marks the signal whose presence means the bus exists.
 
 There is no flag. The project names its own `profiles/` directory, so agni composes it for every
 design under `designs/`, the same way it composes `params/` and the `conventions:` section of
@@ -73,7 +74,7 @@ Ask a requirement what it concluded and it tells you, whether or not it found an
 
 Each anchor, one per lane, comes back with one answer per required signal, and the list stops at
 twenty passes per rule and says how many it folded away. Read what a pass claims, though. Presence
-is matched across the board, so `PCIe_{C1x1}.TX0+ + CLKN` says a PCIe clock exists, not that this
+is matched across the board, so `/M.2/PCIe_{C1x1}.TX0+ + CLKN` says a PCIe clock exists, not that this
 link's clock does. A profile describes one bus, and four links named alike read as one
 bus four lanes wide.
 

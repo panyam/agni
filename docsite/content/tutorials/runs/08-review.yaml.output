@@ -1,4 +1,4 @@
-#agni-run 770285671fcb529a
+#agni-run 2d42403888b1118e
 # Review: Jetson baseboard design review
 
 Design: `designs/jetson`
@@ -11,8 +11,8 @@ Design: `designs/jetson`
 
 | # | Title | Outcome | Detail |
 |---|-------|---------|--------|
-| P1 | every rail carries a bulk capacitor | fail | bulk-cap: +12V (power rail has no bulk capacitor); bulk-cap: N$54 (power rail has no bulk capacitor) |
-| P2 | every rail carries decoupling | fail | decoupling-present: N$54 (power rail has no decoupling capacitor) |
+| P1 | every rail carries a bulk capacitor | fail | bulk-cap: +12V (power rail has no bulk capacitor); bulk-cap: Net-(D1-C) (power rail has no bulk capacitor) |
+| P2 | every rail carries decoupling | fail | decoupling-present: Net-(D1-C) (power rail has no decoupling capacitor) |
 | P3 | the input is protected against reverse polarity | fail | reverse-blocking-absent: +3V3 (connector feeds a power input with no reverse-blocking element in the path); reverse-blocking-absent: /USB DP Alt mode/USBC1_VBUS (connector feeds a power input with no reverse-blocking element in the path); reverse-blocking-absent: /USB Debug, PD/USBC0_VBUS (connector feeds a power input with no reverse-blocking element in the path); (+1 more) |
 | P4 | no part is operated above its absolute-maximum supply voltage | pass |  |
 | P5 | every rail is probeable during bring-up | fail | test-point-coverage: /CSI/CSIA_3V3 (rail carries no test point; bring-up and factory test cannot probe it); test-point-coverage: /CSI/CSIA_5V (rail carries no test point; bring-up and factory test cannot probe it); test-point-coverage: /CSI/CSIA_I2C_VCC (rail carries no test point; bring-up and factory test cannot probe it); (+33 more) |
@@ -26,7 +26,7 @@ Design: `designs/jetson`
 | I1 | every PCIe link is complete | pass |  |
 | I2 | the CAN interface is complete and terminated | not-applicable | interface not present on this design |
 | I3 | exposed signals have ESD protection | fail | esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_RX_P (externally-exposed signal net has no ESD protection); esd-protection: /SFP/SFI_CONN_TX_N (externally-exposed signal net has no ESD protection); (+7 more) |
-| I4 | every I2C bus has pull-ups | fail | i2c-pull-up: /CSI/I2C_MUX_SCL (I2C net has no pull-up resistor to a rail); i2c-pull-up: /CSI/I2C_MUX_SDA (I2C net has no pull-up resistor to a rail); i2c-pull-up: /CSI/MUX_I2C_4_SCL (I2C net has no pull-up resistor to a rail); (+25 more) |
+| I4 | every I2C bus has pull-ups | fail | i2c-pull-up: /CSI/I2C_MUX_SCL (I2C net has no pull-up resistor to a rail); i2c-pull-up: /CSI/I2C_MUX_SDA (I2C net has no pull-up resistor to a rail); i2c-pull-up: /CSI/I2C_{CAM}.SCL (I2C net has no pull-up resistor to a rail); (+25 more) |
 
 ## House style
 
@@ -35,7 +35,7 @@ Design: `designs/jetson`
 | # | Title | Outcome | Detail |
 |---|-------|---------|--------|
 | H1 | active-low signals use the overbar | fail | jetson/active-low-overbar: /USB Debug, PD/PDC_I2C1_IRQn (net name matches no allowed naming pattern); jetson/active-low-overbar: /USB Debug, PD/PDC_I2C2_IRQn (net name matches no allowed naming pattern) |
-| H2 | every test point sits on a net somebody named | fail | review/H2: TP109 (TP109 probes N$113, a net nobody named); review/H2: TP110 (TP110 probes N$109, a net nobody named); review/H2: TP111 (TP111 probes N$111, a net nobody named); (+29 more) |
+| H2 | every test point sits on a net somebody named | fail | review/H2: TP109 (TP109 probes Net-(J18-PadH01), a net nobody named); review/H2: TP110 (TP110 probes Net-(J18-PadK01), a net nobody named); review/H2: TP111 (TP111 probes Net-(J18-PadK40), a net nobody named); (+29 more) |
 | H3 | the assembly drawing lists a torque spec for every standoff | not-automated | manual review against the mechanical drawing package |
 
 ## Board

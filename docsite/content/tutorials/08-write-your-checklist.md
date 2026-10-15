@@ -60,13 +60,14 @@ requires, and reads as unevaluated rather than passed when the interface is abse
 - id: "H2"
   title: every test point sits on a net somebody named
   query:
-    match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), str.prefix(?n, "N$") => ?r, ?n'
+    match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), str.prefix(?n, "Net-(") => ?r, ?n'
     subject: r
     message: '{r} probes {n}, a net nobody named'
 ```
 
-KiCad names a net nobody labelled `N$` and a number. A bring-up engineer holding a probe and a
-schematic cannot find `N$113`, so this team asks that every test point land on a net with a name.
+KiCad names a net nobody labelled after one of its pins, `Net-(J18-PadH01)`. A bring-up engineer
+holding a probe and a schematic cannot find that net by name, so this team asks that every test point
+land on a net someone named.
 
 **`note:`** is for a question nothing automated can answer. The item stays on the checklist and
 reports that no automated check answered it.

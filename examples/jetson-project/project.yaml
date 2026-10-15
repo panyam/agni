@@ -95,10 +95,10 @@ checklists:
             title: every test point sits on a net somebody named
             description: >-
               An inline query, because no shipped rule asks this question. It matches the VIOLATION,
-              a test point on a net KiCad named automatically, not the healthy case. A query binding
+              a test point on a net KiCad named after one of its pins, not the healthy case. A query binding
               reports what it matches as findings, so matching the healthy case inverts the item.
             query:
-              match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), str.prefix(?n, "N$") => ?r, ?n'
+              match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), str.prefix(?n, "Net-(") => ?r, ?n'
               subject: r
               message: '{r} probes {n}, a net nobody named'
           - id: "H3"

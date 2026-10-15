@@ -151,7 +151,8 @@ Now the pass is checkable. It names C10 on `+3V3` and C241 on `VCC`, so you can 
 and confirm that those capacitors really are on those rails. Delete one next revision and this output
 changes, where the findings-only view would print the same nothing before and after.
 
-The one fail is `N$54`, a net KiCad named automatically because nobody labelled it. It is the module's
+The one fail is `Net-(D1-C)`, a net KiCad named after a pin on it, diode D1's cathode, because nobody
+labelled it. It is the module's
 backup-battery input, fed through D1 and R6, and the module decouples it on its own side of the
 connector. That is the same lesson as the I2C finding, met from the other direction.
 

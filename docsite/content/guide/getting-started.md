@@ -44,8 +44,8 @@ deliberately trips several rules:
 {{ agniRun "content/guide/runs/first-check.yaml" }}
 
 Read a finding as three parts: the **severity** (`error` / `warning` / `info`), the
-**rule** that fired (`i2c-pull-up`), and the **subject** it fired on (the net `SCL`), with a
-plain-language reason in parentheses. Each finding also carries its provenance, and
+**rule** that fired (`i2c-pull-up`), and the **subject** it fired on (the net `/SCL`, a label on the
+root sheet, which KiCad names with a leading `/`), with a plain-language reason in parentheses. Each finding also carries its provenance, and
 `--format json` (below) shows exactly which net or pin, and for datasheet rules which page
 and table, the finding came from.
 

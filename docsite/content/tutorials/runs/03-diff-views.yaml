@@ -1,5 +1,8 @@
-# Generated block for 03-see-it.md. Edit the script, not the capture.
-fixture: examples/tutorial-project
+# Rung 3: the Jetson board's schematic against its own board file, two views of one design. The diff
+# lists every changed net, so the block keeps the summary and the first of them.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+show: |
+  agni diff --as-named jetson-agx-thor-baseboard.kicad_sch jetson-agx-thor-baseboard.kicad_pcb
 script: |
-  agni diff designs/gateway/gateway.edn designs/gateway/gateway.kicad_sch \
-    --symbol-path designs/gateway/symbols
+  agni diff --as-named jetson-agx-thor-baseboard.kicad_sch jetson-agx-thor-baseboard.kicad_pcb 2>/dev/null | sed -n '1,12p'
+  echo "..."

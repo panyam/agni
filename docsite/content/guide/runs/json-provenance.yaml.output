@@ -6,7 +6,7 @@
       "severity": "error",
       "subject": {
         "kind": "net",
-        "ref": "SCL",
+        "ref": "/SCL",
         "pin": "",
         "netId": "9de85e683cf7",
         "busId": ""

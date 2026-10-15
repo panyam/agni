@@ -27,7 +27,7 @@ type irModel struct {
 	pinConn   map[string]bool             // "refdes\x00pin" present in some net's connections
 	pinNet    map[string]string           // "refdes\x00pin" -> first net name it appears on
 	pinNetDup []PinNetConflict            // pins claimed by more than one net (malformed input)
-	ncChannel bool                        // source carries any no-connect evidence (typed pin or marker net)
+	ncChannel bool                        // source carries any no-connect evidence (typed pin, flagged net, or NC_ name)
 	netClass  bool                        // at least one net carries a tool-assigned net class (WS3-105)
 	board     *geom.BoardGeometry         // staged by WithBoard, built into boardNets by attachBoard
 	boardNets []BoardNet                  // board tier, populated only when WithBoard attached one

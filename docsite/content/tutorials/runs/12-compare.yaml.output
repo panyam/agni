@@ -1,4 +1,4 @@
-#agni-run 847a2542953d02e7
+#agni-run a2dde53370408264
 #agni-step
 comparing:
   ours:   agni <version> — 91 finding(s) over mount://jetson/designs/jetson
@@ -7,7 +7,7 @@ comparing:
 entities flagged:
   both         2
   ours only    86
-  theirs only  221
+  theirs only  258
 
 ours only:
   net +12V
@@ -20,6 +20,8 @@ ours only:
   net /CSI/CSIB_I2C_VCC
   net /CSI/I2C_MUX_SCL
   net /CSI/I2C_MUX_SDA
+  net /CSI/I2C_{CAM}.SCL
+  net /CSI/I2C_{CAM}.SDA
   net /CSI/MUX_I2C_4_SCL
   net /CSI/MUX_I2C_4_SDA
   net /CSI/MUX_I2C_5_SCL
@@ -42,15 +44,21 @@ ours only:
   net /DCDC/5V_VDD
   net /DCDC/5V_{AON}_OUT
   net /DCDC/5V_{AON}_VDD
+  net /DCDC/VIN_PWR_ON
   net /Expansion connector/+12V_FMC
   net /Expansion connector/+3V3_AUX
   net /Expansion connector/+3V3_FMC
   net /Expansion connector/+5V_FMC
   net /Expansion connector/+VCC_FMC
   net /Expansion connector/+V_{ADJ}
+  net /Expansion connector/I2C7.SCL
+  net /Expansion connector/I2C7.SDA
+  net /Expansion connector/I2C8.SCL
+  net /Expansion connector/I2C8.SDA
+  net /I2C_{SYS}.SCL
+  net /I2C_{SYS}.SDA
   net /Peripherals/FAN_VDD
   net /Power/3V3_LDO
-  net /Power/VIN_PWR_ON
   net /SFP/SFI_CONN_RX_N
   net /SFP/SFI_CONN_RX_P
   net /SFP/SFI_CONN_TX_N
@@ -79,23 +87,15 @@ ours only:
   net /USB Debug, PD/PDC_LDO_3V3
   net /USB Debug, PD/USBC0_VBUS
   net FLASH_PWR
-  net I2C7.SCL
-  net I2C7.SDA
-  net I2C8.SCL
-  net I2C8.SDA
-  net I2C_{CAM}.SCL
-  net I2C_{CAM}.SDA
-  net I2C_{SYS}.SCL
-  net I2C_{SYS}.SDA
-  net N$131
-  net N$133
-  net N$135
-  net N$136
-  net N$137
-  net N$202
-  net N$203
-  net N$54
+  net Net-(D1-C)
+  net Net-(J12-RS0)
+  net Net-(J12-RS1)
+  net Net-(J12-RX_{LOS})
+  net Net-(J12-TX_{DISABLE})
+  net Net-(J12-TX_{FAULT})
   net VCC_IN
+  net unconnected-(J18-PadB24)
+  net unconnected-(J18-PadB25)
 
 theirs only:
   component C102
@@ -311,7 +311,44 @@ theirs only:
   component U8
   component Y2
   net +5V_SOM
+  net /CSI/CAM0.CSI2_CLK+
+  net /CSI/CAM0.CSI2_CLK-
+  net /CSI/CAM0.CSI2_D0+
+  net /CSI/CAM0.CSI2_D0-
+  net /CSI/CAM0.CSI2_D1+
+  net /CSI/CAM0.CSI2_D1-
+  net /CSI/CAM0.CSI3_D0+
+  net /CSI/CAM0.CSI3_D0-
+  net /CSI/CAM0.CSI3_D1+
+  net /CSI/CAM0.CSI3_D1-
+  net /CSI/CAM1.CSI0_CLK+
+  net /CSI/CAM1.CSI0_D0+
+  net /CSI/CAM1.CSI0_D0-
+  net /CSI/CAM1.CSI0_D1+
+  net /CSI/CAM1.CSI0_D1-
+  net /CSI/CAM1.CSI1_D0+
+  net /CSI/CAM1.CSI1_D0-
+  net /CSI/CAM1.CSI1_D1+
+  net /CSI/CAM1.CSI1_D1-
+  net /CSI/CAM3.CSI6_CLK+
+  net /CSI/CAM3.CSI6_CLK-
+  net /CSI/CAM3.CSI6_D0+
+  net /CSI/CAM3.CSI6_D0-
+  net /CSI/CAM3.CSI6_D1+
+  net /CSI/CAM3.CSI6_D1-
+  net /CSI/CAM3.CSI7_D0+
+  net /CSI/CAM3.CSI7_D0-
+  net /Expansion connector/DP2.AUX-
+  net /Expansion connector/PCIe_{C2x1}.CLK-
+  net /Expansion connector/PCIe_{C2x1}.TX0+
+  net /M.2/PCIe_{C1x1}.CLK-
+  net /M.2/PCIe_{C1x1}.~{CLKREQ}
+  net /M.2/PCIe_{C5x4}.TX1+
+  net /M.2/PCIe_{C5x4}.TX1-
   net /Power/USBPD1_HV
+  net /SFP/SFI.RX+
+  net /SoM_IO2/DP0.HPD
+  net /SoM_IO2/DP0.TX0+
   net /SoM_IO2/DP0.TX0_C+
   net /SoM_IO2/DP2.AUX_C+
   net /SoM_IO2/DP2.AUX_C-
@@ -326,4 +363,4 @@ not a claim that the rules ask the same question):
   reverse-blocking-absent      kicad-drc/clearance                1
   test-point-coverage          kicad-drc/clearance                1
 
-not comparable (a finding naming no component or net): ours 0, theirs 352
+not comparable (a finding naming no component or net): ours 0, theirs 86

@@ -29,8 +29,8 @@ part that mostly works and fails in ways that read as a component defect.
 
 Three guards, each learned
 from a real source:
-- **The source must have a no-connect channel** (any NO_CONNECT-typed pin or nc-marker net
-  name anywhere in the design). Where none exists, an unwired pin carries no NC flag
+- **The source must have a no-connect channel** (any NO_CONNECT-typed pin, no-connect-flagged
+  net, or designer's NC_ / no_connect net name anywhere in the design). Where none exists, an unwired pin carries no NC flag
   because the format cannot express one, not because the designer missed it, and a bare EDIF
   netlist export lists every library pin of every part, and firing there produced 1836
   findings on one real board (unused gates, spare TVS channels, unwired connector pads,

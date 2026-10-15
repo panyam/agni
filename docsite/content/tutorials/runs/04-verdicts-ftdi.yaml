@@ -1,7 +1,8 @@
-# Rung 4: the two I2C lines the lexicon half moved from fail to pass, with the rail they reach.
+# Rung 4: the two I2C lines the lexicon half moved from fail to pass, with the rail they reach. The
+# text view folds passes past twenty per rule, and these sort late, so the block is the csv's rows.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: designs/jetson
 script: |
-  agni check --verdicts --rule i2c-pull-up designs/jetson
-match: 'FTDI_CBUS|PD/FTDI_3V3'
+  agni check --verdicts --rule i2c-pull-up --format csv designs/jetson
+match: '^verdict_id|FTDI_CBUS'

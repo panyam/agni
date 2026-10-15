@@ -1,20 +1,20 @@
 # This team's PCIe, declared once for every board the project reviews.
 #
 # The shipped PCIe profile names its signals by suffix (_PETP, _PERN, _REFCLKP). This board draws each
-# link as a KiCad bus, so the same signals are members such as PCIe_{C1x1}.TX0+ and
-# PCIe_{C5x4}.RX3-, and the built-in profile finds none of them. Declaring a profile under the same
+# link as a KiCad bus, so the same signals are members such as /M.2/PCIe_{C1x1}.TX0+ and
+# /Expansion connector/PCIe_{C2x1}.RX0-, and the built-in profile finds none of them. Declaring a profile under the same
 # name REPLACES the built-in one, so this file carries every requirement the built-in declares that a
 # board without a declared host can use, rather than only what differs.
 name: PCIe
 signals:
-  - {name: TXP,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]\+$', anchor: true}
-  - {name: TXN,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]-$'}
-  - {name: RXP,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]\+$'}
-  - {name: RXN,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]-$'}
-  - {name: CLKP,   regex: '^PCIe_\{C[0-9]x[0-9]\}\.CLK\+$'}
-  - {name: CLKN,   regex: '^PCIe_\{C[0-9]x[0-9]\}\.CLK-$'}
-  - {name: RST,    regex: '^PCIe_\{C[0-9]x[0-9]\}\.~\{RST\}$'}
-  - {name: CLKREQ, regex: '^PCIe_\{C[0-9]x[0-9]\}\.~\{CLKREQ\}$'}
+  - {name: TXP,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]\+$', anchor: true}
+  - {name: TXN,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.TX[0-9]-$'}
+  - {name: RXP,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]\+$'}
+  - {name: RXN,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.RX[0-9]-$'}
+  - {name: CLKP,   regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.CLK\+$'}
+  - {name: CLKN,   regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.CLK-$'}
+  - {name: RST,    regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.~\{RST\}$'}
+  - {name: CLKREQ, regex: '(^|/)PCIe_\{C[0-9]x[0-9]\}\.~\{CLKREQ\}$'}
 requirements:
   - {type: signal-missing}
   - {type: signal-dangling}
