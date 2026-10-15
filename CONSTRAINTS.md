@@ -872,17 +872,11 @@ tutorial capture's stamp hashes its spec and its fixture and never the engine, s
 that alters the output leaves every stamp valid. Changing one rule's coverage wording rewrote 0
 captures on a plain docsite build and 12 on a forced regeneration. Before `tutorial-runs-check`
 existed, a capture edited by hand passed the entire gate.
-**Verify:** `proto-check`, `catalog-docs-check` and `tutorial-runs-check` are all in `testall`, and
-each regenerates its artifact. `catalog-docs-check` then reads `git status` to compare, so it still
+**Verify:** `proto-check`, `catalog-docs-check`, `tutorial-runs-check` and `docsite-images-check`
+are all in `testall`, and each regenerates its artifact. `catalog-docs-check` then reads `git status` to compare, so it still
 forces the commit-first ordering the next Note describes. Exemptions live in
 `hack/tutorial_runs_check.ignore`, and a line belongs there only when its command is not a function
 of this repo, never because the artifact merely went stale.
-**Outstanding violation:** `docsite/figures.sh` renders four committed SVGs under
-`docsite/static/images/learn/` and is deliberately outside the gate (agni issue 453). Its stated
-reason, that a render depends on the engine build, does not distinguish it from a capture, which
-depends on the engine build too and is regenerated anyway. The real blocker is that the force layout
-is not bit-identical across architectures (agni issue 472), so a regenerate-and-diff would fail on
-the runner's architecture rather than on any change. Closing 472 is what lets this join the gate.
 **Note:** a regeneration check must SNAPSHOT AND RESTORE rather than read `git status`. A
 git-status check forces a regenerate-then-commit-then-gate ordering, so the first run after an edit
 fails for a reason unrelated to the edit. `proto-check` spells this out and

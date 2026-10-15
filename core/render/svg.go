@@ -304,9 +304,10 @@ func drawImage(c *svg.Canvas, im *geom.Image, tx, ty func(int64) float64) {
 	attrs := []svg.Attr{svg.F("x", x), svg.F("y", y), svg.F("width", w), svg.F("height", h), svg.A("href", uri)}
 	if im.RotationDeg != 0 || im.Mirror {
 		cx, cy := x+w/2, y+h/2
-		t := fmt.Sprintf("rotate(%d %g %g)", -im.RotationDeg, cx, cy) // SVG rotates CW; geom is CCW
+		// One decimal, like every other coordinate, for the reason drawTextLine gives.
+		t := fmt.Sprintf("rotate(%d %.1f %.1f)", -im.RotationDeg, cx, cy) // SVG rotates CW; geom is CCW
 		if im.Mirror {
-			t += fmt.Sprintf(" translate(%g 0) scale(-1 1)", 2*cx)
+			t += fmt.Sprintf(" translate(%.1f 0) scale(-1 1)", 2*cx)
 		}
 		attrs = append(attrs, svg.A("transform", t))
 	}
@@ -598,8 +599,11 @@ func drawTextLine(c *svg.Canvas, content string, x, y, fontPx float64, justify s
 	if maxWidthPx > 0 && naturalTextWidthPx(content, fontPx) > maxWidthPx {
 		attrs = append(attrs, svg.F("textLength", maxWidthPx), svg.A("lengthAdjust", "spacingAndGlyphs"))
 	}
+	// The pivot prints at the anchor's own one decimal, so it names the point x and y name. At full
+	// precision its last digits differ between arm64 and amd64, which fuse a multiply-add the other
+	// rounds twice, and a committed docsite image then reads as stale on one of them (agni 453).
 	if a := normDeg(rotDeg); a != 0 {
-		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%g %g %g)", a, x, y)))
+		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%g %.1f %.1f)", a, x, y)))
 	}
 	c.Text(content, attrs...)
 }

@@ -127,6 +127,19 @@ cmd/agni/testdata/conformance/params/demo-nfet-40.textproto
 cmd/agni/testdata/intent/params-no-ocp/demo-nfet-40.textproto
 
 # ---------------------------------------------------------------------------------------------
+# The docsite's demos page shows two of the renderer's own goldens (agni issue 453).
+#
+# The page needs them under static/ to serve them, and the render tests are what keep a golden
+# current. docsite/images.sh copies them over, so this group is what turns a renderer change that
+# moves a golden into a red gate until the docsite copy follows. These drifted before: both still
+# drew in monospace two months after the renderer stopped.
+core/render/testdata/golden/board-fixture.svg
+docsite/static/designs/demo-board.svg
+
+core/render/testdata/golden/faithful-sample.svg
+docsite/static/designs/demo-schematic.svg
+
+# ---------------------------------------------------------------------------------------------
 # A docsite figure used by two pages that keep their images in separate folders.
 #
 # `guide/querying.md` and `reference/analogy.md` both draw the protection walk. This one is a real

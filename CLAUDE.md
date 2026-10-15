@@ -262,10 +262,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   time, so a run stuck at `waiting` on the `github-pages` environment (no reviewer exists to approve
   it) holds every later deploy at `pending`; cancel the stuck run with `gh run cancel <id>`, since a
   later deploy carries its commit.
-- `make -C docsite figures` re-renders the schematics `learn/` embeds. Outside the gate, because a
-  render depends on the engine build and nothing checks its output for staleness (agni issue 453).
-  `make tutorial-runs` is no longer outside it, because `tutorial-runs-check` regenerates every
-  capture and fails on any difference, and it is in `testall`. A capture's stamp hashes the spec and the
+- `make -C docsite images` re-renders every engine-drawn image the docs embed, and
+  `docsite-images-check` in `testall` fails when one is stale (agni issue 453). Never `--layout
+  force` there, since it alone differs between arm64 and amd64 (agni 472). `tutorial-runs-check`
+  likewise regenerates every capture and fails on any difference. A capture's stamp hashes the spec and the
   fixture but NOT the engine, so regenerating is the only way to see engine drift. **Editing any
   tracked file inside a fixture restamps every capture over it**, 61 of them for
   `examples/tutorial-project`, so commit the fixture edit, then `make tutorial-runs`, then check the
@@ -895,6 +895,7 @@ discovered.
 | A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
 | A new EVIDENCE TIER for a derived IR field | 7 (the pass, the source enum value, the `Loader` field, the `Loader.ReadDesign` call, `service.ReadOptions` + `Overlay.ReadOptions`, the `check.Model` call, `hack/ir_model_baseline.txt`) | C9's evidence-tier variant, `architecture/ingestion-and-ir.md` | the C19 ratchet catches the pass; NOTHING catches a tier that reaches one surface and not the other, which is what agni 710 was |
 | A host that reads designs | 1 (go through `formats.Loader`, never a bare reader, and through `service.LoaderIn` so its reads can be kept, agni 895) | `build/evidence.md` | `TestReadCarriesTheIngestionPasses` in `examples/common`; nothing guards a NEW host |
+| An engine-drawn image the docs embed | 1 (a line in `docsite/images.sh`, then `make -C docsite images`) | `build/the-gate.md` | `docsite-images-check` |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
 | An architectural constraint | 3 (the rule in `CONSTRAINTS.md`, a test in one of three homes, a `Verify` naming that test) | `build/the-gate.md`, and `CONSTRAINTS.md`'s own header | the test you wrote, and NOTHING checks that a rule has one |
 

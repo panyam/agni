@@ -1,4 +1,4 @@
-.PHONY: run build components node-deps search-index preview figures gh-pages clean
+.PHONY: run build components node-deps search-index preview images figures designs gh-pages clean
 
 # Dev server with live reload on http://localhost:8085/agni/. Builds the
 # playground bundles first so a page that opts into one (front-matter
@@ -41,11 +41,14 @@ search-index: node-deps
 clean:
 	rm -rf dist static/js/gen
 
-# Re-render the schematics the learn course embeds. Not in the gate; see figures.sh.
-figures:
-	@./figures.sh
-	@git status --short -- static/images/learn || true
-	@echo "learn figures regenerated; review the diff above before committing"
+# Re-render every engine-drawn image the docs embed (images.sh). The gate's docsite-images-check
+# regenerates the same set and fails on any difference. `figures` and `designs` were once two targets
+# over two halves of it and stay as names for this one.
+images:
+	@./images.sh
+	@git status --short -- static/designs static/images/learn || true
+	@echo "docsite images regenerated; review the diff above before committing"
+figures designs: images
 
 # Fold ONE built page into a self-contained HTML file for reviewing a branch before it merges.
 #   make -C docsite preview PAGE=learn/05-who-drives-this-net
@@ -75,20 +78,3 @@ gh-pages: build
 	@rm -rf dist/.git
 	@echo "Deployed. Set GitHub Pages to serve from the gh-pages branch."
 
-# The board images the tutorial pages embed in <agni-viewer> are rendered by the engine from the
-# committed tutorial fixture, so a rendering change or a fixture edit can be picked up by re-running
-# this rather than by noticing the picture went stale. Run from the repo root, where the engine
-# module lives (docsite is its own module and does not depend on it).
-TUT = examples/tutorial-project/designs/gateway
-JETSON = tools/samples/boards/jetson-agx-thor-baseboard
-designs: ## Re-render the tutorial board images the docs embed
-	# LAYERED, matching the run on rung 3 rather than beating it. force draws the better picture and
-	# is not bit-identical across architectures (agni issue 472), so a page whose command produced it
-	# would carry a capture the gate cannot check. The command and the figure agreeing is worth more
-	# here than the prettier layout, and the comparison table two sections down still says force wins.
-	@cd .. && go run ./cmd/agni render $(TUT)/gateway.edn --layout layered \
-	  -o docsite/static/designs/gateway-netlist.svg
-	# The Jetson baseboard the ladder teaches from is fetched rather than committed (make
-	# samples-oracle), so its drawing is committed instead and re-rendered here.
-	@cd .. && go run ./cmd/agni render $(JETSON) --sheet Power \
-	  -o docsite/static/designs/jetson-power.svg

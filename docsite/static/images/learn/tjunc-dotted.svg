@@ -51,8 +51,8 @@
 <text x="1520.6" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333" font-weight="bold">Rev: </text>
 <polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1516.6,1126.7 1516.6,1148.7"/>
 <text x="1520.6" y="1137.7" font-size="11.0" dominant-baseline="central" fill="#333333">Id: 1/1</text>
-<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="309.4,309.4 471.0,309.4" data-kind="net" data-net="BUS" data-net-id="fbf5f993e0ee"/>
-<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="390.2,363.2 390.2,309.4" data-kind="net" data-net="BUS" data-net-id="fbf5f993e0ee"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="309.4,309.4 471.0,309.4" data-kind="net" data-net="/BUS" data-net-id="fbf5f993e0ee"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="390.2,363.2 390.2,309.4" data-kind="net" data-net="/BUS" data-net-id="fbf5f993e0ee"/>
 <circle cx="390.2" cy="309.4" r="1.6" fill="#333333"/>
 <rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="303.9" y="275.2" width="10.9" height="27.4" data-kind="component" data-ref="R1"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="309.4,268.3 309.4,275.2" data-kind="component" data-ref="R1"/>
