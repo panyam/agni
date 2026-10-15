@@ -67,7 +67,7 @@ func externalSymbolDefs(root *node, have []*geom.SymbolDef, syms *symLibCache, s
 	var out []*geom.SymbolDef
 	done := map[string]bool{}
 	for _, ps := range root.Children("symbol") {
-		libID := atomOf(ps.Child("lib_id").Arg(1))
+		libID := symbolKey(ps)
 		if libID == "" || embedded[libID] || done[libID] {
 			continue
 		}
@@ -762,9 +762,7 @@ func placementOf(ps *node, src string) *geom.SymbolPlacement {
 		Fields:    fieldsOf(ps),
 		Prov:      &geom.Provenance{SourceFile: src, SourceId: uuidOf(ps)},
 	}
-	if lid := ps.Child("lib_id"); lid != nil {
-		pl.CellRef = atomOf(lid.Arg(1))
-	}
+	pl.CellRef = symbolKey(ps)
 	return pl
 }
 
