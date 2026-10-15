@@ -16,14 +16,14 @@ const spec = "content/tutorials/runs/coverage-rollup.yaml"
 func TestAgniRunCapturesAndCaches(t *testing.T) {
 	_ = os.Remove(spec + outputSuffix)
 	first := AgniRun(spec)
-	if !strings.Contains(first, "13 of 15 covered") {
+	if !strings.Contains(first, "14 of 15 covered") {
 		t.Fatalf("expected the real rollup, got:\n%s", first)
 	}
 	out, stamp, err := readOutput(spec + outputSuffix)
 	if err != nil {
 		t.Fatalf("the capture should have been written: %v", err)
 	}
-	if stamp == "" || len(out) != 1 || !strings.Contains(out[0], "13 of 15 covered") {
+	if stamp == "" || len(out) != 1 || !strings.Contains(out[0], "14 of 15 covered") {
 		t.Errorf("capture should carry a stamp and the body, got stamp=%q", stamp)
 	}
 
