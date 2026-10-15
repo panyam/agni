@@ -2,3 +2,5 @@
 # descriptor is ours.
 designs/jetson/*
 !designs/jetson/design.yaml
+designs/jetson-rev-b/*
+!designs/jetson-rev-b/design.yaml
