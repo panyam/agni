@@ -20,4 +20,4 @@ usb_debug_pd.kicad_sch               kicad   ok      96 comps, 93 nets · 1 shee
 usb_dp.kicad_sch                     kicad   ok      65 comps, 70 nets · 1 sheets, 100 placements (100 resolved), 316 wires
 usb_hub.kicad_sch                    kicad   ok      131 comps, 129 nets · 1 sheets, 194 placements (194 resolved), 557 wires
 
-19 passed, 0 failed, 5 skipped (no reader)
+19 passed, 0 failed, 4 skipped (no reader)
