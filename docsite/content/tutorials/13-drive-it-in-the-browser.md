@@ -13,11 +13,12 @@ would be lying.
 ## Serve the project
 
 ```
-agni serve --addr :8090 --mount proj=. --review-store ./reviews
+agni serve --addr :8090 --mount proj=. --review-store ./reviews --web-dir ../../web
 ```
 
-Run it from the project root. That is the whole command, and the flag list is short on purpose,
-because the server discovers the rest.
+Run it from the project root, `examples/jetson-project`. The flag list is short on purpose, because
+the server discovers the rest. `--web-dir` points at the viewer's built assets, which sit four levels
+up in a checkout, as in [rung 3](../03-see-it/).
 
 ```
 serving web at http://localhost:8090/ with 1 mount(s) (Ctrl-C to stop)
@@ -30,12 +31,12 @@ so whatever you mounted is readable by them. That is usually what you want on a 
 what you want on shared Wi-Fi. `--addr 127.0.0.1:8090` binds this machine only, and the line
 disappears when it applies to nobody.
 
-Outside a checkout, add `--web-dir` (or set `web_dir` in an `agni.yaml`) so the server can find the
-viewer's own assets; [Running the server](../../guide/running-the-server/) covers it.
+Outside a checkout, `--web-dir` (or `web_dir` in an `agni.yaml`) names wherever the built viewer
+lives; [Running the server](../../guide/running-the-server/) covers it.
 
 `--mount name=path` exposes a folder in the file browser, and it is repeatable, so a real deployment
 mounts several project folders at once. Point it at the **project root**, not at
-`designs/gateway/`. A mount rooted inside the design puts `project.yaml`, which carries the
+`designs/jetson/`. A mount rooted inside the design puts `project.yaml`, which carries the
 checklists, above the mount, where the server cannot reach it, and the Review panel then has no
 checklist to offer.
 
@@ -63,62 +64,52 @@ Open `http://localhost:8090/`, pick the mount, choose a design, and open it.
 ## What the checks say
 
 Run the checks in the panel and you get the findings the ladder has been building up, most of them
-built-in rules from rung 2. These are the six that carry a tier's namespace, and the panel and the
-command line report them identically:
+built-in rules from rung 2. These are the ones that carry a tier's namespace, with the run's total,
+and the panel and the command line report them identically:
 
 {{ agniRun "content/tutorials/runs/13-check-tiers.yaml" }}
 
-Read the rule column. `gateway/` is your conventions section. `gateway-profiles/` is your CAN profile
+Only the naming rule has findings. The other tiers are present and passing, which a findings list
+cannot show, so ask for their verdicts:
+
+{{ agniRun "content/tutorials/runs/13-verdicts-tiers.yaml" }}
+
+Read the rule column. `jetson/` is your conventions section. `jetson-profiles/` is your PCIe profile
 superseding the built-in. `intent/` is your architecture declaration. Every tier you added is
 present, namespaced exactly as it is at the command line, because it is the same catalog.
 
-The namespace also records **how** the tier arrived. A project
-composes its profiles under the project's own name, so these read `gateway-profiles/`. An overlay
-passed with `--profile-path` composes under the fixed name `profile-overlay/` instead. The file and
-the rules are the same, and the label is how you tell which route a run took.
+The namespace also records **how** the tier arrived. A project composes its profiles under the
+project's own name, so these read `jetson-profiles/`. An overlay passed with `--profile-path` composes
+under the fixed name `profile-overlay/` instead. The file and the rules are the same, and the label is
+how you tell which route a run took.
 
 ## The failure this read cannot have
 
-[Rung 1](../01-read-a-design/) spent its length on a bad read, where the checks report a board in
-ruins that is really a read of the wrong thing. Its close cousin is the unresolved-symbol failure,
-where the parts load and the pins do not. It is the most expensive mistake on the ladder, so it is
-fair to ask what it looks like here.
+[Rung 1](../01-read-a-design/) spent its length on a bad read. Its close cousin is the
+unresolved-symbol failure, where the parts load and the pins do not, because the symbols that carry
+the pins live in a library the read never found. It is the most expensive mistake on the ladder, so
+it is fair to ask what it looks like here.
 
-It does not look like anything here, because this rung serves the EDIF netlist and EDIF declares
-its own pins:
-
-```
-$ agni query designs/gateway/gateway.edn 'pin.net(?r,?p,?n) => count(?p)'
-count(p)  provenance
-56        designs/gateway/gateway.edn
-```
-
-Fifty-six pins, with no symbol path anywhere. `--symbol-path` points at a directory of `.sym` files,
-which an `.edn` never references, so there is nothing for the flag to do and nothing that removing
-it can break. A netlist format that carries its own pins cannot suffer the failure at all.
-
-The formats that can are the ones whose symbols live in a separate library: `gateway.kicad_sch`
-here, and xschem and gEDA schematics generally. This project ships both views of the board, so the
-failure is one file away.
+On this board it cannot happen in the usual way, because every KiCad sheet embeds a copy of each
+symbol it places, so the pins travel inside the file. It nearly happened anyway. KiCad files an
+embedded copy that differs from its library under a second name, and until agni issue 1011 the reader
+looked only at the first, so one stray sheet in this folder resolved 97 of its 138 symbols. `validate`
+in rung 1 is how you would have seen it. A KiCad project that keeps its symbols in a separate library,
+and xschem and gEDA schematics generally, can still fail the classic way.
 
 ## Serve it wrong, on a design that can go wrong
 
-Point the same project at the schematic, with its symbol library moved aside, and it is available
-again. Scored by the review layer, it reads like this:
+The read that can go wrong here is rung 1's, one sheet named on its own. Score it with the review
+layer:
 
 {{ agniRun "content/tutorials/runs/13-review-broken-read.yaml" }}
 
-Eight of the fifteen items are `inconclusive`. The rules ran.
-They had the design. They could not reach a verdict, because the pins they needed were never
-resolved, and rather than pass, fail, or stay silent, each one says so and names the parts it could
-not resolve.
-
-Compare that to the plain catalog on a bad read, which in rung 1 counted 383 confident and
-entirely wrong findings off one sheet. The tool got no cleverer between the two rungs.
-The difference is that [rung 9's](../09-read-the-verdicts/) vocabulary has a word for "I looked
-and I cannot tell" and a bare finding list does not.
-
-Serve that design and the panel shows the same eight, styled apart from the passes.
+Seven passes, and they are the dangerous part. I3 and I4 pass because their rules found nothing on
+this sheet to judge, and an item whose rule fires on nothing reads as a pass. That is the hollow pass
+[rung 9](../09-read-the-verdicts/) warned about, and `--verdicts` on the same read shows both rules
+with no subjects at all. The one item that says something is wrong is A2,
+whose intent names connectors the design does not have. The review layer is not a substitute for
+rung 1. Confirm what was read, then score it.
 
 ## What the panels are for
 
@@ -128,7 +119,7 @@ The **sheet badge** carries the finding count, so a multi-sheet design shows you
 are before you open anything.
 
 **Findings** is the table above. Selecting a row highlights its subject on the canvas, which a terminal
-cannot do, so you go from "net `CAN1_CANH` has no ESD protection" to seeing where that net
+cannot do, so you go from "net `/SFP/SFI_CONN_RX_P` has no ESD protection" to seeing where that net
 actually runs.
 
 **Canvas** renders faithfully when the design carries geometry and computes a layout when it does
@@ -137,14 +128,13 @@ not, exactly as [rung 3](../03-see-it/) described. The WebGL and SVG toggle matt
 **Rules** lists the composed catalog, which is how you confirm a tier actually loaded rather than
 inferring it from findings that did or did not appear. Select the design first, because with no design
 chosen the panel lists the server's own catalog, and a project's tiers compose per design, so
-`gateway/`, `gateway-profiles/` and `intent/` appear only once the panel knows which design it is
+`jetson/`, `jetson-profiles/` and `intent/` appear only once the panel knows which design it is
 listing for.
 
-This is also where supersession from rung 5 is visible, and it shows up as arithmetic rather than as
-a message. Selecting the design moves the built-in `profile/` count down by five and adds five
-`gateway-profiles/` rules, because the house CAN profile replaces the built-in one wholesale. The
-CLI prints a `supersedes` note when an overlay is composed at the command line; a project that
-composes its own profiles prints nothing, so the count is the thing to read.
+This is also where supersession from rung 5 is visible, as arithmetic. Selecting the design moves
+the built-in `profile/` count down by four and adds three `jetson-profiles/` rules, because the
+project's PCIe profile replaces the built-in one wholesale and declares one requirement fewer. The
+CLI says the same thing in its `supersedes` note.
 
 **Compare** is [rung 10's](../10-compare-revisions/) diff with a revision picker.
 
@@ -152,19 +142,20 @@ composes its own profiles prints nothing, so the count is the thing to read.
 needs no second server, because `--review-store` was on the command at the top, and `project.yaml`
 sits at the project root, which is inside the mount.
 
-The checklist picker lists the project's checklists by name, `review` and `house` here, in the
-order `project.yaml` declares them, so its first entry is the project's default. Pick `review` and
+The checklist picker lists the project's checklists by name, in the order `project.yaml` declares
+them, so its first entry is the project's default. This project declares one, `review`. Pick `review` and
 press Run review. What comes back is the same verdict
 [rung 9](../09-read-the-verdicts/) read in the terminal, item by item, with the same vocabulary, so an
 item that could not be evaluated is styled differently from one that passed, because the two mean
 opposite things. The headline leads with coverage rather than pass/fail, for the reason rung 9 gave
 about what a bare pass count hides.
 
-`B1`, the fab's minimum track width, is worth a look because it is a board question and the entry is
-a netlist, which carries no copper. It reads `fail` in the panel exactly as it does in the terminal,
-because both attach the `gateway.kicad_pcb` the descriptor declares as a companion. Until
-[agni issue 646](https://github.com/panyam/agni/issues/646) the panel scored the netlist alone and
-read `B1` as `not-applicable`, so if you have an older run in the history, that is why it disagrees.
+`B1`, the board's minimum track width, is worth a look because it is a board question and the entry
+is a schematic, which carries no copper. It reads `pass` in the panel exactly as it does in the
+terminal, because both attach the `.kicad_pcb` the descriptor declares as a companion. Until
+[agni issue 646](https://github.com/panyam/agni/issues/646) the panel scored the entry alone and read
+a board item as `not-applicable`, so if you have an older run in the history, that is why it
+disagrees.
 
 A failing item lists the findings that failed it, and clicking one highlights it on the canvas, which
 is the same move Findings offers one level down.
