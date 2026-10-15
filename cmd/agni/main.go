@@ -448,6 +448,7 @@ func checkCmd() *cobra.Command {
 	var serverVal, outPath string
 	var orderBy []string
 	var srvSpec serverSpec
+	var remoteURL string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -568,24 +569,41 @@ func checkCmd() *cobra.Command {
 			// Thin client of the in-process CheckService, the same service the web check panel runs
 			// (WS9-048). The catalog and datasheet corpus are injected, while --conventions rides the
 			// request so its lexicon reaches the design read without touching process state.
-			var specs param.ParamProvider
-			if paramsDir != "" {
-				set, err := param.LoadSet(os.DirFS(paramsDir))
-				if err != nil {
-					return fmt.Errorf("--params %s: %w", paramsDir, err)
-				}
-				specs = set
-			}
+			// The local loader stays even under --remote, because a viewer link hashes the bytes on
+			// this machine (designContentHash).
 			ll := &localLoader{loader: newLoader()}
-			svc := service.NewCheckService(ll, catalog, specs, "", nil, cliProjects()).
-				WithEnv(service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""})
+			// --remote sends the same requests to a running server (agni issue 998). The rule names
+			// are still resolved here, against the catalog this design's project composes.
+			var svc checkAPI
+			addr := cliArgURI
+			if remoteURL != "" {
+				if err := refuseLocalOnly(cmd, "params", "profile-path"); err != nil {
+					return err
+				}
+				r, err := dialRemote(cmd.Context(), remoteURL)
+				if err != nil {
+					return err
+				}
+				svc, addr = r.check(), r.uri
+			} else {
+				var specs param.ParamProvider
+				if paramsDir != "" {
+					set, err := param.LoadSet(os.DirFS(paramsDir))
+					if err != nil {
+						return fmt.Errorf("--params %s: %w", paramsDir, err)
+					}
+					specs = set
+				}
+				svc = service.NewCheckService(ll, catalog, specs, "", nil, cliProjects()).
+					WithEnv(service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""})
+			}
 			ctx := cmd.Context()
 			// Addressed once, since every request below names the same two artifacts.
-			designURI, err := cliArgURI(args[0])
+			designURI, err := addr(args[0])
 			if err != nil {
 				return err
 			}
-			boardURI, err := cliArgURI(boardPath)
+			boardURI, err := addr(boardPath)
 			if err != nil {
 				return err
 			}
@@ -658,7 +676,13 @@ func checkCmd() *cobra.Command {
 					// viewerLinkMeta decides whether rows carry a viewer link, and emits none rather
 					// than a guessed one (issue 392). Both halves of a link name the ENTRY rather than
 					// the argument and come from one resolution (agni issue 489).
-					meta := viewerLinkMeta(cmd, ctx, ll, designURI, srvSpec)
+					// A link is built from this machine's mount table whichever engine answered, so
+					// --server means the same thing with --remote as without it.
+					localURI, err := cliArgURI(args[0])
+					if err != nil {
+						return err
+					}
+					meta := viewerLinkMeta(cmd, ctx, ll, localURI, srvSpec)
 					meta.Generated = time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
 					switch format {
 					case "csv":
@@ -716,6 +740,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report | html (html is the verdict report and implies --verdicts)")
 	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
+	remoteFlag(cmd, &remoteURL)
 	outFileFlag(cmd, &outPath)
 	cmd.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so subject puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
@@ -832,6 +857,7 @@ func reviewCmd() *cobra.Command {
 	var failOnOutcome string
 	var minAnswered int
 	var reviewLibs, orderBy []string
+	var remoteURL string
 	cmd := &cobra.Command{
 		Use:   "review <file>...",
 		Short: "Run a review checklist (manifest) over one or more designs and report per-item outcomes",
@@ -917,11 +943,26 @@ func reviewCmd() *cobra.Command {
 			// review` leaves no files behind. --results-out is the explicit way to write one.
 			env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
 			ll := &localLoader{loader: newLoader()}
-			svc := service.NewReviewService(ll, service.NewMemReviewStore(), catalog, byName, specs, env, "", cliProjects())
+			var svc reviewAPI = service.NewReviewService(ll, service.NewMemReviewStore(), catalog, byName, specs, env, "", cliProjects())
+			// --remote scores the checklist on a running server (agni issue 998). Every create is
+			// validate_only, so the server keeps no run, as the in-memory store above keeps none past
+			// the command.
+			addr := cliArgURI
+			remote := remoteURL != ""
+			if remote {
+				if err := refuseLocalOnly(cmd, "params", "profile-path", "render"); err != nil {
+					return err
+				}
+				r, err := dialRemote(cmd.Context(), remoteURL)
+				if err != nil {
+					return err
+				}
+				svc, addr = r.review(), r.uri
+			}
 			// One create per design, since a stored run is about ONE design. The loop is the rollup.
 			var docs []*checkspb.CheckResults
 			var reviews []*webapi.Review
-			boardURI, err := cliArgURI(boardPath)
+			boardURI, err := addr(boardPath)
 			if err != nil {
 				return err
 			}
@@ -929,9 +970,13 @@ func reviewCmd() *cobra.Command {
 			// the note is per design, and an identical line is printed once.
 			noted := map[string]bool{}
 			for _, design := range args {
-				parent, err := cliProjectParent(cmd.Context(), design)
-				if err != nil {
-					return err
+				// A remote run is never stored, and the server names its projects from its own mounts,
+				// so it is sent no parent.
+				var parent string
+				if !remote {
+					if parent, err = cliProjectParent(cmd.Context(), design); err != nil {
+						return err
+					}
 				}
 				// The flag-built catalog plus this design's project rules, composed here only to report
 				// what it superseded. The service composes its own from the same inputs.
@@ -943,7 +988,7 @@ func reviewCmd() *cobra.Command {
 						fmt.Fprint(cmd.ErrOrStderr(), line)
 					}
 				}
-				designURI, err := cliArgURI(design)
+				designURI, err := addr(design)
 				if err != nil {
 					return err
 				}
@@ -953,7 +998,8 @@ func reviewCmd() *cobra.Command {
 					// project other than the one whose rules scored it.
 					Parent:   parent,
 					Manifest: service.ManifestProto(man), DesignUri: designURI, BoardUri: boardURI, RatifiedFloor: ratifiedFloor,
-					AsNamed: readAsNamed,
+					AsNamed:      readAsNamed,
+					ValidateOnly: true,
 					// --conventions rides the REQUEST as a value and the service composes it (WS3-102).
 					Overlay: overlay,
 				})
@@ -1067,6 +1113,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=outcome,id. csv only (agni issue 862)")
 	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
+	remoteFlag(cmd, &remoteURL)
 	outFileFlag(cmd, &reviewOutPath)
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")

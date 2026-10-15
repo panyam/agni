@@ -36,7 +36,7 @@ class ReviewSummary(_message.Message):
     def __init__(self, total: _Optional[int] = ..., covered: _Optional[int] = ..., answered: _Optional[int] = ..., fail: _Optional[int] = ..., provisional: _Optional[int] = ..., **kwargs) -> None: ...
 
 class CreateReviewRequest(_message.Message):
-    __slots__ = ("parent", "design_uri", "board_uri", "ratified_floor", "overlay", "manifest", "as_named", "work_budget")
+    __slots__ = ("parent", "design_uri", "board_uri", "ratified_floor", "overlay", "manifest", "as_named", "work_budget", "validate_only")
     PARENT_FIELD_NUMBER: _ClassVar[int]
     DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
     BOARD_URI_FIELD_NUMBER: _ClassVar[int]
@@ -45,6 +45,7 @@ class CreateReviewRequest(_message.Message):
     MANIFEST_FIELD_NUMBER: _ClassVar[int]
     AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
+    VALIDATE_ONLY_FIELD_NUMBER: _ClassVar[int]
     parent: str
     design_uri: str
     board_uri: str
@@ -53,7 +54,8 @@ class CreateReviewRequest(_message.Message):
     manifest: _checks_pb2.ReviewManifest
     as_named: bool
     work_budget: int
-    def __init__(self, parent: _Optional[str] = ..., design_uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., ratified_floor: _Optional[float] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ...) -> None: ...
+    validate_only: bool
+    def __init__(self, parent: _Optional[str] = ..., design_uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., ratified_floor: _Optional[float] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., validate_only: _Optional[bool] = ...) -> None: ...
 
 class GetReviewRequest(_message.Message):
     __slots__ = ("name",)

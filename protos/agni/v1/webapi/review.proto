@@ -165,6 +165,10 @@ message CreateReviewRequest {
   // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
   // deployment's own budget, never raise it, and zero leaves that budget as it is. A checklist item whose query passes its budget reads inconclusive, naming the budget, and the other items still answer.
   int64 work_budget = 8;
+  // validate_only scores the run and returns it without storing it (AIP-163), so the Review comes back
+  // with no name and its document with no created_at. It needs no review store, which is how the CLI
+  // asks a server for a review (`agni review --remote`) without leaving a run in that server's list.
+  bool validate_only = 9;
 }
 
 message GetReviewRequest {

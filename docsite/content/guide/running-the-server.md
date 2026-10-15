@@ -133,6 +133,29 @@ This is mostly for CI, where a container is easier than provisioning a Go toolch
 matters that the gate and the viewer run identical engine and symbol data. At your own desk,
 installing the CLI is nicer. See [the CLI reference](../cli-reference/).
 
+## Asking a running server from the CLI
+
+Every `agni` command reads the design itself, so a second command on the same board reads and
+projects it again. A running server keeps what it read (see [Kept reads](#kept-reads)), and
+`--remote` on `query`, `check`, `trace` and `review` sends the command's request there instead:
+
+```
+agni query designs/board --remote http://localhost:8080 'component.mpn(?r, ?m) => count(?r)'
+```
+
+The output is the one the local command prints, because the CLI already builds the request the
+server receives and renders the response it gets back. On the Jetson board a warm query takes 0.02 s
+end to end against 0.33 s run locally, and a check 0.18 s against 1.39 s.
+
+The server has to read the same filesystem, since a path is addressed through whichever of the
+server's mounts contains it, and one it does not serve is an error rather than a quiet local read.
+The server answers with the datasheet corpus and profiles it was started with, so `--params` and
+`--profile-path` are refused with `--remote` rather than ignored, and so is `--timing`, which would
+time this process. The server's own `--slow-request` and the `Agni-Timing` header time the request
+where it runs. A review is scored and returned
+without being stored, so it leaves nothing in the server's list. `stats`, `diff`, `render` and the
+other commands that read a design themselves still run locally.
+
 ## Health
 
 `GET /healthz` returns 200 while the server is up. The image declares a `HEALTHCHECK` that calls

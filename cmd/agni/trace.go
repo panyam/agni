@@ -23,6 +23,7 @@ func traceCmd() *cobra.Command {
 	var from, to, format, renderOut, serverVal, traceOutPath string
 	var srvSpec serverSpec
 	var hops int
+	var remoteURL string
 	cmd := &cobra.Command{
 		Use:   "trace <file>",
 		Short: "Show the series path between two pins, and what sits on it",
@@ -60,13 +61,26 @@ func traceCmd() *cobra.Command {
 			//
 			// The native renderer is nil because TraceDesign never reaches it.
 			ll := &localLoader{loader: newLoader()}
-			svc := service.NewDesignService(ll, nil, render.Style{}, cliProjects())
-			uri, err := cliArgURI(args[0])
+			// --remote asks a running server the same question (agni issue 998). --render still draws
+			// here, from this machine's copy of the design.
+			var svc traceAPI = service.NewDesignService(ll, nil, render.Style{}, cliProjects())
+			addr := cliArgURI
+			if remoteURL != "" {
+				if err := refuseLocalOnly(cmd); err != nil {
+					return err
+				}
+				r, err := dialRemote(cmd.Context(), remoteURL)
+				if err != nil {
+					return err
+				}
+				svc, addr = r.trace(), r.uri
+			}
+			uri, err := addr(args[0])
 			if err != nil {
 				return err
 			}
 			resp, err := svc.TraceDesign(cmd.Context(), &webapi.TraceDesignRequest{
-				Uri:  string(uri),
+				Uri:  uri,
 				From: &webapi.TraceEndpoint{RefDes: a.RefDes, Pin: a.Pin},
 				To:   &webapi.TraceEndpoint{RefDes: b.RefDes, Pin: b.Pin},
 				Hops: int32(hops),
@@ -88,7 +102,12 @@ func traceCmd() *cobra.Command {
 			// `trace --server <url>` printed no link and no reason once #633 replaced --url-base with
 			// --server (agni issue 636).
 			if srvSpec.url != "" {
-				meta := viewerLinkMeta(cmd, cmd.Context(), ll, string(uri), srvSpec)
+				// Built from this machine's mount table whichever engine answered, as `check` does.
+				localURI, err := cliArgURI(args[0])
+				if err != nil {
+					return err
+				}
+				meta := viewerLinkMeta(cmd, cmd.Context(), ll, localURI, srvSpec)
 				if u := rpt.TraceURL(meta, a.String(), b.String(), hops); u != "" {
 					defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
 				}
@@ -135,6 +154,7 @@ func traceCmd() *cobra.Command {
 	outFileFlag(cmd, &traceOutPath)
 	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
+	remoteFlag(cmd, &remoteURL)
 	cmd.Flags().StringVar(&renderOut, "render", "",
 		"also draw the answer to this .svg file: the route's nets and the parts crossed, on the "+
 			"design's own schematic where it has one and on an auto-layout of its netlist where it "+

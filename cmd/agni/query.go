@@ -38,6 +38,7 @@ func queryCmd() *cobra.Command {
 	var libDirs []string
 	var budget int64
 	var bindArgs []string
+	var remoteURL string
 	c := &cobra.Command{
 		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
@@ -99,6 +100,9 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			// A budget rides the command's context to every query it evaluates, as a server's does
 			// (agni issue 792). None by default: a local run's caller is the person waiting.
 			cmd.SetContext(query.WithBudget(cmd.Context(), budget))
+			if remoteURL != "" && (showRelations || specLib) {
+				return fmt.Errorf("--remote sends a design query to a server; --relations and --speclib read no design and run here")
+			}
 			if showRelations {
 				path := ""
 				if len(args) == 1 {
@@ -145,14 +149,6 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			// A design query goes through the in-process QueryService (WS9-048), the same service and
 			// BuildModel fact base the web query panel uses, so the two cannot drift. The CLI supplies
 			// an os-backed loader and the datasheet corpus.
-			var specs param.ParamProvider
-			if paramsDir != "" {
-				set, err := param.LoadSet(os.DirFS(paramsDir))
-				if err != nil {
-					return err
-				}
-				specs = set
-			}
 			// The CLI reads the convention file and the service takes the value (C22), as in `check`
 			// and `review`.
 			overlay := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{}}
@@ -166,12 +162,35 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			if err := addLibraries(overlay.Config, libDirs); err != nil {
 				return err
 			}
-			svc := service.NewQueryService(&localLoader{loader: newLoader()}, specs, cliProjects())
-			designURI, err := cliArgURI(args[0])
+			// --remote sends the same request to a running server (agni issue 998), so everything below
+			// reads one answer whichever engine produced it.
+			var svc queryAPI
+			addr := cliArgURI
+			if remoteURL != "" {
+				if err := refuseLocalOnly(cmd, "params"); err != nil {
+					return err
+				}
+				r, err := dialRemote(cmd.Context(), remoteURL)
+				if err != nil {
+					return err
+				}
+				svc, addr = r.query(), r.uri
+			} else {
+				var specs param.ParamProvider
+				if paramsDir != "" {
+					set, err := param.LoadSet(os.DirFS(paramsDir))
+					if err != nil {
+						return err
+					}
+					specs = set
+				}
+				svc = service.NewQueryService(&localLoader{loader: newLoader()}, specs, cliProjects())
+			}
+			designURI, err := addr(args[0])
 			if err != nil {
 				return err
 			}
-			boardURI, err := cliArgURI(boardPath)
+			boardURI, err := addr(boardPath)
 			if err != nil {
 				return err
 			}
@@ -179,13 +198,15 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if queryLimit != 0 {
 					return fmt.Errorf("--limit caps one query's answer; a set's queries write their own limit")
 				}
-				return runQuerySet(cmd, svc, setPath, designURI, boardURI, overlay, format, title)
+				return runQuerySet(cmd, svc, setPath, designURI, boardURI, overlay, format, title, budget)
 			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
 				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
 				OmitLocations: queryOmitLocations,
 				Bindings:      service.BindingsProto(bind),
 				Limit:         queryLimit,
+				// The context carries the budget in this process; a server reads it off the request.
+				WorkBudget: budget,
 			})
 			if err != nil {
 				return err
@@ -209,6 +230,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().StringArrayVar(&bindArgs, "bind", nil, "give a query variable a value, as name=value (repeatable): `--bind n=GND` asks the query with ?n bound to GND, exactly as if \"GND\" were written in its place. A value that parses as a number binds a number; quote it (n=\"3\") to bind text. A name the query does not use is an error")
 	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons plus generator rows), as `agni serve --query-budget` does. 0, the default, sets none")
 	c.Flags().StringArrayVar(&libDirs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the query, beside any the design's project carries. Repeatable")
+	remoteFlag(c, &remoteURL)
 	c.Flags().StringVar(&relDesign, "design", "", "with --relations, a design whose project's own library (lib/) joins the catalog, so its members list beside the shipped ones")
 	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations and no member path, also print each member's full reference doc")
 	return c
@@ -370,7 +392,7 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 // answer. Reading the file is the CLI's job; the service takes the set as a value (C22). The whole
 // document is written before any failure is reported, so a script gets the answers that exist and a
 // non-zero exit that says some are missing, rather than either alone.
-func runQuerySet(cmd *cobra.Command, svc *service.QueryService, path, designURI, boardURI string, overlay *webapi.OverlayConfig, format, title string) error {
+func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI string, overlay *webapi.OverlayConfig, format, title string, budget int64) error {
 	var b []byte
 	var err error
 	if path == "-" {
@@ -391,7 +413,7 @@ func runQuerySet(cmd *cobra.Command, svc *service.QueryService, path, designURI,
 		set.Title = title
 	}
 	resp, err := svc.RunQueries(cmd.Context(), &webapi.RunQueriesRequest{
-		Set: service.QuerySetProto(set), Uri: designURI, BoardUri: boardURI, Overlay: overlay, AsNamed: readAsNamed,
+		Set: service.QuerySetProto(set), Uri: designURI, BoardUri: boardURI, Overlay: overlay, AsNamed: readAsNamed, WorkBudget: budget,
 		OmitLocations: queryOmitLocations,
 	})
 	if err != nil {

@@ -127,9 +127,13 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err != nil {
 		return nil, err
 	}
-	store, err := s.reviewStore()
-	if err != nil {
-		return nil, err
+	// A validate_only run is never stored, so it needs no store, and a server started without
+	// --review-store still answers it.
+	var store ReviewStore
+	if !req.GetValidateOnly() {
+		if store, err = s.reviewStore(); err != nil {
+			return nil, err
+		}
 	}
 	if req.GetDesignUri() == "" {
 		return nil, fmt.Errorf("%w: CreateReview needs a design_ref", ErrInvalidArgument)
@@ -200,6 +204,9 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 		Manifest:         man.Name,
 		ManifestSnapshot: req.GetManifest(),
 		Areas:            reviewAreaProtos(rep),
+	}
+	if store == nil {
+		return ReviewOf("", doc), nil
 	}
 	name, createdAt, err := store.Create(ctx, parent, doc)
 	if err != nil {
