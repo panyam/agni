@@ -1,0 +1,6 @@
+# The review project the tutorial ladder teaches on, wrapped around Antmicro's open-source baseboard
+# for the Jetson AGX Thor module. The board itself is fetched rather than committed, because it is
+# someone else's design: `make board` copies it into designs/jetson/ from tools/samples (see the
+# Makefile). Everything in this folder that is not that copy is ours, and is what the rungs teach.
+name: jetson
+title: Jetson AGX Thor baseboard review project

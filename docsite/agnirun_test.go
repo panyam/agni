@@ -483,3 +483,65 @@ func TestInputHashRejectsUntrackedFixtureFiles(t *testing.T) {
 		}
 	}
 }
+
+// A tracked project over a fetched board (the Jetson tutorial project) stamps on BOTH, so committing
+// a project edit and bumping the samples pin each regenerate its captures.
+func TestSpecStampCoversItsFetchedBoard(t *testing.T) {
+	pin := filepath.Join(t.TempDir(), "samples.pin")
+	if err := os.WriteFile(pin, []byte("VERSION v1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	orig := samplesPin
+	samplesPin = pin
+	t.Cleanup(func() { samplesPin = orig })
+
+	plain := runSpec{Fixture: "examples/tutorial-project"}
+	withBoard := runSpec{Fixture: "examples/tutorial-project", Fetched: "tools/samples/boards/not-fetched-here", FetchedInto: "designs/x"}
+	a, err := specStamp([]byte("spec"), plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := specStamp([]byte("spec"), withBoard)
+	if err != nil {
+		t.Fatalf("a fetched board must stamp without the corpus present: %v", err)
+	}
+	if a == b {
+		t.Error("naming a fetched board stamped identically to naming none")
+	}
+	if err := os.WriteFile(pin, []byte("VERSION v2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := specStamp([]byte("spec"), withBoard); after == b {
+		t.Error("bumping the samples pin must move the stamp of a spec that copies a fetched board")
+	}
+	if after, _ := specStamp([]byte("spec"), plain); after != a {
+		t.Error("the samples pin moved the stamp of a spec that reads no fetched board")
+	}
+}
+
+// The board is copied INTO the project copy without replacing anything the project tracks, because
+// the project's own design.yaml is the one the tutorial teaches and the fetched one is its seed.
+func TestCopyFetchedKeepsTheProjectsOwnFiles(t *testing.T) {
+	src, dst := t.TempDir(), t.TempDir()
+	for name, body := range map[string]string{"board.kicad_sch": "fetched sch", "design.yaml": "fetched descriptor"} {
+		if err := os.WriteFile(filepath.Join(src, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	into := filepath.Join(dst, "designs", "x")
+	if err := os.MkdirAll(into, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(into, "design.yaml"), []byte("project descriptor"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := copyFetched(src, into); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(into, "board.kicad_sch")); string(b) != "fetched sch" {
+		t.Errorf("board file = %q, want the fetched copy", b)
+	}
+	if b, _ := os.ReadFile(filepath.Join(into, "design.yaml")); string(b) != "project descriptor" {
+		t.Errorf("design.yaml = %q, want the project's own, not the fetched one", b)
+	}
+}

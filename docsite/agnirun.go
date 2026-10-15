@@ -148,6 +148,12 @@ type runSpec struct {
 	// variables do not. Script and Steps are mutually exclusive. Capture and Match apply to every
 	// step, Exit to the last.
 	Steps []runStep `yaml:"steps"`
+	// Fetched names a board under tools/samples to copy INTO the fixture copy at FetchedInto, so a
+	// committed project can teach over a board that is someone else's and so is fetched rather than
+	// committed (the Jetson tutorial project, agni issue 564). Nothing the project tracks is replaced,
+	// and the stamp covers the samples pin as well as the project.
+	Fetched     string `yaml:"fetched"`
+	FetchedInto string `yaml:"fetched_into"`
 }
 
 // runStep is one command and the output it produced, which the page renders as its own block.
@@ -206,7 +212,7 @@ func runOrLoad(relativePath string) (runSpec, []string, error) {
 	if err := spec.validate(relativePath); err != nil {
 		return spec, nil, err
 	}
-	want, err := inputHash(raw, spec.Fixture)
+	want, err := specStamp(raw, spec)
 	if err != nil {
 		return spec, nil, err
 	}
@@ -238,6 +244,9 @@ func (s runSpec) validate(path string) error {
 	if hasScript && strings.TrimSpace(s.Show) == "" && strings.Contains(s.Script, stepDelim) {
 		return fmt.Errorf("%s: a script cannot contain %q, which delimits a capture", path, strings.TrimSpace(stepDelim))
 	}
+	if s.Fetched != "" && (!isFetched(s.Fetched) || s.Fixture == "" || isFetched(s.Fixture)) {
+		return fmt.Errorf("%s: fetched names a board under %s, copied into a committed fixture", path, fetchedRoot)
+	}
 	for i, st := range s.Steps {
 		if strings.TrimSpace(st.Script) == "" {
 			return fmt.Errorf("%s: step %d declares no script", path, i+1)
@@ -259,6 +268,38 @@ func readOutput(path string) (bodies []string, stamp string, err error) {
 		return nil, "", fmt.Errorf("no stamp")
 	}
 	return strings.Split(rest, stepDelim), strings.TrimPrefix(first, stampPrefix), nil
+}
+
+// specStamp is the spec's input hash, folded with its fetched board's when it copies one in.
+func specStamp(raw []byte, spec runSpec) (string, error) {
+	want, err := inputHash(raw, spec.Fixture)
+	if err != nil || spec.Fetched == "" {
+		return want, err
+	}
+	board, err := inputHash(raw, spec.Fetched)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256([]byte(want + board))
+	return hex.EncodeToString(sum[:])[:16], nil
+}
+
+// copyFetched copies each entry of a fetched board into dir, skipping any the fixture already holds.
+func copyFetched(board, dir string) error {
+	entries, err := os.ReadDir(board)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		dst := filepath.Join(dir, e.Name())
+		if _, err := os.Lstat(dst); err == nil {
+			continue
+		}
+		if out, err := exec.Command("cp", "-R", filepath.Join(board, e.Name()), dst).CombinedOutput(); err != nil {
+			return fmt.Errorf("copying fetched %s: %v: %s", e.Name(), err, out)
+		}
+	}
+	return nil
 }
 
 // inputHash covers the spec and every TRACKED file in its fixture, so any COMMITTED edit to either
@@ -403,6 +444,19 @@ func execute(spec runSpec) ([]string, error) {
 		}
 		if out, err := exec.Command("cp", "-R", filepath.Join("..", spec.Fixture), dest).CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("copying fixture: %v: %s", err, out)
+		}
+		if spec.Fetched != "" {
+			board := filepath.Join("..", spec.Fetched)
+			if _, err := os.Stat(board); err != nil {
+				return nil, fmt.Errorf("board %s is fetched rather than committed, and is not here: run `make samples-oracle`", spec.Fetched)
+			}
+			into := filepath.Join(dest, spec.FetchedInto)
+			if err := os.MkdirAll(into, 0o755); err != nil {
+				return nil, fmt.Errorf("preparing %s: %w", spec.FetchedInto, err)
+			}
+			if err := copyFetched(board, into); err != nil {
+				return nil, err
+			}
 		}
 	}
 	steps := spec.steps()

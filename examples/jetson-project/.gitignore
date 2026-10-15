@@ -1,0 +1,4 @@
+# The board's own files, copied in from the fetched samples corpus by `make board`. Only the
+# descriptor is ours.
+designs/jetson/*
+!designs/jetson/design.yaml
