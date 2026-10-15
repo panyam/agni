@@ -6,3 +6,8 @@ see the LICENSE file in this repository for the full text.
 
 This product includes software developed by Sri Panyam and contributors to
 the Agni project.
+
+docsite/static/designs/jetson-power.svg is rendered from the Antmicro baseboard for
+Jetson AGX Thor, Copyright (c) 2025-2026 Antmicro, licensed under the Apache License,
+Version 2.0. The board's design files are fetched into tools/samples/ and are not
+committed here.
