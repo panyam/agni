@@ -15,9 +15,9 @@ levels of hardware knowledge, each tied back to the rules that encode it.
 
 ## The board
 
-Rung 1 runs on a real board, Antmicro's Apache-2.0 baseboard for the Jetson AGX Thor module,
+Rungs 1 to 3 run on a real board, Antmicro's Apache-2.0 baseboard for the Jetson AGX Thor module,
 which `make samples-oracle` fetches into `tools/samples/boards/jetson-agx-thor-baseboard`. Rung 1
-shows how to get it. The other rungs are moving onto it one at a time and until then run against
+shows how to get it. The later rungs are moving onto it one at a time and until then run against
 `examples/tutorial-project` in the engine repo. It is a synthetic industrial
 sample board plus the project files a team wraps around one. Every part, MPN, and datasheet value in
 it is invented, so you can copy the whole folder and change it freely.
