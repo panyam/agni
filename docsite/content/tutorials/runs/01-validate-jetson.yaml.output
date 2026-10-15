@@ -1,0 +1,23 @@
+#agni-run f2ed04a4cb40b93b
+FILE                                 FORMAT  STATUS  DETAIL
+csi.kicad_sch                        kicad   ok      73 comps, 129 nets · 1 sheets, 125 placements (125 resolved), 457 wires
+dcdc.kicad_sch                       kicad   ok      198 comps, 99 nets · 1 sheets, 374 placements (374 resolved), 753 wires
+expansion_connector.kicad_sch        kicad   ok      38 comps, 327 nets · 1 sheets, 77 placements (77 resolved), 989 wires
+jetson-agx-thor-baseboard.kicad_pcb  kicad   ok      1123 comps, 1387 nets
+jetson-agx-thor-baseboard.kicad_pro  kicad   ok      1123 comps, 1387 nets · 15 sheets, 1855 placements (1855 resolved), 6231 wires
+jetson-agx-thor-baseboard.kicad_sch  kicad   ok      1123 comps, 1355 nets · 15 sheets, 1855 placements (1855 resolved), 6231 wires
+level_shifter_x8.kicad_sch           kicad   ok      6 comps, 23 nets · 1 sheets, 18 placements (18 resolved), 42 wires
+m2.kicad_sch                         kicad   ok      53 comps, 122 nets · 1 sheets, 76 placements (76 resolved), 234 wires
+peripherals.kicad_sch                kicad   ok      74 comps, 70 nets · 1 sheets, 131 placements (131 resolved), 330 wires
+power.kicad_sch                      kicad   ok      76 comps, 44 nets · 1 sheets, 137 placements (137 resolved), 241 wires
+recovery_usb.kicad_sch               kicad   ok      49 comps, 52 nets · 1 sheets, 78 placements (78 resolved), 211 wires
+sfp.kicad_sch                        kicad   ok      35 comps, 27 nets · 1 sheets, 54 placements (54 resolved), 118 wires
+som_io.kicad_sch                     kicad   ok      40 comps, 181 nets · 1 sheets, 77 placements (77 resolved), 449 wires
+som_io2.kicad_sch                    kicad   ok      75 comps, 291 nets · 1 sheets, 103 placements (103 resolved), 708 wires
+som_power.kicad_sch                  kicad   ok      116 comps, 64 nets · 1 sheets, 175 placements (175 resolved), 315 wires
+usb.kicad_sch                        kicad   ok      88 comps, 155 nets · 1 sheets, 138 placements (138 resolved), 511 wires
+usb_debug_pd.kicad_sch               kicad   ok      96 comps, 93 nets · 1 sheets, 146 placements (146 resolved), 374 wires
+usb_dp.kicad_sch                     kicad   ok      65 comps, 70 nets · 1 sheets, 100 placements (100 resolved), 316 wires
+usb_hub.kicad_sch                    kicad   ok      131 comps, 129 nets · 1 sheets, 194 placements (194 resolved), 557 wires
+
+19 passed, 0 failed, 4 skipped (no reader)

@@ -1,0 +1,5 @@
+# Rung 1: what was read, from the design folder. The folder's design.yaml names the root schematic
+# as the entry and the board as its companion, so naming the folder reads the whole design.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni stats .

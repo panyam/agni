@@ -12,23 +12,44 @@ your CAD tool would draw. If your design is a netlist, there is no geometry to d
 netlist records what is connected and never records where anything sits. In that case the tool
 computes a layout from the connections.
 
-The tutorial board is the second case. `gateway.edn` is an EDIF netlist.
+The Jetson baseboard is the first case. Run the next command from its folder, as in
+[rung 1](../01-read-a-design/).
+
+## Draw a sheet
+
+{{ agniRun "content/tutorials/runs/03-render-jetson-power.yaml" }}
+
+That is placements and wires read out of the file rather than computed, so the result is the drawing
+somebody drew. Faithful is the default. `--sheet` takes a sheet's name or its index, and without it
+you get the root sheet, which on a hierarchical design is mostly the boxes standing for the others.
+
+<agni-viewer src="{{.Site.PathPrefix}}/static/designs/jetson-power.svg"
+             caption="The Power sheet drawn by the command above, with every position, wire, and label read out of the file"></agni-viewer>
+
+The design has sixteen sheets in all. Fifteen come from the schematic, and the sixteenth, `Board`, is
+the copper from the `.kicad_pcb` its `design.yaml` declares, which the viewer at the end of this page
+draws.
 
 ## Draw a netlist
+
+The other case needs a design with no drawing, and the Jetson board does not have one. The
+synthetic board in `examples/tutorial-project` ships an EDIF netlist, `gateway.edn`, for exactly this,
+so run the next three commands from that folder instead:
 
 {{ agniRun "content/tutorials/runs/03-render-layered.yaml" }}
 
 The line it prints is a quality report on the drawing, not on your board. `crossings` counts wires
 that cross each other, and crossings are what mainly make a generated schematic hard to follow.
 
-This is a drawing of your netlist, not a reproduction of your schematic. Parts sit where the layout
+This is a drawing of the netlist, not a reproduction of a schematic. Parts sit where the layout
 algorithm put them. It is for following connectivity, not for judging the layout itself.
 
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-netlist.svg"
              caption="gateway.edn drawn by the command above, with every position calculated because no geometry came from the file"></agni-viewer>
 
-Compare it against the faithful drawing further down. The board and the nets are the same and the
-picture is completely different, because one was drawn by a person and the other was solved for.
+A computed layout earns its keep on a board of this size. On the Jetson's 1123 parts the best of the
+five layouts below still crosses wires about 75,000 times, so it is for a netlist that has no
+drawing, never a substitute for one.
 
 ## Pick a layout
 
@@ -43,20 +64,6 @@ is what a schematic normally looks like, at the cost of more segments and more c
 Lower `stress` means the drawn distances better match how far apart things actually are in the
 connection graph. There is no single winner. Render the two or three that score well and look at
 them.
-
-## Faithful geometry
-
-When the design does carry geometry, drop `--layout` and you get the design's own drawing. The
-tutorial board ships a KiCad view of itself for exactly this:
-
-{{ agniRun "content/tutorials/runs/03-render-kicad-sch.yaml" }}
-
-That is placements and wires read out of the file rather than computed, so the result is the drawing
-somebody drew. Faithful is the default. `--layout` is what you reach for when there is nothing to be
-faithful to.
-
-<agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-schematic.svg"
-             caption="gateway.kicad_sch rendered faithfully, with every position, wire, and label read out of the file"></agni-viewer>
 
 ## The same board, twice
 
@@ -74,39 +81,33 @@ diff the two, and an empty net delta is real evidence the design survived the mo
 
 ## In the browser
 
-`agni open` serves one design and prints the URL that shows it:
+`agni open` serves one design and prints the URL that shows it. It needs the viewer's built assets,
+which a checkout builds into `web/` with `make ui`, and it looks for them in `./web` unless told
+otherwise. The board's folder is four levels below the checkout, so point at them from there:
 
 ```
-agni open designs/gateway/gateway.edn
+agni open . --web-dir ../../../../web
 ```
 
 It picks a free port on loopback, so it will not collide with anything you already have running, and
 it serves only this design and the project around it. The URL it prints goes straight to the board
-rather than to a file browser.
+rather than to a file browser. Without the flag it stops before serving anything, with an error that
+names the flag and the two other ways to say the same thing.
 
-**It needs the viewer's built assets, and it does not carry them.** From a repo checkout they sit in
-`./web` after `make ui`, which is the default, and that is why every other command on this page works
-here and this one may not. Anywhere else, point at them once:
-
-```
-agni open designs/gateway/gateway.edn --web-dir /path/to/web
-```
-
-`AGNI_WEB_DIR` and a `web_dir:` line in `agni.yaml` do the same thing without repeating the flag, and
-the error names all three if you get it wrong. A binary from `go install` has no assets to point at,
+`AGNI_WEB_DIR` and a `web_dir:` line in `agni.yaml` do the same thing without repeating the flag. A binary from `go install` has no assets to point at,
 because the built JavaScript is not part of the Go module, so from there use a checkout's `web/`
 after `make ui`, or the container image.
 
 The viewer pans and zooms, and its panels run the same checks the CLI runs, over the same catalog, so
-the findings you saw in rung 2 appear against the drawing rather than as a list. Later rungs add tiers
+the findings you saw in rung 2 appear against the drawing rather than as a list. The `Board` sheet
+in its list is the copper. Later rungs add tiers
 to that catalog, and the viewer picks them up the same way the CLI does.
 
 `agni open` also prints a ready-made `agni check` command pointed at the server it just started, which
 is what [rung 11](../11-archive-and-gate/) uses to turn a report's subjects into links.
 
 For several designs at once, or for a server other people reach, [`agni serve`](../../guide/running-the-server/)
-takes a mount per folder. It has to be told where the viewer's own assets are, which `agni open` works
-out for itself.
+takes a mount per folder, and finds the viewer's assets the same way.
 
 ## Next
 

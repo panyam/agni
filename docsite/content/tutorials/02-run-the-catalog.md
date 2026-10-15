@@ -5,37 +5,43 @@ description: "The built-in rules, how to read a finding, and how to fail a build
 
 `agni check` runs the shipped rule catalog over one design. These are the general rules,
 true of most boards regardless of whose board it is. Your team's own rules come later, in
-rungs 4 through 8.
+rungs 4 through 8. Run it from the board's folder, as in [rung 1](../01-read-a-design/).
 
 ## Run it
 
-{{ agniRun "content/tutorials/runs/02-check-designs-gateway-gateway-edn.yaml" }}
+{{ agniRun "content/tutorials/runs/02-check-jetson.yaml" }}
 
 ## Reading one finding
 
-Take `[error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor to a rail)`. It has four parts.
+Take `[error] i2c-pull-up: /SoM_IO/I2C0_SCL_1V8 (I2C net has no pull-up resistor to a rail)`. It has
+four parts.
 
-The **severity** is `error`. The **rule** is `i2c-pull-up`. The **subject** is the net `I2C_SCL`,
-naming the specific thing on your board the rule is talking about. The **reason** in parentheses
-says what is wrong in plain language.
+The **severity** is `error`. The **rule** is `i2c-pull-up`. The **subject** is the net
+`/SoM_IO/I2C0_SCL_1V8`, naming the specific thing on your board the rule is talking about, with the
+sheet it was drawn on as a prefix. The **reason** in parentheses says what is wrong in plain language.
 
 Severity is a policy signal, not a confidence signal. An `error` is something that will almost
-certainly not work, such as an I2C bus with no {{ explainable "pull-up" }}, which cannot signal at all because the parts on it can
-only pull the line down and nothing pulls it back up. A `warning` is something that usually
-indicates a defect. An `info` is worth a look. None of them is a statement about how sure the tool
-is.
+certainly not work, such as an I2C bus with no {{ explainable "pull-up" }}, which cannot signal at all
+because the parts on it can only pull the line down and nothing pulls it back up. A `warning` is
+something that usually indicates a defect. An `info` is worth a look. None of them is a statement
+about how sure the tool is.
 
-`profile/can-esd-missing` fires alongside `esd-protection` on the same two nets. That is not a
-duplicate. The general rule notices any externally exposed signal with no protection. The CAN
-profile knows those two nets are a CAN bus and applies what CAN specifically requires. Rung 5 is
-about that second kind.
+Now look at the net itself. It joins three pins, one on the module connector J1, one on R357, and
+one on U1, an NTS0104 level translator. R357 is a 2.2 kOhm pull-up, and the schematic marks it
+do-not-populate, so the rule does not count it. The translator carries 10 kOhm pull-ups of its own
+inside the package, which is a fact from its datasheet and appears nowhere in the netlist. So the
+finding is right about what the drawing shows, and the board most likely works. Closing that gap is
+what [rung 6](../06-part-limits/) is for, where a datasheet fact becomes something a check can read.
+
+Most findings on a real board read like this one. The rule is correct about the netlist, and
+whether it matters depends on something the netlist does not carry.
 
 ## Where a finding came from
 
 The text form is a summary. `--format json` gives you the whole thing:
 
 ```
-agni check designs/gateway/gateway.edn --format json
+agni check . --format json
 ```
 
 ```json
@@ -44,25 +50,33 @@ agni check designs/gateway/gateway.edn --format json
   "severity": "error",
   "subject": {
     "kind": "net",
-    "ref": "I2C_SCL",
-    "netId": "601209543ef5"
+    "ref": "/SoM_IO/I2C0_SCL_1V8",
+    "pin": "",
+    "netId": "93b92cc31d78",
+    "busId": ""
   },
   "message": "I2C net has no pull-up resistor to a rail",
   "inconclusive": false,
   "provenance": {
-    "sourceFile": "designs/gateway/gateway.edn",
-    "nativeId": "I2C_SCL",
-    "nativeIdKind": "edif-rename-id"
+    "sourceFile": "jetson-agx-thor-baseboard.kicad_sch",
+    "span": null,
+    "nativeId": "",
+    "nativeIdKind": ""
   },
-  "sheets": ["graph"],
-  "datasheets": []
+  "sheets": [
+    "/SoM_IO"
+  ],
+  "locateReason": "LOCATE_REASON_UNSPECIFIED",
+  "datasheets": [],
+  "context": []
 }
 ```
 
-`provenance` points back at the file and at the identifier the source file itself used, which is how
-you get from a finding to the thing in your CAD tool. `datasheets` is empty here and carries the
-page and table a datasheet-backed finding rests on, which rung 6 covers. `inconclusive` marks a
-check that ran but could not decide, which matters enough to get its own rung later.
+`provenance` points back at the file the design was read from, and `sheets` names the sheet the net
+is drawn on, which is how you get from a finding to the thing in your CAD tool. `datasheets` is
+empty here and carries the page and table a datasheet-backed finding rests on, which rung 6 covers.
+`inconclusive` marks a check that ran but could not decide, which matters enough to get its own rung
+later.
 
 Two other formats are useful early. `--format markdown` organizes by severity, worst first, for
 pasting into a review. `--format report` is the long form with each rule's full explanation.
@@ -72,13 +86,13 @@ pasting into a review. `--format report` is the long form with each rule's full 
 Run one rule while you work on it:
 
 ```
-agni check designs/gateway/gateway.edn --rule i2c-pull-up
+agni check . --rule i2c-pull-up
 ```
 
 Or a whole category:
 
 ```
-agni check designs/gateway/gateway.edn --tag category=power
+agni check . --tag category=power
 ```
 
 ## Failing a build
@@ -88,13 +102,15 @@ all you need to put it in CI:
 
 {{ agniRun "content/tutorials/runs/02-gate-fails.yaml" }}
 
-The board has two `error` findings, so the command fails. With those gone it passes:
+The board has thirty `error` findings, all of them `i2c-pull-up`, so the command fails. A rule with
+no errors passes the same gate:
 
 {{ agniRun "content/tutorials/runs/02-gate-passes.yaml" }}
 
 Starting at `--fail-on error` is the practical choice. It gates on the things that will not work at
 all, which almost nobody argues with, and it lets you tighten to `warning` later once the backlog is
-clear.
+clear. On a board like this one the first job is reading those thirty, because as the finding above
+showed, an error can be right about the netlist and still not be a defect.
 
 ## What the run says it looked at
 
@@ -102,41 +118,42 @@ Look at the last line of that first run again. Every run ends with it, whether o
 anything:
 
 ```
-258 subject(s) considered by 36 rule(s), 7 not considered (--verdicts for the detail)
+24121 subject(s) considered by 36 rule(s), 625 not considered (--verdicts for the detail)
 ```
 
 This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
 examined the wrong thing produce an identical list of findings, namely none, so the findings alone
 can never tell you which one you are holding.
 
-Read the three numbers separately. **258 considered** is how many subjects were actually judged.
+Read the three numbers separately. **24121 considered** is how many subjects were actually judged.
 **36 rules** is how many were willing to say what they looked at, which is not the same as how many
 ran, because most of the catalog has no subject in scope on any given board, and a rule with nothing
-to say is not a gap. **7 not considered** is the one worth reading closely, and it gets its own look below.
+to say is not a gap. **625 not considered** is the one worth reading closely, and it gets its own
+look below.
 
-A second line used to sit under that one, and on this board it no longer prints:
+A second line can appear under that one:
 
 ```
 2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
 ```
 
 It counts rules that found something and never said what they looked at, so silence from them means
-nothing and the coverage number does not cover them. It is printed whenever the count is above zero,
-and on this board it now reads zero and is omitted entirely. It was 3 before the design-intent rules
-gained a considered set, then 2, now none. The rules you write for your own board were the last ones
-whose silence meant nothing, and they are the ones you most want a considered set from.
-
-You will still see the line on a board of your own, and on any run whose read went wrong, where the
-broken schematic from rung 1 reports 30 such rules. Treat it as the limit of the coverage claim above
-it.
+nothing and the coverage number does not cover them. It is printed whenever the count is above zero.
+On this board it reads zero and is omitted, and so it does for the sub-sheet read in rung 1. You will
+see it on a run that includes rules of your own written without a considered set, and when it
+appears it is the limit of the coverage claim above it.
 
 That line is the claim. `--verdicts` is the evidence, one row per subject with passes included:
 
 {{ agniRun "content/tutorials/runs/02-verdicts.yaml" }}
 
-Now the pass is checkable. It names C1 and C3, so you can open the schematic and confirm that those
-capacitors really are on those rails. Delete C1 next revision and this output changes, where the
-findings-only view would print the same nothing before and after.
+Now the pass is checkable. It names C10 on `+3V3` and C241 on `VCC`, so you can open the schematic
+and confirm that those capacitors really are on those rails. Delete one next revision and this output
+changes, where the findings-only view would print the same nothing before and after.
+
+The one fail is `N$54`, a net KiCad named automatically because nobody labelled it. It is the module's
+backup-battery input, fed through D1 and R6, and the module decouples it on its own side of the
+connector. That is the same lesson as the I2C finding, met from the other direction.
 
 Across the whole catalog that is a much larger table than the findings list, which is why the summary
 is the default and the rows are a flag:
@@ -147,13 +164,13 @@ is the default and the rows are a flag:
 rule was willing to judge that subject and something stopped it, so it says what stopped it rather
 than passing on incomplete evidence.
 
-On this board only one of them wants a datasheet value of the kind you seed in
-[rung 6](../06-part-limits/). The rest are the more interesting sort. Four are `floating-input`
-declining a net that carries a passive part, because a resistor on a net might be the pull that fixes
-it, might be a series element with the driver on the far side, or might be a footprint nobody stuffed,
-and a netlist cannot tell those apart. Two are `esd-clamp-not-tvs` handing a bare net to
-`esd-protection`, which is the rule that reports it. Seeding fills neither, because they
-mark where the check's reach ends.
+On this board most of the 625 are one of three kinds. 319 are `netclass-via-drill` declining nets
+that carry no via, which have no drill to compare. 156 are `floating-input` declining a net that
+carries a passive part, because a resistor on a net might be the pull that fixes it, might be a series
+element with the driver on the far side, or might be a footprint nobody stuffed, and a netlist cannot
+tell those apart. 111 are `rail-not-classified` declining a net whose name declares a voltage while no
+power-input pin on it confirms the net is a rail. None of those is something a datasheet fills,
+because they mark where the check's reach ends.
 
 That distinction between "checked and fine", "never checked" and "could not tell" runs through the
 whole tool, and [rung 9](../09-read-the-verdicts/) is about reading it.

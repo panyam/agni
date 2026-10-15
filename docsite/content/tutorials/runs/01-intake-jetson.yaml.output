@@ -1,0 +1,33 @@
+#agni-run 91d3d456778ec77e
+## Aggregates
+- Components: 1123 | Sections: 1141 | Nets: 1355
+
+## Class summary (query-derived)
+| Class | Ref count |
+|-------|-----------|
+| resistor | 403 |
+| capacitor | 377 |
+| test_point | 115 |
+| diode | 82 |
+| ic | 55 |
+| tvs | 38 |
+| transistor | 36 |
+| led | 34 |
+| connector | 20 |
+| inductor | 8 |
+| clock | 4 |
+| oscillator | 4 |
+| zener | 1 |
+| unclassified | 23 |
+
+## Rails (nominal only; net names withheld)
+- 1.15V
+- 1.8V
+- 3.3V
+- 5V
+- 12V
+- 16V
+- 20V
+
+## Parts (BOM by distinct type; --parts full for the per-component AVL)
+...

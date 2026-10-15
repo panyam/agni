@@ -79,9 +79,10 @@ the rules are the same, and the label is how you tell which route a run took.
 
 ## The failure this read cannot have
 
-[Rung 1](../01-read-a-design/) spent its length on the unresolved-symbol failure, where the parts
-load, the pins do not, and the checks report a board in ruins that is really a bad read. It is the
-most expensive mistake on the ladder, so it is fair to ask what it looks like here.
+[Rung 1](../01-read-a-design/) spent its length on a bad read, where the checks report a board in
+ruins that is really a read of the wrong thing. Its close cousin is the unresolved-symbol failure,
+where the parts load and the pins do not. It is the most expensive mistake on the ladder, so it is
+fair to ask what it looks like here.
 
 It does not look like anything here, because this rung serves the EDIF netlist and EDIF declares
 its own pins:
@@ -103,7 +104,7 @@ failure is one file away.
 ## Serve it wrong, on a design that can go wrong
 
 Point the same project at the schematic, with its symbol library moved aside, and it is available
-again. That is rung 1's recipe, scored this time by the review layer:
+again. Scored by the review layer, it reads like this:
 
 {{ agniRun "content/tutorials/runs/13-review-broken-read.yaml" }}
 
@@ -112,8 +113,8 @@ They had the design. They could not reach a verdict, because the pins they neede
 resolved, and rather than pass, fail, or stay silent, each one says so and names the parts it could
 not resolve.
 
-Compare that to the plain catalog on the same broken read, where rung 1 counted a hundred and
-fourteen confident and entirely wrong findings. The tool got no cleverer between the two rungs.
+Compare that to the plain catalog on a bad read, which in rung 1 counted 383 confident and
+entirely wrong findings off one sheet. The tool got no cleverer between the two rungs.
 The difference is that [rung 9's](../09-read-the-verdicts/) vocabulary has a word for "I looked
 and I cannot tell" and a bare finding list does not.
 

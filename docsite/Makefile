@@ -80,12 +80,15 @@ gh-pages: build
 # this rather than by noticing the picture went stale. Run from the repo root, where the engine
 # module lives (docsite is its own module and does not depend on it).
 TUT = examples/tutorial-project/designs/gateway
+JETSON = tools/samples/boards/jetson-agx-thor-baseboard
 designs: ## Re-render the tutorial board images the docs embed
-	@cd .. && go run ./cmd/agni render $(TUT)/gateway.kicad_sch --symbol-path $(TUT)/symbols \
-	  -o docsite/static/designs/gateway-schematic.svg
 	# LAYERED, matching the run on rung 3 rather than beating it. force draws the better picture and
 	# is not bit-identical across architectures (agni issue 472), so a page whose command produced it
 	# would carry a capture the gate cannot check. The command and the figure agreeing is worth more
 	# here than the prettier layout, and the comparison table two sections down still says force wins.
 	@cd .. && go run ./cmd/agni render $(TUT)/gateway.edn --layout layered \
 	  -o docsite/static/designs/gateway-netlist.svg
+	# The Jetson baseboard the ladder teaches from is fetched rather than committed (make
+	# samples-oracle), so its drawing is committed instead and re-rendered here.
+	@cd .. && go run ./cmd/agni render $(JETSON) --sheet Power \
+	  -o docsite/static/designs/jetson-power.svg
