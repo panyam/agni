@@ -131,7 +131,7 @@
 
 ## Verdicts
 
-273 rows
+271 rows
 
 | verdict_id | url | rule | outcome | subjects | statement | context | terms | reason |
 |---|---|---|---|---|---|---|---|---|
@@ -143,7 +143,7 @@
 
 ## Verdicts by rule
 
-38 rows
+37 rows
 
 | rule | pass | fail | inconclusive | no-limit | not-considered | total |
 |---|---|---|---|---|---|---|
