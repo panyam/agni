@@ -196,10 +196,10 @@ with no capture at all, which fell out of the rule rather than being chosen, and
 despite being the longest page on the ladder because it carries eight captures. Unbroken prose is the
 trigger, and length is not.
 
-**Figures are generated too.** `make -C docsite figures` re-renders the schematics `learn/` embeds,
-via `figures.sh`. It stays outside the gate because a render depends on the
-engine build, so a code change would invalidate every figure on every branch, and nothing checks a
-render for staleness (agni issue 453).
+**Figures are generated too.** `make -C docsite images` re-renders every engine-drawn image the docs
+embed (the tutorial's board drawings and the schematics `learn/` embeds) via `images.sh`, and
+`docsite-images-check` in the gate fails when one disagrees with what the engine draws today (agni
+issue 453). A new one is a line in `images.sh`, never a hand export.
 
 **To review a branch before it merges, use `make -C docsite preview PAGE=<page>`**, which folds one
 built page into a self-contained HTML file that opens anywhere. Do NOT reach for `make gh-pages`, which

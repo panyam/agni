@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -341,7 +341,7 @@ catalog-docs-check: catalog-docs
 # browser-test came back in on 2026-09-08 once the demo work was done, which is what the note that
 # took it out said to do. It was worth re-timing rather than trusting that note: the reason given was
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
-testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
@@ -695,6 +695,13 @@ tutorial-runs:
 # on macOS.
 tutorial-runs-check:
 	./hack/tutorial_runs_check.sh
+
+# Fail when an engine-drawn image the docsite embeds disagrees with what the engine draws today.
+# Same posture as tutorial-runs-check (snapshot, regenerate, compare, restore), over what
+# docsite/images.sh renders. About two seconds once the engine is built. It needs the Jetson board, so
+# it names samples-oracle rather than trusting the order testall lists it in (agni issue 453).
+docsite-images-check: samples-oracle
+	./hack/docsite_images_check.sh
 
 # =============================================================================
 # Datasheet tooling

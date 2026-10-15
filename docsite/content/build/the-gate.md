@@ -12,7 +12,7 @@ flowchart LR
     T --> E["test<br/>examples-test<br/>docsite-test"]
     T --> W["ui<br/>web-test<br/>browser-test"]
     T --> P["python-test"]
-    T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check<br/>tidyall-check"]
+    T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check<br/>docsite-images-check<br/>tidyall-check"]
     V --- Vn["Go hygiene, C19 ratchet,<br/>duplicated fixtures"]
     E --- En["engine, example modules, docsite wiring"]
     W --- Wn["bundle, typecheck, vitest,<br/>layout in a real Chromium"]
@@ -147,6 +147,16 @@ hand-written fence keeps whatever numbers it was written with, because the check
 `14 finding(s) ... 32 rule(s)` through a change that moved the run to 27 and 36, and the gate was
 green the whole time. When a change moves a capture, grep the docsite for the numbers that moved
 before believing the tutorials still read correctly.
+
+**The images the docs embed get the same check.** `docsite-images-check` runs `docsite/images.sh`,
+which renders the board drawings the tutorial and the `learn/` chapters show, and fails on any
+difference, in about two seconds. A reader change made it necessary, not a renderer one: "Name
+KiCad nets as KiCad does" moved every `data-net` on the Jetson Power sheet a day after that drawing
+was committed, and no stamp over the renderer would have seen it (agni issue 453). The two drawings
+on the demos page are copies of render goldens, so `fixture-copies-check` holds them to the goldens
+the render tests keep current. Nothing in `images.sh` may use `--layout force`, for the reason
+above. Every other layout, and every faithful sheet, renders byte-identical on arm64 and amd64, once
+a rotated label's pivot prints at one decimal like the coordinates around it.
 
 It snapshots and restores, so it carries no commit-first trap and leaves the tree as it found it
 whether it passes or fails. That matters more here than for the catalog, because captures move on any
@@ -307,10 +317,6 @@ and a regression grows it; `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Two b
 survey, and the file records that neither crosses a sheet boundary with a bus vector, so it does not
 move when that fix is reverted. The in-gate fixture pair (`hier_busvec_root.kicad_sch` against
 kicad-cli's own netlist) is that guard.
-
-`make -C docsite figures` and `make -C docsite designs` re-render the images the docs embed, and
-nothing checks those for staleness at all (agni issue 453). The captures got a check; the pictures
-have not.
 
 ```mermaid
 flowchart LR
