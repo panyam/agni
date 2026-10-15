@@ -21,8 +21,8 @@ func TestPlacedSymbolResolvesThroughLibName(t *testing.T) {
 			at[c.GetComponentRef()+"."+c.GetPinRef()] = n.GetName()
 		}
 	}
-	if got := at["R1.1"]; got != "SIG" {
-		t.Errorf("R1.1 is on %q, want SIG", got)
+	if got := at["R1.1"]; got != "/SIG" {
+		t.Errorf("R1.1 is on %q, want /SIG", got)
 	}
 	if got := at["R1.2"]; got != "GND" {
 		t.Errorf("R1.2 is on %q, want GND, which the power symbol filed under lib_name names", got)

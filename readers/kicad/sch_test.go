@@ -342,7 +342,9 @@ func TestNoConnectMarkerNamesPinStub(t *testing.T) {
 	for _, n := range d.Nets {
 		names[n.Name] = true
 	}
-	for _, want := range []string{"SIG", "unconnected-(U1-Pad2)", "unconnected-(R1-Pad2)"} {
+	// KiCad's own names (testdata/ncmark.netnames): U1's pin 2 is named NC, so its stub carries the
+	// pin name as well as the pad.
+	for _, want := range []string{"/SIG", "unconnected-(U1-NC-Pad2)", "unconnected-(R1-Pad2)"} {
 		if !names[want] {
 			t.Errorf("missing net %q; have %v", want, names)
 		}
@@ -462,8 +464,8 @@ func TestJoinedTapByLabel(t *testing.T) {
 	if len(jt) != 1 {
 		t.Fatalf("joined taps = %d, want 1: %+v", len(jt), jt)
 	}
-	if jt[0].GetJoinKind() != "label" || jt[0].GetLabel() != "BUS" {
-		t.Errorf("join = %q %q, want label BUS", jt[0].GetJoinKind(), jt[0].GetLabel())
+	if jt[0].GetJoinKind() != "label" || jt[0].GetLabel() != "/BUS" {
+		t.Errorf("join = %q %q, want label /BUS", jt[0].GetJoinKind(), jt[0].GetLabel())
 	}
 }
 

@@ -22,7 +22,7 @@ import (
 func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.DanglingEndpoint, []*ir.DanglingEndpoint, []*ir.JoinedTap) {
 	var in netInputs
 	collectSheetNets(root, sheetScope{src: src, syms: syms}, &in)
-	built, dangles, _ := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals)
+	built, dangles, _ := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals, kicadNaming)
 	// KiCad omits a named-but-pinless net (a label on a dangling wire), so drop it before emission.
 	kept := built[:0]
 	for _, n := range built {
@@ -33,14 +33,35 @@ func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.Dangli
 	return netgraph.IRNets(kept, src), netgraph.IRDangles(dangles, src, "kicad-uuid"), in.noJunction, in.joinedTaps
 }
 
-// Anchor ranks for KiCad net naming; netgraph picks the lowest-ranked label on a net. A rail
-// touched by both a VCC tap and a local alias is "VCC", and on the pre-order hierarchy walk a
-// root-sheet name beats an equal-rank deeper one. See
+// Anchor ranks for KiCad net naming, which netgraph resolves lowest first and, between equal
+// ranks, alphabetically (netgraph.Options.AlphaTies). They follow KiCad's driver priority (agni
+// issue 1019): a design-wide name (a global label or a power symbol) beats any sheet-scoped name, and
+// among those a local label beats a hierarchical label, which beats a sheet pin. Global labels and
+// power symbols share rank 0, because the alias rules read 0 as "design-wide" (netgraph.AttrAliases);
+// KiCad also prefers a global label to a power symbol, which only matters when both name one net. A sheet-scoped rank adds
+// the sheet's depth, because KiCad prefers the name nearer the root at equal priority. rankJoin
+// names nothing and exists only to union a promoted bus member with its parent's. See
 // docsite/content/architecture/net-solving.md#name-scoping.
 const (
-	rankGlobal = 0 // global labels, power-symbol rails
-	rankLocal  = 1 // local labels, hierarchical-label/sheet-pin port names
+	rankGlobal   = 0   // global labels
+	rankPower    = 0   // power-symbol rails, design-wide like a global label
+	rankLocal    = 100 // local labels, plus sheet depth
+	rankHier     = 200 // hierarchical labels, plus sheet depth
+	rankSheetPin = 300 // a parent's sheet pin, plus sheet depth
+	rankJoin     = 900
 )
+
+// kicadNaming is the netgraph naming every KiCad build uses, so a net's name is KiCad's own.
+var kicadNaming = netgraph.Options{AlphaTies: true}
+
+// netName spells a label as KiCad spells the net it names: the label's escapes resolved, then a
+// slash escaped again and line breaks dropped, so "FTDI_CBUS0{slash}SDA" stays as written while
+// the "/" separating a sheet path from a name does not collide with one inside it.
+func netName(raw string) string {
+	s := unescapeName(raw)
+	s = strings.NewReplacer("/", "{slash}", "\n", "", "\r", "").Replace(s)
+	return s
+}
 
 // sheetScope places one sheet INSTANCE's geometry inside a design-wide net solve (WS1-018). The
 // zero value is the plain single-sheet read, with no offset, bare local names and first-entry ref
@@ -58,7 +79,15 @@ type sheetScope struct {
 	// qualification, for members of a bus vector that entered through a bus sheet pin. So `AN0`
 	// inside a sub-sheet reached by `AN[0..7]` is the PARENT's `AN0` (agni issue 561). Nil on the
 	// root and on any instance no bus enters, which is the common case.
-	promoted map[string]string
+	promoted map[string]promotion
+}
+
+// promotion is the parent's name a promoted bus member unions with, and the rank that name has as a
+// candidate: a local label's when the parent draws a label for the bus, else rankJoin, a join that
+// names nothing.
+type promotion struct {
+	name string
+	rank int
 }
 
 func (sc sheetScope) at(p netgraph.Point) netgraph.Point {
@@ -76,17 +105,33 @@ func (sc sheetScope) wireID(uuid string) string {
 	return sc.wirePfx + "\x00" + uuid
 }
 
-// local qualifies a sheet-scoped name. "X" stays "X" on the root and becomes "/<sheet path>/X" on
-// a sub-sheet instance, KiCad's own convention and the one the board reader produces, so
-// schematic-vs-board joins agree. A promoted bus member takes its parent's name instead.
+// local qualifies a sheet-scoped name as KiCad does: "/X" on the root and "/<sheet path>/X" on a
+// sub-sheet instance, the spelling the board reader produces too, so schematic-vs-board joins
+// agree. A bus member that entered through a bus sheet pin keeps this qualified name; join gives
+// the parent's name it must union with.
 func (sc sheetScope) local(name string) string {
-	if p, ok := sc.promoted[name]; ok {
-		return p
-	}
-	if sc.prefix == "" {
-		return name
-	}
 	return sc.prefix + "/" + name
+}
+
+// join returns the parent's name a promoted bus member unions with (agni issue 561), if it is one.
+func (sc sheetScope) join(name string) (promotion, bool) {
+	p, ok := sc.promoted[name]
+	return p, ok
+}
+
+// depth is the instance's distance from the root sheet, which orders equal-priority names.
+func (sc sheetScope) depth() int {
+	return strings.Count(sc.prefix, "/")
+}
+
+// localAnchors returns a sheet-scoped label's anchor at the given rank, plus the join anchor a
+// promoted bus member needs so it still unions with its parent's member.
+func (sc sheetScope) localAnchors(at netgraph.Point, name string, rank int, external bool) []netgraph.Anchor {
+	out := []netgraph.Anchor{{At: at, Label: sc.local(name), External: external, Rank: rank + sc.depth()}}
+	if p, ok := sc.join(name); ok {
+		out = append(out, netgraph.Anchor{At: at, Label: p.name, Rank: p.rank})
+	}
+	return out
 }
 
 // netInputs accumulates the connectivity solver's inputs across one or more sheet
@@ -177,28 +222,28 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	// its bare name and is marked External, because the binding parent, if any, was not read.
 	for _, l := range root.Children("label") {
 		if at := sheetPt(l.Child("at")); at != nil {
-			anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: sc.local(unescapeName(atomOf(l.Arg(1)))), Rank: rankLocal})
+			anchors = append(anchors, sc.localAnchors(gp(at), netName(atomOf(l.Arg(1))), rankLocal, false)...)
 			onWire = append(onWire, gp(at))
 			if _, seen := joins[gp(at)]; !seen {
-				joins[gp(at)] = tapJoin{kind: "label", label: sc.local(unescapeName(atomOf(l.Arg(1))))}
+				joins[gp(at)] = tapJoin{kind: "label", label: sc.local(netName(atomOf(l.Arg(1))))}
 			}
 		}
 	}
 	for _, l := range root.Children("global_label") {
 		if at := sheetPt(l.Child("at")); at != nil {
-			anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: unescapeName(atomOf(l.Arg(1))), External: true, Rank: rankGlobal})
+			anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: netName(atomOf(l.Arg(1))), External: true, Rank: rankGlobal})
 			onWire = append(onWire, gp(at))
 			if _, seen := joins[gp(at)]; !seen {
-				joins[gp(at)] = tapJoin{kind: "label", label: unescapeName(atomOf(l.Arg(1)))}
+				joins[gp(at)] = tapJoin{kind: "label", label: netName(atomOf(l.Arg(1)))}
 			}
 		}
 	}
 	for _, l := range root.Children("hierarchical_label") {
 		if at := sheetPt(l.Child("at")); at != nil {
-			anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: sc.local(unescapeName(atomOf(l.Arg(1)))), External: sc.prefix == "", Rank: rankLocal})
+			anchors = append(anchors, sc.localAnchors(gp(at), netName(atomOf(l.Arg(1))), rankHier, sc.prefix == "")...)
 			onWire = append(onWire, gp(at))
 			if _, seen := joins[gp(at)]; !seen {
-				joins[gp(at)] = tapJoin{kind: "label", label: sc.local(unescapeName(atomOf(l.Arg(1))))}
+				joins[gp(at)] = tapJoin{kind: "label", label: sc.local(netName(atomOf(l.Arg(1))))}
 			}
 		}
 	}
@@ -217,14 +262,14 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 		t := pinTransform(ps)
 		local := libPins.forUnit(symbolKey(ps), unitOf(ps))
 		if ref[0] == '#' {
-			name := propValue(ps, "Value")
+			name := netName(propValue(ps, "Value"))
 			isFlag := name == "PWR_FLAG" // a directive asserting the net is driven, not a net name
 			if isFlag {
 				name = ""
 			}
 			for _, pp := range local {
 				at := gp(geomath.ApplyTransform(t, pp.loc))
-				anchors = append(anchors, netgraph.Anchor{At: at, Label: name, Driver: isFlag, External: !isFlag, Rank: rankGlobal})
+				anchors = append(anchors, netgraph.Anchor{At: at, Label: name, Driver: isFlag, External: !isFlag, Rank: rankPower})
 				// The symbol's pin ALSO becomes a typed virtual connection (WS1-014) carrying
 				// the power evidence rules reason over. A PWR_FLAG's power_out pin is the
 				// driver, and a rail symbol's power_in pin is KiCad's "this rail wants a
@@ -236,9 +281,15 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 			}
 			continue
 		}
+		multi := libPins.multiUnit(symbolKey(ps))
+		onBoard := ps.Child("on_board") == nil || atomOf(ps.Child("on_board").Arg(1)) != "no"
 		for _, pp := range local {
 			at := gp(geomath.ApplyTransform(t, pp.loc))
-			pins = append(pins, netgraph.Pin{At: at, Comp: ref, Pin: pp.designator, NoConnect: ncPts[at]})
+			pin := netgraph.Pin{At: at, Comp: ref, Pin: pp.designator, NoConnect: ncPts[at]}
+			if onBoard {
+				pin.AutoName, pin.NCName = pinNetNames(ref, unitOf(ps), multi, pp, local)
+			}
+			pins = append(pins, pin)
 		}
 	}
 
@@ -501,6 +552,7 @@ func unitOf(ps *node) int {
 // pinPos is one lib-symbol pin: its designator and its symbol-local connect point.
 type pinPos struct {
 	designator string
+	name       string // the pin's name, empty for KiCad's "~"
 	loc        *geom.Point
 	etype      string // the pin's electrical type atom as printed ("power_in", "passive", ...)
 }
@@ -532,11 +584,80 @@ func symPinsByUnit(libSym *node) libPinsByUnit {
 		u := unitOfSubSymbol(atomOf(sub.Arg(1)))
 		for _, pn := range sub.Children("pin") {
 			if p := kicadPin(pn, false); p != nil && p.PortRef != "" {
-				byUnit[u] = append(byUnit[u], pinPos{designator: p.PortRef, loc: p.Loc, etype: atomOf(pn.Arg(1))})
+				name := ""
+				if nm := pn.Child("name"); nm != nil && atomOf(nm.Arg(1)) != "~" {
+					name = atomOf(nm.Arg(1))
+				}
+				byUnit[u] = append(byUnit[u], pinPos{designator: p.PortRef, name: name, loc: p.Loc, etype: atomOf(pn.Arg(1))})
 			}
 		}
 	}
 	return byUnit
+}
+
+// multiUnit reports whether a lib symbol draws more than one unit, which is when KiCad adds the
+// unit letter to a reference in a net name.
+func (idx schPinIndex) multiUnit(libID string) bool {
+	units := 0
+	for u := range idx.byID[libID] {
+		if u > 0 {
+			units++
+		}
+	}
+	return units > 1
+}
+
+// pinNetNames are the two names KiCad gives a net after one of its pins (agni issue 1019): auto,
+// "Net-(...)" for an unlabelled net, and nc, "unconnected-(...)" for a no-connect-flagged pin's
+// lone stub. A pin with a real name is named by reference (with the unit letter on a multi-unit
+// part) and pin name, adding the pad number when the pin is unconnected or the part has another
+// pin of that name. A pin with no name, or one named by its own number, is named by pad. A
+// no-connect pin type is always "unconnected". See KiCad's SCH_PIN::GetDefaultNetName.
+func pinNetNames(ref string, unit int, multi bool, pp pinPos, unitPins []pinPos) (auto, nc string) {
+	if ref == "" || strings.HasSuffix(ref, "?") {
+		return "", ""
+	}
+	name := func(unconnected bool) string {
+		head := "Net-("
+		if unconnected {
+			head = "unconnected-("
+		}
+		if pp.name == "" || pp.name == pp.designator {
+			return head + ref + "-Pad" + netName(pp.designator) + ")"
+		}
+		multiple := false
+		for _, o := range unitPins {
+			if o.name == pp.name && o.designator != pp.designator && unconnected == (o.etype == "no_connect") {
+				multiple = true
+				break
+			}
+		}
+		r := ref
+		if multi {
+			r += unitLetter(unit)
+		}
+		out := head + r + "-" + netName(pp.name)
+		if unconnected || multiple {
+			out += "-Pad" + netName(pp.designator)
+		}
+		return out + ")"
+	}
+	isNC := pp.etype == "no_connect"
+	return name(isNC), name(true)
+}
+
+// unitLetter is KiCad's letter for a unit number: A for 1, Z for 26, then AA, AB and so on.
+func unitLetter(unit int) string {
+	if unit < 1 {
+		return ""
+	}
+	var out []byte
+	for unit > 0 {
+		unit--
+		out = append([]byte{byte('A' + unit%26)}, out...)
+		unit /= 26
+	}
+	return string(out)
 }
 
 // forUnit returns the pins a placement of the given unit exposes: the common (unit 0) pins plus

@@ -87,7 +87,7 @@ func TestEditingASubSheetReadsTheDesignAgain(t *testing.T) {
 	_ = os.Chtimes(child, later, later)
 
 	names := netNames(t, l)
-	if !hasSuffix(names, "SIGNAL_RENAMED") || hasSuffix(names, "/SIG") {
+	if !hasSuffix(names, "SIGNAL_RENAMED") || hasSuffix(names, "/amp1/SIG") {
 		t.Fatalf("the edited sub-sheet was not read again: %v", names)
 	}
 	if _, misses := c.Stats(); misses != 2 {
