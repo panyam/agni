@@ -351,6 +351,14 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   still resolves by the slow route, which is what keeps saved reports working. A TRACE link needs no
   such hint because it carries the question rather than a conclusion. Semantics and the two ways the
   halves used to disagree are in `guide/checks-and-reports.md`.
+- **`--remote <url>` on `query`, `check`, `trace` and `review` sends the command's request to a running
+  `agni serve`** (agni 998) and renders the response exactly as the local run does, which
+  `TestRemoteAnswersAsTheLocalCommandDoes` holds byte for byte. It is a different flag from `--server`,
+  which only says where LINKS point. A path is addressed through the server's own mounts
+  (`ListMounts`, longest root wins), so it needs the same filesystem, and an unserved path or an
+  unreachable server is an error, never a local read. Flags that configure this process's engine
+  (`--params`, `--profile-path`, `--timing`) are refused rather than ignored. A remote review is
+  `CreateReview` with `validate_only`, so the server stores nothing.
 - **`review --coverage` renders as markdown ALONE and refuses an explicit `--format`.** The two are
   different axes and the render switch tests coverage first, so `--coverage --format html -o page.html`
   used to write a markdown table into a file named `.html`. If you want a coverage page, the per-item
