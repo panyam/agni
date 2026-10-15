@@ -10,6 +10,7 @@ import (
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/readers/edif"
 	"github.com/panyam/agni/readers/geda"
 	"github.com/panyam/agni/readers/ipc2581"
@@ -53,15 +54,17 @@ func init() {
 				return nil, err
 			}
 			// Walk the sheet tree (WS1-018), matching the geometry entry below, so the viewer's
-			// sheets and the rules' nets come from the same hierarchy. The completeness flag is
-			// dropped because a bare .kicad_sch may itself be one sheet of a larger design, so its
-			// external markings never resolve. Only the .kicad_pro read is a completeness witness
-			// (WS1-017).
-			d, _, err := kicad.ReadSchematicHierarchyNetsWithSymbols(path, content, l.sheetOpener(path), l.kicadSymOpener(path))
+			// sheets and the rules' nets come from the same hierarchy. A complete walk resolves the
+			// external markings (WS1-017) only when the schematic's own .kicad_pro sits beside it,
+			// since that makes it the project's root; without one it may be another design's
+			// sub-sheet (agni issue 1013).
+			d, complete, err := kicad.ReadSchematicHierarchyNetsWithSymbols(path, content, l.sheetOpener(path), l.kicadSymOpener(path))
 			if err != nil {
 				return nil, err
 			}
-			annotateFromProject(l, d, kicadProjectOf(path))
+			if annotateFromProject(l, d, kicadProjectOf(path)) && complete {
+				netgraph.ResolveExternal(d)
+			}
 			return d, nil
 		},
 		Geometry: func(l *Loader, path string) (*geom.SchematicGeometry, error) {
@@ -154,15 +157,16 @@ func kicadProjectOf(path string) string {
 // and the board-wide minimums from board.design_settings.rules. Each pass decodes the whole file, so
 // each gets its own reader over one buffer. An fs.File is not required to be an io.Seeker (WS1-049),
 // and independent readers also make the passes order-independent. A project that is absent or
-// unreadable leaves the design as read.
-func annotateFromProject(l *Loader, d *ir.Design, proPath string) {
+// unreadable leaves the design as read, and the result says whether one was found.
+func annotateFromProject(l *Loader, d *ir.Design, proPath string) bool {
 	data, err := l.ReadFile(proPath)
 	if err != nil {
-		return
+		return false
 	}
 	kicad.AnnotateNetClasses(d, kicad.ParseNetClasses(bytes.NewReader(data)))
 	kicad.AnnotateNetClassDefs(d, kicad.ParseNetClassDefs(bytes.NewReader(data)))
 	kicad.AnnotateBoardRules(d, kicad.ParseBoardRules(bytes.NewReader(data)))
+	return true
 }
 
 // sheetOpener resolves a schematic's sub-sheet Sheetfile references against its own
