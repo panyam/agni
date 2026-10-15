@@ -13,4 +13,4 @@ findings by rule:
   unspecified-pin-with-driver 1
 
 83 finding(s) total
-24121 subject(s) considered by 36 rule(s), 625 not considered (--verdicts for the detail)
+24118 subject(s) considered by 35 rule(s), 625 not considered (--verdicts for the detail)
