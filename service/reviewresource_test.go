@@ -7,6 +7,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -411,5 +412,40 @@ func nestDoc(design string) *checkspb.CheckResults {
 	return &checkspb.CheckResults{
 		Meta:   &checkspb.ResultsMeta{ProducerVersion: "test"},
 		Design: &checkspb.DesignRef{Source: design},
+	}
+}
+
+// TestValidateOnlyScoresWithoutStoring holds `agni review --remote` to what the local CLI does: the
+// run is scored and returned, nothing lands in the server's list, and a server with no review store
+// still answers.
+func TestValidateOnlyScoresWithoutStoring(t *testing.T) {
+	ctx := context.Background()
+	m, err := review.Load(strings.NewReader("name: dry run\nareas:\n  - name: Power\n    items:\n      - {id: P1, title: every rail carries a bulk capacitor, rule: bulk-cap}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	man := ManifestProto(m)
+	store := NewMemReviewStore()
+	store.Clock = func() string { return "2026-10-15T00:00:00Z" }
+	stored, _ := dirReviewSvc(t, store)
+	unstored, _ := dirReviewSvc(t, nil)
+	for name, svc := range map[string]*ReviewService{"with a store": stored, "with no store": unstored} {
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{DesignUri: "mount://m/d.edn", Manifest: man, ValidateOnly: true})
+		if err != nil {
+			t.Fatalf("%s: CreateReview: %v", name, err)
+		}
+		if rv.GetName() != "" || rv.GetResults().GetMeta().GetCreatedAt() != "" {
+			t.Errorf("%s: name %q, created_at %q, want both empty for a run never stored", name, rv.GetName(), rv.GetResults().GetMeta().GetCreatedAt())
+		}
+		if got := len(rv.GetResults().GetAreas()); got != 1 {
+			t.Errorf("%s: %d areas scored, want 1", name, got)
+		}
+	}
+	list, err := stored.ListReviews(ctx, &webapi.ListReviewsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(list.GetReviews()); n != 0 {
+		t.Errorf("the store holds %d runs after validate_only creates, want 0", n)
 	}
 }
