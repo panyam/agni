@@ -327,20 +327,27 @@ func stampRequirement(r *check.Rule, reqType string) *check.Rule {
 func (p Profile) lname() string { return strings.ToLower(strings.ReplaceAll(p.Name, "-", "_")) }
 
 // presenceRules are the IDB rules every requirement shares, has_signal("X") for each present signal
-// and the CONFIDENCE gate in_use, true only when TWO DISTINCT signals of the interface are present.
-// One name-matched signal is not evidence the interface exists. A real corpus has many `_CS` nets
-// whose buses are named nothing like SPI-NOR, and firing "missing SCLK" on each is noise. A declared
-// host (WS3-042) avoids the guess entirely.
+// and the CONFIDENCE gate in_use, true only when TWO DISTINCT signals of the interface are present
+// and, for a profile that declares one, its ANCHOR is among them. One name-matched signal is not
+// evidence the interface exists. A real corpus has many `_CS` nets whose buses are named nothing like
+// SPI-NOR, and firing "missing SCLK" on each is noise. Two generic suffixes are not evidence either,
+// since a board with no eMMC still has an SMBus `_CLK` and a part's `_RST` (agni issue 1021). A
+// declared host (WS3-042) avoids the guess entirely.
 func (p Profile) presenceRules() []query.Rule {
 	var rules []query.Rule
 	for _, s := range p.Signals {
 		body := append(wiredNet(query.V("n")), netMatch(query.V("n"), s)...)
 		rules = append(rules, query.Def(query.Rel("has_signal", query.Str(s.Name)), body...))
 	}
-	rules = append(rules, query.Def(query.Rel("in_use", query.V("x")),
+	inUse := []query.Literal{
 		query.Pos(query.Rel("has_signal", query.V("x"))),
 		query.Pos(query.Rel("has_signal", query.V("y"))),
-		query.Cmp(query.V("x"), "!=", query.V("y"))))
+		query.Cmp(query.V("x"), "!=", query.V("y")),
+	}
+	if a := p.anchorSignal(); a != nil {
+		inUse = append(inUse, query.Pos(query.Rel("has_signal", query.Str(a.Name))))
+	}
+	rules = append(rules, query.Def(query.Rel("in_use", query.V("x")), inUse...))
 	return rules
 }
 

@@ -198,3 +198,20 @@ func TestEMMCPullupSeesAWideRail(t *testing.T) {
 		}
 	}
 }
+
+// A board with no eMMC still has nets ending _CLK and _RST, an SMBus clock and a part's reset. Two
+// suffix matches without the CMD anchor are not an eMMC bus, so no eMMC rule may judge them, and a
+// dangling one of them is not an eMMC finding (agni issue 1021).
+func TestEMMCWithoutItsAnchorIsNotInUse(t *testing.T) {
+	d := &ir.Design{
+		Components: comps("U1", "U2"),
+		Nets: []*ir.Net{
+			net("M2_SMB_CLK", "U1.1", "U2.1"),
+			net("TPM_RST", "U1.2", "U2.2"),
+			net("HUB_SPI_CLK", "U1.3"),
+		},
+	}
+	if fs := check.RunBackground(check.NewModel(d), Compile(EMMC)); len(fs) != 0 {
+		t.Fatalf("no CMD anchor, so no eMMC bus: want 0 findings, got %d: %+v", len(fs), fs)
+	}
+}
