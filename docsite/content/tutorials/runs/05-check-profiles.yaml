@@ -1,8 +1,8 @@
-# Rung 5: the same board with the project's own interface declarations in place.
-#
-# No --profile-path. The project names its own profiles directory and composes it, the same way it
-# composes its conventions and params/, so passing the flag as well would load the directory a
-# second time under a second namespace and report every profile finding twice (agni issue 450).
-fixture: examples/tutorial-project
+# Rung 5: the project's PCIe profile in place. The supersession note is on stderr, so both streams.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
 script: |
-  agni check designs/gateway/gateway.edn
+  agni check designs/jetson
+capture: both
+match: 'supersedes|finding\(s\) total|considered by'
