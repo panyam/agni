@@ -12,36 +12,31 @@ the other tool's report into the same model and ask directly.
 
 ## Import the other tool's report
 
-Run your existing check and keep the JSON:
+Run your existing check and keep the JSON. The project keeps KiCad's own report for this board in
+`reports/kicad-drc.json`, so you can follow along without KiCad installed. It came from:
 
 ```
-kicad-cli pcb drc --format json -o kicad-drc.json designs/gateway/gateway.kicad_pcb
+kicad-cli pcb drc --format json -o kicad-drc.json designs/jetson/jetson-agx-thor-baseboard.kicad_pcb
 ```
 
-Then import it:
+KiCad 10.0.6 found 578 violations. Import them:
 
-```
-agni import-results kicad-drc.json --design designs/gateway/gateway.kicad_pcb -o kicad.results.json
-```
+{{ agniRun "content/tutorials/runs/12-import.yaml" }}
 
-```
-kicad-cli pcb drc 10.0.4 — 309 finding(s) from designs/gateway/gateway.kicad_pcb
-attached to an entity: 219 of 309
-    90 not attached — board outline geometry, which belongs to no component or net
-         e.g. Rectangle on Edge.Cuts
+Read the summary slowly, because it is the import telling you how far to trust what follows.
 
-This document carries no coverage axis: a vendor report lists violations and says
-nothing about what it did not check, so its silence must not be read as a pass.
-```
+**605 of 957 attached to an entity.** A vendor report names things in prose, so importing it means
+resolving "Track [/CSI/CAM0.CSI2_CLK+] on In2.Cu" to the net your design calls that. There are more
+findings than violations because a clearance violation names two items, and each becomes a finding.
 
-Three things in that summary are worth reading slowly.
-
-**219 of 309 findings attached to an entity.** A vendor report names things in prose, so
-importing it means resolving "Track [PMIC_MAIN_12V0] on F.Cu" to the net your design calls `PMIC_MAIN_12V0`. Most resolve.
-
-**The 90 that did not are named, with a reason.** They are board-outline geometry, which genuinely
-belongs to no component or net. Nothing was dropped quietly, which matters because a silently
-discarded finding is worse than one that was never imported.
+**The rest are named, with a reason.** Ten are board outline geometry, which belongs to no component
+or net. Seventy-five are shapes the import does not recognize yet, unplated holes and arcs of track among
+them. And 267
+name a net the loaded design does not contain, which on this board means something specific: KiCad
+names a bus member drawn on a sub-sheet with the sheet's path, `/CSI/CAM0.CSI2_CLK+`, and agni's
+schematic read names the same net `CAM0.CSI2_CLK+`. Two tools reading one board disagree on what to
+call a net, and the import says so in a line you can count, rather than dropping the finding. That
+disagreement is tracked in [agni issue 1019](https://github.com/panyam/agni/issues/1019).
 
 **The document carries no coverage axis.** This is the same idea as [rung
 9](../09-read-the-verdicts/), applied to somebody else's tool. A vendor report is a flat list of
@@ -51,61 +46,35 @@ of the document inherits the caveat.
 
 ## Compare the two runs
 
-Now produce your own run over the same file and compare them:
+Now produce your own run over the same design and compare them:
 
-```
-agni check designs/gateway/gateway.kicad_pcb --results-out agni.results.json
-agni results agni.results.json --compare kicad.results.json
-```
-
-The board is a declared companion of this design, so that `check` reads the netlist and pulls the
-copper in beside it, and says so on stderr. Both tools are therefore reading the same geometry, but
-only one of them is reading *only* geometry.
-
-```
-comparing:
-  ours:   agni <version> — 28 finding(s) over mount://gateway/designs/gateway/gateway.kicad_pcb
-  theirs: kicad-cli pcb drc 10.0.4 — 309 finding(s) over designs/gateway/gateway.kicad_pcb   [no coverage axis: its silence is not a pass]
-
-entities flagged:
-  both         8
-  ours only    9
-  theirs only  17
-
-ours only:
-  net CAN1_RXD
-  net CAN1_TXD
-  net I2C_SCL
-  net I2C_SDA
-  net MCU_NRST
-  net PMIC_EN
-  net PMIC_PG
-  net XTAL_IN
-  net XTAL_OUT
-```
+{{ agniRun "content/tutorials/runs/12-compare.yaml" }}
 
 ## Reading the split
 
-The instinct is to compare 28 against 309 and conclude something about which tool is better. That
+The instinct is to compare 91 against 957 and conclude something about which tool is better. That
 reading is wrong, and the three-way split is there to stop you making it.
 
-**Theirs only** is 17 components, all physical manufacturability: edge clearance, silkscreen over
-pads, footprint library mismatches. Agni has no opinion about most of that and should not pretend to.
-Your existing DRC is not being replaced.
+**Theirs only** is mostly components, nearly all of them KiCad's `lib_footprint_issues`, footprints that
+differ from the library copy KiCad has installed, plus courtyard and silkscreen checks. Agni has no
+opinion about most of that and should not pretend to. Your existing DRC is not being replaced.
 
-**Ours only** is 9 nets. `I2C_SCL` and `I2C_SDA` are missing {{ explainable "pull-up" "pull-ups" }}.
-`CAN1_TXD` and `CAN1_RXD` are the {{ explainable "transceiver" }}'s logic side. `PMIC_EN`, `PMIC_PG` and `MCU_NRST` are
-control signals. Each of those is a statement about what the circuit *means*, and a board DRC
-structurally cannot reach any of them. It is checking copper against fabrication limits. It has no
-model in which "this bus needs a pull-up" is expressible.
+The nets in that column are KiCad's `clearance` findings, and they are where the two tools genuinely
+disagree. KiCad reports 357 clearance violations, and agni, checking the same copper against the
+board's declared 0.1 mm minimum, reports none. The board also carries a `.kicad_dru` file of custom
+rules, wider gaps for differential pairs and keep-outs between high-speed pairs and copper pours, and
+agni does not read it. So KiCad is checking rules agni has never seen, and the split tells you which
+tool to believe for that question.
 
-`XTAL_IN` and `XTAL_OUT` are the last two, and they are a different kind of thing again, because this
-project's naming convention says a signal net should be named for its function, and those two are
-not. That is a statement about house process rather than about the circuit, and a copper checker has
-no model for it either.
+**Ours only** is nets, and each is a statement about what the circuit *means*: an I2C bus with no
+{{ explainable "pull-up" }}, a rail with no {{ explainable "test-point" }}, a supply entering through a
+connector with no reverse protection, a net named against house style. A board DRC structurally
+cannot reach any of them. It is checking copper against fabrication limits, and it has no model in
+which "this bus needs a pull-up" is expressible.
 
-**Both** is 8 entities, the overlap where the two tools genuinely agree, including the sub-floor track
-on `CAN1_CANH` that both flag by their own route.
+**Both** is two rails, and the line under the list says what that overlap is worth. Agni flags them
+for reverse protection and test points, KiCad for clearance. The same entity, two unrelated
+questions, which is why the tool calls it an observation about two documents rather than agreement.
 
 {{ includeFile "figures/tool-overlap-axes.svg" }}
 
@@ -113,14 +82,12 @@ The useful answer to "what does this add" is a different axis, not a bigger numb
 
 ## About this board's copper
 
-One caveat affects the numbers above. The tutorial board's `.kicad_pcb` is
-generated from the netlist rather than laid out by a person, so its geometry is crude and DRC has a
-great deal to say about it. On your own board, laid out properly, the "theirs only" column will be
-far shorter.
-
-That does not change what the comparison shows. The columns stay complementary, because the two tools
-are answering different questions, and no amount of careful layout gives a copper checker access to
-the fact that an I2C bus has no pull-up.
+The numbers above are a real board's. It was laid out by people, passes its own manufacturer's
+review, and still collects hundreds of DRC findings, most of them library bookkeeping and rules a
+second tool has not been told about. That is normal, and it is why the comparison reads the columns
+rather than the totals. The columns stay complementary, because the two tools are answering different
+questions, and no amount of careful layout gives a copper checker access to the fact that an I2C bus
+has no pull-up.
 
 ## Using it as a gate
 
