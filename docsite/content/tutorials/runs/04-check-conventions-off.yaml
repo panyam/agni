@@ -1,17 +1,11 @@
-# Rung 4: the same board WITHOUT this project's naming vocabulary.
-#
-# The conventions section is deleted from project.yaml for the run, because the project declares it
-# and it therefore applies automatically, which makes the "before" state otherwise unreachable by
-# naming this design. Same mechanism as the rung 4 query pair beside it. The sed deletes from
-# `conventions:` to the blank line ending the section, and runs on the scratch copy every run gets.
-#
-# The params corpus STAYS here, unlike that query pair. The query is about the rail RELATION, where a
-# seeded datasheet establishes the role on its own and would show four rails before the vocabulary
-# arrived. A check is about what the rules conclude, and the corpus covers some parts rather than all,
-# so the vocabulary still moves test-point-coverage with params in place. Keeping them also keeps the
-# before-state free of rules that fire only because the corpus is gone (rail-not-classified,
-# intent/module-*), which are an artefact of the removal rather than anything this rung teaches.
-fixture: examples/tutorial-project
+# Rung 4: the catalog without the conventions section, findings by rule.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  sed -i.orig '/^conventions:/,/^$/d' project.yaml
+  agni check designs/jetson
 script: |
   sed -i.orig '/^conventions:/,/^$/d' project.yaml
-  agni check designs/gateway/gateway.edn
+  agni check designs/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
+  agni check designs/jetson 2>/dev/null | tail -2

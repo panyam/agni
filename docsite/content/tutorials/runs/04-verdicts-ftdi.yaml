@@ -1,0 +1,7 @@
+# Rung 4: the two I2C lines the lexicon half moved from fail to pass, with the rail they reach.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni check --verdicts --rule i2c-pull-up designs/jetson
+match: 'FTDI_CBUS|PD/FTDI_3V3'

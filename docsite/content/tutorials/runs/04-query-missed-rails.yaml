@@ -1,0 +1,9 @@
+# Rung 4: voltage-named nets the vocabulary does not call rails, without the conventions. Some are
+# rails named for what they feed, and some are signals named for their logic level.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  sed -i.orig '/^conventions:/,/^$/d' project.yaml
+  agni query designs/jetson 'net.pin_count(?n, ?c), not net.rail(?n) => ?n'
+match: '^n |CSI[AB]_(3V3|5V) |USBC[0-9]_VBUS |FAN_VDD|PDC_LDO_3V3|I2C0_S[CD][AL]_1V8|VSYNC_CAM0_3V3'
