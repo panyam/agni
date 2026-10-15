@@ -36,28 +36,43 @@ Read the two leading numbers before reading anything else. A board with zero fai
 of 4 of 15 has not been reviewed, and the failure count alone would have told you it was perfect.
 
 **Covered** is how many items a mechanism exists for. **Answered** is how many the run actually
-decided, and it is the stricter of the two. They are equal here. They separate when a rule is in
-the catalog, selected, and still unable to run because the facts it reads are absent. That item
-reads `not-applicable` and still counts as covered. Rung 11 gates a pipeline on the answered number
-for exactly that reason.
+decided, and it is the stricter of the two. They differ here by one item, I2, the CAN interface. A
+profile is bound to it, so it is covered, and the board carries no CAN, so the run had nothing to
+decide and the item reads `not-applicable`. A rule in the catalog that cannot run because the facts it
+reads are absent lands in the same place. Rung 11 gates a pipeline on the answered number for exactly
+that reason.
 
 {{ includeFile "figures/covered-vs-answered.svg" }}
 
-Coverage is also the number that tells you where to invest. Interfaces sits at 3 of 4 because of an
+Coverage is also the number that tells you where to invest. Interfaces carries one `n/a` for an
 absent bus, which is fine and will never improve. House style sits at 2 of 3 because of a genuinely
 manual item, which is also fine. Neither is a gap worth working on. A column filling up with
 `needs-data` is, because seeding a few parts converts it directly into coverage.
 
 ## Eight failures is a good sign
 
-The tutorial board reports 8 fail out of 15. That looks alarming and it is the healthiest state on
-offer, because every one of them is a real defect with a named subject and a reason.
+This board reports 8 fail out of 15. That looks alarming and it is the healthiest state on offer,
+because every one of them names its subjects and its reason, and each is now a conversation a
+reviewer can finish. Rung 2's I2C errors are among them, and so are the test points on nets nobody
+named, which no shipped rule would ever have raised.
 
-Compare against the run before the tiers were added, which reported far fewer failures. The board
-was not better then. Fewer questions were being asked.
+Compare against the board before the tiers were added. Fewer questions were being asked, so some
+failures could not appear, and others, like the ESD findings on internal connectors, were noise
+burying the ones that mattered.
 
-Failures going **up** as you add tiers is
-the system working. Failures going up while coverage stays flat is the number to worry about.
+Failures going **up** as you add tiers is the system working. Failures going up while coverage stays
+flat is the number to worry about.
+
+## Provisional
+
+Rung 6 left one state to show. Put its first-pass draft of the NTS0102 back over the transcribed
+file and score the checklist:
+
+{{ agniRun "content/tutorials/runs/09-review-provisional.yaml" }}
+
+P4 reads **`provisional`**, not `fail`. The finding is shown in full, and the engine declines to call
+it a defect, because every limit it rests on carries a confidence below the trust floor.
+`--ratified-floor` sets where that line sits, 0.9 by default.
 
 ## Auditing a pass
 
@@ -70,7 +85,7 @@ describes something being wrong.
 
 A rule can also have **no members**. An item bound to a rule that quantifies over a device class
 passes when no component is in that class, which can mean the class was never resolved rather than that
-nothing was in it. Rung 7's false module-absence findings are this shape seen from the other side.
+nothing was in it. Rung 7's note on declaring modules by class is this shape seen from the other side.
 
 In general, you should be able to name the thing every pass looked at. If you cannot,
 the pass is a guess.

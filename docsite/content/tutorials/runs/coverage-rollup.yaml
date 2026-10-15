@@ -1,5 +1,6 @@
-# The coverage rollup rung 9 teaches. Declared here rather than pasted into the page, so the
-# output has one source and cannot drift from the fixture it claims to come from.
-fixture: examples/tutorial-project
+# Rung 9: the checklist's coverage rollup, covered and answered before any result.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
 script: |
-  agni review designs/gateway --coverage
+  agni review designs/jetson --coverage
