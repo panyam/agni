@@ -1,6 +1,11 @@
-# Rung 11: rev B still trips, on the datasheet finding the review calls provisional.
-fixture: examples/tutorial-project
+# Rung 11: the same gate on rev B, which fixed two of the I2C errors and not the rest.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
 script: |
-  agni check designs/gateway/gateway-rev-b.edn --params params --fail-on error
+  python3 tools/make_rev_b.py designs/jetson designs/jetson-rev-b
+  agni check designs/jetson-rev-b --fail-on error
+show: |
+  agni check designs/jetson-rev-b --fail-on error
 capture: none
 exit: true
