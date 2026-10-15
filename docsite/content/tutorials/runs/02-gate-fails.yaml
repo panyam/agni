@@ -1,6 +1,6 @@
-# Rung 2: the severity gate trips on a board with error findings.
-fixture: examples/tutorial-project
+# Rung 2: --fail-on trips on the board's error findings, so the exit code is the lesson.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
 script: |
-  agni check designs/gateway/gateway.edn --fail-on error
+  agni check . --fail-on error
 capture: none
 exit: true
