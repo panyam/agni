@@ -1,0 +1,8 @@
+# Rung 8: the stderr note naming which checklist scored the run.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni review designs/jetson
+capture: stderr
+match: 'running the checklist'
