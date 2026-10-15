@@ -109,7 +109,7 @@ func TestNoURLBaseMeansNoLinks(t *testing.T) {
 // that split is how two spellings drift apart.
 func TestEveryFormatComposesTheSameLink(t *testing.T) {
 	text, csv, html := mountedShowcase(t), mountedShowcase(t, "--format", "csv"), mountedShowcase(t, "--format", "html")
-	const want = urlBaseFlag + "/designs/demo/showcase.fires.kicad_sch/view?verdict=esd-protection%3A%28net%3AUSB_D%2B%29"
+	const want = urlBaseFlag + "/designs/demo/showcase.fires.kicad_sch/view?verdict=esd-protection%3A%28net%3A%2FUSB_D%2B%29"
 	for name, out := range map[string]string{"text": text, "csv": csv, "html": html} {
 		if !strings.Contains(out, want) {
 			t.Errorf("%s does not carry the shared link form %q", name, want)

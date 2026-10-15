@@ -7,7 +7,7 @@
 # the flag-driven rail carries no capacitor (bulk-cap).
 fires:
   unspecified-pin-with-driver:
-    subjects: [VCC]
+    subjects: ["/VCC"]
     why: "a declared-but-untyped pin on a driven net; the matrix is blind exactly where a wrong guess costs a driver"
   bulk-cap:
-    subjects: [VCC]
+    subjects: ["/VCC"]

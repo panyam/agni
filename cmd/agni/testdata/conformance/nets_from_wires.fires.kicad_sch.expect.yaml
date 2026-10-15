@@ -1,2 +1,2 @@
 fires:
-  single-pin-net: [N$1, N$2, N$3]
+  single-pin-net: ["unconnected-(R1-Pad1)", "unconnected-(R1-Pad2)", "unconnected-(U1B-Y-Pad2)"]

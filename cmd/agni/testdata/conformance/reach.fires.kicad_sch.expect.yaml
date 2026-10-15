@@ -7,12 +7,12 @@
 # Incidentals: the bead-fed input has no local cap and no driver.
 fires:
   reverse-blocking-absent:
-    subjects: ["JIN"]
+    subjects: ["/JIN"]
     why: "incidental: the same bead-fed power entry input-protection flags; nothing directional is in the path either"
   input-protection:
-    subjects: [JIN]
+    subjects: ["/JIN"]
     why: "the power input is one bead away and nothing protects the path; invisible to any per-net rule"
   decoupling-present:
-    subjects: [JOUT]
+    subjects: ["/JOUT"]
   power-input-not-driven:
-    subjects: [JOUT]
+    subjects: ["/JOUT"]

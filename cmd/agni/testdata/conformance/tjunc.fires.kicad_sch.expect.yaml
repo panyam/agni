@@ -9,4 +9,4 @@ fires:
     subjects: ["65000000,-50000000"]
     why: "the TAP wire's end sits on the BUS wire's body; KiCad connects only at a dot"
   single-pin-net:
-    subjects: [N$1, N$2, N$3, TAP]
+    subjects: ["unconnected-(R1-Pad1)", "unconnected-(R2-Pad1)", "unconnected-(R3-Pad2)", "/TAP"]

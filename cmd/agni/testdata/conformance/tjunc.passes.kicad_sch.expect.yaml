@@ -5,4 +5,4 @@
 # nothing silent about it). Incidentals: the resistors' far pins are bare stubs.
 fires:
   single-pin-net:
-    subjects: [N$1, N$2, N$3]
+    subjects: ["unconnected-(R1-Pad1)", "unconnected-(R2-Pad1)", "unconnected-(R3-Pad2)"]

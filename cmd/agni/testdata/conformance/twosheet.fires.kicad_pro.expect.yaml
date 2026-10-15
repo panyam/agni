@@ -12,7 +12,7 @@ fires:
     subjects: [VCC]
     why: "the cross-sheet rail, unified by the walk and downgraded to global by the complete project read, carries no bulk capacitor"
   single-pin-net:
-    subjects: [SIG, /amp2/CTRL]
+    subjects: ["/SIG", "/amp2/CTRL"]
     why: "the root's local SIG (scoped apart from each instance's /ampN/SIG) and the amp2 port no root wire reaches"
   dangling-endpoint:
     subjects: ["200000000,-100000000", "200000000,-100000000", "205000000,-100000000", "205000000,-100000000"]

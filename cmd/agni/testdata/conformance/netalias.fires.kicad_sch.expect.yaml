@@ -6,10 +6,10 @@
 # are bare stubs.
 fires:
   label-alias-conflict:
-    subjects: [SIG_A]
+    subjects: ["/SIG_A"]
     why: "two different sheet-scoped labels on one wire; the naming pass keeps SIG_A and SIG_B silently vanishes"
   power-tap-conflict:
-    subjects: ["+3V3"]
+    subjects: ["+3.3V"]
     why: "rival design-wide rail names on one net; the classic 3V3-spelling merge hazard"
   single-pin-net:
-    subjects: [N$1, N$2, N$3]
+    subjects: ["unconnected-(R1-Pad1)", "unconnected-(R2-Pad1)", "unconnected-(R3-Pad2)"]

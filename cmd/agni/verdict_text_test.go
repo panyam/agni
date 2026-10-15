@@ -35,12 +35,12 @@ func TestVerdictTextAttributesEveryRowToItsRule(t *testing.T) {
 	rows := ruleOf(out)
 	var onSCL []string
 	for row, rule := range rows {
-		if strings.Contains(row, " SCL ") || strings.HasSuffix(row, " SCL") {
+		if strings.Contains(row, " /SCL ") || strings.HasSuffix(row, " /SCL") {
 			onSCL = append(onSCL, rule)
 		}
 	}
 	if len(onSCL) < 2 {
-		t.Fatalf("want several rules answering about SCL, got %v\n%s", onSCL, out)
+		t.Fatalf("want several rules answering about /SCL, got %v\n%s", onSCL, out)
 	}
 	seen := map[string]bool{}
 	for _, r := range onSCL {

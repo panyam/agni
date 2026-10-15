@@ -114,19 +114,20 @@ func TestCheckCSVIsDeterministic(t *testing.T) {
 
 // TestCheckCSVEscapesARealNetName is the end-to-end half of the escaping guarantee. The unit test
 // above can be satisfied by a helper nothing calls, so this one drives the whole command over a
-// fixture that really carries a rail named +10V and asserts the emitted cell is escaped.
+// fixture that really carries a rail named +3V3 and asserts the emitted cell is escaped. The rail is a
+// power symbol's, because KiCad names a root-sheet label "/+3V3", which needs no escaping.
 func TestCheckCSVEscapesARealNetName(t *testing.T) {
-	recs, raw := runCheckCSV(t, "--rule", "single-pin-net", "testdata/conformance/capcheck.fires.kicad_sch")
+	recs, raw := runCheckCSV(t, "--rule", "decoupling-present", "testdata/conformance/showcase.fires.kicad_sch")
 
 	for _, rec := range recs[1:] {
-		if rec[4] == "'+10V" {
+		if rec[4] == "'+3V3" {
 			return
 		}
-		if rec[4] == "+10V" {
-			t.Fatalf("net +10V emitted unescaped; a spreadsheet evaluates it as a formula on open\n%s", raw)
+		if rec[4] == "+3V3" {
+			t.Fatalf("net +3V3 emitted unescaped; a spreadsheet evaluates it as a formula on open\n%s", raw)
 		}
 	}
-	t.Fatalf("fixture produced no +10V finding, so this test no longer guards anything\n%s", raw)
+	t.Fatalf("fixture produced no +3V3 finding, so this test no longer guards anything\n%s", raw)
 }
 
 // TestCheckCSVQuotesAwkwardMessages covers the three characters that break a hand-rolled writer.

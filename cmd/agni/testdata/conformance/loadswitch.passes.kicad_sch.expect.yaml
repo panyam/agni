@@ -4,5 +4,5 @@
 # neither fires nor pending.
 fires:
   single-pin-net:
-    subjects: [VOUT]
+    subjects: ["/VOUT"]
     why: "incidental: the sheet ends at the switch output, with no load drawn"

@@ -3,5 +3,5 @@
 # (the exhaustive-firing contract fails on any unexpected finding).
 fires:
   single-pin-net:
-    subjects: ["+3V3", GND]
+    subjects: ["/+3V3", "/GND"]
     why: "incidental: the minimal one-cap sheet gives each net a single connection"

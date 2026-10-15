@@ -4,7 +4,7 @@
 # name anchors. Incidental: the flag-driven rail carries no capacitor (bulk-cap).
 fires:
   output-output-conflict:
-    subjects: [VCC_RAW]
+    subjects: ["/VCC_RAW"]
     why: "two PWR_FLAG power_out pins fight; the corpus pin-to-pin-conflict case, now live"
   bulk-cap:
-    subjects: [VCC_RAW]
+    subjects: ["/VCC_RAW"]
