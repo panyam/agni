@@ -44,4 +44,4 @@ first 28:
   [error] track-width: CAN1_CANH (net has 1 track segment(s) narrower than the 0.127mm fabrication floor)
 
 28 finding(s) total
-258 subject(s) considered by 36 rule(s), 7 not considered (--verdicts for the detail)
+256 subject(s) considered by 35 rule(s), 7 not considered (--verdicts for the detail)
