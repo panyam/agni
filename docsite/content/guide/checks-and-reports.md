@@ -88,9 +88,10 @@ The table groups by rule and tallies each one, so `i2c-pull-up` reports one fail
 than one finding and a silence. SDA is fine, and it says so and names the resistor and the
 {{ explainable "rail" }} holding it up, which is the line a findings report cannot print.
 
-`not-considered` is the third answer. `bulk-cap` reaches VBUS and
-declines, because the rail continues onto a sheet this read did not open, so its reservoir may be
-drawn outside it. A findings report shows that net exactly as it shows a net that passed.
+`not-considered` is the third answer. `esd-clamp-not-tvs` reaches USB_D+ and USB_D- and declines,
+because those nets carry no clamp at all, so there is no device class for it to judge, and it names
+`esd-protection` as the rule that reports them. A findings report shows those nets exactly as it
+shows a net that passed.
 
 It honours `--format text|csv|json|html`, and `--format html` turns it on by itself, since the HTML
 report has no findings-only form. The CSV carries a `verdict_id` per row
@@ -99,7 +100,7 @@ report has no findings-only form. The CSV carries a `verdict_id` per row
 
 {{ agniRun "content/guide/runs/csv-verdicts.yaml" }}
 
-That is one rule out of the table, which runs to about 140 rows on this board.
+That is one rule out of the table, which runs to about 150 rows on this board.
 
 Paste an id into a running viewer as `?verdict=<id>` and it opens on that verdict with the proof
 drawn, with the subject in focus and the resistor and rail behind it.

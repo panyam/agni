@@ -1,32 +1,42 @@
 #agni-run ddb3ed4b672e69f5
-esd-protection  2 fail, 1 pass
+bulk-cap  2 fail
+    fail            +3V3  the rail carries no capacitor at all
+    fail            VBUS  the rail carries no capacitor at all
+
+decoupling-present  2 fail
+    fail            +3V3  no capacitor sits on the rail, which feeds at least one power-input
+                          pin
+    fail            VBUS  no capacitor sits on the rail, which feeds at least one power-input
+                          pin
+
+esd-protection  2 fail, 2 pass
     fail            USB_D+  no TVS or Zener is in the net's series reach and no part on it
                             declares a datasheet ESD rating
     fail            USB_D-  no TVS or Zener is in the net's series reach and no part on it
                             declares a datasheet ESD rating
     pass            SCL     TVS D7 clamps the net
+    pass            SDA     TVS D6 clamps the net
 
 i2c-pull-up  1 fail, 1 pass
     fail            SCL  no rail is reachable from SCL through a resistor within 3 hops
     pass            SDA  SDA reaches rail +3V3 through R1
 
-reverse-blocking-absent  1 fail
-    fail            SDA  the connector reaches a power input through passives alone, so nothing
-                         in the path passes current one way
+input-protection  1 fail
+    fail            VBUS  the connector reaches power input VBUS with no fuse crossed and no
+                          clamp on the path
 
-bulk-cap  1 not-considered
-    not-considered  VBUS  the rail continues onto a sheet this read did not open, so its
-                          reservoir may be drawn outside it
+reverse-blocking-absent  1 fail
+    fail            VBUS  the connector reaches a power input through passives alone, so nothing
+                          in the path passes current one way
+
+test-point-coverage  2 fail, 1 pass
+    fail            GND   rail carries no test point; bring-up and factory test cannot probe it
+    fail            VBUS  rail carries no test point; bring-up and factory test cannot probe it
+    pass            +3V3  passes because TP1.1 is component.class == "test_point"
 
 crystal-load-caps  2 pass
     pass            Y1.1  capacitor C3 sits on terminal net XTAL1
     pass            Y1.2  capacitor C4 sits on terminal net XTAL2
-
-decoupling-present  2 not-considered
-    not-considered  +3V3  the rail continues onto a sheet this read did not open, so its
-                          decoupling may be drawn outside it
-    not-considered  VBUS  the rail continues onto a sheet this read did not open, so its
-                          decoupling may be drawn outside it
 
 diff-pair-naming  1 pass
     pass            USB_D+  the design carries the complementary net "USB_D-"
@@ -59,12 +69,14 @@ duplicate-ref-des  13 pass
     pass            U2   the reader found no second physical part claiming "U2"
     pass            Y1   the reader found no second physical part claiming "Y1"
 
-esd-clamp-not-tvs  2 not-considered, 1 pass
+esd-clamp-not-tvs  2 not-considered, 2 pass
     not-considered  USB_D+  the net carries no clamp at all, so there is no device class to
                             characterise; esd-protection reports it
     not-considered  USB_D-  the net carries no clamp at all, so there is no device class to
                             characterise; esd-protection reports it
     pass            SCL     the net's clamp is TVS D7, which is the fast ESD device class this
+                            rule asks for
+    pass            SDA     the net's clamp is TVS D6, which is the fast ESD device class this
                             rule asks for
 
 i2c-pull-up-split-rail  1 pass
@@ -72,12 +84,6 @@ i2c-pull-up-split-rail  1 pass
 
 i2c-redundant-pull-up  1 pass
     pass            SDA  SDA is pulled to +3V3 by R1
-
-input-protection  1 not-considered, 1 pass
-    not-considered  VBUS  the net continues onto a sheet this read did not open, so its fuse or
-                          clamp may be drawn outside it
-    pass            SDA   D6 guards the path from the connector to all 1 power entries it
-                          reaches
 
 label-alias-conflict  11 pass
     pass            +3V3    passes because labels is empty
@@ -95,7 +101,11 @@ label-alias-conflict  11 pass
 led-polarity  1 pass
     pass            D2  passes because led_reversed does not hold
 
-nc-pin-connected  8 pass
+nc-pin-connected  11 pass
+    pass            +3V3    passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (8 examined)
+    pass            GND     passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (19 examined)
     pass            LED_A   passes because no net.connections where pin.electrical_type ==
                             "no_connect" (2 examined)
     pass            LED_EN  passes because no net.connections where pin.electrical_type ==
@@ -108,6 +118,8 @@ nc-pin-connected  8 pass
                             "no_connect" (2 examined)
     pass            USB_D-  passes because no net.connections where pin.electrical_type ==
                             "no_connect" (2 examined)
+    pass            VBUS    passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (4 examined)
     pass            XTAL1   passes because no net.connections where pin.electrical_type ==
                             "no_connect" (3 examined)
     pass            XTAL2   passes because no net.connections where pin.electrical_type ==
@@ -126,13 +138,12 @@ output-output-conflict  11 pass
     pass            XTAL1   passes because drivers is 0, not >= 2
     pass            XTAL2   passes because drivers is 0, not >= 2
 
-power-input-not-driven  3 not-considered
-    not-considered  +3V3  the net continues onto a sheet this read did not open, so its feed may
-                          exist outside it
-    not-considered  GND   the net continues onto a sheet this read did not open, so its feed may
-                          exist outside it
-    not-considered  VBUS  the net continues onto a sheet this read did not open, so its feed may
-                          exist outside it
+power-input-not-driven  3 pass
+    pass            +3V3  1 driving pin(s) on the net feed its 5 power-input pin(s)
+    pass            GND   a power flag on the net asserts it is driven, feeding 11 power-input
+                          pin(s)
+    pass            VBUS  a power flag on the net asserts it is driven, feeding 2 power-input
+                          pin(s)
 
 power-tap-conflict  11 pass
     pass            +3V3    passes because rails is empty
@@ -228,8 +239,14 @@ unconnected-component  13 pass
     pass            U2   component's pins land on 9 net(s)
     pass            Y1   component's pins land on 2 net(s)
 
-unspecified-pin-with-driver  1 pass
+unspecified-pin-with-driver  4 pass
+    pass            +3V3    passes because no net.connections where pin.electrical_type ==
+                            "unspecified" and pin.declared and not (conn.virtual) (8 examined)
+    pass            GND     passes because no net.connections where pin.electrical_type ==
+                            "unspecified" and pin.declared and not (conn.virtual) (19 examined)
     pass            LED_EN  passes because no net.connections where pin.electrical_type ==
                             "unspecified" and pin.declared and not (conn.virtual) (2 examined)
+    pass            VBUS    passes because no net.connections where pin.electrical_type ==
+                            "unspecified" and pin.declared and not (conn.virtual) (4 examined)
 
-143 verdicts across 25 rule(s), 130 pass, 4 fail, 9 not-considered
+154 verdicts across 26 rule(s), 141 pass, 11 fail, 2 not-considered
