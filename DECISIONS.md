@@ -2034,3 +2034,21 @@ one composition of the diff.
 **Reopen if** an encoder needs something the projection cannot carry as a cell, such as a link
 target or a style that depends on the cell's meaning. That belongs on `TableColumn` or as a second
 table, not in a client's re-derivation.
+
+## A root schematic beside its own project is a complete read
+
+**Question.** WS1-017 made the `.kicad_pro` read the only witness that a KiCad read covered the whole
+design, because a bare `.kicad_sch` may be one sheet of someone else's design. A design whose entry
+is its ROOT schematic therefore kept every power rail and global label `external` even when the
+walk opened every sheet. On the Jetson baseboard that left `decoupling-present`, `bulk-cap`,
+`power-input-not-driven` and `input-protection` declining 39 real rails as "continues onto a sheet
+this read did not open" (agni issue 1013).
+
+**Answer. A complete walk from a schematic that has its same-stem `.kicad_pro` beside it resolves
+external to global, as the project read does.** KiCad names a project after its root sheet, and a
+sub-sheet has a stem of its own, so the project file beside a schematic says it is the root. agni
+933 already reads that file for net classes and board rules on the same grounds. A schematic with no
+project beside it keeps its markings, and so does any walk that failed to open a sub-sheet.
+
+**Reopen if** a tool writes a same-stem project beside a schematic that is not its root, or a
+hierarchy can reach a design's nets through something other than its `Sheetfile` references.
