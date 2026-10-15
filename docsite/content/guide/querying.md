@@ -450,12 +450,23 @@ headroom(?v, ?h) :- ?h = 5V - ?v; net.max_voltage(?n, ?v), ?h = headroom(?v), ?h
 
 The same rule still works as a relation, `headroom(?v, ?h)`.
 
-A computed number keeps the error of the floating-point arithmetic behind it, so `5V - 3.3V` shows as
-`1.7000000000000002` for now. It also does not equal the constant it looks like, and
-`5V - ?v = 1.7V` answers nothing for a 3.3 V net. Compare a computed number with a margin rather than
-with `=`, as in `?h > 1.69V, ?h < 1.71V`, and be wary of a boundary such as `>= 1.7V` that a value
-can miss by its last digit. The engine fixing this is
-[panyam/jaala#216](https://github.com/panyam/jaala/issues/216).
+An expression can also stand in the projection, where its column is named by the expression's own
+text without the `?`s:
+
+```
+net.max_voltage(?n, ?v) => ?n, ?v * 1000
+```
+
+answers in columns `n` and `v * 1000`. And it can stand in a rule's head, which computes the value as
+`?y = expression` in the body would:
+
+```
+margin(?n, 5V - ?v) :- net.max_voltage(?n, ?v); margin(?n, ?m), ?m > 3V => ?n, ?m
+```
+
+A computed number compares as the constant it looks like, so `5V - 3.3V` shows as `1.7` and
+`net.max_voltage(?n, ?v), 5V - ?v = 1.7V` finds the 3.3 V nets (fixed in
+[panyam/jaala#216](https://github.com/panyam/jaala/issues/216)).
 
 ### Use the shipped library (derived relations)
 
