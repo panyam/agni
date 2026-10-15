@@ -25,7 +25,7 @@ func TestShowcaseFaithfulWireNets(t *testing.T) {
 			}
 		}
 	}
-	for _, net := range []string{"SCL", "USB_D+", "USB_D-", "VBUS"} {
+	for _, net := range []string{"/SCL", "/USB_D+", "/USB_D-", "VBUS"} {
 		if !got[net] {
 			t.Errorf("wire net %q missing on faithful geometry; a net-subject highlight would not paint (are the wire uuids present?)", net)
 		}

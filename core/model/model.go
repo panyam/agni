@@ -163,8 +163,9 @@ type Model interface {
 	// information is involved.
 	PinNetConflicts() []PinNetConflict
 	// no-connect channel: whether the source can express "intentionally unconnected" at
-	// all, meaning any NO_CONNECT-typed pin or any no-connect-marker net name. Where the channel
-	// is absent (a bare EDIF netlist), an unwired pin carries no NC flag because none
+	// all, meaning any NO_CONNECT-typed pin, any no-connect-flagged net, or a designer's NC_ /
+	// no_connect net name. Where the channel is absent (a bare EDIF netlist), an unwired pin
+	// carries no NC flag because none
 	// exists, not because the designer missed it, so per-pin absence rules must not fire.
 	HasNoConnectChannel() bool
 	// power-output typing channel (WS3-072 PR2): whether the source format classifies

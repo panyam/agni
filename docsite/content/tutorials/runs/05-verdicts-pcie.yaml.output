@@ -1,19 +1,19 @@
-#agni-run 37d53e66aaaa49ae
+#agni-run 40a886719fca4094
 jetson-profiles/pcie-signal-missing  56 pass
-    pass  PCIe_{C1x1}.TX0+ + CLKN    PCIe interface (anchored at net PCIe_{C1x1}.TX0+) carries
-                                     required signal CLKN
-    pass  PCIe_{C1x1}.TX0+ + CLKP    PCIe interface (anchored at net PCIe_{C1x1}.TX0+) carries
-                                     required signal CLKP
-    pass  PCIe_{C1x1}.TX0+ + CLKREQ  PCIe interface (anchored at net PCIe_{C1x1}.TX0+) carries
-                                     required signal CLKREQ
-    pass  PCIe_{C1x1}.TX0+ + RST     PCIe interface (anchored at net PCIe_{C1x1}.TX0+) carries
-                                     required signal RST
-    pass  PCIe_{C1x1}.TX0+ + RXN     PCIe interface (anchored at net PCIe_{C1x1}.TX0+) carries
-                                     required signal RXN
-    pass  PCIe_{C1x1}.TX0+ + RXP     PCIe interface (anchored at net PCIe_{C1x1}.TX0+) carries
-                                     required signal RXP
-    pass  PCIe_{C1x1}.TX0+ + TXN     PCIe interface (anchored at net PCIe_{C1x1}.TX0+) carries
-                                     required signal TXN
+    pass  /Expansion connector/PCIe_{C2x1}.TX0+ + CLKN    PCIe interface (anchored at net
+                                                          /Expansion connector/PCIe_{C2x1}.TX0+)
+                                                          carries required signal CLKN
+    pass  /Expansion connector/PCIe_{C2x1}.TX0+ + CLKP    PCIe interface (anchored at net
+                                                          /Expansion connector/PCIe_{C2x1}.TX0+)
+                                                          carries required signal CLKP
+    pass  /Expansion connector/PCIe_{C2x1}.TX0+ + CLKREQ  PCIe interface (anchored at net
+                                                          /Expansion connector/PCIe_{C2x1}.TX0+)
+                                                          carries required signal CLKREQ
+    pass  /Expansion connector/PCIe_{C2x1}.TX0+ + RST     PCIe interface (anchored at net
+                                                          /Expansion connector/PCIe_{C2x1}.TX0+)
+                                                          carries required signal RST
+    pass  /Expansion connector/PCIe_{C2x1}.TX0+ + RXN     PCIe interface (anchored at net
+                                                          /Expansion connector/PCIe_{C2x1}.TX0+)
     ... and 36 more, not shown here. The tally beside the rule name is the full count.
 
 56 verdicts across 1 rule(s), 56 pass

@@ -63,7 +63,7 @@ func TestReadSchematicHierarchyNets(t *testing.T) {
 		nets[n.Name] = strings.Join(connKeys(n), " ")
 	}
 	want := map[string]string{
-		"SIG":        "R1.2",
+		"/SIG":       "R1.2",
 		"/amp1/SIG":  "R101.2 R102.2",
 		"/amp2/SIG":  "R201.2 R202.2",
 		"/amp1/CTRL": "R1.1 R101.1",
@@ -108,7 +108,7 @@ func TestReadSchematicHierarchyNets(t *testing.T) {
 	// port symbol lives); the design-wide rail lists every instance. A single-sheet design would
 	// carry no attribute (guarded below two sheets).
 	wantSheets := map[string]string{
-		"SIG":        "/",
+		"/SIG":       "/",
 		"/amp1/SIG":  "/amp1",
 		"/amp2/SIG":  "/amp2",
 		"/amp1/CTRL": "/ /amp1",
@@ -208,12 +208,14 @@ func TestNetNameUnescape(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, n := range d.Nets {
-		if n.Name == "VPP/MCLR" {
+		// KiCad keeps a slash inside a label escaped in the net name, so the sheet path's own "/"
+		// stays unambiguous (testdata/escapes.netnames).
+		if n.Name == "/VPP{slash}MCLR" {
 			if got := strings.Join(connKeys(n), " "); got != "R1.2 R2.2" {
-				t.Errorf("VPP/MCLR = %q, want both spellings' wires joined", got)
+				t.Errorf("/VPP{slash}MCLR = %q, want both spellings' wires joined", got)
 			}
 			return
 		}
 	}
-	t.Fatalf("no VPP/MCLR net; nets: %v", d.Nets)
+	t.Fatalf("no /VPP{slash}MCLR net; nets: %v", d.Nets)
 }

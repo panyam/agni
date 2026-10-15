@@ -4,11 +4,11 @@
 # minimal-sheet artifacts as the fires variant.
 fires:
   decoupling-present:
-    subjects: ["+3V3"]
+    subjects: ["/+3V3"]
     why: "incidental: the minimal rail feeds a power-in pin with no capacitor"
   power-input-not-driven:
-    subjects: [GND]
+    subjects: ["/GND"]
     why: "incidental: the single-pin GND stub has no driver (no PWR_FLAG in this minimal sheet)"
   single-pin-net:
-    subjects: [GND]
+    subjects: ["/GND"]
     why: "incidental: the GND label binds only U1's GND pin"

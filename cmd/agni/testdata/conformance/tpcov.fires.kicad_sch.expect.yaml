@@ -3,7 +3,7 @@
 # rails are omissions, not style. Incidental: GND is also a lone pin here.
 fires:
   test-point-coverage:
-    subjects: [3V3, GND]
+    subjects: ["/3V3", "/GND"]
     why: "rails a scope or flying probe cannot reach on the assembled board"
   single-pin-net:
-    subjects: [GND]
+    subjects: ["/GND"]

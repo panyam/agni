@@ -10,9 +10,10 @@
     ],
     "netclass_assignments": { "+3V3": ["Power", "Critical"] },
     "netclass_patterns": [
-      { "netclass": "HighSpeed", "pattern": "USB_*" },
-      { "netclass": "Differential", "pattern": "USB_D?" },
-      { "netclass": "Power", "pattern": "VBUS*" }
+      { "netclass": "HighSpeed", "pattern": "/USB_*" },
+      { "netclass": "Differential", "pattern": "/USB_D?" },
+      { "netclass": "Power", "pattern": "VBUS*" },
+      { "netclass": "Power", "pattern": "/VBUS*" }
     ]
   }
 }

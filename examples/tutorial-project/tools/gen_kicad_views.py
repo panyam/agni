@@ -4,11 +4,15 @@
 Reads gateway.edn, extracts cells/pins/instances/nets, and writes:
   symbols/gateway.kicad_sym  - one symbol per part type, pins numbered as the netlist numbers them
   gateway.kicad_sch          - instances placed on a grid, each pin stubbed and labelled
+  gateway.kicad_pro          - an empty project, which makes the schematic a complete read
 
 Netting is by LABEL, not by routing: every pin gets a short stub wire with a label carrying its
 net name, and same-named labels union into one net. That is the real-schematic idiom for rails and
-it removes the hand-routing problem entirely. Plain `label`, never `global_label`, because a global
-label marks the net External and several rules deliberately skip external nets.
+it removes the hand-routing problem entirely. The labels are `global_label`, because KiCad names a
+global label's net exactly as written and a root-sheet local label's "/NAME", and the schematic is a
+view of the netlist, whose names are bare. A global label marks its net External, which several
+rules skip, so the generator also writes the schematic's own .kicad_pro: a schematic read beside its
+project is complete, and External resolves (agni issues 1013, 1019).
 """
 import re, sys, pathlib, collections
 
@@ -129,13 +133,14 @@ for idx, iid in enumerate(insts):
         ex = px - 7.62                                   # stub runs left, clear of the body
         emitted += 1
         wires.append(f'\t(wire (pts (xy {px:.2f} {py:.2f}) (xy {ex:.2f} {py:.2f}))\n\t\t(uuid "w{idx}-{desig}"))')
-        labels.append(f'\t(label "{net}" (at {ex:.2f} {py:.2f} 180)\n'
+        labels.append(f'\t(global_label "{net}" (shape bidirectional) (at {ex:.2f} {py:.2f} 180)\n'
                       f'\t\t(effects (font (size 1.27 1.27)) (justify right)))')
 sch += wires + labels
 sch.append(")")
 (outdir / "gateway.kicad_sch").write_text("\n".join(sch) + "\n")
+(outdir / "gateway.kicad_pro").write_text("{}\n")
 total = sum(len(c) for c in nets.values())
 if emitted != total:
     sys.exit(f"emitted {emitted} stubs for {total} connections -- some pin was not placed")
 print(f"stubs {emitted} == connections {total}", file=sys.stderr)
-print(f"wrote {outdir/'gateway.kicad_sch'} and {outdir/'symbols'/'gateway.kicad_sym'}", file=sys.stderr)
+print(f"wrote {outdir/'gateway.kicad_sch'}, {outdir/'gateway.kicad_pro'} and {outdir/'symbols'/'gateway.kicad_sym'}", file=sys.stderr)

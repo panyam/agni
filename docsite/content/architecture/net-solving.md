@@ -63,14 +63,36 @@ KiCad has four name kinds, and they map onto familiar software scoping:
 
 | kind | scope | net name | analogy |
 |---|---|---|---|
-| local label | one sheet instance | `/amp1/SIG` (root: bare `SIG`) | instance-qualified member: same text on two sheets is two nets |
+| local label | one sheet instance | `/amp1/SIG` (root: `/SIG`) | instance-qualified member: same text on two sheets is two nets |
 | global label / power symbol | design-wide | bare (`VCC`) | root-namespace global |
 | hierarchical label + sheet pin | one instance edge | the child-qualified port name | function parameter: child declares the port, each call site binds it |
 | {{ explainable "reference-designator" "ref-des" }} in a reused sheet | per instance | flat (`RV201` vs `RV301`) | the linker gives each inlined copy its own symbol, looked up rather than qualified |
 
-The qualifier is the instance path (built from sheet names), not the file. A sheet file is a class and its placements are objects. Root locals stay bare because that is what `.kicad_pcb` files store, and matching the board's spelling lets schematic-versus-board diffs and net joins agree. (`kicad-cli`'s netlist export adds a leading `/` to root locals that the board does not carry, and Agni matches the board.)
+The qualifier is the instance path (built from sheet names), not the file. A sheet file is a class
+and its placements are objects. The root's path is `/`, so a root local is `/SIG`, which is how both
+`kicad-cli`'s netlist and the `.kicad_pcb` spell it.
 
-Naming priority across kinds is encoded in the anchor's rank and was pinned empirically. A net carrying both a local label and a `VCC` power symbol exports from `kicad-cli` as `VCC`, so global and power are rank 0 and local and port are rank 1. Rank ties keep input order, and the walk emits pre-order, so a root-sheet name beats an equal-kind deeper name, which is also KiCad's rule.
+Every name follows KiCad 10.0's own rules (agni issue 1019, read from `connection_graph.cpp` and
+`sch_pin.cpp`), and `TestFixtureNetNamesAreKiCads` holds the reader to `kicad-cli`'s netlist of every
+fixture, regenerated with `hack/kicad_net_names.sh`. On the Jetson baseboard all 1355 names match.
+
+- **Which label names a net.** A design-wide name (a global label or a power symbol) wins, then a local
+  label, then a hierarchical label, then a sheet pin, and at equal priority the name nearer the root.
+  A tie after that is alphabetical, so `+3.3V` beats `+3V3` and `/DCDC/X` beats `/Power/X`. The ranks
+  live on each anchor and netgraph resolves them with `Options.AlphaTies`.
+- **A net nobody labelled** takes a pin's name. A pin with a real name gives `Net-(D1-C)`, with the unit
+  letter on a multi-unit part (`Net-(J1A-GPIO30)`) and the pad number added when the part has another
+  pin of that name. A pin with no name gives `Net-(R6-Pad2)`. Among the pins the name without a pad
+  number wins, then the alphabetically first.
+- **A stub** is `unconnected-(...)`, with the pad number, when a no-connect flag sits on the net or one
+  pin alone is on it, flagged or not. So the name says nothing about intent. A no-connect flag marks
+  the net `no_connect` instead, which is what the rules read.
+- **A slash inside a label** stays escaped, `FTDI_CBUS0{slash}SDA`, so a sheet path's `/` is never
+  ambiguous.
+
+A bus member that entered a sub-sheet through a bus sheet pin keeps its own sheet's name, as KiCad
+does, and joins the parent's member through an anchor that names nothing (`rankJoin`), unless the
+parent draws a label for the bus, in which case that label competes as a local name on the parent.
 
 ## The hierarchy walk
 
@@ -81,7 +103,7 @@ Per sheet instance (a reused file is walked once per placement), pre-order:
 1. **Coordinate band.** Instance `k`'s geometry is offset by `k · 2^41` nm on X. Sheets are about 10^9 nm wide, so the bands never touch. Point-union stays within an instance, and only label-union crosses bands. One solve handles the whole design.
 2. **Scoped collection.** The same collector the single-sheet read uses runs with a sheet scope: the band offset, the name prefix (empty for the root), and the instance path. Local and hierarchical labels emit prefix-qualified anchors. Globals and power symbols emit bare ones.
 3. **Components.** Each placement's ref-des is resolved from the `instances` entry whose path matches this instance's uuid chain. The fallback is the first non-placeholder entry, then the Reference property (the single-file behavior). Components merge design-wide by resolved ref, and part libraries dedup by lib_id across files.
-4. **Ports.** For each `(sheet ...)` block, the parent emits an anchor at every sheet pin's position, labeled `<childID>/<pin name>`, which is the same string the child's same-named hierarchical label produces under its prefix. Label-union joins the parent net to the child net, and rank 1 makes the port name the net's name when nothing better exists. This works per instance edge, so two `amp` instances bind their `CTRL` ports to different parent nets.
+4. **Ports.** For each `(sheet ...)` block, the parent emits an anchor at every sheet pin's position, labeled `<childID>/<pin name>`, which is the same string the child's same-named hierarchical label produces under its prefix. Label-union joins the parent net to the child net, and the sheet-pin rank makes the port name the net's name when nothing better exists. This works per instance edge, so two `amp` instances bind their `CTRL` ports to different parent nets.
 5. **Recursion and completeness.** A child that fails to open (or a `Sheetfile` cycling back to an ancestor) is skipped and flips `complete` to false. The rest still reads.
 
 ### Buses cross by a different rule

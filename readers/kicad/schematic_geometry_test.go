@@ -362,18 +362,12 @@ func TestWireNetNames(t *testing.T) {
 			nets[w.Net] = w.Net
 		}
 	}
-	if nets["SIG"] == "" {
-		t.Errorf("the labeled wire must carry net SIG; got wire nets %v", names)
+	if nets["/SIG"] == "" {
+		t.Errorf("the labeled wire must carry net /SIG; got wire nets %v", names)
 	}
-	// The unlabeled stub wire off R1.2 gets a synthesized N$ name (not empty).
-	hasStub := false
-	for _, n := range names {
-		if len(n) >= 2 && n[:2] == "N$" {
-			hasStub = true
-		}
-	}
-	if !hasStub {
-		t.Errorf("the unlabeled stub wire must carry an N$ name; got %v", names)
+	// The unlabeled stub wire off R1.2 carries the name KiCad gives a one-pin net, not an empty one.
+	if nets["unconnected-(R1-Pad2)"] == "" {
+		t.Errorf("the unlabeled stub wire must carry net unconnected-(R1-Pad2); got %v", names)
 	}
 }
 

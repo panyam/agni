@@ -69,7 +69,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 	unresolvedSyms := w.libs.resolveExternal(d.Components, w.syms, rootName)
 	d.Libraries = w.libs.libraries()
 
-	built, dangles, _, pointNets := netgraph.BuildWithPoints(w.in.wires, w.in.anchors, w.in.pins, w.in.terminals)
+	built, dangles, _, pointNets := netgraph.BuildWithPoints(w.in.wires, w.in.anchors, w.in.pins, w.in.terminals, kicadNaming)
 	kept := built[:0]
 	for _, n := range built {
 		if len(n.Conns) > 0 {
@@ -213,7 +213,10 @@ func busMembersAscending(name string) []string {
 // wired together share members by NAME, while a bus crossing a sheet pin maps BY BIT POSITION, so the
 // branch's own label is the one that decides. See
 // docsite/content/architecture/net-solving.md#buses-cross-by-a-different-rule.
-func sheetBusNames(root *node, aliases map[string][]string) map[netgraph.Point]string {
+//
+// labelled reports, per pin, whether its branch's name is a bus LABEL drawn on this sheet rather than
+// one inferred from the sheet pins, since only a label gives the members a name on this sheet.
+func sheetBusNames(root *node, aliases map[string][]string) (names map[netgraph.Point]string, labelled map[netgraph.Point]bool) {
 	type seg struct{ a, b netgraph.Point }
 	var segs []netgraph.Wire
 	for _, b := range root.Children("bus") {
@@ -223,7 +226,7 @@ func sheetBusNames(root *node, aliases map[string][]string) map[netgraph.Point]s
 		}
 	}
 	if len(segs) == 0 {
-		return nil
+		return nil, nil
 	}
 	labelAt := map[netgraph.Point]string{}
 	var onBus []netgraph.Point
@@ -257,9 +260,11 @@ func sheetBusNames(root *node, aliases map[string][]string) map[netgraph.Point]s
 	}
 
 	out := map[netgraph.Point]string{}
+	labelled = map[netgraph.Point]bool{}
 	for pin, pinName := range pinAt {
 		if name, ok := nearestBusLabel(pin, adj, labelAt); ok {
 			out[pin] = name
+			labelled[pin] = true
 		} else if _, onIt := adj[pin]; onIt {
 			// Nothing labels the branch, so the pins on it name it. A GROUP bus joining sibling sheets
 			// takes one name for the whole bus, so members of the same name meet even when the two
@@ -272,7 +277,7 @@ func sheetBusNames(root *node, aliases map[string][]string) map[netgraph.Point]s
 			}
 		}
 	}
-	return out
+	return out, labelled
 }
 
 // groupBusNameOf is the name an unlabelled bus carries: the first, in sorted order, of the group-bus
@@ -372,33 +377,45 @@ func reusedSheetFiles(root *node) map[string]bool {
 // `PP_OUT0` to the parent's `PP_OUT2` when the parent's bus at that pin is `PP_OUT[2..3]`, and pairs
 // off only as far as the shorter bus. Only members are promoted, never the bus name, because the
 // parent's anchor for the pin is the child-qualified `/<sheet>/AN[0..7]` and promoting it would break
-// that join. Promotion composes through nesting since sc.local already carries what this sheet
-// inherited. See docsite/content/architecture/net-solving.md#buses-cross-by-a-different-rule.
-func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string, aliases map[string][]string, reused bool) map[string]string {
+// that join. Promotion composes through nesting, since a member this sheet itself inherited joins
+// the name it inherited. See docsite/content/architecture/net-solving.md#buses-cross-by-a-different-rule.
+func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string, busLabelled map[netgraph.Point]bool, aliases map[string][]string, reused bool) map[string]promotion {
 	if reused {
 		return nil
 	}
-	out := map[string]string{}
+	out := map[string]promotion{}
 	// A child member must promote to exactly one parent name. The rules below never produce two, so a
 	// collision means an assumption here is wrong, and the member stays unpromoted rather than picking.
 	conflict := map[string]bool{}
-	set := func(from, to string) {
-		if prev, ok := out[from]; ok && prev != to {
+	set := func(from string, to promotion) {
+		if prev, ok := out[from]; ok && prev.name != to.name {
 			conflict[from] = true
 			return
 		}
 		out[from] = to
+	}
+	// parentName is the name a child member joins: the parent's own join when the parent inherited
+	// the member through a bus pin too, so promotion composes through nesting, else its qualified name.
+	parentName := func(member string, labelled bool) promotion {
+		if p, ok := sc.join(member); ok {
+			return p
+		}
+		if labelled {
+			// The parent's bus label names the member on the parent sheet, a real local label there.
+			return promotion{name: sc.local(member), rank: rankLocal + sc.depth()}
+		}
+		return promotion{name: sc.local(member), rank: rankJoin}
 	}
 	for _, p := range sub.Children("pin") {
 		at := sheetPt(p.Child("at"))
 		if at == nil {
 			continue
 		}
-		pinName, busName := unescapeName(atomOf(p.Arg(1))), busAt[gp(at)]
+		pinName, busName, labelled := unescapeName(atomOf(p.Arg(1))), busAt[gp(at)], busLabelled[gp(at)]
 		// A VECTOR pairs by bit position, so a rename across the boundary carries.
 		if mine, theirs := busMembersAscending(pinName), busMembersAscending(busName); mine != nil && theirs != nil {
 			for j := 0; j < len(mine) && j < len(theirs); j++ {
-				set(mine[j], sc.local(theirs[j]))
+				set(mine[j], parentName(theirs[j], labelled))
 			}
 			continue
 		}
@@ -413,7 +430,7 @@ func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string,
 			continue
 		}
 		for _, m := range members {
-			set(childPrefix+"."+m, sc.local(parentPrefix+"."+m))
+			set(childPrefix+"."+m, parentName(parentPrefix+"."+m, labelled))
 		}
 	}
 	for k := range conflict {
@@ -490,7 +507,7 @@ type hierNetWalker struct {
 // components, nets, and sheet record, then recurses into referenced sub-sheets. ancestors is
 // the source-file set on the path from the root, for cycle breaking; instPath is the KiCad
 // instance path used to resolve per-instance reference designators.
-func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]string) error {
+func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]promotion) error {
 	if len(ancestors) > 64 {
 		w.complete = false // depth backstop, in addition to the ancestor-cycle guard
 		return nil
@@ -521,7 +538,8 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 		sc.prefix = id
 		name = path.Base(id)
 	}
-	busAt, reusedSheet := sheetBusNames(root, w.aliases), reusedSheetFiles(root)
+	busAt, busLabelled := sheetBusNames(root, w.aliases)
+	reusedSheet := reusedSheetFiles(root)
 	w.libs.collect(root, src)
 	w.comps.collect(root, src, instPath)
 	collectSheetNets(root, sc, &w.in)
@@ -540,7 +558,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 		// even when the child fails to open, so a partial read still names the parent net.
 		for _, p := range sub.Children("pin") {
 			if at := sheetPt(p.Child("at")); at != nil {
-				w.in.anchors = append(w.in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + unescapeName(atomOf(p.Arg(1))), Rank: rankLocal})
+				w.in.anchors = append(w.in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + netName(atomOf(p.Arg(1))), Rank: rankSheetPin + sc.depth()})
 			}
 		}
 		if file == "" || ancestors[file] {
@@ -556,7 +574,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 		for a := range ancestors {
 			childAnc[a] = true
 		}
-		if err := w.walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, w.aliases, reusedSheet[propValue(sub, "Sheetfile")])); err != nil {
+		if err := w.walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, busLabelled, w.aliases, reusedSheet[propValue(sub, "Sheetfile")])); err != nil {
 			return err
 		}
 	}
@@ -574,8 +592,8 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 	var in netInputs
 	var k int64
 
-	var walk func(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]string)
-	walk = func(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]string) {
+	var walk func(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]promotion)
+	walk = func(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]promotion) {
 		if len(ancestors) > 64 {
 			return
 		}
@@ -588,7 +606,8 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 				instPath = "/" + u
 			}
 		}
-		busAt, reusedSheet := sheetBusNames(root, aliases), reusedSheetFiles(root)
+		busAt, busLabelled := sheetBusNames(root, aliases)
+		reusedSheet := reusedSheetFiles(root)
 		sc := sheetScope{offset: netgraph.Point{X: k * instStep}, instPath: instPath, src: src, syms: syms, wirePfx: id, promoted: promoted}
 		if id != "/" {
 			sc.prefix = id
@@ -600,7 +619,7 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 			childID := path.Join(id, propValue(sub, "Sheetname"))
 			for _, p := range sub.Children("pin") {
 				if at := sheetPt(p.Child("at")); at != nil {
-					in.anchors = append(in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + unescapeName(atomOf(p.Arg(1))), Rank: rankLocal})
+					in.anchors = append(in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + netName(atomOf(p.Arg(1))), Rank: rankSheetPin + sc.depth()})
 				}
 			}
 			if file == "" || ancestors[file] {
@@ -614,7 +633,7 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 			for a := range ancestors {
 				childAnc[a] = true
 			}
-			walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, aliases, reusedSheet[propValue(sub, "Sheetfile")]))
+			walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, busLabelled, aliases, reusedSheet[propValue(sub, "Sheetfile")]))
 		}
 	}
 
@@ -622,7 +641,7 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 		open = func(string) ([]byte, error) { return nil, fmt.Errorf("no sub-sheet opener") }
 	}
 	walk(rootContent, rootName, "/", "", map[string]bool{}, nil)
-	_, _, wireNets := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals)
+	_, _, wireNets := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals, kicadNaming)
 	return wireNets
 }
 

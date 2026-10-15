@@ -50,7 +50,7 @@ func TestExternalSymbolResolution(t *testing.T) {
 	}
 	var sig []string
 	for _, n := range d.Nets {
-		if n.Name == "SIG" {
+		if n.Name == "/SIG" {
 			sig = connKeys(n)
 		}
 	}

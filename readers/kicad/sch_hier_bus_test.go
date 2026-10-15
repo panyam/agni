@@ -36,8 +36,8 @@ func TestHierBusMembersDoNotCross(t *testing.T) {
 	}
 	parent := pinNet(d, "R1", "1")  // root member tap DATA0
 	child := pinNet(d, "R101", "1") // sub-sheet member tap DATA0
-	if parent != "DATA0" {
-		t.Errorf("parent R1.1 net = %q, want bare DATA0 (root local)", parent)
+	if parent != "/DATA0" {
+		t.Errorf("parent R1.1 net = %q, want /DATA0 (root local)", parent)
 	}
 	if child != "/sub/DATA0" {
 		t.Errorf("child R101.1 net = %q, want qualified /sub/DATA0", child)

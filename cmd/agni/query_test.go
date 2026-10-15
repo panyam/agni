@@ -78,7 +78,7 @@ func TestQueryNetClassCLI(t *testing.T) {
 	}
 
 	s := run("testdata/conformance/showcase.passes.kicad_pro", "net.netclass(?n, ?c) => ?n, ?c")
-	for _, want := range []string{"USB_D+", "HighSpeed", "VBUS_PROT", "Power"} {
+	for _, want := range []string{"/USB_D+", "HighSpeed", "VBUS_PROT", "Power"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("project net.netclass query missing %q:\n%s", want, s)
 		}
@@ -102,7 +102,7 @@ func TestQueryNetClassCLI(t *testing.T) {
 	// The same board named by its schematic reads the project beside it, so it has the same classes
 	// and the marker (agni issue 933).
 	sch := run("testdata/conformance/showcase.passes.kicad_sch", "net.netclass(?n, ?c) => ?n, ?c")
-	for _, want := range []string{"USB_D+", "HighSpeed", "VBUS_PROT", "Power", "Critical", "Differential", "8 result(s)"} {
+	for _, want := range []string{"/USB_D+", "HighSpeed", "VBUS_PROT", "Power", "Critical", "Differential", "8 result(s)"} {
 		if !strings.Contains(sch, want) {
 			t.Errorf("schematic read of a project missing %q:\n%s", want, sch)
 		}
@@ -155,7 +155,7 @@ func TestQueryNetClassDefsCLI(t *testing.T) {
 	// (priority 2, states 0.2). It must resolve to Differential's value, NOT to no value and NOT
 	// to Default's 0.25, because the fall-through is per FIELD.
 	d := run(pro, `net.declared_track_width(?n, ?mm) => ?n, ?mm`)
-	for _, want := range []string{"USB_D+", "0.2", "net_settings:Differential"} {
+	for _, want := range []string{"/USB_D+", "0.2", "net_settings:Differential"} {
 		if !strings.Contains(d, want) {
 			t.Errorf("declared track width missing %q:\n%s", want, d)
 		}
@@ -171,7 +171,7 @@ func TestQueryNetClassDefsCLI(t *testing.T) {
 	// Named by its schematic, the board reads the same definitions from the project beside it, and a
 	// schematic with no project has none (agni issue 933).
 	sch := run("testdata/conformance/showcase.passes.kicad_sch", `net.declared_track_width(?n, ?mm) => ?n, ?mm`)
-	for _, want := range []string{"USB_D+", "net_settings:Differential", "net_settings:Default"} {
+	for _, want := range []string{"/USB_D+", "net_settings:Differential", "net_settings:Default"} {
 		if !strings.Contains(sch, want) {
 			t.Errorf("schematic read of a project missing declared width %q:\n%s", want, sch)
 		}

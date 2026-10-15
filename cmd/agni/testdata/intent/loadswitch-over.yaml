@@ -9,4 +9,4 @@
 name: Load switch budget (over the limit)
 intent:
   nets:
-    VOUT: {peak: 2}
+    /VOUT: {peak: 2}

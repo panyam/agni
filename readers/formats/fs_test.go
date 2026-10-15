@@ -298,7 +298,7 @@ func TestKicadProjectOverFS(t *testing.T) {
 		t.Fatal(err)
 	}
 	const pro = `{"net_settings":{
-	  "netclass_assignments": {"SIG": ["Critical"]},
+	  "netclass_assignments": {"/SIG": ["Critical"]},
 	  "classes": [{"name":"Critical","clearance":0.3,"track_width":0.5}]}}`
 	l := &Loader{FS: fstest.MapFS{
 		"proj/board.kicad_sch": &fstest.MapFile{Data: sch},
@@ -310,7 +310,7 @@ func TestKicadProjectOverFS(t *testing.T) {
 	}
 	var sig *ir.Net
 	for _, n := range d.Nets {
-		if n.Name == "SIG" {
+		if n.Name == "/SIG" {
 			sig = n
 		}
 	}

@@ -5,7 +5,7 @@
 # recognize the fuse ACROSS two series hops, which is the reach walk's whole point.
 fires:
   reverse-blocking-absent:
-    subjects: ["JIN"]
+    subjects: ["/JIN"]
     why: |
       NOT a false positive, and the clearest illustration of why this rule exists. This fixture is
       "input-protection done RIGHT" — a fuse crossed on the path — and a fuse opens on current

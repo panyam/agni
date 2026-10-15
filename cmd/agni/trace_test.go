@@ -79,9 +79,9 @@ func TestTraceCLINoRouteExplainsItself(t *testing.T) {
 	}
 	for _, want := range []string{
 		"no route: U2.3 (SDA) --> TP2.1",
-		"U2.3 (SDA) on net SDA",
+		"U2.3 (SDA) on net /SDA",
 		"TP2.1 on net GND",
-		"no series path from SDA to GND within 6 crossings",
+		"no series path from /SDA to GND within 6 crossings",
 		"A capacitor is a DC block and is never crossed.",
 	} {
 		if !strings.Contains(out, want) {

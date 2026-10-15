@@ -14,6 +14,9 @@ import (
 const (
 	// AttrPowerDriven marks a net asserted as fed (a PWR_FLAG or equivalent directive).
 	AttrPowerDriven = "power_driven"
+	// AttrNoConnect marks a net a pin's no-connect flag lands on, the designer's own statement that
+	// the open pin is deliberate (see Net.NoConnect).
+	AttrNoConnect = "no_connect"
 	// AttrExternal marks a net that continues into something the read did NOT cover, a by-name
 	// connection (global label, power symbol) whose other ends may live in unread files. It is
 	// about READ SCOPE, not sheet membership, so a net spanning ten sheets of a completely-read
@@ -115,10 +118,13 @@ func IRNets(nets []Net, src string) []*ir.Net {
 	var out []*ir.Net
 	for _, n := range nets {
 		net := &ir.Net{Name: n.Name, Id: n.ID, Prov: &ir.Provenance{SourceFile: src}}
-		if n.Driven || n.External || len(n.Aliases) > 1 {
+		if n.Driven || n.External || n.NoConnect || len(n.Aliases) > 1 {
 			net.Attributes = map[string]string{}
 			if n.Driven {
 				net.Attributes[AttrPowerDriven] = "true"
+			}
+			if n.NoConnect {
+				net.Attributes[AttrNoConnect] = "true"
 			}
 			if n.External {
 				net.Attributes[AttrExternal] = "true"

@@ -8,7 +8,7 @@ findings:
     - class: design-choice
       why: N$54 is the module's PMIC backup-battery input through D1 and R6, which the module decouples on its own side.
       subjects:
-        - net:N$54
+        - net:Net-(D1-C)
     - class: false-positive
       ticket: 1015
       why: +12V is joined to the 12 V buck's output node /DCDC/12V_OUT through R22, a 0 Ohm 22.4 A link, and four 22 uF capacitors (C222, C235, C306, C307) sit on that node beside U8's output. The rule stops at the 0 Ohm link and finds no capacitor on +12V.
@@ -18,7 +18,7 @@ findings:
     - class: design-choice
       why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
       subjects:
-        - net:N$54
+        - net:Net-(D1-C)
   esd-protection:
     - class: design-choice
       why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, its low-speed control pins (TX_FAULT, TX_DISABLE, rate select) go through 1 kOhm or 0 Ohm series parts, and SH is the cage shield returned to ground through an RC network; the module protects its own end.
@@ -28,17 +28,17 @@ findings:
         - net:/SFP/SFI_CONN_TX_N
         - net:/SFP/SFI_CONN_TX_P
         - net:/SFP/SH
-        - net:N$131
-        - net:N$133
-        - net:N$135
-        - net:N$136
-        - net:N$137
+        - net:Net-(J12-TX_{FAULT})
+        - net:Net-(J12-RS0)
+        - net:Net-(J12-TX_{DISABLE})
+        - net:Net-(J12-RX_{LOS})
+        - net:Net-(J12-RS1)
   i2c-pull-up:
     - class: needs-intent
       why: These lines pass through an NTS0102 level translator, which carries its own 10 kOhm pull-ups on both sides; that is a datasheet fact this run has no parameter set for.
       subjects:
-        - net:/USB Debug, PD/FTDI_CBUS0/SDA
-        - net:/USB Debug, PD/FTDI_CBUS3/SCL
+        - net:/USB Debug, PD/FTDI_CBUS0{slash}SDA
+        - net:/USB Debug, PD/FTDI_CBUS3{slash}SCL
     - class: design-choice
       why: The TPS65988's third I2C port is unused and brought to a test point only.
       subjects:
@@ -62,12 +62,12 @@ findings:
         - net:/CSI/I2C_MUX_SDA
         - net:/SoM_IO/I2C1_SCL_1V8
         - net:/SoM_IO/I2C1_SDA_1V8
-        - net:I2C7.SCL
-        - net:I2C7.SDA
-        - net:I2C8.SCL
-        - net:I2C8.SDA
-        - net:I2C_{CAM}.SCL
-        - net:I2C_{CAM}.SDA
+        - net:/Expansion connector/I2C7.SCL
+        - net:/Expansion connector/I2C7.SDA
+        - net:/Expansion connector/I2C8.SCL
+        - net:/Expansion connector/I2C8.SDA
+        - net:/CSI/I2C_{CAM}.SCL
+        - net:/CSI/I2C_{CAM}.SDA
     - class: needs-intent
       why: Each of these SoM I2C lines at 1.8 V has a 2.2 kOhm pull-up footprint marked do-not-populate (R357, R358 and their neighbours) and runs through an NTS0104 level translator, which carries its own 10 kOhm pull-ups; that is a datasheet fact this run has no parameter set for. Surfaced once DNP parts stopped counting as pull-ups (agni issue 938).
       subjects:
@@ -85,8 +85,8 @@ findings:
       subjects:
         - net:/USB Debug, PD/DEBUG_SCL
         - net:/USB Debug, PD/DEBUG_SDA
-        - net:I2C_{SYS}.SCL
-        - net:I2C_{SYS}.SDA
+        - net:/I2C_{SYS}.SCL
+        - net:/I2C_{SYS}.SDA
   input-protection:
     - class: false-positive
       ticket: 1014
@@ -117,8 +117,8 @@ findings:
     - class: defect
       why: Two unused FMC pins (J18 B24, B25) lack the no-connect flag every other unused pin on the connector carries; KiCad's own netlist also leaves them unconnected. Harmless electrically.
       subjects:
-        - net:N$202
-        - net:N$203
+        - net:unconnected-(J18-PadB24)
+        - net:unconnected-(J18-PadB25)
   test-point-coverage:
     - class: design-choice
       why: The board puts test points on its main rails, not on each converter's internal supply and output nodes, the FMC rails or the debug bridge's 3.3 V.
@@ -145,7 +145,7 @@ findings:
         - net:/Expansion connector/+V_{ADJ}
         - net:/M.2/3V3_M2
         - net:/Power/3V3_LDO
-        - net:/Power/VIN_PWR_ON
+        - net:/DCDC/VIN_PWR_ON
         - net:/SoM_IO2/TC_VCC
         - net:/USB Debug, PD/FTDI_3V3
     - class: design-choice

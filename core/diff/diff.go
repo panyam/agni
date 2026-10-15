@@ -6,6 +6,7 @@ package diff
 
 import (
 	"fmt"
+	"github.com/panyam/agni/internal/netgraph"
 	"sort"
 	"strings"
 
@@ -117,7 +118,7 @@ func diffComponents(a, b *ir.Design, r *Report) {
 			r.ComponentsAdded = append(r.ComponentsAdded, ref)
 			continue
 		}
-		r.ComponentsChanged = append(r.ComponentsChanged, componentFieldChanges(ref, ac, bc)...)
+		r.ComponentsChanged = append(r.ComponentsChanged, componentFieldChanges(ref, ac, bc, sameFormat(a, b))...)
 	}
 	sort.Strings(r.ComponentsAdded)
 	sort.Strings(r.ComponentsRemoved)
@@ -135,14 +136,21 @@ func diffComponents(a, b *ir.Design, r *Report) {
 // the SET of "library/part" over all sections, so section ordering causes no false diff
 // (WS2-001). dnp is compared because a DNP part is not fabricated, so flipping it changes the
 // built board.
-func componentFieldChanges(ref string, a, b *ir.Component) []ComponentChange {
+//
+// A field is compared only when both designs record it, because a view that does not record a
+// field says nothing about it: a KiCad board carries no dnp and no symbol Footprint. The part
+// references are compared only between two reads of one format, since a schematic names a symbol
+// library and a board a footprint library (agni issue 1019).
+func componentFieldChanges(ref string, a, b *ir.Component, sameFormat bool) []ComponentChange {
 	var out []ComponentChange
 	add := func(field, o, n string) {
-		if o != n {
+		if o != n && o != "" && n != "" {
 			out = append(out, ComponentChange{RefDes: ref, Field: field, Old: o, New: n})
 		}
 	}
-	add("parts", partSet(a), partSet(b))
+	if sameFormat {
+		add("parts", partSet(a), partSet(b))
+	}
 	add("Value", a.Attributes["Value"], b.Attributes["Value"])
 	add("dnp", a.Attributes["dnp"], b.Attributes["dnp"])
 	add("Footprint", a.Attributes["Footprint"], b.Attributes["Footprint"])
@@ -169,10 +177,42 @@ func partSet(c *ir.Component) string {
 // set (for rename matching), a canonical key of its non-connectivity attributes (for Soft
 // vs Hard), and its provenance.
 type netInfo struct {
-	conns map[string]bool
-	sig   string
-	meta  string
-	prov  *ir.Provenance
+	conns   map[string]bool
+	sig     string
+	classes string
+	attrs   map[string]string
+	prov    *ir.Provenance
+}
+
+// readScopeAttrs are net attributes that record how a read reached a net rather than anything about
+// the design, so two views or two reads of one board can differ in them with nothing changed.
+var readScopeAttrs = map[string]bool{
+	netgraph.AttrExternal: true,
+	netgraph.AttrGlobal:   true,
+	netgraph.AttrSheets:   true,
+}
+
+// metaEqual compares the non-connectivity facts of one net on both sides: its net classes, and each
+// attribute both sides record that is not read scope. An attribute one side does not record says
+// nothing, as a component field does not (componentFieldChanges).
+func metaEqual(a, b *netInfo) bool {
+	if a.classes != b.classes {
+		return false
+	}
+	for k, v := range a.attrs {
+		if readScopeAttrs[k] {
+			continue
+		}
+		if w, ok := b.attrs[k]; ok && w != v {
+			return false
+		}
+	}
+	return true
+}
+
+// sameFormat reports whether two designs were read from one source format.
+func sameFormat(a, b *ir.Design) bool {
+	return a.GetSourceFormat() == b.GetSourceFormat()
 }
 
 // diffNets classifies every net change. Nets are matched by name first (Equal / Soft /
@@ -195,7 +235,7 @@ func diffNets(a, b *ir.Design, r *Report, ro RenameOptions) {
 				Removed: setDiff(ai.conns, bi.conns),
 				OldProv: ai.prov, NewProv: bi.prov,
 			})
-		case ai.meta != bi.meta:
+		case !metaEqual(ai, bi):
 			r.Nets = append(r.Nets, NetChange{Kind: NetSoft, Name: name, OldProv: ai.prov, NewProv: bi.prov})
 		default:
 			r.Equal = append(r.Equal, NetChange{Kind: NetEqual, Name: name, OldProv: ai.prov, NewProv: bi.prov})
@@ -302,6 +342,11 @@ func indexNets(d *ir.Design) map[string]*netInfo {
 		conns := make(map[string]bool, len(n.Connections))
 		keys := make([]string, 0, len(n.Connections))
 		for _, c := range n.Connections {
+			// A power symbol's virtual pin is not a part (check.IsVirtualRef). Only a schematic
+			// view draws one, so it is no change between views or between revisions.
+			if strings.HasPrefix(c.ComponentRef, "#") {
+				continue
+			}
 			k := c.ComponentRef + "." + c.PinRef
 			if !conns[k] {
 				conns[k] = true
@@ -310,10 +355,11 @@ func indexNets(d *ir.Design) map[string]*netInfo {
 		}
 		sort.Strings(keys)
 		m[n.Name] = &netInfo{
-			conns: conns,
-			sig:   strings.Join(keys, ","),
-			meta:  netClassesKey(n.NetClasses) + "\x00" + attrsKey(n.Attributes),
-			prov:  n.Prov,
+			conns:   conns,
+			sig:     strings.Join(keys, ","),
+			classes: netClassesKey(n.NetClasses),
+			attrs:   n.Attributes,
+			prov:    n.Prov,
 		}
 	}
 	return m
@@ -329,23 +375,6 @@ func netClassesKey(cs []string) string {
 	sorted := append([]string(nil), cs...)
 	sort.Strings(sorted)
 	return strings.Join(sorted, ",")
-}
-
-// attrsKey renders an attribute map as a canonical, order-independent string for equality.
-func attrsKey(m map[string]string) string {
-	if len(m) == 0 {
-		return ""
-	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var b strings.Builder
-	for _, k := range keys {
-		fmt.Fprintf(&b, "%s=%s;", k, m[k])
-	}
-	return b.String()
 }
 
 // setDiff returns elements in a but not in b, sorted.

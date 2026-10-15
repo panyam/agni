@@ -1,6 +1,6 @@
-#agni-run f7f2702b633782a7
-n     count(r)  count(distinct r)  list(distinct r)  provenance
-+24V  4         2                  J1 U1             regulator.fires.kicad_sch
-GND   1         1                  U1                regulator.fires.kicad_sch
+#agni-run 728f2f7f69630481
+n      count(r)  count(distinct r)  list(distinct r)  provenance
+/+24V  4         2                  J1 U1             regulator.fires.kicad_sch
+/GND   1         1                  U1                regulator.fires.kicad_sch
 
 2 result(s)

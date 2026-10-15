@@ -304,7 +304,7 @@ const (
 	// queryable twin is design.types_power_out / the design.types_power_out fact.
 	CapTypesPowerOut Capability = "design.types_power_out"
 	// CapNoConnectChannel means the design can express an intentional no-connect (a NO_CONNECT-typed
-	// pin or an nc-marker net name). Without it unconnected-pin cannot tell a deliberate open pin from
+	// pin, a no-connect flag, or a designer's NC_ / no_connect net name; see NoConnectMarked). Without it unconnected-pin cannot tell a deliberate open pin from
 	// a forgotten one. The queryable twin is design.has_nc_channel / design.nc_channel.
 	CapNoConnectChannel Capability = "nc_channel"
 	// CapNetClass means the design carries tool-assigned net-class membership (WS3-105). A rule scoped

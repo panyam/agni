@@ -1,10 +1,10 @@
-#agni-run 16a5adf6f1d989bc
+#agni-run 6a11ddaecf0379aa
 findings by rule:
   example/signal-net-naming 2
 
 first 2:
-  [info] example/signal-net-naming: USB_D+ (net name matches no allowed naming pattern)
-  [info] example/signal-net-naming: USB_D- (net name matches no allowed naming pattern)
+  [info] example/signal-net-naming: /USB_D+ (net name matches no allowed naming pattern)
+  [info] example/signal-net-naming: /USB_D- (net name matches no allowed naming pattern)
 
 2 finding(s) total
 11 subject(s) considered by 1 rule(s) (--verdicts for the detail)

@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 // Point is a connection location on the caller's integer grid. The caller is responsible for
@@ -66,6 +67,20 @@ type Pin struct {
 	// WS1-014) that never enters Components, since no part-type pin exists to resolve it
 	// from. Empty for ordinary pins, whose direction resolves via the part type.
 	Dir string
+	// AutoName is the name the format's own tool gives a net no label names, when this pin is
+	// the one it is named after (KiCad's "Net-(R1-Pad2)"), and NCName the name it gives a
+	// no-connect-flagged pin's lone stub ("unconnected-(J1A-MID0-PadK40)"). A format that sets
+	// neither gets the synthetic "N$<n>" and "unconnected-(REF-PadN)" names.
+	AutoName, NCName string
+}
+
+// Options adjusts how Build names nets. The zero value is the shared behaviour every format
+// without its own naming rules uses.
+type Options struct {
+	// AlphaTies breaks a tie between labels of equal rank by name rather than input order, and
+	// picks a pin-derived AutoName the same way, preferring a name that does not end in a pad
+	// number. KiCad names nets this way, so a read that follows it agrees with KiCad's netlist.
+	AlphaTies bool
 }
 
 // Conn is a pin's membership in a net.
@@ -88,7 +103,11 @@ type Net struct {
 	Conns    []Conn
 	Driven   bool
 	External bool
-	Aliases  []Alias
+	// NoConnect is true when a pin on the net carries the format's no-connect flag, which is the
+	// designer saying the open pin is deliberate. A net's name never says so: KiCad names every
+	// unlabelled one-pin net "unconnected-(...)", flagged or not (agni issue 1019).
+	NoConnect bool
+	Aliases   []Alias
 }
 
 // NetRef identifies the net a wire or point resolved to by its display Name and the deterministic
@@ -169,8 +188,8 @@ type Dangle struct {
 // The third return maps each identified wire (by Wire.Id) to the net its endpoints resolved
 // to, which the geometry sidecar uses to draw a KiCad wire by net (WS1-022). Only wires with a
 // native id populate it; a wire whose node is drawing noise is omitted.
-func Build(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point) ([]Net, []Dangle, map[string]NetRef) {
-	nets, dangles, wireNets, _ := BuildWithPoints(wires, anchors, pins, terminals)
+func Build(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point, opts ...Options) ([]Net, []Dangle, map[string]NetRef) {
+	nets, dangles, wireNets, _ := BuildWithPoints(wires, anchors, pins, terminals, opts...)
 	return nets, dangles, wireNets
 }
 
@@ -178,7 +197,11 @@ func Build(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point) ([]Net
 // endpoints, each anchor, each pin). The KiCad hierarchy walk offsets each sheet instance into
 // its own grid band (WS9-028) and uses this map to attribute each net to the sheets it touches.
 // A point on drawing noise (unnamed, pinless) is omitted, as in the wire map.
-func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point) ([]Net, []Dangle, map[string]NetRef, map[Point]NetRef) {
+func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point, opts ...Options) ([]Net, []Dangle, map[string]NetRef, map[Point]NetRef) {
+	var opt Options
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
 	uf := newUnionFind()
 	for _, w := range wires {
 		uf.union(w.A, w.B)
@@ -230,7 +253,7 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 		if label == "" {
 			return
 		}
-		if c := name[r]; c.name == "" || rank < c.rank {
+		if c := name[r]; c.name == "" || rank < c.rank || (opt.AlphaTies && rank == c.rank && label < c.name) {
 			name[r] = candidate{rank: rank, name: label}
 		}
 		for _, a := range aliases[r] {
@@ -265,12 +288,36 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 	}
 
 	conns := map[int][]Conn{}
-	ncName := map[int]string{} // root -> no-connect stub name, when a marked pin sits there
+	ncName := map[int]string{}      // root -> no-connect stub name, when a marked pin sits there
+	autoName := map[int]string{}    // root -> the format's own name for an unlabelled net, if it has one
+	autoPins := map[int]int{}       // root -> how many pins carry an AutoName
+	loneNC := map[int]string{}      // root -> the NCName of its last AutoName pin, used when it is the only one
+	flaggedName := map[int]string{} // root -> the best NCName among its pins, used when a pin is flagged no-connect
+	flagged := map[int]bool{}
 	for _, p := range pins {
 		r := uf.find(uf.id[p.At])
 		conns[r] = append(conns[r], Conn{Comp: p.Comp, Pin: p.Pin, Dir: p.Dir})
 		if p.NoConnect {
-			ncName[r] = "unconnected-(" + p.Comp + "-Pad" + p.Pin + ")"
+			if p.NCName != "" {
+				ncName[r] = p.NCName
+			} else {
+				ncName[r] = "unconnected-(" + p.Comp + "-Pad" + p.Pin + ")"
+			}
+		}
+		if p.NoConnect {
+			flagged[r] = true
+		}
+		if p.NCName != "" {
+			if cur, ok := flaggedName[r]; !ok || betterAutoName(p.NCName, cur) {
+				flaggedName[r] = p.NCName
+			}
+		}
+		if p.AutoName != "" {
+			autoPins[r]++
+			loneNC[r] = p.NCName
+			if cur, ok := autoName[r]; !ok || betterAutoName(p.AutoName, cur) {
+				autoName[r] = p.AutoName
+			}
 		}
 	}
 
@@ -286,6 +333,20 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 			// intentional and every no-connect-aware consumer keys on this vocabulary.
 			nm = ncName[r]
 		}
+		if nm == "" && autoName[r] != "" {
+			// A net one pin alone names is a stub whatever its flags say, so it takes that pin's
+			// unconnected name, as KiCad does for a weakly driven single-pin net.
+			// A no-connect flag on the net does the same for every pin, as KiCad's forced no-connect
+			// naming does.
+			switch {
+			case flagged[r] && flaggedName[r] != "":
+				nm = flaggedName[r]
+			case autoPins[r] == 1 && loneNC[r] != "":
+				nm = loneNC[r]
+			default:
+				nm = autoName[r]
+			}
+		}
 		if nm == "" {
 			if len(cs) == 0 {
 				continue // unnamed and pinless, so drawing noise rather than a net
@@ -297,7 +358,7 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 		id := netID(sorted)
 		rootName[r] = nm
 		rootID[r] = id
-		nets = append(nets, Net{Name: nm, ID: id, Conns: sorted, Driven: driven[r], External: external[r], Aliases: aliases[r]})
+		nets = append(nets, Net{Name: nm, ID: id, Conns: sorted, Driven: driven[r], External: external[r], NoConnect: flagged[r], Aliases: aliases[r]})
 	}
 
 	// Only formats with native wire ids (KiCad uuids) populate wireNets. Formats whose wires
@@ -332,6 +393,17 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 		addPoint(p.At)
 	}
 	return nets, dangling(wires, anchors, pins, terminals), wireNets, pointNets
+}
+
+// betterAutoName reports whether a pin-derived net name should replace the current pick: a name
+// with no pad number beats one with, and otherwise the alphabetically lower wins. That is KiCad's
+// order for a net named after one of its pins.
+func betterAutoName(a, cur string) bool {
+	aPad, curPad := strings.Contains(a, "-Pad"), strings.Contains(cur, "-Pad")
+	if aPad != curPad {
+		return !aPad
+	}
+	return a < cur
 }
 
 // dangling finds the wire endpoints that terminate on nothing. A grid point is "occupied" if a

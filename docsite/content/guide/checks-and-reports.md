@@ -85,17 +85,17 @@ apart from one no rule looked at. `--verdicts` answers the other question:
 {{ agniRun "content/guide/runs/verdicts.yaml" }}
 
 The table groups by rule and tallies each one, so `i2c-pull-up` reports one fail and one pass rather
-than one finding and a silence. SDA is fine, and it says so and names the resistor and the
+than one finding and a silence. `/SDA` is fine, and it says so and names the resistor and the
 {{ explainable "rail" }} holding it up, which is the line a findings report cannot print.
 
-`not-considered` is the third answer. `esd-clamp-not-tvs` reaches USB_D+ and USB_D- and declines,
+`not-considered` is the third answer. `esd-clamp-not-tvs` reaches `/USB_D+` and `/USB_D-` and declines,
 because those nets carry no clamp at all, so there is no device class for it to judge, and it names
 `esd-protection` as the rule that reports them. A findings report shows those nets exactly as it
 shows a net that passed.
 
 It honours `--format text|csv|json|html`, and `--format html` turns it on by itself, since the HTML
 report has no findings-only form. The CSV carries a `verdict_id` per row
-(`i2c-pull-up:(net:SDA)`), plus `context` (the entities to look at, as `role=ref` pairs) and `terms`
+(`i2c-pull-up:(net:/SDA)`), plus `context` (the entities to look at, as `role=ref` pairs) and `terms`
 (the values a conclusion rests on):
 
 {{ agniRun "content/guide/runs/csv-verdicts.yaml" }}
@@ -119,7 +119,7 @@ json` exposes it:
 
 {{ agniRun "content/guide/runs/json-provenance.yaml" }}
 
-- `subject` is what the finding is about, either a `net` (`SCL`), a `component` (its
+- `subject` is what the finding is about, either a `net` (`/SCL`), a `component` (its
   {{ explainable "reference-designator" "ref des" }}), or a component `pin`.
 - `provenance.sourceFile` is the file the fact came from. For datasheet-backed rules the
   message also names the datasheet page and table (see [Datasheets](../datasheets/)).

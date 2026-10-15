@@ -804,7 +804,7 @@ func componentNetCountFacts(m check.Model) []facts.Row {
 }
 
 // ncChannelFacts emits one row when the design can express intentional no-connect (a
-// NO_CONNECT-typed pin or an nc-marker net), and none otherwise, so a `design.has_nc_channel(?_)` gate
+// NO_CONNECT-typed pin, a no-connect-flagged net, or an NC_ name), and none otherwise, so a `design.has_nc_channel(?_)` gate
 // fails closed.
 func ncChannelFacts(m check.Model) []facts.Row {
 	if m.HasNoConnectChannel() {

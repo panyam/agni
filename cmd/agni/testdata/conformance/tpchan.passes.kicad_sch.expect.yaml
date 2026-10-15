@@ -3,4 +3,4 @@
 # pattern). Incidental: the rails are lone pins on this minimal board.
 fires:
   single-pin-net:
-    subjects: [VCC, GND]
+    subjects: ["/VCC", "/GND"]

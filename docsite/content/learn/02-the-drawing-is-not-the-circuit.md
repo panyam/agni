@@ -41,7 +41,7 @@ Ask what actually changed:
 
 {{ agniRun "content/learn/runs/tjunc-diff.yaml" }}
 
-The net `TAP` is gone, because it merged into `BUS`. And `BUS` gained `R3.1`, a pin it did not have before. In the version without the dot, R3 sits on a net of its own that reaches nothing else on the board. In the version with it, R3 is on the bus.
+The net `/TAP` is gone, because it merged into `/BUS`. And `/BUS` gained `R3.1`, a pin it did not have before. In the version without the dot, R3 sits on a net of its own that reaches nothing else on the board. In the version with it, R3 is on the bus.
 
 That is the failure mode in full. The author drew a T, meaning "connect these". The reviewer saw a T and read it the same way. The netlist has two separate nets, and R3 does nothing.
 

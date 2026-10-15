@@ -54,7 +54,7 @@ func Parse(b []byte) (*configpb.NamingConvention, error) {
 	return &cfg, nil
 }
 
-const alwaysExempt = `^(N\$|unconnected-\(|Net-\(|\$)`
+const alwaysExempt = check.ToolNetNamePattern
 
 // BuildLexicon compiles the config's naming-lexicon block into a lexicon VALUE (WS3-106). A nil
 // Lexicon block yields nil, meaning "this config states no vocabulary", which the caller reads as the

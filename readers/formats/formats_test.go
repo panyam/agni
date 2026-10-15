@@ -84,7 +84,7 @@ func TestRegistryConsistency(t *testing.T) {
 // net_settings (not the sch/pcb), so a project read stamps ir.Net.net_classes. It also covers the
 // WS1-050 cardinality end to end: SIG is named by an explicit assignment AND matched by two
 // patterns, and all three memberships must survive the loader, not just whichever resolved first.
-// wirenet.kicad_sch yields a net named "SIG".
+// wirenet.kicad_sch yields a net named "/SIG", KiCad's name for a root-sheet label.
 func TestKicadProjectNetClass(t *testing.T) {
 	sch, err := os.ReadFile("../kicad/testdata/wirenet.kicad_sch")
 	if err != nil {
@@ -95,10 +95,10 @@ func TestKicadProjectNetClass(t *testing.T) {
 		t.Fatal(err)
 	}
 	pro := `{"net_settings":{
-	  "netclass_assignments": {"SIG": ["Critical"]},
+	  "netclass_assignments": {"/SIG": ["Critical"]},
 	  "netclass_patterns": [
-	    {"netclass":"HighSpeed","pattern":"SIG"},
-	    {"netclass":"Diagnostic","pattern":"S*"}
+	    {"netclass":"HighSpeed","pattern":"/SIG"},
+	    {"netclass":"Diagnostic","pattern":"/S*"}
 	  ]}}`
 	if err := os.WriteFile(filepath.Join(dir, "board.kicad_pro"), []byte(pro), 0o644); err != nil {
 		t.Fatal(err)
@@ -109,7 +109,7 @@ func TestKicadProjectNetClass(t *testing.T) {
 	}
 	var sig *ir.Net
 	for _, n := range d.Nets {
-		if n.Name == "SIG" {
+		if n.Name == "/SIG" {
 			sig = n
 		}
 	}

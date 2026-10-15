@@ -2,11 +2,12 @@ package review
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/netgraph"
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
@@ -239,7 +240,7 @@ func unwiredPinDesign(format string, channel bool) *ir.Design {
 		}},
 	}
 	if channel {
-		d.Nets = []*ir.Net{{Name: "unconnected-(U2-Pad1)", Prov: &ir.Provenance{SourceFile: "t"}}}
+		d.Nets = []*ir.Net{{Name: "unconnected-(U2-Pad1)", Attributes: map[string]string{netgraph.AttrNoConnect: "true"}, Prov: &ir.Provenance{SourceFile: "t"}}}
 	}
 	return d
 }

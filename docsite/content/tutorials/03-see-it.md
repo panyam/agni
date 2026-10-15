@@ -34,7 +34,7 @@ draws.
 
 The other case needs a design with no drawing, and the Jetson board does not have one. The
 synthetic board in `examples/tutorial-project` ships an EDIF netlist, `gateway.edn`, for exactly this,
-so run the next three commands from that folder instead:
+so run the next two commands from that folder instead:
 
 {{ agniRun "content/tutorials/runs/03-render-layered.yaml" }}
 
@@ -67,17 +67,27 @@ them.
 
 ## The same board, twice
 
-`gateway.edn` and `gateway.kicad_sch` are two views of one design, which raises the obvious
-question of whether they still agree. Ask directly:
+Back in the Jetson board's folder, the `.kicad_sch` and the `.kicad_pcb` are two views of one design,
+which raises the obvious question of whether they still agree. Ask directly, reading each file as
+itself with `--as-named` rather than as the design its `design.yaml` declares:
 
 {{ agniRun "content/tutorials/runs/03-diff-views.yaml" }}
 
-Zero net changes. The two readers converged on the same netlist, and the whole engine depends on that,
-because analysis runs over one internal representation and the format you started from stops
-mattering once the file is read.
+No component changed, and no net was renamed or lost. The changes that remain are one shape. A part
+with several pins of one function stacked on top of each other, a regulator's `GL` pins or a PD
+controller's drain pins, is one no-connect net on the schematic, because the pins touch, and KiCad's
+board gives each unconnected pad a net of its own, suffixed `_1`, `_2`. That is a real difference in
+how KiCad records the two views, and it is the only one.
+
+That near-empty delta is what the whole engine depends on, because analysis runs over one internal
+representation and the format you started from stops mattering once the file is read. A diff of two
+views only reads this cleanly because the reader names a schematic's nets exactly as KiCad does, and
+compares only what both views record, so a board's silence about a part's symbol library is not a
+change.
 
 This is also the practical way to check a CAD migration. Export from the old tool and the new one,
-diff the two, and an empty net delta is real evidence the design survived the move.
+diff the two, and a net delta you can explain line by line is real evidence the design survived the
+move.
 
 ## In the browser
 

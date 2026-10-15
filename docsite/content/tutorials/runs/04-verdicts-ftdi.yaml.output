@@ -1,5 +1,4 @@
-#agni-run 8176d023afb3d2d1
-    pass  /USB Debug, PD/FTDI_CBUS0/SDA  /USB Debug, PD/FTDI_CBUS0/SDA reaches rail /USB Debug,
-                                         PD/FTDI_3V3 through R114
-    pass  /USB Debug, PD/FTDI_CBUS3/SCL  /USB Debug, PD/FTDI_CBUS3/SCL reaches rail /USB Debug,
-                                         PD/FTDI_3V3 through R113
+#agni-run 29e7ff1c59a24987
+verdict_id,url,rule,outcome,subjects,statement,context,terms,reason
+i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS0{slash}SDA),,i2c-pull-up,pass,"net:/USB Debug, PD/FTDI_CBUS0{slash}SDA","/USB Debug, PD/FTDI_CBUS0{slash}SDA reaches rail /USB Debug, PD/FTDI_3V3 through R114","pull-up=R114|rail=/USB Debug, PD/FTDI_3V3",,
+i2c-pull-up:(net:/USB Debug%2C PD/FTDI_CBUS3{slash}SCL),,i2c-pull-up,pass,"net:/USB Debug, PD/FTDI_CBUS3{slash}SCL","/USB Debug, PD/FTDI_CBUS3{slash}SCL reaches rail /USB Debug, PD/FTDI_3V3 through R113","pull-up=R113|rail=/USB Debug, PD/FTDI_3V3",,

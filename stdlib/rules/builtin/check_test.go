@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"github.com/panyam/agni/internal/netgraph"
 	"strings"
 	"testing"
 
@@ -15,6 +16,14 @@ func tnet(name string, conns ...string) *ir.Net {
 		p := strings.SplitN(c, ".", 2)
 		n.Connections = append(n.Connections, &ir.Connection{ComponentRef: p[0], PinRef: p[1]})
 	}
+	return n
+}
+
+// flaggedNet is a net a pin's no-connect flag landed on, the reader's statement that the open pin is
+// deliberate (netgraph.AttrNoConnect). A tool stub name alone is not that statement (agni issue 1019).
+func flaggedNet(name string, conns ...string) *ir.Net {
+	n := tnet(name, conns...)
+	n.Attributes = map[string]string{netgraph.AttrNoConnect: "true"}
 	return n
 }
 
@@ -36,12 +45,12 @@ func ruleFixture() *ir.Design {
 			{RefDes: "R9", Prov: &ir.Provenance{SourceFile: "t"}}, // on no net
 		},
 		Nets: []*ir.Net{
-			tnet("STUB", "R1.1"),                  // real single-pin -> flag
-			tnet("unconnected-(P5-Pad1)", "R2.1"), // tool no-connect marker -> skip
-			tnet("NC", "U2.1"),                    // U2.1 is NO_CONNECT -> skip
-			tnet("GND", "R1.2", "R2.2"),           // ok
-			tnet("SDA", "U1.5"),                   // I2C, no pull-up -> flag
-			tnet("SCL", "U1.6", "R3.1"),           // I2C, R3 pull-up -> ok
+			tnet("STUB", "R1.1"),                        // real single-pin -> flag
+			flaggedNet("unconnected-(P5-Pad1)", "R2.1"), // no-connect-flagged stub -> skip
+			tnet("NC", "U2.1"),                          // U2.1 is NO_CONNECT -> skip
+			tnet("GND", "R1.2", "R2.2"),                 // ok
+			tnet("SDA", "U1.5"),                         // I2C, no pull-up -> flag
+			tnet("SCL", "U1.6", "R3.1"),                 // I2C, R3 pull-up -> ok
 			// R3's OTHER end. A pull-up is a resistor to a rail, and before agni issue 375 this
 			// fixture drew only the bus-side leg, which is precisely the assumption the rule was
 			// making. Without this net the "R3 pull-up" comment describes a resistor to nowhere.

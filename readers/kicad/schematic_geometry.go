@@ -127,7 +127,7 @@ func symbolsOf(root *node, src string) []*geom.SymbolDef {
 func solveWireNets(root *node, sc sheetScope) map[string]netgraph.NetRef {
 	var in netInputs
 	collectSheetNets(root, sc, &in)
-	_, _, wireNets := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals)
+	_, _, wireNets := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals, kicadNaming)
 	return wireNets
 }
 

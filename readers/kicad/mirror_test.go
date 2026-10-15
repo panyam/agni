@@ -88,9 +88,10 @@ func TestMirroredPinPlacement(t *testing.T) {
 					at[conn.GetPinRef()] = n.GetName()
 				}
 			}
-			if at["1"] != c.pin1 || at["2"] != c.pin2 {
+			// The labels are root-sheet locals, which KiCad names with the root's "/" (agni issue 1019).
+			if at["1"] != "/"+c.pin1 || at["2"] != "/"+c.pin2 {
 				t.Errorf("pin1 at %q, pin2 at %q; kicad-cli puts pin1 at %q and pin2 at %q",
-					at["1"], at["2"], c.pin1, c.pin2)
+					at["1"], at["2"], "/"+c.pin1, "/"+c.pin2)
 			}
 		})
 	}

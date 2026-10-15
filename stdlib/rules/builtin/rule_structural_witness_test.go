@@ -76,7 +76,7 @@ func TestSinglePinNetWitnessTracksTheCount(t *testing.T) {
 // nothing downstream.
 func TestIntentionalNoConnectPassesRatherThanVanishing(t *testing.T) {
 	vs := singlePinNetVerdicts(context.Background(), check.NewModel(&ir.Design{
-		Components: comps("U1"), Nets: []*ir.Net{tnet("unconnected-(U1-Pad1)", "U1.1")},
+		Components: comps("U1"), Nets: []*ir.Net{flaggedNet("unconnected-(U1-Pad1)", "U1.1")},
 	}))
 	v := verdictOf(t, vs, "unconnected-(U1-Pad1)", "")
 	if v.Outcome != check.Pass {

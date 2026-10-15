@@ -6,5 +6,5 @@
 # joins R1.2-R2.2 and only the far pins' stubs remain.
 fires:
   single-pin-net:
-    subjects: [N$1, N$2]
+    subjects: ["unconnected-(R1-Pad1)", "unconnected-(R2-Pad1)"]
     why: "the resistors' far pins are bare — visible at all ONLY because the external lib supplied the pins"

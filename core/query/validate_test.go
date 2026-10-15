@@ -111,19 +111,26 @@ func TestValidateNeedsNoDesign(t *testing.T) {
 	}
 }
 
-// evalFailingQuery validates but cannot be solved, because `str.contains` needs its argument bound,
-// and no relation binds ?loose. Validation does not catch it because binding ORDER is what the
-// solver establishes, and reproducing that here would mean reimplementing solve.
-//
-// That gap is why the eval-time half of agni issue 540 matters. Construction catches the queries an
-// author gets wrong most often, and this one still slips through to the evaluator, so what the
-// evaluator does with a failure is not academic.
-const evalFailingQuery = `component.net(?r, ?n), str.contains(?loose, "x") => ?r`
+// looseFilterQuery tests a variable no relation binds. Validation refuses it since jaala v0.1.53
+// (panyam/jaala#215), where before it reached the evaluator and failed there.
+const looseFilterQuery = `component.net(?r, ?n), str.contains(?loose, "x") => ?r`
+
+func TestLooseFilterIsRefusedAtValidation(t *testing.T) {
+	q, err := Parse(looseFilterQuery)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := Validate(q, facts.DefaultRegistry()); err == nil || !strings.Contains(err.Error(), "str.contains needs all arguments bound") {
+		t.Fatalf("an unbound filter must be refused before anything runs, naming the filter; got %v", err)
+	}
+}
 
 // TestEvalFailureIsInconclusiveNotClean: a rule whose query cannot be evaluated reports that it could
 // not decide. It used to return no findings, which every consumer reads as a design with no defects.
+// The query is valid and the evaluation fails by running out of its work budget, the failure no
+// validation can foresee (agni issue 540).
 func TestEvalFailureIsInconclusiveNotClean(t *testing.T) {
-	q, err := Parse(evalFailingQuery)
+	q, err := Parse(`component.net(?r, ?n) => ?r`)
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
@@ -141,7 +148,7 @@ func TestEvalFailureIsInconclusiveNotClean(t *testing.T) {
 		t.Fatalf("construction rejected it, so the eval path is untested: %v", err)
 	}
 
-	fs := rule.Findings(context.Background(), check.NewModel(chainDesign()))
+	fs := rule.Findings(WithBudget(context.Background(), 1), check.NewModel(chainDesign()))
 	if len(fs) != 1 {
 		t.Fatalf("findings = %d, want one inconclusive; a rule that could not run must not report a clean pass", len(fs))
 	}

@@ -1,14 +1,12 @@
-#agni-run 817288b2a2db2897
+#agni-run 2f1e7176f2e437c7
 kicad-cli pcb drc 10.0.6 — 957 finding(s) from designs/jetson
-attached to an entity: 605 of 957
+attached to an entity: 871 of 957
     75 not attached — an entity shape the import does not recognize
          e.g. NPTH pad of J12
          e.g. NPTH pad of J18
          e.g. Track (arc) [/CSI/CAM0.CSI2_CLK-] on In2.Cu, length 0.2199 mm
-   267 not attached — an entity the description names but the loaded design does not contain
+     1 not attached — an entity the description names but the loaded design does not contain
          e.g. Footprint REF**
-         e.g. Track [/CSI/CAM0.CSI2_CLK+] on In2.Cu, length 0.5033 mm
-         e.g. Track [/CSI/CAM0.CSI2_CLK+] on In2.Cu, length 0.5175 mm
     10 not attached — board outline geometry, which belongs to no component or net
          e.g. Segment on Edge.Cuts
 
