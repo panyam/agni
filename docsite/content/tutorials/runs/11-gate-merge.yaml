@@ -1,6 +1,8 @@
-# Rung 11: the one line that goes in a pipeline.
-fixture: examples/tutorial-project
+# Rung 11: the merge gate on rev A, which trips on the board's error findings.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
 script: |
-  agni check designs/gateway/gateway.edn --params params --fail-on error
+  agni check designs/jetson --fail-on error
 capture: none
 exit: true

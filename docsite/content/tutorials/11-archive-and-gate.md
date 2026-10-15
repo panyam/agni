@@ -8,12 +8,10 @@ has to outlive the run, and to change behavior it has to be able to stop a merge
 
 ## Write the run down
 
-```
-make report
-```
+`--results-out` writes the run to a file as it happens:
 
 ```
-wrote reports/gateway/review.results.json
+agni review designs/jetson --results-out review.results.json
 ```
 
 That is a self-contained check-result document. It carries what produced it and at what build, which
@@ -43,14 +41,16 @@ run today, render it as HTML:
 {{ agniRun "content/tutorials/runs/11-report-html.yaml" }}
 
 That writes a self-contained page: failures first, then each rule with what it examined, why the
-rule exists, and what to do about a failure. It needs no server and no assets, so it attaches to a
+rule exists, and what to do about a failure. On this board it is about 8 MB, because it carries every
+net name and reference designator, so treat it like the design itself and keep it out of any
+repository the design could not go in. It needs no server and no assets, so it attaches to a
 review ticket or a release folder as one file.
 
 Give it `--server self` and each subject becomes a link into a viewer, which opens the board with
 that verdict's proof drawn:
 
 ```
-agni check --format html --server self designs/gateway/gateway.edn > review.html
+agni check --format html --server self designs/jetson > review.html
 ```
 
 That is one command rather than two, for the same reason a link can be withheld. A link is a
@@ -62,7 +62,7 @@ Point it at a server someone else is running and the promise has to be checked i
 
 ```
 agni check --format html --server http://localhost:8080 \
-  --mount work=. designs/gateway/gateway.edn > review.html
+  --mount work=. designs/jetson > review.html
 ```
 
 The report needs that `--mount` to carry links. The CLI asks that server whether it serves the
@@ -83,33 +83,33 @@ bill.
 
 {{ agniRun "content/tutorials/runs/11-gate-merge.yaml" }}
 
-Exit `2` is a tripped gate, so CI fails. Put that one line in your pipeline and a board with an error-severity finding
-cannot merge.
+Exit `2` is a tripped gate, so CI fails. Put that one line in your pipeline and a board with an
+error-severity finding cannot merge. On this board that is the twenty-eight `i2c-pull-up` errors.
 
 ## The gate reads severity, not verdict
 
-Rev B fixed the I2C {{ explainable "pull-up" "pull-ups" }} and the naming, and its review
-went from 8 failures to 6. Run the gate on it:
+Rev B fitted two of the missing pull-ups and fixed the naming, and its review went from 8 failures to
+7. Run the gate on it:
 
 {{ agniRun "content/tutorials/runs/11-gate-rev-b.yaml" }}
 
-Still failing. The remaining error is the datasheet finding on U2, the one the review reported as
-`provisional` because it rests on placeholder data.
+Still failing, and correctly, because twenty-six I2C errors remain. A revision that fixes some of the
+findings a gate trips on does not open the gate, and the review delta in rung 10 is how you see the
+progress the exit code cannot show.
+
+The subtler case is evidence. Put rung 6's first-pass draft of the NTS0102 back, the one the checklist
+scored `provisional`, and gate on the rule it feeds:
+
+{{ agniRun "content/tutorials/runs/11-gate-provisional.yaml" }}
 
 `--fail-on` operates on **finding severity**, which is a statement about consequence. `provisional`
-is a statement about evidence quality. They are different axes, and a finding can be severe and
-poorly evidenced at the same time, and this one is both.
+is a statement about evidence quality. They are different axes, and a finding can be severe and poorly
+evidenced at the same time, and this one is both.
 
-So a provisional finding still gates. Whether it should is your call, and there are two defensible
-answers. Leave it gating and treat the block as pressure to go transcribe the real datasheet value,
-which is usually the right instinct. Or drop the parameter tier out of the gate command until the
-corpus is trustworthy, and accept that those checks are not gating yet:
-
-{{ agniRun "content/tutorials/runs/11-gate-rev-b-no-params.yaml" }}
-
-Still `2`. Dropping the parameter tier removed the *datasheet* error, and underneath it was a
-different one, from a CAN host that declares the interface without its `STB` signal. Narrowing
-what a gate can see does not make a board pass, it only changes which failure you are looking at. To see what remains, run without `--fail-on` and read the list.
+So a provisional finding still gates. Whether it should is your call. Leaving it gating treats the
+block as pressure to go transcribe the real value, which is usually the right instinct, and here it
+would have found the draft's mistake. Dropping the parameter tier out of the gate until the corpus is
+trustworthy is defensible too, as long as you accept that those checks are not gating yet.
 
 What you should not do is lower the severity of the rule to make the gate pass. That changes what
 the tool claims about consequence to change an exit code, and every future reader of that
@@ -128,7 +128,7 @@ you have been gating with:
 
 {{ agniRun "content/tutorials/runs/gate-corpus-moved-coverage.yaml" }}
 
-**Covered did not move.** It is still 13 of 15. The item that used to check a part against its
+**Covered did not move.** It is still 14 of 15. The item that used to check a part against its
 datasheet now reads `not-applicable`, because its rule is still in the catalog and merely has nothing
 to read, and `not-applicable` counts as covered. Nothing in the failure count says so either.
 

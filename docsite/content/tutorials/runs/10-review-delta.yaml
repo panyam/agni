@@ -1,0 +1,12 @@
+# Rung 10: the checklist on each revision, its summary and the house-style item the rename was for.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+steps:
+  - show: agni review designs/jetson
+    script: |
+      agni review designs/jetson 2>/dev/null | grep -E '^\*\*|^\| H1 '
+  - show: agni review designs/jetson-rev-b
+    script: |
+      python3 tools/make_rev_b.py designs/jetson designs/jetson-rev-b
+      agni review designs/jetson-rev-b 2>/dev/null | grep -E '^\*\*|^\| H1 '

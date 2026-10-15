@@ -1,0 +1,6 @@
+#agni-run 1be1e526996b0eeb
+**5 pass, 8 fail, 1 n/a, 1 not-automated (of 15)**
+| H1 | active-low signals use the overbar | fail | jetson/active-low-overbar: /USB Debug, PD/PDC_I2C1_IRQn (net name matches no allowed naming pattern); jetson/active-low-overbar: /USB Debug, PD/PDC_I2C2_IRQn (net name matches no allowed naming pattern) |
+#agni-step
+**6 pass, 7 fail, 1 n/a, 1 not-automated (of 15)**
+| H1 | active-low signals use the overbar | pass |  |

@@ -1,0 +1,329 @@
+#agni-run 847a2542953d02e7
+#agni-step
+comparing:
+  ours:   agni <version> — 91 finding(s) over mount://jetson/designs/jetson
+  theirs: kicad-cli pcb drc 10.0.6 — 957 finding(s) over designs/jetson   [no coverage axis: its silence is not a pass]
+
+entities flagged:
+  both         2
+  ours only    86
+  theirs only  221
+
+ours only:
+  net +12V
+  net +1V8
+  net /CSI/CSIA_3V3
+  net /CSI/CSIA_5V
+  net /CSI/CSIA_I2C_VCC
+  net /CSI/CSIB_3V3
+  net /CSI/CSIB_5V
+  net /CSI/CSIB_I2C_VCC
+  net /CSI/I2C_MUX_SCL
+  net /CSI/I2C_MUX_SDA
+  net /CSI/MUX_I2C_4_SCL
+  net /CSI/MUX_I2C_4_SDA
+  net /CSI/MUX_I2C_5_SCL
+  net /CSI/MUX_I2C_5_SDA
+  net /CSI/MUX_I2C_6_SCL
+  net /CSI/MUX_I2C_6_SDA
+  net /CSI/MUX_I2C_7_SCL
+  net /CSI/MUX_I2C_7_SDA
+  net /DCDC/12V_OUT
+  net /DCDC/12V_VDD
+  net /DCDC/16V_OUT
+  net /DCDC/16V_VDD
+  net /DCDC/1V15_OUT
+  net /DCDC/1V8_OUT
+  net /DCDC/20V_OUT
+  net /DCDC/20V_VDD
+  net /DCDC/3V3_OUT
+  net /DCDC/3V3_VDD
+  net /DCDC/5V_OUT
+  net /DCDC/5V_VDD
+  net /DCDC/5V_{AON}_OUT
+  net /DCDC/5V_{AON}_VDD
+  net /Expansion connector/+12V_FMC
+  net /Expansion connector/+3V3_AUX
+  net /Expansion connector/+3V3_FMC
+  net /Expansion connector/+5V_FMC
+  net /Expansion connector/+VCC_FMC
+  net /Expansion connector/+V_{ADJ}
+  net /Peripherals/FAN_VDD
+  net /Power/3V3_LDO
+  net /Power/VIN_PWR_ON
+  net /SFP/SFI_CONN_RX_N
+  net /SFP/SFI_CONN_RX_P
+  net /SFP/SFI_CONN_TX_N
+  net /SFP/SFI_CONN_TX_P
+  net /SFP/SH
+  net /SoM_IO/I2C0_SCL_1V8
+  net /SoM_IO/I2C0_SDA_1V8
+  net /SoM_IO/I2C1_SCL_1V8
+  net /SoM_IO/I2C1_SDA_1V8
+  net /SoM_IO/I2C2_SCL_1V8
+  net /SoM_IO/I2C2_SDA_1V8
+  net /SoM_IO/I2C3_SCL_1V8
+  net /SoM_IO/I2C3_SDA_1V8
+  net /SoM_IO/I2C5_SCL_1V8
+  net /SoM_IO/I2C5_SDA_1V8
+  net /SoM_IO2/TC_VCC
+  net /USB DP Alt mode/USBC1_VBUS
+  net /USB Debug, PD/DEBUG_SCL
+  net /USB Debug, PD/DEBUG_SDA
+  net /USB Debug, PD/FTDI_3V3
+  net /USB Debug, PD/PDC_I2C1_IRQn
+  net /USB Debug, PD/PDC_I2C2_IRQn
+  net /USB Debug, PD/PDC_I2C3_SCL
+  net /USB Debug, PD/PDC_I2C3_SDA
+  net /USB Debug, PD/PDC_LDO_1V8
+  net /USB Debug, PD/PDC_LDO_3V3
+  net /USB Debug, PD/USBC0_VBUS
+  net FLASH_PWR
+  net I2C7.SCL
+  net I2C7.SDA
+  net I2C8.SCL
+  net I2C8.SDA
+  net I2C_{CAM}.SCL
+  net I2C_{CAM}.SDA
+  net I2C_{SYS}.SCL
+  net I2C_{SYS}.SDA
+  net N$131
+  net N$133
+  net N$135
+  net N$136
+  net N$137
+  net N$202
+  net N$203
+  net N$54
+  net VCC_IN
+
+theirs only:
+  component C102
+  component C107
+  component C111
+  component C117
+  component C121
+  component C127
+  component C130
+  component C131
+  component C132
+  component C138
+  component C139
+  component C142
+  component C144
+  component C145
+  component C156
+  component C194
+  component C195
+  component C196
+  component C197
+  component C202
+  component C234
+  component C236
+  component C242
+  component C243
+  component C245
+  component C246
+  component C247
+  component C249
+  component C251
+  component C252
+  component C253
+  component C255
+  component C257
+  component C26
+  component C260
+  component C268
+  component C269
+  component C270
+  component C271
+  component C273
+  component C274
+  component C276
+  component C280
+  component C286
+  component C287
+  component C293
+  component C295
+  component C298
+  component C299
+  component C300
+  component C301
+  component C302
+  component C305
+  component C307
+  component C309
+  component C310
+  component C311
+  component C314
+  component C318
+  component C335
+  component C338
+  component C343
+  component C348
+  component C349
+  component C35
+  component C350
+  component C354
+  component C355
+  component C370
+  component C371
+  component C372
+  component C373
+  component C375
+  component C378
+  component C384
+  component C387
+  component C39
+  component C43
+  component C47
+  component C5
+  component C52
+  component C55
+  component C59
+  component C6
+  component C70
+  component C75
+  component C79
+  component C81
+  component C86
+  component C9
+  component C90
+  component C93
+  component C94
+  component D10
+  component D12
+  component D14
+  component D19
+  component D24
+  component D30
+  component D31
+  component D39
+  component D42
+  component D51
+  component D61
+  component D7
+  component D9
+  component H4
+  component H5
+  component J1
+  component J10
+  component J11
+  component J12
+  component J14
+  component J15
+  component J18
+  component J19
+  component J2
+  component J7
+  component L4
+  component L5
+  component Q10
+  component Q18
+  component Q38
+  component Q40
+  component R119
+  component R123
+  component R14
+  component R156
+  component R16
+  component R162
+  component R166
+  component R172
+  component R18
+  component R19
+  component R193
+  component R195
+  component R196
+  component R201
+  component R202
+  component R205
+  component R218
+  component R225
+  component R228
+  component R231
+  component R234
+  component R260
+  component R261
+  component R284
+  component R288
+  component R29
+  component R298
+  component R301
+  component R306
+  component R326
+  component R344
+  component R346
+  component R347
+  component R348
+  component R351
+  component R352
+  component R354
+  component R356
+  component R357
+  component R360
+  component R361
+  component R362
+  component R366
+  component R370
+  component R374
+  component R375
+  component R376
+  component R377
+  component R387
+  component R49
+  component R52
+  component R54
+  component R59
+  component R60
+  component R65
+  component R69
+  component R71
+  component R74
+  component R76
+  component R87
+  component R9
+  component R90
+  component R91
+  component R92
+  component TP11
+  component TP12
+  component TP21
+  component TP24
+  component TP3
+  component TP4
+  component TP5
+  component TP63
+  component TP73
+  component TP77
+  component U1
+  component U17
+  component U19
+  component U26
+  component U28
+  component U31
+  component U33
+  component U57
+  component U60
+  component U69
+  component U71
+  component U78
+  component U8
+  component Y2
+  net +5V_SOM
+  net /Power/USBPD1_HV
+  net /SoM_IO2/DP0.TX0_C+
+  net /SoM_IO2/DP2.AUX_C+
+  net /SoM_IO2/DP2.AUX_C-
+  net /SoM_IO2/PCIe_{C2x1}R_CLK-
+  net GND
+  net SYS_VIN_HV
+  net VCC
+
+rules seen on the same entity (an observation about these two documents,
+not a claim that the rules ask the same question):
+  ours                         theirs                             entities
+  reverse-blocking-absent      kicad-drc/clearance                1
+  test-point-coverage          kicad-drc/clearance                1
+
+not comparable (a finding naming no component or net): ours 0, theirs 352

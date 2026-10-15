@@ -1,8 +1,5 @@
-#agni-run 3c034af8e7b68c04
-n               provenance
-GND             designs/gateway/gateway.edn:GND
-PMIC_CORE_3V3   designs/gateway/gateway.edn:PMIC_CORE_3V3
-PMIC_IO_1V8     designs/gateway/gateway.edn:PMIC_IO_1V8
-PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
+#agni-run d1373392fdccf63b
+count(n)  provenance
+57        designs/jetson/jetson-agx-thor-baseboard.kicad_sch
 
-4 result(s)
+1 result(s)

@@ -1,6 +1,10 @@
-#agni-run cc69c585c22cc145
-supply-exceeds-abs-max  1 fail, 1 pass
-    fail  U2.1  3.3 V exceeds the absolute maximum of 3 V
-    pass  U1.1  12 V is within the absolute maximum of 36 V
-
-2 verdicts across 1 rule(s), 1 pass, 1 fail
+#agni-run 65b1e516e24c378f
+i2c-pull-up  28 fail, 26 pass
+    pass  /CSI/SCL_CAM0                  /CSI/SCL_CAM0 reaches rail /CSI/CSIA_I2C_VCC through
+                                         R390
+    pass  /CSI/SCL_CAM1                  /CSI/SCL_CAM1 reaches rail /CSI/CSIA_I2C_VCC through
+                                         R389
+    pass  /CSI/SCL_CAM2                  /CSI/SCL_CAM2 reaches rail /CSI/CSIB_I2C_VCC through
+                                         R392
+    pass  /CSI/SCL_CAM3                  /CSI/SCL_CAM3 reaches rail /CSI/CSIB_I2C_VCC through
+                                         R394

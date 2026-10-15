@@ -1,0 +1,4 @@
+#agni-run 17d2b39821f95406
+i2c-pull-up  26 fail, 28 pass
+    pass  /SoM_IO/I2C0_SCL_1V8           /SoM_IO/I2C0_SCL_1V8 reaches rail +1V8 through R357
+    pass  /SoM_IO/I2C3_SDA_1V8           /SoM_IO/I2C3_SDA_1V8 reaches rail +1V8 through R358

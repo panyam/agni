@@ -1,9 +1,16 @@
-#agni-run 66fafb714c45bd0f
-findings by rule:
-  supply-exceeds-abs-max 1
+#agni-run 339ce57b251ffd73
+supply-exceeds-abs-max  4 not-considered, 8 pass
+    not-considered  U31.2  rail "GND" does not name a nominal voltage
+    not-considered  U48.2  rail "GND" does not name a nominal voltage
+    not-considered  U49.2  rail "GND" does not name a nominal voltage
+    not-considered  U51.2  rail "GND" does not name a nominal voltage
+    pass            U31.3  3.3 V is within the absolute maximum of 6.5 V
+    pass            U31.7  3.3 V is within the absolute maximum of 6.5 V
+    pass            U48.3  1.8 V is within the absolute maximum of 6.5 V
+    pass            U48.7  3.3 V is within the absolute maximum of 6.5 V
+    pass            U49.3  1.8 V is within the absolute maximum of 6.5 V
+    pass            U49.7  3.3 V is within the absolute maximum of 6.5 V
+    pass            U51.3  1.8 V is within the absolute maximum of 6.5 V
+    pass            U51.7  5 V is within the absolute maximum of 6.5 V
 
-first 1:
-  [error] supply-exceeds-abs-max: U2 (power-input pin 1 on rail "PMIC_CORE_3V3": nominal 3.3V exceeds absolute-maximum VIN 3V — datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3))
-
-1 finding(s) total
-2 subject(s) considered by 1 rule(s) (--verdicts for the detail)
+12 verdicts across 1 rule(s), 8 pass, 4 not-considered

@@ -1,17 +1,15 @@
-#agni-run 191d37e8db5ef3be
-# Review coverage: Sample Board design review
+#agni-run 001afa2c54fd7212
+# Review coverage: Jetson baseboard design review
 
-Design: `designs/gateway`
+Design: `designs/jetson`
 
-**13 of 15 covered**, **13 answered** — 3 pass, 9 fail, 0 n/a; 2 not-automated
-
-Of the covered: 1 provisional (awaiting datasheet data), 0 needs-design-intent (awaiting a declaration), 0 needs-data (awaiting a datasheet seed), 0 inconclusive (the check ran and could not decide), 0 computed-n/a
+**14 of 15 covered**, **13 answered** — 5 pass, 8 fail, 1 n/a; 1 not-automated
 
 | Area | Covered | Pass | Fail | Provisional | Needs-intent | Needs-data | Inconclusive | Computed-n/a | N/A | Not-automated |
 |------|---------|------|------|-------------|--------------|------------|--------------|--------------|-----|---------------|
-| Power | 5/5 | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Interfaces | 3/4 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| House style | 2/3 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| Board | 1/1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Architecture | 2/2 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| **Total** | 13/15 | 3 | 9 | 1 | 0 | 0 | 0 | 0 | 0 | 2 |
+| Power | 5/5 | 1 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Interfaces | 4/4 | 1 | 2 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| House style | 2/3 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+| Board | 1/1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Architecture | 2/2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| **Total** | 14/15 | 5 | 8 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |

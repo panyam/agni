@@ -7,56 +7,69 @@ Everything so far used only the shipped rules, which know nothing about your tea
 first of four that change that, and it is deliberately first because it changes what the later ones
 can see at all.
 
+From here on the ladder runs inside a project, `examples/jetson-project`, which wraps a team's
+configuration around the same Jetson board. Copy the board into it once, after `make samples-oracle`
+at the repo root:
+
+```
+cd examples/jetson-project
+make board
+```
+
+Run the commands on this page and the next ones from that folder. The board lands in
+`designs/jetson/`, beside the project's own `design.yaml`.
+
 The vocabulary is the `conventions:` section of `project.yaml`, and it carries two halves that are
 wired very differently.
 
 ## The problem
 
-This project already carries the section this rung is about, so to see the problem it solves you
-have to delete it first, which the run below does on its scratch copy of the project. The seeded
-parameter corpus moves aside too, because a
-datasheet that types a pin as a supply establishes the rail on its own, so with
-the corpus in place these rails classify whether or not the naming vocabulary reaches them. That is
-the later rungs' subject. This one is about names, so both are out of the way. Ask the board which of
-its nets are power rails:
+This project already carries the section this rung is about, so to see the problem it solves the
+runs below delete it from their scratch copy of the project first. Ask the board how many of its nets
+are power rails:
 
-{{ agniRun "content/tutorials/runs/04-query-designs-gateway-gateway-edn-rail-n-n.yaml" }}
+{{ agniRun "content/tutorials/runs/04-query-rails-off.yaml" }}
 
-One rail. The board has four. `PMIC_MAIN_12V0`, `PMIC_CORE_3V3`, and `PMIC_IO_1V8` are all supply
-rails and the tool does not think any of them is.
+The built-in vocabulary finds a lot. It is anchored on the names most boards use, `VCC`, `VDD`,
+`+3V3`, `5V_OUT`, and most of this board's rails are named that way. Now look at what it did not
+call a rail among the nets whose names mention a voltage or a supply:
 
-That is not a bug. The built-in rail vocabulary is anchored on the names most boards use: `VCC`,
-`VDD`, `+3V3`, and so on. This project names rails function-first, subsystem before voltage, so none
-of them start the way the vocabulary expects.
+{{ agniRun "content/tutorials/runs/04-query-missed-rails.yaml" }}
 
-The consequence is quiet. A rule that finds its rails BY NAME simply sees
-fewer of them. It does not warn you. It does not fail. A rail with no test point is not reported,
+Two kinds of net are in that list. `I2C0_SCL_1V8` and `VSYNC_CAM0_3V3` are signals named for their
+logic level, and the vocabulary is right to skip them, because the voltage in the name is a fact
+about the wire's swing rather than a supply. `CSIA_3V3`, `CSIA_5V`, the `USBCn_VBUS` nets, `FAN_VDD`
+and `PDC_LDO_3V3` are rails, named for what they feed, and the vocabulary cannot tell them from the
+signals by spelling alone.
+
+The consequence is quiet. A rule that finds its rails BY NAME simply sees fewer of them. It does not
+warn you, and it does not fail. A rail with no {{ explainable "test-point" }} is not reported,
 because as far as that rule is concerned the net is not a rail.
-
-How many rules that is depends on the board, and on this one it is a single rule.
-`decoupling-present` finds the same three rails either way, because it reaches them through pin types
-rather than through names. So the vocabulary matters most to the rules that have no other route to a
-rail, and you cannot tell which rules those are by reading their descriptions.
 
 ## The two halves
 
 ```yaml
 conventions:
-  name: gateway
+  name: jetson
   lexicon:
     net:
       rail:
-        patterns: ["_[0-9]+V[0-9]$"]
+        patterns:
+          - "^CSI[AB]_([0-9]+V[0-9]*|I2C_VCC)$"
+          - "^USBC[0-9]_VBUS$"
+          - "^FAN_VDD$"
+          - "^(PDC_LDO|FTDI)_[0-9]+V[0-9]*$"
   rules:
-    - name: signal-net-naming
+    - name: active-low-overbar
       severity: warning
-      why: "house style names a clock net CLK_*, so XTAL_IN / XTAL_OUT are off-convention"
-      allow: ["^(PMIC|CAN[0-9]+|I2C|MCU|CLK|GND)"]
+      why: "house style writes an active-low signal with KiCad's overbar, ~{NAME}, never a trailing n"
+      allow: ["[^n]$", "[a-z]n$"]
 ```
 
 **`lexicon`** teaches the engine which of your names mean what. It is applied when the design is
 read, before any rule runs, so it changes the input every rule sees. It is also the half
-people skip.
+people skip. Each pattern here names a rail by its function rather than matching any trailing
+voltage, since a pattern as loose as `_3V3$` would sweep the logic-level signals in too.
 
 It is grouped by what is being named, because that is what decides whether a pattern is right.
 `net` holds `rail`, `ground` and `feedback`, matched against NET names. `pin` holds `supply`,
@@ -65,8 +78,9 @@ or `VIN` while a rail net is called `3V3` or `+5V`, so a pattern that belongs in
 in the other. There is also a `class` map, which marks a PART as belonging to a component class.
 
 **`rules`** adds checks. They join the catalog namespaced under the config's name, so this one
-appears as `gateway/signal-net-naming`. Most people opening a conventions section expect only this
-half.
+appears as `jetson/active-low-overbar`. Most people opening a conventions section expect only this
+half. This board writes most active-low signals with KiCad's overbar, `~{CLKREQ_E}`, and a few with
+a trailing `n`, and the rule asks for one spelling.
 
 ## Both halves, visible
 
@@ -78,36 +92,37 @@ With it:
 
 {{ agniRun "content/tutorials/runs/04-check-conventions.yaml" }}
 
-Two things changed, one from each half.
+Several things changed, and they come from both halves.
 
-`gateway/signal-net-naming` appears, with two findings. That is the rules half:
+`jetson/active-low-overbar` appears, with two findings. That is the rules half:
 
-```
-[warning] gateway/signal-net-naming: XTAL_IN (net name matches no allowed naming pattern)
-[warning] gateway/signal-net-naming: XTAL_OUT (net name matches no allowed naming pattern)
-```
+{{ agniRun "content/tutorials/runs/04-check-naming.yaml" }}
 
-And `test-point-coverage` went from 1 finding to 2. Nothing about that rule changed. A net that was
-invisible to it became a rail, and that rail has no {{ explainable "test-point" }}:
+The rest is the lexicon half. `test-point-coverage` found more rails without a test point, because
+nets that were invisible to it became rails. `rail-not-classified` is gone too. It is the shipped catalog's
+own tripwire for this gap, and it had named `FTDI_3V3`, a net whose name declares 3.3 V and which feeds
+four supply pins but carries no rail role. That net is already in the count above, since `net.rail` also
+counts any net something drives as a power net, but the rail ROLE is what the rules read, and only
+the lexicon gives it one. And two `i2c-pull-up` errors disappeared:
 
-```
-[info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
-[info] test-point-coverage: PMIC_MAIN_12V0 (rail carries no test point; bring-up and factory test cannot probe it)
-```
+{{ agniRun "content/tutorials/runs/04-verdicts-ftdi.yaml" }}
 
-That second change is the lexicon half doing its job, and every tier works the same way. Supplying
-a tier adds its own findings, and it can also change what the rules you already had are able to see.
+Both lines were pulled up all along, through R113 and R114 to `FTDI_3V3`. The rule asks for a
+pull-up to a RAIL, and until the lexicon named that net a rail, the resistors led nowhere the rule
+recognized. Two of rung 2's thirty errors were the vocabulary's blind spot rather than the design's.
+
+That is every tier's pattern. Supplying a tier adds its own findings, and it can also change what the
+rules you already had are able to see, in both directions.
 
 ## Reading the lexicon directly
 
-Inferring the lexicon from a finding count that moved is indirect. You can ask the fact base itself,
+Inferring the lexicon from finding counts that moved is indirect. You can ask the fact base itself,
 putting the same question this rung opened with:
 
 {{ agniRun "content/tutorials/runs/04-query-rails-conventions.yaml" }}
 
-Four rails, where the same query without the section found one. Nothing was added to the design and no
-rule ran. The lexicon changed what the engine believes a rail *is*, and every relation derived from
-that role now answers differently.
+Nothing was added to the design and no rule ran. The lexicon changed what the engine believes a rail
+*is*, and every relation derived from that role now answers differently.
 
 This is the loop to write a lexicon in: ask, compare against the rails you know the board has, adjust
 the pattern, ask again. A query reads only the lexicon half, since it runs no rules.

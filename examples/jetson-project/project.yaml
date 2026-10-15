@@ -1,0 +1,126 @@
+# The review project the tutorial ladder teaches on, wrapped around Antmicro's open-source baseboard
+# for the Jetson AGX Thor module. The board itself is fetched rather than committed, because it is
+# someone else's design: `make board` copies it into designs/jetson/ from tools/samples (see the
+# Makefile). Everything in this folder that is not that copy is ours, and is what the rungs teach.
+name: jetson
+title: Jetson AGX Thor baseboard review project
+
+# House naming conventions, composed into every run on a design of this project. The section carries
+# two halves, wired differently.
+#
+#   lexicon: teaches the engine which of THIS project's net names are power rails. It is applied to
+#            the design READ, so it changes what the rail-quantified rules can even see.
+#   rules:   adds catalog rules, namespaced <config name>/<rule name>, so they appear as
+#            `jetson/active-low-overbar` alongside the built-ins.
+#
+# The built-in vocabulary already finds this board's rails named the usual way (+3V3, VCC_IN,
+# /DCDC/5V_OUT). What it misses are rails named for what they feed: the camera supplies, the USB-C
+# ports' VBUS, the fan, and two small LDO outputs. It is RIGHT to skip the many signal nets named for
+# their logic level (I2C0_SCL_1V8, VSYNC_CAM0_3V3), so each pattern names a rail by its function
+# rather than matching any trailing voltage.
+conventions:
+  name: jetson
+  lexicon:
+    net:
+      rail:
+        patterns:
+          - "^CSI[AB]_([0-9]+V[0-9]*|I2C_VCC)$"
+          - "^USBC[0-9]_VBUS$"
+          - "^FAN_VDD$"
+          - "^(PDC_LDO|FTDI)_[0-9]+V[0-9]*$"
+  rules:
+    - name: active-low-overbar
+      severity: warning
+      why: "house style writes an active-low signal with KiCad's overbar, ~{NAME}, never a trailing n"
+      allow: ["[^n]$", "[a-z]n$"]
+
+# Checklists are named, and a run picks one with --checklist NAME. The first one written is the one
+# `agni review` runs when none is named.
+#
+# An item is bound to the engine in one of four ways, and all four appear below:
+#   rule:    a catalog rule decides the item (built-in, house, profile, or intent)
+#   profile: an interface profile decides it, and the item reads n/a when the interface is absent
+#   query:   an inline datalog query decides it, for a question no shipped rule asks
+#   note:    nothing automated decides it, and the note says who does
+checklists:
+  review:
+    name: Jetson baseboard design review
+    areas:
+      - name: Power
+        items:
+          - id: "P1"
+            title: every rail carries a bulk capacitor
+            description: A rail with no bulk capacitance browns out on a load step.
+            rule: bulk-cap
+          - id: "P2"
+            title: every rail carries decoupling
+            rule: decoupling-present
+          - id: "P3"
+            title: the input is protected against reverse polarity
+            description: A harness connected backwards must not destroy the board.
+            rule: reverse-blocking-absent
+          - id: "P4"
+            title: no part is operated above its absolute-maximum supply voltage
+            description: Needs a seeded datasheet parameter for the part, else it cannot be decided.
+            rule: supply-exceeds-abs-max
+          - id: "P5"
+            title: every rail is probeable during bring-up
+            rule: test-point-coverage
+
+      - name: Interfaces
+        items:
+          - id: "I1"
+            title: every PCIe link is complete
+            description: Bound to the project's own PCIe profile, which supersedes the built-in one.
+            profile: PCIe
+          - id: "I2"
+            title: the CAN interface is complete and terminated
+            description: >-
+              This board carries no CAN transceiver. The item must not score a pass just because a
+              check for an absent interface found nothing to complain about.
+            profile: CAN
+          - id: "I3"
+            title: exposed signals have ESD protection
+            rule: esd-protection
+          - id: "I4"
+            title: every I2C bus has pull-ups
+            rule: i2c-pull-up
+
+      - name: House style
+        items:
+          - id: "H1"
+            title: active-low signals use the overbar
+            rule: jetson/active-low-overbar
+          - id: "H2"
+            title: every test point sits on a net somebody named
+            description: >-
+              An inline query, because no shipped rule asks this question. It matches the VIOLATION,
+              a test point on a net KiCad named automatically, not the healthy case. A query binding
+              reports what it matches as findings, so matching the healthy case inverts the item.
+            query:
+              match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), str.prefix(?n, "N$") => ?r, ?n'
+              subject: r
+              message: '{r} probes {n}, a net nobody named'
+          - id: "H3"
+            title: the assembly drawing lists a torque spec for every standoff
+            description: Nothing in the design files can answer this.
+            note: manual review against the mechanical drawing package
+
+      - name: Board
+        items:
+          - id: "B1"
+            title: no track is below the board's minimum width
+            description: >-
+              A board-tier question, answered from the .kicad_pcb the design.yaml declares as a
+              companion. A design read without its board reads n/a here, which means the question
+              did not apply to what was loaded, not that it passed.
+            rule: track-width
+
+      - name: Architecture
+        items:
+          - id: "A1"
+            title: each rail sits at its declared voltage
+            rule: intent/voltage-domain-mismatch
+          - id: "A2"
+            title: every connector declared internal exists
+            rule: intent/exposure-declared

@@ -1,0 +1,9 @@
+#agni-run 3da70af10aa12017
+findings by rule:
+  intent/voltage-domain-mismatch 1
+
+first 1:
+  [warning] intent/voltage-domain-mismatch: +1V8 (rail "+1V8" is declared in voltage domain "logic" (3.3V) but its name declares 1.8V)
+
+1 finding(s) total
+6 subject(s) considered by 1 rule(s) (--verdicts for the detail)

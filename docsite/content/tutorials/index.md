@@ -15,27 +15,29 @@ levels of hardware knowledge, each tied back to the rules that encode it.
 
 ## The board
 
-Rungs 1 to 3 run on a real board, Antmicro's Apache-2.0 baseboard for the Jetson AGX Thor module,
-which `make samples-oracle` fetches into `tools/samples/boards/jetson-agx-thor-baseboard`. Rung 1
-shows how to get it. The later rungs are moving onto it one at a time and until then run against
-`examples/tutorial-project` in the engine repo. It is a synthetic industrial
-sample board plus the project files a team wraps around one. Every part, MPN, and datasheet value in
-it is invented, so you can copy the whole folder and change it freely.
+Every rung runs on a real board, Antmicro's Apache-2.0 baseboard for the NVIDIA Jetson AGX Thor
+module: 1123 parts on fifteen sheets, with its copper. It is someone else's design, so it is fetched
+rather than committed, and the ladder wraps a review project around it, `examples/jetson-project`,
+which holds a team's configuration and nothing of the board itself.
 
 ```
 git clone https://github.com/panyam/agni
-cd agni/examples/tutorial-project
-make review
+cd agni
+make samples-oracle
+make -C examples/jetson-project board
 ```
 
-The folder is checked in complete, with every file present. Each rung below tells you which file or
-section it is about and passes only the flags earned so far, so you can start at any rung and it will
-run. If you would rather build it up yourself, delete the `conventions:` section of `project.yaml`,
-`profiles/`, `params/`, and the `intent:` section of `designs/gateway/design.yaml` and add them back
-as you go.
+Rungs 1 to 3 read the fetched board directly, and from rung 4 on everything runs inside the project.
+The project is checked in complete, so you can start at any rung and it will run. If you would rather
+build it up yourself, delete the `conventions:` and `checklists:` sections of `project.yaml`,
+`profiles/`, `params/`, and the `intent:` section of `designs/jetson/design.yaml` and add them back as
+you go.
 
-The board is deliberately imperfect. Each flaw is a real defect a reviewer would flag, and each one
-exists so some part of the tool has something true to report.
+The board is a real, shipped design, and it is not a test fixture with flaws planted in it. What the
+tool reports about it is a mix of genuine review points, design choices a netlist cannot see the
+reasons for, and the limits of what any tool can tell from the files, and learning to tell those apart
+is most of what the ladder teaches. Rung 10's second revision is the one place the board is edited,
+and that page says exactly how.
 
 ## The rungs
 
@@ -83,12 +85,12 @@ same step on your own design by changing which files it points at.
 
 | Rung | In the tutorial | On your project |
 |---|---|---|
-| 1 | `make stats` | point `designs/<name>/design.yaml` at your netlist, and list your board and schematic exports under `companions` |
-| 2 | `make check` | same command, your design folder |
+| 1 | `agni stats .` on the board | point `designs/<name>/design.yaml` at your schematic or netlist, and list your board and other exports under `companions` |
+| 2 | `agni check .` | same command, your design folder |
 | 4 | `conventions:` in `project.yaml` | your team's rail names and naming rules |
-| 5 | the bundled `profiles/can.yaml` | one file per bus your team designs with |
-| 6 | the bundled `params/` | a seeded PartSpec per part worth checking |
-| 7 | `intent:` in `designs/gateway/design.yaml` | one per design, since each board has its own architecture |
+| 5 | the project's `profiles/pcie.yaml` | one file per bus your team designs with |
+| 6 | the project's `params/` | a seeded PartSpec per part worth checking |
+| 7 | `intent:` in `designs/jetson/design.yaml` | one per design, since each board has its own architecture |
 | 8 | `checklists:` in `project.yaml` | your team's checklists, by name |
 
 Conventions, profiles, and parameters describe the *team*, so they

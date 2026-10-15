@@ -1,22 +1,5 @@
-#agni-run 9998daf3145a0373
+#agni-run 5d695d8a54d11a25
 #agni-step
-# Review: Sample Board design review
-
-Design: `designs/gateway`
-
-**3 pass, 9 fail, 0 n/a, 2 not-automated, 1 provisional (of 15)**
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Review: Jetson baseboard design review
+Design: `designs/jetson`
+**5 pass, 8 fail, 1 n/a, 1 not-automated (of 15)**

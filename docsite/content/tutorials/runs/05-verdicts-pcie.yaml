@@ -1,0 +1,10 @@
+# Rung 5: what the new profile concluded, for the first link. The text view lists at most twenty
+# passes per rule and says how many it folded, so the block shows the first link's rows and the tail.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  agni check --verdicts --rule jetson-profiles/pcie-signal-missing designs/jetson
+script: |
+  agni check --verdicts --rule jetson-profiles/pcie-signal-missing designs/jetson 2>/dev/null | sed -n '1,15p'
+  agni check --verdicts --rule jetson-profiles/pcie-signal-missing designs/jetson 2>/dev/null | tail -3

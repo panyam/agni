@@ -1,6 +1,10 @@
-# Rung 9: auditing a pass. supply-exceeds-abs-max is the example because the board both passes and
-# fails it, and both rows cite the numbers they compared, which is what makes the pass checkable
-# against the datasheet rather than merely reassuring.
-fixture: examples/tutorial-project
+# Rung 9: a rule's passes with the evidence each rests on. The fails print first, so the block shows
+# the rule's tally and its first passes.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  agni check --verdicts --rule i2c-pull-up designs/jetson
 script: |
-  agni check --verdicts --rule supply-exceeds-abs-max designs/gateway/gateway.edn
+  agni check --verdicts --rule i2c-pull-up designs/jetson 2>/dev/null | head -1
+  agni check --verdicts --rule i2c-pull-up designs/jetson 2>/dev/null | grep -A1 '^    pass ' | head -8

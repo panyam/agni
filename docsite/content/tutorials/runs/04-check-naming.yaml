@@ -1,0 +1,6 @@
+# Rung 4: the rules half, one house rule's findings.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni check designs/jetson --rule jetson/active-low-overbar

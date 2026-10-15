@@ -1,0 +1,7 @@
+# Rung 6: the project's first-pass draft of the same part copied over the transcribed one.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  cp drafts/nts0102gt.first-pass.textproto params/nts0102gt.textproto
+  agni check designs/jetson --rule supply-exceeds-abs-max

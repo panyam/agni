@@ -1,0 +1,10 @@
+#agni-run 8e342ab05ae0db79
+findings by rule:
+  jetson/active-low-overbar 2
+
+first 2:
+  [warning] jetson/active-low-overbar: /USB Debug, PD/PDC_I2C1_IRQn (net name matches no allowed naming pattern)
+  [warning] jetson/active-low-overbar: /USB Debug, PD/PDC_I2C2_IRQn (net name matches no allowed naming pattern)
+
+2 finding(s) total
+1355 subject(s) considered by 1 rule(s) (--verdicts for the detail)

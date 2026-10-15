@@ -1,0 +1,10 @@
+# Rung 10: rev A against rev B. The scratch copy builds rev B first, as `make rev-b` does.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  make rev-b
+  agni diff designs/jetson designs/jetson-rev-b
+script: |
+  python3 tools/make_rev_b.py designs/jetson designs/jetson-rev-b
+  agni diff designs/jetson designs/jetson-rev-b 2>/dev/null

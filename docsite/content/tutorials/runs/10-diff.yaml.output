@@ -1,0 +1,13 @@
+#agni-run 0ad94f6f321a1521
+diff designs/jetson -> designs/jetson-rev-b
+
+Components: +0  -0  ~2
+Nets:       new 0  deleted 0  renamed 2  hard 0  soft 0
+
+Components changed (2):
+  R357 dnp: "yes" -> "no"
+  R358 dnp: "yes" -> "no"
+
+Nets changed (2):
+  [renamed] /USB Debug, PD/PDC_I2C1_IRQn -> /USB Debug, PD/~{PDC_I2C1_IRQ_R}
+  [renamed] /USB Debug, PD/PDC_I2C2_IRQn -> /USB Debug, PD/~{PDC_I2C2_IRQ_R}

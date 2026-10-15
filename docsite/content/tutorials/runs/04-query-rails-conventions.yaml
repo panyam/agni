@@ -1,5 +1,6 @@
-# Rung 4: the same query under the project's naming vocabulary. No --conventions, because the
-# project composes its own conventions section into every run.
-fixture: examples/tutorial-project
+# Rung 4: the rail count again, with the conventions in place.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
 script: |
-  agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n'
+  agni query designs/jetson 'net.rail(?n) => count(?n)'

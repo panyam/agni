@@ -1,7 +1,9 @@
-# Rung 4: the same board with the project's naming vocabulary in place.
-#
-# No --conventions. The project carries a conventions section in project.yaml and composes it into
-# every run, so the run needs no flag to show what the vocabulary changes.
-fixture: examples/tutorial-project
+# Rung 4: the same with the section, as the project ships.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  agni check designs/jetson
 script: |
-  agni check designs/gateway/gateway.edn
+  agni check designs/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
+  agni check designs/jetson 2>/dev/null | tail -2
