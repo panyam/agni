@@ -1,4 +1,4 @@
-#agni-run ddb3ed4b672e69f5
+#agni-run ccf35319b2d1d259
 bulk-cap  2 fail
     fail            +3V3  the rail carries no capacitor at all
     fail            VBUS  the rail carries no capacitor at all
