@@ -1,0 +1,6 @@
+# Rung 7: the declared rails, each compared with the voltage its name states.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni check --verdicts --rule intent/voltage-domain-mismatch designs/jetson

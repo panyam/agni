@@ -26,3 +26,13 @@ intent:
     J15: {exposure: internal}   # fan
     J4:  {exposure: internal}   # Tag-Connect debug pads, used in manufacturing
     J20: {exposure: internal}   # Tag-Connect debug pads
+
+  # The supplies the board makes, each in a named domain at one voltage. The standby domains stay up
+  # while the module sleeps, so a load placed on one by mistake keeps drawing in standby.
+  nets:
+    +5V:      {nominal: 5.0, domain: main}
+    +3V3:     {nominal: 3.3, domain: io}
+    +1V8:     {nominal: 1.8, domain: logic}
+    +5V_SOM:  {nominal: 5.0, domain: module}
+    +5V_AON:  {nominal: 5.0, domain: standby}
+    +3V3_AON: {nominal: 3.3, domain: standby-io}

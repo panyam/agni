@@ -1,8 +1,9 @@
-# Generated block for 07-your-architecture.md. Edit the script, not the capture.
-#
-# The project's params/ is moved aside, because a project discovers its own tiers and dropping the flag
-# alone would not turn the datasheet tier off.
-fixture: examples/tutorial-project
+# Rung 7: the same with the intent section, as the project ships.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  agni check designs/jetson
 script: |
-  mv params params-off
-  agni check designs/gateway/gateway.edn
+  agni check designs/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
+  agni check designs/jetson 2>/dev/null | tail -2

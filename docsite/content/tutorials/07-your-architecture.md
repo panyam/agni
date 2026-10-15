@@ -16,80 +16,98 @@ root.
 
 ## The declaration
 
-The `intent:` section of `designs/gateway/design.yaml`:
+The `intent:` section of `designs/jetson/design.yaml` says two things about this board.
 
 ```yaml
 intent:
-  modules:
-    - {name: regulators, class: regulator, count: 2}
-    - {name: connectors, class: connector, count: 1}
-    - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
-    - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+  components:
+    J1:  {exposure: internal}   # Jetson AGX Thor module, board-to-board
+    J8:  {exposure: internal}   # FMC+ expansion power, mates with J18's accessory
+    J18: {exposure: internal}   # FMC+ expansion mezzanine
+    J13: {exposure: internal}   # M.2 key-M, NVMe card
+    J14: {exposure: internal}   # M.2 key-E, wireless card
+    J10: {exposure: internal}   # CSI camera FFC, cabled to a camera inside the product
+    J11: {exposure: internal}   # CSI camera FFC
+    J15: {exposure: internal}   # fan
+    J4:  {exposure: internal}   # Tag-Connect debug pads, used in manufacturing
+    J20: {exposure: internal}   # Tag-Connect debug pads
   nets:
-    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
-    PMIC_CORE_3V3: {nominal: 3.3, domain: io}
-    PMIC_IO_1V8: {nominal: 3.3, domain: core}
+    +5V:      {nominal: 5.0, domain: main}
+    +3V3:     {nominal: 3.3, domain: io}
+    +1V8:     {nominal: 1.8, domain: logic}
+    +5V_SOM:  {nominal: 5.0, domain: module}
+    +5V_AON:  {nominal: 5.0, domain: standby}
+    +3V3_AON: {nominal: 3.3, domain: standby-io}
 ```
 
-Read it as the sentence you would say describing the board to a colleague. Two regulators and one
-connector. A {{ explainable "power-tree" }} and a CAN block made of these nets. Three rails at these
-voltages, each in a named domain.
+Read it as the sentences you would say describing the board to a colleague. These ten connectors join
+this board to other parts of the same product, and every other connector takes a cable from the
+outside world. These are the supplies, at these voltages, each in a named domain.
 
-## Running it
+## Which connectors face the field
 
-{{ agniRun "content/tutorials/runs/07-check-intent-params.yaml" }}
+The first half matters more than it looks. Every rule about protection asks whether a net reaches the
+outside world, and a netlist cannot answer that. A module socket and a USB-C receptacle are both
+connectors, and the same part number can be the cable entry on one carrier and the socket for a
+daughterboard on another. So every connector counts as exposed until the design says otherwise.
 
-The declaration says the core domain runs at 3.3 V. The rail assigned to it is a 1.8 V rail. Nothing
-structural is wrong with the board, and no rule from any other tier has anything to say. The only
-reason this is catchable is that somebody wrote down what was intended and the two disagree.
+Without the section:
 
-This tier finds divergence between the board and the description of the
-board rather than defects in the usual sense, and that divergence creeps in over
-months as a design is edited by people who did not write the original plan.
+{{ agniRun "content/tutorials/runs/07-check-intent-off.yaml" }}
 
-## A tier can depend on another tier
-
-Run the same thing without `--params`. A project discovers its own tiers, so dropping the flag
-alone would change nothing, and both runs move the project's `params/` aside first:
+With it:
 
 {{ agniRun "content/tutorials/runs/07-check-intent.yaml" }}
 
-Two extra findings, and both are false. The board plainly has two regulators.
+Hundreds of findings disappear. Nearly all of them were `esd-protection`, on nets reaching the module
+socket J1, whose pins carry most of the board's signals, the FMC+ header J18, and behind those the
+M.2 sockets and the two camera connectors. Rung 5's PCIe profile
+loses its `esd` findings for the same reason. None of those findings was wrong about the netlist, and
+all of them were wrong about the board. Ten lines of intent turned a protection report nobody would
+read into one worth reading, and the ones that remain are the connectors a user really can plug a
+cable into, which are exactly the ones a reviewer wants to see.
 
-The declaration says `class: regulator`. Without a datasheet corpus, the classifier can tell U1 and
-U2 are integrated circuits from their {{ explainable "reference-designator" "reference designators" }}, but not what kind. "This is a
-regulator" comes off the part's datasheet. Attach `--params` and the class resolves, and both
-findings disappear.
+## Rails and their domains
 
-A module declaration written in terms of device class
-is only as good as the parameter tier underneath it. If you plan to declare modules by class, seed
-those parts first. Otherwise the intent tier reports absences that are really gaps in a different
-tier.
+The second half declares each supply's voltage and the domain it belongs to. A domain carries one
+voltage, so two rails in it must agree, and each rail's name must agree with what was declared:
+
+{{ agniRun "content/tutorials/runs/07-verdicts-domains.yaml" }}
+
+Today the board and the plan agree, and each pass says what was compared. The tier earns its keep the
+day they stop agreeing. Here is the plan edited, on a scratch copy, to say the logic domain runs at
+3.3 V while the board still runs it at 1.8 V:
+
+{{ agniRun "content/tutorials/runs/07-check-drift.yaml" }}
+
+Nothing structural is wrong with the board, and no rule from any other tier has anything to say. The
+only reason this is catchable is that somebody wrote down what was intended and the two disagree.
+
+This tier finds divergence between the board and the description of the board rather than defects in
+the usual sense, and that divergence creeps in over months as a design is edited by people who did not
+write the original plan.
+
+## A tier can depend on another tier
+
+`modules` is the third thing a declaration can say: the board has two regulators, or a CAN block made
+of these nets. A module written in terms of a device class (`class: regulator`) is only as good as the
+classification underneath it, and on this board nothing classifies as a regulator, because "this is a
+regulator" comes off a part's datasheet and the project seeds one part. So a module declared by class
+would report every regulator missing. If you plan to declare modules by class, seed those parts in
+`params/` first, or the intent tier reports absences that are really gaps in a different tier.
 
 ## Without the declaration
 
-```
-| A1 | each rail sits at its declared voltage | needs-design-intent | needs a design-intent declaration (an intent: section in the design's design.yaml, or --intent-path) |
-| A2 | the declared modules are all present | needs-design-intent | needs a design-intent declaration (an intent: section in the design's design.yaml, or --intent-path) |
-```
-
-`needs-design-intent`, not `pass`. A question about intent cannot be answered by a design that never
-stated its intent, and a checklist that reported `pass` here instead
-could not be trusted.
+A checklist question about intent, such as "each rail sits at its declared voltage", cannot be
+answered by a design that never stated its intent. It reads `needs-design-intent`, not `pass`, and
+the reason names the `intent:` section it needs. A checklist that reported `pass` there instead could
+not be trusted.
 
 ## All four tiers
 
-That is the last of them. Running the full checklist with everything attached:
-
-```
-make review
-```
-
-```
-**3 pass, 8 fail, 1 n/a, 2 not-automated, 1 provisional (of 15)**
-```
-
-The next rungs answer what that checklist is and how to read those numbers.
+That is the last of them. Names, interfaces, part limits and intent are each a file or a section, and
+each changed what the catalog could see as well as adding checks of its own. The next rungs bind your
+team's review questions to all of it.
 
 ## Next
 

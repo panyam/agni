@@ -1,4 +1,4 @@
-#agni-run 4e9d3324d7d4394b
+#agni-run cab79759fa3a5ed9
 findings by rule:
   bulk-cap               2
   decoupling-present     1
@@ -13,4 +13,4 @@ findings by rule:
   unspecified-pin-with-driver 1
 
 91 finding(s) total
-25603 subject(s) considered by 41 rule(s), 665 not considered (--verdicts for the detail)
+25609 subject(s) considered by 42 rule(s), 665 not considered (--verdicts for the detail)
