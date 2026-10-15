@@ -56,7 +56,7 @@
 <rect fill="none" stroke="#222222" stroke-width="0.8" x="520.0" y="680.0" width="80.0" height="160.0" data-kind="component" data-ref="R1"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="520.0,680.0 524.8,688.0 520.0,696.0" data-kind="component" data-ref="R1"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="560.0,800.0 560.0,840.0" data-kind="component" data-ref="R1"/>
-<text x="48.0" y="1310.4" font-size="25.6" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555" transform="rotate(90 48 1310.4)">HELLO</text>
-<text x="520.0" y="680.0" font-size="25.6" text-anchor="middle" dominant-baseline="central" fill="#1560bd" transform="rotate(90 520 680)">R1</text>
-<text x="552.0" y="648.0" font-size="25.6" text-anchor="start" dominant-baseline="central" fill="#1560bd" transform="rotate(90 552 648)">10k</text>
+<text x="48.0" y="1310.4" font-size="25.6" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555" transform="rotate(90 48.0 1310.4)">HELLO</text>
+<text x="520.0" y="680.0" font-size="25.6" text-anchor="middle" dominant-baseline="central" fill="#1560bd" transform="rotate(90 520.0 680.0)">R1</text>
+<text x="552.0" y="648.0" font-size="25.6" text-anchor="start" dominant-baseline="central" fill="#1560bd" transform="rotate(90 552.0 648.0)">10k</text>
 </svg>
