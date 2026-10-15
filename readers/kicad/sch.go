@@ -238,6 +238,16 @@ type compAccum struct {
 
 func newCompAccum() *compAccum { return &compAccum{byRef: map[string]*ir.Component{}} }
 
+// symbolKey is the name a placed symbol's definition is filed under in lib_symbols. KiCad writes a
+// lib_name when the embedded copy differs from the library's, as with "GND_3" beside lib_id
+// "power:GND", and the definition is then keyed on it rather than on lib_id.
+func symbolKey(ps *node) string {
+	if n := atomOf(ps.Child("lib_name").Arg(1)); n != "" {
+		return n
+	}
+	return atomOf(ps.Child("lib_id").Arg(1))
+}
+
 // collect adds root's placed symbols, resolving each reference for the given instance
 // path (symbolRefAt; empty for a single-file read).
 func (a *compAccum) collect(root *node, src, instPath string) {
@@ -254,8 +264,8 @@ func (a *compAccum) collect(root *node, src, instPath string) {
 		}
 		sec := &ir.ComponentSection{
 			Index:      int32(unitOf(ps) - 1),
-			PartRef:    atomOf(ps.Child("lib_id").Arg(1)),
-			LibraryRef: libPrefix(atomOf(ps.Child("lib_id").Arg(1))),
+			PartRef:    symbolKey(ps),
+			LibraryRef: libPrefix(symbolKey(ps)),
 			Attributes: map[string]string{},
 			Prov:       &ir.Provenance{SourceFile: src, NativeId: uuidOf(ps), NativeIdKind: kicadNativeIDKind},
 		}

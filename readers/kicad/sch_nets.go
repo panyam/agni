@@ -215,7 +215,7 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 			continue
 		}
 		t := pinTransform(ps)
-		local := libPins.forUnit(atomOf(ps.Child("lib_id").Arg(1)), unitOf(ps))
+		local := libPins.forUnit(symbolKey(ps), unitOf(ps))
 		if ref[0] == '#' {
 			name := propValue(ps, "Value")
 			isFlag := name == "PWR_FLAG" // a directive asserting the net is driven, not a net name
