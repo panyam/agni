@@ -114,6 +114,16 @@ a copy, since `check.NewModel` stamps datasheet classes into the design it is gi
 is safe because rules only read a model and its memo is built for concurrent use. The query, check,
 report, coverage and review surfaces read through it.
 
+`CheckDesign` keeps each rule's findings and verdicts on that model's entry too (agni issue 390), so
+a check asking for a rule the model has already run answers from that run, and only the rules it has
+not run are evaluated. The results need no key of their own, because the entry is already keyed on
+the design's tiers and the overlay's identity and checked against every file its read touched, so an
+edit or a different convention lands on an entry holding no results. A model that could not be kept
+holds none either. Under a work budget an inconclusive rule is not kept, since the budget may be what
+stopped it. `check.RunAll` sorts stably, so a rule's results keep their order whichever rules ran
+beside them, and joining kept rules to new ones answers as one run would. On Jetson a second check
+of the whole catalog spends 17 ms in the engine rather than 103 ms.
+
 The browser engine also collects garbage after each layer the cache reads, builds or restores
 (`DesignCache.AfterLoad`, agni issue 1000), shown as a `collect.<layer>` stage under `Agni-Timing`. A
 worker's wasm memory never shrinks, so without it the rules stage grew past what a board's parse left
