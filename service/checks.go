@@ -256,7 +256,7 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 		return nil, err
 	}
 	namer, _ := specs.(param.CorpusNamer)
-	resp := &webapi.GetComponentParamsResponse{}
+	resp := &webapi.GetComponentParamsResponse{CorpusConnected: specs != nil}
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.GetRefDes())
 		if spec == nil {

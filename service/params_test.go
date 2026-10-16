@@ -33,6 +33,9 @@ func TestGetComponentParams(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !resp.GetCorpusConnected() {
+		t.Error("a service with a provider must report a connected corpus")
+	}
 	if len(resp.GetComponents()) != 1 {
 		t.Fatalf("components with a joined spec = %d, want 1 (only U1)", len(resp.GetComponents()))
 	}
@@ -51,6 +54,9 @@ func TestGetComponentParams(t *testing.T) {
 	}
 	if len(empty.GetComponents()) != 0 {
 		t.Errorf("nil provider must yield no components, got %d", len(empty.GetComponents()))
+	}
+	if empty.GetCorpusConnected() {
+		t.Error("nil provider must report no corpus, so an empty list reads as unasked rather than unseeded")
 	}
 }
 
