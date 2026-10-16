@@ -30,8 +30,9 @@ links rather than here. Log each exercise run on the mission issue.
   533 MB on a first visit and 419 MB on a reload (`make wasm-bench`, from 1.36 and 1.6 GB before PR
   1001). #1010 is the one regression the `18cfe8f6` walk showed (coverage and the first query rule
   about 750 ms slower each).
-- **Seed triage on #851** (`hack/seed-triage/`, closed #857): no seed record holds a false positive.
-  Two follow-ups are filed: #961 (the rules besides the pull-up walks that still credit a DNP part)
+- **Seed triage on #851** (`hack/seed-triage/`, closed #857): the Jetson record holds three false
+  positives, each with its ticket on the mission (#1014 PTVS as a plain diode, #1015 bulk-cap at a
+  0 Ohm link, #1016 an outlet connector read as a supply entry). Two more are filed: #961 (the rules besides the pull-up walks that still credit a DNP part)
   and #967 (check the records against KiCad's ERC and DRC). #967's first run already disagrees:
   KiCad's DRC reports 357 `clearance` violations on Jetson where agni reports none against the
   board's declared 0.1 mm, most likely the netclass and `.kicad_dru` rules agni does not read.
@@ -39,7 +40,8 @@ links rather than here. Log each exercise run on the mission issue.
 - This run: PRs 1012, 1017, 1018, 1020, 1022, 1024, 1025 and 1029 merged (#564, #724, #998 and
   #453 closed). #453 put the docsite's embedded drawings in the gate (`docsite-images-check`).
   Filed #1028 (`waiting`, the faithful-sample golden's corner label off its canvas). The lazy fact
-  base is still parked on `wip/lazy-fact-base` (#1007, `waiting`).
+  base is still parked on `wip/lazy-fact-base` (#1007, `waiting`, now grouping #984 and #999).
+  Retriaged: 15 orphans dropped from P2 to P3, #605 and #702 kept as deliberate off-mission P2s.
 
 ## Open, ranked
 
