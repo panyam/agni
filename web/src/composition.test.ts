@@ -342,7 +342,8 @@ describe("clicking the drawing selects what was clicked, and Ask asks about it",
       // The question opened a tab of its own, named for what it asked about and the served label,
       // so the query box the reader started in is still there behind it.
       const front = document.querySelector('[data-component="query"] .query-tab.on .query-tab-go');
-      expect(front?.textContent ?? "").toBe("PMIC_CORE_3V3: What pins are on it?");
+      // The title, since the label also carries a running mark while the query is in flight.
+      expect(front?.getAttribute("title") ?? "").toBe("PMIC_CORE_3V3: What pins are on it?");
       expect(document.querySelectorAll('[data-component="query"] .query-tab').length).toBe(2);
       // And the query panel names what was asked about, which is where the next hop is offered from.
       const named = document.querySelector('[data-component="query"] .query-selection-name');
