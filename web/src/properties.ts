@@ -43,9 +43,13 @@ export interface Inventory {
   nets: Map<string, Net>;
   // pinsOf lists every connected pin of a component with its net, sorted by designator.
   pinsOf: Map<string, PinNet[]>;
-  // pinName maps ref + PIN_SEP + designator to the pin's functional name off its part type, which is
-  // what a datasheet calls it, beside the designator every other pin relation keys on.
+  // pinName maps ref + PIN_SEP + designator to the pin's functional name, what a datasheet calls it,
+  // as the engine's pin.name answers it (agni issue 1045). A name that only repeats the designator
+  // is left out, since it would say nothing beside it.
   pinName: Map<string, string>;
+  // testPoints holds the components the engine classes as test points (component.class), which can
+  // come from conventions or a datasheet the IR's own tags do not show.
+  testPoints: Set<string>;
   // buses holds each bus a reader recorded, by label: the constructs it was drawn as and the member
   // signals the reader could name. The netlist has no bus as such, so this is the read's own record.
   buses: Map<string, { constructs: string[]; members: string[] }>;
@@ -60,8 +64,6 @@ export const INVENTORY_PATHS = [
   "design.components.value",
   "design.components.device_classes",
   "design.components.attributes",
-  "design.components.sections.part_ref",
-  "design.components.sections.library_ref",
   "design.nets.name",
   "design.nets.id",
   "design.nets.roles",
@@ -69,10 +71,6 @@ export const INVENTORY_PATHS = [
   "design.nets.attributes",
   "design.nets.connections.component_ref",
   "design.nets.connections.pin_ref",
-  "design.libraries.name",
-  "design.libraries.parts.name",
-  "design.libraries.parts.pins.designator",
-  "design.libraries.parts.pins.name",
   "design.input_diagnostics.unmodeled_buses.label",
   "design.input_diagnostics.unmodeled_buses.kind",
   "design.input_diagnostics.unmodeled_buses.members",
@@ -81,24 +79,28 @@ export const INVENTORY_PATHS = [
 // byDesignator orders pin designators the way a datasheet does, so pin 2 sorts before pin 10.
 const byDesignator = new Intl.Collator(undefined, { numeric: true }).compare;
 
-// inventoryFromDesign indexes a design read with INVENTORY_PATHS.
-export function inventoryFromDesign(d: Design): Inventory {
+// ServedFacts is what Properties asks the engine for once per design, rather than working out from the
+// IR: each pin's functional name (pin.name) and the test points (component.class). The engine applies
+// the part resolution and class evidence a reading of the IR alone would miss (agni issue 1045).
+export interface ServedFacts {
+  pinNames: [ref: string, pin: string, name: string][];
+  testPoints: string[];
+}
+
+// SERVED_QUERIES are the two questions ServedFacts holds the answers to, in that order.
+export const SERVED_QUERIES = {
+  pinNames: "pin.name(?r, ?p, ?name) => ?r, ?p, ?name",
+  testPoints: 'component.class(?r, "test_point") => ?r',
+} as const;
+
+// inventoryFromDesign indexes a design read with INVENTORY_PATHS, with the engine's answers in served.
+export function inventoryFromDesign(d: Design, served: ServedFacts = { pinNames: [], testPoints: [] }): Inventory {
   const components = new Map(d.components.map((c) => [c.refDes, c]));
   const nets = new Map(d.nets.map((n) => [n.name, n]));
   const pinsOf = new Map<string, PinNet[]>();
   const pinName = new Map<string, string>();
-  const partPins = new Map<string, Map<string, string>>();
-  for (const lib of d.libraries) {
-    for (const part of lib.parts) {
-      partPins.set(lib.name + PIN_SEP + part.name, new Map(part.pins.map((p) => [p.designator, p.name])));
-    }
-  }
-  for (const c of d.components) {
-    for (const s of c.sections) {
-      for (const [designator, name] of partPins.get(s.libraryRef + PIN_SEP + s.partRef) ?? []) {
-        if (name && name !== designator) pinName.set(c.refDes + PIN_SEP + designator, name);
-      }
-    }
+  for (const [ref, pin, name] of served.pinNames) {
+    if (name && name !== pin) pinName.set(ref + PIN_SEP + pin, name);
   }
   for (const n of d.nets) {
     for (const conn of n.connections) {
@@ -117,7 +119,7 @@ export function inventoryFromDesign(d: Design): Inventory {
     buses.set(b.label, at);
   }
   for (const b of buses.values()) b.members.sort(byDesignator);
-  return { components, nets, pinsOf, pinName, buses };
+  return { components, nets, pinsOf, pinName, testPoints: new Set(served.testPoints), buses };
 }
 
 // Datasheet is the datasheet section's outcome. The three a reader acts on differently are kept
@@ -342,7 +344,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
       const n = inv?.nets.get(sel.net ?? "");
       const conns = [...(n?.connections ?? [])].sort((a, b) => byDesignator(a.componentRef, b.componentRef) || byDesignator(a.pinRef, b.pinRef));
       const comps = [...new Set(conns.map((c) => c.componentRef))];
-      const testPoints = comps.filter((r) => inv?.components.get(r)?.deviceClasses.some((t) => t.class === "test_point"));
+      const testPoints = comps.filter((r) => inv?.testPoints.has(r));
       return {
         ...base,
         rows: n ? netRows(n) : [],

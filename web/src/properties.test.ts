@@ -4,7 +4,7 @@ import { ClassSource, DesignSchema, Role } from "./gen/agni/v1/ir/ir_pb.js";
 import { PartSpecSchema } from "./gen/agni/v1/param/param_pb.js";
 import { ConversionReportSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingItem, FindingsState } from "./findings.js";
-import { type PropertiesInput, inventoryFromDesign, propertiesFor, reportLines } from "./properties.js";
+import { type PropertiesInput, type ServedFacts, inventoryFromDesign, propertiesFor, reportLines } from "./properties.js";
 import type { EntityQueryItem } from "./query.js";
 
 // A barrel jack J1 feeding a regulator U1, with a test point on the output, which is enough to
@@ -50,6 +50,20 @@ const design = create(DesignSchema, {
   inputDiagnostics: { unmodeledBuses: [{ label: "D[1:0]", kind: "bus_alias", members: ["VIN", "D0"] }] },
 });
 
+// SERVED is what the engine answers SERVED_QUERIES with on that design: pin.name off each part type,
+// a name that repeats the designator included, and the one test point.
+const SERVED: ServedFacts = {
+  pinNames: [
+    ["J1", "1", "VIN"],
+    ["J1", "2", "GND"],
+    ["U1", "1", "IN"],
+    ["U1", "2", "GND"],
+    ["U1", "10", "OUT"],
+    ["TP1", "1", "1"],
+  ],
+  testPoints: ["TP1"],
+};
+
 const QUESTIONS: EntityQueryItem[] = [
   { kind: "component", label: "What nets does it touch?", query: "q1", teaches: "", binds: ["ref"] },
   { kind: "component", label: "Which test points reach its nets?", query: "q2", teaches: "", binds: ["ref"] },
@@ -86,7 +100,7 @@ function input(over: Partial<PropertiesInput>): PropertiesInput {
     summary: "gateway.edn · faithful",
     sheets: [{ id: "s1", name: "Power" }],
     report: null,
-    inventory: inventoryFromDesign(design),
+    inventory: inventoryFromDesign(design, SERVED),
     findings: null,
     datasheet: null,
     drawn: null,
@@ -100,7 +114,7 @@ const row = (s: ReturnType<typeof propertiesFor>, label: string) => s.rows.find(
 
 describe("inventoryFromDesign", () => {
   it("lists a component's pins in datasheet order with their functional names and nets", () => {
-    const inv = inventoryFromDesign(design);
+    const inv = inventoryFromDesign(design, SERVED);
     // "10" after "2", which a string sort gets wrong.
     expect(inv.pinsOf.get("U1")).toEqual([
       { pin: "1", name: "IN", net: "VIN" },
@@ -110,7 +124,15 @@ describe("inventoryFromDesign", () => {
   });
 
   it("keeps no functional name that only repeats the designator", () => {
-    expect(inventoryFromDesign(design).pinsOf.get("TP1")).toEqual([{ pin: "1", name: "", net: "3V3" }]);
+    expect(inventoryFromDesign(design, SERVED).pinsOf.get("TP1")).toEqual([{ pin: "1", name: "", net: "3V3" }]);
+  });
+
+  // agni issue 1045: the names and test points are the engine's, so with no answer from it the
+  // panel shows none rather than reading the part types and class tags itself.
+  it("works out no pin name or test point from the IR itself", () => {
+    const inv = inventoryFromDesign(design);
+    expect(inv.pinsOf.get("U1")?.map((p) => p.name)).toEqual(["", "", ""]);
+    expect(inv.testPoints.size).toBe(0);
   });
 });
 
