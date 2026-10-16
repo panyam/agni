@@ -283,6 +283,27 @@ func VerdictsToFindings(vs []Verdict) []Finding {
 	return out
 }
 
+// findingsOf is VerdictsToFindings for a run, which also stamps each finding with the id of the
+// verdict it came from (agni issue 485). Only a rule that states its considered set gets ids, since
+// RunVerdicts publishes no other rule's verdicts and an id would then name nothing. Each failing
+// verdict projects to its own finding, so a finding from a run carries one id; the field is a list so
+// a consumer that folds several findings into one keeps every id.
+func findingsOf(r *Rule, vs []Verdict) []Finding {
+	if !r.StatesConsideredSet {
+		return VerdictsToFindings(vs)
+	}
+	out := []Finding{}
+	for _, v := range vs {
+		if (v.Outcome == Fail || v.Outcome == Inconclusive) && v.Finding != nil {
+			f := *v.Finding
+			v.Rule = r.Name
+			f.VerdictIDs = []string{VerdictID(v)}
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 // Render writes a witness the way a terminal shows it, the statement and then one line per
 // datasheet citation. A nil witness renders as "".
 func (w *Witness) Render() string {

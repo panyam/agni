@@ -87,16 +87,10 @@ func ChecklistOf(doc *checkspb.CheckResults, meta report.Checklist) report.Check
 	return out
 }
 
-// evidenceOf turns an item's findings into linked rows.
-//
-// THE LINK IS SYNTHESIZED. A review item carries findings, not verdicts, because core/review keeps
-// what fired rather than what was considered. VerdictID is derived from (rule, subjects), so the id a
-// verdict for this finding would carry can be computed without one in hand.
-//
-// KNOWN LIMIT (agni issue 349): a rule whose verdict names a TUPLE (a clearance between two nets)
-// files its finding under one subject, so the id built here names one entity and the real verdict
-// names two. The viewer treats that id as a stale link, opening the design with the checks run and
-// nothing highlighted.
+// evidenceOf turns an item's findings into rows, each linked to the verdict the finding was
+// projected from (agni issue 485). A finding names its verdicts in verdict_ids, and the row links the
+// first; a finding from a check run carries exactly one. A finding with none, from a rule that states
+// no considered set, gets no link, since there is no verdict for a viewer to open.
 func evidenceOf(it *checkspb.ReviewItem, meta report.Checklist) []report.ChecklistEvidence {
 	if len(it.GetFindings()) == 0 {
 		return nil
@@ -104,15 +98,17 @@ func evidenceOf(it *checkspb.ReviewItem, meta report.Checklist) []report.Checkli
 	out := make([]report.ChecklistEvidence, 0, len(it.GetFindings()))
 	for _, f := range it.GetFindings() {
 		subject := check.Entity{Kind: f.GetSubject().GetKind(), Ref: f.GetSubject().GetRef(), Pin: f.GetSubject().GetPin()}
-		id := check.VerdictID(check.Verdict{Rule: f.GetRule(), Subjects: []check.Entity{subject}})
-		out = append(out, report.ChecklistEvidence{
+		e := report.ChecklistEvidence{
 			Rule:    f.GetRule(),
 			Subject: check.EntityRef(subject),
 			Message: f.GetMessage(),
-			URL: report.VerdictURL(report.Report{
+		}
+		if ids := f.GetVerdictIds(); len(ids) > 0 {
+			e.URL = report.VerdictURL(report.Report{
 				URLBase: meta.URLBase, MountPath: meta.MountPath, ContentHash: meta.ContentHash,
-			}, id, f.GetRule()),
-		})
+			}, ids[0], f.GetRule())
+		}
+		out = append(out, e)
 	}
 	return out
 }

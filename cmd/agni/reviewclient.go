@@ -4,6 +4,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/service"
 )
 
 // reportsFromDocs maps stored review documents back to the Go view-model the renderers consume, the
@@ -31,50 +32,10 @@ func reportsFromDocs(docs []*checkspb.CheckResults) []review.Report {
 	return reports
 }
 
-// findingsFromProto reconstructs the check.Finding list a review item's renderers read (rule, subject,
-// message, provenance -> source file, and the datasheet citation the JSON surface prints). The subject
-// name is the proto Subject.Ref for every kind (FindingProto sets it, plus BusId for a bus).
+// findingsFromProto reads a document's findings back through the service's one inverse of
+// FindingProto, so the CLI's renderers see every field the wire carries, verdict ids included.
 func findingsFromProto(fs []*checkspb.Finding) []check.Finding {
-	out := make([]check.Finding, 0, len(fs))
-	for _, f := range fs {
-		out = append(out, check.Finding{Subject: check.Entity{Kind: f.GetSubject().GetKind(), Ref: f.GetSubject().GetRef(), Pin: f.GetSubject().GetPin(), NetID: f.GetSubject().GetNetId()}, Rule: f.GetRule(), Severity: f.GetSeverity(), Message: f.GetMessage(), Prov: f.GetProvenance(), DatasheetProv: datasheetsFromProto(f.GetDatasheets())})
-	}
-	return out
-}
-
-// datasheetsFromProto reconstructs a finding's citations from the wire form, preserving order.
-func datasheetsFromProto(cs []*checkspb.DatasheetCitation) []*check.DatasheetCitation {
-	if len(cs) == 0 {
-		return nil
-	}
-	out := make([]*check.DatasheetCitation, 0, len(cs))
-	for _, c := range cs {
-		if dc := datasheetFromProto(c); dc != nil {
-			out = append(out, dc)
-		}
-	}
-	return out
-}
-
-// datasheetFromProto reconstructs a finding's datasheet citation from the wire form, nil when the
-// finding carries none.
-func datasheetFromProto(c *checkspb.DatasheetCitation) *check.DatasheetCitation {
-	if c == nil {
-		return nil
-	}
-	return &check.DatasheetCitation{
-		Doc:        c.GetDoc(),
-		DocRef:     c.GetDocRef(),
-		Page:       c.GetPage(),
-		Section:    c.GetSection(),
-		Method:     c.GetMethod(),
-		Confidence: c.GetConfidence(),
-		// Dropping these re-opens agni issue 263 on the service path. The client re-runs the
-		// ratified-floor judgement locally, and an empty verification reads as Unverified, which
-		// falls through to the confidence a stale verification pinned at 1.0.
-		Verification:     c.GetVerification(),
-		VerifiedRevision: c.GetVerifiedRevision(),
-	}
+	return service.FindingsFromProto(fs)
 }
 
 // designSourcesOf returns each document's design URI, positionally matching reportsFromDocs.

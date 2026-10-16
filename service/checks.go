@@ -298,7 +298,7 @@ func expectationProtos(m map[string]expect.Entry, pending bool) []*webapi.RuleEx
 // when present so a consumer can link back to the source. A bus subject's join key is handled in
 // subjectProto.
 func FindingProto(f check.Finding) *checkspb.Finding {
-	return &checkspb.Finding{Subject: subjectProto(f.Subject), Rule: f.Rule, Severity: f.Severity, Inconclusive: f.Inconclusive, Message: f.Message, Provenance: f.Prov, Datasheets: datasheetCitationProtos(f.DatasheetProv), Context: contextSubjectProtos(f.Context)}
+	return &checkspb.Finding{Subject: subjectProto(f.Subject), Rule: f.Rule, Severity: f.Severity, Inconclusive: f.Inconclusive, Message: f.Message, Provenance: f.Prov, Datasheets: datasheetCitationProtos(f.DatasheetProv), Context: contextSubjectProtos(f.Context), VerdictIds: f.VerdictIDs}
 }
 
 // contextSubjectProtos maps a finding's context entities to the wire form, PRESERVING ORDER, since
@@ -365,6 +365,34 @@ func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitat
 		VerifiedRevision: c.VerifiedRevision,
 		Corpus:           c.Corpus,
 	}
+}
+
+// FindingFromProto is the inverse of FindingProto, for a consumer that reads findings back off the
+// wire or out of a saved document: a review's items, `agni results`, a remote check. Sheets and
+// locate_reason are not read back, since the server fills them from the design's drawing and
+// check.Finding has no field for either.
+func FindingFromProto(p *checkspb.Finding) check.Finding {
+	return check.Finding{
+		Severity:      p.GetSeverity(),
+		Inconclusive:  p.GetInconclusive(),
+		Rule:          p.GetRule(),
+		Subject:       subjectFromProto(p.GetSubject()),
+		Message:       p.GetMessage(),
+		Prov:          p.GetProvenance(),
+		Context:       contextSubjectsFromProto(p.GetContext()),
+		DatasheetProv: datasheetCitationsFromProto(p.GetDatasheets()),
+		VerdictIDs:    p.GetVerdictIds(),
+	}
+}
+
+// FindingsFromProto maps a slice through FindingFromProto, preserving order. It returns an empty
+// slice rather than nil for no findings.
+func FindingsFromProto(ps []*checkspb.Finding) []check.Finding {
+	out := make([]check.Finding, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, FindingFromProto(p))
+	}
+	return out
 }
 
 // FindingProtos maps a slice of findings through FindingProto, preserving order (check.Run sorts by
@@ -522,9 +550,8 @@ func contextSubjectsFromProto(ps []*checkspb.ContextSubject) []check.ContextSubj
 	return out
 }
 
-// datasheetCitationsFromProto is the inverse of datasheetCitationProtos, needed because a Verdict
-// round-trips under C26. FindingProto has no inverse, so its field coverage is checked only by
-// review.
+// datasheetCitationsFromProto is the inverse of datasheetCitationProtos, needed because a Verdict and
+// a Finding each round-trip under C26.
 func datasheetCitationsFromProto(ps []*checkspb.DatasheetCitation) []*check.DatasheetCitation {
 	if len(ps) == 0 {
 		return nil

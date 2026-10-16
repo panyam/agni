@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -19,8 +20,12 @@ func reviewItem(id, title, outcome string, fs ...*checkspb.Finding) *checkspb.Re
 	return &checkspb.ReviewItem{Id: id, Title: title, Outcome: outcome, Findings: fs}
 }
 
+// netFinding is a finding from a rule that states its considered set, so it names its verdict as a
+// check run stamps it.
 func netFinding(rule, net, msg string) *checkspb.Finding {
-	return &checkspb.Finding{Rule: rule, Subject: &checkspb.Subject{Kind: check.KindNet, Ref: net}, Message: msg}
+	subject := check.Entity{Kind: check.KindNet, Ref: net}
+	return &checkspb.Finding{Rule: rule, Subject: &checkspb.Subject{Kind: check.KindNet, Ref: net}, Message: msg,
+		VerdictIds: []string{check.VerdictID(check.Verdict{Rule: rule, Subjects: []check.Entity{subject}})}}
 }
 
 // twoAreas is a run whose areas and items are NOT in alphabetical or worst-first order, so a
@@ -156,5 +161,31 @@ func TestRenderReviewReportNeedsAReview(t *testing.T) {
 	svc := NewReviewService(nil, nil, check.DefaultCatalog(), nil, nil, testReviewEnv, "", nil)
 	if _, err := svc.RenderReviewReport(context.Background(), &webapi.RenderReviewReportRequest{}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("err = %v, want an invalid argument", err)
+	}
+}
+
+// TestChecklistLinksTheFindingsOwnVerdict guards agni issue 485. The link names the verdict id the
+// finding carries, which for a tuple-keyed rule is not what its subject alone would spell, and a
+// finding that carries no id, from a rule that states no considered set, gets no link at all.
+func TestChecklistLinksTheFindingsOwnVerdict(t *testing.T) {
+	tuple := netFinding("copper-clearance", "CAN1_CANH", "too close to I2C_SCL")
+	tuple.VerdictIds = []string{"copper-clearance:(net:CAN1_CANH,net:I2C_SCL)", "copper-clearance:(net:CAN1_CANH,net:I2C_SDA)"}
+	bare := &checkspb.Finding{Rule: "query/unterminated", Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "CANH"}, Message: "no terminator"}
+	doc := &checkspb.CheckResults{Areas: []*checkspb.ReviewArea{{
+		Name:  "Interfaces",
+		Items: []*checkspb.ReviewItem{reviewItem("I1", "CAN routes apart", "fail", tuple, bare)},
+	}}}
+	got := ChecklistOf(doc, report.Checklist{URLBase: "http://localhost:8080", MountPath: "gw/board.edn"}).Areas[0].Items[0].Evidence
+	if len(got) != 2 {
+		t.Fatalf("evidence rows = %d, want 2", len(got))
+	}
+	if want := "verdict=" + url.QueryEscape(tuple.VerdictIds[0]); !strings.Contains(got[0].URL, want) {
+		t.Errorf("tuple finding linked to %q, want one carrying %s", got[0].URL, want)
+	}
+	if got[1].URL != "" {
+		t.Errorf("a finding with no verdict id linked to %q, want no link", got[1].URL)
+	}
+	if got[1].Message != "no terminator" {
+		t.Errorf("the unlinked row lost its message: %+v", got[1])
 	}
 }

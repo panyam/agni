@@ -502,7 +502,17 @@ type Finding struct {
 	// partitions the findings, which is what makes "the union of what I clicked equals the full pass"
 	// a fact rather than a hope (agni issue 259), and counting a finding under two entities would break
 	// that. Context makes the finding REACHABLE from the other entity; it does not make it ABOUT it.
-	Context       []*ContextSubject `protobuf:"bytes,11,rep,name=context,proto3" json:"context,omitempty"`
+	Context []*ContextSubject `protobuf:"bytes,11,rep,name=context,proto3" json:"context,omitempty"`
+	// verdict_ids names the verdicts this finding was projected from, each spelled as check.VerdictID
+	// computes it (`<rule>:(<kind>:<ref>,...)`), so a consumer holding only the finding, such as a
+	// review item, links to the proof by a real id (agni issue 485). A verdict id is not recoverable
+	// from the finding's subject and context, since a verdict may be keyed on a tuple, on an entity the
+	// finding lists as context, or on an element such as a signal that no finding field can hold.
+	//
+	// Empty when the rule states no considered set, because such a rule publishes no verdicts and an id
+	// would name nothing a viewer can resolve. A finding from a check run carries one id; the field is
+	// repeated so a consumer that folds findings together keeps every id.
+	VerdictIds    []string `protobuf:"bytes,12,rep,name=verdict_ids,json=verdictIds,proto3" json:"verdict_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -603,6 +613,13 @@ func (x *Finding) GetDatasheets() []*DatasheetCitation {
 func (x *Finding) GetContext() []*ContextSubject {
 	if x != nil {
 		return x.Context
+	}
+	return nil
+}
+
+func (x *Finding) GetVerdictIds() []string {
+	if x != nil {
+		return x.VerdictIds
 	}
 	return nil
 }
@@ -2524,7 +2541,7 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"confidence\x12\"\n" +
 	"\fverification\x18\a \x01(\tR\fverification\x12+\n" +
 	"\x11verified_revision\x18\b \x01(\tR\x10verifiedRevision\x12\x16\n" +
-	"\x06corpus\x18\t \x01(\tR\x06corpus\"\xba\x03\n" +
+	"\x06corpus\x18\t \x01(\tR\x06corpus\"\xdb\x03\n" +
 	"\aFinding\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x121\n" +
@@ -2540,7 +2557,9 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\n" +
 	"datasheets\x18\b \x03(\v2!.agni.v1.checks.DatasheetCitationR\n" +
 	"datasheets\x128\n" +
-	"\acontext\x18\v \x03(\v2\x1e.agni.v1.checks.ContextSubjectR\acontext\"9\n" +
+	"\acontext\x18\v \x03(\v2\x1e.agni.v1.checks.ContextSubjectR\acontext\x12\x1f\n" +
+	"\vverdict_ids\x18\f \x03(\tR\n" +
+	"verdictIds\"9\n" +
 	"\vWitnessTerm\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\"\x9b\x01\n" +

@@ -282,6 +282,15 @@ is the verdict's identity, and a finding's subject is the one entity a reader ha
 else the finding names is in its `context`, which is where a consumer that wants equal standing across
 all of them looks.
 
+**A finding names the verdict it came from in `Finding.verdict_ids`** (agni 485), because the id is not
+recoverable from the finding. A clearance verdict is keyed on two nets and its finding on one, a
+supply verdict can be keyed on a pin the finding lists only as context, and a profile's verdict is
+keyed on a `signal:` element no finding field can hold. The run stamps the id where it holds both the
+verdict and the finding it projects, so a consumer holding only findings, such as a review item, links
+to the real proof. A finding from a check run carries one id; the field is a list so a consumer that
+folds findings together keeps them all. It is empty for a rule that states no considered set, since
+that rule publishes no verdicts and an id would name nothing, and such a finding gets no link.
+
 ### `Verdict.id` is derived, never assigned
 
 `"<rule>:(<kind>:<ref>,...)"`, computed from the verdict rather than handed to it, so a CLI run and a

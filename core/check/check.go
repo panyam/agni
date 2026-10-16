@@ -56,6 +56,13 @@ type Finding struct {
 	// (review.isUnratified), since one weak input weakens the whole conclusion. Across findings the
 	// quantifier flips, and one trustworthy finding makes the item a Fail.
 	DatasheetProv []*DatasheetCitation
+	// VerdictIDs names the verdict or verdicts this finding was projected from, each spelled as
+	// VerdictID computes it, so a consumer holding only the finding can link to the proof (agni issue
+	// 485). A verdict id is not recoverable from a Finding, since the verdict may be keyed on a tuple,
+	// on a context entity, or on an element such as a signal that a finding cannot name. The run stamps
+	// it where it holds both. Empty for a rule that states no considered set, because that rule's
+	// verdicts are never published and an id would name nothing a viewer can resolve.
+	VerdictIDs []string
 }
 
 // ContextSubject is one entity a finding's message names but is not about, with the part it plays.
@@ -386,7 +393,7 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 		evaluated := r.Eval(ctx, m)
 		ruled(r.Name)
 		if wantFindings && !gated {
-			for _, f := range VerdictsToFindings(evaluated) {
+			for _, f := range findingsOf(r, evaluated) {
 				f.Rule, f.Severity = r.Name, r.Severity
 				stampCorpus(m, f.DatasheetProv)
 				fs = append(fs, f)
