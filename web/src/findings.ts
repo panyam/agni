@@ -294,10 +294,12 @@ export type FindingSortKey = "severity" | "rule" | "subject";
 
 const SEV_RANK: Record<string, number> = { error: 0, warning: 1, info: 2 };
 
-// severityRank orders severities worst-first (error 0, warning 1, info 2, unknown last), matching the
-// server report's section order (GetCheckReport) so the client severity view cannot reorder it.
+// severityRank orders severities worst-first (unknown -1, error 0, warning 1, info 2), as the
+// engine's report does (core/results.SeverityRank): a severity this build does not recognise leads,
+// so a provider's custom level is never buried below the defects it may be worse than (agni issue
+// 1045). core/results/testdata/severity_twin.json holds the two to one order.
 export function severityRank(sev: string): number {
-  return SEV_RANK[sev] ?? 3;
+  return SEV_RANK[sev] ?? -1;
 }
 
 // findingRank orders one finding for the severity column, as severityRank plus what a severity
@@ -325,15 +327,23 @@ export function sortFindings(items: FindingItem[], key: FindingSortKey, dir: 1 |
   return [...items].sort(cmp);
 }
 
-// severitySections projects findings into worst-first [severity, count] tiers, the same shape and
-// order as the server report's sections (GetCheckReport). It is the parity oracle for that report, and
-// a test pins it against reportFromWire so the two cannot drift (WS3-022).
+// severitySections projects findings into worst-first [severity, count] tiers, the shape and order
+// of the engine report's sections (core/results.Pivot): severities by severityRank, ties by name, then
+// UNRESOLVED_GROUP holding every inconclusive finding. findings.test.ts and core/results read one
+// fixture, testdata/severity_twin.json, so the panel's ranking and the report's cannot drift (WS3-022,
+// agni issue 1045).
 export function severitySections(items: FindingItem[]): { severity: string; count: number }[] {
   const counts = new Map<string, number>();
-  for (const f of items) counts.set(f.severity, (counts.get(f.severity) ?? 0) + 1);
-  return [...counts.entries()]
+  let unresolved = 0;
+  for (const f of items) {
+    if (f.inconclusive) unresolved++;
+    else counts.set(f.severity, (counts.get(f.severity) ?? 0) + 1);
+  }
+  const out = [...counts.entries()]
     .map(([severity, count]) => ({ severity, count }))
-    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
+    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity) || cmpStr(a.severity, b.severity));
+  if (unresolved > 0) out.push({ severity: UNRESOLVED_GROUP, count: unresolved });
+  return out;
 }
 
 // HighlightSubject is the minimal shape subjectsToSpecs needs, an entity ref, its kind, and (for a

@@ -2377,9 +2377,12 @@ func (x *RuleRecord) GetTags() map[string]string {
 }
 
 type CheckReport_SeveritySection struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Severity      string                   `protobuf:"bytes,1,opt,name=severity,proto3" json:"severity,omitempty"` // "error" | "warning" | "info" (worst first in `sections`)
-	Count         int32                    `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`      // findings in this section, for the summary table
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// severity is "error" | "warning" | "info", worst first in `sections` with an unrecognized
+	// severity ahead of error, and then "unresolved", the section holding every inconclusive finding
+	// whatever severity it carries, since a rule that declined to decide is not a defect.
+	Severity      string                   `protobuf:"bytes,1,opt,name=severity,proto3" json:"severity,omitempty"`
+	Count         int32                    `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"` // findings in this section, for the summary table
 	Rules         []*CheckReport_RuleGroup `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
