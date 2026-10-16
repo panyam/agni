@@ -336,7 +336,8 @@
     .query-input.hidden { display: none; }
     /* The query panel's own tab strip (agni issue 902), one tab per question. It scrolls sideways
        rather than wrapping or clipping when many are open. */
-    .query-tabs { flex: 0 0 auto; display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; border-bottom: 1px solid #ddd; margin-bottom: 6px; scrollbar-width: thin; }
+    .query-tabbar { flex: 0 0 auto; display: flex; align-items: flex-end; gap: 6px; border-bottom: 1px solid #ddd; margin-bottom: 6px; }
+    .query-tabs { flex: 1 1 auto; min-width: 0; display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; scrollbar-width: thin; }
     .query-tab { flex: 0 0 auto; display: inline-flex; align-items: center; max-width: 260px; border: 1px solid #ddd; border-bottom: none; border-radius: 4px 4px 0 0; background: #f4f4f5; margin-bottom: -1px; }
     .query-tab.on { background: #fff; border-color: #ccc; }
     .query-tab-go { font: inherit; font-size: 11px; padding: 3px 8px; border: none; background: none; color: #555; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -346,6 +347,16 @@
     .query-tab-close:hover { color: #c00; }
     .query-tab-new { flex: 0 0 auto; font: inherit; font-size: 13px; line-height: 1; padding: 2px 8px 3px; margin-bottom: 1px; border: 1px solid transparent; border-radius: 4px; background: none; color: #555; cursor: pointer; }
     .query-tab-new:hover { background: #ececec; }
+    /* The Sets menu (agni issue 745): a project's query sets, and a set file from disk. */
+    .query-sets { position: relative; flex: 0 0 auto; margin-bottom: 2px; }
+    .query-sets-open { font: inherit; font-size: 11px; padding: 2px 8px; border: 1px solid #ccc; border-radius: 4px; background: #f6f6f6; color: #444; cursor: pointer; }
+    .query-sets-open:hover { background: #ececec; }
+    .query-sets-menu { position: absolute; right: 0; top: calc(100% + 2px); z-index: 20; min-width: 220px; display: flex; flex-direction: column; padding: 4px; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+    .query-set-item, .query-set-file { font: inherit; font-size: 12px; text-align: left; padding: 4px 8px; border: none; background: none; color: #222; cursor: pointer; border-radius: 3px; }
+    .query-set-item:hover, .query-set-file:hover { background: #eef2ff; }
+    .query-set-file { color: #2563eb; border-top: 1px solid #eee; margin-top: 2px; }
+    .query-set-count { color: #999; }
+    .query-sets-none { font-size: 12px; color: #888; padding: 4px 8px; }
     .query-modes { flex: 0 0 auto; display: flex; gap: 4px; margin-bottom: 4px; }
     .query-mode { font: inherit; font-size: 11px; padding: 2px 10px; border: 1px solid #ccc; background: #f6f6f6; color: #666; border-radius: 4px 4px 0 0; border-bottom-color: transparent; cursor: pointer; }
     .query-mode:hover:not(.on) { background: #ececec; }

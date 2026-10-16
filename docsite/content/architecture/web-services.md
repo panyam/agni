@@ -36,6 +36,8 @@ documents are independent concerns with independent cadences.
 | Query | RunQuery | evaluate an ad-hoc datalog query over the design's fact base, returning columns and provenance-linked rows, the same engine as `agni query` |
 | Query | RunQueries | a named set of queries over one read of the design, each result shaped as RunQuery would return it |
 | Query | ListRelations | the relation catalog with arg labels, summary, and kind, driving the panel's click-to-insert picker |
+| Query | ListQuerySets | the query sets the design's project keeps in `queries/`, inherited ones first, each parsed |
+| Query | ParseQuerySet | a set file's text read into the QuerySet RunQueries takes, for a caller with no parser of its own |
 | Review | GetReviewManifest | resolve a checklist file into a manifest value, parsed and validated |
 | Review | CreateReview | run a checklist against one design and store the result, returning the stored run |
 | Review | GetReview | one stored run, by resource name |

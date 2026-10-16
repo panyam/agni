@@ -5,6 +5,7 @@ import {
   type EntityQueryItem,
   type ExampleItem,
   type QueryResult,
+  type QuerySetItem,
   type QueryView,
   type RelationItem,
   type SearchItem,
@@ -14,6 +15,7 @@ import {
   bindingsInUse,
   formatBinding,
   searchBindings,
+  tabsFromSet,
   groupRelations,
   relationTemplate,
   STARTING_POINT_LIMIT,
@@ -29,6 +31,7 @@ import {
 import { renderMarkdown } from "./markdown.js";
 import { type Selection, entityBindings, labelFor, sameSelection, selectionFromCell } from "./selection.js";
 import { SheetBadges } from "./sheetbadges.jsx";
+import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
 import { type Located, type TabStrip, activeTab, askTitle, blankTab, closeTab, openTab, updateTab } from "./querytabs.js";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
@@ -150,6 +153,13 @@ function QueryPanel(props: {
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
   onActivate: (tab: string, located: Located | undefined, previous: Located | undefined) => void;
   onClose: (tab: string) => void;
+  // querySets are the sets the design's project keeps, offered in the Sets menu.
+  querySets: () => QuerySetItem[];
+  // onRunSet answers a set opened as tabs, one tab id per query in the set's order.
+  onRunSet: (set: QuerySet, tabs: string[]) => void;
+  // onSetFile hands over a set file the reader picked, for the host to parse and open.
+  onSetFile?: (name: string, text: string) => void;
+  registerOpenSet?: (open: (set: QuerySet) => void) => void;
   // registerAsk hands the island the panel's askAbout, so a question asked from elsewhere (the
   // Properties panel's Ask rows) opens its tab exactly as the panel's own ask button does.
   registerAsk?: (ask: (sel: Selection, question?: EntityQueryItem) => void) => void;
@@ -197,6 +207,37 @@ function QueryPanel(props: {
     props.setLocateNote("");
     props.onActivate(id, undefined, previous);
     queueMicrotask(() => taRef?.focus());
+  };
+  // openSet opens one tab per query of a set, after the tab in front and in the set's order, brings
+  // the first forward, and asks the host to answer all of them over one read.
+  const openSet = (set: QuerySet) => {
+    const tabs = tabsFromSet(set);
+    if (tabs.length === 0) return;
+    const previous = front().located;
+    const ids: string[] = [];
+    let strip = props.strip();
+    for (const t of tabs) {
+      const id = props.newTabId();
+      ids.push(id);
+      strip = openTab(strip, { ...blankTab(id, t.title), text: t.text, bindings: t.bindings, lastRun: { text: t.text, bindings: t.bindings } });
+    }
+    props.setStrip({ ...strip, active: ids[0] });
+    resetForRun();
+    setMode("query");
+    setSetsOpen(false);
+    props.setLocateNote("");
+    props.onActivate(ids[0], undefined, previous);
+    props.onRunSet(set, ids);
+  };
+  props.registerOpenSet?.(openSet);
+  // setsOpen shows the Sets menu: the project's sets, and a set file from disk.
+  const [setsOpen, setSetsOpen] = createSignal(false);
+  let fileRef: HTMLInputElement | undefined;
+  const pickFile = async (f: File | undefined) => {
+    setSetsOpen(false);
+    if (!f || !props.onSetFile) return;
+    props.onSetFile(f.name, await f.text());
+    if (fileRef) fileRef.value = "";
   };
   // activate brings a tab forward. The host then shows what that tab last located, so the canvas
   // matches the answer in front.
@@ -465,34 +506,80 @@ function QueryPanel(props: {
     <div class="query">
       {/* The panel's own tab strip, one tab per question. A tab's close button hides while it is the
           last one, so the panel always shows one. */}
-      <div class="query-tabs" role="tablist" aria-label="Queries">
-        <For each={props.strip().tabs}>
-          {(t) => (
-            <span class="query-tab" classList={{ on: t.id === props.strip().active }}>
-              <button
-                type="button"
-                role="tab"
-                class="query-tab-go"
-                aria-selected={t.id === props.strip().active}
-                title={t.title}
-                onClick={() => activate(t.id)}
-              >
-                {t.title}
-                <Show when={props.results()[t.id]?.loading}>
-                  <span class="query-tab-busy" aria-label="running">…</span>
-                </Show>
-              </button>
-              <Show when={props.strip().tabs.length > 1}>
-                <button type="button" class="query-tab-close" aria-label={`Close ${t.title}`} title="Close" onClick={() => close(t.id)}>
-                  ×
+      <div class="query-tabbar">
+        <div class="query-tabs" role="tablist" aria-label="Queries">
+          <For each={props.strip().tabs}>
+            {(t) => (
+              <span class="query-tab" classList={{ on: t.id === props.strip().active }}>
+                <button
+                  type="button"
+                  role="tab"
+                  class="query-tab-go"
+                  aria-selected={t.id === props.strip().active}
+                  title={t.title}
+                  onClick={() => activate(t.id)}
+                >
+                  {t.title}
+                  <Show when={props.results()[t.id]?.loading}>
+                    <span class="query-tab-busy" aria-label="running">…</span>
+                  </Show>
                 </button>
-              </Show>
-            </span>
-          )}
-        </For>
-        <button type="button" class="query-tab-new" aria-label="New query" title="New query" onClick={newBlank}>
-          +
-        </button>
+                <Show when={props.strip().tabs.length > 1}>
+                  <button type="button" class="query-tab-close" aria-label={`Close ${t.title}`} title="Close" onClick={() => close(t.id)}>
+                    ×
+                  </button>
+                </Show>
+              </span>
+            )}
+          </For>
+          <button type="button" class="query-tab-new" aria-label="New query" title="New query" onClick={newBlank}>
+            +
+          </button>
+        </div>
+        {/* Opening a query set (agni issue 745) opens one tab per query. The menu lists the sets the
+            design's project keeps in queries/, and takes a set file from disk. */}
+        <Show when={props.querySets().length > 0 || props.onSetFile}>
+          <span class="query-sets">
+            <button
+              type="button"
+              class="query-sets-open"
+              aria-haspopup="menu"
+              aria-expanded={setsOpen()}
+              title="Open a query set as one tab per query"
+              onClick={() => setSetsOpen(!setsOpen())}
+            >
+              Sets ▾
+            </button>
+            <Show when={setsOpen()}>
+              <div class="query-sets-menu" role="menu">
+                <For each={props.querySets()}>
+                  {(s) => (
+                    <button type="button" role="menuitem" class="query-set-item" title={s.source} onClick={() => openSet(s.set)}>
+                      {s.set.title || s.name}
+                      <span class="query-set-count"> ({s.set.queries.length})</span>
+                    </button>
+                  )}
+                </For>
+                <Show when={props.querySets().length === 0}>
+                  <div class="query-sets-none">This design's project keeps no query sets.</div>
+                </Show>
+                <Show when={props.onSetFile}>
+                  <button type="button" role="menuitem" class="query-set-file" onClick={() => fileRef?.click()}>
+                    From a file…
+                  </button>
+                </Show>
+              </div>
+            </Show>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".yaml,.yml"
+              class="query-set-input"
+              hidden
+              onChange={(e) => void pickFile(e.currentTarget.files?.[0])}
+            />
+          </span>
+        </Show>
       </div>
 
       {/* The mode tabs appear only once the server has sent a search template, since without one a
@@ -926,6 +1013,11 @@ export function queryPanelIsland(
     onActivate?: (tab: string, located: Located | undefined, previous: Located | undefined) => void;
     // onClose says a tab closed, so the host can drop the answer it kept for it.
     onClose?: (tab: string) => void;
+    // onRunSet answers a set the panel opened as tabs, one tab id per query in the set's order.
+    onRunSet?: (set: QuerySet, tabs: string[]) => void;
+    // onSetFile hands over a set file the reader picked, for the host to parse and pass back through
+    // view.openSet. Absent, the Sets menu offers no file.
+    onSetFile?: (name: string, text: string) => void;
   },
 ): { island: SolidIsland; view: QueryView } {
   // results holds each tab's answer by tab id, so an answer that arrives after the reader moved to
@@ -959,6 +1051,8 @@ export function queryPanelIsland(
   const onLocate = handlers.onLocate ?? (() => {});
   const onInspect = handlers.onInspect ?? (() => {});
   let askHook: (sel: Selection, question?: EntityQueryItem) => void = () => {};
+  let openSetHook: (set: QuerySet) => void = () => {};
+  const [querySets, setQuerySets] = signalView<QuerySetItem[]>([]);
   // A fresh answer for the tab in front clears any stale locate note from its previous run.
   const setTabState = (s: QueryResult, tab?: string) => {
     const id = tab ?? strip().active;
@@ -999,6 +1093,10 @@ export function queryPanelIsland(
           handlers.onClose?.(tab);
         }}
         registerAsk={(ask) => (askHook = ask)}
+        querySets={querySets}
+        onRunSet={handlers.onRunSet ?? (() => {})}
+        onSetFile={handlers.onSetFile}
+        registerOpenSet={(open) => (openSetHook = open)}
       />
     ),
     eventBus,
@@ -1022,6 +1120,8 @@ export function queryPanelIsland(
         setSelection(sel);
         askHook(sel, question);
       },
+      setQuerySets,
+      openSet: (set: QuerySet) => openSetHook(set),
     },
   };
 }

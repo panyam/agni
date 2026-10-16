@@ -69,9 +69,9 @@ companions:
 A project's naming vocabulary and its checklists are sections of `project.yaml`. `conventions` is
 bound to the `config.NamingConvention` proto, the schema a standalone `--conventions` file also
 uses, and `checklists` maps a name to a review manifest. Its interface profiles, seeded parameters,
-symbol libraries and derived relations are directories found beside the descriptor by their
-conventional names (`profiles/`, `params/`, `symbols/`, `lib/`), and the descriptor can name a
-different directory for any of them or opt out with an empty value.
+symbol libraries, derived relations and query sets are directories found beside the descriptor by
+their conventional names (`profiles/`, `params/`, `symbols/`, `lib/`, `queries/`), and the
+descriptor can name a different directory for any of them or opt out with an empty value.
 
 **The first checklist written is the project's default**, the one `agni review <design>` runs when
 no `--checklist` is given, and the CLI says which it ran. `--checklist` takes a name or a file. A
@@ -389,6 +389,14 @@ still brings its own config, its `symbols/` library and its `intent:`, which com
 design's own name exactly as they would under a project (agni issue 887). Until that fix a
 projectless design applied its companions and silently dropped both, so a dropped folder drew its
 schematic with every externally-symboled part missing.
+
+**A project's query sets resolve through the same edge and change no run** (agni issue 745).
+`queries/` holds one set per `.yaml` file in the shape `agni query --set` reads, travels as
+`query_set_uris`, and is parsed by the config resolver into `ResolvedConfig.QuerySets`.
+`QueryService.ListQuerySets` lists them, inherited ones first, by resolving that tier alone, so a
+broken profile or library cannot hide a project's sets. The viewer's Sets menu and `agni query --set
+<name>` both read that list. A set file that does not parse fails the listing and names the file,
+since leaving it out would read as the project keeping no such set.
 
 **A project's own library of derived relations resolves through the same edge** (agni issue 773).
 `lib/` beside `project.yaml` is discovered like `profiles/`, travels as `library_uris`, and is read

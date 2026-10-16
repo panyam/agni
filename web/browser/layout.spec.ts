@@ -449,6 +449,37 @@ describe("Properties", () => {
     });
   }, 90_000);
 
+  // agni issue 745. A project's query set opens from the Sets menu as one tab per query, and a set
+  // file from disk does too, with a query the engine cannot answer showing its error in its own tab.
+  // The menu sits beside the tab strip, which scrolls, so this also proves it is painted unclipped.
+  it("opens a project's query set, and a set file, as one tab per query", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await growQueryPanel(page);
+      await page.click(".query-sets-open");
+      await page.waitForSelector(".query-set-item", { timeout: 30_000 });
+      expect((await paintedAt(page, ".query-set-item")).ownedByProbe).toBe(true);
+      expect(await page.locator(".query-set-item").innerText()).toBe("Power review (3)");
+      await page.click(".query-set-item");
+      await page.waitForSelector(".query-row", { timeout: 30_000 });
+      const titles = () => page.$$eval(".query-tab-go", (bs) => bs.map((b) => b.getAttribute("title")));
+      expect(await titles()).toEqual(["Query 1", "Rails", "Rails with no test point", "Regulator power pins"]);
+      expect(await page.locator(".query-row").count()).toBeGreaterThan(0);
+
+      await page.click(".query-sets-open");
+      await page.setInputFiles(".query-set-input", {
+        name: "mixed.yaml",
+        mimeType: "text/yaml",
+        buffer: Buffer.from("queries:\n  - name: Good\n    query: net.rail(?n) => ?n\n  - name: Typo\n    query: net.rial(?n) => ?n\n"),
+      });
+      await page.waitForFunction(() => document.querySelector(".query-tab.on .query-tab-go")?.getAttribute("title") === "Good", null, { timeout: 30_000 });
+      await page.waitForSelector(".query-row", { timeout: 30_000 });
+      await page.click('.query-tab-go[title="Typo"]');
+      await page.waitForSelector(".query-error", { timeout: 30_000 });
+      expect(await page.locator(".query-error").innerText()).toContain("net.rial");
+    });
+  }, 90_000);
+
   it("selects the sheet for a click on empty paper", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway");

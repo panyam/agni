@@ -525,6 +525,16 @@ class AppRoot extends BaseComponent {
         else if (previous) void presenter.releaseFocus();
       },
       onClose: (tab) => presenter.forgetQueryTab(tab),
+      onRunSet: (set, tabs) => void presenter.runQuerySet(set, tabs),
+      // A set file from disk is parsed by the engine, which checks it as `agni query --set` does, so
+      // the browser holds no YAML parser of its own (C22).
+      onSetFile: (name, text) =>
+        void queryClient()
+          .parseQuerySet({ text })
+          .then((r) => {
+            if (r.set) query.view.openSet(r.set.title ? r.set : { ...r.set, title: name });
+          })
+          .catch((e: unknown) => query.view.setLocateNote(`${name}: ${e instanceof Error ? e.message : String(e)}`)),
       onLocate: (kind, subject, sheet, reason, pin) => {
         void presenter.locateEntity(kind, subject, sheet, reason, pin ?? "");
         // A located cell is also selected, so Properties follows the walk through an answer. A pin
