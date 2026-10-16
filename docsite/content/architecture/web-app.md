@@ -157,6 +157,11 @@ the keys it already holds, with no round-trip, and the Go and TypeScript resolve
 twinned test fixture so a divergence fails a test on both sides. The SVG path fetches the overlay document
 and stacks it over the same frame.
 
+After a check run the drawing shows nothing until a finding is focused (agni issue 356). Every
+finding at once, the run-wide field, is the reader's opt-in (Highlight › Show every finding, kept in
+`localStorage`), and a focus stacks over it as muted context when it is on. The presenter reads the
+field through one helper, `field()`, so every path that paints it honours the choice.
+
 ## The client
 
 - **The presenter is a humble object.** It owns the semantic loop (open a file, get its sheets,

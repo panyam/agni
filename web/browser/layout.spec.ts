@@ -246,6 +246,11 @@ describe("highlight layers", () => {
       // and hidden, so an unscoped selector waits forever on the wrong one.
       await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
 
+      // The field is opt-in (agni issue 356), so the reader turns it on in the Highlight menu.
+      await page.click(".highlight-btn");
+      await page.check(".highlight-show-all");
+      await page.click(".highlight-btn");
+
       await page.click(".checks-run");
       // This design raises 12 findings across two rules, so there is a field for a focus to sit in.
       // With one finding the base would be empty and the test would pass on a single layer.
@@ -282,6 +287,29 @@ describe("highlight layers", () => {
       });
 
       expect(strokes.length, `the overlay painted one color for both layers: ${strokes.join(", ")}`).toBeGreaterThan(1);
+    });
+  }, 120_000);
+});
+
+// agni issue 356: a run lights nothing until a finding is clicked, so a sheet with dozens of findings
+// is not a wash of the focus colour before the reader has chosen anything.
+describe("the run-wide field", () => {
+  it("is off after a run, and a clicked finding is drawn", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
+      await page.click(".render-mode .mode-btn:nth-of-type(2)");
+      await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
+      await page.click(".checks-run");
+      await page.waitForSelector(".check-locate", { timeout: 30_000 });
+      expect(await page.locator(".check-locate").count()).toBeGreaterThan(1);
+      // Give a field the same time a focus takes to land, so an empty overlay is not just a slow one.
+      await page.waitForTimeout(1500);
+      expect(await page.locator("#svg-view .highlight-overlay svg *").count()).toBe(0);
+
+      const focus = page.locator(".check-locate", { hasText: "DATA0" }).first();
+      await expect.poll(() => focus.count(), { timeout: 30_000 }).toBeGreaterThan(0);
+      await focus.click();
+      await page.waitForFunction(() => document.querySelectorAll("#svg-view .highlight-overlay svg *").length > 0, null, { timeout: 30_000 });
     });
   }, 120_000);
 });
