@@ -409,6 +409,46 @@ describe("Properties", () => {
     });
   }, 90_000);
 
+  // Each Ask row opens a tab of its own, and the drawing follows the tab in front: a tab that located
+  // a cell shows it again when it comes back, and one that located nothing shows no cell.
+  it("opens an Ask row in a named tab, and the tab in front drives the highlight", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.fill("textarea.query-text", "net.rail(?n) => ?n");
+      const at = await page.evaluate(() => {
+        const r = document.querySelector('#svg-view [data-kind="component"][data-ref="U1"]')!.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      });
+      await page.mouse.click(at.x, at.y);
+      await page.waitForSelector(".pr-ask-go", { timeout: 30_000 });
+      const asks = await page.$$eval(".pr-ask-go", (bs) => bs.map((b) => b.textContent));
+      expect(asks.length).toBeGreaterThan(1);
+
+      await page.click('.pr-ask-go:has-text("What nets does it touch?")');
+      const front = page.locator(".query-tab.on .query-tab-go");
+      await page.waitForFunction(() => document.querySelector(".query-tab.on .query-tab-go")?.textContent === "U1: What nets does it touch?", null, {
+        timeout: 30_000,
+      });
+      expect((await paintedAt(page, ".query-tab.on .query-tab-go")).ownedByProbe).toBe(true);
+      await growQueryPanel(page);
+      await page.waitForSelector('.query-row .query-locate:has-text("GND")', { timeout: 30_000 });
+
+      await page.click('.query-row .query-locate:has-text("GND")');
+      await page.waitForFunction(() => document.querySelectorAll("#svg-view .highlight-overlay svg *").length > 0, null, { timeout: 30_000 });
+
+      // Query 1 still holds the typed query, located nothing, and no checks have run, so the
+      // drawing carries no highlight at all while it is in front.
+      await page.click('.query-tab-go:has-text("Query 1")');
+      await page.waitForFunction(() => document.querySelectorAll("#svg-view .highlight-overlay svg *").length === 0, null, { timeout: 30_000 });
+      expect(await page.inputValue("textarea.query-text")).toBe("net.rail(?n) => ?n");
+
+      await page.click('.query-tab-go:has-text("U1: What nets does it touch?")');
+      await page.waitForFunction(() => document.querySelectorAll("#svg-view .highlight-overlay svg *").length > 0, null, { timeout: 30_000 });
+      expect(await front.innerText()).toBe("U1: What nets does it touch?");
+      expect(await page.locator(".query-locate.on").first().innerText()).toBe("GND");
+    });
+  }, 90_000);
+
   it("selects the sheet for a click on empty paper", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway");

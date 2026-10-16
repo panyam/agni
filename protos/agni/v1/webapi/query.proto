@@ -301,8 +301,9 @@ message ExampleQuery {
   string teaches = 3;
 }
 
-// EntityQuery is the preset a viewer runs when the reader CLICKS an entity in the drawing: the
-// datalog that asks what is known about a pin, a component, a net or a bus.
+// EntityQuery is one question a viewer offers about a selected entity: the datalog that asks
+// something about a pin, a component, a net or a bus. A kind has several, which the viewer lists
+// as the Properties panel's Ask rows, each opening a query tab of its own (agni issue 902).
 //
 // It is served rather than held in the browser because every preset names relations defined on this
 // side. A client-held template would be the one caller nothing checks — renaming a relation would go
@@ -320,6 +321,9 @@ message EntityQuery {
   // also the selection field that fills it: ref, pin, net or bus. It is explicit because one
   // preset's input is another's output (the pin preset answers ?net, the net preset asks about one).
   repeated string binds = 4;
+  // label is the question as an Ask row words it ("Which test points reach its nets?"), unique
+  // within its kind. The first question of a kind is its default.
+  string label = 5;
 }
 
 // SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
@@ -347,7 +351,7 @@ message ListRelationsResponse {
   // examples are runnable teaching queries in concept-ladder order (WS14-002), rendered as
   // click-to-run chips beside the relation picker.
   repeated ExampleQuery examples = 2;
-  // entity_queries are the click-to-ask presets, one per pickable entity kind (WS: canvas picking).
+  // entity_queries are the questions about a selected entity, several per kind, grouped by kind.
   repeated EntityQuery entity_queries = 3;
   // search_query is the find-by-name template the panel's search mode fills (agni issue 338).
   SearchQuery search_query = 4;

@@ -5,7 +5,7 @@
 // with asking a question and overwrote whatever the reader had typed. A click now selects, and this
 // module describes the selection from data the viewer already has: the design's own IR (one masked
 // GetDesign per open), the findings of the run on screen, and the datasheet join. Asking a question
-// about the selection is a separate act, the Ask row, which runs the served preset in the query panel.
+// about the selection is a separate act, an Ask row, which opens the served question in a query tab.
 //
 // Selection is a hierarchy with something always selected. The design is the root, the sheet on
 // screen is under it, and an entity (a component, net, pin or bus) is under the sheet it was picked
@@ -16,6 +16,7 @@ import { ClassSource, Role } from "./gen/agni/v1/ir/ir_pb.js";
 import type { PartSpec } from "./gen/agni/v1/param/param_pb.js";
 import type { ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { checkedState, findingsFor, type FindingItem, type FindingsState } from "./findings.js";
+import type { EntityQueryItem } from "./query.js";
 import { labelFor, type Selection } from "./selection.js";
 
 // Focus is what Properties describes. An entity carries the sheet it was picked on, so its breadcrumb
@@ -45,6 +46,9 @@ export interface Inventory {
   // pinName maps ref + PIN_SEP + designator to the pin's functional name off its part type, which is
   // what a datasheet calls it, beside the designator every other pin relation keys on.
   pinName: Map<string, string>;
+  // buses holds each bus a reader recorded, by label: the constructs it was drawn as and the member
+  // signals the reader could name. The netlist has no bus as such, so this is the read's own record.
+  buses: Map<string, { constructs: string[]; members: string[] }>;
 }
 
 // INVENTORY_PATHS is the read_mask for the one GetDesign Properties makes per open. It names the
@@ -69,6 +73,9 @@ export const INVENTORY_PATHS = [
   "design.libraries.parts.name",
   "design.libraries.parts.pins.designator",
   "design.libraries.parts.pins.name",
+  "design.input_diagnostics.unmodeled_buses.label",
+  "design.input_diagnostics.unmodeled_buses.kind",
+  "design.input_diagnostics.unmodeled_buses.members",
 ];
 
 // byDesignator orders pin designators the way a datasheet does, so pin 2 sorts before pin 10.
@@ -101,7 +108,16 @@ export function inventoryFromDesign(d: Design): Inventory {
     }
   }
   for (const list of pinsOf.values()) list.sort((a, b) => byDesignator(a.pin, b.pin));
-  return { components, nets, pinsOf, pinName };
+  const buses = new Map<string, { constructs: string[]; members: string[] }>();
+  for (const b of d.inputDiagnostics?.unmodeledBuses ?? []) {
+    if (!b.label) continue;
+    const at = buses.get(b.label) ?? { constructs: [], members: [] };
+    if (!at.constructs.includes(b.kind)) at.constructs.push(b.kind);
+    for (const m of b.members) if (!at.members.includes(m)) at.members.push(m);
+    buses.set(b.label, at);
+  }
+  for (const b of buses.values()) b.members.sort(byDesignator);
+  return { components, nets, pinsOf, pinName, buses };
 }
 
 // Datasheet is the datasheet section's outcome. The three a reader acts on differently are kept
@@ -119,11 +135,13 @@ export interface DatasheetJoin {
   parts: { refDes: string; mpn: string; spec: PartSpec | undefined; corpus?: string }[];
 }
 
-// Ref is one reference in a group. A target makes it clickable, and clicking moves the selection.
+// Ref is one reference in a group. A target makes it clickable, and clicking moves the selection to
+// that entity, or to that sheet for a sheet reference.
 export interface Ref {
   label: string;
   detail?: string;
   target?: Selection;
+  sheet?: string;
 }
 
 export interface Group {
@@ -153,8 +171,9 @@ export interface PropertiesState {
   datasheet?: Datasheet;
   // report is the auto-layout conversion report, shown at the design level as Details showed it.
   report?: ConversionReport | null;
-  // ask is the selection the Ask row asks about, absent where no served question exists.
-  ask?: Selection;
+  // ask is the selection the Ask rows ask about and the served questions for its kind, absent where
+  // nothing is selected that a question can bind.
+  ask?: { sel: Selection; questions: EntityQueryItem[] };
   // note explains a gap in what the panel can say, such as the inventory still loading.
   note?: string;
 }
@@ -172,6 +191,11 @@ export interface PropertiesInput {
   // drawn is what the sheet on screen draws, read off the rendered document, since a sheet's
   // membership is a property of its drawing rather than of the netlist.
   drawn: { refs: string[]; nets: string[] } | null;
+  // questions are the served questions about a selection, every kind's.
+  questions: EntityQueryItem[];
+  // drawnOn is the sheets the selected entity is drawn on, as the engine located it: null while that
+  // answer is on its way, and absent where nobody asks (a host with no engine to ask).
+  drawnOn?: string[] | null;
 }
 
 // propertiesFor derives the panel's state for one focus.
@@ -281,7 +305,18 @@ function sheetView(input: PropertiesInput, sheetId: string): Omit<PropertiesStat
 function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesState, "crumbs"> {
   const mine = input.findings ? findingsFor(input.findings.findings, [sel]) : [];
   const findingsGroup: Group = { name: "findings", refs: findingRefs(mine), empty: input.findings && checkedState(input.findings) === "complete" ? "none" : "not checked yet" };
-  const base = { kind: sel.kind, title: labelFor(sel), ask: sel };
+  const questions = input.questions.filter((q) => q.kind === sel.kind);
+  const base = { kind: sel.kind, title: labelFor(sel), ask: questions.length ? { sel, questions } : undefined };
+  const sheetsGroup: Group[] =
+    input.drawnOn === undefined
+      ? []
+      : [
+          {
+            name: "sheets",
+            refs: (input.drawnOn ?? []).map((id) => ({ label: sheetName(input, id), sheet: id })),
+            empty: input.drawnOn ? "drawn on no sheet" : "locating…",
+          },
+        ];
   const inv = input.inventory;
   const loading = inv ? undefined : "Reading the design…";
   switch (sel.kind) {
@@ -293,6 +328,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
         ...base,
         rows: c ? componentRows(c) : [],
         groups: [
+          ...sheetsGroup,
           { name: "pins", refs: pins.map((p) => pinRef(sel.ref ?? "", p)), empty: "no connected pins" },
           { name: "nets", refs: nets.map((n) => ({ label: n, target: { kind: "net", net: n } })), empty: "none" },
           findingsGroup,
@@ -311,6 +347,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
         ...base,
         rows: n ? netRows(n) : [],
         groups: [
+          ...sheetsGroup,
           {
             name: "pins",
             refs: conns.map((c) => ({
@@ -347,13 +384,26 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
         note: loading,
       };
     }
-    case "bus":
+    case "bus": {
+      const b = inv?.buses.get(sel.busId ?? "");
       return {
         ...base,
-        rows: [],
-        groups: [findingsGroup],
-        note: "A bus's members are not listed here yet.",
+        rows: b ? [{ label: "drawn as", value: b.constructs.join(", ") }] : [],
+        groups: [
+          {
+            name: "members",
+            // A member the netlist also names is a net to walk to. One it does not is the bus's own
+            // name for a signal the read never connected, which is worth seeing rather than hiding.
+            refs: (b?.members ?? []).map((m) =>
+              inv?.nets.has(m) ? { label: m, target: { kind: "net", net: m } } : { label: m, detail: "no net by this name" },
+            ),
+            empty: "the read recorded no members for this bus",
+          },
+          findingsGroup,
+        ],
+        note: loading ?? (b ? undefined : "The netlist read records no bus by this name, which happens when the drawing comes from a companion file."),
       };
+    }
   }
 }
 

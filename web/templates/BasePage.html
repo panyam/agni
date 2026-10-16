@@ -334,6 +334,18 @@
        unmounted so the textarea keeps its text and its scroll position across a trip through
        search mode; the reader who searched and came back finds the query they were writing. */
     .query-input.hidden { display: none; }
+    /* The query panel's own tab strip (agni issue 902), one tab per question. It scrolls sideways
+       rather than wrapping or clipping when many are open. */
+    .query-tabs { flex: 0 0 auto; display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; border-bottom: 1px solid #ddd; margin-bottom: 6px; scrollbar-width: thin; }
+    .query-tab { flex: 0 0 auto; display: inline-flex; align-items: center; max-width: 260px; border: 1px solid #ddd; border-bottom: none; border-radius: 4px 4px 0 0; background: #f4f4f5; margin-bottom: -1px; }
+    .query-tab.on { background: #fff; border-color: #ccc; }
+    .query-tab-go { font: inherit; font-size: 11px; padding: 3px 8px; border: none; background: none; color: #555; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .query-tab.on .query-tab-go { color: #222; font-weight: 600; }
+    .query-tab-busy { margin-left: 2px; color: #888; }
+    .query-tab-close { font: inherit; font-size: 12px; line-height: 1; padding: 0 6px 0 2px; border: none; background: none; color: #999; cursor: pointer; }
+    .query-tab-close:hover { color: #c00; }
+    .query-tab-new { flex: 0 0 auto; font: inherit; font-size: 13px; line-height: 1; padding: 2px 8px 3px; margin-bottom: 1px; border: 1px solid transparent; border-radius: 4px; background: none; color: #555; cursor: pointer; }
+    .query-tab-new:hover { background: #ececec; }
     .query-modes { flex: 0 0 auto; display: flex; gap: 4px; margin-bottom: 4px; }
     .query-mode { font: inherit; font-size: 11px; padding: 2px 10px; border: 1px solid #ccc; background: #f6f6f6; color: #666; border-radius: 4px 4px 0 0; border-bottom-color: transparent; cursor: pointer; }
     .query-mode:hover:not(.on) { background: #ececec; }
@@ -611,6 +623,7 @@
     .pr-ref-detail { color: #666; overflow-wrap: anywhere; }
     .pr-empty { color: #999; padding: 0 0 4px 14px; }
     .pr-ask-go { font: inherit; padding: 2px 8px; border: 1px solid #c7d2fe; border-radius: 3px; background: #eef2ff; color: #3730a3; cursor: pointer; }
+    .pr-ask { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
     .report-box { color: #a16207; }
     .report-unresolved { color: #b91c1c; }
     /* WS9-035 datasheet-params panel: one expandable row per datasheet-backed component */

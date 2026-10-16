@@ -64,6 +64,36 @@ describe("PropertiesPresenter", () => {
     expect(last().rows.find((r) => r.label === "nets")?.value).toBe("1");
   });
 
+  it("asks where a selected part is drawn, and drops an answer for a part no longer selected", async () => {
+    let releaseU1: (ids: string[]) => void = () => {};
+    const drawnOn = vi
+      .fn()
+      .mockReturnValueOnce(new Promise<string[]>((r) => (releaseU1 = r)))
+      .mockResolvedValueOnce(["s2"]);
+    const states: PropertiesState[] = [];
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign: async () => design("d", []), drawn: () => null, drawnOn });
+    const sheetsGroup = () => states[states.length - 1].groups.find((g) => g.name === "sheets");
+    p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
+    p.selectEntity({ kind: "component", ref: "U1" });
+    expect(sheetsGroup()?.empty).toBe("locating…");
+    p.selectEntity({ kind: "net", net: "VIN" });
+    await vi.waitFor(() => expect(sheetsGroup()?.refs).toEqual([{ label: "IO", sheet: "s2" }]));
+    releaseU1(["s1"]);
+    await Promise.resolve();
+    expect(states[states.length - 1].title).toBe("VIN");
+    expect(sheetsGroup()?.refs).toEqual([{ label: "IO", sheet: "s2" }]);
+    expect(drawnOn.mock.calls.map((c) => c[1])).toEqual([{ kind: "component", ref: "U1" }, { kind: "net", net: "VIN" }]);
+    expect(drawnOn.mock.calls[0][0]).toBe("mount://m/d");
+  });
+
+  it("offers the served questions it was handed for the selection's kind", () => {
+    const { p, last } = harness();
+    p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
+    p.setQuestions([{ kind: "net", label: "What pins are on it?", query: "q", teaches: "", binds: ["net"] }]);
+    p.selectEntity({ kind: "net", net: "VIN" });
+    expect(last().ask?.questions.map((q) => q.label)).toEqual(["What pins are on it?"]);
+  });
+
   it("selects the design on Escape", () => {
     const { p, last } = harness();
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });

@@ -13,8 +13,8 @@ func TestEntityQueriesParse(t *testing.T) {
 		if _, err := Parse(e.Query); err != nil {
 			t.Errorf("preset for %q does not parse: %v\n  query: %s", e.Kind, err, e.Query)
 		}
-		if e.Kind == "" || e.Teaches == "" {
-			t.Errorf("preset %q missing kind/teaches copy", e.Query)
+		if e.Kind == "" || e.Label == "" || e.Teaches == "" {
+			t.Errorf("preset %q missing kind/label/teaches copy", e.Query)
 		}
 	}
 }
@@ -60,18 +60,25 @@ func TestEntityQueriesBindWhatTheSelectionCarries(t *testing.T) {
 	}
 }
 
-// Every kind a viewer can pick needs a preset, or clicking it silently does nothing.
+// Every kind a viewer can pick needs a question, or the Ask rows for it are empty. A kind's
+// questions are told apart by their labels, which name the query tab each one opens, so two alike
+// would open two tabs nobody can tell apart.
 func TestEntityQueriesCoverEveryPickableKind(t *testing.T) {
-	have := map[string]bool{}
+	have := map[string]int{}
+	labels := map[string]bool{}
 	for _, e := range EntityQueries() {
-		if have[e.Kind] {
-			t.Errorf("two presets for kind %q", e.Kind)
+		have[e.Kind]++
+		if labels[e.Kind+"\x00"+e.Label] {
+			t.Errorf("two questions for kind %q are labelled %q", e.Kind, e.Label)
 		}
-		have[e.Kind] = true
+		labels[e.Kind+"\x00"+e.Label] = true
 	}
-	for _, kind := range []string{"pin", "component", "net", "bus"} {
-		if !have[kind] {
-			t.Errorf("no preset for %q, so clicking one does nothing", kind)
+	// A bus has one, since the bus relation records the construct a reader saw and nothing about
+	// its members.
+	want := map[string]int{"pin": 2, "component": 2, "net": 2, "bus": 1}
+	for kind, n := range want {
+		if have[kind] < n {
+			t.Errorf("kind %q has %d question(s), want at least %d", kind, have[kind], n)
 		}
 	}
 }

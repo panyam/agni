@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal } from "solid-js";
+import { For, Show, createEffect, createSignal, untrack } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import {
@@ -27,8 +27,9 @@ import {
   tallySeverities,
 } from "./findings.js";
 import { renderMarkdown } from "./markdown.js";
-import { type Selection, askLabel, entityBindings, labelFor, sameSelection, selectionFromCell } from "./selection.js";
+import { type Selection, entityBindings, labelFor, sameSelection, selectionFromCell } from "./selection.js";
 import { SheetBadges } from "./sheetbadges.jsx";
+import { type Located, type TabStrip, activeTab, askTitle, blankTab, closeTab, openTab, updateTab } from "./querytabs.js";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
 // server's /relation-docs/ route BEFORE markdown rendering. renderMarkdown prepends the /rule-docs/
@@ -121,50 +122,104 @@ function FindingsCount(props: {
   );
 }
 
-// QueryPanel is the ad-hoc datalog query panel (WS9-036 / WS3-029). It owns the query text and emits
-// onRun; the presenter evaluates it server-side against the open design and pushes the QueryResult
-// back through state(), reporting "no file open" as the result's error. Provenance expands per row so
+// QueryPanel is the ad-hoc datalog query panel (WS9-036 / WS3-029). It hosts any number of query
+// tabs (agni issue 902), each with its own query, bindings and answer, and emits onRun naming the tab
+// that asked; the presenter evaluates the query against the open design and pushes the QueryResult
+// back for that tab, reporting "no file open" as the result's error. Provenance expands per row so
 // many-citation rows do not widen the table. The relation catalog (WS9-037) renders as click-to-insert
 // chips grouped by kind.
 function QueryPanel(props: {
-  state: () => QueryResult;
+  results: () => Record<string, QueryResult>;
+  strip: () => TabStrip;
+  setStrip: (s: TabStrip) => void;
+  newTabId: () => string;
   relations: () => RelationItem[];
   examples: () => ExampleItem[];
   entityQueries: () => EntityQueryItem[];
   search: () => SearchItem | null;
   locateNote: () => string;
+  setLocateNote: (note: string) => void;
   prefill: () => { text: string; bindings: Record<string, string>; n: number };
   selection: () => Selection | null;
   setSelection: (sel: Selection | null) => void;
   currentSheet: () => string;
   findings: () => FindingsState;
-  onRun: (text: string, bindings: Record<string, string>, limit?: number) => void;
-  onSaveCSV?: () => void;
+  onRun: (text: string, bindings: Record<string, string>, limit: number, tab: string) => void;
+  onSaveCSV?: (tab: string) => void;
   onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
+  onActivate: (tab: string, located: Located | undefined, previous: Located | undefined) => void;
+  onClose: (tab: string) => void;
   // registerAsk hands the island the panel's askAbout, so a question asked from elsewhere (the
-  // Properties panel's Ask row) runs exactly as the panel's own ask button does.
-  registerAsk?: (ask: (sel: Selection) => void) => void;
+  // Properties panel's Ask rows) opens its tab exactly as the panel's own ask button does.
+  registerAsk?: (ask: (sel: Selection, question?: EntityQueryItem) => void) => void;
 }) {
-  const [text, setText] = createSignal("");
+  // The tab in front, whose question the editor shows and whose answer the table renders.
+  const front = () => activeTab(props.strip());
+  const state = (): QueryResult => props.results()[front().id] ?? emptyResult();
+  const text = () => front().text;
+  const setText = (t: string) => props.setStrip(updateTab(props.strip(), front().id, { text: t }));
   // bindings are the values the query's variables are bound to (agni issue 793), set by a search or a
   // click and shown as chips under the box, so the box keeps the query as the server wrote it and
   // the values stay visible and editable beside it.
-  const [bindings, setBindings] = createSignal<Record<string, string>>({});
-  // lastRun is the question the answer on screen is for, so "show all" asks the same one again
-  // without its limit even after the reader has started editing the box.
-  let lastRun: { text: string; bindings: Record<string, string> } = { text: "", bindings: {} };
-  // ask runs a query and remembers it. A question about one picked entity passes
-  // STARTING_POINT_LIMIT (agni issue 896); every other run asks for the whole answer.
-  const ask = (q: string, b: Record<string, string>, limit?: number) => {
-    lastRun = { text: q, bindings: b };
-    if (limit) props.onRun(q, b, limit);
-    else props.onRun(q, b);
+  const bindings = () => front().bindings;
+  const setBindings = (b: Record<string, string>) => props.setStrip(updateTab(props.strip(), front().id, { bindings: b }));
+  // ask runs a query in the tab in front and remembers it there. A question about one picked entity
+  // passes STARTING_POINT_LIMIT (agni issue 896); every other run asks for the whole answer (0).
+  const ask = (q: string, b: Record<string, string>, limit = 0) => {
+    const id = front().id;
+    props.setStrip(updateTab(props.strip(), id, { lastRun: { text: q, bindings: b } }));
+    props.onRun(q, b, limit, id);
   };
   const showAll = () => {
-    if (props.state().loading) return;
+    if (state().loading) return;
     resetForRun();
-    props.onRun(lastRun.text, lastRun.bindings);
+    const last = front().lastRun;
+    props.onRun(last.text, last.bindings, 0, front().id);
+  };
+  // openQuestion opens a tab holding a question and runs it there. The new tab keeps the drawing's
+  // highlight as it is, since the question is about what is already selected.
+  const openQuestion = (title: string, q: string, b: Record<string, string>, limit = 0) => {
+    const id = props.newTabId();
+    props.setStrip(openTab(props.strip(), { ...blankTab(id, title), text: q, bindings: b, located: front().located }));
+    resetForRun();
+    setMode("query");
+    ask(q, b, limit);
+  };
+  // blankTitle numbers the tabs "+" opens, Query 1, Query 2, so each reads as its own.
+  let blanks = 1;
+  const newBlank = () => {
+    const previous = front().located;
+    const id = props.newTabId();
+    props.setStrip(openTab(props.strip(), blankTab(id, `Query ${++blanks}`)));
+    resetForRun();
+    setMode("query");
+    props.setLocateNote("");
+    props.onActivate(id, undefined, previous);
+    queueMicrotask(() => taRef?.focus());
+  };
+  // activate brings a tab forward. The host then shows what that tab last located, so the canvas
+  // matches the answer in front.
+  const activate = (id: string) => {
+    const previous = front();
+    if (previous.id === id) return;
+    props.setStrip({ ...props.strip(), active: id });
+    resetForRun();
+    props.setLocateNote("");
+    props.onActivate(id, front().located, previous.located);
+  };
+  const close = (id: string) => {
+    const before = props.strip();
+    const previous = activeTab(before).located;
+    const after = closeTab(before, id);
+    if (after === before) return;
+    props.setStrip(after);
+    props.onClose(id);
+    if (before.active === id) {
+      resetForRun();
+      props.setLocateNote("");
+      props.onActivate(after.active, activeTab(after).located, previous);
+    }
   };
   // inUse is the bindings the current text still names, which are the ones a run sends and the
   // chips show.
@@ -203,15 +258,13 @@ function QueryPanel(props: {
     handle.addEventListener("pointerup", up);
   };
 
-  // A query written for the reader (a click on the drawing) lands in the box AND runs, and leaves an
-  // editable query behind so the click teaches the language.
+  // A query written for the reader opens its own tab AND runs, and leaves an editable query behind so
+  // it teaches the language.
+  // Only the prefill is tracked, since opening a tab reads and writes the strip.
   createEffect(() => {
     const p = props.prefill();
     if (!p.n) return;
-    setText(p.text);
-    setBindings(p.bindings);
-    setDrawerOpen(false);
-    ask(p.text, p.bindings, STARTING_POINT_LIMIT);
+    untrack(() => openQuestion(`Query ${++blanks}`, p.text, p.bindings, STARTING_POINT_LIMIT));
   });
 
   // drawerOpen controls the slide-in helper drawer (examples, relations, reference), which keeps
@@ -243,16 +296,15 @@ function QueryPanel(props: {
   };
   const run = () => {
     const q = text().trim();
-    if (q === "" || props.state().loading) return;
+    if (q === "" || state().loading) return;
     resetForRun();
     ask(q, bindingsInUse(q, bindings()));
   };
   // runExample fills the textarea with a starter query AND runs it (WS14-002), leaving the query in
   // the box to edit.
   const runExample = (e: ExampleItem) => {
-    setText(e.query);
-    setBindings({});
-    if (props.state().loading) return;
+    props.setStrip(updateTab(props.strip(), front().id, { text: e.query, bindings: {} }));
+    if (state().loading) return;
     resetForRun();
     ask(e.query, {});
   };
@@ -262,27 +314,22 @@ function QueryPanel(props: {
   const doSearch = () => {
     const s = props.search();
     const t = term().trim();
-    if (!s || t === "" || props.state().loading) return;
+    if (!s || t === "" || state().loading) return;
     const b = searchBindings(s, t);
-    setText(s.query);
-    setBindings(b);
+    props.setStrip(updateTab(props.strip(), front().id, { text: s.query, bindings: b }));
     setMode("query");
     resetForRun();
     ask(s.query, b);
   };
-  // presetFor is the served click-to-ask query for a selection's kind, or undefined before the
-  // catalog has arrived (or for a kind the server writes no preset for).
+  // presetFor is the first served question for a selection's kind, the one the selection bar offers,
+  // or undefined before the catalog has arrived (or for a kind the server writes none for).
   const presetFor = (kind: string): EntityQueryItem | undefined => props.entityQueries().find((p) => p.kind === kind);
-  // askAbout fills the box with the preset for what is selected, binds the selection's values, and
-  // runs it, leaving the same editable query behind.
-  const askAbout = (sel: Selection) => {
-    const preset = presetFor(sel.kind);
-    if (!preset || props.state().loading) return;
-    const b = entityBindings(preset.binds, sel);
-    setText(preset.query);
-    setBindings(b);
-    resetForRun();
-    ask(preset.query, b, STARTING_POINT_LIMIT);
+  // askAbout opens a tab asking one served question about what is selected, with the selection's
+  // values bound, leaving the same editable query behind. The question defaults to the kind's first.
+  const askAbout = (sel: Selection, question?: EntityQueryItem) => {
+    const q = question ?? presetFor(sel.kind);
+    if (!q) return;
+    openQuestion(askTitle(sel, q.label), q.query, entityBindings(q.binds, sel), STARTING_POINT_LIMIT);
   };
   props.registerAsk?.(askAbout);
   // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
@@ -293,13 +340,18 @@ function QueryPanel(props: {
   // `ref` is the row's other half for a pin cell, "" for every other kind. A pin inverts the locate
   // arguments, since the entity is the COMPONENT and the cell is its designator, so the call is
   // (pin, U7, ..., "5") where a component cell sends (component, U7).
+  //
+  // The tab remembers what it located, so coming back to it shows the same thing on the drawing.
   const pickCell = (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, ref = "") => {
     const sel = selectionFromCell(kind, subject, ref);
     props.setSelection(sel);
     if (kind === "pin") {
-      if (ref) props.onLocate(kind, ref, sheet, reason, subject);
+      if (!ref) return;
+      props.setStrip(updateTab(props.strip(), front().id, { located: { kind, subject: ref, sheet, reason, pin: subject } }));
+      props.onLocate(kind, ref, sheet, reason, subject);
       return;
     }
+    props.setStrip(updateTab(props.strip(), front().id, { located: { kind, subject, sheet, reason } }));
     props.onLocate(kind, subject, sheet, reason);
   };
   // isCurrent reports whether a cell names the entity on screen now, so the table marks which answer
@@ -321,7 +373,7 @@ function QueryPanel(props: {
   // kind rather than a column's.
   const resultSubjects = (): Selection[] => {
     const out: Selection[] = [];
-    const st = props.state();
+    const st = state();
     for (const row of st.rows) {
       for (let i = 0; i < row.cells.length; i++) {
         const sel = selectionFromCell(cellKind(st, row, i), row.cells[i]);
@@ -372,7 +424,7 @@ function QueryPanel(props: {
     return a.localeCompare(b);
   };
   const displayRows = (): { row: QueryResult["rows"][number]; idx: number }[] => {
-    const indexed = props.state().rows.map((row, idx) => ({ row, idx }));
+    const indexed = state().rows.map((row, idx) => ({ row, idx }));
     const col = sortCol();
     if (col < 0) return indexed;
     const dir = sortDir() === "asc" ? 1 : -1;
@@ -411,6 +463,38 @@ function QueryPanel(props: {
 
   return (
     <div class="query">
+      {/* The panel's own tab strip, one tab per question. A tab's close button hides while it is the
+          last one, so the panel always shows one. */}
+      <div class="query-tabs" role="tablist" aria-label="Queries">
+        <For each={props.strip().tabs}>
+          {(t) => (
+            <span class="query-tab" classList={{ on: t.id === props.strip().active }}>
+              <button
+                type="button"
+                role="tab"
+                class="query-tab-go"
+                aria-selected={t.id === props.strip().active}
+                title={t.title}
+                onClick={() => activate(t.id)}
+              >
+                {t.title}
+                <Show when={props.results()[t.id]?.loading}>
+                  <span class="query-tab-busy" aria-label="running">…</span>
+                </Show>
+              </button>
+              <Show when={props.strip().tabs.length > 1}>
+                <button type="button" class="query-tab-close" aria-label={`Close ${t.title}`} title="Close" onClick={() => close(t.id)}>
+                  ×
+                </button>
+              </Show>
+            </span>
+          )}
+        </For>
+        <button type="button" class="query-tab-new" aria-label="New query" title="New query" onClick={newBlank}>
+          +
+        </button>
+      </div>
+
       {/* The mode tabs appear only once the server has sent a search template, since without one a
           search mode could only guess at a query. */}
       <Show when={props.search()}>
@@ -456,11 +540,11 @@ function QueryPanel(props: {
               <button
                 type="button"
                 class="query-run"
-                disabled={props.state().loading || term().trim() === ""}
+                disabled={state().loading || term().trim() === ""}
                 title={tmpl().teaches}
                 onClick={doSearch}
               >
-                {props.state().loading ? "Searching…" : "Find"}
+                {state().loading ? "Searching…" : "Find"}
               </button>
               <span class="query-hint">names anything the design declares, connected or not</span>
             </div>
@@ -519,8 +603,8 @@ function QueryPanel(props: {
           </div>
         </Show>
         <div class="query-actions">
-          <button type="button" class="query-run" disabled={props.state().loading || text().trim() === ""} onClick={run}>
-            {props.state().loading ? "Running…" : "Run"}
+          <button type="button" class="query-run" disabled={state().loading || text().trim() === ""} onClick={run}>
+            {state().loading ? "Running…" : "Run"}
           </button>
           <span class="query-hint">⌘/Ctrl+Enter</span>
         </div>
@@ -548,13 +632,12 @@ function QueryPanel(props: {
                 <button
                   type="button"
                   class="query-ask"
-                  disabled={props.state().loading}
                   title={`${preset().query}\n${Object.entries(entityBindings(preset().binds, sel()))
                     .map(([k, v]) => formatBinding(k, v))
                     .join("\n")}\n\n${preset().teaches}`}
                   onClick={() => askAbout(sel())}
                 >
-                  {askLabel(sel())}
+                  {preset().label}
                 </button>
               )}
             </Show>
@@ -668,17 +751,17 @@ function QueryPanel(props: {
         </div>
       </div>
 
-      <Show when={props.state().error !== ""}>
-        <div class="query-error">{props.state().error}</div>
+      <Show when={state().error !== ""}>
+        <div class="query-error">{state().error}</div>
       </Show>
 
       <Show when={props.locateNote() !== ""}>
         <div class="query-locate-note" role="status">{props.locateNote()}</div>
       </Show>
 
-      <Show when={props.state().error === "" && props.state().ran}>
+      <Show when={state().error === "" && state().ran}>
         <Show
-          when={props.state().rows.length > 0}
+          when={state().rows.length > 0}
           fallback={<div class="query-empty">No results.</div>}
         >
           <div class="query-results">
@@ -687,12 +770,12 @@ function QueryPanel(props: {
                   cell in the column, and the fixed layout below honours it. */}
               <colgroup>
                 <col class="query-cite-col" />
-                <For each={props.state().columns}>{(_, ci) => <col style={widths()[ci()] ? { width: `${widths()[ci()]}px` } : undefined} />}</For>
+                <For each={state().columns}>{(_, ci) => <col style={widths()[ci()] ? { width: `${widths()[ci()]}px` } : undefined} />}</For>
               </colgroup>
               <thead>
                 <tr>
                   <th class="query-cite-col" />
-                  <For each={props.state().columns}>
+                  <For each={state().columns}>
                     {(c, ci) => (
                       <th
                         class="query-sortable"
@@ -740,7 +823,7 @@ function QueryPanel(props: {
                             // renders as plain text. The server already blanks the kind then, and
                             // this covers a server that does not.
                             const rowRef = row.cellRefs[ci()] ?? "";
-                            const rawKind = cellKind(props.state(), row, ci());
+                            const rawKind = cellKind(state(), row, ci());
                             const kind = rawKind === "pin" && rowRef === "" ? "" : rawKind;
                             const reason = row.cellReasons[ci()] ?? LocateReason.UNSPECIFIED;
                             // Only an entity cell is locatable; a scalar (a voltage, an mpn) stays
@@ -775,7 +858,7 @@ function QueryPanel(props: {
                       <Show when={expanded().has(i)}>
                         <tr class="query-cite-row">
                           <td />
-                          <td colspan={props.state().columns.length}>
+                          <td colspan={state().columns.length}>
                             <ul class="query-cites">
                               <For each={row.cites}>{(c) => <li>{c}</li>}</For>
                             </ul>
@@ -789,15 +872,15 @@ function QueryPanel(props: {
               </tbody>
             </table>
             <div class="query-count">
-              <Show when={props.state().total > 0} fallback={<>{props.state().rows.length} result(s)</>}>
-                {props.state().rows.length} of {props.state().total} result(s){" "}
+              <Show when={state().total > 0} fallback={<>{state().rows.length} result(s)</>}>
+                {state().rows.length} of {state().total} result(s){" "}
                 <button type="button" class="query-show-all" onClick={showAll} title="Run the same question again without the limit.">
                   show all
                 </button>
               </Show>
               <Show when={props.onSaveCSV}>
                 {" "}
-                <button type="button" class="query-save-csv" title="Save this answer as a csv file, the same file agni query writes as csv" onClick={() => props.onSaveCSV?.()}>
+                <button type="button" class="query-save-csv" title="Save this answer as a csv file, the same file agni query writes as csv" onClick={() => props.onSaveCSV?.(front().id)}>
                   Save CSV
                 </button>
               </Show>
@@ -821,40 +904,51 @@ function QueryPanel(props: {
 }
 
 // queryPanelIsland mounts the panel and returns its command-down view, per
-// docsite/content/architecture/web-client.md#wiring-a-new-panel. onRun is answered through
-// view.setState. onLocate (WS9-038) takes the same navigate-and-highlight path a finding click does,
-// and the presenter pushes a note through setLocateNote when the highlight paints nothing (WS9-039).
+// docsite/content/architecture/web-client.md#wiring-a-new-panel. onRun names the tab that asked and
+// is answered through view.setState for that tab. onLocate (WS9-038) takes the same
+// navigate-and-highlight path a finding click does, and the presenter pushes a note through
+// setLocateNote when the highlight paints nothing (WS9-039).
 export function queryPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   handlers: {
-    onRun: (text: string, bindings: Record<string, string>, limit?: number) => void;
-    // onSaveCSV saves the answer on screen as csv (agni issue 956). Absent, the panel offers no save.
-    onSaveCSV?: () => void;
+    // onRun asks one tab's question. limit is 0 for the whole answer.
+    onRun: (text: string, bindings: Record<string, string>, limit: number, tab: string) => void;
+    // onSaveCSV saves the answer in the named tab as csv (agni issue 956). Absent, the panel offers
+    // no save.
+    onSaveCSV?: (tab: string) => void;
     onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
     // onInspect opens the check results for one entity. Optional like onLocate, since an embedding
     // host may mount the query panel with no checks panel (C13).
     onInspect?: (sel: Selection) => void;
+    // onActivate says a tab came to the front, with what it last located and what the tab it
+    // replaced had located, so the host can make the drawing match the answer now in front.
+    onActivate?: (tab: string, located: Located | undefined, previous: Located | undefined) => void;
+    // onClose says a tab closed, so the host can drop the answer it kept for it.
+    onClose?: (tab: string) => void;
   },
 ): { island: SolidIsland; view: QueryView } {
-  const [state, setState] = signalView<QueryResult>(emptyResult());
+  // results holds each tab's answer by tab id, so an answer that arrives after the reader moved to
+  // another tab still lands in the tab that asked.
+  const [results, setResults] = signalView<Record<string, QueryResult>>({});
+  let tabs = 1;
+  const newTabId = () => `q${++tabs}`;
+  const [strip, setStrip] = signalView<TabStrip>({ tabs: [blankTab("q1", "Query 1")], active: "q1" });
   const [relations, setRelations] = signalView<RelationItem[]>([]);
   const [examples, setExamples] = signalView<ExampleItem[]>([]);
   const [locateNote, setLocateNote] = signalView<string>("");
-  // prefill carries a query written FOR the reader (a click on the drawing generates one). The
-  // counter makes clicking the same pin twice re-fill and re-run, since an effect over identical
-  // text does not fire.
+  // prefill carries a query written FOR the reader. The counter makes asking the same question twice
+  // open and run it again, since an effect over identical text does not fire.
   const [prefill, setPrefill] = signalView<{ text: string; bindings: Record<string, string>; n: number }>({ text: "", bindings: {}, n: 0 });
   let prefills = 0;
-  // The click-to-ask presets. A signal because the panel RENDERS one (the ask button's hover shows
-  // the query and what it teaches) as well as running it. The host looks one up by kind through
-  // entityQuery.
+  // The served questions about a selection. A signal because the panel RENDERS one (the ask button's
+  // hover shows the query and what it teaches) as well as running it.
   const [entityQueries, setEntityQueries] = signalView<EntityQueryItem[]>([]);
   // The find-by-name template, null until the catalog arrives. The panel offers no search mode
   // while it is null (agni issue 338).
   const [search, setSearch] = signalView<SearchItem | null>(null);
-  // selection is what the reader last picked. The canvas pushes one through the view, and a click on
-  // a result cell sets it from inside the panel, which is why the setter goes down as a prop.
+  // selection is what the reader last picked. A click on a result cell sets it from inside the panel,
+  // which is why the setter goes down as a prop.
   const [selection, setSelection] = signalView<Selection | null>(null);
   // The sheet on screen, pushed by the presenter on every navigation. The panel needs it to mark
   // which of a cell's badges is the one being shown.
@@ -864,23 +958,30 @@ export function queryPanelIsland(
   const [findings, setFindings] = signalView<FindingsState>(emptyFindings());
   const onLocate = handlers.onLocate ?? (() => {});
   const onInspect = handlers.onInspect ?? (() => {});
-  let askHook: (sel: Selection) => void = () => {};
-  // A fresh query result clears any stale locate note from the previous run.
-  const setStateClearing = (s: QueryResult) => {
-    setLocateNote("");
-    setState(s);
+  let askHook: (sel: Selection, question?: EntityQueryItem) => void = () => {};
+  // A fresh answer for the tab in front clears any stale locate note from its previous run.
+  const setTabState = (s: QueryResult, tab?: string) => {
+    const id = tab ?? strip().active;
+    // A tab closed while its query ran has nowhere to show the answer, so it is not kept.
+    if (!strip().tabs.some((t) => t.id === id)) return;
+    if (id === strip().active) setLocateNote("");
+    setResults({ ...results(), [id]: s });
   };
   const island = new SolidIsland(
     "query",
     el,
     () => (
       <QueryPanel
-        state={state}
+        results={results}
+        strip={strip}
+        setStrip={setStrip}
+        newTabId={newTabId}
         relations={relations}
         examples={examples}
         entityQueries={entityQueries}
         search={search}
         locateNote={locateNote}
+        setLocateNote={setLocateNote}
         prefill={prefill}
         selection={selection}
         setSelection={setSelection}
@@ -890,6 +991,13 @@ export function queryPanelIsland(
         onSaveCSV={handlers.onSaveCSV}
         onLocate={onLocate}
         onInspect={onInspect}
+        onActivate={handlers.onActivate ?? (() => {})}
+        onClose={(tab) => {
+          const next = { ...results() };
+          delete next[tab];
+          setResults(next);
+          handlers.onClose?.(tab);
+        }}
         registerAsk={(ask) => (askHook = ask)}
       />
     ),
@@ -898,7 +1006,8 @@ export function queryPanelIsland(
   return {
     island,
     view: {
-      setState: setStateClearing,
+      setState: setTabState,
+      clearAnswers: () => setResults({}),
       setRelations,
       setExamples,
       setLocateNote,
@@ -908,10 +1017,10 @@ export function queryPanelIsland(
       setSelection,
       setCurrentSheet,
       setFindings,
-      entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind),
-      askAbout: (sel: Selection) => {
+      questionsFor: (kind: string) => entityQueries().filter((p) => p.kind === kind),
+      askAbout: (sel: Selection, question?: EntityQueryItem) => {
         setSelection(sel);
-        askHook(sel);
+        askHook(sel, question);
       },
     },
   };

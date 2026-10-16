@@ -16,14 +16,15 @@ import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import type { ViewerLocation } from "./router.js";
-import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
+import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
 import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
+import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
-import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
+import { type QueryResult, type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
@@ -291,30 +292,45 @@ export class ViewerPresenter {
   // panel disables Run while a query runs.
   //
   // bindings are the values the query's variables are bound to (agni issue 793), sent as text. limit
-  // caps the rows (agni issue 896), 0 for the whole answer.
-  // lastQuery is the answer the query panel shows, kept as the engine sent it so the Tables panel and
-  // Save CSV tabulate that answer rather than running the query again (agni issues 898 and 956).
-  private lastQuery: RunQueryResponse | undefined;
+  // caps the rows (agni issue 896), 0 for the whole answer. tab names the query panel tab that asked
+  // (agni issue 902), and the answer goes back to it, "" meaning the tab in front.
+  //
+  // answers holds each tab's answer as the engine sent it, so Save CSV tabulates the answer the
+  // reader is looking at rather than running the query again (agni issues 898 and 956).
+  private answers = new Map<string, RunQueryResponse>();
 
-  async runQuery(text: string, bindings: Record<string, string> = {}, limit = 0): Promise<void> {
+  async runQuery(text: string, bindings: Record<string, string> = {}, limit = 0, tab = ""): Promise<void> {
     if (!this.views.query || !this.query) return;
+    const push = (r: QueryResult) => (tab ? this.views.query?.setState(r, tab) : this.views.query?.setState(r));
     if (!this.mount || !this.path) {
-      this.views.query.setState(errorResult("Open a design first."));
+      push(errorResult("Open a design first."));
       return;
     }
-    this.views.query.setState(emptyResult(true));
+    push(emptyResult(true));
     try {
       // The overlay goes here too, because the vocabulary bar names the convention the answers on
       // screen were computed under, and a Query panel answering under the server's would contradict
       // it (WS3-113).
       const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, { kind: { case: "text" as const, value } }]));
       const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay(), bindings: wire, limit });
-      this.lastQuery = resp;
-      this.views.query.setState(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
+      this.answers.set(tab, resp);
+      push(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
-      this.lastQuery = undefined;
-      this.views.query.setState(errorResult(e instanceof Error ? e.message : String(e)));
+      this.answers.delete(tab);
+      push(errorResult(e instanceof Error ? e.message : String(e)));
     }
+  }
+
+  // forgetQueryTab drops a closed tab's answer.
+  forgetQueryTab(tab: string): void {
+    this.answers.delete(tab);
+  }
+
+  // releaseFocus puts the drawing back to the findings alone, for a query tab coming forward that
+  // has located nothing, so the canvas never shows a cell from an answer no longer in front.
+  async releaseFocus(): Promise<void> {
+    this.views.query?.setLocateNote("");
+    await this.setHighlights(focusStack(this.findings, [], []));
   }
 
   // locateEntity focuses a query result cell's entity (WS9-038). It navigates to the given sheet (a
@@ -473,7 +489,7 @@ export class ViewerPresenter {
       this.catalogLoading = true;
       this.pushFindings();
     }
-    if (mount !== this.mount || path !== this.path) this.lastQuery = undefined;
+    if (mount !== this.mount || path !== this.path) this.answers.clear();
     this.mount = mount;
     this.path = path;
     this.setBusy(true, "loading design…");
@@ -874,9 +890,10 @@ export class ViewerPresenter {
     return held ? { case: "check", value: held.run } : undefined;
   }
 
-  // queryAnswer is the query panel's answer for Tabulate, undefined before a query has answered.
-  queryAnswer(): TableAnswer | undefined {
-    return this.lastQuery ? { case: "query", value: this.lastQuery } : undefined;
+  // queryAnswer is one query tab's answer for Tabulate, undefined before it has answered.
+  queryAnswer(tab = ""): TableAnswer | undefined {
+    const answer = this.answers.get(tab);
+    return answer ? { case: "query", value: answer } : undefined;
   }
 
   // designStem names a saved file after the open design, its file name without the extension.
@@ -894,9 +911,9 @@ export class ViewerPresenter {
     this.pushFindings();
   }
 
-  // saveQueryCSV saves the query panel's answer as csv the same way.
-  async saveQueryCSV(save: (answer: TableAnswer, stem: string, names: string[]) => Promise<string>): Promise<void> {
-    const answer = this.queryAnswer();
+  // saveQueryCSV saves one query tab's answer as csv the same way.
+  async saveQueryCSV(save: (answer: TableAnswer, stem: string, names: string[]) => Promise<string>, tab = ""): Promise<void> {
+    const answer = this.queryAnswer(tab);
     if (!answer) return;
     const note = await save(answer, this.designStem(), []);
     if (note) this.views.query?.setLocateNote(note);
@@ -1039,7 +1056,8 @@ export class ViewerPresenter {
     this.skippedCache.clear();
     // Query results were computed under the previous vocabulary too (`net.rail` answers differently),
     // so leaving them would show two vocabularies at once.
-    this.views.query?.setState(emptyResult(false));
+    this.answers.clear();
+    this.views.query?.clearAnswers();
     if (this.mount && this.path) await this.loadRules(this.mount, this.path);
     this.assembleFindings();
   }
@@ -1452,7 +1470,10 @@ export class ViewerPresenter {
   // click); without it, a subject absent from the current sheet navigates to the first sheet it
   // lives on (WS9-024). An explicit sheet never toggles the focus off, so clicking a second badge
   // of a focused spanning net just switches sheets.
-  async selectFinding(subject: string, sheet?: string, netId = ""): Promise<void> {
+  //
+  // It returns what the focused finding is about, so the host can select it, and null when the click
+  // toggled the focus off or named no finding.
+  async selectFinding(subject: string, sheet?: string, netId = ""): Promise<Selection | null> {
     const toggleOff = this.selectedSubject === subject && this.selectedNetId === netId && !sheet;
     this.selectedSubject = toggleOff ? "" : subject;
     this.selectedNetId = toggleOff ? "" : netId;
@@ -1462,7 +1483,7 @@ export class ViewerPresenter {
     if (toggleOff) {
       this.views.findings.setFindingLocateNote("");
       await this.setHighlights(subjectsToSpecs(this.findings)); // back to all subjects
-      return;
+      return null;
     }
     // A subject may be clicked from the expectations panel (a full-run finding) even when its rule
     // is deselected in the checks panel, so fall back to the full-run findings for the spec.
@@ -1481,6 +1502,7 @@ export class ViewerPresenter {
     // translucent PATH highlighter along its wire (WS9-040). focusStack drops the focused NET from
     // the base layer so the opaque underlay does not show through its highlighter.
     await this.reapplyFocus(subject, netId);
+    return focused ? selectionFromFinding(focused) : null;
   }
 
   // findFinding locates the focused finding by its per-instance id when given (a net id, or a bus

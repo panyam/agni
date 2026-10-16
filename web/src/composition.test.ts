@@ -103,7 +103,7 @@ const REPLIES: Record<string, unknown> = {
     examples: [],
     // Without these a click highlights and asks nothing, so their absence here would make the click
     // test below fail for the right reason.
-    entityQueries: [{ kind: "net", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] }],
+    entityQueries: [{ kind: "net", label: "What pins are on it?", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] }],
   },
 };
 
@@ -339,6 +339,12 @@ describe("clicking the drawing selects what was clicked, and Ask asks about it",
         const bound = document.querySelector<HTMLInputElement>('[data-component="query"] .query-binding-value');
         expect(bound?.value ?? "").toBe("PMIC_CORE_3V3");
       }, 3000);
+      // The question opened a tab of its own, named for what it asked about and the served label,
+      // so the query box the reader started in is still there behind it.
+      const front = document.querySelector('[data-component="query"] .query-tab.on .query-tab-go');
+      // The title, since the label also carries a running mark while the query is in flight.
+      expect(front?.getAttribute("title") ?? "").toBe("PMIC_CORE_3V3: What pins are on it?");
+      expect(document.querySelectorAll('[data-component="query"] .query-tab').length).toBe(2);
       // And the query panel names what was asked about, which is where the next hop is offered from.
       const named = document.querySelector('[data-component="query"] .query-selection-name');
       expect(named?.textContent ?? "").toBe("PMIC_CORE_3V3");

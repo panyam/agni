@@ -2,12 +2,14 @@
 //
 // It is its own presenter rather than more state on ViewerPresenter, which already holds too much
 // (agni issue 390). It listens on the channels the viewer presenter already fans out (sheets, the
-// summary line, the conversion report, findings, the datasheet join) and makes one read of its own,
-// the design's IR under INVENTORY_PATHS, once per open design.
+// summary line, the conversion report, findings, the datasheet join) and makes two reads of its own:
+// the design's IR under INVENTORY_PATHS once per open design, and where a selected part or net is
+// drawn, once per selection.
 
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import type { ConversionReport, GetDesignRequestSchema, GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingsState } from "./findings.js";
+import type { EntityQueryItem } from "./query.js";
 import {
   type DatasheetJoin,
   type Focus,
@@ -17,7 +19,7 @@ import {
   propertiesFor,
 } from "./properties.js";
 import type { PropertiesView } from "./propertiespanel.js";
-import type { Selection } from "./selection.js";
+import { type Selection, sameSelection } from "./selection.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 
 export interface PropertiesSources {
@@ -25,6 +27,8 @@ export interface PropertiesSources {
   getDesign: (req: MessageInitShape<typeof GetDesignRequestSchema>) => Promise<GetDesignResponse>;
   // drawn reads what the sheet on screen draws, or null when no drawing is on screen.
   drawn: () => { refs: string[]; nets: string[] } | null;
+  // drawnOn asks the engine which sheets draw a component or a net. Absent, the panel lists none.
+  drawnOn?: (uri: string, sel: Selection) => Promise<string[]>;
 }
 
 export class PropertiesPresenter {
@@ -42,6 +46,10 @@ export class PropertiesPresenter {
   // for a design the reader has since left never lands on the new one.
   private inventoryKey = "";
   private focus: Focus = { level: "design" };
+  private questions: EntityQueryItem[] = [];
+  // located is where the selected entity is drawn, for the selection it was asked for, so an answer
+  // that arrives after the reader moved on is dropped rather than shown against the new selection.
+  private located: { sel: Selection; sheets: string[] } | null = null;
 
   constructor(
     private readonly view: PropertiesView,
@@ -59,6 +67,7 @@ export class PropertiesPresenter {
     this.activeSheet = s.activeId;
     if (changed) {
       this.focus = { level: "design" };
+      this.located = null;
       this.inventory = null;
       this.designName = "";
       this.datasheet = null;
@@ -89,9 +98,16 @@ export class PropertiesPresenter {
     this.push();
   }
 
+  // setQuestions takes the served questions about a selection, which the Ask rows list.
+  setQuestions(questions: EntityQueryItem[]): void {
+    this.questions = questions;
+    this.push();
+  }
+
   select(focus: Focus): void {
     this.focus = focus;
     this.push();
+    if (focus.level === "entity") void this.locate(focus.sel);
   }
 
   // selectEntity is a pick from the drawing or a result cell, made on the sheet on screen.
@@ -110,6 +126,41 @@ export class PropertiesPresenter {
 
   currentFocus(): Focus {
     return this.focus;
+  }
+
+  // activeSheetId is the sheet on screen, as the sheet channel last said.
+  activeSheetId(): string {
+    return this.activeSheet;
+  }
+
+  // locate asks where a selected part or net is drawn. A pin is described under its part and a bus by
+  // its members, so neither asks.
+  private async locate(sel: Selection): Promise<void> {
+    if (this.located && sameSelection(this.located.sel, sel)) return;
+    this.located = null;
+    if (!this.src.drawnOn || !this.mount || !this.path) return;
+    if (sel.kind !== "component" && sel.kind !== "net") return;
+    try {
+      const sheets = await this.src.drawnOn(artifactUri(this.mount, this.path), sel);
+      if (!this.isSelected(sel)) return;
+      this.located = { sel, sheets };
+    } catch {
+      if (!this.isSelected(sel)) return;
+      this.located = { sel, sheets: [] };
+    }
+    this.push();
+  }
+
+  // drawnOn is what the panel says about where the selection is drawn: nothing without an engine to
+  // ask, null while the answer is on its way.
+  private drawnOn(): string[] | null | undefined {
+    if (!this.src.drawnOn) return undefined;
+    if (this.focus.level !== "entity") return null;
+    return this.located && sameSelection(this.located.sel, this.focus.sel) ? this.located.sheets : null;
+  }
+
+  private isSelected(sel: Selection): boolean {
+    return this.focus.level === "entity" && sameSelection(this.focus.sel, sel);
   }
 
   private async loadInventory(): Promise<void> {
@@ -142,6 +193,8 @@ export class PropertiesPresenter {
         findings: this.findings,
         datasheet: this.datasheet,
         drawn: this.focus.level === "sheet" && this.focus.sheetId === this.activeSheet ? this.src.drawn() : null,
+        questions: this.questions,
+        drawnOn: this.drawnOn(),
       }),
     );
   }

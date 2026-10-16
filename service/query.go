@@ -592,7 +592,7 @@ func (s *QueryService) ListRelations(ctx context.Context, req *webapi.ListRelati
 		resp.Relations = append(resp.Relations, info)
 	}
 	for _, e := range query.EntityQueries() {
-		resp.EntityQueries = append(resp.EntityQueries, &webapi.EntityQuery{Kind: e.Kind, Query: e.Query, Teaches: e.Teaches, Binds: e.Binds})
+		resp.EntityQueries = append(resp.EntityQueries, &webapi.EntityQuery{Kind: e.Kind, Label: e.Label, Query: e.Query, Teaches: e.Teaches, Binds: e.Binds})
 	}
 	for _, e := range query.Examples() {
 		resp.Examples = append(resp.Examples, &webapi.ExampleQuery{Label: e.Label, Query: e.Query, Teaches: e.Teaches})

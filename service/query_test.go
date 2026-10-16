@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/panyam/agni/artifact"
+	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/readers/formats"
@@ -706,7 +708,13 @@ func TestExamplesEvaluate(t *testing.T) {
 // than a second parse check. Each answer is also compared with the same query with the values
 // written in as constants, which is what a binding promises to mean (agni issue 793).
 func TestEntityQueriesEvaluate(t *testing.T) {
-	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project")}, nil, nil)
+	// The project's corpus, so the datasheet question has a spec to answer from.
+	project := filepath.Join("..", "examples", "tutorial-project")
+	specs, err := param.LoadSet(os.DirFS(filepath.Join(project, "params")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewQueryService(fsQueryLoader{base: project}, specs, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
 	if err != nil {
 		t.Fatal(err)
@@ -714,10 +722,10 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 	if len(resp.GetEntityQueries()) == 0 {
 		t.Fatal("no entity presets served, so a click in the viewer would do nothing")
 	}
-	// Values from the tutorial board: a part, one of its pins, and the net that pin sits on. The
-	// board has no bus, so the bus preset is evaluated and answers nothing.
+	// Values from the tutorial board: a part, one of its pins, and the net that pin sits on, which
+	// carries a test point. The board has no bus, so the bus presets are evaluated and answer nothing.
 	const uri = "mount://m/designs/gateway/gateway.edn"
-	values := map[string]string{"ref": "U1", "pin": "1", "net": "PMIC_MAIN_12V0", "bus": "DATA"}
+	values := map[string]string{"ref": "U1", "pin": "2", "net": "PMIC_CORE_3V3", "bus": "DATA"}
 	for _, e := range resp.GetEntityQueries() {
 		if len(e.GetBinds()) == 0 {
 			t.Errorf("preset for %q binds nothing, so every click asks the same question", e.GetKind())
@@ -728,10 +736,11 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 			bind[v] = &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: values[v]}}
 			written = strings.ReplaceAll(written, "?"+v+",", `"`+values[v]+`",`)
 			written = strings.ReplaceAll(written, "?"+v+")", `"`+values[v]+`")`)
+			written = strings.ReplaceAll(written, "?"+v+" ", `"`+values[v]+`" `)
 		}
 		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: e.GetQuery(), Bindings: bind})
 		if err != nil {
-			t.Errorf("preset for %q failed to evaluate: %v\n  query: %s", e.GetKind(), err, e.GetQuery())
+			t.Errorf("%s %q failed to evaluate: %v\n  query: %s", e.GetKind(), e.GetLabel(), err, e.GetQuery())
 			continue
 		}
 		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: written})
@@ -739,10 +748,10 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 			t.Fatalf("the preset with its values written in (%s): %v", written, err)
 		}
 		if e.GetKind() != "bus" && len(got.GetRows()) == 0 {
-			t.Errorf("preset for %q answered no rows on the fixture, so the comparison below proves nothing", e.GetKind())
+			t.Errorf("%s %q answered no rows on the fixture, so the comparison below proves nothing", e.GetKind(), e.GetLabel())
 		}
 		if g, w := rowCells(got), rowCells(want); g != w {
-			t.Errorf("preset for %q: bound answer %s differs from the written-in answer %s", e.GetKind(), g, w)
+			t.Errorf("%s %q: bound answer %s differs from the written-in answer %s", e.GetKind(), e.GetLabel(), g, w)
 		}
 	}
 }

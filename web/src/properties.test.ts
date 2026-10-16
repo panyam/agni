@@ -5,6 +5,7 @@ import { PartSpecSchema } from "./gen/agni/v1/param/param_pb.js";
 import { ConversionReportSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingItem, FindingsState } from "./findings.js";
 import { type PropertiesInput, inventoryFromDesign, propertiesFor, reportLines } from "./properties.js";
+import type { EntityQueryItem } from "./query.js";
 
 // A barrel jack J1 feeding a regulator U1, with a test point on the output, which is enough to
 // reach every level and every group the panel renders.
@@ -45,7 +46,15 @@ const design = create(DesignSchema, {
     },
     { name: "3V3", roles: [{ roleKind: Role.RAIL }], connections: [{ componentRef: "U1", pinRef: "10" }, { componentRef: "TP1", pinRef: "1" }] },
   ],
+  // A bus the reader recorded with two members, one of which the netlist names.
+  inputDiagnostics: { unmodeledBuses: [{ label: "D[1:0]", kind: "bus_alias", members: ["VIN", "D0"] }] },
 });
+
+const QUESTIONS: EntityQueryItem[] = [
+  { kind: "component", label: "What nets does it touch?", query: "q1", teaches: "", binds: ["ref"] },
+  { kind: "component", label: "Which test points reach its nets?", query: "q2", teaches: "", binds: ["ref"] },
+  { kind: "net", label: "What pins are on it?", query: "q3", teaches: "", binds: ["net"] },
+];
 
 function finding(over: Partial<FindingItem>): FindingItem {
   return {
@@ -81,6 +90,7 @@ function input(over: Partial<PropertiesInput>): PropertiesInput {
     findings: null,
     datasheet: null,
     drawn: null,
+    questions: QUESTIONS,
     ...over,
   };
 }
@@ -134,7 +144,39 @@ describe("propertiesFor", () => {
     expect(row(s, "classes")).toBe("regulator (datasheet)");
     expect(group(s, "pins")?.refs.map((r) => `${r.label} ${r.detail}`)).toEqual(["1 IN → VIN", "2 GND → GND", "10 OUT → 3V3"]);
     expect(group(s, "nets")?.refs.map((r) => r.label)).toEqual(["3V3", "GND", "VIN"]);
-    expect(s.ask).toEqual({ kind: "component", ref: "U1" });
+    expect(s.ask?.sel).toEqual({ kind: "component", ref: "U1" });
+  });
+
+  it("offers every served question for the selection's kind, in the server's order, and none for a kind with none", () => {
+    const comp = propertiesFor(input({ focus: { level: "entity", sel: { kind: "component", ref: "U1" } } }));
+    expect(comp.ask?.questions.map((q) => q.label)).toEqual(["What nets does it touch?", "Which test points reach its nets?"]);
+    expect(propertiesFor(input({ focus: { level: "entity", sel: { kind: "pin", ref: "U1", pin: "1" } } })).ask).toBeUndefined();
+  });
+
+  it("lists the sheets a part is drawn on as sheet references, and says when that is not known yet", () => {
+    const at = (drawnOn: string[] | null | undefined) =>
+      group(propertiesFor(input({ focus: { level: "entity", sel: { kind: "component", ref: "U1" } }, drawnOn })), "sheets");
+    expect(at(["s1"])?.refs).toEqual([{ label: "Power", sheet: "s1" }]);
+    expect(at(null)?.empty).toBe("locating…");
+    expect(at([])?.empty).toBe("drawn on no sheet");
+    // A host with no engine to ask lists no sheets group at all, rather than one stuck locating.
+    expect(at(undefined)).toBeUndefined();
+  });
+
+  it("lists a bus's members, walking to the ones the netlist names", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: { kind: "bus", busId: "D[1:0]" } } }));
+    expect(row(s, "drawn as")).toBe("bus_alias");
+    expect(group(s, "members")?.refs).toEqual([
+      { label: "D0", detail: "no net by this name" },
+      { label: "VIN", target: { kind: "net", net: "VIN" } },
+    ]);
+    expect(s.note).toBeUndefined();
+  });
+
+  it("says when the read records no bus by the name the drawing gave", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: { kind: "bus", busId: "ADDR[7:0]" } } }));
+    expect(group(s, "members")?.refs).toEqual([]);
+    expect(s.note).toContain("records no bus by this name");
   });
 
   it("lists a net's pins, components and test points", () => {
