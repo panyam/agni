@@ -42,6 +42,16 @@ func TestFormatBindingsSpellsEachAsTheQueryWould(t *testing.T) {
 	}
 }
 
+// A query string takes no escapes, so a pattern's backslash is written once. Doubled, it reads as a
+// pattern matching a literal backslash.
+func TestFormatBindingsKeepsABackslashAsWritten(t *testing.T) {
+	got := FormatBindings(map[string]Value{"p": Text(`^U1\.`)})
+	want := []string{`?p = "^U1\."`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestASetQueryReadsItsBindings(t *testing.T) {
 	s, err := ParseQuerySet([]byte("queries:\n  - name: a\n    query: component.net(?r, ?n) => ?n\n    bind: {r: U1, v: 3.3, t: \"3\"}\n"))
 	if err != nil {

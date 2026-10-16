@@ -49,5 +49,4 @@ only the questions. `agni query --set` answers all of them from a single read of
 A set holds TABLES. A question with a pass or fail answer, such as "is every I2C line pulled up to a
 rail", is a check, which `agni check --rule i2c-pull-up` answers with verdicts that also say which
 lines passed and why. A house threshold, such as one ground test point per thirty nets, is two
-counts from the set and one division by whoever owns the threshold, because the query language has no arithmetic
-yet (panyam/jaala#5).
+counts from the set and one division by whoever owns the threshold.

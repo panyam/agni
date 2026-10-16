@@ -232,8 +232,12 @@ export function bindingsInUse(text: string, bindings: Record<string, string>): R
 }
 
 // formatBinding spells one binding as the query would write the constant, for a chip or a tooltip.
+// The text goes between quotes as it is, since a query string takes no escapes (jaala v0.1.62), so a
+// search pattern's backslash shows once. A value with a bare quote has no spelling and is shown the
+// same way; it still binds, since a binding never travels as text. FormatBindings in core/query
+// spells it identically.
 export function formatBinding(name: string, value: string): string {
-  return `?${name} = ${JSON.stringify(value)}`;
+  return `?${name} = "${value}"`;
 }
 
 // groupRelations buckets the catalog by kind in RELATION_KINDS order, each bucket sorted by name.
