@@ -1,0 +1,16 @@
+# A query set the project keeps, so every design in it can open the same tables. The viewer lists
+# the sets under queries/ and opens one as a tab per query; the CLI runs a set file with
+#
+#   agni query designs/gateway --set queries/power-review.yaml --format markdown
+#
+# The shape is the one examples/netlist-audit/audit.yaml documents.
+title: Power review
+queries:
+  - name: Rails
+    description: Every net the project's conventions name a rail, with its fan-out.
+    query: net.rail(?net), net.pin_count(?net, ?fanout) => ?net, ?fanout
+  - name: Rails with no test point
+    query: net.rail(?net), not net.has_test_point(?net) => ?net
+  - name: Regulator power pins
+    description: The rails each regulator's power pins sit on, input and output alike.
+    query: component.class(?u, "regulator"), pin.net(?u, ?pin, ?net), pin.role(?u, ?pin, "power"), net.rail(?net) => ?u, ?pin, ?net
