@@ -351,6 +351,10 @@ func (m *irModel) UnannotatedComponents() []*ir.UnannotatedComponent {
 	return m.d.GetInputDiagnostics().GetUnannotatedComponents()
 }
 
+func (m *irModel) UnexpandedHierarchy() []*ir.UnexpandedHierarchy {
+	return m.d.GetInputDiagnostics().GetUnexpandedHierarchy()
+}
+
 func (m *irModel) UnmodeledBuses() []*ir.BusNotModeled {
 	return m.d.GetInputDiagnostics().GetUnmodeledBuses()
 }

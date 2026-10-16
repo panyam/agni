@@ -2123,11 +2123,16 @@ func (x *ResultsMeta) GetCoverageAxis() bool {
 // check service and never loads one itself. A field only a second read could fill would either cost
 // every write a redundant parse or sit empty pretending to be optional.
 type DesignRef struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`                              // the checked file as the run named it (path or CLI argument)
-	ContentHash   string                 `protobuf:"bytes,2,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"` // "sha256:<hex>" over the source bytes; empty when the producer did not hash
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Source      string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`                              // the checked file as the run named it (path or CLI argument)
+	ContentHash string                 `protobuf:"bytes,2,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"` // "sha256:<hex>" over the source bytes; empty when the producer did not hash
+	// unexpanded_hierarchy lists the hierarchical blocks the read left out (agni issues 707, 717), so a
+	// document says that its findings cover the top level alone. A check document and a review document
+	// both carry it here, since both describe one read of one design. Empty for a flat design, and for
+	// a document from a producer that did not record it.
+	UnexpandedHierarchy []*ir.UnexpandedHierarchy `protobuf:"bytes,3,rep,name=unexpanded_hierarchy,json=unexpandedHierarchy,proto3" json:"unexpanded_hierarchy,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *DesignRef) Reset() {
@@ -2172,6 +2177,13 @@ func (x *DesignRef) GetContentHash() string {
 		return x.ContentHash
 	}
 	return ""
+}
+
+func (x *DesignRef) GetUnexpandedHierarchy() []*ir.UnexpandedHierarchy {
+	if x != nil {
+		return x.UnexpandedHierarchy
+	}
+	return nil
 }
 
 // RunConfig records the inputs that changed what was even EVALUABLE, so a reader can tell a design
@@ -2668,10 +2680,11 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x10producer_version\x18\x03 \x01(\tR\x0fproducerVersion\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12#\n" +
-	"\rcoverage_axis\x18\x05 \x01(\bR\fcoverageAxis\"F\n" +
+	"\rcoverage_axis\x18\x05 \x01(\bR\fcoverageAxis\"\x9a\x01\n" +
 	"\tDesignRef\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12!\n" +
-	"\fcontent_hash\x18\x02 \x01(\tR\vcontentHash\"\xa0\x01\n" +
+	"\fcontent_hash\x18\x02 \x01(\tR\vcontentHash\x12R\n" +
+	"\x14unexpanded_hierarchy\x18\x03 \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\"\xa0\x01\n" +
 	"\tRunConfig\x12\x16\n" +
 	"\x06params\x18\x01 \x01(\bR\x06params\x12\x1a\n" +
 	"\bprofiles\x18\x02 \x01(\bR\bprofiles\x12\x16\n" +
@@ -2753,6 +2766,7 @@ var file_agni_v1_checks_checks_proto_goTypes = []any{
 	(*CheckReport_RuleGroup)(nil),       // 30: agni.v1.checks.CheckReport.RuleGroup
 	nil,                                 // 31: agni.v1.checks.RuleRecord.TagsEntry
 	(*ir.Provenance)(nil),               // 32: agni.v1.ir.Provenance
+	(*ir.UnexpandedHierarchy)(nil),      // 33: agni.v1.ir.UnexpandedHierarchy
 }
 var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	2,  // 0: agni.v1.checks.ContextSubject.subject:type_name -> agni.v1.checks.Subject
@@ -2788,14 +2802,15 @@ var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	22, // 30: agni.v1.checks.CheckResults.import_summary:type_name -> agni.v1.checks.ImportSummary
 	10, // 31: agni.v1.checks.CheckResults.manifest_snapshot:type_name -> agni.v1.checks.ReviewManifest
 	23, // 32: agni.v1.checks.ImportSummary.unjoined:type_name -> agni.v1.checks.UnjoinedReason
-	31, // 33: agni.v1.checks.RuleRecord.tags:type_name -> agni.v1.checks.RuleRecord.TagsEntry
-	30, // 34: agni.v1.checks.CheckReport.SeveritySection.rules:type_name -> agni.v1.checks.CheckReport.RuleGroup
-	5,  // 35: agni.v1.checks.CheckReport.RuleGroup.findings:type_name -> agni.v1.checks.Finding
-	36, // [36:36] is the sub-list for method output_type
-	36, // [36:36] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	33, // 33: agni.v1.checks.DesignRef.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
+	31, // 34: agni.v1.checks.RuleRecord.tags:type_name -> agni.v1.checks.RuleRecord.TagsEntry
+	30, // 35: agni.v1.checks.CheckReport.SeveritySection.rules:type_name -> agni.v1.checks.CheckReport.RuleGroup
+	5,  // 36: agni.v1.checks.CheckReport.RuleGroup.findings:type_name -> agni.v1.checks.Finding
+	37, // [37:37] is the sub-list for method output_type
+	37, // [37:37] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_checks_proto_init() }

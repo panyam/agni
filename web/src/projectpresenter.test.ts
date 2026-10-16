@@ -52,6 +52,7 @@ function harness(
       expectationCaption: vi.fn(),
       undrawnNote: vi.fn(),
       staleLinkNote: vi.fn(),
+      hierarchyNote: vi.fn(),
       rules: { setState: vi.fn() },
       report: vi.fn(),
       projectBar: { setState: onProject },

@@ -580,6 +580,11 @@ message ResultsMeta {
 message DesignRef {
   string source = 1;       // the checked file as the run named it (path or CLI argument)
   string content_hash = 2; // "sha256:<hex>" over the source bytes; empty when the producer did not hash
+  // unexpanded_hierarchy lists the hierarchical blocks the read left out (agni issues 707, 717), so a
+  // document says that its findings cover the top level alone. A check document and a review document
+  // both carry it here, since both describe one read of one design. Empty for a flat design, and for
+  // a document from a producer that did not record it.
+  repeated agni.v1.ir.UnexpandedHierarchy unexpanded_hierarchy = 3;
 }
 
 // RunConfig records the inputs that changed what was even EVALUABLE, so a reader can tell a design

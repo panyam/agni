@@ -362,6 +362,70 @@ describe("the incomplete-drawing notice", () => {
   }, 120_000);
 });
 
+// agni issue 717: the notice that says the read left hierarchical blocks out.
+//
+// It is asserted by its painted box for the reason the incomplete-drawing notice is: an element with
+// the right class and text can still be zero-sized, hidden behind the canvas, or painted over the
+// controls, and jsdom sees none of that. The sentence is the server's, so it is compared whole.
+describe("the hierarchical-read notice", () => {
+  const sentence =
+    "hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone.";
+
+  it("is painted on a hierarchical design, below the controls and clear of them", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "edif", "hier.edn");
+      const note = page.locator(".hierarchy-note.on");
+      await note.waitFor({ state: "visible", timeout: 30_000 });
+      expect((await note.textContent())?.trim()).toBe(sentence);
+
+      const geometry = await page.evaluate(() => {
+        const box = (sel: string) => {
+          const el = document.querySelector(sel);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height };
+        };
+        const hit = (a: ReturnType<typeof box>, x: ReturnType<typeof box>) =>
+          !!a && !!x && !(a.r <= x.l || x.r <= a.l || a.b <= x.t || x.b <= a.t);
+        const n = box(".hierarchy-note");
+        const canvas = box("#view");
+        // What the browser would paint at the note's centre, which is the note (or its text) only
+        // when nothing sits on top of it. The notes take no pointer events, so a hit test skips
+        // them; they take them for the one test and are put back.
+        const el = document.querySelector<HTMLElement>(".hierarchy-note")!;
+        const stack = el.parentElement as HTMLElement;
+        el.style.pointerEvents = stack.style.pointerEvents = "auto";
+        const r = el.getBoundingClientRect();
+        const top = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2)[0];
+        el.style.pointerEvents = stack.style.pointerEvents = "";
+        return {
+          note: n,
+          inCanvas: !!n && !!canvas && n.l >= canvas.l && n.r <= canvas.r && n.t >= canvas.t && n.b <= canvas.b,
+          onTop: !!top && (top === el || el.contains(top)),
+          controls: hit(n, box(".controls")),
+          readout: hit(n, box("#readout")),
+        };
+      });
+      expect(geometry.note!.w, "the notice has no width").toBeGreaterThan(100);
+      expect(geometry.note!.h, "the notice has no height").toBeGreaterThan(10);
+      expect(geometry.inCanvas, "the notice is painted outside the canvas").toBe(true);
+      expect(geometry.onTop, "something is painted over the notice").toBe(true);
+      expect(geometry.controls, "the notice paints over the render-mode buttons").toBe(false);
+      expect(geometry.readout, "the notice paints over the element readout").toBe(false);
+    });
+  }, 120_000);
+
+  it("stays hidden for a flat design", async () => {
+    // The control: a strip shown on every open would satisfy every assertion above.
+    await withPage(browser, async (page) => {
+      await openViewer(page, "edif", "basic.edn");
+      await page.waitForTimeout(1500);
+      expect(await page.locator(".hierarchy-note.on").count()).toBe(0);
+      expect((await page.locator("#hierarchy-note").textContent())?.trim() ?? "").toBe("");
+    });
+  }, 120_000);
+});
+
 // agni issue 350. A severity mark is an empty span styled into a dot, and an INLINE span ignores
 // width and height, so the dot measured 0x0 from the day WS9 moved it out of the old grid row into a
 // table cell. Every unit test passed throughout: the class was on the element, the element was in

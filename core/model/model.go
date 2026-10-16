@@ -78,6 +78,11 @@ type Model interface {
 	// nothing was LOST in the read, since the parts and their pins are all present. What is absent is
 	// an identity, so a consumer must not key on these designators (see internal/refdes).
 	UnannotatedComponents() []*ir.UnannotatedComponent
+	// UnexpandedHierarchy are the hierarchical blocks whose contents the read left out, each with its
+	// instance count (agni issue 707). Non-empty means every count and every rule covers the top level
+	// alone. No rule reads it, since being hierarchical is not a defect; a run carries it on its
+	// response so a report can say what the read covered (agni issue 717).
+	UnexpandedHierarchy() []*ir.UnexpandedHierarchy
 	// traverse / pin-role: a pin's electrical direction, or the unspecified zero value when the
 	// source carries no part-type pin data (so direction-based rules do not fire).
 	PinDir(refDes, pin string) ir.PinDirection

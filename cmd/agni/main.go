@@ -391,7 +391,7 @@ func statsCmd() *cobra.Command {
 			// level alone. Said here as well as in the stderr note (agni issue 707).
 			if blocks := d.GetInputDiagnostics().GetUnexpandedHierarchy(); len(blocks) > 0 {
 				fmt.Fprintf(w, "not extracted:       %s (counts above are the top %s only)\n",
-					hierarchySummary(blocks), hierarchyNoun(blocks))
+					rpt.HierarchySummary(blocks), rpt.HierarchyNoun(blocks))
 			}
 			// Physical tier, shown only when a reader populated it (IPC-2581, KiCad PCB).
 			if len(d.Footprints) > 0 {

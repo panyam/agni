@@ -44,6 +44,7 @@ import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
 import { staleLinkStrip } from "./stalelink.js";
+import { hierarchyStrip } from "./hierarchy.js";
 import { selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
 import { PropertiesPresenter } from "./propertiespresenter.js";
@@ -306,6 +307,7 @@ class AppRoot extends BaseComponent {
     const setExpectCaption = expectationCaptionStrip(document.getElementById("expect-caption"));
     const setUndrawnNote = undrawnStrip(document.getElementById("undrawn-note"));
     const setStaleLinkNote = staleLinkStrip(document.getElementById("stale-link-note"));
+    const setHierarchyNote = hierarchyStrip(document.getElementById("hierarchy-note"));
     const readoutEl = document.getElementById("readout");
     const svgView = new SvgView(svgEl);
     // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
@@ -683,6 +685,7 @@ class AppRoot extends BaseComponent {
         expectationCaption: setExpectCaption,
         undrawnNote: setUndrawnNote,
         staleLinkNote: setStaleLinkNote,
+        hierarchyNote: setHierarchyNote,
         rules: rules.view,
         report: (report) => propertiesPresenter.setReport(report),
         // A saved report goes to the visitor's machine as a download, and its rows link back to this

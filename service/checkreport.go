@@ -75,7 +75,7 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 				// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
 				CoverageAxis: true,
 			},
-			Design: &checkspb.DesignRef{Source: req.GetUri(), ContentHash: hash},
+			Design: &checkspb.DesignRef{Source: req.GetUri(), ContentHash: hash, UnexpandedHierarchy: run.GetUnexpandedHierarchy()},
 			// Provenance comes off the resolved overlay the run used, as a review's does. See
 			// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 			Run: RunConfigProto(ov.Provenance(RunProvenance{
@@ -110,6 +110,9 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 			URLBase:       strings.TrimSuffix(links.GetUrlBase(), "/"),
 			MountPath:     mountPath,
 			LinksWithheld: links.GetWithheld(),
+			// The run's own record of what its read left out, in the sentence the CLI prints (agni
+			// issue 717).
+			HierarchyNote: report.HierarchyNote(req.GetUri(), run.GetUnexpandedHierarchy()),
 		}
 		var buf bytes.Buffer
 		// The composed catalog, not the selection, so a rule an overlay added carries its prose like a

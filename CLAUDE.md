@@ -891,7 +891,10 @@ which reads as "the design does not have that".
   sub-cell's contents are absent and every rule evaluates over the top cell alone. This one is no
   longer silent (agni issue 707): the reader lists each skipped cell with its instance count in
   `InputDiagnostics.unexpanded_hierarchy`, every CLI read prints a stderr note naming them, `agni
-  stats` adds a `not extracted:` line, and `GetDesignResponse` carries the list. It is still WRONG,
+  stats` adds a `not extracted:` line, both HTML reports state it in their header, and the viewer
+  shows a canvas strip and lists the cells in Properties (agni 717). Every one of those says the
+  sentence `report.HierarchyNote` builds, and a report gets the list off the RUN
+  (`CheckDesignResponse` and `DesignRef` carry it), so it reads no design to say it. It is still WRONG,
   because descending into the sub-cells is the EDIF sibling of issue 134 and has not landed, so
   read the note rather than the counts. It is deliberately not a finding, since being hierarchical
   is a limit of the read rather than a defect.
@@ -913,7 +916,7 @@ discovered.
 | A docsite page | 4 (5 for a new section) | `docsite/README.md` | `docsite/nav_test.go` |
 | A `learn/` chapter | 4, plus the level-index entries | `docsite/README.md` | `docsite/learn_levels_test.go` |
 | A web viewer panel | 4, plus 2 more if it docks | `docsite/content/architecture/web-client.md` | `web/src/composition.test.ts`, `dock.test.ts` |
-| A canvas note strip (undrawn, stale-link) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples | the compiler for the `ViewSink` channel, `composition.test.ts` for the template hole |
+| A canvas note strip (undrawn, stale-link, hierarchy) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples; the hole goes inside `.canvas-notes` in `ViewerPage.html`, which stacks the strips so two never paint over each other | the compiler for the `ViewSink` channel, `composition.test.ts` for the template hole |
 | A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
 | A field in the viewer shell (`ViewerPage.html`) | 3 (the template, the page struct in `cmd/agni/webpage.go`, `servedFields` in `web/src/composition.test.ts`) | `docsite/content/architecture/web-services.md` | `composition.test.ts` throws on an unfilled field; `agni site` renders the same struct |
 | A format reader | see the page | `docsite/content/build/format-reader.md` | see the page |
