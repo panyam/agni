@@ -286,6 +286,21 @@ describe("querypanel", () => {
     expect(vHead().textContent).not.toContain("▲");
   });
 
+  // agni issue 1045: a column the answer types as parts sorts as Tabulate and every csv sort it.
+  it("sorts an entity column in the engine's name order, R2 before R10", () => {
+    const { el, push } = mountPanel();
+    push(
+      resultFromWire({
+        columns: ["r"],
+        columnKinds: ["component"],
+        rows: [{ cells: ["R10"], cites: [] }, { cells: ["r2"], cites: [] }, { cells: ["R1"], cites: [] }],
+      } as never),
+    );
+    const col = () => [...el.querySelectorAll("tbody tr.query-row")].map((r) => r.querySelectorAll("td")[1].textContent);
+    ([...el.querySelectorAll("thead th.query-sortable")][0] as HTMLElement).click();
+    expect(col()).toEqual(["R1", "r2", "R10"]);
+  });
+
   it("keeps a row's provenance expansion attached to that row after a re-sort", () => {
     const { el, push } = mountPanel();
     push(
@@ -1128,6 +1143,25 @@ describe("opening a query set", () => {
     expect(el.querySelector(".query-tab.on .query-tab-go")!.getAttribute("title")).toBe("Rails");
     expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("net.rail(?n) => ?n");
     expect(onRunSet).toHaveBeenCalledWith(SET, ["q2", "q3"]);
+  });
+
+  // agni issue 1045: a set's tab asked again unchanged is the set's member, compiled by the engine
+  // with its typed bindings; edited, it is the reader's own query.
+  it("runs a set tab again through the set until the reader edits it", () => {
+    const onRun = vi.fn();
+    const onRunSet = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun, onRunSet, onActivate: vi.fn() });
+    panel.island.activate();
+    panel.view.openSet(SET);
+    panel.view.setState(emptyResult(false), "q2");
+    el.querySelector<HTMLButtonElement>("button.query-run")!.click();
+    expect(onRunSet).toHaveBeenLastCalledWith({ ...SET, queries: [SET.queries[0]] }, ["q2"]);
+    expect(onRun).not.toHaveBeenCalled();
+    typeQuery(el, "net.rail(?n), ?n != \"GND\" => ?n");
+    el.querySelector<HTMLButtonElement>("button.query-run")!.click();
+    expect(onRun).toHaveBeenCalledWith("net.rail(?n), ?n != \"GND\" => ?n", {}, 0, "q2");
   });
 
   it("shows each query's own answer or error in its own tab", () => {

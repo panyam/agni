@@ -134,5 +134,5 @@ func (s QuerySet) Compile(i int) (Query, error) {
 	q, err := Parse(prefix + s.Queries[i].Query)
 	// A syntax error points into the query as its author wrote it, not into the text with the
 	// preamble in front.
-	return q, shifted(err, prefix)
+	return q, shifted(err, prefix, s.Queries[i].Query)
 }

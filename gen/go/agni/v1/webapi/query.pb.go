@@ -1630,7 +1630,11 @@ type TextPosition struct {
 	// line counts from 1.
 	Line int32 `protobuf:"varint,2,opt,name=line,proto3" json:"line,omitempty"`
 	// column counts characters, not bytes, from 1, as an editor does.
-	Column        int32 `protobuf:"varint,3,opt,name=column,proto3" json:"column,omitempty"`
+	Column int32 `protobuf:"varint,3,opt,name=column,proto3" json:"column,omitempty"`
+	// caret is the line of the query's text the position is on, a newline, and a caret under the
+	// column, as the engine draws it, so the CLI and the viewer show the same picture without either
+	// drawing it again (agni issue 1045). Empty when the position is not inside the text.
+	Caret         string `protobuf:"bytes,4,opt,name=caret,proto3" json:"caret,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1684,6 +1688,13 @@ func (x *TextPosition) GetColumn() int32 {
 		return x.Column
 	}
 	return 0
+}
+
+func (x *TextPosition) GetCaret() string {
+	if x != nil {
+		return x.Caret
+	}
+	return ""
 }
 
 type ListQuerySetsRequest struct {
@@ -2071,11 +2082,12 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x128\n" +
 	"\x06result\x18\x03 \x01(\v2 .agni.v1.webapi.RunQueryResponseR\x06result\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x127\n" +
-	"\berror_at\x18\x05 \x01(\v2\x1c.agni.v1.webapi.TextPositionR\aerrorAt\"R\n" +
+	"\berror_at\x18\x05 \x01(\v2\x1c.agni.v1.webapi.TextPositionR\aerrorAt\"h\n" +
 	"\fTextPosition\x12\x16\n" +
 	"\x06offset\x18\x01 \x01(\x05R\x06offset\x12\x12\n" +
 	"\x04line\x18\x02 \x01(\x05R\x04line\x12\x16\n" +
-	"\x06column\x18\x03 \x01(\x05R\x06column\"5\n" +
+	"\x06column\x18\x03 \x01(\x05R\x06column\x12\x14\n" +
+	"\x05caret\x18\x04 \x01(\tR\x05caret\"5\n" +
 	"\x14ListQuerySetsRequest\x12\x1d\n" +
 	"\n" +
 	"design_uri\x18\x01 \x01(\tR\tdesignUri\"o\n" +

@@ -26,8 +26,8 @@ func TestASyntaxErrorSaysWhere(t *testing.T) {
 		t.Errorf("message %q, want the engine's %q unchanged", err, engineErr)
 	}
 	want := "  net.pin_count(?n ?c) => ?r\n                ^"
-	if got := Caret(text, at); got != want {
-		t.Errorf("caret\n%s\nwant\n%s", got, want)
+	if at.Caret != want {
+		t.Errorf("caret\n%s\nwant\n%s", at.Caret, want)
 	}
 }
 
@@ -52,6 +52,9 @@ func TestASetQueryErrorPointsIntoItsOwnText(t *testing.T) {
 	}
 	if at.Line != 1 || at.Column != 11 || at.Offset != 10 {
 		t.Errorf("position %+v, want line 1, column 11, offset 10 (the ?r ?x) within the query's own text", at)
+	}
+	if want := "on(?r) => ?r ?x\n          ^"; at.Caret != want {
+		t.Errorf("caret\n%s\nwant it drawn on the query's own text\n%s", at.Caret, want)
 	}
 }
 

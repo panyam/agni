@@ -169,6 +169,9 @@ func TestRunQueriesSaysWhereABadQueryStopped(t *testing.T) {
 	if at.GetLine() != 1 || at.GetColumn() != 15 || at.GetOffset() != 14 {
 		t.Errorf("position %v, want line 1 column 15 offset 14, the ?r ?n in the query's own text", at)
 	}
+	if want := "component.net(?r ?n)\n              ^"; at.GetCaret() != want {
+		t.Errorf("caret %q, want %q, drawn by the engine on the query's own text", at.GetCaret(), want)
+	}
 }
 
 // RunQuery's error keeps the syntax error in its chain, so the transport can say where.

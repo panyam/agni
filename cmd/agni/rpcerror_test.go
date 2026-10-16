@@ -41,7 +41,7 @@ func TestAFailedRequestWritesTheWireErrorUnderJSON(t *testing.T) {
 		Message string `json:"message"`
 		Details []struct {
 			Type  string         `json:"type"`
-			Debug map[string]int `json:"debug"`
+			Debug map[string]any `json:"debug"`
 		} `json:"details"`
 	}
 	if err := json.Unmarshal([]byte(local), &got); err != nil {
@@ -50,8 +50,8 @@ func TestAFailedRequestWritesTheWireErrorUnderJSON(t *testing.T) {
 	if got.Code != "invalid_argument" || !strings.Contains(got.Message, "variable ?r ?n") {
 		t.Errorf("error %+v, want invalid_argument naming the variable", got)
 	}
-	if len(got.Details) != 1 || got.Details[0].Type != "agni.v1.webapi.TextPosition" || got.Details[0].Debug["column"] != 15 {
-		t.Errorf("details %+v, want one TextPosition at column 15", got.Details)
+	if len(got.Details) != 1 || got.Details[0].Type != "agni.v1.webapi.TextPosition" || got.Details[0].Debug["column"] != 15.0 || got.Details[0].Debug["caret"] != "component.net(?r ?n) => ?r\n              ^" {
+		t.Errorf("details %+v, want one TextPosition at column 15 carrying the engine's caret", got.Details)
 	}
 	if local != remote {
 		t.Errorf("--remote wrote another error.\n--- local\n%s\n--- remote\n%s", local, remote)

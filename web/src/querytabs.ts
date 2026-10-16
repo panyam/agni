@@ -7,6 +7,7 @@
 // tab is called, which tab an action leaves active, and that one tab always remains.
 
 import { LocateReason } from "./query.js";
+import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
 import { labelFor, type Selection } from "./selection.js";
 
 // Located is the cell a tab last located on the drawing. Switching back to the tab locates it again,
@@ -30,6 +31,25 @@ export interface QueryTab {
   // without its limit even after the reader has started editing the box.
   lastRun: { text: string; bindings: Record<string, string> };
   located?: Located;
+  // origin is the query set member a tab was opened from, with the text and bindings it opened with.
+  // While the tab still asks exactly that, running it runs the member through RunQueries, so the
+  // engine joins the preamble and keeps the set's numeric bindings as numbers (agni issue 1045). Once
+  // the reader edits it, it is their own query.
+  origin?: SetOrigin;
+}
+
+// SetOrigin is where a tab opened from a query set came from.
+export interface SetOrigin {
+  set: QuerySet;
+  index: number;
+  text: string;
+  bindings: Record<string, string>;
+  numbers: string[];
+}
+
+// fromOrigin reports whether a question is still the set member a tab was opened from.
+export function fromOrigin(o: SetOrigin | undefined, text: string, bindings: Record<string, string>): o is SetOrigin {
+  return !!o && tabKey(text, bindings) === tabKey(o.text, o.bindings);
 }
 
 // TabStrip is the whole strip: its tabs in order and the one in front.
