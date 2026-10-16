@@ -50,8 +50,8 @@ import (
 const diffListLimit = 40
 
 func main() {
-	if err := rootCmd().Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+	if cmd, err := rootCmd().ExecuteC(); err != nil {
+		reportError(cmd, err, os.Stderr)
 		os.Exit(exitCode(err))
 	}
 }
@@ -430,7 +430,7 @@ func statsJSON(cmd *cobra.Command, design string, maskPaths, nets, refs []string
 	svc := service.NewDesignService(&localLoader{loader: newLoader()}, nil, render.Style{}, cliProjects())
 	resp, err := svc.GetDesign(cmd.Context(), req)
 	if err != nil {
-		return err
+		return rpcFailed(err)
 	}
 	out, err := protoJSON(resp)
 	if err != nil {
@@ -613,7 +613,7 @@ func checkCmd() *cobra.Command {
 			if resultsOut != "" {
 				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
 				if err != nil {
-					return err
+					return rpcFailed(err)
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
 				// The document is the one the viewer saves (agni issue 127): the service writes it from
@@ -624,7 +624,7 @@ func checkCmd() *cobra.Command {
 					Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON,
 				})
 				if err != nil {
-					return err
+					return rpcFailed(err)
 				}
 				if err := os.WriteFile(resultsOut, rendered.GetContent(), 0o644); err != nil {
 					return err
@@ -651,7 +651,7 @@ func checkCmd() *cobra.Command {
 			case "markdown", "report":
 				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
 				if err != nil {
-					return err
+					return rpcFailed(err)
 				}
 				if format == "markdown" {
 					err = writeCheckMarkdown(cmd.OutOrStdout(), rresp.GetReport())
@@ -665,7 +665,7 @@ func checkCmd() *cobra.Command {
 			default: // text, json and csv all need the raw findings
 				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
 				if err != nil {
-					return err
+					return rpcFailed(err)
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
 				// --verdicts selects the CONSIDERED SET instead of the violations, which is what each
@@ -702,7 +702,7 @@ func checkCmd() *cobra.Command {
 							Links:  &webapi.ReportLinks{UrlBase: meta.URLBase, DesignUri: linkURI(meta.MountPath), Withheld: meta.LinksWithheld},
 						})
 						if err != nil {
-							return err
+							return rpcFailed(err)
 						}
 						if _, err := cmd.OutOrStdout().Write(rendered.GetContent()); err != nil {
 							return err
@@ -1003,7 +1003,7 @@ func reviewCmd() *cobra.Command {
 					Overlay: overlay,
 				})
 				if err != nil {
-					return err
+					return rpcFailed(err)
 				}
 				docs = append(docs, rv.GetResults())
 				// The CLI's store lives as long as the command, so the name it assigned means nothing
@@ -1065,7 +1065,7 @@ func reviewCmd() *cobra.Command {
 					}
 					page, err := svc.RenderReviewReport(cmd.Context(), &webapi.RenderReviewReportRequest{Review: reviews[0], Links: links})
 					if err != nil {
-						return err
+						return rpcFailed(err)
 					}
 					_, err = cmd.OutOrStdout().Write(page.GetContent())
 					return err

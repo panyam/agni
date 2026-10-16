@@ -50,7 +50,7 @@ func proposeCmd() *cobra.Command {
 			svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(nil, host.Workspace())
 			resp, err := svc.ProposeDesigns(cmd.Context(), &webapi.ProposeDesignsRequest{Uri: "mount://drop/" + filepath.ToSlash(sub)})
 			if err != nil {
-				return err
+				return rpcFailed(err)
 			}
 			w := cmd.OutOrStdout()
 			if format == "json" {

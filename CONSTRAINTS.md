@@ -1011,7 +1011,11 @@ vanishes between runs. Where no rpc serves the answer, it emits the contract TYP
 wrapper invented for one consumer (`agni params` emits a bare `PartSpec`). A command with neither has
 no wire form yet, and adding one is the work rather than hand-rolling a second shape. A command that
 evaluates two ways renders BOTH paths from the same message, so a format cannot work on one and not
-the other.
+the other. **A failed request is a wire message too.** When the command's rpc fails, `--format json`
+writes the error as the Connect protocol encodes it (`code`, `message`, `details`), through connect's
+own error writer, to where the answer would have gone, and the command still exits non-zero with the
+text error on stderr. Only the request's own failure is written that way, never a flag mistake before
+it or a status the command reports after writing its answer, so stdout never holds two documents.
 **Why:** the CLI's json is a contract, and it was two. `check`, `check --report`, `diff`, `validate`
 and `params` emitted the wire message; `query`, `render --report` and `intake` emitted hand-rolled
 shapes, so what a client learned from one command told it nothing about the next. Two of those were
@@ -1022,7 +1026,9 @@ and `render` encoded the Go `graph.ConversionReport` while `service` converted t
 hand-maintained shapes for one answer drift, and they drift silently, because a field the renderer
 never learned is absent from both sides of any assertion made on the proto.
 **Verify:** `TestEveryJSONFormatEmitsAProto` (`cmd/agni`) scans the command tree's json paths and
-fails on a hand-rolled encoder outside the declared exception list.
+fails on a hand-rolled encoder outside the declared exception list. `TestAFailedRequestWritesTheWireErrorUnderJSON`
+holds a failed query's json to the server's error, byte for byte under `--remote`, and
+`TestASetsStatusAfterItsAnswerAddsNoSecondDocument` holds the second half.
 **`agni intake` is the one exception, and it is declared rather than tolerated.** `intake.Skeleton`'s
 confidentiality guarantee is STRUCTURAL, meaning the type has no field that can hold a net name or a
 connection, so an intake summary cannot express the confidential parts of a design (C16). A proto twin
