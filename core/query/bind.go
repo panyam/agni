@@ -54,10 +54,16 @@ func ParseBinding(s string) (string, Value, error) {
 
 // FormatBindings renders bound values as a query would spell them, `?n = "GND"` or `?v = 3.3`,
 // sorted by name, so a rendered view states the values beside its query.
+//
+// Text goes between quotes exactly as it is, since a query string takes no escapes: `"U1\."` is the
+// four characters U, 1, a backslash and a dot (jaala v0.1.62). Go's quoting doubled that backslash,
+// which spells another pattern. A value holding a quote with no backslash before it, or ending in a
+// lone backslash, has no spelling in the language; it is shown the same way, and still binds, since
+// a binding never travels as text.
 func FormatBindings(vals map[string]Value) []string {
 	out := make([]string, 0, len(vals))
 	for k, v := range vals {
-		val := strconv.Quote(v.S)
+		val := `"` + v.S + `"`
 		if v.Num != nil {
 			val = v.S
 		}

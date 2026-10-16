@@ -186,7 +186,10 @@ describe("bindingsInUse", () => {
 
 describe("formatBinding", () => {
   it("spells the value as the query would write the constant", () => {
-    expect(formatBinding("ref", 'R"1')).toBe('?ref = "R\\"1"');
+    expect(formatBinding("ref", "R1")).toBe('?ref = "R1"');
+  });
+  it("keeps a pattern's backslash as written, since a query string takes no escapes", () => {
+    expect(formatBinding("p", "^U1\\.")).toBe('?p = "^U1\\."');
   });
 });
 
