@@ -16,6 +16,7 @@ import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import { type ViewerLocation, bindsFromLink } from "./router.js";
+import { DocumentStore } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
@@ -172,9 +173,9 @@ export interface SavedFile {
 // navigator's view interface, and RenderView and never a DOM node or a Solid signal (C3). It runs
 // in-process TS because file, sheet and mode switches are low-frequency (C7).
 export class ViewerPresenter {
-  private mount = "";
-  private path = "";
-  private sheets: SheetRef[] = [];
+  // doc is the document half (agni issue 390): what is true of the open design and its config. This
+  // class is the interaction half and reads it; document.ts reads nothing back.
+  readonly doc = new DocumentStore();
   private currentSheet = "";
   // Default to SVG, since it renders faithfully (with text) for every design, where WebGL is
   // currently lower-fidelity and native is per-format/opt-in.
@@ -186,9 +187,6 @@ export class ViewerPresenter {
   // synthetic glyphs. Only meaningful when the design ships symbols (availableLayouts has
   // "faithful") and the current layout is an auto-layout.
   private faithfulSymbols = false;
-  private availableLayouts: string[] = [];
-  private nativeAvailable = false;
-  private summary = "";
 
   // findings holds the rule findings for the open design, and selectedSubject the one the user
   // clicked (highlighted in the viewer), "" for none.
@@ -200,27 +198,7 @@ export class ViewerPresenter {
   // checksRunning is true while runChecks is in flight (the on-demand Run), so the panel disables its
   // Run button and the presenter guards against a re-entrant run.
   private checksRunning = false;
-  // catalogLoading is true while the open design's rule catalog has not arrived. A new design sets it
-  // before its first sheet draws, since that sheet can draw before ListRules answers, and until then
-  // selectedRules is empty or still the previous design's (agni 868).
-  private catalogLoading = false;
 
-  // rules is the catalog for the open design (ListRules), and selectedRules the active ruleset the
-  // user has checked, the subset CheckDesign runs. It defaults to every available rule so a design
-  // opens showing all runnable checks. Group-by/filter/search are the panel's own view state.
-  private rules: RuleItem[] = [];
-  private selectedRules: string[] = [];
-  // rulesByName indexes the catalog for the finding->category lookup (findings carry only the rule
-  // name on the wire).
-  private rulesByName = new Map<string, RuleItem>();
-  // run is what the reader has run on this design: the rules asked for and the engine's answers, as
-  // sent (agni issue 390). It is the panel's one copy of a check, so the findings, the considered set,
-  // the skipped rules, a saved report and the Tables panel all read it, and a new design or a
-  // convention change drops it in one place, where four per-rule caches each had to be cleared and
-  // one was missed. Run asks only for the selected rules it lacks and folds the answer in, so a
-  // repeated Run costs nothing; asking for the whole selection again cost Jetson 0.3 to 0.8 s in the
-  // browser for an answer already on screen. null until a run.
-  private run: { rules: Set<string>; resp: CheckDesignResponse } | null = null;
   // focusedVerdict is the id currently drawn as a proof, "" when none. It rides the URL so a link
   // reopens on the same proof, and it is cleared by anything that replaces the highlight, since a
   // stale id in the address bar would promise a drawing the canvas is no longer showing.
@@ -234,7 +212,6 @@ export class ViewerPresenter {
   // still holds after the reader dismisses a proof and re-focuses it; opening a different design
   // drops it.
   private linkHash = "";
-  private designContentHash = "";
 
   // tracedPins is the "from,to" the panel last asked about ("" when none), and tracedHops the radius
   // it asked at (0 for the server default). They are URL state in the same category as the focused
@@ -261,7 +238,7 @@ export class ViewerPresenter {
   // pan/zoom independently.
   private viewKey(mode: RenderMode, sheetId: string): string {
     // Include the symbol source, because faithful symbols scale the layout and need their own pan/zoom.
-    return `${mode}|${this.currentLayout}|${this.faithfulSymbols ? "f" : "g"}|${this.mount}|${this.path}|${sheetId}`;
+    return `${mode}|${this.currentLayout}|${this.faithfulSymbols ? "f" : "g"}|${this.doc.mount}|${this.doc.path}|${sheetId}`;
   }
 
   constructor(
@@ -301,7 +278,7 @@ export class ViewerPresenter {
   async runQuery(text: string, bindings: Record<string, string> = {}, limit = 0, tab = ""): Promise<void> {
     if (!this.views.query || !this.query) return;
     const push = (r: QueryResult) => (tab ? this.views.query?.setState(r, tab) : this.views.query?.setState(r));
-    if (!this.mount || !this.path) {
+    if (!this.doc.mount || !this.doc.path) {
       push(errorResult("Open a design first."));
       return;
     }
@@ -311,9 +288,9 @@ export class ViewerPresenter {
       // screen were computed under, and a Query panel answering under the server's would contradict
       // it (WS3-113).
       const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, { kind: { case: "text" as const, value } }]));
-      const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay(), bindings: wire, limit });
+      const resp = await this.query.runQuery({ uri: artifactUri(this.doc.mount, this.doc.path), query: text, overlay: this.overlay(), bindings: wire, limit });
       this.answers.set(tab, resp);
-      push(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
+      push(resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids)));
     } catch (e) {
       this.answers.delete(tab);
       // A query that would not parse carries where it stopped, as an error detail.
@@ -330,7 +307,7 @@ export class ViewerPresenter {
     this.views.query.setQuerySets([]);
     try {
       const resp = await this.query.listQuerySets({ designUri: artifactUri(mount, path) });
-      if (mount !== this.mount || path !== this.path) return;
+      if (mount !== this.doc.mount || path !== this.doc.path) return;
       this.views.query.setQuerySets(resp.querySets.filter((s) => s.set).map((s) => ({ name: s.name, source: s.source, set: s.set! })));
     } catch {
       // A project whose sets do not parse offers none; `agni query --set` names the file.
@@ -343,19 +320,19 @@ export class ViewerPresenter {
   async runQuerySet(set: QuerySet, tabs: string[]): Promise<void> {
     if (!this.views.query || !this.query) return;
     const push = (r: QueryResult, tab: string) => this.views.query?.setState(r, tab);
-    if (!this.mount || !this.path) {
+    if (!this.doc.mount || !this.doc.path) {
       for (const t of tabs) push(errorResult("Open a design first."), t);
       return;
     }
     for (const t of tabs) push(emptyResult(true), t);
     try {
-      const resp = await this.query.runQueries({ uri: artifactUri(this.mount, this.path), set, overlay: this.overlay() });
+      const resp = await this.query.runQueries({ uri: artifactUri(this.doc.mount, this.doc.path), set, overlay: this.overlay() });
       resp.results.forEach((r, i) => {
         const tab = tabs[i];
         if (!tab) return;
         if (r.result) {
           this.answers.set(tab, r.result);
-          push(resultFromResponse(r.result, (ids) => this.sheetBadges(ids)), tab);
+          push(resultFromResponse(r.result, (ids) => this.doc.sheetBadges(ids)), tab);
         } else {
           this.answers.delete(tab);
           push(errorResult(r.error || "This query was not answered.", r.errorAt?.caret ?? ""), tab);
@@ -420,7 +397,7 @@ export class ViewerPresenter {
   // Returns whether the id resolved, so the caller can say so. A verdict whose rule has not run yet
   // is absent, the same "not computed" state the findings list models.
   async locateVerdict(id: string): Promise<boolean> {
-    const v = this.findVerdict(id);
+    const v = this.doc.findVerdict(id);
     if (!v) return false;
     if (this.mode === "native") await this.setMode("webgl");
     // Every entity in the tuple is the figure, so a clearance verdict lights both nets rather than
@@ -435,34 +412,14 @@ export class ViewerPresenter {
     return true;
   }
 
-  // findVerdict looks one up across every rule's cached considered set. Linear over a few thousand
-  // rows at worst (the sum of the considered sets, not rules times subjects), too few for an index
-  // to matter.
-  private findVerdict(id: string): VerdictItem | undefined {
-    const v = this.run?.resp.verdicts.find((x) => x.id === id);
-    return v ? verdictItem(v) : undefined;
-  }
 
   // verdictList is the considered set of the selected rules the last run answered, rule by rule in
   // the selection's order, for the panel to render.
   verdictList(): VerdictItem[] {
-    const vs = this.run?.resp.verdicts ?? [];
-    return this.selectedRules.flatMap((name) => vs.filter((v) => v.rule === name).map(verdictItem));
+    return this.doc.verdictList();
   }
 
-  // ran reports whether the last run answered a rule, which is what separates "ran clean" from
-  // "press Run".
-  private ran(rule: string): boolean {
-    return this.run?.rules.has(rule) ?? false;
-  }
 
-  // sheetBadges denormalizes a finding's wire sheet ids into display badges (WS9-024), the id for
-  // navigation and the SheetRef's name for the label (falling back to the id). A single-sheet
-  // design gets no badges, since there is nowhere to navigate, so panels render badges iff present.
-  private sheetBadges(ids: string[]): SheetBadge[] {
-    if (this.sheets.length <= 1) return [];
-    return ids.map((id) => ({ id, name: this.sheets.find((s) => s.id === id)?.name || id }));
-  }
 
   // refreshReport fetches how the current auto-layout maps each component (device class,
   // glyph/box/provided/unresolved) under the active symbol source, and pushes it to the panel.
@@ -473,13 +430,13 @@ export class ViewerPresenter {
       return;
     }
     const symbols = this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH;
-    const resp = await this.client.getLayoutReport({ uri: artifactUri(this.mount, this.path), symbols });
+    const resp = await this.client.getLayoutReport({ uri: artifactUri(this.doc.mount, this.doc.path), symbols });
     this.views.report(resp.report ?? null);
   }
 
   // pushSheets fans the current sheet state out to every navigation surface.
   private pushSheets(activeId: string): void {
-    const state = { mount: this.mount, path: this.path, sheets: this.sheets, activeId };
+    const state = { mount: this.doc.mount, path: this.doc.path, sheets: this.doc.sheets, activeId };
     for (const nav of this.views.sheetNavs) nav.setState(state);
     this.pushOverview(activeId);
   }
@@ -488,7 +445,7 @@ export class ViewerPresenter {
   // current findings' sheet badges. Re-pushed when the sheet set, the shown sheet, or the findings
   // change.
   private pushOverview(activeId = this.currentSheet): void {
-    this.views.overview?.setState({ tiles: sheetTiles(this.sheets, this.findings), activeId, ruleCount: this.selectedRules.length });
+    this.views.overview?.setState({ tiles: sheetTiles(this.doc.sheets, this.findings), activeId, ruleCount: this.doc.selectedRules.length });
   }
 
   // boardLayers is the board layer-visibility setting, kept across sheet switches so
@@ -499,10 +456,10 @@ export class ViewerPresenter {
   private pushControls(): void {
     this.views.controls.setState({
       mode: this.mode,
-      nativeAvailable: this.nativeAvailable,
-      layouts: this.availableLayouts,
+      nativeAvailable: this.doc.nativeAvailable,
+      layouts: this.doc.availableLayouts,
       layout: this.currentLayout,
-      providedSymbols: this.availableLayouts.includes("faithful"),
+      providedSymbols: this.doc.availableLayouts.includes("faithful"),
       faithfulSymbols: this.faithfulSymbols,
       board: this.currentSheet === "board",
       boardLayers: this.boardLayers,
@@ -528,7 +485,7 @@ export class ViewerPresenter {
   // layout must win; a same-file re-open (setLayout) keeps the chosen layout because mount/path are
   // unchanged.
   async openFile(mount: string, path: string, wantSheet = "", keepLayout = false): Promise<void> {
-    const newFile = mount !== this.mount || path !== this.path;
+    const newFile = mount !== this.doc.mount || path !== this.doc.path;
     if (!keepLayout && newFile) this.currentLayout = "";
     // A different design retires the link's claim, since the hash described the bytes behind the
     // OLD path. restore() re-sets it after this call, which is why it clears here rather than
@@ -536,38 +493,38 @@ export class ViewerPresenter {
     if (newFile) {
       this.linkHash = "";
       this.views.staleLinkNote(null);
-      this.catalogLoading = true;
+      this.doc.catalogLoading = true;
       this.pushFindings();
     }
-    const changed = mount !== this.mount || path !== this.path;
+    const changed = mount !== this.doc.mount || path !== this.doc.path;
     if (changed) this.answers.clear();
-    this.mount = mount;
-    this.path = path;
+    this.doc.mount = mount;
+    this.doc.path = path;
     if (changed) void this.loadQuerySets(mount, path);
     this.setBusy(true, "loading design…");
     try {
       const d = await this.client.getDesign({ uri: artifactUri(mount, path), layout: this.currentLayout });
-      this.sheets = d.sheets;
+      this.doc.sheets = d.sheets;
       // Adopt the effective layout the server chose (the request may have been empty or
       // unavailable for this file), and report the options to the UI.
       this.currentLayout = d.layout;
-      this.availableLayouts = d.availableLayouts ?? [];
+      this.doc.availableLayouts = d.availableLayouts ?? [];
       // Default the symbol source to faithful when a newly opened design provides its own
       // symbols (availableLayouts has "faithful"), so it draws with real artwork rather than
       // glyphs even after switching to an auto-layout. A restore keeps the URL's choice.
-      if (!keepLayout && newFile) this.faithfulSymbols = this.availableLayouts.includes("faithful");
-      this.summary = summaryLine(path, d.name, d.layout, d.sourceFormat, d.componentCount, d.netCount);
-      this.views.summary(this.summary);
+      if (!keepLayout && newFile) this.faithfulSymbols = this.doc.availableLayouts.includes("faithful");
+      this.doc.summary = summaryLine(path, d.name, d.layout, d.sourceFormat, d.componentCount, d.netCount);
+      this.views.summary(this.doc.summary);
       // Pushed with the summary because it is a property of THIS read, and a reader needs it before
       // trusting the drawing.
       this.views.undrawnNote(undrawnNote(d.undrawn));
       // "" means the server could not hash the file, and it MUST NOT be read as agreement with a
       // link that named a revision; staleLinkNote keeps it a third state.
-      this.designContentHash = d.contentHash ?? "";
+      this.doc.designContentHash = d.contentHash ?? "";
       // If the newly opened file can't render natively but we're in native mode, fall back to
       // SVG (the always-works renderer) so switching files doesn't error.
       if (!d.nativeAvailable && this.mode === "native") this.mode = "svg";
-      this.nativeAvailable = d.nativeAvailable;
+      this.doc.nativeAvailable = d.nativeAvailable;
       this.pushControls();
       // Resolve the project before the report and parts work, since a reader wants to know whose
       // config is in effect while the rest loads, and the pickers below filter by it.
@@ -576,7 +533,7 @@ export class ViewerPresenter {
       this.pushSheets(target?.id ?? "");
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
-      this.run = null; // a run is of one design, with its own tiers and so its own skipped rules
+      this.doc.run = null; // a run is of one design, with its own tiers and so its own skipped rules
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
       this.assembleFindings(); // empty until a run; pushes the "press Run" state + zero overview counts
@@ -599,8 +556,8 @@ export class ViewerPresenter {
     } finally {
       this.setBusy(false);
       // An open that failed before loadRules would otherwise leave Run disabled for good.
-      if (this.catalogLoading) {
-        this.catalogLoading = false;
+      if (this.doc.catalogLoading) {
+        this.doc.catalogLoading = false;
         this.pushFindings();
       }
     }
@@ -624,7 +581,7 @@ export class ViewerPresenter {
     // The hash is adopted and reported BEFORE the checks run and the proof is drawn, so the warning
     // is on screen before the highlight it warns about.
     this.linkHash = loc.hash;
-    this.views.staleLinkNote(staleLinkNote(this.linkHash, this.designContentHash));
+    this.views.staleLinkNote(staleLinkNote(this.linkHash, this.doc.designContentHash));
     if (loc.verdict) {
       await this.runChecksForLink(loc.rule);
       await this.locateVerdict(loc.verdict);
@@ -645,9 +602,9 @@ export class ViewerPresenter {
   // query's, as the Sets menu would open it. A name the project no longer keeps says so in the panel
   // rather than opening nothing.
   private async openSetMember(setName: string, name: string): Promise<void> {
-    if (!this.views.query || !this.query || !this.mount || !this.path) return;
+    if (!this.views.query || !this.query || !this.doc.mount || !this.doc.path) return;
     try {
-      const resp = await this.query.listQuerySets({ designUri: artifactUri(this.mount, this.path) });
+      const resp = await this.query.listQuerySets({ designUri: artifactUri(this.doc.mount, this.doc.path) });
       const set = resp.querySets.find((s) => s.name === setName)?.set;
       const member = set?.queries.find((q) => q.name === name);
       if (set && member) {
@@ -663,8 +620,8 @@ export class ViewerPresenter {
   // currentLoc snapshots the URL-addressable state.
   private currentLoc(): ViewerLocation {
     return {
-      mount: this.mount,
-      path: this.path,
+      mount: this.doc.mount,
+      path: this.doc.path,
       isDir: false, // the presenter only ever addresses an open file
       sheet: this.currentSheet,
       mode: this.mode,
@@ -674,7 +631,7 @@ export class ViewerPresenter {
       hash: this.linkHash,
       // Named from the focused verdict rather than remembered from the URL, so a verdict reached by
       // clicking in the panel produces the same cheap link as one arrived at from a report.
-      rule: this.focusedVerdict ? (this.findVerdict(this.focusedVerdict)?.rule ?? "") : "",
+      rule: this.focusedVerdict ? (this.doc.findVerdict(this.focusedVerdict)?.rule ?? "") : "",
       // The trace the panel is showing, so a typed route is addressable and the address bar never
       // disagrees with the panel.
       trace: this.tracedPins,
@@ -699,30 +656,11 @@ export class ViewerPresenter {
   // to every available rule, and pushes both to the rules panel. A failure leaves an empty catalog
   // (the panel shows "No rules.") rather than erroring the open.
   private async loadRules(mount: string, path: string): Promise<void> {
-    if (!this.catalogLoading) {
-      this.catalogLoading = true;
+    if (!this.doc.catalogLoading) {
+      this.doc.catalogLoading = true;
       this.pushFindings();
     }
-    try {
-      const resp = await this.checks.listRules({ uri: artifactUri(mount, path), overlay: this.overlay() });
-      this.rules = resp.rules.map((r) => ({
-        name: r.name,
-        severity: r.severity,
-        summary: r.summary,
-        impact: r.impact,
-        remedy: r.remedy,
-        detail: r.detail,
-        reads: r.reads,
-        tags: r.tags,
-        available: r.available,
-        unavailableReason: r.unavailableReason,
-      }));
-    } catch {
-      this.rules = [];
-    }
-    this.rulesByName = new Map(this.rules.map((r) => [r.name, r]));
-    this.selectedRules = defaultSelection(this.rules);
-    this.catalogLoading = false;
+    await this.doc.loadCatalog(this.checks, artifactUri(mount, path), this.overlay());
     this.pushRules();
   }
 
@@ -733,9 +671,9 @@ export class ViewerPresenter {
     // fired counts only the currently selected rules, matching the checks panel, so a rule that ran
     // and was then deselected keeps its cached findings but drops out of the fired counts.
     const fired: Record<string, number> = {};
-    const fs = this.run?.resp.findings ?? [];
-    for (const name of this.selectedRules) fired[name] = fs.filter((f) => f.rule === name).length;
-    this.views.rules.setState({ rules: this.rules, selected: this.selectedRules, fired });
+    const fs = this.doc.run?.resp.findings ?? [];
+    for (const name of this.doc.selectedRules) fired[name] = fs.filter((f) => f.rule === name).length;
+    this.views.rules.setState({ rules: this.doc.rules, selected: this.doc.selectedRules, fired });
   }
 
   // setRuleSelection adopts a new active ruleset (from the rules panel's checkboxes) and re-renders
@@ -743,7 +681,7 @@ export class ViewerPresenter {
   // toggling a rule is instant. A selected rule the last run did not answer shows as pending until
   // the next Run; a deselected rule's findings are hidden.
   async setRuleSelection(names: string[]): Promise<void> {
-    this.selectedRules = names;
+    this.doc.selectedRules = names;
     this.assembleFindings();
     await this.setHighlights(subjectsToSpecs(this.field()));
   }
@@ -757,16 +695,16 @@ export class ViewerPresenter {
   // the full run, because the alternative is resolving nothing and reporting it as a stale link.
   // The rest of the catalog stays PENDING afterwards; the reader who wants it presses Run.
   private async runChecksForLink(rule: string): Promise<void> {
-    if (!rule || !this.rulesByName.has(rule)) {
+    if (!rule || !this.doc.rulesByName.has(rule)) {
       await this.runChecks();
       return;
     }
-    const restore = this.selectedRules;
-    this.selectedRules = [rule];
+    const restore = this.doc.selectedRules;
+    this.doc.selectedRules = [rule];
     try {
       await this.runChecks();
     } finally {
-      this.selectedRules = restore;
+      this.doc.selectedRules = restore;
     }
     this.assembleFindings();
   }
@@ -777,7 +715,7 @@ export class ViewerPresenter {
   // Re-entrancy, a catalog still loading and no-open-file are guarded, and running disables the
   // button meanwhile.
   async runChecks(): Promise<void> {
-    if (this.checksRunning || this.catalogLoading || !this.mount || !this.path) return;
+    if (this.checksRunning || this.doc.catalogLoading || !this.doc.mount || !this.doc.path) return;
     this.checksRunning = true;
     this.pushFindings(); // reflect running=true (disables the Run button)
     this.setBusy(true, "running checks…");
@@ -797,27 +735,7 @@ export class ViewerPresenter {
   // that. A geometry-only file (no netlist) makes CheckDesign fail, which leaves the run as it was and
   // those rules pending.
   private async runSelection(): Promise<void> {
-    const missing = this.selectedRules.filter((n) => !this.ran(n));
-    if (missing.length > 0 && this.mount && this.path) {
-      try {
-        const resp = await this.checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: missing, overlay: this.overlay() });
-        // ?? [] because a hand-built response (a test stub, an older server) may omit a list, and a
-        // missing field must degrade to "nothing was skipped" or "this rule stated no considered
-        // set" rather than throwing mid-run and losing the findings too.
-        resp.skipped ??= [];
-        resp.verdicts ??= [];
-        if (!this.run) {
-          this.run = { rules: new Set(missing), resp };
-        } else {
-          for (const n of missing) this.run.rules.add(n);
-          this.run.resp.findings.push(...resp.findings);
-          this.run.resp.verdicts.push(...resp.verdicts);
-          this.run.resp.skipped.push(...resp.skipped);
-        }
-      } catch {
-        // no netlist etc.: the run stands, and the rules it lacks stay pending.
-      }
-    }
+    await this.doc.runMissing(this.checks, this.overlay());
     this.assembleFindings();
     await this.setHighlights(subjectsToSpecs(this.field())); // every finding at once, when the reader asked for it
   }
@@ -826,10 +744,10 @@ export class ViewerPresenter {
   // stable rule-then-subject base order; the panel re-sorts), clears the focus, and pushes the checks,
   // rules (fired counts), and overview (per-sheet counts) panels. It fetches nothing.
   private assembleFindings(): void {
-    const selected = new Set(this.selectedRules);
-    this.findings = (this.run?.resp.findings ?? [])
+    const selected = new Set(this.doc.selectedRules);
+    this.findings = (this.doc.run?.resp.findings ?? [])
       .filter((f) => selected.has(f.rule))
-      .map((f) => this.findingItem(f))
+      .map((f) => this.doc.findingItem(f))
       .sort((a, b) => (a.rule !== b.rule ? (a.rule < b.rule ? -1 : 1) : a.subject < b.subject ? -1 : a.subject > b.subject ? 1 : 0));
     this.selectedSubject = "";
     this.pushFindings();
@@ -842,22 +760,22 @@ export class ViewerPresenter {
   // Run" from "ran clean") and the rule catalog summaries (the per-rule one-liners the merged panel
   // shows).
   private pushFindings(): void {
-    const pending = this.selectedRules.filter((n) => !this.ran(n)).length;
-    const skippedAt = new Map((this.run?.resp.skipped ?? []).map((sk) => [sk.name, sk.reason]));
+    const pending = this.doc.selectedRules.filter((n) => !this.doc.ran(n)).length;
+    const skippedAt = new Map((this.doc.run?.resp.skipped ?? []).map((sk) => [sk.name, sk.reason]));
     const ruleSummaries: Record<string, string> = {};
-    for (const r of this.rules) if (r.summary) ruleSummaries[r.name] = r.summary;
+    for (const r of this.doc.rules) if (r.summary) ruleSummaries[r.name] = r.summary;
     const state: FindingsState = {
       findings: this.findings,
       verdicts: this.verdictList(),
       focusedVerdict: this.focusedVerdict,
       selected: this.selectedSubject,
-      ruleCount: this.selectedRules.length,
+      ruleCount: this.doc.selectedRules.length,
       pending,
       running: this.checksRunning,
-      catalogLoading: this.catalogLoading,
+      catalogLoading: this.doc.catalogLoading,
       // Only the SELECTED rules, since a rule nobody ticked being unavailable is not news. Sorted so
       // the list is stable across runs rather than following response order.
-      skipped: this.selectedRules
+      skipped: this.doc.selectedRules
         .filter((n) => skippedAt.has(n))
         .map((n) => ({ rule: n, reason: skippedAt.get(n) ?? "" }))
         .sort((a, b) => a.rule.localeCompare(b.rule)),
@@ -872,26 +790,6 @@ export class ViewerPresenter {
     this.views.query?.setFindings(state);
   }
 
-  // findingItem is one wire finding as the panel shows it, with the catalog's category and profile
-  // and the sheet badges of the design on screen.
-  private findingItem(f: CheckDesignResponse["findings"][number]): FindingItem {
-    return {
-      rule: f.rule,
-      category: this.rulesByName.get(f.rule)?.tags.category ?? "",
-      profile: this.rulesByName.get(f.rule)?.tags.profile ?? "",
-      severity: f.severity,
-      kind: f.subject?.kind ?? "",
-      subject: f.subject?.ref ?? "",
-      pin: f.subject?.pin ?? "",
-      netId: f.subject?.netId ?? "",
-      busId: f.subject?.busId ?? "",
-      message: f.message,
-      inconclusive: f.inconclusive ?? false,
-      context: contextFromWire(f.context),
-      sheets: this.sheetBadges(f.sheets ?? []),
-      locateReason: f.locateReason ?? 0,
-    };
-  }
 
   private saveNote = "";
 
@@ -900,14 +798,14 @@ export class ViewerPresenter {
   // so saving runs no rules. It needs every selected rule run, which the panel enforces by enabling
   // the control only then.
   async saveReport(format: "html" | "json"): Promise<void> {
-    if (!this.mount || !this.path || !this.views.download) return;
-    const held = this.heldRun();
+    if (!this.doc.mount || !this.doc.path || !this.views.download) return;
+    const held = this.doc.heldRun();
     if (!held) return;
     const { names, run } = held;
     const links = this.reportLinks();
     try {
       const resp = await this.checks.renderCheckReport({
-        uri: artifactUri(this.mount, this.path),
+        uri: artifactUri(this.doc.mount, this.doc.path),
         overlay: this.overlay(),
         rules: names,
         run,
@@ -925,9 +823,9 @@ export class ViewerPresenter {
   // reportLinks is where a saved report's rows link back to: this viewer, under the page's own base.
   // A dropped design lives in this tab's worker alone, so a link to it would open nothing later.
   private reportLinks(): { withheld?: string; urlBase?: string; designUri?: string } {
-    return this.mount === BROWSER_MOUNT
+    return this.doc.mount === BROWSER_MOUNT
       ? { withheld: "This design was opened from the reader's own files, which the browser keeps only in the tab that opened them, so a link to it would open nothing." }
-      : { urlBase: this.views.linkBase ?? "", designUri: artifactUri(this.mount, this.path) };
+      : { urlBase: this.views.linkBase ?? "", designUri: artifactUri(this.doc.mount, this.doc.path) };
   }
 
   // reviewWire holds each run the review panel shows as the server returned it, by name, so Save
@@ -950,27 +848,10 @@ export class ViewerPresenter {
     this.pushReview();
   }
 
-  // heldRun is the selection's part of the last run as one CheckDesignResponse, rule by rule in the
-  // catalog's order, or undefined until every selected rule has run. A saved report, a saved csv and the Tables panel
-  // all start from it, so none of them runs a rule.
-  private heldRun(): { names: string[]; run: CheckDesignResponse } | undefined {
-    const selected = new Set(this.selectedRules);
-    // Catalog order, which is the order one run over the selection returns its findings in.
-    const names = this.rules.map((r) => r.name).filter((n) => selected.has(n));
-    const held = this.run;
-    if (!held || names.length === 0 || names.some((n) => !held.rules.has(n))) return undefined;
-    const r = held.resp;
-    const run = create(CheckDesignResponseSchema, {
-      findings: names.flatMap((n) => r.findings.filter((f) => f.rule === n)),
-      verdicts: names.flatMap((n) => r.verdicts.filter((v) => v.rule === n)),
-      skipped: r.skipped.filter((sk) => selected.has(sk.name)),
-    });
-    return { names, run };
-  }
 
   // checksAnswer is the held run as an answer for Tabulate, undefined until the selection has run.
   checksAnswer(): TableAnswer | undefined {
-    const held = this.heldRun();
+    const held = this.doc.heldRun();
     return held ? { case: "check", value: held.run } : undefined;
   }
 
@@ -982,7 +863,7 @@ export class ViewerPresenter {
 
   // designStem names a saved file after the open design, its file name without the extension.
   designStem(): string {
-    const base = (this.path ?? "").split("/").filter(Boolean).pop() ?? "";
+    const base = (this.doc.path ?? "").split("/").filter(Boolean).pop() ?? "";
     return base.replace(/\.[^.]+$/, "") || "agni";
   }
 
@@ -1003,9 +884,6 @@ export class ViewerPresenter {
     if (note) this.views.query?.setLocateNote(note);
   }
 
-  private expectations: RuleExpectationItem[] = [];
-  private expectationFindings: FindingItem[] = [];
-  private hasSidecar = false;
 
   // ---- Naming convention (WS9-128) -----------------------------------------------------------
   //
@@ -1013,10 +891,6 @@ export class ViewerPresenter {
   // presenter holds the chosen one and stamps it onto every rule-running call, so the checks panel,
   // the report, and a review run answer under one vocabulary.
 
-  // convention is the resolved value sent on each request, null while the server's default applies.
-  // conventionRef is the ref it was resolved from, so the UI can name it.
-  private convention: NamingConvention | null = null;
-  private conventionRef = "";
 
   // overlayConfig is overlay for a rule-running call the composition root makes on the page's behalf,
   // such as the Tables panel running the checks over a comparison's side, so it checks under the
@@ -1028,11 +902,11 @@ export class ViewerPresenter {
   // overlay is what every rule-running call carries. Every call site that runs rules goes through
   // it, so one that did not would stand out from its neighbours.
   private overlay(): OverlayConfig | undefined {
-    if (!this.convention && !this.projectState.plain) return undefined;
+    if (!this.doc.convention && !this.projectState.plain) return undefined;
     return create(OverlayConfigSchema, {
       // The convention rides inside the shared AnalysisConfig, the same message a Project declares, so
       // a config tier added there is one a request can carry without a second edit here.
-      config: { conventions: this.convention ?? undefined },
+      config: { conventions: this.doc.convention ?? undefined },
       // ignore_project is the "show me the built-in catalog" choice. It rides on every rule-running
       // request because each surface composes its own overlay, and a toggle that reached only some
       // would show findings from one catalog beside the rule set of another.
@@ -1049,12 +923,12 @@ export class ViewerPresenter {
     const plain = this.projectState.plain;
     this.projectState = { ...emptyProject(), plain, busy: true };
     this.pushProject();
-    if (!this.projects || !this.mount || !this.path) {
+    if (!this.projects || !this.doc.mount || !this.doc.path) {
       this.projectState = { ...emptyProject(), plain };
       this.pushProject();
       return;
     }
-    const uri = artifactUri(this.mount, this.path);
+    const uri = artifactUri(this.doc.mount, this.doc.path);
     try {
       const resp = await this.projects.resolveDesign({ uri });
       const d = resp.design;
@@ -1090,7 +964,7 @@ export class ViewerPresenter {
     this.pushProject();
     // The rule LIST is recomposed too, or the panel would list one catalog's rules beside the
     // other's findings.
-    await this.loadRules(this.mount, this.path);
+    await this.loadRules(this.doc.mount, this.doc.path);
     await this.runChecks();
   }
 
@@ -1106,17 +980,17 @@ export class ViewerPresenter {
   async setConvention(ref: string): Promise<void> {
     if (!this.views.conventionBar) return;
     if (ref === "") {
-      this.convention = null;
-      this.conventionRef = "";
+      this.doc.convention = null;
+      this.doc.conventionRef = "";
       await this.reloadForConvention();
       this.pushConvention();
       return;
     }
     this.pushConvention(true);
     try {
-      const resp = await this.checks.getNamingConvention({ uri: artifactUri(this.mount, ref) });
-      this.convention = resp.convention ?? null;
-      this.conventionRef = ref;
+      const resp = await this.checks.getNamingConvention({ uri: artifactUri(this.doc.mount, ref) });
+      this.doc.convention = resp.convention ?? null;
+      this.doc.conventionRef = ref;
       await this.reloadForConvention();
       this.pushConvention();
     } catch (e) {
@@ -1133,13 +1007,13 @@ export class ViewerPresenter {
   private async reloadForConvention(): Promise<void> {
     // A verdict is keyed by rule name, which is what a convention changes, so a surviving run could
     // claim coverage for a rule nobody ran.
-    this.run = null;
+    this.doc.run = null;
     this.focusedVerdict = "";
     // Query results were computed under the previous vocabulary too (`net.rail` answers differently),
     // so leaving them would show two vocabularies at once.
     this.answers.clear();
     this.views.query?.clearAnswers();
-    if (this.mount && this.path) await this.loadRules(this.mount, this.path);
+    if (this.doc.mount && this.doc.path) await this.loadRules(this.doc.mount, this.doc.path);
     this.assembleFindings();
   }
 
@@ -1149,8 +1023,8 @@ export class ViewerPresenter {
   private pushConvention(busy = false, error = ""): void {
     this.views.conventionBar?.setState({
       choices: this.conventionChoices,
-      active: this.conventionRef,
-      name: this.convention?.name ?? "",
+      active: this.doc.conventionRef,
+      name: this.doc.convention?.name ?? "",
       busy,
       error,
     });
@@ -1192,14 +1066,14 @@ export class ViewerPresenter {
     if (!this.views.review || !this.reviews) return;
     this.reviewState = emptyReview();
     this.reviewWire.clear();
-    if (!this.mount || !this.path) {
+    if (!this.doc.mount || !this.doc.path) {
       this.pushReview();
       return;
     }
     this.reviewState.checklists = this.checklistChoices;
     this.reviewState.checklist = this.reviewState.checklists[0]?.ref ?? "";
     try {
-      const resp = await this.reviews.listReviews({ filter: `design="${artifactUri(this.mount, this.path)}"` });
+      const resp = await this.reviews.listReviews({ filter: `design="${artifactUri(this.doc.mount, this.doc.path)}"` });
       this.reviewState.runs = resp.reviews.map(reviewFromWire);
       for (const r of resp.reviews) this.reviewWire.set(r.name, r);
       // Newest first comes from the server, so the head is the latest run.
@@ -1232,7 +1106,7 @@ export class ViewerPresenter {
     // issues 829, 859). A failure keeps the descriptor's own list rather than offering nothing.
     if (this.projectResolved?.project && this.reviews) {
       try {
-        declared = (await this.reviews.listChecklists({ designUri: artifactUri(this.mount, this.path) })).checklists;
+        declared = (await this.reviews.listChecklists({ designUri: artifactUri(this.doc.mount, this.doc.path) })).checklists;
       } catch {
         // the descriptor's own checklists stand
       }
@@ -1251,10 +1125,10 @@ export class ViewerPresenter {
   // keeps its review.yaml and its conventions.yaml side by side.
   private async yamlSiblings(): Promise<ChecklistOption[]> {
     if (!this.workspace) return [];
-    const slash = this.path.lastIndexOf("/");
-    const dir = slash < 0 ? "" : this.path.slice(0, slash);
+    const slash = this.doc.path.lastIndexOf("/");
+    const dir = slash < 0 ? "" : this.doc.path.slice(0, slash);
     try {
-      const resp = await this.workspace.listDir({ uri: artifactUri(this.mount, dir) });
+      const resp = await this.workspace.listDir({ uri: artifactUri(this.doc.mount, dir) });
       return checklistOptions(resp.entries.map((e) => ({ name: e.name, path: uriPath(e.uri), isDir: e.isDir })));
     } catch {
       return [];
@@ -1265,9 +1139,9 @@ export class ViewerPresenter {
   // none or when resolution fails. A failure is not surfaced, because the run still stores
   // unparented, which beats refusing to record a review that ran.
   private async designParent(): Promise<string> {
-    if (!this.projects || !this.mount || !this.path) return "";
+    if (!this.projects || !this.doc.mount || !this.doc.path) return "";
     try {
-      const resp = await this.projects.resolveDesign({ uri: artifactUri(this.mount, this.path) });
+      const resp = await this.projects.resolveDesign({ uri: artifactUri(this.doc.mount, this.doc.path) });
       return resp.project?.name ?? "";
     } catch {
       return "";
@@ -1281,7 +1155,7 @@ export class ViewerPresenter {
   async createReview(): Promise<void> {
     if (!this.views.review || !this.reviews) return;
     if (this.reviewState.running) return;
-    if (!this.mount || !this.path || !this.reviewState.checklist) return;
+    if (!this.doc.mount || !this.doc.path || !this.reviewState.checklist) return;
     this.reviewState = { ...this.reviewState, running: true, error: "" };
     this.pushReview();
     this.setBusy(true, "running review…");
@@ -1290,13 +1164,13 @@ export class ViewerPresenter {
       const chosen = this.checklistChoices.find((c) => c.ref === this.reviewState.checklist);
       const manifest =
         chosen?.manifest ??
-        (await this.reviews.getReviewManifest({ uri: artifactUri(this.mount, this.reviewState.checklist) })).manifest;
+        (await this.reviews.getReviewManifest({ uri: artifactUri(this.doc.mount, this.reviewState.checklist) })).manifest;
       const created = await this.reviews.createReview({
         // Resolved here rather than re-derived by the server, so the run is filed under the project
         // whose config scored it. An empty parent is a real answer, since a design on a mounted
         // folder often belongs to no project.
         parent: await this.designParent(),
-        designUri: artifactUri(this.mount, this.path),
+        designUri: artifactUri(this.doc.mount, this.doc.path),
         manifest,
         overlay: this.overlay(),
       });
@@ -1348,14 +1222,14 @@ export class ViewerPresenter {
       view.setState(errorTrace("Name each end as <ref-des>.<pin>, for example U1.3"));
       return;
     }
-    if (!this.mount || !this.path) {
+    if (!this.doc.mount || !this.doc.path) {
       view.setState(errorTrace("Open a design first"));
       return;
     }
     view.setState(loadingTrace());
     let state;
     try {
-      const resp = await this.client.traceDesign({ uri: artifactUri(this.mount, this.path), from, to, hops });
+      const resp = await this.client.traceDesign({ uri: artifactUri(this.doc.mount, this.doc.path), from, to, hops });
       if (!resp.trace) {
         view.setState(errorTrace("The server answered with no trace"));
         return;
@@ -1389,12 +1263,12 @@ export class ViewerPresenter {
   // rather than stale coverage from the previous design.
   private async refreshCoverage(): Promise<void> {
     if (!this.views.coverage) return;
-    if (!this.mount || !this.path) {
+    if (!this.doc.mount || !this.doc.path) {
       this.views.coverage.setState(emptyCoverage());
       return;
     }
     try {
-      const resp = await this.checks.getInterfaceCoverage({ uri: artifactUri(this.mount, this.path), overlay: this.overlay() });
+      const resp = await this.checks.getInterfaceCoverage({ uri: artifactUri(this.doc.mount, this.doc.path), overlay: this.overlay() });
       this.views.coverage.setState(coverageFromResponse(resp));
     } catch {
       this.views.coverage.setState(emptyCoverage());
@@ -1407,12 +1281,12 @@ export class ViewerPresenter {
   // empty hint rather than stale parts from the previous design.
   private async refreshParts(): Promise<void> {
     if (!this.views.parts) return;
-    if (!this.mount || !this.path) {
+    if (!this.doc.mount || !this.doc.path) {
       this.views.parts.setState(emptyParts());
       return;
     }
     try {
-      const resp = await this.checks.getComponentParams({ uri: artifactUri(this.mount, this.path) });
+      const resp = await this.checks.getComponentParams({ uri: artifactUri(this.doc.mount, this.doc.path) });
       this.views.parts.setState(partsFromResponse(resp));
     } catch {
       this.views.parts.setState(emptyParts());
@@ -1424,9 +1298,9 @@ export class ViewerPresenter {
   // first Run the panel shows its neutral empty state instead of reconciling against zero findings,
   // which would mislabel every non-pending expectation "missing".
   private clearExpectations(): void {
-    this.expectations = [];
-    this.expectationFindings = [];
-    this.hasSidecar = false;
+    this.doc.expectations = [];
+    this.doc.expectationFindings = [];
+    this.doc.hasSidecar = false;
     this.pushExpectations();
   }
 
@@ -1435,17 +1309,17 @@ export class ViewerPresenter {
   // "missing" row means the rule ran and did not fire, not that it was deselected. Runs as part of the
   // on-demand check run (runChecks); a design with no sidecar leaves the panel empty.
   private async refreshExpectations(): Promise<void> {
-    this.expectations = [];
-    this.expectationFindings = [];
-    this.hasSidecar = false;
-    if (this.mount && this.path) {
+    this.doc.expectations = [];
+    this.doc.expectationFindings = [];
+    this.doc.hasSidecar = false;
+    if (this.doc.mount && this.doc.path) {
       try {
-        const exp = await this.checks.getExpectations({ uri: artifactUri(this.mount, this.path) });
-        this.hasSidecar = exp.hasSidecar;
-        this.expectations = exp.expectations.map((e) => ({ rule: e.rule, subjects: e.subjects, pending: e.pending, why: e.why }));
-        if (this.hasSidecar) {
-          const resp = await this.checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: [], overlay: this.overlay() });
-          this.expectationFindings = resp.findings.map((f) => ({
+        const exp = await this.checks.getExpectations({ uri: artifactUri(this.doc.mount, this.doc.path) });
+        this.doc.hasSidecar = exp.hasSidecar;
+        this.doc.expectations = exp.expectations.map((e) => ({ rule: e.rule, subjects: e.subjects, pending: e.pending, why: e.why }));
+        if (this.doc.hasSidecar) {
+          const resp = await this.checks.checkDesign({ uri: artifactUri(this.doc.mount, this.doc.path), rules: [], overlay: this.overlay() });
+          this.doc.expectationFindings = resp.findings.map((f) => ({
             rule: f.rule,
             category: "",
             profile: "",
@@ -1458,19 +1332,19 @@ export class ViewerPresenter {
             message: f.message,
             inconclusive: f.inconclusive ?? false,
             context: contextFromWire(f.context),
-            sheets: this.sheetBadges(f.sheets ?? []),
+            sheets: this.doc.sheetBadges(f.sheets ?? []),
             locateReason: f.locateReason ?? 0,
           }));
         }
       } catch {
-        this.hasSidecar = false; // no netlist / bad path: no overlay/caption rather than erroring
+        this.doc.hasSidecar = false; // no netlist / bad path: no overlay/caption rather than erroring
       }
     }
     // A conformance fixture's assertions become the status-colored highlight overlay (the anchored
     // half), replacing the plain "all findings lit" base, plus the caption (the non-anchored
     // verdict). A real design with no sidecar keeps the findings base and hides the caption.
-    if (this.hasSidecar) {
-      await this.setHighlights(expectationSpecs(this.reconcileExpectations(), this.expectationFindings));
+    if (this.doc.hasSidecar) {
+      await this.setHighlights(expectationSpecs(this.reconcileExpectations(), this.doc.expectationFindings));
     }
     this.pushExpectations();
   }
@@ -1478,8 +1352,8 @@ export class ViewerPresenter {
   // reconcileExpectations joins the sidecar against the full-run findings, stamping each row with its
   // rule's catalog summary (WS9-020). Empty when the design has no sidecar.
   private reconcileExpectations(): ExpectationRow[] {
-    return this.hasSidecar
-      ? reconcile(this.expectations, this.expectationFindings, (rule) => this.rulesByName.get(rule)?.summary ?? "")
+    return this.doc.hasSidecar
+      ? reconcile(this.doc.expectations, this.doc.expectationFindings, (rule) => this.doc.rulesByName.get(rule)?.summary ?? "")
       : [];
   }
 
@@ -1488,7 +1362,7 @@ export class ViewerPresenter {
   // refreshExpectations applies the anchored overlay once and a later focus change must not disturb
   // it.
   private pushExpectations(): void {
-    this.views.expectationCaption(this.hasSidecar ? expectationCaption(this.reconcileExpectations()) : null);
+    this.views.expectationCaption(this.doc.hasSidecar ? expectationCaption(this.reconcileExpectations()) : null);
   }
 
   // setHighlights replaces the active highlight layers (the selection API). Each spec selects
@@ -1535,7 +1409,7 @@ export class ViewerPresenter {
     }
     try {
       const resp = await this.client.highlightSheet({
-        uri: artifactUri(this.mount, this.path),
+        uri: artifactUri(this.doc.mount, this.doc.path),
         sheet: this.currentSheet,
         layout: this.currentLayout,
         symbols: this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH,
@@ -1596,7 +1470,7 @@ export class ViewerPresenter {
   // deselected.
   private findFinding(subject: string, id: string): FindingItem | undefined {
     const match = (f: FindingItem) => (id !== "" ? f.netId === id || f.busId === id : f.subject === subject);
-    return this.findings.find(match) ?? this.expectationFindings.find(match);
+    return this.findings.find(match) ?? this.doc.expectationFindings.find(match);
   }
 
   // reapplyFocus (re)builds the focus highlight for a subject/instance on the current sheet, stamping
@@ -1651,11 +1525,11 @@ export class ViewerPresenter {
     try {
       try {
         await this.renderSheet(sheetId, formatFor(this.mode));
-        this.views.summary(this.summary); // clear any prior transient error
+        this.views.summary(this.doc.summary); // clear any prior transient error
       } catch (e) {
         if (this.mode !== "native") throw e;
         await this.renderSheet(sheetId, SheetFormat.SVG);
-        this.views.summary(`${this.summary} · native unavailable, showing SVG`);
+        this.views.summary(`${this.doc.summary} · native unavailable, showing SVG`);
       }
     } catch (e) {
       this.views.summary(`error: ${String(e)}`);
@@ -1671,7 +1545,7 @@ export class ViewerPresenter {
   // native slot's view (native and SVG share the SVG host). Throws on RPC failure.
   private async renderSheet(sheetId: string, format: SheetFormat): Promise<void> {
     const symbols = this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH;
-    const resp = await this.client.getSheet({ uri: artifactUri(this.mount, this.path), sheet: sheetId, layout: this.currentLayout, format, symbols });
+    const resp = await this.client.getSheet({ uri: artifactUri(this.doc.mount, this.doc.path), sheet: sheetId, layout: this.currentLayout, format, symbols });
     switch (resp.content.case) {
       case "packed":
         this.canvas.showSheet(resp.content.value);
@@ -1722,7 +1596,7 @@ export class ViewerPresenter {
   async setMode(mode: RenderMode): Promise<void> {
     if (mode === this.mode) return;
     this.mode = mode;
-    if (mode === "native" && this.currentLayout !== "faithful" && this.availableLayouts.includes("faithful")) {
+    if (mode === "native" && this.currentLayout !== "faithful" && this.doc.availableLayouts.includes("faithful")) {
       await this.setLayout("faithful"); // re-opens and pushes controls with the snapped layout
       return;
     }
@@ -1735,7 +1609,7 @@ export class ViewerPresenter {
   async setLayout(layout: string): Promise<void> {
     if (layout === this.currentLayout) return;
     this.currentLayout = layout;
-    await this.openFile(this.mount, this.path);
+    await this.openFile(this.doc.mount, this.doc.path);
   }
 
   // setSymbols switches an auto-layout's node artwork between synthetic glyphs and the design's
@@ -1773,23 +1647,3 @@ function messageOf(e: unknown): string {
 
 
 
-// verdictItem is one wire verdict as the panel shows it: its outcome as a word, its subjects, and the
-// statement and terms its witness rests on.
-function verdictItem(v: CheckDesignResponse["verdicts"][number]): VerdictItem {
-  return {
-    id: v.id,
-    rule: v.rule,
-    outcome: outcomeWord(v.outcome),
-    subjects: (v.subjects ?? []).map((sub) => ({
-      kind: sub.kind ?? "",
-      subject: sub.ref ?? "",
-      pin: sub.pin ?? "",
-      netId: sub.netId ?? "",
-      busId: sub.busId ?? "",
-    })),
-    statement: v.witness?.statement ?? "",
-    terms: (v.witness?.terms ?? []).map((t) => ({ label: t.label, value: t.value })),
-    context: contextFromWire(v.context),
-    reason: v.reason ?? "",
-  };
-}
