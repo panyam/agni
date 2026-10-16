@@ -488,6 +488,10 @@ type builtModel struct {
 	model check.Model
 	mu    sync.Mutex
 	bases map[*facts.Registry]*query.Base
+	// kept is whether the entry lives in the cache, where a later request with the same tiers and
+	// overlay finds it. Only a kept entry stores rule results.
+	kept    bool
+	results ruleResults
 }
 
 // base returns the fact base over reg, built once. The registry is the overlay's, and the overlay is
@@ -526,27 +530,33 @@ func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI art
 // one, since that model answers everything the board-less one would, so a server that has run checks
 // on a design builds no second model for its coverage panel (agni issues 985, 987).
 func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (check.Model, func(*facts.Registry) *query.Base, error) {
+	b, err := buildModelEntry(ctx, loader, uri, boardURI, ov, serverSpecs, board)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b.model, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
+}
+
+// buildModelEntry is BuildModelCachedTier returning the entry itself, which a check run also keeps
+// its rules' results on (runKept). An entry built for one request alone is marked unkept, so nothing
+// is stored on it for a later request to find.
+func buildModelEntry(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (*builtModel, error) {
 	specs := ov.SpecsOver(serverSpecs)
 	opts := ov.ReadOptions()
-	fresh := func() (check.Model, func(*facts.Registry) *query.Base, error) {
-		m, err := BuildModelTier(ctx, loader, uri, boardURI, specs, board, opts...)
-		if err != nil {
-			return nil, nil, err
-		}
-		b := &builtModel{model: m, bases: map[*facts.Registry]*query.Base{}}
-		return m, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
-	}
 	c := cacheOf(loader)
 	id, ok := optsKey(opts)
 	if c == nil || !ok || param.Fetches(specs) {
-		return fresh()
+		m, err := BuildModelTier(ctx, loader, uri, boardURI, specs, board, opts...)
+		if err != nil {
+			return nil, err
+		}
+		return &builtModel{model: m, bases: map[*facts.Registry]*query.Base{}}, nil
 	}
 	withBoard := cacheKey("model", uri.String(), boardURI.String(), id)
 	key := withBoard
 	if board == SkipBoard {
 		if v, ok := c.peek(ctx, withBoard); ok {
-			b := v.(*builtModel)
-			return b.model, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
+			return v.(*builtModel), nil
 		}
 		key = cacheKey("model", uri.String(), "", id, "noboard")
 	}
@@ -555,11 +565,10 @@ func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI
 		if err != nil {
 			return nil, err
 		}
-		return &builtModel{model: m, bases: map[*facts.Registry]*query.Base{}}, nil
+		return &builtModel{model: m, bases: map[*facts.Registry]*query.Base{}, kept: true}, nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	b := v.(*builtModel)
-	return b.model, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
+	return v.(*builtModel), nil
 }

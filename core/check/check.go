@@ -402,13 +402,15 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 			}
 		}
 	}
-	sort.Slice(fs, func(i, j int) bool {
+	// Stable, so a rule's findings keep its own order whichever other rules ran beside it, and a
+	// caller holding one rule's results can join them to another's (agni issue 390).
+	sort.SliceStable(fs, func(i, j int) bool {
 		if fs[i].Rule != fs[j].Rule {
 			return fs[i].Rule < fs[j].Rule
 		}
 		return EntityRef(fs[i].Subject) < EntityRef(fs[j].Subject)
 	})
-	sort.Slice(vs, func(i, j int) bool {
+	sort.SliceStable(vs, func(i, j int) bool {
 		if vs[i].Rule != vs[j].Rule {
 			return vs[i].Rule < vs[j].Rule
 		}
