@@ -272,6 +272,41 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	if pa != pb {
 		t.Error("RenderReviewReport: the wasm engine writes a different page from the server")
 	}
+	// A checklist is scored on the browser engine with validate_only, since it keeps no review store
+	// (agni issue 931), so both hosts score one checklist alike and neither stores it.
+	lists, err := served.review.ListChecklists(ctx, connect.NewRequest(&webapi.ListChecklistsRequest{DesignUri: design}))
+	if err != nil {
+		t.Fatalf("ListChecklists: %v", err)
+	}
+	// Only a design in a project has a checklist to score; the project case must have one, or the
+	// comparison below is skipped for the case it exists for.
+	if len(lists.Msg.GetChecklists()) == 0 && ruleFrom != "" {
+		t.Fatal("ListChecklists: the project design offers no checklist")
+	}
+	if len(lists.Msg.GetChecklists()) > 0 {
+		score := func(c parityClients) (*webapi.Review, error) {
+			r, err := c.review.CreateReview(ctx, connect.NewRequest(&webapi.CreateReviewRequest{
+				DesignUri: design, Manifest: lists.Msg.GetChecklists()[0].GetManifest(), ValidateOnly: true,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			rv := r.Msg
+			rv.GetResults().GetMeta().CreatedAt = ""
+			return rv, nil
+		}
+		ra, errA := score(served)
+		rb, errB := score(wasm)
+		if errA != nil || errB != nil {
+			t.Fatalf("CreateReview validate_only: served err %v, wasm err %v", errA, errB)
+		}
+		if n := len(ra.GetResults().GetAreas()); n == 0 {
+			t.Fatal("CreateReview: the run scored no area, so two empty runs would compare equal")
+		}
+		if !proto.Equal(ra, rb) {
+			t.Errorf("CreateReview validate_only: the wasm engine scores the checklist differently:\n%s", firstDifference(ra, rb))
+		}
+	}
 	// A run saved as csv is tabulated and encoded by whichever host the page runs on (agni issue 956),
 	// so both lay out and write one run identically. The run is the server's, sent to each.
 	run, err := served.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Uri: design}))

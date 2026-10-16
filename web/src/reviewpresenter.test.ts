@@ -248,6 +248,37 @@ describe("review presenter — creating", () => {
     expect(s.running).toBe(false);
   });
 
+  // agni issue 931: an engine that keeps no store (the browser engine, or a server without
+  // --review-store) still scores the checklist, with validate_only, and the page holds the run.
+  it("scores without a store once the listing said there is none, and holds the run in the page", async () => {
+    const h = harness();
+    h.listReviews.mockRejectedValueOnce(new ConnectError("no review store configured", Code.FailedPrecondition));
+    const unnamed = { ...doc("", "", ["pass", "fail"]) };
+    h.createReview.mockResolvedValueOnce(unnamed as never);
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.createReview();
+    expect(h.createReview).toHaveBeenCalledTimes(1);
+    expect(h.createReview.mock.calls[0][0]).toMatchObject({ designUri: artifactUri("m", "proj/board.edn"), validateOnly: true });
+    const s = lastState(h.onReview);
+    expect(s.storeConfigured).toBe(false);
+    expect(s.error).toBe("");
+    expect(s.runs.map((r) => r.name)).toEqual(["page/1"]);
+    expect(s.selected).toBe("page/1");
+    expect(s.runs[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+  });
+
+  it("falls back to scoring without a store when a create finds none, and asks once more", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.createReview.mockRejectedValueOnce(new ConnectError("no review store configured", Code.FailedPrecondition));
+    h.createReview.mockResolvedValueOnce({ ...doc("", "2026-08-11T08:00:00Z", ["pass"]) } as never);
+    await h.presenter.createReview();
+    expect(h.createReview.mock.calls.map((c) => (c[0] as { validateOnly?: boolean }).validateOnly ?? false)).toEqual([false, true]);
+    const s = lastState(h.onReview);
+    expect(s.storeConfigured).toBe(false);
+    expect(s.runs[0].name).toBe("page/1");
+  });
+
   // The manifest travels as a VALUE (C22). The browser holds a ref and no filesystem, so the read is
   // a named rpc rather than something the run does behind its back.
   it("sends the manifest value rather than a path", async () => {

@@ -12,9 +12,9 @@ your browser. You install nothing, and nothing you open is uploaded.
 The landing page lists a few seed designs. One is the gateway board the
 [tutorials](../tutorials/) use, and the others are open-source KiCad boards from the samples corpus,
 each shipped under its own licence. Open one and the viewer draws its sheets and its board, runs the
-rule catalog, answers queries and traces a signal, the same as it would against a server. Running a
-checklist needs a server for now, because the browser engine keeps no review store
-([#931](https://github.com/panyam/agni/issues/931)).
+rule catalog, answers queries, traces a signal and scores a checklist, the same as it would against
+a server. The browser engine keeps no review store, so a checklist run lasts until you leave the
+page; it still shows every item's verdict and saves as the checklist page.
 
 You can also drop a folder or a `.zip` of your own design files on the page, or pick them with its
 "Open files" button. The page proposes which designs the files make, shows each as the `design.yaml`
