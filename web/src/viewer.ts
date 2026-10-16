@@ -22,6 +22,7 @@ import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
 import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
+import { hierarchyNote } from "./hierarchy.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
@@ -120,6 +121,10 @@ export interface ViewSink {
   // verdict id is derived from a rule name and a subject ref, so it resolves against an edited
   // design just as readily and draws its proof on whatever now answers to that ref.
   staleLinkNote: (note: StaleLinkNote | null) => void;
+  // hierarchyNote receives the server's sentence saying the read left hierarchical blocks out, or
+  // null for a design read whole (agni issues 707, 717). The drawing and the counts look complete
+  // either way, so this is the only thing on screen that says they cover the top level alone.
+  hierarchyNote: (note: string | null) => void;
   // rules receives the rule catalog + active selection.
   rules: RulesView;
   // report receives the auto-layout conversion report, or null to hide the panel (the
@@ -518,6 +523,7 @@ export class ViewerPresenter {
       // Pushed with the summary because it is a property of THIS read, and a reader needs it before
       // trusting the drawing.
       this.views.undrawnNote(undrawnNote(d.undrawn));
+      this.views.hierarchyNote(hierarchyNote(d.hierarchyNote));
       // "" means the server could not hash the file, and it MUST NOT be read as agreement with a
       // link that named a revision; staleLinkNote keeps it a third state.
       this.doc.designContentHash = d.contentHash ?? "";

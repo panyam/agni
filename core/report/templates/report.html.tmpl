@@ -15,6 +15,10 @@
   {{if .ContentHash}} · <code>{{.ContentHash}}</code>{{end}}
 </div>
 
+{{if .HierarchyNote}}
+<div class="read-limit">{{.HierarchyNote}}</div>
+{{end}}
+
 <div class="stats">
   <div class="stat"><span class="n">{{.Totals.Findings}}</span><span class="l">findings</span></div>
   <div class="stat"><span class="n">{{.Totals.Considered}}</span><span class="l">considered</span></div>

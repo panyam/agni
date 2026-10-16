@@ -20,6 +20,8 @@ type Checklist struct {
 	// LinksWithheld is why this run promised no links, when it was asked for them and refused.
 	// Same as Report.LinksWithheld (issue 626).
 	LinksWithheld string
+	// HierarchyNote is Report.HierarchyNote for the read this checklist scored (agni issue 717).
+	HierarchyNote string
 	Summary       string // the one-line tally, rendered by the caller so both surfaces read alike
 	Covered       int
 	Answered      int

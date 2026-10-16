@@ -30,6 +30,9 @@ function harness() {
     // Optional for the same reason undrawn is, and its absence is MEANINGFUL. A server that did not
     // hash sends nothing, which is the unverifiable case rather than agreement (agni issue 392).
     contentHash?: string;
+    // Optional like undrawn: absent means the read left nothing out, and a server that predates the
+    // field sends nothing (agni issue 717).
+    hierarchyNote?: string;
   };
   const getDesign = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
     name: "D",
@@ -108,6 +111,7 @@ function harness() {
   const onExpectCaption = vi.fn();
   const onUndrawnNote = vi.fn();
   const onStaleLinkNote = vi.fn();
+  const onHierarchyNote = vi.fn();
   const onRules = vi.fn();
   const onReport = vi.fn();
   const onLocation = vi.fn();
@@ -120,6 +124,7 @@ function harness() {
     expectationCaption: onExpectCaption,
     undrawnNote: onUndrawnNote,
     staleLinkNote: onStaleLinkNote,
+    hierarchyNote: onHierarchyNote,
     rules: { setState: onRules },
     report: onReport,
     location: onLocation,
@@ -129,7 +134,7 @@ function harness() {
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   }, { runQuery, runQueries, listQuerySets } as any);
-  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -1259,6 +1264,35 @@ describe("the incomplete-drawing notice", () => {
     const h = harness();
     await h.presenter.openFile("m", "board.eds");
     const calls = h.onUndrawnNote.mock.calls;
+    expect(calls[calls.length - 1][0]).toBeNull();
+  });
+});
+
+// The presenter half of agni issue 717: the server's sentence about a hierarchical read reaches the
+// view on open, as sent, because a top-cell-only drawing and its counts look complete.
+describe("the hierarchical-read notice", () => {
+  const sentence =
+    "hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone.";
+
+  it("pushes the served sentence unchanged", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "TEST", layout: "grid", sourceFormat: "edif", componentCount: 1, netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["grid"],
+      hierarchyNote: sentence,
+    });
+    await h.presenter.openFile("edif", "hier.edn");
+    const calls = h.onHierarchyNote.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[calls.length - 1][0]).toBe(sentence);
+  });
+
+  it("pushes null for a design read whole, so the notice stays off", async () => {
+    // The control: a strip shown on every open would satisfy the test above.
+    const h = harness();
+    await h.presenter.openFile("edif", "basic.edn");
+    const calls = h.onHierarchyNote.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
     expect(calls[calls.length - 1][0]).toBeNull();
   });
 });

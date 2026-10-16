@@ -122,6 +122,9 @@ export class DocumentStore {
       findings: names.flatMap((n) => r.findings.filter((f) => f.rule === n)),
       verdicts: names.flatMap((n) => r.verdicts.filter((v) => v.rule === n)),
       skipped: r.skipped.filter((sk) => selected.has(sk.name)),
+      // What the read left out is a property of the design rather than of a rule, so it travels whole
+      // and a saved report states it (agni issue 717).
+      unexpandedHierarchy: r.unexpandedHierarchy ?? [],
     });
     return { names, run };
   }

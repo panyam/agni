@@ -352,12 +352,14 @@ class ResultsMeta(_message.Message):
     def __init__(self, schema: _Optional[str] = ..., producer: _Optional[str] = ..., producer_version: _Optional[str] = ..., created_at: _Optional[str] = ..., coverage_axis: _Optional[bool] = ...) -> None: ...
 
 class DesignRef(_message.Message):
-    __slots__ = ("source", "content_hash")
+    __slots__ = ("source", "content_hash", "unexpanded_hierarchy")
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_HASH_FIELD_NUMBER: _ClassVar[int]
+    UNEXPANDED_HIERARCHY_FIELD_NUMBER: _ClassVar[int]
     source: str
     content_hash: str
-    def __init__(self, source: _Optional[str] = ..., content_hash: _Optional[str] = ...) -> None: ...
+    unexpanded_hierarchy: _containers.RepeatedCompositeFieldContainer[_ir_pb2.UnexpandedHierarchy]
+    def __init__(self, source: _Optional[str] = ..., content_hash: _Optional[str] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ...) -> None: ...
 
 class RunConfig(_message.Message):
     __slots__ = ("params", "profiles", "intent", "conventions", "ratified_floor")

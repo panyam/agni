@@ -203,6 +203,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		Findings: FindingProtos(findings),
 		Verdicts: VerdictProtos(verdicts),
 		Skipped:  skipped,
+		// What the read left out travels with the run, so a report written from it says so without
+		// reading the design again (agni issue 717).
+		UnexpandedHierarchy: m.UnexpandedHierarchy(),
 	}
 	g := BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...)
 	endLocate := timing.Begin(ctx, "locate")

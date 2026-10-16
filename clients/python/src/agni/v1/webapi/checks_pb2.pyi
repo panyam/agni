@@ -1,5 +1,6 @@
 from agni.v1.checks import checks_pb2 as _checks_pb2
 from agni.v1.config import naming_pb2 as _naming_pb2
+from agni.v1.ir import ir_pb2 as _ir_pb2
 from agni.v1.webapi import config_pb2 as _config_pb2
 from agni.v1.param import param_pb2 as _param_pb2
 from google.protobuf.internal import containers as _containers
@@ -45,14 +46,16 @@ class OverlayConfig(_message.Message):
     def __init__(self, config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., ignore_project: _Optional[bool] = ...) -> None: ...
 
 class CheckDesignResponse(_message.Message):
-    __slots__ = ("findings", "skipped", "verdicts")
+    __slots__ = ("findings", "skipped", "verdicts", "unexpanded_hierarchy")
     FINDINGS_FIELD_NUMBER: _ClassVar[int]
     SKIPPED_FIELD_NUMBER: _ClassVar[int]
     VERDICTS_FIELD_NUMBER: _ClassVar[int]
+    UNEXPANDED_HIERARCHY_FIELD_NUMBER: _ClassVar[int]
     findings: _containers.RepeatedCompositeFieldContainer[_checks_pb2.Finding]
     skipped: _containers.RepeatedCompositeFieldContainer[SkippedRule]
     verdicts: _containers.RepeatedCompositeFieldContainer[_checks_pb2.Verdict]
-    def __init__(self, findings: _Optional[_Iterable[_Union[_checks_pb2.Finding, _Mapping]]] = ..., skipped: _Optional[_Iterable[_Union[SkippedRule, _Mapping]]] = ..., verdicts: _Optional[_Iterable[_Union[_checks_pb2.Verdict, _Mapping]]] = ...) -> None: ...
+    unexpanded_hierarchy: _containers.RepeatedCompositeFieldContainer[_ir_pb2.UnexpandedHierarchy]
+    def __init__(self, findings: _Optional[_Iterable[_Union[_checks_pb2.Finding, _Mapping]]] = ..., skipped: _Optional[_Iterable[_Union[SkippedRule, _Mapping]]] = ..., verdicts: _Optional[_Iterable[_Union[_checks_pb2.Verdict, _Mapping]]] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ...) -> None: ...
 
 class SkippedRule(_message.Message):
     __slots__ = ("name", "reason")

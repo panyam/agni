@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { create } from "@bufbuild/protobuf";
-import { ClassSource, DesignSchema, Role } from "./gen/agni/v1/ir/ir_pb.js";
+import { clone, create } from "@bufbuild/protobuf";
+import { ClassSource, DesignSchema, InputDiagnosticsSchema, Role } from "./gen/agni/v1/ir/ir_pb.js";
 import { PartSpecSchema } from "./gen/agni/v1/param/param_pb.js";
 import { ConversionReportSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingItem, FindingsState } from "./findings.js";
@@ -144,6 +144,25 @@ describe("propertiesFor", () => {
     expect(row(s, "nets")).toBe("3");
     expect(row(s, "findings")).toBe("not checked yet");
     expect(s.ask).toBeUndefined();
+    // A flat read lists no blocks it left out, rather than an empty group.
+    expect(group(s, "not extracted")).toBeUndefined();
+  });
+
+  it("lists the hierarchical blocks the read left out, largest first, with what each holds", () => {
+    // agni issue 717: the counts above cover the top level alone, so the design level names what
+    // they leave out.
+    const hier = clone(DesignSchema, design);
+    hier.inputDiagnostics = create(InputDiagnosticsSchema, {
+      unexpandedHierarchy: [
+        { name: "SUB", kind: "edif_cell", instanceCount: 1 },
+        { name: "PSU", kind: "edif_cell", instanceCount: 212 },
+      ],
+    });
+    const s = propertiesFor(input({ inventory: inventoryFromDesign(hier, SERVED) }));
+    expect(group(s, "not extracted")?.refs).toEqual([
+      { label: "PSU", detail: "212 instances" },
+      { label: "SUB", detail: "1 instance" },
+    ]);
   });
 
   it("counts findings only once the run is complete, and keeps unresolved apart", () => {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -68,8 +69,11 @@ func TestPivotIsIdempotentUnderItsOwnFlattening(t *testing.T) {
 // TestMarshalParseRoundTrip pins that a document survives the encoding unchanged.
 func TestMarshalParseRoundTrip(t *testing.T) {
 	doc := &checkspb.CheckResults{
-		Meta:     &checkspb.ResultsMeta{Schema: Schema, Producer: Producer, ProducerVersion: "abc123", CreatedAt: "2026-01-01T00:00:00Z"},
-		Design:   &checkspb.DesignRef{Source: "d.edn", ContentHash: "sha256:00"},
+		Meta: &checkspb.ResultsMeta{Schema: Schema, Producer: Producer, ProducerVersion: "abc123", CreatedAt: "2026-01-01T00:00:00Z"},
+		Design: &checkspb.DesignRef{Source: "d.edn", ContentHash: "sha256:00", UnexpandedHierarchy: []*ir.UnexpandedHierarchy{
+			{Name: "SUB", Kind: "edif_cell", InstanceCount: 212, Prov: &ir.Provenance{SourceFile: "d.edn", NativeId: "SUB", NativeIdKind: "edif-cell", Span: &ir.Span{ByteOffset: 40, ByteLength: 120, Line: 5, Column: 5}}},
+			{Name: "PSU", Kind: "edif_cell", InstanceCount: 9, Prov: &ir.Provenance{SourceFile: "d.edn", NativeId: "PSU", NativeIdKind: "edif-cell", Span: &ir.Span{ByteOffset: 400, ByteLength: 90, Line: 40, Column: 5}}},
+		}},
 		Run:      &checkspb.RunConfig{Params: true, Conventions: "acme"},
 		Catalog:  []*checkspb.RuleRecord{{Name: "a", Severity: "info", Summary: "A rule", Tags: map[string]string{"category": "connectivity"}}},
 		Findings: []*checkspb.Finding{finding("a", "info", "N1")},

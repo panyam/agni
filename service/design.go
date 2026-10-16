@@ -10,6 +10,7 @@ import (
 
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/core/report"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -364,6 +365,9 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 			resp.ComponentCount = int32(len(d.GetComponents()))
 			resp.NetCount = int32(len(d.GetNets()))
 			resp.UnexpandedHierarchy = d.GetInputDiagnostics().GetUnexpandedHierarchy()
+			// The viewer's strip shows this sentence as sent, so the page and the CLI say it in one
+			// wording (agni issue 717).
+			resp.HierarchyNote = report.HierarchyNote(nu.Path, resp.UnexpandedHierarchy)
 		}
 	}
 	return resp, nil

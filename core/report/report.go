@@ -33,6 +33,9 @@ type Report struct {
 	// Empty when links were emitted, and empty when none were asked for. It travels in the report
 	// because the report is read long after the stderr that also said it is gone (issue 626).
 	LinksWithheld string
+	// HierarchyNote says the read left out hierarchical blocks (HierarchyNote's sentence), so every
+	// count on the page covers the top level alone. Empty for a flat design (agni issue 717).
+	HierarchyNote string
 	Totals        Totals
 	Rules         []RuleReport
 }

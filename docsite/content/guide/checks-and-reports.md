@@ -275,6 +275,18 @@ The easiest way to get all of this right is not to assemble it by hand. `agni op
 the board and prints the matching `agni check --mount … --server …` line, and because one process
 mints the mount and serves it, the two cannot disagree.
 
+**A report on a hierarchical design says that its counts cover the top level alone.** The EDIF
+reader extracts a hierarchical `.edn`'s top cell and skips the sub-cells it places, so every finding
+and every count on the page describes the top level. The check report and the checklist page both
+state this in their header, above the counts, in the sentence the CLI prints on stderr:
+
+    hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone.
+
+It names the five largest skipped cells and totals the rest. The list travels with the run
+(`CheckDesignResponse.unexpanded_hierarchy`, and the results document's `design` record), so a
+report saved later from the viewer says it as well. A flat design gets no such line. The markdown and
+text output carry no header band, so on those formats the stderr note is the only place it is said.
+
 The page needs no JavaScript and loads nothing from the network, so it survives being emailed,
 committed, or opened from a `file://` path.
 

@@ -50,6 +50,10 @@
      because it is the same kind of statement, the document declaring a limit on itself. */
   .links-withheld { border-left: 3px solid var(--warn); padding-left: 8px; color: var(--muted);
                     font-size: 12px; margin: 10px 0; }
+  /* Shared by both reports: the read left out hierarchical blocks, so every count below covers the
+     top level alone (agni issue 717). It sits above the counts it qualifies, and in the text colour
+     rather than the muted one, because a reader who skims past it misreads every number on the page. */
+  .read-limit { border-left: 3px solid var(--warn); padding-left: 8px; font-size: 13px; margin: 10px 0 16px 0; }
 
   /* Checklist report. The page shape differs from the check report (items grouped by area, one
      row per question) but the vocabulary is shared, so an outcome is the same colour on both. */

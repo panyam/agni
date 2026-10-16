@@ -170,7 +170,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	}
 	// The budget reaches every checklist query through ctx (agni issue 792); an item past it reads
 	// inconclusive, naming the budget, and the others still answer.
-	rep, cat, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
+	rep, cat, unexpanded, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +189,9 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
 			CoverageAxis: true,
 		},
-		Design: &checkspb.DesignRef{Source: designURI.String(), ContentHash: hash},
+		// What the read left out is recorded with the design it describes, so the checklist page
+		// rendered from this document says so (agni issue 717).
+		Design: &checkspb.DesignRef{Source: designURI.String(), ContentHash: hash, UnexpandedHierarchy: unexpanded},
 		// Provenance comes off the RESOLVED overlay the run used, not this service's startup config,
 		// which describes the deployment rather than the run. See
 		// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
@@ -361,18 +363,18 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 //
 // It returns the per-request catalog, overlay spliced on, because the stored document records the
 // rules that ACTUALLY ran.
-func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, error) {
+func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, []*ir.UnexpandedHierarchy, error) {
 	m, _, err := BuildModelCached(ctx, s.loader, designURI, boardURI, ov, s.specs)
 	if err != nil {
-		return review.Report{}, nil, err
+		return review.Report{}, nil, nil, err
 	}
 	cat, err := ov.Catalog(s.catalog)
 	if err != nil {
-		return review.Report{}, nil, err
+		return review.Report{}, nil, nil, err
 	}
 	vocab, err := ov.Registry()
 	if err != nil {
-		return review.Report{}, nil, err
+		return review.Report{}, nil, nil, err
 	}
 	// The run's own profiles, so a project profile re-binding a built-in's signals is the one the
 	// presence gate asks about (agni issue 833).
@@ -387,9 +389,9 @@ func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact
 		Vocabulary:      vocab,
 	})
 	if err != nil {
-		return review.Report{}, nil, err
+		return review.Report{}, nil, nil, err
 	}
-	return rep, cat, nil
+	return rep, cat, m.UnexpandedHierarchy(), nil
 }
 
 // reviewClosures builds the presence and scope closures a review run needs over a design's Model and

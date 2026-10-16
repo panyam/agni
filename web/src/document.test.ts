@@ -65,3 +65,28 @@ describe("DocumentStore on its own", () => {
     expect(doc.heldRun()?.names).toEqual(["a", "b"]);
   });
 });
+
+// agni issue 717: a saved report is rendered from heldRun, which rebuilds the run rule by rule. What
+// the read left out belongs to the design rather than to a rule, so it must survive the rebuild
+// whole, every entry and field, or the saved page reads as the whole design.
+describe("the held run keeps what the read left out", () => {
+  it("carries every unexpanded block into the run a report is saved from", async () => {
+    const doc = new DocumentStore();
+    doc.mount = "m";
+    doc.path = "hier.edn";
+    const listRules = vi.fn(async () => ({
+      rules: [{ name: "a", severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" }],
+    }));
+    await doc.loadCatalog({ listRules } as never, "mount://m/hier.edn", undefined);
+    const blocks = [
+      { name: "SUB", kind: "edif_cell", instanceCount: 212, prov: { sourceFile: "hier.edn", nativeId: "SUB", nativeIdKind: "edif-cell", span: { byteOffset: 40n, byteLength: 120n, line: 5, column: 5 } } },
+      { name: "PSU", kind: "edif_cell", instanceCount: 9, prov: { sourceFile: "hier.edn", nativeId: "PSU", nativeIdKind: "edif-cell", span: { byteOffset: 400n, byteLength: 90n, line: 40, column: 5 } } },
+    ];
+    const checkDesign = vi.fn(async () => ({ findings: [], verdicts: [], skipped: [], unexpandedHierarchy: blocks }));
+    await doc.runMissing({ checkDesign } as never, undefined);
+    // toMatchObject because the rebuilt run is a created message, which adds its type names.
+    const held = doc.heldRun()?.run.unexpandedHierarchy;
+    expect(held).toHaveLength(2);
+    expect(held).toMatchObject(blocks);
+  });
+});

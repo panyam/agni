@@ -24,11 +24,12 @@ _sym_db = _symbol_database.Default()
 
 from agni.v1.checks import checks_pb2 as agni_dot_v1_dot_checks_dot_checks__pb2
 from agni.v1.config import naming_pb2 as agni_dot_v1_dot_config_dot_naming__pb2
+from agni.v1.ir import ir_pb2 as agni_dot_v1_dot_ir_dot_ir__pb2
 from agni.v1.webapi import config_pb2 as agni_dot_v1_dot_webapi_dot_config__pb2
 from agni.v1.param import param_pb2 as agni_dot_v1_dot_param_dot_param__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/checks.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/checks/checks.proto\x1a\x1b\x61gni/v1/config/naming.proto\x1a\x1b\x61gni/v1/webapi/config.proto\x1a\x19\x61gni/v1/param/param.proto\"\xce\x01\n\x12\x43heckDesignRequest\x12\x14\n\x05rules\x18\x01 \x03(\tR\x05rules\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\x12\x1f\n\x0bwork_budget\x18\x06 \x01(\x03R\nworkBudget\"z\n\rOverlayConfig\x12\x36\n\x06\x63onfig\x18\x04 \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfig\x12%\n\x0eignore_project\x18\x03 \x01(\x08R\rignoreProjectJ\x04\x08\x01\x10\x02J\x04\x08\x02\x10\x03\"\xb6\x01\n\x13\x43heckDesignResponse\x12\x33\n\x08\x66indings\x18\x01 \x03(\x0b\x32\x17.agni.v1.checks.FindingR\x08\x66indings\x12\x35\n\x07skipped\x18\x02 \x03(\x0b\x32\x1b.agni.v1.webapi.SkippedRuleR\x07skipped\x12\x33\n\x08verdicts\x18\x03 \x03(\x0b\x32\x17.agni.v1.checks.VerdictR\x08verdicts\"9\n\x0bSkippedRule\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason\"\xb0\x01\n\x15GetCheckReportRequest\x12\x14\n\x05rules\x18\x01 \x03(\tR\x05rules\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\"M\n\x16GetCheckReportResponse\x12\x33\n\x06report\x18\x01 \x01(\x0b\x32\x1b.agni.v1.checks.CheckReportR\x06report\"c\n\x0bReportLinks\x12\x19\n\x08url_base\x18\x01 \x01(\tR\x07urlBase\x12\x1d\n\ndesign_uri\x18\x02 \x01(\tR\tdesignUri\x12\x1a\n\x08withheld\x18\x03 \x01(\tR\x08withheld\"\xd8\x02\n\x18RenderCheckReportRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x14\n\x05rules\x18\x03 \x03(\tR\x05rules\x12\x35\n\x03run\x18\x04 \x01(\x0b\x32#.agni.v1.webapi.CheckDesignResponseR\x03run\x12\x39\n\x06\x66ormat\x18\x05 \x01(\x0e\x32!.agni.v1.webapi.CheckReportFormatR\x06\x66ormat\x12\x31\n\x05links\x18\x06 \x01(\x0b\x32\x1b.agni.v1.webapi.ReportLinksR\x05links\x12\x1b\n\tboard_uri\x18\x07 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x08 \x01(\x08R\x07\x61sNamed\"t\n\x19RenderCheckReportResponse\x12\x18\n\x07\x63ontent\x18\x01 \x01(\x0cR\x07\x63ontent\x12!\n\x0c\x63ontent_type\x18\x02 \x01(\tR\x0b\x63ontentType\x12\x1a\n\x08\x66ilename\x18\x03 \x01(\tR\x08\x66ilename\".\n\x1aGetNamingConventionRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"_\n\x1bGetNamingConventionResponse\x12@\n\nconvention\x18\x01 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\nconvention\"*\n\x16GetExpectationsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"m\n\x0fRuleExpectation\x12\x12\n\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n\x08subjects\x18\x02 \x03(\tR\x08subjects\x12\x18\n\x07pending\x18\x03 \x01(\x08R\x07pending\x12\x10\n\x03why\x18\x04 \x01(\tR\x03why\"\x7f\n\x17GetExpectationsResponse\x12\x43\n\x0c\x65xpectations\x18\x01 \x03(\x0b\x32\x1f.agni.v1.webapi.RuleExpectationR\x0c\x65xpectations\x12\x1f\n\x0bhas_sidecar\x18\x02 \x01(\x08R\nhasSidecar\"]\n\x10ListRulesRequest\x12\x37\n\x07overlay\x18\x01 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\"\xf0\x02\n\x08RuleInfo\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n\x08severity\x18\x02 \x01(\tR\x08severity\x12\x18\n\x07summary\x18\x03 \x01(\tR\x07summary\x12\x14\n\x05reads\x18\x04 \x03(\tR\x05reads\x12\x36\n\x04tags\x18\x05 \x03(\x0b\x32\".agni.v1.webapi.RuleInfo.TagsEntryR\x04tags\x12\x1c\n\tavailable\x18\x06 \x01(\x08R\tavailable\x12-\n\x12unavailable_reason\x18\x07 \x01(\tR\x11unavailableReason\x12\x16\n\x06impact\x18\x08 \x01(\tR\x06impact\x12\x16\n\x06\x64\x65tail\x18\t \x01(\tR\x06\x64\x65tail\x12\x16\n\x06remedy\x18\n \x01(\tR\x06remedy\x1a\x37\n\tTagsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"C\n\x11ListRulesResponse\x12.\n\x05rules\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.RuleInfoR\x05rules\"\x83\x01\n\x1bGetInterfaceCoverageRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x19\n\x08\x61s_named\x18\x03 \x01(\x08R\x07\x61sNamed\"L\n\x0eSignalCoverage\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n\x03net\x18\x02 \x01(\tR\x03net\x12\x14\n\x05state\x18\x03 \x01(\tR\x05state\"\x86\x01\n\x11InterfaceCoverage\x12\x18\n\x07profile\x18\x01 \x01(\tR\x07profile\x12\x1d\n\nanchor_net\x18\x02 \x01(\tR\tanchorNet\x12\x38\n\x07signals\x18\x03 \x03(\x0b\x32\x1e.agni.v1.webapi.SignalCoverageR\x07signals\"a\n\x1cGetInterfaceCoverageResponse\x12\x41\n\ninterfaces\x18\x01 \x03(\x0b\x32!.agni.v1.webapi.InterfaceCoverageR\ninterfaces\"-\n\x19GetComponentParamsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\x81\x01\n\x0f\x43omponentParams\x12\x17\n\x07ref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n\x03mpn\x18\x02 \x01(\tR\x03mpn\x12+\n\x04spec\x18\x03 \x01(\x0b\x32\x17.agni.v1.param.PartSpecR\x04spec\x12\x16\n\x06\x63orpus\x18\x04 \x01(\tR\x06\x63orpus\"\x88\x01\n\x1aGetComponentParamsResponse\x12?\n\ncomponents\x18\x01 \x03(\x0b\x32\x1f.agni.v1.webapi.ComponentParamsR\ncomponents\x12)\n\x10\x63orpus_connected\x18\x02 \x01(\x08R\x0f\x63orpusConnected*|\n\x11\x43heckReportFormat\x12#\n\x1f\x43HECK_REPORT_FORMAT_UNSPECIFIED\x10\x00\x12$\n CHECK_REPORT_FORMAT_RESULTS_JSON\x10\x01\x12\x1c\n\x18\x43HECK_REPORT_FORMAT_HTML\x10\x02\x32\xb7\x06\n\x0c\x43heckService\x12P\n\tListRules\x12 .agni.v1.webapi.ListRulesRequest\x1a!.agni.v1.webapi.ListRulesResponse\x12V\n\x0b\x43heckDesign\x12\".agni.v1.webapi.CheckDesignRequest\x1a#.agni.v1.webapi.CheckDesignResponse\x12\x62\n\x0fGetExpectations\x12&.agni.v1.webapi.GetExpectationsRequest\x1a\'.agni.v1.webapi.GetExpectationsResponse\x12_\n\x0eGetCheckReport\x12%.agni.v1.webapi.GetCheckReportRequest\x1a&.agni.v1.webapi.GetCheckReportResponse\x12h\n\x11RenderCheckReport\x12(.agni.v1.webapi.RenderCheckReportRequest\x1a).agni.v1.webapi.RenderCheckReportResponse\x12q\n\x14GetInterfaceCoverage\x12+.agni.v1.webapi.GetInterfaceCoverageRequest\x1a,.agni.v1.webapi.GetInterfaceCoverageResponse\x12k\n\x12GetComponentParams\x12).agni.v1.webapi.GetComponentParamsRequest\x1a*.agni.v1.webapi.GetComponentParamsResponse\x12n\n\x13GetNamingConvention\x12*.agni.v1.webapi.GetNamingConventionRequest\x1a+.agni.v1.webapi.GetNamingConventionResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/webapi/checks.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/checks/checks.proto\x1a\x1b\x61gni/v1/config/naming.proto\x1a\x13\x61gni/v1/ir/ir.proto\x1a\x1b\x61gni/v1/webapi/config.proto\x1a\x19\x61gni/v1/param/param.proto\"\xce\x01\n\x12\x43heckDesignRequest\x12\x14\n\x05rules\x18\x01 \x03(\tR\x05rules\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\x12\x1f\n\x0bwork_budget\x18\x06 \x01(\x03R\nworkBudget\"z\n\rOverlayConfig\x12\x36\n\x06\x63onfig\x18\x04 \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfig\x12%\n\x0eignore_project\x18\x03 \x01(\x08R\rignoreProjectJ\x04\x08\x01\x10\x02J\x04\x08\x02\x10\x03\"\x8a\x02\n\x13\x43heckDesignResponse\x12\x33\n\x08\x66indings\x18\x01 \x03(\x0b\x32\x17.agni.v1.checks.FindingR\x08\x66indings\x12\x35\n\x07skipped\x18\x02 \x03(\x0b\x32\x1b.agni.v1.webapi.SkippedRuleR\x07skipped\x12\x33\n\x08verdicts\x18\x03 \x03(\x0b\x32\x17.agni.v1.checks.VerdictR\x08verdicts\x12R\n\x14unexpanded_hierarchy\x18\x04 \x03(\x0b\x32\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\"9\n\x0bSkippedRule\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason\"\xb0\x01\n\x15GetCheckReportRequest\x12\x14\n\x05rules\x18\x01 \x03(\tR\x05rules\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x05 \x01(\x08R\x07\x61sNamed\"M\n\x16GetCheckReportResponse\x12\x33\n\x06report\x18\x01 \x01(\x0b\x32\x1b.agni.v1.checks.CheckReportR\x06report\"c\n\x0bReportLinks\x12\x19\n\x08url_base\x18\x01 \x01(\tR\x07urlBase\x12\x1d\n\ndesign_uri\x18\x02 \x01(\tR\tdesignUri\x12\x1a\n\x08withheld\x18\x03 \x01(\tR\x08withheld\"\xd8\x02\n\x18RenderCheckReportRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x14\n\x05rules\x18\x03 \x03(\tR\x05rules\x12\x35\n\x03run\x18\x04 \x01(\x0b\x32#.agni.v1.webapi.CheckDesignResponseR\x03run\x12\x39\n\x06\x66ormat\x18\x05 \x01(\x0e\x32!.agni.v1.webapi.CheckReportFormatR\x06\x66ormat\x12\x31\n\x05links\x18\x06 \x01(\x0b\x32\x1b.agni.v1.webapi.ReportLinksR\x05links\x12\x1b\n\tboard_uri\x18\x07 \x01(\tR\x08\x62oardUri\x12\x19\n\x08\x61s_named\x18\x08 \x01(\x08R\x07\x61sNamed\"t\n\x19RenderCheckReportResponse\x12\x18\n\x07\x63ontent\x18\x01 \x01(\x0cR\x07\x63ontent\x12!\n\x0c\x63ontent_type\x18\x02 \x01(\tR\x0b\x63ontentType\x12\x1a\n\x08\x66ilename\x18\x03 \x01(\tR\x08\x66ilename\".\n\x1aGetNamingConventionRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"_\n\x1bGetNamingConventionResponse\x12@\n\nconvention\x18\x01 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\nconvention\"*\n\x16GetExpectationsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"m\n\x0fRuleExpectation\x12\x12\n\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n\x08subjects\x18\x02 \x03(\tR\x08subjects\x12\x18\n\x07pending\x18\x03 \x01(\x08R\x07pending\x12\x10\n\x03why\x18\x04 \x01(\tR\x03why\"\x7f\n\x17GetExpectationsResponse\x12\x43\n\x0c\x65xpectations\x18\x01 \x03(\x0b\x32\x1f.agni.v1.webapi.RuleExpectationR\x0c\x65xpectations\x12\x1f\n\x0bhas_sidecar\x18\x02 \x01(\x08R\nhasSidecar\"]\n\x10ListRulesRequest\x12\x37\n\x07overlay\x18\x01 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\"\xf0\x02\n\x08RuleInfo\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n\x08severity\x18\x02 \x01(\tR\x08severity\x12\x18\n\x07summary\x18\x03 \x01(\tR\x07summary\x12\x14\n\x05reads\x18\x04 \x03(\tR\x05reads\x12\x36\n\x04tags\x18\x05 \x03(\x0b\x32\".agni.v1.webapi.RuleInfo.TagsEntryR\x04tags\x12\x1c\n\tavailable\x18\x06 \x01(\x08R\tavailable\x12-\n\x12unavailable_reason\x18\x07 \x01(\tR\x11unavailableReason\x12\x16\n\x06impact\x18\x08 \x01(\tR\x06impact\x12\x16\n\x06\x64\x65tail\x18\t \x01(\tR\x06\x64\x65tail\x12\x16\n\x06remedy\x18\n \x01(\tR\x06remedy\x1a\x37\n\tTagsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"C\n\x11ListRulesResponse\x12.\n\x05rules\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.RuleInfoR\x05rules\"\x83\x01\n\x1bGetInterfaceCoverageRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\x12\x37\n\x07overlay\x18\x02 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x19\n\x08\x61s_named\x18\x03 \x01(\x08R\x07\x61sNamed\"L\n\x0eSignalCoverage\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n\x03net\x18\x02 \x01(\tR\x03net\x12\x14\n\x05state\x18\x03 \x01(\tR\x05state\"\x86\x01\n\x11InterfaceCoverage\x12\x18\n\x07profile\x18\x01 \x01(\tR\x07profile\x12\x1d\n\nanchor_net\x18\x02 \x01(\tR\tanchorNet\x12\x38\n\x07signals\x18\x03 \x03(\x0b\x32\x1e.agni.v1.webapi.SignalCoverageR\x07signals\"a\n\x1cGetInterfaceCoverageResponse\x12\x41\n\ninterfaces\x18\x01 \x03(\x0b\x32!.agni.v1.webapi.InterfaceCoverageR\ninterfaces\"-\n\x19GetComponentParamsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\x81\x01\n\x0f\x43omponentParams\x12\x17\n\x07ref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n\x03mpn\x18\x02 \x01(\tR\x03mpn\x12+\n\x04spec\x18\x03 \x01(\x0b\x32\x17.agni.v1.param.PartSpecR\x04spec\x12\x16\n\x06\x63orpus\x18\x04 \x01(\tR\x06\x63orpus\"\x88\x01\n\x1aGetComponentParamsResponse\x12?\n\ncomponents\x18\x01 \x03(\x0b\x32\x1f.agni.v1.webapi.ComponentParamsR\ncomponents\x12)\n\x10\x63orpus_connected\x18\x02 \x01(\x08R\x0f\x63orpusConnected*|\n\x11\x43heckReportFormat\x12#\n\x1f\x43HECK_REPORT_FORMAT_UNSPECIFIED\x10\x00\x12$\n CHECK_REPORT_FORMAT_RESULTS_JSON\x10\x01\x12\x1c\n\x18\x43HECK_REPORT_FORMAT_HTML\x10\x02\x32\xb7\x06\n\x0c\x43heckService\x12P\n\tListRules\x12 .agni.v1.webapi.ListRulesRequest\x1a!.agni.v1.webapi.ListRulesResponse\x12V\n\x0b\x43heckDesign\x12\".agni.v1.webapi.CheckDesignRequest\x1a#.agni.v1.webapi.CheckDesignResponse\x12\x62\n\x0fGetExpectations\x12&.agni.v1.webapi.GetExpectationsRequest\x1a\'.agni.v1.webapi.GetExpectationsResponse\x12_\n\x0eGetCheckReport\x12%.agni.v1.webapi.GetCheckReportRequest\x1a&.agni.v1.webapi.GetCheckReportResponse\x12h\n\x11RenderCheckReport\x12(.agni.v1.webapi.RenderCheckReportRequest\x1a).agni.v1.webapi.RenderCheckReportResponse\x12q\n\x14GetInterfaceCoverage\x12+.agni.v1.webapi.GetInterfaceCoverageRequest\x1a,.agni.v1.webapi.GetInterfaceCoverageResponse\x12k\n\x12GetComponentParams\x12).agni.v1.webapi.GetComponentParamsRequest\x1a*.agni.v1.webapi.GetComponentParamsResponse\x12n\n\x13GetNamingConvention\x12*.agni.v1.webapi.GetNamingConventionRequest\x1a+.agni.v1.webapi.GetNamingConventionResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,58 +39,58 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_RULEINFO_TAGSENTRY']._loaded_options = None
   _globals['_RULEINFO_TAGSENTRY']._serialized_options = b'8\001'
-  _globals['_CHECKREPORTFORMAT']._serialized_start=3292
-  _globals['_CHECKREPORTFORMAT']._serialized_end=3416
-  _globals['_CHECKDESIGNREQUEST']._serialized_start=162
-  _globals['_CHECKDESIGNREQUEST']._serialized_end=368
-  _globals['_OVERLAYCONFIG']._serialized_start=370
-  _globals['_OVERLAYCONFIG']._serialized_end=492
-  _globals['_CHECKDESIGNRESPONSE']._serialized_start=495
-  _globals['_CHECKDESIGNRESPONSE']._serialized_end=677
-  _globals['_SKIPPEDRULE']._serialized_start=679
-  _globals['_SKIPPEDRULE']._serialized_end=736
-  _globals['_GETCHECKREPORTREQUEST']._serialized_start=739
-  _globals['_GETCHECKREPORTREQUEST']._serialized_end=915
-  _globals['_GETCHECKREPORTRESPONSE']._serialized_start=917
-  _globals['_GETCHECKREPORTRESPONSE']._serialized_end=994
-  _globals['_REPORTLINKS']._serialized_start=996
-  _globals['_REPORTLINKS']._serialized_end=1095
-  _globals['_RENDERCHECKREPORTREQUEST']._serialized_start=1098
-  _globals['_RENDERCHECKREPORTREQUEST']._serialized_end=1442
-  _globals['_RENDERCHECKREPORTRESPONSE']._serialized_start=1444
-  _globals['_RENDERCHECKREPORTRESPONSE']._serialized_end=1560
-  _globals['_GETNAMINGCONVENTIONREQUEST']._serialized_start=1562
-  _globals['_GETNAMINGCONVENTIONREQUEST']._serialized_end=1608
-  _globals['_GETNAMINGCONVENTIONRESPONSE']._serialized_start=1610
-  _globals['_GETNAMINGCONVENTIONRESPONSE']._serialized_end=1705
-  _globals['_GETEXPECTATIONSREQUEST']._serialized_start=1707
-  _globals['_GETEXPECTATIONSREQUEST']._serialized_end=1749
-  _globals['_RULEEXPECTATION']._serialized_start=1751
-  _globals['_RULEEXPECTATION']._serialized_end=1860
-  _globals['_GETEXPECTATIONSRESPONSE']._serialized_start=1862
-  _globals['_GETEXPECTATIONSRESPONSE']._serialized_end=1989
-  _globals['_LISTRULESREQUEST']._serialized_start=1991
-  _globals['_LISTRULESREQUEST']._serialized_end=2084
-  _globals['_RULEINFO']._serialized_start=2087
-  _globals['_RULEINFO']._serialized_end=2455
-  _globals['_RULEINFO_TAGSENTRY']._serialized_start=2400
-  _globals['_RULEINFO_TAGSENTRY']._serialized_end=2455
-  _globals['_LISTRULESRESPONSE']._serialized_start=2457
-  _globals['_LISTRULESRESPONSE']._serialized_end=2524
-  _globals['_GETINTERFACECOVERAGEREQUEST']._serialized_start=2527
-  _globals['_GETINTERFACECOVERAGEREQUEST']._serialized_end=2658
-  _globals['_SIGNALCOVERAGE']._serialized_start=2660
-  _globals['_SIGNALCOVERAGE']._serialized_end=2736
-  _globals['_INTERFACECOVERAGE']._serialized_start=2739
-  _globals['_INTERFACECOVERAGE']._serialized_end=2873
-  _globals['_GETINTERFACECOVERAGERESPONSE']._serialized_start=2875
-  _globals['_GETINTERFACECOVERAGERESPONSE']._serialized_end=2972
-  _globals['_GETCOMPONENTPARAMSREQUEST']._serialized_start=2974
-  _globals['_GETCOMPONENTPARAMSREQUEST']._serialized_end=3019
-  _globals['_COMPONENTPARAMS']._serialized_start=3022
-  _globals['_COMPONENTPARAMS']._serialized_end=3151
-  _globals['_GETCOMPONENTPARAMSRESPONSE']._serialized_start=3154
-  _globals['_GETCOMPONENTPARAMSRESPONSE']._serialized_end=3290
-  _globals['_CHECKSERVICE']._serialized_start=3419
-  _globals['_CHECKSERVICE']._serialized_end=4242
+  _globals['_CHECKREPORTFORMAT']._serialized_start=3397
+  _globals['_CHECKREPORTFORMAT']._serialized_end=3521
+  _globals['_CHECKDESIGNREQUEST']._serialized_start=183
+  _globals['_CHECKDESIGNREQUEST']._serialized_end=389
+  _globals['_OVERLAYCONFIG']._serialized_start=391
+  _globals['_OVERLAYCONFIG']._serialized_end=513
+  _globals['_CHECKDESIGNRESPONSE']._serialized_start=516
+  _globals['_CHECKDESIGNRESPONSE']._serialized_end=782
+  _globals['_SKIPPEDRULE']._serialized_start=784
+  _globals['_SKIPPEDRULE']._serialized_end=841
+  _globals['_GETCHECKREPORTREQUEST']._serialized_start=844
+  _globals['_GETCHECKREPORTREQUEST']._serialized_end=1020
+  _globals['_GETCHECKREPORTRESPONSE']._serialized_start=1022
+  _globals['_GETCHECKREPORTRESPONSE']._serialized_end=1099
+  _globals['_REPORTLINKS']._serialized_start=1101
+  _globals['_REPORTLINKS']._serialized_end=1200
+  _globals['_RENDERCHECKREPORTREQUEST']._serialized_start=1203
+  _globals['_RENDERCHECKREPORTREQUEST']._serialized_end=1547
+  _globals['_RENDERCHECKREPORTRESPONSE']._serialized_start=1549
+  _globals['_RENDERCHECKREPORTRESPONSE']._serialized_end=1665
+  _globals['_GETNAMINGCONVENTIONREQUEST']._serialized_start=1667
+  _globals['_GETNAMINGCONVENTIONREQUEST']._serialized_end=1713
+  _globals['_GETNAMINGCONVENTIONRESPONSE']._serialized_start=1715
+  _globals['_GETNAMINGCONVENTIONRESPONSE']._serialized_end=1810
+  _globals['_GETEXPECTATIONSREQUEST']._serialized_start=1812
+  _globals['_GETEXPECTATIONSREQUEST']._serialized_end=1854
+  _globals['_RULEEXPECTATION']._serialized_start=1856
+  _globals['_RULEEXPECTATION']._serialized_end=1965
+  _globals['_GETEXPECTATIONSRESPONSE']._serialized_start=1967
+  _globals['_GETEXPECTATIONSRESPONSE']._serialized_end=2094
+  _globals['_LISTRULESREQUEST']._serialized_start=2096
+  _globals['_LISTRULESREQUEST']._serialized_end=2189
+  _globals['_RULEINFO']._serialized_start=2192
+  _globals['_RULEINFO']._serialized_end=2560
+  _globals['_RULEINFO_TAGSENTRY']._serialized_start=2505
+  _globals['_RULEINFO_TAGSENTRY']._serialized_end=2560
+  _globals['_LISTRULESRESPONSE']._serialized_start=2562
+  _globals['_LISTRULESRESPONSE']._serialized_end=2629
+  _globals['_GETINTERFACECOVERAGEREQUEST']._serialized_start=2632
+  _globals['_GETINTERFACECOVERAGEREQUEST']._serialized_end=2763
+  _globals['_SIGNALCOVERAGE']._serialized_start=2765
+  _globals['_SIGNALCOVERAGE']._serialized_end=2841
+  _globals['_INTERFACECOVERAGE']._serialized_start=2844
+  _globals['_INTERFACECOVERAGE']._serialized_end=2978
+  _globals['_GETINTERFACECOVERAGERESPONSE']._serialized_start=2980
+  _globals['_GETINTERFACECOVERAGERESPONSE']._serialized_end=3077
+  _globals['_GETCOMPONENTPARAMSREQUEST']._serialized_start=3079
+  _globals['_GETCOMPONENTPARAMSREQUEST']._serialized_end=3124
+  _globals['_COMPONENTPARAMS']._serialized_start=3127
+  _globals['_COMPONENTPARAMS']._serialized_end=3256
+  _globals['_GETCOMPONENTPARAMSRESPONSE']._serialized_start=3259
+  _globals['_GETCOMPONENTPARAMSRESPONSE']._serialized_end=3395
+  _globals['_CHECKSERVICE']._serialized_start=3524
+  _globals['_CHECKSERVICE']._serialized_end=4347
 # @@protoc_insertion_point(module_scope)

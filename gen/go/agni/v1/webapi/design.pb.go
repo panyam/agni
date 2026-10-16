@@ -412,7 +412,12 @@ type GetDesignResponse struct {
 	// tiers, the format-neutral ingestion passes such as part-number promotion), present only when the
 	// request's read_mask selects it (agni issue 836). A client prototyping an analysis reads this
 	// rather than parsing the netlist again.
-	Design        *ir.Design `protobuf:"bytes,12,opt,name=design,proto3" json:"design,omitempty"`
+	Design *ir.Design `protobuf:"bytes,12,opt,name=design,proto3" json:"design,omitempty"`
+	// hierarchy_note is the sentence stating what unexpanded_hierarchy means for this read, or "" when
+	// the read left nothing out (agni issue 717). It is report.HierarchyNote, the wording the CLI's
+	// stderr note and both HTML reports use, sent whole so the viewer's strip renders it rather than
+	// composing a second copy of it.
+	HierarchyNote string `protobuf:"bytes,13,opt,name=hierarchy_note,json=hierarchyNote,proto3" json:"hierarchy_note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -529,6 +534,13 @@ func (x *GetDesignResponse) GetDesign() *ir.Design {
 		return x.Design
 	}
 	return nil
+}
+
+func (x *GetDesignResponse) GetHierarchyNote() string {
+	if x != nil {
+		return x.HierarchyNote
+	}
+	return ""
 }
 
 type GetSheetRequest struct {
@@ -1758,7 +1770,7 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\bas_named\x18\x03 \x01(\bR\aasNamed\x127\n" +
 	"\tread_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskR\breadMask\x12\x12\n" +
 	"\x04nets\x18\x05 \x03(\tR\x04nets\x12\x17\n" +
-	"\aref_des\x18\x06 \x03(\tR\x06refDes\"\x91\x04\n" +
+	"\aref_des\x18\x06 \x03(\tR\x06refDes\"\xb8\x04\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -1772,7 +1784,8 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\fcontent_hash\x18\n" +
 	" \x01(\tR\vcontentHash\x12R\n" +
 	"\x14unexpanded_hierarchy\x18\v \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\x12*\n" +
-	"\x06design\x18\f \x01(\v2\x12.agni.v1.ir.DesignR\x06design\"\xd9\x01\n" +
+	"\x06design\x18\f \x01(\v2\x12.agni.v1.ir.DesignR\x06design\x12%\n" +
+	"\x0ehierarchy_note\x18\r \x01(\tR\rhierarchyNote\"\xd9\x01\n" +
 	"\x0fGetSheetRequest\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x123\n" +

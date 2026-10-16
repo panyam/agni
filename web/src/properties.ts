@@ -53,6 +53,9 @@ export interface Inventory {
   // buses holds each bus a reader recorded, by label: the constructs it was drawn as and the member
   // signals the reader could name. The netlist has no bus as such, so this is the read's own record.
   buses: Map<string, { constructs: string[]; members: string[] }>;
+  // unexpanded lists the hierarchical blocks the read left out, largest first, so the design level
+  // can say which ones every count above covers none of (agni issues 707, 717).
+  unexpanded: { name: string; instances: number }[];
 }
 
 // INVENTORY_PATHS is the read_mask for the one GetDesign Properties makes per open. It names the
@@ -74,6 +77,8 @@ export const INVENTORY_PATHS = [
   "design.input_diagnostics.unmodeled_buses.label",
   "design.input_diagnostics.unmodeled_buses.kind",
   "design.input_diagnostics.unmodeled_buses.members",
+  "design.input_diagnostics.unexpanded_hierarchy.name",
+  "design.input_diagnostics.unexpanded_hierarchy.instance_count",
 ];
 
 // byDesignator orders pin designators the way a datasheet does, so pin 2 sorts before pin 10.
@@ -119,7 +124,10 @@ export function inventoryFromDesign(d: Design, served: ServedFacts = { pinNames:
     buses.set(b.label, at);
   }
   for (const b of buses.values()) b.members.sort(byDesignator);
-  return { components, nets, pinsOf, pinName, testPoints: new Set(served.testPoints), buses };
+  const unexpanded = (d.inputDiagnostics?.unexpandedHierarchy ?? [])
+    .map((h) => ({ name: h.name, instances: h.instanceCount }))
+    .sort((a, b) => b.instances - a.instances || byDesignator(a.name, b.name));
+  return { components, nets, pinsOf, pinName, testPoints: new Set(served.testPoints), buses, unexpanded };
 }
 
 // Datasheet is the datasheet section's outcome. The three a reader acts on differently are kept
@@ -282,6 +290,16 @@ function designView(input: PropertiesInput): Omit<PropertiesState, "crumbs"> {
       refs: input.sheets.map((s) => ({ label: s.name || s.id })),
     },
   ];
+  // The blocks the read left out, each with what it holds. Only on a hierarchical read, since an
+  // empty group on every flat design would read as something to look at. The sentence saying what
+  // this means is the canvas strip's.
+  const unexpanded = input.inventory?.unexpanded ?? [];
+  if (unexpanded.length > 0) {
+    groups.push({
+      name: "not extracted",
+      refs: unexpanded.map((u) => ({ label: u.name, detail: `${u.instances} instance${u.instances === 1 ? "" : "s"}` })),
+    });
+  }
   return { kind: "design", title: input.designName || "Design", rows, groups, report: input.report };
 }
 

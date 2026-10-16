@@ -172,6 +172,11 @@ message GetDesignResponse {
   // request's read_mask selects it (agni issue 836). A client prototyping an analysis reads this
   // rather than parsing the netlist again.
   agni.v1.ir.Design design = 12;
+  // hierarchy_note is the sentence stating what unexpanded_hierarchy means for this read, or "" when
+  // the read left nothing out (agni issue 717). It is report.HierarchyNote, the wording the CLI's
+  // stderr note and both HTML reports use, sent whole so the viewer's strip renders it rather than
+  // composing a second copy of it.
+  string hierarchy_note = 13;
 }
 
 message GetSheetRequest {

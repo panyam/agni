@@ -43,6 +43,9 @@ func (s *ReviewService) RenderReviewReport(_ context.Context, req *webapi.Render
 		URLBase:       strings.TrimSuffix(links.GetUrlBase(), "/"),
 		MountPath:     mountPath,
 		LinksWithheld: links.GetWithheld(),
+		// The document's record of what the read left out, in the sentence the CLI prints (agni issue
+		// 717).
+		HierarchyNote: report.HierarchyNote(doc.GetDesign().GetSource(), doc.GetDesign().GetUnexpandedHierarchy()),
 	}
 	var buf bytes.Buffer
 	if err := report.ChecklistHTML(&buf, ChecklistOf(doc, meta)); err != nil {
