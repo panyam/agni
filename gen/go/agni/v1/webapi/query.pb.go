@@ -975,8 +975,9 @@ func (x *ExampleQuery) GetTeaches() string {
 	return ""
 }
 
-// EntityQuery is the preset a viewer runs when the reader CLICKS an entity in the drawing: the
-// datalog that asks what is known about a pin, a component, a net or a bus.
+// EntityQuery is one question a viewer offers about a selected entity: the datalog that asks
+// something about a pin, a component, a net or a bus. A kind has several, which the viewer lists
+// as the Properties panel's Ask rows, each opening a query tab of its own (agni issue 902).
 //
 // It is served rather than held in the browser because every preset names relations defined on this
 // side. A client-held template would be the one caller nothing checks — renaming a relation would go
@@ -994,7 +995,10 @@ type EntityQuery struct {
 	// binds names the variables the client binds from the picked selection (agni issue 793), each
 	// also the selection field that fills it: ref, pin, net or bus. It is explicit because one
 	// preset's input is another's output (the pin preset answers ?net, the net preset asks about one).
-	Binds         []string `protobuf:"bytes,4,rep,name=binds,proto3" json:"binds,omitempty"`
+	Binds []string `protobuf:"bytes,4,rep,name=binds,proto3" json:"binds,omitempty"`
+	// label is the question as an Ask row words it ("Which test points reach its nets?"), unique
+	// within its kind. The first question of a kind is its default.
+	Label         string `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1055,6 +1059,13 @@ func (x *EntityQuery) GetBinds() []string {
 		return x.Binds
 	}
 	return nil
+}
+
+func (x *EntityQuery) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
 }
 
 // SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
@@ -1144,7 +1155,7 @@ type ListRelationsResponse struct {
 	// examples are runnable teaching queries in concept-ladder order (WS14-002), rendered as
 	// click-to-run chips beside the relation picker.
 	Examples []*ExampleQuery `protobuf:"bytes,2,rep,name=examples,proto3" json:"examples,omitempty"`
-	// entity_queries are the click-to-ask presets, one per pickable entity kind (WS: canvas picking).
+	// entity_queries are the questions about a selected entity, several per kind, grouped by kind.
 	EntityQueries []*EntityQuery `protobuf:"bytes,3,rep,name=entity_queries,json=entityQueries,proto3" json:"entity_queries,omitempty"`
 	// search_query is the find-by-name template the panel's search mode fills (agni issue 338).
 	SearchQuery *SearchQuery `protobuf:"bytes,4,opt,name=search_query,json=searchQuery,proto3" json:"search_query,omitempty"`
@@ -1683,12 +1694,13 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\fExampleQuery\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12\x18\n" +
-	"\ateaches\x18\x03 \x01(\tR\ateaches\"g\n" +
+	"\ateaches\x18\x03 \x01(\tR\ateaches\"}\n" +
 	"\vEntityQuery\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12\x18\n" +
 	"\ateaches\x18\x03 \x01(\tR\ateaches\x12\x14\n" +
-	"\x05binds\x18\x04 \x03(\tR\x05binds\"k\n" +
+	"\x05binds\x18\x04 \x03(\tR\x05binds\x12\x14\n" +
+	"\x05label\x18\x05 \x01(\tR\x05label\"k\n" +
 	"\vSearchQuery\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x18\n" +
 	"\ateaches\x18\x02 \x01(\tR\ateaches\x12\x12\n" +

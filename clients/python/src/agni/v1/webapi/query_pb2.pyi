@@ -167,16 +167,18 @@ class ExampleQuery(_message.Message):
     def __init__(self, label: _Optional[str] = ..., query: _Optional[str] = ..., teaches: _Optional[str] = ...) -> None: ...
 
 class EntityQuery(_message.Message):
-    __slots__ = ("kind", "query", "teaches", "binds")
+    __slots__ = ("kind", "query", "teaches", "binds", "label")
     KIND_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
     TEACHES_FIELD_NUMBER: _ClassVar[int]
     BINDS_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
     kind: str
     query: str
     teaches: str
     binds: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, kind: _Optional[str] = ..., query: _Optional[str] = ..., teaches: _Optional[str] = ..., binds: _Optional[_Iterable[str]] = ...) -> None: ...
+    label: str
+    def __init__(self, kind: _Optional[str] = ..., query: _Optional[str] = ..., teaches: _Optional[str] = ..., binds: _Optional[_Iterable[str]] = ..., label: _Optional[str] = ...) -> None: ...
 
 class SearchQuery(_message.Message):
     __slots__ = ("query", "teaches", "bind", "pattern")
