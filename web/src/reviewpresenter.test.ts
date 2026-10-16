@@ -253,7 +253,7 @@ describe("review presenter — creating", () => {
   it("scores without a store once the listing said there is none, and holds the run in the page", async () => {
     const h = harness();
     h.listReviews.mockRejectedValueOnce(new ConnectError("no review store configured", Code.FailedPrecondition));
-    const unnamed = { ...doc("", "2026-08-11T08:00:00Z", ["pass", "fail"]) };
+    const unnamed = { ...doc("", "", ["pass", "fail"]) };
     h.createReview.mockResolvedValueOnce(unnamed as never);
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.createReview();
@@ -264,6 +264,7 @@ describe("review presenter — creating", () => {
     expect(s.error).toBe("");
     expect(s.runs.map((r) => r.name)).toEqual(["page/1"]);
     expect(s.selected).toBe("page/1");
+    expect(s.runs[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
   });
 
   it("falls back to scoring without a store when a create finds none, and asks once more", async () => {

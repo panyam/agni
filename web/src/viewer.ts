@@ -1193,6 +1193,8 @@ export class ViewerPresenter {
       // A run nothing stored has no name, so the page names it to tell its runs apart.
       if (!created.name) created.name = `page/${++this.pageRuns}`;
       const run = reviewFromWire(created);
+      // A run nothing stored has no stored time, so the page labels it with when it scored it.
+      if (!run.createdAt) run.createdAt = new Date().toISOString().replace(/\.\d+Z$/, "Z");
       this.reviewWire.set(created.name, created);
       // Prepend rather than refetch, since the new run is the newest and the server already handed
       // back the whole document.
