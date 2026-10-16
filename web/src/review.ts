@@ -140,6 +140,8 @@ export interface ReviewState {
   storeConfigured: boolean;
   // error is a message to show instead of results, "" when fine.
   error: string;
+  // saveNote says why the last Save report failed, "" when it did not (agni issue 1030).
+  saveNote: string;
 }
 
 export interface ReviewView {
@@ -149,7 +151,7 @@ export interface ReviewView {
 export function emptyReview(): ReviewState {
   return {
     runs: [], selected: "", checklists: [], checklist: "",
-    running: false, storeConfigured: true, error: "",
+    running: false, storeConfigured: true, error: "", saveNote: "",
   };
 }
 

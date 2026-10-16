@@ -496,3 +496,34 @@ describe("Properties", () => {
     });
   }, 90_000);
 });
+
+// agni issue 1030. A checklist run in the Review panel saves as the page `agni review --format html`
+// writes, through the same rpc. The download is read back, so this proves a reader gets the page and
+// not merely that a button exists.
+describe("Review", () => {
+  it("runs a checklist and saves it as the checklist page", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.waitForSelector("select.rv-checklist option[value]", { state: "attached", timeout: 30_000 });
+      await page.selectOption("select.rv-checklist", { label: "review" });
+      await page.click("button.rv-run");
+      await page.waitForSelector(".rv-summary", { timeout: 60_000 });
+      const tally = await page.locator(".rv-summary").innerText();
+      expect((await paintedAt(page, ".rv-save")).ownedByProbe).toBe(true);
+
+      const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), page.click(".rv-save")]);
+      expect(download.suggestedFilename()).toBe("gateway.agni-review.html");
+      const path = await download.path();
+      const html = (await import("node:fs")).readFileSync(path!, "utf8");
+      // The saved page's text as a browser reads it, since the page escapes what a title holds.
+      const text = await page.evaluate((h) => new DOMParser().parseFromString(h, "text/html").body.textContent ?? "", html);
+      const items = await page.$$eval(".rv-item-title", (els) => els.map((e) => e.textContent ?? ""));
+      expect(items.length).toBeGreaterThan(0);
+      for (const title of items) expect(text).toContain(title.trim());
+      // The page and the panel word the tally differently, and agree on the counts.
+      const counts = tally.match(/\d+ pass, \d+ fail/)?.[0];
+      expect(counts, `the panel's tally ${tally} names no pass and fail counts`).toBeTruthy();
+      expect(text).toContain(counts!);
+    });
+  }, 120_000);
+});

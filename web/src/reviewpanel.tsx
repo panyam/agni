@@ -111,6 +111,9 @@ function ReviewPanel(props: {
   onSelectChecklist: (ref: string) => void;
   onCreate: () => void;
   onLocate: (kind: string, subject: string) => void;
+  // onSave writes the shown run as the checklist page `agni review --format html` writes. Absent,
+  // the panel offers no save.
+  onSave?: () => void;
   staticHost: boolean;
 }) {
   const run = () => selectedRun(props.state());
@@ -182,7 +185,22 @@ function ReviewPanel(props: {
         >
           {(r) => (
             <div class="rv-run-body">
-              <div class="rv-summary">{tallyLine(runTally(r()))}</div>
+              <div class="rv-summary-row">
+                <div class="rv-summary">{tallyLine(runTally(r()))}</div>
+                <Show when={props.onSave}>
+                  <button
+                    type="button"
+                    class="rv-save"
+                    title="Save this run as the checklist page agni review --format html writes"
+                    onClick={() => props.onSave?.()}
+                  >
+                    Save report
+                  </button>
+                </Show>
+              </div>
+              <Show when={props.state().saveNote}>
+                <div class="rv-save-note" role="alert">{props.state().saveNote}</div>
+              </Show>
               <div class="rv-provenance">
                 {r().manifest}
                 <Show when={r().producerVersion}>{` · ${r().producerVersion}`}</Show>
@@ -221,6 +239,7 @@ export function reviewPanelIsland(
     onSelectChecklist: (ref: string) => void;
     onCreate: () => void;
     onLocate: (kind: string, subject: string) => void;
+    onSave?: () => void;
   },
   opts: { staticHost?: boolean } = {},
 ): { island: SolidIsland; view: ReviewView } {
@@ -235,6 +254,7 @@ export function reviewPanelIsland(
         onSelectChecklist={handlers.onSelectChecklist}
         onCreate={handlers.onCreate}
         onLocate={handlers.onLocate}
+        onSave={handlers.onSave}
         staticHost={opts.staticHost ?? false}
       />
     ),

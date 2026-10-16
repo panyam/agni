@@ -43,6 +43,7 @@ documents are independent concerns with independent cadences.
 | Review | GetReview | one stored run, by resource name |
 | Review | ListReviews | stored runs newest first, paginated, filterable by design |
 | Review | DeleteReview | remove a stored run |
+| Review | RenderReviewReport | a review the caller holds, written as the checklist page `agni review --format html` writes; nothing is re-run or read from the store |
 | Project | GetProject, ListProjects | the declared projects visible across the server's mounts |
 | Project | GetDesign, ListDesigns | a declared design's identity and which file around it is which (a different question from Design.GetDesign) |
 | Project | ResolveDesign | whether a file belongs to a declared design, and which; resolving to nothing is a normal answer |
