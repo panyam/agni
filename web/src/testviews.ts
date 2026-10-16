@@ -24,6 +24,7 @@ export function stubQueryView(over: Partial<QueryView> = {}): QueryView {
     setCurrentSheet: () => {},
     setFindings: () => {},
     entityQuery: () => undefined,
+    askAbout: () => {},
     ...over,
   };
 }

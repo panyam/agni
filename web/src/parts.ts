@@ -10,10 +10,15 @@ export interface PartRow {
   refDes: string;
   mpn: string;
   spec: PartSpec | undefined;
+  // corpus names where the spec came from, "project" or "shared".
+  corpus: string;
 }
 
 export interface PartsState {
   parts: PartRow[];
+  // corpusConnected tells "nothing was asked" from "the corpus has no spec for these parts", which
+  // an empty parts list cannot say on its own.
+  corpusConnected: boolean;
 }
 
 export interface PartsView {
@@ -21,10 +26,13 @@ export interface PartsView {
 }
 
 export function emptyParts(): PartsState {
-  return { parts: [] };
+  return { parts: [], corpusConnected: false };
 }
 
 // partsFromResponse maps the GetComponentParams wire response into the panel's view state.
 export function partsFromResponse(resp: GetComponentParamsResponse): PartsState {
-  return { parts: resp.components.map((c) => ({ refDes: c.refDes, mpn: c.mpn, spec: c.spec })) };
+  return {
+    parts: resp.components.map((c) => ({ refDes: c.refDes, mpn: c.mpn, spec: c.spec, corpus: c.corpus })),
+    corpusConnected: resp.corpusConnected,
+  };
 }

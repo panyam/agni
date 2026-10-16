@@ -382,7 +382,13 @@ func (s *DesignService) GetLayoutReport(ctx context.Context, req *webapi.GetLayo
 	if err != nil {
 		return nil, err
 	}
-	rep, err := s.loader.Report(ctx, u, faithful, opts...)
+	// The report explains a drawing, so it reads the GEOMETRY tier, as the CLI's render --report does.
+	// Passing the request URI through read a design folder as no netlist at all (agni issue 736).
+	_, _, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	rep, err := s.loader.Report(ctx, gu, faithful, opts...)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
 			return nil, err

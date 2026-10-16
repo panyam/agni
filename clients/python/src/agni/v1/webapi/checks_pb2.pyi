@@ -260,7 +260,9 @@ class ComponentParams(_message.Message):
     def __init__(self, ref_des: _Optional[str] = ..., mpn: _Optional[str] = ..., spec: _Optional[_Union[_param_pb2.PartSpec, _Mapping]] = ..., corpus: _Optional[str] = ...) -> None: ...
 
 class GetComponentParamsResponse(_message.Message):
-    __slots__ = ("components",)
+    __slots__ = ("components", "corpus_connected")
     COMPONENTS_FIELD_NUMBER: _ClassVar[int]
+    CORPUS_CONNECTED_FIELD_NUMBER: _ClassVar[int]
     components: _containers.RepeatedCompositeFieldContainer[ComponentParams]
-    def __init__(self, components: _Optional[_Iterable[_Union[ComponentParams, _Mapping]]] = ...) -> None: ...
+    corpus_connected: bool
+    def __init__(self, components: _Optional[_Iterable[_Union[ComponentParams, _Mapping]]] = ..., corpus_connected: _Optional[bool] = ...) -> None: ...

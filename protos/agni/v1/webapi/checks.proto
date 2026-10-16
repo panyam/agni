@@ -404,4 +404,8 @@ message ComponentParams {
 
 message GetComponentParamsResponse {
   repeated ComponentParams components = 1;
+  // corpus_connected says whether any datasheet corpus was consulted, the project's or the server's.
+  // Without it an empty components list means two things a reader must not confuse: nothing was
+  // asked (no corpus), or the corpus was asked and holds no spec for these parts.
+  bool corpus_connected = 2;
 }

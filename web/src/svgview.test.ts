@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { SvgView, computeReveal } from "./svgview.js";
+import { SvgView, computeReveal, drawnOnSheet } from "./svgview.js";
 
 describe("computeReveal (WS9-006)", () => {
   it("centers the target box in the host", () => {
@@ -117,5 +117,70 @@ describe("refit on resize", () => {
     view.setSvg('<svg width="200" height="200"></svg>');
     resize(800, 800);
     expect(scaleOf(host)).toBeCloseTo(4);
+  });
+});
+
+// A click picks what it lands on, and a click on nothing keyed names the sheet (agni issue 902). A pan
+// is neither, which is the rule the click-versus-pan slop already enforces for picks.
+describe("a click on the drawing", () => {
+  function clickAt(host: HTMLElement, hit: Element | null, moveBy = 0): void {
+    const real = document.elementFromPoint;
+    document.elementFromPoint = (() => hit) as typeof document.elementFromPoint;
+    try {
+      host.dispatchEvent(new MouseEvent("mousedown", { clientX: 10, clientY: 10, bubbles: true }));
+      if (moveBy) window.dispatchEvent(new MouseEvent("mousemove", { clientX: 10 + moveBy, clientY: 10, bubbles: true }));
+      window.dispatchEvent(new MouseEvent("mouseup", { clientX: 10 + moveBy, clientY: 10, bubbles: true }));
+    } finally {
+      document.elementFromPoint = real;
+    }
+  }
+
+  function setup() {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const view = new SvgView(host);
+    const picks: unknown[] = [];
+    let empties = 0;
+    view.onPick = (sel) => picks.push(sel);
+    view.onPickEmpty = () => empties++;
+    return { host, picks, empties: () => empties };
+  }
+
+  it("on a keyed element picks it and does not name the sheet", () => {
+    const { host, picks, empties } = setup();
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    el.setAttribute("data-kind", "component");
+    el.setAttribute("data-ref", "U1");
+    clickAt(host, el);
+    expect(picks).toEqual([{ kind: "component", ref: "U1" }]);
+    expect(empties()).toBe(0);
+  });
+
+  it("on empty paper names the sheet", () => {
+    const { host, picks, empties } = setup();
+    clickAt(host, null);
+    expect(picks).toEqual([]);
+    expect(empties()).toBe(1);
+  });
+
+  it("that pans names nothing", () => {
+    const { host, picks, empties } = setup();
+    clickAt(host, null, 40);
+    expect(picks).toEqual([]);
+    expect(empties()).toBe(0);
+  });
+});
+
+describe("drawnOnSheet", () => {
+  it("lists each component and net the drawing keys, once", () => {
+    const host = document.createElement("div");
+    host.innerHTML =
+      '<svg><rect data-kind="component" data-ref="U1"/><rect data-kind="component" data-ref="U1"/>' +
+      '<polyline data-kind="net" data-net="VIN"/><circle data-kind="pin" data-ref="U1" data-pin="1"/></svg>';
+    expect(drawnOnSheet(host)).toEqual({ refs: ["U1"], nets: ["VIN"] });
+  });
+
+  it("is null when the view holds no drawing", () => {
+    expect(drawnOnSheet(document.createElement("div"))).toBeNull();
   });
 });

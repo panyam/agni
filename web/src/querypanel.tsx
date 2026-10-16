@@ -142,6 +142,9 @@ function QueryPanel(props: {
   onSaveCSV?: () => void;
   onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
+  // registerAsk hands the island the panel's askAbout, so a question asked from elsewhere (the
+  // Properties panel's Ask row) runs exactly as the panel's own ask button does.
+  registerAsk?: (ask: (sel: Selection) => void) => void;
 }) {
   const [text, setText] = createSignal("");
   // bindings are the values the query's variables are bound to (agni issue 793), set by a search or a
@@ -281,6 +284,7 @@ function QueryPanel(props: {
     resetForRun();
     ask(preset.query, b, STARTING_POINT_LIMIT);
   };
+  props.registerAsk?.(askAbout);
   // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
   // selects it, so one answer becomes the subject of the next question. A kind with no selection
   // shape (scalars never reach here) locates and deselects rather than leaving the bar naming the
@@ -860,6 +864,7 @@ export function queryPanelIsland(
   const [findings, setFindings] = signalView<FindingsState>(emptyFindings());
   const onLocate = handlers.onLocate ?? (() => {});
   const onInspect = handlers.onInspect ?? (() => {});
+  let askHook: (sel: Selection) => void = () => {};
   // A fresh query result clears any stale locate note from the previous run.
   const setStateClearing = (s: QueryResult) => {
     setLocateNote("");
@@ -885,6 +890,7 @@ export function queryPanelIsland(
         onSaveCSV={handlers.onSaveCSV}
         onLocate={onLocate}
         onInspect={onInspect}
+        registerAsk={(ask) => (askHook = ask)}
       />
     ),
     eventBus,
@@ -903,6 +909,10 @@ export function queryPanelIsland(
       setCurrentSheet,
       setFindings,
       entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind),
+      askAbout: (sel: Selection) => {
+        setSelection(sel);
+        askHook(sel);
+      },
     },
   };
 }

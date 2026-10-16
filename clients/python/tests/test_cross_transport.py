@@ -94,8 +94,6 @@ _MANIFEST = checks_pb2.ReviewManifest(
     ],
 )
 
-LAYOUT_TIERS = "agni issue 736: GetLayoutReport does not resolve tiers, so the folder reads as nothing"
-
 # A set whose preamble every query reads, and the same set with one query the design cannot answer:
 # over the CLI that exits 1 with the full answer printed, and the two transports must still agree.
 _SET = query_pb2.QuerySet(
@@ -213,10 +211,9 @@ CASES: List[Case] = [
     Case("DesignService/TraceDesign", _trace("J1.3", "J1.4")),
     Case("DesignService/TraceDesign", _trace("J1.3", "ZZ9.1")),
     Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(uri=DESIGN + "/gateway.edn", as_named=True)),
+    # The folder reads the declared schematic companion on both transports (agni issue 736).
+    Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(uri=DESIGN)),
 ]
-
-# The server fills nothing for the folder, which is the bug, so the CLI is the side with content.
-LAYOUT_FOLDER = Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(uri=DESIGN))
 
 
 def _nonempty(msg: Message) -> set:
@@ -276,12 +273,6 @@ def test_omitting_locations_drops_only_the_locations(connect: Client):
     full.work = bare.work = 0
     assert full == bare
     assert len(bare.SerializeToString()) < len(connect.run_query(uri=DESIGN, query=q).SerializeToString())
-
-
-def test_layout_report_for_the_folder_diverges_as_declared(cli: Client, connect: Client):
-    """agni issue 736. When it is fixed this fails, and LAYOUT_FOLDER moves into CASES."""
-    assert len(LAYOUT_FOLDER.ask(cli).report.components) > 0
-    assert len(LAYOUT_FOLDER.ask(connect).report.components) == 0, LAYOUT_TIERS
 
 
 def test_every_cli_command_is_compared():

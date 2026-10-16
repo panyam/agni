@@ -25,9 +25,10 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   // The birds-eye sheet list (WS9-025).
   { id: "overview", title: "Sheets", defaultOpen: true },
   { id: "canvas", title: "Canvas", defaultOpen: true },
-  // Details is the click-to-inspect target, so a fresh page needs it visible or selecting a
-  // component paints nowhere.
-  { id: "details", title: "Details", defaultOpen: true },
+  // Properties describes whatever is selected (agni issue 902), so a fresh page needs it visible or
+  // a click on the drawing paints nowhere. It replaced Details, which prunePanels drops from a saved
+  // layout that still names it.
+  { id: "properties", title: "Properties", defaultOpen: true },
   // Rules is a static reference catalog, tabbed in the east stack beside the findings it explains.
   { id: "rules", title: "Rules", defaultOpen: true },
   // Checks is the findings table (WS9), server-sourced and grouped and sorted on the client, with
@@ -44,7 +45,7 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   // The Tables panel (agni issues 898 and 956) shows an answer as the tables Tabulate projects and
   // saves them as csv. It tabs with Query and Trace, the other answers in the bottom strip.
   { id: "tables", title: "Tables", defaultOpen: true },
-  // The datasheet-params panel (WS9-035), a per-component parameter tree tabbed with Details since
+  // The datasheet-params panel (WS9-035), a per-component parameter tree tabbed with Properties since
   // both answer "what is this thing I selected". Populated only when serve was started with --params.
   { id: "parts", title: "Parts", defaultOpen: true },
   // The review panel (WS9-052) shows the project's checklist verdict for the open design (see
@@ -59,8 +60,8 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
 // Bump LAYOUT_KEY whenever the DEFAULT ARRANGEMENT changes. A saved layout wins over the default
 // and the reconcile only ADDS panels, so without a bump anyone who has opened the viewer before
 // keeps their old arrangement and never sees the change. Bumped for the WS9-049 work page and for
-// the tabbed layout (#325).
-export const LAYOUT_KEY = "agni-work-page-dockview-layout-v2";
+// the tabbed layout (#325), and for Properties replacing Details (agni issue 902).
+export const LAYOUT_KEY = "agni-work-page-dockview-layout-v3";
 
 type LayoutStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -188,8 +189,8 @@ export function defaultLayout(api: DockviewApi): void {
 
   // West rail, with the design's own navigation above what one selection is made of.
   api.addPanel({ id: "overview", component: "overview", title: "Sheets", position: { direction: "left", referencePanel: "canvas" } });
-  api.addPanel({ id: "details", component: "details", title: "Details", position: { direction: "below", referencePanel: "overview" } });
-  api.addPanel({ id: "parts", component: "parts", title: "Parts", position: { direction: "within", referencePanel: "details" } });
+  api.addPanel({ id: "properties", component: "properties", title: "Properties", position: { direction: "below", referencePanel: "overview" } });
+  api.addPanel({ id: "parts", component: "parts", title: "Parts", position: { direction: "within", referencePanel: "properties" } });
 
   // East rail, split north/south like the west rail. dockview clips a tab strip rather than
   // scrolling it or offering an overflow menu, so four tabs in one 15% stack left the fourth
@@ -227,7 +228,7 @@ export function defaultLayout(api: DockviewApi): void {
     // Each stack opens on its first tab. Query needs this explicitly, because dockview makes the
     // last panel added the active one and Trace is added to that stack after Query.
     api.getPanel("query")?.api.setActive();
-    api.getPanel("details")?.api.setActive();
+    api.getPanel("properties")?.api.setActive();
     api.getPanel("checks")?.api.setActive();
     api.getPanel("review")?.api.setActive();
     api.getPanel("canvas")?.api.setActive();

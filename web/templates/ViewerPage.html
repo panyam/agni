@@ -64,10 +64,8 @@
       <div id="svg-view" class="svg-view"></div>
       <div id="readout">no sheet loaded</div>
     </div>
-    <div data-dock-panel="details" class="dock-body">
-      <div id="design-summary" class="summary"></div>
-      <div id="conversion-report" class="conversion-report" style="display:none"></div>
-    </div>
+    <!-- agni issue 902: the Properties panel describes the selection, and replaced Details -->
+    <div data-dock-panel="properties" class="dock-body"><div id="properties-panel" data-component="properties"></div></div>
     <!-- WS9-013: the rules panel (catalog + multi-select) island mounts into this hole -->
     <div data-dock-panel="rules" class="dock-body"><div id="rules" data-component="rules"></div></div>
     <!-- the findings panel (rule checks) island mounts into this hole -->

@@ -1628,10 +1628,14 @@ func (x *ComponentParams) GetCorpus() string {
 }
 
 type GetComponentParamsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Components    []*ComponentParams     `protobuf:"bytes,1,rep,name=components,proto3" json:"components,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Components []*ComponentParams     `protobuf:"bytes,1,rep,name=components,proto3" json:"components,omitempty"`
+	// corpus_connected says whether any datasheet corpus was consulted, the project's or the server's.
+	// Without it an empty components list means two things a reader must not confuse: nothing was
+	// asked (no corpus), or the corpus was asked and holds no spec for these parts.
+	CorpusConnected bool `protobuf:"varint,2,opt,name=corpus_connected,json=corpusConnected,proto3" json:"corpus_connected,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetComponentParamsResponse) Reset() {
@@ -1669,6 +1673,13 @@ func (x *GetComponentParamsResponse) GetComponents() []*ComponentParams {
 		return x.Components
 	}
 	return nil
+}
+
+func (x *GetComponentParamsResponse) GetCorpusConnected() bool {
+	if x != nil {
+		return x.CorpusConnected
+	}
+	return false
 }
 
 var File_agni_v1_webapi_checks_proto protoreflect.FileDescriptor
@@ -1780,11 +1791,12 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03mpn\x18\x02 \x01(\tR\x03mpn\x12+\n" +
 	"\x04spec\x18\x03 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12\x16\n" +
-	"\x06corpus\x18\x04 \x01(\tR\x06corpus\"]\n" +
+	"\x06corpus\x18\x04 \x01(\tR\x06corpus\"\x88\x01\n" +
 	"\x1aGetComponentParamsResponse\x12?\n" +
 	"\n" +
 	"components\x18\x01 \x03(\v2\x1f.agni.v1.webapi.ComponentParamsR\n" +
-	"components*|\n" +
+	"components\x12)\n" +
+	"\x10corpus_connected\x18\x02 \x01(\bR\x0fcorpusConnected*|\n" +
 	"\x11CheckReportFormat\x12#\n" +
 	"\x1fCHECK_REPORT_FORMAT_UNSPECIFIED\x10\x00\x12$\n" +
 	" CHECK_REPORT_FORMAT_RESULTS_JSON\x10\x01\x12\x1c\n" +

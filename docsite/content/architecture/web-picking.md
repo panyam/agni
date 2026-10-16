@@ -4,8 +4,9 @@ description: "How a reader names an entity in the viewer, walks from one answer 
 ---
 
 A reader names an entity in the viewer in three ways: by clicking the drawing, by clicking a cell in
-a query result, or by searching for a name. All three produce the same `Selection` value and all
-three leave an editable datalog query in the box. This page covers those paths, and what the viewer
+a query result, or by searching for a name. All three produce the same `Selection` value. A click
+SELECTS, and the Properties panel describes the selection; a question about it is a separate act
+that leaves an editable datalog query in the box. This page covers those paths, and what the viewer
 can then say about what is selected. The render and highlight contracts underneath them are on
 [Web app and presenter](../web-app/).
 
@@ -35,8 +36,31 @@ finding row produce one value.
 - **Entity keys are design data, so they are escaped** (`svg.AEsc`). Attribute values are written
   verbatim otherwise, and the viewer mounts this document with `innerHTML`.
 
-A click generates a query and runs it, rather than opening a bespoke panel. The query is left in the
-box, editable, so using the viewer teaches the language instead of routing around it.
+### Selecting is not asking
+
+A click selects what it lands on and the Properties panel describes it (agni issue 902). It used to
+write the served preset into the query box and run it, which mixed looking around with asking a
+question, and a stray click overwrote whatever the reader had typed. Asking is now the panel's Ask
+row, which runs that same preset in the query panel, so the query is still left in the box, editable,
+and using the viewer still teaches the language.
+
+**Something is always selected.** The design is the root, a click on empty paper selects the sheet on
+screen (`SvgView.onPickEmpty`), Escape selects the design, and an entity sits under the sheet it was
+picked on. The breadcrumb heading the panel moves between those levels, and every reference in it (a
+pin's net, a net's components) moves the selection, so a reader can walk the design inside the panel.
+A located query cell selects too, so the panel follows a walk through an answer.
+
+**The panel reads the design once per open** (`PropertiesPresenter`, `INVENTORY_PATHS`). It asks
+`GetDesign` for the netlist IR under a field mask naming only what it shows, about 1.8 MB of JSON on
+the largest seed, and indexes it. A per-click read was the alternative, but a component's nets cannot
+be filtered on the server by component, so it would have fetched every net per click anyway. What a
+sheet holds is read off its rendered document's entity keys (`drawnOnSheet`), since membership is a
+property of the drawing.
+
+**The datasheet section keeps its outcomes apart.** No corpus connected, a part with no MPN, a corpus
+with no spec for this MPN, and the spec itself each read differently, because an unasked question and
+an absent answer must not look alike. `GetComponentParamsResponse.corpus_connected` is what tells the
+first from the third.
 
 ### Walking from an answer to the next question
 

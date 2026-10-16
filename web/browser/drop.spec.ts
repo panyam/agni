@@ -10,6 +10,10 @@ import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
 import { storedZip, walk } from "./storedzip.js";
 
+// The design's summary line, which Properties shows at the design level (agni issue 902). It names
+// the read, so "faithful" in it says the schematic was drawn rather than an auto-layout.
+const DESIGN_SUMMARY = '[data-component="properties"] dd[data-row="read"]';
+
 const base = (): string => inject("baseUrl");
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const tutorial = join(repo, "examples", "tutorial-project");
@@ -83,7 +87,7 @@ describe("dropping files on the viewer", () => {
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);
       expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/gateway\//);
-      await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 30_000 }).toContain("faithful");
+      await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.errors).toEqual([]);
     });
@@ -109,7 +113,7 @@ describe("dropping files on the viewer", () => {
       expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/gateway\.edn\/view/);
       // The schematic is drawn because the written design.yaml names gateway.kicad_sch as a companion.
       // A netlist read without it would draw an auto-layout.
-      await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 30_000 }).toContain("faithful");
+      await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.errors).toEqual([]);
     });
@@ -132,7 +136,7 @@ describe("dropping files on the viewer", () => {
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);
       expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/gateway\.zip\/gateway\.edn\/view/);
-      await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 30_000 }).toContain("faithful");
+      await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
       // The zip carries the gateway's symbols/ beside the proposed design.yaml, and a design in no
       // project still reads its own symbol library (agni issue 887), so every part is drawn.
       expect((await page.locator("#undrawn-note").textContent())?.trim() ?? "").toBe("");

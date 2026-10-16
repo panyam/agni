@@ -26,17 +26,17 @@ func TestViewerPageRendersShell(t *testing.T) {
 	}
 	body := rec.Body.String()
 	for _, want := range []string{
-		`id="compare-picker"`,       // WS9-049 phase 3: the compare picker modal
-		`id="compare-tree"`,         // its file-tree island hole
-		`id="view"`,                 // canvas region
-		`id="dock"`,                 // WS9-021: dockview mounts here
-		`id="panel-park"`,           // WS9-021: server-rendered holes park here
-		`data-dock-panel="details"`, // WS9-021: the details hole the dock adopts
-		`data-dock-panel="checks"`,  // WS9: the merged checks panel hole (findings + report)
-		`data-component`,            // islands mount by this marker
-		`id="sheet-tabs"`,           // WS9-049: hole for the visited-sheet tab strip
-		"/static/app.js",            // the bundle reference
-		"Agni viewer",               // page title from Load
+		`id="compare-picker"`,          // WS9-049 phase 3: the compare picker modal
+		`id="compare-tree"`,            // its file-tree island hole
+		`id="view"`,                    // canvas region
+		`id="dock"`,                    // WS9-021: dockview mounts here
+		`id="panel-park"`,              // WS9-021: server-rendered holes park here
+		`data-dock-panel="properties"`, // agni issue 902: the Properties hole the dock adopts, which replaced Details
+		`data-dock-panel="checks"`,     // WS9: the merged checks panel hole (findings + report)
+		`data-component`,               // islands mount by this marker
+		`id="sheet-tabs"`,              // WS9-049: hole for the visited-sheet tab strip
+		"/static/app.js",               // the bundle reference
+		"Agni viewer",                  // page title from Load
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("rendered page missing %q", want)
