@@ -10,6 +10,24 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class RenderReviewReportRequest(_message.Message):
+    __slots__ = ("review", "links")
+    REVIEW_FIELD_NUMBER: _ClassVar[int]
+    LINKS_FIELD_NUMBER: _ClassVar[int]
+    review: Review
+    links: _checks_pb2_1.ReportLinks
+    def __init__(self, review: _Optional[_Union[Review, _Mapping]] = ..., links: _Optional[_Union[_checks_pb2_1.ReportLinks, _Mapping]] = ...) -> None: ...
+
+class RenderReviewReportResponse(_message.Message):
+    __slots__ = ("content", "content_type", "filename")
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    content: bytes
+    content_type: str
+    filename: str
+    def __init__(self, content: _Optional[bytes] = ..., content_type: _Optional[str] = ..., filename: _Optional[str] = ...) -> None: ...
+
 class Review(_message.Message):
     __slots__ = ("name", "results", "summary")
     NAME_FIELD_NUMBER: _ClassVar[int]

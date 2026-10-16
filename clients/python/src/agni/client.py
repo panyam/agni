@@ -116,6 +116,11 @@ class Client:
         empty ``project`` means the design belongs to none."""
         return self.call("ReviewService", "ListChecklists", request, **fields)  # type: ignore[return-value]
 
+    def render_review_report(self, request: Optional[review_pb2.RenderReviewReportRequest] = None, **fields) -> review_pb2.RenderReviewReportResponse:
+        """A review this client holds, ``review=`` as ``create_review`` returned it, written as the
+        checklist page ``agni review --format html`` writes. Nothing is re-run. Connect only."""
+        return self.call("ReviewService", "RenderReviewReport", request, **fields)  # type: ignore[return-value]
+
     def get_review_manifest(self, request: Optional[review_pb2.GetReviewManifestRequest] = None, **fields) -> review_pb2.GetReviewManifestResponse:
         return self.call("ReviewService", "GetReviewManifest", request, **fields)  # type: ignore[return-value]
 

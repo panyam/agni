@@ -159,6 +159,7 @@ type (
 	}
 	reviewAPI interface {
 		CreateReview(context.Context, *webapi.CreateReviewRequest) (*webapi.Review, error)
+		RenderReviewReport(context.Context, *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error)
 	}
 )
 
@@ -234,4 +235,8 @@ func (r *remoteServer) review() reviewAPI {
 
 func (r remoteReview) CreateReview(ctx context.Context, req *webapi.CreateReviewRequest) (*webapi.Review, error) {
 	return unary(ctx, r.c.CreateReview, req)
+}
+
+func (r remoteReview) RenderReviewReport(ctx context.Context, req *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error) {
+	return unary(ctx, r.c.RenderReviewReport, req)
 }

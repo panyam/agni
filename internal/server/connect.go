@@ -363,6 +363,14 @@ func (a *Review) ListChecklists(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Review) RenderReviewReport(ctx context.Context, req *connect.Request[webapi.RenderReviewReportRequest]) (*connect.Response[webapi.RenderReviewReportResponse], error) {
+	resp, err := a.svc.RenderReviewReport(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Project adapts service.ProjectService to the generated Connect handler interface.
 type Project struct {
 	webapiconnect.UnimplementedProjectServiceHandler
