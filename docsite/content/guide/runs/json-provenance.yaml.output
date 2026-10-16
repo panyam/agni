@@ -24,7 +24,10 @@
       ],
       "locateReason": "LOCATE_REASON_UNSPECIFIED",
       "datasheets": [],
-      "context": []
+      "context": [],
+      "verdictIds": [
+        "i2c-pull-up:(net:/SCL)"
+      ]
     }
   ],
   "skipped": [],
