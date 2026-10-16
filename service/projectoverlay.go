@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/panyam/agni/artifact"
@@ -91,6 +92,42 @@ func (r *ProjectResolver) Checklists(ctx context.Context, uri artifact.URI) ([]*
 		return nil, "", err
 	}
 	return cfg.GetChecklists(), p.GetName(), nil
+}
+
+// QuerySets returns the query sets a design's project keeps, inherited ones first, and the project's
+// name, answering an absent project and an empty one as Checklists does. Only the query-set tier is
+// resolved, so a listing reads no profile, corpus or library and a broken one cannot fail it. A set
+// file that does not parse fails the listing, since leaving it out would read as the project having
+// no such set.
+func (r *ProjectResolver) QuerySets(ctx context.Context, uri artifact.URI) ([]NamedQuerySet, string, error) {
+	if r == nil || r.Store == nil {
+		return nil, "", nil
+	}
+	_, p, err := r.Store.ResolveDesign(ctx, uri)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return nil, "", nil
+	case err != nil:
+		return nil, "", err
+	case p == nil:
+		return nil, "", nil
+	}
+	cfg, err := ResolveExtends(ctx, r.Store, p)
+	if err != nil {
+		return nil, "", err
+	}
+	uris := cfg.GetQuerySetUris()
+	if len(uris) == 0 {
+		return nil, p.GetName(), nil
+	}
+	if r.Config == nil {
+		return nil, "", fmt.Errorf("%w: project %s names query sets and this host cannot resolve project config", ErrInvalidArgument, p.GetName())
+	}
+	res, err := r.Config.ResolveConfig(ctx, &webapi.AnalysisConfig{QuerySetUris: uris}, p.GetName())
+	if err != nil {
+		return nil, "", err
+	}
+	return res.QuerySets, p.GetName(), nil
 }
 
 // PickChecklist returns the checklist called name, or the first, which is the project's default, when

@@ -188,6 +188,34 @@ func BindingsProto(m map[string]query.Value) map[string]*webapi.QueryValue {
 	return out
 }
 
+// ListQuerySets answers which query sets the design's project keeps, inherited ones first (agni
+// issue 745). See ProjectResolver.QuerySets for what an absent project and an empty one answer.
+func (s *QueryService) ListQuerySets(ctx context.Context, req *webapi.ListQuerySetsRequest) (*webapi.ListQuerySetsResponse, error) {
+	u, err := ParseArtifactURI(req.GetDesignUri())
+	if err != nil {
+		return nil, err
+	}
+	sets, project, err := s.projects.QuerySets(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	out := &webapi.ListQuerySetsResponse{Project: project}
+	for _, n := range sets {
+		out.QuerySets = append(out.QuerySets, &webapi.NamedQuerySet{Name: n.Name, Set: QuerySetProto(n.Set), Source: n.Source})
+	}
+	return out, nil
+}
+
+// ParseQuerySet reads a set file's text into its wire form, checked as `agni query --set` checks it.
+// A set that does not parse is an invalid argument, so a viewer shows the reason beside the file.
+func (s *QueryService) ParseQuerySet(_ context.Context, req *webapi.ParseQuerySetRequest) (*webapi.ParseQuerySetResponse, error) {
+	set, err := query.ParseQuerySet([]byte(req.GetText()))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	return &webapi.ParseQuerySetResponse{Set: QuerySetProto(set)}, nil
+}
+
 // QuerySetProto converts a query set to its wire form, for a caller that read one from a file.
 func QuerySetProto(s query.QuerySet) *webapi.QuerySet {
 	p := &webapi.QuerySet{Title: s.Title, Preamble: s.Preamble}

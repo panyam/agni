@@ -71,10 +71,21 @@ function harness() {
   // Spies for the ports these tests assert on; every other port defaults to a no-op in
   // stubQueryView, so a method added to QueryView is one edit there rather than a runtime failure
   // in a test that never mentions it. The spies are held separately so they keep their Mock type.
-  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), setState: vi.fn(), clearAnswers: vi.fn() };
+  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), setState: vi.fn(), clearAnswers: vi.fn(), setQuerySets: vi.fn() };
   // runQuery answers every query with one row naming the query it was asked, so a test can tell
   // which answer landed where.
   const runQuery = vi.fn(async (req: { query: string }) => ({ columns: ["q"], columnKinds: [""], rows: [{ cells: [req.query] }], total: 0 }));
+  // A set's first query answers and its second could not be, the shape RunQueries reports.
+  const runQueries = vi.fn(async (req: { set: { queries: { name: string; query: string }[] } }) => ({
+    results: [
+      { name: req.set.queries[0].name, result: { columns: ["q"], columnKinds: [""], rows: [{ cells: [req.set.queries[0].query] }], total: 0 } },
+      { name: req.set.queries[1].name, error: "unknown relation" },
+    ],
+  }));
+  const listQuerySets = vi.fn(async (_req: { designUri: string }) => ({
+    project: "projects/p",
+    querySets: [{ name: "power", source: "mount://m/queries/power.yaml", set: { title: "Power", queries: [] } }],
+  }));
   // Two nav surfaces (tabs + tree), as in the app, to prove the presenter fans state to both.
   const navA = { setState: vi.fn() };
   const navB = { setState: vi.fn() };
@@ -114,8 +125,8 @@ function harness() {
     // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
-  }, { runQuery } as any);
-  return { presenter, runQuery, onUndrawnNote, onStaleLinkNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  }, { runQuery, runQueries, listQuerySets } as any);
+  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -1298,5 +1309,32 @@ describe("a finding click selects", () => {
     expect(h.canvas.setHighlights.mock.calls.at(-1)![0]).not.toEqual(base);
     await h.presenter.releaseFocus();
     expect(h.canvas.setHighlights.mock.calls.at(-1)![0]).toEqual(base);
+  });
+});
+
+// agni issue 745: a project's query sets reach the panel, and a set opened as tabs is answered over
+// one read with each answer, or error, in its own tab.
+describe("query sets", () => {
+  it("lists the design's project sets when a design opens", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn", "");
+    await vi.waitFor(() => expect(h.query.setQuerySets).toHaveBeenLastCalledWith([{ name: "power", source: "mount://m/queries/power.yaml", set: { title: "Power", queries: [] } }]));
+    expect(h.listQuerySets).toHaveBeenCalledWith({ designUri: "mount://m/proj/board.edn" });
+  });
+
+  it("answers a set into its tabs, an error in the tab of the query that failed", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    const set = { title: "T", preamble: "", queries: [{ name: "a", query: "first(?x) => ?x" }, { name: "b", query: "bad(?x) => ?x" }] } as never;
+    await h.presenter.runQuerySet(set, ["q2", "q3"]);
+    expect(h.runQueries).toHaveBeenCalledTimes(1);
+    const landed = h.query.setState.mock.calls.filter((c) => !c[0].loading).map((c) => [c[1], c[0].error || c[0].rows[0].cells[0]]);
+    expect(landed).toEqual([
+      ["q2", "first(?x) => ?x"],
+      ["q3", "unknown relation"],
+    ]);
+    const saved: unknown[] = [];
+    await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q2");
+    expect(saved).toHaveLength(1);
   });
 });

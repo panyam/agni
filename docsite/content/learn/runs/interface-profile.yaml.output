@@ -1,4 +1,4 @@
-#agni-run 25a09b29d3822a22
+#agni-run 06497aecb2e7a1ea
 gateway-profiles/can-esd-missing  2 fail
     fail  CAN1_CANH  CAN signal net CAN1_CANH is exposed on a connector with no ESD protection
                      in reach

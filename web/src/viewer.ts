@@ -4,7 +4,7 @@ import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckDesignResponse } from "./gen/agni/v1/webapi/checks_pb.js";
 import { BROWSER_MOUNT } from "./wasm/drop.js";
-import { QueryService, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { QueryService, type QuerySet, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import type { TableAnswer } from "./tables.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
@@ -321,6 +321,53 @@ export class ViewerPresenter {
     }
   }
 
+  // loadQuerySets lists the query sets the design's project keeps (agni issue 745) for the query
+  // panel's Sets menu. A failure, or a later design opened meanwhile, leaves the menu with none
+  // rather than another design's sets.
+  private async loadQuerySets(mount: string, path: string): Promise<void> {
+    if (!this.views.query || !this.query) return;
+    this.views.query.setQuerySets([]);
+    try {
+      const resp = await this.query.listQuerySets({ designUri: artifactUri(mount, path) });
+      if (mount !== this.mount || path !== this.path) return;
+      this.views.query.setQuerySets(resp.querySets.filter((s) => s.set).map((s) => ({ name: s.name, source: s.source, set: s.set! })));
+    } catch {
+      // A project whose sets do not parse offers none; `agni query --set` names the file.
+    }
+  }
+
+  // runQuerySet answers a set the query panel opened as tabs, one tab per query in the set's order,
+  // over one read of the design (RunQueries). A query the engine could not answer shows its error in
+  // its own tab, and the others still answer.
+  async runQuerySet(set: QuerySet, tabs: string[]): Promise<void> {
+    if (!this.views.query || !this.query) return;
+    const push = (r: QueryResult, tab: string) => this.views.query?.setState(r, tab);
+    if (!this.mount || !this.path) {
+      for (const t of tabs) push(errorResult("Open a design first."), t);
+      return;
+    }
+    for (const t of tabs) push(emptyResult(true), t);
+    try {
+      const resp = await this.query.runQueries({ uri: artifactUri(this.mount, this.path), set, overlay: this.overlay() });
+      resp.results.forEach((r, i) => {
+        const tab = tabs[i];
+        if (!tab) return;
+        if (r.result) {
+          this.answers.set(tab, r.result);
+          push(resultFromResponse(r.result, (ids) => this.sheetBadges(ids)), tab);
+        } else {
+          this.answers.delete(tab);
+          push(errorResult(r.error || "This query was not answered."), tab);
+        }
+      });
+    } catch (e) {
+      for (const t of tabs) {
+        this.answers.delete(t);
+        push(errorResult(e instanceof Error ? e.message : String(e)), t);
+      }
+    }
+  }
+
   // forgetQueryTab drops a closed tab's answer.
   forgetQueryTab(tab: string): void {
     this.answers.delete(tab);
@@ -489,9 +536,11 @@ export class ViewerPresenter {
       this.catalogLoading = true;
       this.pushFindings();
     }
-    if (mount !== this.mount || path !== this.path) this.answers.clear();
+    const changed = mount !== this.mount || path !== this.path;
+    if (changed) this.answers.clear();
     this.mount = mount;
     this.path = path;
+    if (changed) void this.loadQuerySets(mount, path);
     this.setBusy(true, "loading design…");
     try {
       const d = await this.client.getDesign({ uri: artifactUri(mount, path), layout: this.currentLayout });

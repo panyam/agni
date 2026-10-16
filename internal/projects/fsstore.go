@@ -280,6 +280,9 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 	if uri, ok := rel(names.Lib); ok {
 		p.Config.LibraryUris = []string{uri}
 	}
+	if uri, ok := rel(names.Queries); ok {
+		p.Config.QuerySetUris = []string{uri}
+	}
 	return nil
 }
 

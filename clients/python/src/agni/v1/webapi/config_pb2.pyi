@@ -10,7 +10,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AnalysisConfig(_message.Message):
-    __slots__ = ("conventions", "profile_uris", "param_uris", "checklists", "intent", "extends", "symbol_path_uris", "library_uris", "library_modules", "library_docs")
+    __slots__ = ("conventions", "profile_uris", "param_uris", "checklists", "intent", "extends", "symbol_path_uris", "library_uris", "query_set_uris", "library_modules", "library_docs")
     class LibraryDocsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -26,6 +26,7 @@ class AnalysisConfig(_message.Message):
     EXTENDS_FIELD_NUMBER: _ClassVar[int]
     SYMBOL_PATH_URIS_FIELD_NUMBER: _ClassVar[int]
     LIBRARY_URIS_FIELD_NUMBER: _ClassVar[int]
+    QUERY_SET_URIS_FIELD_NUMBER: _ClassVar[int]
     LIBRARY_MODULES_FIELD_NUMBER: _ClassVar[int]
     LIBRARY_DOCS_FIELD_NUMBER: _ClassVar[int]
     conventions: _naming_pb2.NamingConvention
@@ -36,9 +37,10 @@ class AnalysisConfig(_message.Message):
     extends: str
     symbol_path_uris: _containers.RepeatedScalarFieldContainer[str]
     library_uris: _containers.RepeatedScalarFieldContainer[str]
+    query_set_uris: _containers.RepeatedScalarFieldContainer[str]
     library_modules: _containers.RepeatedCompositeFieldContainer[LibraryModule]
     library_docs: _containers.ScalarMap[str, str]
-    def __init__(self, conventions: _Optional[_Union[_naming_pb2.NamingConvention, _Mapping]] = ..., profile_uris: _Optional[_Iterable[str]] = ..., param_uris: _Optional[_Iterable[str]] = ..., checklists: _Optional[_Iterable[_Union[NamedChecklist, _Mapping]]] = ..., intent: _Optional[_Union[_intent_pb2.DesignIntent, _Mapping]] = ..., extends: _Optional[str] = ..., symbol_path_uris: _Optional[_Iterable[str]] = ..., library_uris: _Optional[_Iterable[str]] = ..., library_modules: _Optional[_Iterable[_Union[LibraryModule, _Mapping]]] = ..., library_docs: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    def __init__(self, conventions: _Optional[_Union[_naming_pb2.NamingConvention, _Mapping]] = ..., profile_uris: _Optional[_Iterable[str]] = ..., param_uris: _Optional[_Iterable[str]] = ..., checklists: _Optional[_Iterable[_Union[NamedChecklist, _Mapping]]] = ..., intent: _Optional[_Union[_intent_pb2.DesignIntent, _Mapping]] = ..., extends: _Optional[str] = ..., symbol_path_uris: _Optional[_Iterable[str]] = ..., library_uris: _Optional[_Iterable[str]] = ..., query_set_uris: _Optional[_Iterable[str]] = ..., library_modules: _Optional[_Iterable[_Union[LibraryModule, _Mapping]]] = ..., library_docs: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class NamedChecklist(_message.Message):
     __slots__ = ("name", "manifest")

@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { queryPanelIsland } from "./querypanel.jsx";
 import { type ExampleItem, type QueryResult, type RelationItem, LocateReason, STARTING_POINT_LIMIT, emptyResult, errorResult, resultFromResponse } from "./query.js";
 import { resultFromWire } from "./testwire.js";
+import { create } from "@bufbuild/protobuf";
+import { QuerySetSchema } from "./gen/agni/v1/webapi/query_pb.js";
 
 // chips reads the binding chips under the box as [name label, value] pairs.
 function chips(el: HTMLElement): [string, string][] {
@@ -1088,5 +1090,68 @@ describe("query tabs", () => {
     panel.view.setEntityQueries([...PRESETS, { kind: "component", label: "c", query: "c", teaches: "", binds: ["ref"] }]);
     expect(panel.view.questionsFor("net").map((q) => q.label)).toEqual(["What pins are on it?", "Which test points are on it?"]);
     expect(panel.view.questionsFor("bus")).toEqual([]);
+  });
+});
+
+// agni issue 745: a query set opens as one tab per query, from the project's sets or a file.
+describe("opening a query set", () => {
+  const SET = create(QuerySetSchema, {
+    title: "Power review",
+    queries: [
+      { name: "Rails", query: "net.rail(?n) => ?n" },
+      { name: "Untested rails", query: "net.rail(?n), not net.has_test_point(?n) => ?n" },
+    ],
+  });
+  const tabs = (el: HTMLElement) => [...el.querySelectorAll(".query-tab-go")].map((t) => t.getAttribute("title"));
+  const mountSets = (over: { onSetFile?: (name: string, text: string) => void } = {}) => {
+    const onRunSet = vi.fn();
+    const onActivate = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onRunSet, onActivate, ...over });
+    panel.island.activate();
+    return { el, panel, onRunSet, onActivate };
+  };
+
+  it("opens one tab per query in the set's order, in front of the rest, and asks for all of them at once", () => {
+    const { el, panel, onRunSet } = mountSets();
+    panel.view.openSet(SET);
+    expect(tabs(el)).toEqual(["Query 1", "Rails", "Untested rails"]);
+    expect(el.querySelector(".query-tab.on .query-tab-go")!.getAttribute("title")).toBe("Rails");
+    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("net.rail(?n) => ?n");
+    expect(onRunSet).toHaveBeenCalledWith(SET, ["q2", "q3"]);
+  });
+
+  it("shows each query's own answer or error in its own tab", () => {
+    const { el, panel } = mountSets();
+    panel.view.openSet(SET);
+    panel.view.setState(errorResult("unknown relation net.has_test_poin"), "q3");
+    expect(el.querySelector(".query-error")).toBeNull();
+    [...el.querySelectorAll<HTMLButtonElement>(".query-tab-go")].find((t) => t.getAttribute("title") === "Untested rails")!.click();
+    expect(el.querySelector(".query-error")!.textContent).toContain("unknown relation");
+  });
+
+  it("lists the project's sets in the Sets menu, and opening one opens its tabs", () => {
+    const { el, panel, onRunSet } = mountSets();
+    expect(el.querySelector(".query-sets-open")).toBeNull(); // nothing to offer: no sets and no file handler
+    panel.view.setQuerySets([{ name: "power-review", source: "mount://m/queries/power-review.yaml", set: SET }]);
+    el.querySelector<HTMLButtonElement>(".query-sets-open")!.click();
+    const item = el.querySelector<HTMLButtonElement>(".query-set-item")!;
+    expect(item.textContent).toBe("Power review (2)");
+    item.click();
+    expect(onRunSet).toHaveBeenCalledWith(SET, ["q2", "q3"]);
+    expect(el.querySelector(".query-sets-menu")).toBeNull();
+  });
+
+  it("hands a picked set file to the host to parse", async () => {
+    const onSetFile = vi.fn();
+    const { el } = mountSets({ onSetFile });
+    el.querySelector<HTMLButtonElement>(".query-sets-open")!.click();
+    expect(el.querySelector(".query-sets-none")!.textContent).toContain("keeps no query sets");
+    const input = el.querySelector<HTMLInputElement>(".query-set-input")!;
+    const file = new File(["queries: []\n"], "audit.yaml");
+    Object.defineProperty(input, "files", { value: [file] });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => expect(onSetFile).toHaveBeenCalledWith("audit.yaml", "queries: []\n"));
   });
 });

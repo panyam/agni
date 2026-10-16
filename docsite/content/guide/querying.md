@@ -576,6 +576,14 @@ and the rest still answer. The command then exits non-zero, after writing everyt
 sees both the answers and the gap. `examples/netlist-audit` is a full audit written this way, and
 it needs no preamble at all, because what its tables share is in the shipped library (below).
 
+**A project keeps its sets in `queries/`**, one per `.yaml` file beside `project.yaml`, and `--set`
+takes a set's name there as well as a file: `agni query designs/gateway --set power-review` runs the
+tutorial project's `queries/power-review.yaml`. As with `--checklist`, a value ending in `.yaml` or
+`.yml` is a file and any other value is a name the project must keep. In the viewer, the query
+panel's **Sets** menu lists the same sets and opens one as a tab per query, in the set's order, each
+answering over one read of the design, and **From a file…** does the same for a set file on your
+disk. A query the engine cannot answer shows its error in its own tab.
+
 A set holds TABLES. A question with a pass or fail answer belongs in a check or a review checklist,
 whose verdicts also say what passed and why.
 

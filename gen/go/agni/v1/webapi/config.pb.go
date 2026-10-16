@@ -113,6 +113,11 @@ type AnalysisConfig struct {
 	// path, or reading a relation nothing registers, fails the read rather than answering nothing.
 	// A review manifest's inline queries read them too (agni issue 779).
 	LibraryUris []string `protobuf:"bytes,9,rep,name=library_uris,json=libraryUris,proto3" json:"library_uris,omitempty"`
+	// query_set_uris are directories of the project's query sets (agni issue 745), one set per
+	// `<name>.yaml` file in the shape `agni query --set` reads. QueryService.ListQuerySets lists them
+	// by name for a viewer to open, and nothing else reads them, so no run answers differently for
+	// having them. A file that does not parse fails the listing rather than leaving a set out.
+	QuerySetUris []string `protobuf:"bytes,14,rep,name=query_set_uris,json=querySetUris,proto3" json:"query_set_uris,omitempty"`
 	// library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller
 	// whose modules live with it rather than on the server: a script calling a shared server, a
 	// generated client's CLI transport, the viewer trying a module, an embedder. They compose exactly
@@ -208,6 +213,13 @@ func (x *AnalysisConfig) GetSymbolPathUris() []string {
 func (x *AnalysisConfig) GetLibraryUris() []string {
 	if x != nil {
 		return x.LibraryUris
+	}
+	return nil
+}
+
+func (x *AnalysisConfig) GetQuerySetUris() []string {
+	if x != nil {
+		return x.QuerySetUris
 	}
 	return nil
 }
@@ -359,7 +371,7 @@ var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/intent.proto\x1a\x1bagni/v1/config/naming.proto\"\x8d\x05\n" +
+	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/intent.proto\x1a\x1bagni/v1/config/naming.proto\"\xb3\x05\n" +
 	"\x0eAnalysisConfig\x12B\n" +
 	"\vconventions\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\x12!\n" +
 	"\fprofile_uris\x18\x03 \x03(\tR\vprofileUris\x12\x1d\n" +
@@ -371,7 +383,8 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\x06intent\x18\r \x01(\v2\x1c.agni.v1.config.DesignIntentR\x06intent\x12\x18\n" +
 	"\aextends\x18\a \x01(\tR\aextends\x12(\n" +
 	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUris\x12!\n" +
-	"\flibrary_uris\x18\t \x03(\tR\vlibraryUris\x12F\n" +
+	"\flibrary_uris\x18\t \x03(\tR\vlibraryUris\x12$\n" +
+	"\x0equery_set_uris\x18\x0e \x03(\tR\fquerySetUris\x12F\n" +
 	"\x0flibrary_modules\x18\n" +
 	" \x03(\v2\x1d.agni.v1.webapi.LibraryModuleR\x0elibraryModules\x12R\n" +
 	"\flibrary_docs\x18\v \x03(\v2/.agni.v1.webapi.AnalysisConfig.LibraryDocsEntryR\vlibraryDocs\x1a>\n" +

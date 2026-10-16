@@ -60,6 +60,9 @@ type projectYAML struct {
 	// Lib is the project's own library of derived relations, a directory of `.dl` modules (agni
 	// issue 773).
 	Lib *string `yaml:"lib,omitempty"`
+	// Queries is the project's query sets, a directory of `<name>.yaml` files a viewer lists and
+	// opens (agni issue 745).
+	Queries *string `yaml:"queries,omitempty"`
 }
 
 type designYAML struct {
@@ -94,6 +97,7 @@ const (
 	defaultParams   = "params"
 	defaultSymbols  = "symbols"
 	defaultLib      = "lib"
+	defaultQueries  = "queries"
 )
 
 // formerIntentFile is where a design's intent lived before it moved into design.yaml, and
@@ -115,6 +119,7 @@ type ProjectConfigNames struct {
 	Params   string
 	Symbols  string
 	Lib      string
+	Queries  string
 }
 
 // configNames resolves a project descriptor's declarations against the defaults.
@@ -135,6 +140,7 @@ func (y projectYAML) configNames() ProjectConfigNames {
 		Params:   pick(y.Params, defaultParams),
 		Symbols:  pick(y.Symbols, defaultSymbols),
 		Lib:      pick(y.Lib, defaultLib),
+		Queries:  pick(y.Queries, defaultQueries),
 	}
 }
 
@@ -172,7 +178,7 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfi
 		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
 	}
 	names = y.configNames()
-	for field, rel := range map[string]string{"profiles": names.Profiles, "params": names.Params, "symbols": names.Symbols, "lib": names.Lib} {
+	for field, rel := range map[string]string{"profiles": names.Profiles, "params": names.Params, "symbols": names.Symbols, "lib": names.Lib, "queries": names.Queries} {
 		if rel == "" {
 			continue
 		}
@@ -411,6 +417,7 @@ func WriteProjectExtending(w io.Writer, header, id, title, extends string, names
 	if names != nil {
 		y.Profiles, y.Params = &names.Profiles, &names.Params
 		y.Symbols, y.Lib = &names.Symbols, &names.Lib
+		y.Queries = &names.Queries
 	}
 	return writeDescriptor(w, header, y)
 }

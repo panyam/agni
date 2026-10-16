@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
-import { bindingsInUse, cellKind, drawnSheets, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { bindingsInUse, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -227,5 +227,28 @@ describe("drawnSheets", () => {
 
   it("is none when the answer does not name it", () => {
     expect(drawnSheets(resp, "net", "GND")).toEqual([]);
+  });
+});
+
+// agni issue 745: a set opens as one tab per query.
+describe("tabsFromSet", () => {
+  it("names each tab for its query, joins the preamble to it, and keeps the set's order and bindings", () => {
+    const set = create(QuerySetSchema, {
+      title: "Audit",
+      preamble: "res(?r) :- component.class(?r, \"resistor\");",
+      queries: [
+        { name: "Resistors", query: "res(?r) => ?r" },
+        { name: "Busy nets", query: "net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings: { min: { kind: { case: "number", value: 3 } }, n: { kind: { case: "text", value: "GND" } } } },
+      ],
+    });
+    expect(tabsFromSet(set)).toEqual([
+      { title: "Resistors", text: 'res(?r) :- component.class(?r, "resistor");\nres(?r) => ?r', bindings: {} },
+      { title: "Busy nets", text: 'res(?r) :- component.class(?r, "resistor");\nnet.pin_count(?n, ?c), ?c >= ?min => ?n', bindings: { min: "3", n: "GND" } },
+    ]);
+  });
+
+  it("holds the query alone when the set has no preamble", () => {
+    const set = create(QuerySetSchema, { queries: [{ name: "Rails", query: " net.rail(?n) => ?n\n" }] });
+    expect(tabsFromSet(set)[0].text).toBe("net.rail(?n) => ?n");
   });
 });

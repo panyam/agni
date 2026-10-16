@@ -98,6 +98,11 @@ message AnalysisConfig {
   // path, or reading a relation nothing registers, fails the read rather than answering nothing.
   // A review manifest's inline queries read them too (agni issue 779).
   repeated string library_uris = 9;
+  // query_set_uris are directories of the project's query sets (agni issue 745), one set per
+  // `<name>.yaml` file in the shape `agni query --set` reads. QueryService.ListQuerySets lists them
+  // by name for a viewer to open, and nothing else reads them, so no run answers differently for
+  // having them. A file that does not parse fails the listing rather than leaving a set out.
+  repeated string query_set_uris = 14;
   // library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller
   // whose modules live with it rather than on the server: a script calling a shared server, a
   // generated client's CLI transport, the viewer trying a module, an embedder. They compose exactly

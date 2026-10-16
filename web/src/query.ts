@@ -1,7 +1,7 @@
 // query.ts is the framework-neutral state for the datalog query panel (WS9-036). The presenter
 // pushes a QueryResult and the panel renders it. The shape lives here rather than in the .tsx, as in
 // rules.ts and findings.ts, so the presenter and tests build state without touching Solid.
-import { type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { type QuerySet, type QueryValue, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 import type { FindingsState, SheetBadge } from "./findings.js";
 import type { Selection } from "./selection.js";
@@ -110,6 +110,49 @@ export interface QueryView {
   // askAbout selects sel and opens a tab asking one served question about it, the kind's first when
   // none is named. It is how Properties' Ask rows reach the query panel (agni issue 902).
   askAbout: (sel: Selection, question?: EntityQueryItem) => void;
+  // setQuerySets lists the query sets the design's project keeps (agni issue 745), which the panel
+  // offers to open. Empty for a design in no project or one keeping none.
+  setQuerySets: (sets: QuerySetItem[]) => void;
+  // openSet opens one tab per query of a set, in the set's order, and asks the host to answer them
+  // over one read through onRunSet.
+  openSet: (set: QuerySet) => void;
+}
+
+// QuerySetItem is one set a project keeps: its name (the file's stem), the file, and the set.
+export interface QuerySetItem {
+  name: string;
+  source: string;
+  set: QuerySet;
+}
+
+// SetTab is what one query of a set opens as: a tab named for the query, holding the set's preamble
+// and the query as one text, so editing and running the tab again asks what the set asked.
+export interface SetTab {
+  title: string;
+  text: string;
+  bindings: Record<string, string>;
+}
+
+// tabsFromSet turns a set into its tabs, in the set's order. A preamble is rules alone, so it joins
+// the query as the clauses before its goal, which is how a single query carries its own rules.
+export function tabsFromSet(set: QuerySet): SetTab[] {
+  const preamble = set.preamble.trim().replace(/;\s*$/, "");
+  return set.queries.map((q) => ({
+    title: q.name,
+    text: preamble ? `${preamble};\n${q.query.trim()}` : q.query.trim(),
+    bindings: textBindings(q.bindings),
+  }));
+}
+
+// textBindings spells a set's bound values as the panel's chips hold them. A number sent back as
+// text is still read as a number where the relation declares one (panyam/jaala#65).
+export function textBindings(b: { [name: string]: QueryValue }): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [name, v] of Object.entries(b)) {
+    if (v.kind.case === "text") out[name] = v.kind.value;
+    else if (v.kind.case === "number") out[name] = String(v.kind.value);
+  }
+  return out;
 }
 
 // EntityQueryItem is one served question about a selected entity. label words it for an Ask row,

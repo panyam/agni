@@ -14,6 +14,7 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/lib"
@@ -123,6 +124,26 @@ func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCo
 				out.LibraryDocs = map[string]string{}
 			}
 			out.LibraryDocs[p] = doc
+		}
+	}
+	// A project's query sets, one per `.yaml` or `.yml` file, parsed as `agni query --set` parses one.
+	for _, uri := range cfg.GetQuerySetUris() {
+		d, err := c.dir(uri)
+		if err != nil {
+			return service.ResolvedConfig{}, err
+		}
+		read = append(read, d)
+		sub, err := fs.Sub(d.FS, d.Name)
+		if err != nil {
+			return service.ResolvedConfig{}, err
+		}
+		sets, err := readQuerySets(sub)
+		if err != nil {
+			return service.ResolvedConfig{}, fmt.Errorf("%s query sets %s: %w", namespace, uri, err)
+		}
+		for _, s := range sets {
+			s.Source = strings.TrimSuffix(uri, "/") + "/" + s.Source
+			out.QuerySets = append(out.QuerySets, s)
 		}
 	}
 	// A resolution that read nothing still gets a digest identifying it as such. Symbol paths go in
@@ -278,4 +299,30 @@ func foldField(h io.Writer, b []byte) {
 	binary.BigEndian.PutUint64(n[:], uint64(len(b)))
 	h.Write(n[:])
 	h.Write(b)
+}
+
+// readQuerySets parses every set file in a query-set directory, in name order, each named by its
+// stem with Source holding its file name. A file that does not parse is an error naming it.
+func readQuerySets(fsys fs.FS) ([]service.NamedQuerySet, error) {
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		return nil, err
+	}
+	var out []service.NamedQuerySet
+	for _, e := range entries {
+		ext := path.Ext(e.Name())
+		if e.IsDir() || (ext != ".yaml" && ext != ".yml") || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		b, err := fs.ReadFile(fsys, e.Name())
+		if err != nil {
+			return nil, err
+		}
+		set, err := query.ParseQuerySet(b)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", e.Name(), err)
+		}
+		out = append(out, service.NamedQuerySet{Name: strings.TrimSuffix(e.Name(), ext), Source: e.Name(), Set: set})
+	}
+	return out, nil
 }

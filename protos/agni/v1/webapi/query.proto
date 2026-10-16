@@ -45,6 +45,18 @@ service QueryService {
   // and its members, or one member with its signature and, for a derived relation, its definition.
   // `agni query --relations <path>` prints the same answer.
   rpc ListRelations(ListRelationsRequest) returns (ListRelationsResponse);
+
+  // ListQuerySets returns the query sets a design's project keeps (agni issue 745), inherited ones
+  // first, each parsed and named by its file, so a viewer can open one as a tab per query and run
+  // it through RunQueries. A design in no project has none, and that is not an error.
+  rpc ListQuerySets(ListQuerySetsRequest) returns (ListQuerySetsResponse);
+
+  // ParseQuerySet reads a query set file's text into the QuerySet RunQueries takes, for a caller
+  // holding the text and no parser, such as a browser given a file the reader picked. It checks
+  // what `agni query --set` checks: an unknown key, no queries, a repeated name, a preamble that
+  // holds a goal. A config value a client does not hold comes from its own rpc (C22), so RunQueries
+  // itself never takes YAML.
+  rpc ParseQuerySet(ParseQuerySetRequest) returns (ParseQuerySetResponse);
 }
 
 message RunQueryRequest {
@@ -417,4 +429,33 @@ message NamedQueryResult {
   // error says why this query could not be answered: it would not parse, or it named something the
   // design's relations do not have. The query's text is in the request.
   string error = 4;
+}
+
+message ListQuerySetsRequest {
+  // design_uri is the design whose project's query sets are listed.
+  string design_uri = 1;
+}
+
+message ListQuerySetsResponse {
+  // project is the resource name of the design's project, "projects/{project}", empty when the
+  // design belongs to none.
+  string project = 1;
+  repeated NamedQuerySet query_sets = 2;
+}
+
+// NamedQuerySet is one query set a project keeps. name is its file's stem, which is what a viewer
+// lists, and source the file it was read from, for a reader asking where it lives.
+message NamedQuerySet {
+  string name = 1;
+  QuerySet set = 2;
+  string source = 3;
+}
+
+message ParseQuerySetRequest {
+  // text is the set file's contents.
+  string text = 1;
+}
+
+message ParseQuerySetResponse {
+  QuerySet set = 1;
 }

@@ -154,7 +154,7 @@ func (p *proposer) declared() {
 
 // projectTiers are the directories a project's config is read from by default, which
 // internal/projects's descriptor defaults name.
-var projectTiers = []string{"profiles", "params", "symbols", "lib"}
+var projectTiers = []string{"profiles", "params", "symbols", "lib", "queries"}
 
 func (p *proposer) projects() {
 	for _, f := range p.files {

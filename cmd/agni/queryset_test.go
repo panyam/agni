@@ -136,3 +136,27 @@ func TestQuerySetReadsStdin(t *testing.T) {
 		t.Errorf("stdin set answered %v (err %v)", &resp, err)
 	}
 }
+
+// --set also takes the name of a set the design's project keeps in queries/ (agni issue 745), read
+// through ListQuerySets as the viewer reads it, and a name the project does not keep says which it does.
+func TestQuerySetTakesAProjectSetByName(t *testing.T) {
+	freshWorkspace(t)
+	design := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	out, err := runSet(t, design, "--set", "power-review", "--format", "json")
+	if err != nil {
+		t.Fatalf("query --set power-review: %v\n%s", err, out)
+	}
+	var resp webapi.RunQueriesResponse
+	if err := protojson.Unmarshal([]byte(out), &resp); err != nil {
+		t.Fatalf("not protojson: %v\n%s", err, out)
+	}
+	if resp.GetTitle() != "Power review" || len(resp.GetResults()) != 3 || len(resp.GetResults()[0].GetResult().GetRows()) == 0 {
+		t.Errorf("answered %q with %d results, want the project's Power review with rows", resp.GetTitle(), len(resp.GetResults()))
+	}
+	if _, err := runSet(t, design, "--set", "nope"); err == nil || !strings.Contains(err.Error(), "power-review") {
+		t.Errorf("an unknown name = %v, want an error naming the sets the project keeps", err)
+	}
+	if _, err := runSet(t, setDesign, "--set", "power-review"); err == nil || !strings.Contains(err.Error(), "no project") {
+		t.Errorf("a name for a design in no project = %v, want one saying only a file can be named", err)
+	}
+}
