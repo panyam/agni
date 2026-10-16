@@ -536,7 +536,7 @@ func respFromRows(q query.Query, rows []query.Row, queryText, corpus string) *we
 	for _, r := range rows {
 		cells := make([]string, 0, len(cols))
 		for _, c := range cols {
-			cells = append(cells, r.Bind[c].S)
+			cells = append(cells, query.Display(r.Bind[c]))
 		}
 		row := &webapi.QueryRow{Cells: cells}
 		sources.Cite(row, r.Cites)

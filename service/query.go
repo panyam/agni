@@ -409,7 +409,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		}
 		cells := make([]string, len(cols))
 		for i, c := range cols {
-			cells[i] = bound(c).S
+			cells[i] = query.Display(bound(c))
 		}
 		row := &webapi.QueryRow{Cells: cells}
 		if table.Why != nil && table.Why[ri] != nil {

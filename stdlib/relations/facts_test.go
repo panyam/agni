@@ -2,6 +2,7 @@ package relations
 
 import (
 	"context"
+	"math"
 	"reflect"
 	"slices"
 	"sort"
@@ -342,7 +343,10 @@ func TestBoardFacts(t *testing.T) {
 	tw := map[string]float64{}
 	for _, f := range byRel[RelBoardTrackWidth] {
 		if f.Num != nil {
-			tw[f.Subject] = *f.Num
+			if f.BaseUnit != "m" {
+				t.Errorf("%s track width published in %q, want m", f.Subject, f.BaseUnit)
+			}
+			tw[f.Subject] = mmOf(*f.Num)
 		}
 	}
 	if tw["THIN"] != 0.05 || tw["CLEAN"] != 0.25 {
@@ -352,7 +356,7 @@ func TestBoardFacts(t *testing.T) {
 	vd := map[string]float64{}
 	for _, f := range byRel[RelBoardViaDrill] {
 		if f.Num != nil {
-			vd[f.Subject] = *f.Num
+			vd[f.Subject] = mmOf(*f.Num)
 		}
 	}
 	if vd["SMALLHOLE"] != 0.1 {
@@ -562,7 +566,7 @@ func TestNetClassDefCascade(t *testing.T) {
 		if f.Num == nil {
 			t.Fatalf("declared track width for %q has no Num", f.Subject)
 		}
-		got[f.Subject] = *f.Num
+		got[f.Subject] = mmOf(*f.Num)
 		cite[f.Subject] = strings.Join(f.Cites, " ")
 	}
 	// VBUS is in HighSpeed (priority 1) and Power (5). HighSpeed states no track width, so the
@@ -645,8 +649,8 @@ func TestNetClassDefCascadeHonoursPriority(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("rows = %+v, want exactly 1 (the cascade resolves to one value)", rows)
 	}
-	if rows[0].Num == nil || *rows[0].Num != 0.15 {
-		t.Errorf("declared track width = %v, want 0.15 from Zeta (priority 1), not 0.9 from Alpha", rows[0].Num)
+	if rows[0].Num == nil || mmOf(*rows[0].Num) != 0.15 {
+		t.Errorf("declared track width = %v m, want 0.15 mm from Zeta (priority 1), not 0.9 from Alpha", rows[0].Num)
 	}
 	if !slices.Equal(rows[0].Cites, []string{"net_settings:Zeta"}) {
 		t.Errorf("cites = %v, want exactly [net_settings:Zeta]", rows[0].Cites)
@@ -1372,3 +1376,7 @@ func TestEntityFactsSkipsUnnamed(t *testing.T) {
 		}
 	}
 }
+
+// mmOf reads a published length, which is in metres (agni issue 1035), back in millimetres, rounded
+// to the nanometre a board records, so a test states the number the board's own tools print.
+func mmOf(m float64) float64 { return math.Round(m*1e9) / 1e6 }

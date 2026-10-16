@@ -162,18 +162,27 @@ const (
 	RelNetDeclaredViaDrill   = "net.declared_via_drill"   // net.declared_via_drill(net, mm). doc: facts/docs/net.declared_via_drill.md
 )
 
-// unitVolt and unitMillimetre are the BASE units the numeric relations publish. One dimension has
-// ONE spelling across every relation.
+// unitVolt and unitMetre are the BASE units the numeric relations publish. One dimension has ONE
+// spelling across every relation.
 //
-// MILLIMETRES ARE NOT THE SI BASE for length, on purpose, since every board format and board query
-// uses mm (`?w < 0.2`). A datasheet length would have to be projected as mm to join.
+// A length is published in METRES, the SI base, although every board format draws in millimetres.
+// Until jaala v0.1.59 this layer published mm so a bare `?w < 0.2` read as millimetres, and that
+// release folds a prefixed unit to its base as the engine reads a fact, so a column declared mm held
+// metres and a typed `0.2mm` was refused against it (agni issue 1035). So a length is metres here, a
+// query writes its threshold with a unit (`?w < 0.2mm`), and query.Display shows the cell in mm.
 //
 // Counts carry NO base unit. An empty base unit is polymorphic, so `?c < 5` works; a new count
 // must be listed in dimensionlessNumericRelations (facts_test.go).
 const (
-	unitVolt       = "V"
-	unitMillimetre = "mm"
+	unitVolt  = "V"
+	unitMetre = "m"
 )
+
+// metres is a length in millimetres, as a board draws it, in the unit a length is published in.
+func metres(mm float64) *float64 {
+	m := mm / 1000
+	return &m
+}
 
 // Facts projects the Model into the fact base, sorted so two calls on one Model are equal. A
 // relation is empty when the Model lacks its tier (no --params means no param rows); Facts never
@@ -1135,11 +1144,11 @@ func boardFacts(m check.Model) []facts.Row {
 		cites := cite("board net " + bn.Net)
 		if w, ok := minSegmentWidthNm(bn.Segments); ok {
 			mm := nmToMM(w)
-			out = append(out, facts.Row{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cites: cites})
+			out = append(out, facts.Row{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: metres(mm), BaseUnit: unitMetre, Cites: cites})
 		}
 		if d, ok := minViaDrillNm(bn.Vias); ok {
 			mm := nmToMM(d)
-			out = append(out, facts.Row{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cites: cites})
+			out = append(out, facts.Row{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: metres(mm), BaseUnit: unitMetre, Cites: cites})
 		}
 		for _, layer := range netLayers(bn.Segments) {
 			out = append(out, facts.Row{Relation: RelBoardLayer, Subject: bn.Net, Object: layer, Cites: cites})
@@ -1206,8 +1215,7 @@ func netClassDefFacts(m check.Model) []facts.Row {
 			if !ok {
 				continue
 			}
-			v := mm
-			out = append(out, facts.Row{Relation: p.rel, Subject: c.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre, Cites: cite("net_settings")})
+			out = append(out, facts.Row{Relation: p.rel, Subject: c.GetName(), Value: mmStr(mm), Num: metres(mm), BaseUnit: unitMetre, Cites: cite("net_settings")})
 		}
 	}
 	return out
@@ -1249,7 +1257,7 @@ func netDeclaredFacts(m check.Model) []facts.Row {
 				continue
 			}
 			out = append(out, facts.Row{
-				Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre,
+				Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: metres(v), BaseUnit: unitMetre,
 				Cites: cite("net_settings:" + cls),
 			})
 		}

@@ -53,7 +53,7 @@ board.via_drill(?n, ?d) => ?n, ?d
 Nets with a via drilled below 0.3 mm:
 
 ```
-board.via_drill(?n, ?d), ?d < 0.3 => ?n, ?d
+board.via_drill(?n, ?d), ?d < 0.3mm => ?n, ?d
 ```
 
 Both need a board-bearing design (a `.kicad_pcb` or an IPC-2581 file); on a netlist-only load they
