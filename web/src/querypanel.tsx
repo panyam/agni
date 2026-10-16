@@ -13,6 +13,7 @@ import {
   cellKind,
   emptyResult,
   bindingsInUse,
+  compareNatural,
   formatBinding,
   searchBindings,
   tabsFromSet,
@@ -32,7 +33,7 @@ import { renderMarkdown } from "./markdown.js";
 import { type Selection, entityBindings, labelFor, sameSelection, selectionFromCell } from "./selection.js";
 import { SheetBadges } from "./sheetbadges.jsx";
 import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
-import { type Located, type TabStrip, activeTab, askTitle, blankTab, closeTab, openTab, updateTab } from "./querytabs.js";
+import { type Located, type TabStrip, activeTab, askTitle, blankTab, closeTab, fromOrigin, openTab, updateTab } from "./querytabs.js";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
 // server's /relation-docs/ route BEFORE markdown rendering. renderMarkdown prepends the /rule-docs/
@@ -173,19 +174,31 @@ function QueryPanel(props: {
   // click and shown as chips under the box, so the box keeps the query as the server wrote it and
   // the values stay visible and editable beside it.
   const bindings = () => front().bindings;
+  // isSetNumber reports whether a chip still holds the number its set bound, which spells bare.
+  const isSetNumber = (name: string, value: string) => {
+    const o = front().origin;
+    return !!o && o.numbers.includes(name) && o.bindings[name] === value;
+  };
   const setBindings = (b: Record<string, string>) => props.setStrip(updateTab(props.strip(), front().id, { bindings: b }));
   // ask runs a query in the tab in front and remembers it there. A question about one picked entity
   // passes STARTING_POINT_LIMIT (agni issue 896); every other run asks for the whole answer (0).
   const ask = (q: string, b: Record<string, string>, limit = 0) => {
     const id = front().id;
     props.setStrip(updateTab(props.strip(), id, { lastRun: { text: q, bindings: b } }));
-    props.onRun(q, b, limit, id);
+    send(q, b, limit, id);
+  };
+  // send runs a question in tab id. A tab still asking the set member it was opened from runs that
+  // member through the set, as the engine composes it; any other question runs as written.
+  const send = (q: string, b: Record<string, string>, limit: number, id: string) => {
+    const o = props.strip().tabs.find((t) => t.id === id)?.origin;
+    if (fromOrigin(o, q, b)) props.onRunSet({ ...o.set, queries: [o.set.queries[o.index]] }, [id]);
+    else props.onRun(q, b, limit, id);
   };
   const showAll = () => {
     if (state().loading) return;
     resetForRun();
     const last = front().lastRun;
-    props.onRun(last.text, last.bindings, 0, front().id);
+    send(last.text, last.bindings, 0, front().id);
   };
   // openQuestion opens a tab holding a question and runs it there. The new tab keeps the drawing's
   // highlight as it is, since the question is about what is already selected.
@@ -216,11 +229,17 @@ function QueryPanel(props: {
     const previous = front().located;
     const ids: string[] = [];
     let strip = props.strip();
-    for (const t of tabs) {
+    tabs.forEach((t, index) => {
       const id = props.newTabId();
       ids.push(id);
-      strip = openTab(strip, { ...blankTab(id, t.title), text: t.text, bindings: t.bindings, lastRun: { text: t.text, bindings: t.bindings } });
-    }
+      strip = openTab(strip, {
+        ...blankTab(id, t.title),
+        text: t.text,
+        bindings: t.bindings,
+        lastRun: { text: t.text, bindings: t.bindings },
+        origin: { set, index, text: t.text, bindings: t.bindings, numbers: t.numbers },
+      });
+    });
     props.setStrip({ ...strip, active: ids[0] });
     resetForRun();
     setMode("query");
@@ -454,9 +473,12 @@ function QueryPanel(props: {
       `so the other end shows nothing.${gated}`
     );
   };
-  // cmpCells sorts two numeric cells by value (so 9 < 10) and any other pair lexicographically.
-  // displayRows applies it, carrying each row's original index.
-  const cmpCells = (a: string, b: string): number => {
+  // cmpCells sorts a column the answer types as an entity kind (a part, a net) in the engine's name
+  // order, so R2 < R10 as every csv has it (compareNatural, agni issue 1045), and any other column's
+  // two numeric cells by value (so 9 < 10) and other pairs lexicographically. displayRows applies it,
+  // carrying each row's original index.
+  const cmpCells = (a: string, b: string, named = false): number => {
+    if (named) return compareNatural(a, b);
     const na = Number(a);
     const nb = Number(b);
     const aNum = a.trim() !== "" && Number.isFinite(na);
@@ -469,7 +491,8 @@ function QueryPanel(props: {
     const col = sortCol();
     if (col < 0) return indexed;
     const dir = sortDir() === "asc" ? 1 : -1;
-    return [...indexed].sort((x, y) => dir * cmpCells(x.row.cells[col] ?? "", y.row.cells[col] ?? ""));
+    const named = (state().columnKinds[col] ?? "") !== "";
+    return [...indexed].sort((x, y) => dir * cmpCells(x.row.cells[col] ?? "", y.row.cells[col] ?? "", named));
   };
   // sortBy cycles a column through ascending, descending, and back to the server's natural order.
   const sortBy = (ci: number) => {
@@ -660,7 +683,7 @@ function QueryPanel(props: {
           <div class="query-bindings" aria-label="bound values">
             <For each={Object.entries(inUse())}>
               {([name, value]) => (
-                <span class="query-binding" title={formatBinding(name, value)}>
+                <span class="query-binding" title={formatBinding(name, value, isSetNumber(name, value))}>
                   <span class="query-binding-name">?{name} =</span>
                   <input
                     class="query-binding-value"

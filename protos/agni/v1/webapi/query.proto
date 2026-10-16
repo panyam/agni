@@ -445,6 +445,10 @@ message TextPosition {
   int32 line = 2;
   // column counts characters, not bytes, from 1, as an editor does.
   int32 column = 3;
+  // caret is the line of the query's text the position is on, a newline, and a caret under the
+  // column, as the engine draws it, so the CLI and the viewer show the same picture without either
+  // drawing it again (agni issue 1045). Empty when the position is not inside the text.
+  string caret = 4;
 }
 
 message ListQuerySetsRequest {

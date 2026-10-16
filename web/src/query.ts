@@ -42,7 +42,8 @@ export interface QueryResult {
   // rows is the whole answer. The panel then says how many it left out and offers the rest.
   total: number;
   // errorAt is the line of query text a query that would not parse stopped on, with a caret under
-  // the place (caretAt), shown under the error. Absent for every other error.
+  // the place, as the engine drew it (TextPosition.caret), shown under the error. Absent for every
+  // other error.
   errorAt?: string;
 }
 
@@ -134,6 +135,8 @@ export interface SetTab {
   title: string;
   text: string;
   bindings: Record<string, string>;
+  // numbers names the bindings the set gives as numbers, which a chip spells bare (formatBinding).
+  numbers: string[];
 }
 
 // tabsFromSet turns a set into its tabs, in the set's order. A preamble is rules alone, so it joins
@@ -144,6 +147,9 @@ export function tabsFromSet(set: QuerySet): SetTab[] {
     title: q.name,
     text: preamble ? `${preamble};\n${q.query.trim()}` : q.query.trim(),
     bindings: textBindings(q.bindings),
+    numbers: Object.entries(q.bindings)
+      .filter(([, v]) => v.kind.case === "number")
+      .map(([name]) => name),
   }));
 }
 
@@ -169,15 +175,16 @@ export interface EntityQueryItem {
   binds: string[];
 }
 
-// RELATION_KINDS is the group order + display label for the picker; a kind absent here (or with no
-// members) renders no group. Mirrors query.KindOrder on the server, but the client owns display.
+// RELATION_KINDS is the group order + display label for the picker; a kind with no members renders no
+// group. Its keys are facts.KindOrder on the server, in order, which query.test.ts and core/facts
+// both hold to core/facts/testdata/kind_order.json (agni issue 1045); the client owns only the labels.
 export const RELATION_KINDS: readonly { key: string; label: string }[] = [
   { key: "netlist", label: "Netlist" },
   { key: "board", label: "Board" },
   { key: "datasheet", label: "Datasheet" },
   { key: "derived", label: "Library" },
   { key: "predicate", label: "Predicates" },
-  { key: "overlay", label: "Overlay" },
+  { key: "extension", label: "Extensions" },
 ];
 
 // relationTemplate renders a relation as an insertable snippet: name(?arg1, ?arg2). A zero-arg
@@ -237,10 +244,11 @@ export function bindingsInUse(text: string, bindings: Record<string, string>): R
 // formatBinding spells one binding as the query would write the constant, for a chip or a tooltip.
 // The text goes between quotes as it is, since a query string takes no escapes (jaala v0.1.62), so a
 // search pattern's backslash shows once. A value with a bare quote has no spelling and is shown the
-// same way; it still binds, since a binding never travels as text. FormatBindings in core/query
-// spells it identically.
-export function formatBinding(name: string, value: string): string {
-  return `?${name} = "${value}"`;
+// same way; it still binds, since a binding never travels as text. A number is spelled bare. Both
+// spellings are FormatBindings' in core/query, and query.test.ts and core/query read one fixture,
+// testdata/binding_twin.json, so the chip and the CLI's document cannot drift (agni issue 1045).
+export function formatBinding(name: string, value: string, number = false): string {
+  return number ? `?${name} = ${value}` : `?${name} = "${value}"`;
 }
 
 // groupRelations buckets the catalog by kind in RELATION_KINDS order, each bucket sorted by name.
@@ -350,16 +358,45 @@ export function reasonMessage(reason: LocateReason, kind: string, subject: strin
   }
 }
 
-// caretAt renders the line of text a syntax error points into, with a caret under its column, as
-// core/query's Caret does for the CLI. line and column count from 1 and column counts characters. A
-// tab before the column stays a tab, so the caret lines up however wide tabs are drawn. "" when the
-// position is not in the text.
-export function caretAt(text: string, line: number, column: number): string {
-  const lines = text.split("\n");
-  if (line < 1 || line > lines.length || column < 1) return "";
-  const l = lines[line - 1].replace(/\r$/, "");
-  const chars = [...l];
-  if (column - 1 > chars.length) return "";
-  const pad = chars.slice(0, column - 1).map((c) => (c === "\t" ? "\t" : " ")).join("");
-  return `${l}\n${pad}^`;
+// compareNatural orders two names with their digit runs read as numbers, so R2 < R10 and U10.3 <
+// U10.12, text runs case-insensitively, and the plain strings breaking a tie. It is service's
+// compareNatural, the order Tabulate and every csv give a name column, and query.test.ts and service
+// read one fixture, testdata/natural_twin.json, so the panel's sort cannot disagree with them (agni
+// issue 1045).
+export function compareNatural(x: string, y: string): number {
+  const isDigit = (c: string) => c >= "0" && c <= "9";
+  const run = (s: string, digits: boolean) => {
+    let i = 0;
+    while (i < s.length && isDigit(s[i]) === digits) i++;
+    return s.slice(0, i);
+  };
+  const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  let a = x;
+  let b = y;
+  while (a !== "" && b !== "") {
+    const da = isDigit(a[0]);
+    const db = isDigit(b[0]);
+    if (da && db) {
+      const ra = run(a, true);
+      const rb = run(b, true);
+      const na = ra.replace(/^0+/, "");
+      const nb = rb.replace(/^0+/, "");
+      if (na.length !== nb.length) return na.length < nb.length ? -1 : 1;
+      const c = cmp(na, nb);
+      if (c !== 0) return c;
+      a = a.slice(ra.length);
+      b = b.slice(rb.length);
+    } else if (da !== db) {
+      return da ? -1 : 1;
+    } else {
+      const ta = run(a, false);
+      const tb = run(b, false);
+      const c = cmp(ta.toLowerCase(), tb.toLowerCase());
+      if (c !== 0) return c;
+      a = a.slice(ta.length);
+      b = b.slice(tb.length);
+    }
+  }
+  if (a !== b) return a.length < b.length ? -1 : a.length > b.length ? 1 : 0;
+  return cmp(x, y);
 }

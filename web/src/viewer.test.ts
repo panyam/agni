@@ -1354,7 +1354,7 @@ describe("a query that would not parse", () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn", "");
     h.runQuery.mockRejectedValueOnce(
-      new ConnectError("query: variable ?r ?n", Code.InvalidArgument, undefined, [{ desc: TextPositionSchema, value: { offset: 14, line: 1, column: 15 } }]),
+      new ConnectError("query: variable ?r ?n", Code.InvalidArgument, undefined, [{ desc: TextPositionSchema, value: { offset: 14, line: 1, column: 15, caret: "component.net(?r ?n)\n              ^" } }]),
     );
     await h.presenter.runQuery("component.net(?r ?n)", {}, 0, "q1");
     const calls = h.query.setState.mock.calls;
@@ -1367,7 +1367,7 @@ describe("a query that would not parse", () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn", "");
     h.runQueries.mockResolvedValueOnce({
-      results: [{ name: "a", error: "query: variable ?r ?n", errorAt: { offset: 14, line: 1, column: 15 } }],
+      results: [{ name: "a", error: "query: variable ?r ?n", errorAt: { offset: 14, line: 1, column: 15, caret: "component.net(?r ?n)\n              ^" } }],
     } as never);
     const set = { title: "T", preamble: "", queries: [{ name: "a", query: "component.net(?r ?n)" }] } as never;
     await h.presenter.runQuerySet(set, ["q2"]);

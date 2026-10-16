@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
-import { bindingsInUse, caretAt, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -191,6 +194,18 @@ describe("formatBinding", () => {
   it("keeps a pattern's backslash as written, since a query string takes no escapes", () => {
     expect(formatBinding("p", "^U1\\.")).toBe('?p = "^U1\\."');
   });
+  // agni issue 1045: one fixture with core/query's FormatBindings.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const twin = JSON.parse(readFileSync(join(here, "..", "..", "core", "query", "testdata", "binding_twin.json"), "utf8")) as {
+    cases: { name: string; text?: string; number?: number; want: string }[];
+  };
+  it("has binding cases to check", () => expect(twin.cases.length).toBeGreaterThanOrEqual(4));
+  for (const c of twin.cases) {
+    it(`spells as FormatBindings does: ${c.want}`, () => {
+      const isNum = c.number !== undefined;
+      expect(formatBinding(c.name, isNum ? String(c.number) : c.text!, isNum)).toBe(c.want);
+    });
+  }
 });
 
 describe("groupRelations", () => {
@@ -245,8 +260,8 @@ describe("tabsFromSet", () => {
       ],
     });
     expect(tabsFromSet(set)).toEqual([
-      { title: "Resistors", text: 'res(?r) :- component.class(?r, "resistor");\nres(?r) => ?r', bindings: {} },
-      { title: "Busy nets", text: 'res(?r) :- component.class(?r, "resistor");\nnet.pin_count(?n, ?c), ?c >= ?min => ?n', bindings: { min: "3", n: "GND" } },
+      { title: "Resistors", text: 'res(?r) :- component.class(?r, "resistor");\nres(?r) => ?r', bindings: {}, numbers: [] },
+      { title: "Busy nets", text: 'res(?r) :- component.class(?r, "resistor");\nnet.pin_count(?n, ?c), ?c >= ?min => ?n', bindings: { min: "3", n: "GND" }, numbers: ["min"] },
     ]);
   });
 
@@ -256,13 +271,23 @@ describe("tabsFromSet", () => {
   });
 });
 
-describe("caretAt", () => {
-  it("puts the caret under the column on its line, as core/query's Caret does", () => {
-    expect(caretAt("component.net(?r, ?n),\n  net.pin_count(?n ?c)", 2, 17)).toBe("  net.pin_count(?n ?c)\n                ^");
+// agni issue 1045: the picker's groups are the catalog's kinds, held to the fixture core/facts reads.
+describe("RELATION_KINDS, twinned with facts.KindOrder via kind_order.json", () => {
+  it("names every kind the catalog serves, in its order", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const twin = JSON.parse(readFileSync(join(here, "..", "..", "core", "facts", "testdata", "kind_order.json"), "utf8")) as { kinds: string[] };
+    expect(twin.kinds.length).toBeGreaterThan(4);
+    expect(RELATION_KINDS.map((k) => k.key)).toEqual(twin.kinds);
   });
-  it("keeps a tab as a tab and refuses a place outside the text", () => {
-    expect(caretAt("\tx(?a ?b)", 1, 6)).toBe("\tx(?a ?b)\n\t    ^");
-    expect(caretAt("x(?a)", 3, 1)).toBe("");
-    expect(caretAt("x(?a)", 1, 40)).toBe("");
-  });
+});
+
+describe("compareNatural, twinned with service via natural_twin.json", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const twin = JSON.parse(readFileSync(join(here, "..", "..", "service", "testdata", "natural_twin.json"), "utf8")) as { lists: string[][] };
+  it("has lists to check", () => expect(twin.lists.length).toBeGreaterThanOrEqual(5));
+  for (const want of twin.lists) {
+    it(`orders ${want.join(" < ")}`, () => {
+      expect([...want].reverse().sort(compareNatural)).toEqual(want);
+    });
+  }
 });

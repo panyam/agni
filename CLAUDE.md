@@ -611,6 +611,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   its mounts. Point `HOME` and `XDG_CONFIG_HOME` at a temp dir and run from an empty working directory
   (`TestOpenStillRequiresTheViewer`, `clients/python/tests/conftest.py`). CI has no such file, so this
   is also green in CI and red on a developer's machine.
+- **The backend (a server or the browser engine) answers, and a client renders.** Where the viewer
+  must still compute what the engine computes, because it ranks or spells a subset the server never
+  sent, a TWIN fixture both test suites read holds the two to one answer (agni 1045):
+  `core/review/testdata/tally_twin.json`, `core/results/testdata/severity_twin.json`,
+  `core/query/testdata/binding_twin.json`, `core/facts/testdata/kind_order.json`,
+  `service/testdata/natural_twin.json`. A new client copy of engine logic gets one, or better, comes
+  off the wire (a parse error's caret is `TextPosition.caret`, drawn by the engine).
 - **A server and the browser engine keep what a request read** (agni 895, `service.DesignCache`;
   "Kept reads" in `architecture/web-services.md`). Validity is the files the read touched, recorded by
   `formats.Loader` through `service.LoaderIn`, so a new host that reads around `LoaderIn` is never
