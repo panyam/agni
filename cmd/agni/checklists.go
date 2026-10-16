@@ -32,7 +32,7 @@ func checklistsCmd() *cobra.Command {
 			svc := service.NewReviewService(nil, nil, nil, nil, nil, service.ReviewEnv{}, "", cliProjects())
 			resp, err := svc.ListChecklists(cmd.Context(), &webapi.ListChecklistsRequest{DesignUri: u})
 			if err != nil {
-				return err
+				return rpcFailed(err)
 			}
 			w := cmd.OutOrStdout()
 			if format == "json" {

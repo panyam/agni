@@ -549,6 +549,18 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 | `--as-named` | read exactly the file named, even when its `design.yaml` declares it a companion view of a different entry. Without it, analysing a declared companion (a schematic export, a board) reads the design's entry instead, because a companion is a view of the design rather than a second source of it. Reach for this when reading a view as a netlist is the point, such as checking that two views of one design still agree. |
 | `--version` | print the build version and exit. |
 
+**A command asked for `--format json` writes a failed request as JSON too.** Where its request to
+the engine fails (a query that does not parse, a design that cannot be read), it writes the error as
+the server's API sends it, to stdout or to `-o`'s file, and still exits non-zero with the text error
+on stderr. A query that does not parse carries where it stopped:
+
+```
+{"code":"invalid_argument","message":"invalid argument: query: variable ?r ?n: ...","details":[{"type":"agni.v1.webapi.TextPosition","value":"CA4QARgP","debug":{"offset":14,"line":1,"column":15}}]}
+```
+
+A mistake in the command's own flags is text on stderr alone, since no request was made, and a query
+set that wrote its answers before exiting non-zero writes no error document after them.
+
 ## Advanced and developer commands
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`

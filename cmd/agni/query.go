@@ -212,7 +212,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				WorkBudget: budget,
 			})
 			if err != nil {
-				return withCaret(err, args[1])
+				return withCaret(rpcFailed(err), args[1])
 			}
 			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI), orderBy)
 		},
@@ -257,7 +257,7 @@ func printRelations(ctx context.Context, w io.Writer, path, design string, cfg *
 		}
 		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p, Uri: uri, Overlay: &webapi.OverlayConfig{Config: cfg}})
 		if err != nil {
-			return nil, err
+			return nil, rpcFailed(err)
 		}
 		return resp.GetEntry(), nil
 	}
@@ -412,7 +412,7 @@ func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI str
 		OmitLocations: queryOmitLocations,
 	})
 	if err != nil {
-		return err
+		return rpcFailed(err)
 	}
 	if err := renderQuerySet(cmd.OutOrStdout(), format, set, resp); err != nil {
 		return err
@@ -458,7 +458,7 @@ func readQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI string) (que
 func projectQuerySet(cmd *cobra.Command, svc queryAPI, name, designURI string) (query.QuerySet, string, error) {
 	resp, err := svc.ListQuerySets(cmd.Context(), &webapi.ListQuerySetsRequest{DesignUri: designURI})
 	if err != nil {
-		return query.QuerySet{}, name, err
+		return query.QuerySet{}, name, rpcFailed(err)
 	}
 	var have []string
 	for _, s := range resp.GetQuerySets() {

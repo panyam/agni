@@ -86,7 +86,7 @@ func traceCmd() *cobra.Command {
 				Hops: int32(hops),
 			})
 			if err != nil {
-				return err
+				return rpcFailed(err)
 			}
 			t := service.TraceFromProto(resp.GetTrace())
 

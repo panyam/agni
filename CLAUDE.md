@@ -314,6 +314,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `TestNoCommandCallsAHandRolledEncoderInAnotherPackage` follows the commands' calls into the
   module's other packages, which is how `report.TableJSON` and `review.RenderJSON` hid (agni 734).
   `review --format json` is the `Review` the rpc returns, with a `summary` computed on the way out.
+  **A failed request under `--format json` is written as the Connect error** (`code`, `message`,
+  `details`) through connect's own error writer (`cmd/agni/rpcerror.go`). A new service call in a
+  command returns its error through `rpcFailed`, or a script gets text where it expected JSON; an
+  unmarked error (a flag mistake, a set's after-the-answer status) stays text-only on purpose.
   **`GetDesign` serves the IR on request** (agni 836): a `read_mask` over the response (`design`,
   `design.nets`, `design.components.mpn`, `*`) plus `nets`/`ref_des` filters, and `stats --format json
   --mask` on the CLI. UNMASKED it stays the viewer's summary with no IR, deliberately against AIP-157's

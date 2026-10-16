@@ -86,7 +86,7 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: uri.Mount, FS: os.DirFS(root)}))
 	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: uri.String()})
 	if err != nil {
-		return designSource{}, err
+		return designSource{}, rpcFailed(err)
 	}
 	d := resp.GetDesign()
 	if d == nil {

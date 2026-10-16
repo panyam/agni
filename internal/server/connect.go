@@ -18,10 +18,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// toConnectErr maps the service tier's error sentinels to Connect codes, for every adapter. An
-// unclassified error is treated as an invalid argument, the service tier's documented default
-// (load/parse failures).
-func toConnectErr(err error) error {
+// toConnectErr maps the service tier's error sentinels to Connect codes, for every adapter.
+func toConnectErr(err error) error { return ConnectError(err) }
+
+// ConnectError is a service error as the wire carries it: the service tier's error sentinels mapped
+// to Connect codes, with a query's syntax-error position as a detail. An unclassified error is
+// treated as an invalid argument, the service tier's documented default (load/parse failures). The
+// CLI writes a failed request through it under --format json, so a script reading the CLI and a
+// client reading the API see one error shape.
+func ConnectError(err error) *connect.Error {
 	switch {
 	case errors.Is(err, service.ErrNotFound):
 		return connect.NewError(connect.CodeNotFound, err)

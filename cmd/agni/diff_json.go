@@ -41,5 +41,6 @@ func diffResponse(cmd *cobra.Command, a, b string, renameApprox, includeEqual bo
 	if renameApprox {
 		req.NearRenames = &webapi.NearRenameOptions{} // the calibrated thresholds
 	}
-	return svc.DiffDesigns(cmd.Context(), req)
+	resp, err := svc.DiffDesigns(cmd.Context(), req)
+	return resp, rpcFailed(err)
 }
