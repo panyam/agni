@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import {
+  outcomeWord,
   type FindingItem,
   findingRank,
   groupFindings,
@@ -415,4 +419,12 @@ describe("an inconclusive finding is not a defect", () => {
   it("still reaches severitySections under its own severity, where the server puts it", () => {
     expect(severitySections([undecided])).toEqual([{ severity: "error", count: 1 }]);
   });
+});
+
+// agni issue 1045: the enum decodes as the engine spells it.
+describe("outcomeWord, twinned with service.OutcomeWord via outcome_twin.json", () => {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const twin = JSON.parse(readFileSync(join(dir, "..", "..", "service", "testdata", "outcome_twin.json"), "utf8")) as { outcomes: { wire: number; word: string }[] };
+  it("has outcomes to check", () => expect(twin.outcomes.length).toBeGreaterThanOrEqual(6));
+  for (const o of twin.outcomes) it(`decodes ${o.wire} as ${o.word}`, () => expect(outcomeWord(o.wire)).toBe(o.word));
 });

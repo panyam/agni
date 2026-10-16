@@ -26,6 +26,7 @@ import (
 	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/render"
+	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -639,7 +640,7 @@ func checkCmd() *cobra.Command {
 				// The document has no field for a considered set (OUT_OF_SCOPE.md), so the coverage
 				// line comes from the live response. A later replay of the document cannot reproduce it.
 				if format == "text" {
-					writeCoverage(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), resp.GetVerdicts())
+					writeCoverage(cmd.OutOrStdout(), coverageOf(resp, resolveAgainst.Rules()))
 				}
 				if failOn != "" && failsAtProto(resp.GetFindings(), failOn) {
 					cmd.SilenceUsage = true
@@ -723,7 +724,7 @@ func checkCmd() *cobra.Command {
 						return err
 					}
 				default:
-					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected), resp.GetVerdicts())
+					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected), coverageOf(resp, resolveAgainst.Rules()))
 				}
 				failFindings = resp.GetFindings()
 			}
@@ -759,10 +760,10 @@ func checkCmd() *cobra.Command {
 // It closes with a COVERAGE line by default, since a findings list cannot say what was examined. The
 // per-subject rows stay behind --verdicts, being six times the volume here and far more on a real
 // board.
-func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int, vs []*checkspb.Verdict) {
+func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int, cov *rpt.Totals) {
 	if len(fs) == 0 {
 		fmt.Fprintf(w, "no findings (%d rule(s) run)\n", rulesRun)
-		writeCoverage(w, fs, vs)
+		writeCoverage(w, cov)
 		return
 	}
 	byRule := map[string]int{}
@@ -779,7 +780,7 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int, vs []*checksp
 		fmt.Fprintf(w, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
 	}
 	fmt.Fprintf(w, "\n%d finding(s) total\n", len(fs))
-	writeCoverage(w, fs, vs)
+	writeCoverage(w, cov)
 }
 
 // writeCoverage states what the run looked at, in the terms core/report uses for the HTML report.
@@ -790,34 +791,25 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int, vs []*checksp
 //
 // NOT_CONSIDERED is counted apart from the judged outcomes, since it means the rule was willing to
 // judge and an input was missing.
-func writeCoverage(w io.Writer, fs []check.Finding, vs []*checkspb.Verdict) {
-	if len(vs) == 0 {
+func writeCoverage(w io.Writer, t *rpt.Totals) {
+	if t == nil || t.Considered == 0 {
 		return // nothing stated a considered set; claiming coverage would invent it
 	}
-	stating := map[string]bool{}
-	judged, notConsidered := 0, 0
-	for _, v := range vs {
-		stating[v.GetRule()] = true
-		if v.GetOutcome() == checkspb.Outcome_OUTCOME_NOT_CONSIDERED {
-			notConsidered++
-			continue
-		}
-		judged++
-	}
-	fmt.Fprintf(w, "%d subject(s) considered by %d rule(s)", judged, len(stating))
-	if notConsidered > 0 {
-		fmt.Fprintf(w, ", %d not considered", notConsidered)
+	fmt.Fprintf(w, "%d subject(s) considered by %d rule(s)", t.Considered-t.NotConsidered, t.RulesReporting)
+	if t.NotConsidered > 0 {
+		fmt.Fprintf(w, ", %d not considered", t.NotConsidered)
 	}
 	fmt.Fprint(w, " (--verdicts for the detail)\n")
-	silent := map[string]bool{}
-	for _, f := range fs {
-		if !stating[f.Rule] {
-			silent[f.Rule] = true
-		}
+	if t.RulesFindingsOnly > 0 {
+		fmt.Fprintf(w, "%d rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything\n", t.RulesFindingsOnly)
 	}
-	if len(silent) > 0 {
-		fmt.Fprintf(w, "%d rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything\n", len(silent))
-	}
+}
+
+// coverageOf is a run's coverage as the verdict report counts it (service.VerdictReport), so the
+// default output's coverage line and the --verdicts footer state one set of numbers (agni issue 1045).
+func coverageOf(resp *webapi.CheckDesignResponse, rules []*check.Rule) *rpt.Totals {
+	t := service.VerdictReport(resp, rules, rpt.Report{}).Totals
+	return &t
 }
 
 // writeCheckDesignJSON emits the CheckDesign response as protojson, the wire shape the RPC returns

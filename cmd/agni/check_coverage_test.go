@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -8,6 +10,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 // The DEFAULT text output states what the run looked at. A findings list cannot, because
@@ -83,7 +86,12 @@ func TestCoverageOnlyBlamesRulesThatActuallyReported(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var b strings.Builder
-			writeCoverage(&b, tc.fs, tc.vs)
+			// Through the verdict report, as the command counts it (agni issue 1045).
+			resp := &webapi.CheckDesignResponse{Verdicts: tc.vs}
+			for _, f := range tc.fs {
+				resp.Findings = append(resp.Findings, &checkspb.Finding{Rule: f.Rule, Subject: &checkspb.Subject{Kind: "net", Ref: "N"}})
+			}
+			writeCoverage(&b, coverageOf(resp, nil))
 			for _, w := range tc.want {
 				if !strings.Contains(b.String(), w) {
 					t.Errorf("want %q in:\n%s", w, b.String())
@@ -114,5 +122,47 @@ func TestResultsReplayClaimsNoCoverage(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "subject(s) considered") {
 		t.Errorf("a results document cannot carry a considered set, so it must claim none:\n%s", out.String())
+	}
+}
+
+// TestCoverageLineMatchesTheVerdictsFooter: the default output's coverage line and --verdicts' footer
+// count one run one way, since both come from the verdict report (agni issue 1045). They used to be
+// two counts, one of which ignored the catalog's StatesConsideredSet.
+func TestCoverageLineMatchesTheVerdictsFooter(t *testing.T) {
+	const design = "testdata/conformance/showcase.fires.kicad_sch"
+	line := regexp.MustCompile(`(\d+) subject\(s\) considered by (\d+) rule\(s\)(?:, (\d+) not considered)?`).FindStringSubmatch(runCheck(t, design))
+	foot := regexp.MustCompile(`(\d+) verdicts across (\d+) rule\(s\)(?:.*?, (\d+) not-considered)?`).FindStringSubmatch(runCheck(t, "--verdicts", design))
+	if line == nil || foot == nil {
+		t.Fatalf("coverage line %v, footer %v; want both", line, foot)
+	}
+	n := func(s string) int { v, _ := strconv.Atoi(s); return v }
+	if n(line[2]) != n(foot[2]) || n(line[1])+n(line[3]) != n(foot[1]) || n(line[3]) != n(foot[3]) {
+		t.Errorf("coverage line %q disagrees with the footer %q", line[0], foot[0])
+	}
+	if n(foot[1]) < 20 {
+		t.Fatalf("the fixture stated %s verdicts, too few to compare", foot[1])
+	}
+}
+
+// TestSpecLibAnswersThroughTheService: `query --speclib` is answered by the QueryService's projection
+// rather than one the CLI built, so its json carries what a design query's does, a kind per column
+// and the work it cost (agni issue 1045).
+func TestSpecLibAnswersThroughTheService(t *testing.T) {
+	out := runCLI(t, queryCmd(), "--speclib", "--params", filepath.Join("..", "..", "examples", "tutorial-project", "params"),
+		"param.max(?m, ?s, ?v) => ?m, ?s, ?v", "--format", "json")
+	var resp struct {
+		Columns     []string `json:"columns"`
+		ColumnKinds []string `json:"columnKinds"`
+		Rows        []any    `json:"rows"`
+		Work        string   `json:"work"`
+	}
+	if err := json.Unmarshal([]byte(out), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Rows) < 3 {
+		t.Fatalf("the corpus answered %d rows, too few to say anything", len(resp.Rows))
+	}
+	if len(resp.ColumnKinds) != len(resp.Columns) || resp.Work == "" || resp.Work == "0" {
+		t.Errorf("columnKinds %v for columns %v, work %q; want the service's projection", resp.ColumnKinds, resp.Columns, resp.Work)
 	}
 }

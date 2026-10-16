@@ -133,22 +133,13 @@ func ruleTally(r rpt.RuleReport) string {
 	return strings.Join(parts, ", ")
 }
 
-// outcomeWord is the vocabulary word for an outcome, spelled the way the csv and the wire spell it
-// rather than as the Go constant.
+// outcomeWord is the vocabulary word for an outcome, which is the Go constant's own value
+// (check.Outcome is the word the csv and the wire spell), so there is no second spelling to keep.
 func outcomeWord(o check.Outcome) string {
-	switch o {
-	case check.Pass:
-		return "pass"
-	case check.Fail:
-		return "fail"
-	case check.NoLimit:
-		return "no-limit"
-	case check.NotConsidered:
-		return "not-considered"
-	case check.Inconclusive:
-		return "inconclusive"
+	if o == "" {
+		return "unspecified"
 	}
-	return "unspecified"
+	return string(o)
 }
 
 // wrapText folds a sentence at width, indenting every line after the first so it stays inside the

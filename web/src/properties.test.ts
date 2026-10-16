@@ -225,9 +225,9 @@ describe("reportLines", () => {
   it("counts glyphs by class and calls out unmapped and unresolved parts", () => {
     const r = create(ConversionReportSchema, {
       components: [
-        { refDes: "R1", kind: "glyph", deviceClass: "resistor" },
-        { refDes: "U1", kind: "box" },
-        { refDes: "U2", kind: "unresolved" },
+        { refDes: "R1", kind: "glyph", deviceClass: "resistor", label: "resistor" },
+        { refDes: "U1", kind: "box", label: "box" },
+        { refDes: "U2", kind: "unresolved", label: "unresolved" },
       ],
     });
     expect(reportLines(r)).toEqual({ counts: "box 1 · resistor 1 · unresolved 1", box: ["U1"], unresolved: ["U2"] });

@@ -263,15 +263,17 @@ class ConversionReport(_message.Message):
     def __init__(self, components: _Optional[_Iterable[_Union[ComponentReport, _Mapping]]] = ...) -> None: ...
 
 class ComponentReport(_message.Message):
-    __slots__ = ("ref_des", "symbol", "device_class", "cell", "kind")
+    __slots__ = ("ref_des", "symbol", "device_class", "cell", "kind", "label")
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     SYMBOL_FIELD_NUMBER: _ClassVar[int]
     DEVICE_CLASS_FIELD_NUMBER: _ClassVar[int]
     CELL_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     symbol: str
     device_class: str
     cell: str
     kind: str
-    def __init__(self, ref_des: _Optional[str] = ..., symbol: _Optional[str] = ..., device_class: _Optional[str] = ..., cell: _Optional[str] = ..., kind: _Optional[str] = ...) -> None: ...
+    label: str
+    def __init__(self, ref_des: _Optional[str] = ..., symbol: _Optional[str] = ..., device_class: _Optional[str] = ..., cell: _Optional[str] = ..., kind: _Optional[str] = ..., label: _Optional[str] = ...) -> None: ...

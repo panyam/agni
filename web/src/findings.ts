@@ -181,7 +181,8 @@ export function verdictSubjectLabel(v: VerdictItem): string {
 
 // outcomeWord decodes the wire enum to the vocabulary word. An unrecognised value becomes
 // "unspecified" rather than "", since a blank outcome would read as "nothing to report" about a subject
-// the rule did look at.
+// the rule did look at. It is service.OutcomeWord's spelling, held to it by
+// service/testdata/outcome_twin.json (agni issue 1045).
 export function outcomeWord(o: number | undefined): string {
   switch (o) {
     case 1:

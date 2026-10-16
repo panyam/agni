@@ -378,4 +378,8 @@ message ComponentReport {
   string device_class = 3; // device class (empty for a provided symbol or a component with no class)
   string cell = 4;         // drawn symbol cell_ref
   string kind = 5;         // provided | glyph | box | unresolved
+  // label is how the report's summary groups the component: its device class for a glyph, else its
+  // kind. The engine decides it (graph.ComponentReport.Label) so the CLI's summary and the viewer's
+  // Properties group one report alike (agni issue 1045).
+  string label = 6;
 }

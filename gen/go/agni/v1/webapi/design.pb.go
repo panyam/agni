@@ -1657,12 +1657,16 @@ func (x *ConversionReport) GetComponents() []*ComponentReport {
 
 // ComponentReport is one component's mapping in the conversion report.
 type ComponentReport struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
-	Symbol        string                 `protobuf:"bytes,2,opt,name=symbol,proto3" json:"symbol,omitempty"`                              // source part/symbol name, empty if none
-	DeviceClass   string                 `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"` // device class (empty for a provided symbol or a component with no class)
-	Cell          string                 `protobuf:"bytes,4,opt,name=cell,proto3" json:"cell,omitempty"`                                  // drawn symbol cell_ref
-	Kind          string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`                                  // provided | glyph | box | unresolved
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	RefDes      string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Symbol      string                 `protobuf:"bytes,2,opt,name=symbol,proto3" json:"symbol,omitempty"`                              // source part/symbol name, empty if none
+	DeviceClass string                 `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"` // device class (empty for a provided symbol or a component with no class)
+	Cell        string                 `protobuf:"bytes,4,opt,name=cell,proto3" json:"cell,omitempty"`                                  // drawn symbol cell_ref
+	Kind        string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`                                  // provided | glyph | box | unresolved
+	// label is how the report's summary groups the component: its device class for a glyph, else its
+	// kind. The engine decides it (graph.ComponentReport.Label) so the CLI's summary and the viewer's
+	// Properties group one report alike (agni issue 1045).
+	Label         string `protobuf:"bytes,6,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1728,6 +1732,13 @@ func (x *ComponentReport) GetCell() string {
 func (x *ComponentReport) GetKind() string {
 	if x != nil {
 		return x.Kind
+	}
+	return ""
+}
+
+func (x *ComponentReport) GetLabel() string {
+	if x != nil {
+		return x.Label
 	}
 	return ""
 }
@@ -1836,13 +1847,14 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x10ConversionReport\x12?\n" +
 	"\n" +
 	"components\x18\x01 \x03(\v2\x1f.agni.v1.webapi.ComponentReportR\n" +
-	"components\"\x8d\x01\n" +
+	"components\"\xa3\x01\n" +
 	"\x0fComponentReport\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x16\n" +
 	"\x06symbol\x18\x02 \x01(\tR\x06symbol\x12!\n" +
 	"\fdevice_class\x18\x03 \x01(\tR\vdeviceClass\x12\x12\n" +
 	"\x04cell\x18\x04 \x01(\tR\x04cell\x12\x12\n" +
-	"\x04kind\x18\x05 \x01(\tR\x04kind*s\n" +
+	"\x04kind\x18\x05 \x01(\tR\x04kind\x12\x14\n" +
+	"\x05label\x18\x06 \x01(\tR\x05label*s\n" +
 	"\vSheetFormat\x12\x1c\n" +
 	"\x18SHEET_FORMAT_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13SHEET_FORMAT_PACKED\x10\x01\x12\x14\n" +

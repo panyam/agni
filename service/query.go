@@ -718,6 +718,22 @@ func entryProto(reg *facts.Registry, e query.Entry) *webapi.RelationEntry {
 	return out
 }
 
+// RunSpecLibQuery answers a query over a datasheet corpus with no design (`agni query --speclib`):
+// the param.* and part.* relations range over every spec in fs rather than one design's parts. It
+// answers through the same projection RunQuery does, so its rows, kinds, citations and work are a
+// RunQueryResponse built one way (agni issue 1045). source names the corpus for the response. A
+// query that does not parse is an invalid argument, carrying its position as RunQuery's does.
+func (s *QueryService) RunSpecLibQuery(ctx context.Context, fs param.FactSource, queryText, source string, bind map[string]query.Value) (*webapi.RunQueryResponse, error) {
+	q, err := query.Parse(queryText)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
+	}
+	reg := facts.DefaultRegistry()
+	d := &designRead{source: source, base: query.NewSpecLibBaseFrom(reg, fs), reg: reg}
+	// A corpus is drawn nowhere, so nothing is located.
+	return s.answer(ctx, d, q, queryText, bind, true)
+}
+
 // TextPositionOf is where in its query's text err points, when err is a query that would not parse,
 // and nil otherwise. The Connect transport attaches it to a RunQuery failure as an error detail, and
 // RunQueries sets it on the query that failed, so a client can point at the place.
