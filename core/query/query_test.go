@@ -38,9 +38,8 @@ func TestBoardQuery(t *testing.T) {
 	}
 }
 
-// Since jaala v0.1.59 the engine folds a millimetre to metres as it reads a fact, so a BARE number
-// compared with a length is metres: 0.1 is a 100 mm track, and both nets are thinner than that
-// (agni issue 1035). A threshold over a length writes its unit, as TestBoardQuery's does.
+// A length is published in metres, so a BARE number compared with one is metres: 0.1 is a 100 mm
+// track, and both nets are thinner than that (agni issue 1035). A threshold over a length writes its unit, as TestBoardQuery's does.
 func TestABareThresholdOverALengthIsMetres(t *testing.T) {
 	rows := runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.1 => ?net`)
 	if len(rows) != 2 {
