@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
-import { bindingsInUse, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { bindingsInUse, caretAt, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -253,5 +253,16 @@ describe("tabsFromSet", () => {
   it("holds the query alone when the set has no preamble", () => {
     const set = create(QuerySetSchema, { queries: [{ name: "Rails", query: " net.rail(?n) => ?n\n" }] });
     expect(tabsFromSet(set)[0].text).toBe("net.rail(?n) => ?n");
+  });
+});
+
+describe("caretAt", () => {
+  it("puts the caret under the column on its line, as core/query's Caret does", () => {
+    expect(caretAt("component.net(?r, ?n),\n  net.pin_count(?n ?c)", 2, 17)).toBe("  net.pin_count(?n ?c)\n                ^");
+  });
+  it("keeps a tab as a tab and refuses a place outside the text", () => {
+    expect(caretAt("\tx(?a ?b)", 1, 6)).toBe("\tx(?a ?b)\n\t    ^");
+    expect(caretAt("x(?a)", 3, 1)).toBe("");
+    expect(caretAt("x(?a)", 1, 40)).toBe("");
   });
 });

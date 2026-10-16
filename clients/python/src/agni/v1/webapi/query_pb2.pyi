@@ -266,16 +266,28 @@ class RunQueriesResponse(_message.Message):
     def __init__(self, title: _Optional[str] = ..., preamble: _Optional[str] = ..., source: _Optional[str] = ..., results: _Optional[_Iterable[_Union[NamedQueryResult, _Mapping]]] = ...) -> None: ...
 
 class NamedQueryResult(_message.Message):
-    __slots__ = ("name", "description", "result", "error")
+    __slots__ = ("name", "description", "result", "error", "error_at")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     RESULT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    ERROR_AT_FIELD_NUMBER: _ClassVar[int]
     name: str
     description: str
     result: RunQueryResponse
     error: str
-    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., result: _Optional[_Union[RunQueryResponse, _Mapping]] = ..., error: _Optional[str] = ...) -> None: ...
+    error_at: TextPosition
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., result: _Optional[_Union[RunQueryResponse, _Mapping]] = ..., error: _Optional[str] = ..., error_at: _Optional[_Union[TextPosition, _Mapping]] = ...) -> None: ...
+
+class TextPosition(_message.Message):
+    __slots__ = ("offset", "line", "column")
+    OFFSET_FIELD_NUMBER: _ClassVar[int]
+    LINE_FIELD_NUMBER: _ClassVar[int]
+    COLUMN_FIELD_NUMBER: _ClassVar[int]
+    offset: int
+    line: int
+    column: int
+    def __init__(self, offset: _Optional[int] = ..., line: _Optional[int] = ..., column: _Optional[int] = ...) -> None: ...
 
 class ListQuerySetsRequest(_message.Message):
     __slots__ = ("design_uri",)

@@ -4,7 +4,7 @@ import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckDesignResponse } from "./gen/agni/v1/webapi/checks_pb.js";
 import { BROWSER_MOUNT } from "./wasm/drop.js";
-import { QueryService, type QuerySet, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { QueryService, TextPositionSchema, type QuerySet, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import type { TableAnswer } from "./tables.js";
 import { ReviewService, type Review } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
@@ -24,7 +24,7 @@ import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
-import { type QueryResult, type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
+import { type QueryResult, type QueryView, LocateReason, caretAt, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
@@ -317,7 +317,9 @@ export class ViewerPresenter {
       push(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
       this.answers.delete(tab);
-      push(errorResult(e instanceof Error ? e.message : String(e)));
+      // A query that would not parse carries where it stopped, as an error detail.
+      const at = e instanceof ConnectError ? e.findDetails(TextPositionSchema)[0] : undefined;
+      push(errorResult(e instanceof Error ? e.message : String(e), at ? caretAt(text, at.line, at.column) : ""));
     }
   }
 
@@ -357,7 +359,8 @@ export class ViewerPresenter {
           push(resultFromResponse(r.result, (ids) => this.sheetBadges(ids)), tab);
         } else {
           this.answers.delete(tab);
-          push(errorResult(r.error || "This query was not answered."), tab);
+          const at = r.errorAt ? caretAt(set.queries[i]?.query ?? "", r.errorAt.line, r.errorAt.column) : "";
+          push(errorResult(r.error || "This query was not answered.", at), tab);
         }
       });
     } catch (e) {

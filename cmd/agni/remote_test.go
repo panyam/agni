@@ -117,3 +117,23 @@ func TestRemoteRefusesWhatItCannotSend(t *testing.T) {
 		t.Errorf("query of a path outside the server's mounts: err = %v, want the unserved-path refusal", err)
 	}
 }
+
+// TestABadQueryPointsAtItsPlace: a query that would not parse prints the line it stopped on with a
+// caret under the place, whether this process or a --remote server parsed it.
+func TestABadQueryPointsAtItsPlace(t *testing.T) {
+	url, design, _ := remoteParityServer(t)
+	want := "\n  component.net(?r ?n) => ?r\n                ^"
+	for _, extra := range [][]string{nil, {"--remote", url}} {
+		cmd := queryCmd()
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetErr(&bytes.Buffer{})
+		cmd.SetArgs(append([]string{design, `component.net(?r ?n) => ?r`}, extra...))
+		err := cmd.Execute()
+		if err == nil {
+			t.Fatalf("%v: the malformed query was answered", extra)
+		}
+		if !strings.HasSuffix(err.Error(), want) {
+			t.Errorf("%v: error\n%s\nwant it to end with%s", extra, err, want)
+		}
+	}
+}

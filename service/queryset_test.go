@@ -151,3 +151,34 @@ func TestRunQueriesUnusableSetIsInvalidArgument(t *testing.T) {
 		t.Errorf("empty set: err = %v, want invalid argument", err)
 	}
 }
+
+// A set's query that would not parse says where in its own text, and one that parsed and named a
+// relation the design lacks has nowhere to point (agni jaala v0.1.62 ParseError).
+func TestRunQueriesSaysWhereABadQueryStopped(t *testing.T) {
+	req := setReq(`compnent.net(?r,?n)`, `component.net(?r ?n)`)
+	req.Set.Preamble = `on(?r) :- component.net(?r, ?_)`
+	got, err := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil).RunQueries(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := got.GetResults()
+	if res[0].GetErrorAt() != nil {
+		t.Errorf("an unknown relation was given a position: %v", res[0].GetErrorAt())
+	}
+	at := res[1].GetErrorAt()
+	if at.GetLine() != 1 || at.GetColumn() != 15 || at.GetOffset() != 14 {
+		t.Errorf("position %v, want line 1 column 15 offset 14, the ?r ?n in the query's own text", at)
+	}
+}
+
+// RunQuery's error keeps the syntax error in its chain, so the transport can say where.
+func TestRunQueryKeepsWhereItStopped(t *testing.T) {
+	_, err := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil).RunQuery(context.Background(),
+		&webapi.RunQueryRequest{Uri: "mount://m/x.kicad_sch", Query: `component.net(?r ?n)`})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("err %v, want an invalid argument", err)
+	}
+	if at := TextPositionOf(err); at.GetColumn() != 15 {
+		t.Errorf("position %v, want column 15", at)
+	}
+}

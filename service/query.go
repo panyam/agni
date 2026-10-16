@@ -54,7 +54,8 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	}
 	q, err := query.Parse(req.GetQuery())
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+		// %w on both, so the transport finds the syntax error's position (TextPositionOf).
+		return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
 	}
 	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed(), q)
 	if err != nil {
@@ -130,6 +131,7 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 		q, err := set.Compile(i)
 		if err != nil {
 			res.Error = err.Error()
+			res.ErrorAt = TextPositionOf(err)
 			continue
 		}
 		resp, err := s.answer(ctx, d, q, nq.Query, nq.Bind, req.GetOmitLocations())
@@ -714,4 +716,15 @@ func entryProto(reg *facts.Registry, e query.Entry) *webapi.RelationEntry {
 		}
 	}
 	return out
+}
+
+// TextPositionOf is where in its query's text err points, when err is a query that would not parse,
+// and nil otherwise. The Connect transport attaches it to a RunQuery failure as an error detail, and
+// RunQueries sets it on the query that failed, so a client can point at the place.
+func TextPositionOf(err error) *webapi.TextPosition {
+	p, ok := query.ErrorPosition(err)
+	if !ok {
+		return nil
+	}
+	return &webapi.TextPosition{Offset: int32(p.Offset), Line: int32(p.Line), Column: int32(p.Column)}
 }
