@@ -171,10 +171,11 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if err != nil {
 		return nil, err
 	}
-	m, _, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
+	b, err := buildModelEntry(ctx, s.loader, nu, bu, ov, s.specs, ReadBoard)
 	if err != nil {
 		return nil, err
 	}
+	m := b.model
 	cat, err := ov.Catalog(s.catalog)
 	if err != nil {
 		return nil, err
@@ -192,8 +193,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	// (agni issue 792); a rule past it reports itself inconclusive and the others still answer.
 	ctx = query.NarrowBudget(ctx, req.GetWorkBudget())
 	// One evaluation per rule for both contracts (agni issue 810). Calling Run and then RunVerdicts
-	// ran the whole catalog twice, since a finding is a projection of a verdict.
-	findings, verdicts, err := check.RunAll(ctx, m, runnable)
+	// ran the whole catalog twice, since a finding is a projection of a verdict. A rule this model has
+	// already run answers from that run (agni issue 390).
+	findings, verdicts, err := b.runKept(ctx, s.catalog, runnable)
 	if err != nil {
 		return nil, err
 	}
