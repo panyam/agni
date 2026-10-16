@@ -166,10 +166,10 @@ const (
 // spelling across every relation.
 //
 // A length is published in METRES, the SI base, although every board format draws in millimetres.
-// Until jaala v0.1.59 this layer published mm so a bare `?w < 0.2` read as millimetres, and that
-// release folds a prefixed unit to its base as the engine reads a fact, so a column declared mm held
-// metres and a typed `0.2mm` was refused against it (agni issue 1035). So a length is metres here, a
-// query writes its threshold with a unit (`?w < 0.2mm`), and query.Display shows the cell in mm.
+// This layer used to publish mm, so a bare `?w < 0.2` read as millimetres. The engine folds a query
+// literal to its SI base, so a typed `0.2mm` is 0.0002 m and was refused against a column declared
+// mm (agni issue 1035, from jaala v0.1.59). So a length is metres here, a query writes its threshold
+// with a unit (`?w < 0.2mm`), and query.Display shows the cell in mm.
 //
 // Counts carry NO base unit. An empty base unit is polymorphic, so `?c < 5` works; a new count
 // must be listed in dimensionlessNumericRelations (facts_test.go).
