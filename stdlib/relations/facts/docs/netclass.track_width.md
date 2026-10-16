@@ -3,7 +3,7 @@
 ### What it is
 
 `netclass.track_width(class, mm)` yields the track width a net class DECLARES its nets should route
-at, in millimetres, one row per class that states one. A class that states no track width yields no
+at, held in metres and shown in mm, one row per class that states one. A class that states no track width yields no
 row, which is a meaningful fact rather than a gap, because that field then cascades to a
 lower-priority class.
 

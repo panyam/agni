@@ -68,7 +68,7 @@ const (
 	// are ordered, since the bound is on subject minus reference.
 	RelParamPinRelation = "param.pin_relation" // param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max): a pin-to-pin bound. doc: facts/docs/param.pin_relation.md
 
-	// Board-tier relations (WS1-006) are derived per-net values in millimetres, not raw geometry.
+	// Board-tier relations (WS1-006) are derived per-net lengths in metres, shown in mm, not raw geometry.
 	RelBoardTrackWidth = "board.track_width" // board.track_width(net, mm): the net's MINIMUM copper width. doc: facts/docs/board.track_width.md
 	RelBoardViaDrill   = "board.via_drill"   // board.via_drill(net, mm): the net's MINIMUM via drill. doc: facts/docs/board.via_drill.md
 	RelBoardLayer      = "board.layer"       // board.layer(net, layer): a layer the net's copper occupies. doc: facts/docs/board.layer.md
@@ -147,7 +147,7 @@ const (
 	RelNetNetClass = "net.netclass"        // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
 	RelHasNetClass = "design.has_netclass" // design.has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/design.has_netclass.md
 
-	// Net-class DEFINITIONS (WS3-111), keyed by CLASS, in millimetres like the board tier. These are
+	// Net-class DEFINITIONS (WS3-111), keyed by CLASS, in metres like the board tier. These are
 	// the raw per-class rows; the cascaded per-NET values are below.
 	RelNetClassClearance   = "netclass.clearance"       // netclass.clearance(class, mm). doc: facts/docs/netclass.clearance.md
 	RelNetClassTrackWidth  = "netclass.track_width"     // netclass.track_width(class, mm). doc: facts/docs/netclass.track_width.md

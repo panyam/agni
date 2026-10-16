@@ -1,13 +1,13 @@
 ---
 title: "board.track_width"
-description: "a copper track's width on a net (millimetres)"
+description: "a copper track's width on a net (metres, shown in mm)"
 ---
 
 ### What it is
 
 `board.track_width(net, mm)` yields one row per net that has routed copper, giving the net's
-MINIMUM track width in millimetres. `net` is the net name (the join key to `ir.Net.name`); `mm`
-is a number, so a query can compare it directly (`?w < 0.2`). A net routed with several widths
+MINIMUM track width, held in metres and shown in mm. `net` is the net name (the join key to
+`ir.Net.name`); `mm` is a number, so a query compares it with a unit (`?w < 0.2mm`). A net routed with several widths
 reports only its thinnest segment, not every segment.
 
 ### For hardware engineers
@@ -16,8 +16,8 @@ The narrowest copper on a net sets its worst-case current-carrying capacity, so 
 number a review cares about. A power or ground net that necks down to a thin trace somewhere is a
 current-density risk even if most of its copper is wide. Query this to find nets routed below a
 width floor, or to sanity-check that a high-current rail never drops under its intended minimum.
-The value is the physical track width, so the threshold you compare against is a real millimetre
-figure.
+The value is the physical track width, so the threshold you compare against is a real length,
+written with its unit.
 
 ### For software engineers
 
@@ -25,16 +25,17 @@ The routed net is a set of track segments, each with a width. `board.track_width
 projection over that set, reducing it to the minimum width keyed by net. Reporting the minimum (the
 safety-relevant extreme) rather than one row per raw segment keeps the relation a compact per-net
 answer rather than a full segment dump. Rows are 1:1 with nets that have at least one track; a net
-with pads or vias but no routed track contributes no row. The stored unit is nanometres; the
-projector converts to millimetres so a query reads a natural threshold.
+with pads or vias but no routed track contributes no row. The stored unit is nanometres. The
+projector converts to metres, the SI base the engine folds a query literal to, and a
+cell is shown in millimetres.
 
 ### Go projector
 
 `boardFacts` in `stdlib/relations/facts.go` walks `Model.BoardNets()` and, for each net, calls the
 helper `minSegmentWidthNm(bn.Segments)`, which returns the smallest `Width` across the net's track
 segments (and a false ok when the net has no segments, in which case no row is emitted). The
-nanometre minimum is converted with `nmToMM` and emitted as `board.track_width(net, mm)` with the
-numeric value populated for comparison.
+nanometre minimum is converted with `nmToMM`, shown as millimetres, and emitted as
+`board.track_width(net, mm)` with the numeric value populated in metres for comparison.
 
 The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
 design was loaded with board geometry (`check.WithBoard`, fed a `.kicad_pcb` or IPC-2581 board

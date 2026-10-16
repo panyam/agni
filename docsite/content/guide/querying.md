@@ -418,9 +418,9 @@ kept, located and sent rather than the solving.
 
 ### Units
 
-A voltage carries volts and a board width carries millimetres, and a relation whose numbers all share
-a unit declares it. Comparing two different units is refused before the query runs, since volts are
-never less than millimetres:
+A voltage carries volts and a board width carries metres, shown in millimetres, and a relation whose
+numbers all share a unit declares it. Comparing two different units is refused before the query
+runs, since volts are never less than metres:
 
 ```
 net.max_voltage(?n, ?v), board.track_width(?n, ?w), ?v < ?w => ?n

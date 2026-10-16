@@ -1,12 +1,12 @@
 ---
 title: "netclass.clearance"
-description: "the clearance a net class declares its nets should route at (millimetres)"
+description: "the clearance a net class declares its nets should route at (metres, shown in mm)"
 ---
 
 ### What it is
 
 `netclass.clearance(class, mm)` yields the copper-to-copper spacing a net class DECLARES its nets
-should route at, in millimetres, one row per class that states one. A class that states none yields
+should route at, held in metres and shown in mm, one row per class that states one. A class that states none yields
 no row, which is a meaningful fact rather than a gap, because that field then cascades to a
 lower-priority class.
 
