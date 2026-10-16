@@ -9,37 +9,33 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-15, at `4433e6de` (PR 1029).
+Last pruned 2026-10-16, at `f34fb4b8` (PR 1040).
 
 ## At a glance
 
-Two missions are active, one per worktree, and a third is filed. #844 closed on 2026-10-15. `MISSION=mission_<slug> queue.sh` (the retriage
-skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
-links rather than here. Log each exercise run on the mission issue.
+Two missions are active, one per worktree, and a third is filed. `MISSION=mission_<slug> queue.sh`
+(the retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
+blocked-by links rather than here. Log each exercise run on the mission issue.
 
-- **#845 `mission_browser_review`**, 4 of 17. The first logged walk (4433e6de) broke at the export
-  step: the Review panel cannot save a checklist run (#1030, filed). Picker, runs and clicks all
-  agree with the CLI. #902 (a Properties panel and query tabs) is the next ready ticket.
-- **#851 `mission_public_demo`**, 44 of 67. #1002 (P1) is the only P1, and it needs clean deployed
-  runs rather than code: two deployed walks at `4433e6de` opened every seed with the one failure
-  #975, so 3 of the 10 clean runs #1002 asks for. Run checks on Jetson took 5.9 s at `18cfe8f6` and
-  8.8 and 16.8 s at `4433e6de`, but the engine's share stayed near 6.4 s and the rest waited on a
-  slow board fetch, so one walk is weak evidence for a timing claim. The jobs worker peaks at
-  533 MB on a first visit and 419 MB on a reload (`make wasm-bench`, from 1.36 and 1.6 GB before PR
-  1001). #1010 is the one regression the `18cfe8f6` walk showed (coverage and the first query rule
-  about 750 ms slower each).
-- **Seed triage on #851** (`hack/seed-triage/`, closed #857): the Jetson record holds three false
-  positives, each with its ticket on the mission (#1014 PTVS as a plain diode, #1015 bulk-cap at a
-  0 Ohm link, #1016 an outlet connector read as a supply entry). Two more are filed: #961 (the rules besides the pull-up walks that still credit a DNP part)
-  and #967 (check the records against KiCad's ERC and DRC). #967's first run already disagrees:
-  KiCad's DRC reports 357 `clearance` violations on Jetson where agni reports none against the
-  board's declared 0.1 mm, most likely the netclass and `.kicad_dru` rules agni does not read.
+- **#845 `mission_browser_review`**, 9 of 17. The walk at `bec675b9` completed every step on the
+  tutorial project for the first time: picker, runs, a query set opened as tabs, clicks into the
+  drawing, and Save report matching `agni review --format html`. Done-when also wants one sample
+  board, and no sample board carries a checklist yet, so that run needs one first. The next ready
+  ticket is #390, then #485 and #634.
+- **#851 `mission_public_demo`**, 46 of 68. #1002 closed after ten clean deployed runs. jaala v0.1.59
+  made Jetson's Run checks about three times slower through a planner change (#1037), fixed by
+  v0.1.60: the local walk at `28a6f080` took 4.9 s, against about 28 s at v0.1.59 and 9.6 to 11.8 s at
+  v0.1.53. #1010 is still the open measured regression.
+- **Seed triage on #851** (`hack/seed-triage/`): the Jetson record holds three false positives, each
+  with its ticket (#1014, #1015, #1016). #961 and #967 are filed; #967's first run found KiCad's DRC
+  reporting 357 `clearance` violations on Jetson where agni reports none.
 - **#909 `mission_ask`**, filed, not active. #910 (P1, MCP on `agni serve`) is its first ticket.
-- This run: PRs 1012, 1017, 1018, 1020, 1022, 1024, 1025 and 1029 merged (#564, #724, #998 and
-  #453 closed). #453 put the docsite's embedded drawings in the gate (`docsite-images-check`).
-  Filed #1028 (`waiting`, the faithful-sample golden's corner label off its canvas). The lazy fact
-  base is still parked on `wip/lazy-fact-base` (#1007, `waiting`, now grouping #984 and #999).
-  Retriaged: 15 orphans dropped from P2 to P3, #605 and #702 kept as deliberate off-mission P2s.
+- This run: PRs 1031, 1033, 1034, 1036, 1038, 1039 and 1040 merged, closing #736, #902, #745,
+  #1035, #1037, #1030 and #356. The viewer now selects on click into a Properties panel, asks served
+  questions in query tabs, opens a project's `queries/` sets, saves a checklist run, and lights
+  nothing after Run checks until a finding is clicked. Lengths are published in metres and shown in
+  mm. Filed #1032 (P3: dedupe open questions, keep tabs, save tabs as a set), whose `waiting`
+  trigger, #745, has now landed; and panyam/jaala#304, fixed in v0.1.60.
 
 ## Open, ranked
 
@@ -61,9 +57,7 @@ links rather than here. Log each exercise run on the mission issue.
    check pays only rule evaluation; measure that with `--timing` before building a result cache.
 6. **#910 on `mission_ask`**, MCP tools over the existing services. Every service is transport-neutral,
    so it is an adapter, not new analysis.
-7. **#356, #485, #634, #736**, on `mission_browser_review`. The Python client's cross-transport
-   test declares #736 field by field, so its fix also deletes that declaration in
-   `clients/python/tests/test_cross_transport.py`.
+7. **#485 and #634**, on `mission_browser_review`, after #390.
 
 Later work is #1007 (a fact store per tier, `waiting`), #717 (show unexpanded EDIF hierarchy in the viewer and reports), #370 then #373, #380,
 #456, #374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group,

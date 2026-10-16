@@ -218,7 +218,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **A project DISCOVERS its analysis tiers, so a flag naming one is redundant and dropping the flag
   does not turn it off.** `project.yaml` carries the team's `conventions:` and its named
   `checklists:` as sections (agni 828), `internal/projects/descriptor.go` defaults the directories
-  `profiles`, `params`, `symbols` and `lib`, and `FSStore` composes each one it finds. `lib/` is the
+  `profiles`, `params`, `symbols`, `lib` and `queries`, and `FSStore` composes each one it finds.
+  `queries/` holds the project's query sets, which `QueryService.ListQuerySets` lists, the viewer's
+  Sets menu opens as tabs, and `agni query --set <name>` runs (agni 745). `lib/` is the
   project's own derived relations, which every query surface and a review manifest's inline queries
   read through `Overlay.Registry` (agni 773, 779). That has two consequences, and
   each has cost a bug. Before adding a tier flag to a command, check whether the name is already
@@ -333,7 +335,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **There are two HTML reports, on different axes, sharing one stylesheet.** `check --format html`
   is the verdict report, rule-major, and implies `--verdicts`. `review --format html` is the
   checklist, question-major, in the manifest's order with every finding per item. Both take
-  `--server` and share `core/report/style.css`. **Against a REMOTE server a link is only emitted for
+  `--server` and share `core/report/style.css`. The checklist page is built by
+  `ReviewService.RenderReviewReport` from a review the caller holds, which `review --format html` and
+  the viewer's Review panel Save report both call (agni 1030). **Against a REMOTE server a link is only emitted for
   a mount you DECLARED**, because a mount minted for one run means nothing on a server not started
   with it, and that server is then asked through `ListMounts` whether it serves the name from the
   same root; a withheld link always states its reason, on stderr AND in the report itself, because
@@ -677,7 +681,9 @@ because a bump that touched the root alone left every nested module stale and fa
 misread (a wrapper reporting its own status rather than make's, which turns red green, a
 commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fine tree read RED (a stray
 `agni serve` on :8080 fails three verdict-link tests, so reproduce against unmodified `main` before
-reporting a regression), plus what a run leaves behind and the generated-code rules.
+reporting a regression), plus what a run leaves behind and the generated-code rules. **From a worktree run
+`make -k testall`**: a worktree build carries no VCS stamp, so `browser-test` fails there (#957) and a
+plain `make` stops before `python-test`, `tutorial-runs-check` and `docsite-images-check` ever run.
 **`tutorial-runs-check` regenerates captures and does not read the prose quoting them**, so a
 tutorial can cite numbers a change moved and the gate stays green. A capture step that exits non-zero
 and captures nothing is a build error unless its spec sets `exit: true` (agni 825). A checkout from
@@ -723,6 +729,14 @@ about 30 s in the browser, since everything on the worker queues behind the requ
 `board.*` relation (`boardTierFor`, which sees through its rules and library members), and coverage
 and part parameters pass `SkipBoard`. On Jetson the board is 385 of the 547 MB a model with it holds.
 A new surface that builds a model chooses its tier, because `BuildModelCached` reads the board.
+
+**A jaala bump can change a rule's plan, so time Jetson's Run checks across one.** v0.1.57 started
+the ESD profile rules from the TVS index and walked the board once per TVS net, about 10 times slower,
+until v0.1.60 (agni 1037). Bisect by building agni against each release and timing one rule with
+`check --rule <name> --timing`; `stdlib/profiles/esdplan_test.go` holds that shape to a work budget.
+**A length is published in metres and shown in millimetres** (agni 1035): the engine folds a query
+literal to its SI base, so a threshold over a length writes its unit (`?w < 0.2mm`), a bare `0.2` is
+metres, and `query.Display` turns a metre value back into mm wherever a value becomes text.
 
 **Measure a slow request before optimising it** (agni 914). `--timing` on `check`/`query`/`trace`/`review`
 prints each stage, which cache tier answered each read and the slowest rules; `query --explain`
