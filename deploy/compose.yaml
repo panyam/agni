@@ -1,0 +1,43 @@
+# agni on your own machine (agni issue 1057): the viewer and engine over your designs, a guided
+# trial, and the datasheet workbench if you want it. Works with `docker compose` and `podman compose`.
+#
+#   AGNI_DESIGNS=./designs docker compose up -d       then open http://localhost:8080
+#   docker compose run --rm trial /designs/<board>     a trial report that holds nothing from the board
+#   docker compose --profile datasheets up -d          also the datasheet workbench, on :8090
+#
+# Each release attaches this file with AGNI_VERSION pinned to that release. Copy env.example to .env
+# to change the defaults. Your designs are mounted read-only; review runs are kept in a volume.
+name: agni
+
+services:
+  agni:
+    image: ${AGNI_IMAGE:-ghcr.io/panyam/agni}:${AGNI_VERSION:-latest}
+    command: ["serve", "--addr", ":8080", "--mount", "designs=/designs", "--review-store", "/var/lib/agni/reviews"]
+    ports:
+      - "${AGNI_PORT:-8080}:8080"
+    volumes:
+      - ${AGNI_DESIGNS:-./designs}:/designs:ro
+      - reviews:/var/lib/agni/reviews
+    restart: unless-stopped
+
+  # The guided trial, run on demand: `docker compose run --rm trial /designs/<board>`. It prints a
+  # report of counts, timings and agni's own rule names, and a link that opens it as an issue.
+  trial:
+    image: ${AGNI_IMAGE:-ghcr.io/panyam/agni}:${AGNI_VERSION:-latest}
+    entrypoint: ["agni", "trial"]
+    volumes:
+      - ${AGNI_DESIGNS:-./designs}:/designs:ro
+    profiles: ["trial"]
+
+  # The datasheet workbench, off unless asked for: `docker compose --profile datasheets up -d`.
+  datasheets:
+    image: ${AGNI_DS_IMAGE:-ghcr.io/panyam/agnids}:${AGNI_VERSION:-latest}
+    ports:
+      - "${AGNI_DATASHEETS_PORT:-8090}:8090"
+    volumes:
+      - ${AGNI_DATASHEETS:-./datasheets}:/datasheets
+    profiles: ["datasheets"]
+    restart: unless-stopped
+
+volumes:
+  reviews:

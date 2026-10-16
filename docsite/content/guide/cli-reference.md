@@ -284,6 +284,21 @@ connection, so it is safe to hand to someone who should not see the design itsel
 | `--parts <view>` | `types` (BOM by distinct part type, default) or `full` (per-component AVL) |
 | `--format <fmt>` | `md` (default) or `json` |
 
+### `trial <design>`
+
+Walk a design through what a reviewer does with it (read, run every rule, score the project's
+checklists, answer its query sets, trace a signal through a resistor, save the check report) and
+report how each step went. The report holds counts, timings and the names of rules agni ships, and
+no net name, reference designator, part number, design name or path, because its type has no field
+for one. A rule a project wrote is counted without its name. It prints a link that opens the report
+as a GitHub issue to read before submitting. The compose bundle runs it as its `trial` service; see
+[Trying agni on your own boards](../trying-agni/).
+
+| flag | what it does |
+|---|---|
+| `--format <fmt>` | `md` (default) or `json` |
+| `-o, --out <file>` | write the report to a file rather than stdout |
+
 ### `params <mpn>`
 
 Print one part's whole datasheet record: its source documents, every parameter with its limit kind,

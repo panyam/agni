@@ -436,3 +436,14 @@ describe("saving a check report (agni issue 127)", () => {
     expect(el.querySelector(".checks-save-note")?.textContent).toBe("Could not save the report: boom");
   });
 });
+
+// agni issues 858 and 1057: a finding offers to report itself as wrong, through the link the store
+// built from a FindingFeedback, and a finding without one offers nothing.
+describe("reporting a wrong finding", () => {
+  it("links each finding to its prefilled issue", () => {
+    const { el } = mountPanel({ findings: [f({ subject: "A", reportUrl: "https://github.com/panyam/agni/issues/new?title=x" }), f({ subject: "B" })] });
+    const links = [...el.querySelectorAll<HTMLAnchorElement>("a.check-report")];
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["https://github.com/panyam/agni/issues/new?title=x"]);
+    expect(links[0].getAttribute("target")).toBe("_blank");
+  });
+});

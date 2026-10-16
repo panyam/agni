@@ -188,6 +188,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench is
   NOT served by `agni` at all since agni 744; it is `agnids serve` (`make dsserve`), and
   `agni serve --datasheets-url <url>` is what makes the landing page link to it.
+- **A release is tried on a machine whose boards we never see through `deploy/compose.yaml`**
+  (agni 1057), which `make compose-release V=...` pins and the release attaches. Its `trial` service
+  runs `agni trial`, whose `feedback.Report` has no field for design content, and names a rule only
+  through `feedback.Shipped` against `service.ShippedRules()`, since a project's rule namespace can
+  name the customer. `hack/compose_smoke.sh` runs the bundle in the `images` and `release` workflows.
+  Pipe `compose run` output only with `-T`, or it arrives empty.
 - **There are two images, published by one release tag**: `Dockerfile` (`ghcr.io/panyam/agni`, the
   engine, viewer and symbol libraries) and `Dockerfile.agnids` (`ghcr.io/panyam/agnids`, the
   workbench and the docling stack). `make image` and `make dsimage` build them. The `images` workflow
@@ -307,9 +313,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   query is the symptom; measure with `make wasm-bench` before tightening `SERVE_LANE_MAX_BYTES` or
   `SHRINK_RATIO`.
 - **A command's `--format json` is protojson of that command's WIRE MESSAGE** (C31), so a script
-  reading the CLI and a client reading the rpc parse one shape. `agni intake` is the one declared
-  exception and its reasoning is on `intake.Skeleton`, because that type's confidentiality guarantee is
-  structural and a proto twin would have to carry it into a file people edit for other reasons.
+  reading the CLI and a client reading the rpc parse one shape. `agni intake` and `agni trial` are the two
+  declared exceptions, reasoned on `intake.Skeleton` and the `feedback` package, because each type's
+  confidentiality guarantee is structural and a proto twin would have to carry it into a file people
+  edit for other reasons.
   `TestEveryJSONFormatEmitsAProto` enforces it over `cmd/agni`'s own source, and
   `TestNoCommandCallsAHandRolledEncoderInAnotherPackage` follows the commands' calls into the
   module's other packages, which is how `report.TableJSON` and `review.RenderJSON` hid (agni 734).

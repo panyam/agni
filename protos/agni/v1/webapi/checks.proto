@@ -358,10 +358,18 @@ message RuleInfo {
   string impact = 8;              // what goes wrong when the rule is violated (check.Rule.Impact)
   string detail = 9;              // long-form markdown: meaning, rationale, query structure (check.Rule.Detail)
   string remedy = 10;             // what to do about a violation, in the imperative (check.Rule.Remedy)
+  // shipped is whether agni itself ships this rule, rather than a project, a convention or an
+  // overlay composing it. A report that crosses the confidentiality boundary may name a shipped rule
+  // and never another, since a project's rule is namespaced by the project's own name (agni issue
+  // 1057).
+  bool shipped = 11;
 }
 
 message ListRulesResponse {
   repeated RuleInfo rules = 1;
+  // engine_version is the build answering, for a report a client prefills (agni issue 1057). Empty
+  // when the deployment did not say.
+  string engine_version = 2;
 }
 
 message GetInterfaceCoverageRequest {

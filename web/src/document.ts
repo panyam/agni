@@ -14,6 +14,7 @@ import type { NamingConvention } from "./gen/agni/v1/config/naming_pb.js";
 import { type RuleItem, defaultSelection } from "./rules.js";
 import { type FindingItem, type SheetBadge, type VerdictItem, contextFromWire, outcomeWord } from "./findings.js";
 import type { RuleExpectationItem } from "./expectations.js";
+import { feedbackIssueURL, findingFeedback } from "./feedback.js";
 
 type CheckClient = Client<typeof CheckService>;
 
@@ -64,6 +65,8 @@ export class DocumentStore {
   // server's default applies. conventionRef is the ref it was resolved from, so the UI can name it.
   convention: NamingConvention | null = null;
   conventionRef = "";
+  // engineVersion is the build answering, off ListRules, which a finding's report link names.
+  engineVersion = "";
 
   // findVerdict looks one up across every rule's cached considered set. Linear over a few thousand
   // rows at worst (the sum of the considered sets, not rules times subjects), too few for an index
@@ -105,6 +108,7 @@ export class DocumentStore {
       context: contextFromWire(f.context),
       sheets: this.sheetBadges(f.sheets ?? []),
       locateReason: f.locateReason ?? 0,
+      reportUrl: feedbackIssueURL(findingFeedback({ rule: f.rule, severity: f.severity, inconclusive: f.inconclusive ?? false }, this.rulesByName.get(f.rule)?.shipped ?? false, this.engineVersion)),
     };
   }
 
@@ -179,7 +183,9 @@ export class DocumentStore {
         tags: r.tags,
         available: r.available,
         unavailableReason: r.unavailableReason,
+        shipped: r.shipped,
       }));
+      this.engineVersion = resp.engineVersion ?? "";
     } catch {
       this.rules = [];
     }

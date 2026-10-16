@@ -55,9 +55,14 @@ From a green `main`:
 6. **Publish the GitHub Release.**
 
    ```
+   make compose-release V=vX.Y.Z
    GH_TOKEN="$GH_PERSONAL_TOKEN" gh release create vX.Y.Z \
-     --title vX.Y.Z --notes-file RELEASES/vX.Y.Z.md
+     --title vX.Y.Z --notes-file RELEASES/vX.Y.Z.md dist/compose.yaml dist/env.example
    ```
+
+   The two files are the compose bundle a customer downloads to try the release on their own
+   boards (agni issue 1057), `deploy/compose.yaml` with the release's version as its default. The
+   release workflow has already brought it up over the published image (`hack/compose_smoke.sh`).
 
    Add `--prerelease` for a `-bN` tag.
 

@@ -1145,8 +1145,13 @@ type RuleInfo struct {
 	Impact            string                 `protobuf:"bytes,8,opt,name=impact,proto3" json:"impact,omitempty"`                                                                       // what goes wrong when the rule is violated (check.Rule.Impact)
 	Detail            string                 `protobuf:"bytes,9,opt,name=detail,proto3" json:"detail,omitempty"`                                                                       // long-form markdown: meaning, rationale, query structure (check.Rule.Detail)
 	Remedy            string                 `protobuf:"bytes,10,opt,name=remedy,proto3" json:"remedy,omitempty"`                                                                      // what to do about a violation, in the imperative (check.Rule.Remedy)
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// shipped is whether agni itself ships this rule, rather than a project, a convention or an
+	// overlay composing it. A report that crosses the confidentiality boundary may name a shipped rule
+	// and never another, since a project's rule is namespaced by the project's own name (agni issue
+	// 1057).
+	Shipped       bool `protobuf:"varint,11,opt,name=shipped,proto3" json:"shipped,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RuleInfo) Reset() {
@@ -1249,9 +1254,19 @@ func (x *RuleInfo) GetRemedy() string {
 	return ""
 }
 
+func (x *RuleInfo) GetShipped() bool {
+	if x != nil {
+		return x.Shipped
+	}
+	return false
+}
+
 type ListRulesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rules         []*RuleInfo            `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Rules []*RuleInfo            `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
+	// engine_version is the build answering, for a report a client prefills (agni issue 1057). Empty
+	// when the deployment did not say.
+	EngineVersion string `protobuf:"bytes,2,opt,name=engine_version,json=engineVersion,proto3" json:"engine_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1291,6 +1306,13 @@ func (x *ListRulesResponse) GetRules() []*RuleInfo {
 		return x.Rules
 	}
 	return nil
+}
+
+func (x *ListRulesResponse) GetEngineVersion() string {
+	if x != nil {
+		return x.EngineVersion
+	}
+	return ""
 }
 
 type GetInterfaceCoverageRequest struct {
@@ -1767,7 +1789,7 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"hasSidecar\"]\n" +
 	"\x10ListRulesRequest\x127\n" +
 	"\aoverlay\x18\x01 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xf0\x02\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\x8a\x03\n" +
 	"\bRuleInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x18\n" +
@@ -1779,12 +1801,14 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x06impact\x18\b \x01(\tR\x06impact\x12\x16\n" +
 	"\x06detail\x18\t \x01(\tR\x06detail\x12\x16\n" +
 	"\x06remedy\x18\n" +
-	" \x01(\tR\x06remedy\x1a7\n" +
+	" \x01(\tR\x06remedy\x12\x18\n" +
+	"\ashipped\x18\v \x01(\bR\ashipped\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"j\n" +
 	"\x11ListRulesResponse\x12.\n" +
-	"\x05rules\x18\x01 \x03(\v2\x18.agni.v1.webapi.RuleInfoR\x05rules\"\x83\x01\n" +
+	"\x05rules\x18\x01 \x03(\v2\x18.agni.v1.webapi.RuleInfoR\x05rules\x12%\n" +
+	"\x0eengine_version\x18\x02 \x01(\tR\rengineVersion\"\x83\x01\n" +
 	"\x1bGetInterfaceCoverageRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x19\n" +

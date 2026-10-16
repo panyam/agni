@@ -840,3 +840,31 @@ func TestConversionReportFieldCensus(t *testing.T) {
 			got, want)
 	}
 }
+
+// TestListRulesSaysWhichRulesShip: a report leaving the machine may name a rule agni ships and no
+// other (agni issue 1057), so the catalog says which, and names the build answering.
+func TestListRulesSaysWhichRulesShip(t *testing.T) {
+	project := check.NewSource("acme-profiles", []*check.Rule{{Name: "can-esd-missing", Severity: "warning", Eval: func(context.Context, check.Model) []check.Verdict { return nil }}})
+	catalog, err := check.DefaultCatalog().With(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewCheckService(fakeLoader{}, catalog, nil, "", nil, nil).WithEnv(ReviewEnv{ProducerVersion: "v9.9.9"})
+	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.GetEngineVersion() != "v9.9.9" {
+		t.Errorf("engine_version %q, want the deployment's", resp.GetEngineVersion())
+	}
+	shipped := map[string]bool{}
+	for _, r := range resp.GetRules() {
+		shipped[r.GetName()] = r.GetShipped()
+	}
+	if !shipped["single-pin-net"] {
+		t.Error("single-pin-net, which agni ships, is not marked shipped")
+	}
+	if got, ok := shipped["acme-profiles/can-esd-missing"]; !ok || got {
+		t.Errorf("the project's rule: listed %v, shipped %v; want listed and not shipped", ok, got)
+	}
+}

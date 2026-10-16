@@ -139,3 +139,12 @@ jobs:
           img="ghcr.io/${OWNER}/${KIND}:${TAG}"
           docker pull "$img"
           hack/image_smoke.sh "$KIND" "$img" "$TAG"
+
+      # The compose bundle attached to the release, brought up over the published engine image, so
+      # the file a customer downloads has run once (agni issue 1057).
+      - name: Verify the compose bundle runs on the published image
+        if: matrix.kind == 'agni'
+        env:
+          OWNER: ${{ github.repository_owner }}
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: hack/compose_smoke.sh "ghcr.io/${OWNER}/agni" "$TAG"
