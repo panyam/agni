@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import {
   type FindingItem,
@@ -169,8 +172,9 @@ describe("sortFindings", () => {
 });
 
 describe("severityRank", () => {
-  it("orders error < warning < info < unknown", () => {
-    expect([severityRank("error"), severityRank("warning"), severityRank("info"), severityRank("bogus")]).toEqual([0, 1, 2, 3]);
+  // An unrecognised severity leads, as the engine's report has it (agni issue 1045).
+  it("orders unknown < error < warning < info", () => {
+    expect([severityRank("bogus"), severityRank("error"), severityRank("warning"), severityRank("info")]).toEqual([-1, 0, 1, 2]);
   });
 });
 
@@ -252,6 +256,25 @@ describe("focusStack separates the field from the figure (agni issue 348)", () =
     const [, focus] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], styled);
     expect(focus).toEqual({ components: ["R1"], color: "#00ff00", alpha: 0.9 });
   });
+});
+
+// agni issue 1045: the report and the panel rank and file findings by one fixture, which
+// core/results' TestSeverityTwinFixture reads too.
+const here = dirname(fileURLToPath(import.meta.url));
+
+describe("severitySections, twinned with core/results via severity_twin.json", () => {
+  const fixture = JSON.parse(readFileSync(join(here, "..", "..", "core", "results", "testdata", "severity_twin.json"), "utf8")) as {
+    cases: { name: string; findings: { severity: string; inconclusive?: boolean }[]; want: [string, number][] }[];
+  };
+  it("has cases to check", () => {
+    expect(fixture.cases.length).toBeGreaterThanOrEqual(5);
+  });
+  for (const tc of fixture.cases) {
+    it(`matches Pivot: ${tc.name}`, () => {
+      const items = tc.findings.map((x, i) => f({ severity: x.severity, inconclusive: !!x.inconclusive, subject: `N${i}` }));
+      expect(severitySections(items).map((s) => [s.severity, s.count])).toEqual(tc.want);
+    });
+  }
 });
 
 describe("severitySections parity with the server report (WS3-022)", () => {
@@ -410,9 +433,8 @@ describe("an inconclusive finding is not a defect", () => {
     expect(findingRank(undecided)).toBeGreaterThan(findingRank(f({ severity: "catastrophe" })));
   });
 
-  // severitySections is the server-report parity oracle (WS3-022) and deliberately unchanged, since it
-  // mirrors what GetCheckReport emits, and the client cannot fix that shape by disagreeing with it.
-  it("still reaches severitySections under its own severity, where the server puts it", () => {
-    expect(severitySections([undecided])).toEqual([{ severity: "error", count: 1 }]);
+  // The engine's report files it as unresolved too since agni issue 1045, so the parity oracle does.
+  it("reaches severitySections as unresolved, where the report puts it", () => {
+    expect(severitySections([undecided])).toEqual([{ severity: "unresolved", count: 1 }]);
   });
 });

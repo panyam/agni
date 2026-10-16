@@ -59,9 +59,18 @@ func RuleRecords(rules []*check.Rule) []*checkspb.RuleRecord {
 	return out
 }
 
+// UnresolvedSection is the report section an inconclusive finding is filed under, after every
+// severity. The rule declined to decide, so filing it under the severity it would have reported would
+// count it among the defects (agni issues 350, 1045).
+const UnresolvedSection = "unresolved"
+
 // Pivot is THE severity-organized report pivot (WS3-022): sections worst-severity first (an unknown
-// severity leads, then error, warning, info), empty severities omitted, findings grouped by rule in
-// input order, each group stamped with the rule's summary so a report reads without the tool at hand.
+// severity leads, then error, warning, info, then the unresolved section holding every inconclusive
+// finding), empty sections omitted, findings grouped by rule in input order, each group stamped with
+// the rule's summary so a report reads without the tool at hand.
+//
+// The viewer groups and counts the findings it shows by the same rules, and
+// testdata/severity_twin.json holds the two to one answer (agni issue 1045).
 //
 // It takes wire-form findings and a rule -> summary lookup rather than a catalog, so a live run and a
 // reloaded document both call it. rulesRun is passed in rather than derived from the findings, because
@@ -71,7 +80,12 @@ func RuleRecords(rules []*check.Rule) []*checkspb.RuleRecord {
 // document written from a report round-trip.
 func Pivot(source string, fs []*checkspb.Finding, summaries map[string]string, rulesRun int) *checkspb.CheckReport {
 	bySeverity := map[string][]*checkspb.Finding{}
+	var unresolved []*checkspb.Finding
 	for _, f := range fs {
+		if f.GetInconclusive() {
+			unresolved = append(unresolved, f)
+			continue
+		}
 		bySeverity[f.GetSeverity()] = append(bySeverity[f.GetSeverity()], f)
 	}
 	order := make([]string, 0, len(bySeverity))
@@ -85,6 +99,10 @@ func Pivot(source string, fs []*checkspb.Finding, summaries map[string]string, r
 		}
 		return order[i] < order[j]
 	})
+	if len(unresolved) > 0 {
+		order = append(order, UnresolvedSection)
+		bySeverity[UnresolvedSection] = unresolved
+	}
 
 	rep := &checkspb.CheckReport{Source: source, RulesRun: int32(rulesRun)}
 	for _, sev := range order {

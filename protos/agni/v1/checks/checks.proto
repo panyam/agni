@@ -283,7 +283,10 @@ message CheckReport {
   repeated SeveritySection sections = 3;
 
   message SeveritySection {
-    string severity = 1; // "error" | "warning" | "info" (worst first in `sections`)
+    // severity is "error" | "warning" | "info", worst first in `sections` with an unrecognized
+    // severity ahead of error, and then "unresolved", the section holding every inconclusive finding
+    // whatever severity it carries, since a rule that declined to decide is not a defect.
+    string severity = 1;
     int32 count = 2;     // findings in this section, for the summary table
     repeated RuleGroup rules = 3;
   }

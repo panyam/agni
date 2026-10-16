@@ -1,6 +1,9 @@
 package results
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -109,5 +112,51 @@ func TestParseToleratesAnUnknownField(t *testing.T) {
 	}
 	if doc.GetMeta().GetProducer() != "agni" {
 		t.Errorf("producer = %q", doc.GetMeta().GetProducer())
+	}
+}
+
+// TestSeverityTwinFixture checks Pivot against the fixture the web tier's findings.test.ts reads too
+// (agni issue 1045). The viewer groups and counts whatever findings it is showing, a filtered list or
+// one entity's, so it cannot read the report's sections and ranks them itself; one file holds both
+// to the same order and the same counts.
+func TestSeverityTwinFixture(t *testing.T) {
+	b, err := os.ReadFile("testdata/severity_twin.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var twin struct {
+		Cases []struct {
+			Name     string `json:"name"`
+			Findings []struct {
+				Severity     string `json:"severity"`
+				Inconclusive bool   `json:"inconclusive"`
+			} `json:"findings"`
+			Want [][2]any `json:"want"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(b, &twin); err != nil {
+		t.Fatal(err)
+	}
+	if len(twin.Cases) < 5 {
+		t.Fatalf("fixture has %d cases, too few to pin the order", len(twin.Cases))
+	}
+	for _, tc := range twin.Cases {
+		var fs []*checkspb.Finding
+		for i, f := range tc.Findings {
+			x := finding("r", f.Severity, fmt.Sprint("N", i))
+			x.Inconclusive = f.Inconclusive
+			fs = append(fs, x)
+		}
+		var got []string
+		for _, s := range Pivot("x", fs, nil, 1).GetSections() {
+			got = append(got, fmt.Sprint(s.GetSeverity(), " ", s.GetCount()))
+		}
+		var want []string
+		for _, w := range tc.Want {
+			want = append(want, fmt.Sprint(w[0], " ", w[1]))
+		}
+		if strings.Join(got, ", ") != strings.Join(want, ", ") {
+			t.Errorf("%s: sections %v, want %v", tc.Name, got, want)
+		}
 	}
 }
