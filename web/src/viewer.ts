@@ -211,17 +211,16 @@ export class ViewerPresenter {
   private rules: RuleItem[] = [];
   private selectedRules: string[] = [];
   // rulesByName indexes the catalog for the finding->category lookup (findings carry only the rule
-  // name on the wire). findingCache holds each rule's findings keyed by rule name, so toggling a
-  // rule that has already run is instant (no round-trip) and a new rule fetches only itself; it is
-  // cleared when the open design changes. A rule that ran and produced nothing is cached as [] so
-  // it is not re-fetched.
+  // name on the wire).
   private rulesByName = new Map<string, RuleItem>();
-  private readonly findingCache = new Map<string, FindingItem[]>();
-  // verdictCache holds the CONSIDERED SET per rule, keyed like findingCache and filled from the
-  // same CheckDesign response. A rule that states no considered set caches an empty list, so the
-  // panel must use the catalog, not this map, to tell "this rule reported nothing" from "this rule
-  // does not report considered sets".
-  private readonly verdictCache = new Map<string, VerdictItem[]>();
+  // run is what the reader has run on this design: the rules asked for and the engine's answers, as
+  // sent (agni issue 390). It is the panel's one copy of a check, so the findings, the considered set,
+  // the skipped rules, a saved report and the Tables panel all read it, and a new design or a
+  // convention change drops it in one place, where four per-rule caches each had to be cleared and
+  // one was missed. Run asks only for the selected rules it lacks and folds the answer in, so a
+  // repeated Run costs nothing; asking for the whole selection again cost Jetson 0.3 to 0.8 s in the
+  // browser for an answer already on screen. null until a run.
+  private run: { rules: Set<string>; resp: CheckDesignResponse } | null = null;
   // focusedVerdict is the id currently drawn as a proof, "" when none. It rides the URL so a link
   // reopens on the same proof, and it is cleared by anything that replaces the highlight, since a
   // stale id in the address bar would promise a drawing the canvas is no longer showing.
@@ -440,19 +439,21 @@ export class ViewerPresenter {
   // rows at worst (the sum of the considered sets, not rules times subjects), too few for an index
   // to matter.
   private findVerdict(id: string): VerdictItem | undefined {
-    for (const vs of this.verdictCache.values()) {
-      const hit = vs.find((v) => v.id === id);
-      if (hit) return hit;
-    }
-    return undefined;
+    const v = this.run?.resp.verdicts.find((x) => x.id === id);
+    return v ? verdictItem(v) : undefined;
   }
 
-  // verdictList is the flattened considered set across the selected rules, in the catalog's order,
-  // for the panel to render.
+  // verdictList is the considered set of the selected rules the last run answered, rule by rule in
+  // the selection's order, for the panel to render.
   verdictList(): VerdictItem[] {
-    const out: VerdictItem[] = [];
-    for (const name of this.selectedRules) out.push(...(this.verdictCache.get(name) ?? []));
-    return out;
+    const vs = this.run?.resp.verdicts ?? [];
+    return this.selectedRules.flatMap((name) => vs.filter((v) => v.rule === name).map(verdictItem));
+  }
+
+  // ran reports whether the last run answered a rule, which is what separates "ran clean" from
+  // "press Run".
+  private ran(rule: string): boolean {
+    return this.run?.rules.has(rule) ?? false;
   }
 
   // sheetBadges denormalizes a finding's wire sheet ids into display badges (WS9-024), the id for
@@ -575,10 +576,7 @@ export class ViewerPresenter {
       this.pushSheets(target?.id ?? "");
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
-      this.findingCache.clear(); // findings are per-design; a new file starts a fresh cache
-      this.verdictCache.clear();
-      this.runCache.clear();
-      this.skippedCache.clear(); // and so is which rules could not run, since a new design has new tiers
+      this.run = null; // a run is of one design, with its own tiers and so its own skipped rules
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
       this.assembleFindings(); // empty until a run; pushes the "press Run" state + zero overview counts
@@ -705,14 +703,15 @@ export class ViewerPresenter {
     // fired counts only the currently selected rules, matching the checks panel, so a rule that ran
     // and was then deselected keeps its cached findings but drops out of the fired counts.
     const fired: Record<string, number> = {};
-    for (const name of this.selectedRules) fired[name] = this.findingCache.get(name)?.length ?? 0;
+    const fs = this.run?.resp.findings ?? [];
+    for (const name of this.selectedRules) fired[name] = fs.filter((f) => f.rule === name).length;
     this.views.rules.setState({ rules: this.rules, selected: this.selectedRules, fired });
   }
 
   // setRuleSelection adopts a new active ruleset (from the rules panel's checkboxes) and re-renders
-  // the findings over just that subset FROM THE CACHE. It fetches nothing (checks are on-demand),
-  // so toggling a rule is instant. A selected rule with no cache entry shows as pending until the
-  // next Run; a deselected rule's findings are hidden.
+  // the findings over just that subset of the last run. It fetches nothing (checks are on-demand), so
+  // toggling a rule is instant. A selected rule the last run did not answer shows as pending until
+  // the next Run; a deselected rule's findings are hidden.
   async setRuleSelection(names: string[]): Promise<void> {
     this.selectedRules = names;
     this.assembleFindings();
@@ -763,79 +762,44 @@ export class ViewerPresenter {
     }
   }
 
-  // runSelection fetches CheckDesign for the selected rules not yet cached (a rule that ran with no
-  // findings is cached as [] so it is not re-fetched), assembles the visible list, and lights up every
-  // current finding. A geometry-only file (no netlist) makes CheckDesign fail, leaving the missing
-  // rules uncached (a later valid run retries) and the list empty rather than erroring.
+  // runSelection asks CheckDesign for the selected rules the run lacks and folds the answer into it,
+  // then assembles the visible list and lights up every current finding when the reader asked for
+  // that. A geometry-only file (no netlist) makes CheckDesign fail, which leaves the run as it was and
+  // those rules pending.
   private async runSelection(): Promise<void> {
-    const names = this.selectedRules;
-    const missing = names.filter((n) => !this.findingCache.has(n));
+    const missing = this.selectedRules.filter((n) => !this.ran(n));
     if (missing.length > 0 && this.mount && this.path) {
       try {
         const resp = await this.checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: missing, overlay: this.overlay() });
-        for (const n of missing) {
-          this.findingCache.set(n, []); // mark computed (even if it fired nothing)
-          this.verdictCache.set(n, []);
-          this.runCache.set(n, { findings: [], verdicts: [] });
-          this.skippedCache.delete(n); // a rerun may have made it runnable (a board was attached)
-        }
-        // ?? [] because a hand-built response (a test stub, an older server) may omit it, and a
-        // missing field must degrade to "nothing was skipped" rather than throwing mid-run.
-        for (const sk of resp.skipped ?? []) this.skippedCache.set(sk.name, sk.reason);
-        for (const f of resp.findings) this.runCache.get(f.rule)?.findings.push(f);
-        for (const v of resp.verdicts ?? []) this.runCache.get(v.rule)?.verdicts.push(v);
-        for (const f of resp.findings) {
-          this.findingCache.get(f.rule)?.push({
-            rule: f.rule,
-            category: this.rulesByName.get(f.rule)?.tags.category ?? "",
-            profile: this.rulesByName.get(f.rule)?.tags.profile ?? "",
-            severity: f.severity,
-            kind: f.subject?.kind ?? "",
-            subject: f.subject?.ref ?? "",
-            pin: f.subject?.pin ?? "",
-            netId: f.subject?.netId ?? "",
-            busId: f.subject?.busId ?? "",
-            message: f.message,
-            inconclusive: f.inconclusive ?? false,
-            context: contextFromWire(f.context),
-            sheets: this.sheetBadges(f.sheets ?? []),
-            locateReason: f.locateReason ?? 0,
-          });
-        }
-        // ?? [] as for skipped, so a missing considered set reads as "this rule stated none"
-        // instead of throwing mid-run and losing the findings too.
-        for (const v of resp.verdicts ?? []) {
-          this.verdictCache.get(v.rule)?.push({
-            id: v.id,
-            rule: v.rule,
-            outcome: outcomeWord(v.outcome),
-            subjects: (v.subjects ?? []).map((sub) => ({
-              kind: sub.kind ?? "",
-              subject: sub.ref ?? "",
-              pin: sub.pin ?? "",
-              netId: sub.netId ?? "",
-              busId: sub.busId ?? "",
-            })),
-            statement: v.witness?.statement ?? "",
-            terms: (v.witness?.terms ?? []).map((t) => ({ label: t.label, value: t.value })),
-            context: contextFromWire(v.context),
-            reason: v.reason ?? "",
-          });
+        // ?? [] because a hand-built response (a test stub, an older server) may omit a list, and a
+        // missing field must degrade to "nothing was skipped" or "this rule stated no considered
+        // set" rather than throwing mid-run and losing the findings too.
+        resp.skipped ??= [];
+        resp.verdicts ??= [];
+        if (!this.run) {
+          this.run = { rules: new Set(missing), resp };
+        } else {
+          for (const n of missing) this.run.rules.add(n);
+          this.run.resp.findings.push(...resp.findings);
+          this.run.resp.verdicts.push(...resp.verdicts);
+          this.run.resp.skipped.push(...resp.skipped);
         }
       } catch {
-        // no netlist etc.: leave missing rules uncached so a later valid selection retries.
+        // no netlist etc.: the run stands, and the rules it lacks stay pending.
       }
     }
     this.assembleFindings();
     await this.setHighlights(subjectsToSpecs(this.field())); // every finding at once, when the reader asked for it
   }
 
-  // assembleFindings rebuilds the visible list from the per-rule cache for the active ruleset (a
+  // assembleFindings rebuilds the visible list from the last run for the active ruleset (a
   // stable rule-then-subject base order; the panel re-sorts), clears the focus, and pushes the checks,
   // rules (fired counts), and overview (per-sheet counts) panels. It fetches nothing.
   private assembleFindings(): void {
-    this.findings = this.selectedRules
-      .flatMap((n) => this.findingCache.get(n) ?? [])
+    const selected = new Set(this.selectedRules);
+    this.findings = (this.run?.resp.findings ?? [])
+      .filter((f) => selected.has(f.rule))
+      .map((f) => this.findingItem(f))
       .sort((a, b) => (a.rule !== b.rule ? (a.rule < b.rule ? -1 : 1) : a.subject < b.subject ? -1 : a.subject > b.subject ? 1 : 0));
     this.selectedSubject = "";
     this.pushFindings();
@@ -848,7 +812,8 @@ export class ViewerPresenter {
   // Run" from "ran clean") and the rule catalog summaries (the per-rule one-liners the merged panel
   // shows).
   private pushFindings(): void {
-    const pending = this.selectedRules.filter((n) => !this.findingCache.has(n)).length;
+    const pending = this.selectedRules.filter((n) => !this.ran(n)).length;
+    const skippedAt = new Map((this.run?.resp.skipped ?? []).map((sk) => [sk.name, sk.reason]));
     const ruleSummaries: Record<string, string> = {};
     for (const r of this.rules) if (r.summary) ruleSummaries[r.name] = r.summary;
     const state: FindingsState = {
@@ -863,8 +828,8 @@ export class ViewerPresenter {
       // Only the SELECTED rules, since a rule nobody ticked being unavailable is not news. Sorted so
       // the list is stable across runs rather than following response order.
       skipped: this.selectedRules
-        .filter((n) => this.skippedCache.has(n))
-        .map((n) => ({ rule: n, reason: this.skippedCache.get(n) ?? "" }))
+        .filter((n) => skippedAt.has(n))
+        .map((n) => ({ rule: n, reason: skippedAt.get(n) ?? "" }))
         .sort((a, b) => a.rule.localeCompare(b.rule)),
       ruleSummaries,
       saveNote: this.saveNote,
@@ -877,15 +842,27 @@ export class ViewerPresenter {
     this.views.query?.setFindings(state);
   }
 
-  // skippedCache is rule name -> why it could not run on this design, alongside findingCache.
-  // Cached for the same reason, since checks are on-demand and per rule, so a rule's gated-ness is
-  // learned when it first runs and has to survive until the design changes.
-  private skippedCache = new Map<string, string>();
+  // findingItem is one wire finding as the panel shows it, with the catalog's category and profile
+  // and the sheet badges of the design on screen.
+  private findingItem(f: CheckDesignResponse["findings"][number]): FindingItem {
+    return {
+      rule: f.rule,
+      category: this.rulesByName.get(f.rule)?.tags.category ?? "",
+      profile: this.rulesByName.get(f.rule)?.tags.profile ?? "",
+      severity: f.severity,
+      kind: f.subject?.kind ?? "",
+      subject: f.subject?.ref ?? "",
+      pin: f.subject?.pin ?? "",
+      netId: f.subject?.netId ?? "",
+      busId: f.subject?.busId ?? "",
+      message: f.message,
+      inconclusive: f.inconclusive ?? false,
+      context: contextFromWire(f.context),
+      sheets: this.sheetBadges(f.sheets ?? []),
+      locateReason: f.locateReason ?? 0,
+    };
+  }
 
-  // runCache keeps each rule's findings and verdicts as the engine sent them, beside the display
-  // caches, so a saved report is written from the run itself rather than from what the panel shows
-  // (agni issue 127). It is filled and cleared with them.
-  private runCache = new Map<string, { findings: CheckDesignResponse["findings"]; verdicts: CheckDesignResponse["verdicts"] }>();
   private saveNote = "";
 
   // saveReport writes the selection's run as a file to keep, the check report page or the results
@@ -943,18 +920,20 @@ export class ViewerPresenter {
     this.pushReview();
   }
 
-  // heldRun is the selection's run as one CheckDesignResponse, assembled from what each rule returned,
-  // or undefined until every selected rule has run. A saved report, a saved csv and the Tables panel
+  // heldRun is the selection's part of the last run as one CheckDesignResponse, rule by rule in the
+  // catalog's order, or undefined until every selected rule has run. A saved report, a saved csv and the Tables panel
   // all start from it, so none of them runs a rule.
   private heldRun(): { names: string[]; run: CheckDesignResponse } | undefined {
     const selected = new Set(this.selectedRules);
     // Catalog order, which is the order one run over the selection returns its findings in.
     const names = this.rules.map((r) => r.name).filter((n) => selected.has(n));
-    if (names.length === 0 || names.some((n) => !this.runCache.has(n))) return undefined;
+    const held = this.run;
+    if (!held || names.length === 0 || names.some((n) => !held.rules.has(n))) return undefined;
+    const r = held.resp;
     const run = create(CheckDesignResponseSchema, {
-      findings: names.flatMap((n) => this.runCache.get(n)?.findings ?? []),
-      verdicts: names.flatMap((n) => this.runCache.get(n)?.verdicts ?? []),
-      skipped: names.filter((n) => this.skippedCache.has(n)).map((n) => ({ name: n, reason: this.skippedCache.get(n) ?? "" })),
+      findings: names.flatMap((n) => r.findings.filter((f) => f.rule === n)),
+      verdicts: names.flatMap((n) => r.verdicts.filter((v) => v.rule === n)),
+      skipped: r.skipped.filter((sk) => selected.has(sk.name)),
     });
     return { names, run };
   }
@@ -1115,20 +1094,17 @@ export class ViewerPresenter {
     }
   }
 
-  // reloadForConvention re-reads the rule CATALOG and drops every cached answer after the
-  // vocabulary changes. The catalog reload, the finding/verdict/skipped cache clears, and the
+  // reloadForConvention re-reads the rule CATALOG and drops the held run after the vocabulary
+  // changes. The catalog reload, dropping the run, and the
   // query-result reset must happen together, since a request convention changes which rules EXIST
-  // (docsite/content/architecture/web-client.md#two-caches-for-one-answer-will-drift). A client
+  // (docsite/content/architecture/web-client.md, "Two caches for one answer will drift"). A client
   // that kept the old catalog would run none of the selected naming rules, which reads as a design
   // with no naming problems.
   private async reloadForConvention(): Promise<void> {
-    this.findingCache.clear();
-    this.runCache.clear();
-    // A verdict is keyed by rule name, which is what a convention changes, so a surviving verdict
-    // could claim coverage for a rule nobody ran.
-    this.verdictCache.clear();
+    // A verdict is keyed by rule name, which is what a convention changes, so a surviving run could
+    // claim coverage for a rule nobody ran.
+    this.run = null;
     this.focusedVerdict = "";
-    this.skippedCache.clear();
     // Query results were computed under the previous vocabulary too (`net.rail` answers differently),
     // so leaving them would show two vocabularies at once.
     this.answers.clear();
@@ -1766,3 +1742,24 @@ function messageOf(e: unknown): string {
 }
 
 
+
+// verdictItem is one wire verdict as the panel shows it: its outcome as a word, its subjects, and the
+// statement and terms its witness rests on.
+function verdictItem(v: CheckDesignResponse["verdicts"][number]): VerdictItem {
+  return {
+    id: v.id,
+    rule: v.rule,
+    outcome: outcomeWord(v.outcome),
+    subjects: (v.subjects ?? []).map((sub) => ({
+      kind: sub.kind ?? "",
+      subject: sub.ref ?? "",
+      pin: sub.pin ?? "",
+      netId: sub.netId ?? "",
+      busId: sub.busId ?? "",
+    })),
+    statement: v.witness?.statement ?? "",
+    terms: (v.witness?.terms ?? []).map((t) => ({ label: t.label, value: t.value })),
+    context: contextFromWire(v.context),
+    reason: v.reason ?? "",
+  };
+}
