@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { GetDesignResponseSchema, type GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
-import { INVENTORY_PATHS, type PropertiesState } from "./properties.js";
+import { INVENTORY_PATHS, SERVED_QUERIES, type PropertiesState } from "./properties.js";
 import { PropertiesPresenter } from "./propertiespresenter.js";
 
 function design(name: string, nets: string[]): GetDesignResponse {
@@ -28,6 +28,23 @@ describe("PropertiesPresenter", () => {
     await vi.waitFor(() => expect(last().crumbs[0].label).toBe("gateway"));
     expect(getDesign).toHaveBeenCalledTimes(1);
     expect(getDesign.mock.calls[0][0]).toEqual({ uri: "mount://m/d", readMask: { paths: ["name", ...INVENTORY_PATHS] } });
+  });
+
+  // agni issue 1045: a net's test points and a pin's name are the engine's answers, asked once per open.
+  it("asks the engine for pin names and test points once per open, and shows its answers", async () => {
+    const states: PropertiesState[] = [];
+    const getDesign = vi.fn(async () =>
+      create(GetDesignResponseSchema, { name: "g", design: { nets: [{ name: "3V3", connections: [{ componentRef: "TP1", pinRef: "1" }, { componentRef: "U1", pinRef: "10" }] }] } }),
+    );
+    const ask = vi.fn(async (_uri: string, q: string) => (q === SERVED_QUERIES.testPoints ? [["TP1"]] : [["U1", "10", "OUT"]]));
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign, drawn: () => null, ask });
+    p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
+    p.setSheets({ mount: "m", path: "d", sheets, activeId: "s2" });
+    p.selectEntity({ kind: "net", net: "3V3" });
+    const last = () => states[states.length - 1];
+    await vi.waitFor(() => expect(last().groups.find((g) => g.name === "test points")?.refs.map((r) => r.label)).toEqual(["TP1"]));
+    expect(last().groups.find((g) => g.name === "pins")?.refs.find((r) => r.label === "U1.10")?.detail).toBe("OUT");
+    expect(ask.mock.calls.map((c) => c[1]).sort()).toEqual([SERVED_QUERIES.pinNames, SERVED_QUERIES.testPoints].sort());
   });
 
   it("selects the sheet on screen for a click on empty paper, and follows it to the next sheet", () => {

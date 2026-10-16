@@ -15,6 +15,7 @@ import {
   type Focus,
   INVENTORY_PATHS,
   type Inventory,
+  SERVED_QUERIES,
   inventoryFromDesign,
   propertiesFor,
 } from "./properties.js";
@@ -29,6 +30,10 @@ export interface PropertiesSources {
   drawn: () => { refs: string[]; nets: string[] } | null;
   // drawnOn asks the engine which sheets draw a component or a net. Absent, the panel lists none.
   drawnOn?: (uri: string, sel: Selection) => Promise<string[]>;
+  // ask runs a query on the engine serving the page and returns its rows' cells, which is how the
+  // inventory gets the pin names and test points the engine decides (SERVED_QUERIES). Absent, or
+  // failing, the panel shows no pin names and no test points rather than guessing them.
+  ask?: (uri: string, query: string) => Promise<string[][]>;
 }
 
 export class PropertiesPresenter {
@@ -168,10 +173,19 @@ export class PropertiesPresenter {
     const key = artifactUri(this.mount, this.path);
     this.inventoryKey = key;
     try {
-      const resp = await this.src.getDesign({ uri: key, readMask: { paths: ["name", ...INVENTORY_PATHS] } });
+      const asked = (q: string) => (this.src.ask ? this.src.ask(key, q).catch(() => [] as string[][]) : Promise.resolve([] as string[][]));
+      const [resp, names, tps] = await Promise.all([
+        this.src.getDesign({ uri: key, readMask: { paths: ["name", ...INVENTORY_PATHS] } }),
+        asked(SERVED_QUERIES.pinNames),
+        asked(SERVED_QUERIES.testPoints),
+      ]);
       if (this.inventoryKey !== key) return;
       this.designName = resp.name;
-      this.inventory = resp.design ? inventoryFromDesign(resp.design) : null;
+      const served = {
+        pinNames: names.map((c) => [c[0] ?? "", c[1] ?? "", c[2] ?? ""] as [string, string, string]),
+        testPoints: tps.map((c) => c[0] ?? ""),
+      };
+      this.inventory = resp.design ? inventoryFromDesign(resp.design, served) : null;
     } catch {
       // A design whose IR cannot be read still has a drawing and findings to describe, so the panel
       // goes on without the inventory and says so per entity.

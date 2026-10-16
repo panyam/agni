@@ -587,6 +587,10 @@ class AppRoot extends BaseComponent {
         });
         return drawnSheets(resp, sel.kind, name);
       },
+      ask: async (uri, query) => {
+        const resp = await queryClient().runQuery({ uri, query, overlay: presenter.overlayConfig(), omitLocations: true });
+        return resp.rows.map((r) => r.cells);
+      },
     });
     const locateSelection = (sel: Selection) =>
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
