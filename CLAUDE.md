@@ -615,6 +615,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   implements `Prefetch`, and asking the interface kept no model for any project with `params/` (agni
   915). With the fact base kept, **a query's `work` is what THIS request spent**, so a warm server can
   report less than a cold CLI, and the cross-transport test compares `work` only where they must agree.
+  **`CheckDesign` keeps each rule's results on the model's cache entry** (agni 390, `service/keptresults.go`),
+  so a rule already run on an unchanged design under the same overlay answers without evaluating. It
+  has no key of its own, which is the point: the entry's key and touched-file check already cover
+  every tier and the overlay. Joining kept rules to new ones relies on `check.RunAll` sorting STABLY;
+  `sort.Slice` there reorders tied findings and the join stops matching one run.
 - **A query answer keeps each entity and citation once** (agni 916): `RunQueryResponse.entities` and
   `sources`, with rows pointing in through `cell_entity` and `cite_index`. Read a cell's location with
   `service.CellLocation` and a row's citations with `service.RowCites`. The viewer's tests write
@@ -658,6 +663,9 @@ than net names (auto-named nets differ by tool) or counts (compensating errors c
 `readers/kicad/oracle_corpus.baseline`, a committed list of the nets we still get wrong;
 `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Out of the gate because it needs the 19MB both-views
 corpus, not the 3MB the gate fetches.
+
+**The docsite is its own Go module**, so `go test ./docsite/` from the root fails with `[setup failed]`;
+run `make docsite-test`.
 
 **`make browser-test` is IN the gate**, and needs a Chromium on the machine
 (`cd web && pnpm exec playwright-core install chromium`). It drives a real browser against a real

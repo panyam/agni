@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-16, at `f34fb4b8` (PR 1040).
+Last pruned 2026-10-16, at `202c5dc7` (PR 1041).
 
 ## At a glance
 
@@ -20,8 +20,9 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
 - **#845 `mission_browser_review`**, 9 of 17. The walk at `bec675b9` completed every step on the
   tutorial project for the first time: picker, runs, a query set opened as tabs, clicks into the
   drawing, and Save report matching `agni review --format html`. Done-when also wants one sample
-  board, and no sample board carries a checklist yet, so that run needs one first. The next ready
-  ticket is #390, then #485 and #634.
+  board, and no sample board carries a checklist yet, so that run needs one first. #390's first PR (1041, the server
+  keeps each rule's results) merged; the next step is its second PR, dropping the viewer's
+  `findingCache` and `verdictCache`, then #485 and #634.
 - **#851 `mission_public_demo`**, 46 of 68. #1002 closed after ten clean deployed runs. jaala v0.1.59
   made Jetson's Run checks about three times slower through a planner change (#1037), fixed by
   v0.1.60: the local walk at `28a6f080` took 4.9 s, against about 28 s at v0.1.59 and 9.6 to 11.8 s at
@@ -30,12 +31,9 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
   with its ticket (#1014, #1015, #1016). #961 and #967 are filed; #967's first run found KiCad's DRC
   reporting 357 `clearance` violations on Jetson where agni reports none.
 - **#909 `mission_ask`**, filed, not active. #910 (P1, MCP on `agni serve`) is its first ticket.
-- This run: PRs 1031, 1033, 1034, 1036, 1038, 1039 and 1040 merged, closing #736, #902, #745,
-  #1035, #1037, #1030 and #356. The viewer now selects on click into a Properties panel, asks served
-  questions in query tabs, opens a project's `queries/` sets, saves a checklist run, and lights
-  nothing after Run checks until a finding is clicked. Lengths are published in metres and shown in
-  mm. Filed #1032 (P3: dedupe open questions, keep tabs, save tabs as a set), whose `waiting`
-  trigger, #745, has now landed; and panyam/jaala#304, fixed in v0.1.60.
+- This run: v0.2.2 tagged and released; PR 1041 merged (#390 PR 1). The #845 walk at `202c5dc7`
+  ran through picker, both checklist runs, a finding click and Run checks (28 findings, highlight 0)
+  and was stopped before the query-set step, so Save report was not re-checked there.
 
 ## Open, ranked
 
@@ -52,9 +50,9 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
 3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.
-5. **#390 PR 1, the server caches check results.** **The key in the issue body is wrong.** Read the
-   corrections comment before writing any code. #895 keeps the model and fact base, so a repeated
-   check pays only rule evaluation; measure that with `--timing` before building a result cache.
+5. **#390 PR 2, the viewer stops caching check answers.** PR 1041 made a rule already run on a kept
+   model cost a round trip and no evaluation, so `findingCache` and `verdictCache` in
+   `web/src/viewer.ts` can go. PR 3 (split the presenter) follows.
 6. **#910 on `mission_ask`**, MCP tools over the existing services. Every service is transport-neutral,
    so it is an adapter, not new analysis.
 7. **#485 and #634**, on `mission_browser_review`, after #390.
