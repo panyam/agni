@@ -6,6 +6,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/stdlib/profiles"
 	"sort"
+	"sync"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
@@ -128,7 +129,8 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 	// Whether the run would carry a parameter set is known without a read: the project's params/ or this
 	// host's own corpus (agni issue 940).
 	params := ov.SpecsOver(s.specs) != nil
-	resp := &webapi.ListRulesResponse{}
+	resp := &webapi.ListRulesResponse{EngineVersion: s.env.ProducerVersion}
+	shipped := ShippedRules()
 	for _, r := range cat.Rules() {
 		ok, reason := check.ListedAvailable(r, params)
 		resp.Rules = append(resp.Rules, &webapi.RuleInfo{
@@ -142,6 +144,7 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 			Tags:              r.Tags,
 			Available:         ok,
 			UnavailableReason: reason,
+			Shipped:           shipped[r.Name],
 		})
 	}
 	return resp, nil
@@ -578,3 +581,13 @@ func datasheetCitationsFromProto(ps []*checkspb.DatasheetCitation) []*check.Data
 	}
 	return out
 }
+
+// ShippedRules is the names of the rules agni ships, its default catalog's, which a sanitized report
+// may name (agni issue 1057). Composed once, since the shipped set is fixed for the process.
+var ShippedRules = sync.OnceValue(func() map[string]bool {
+	out := map[string]bool{}
+	for _, r := range check.DefaultCatalog().Rules() {
+		out[r.Name] = true
+	}
+	return out
+})

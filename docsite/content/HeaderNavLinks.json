@@ -39,6 +39,7 @@
       { "name": "Getting started", "url": "guide/getting-started/" },
       { "name": "Concepts", "url": "guide/concepts/" },
       { "name": "Projects and designs", "url": "guide/projects/" },
+      { "name": "Trying agni on your own boards", "url": "guide/trying-agni/" },
       { "name": "Checks and reports", "url": "guide/checks-and-reports/" },
       { "name": "Comparing revisions", "url": "guide/comparing-revisions/" },
       { "name": "Querying", "url": "guide/querying/" },

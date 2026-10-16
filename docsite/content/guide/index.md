@@ -12,6 +12,7 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Getting started](getting-started/)** takes you from install to your first check and its report.
 - **[Concepts](concepts/)** maps the ideas behind the tool back to bench intuition.
 - **[Projects and designs](projects/)** lays out the two files that let every command find your config.
+- **[Trying agni on your own boards](trying-agni/)** runs a release from one compose file, walks the guided trial, and sends back a report that holds nothing from your design.
 - **[Checks and reports](checks-and-reports/)** runs the rule catalog and explains its findings.
 - **[Comparing revisions](comparing-revisions/)** diffs two revisions as a schematic redline.
 - **[Querying](querying/)** searches a design as data, with every answer cited.

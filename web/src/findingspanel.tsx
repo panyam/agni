@@ -349,6 +349,13 @@ function Row(props: {
               </button>
             )}
           </For>
+          {/* A report of a wrong finding names agni's rule and nothing from the design (agni issues
+              858, 1057); the link is built from a FindingFeedback, which has no field for the rest. */}
+          <Show when={f().reportUrl}>
+            <a class="check-report" href={f().reportUrl} target="_blank" rel="noopener" title="This looks wrong: open an issue naming only agni's rule, never your design">
+              looks wrong?
+            </a>
+          </Show>
         </td>
       </tr>
       <Show when={multi() && open()}>

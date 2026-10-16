@@ -18,6 +18,8 @@ on:
       - pnpm-workspace.yaml
       - datasheet/tools/pdf2doc/**
       - hack/image_smoke.sh
+      - hack/compose_smoke.sh
+      - deploy/**
       - .github/workflows/images.yml
       - .github/workflows/release.yml
   push:
@@ -30,6 +32,8 @@ on:
       - pnpm-workspace.yaml
       - datasheet/tools/pdf2doc/**
       - hack/image_smoke.sh
+      - hack/compose_smoke.sh
+      - deploy/**
       - .github/workflows/images.yml
       - .github/workflows/release.yml
 
@@ -74,3 +78,8 @@ jobs:
         run: |
           hack/image_smoke.sh "$KIND" "agni-ci/$KIND:ci" v0.0.0-ci
           docker image ls "agni-ci/$KIND:ci" --format '{{.Repository}}:{{.Tag}} {{.Size}}'
+
+      # The compose bundle a customer runs (agni issue 1057), brought up over the tutorial project.
+      - name: Compose smoke test
+        if: matrix.kind == 'agni'
+        run: hack/compose_smoke.sh agni-ci/agni ci

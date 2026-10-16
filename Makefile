@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -656,6 +656,22 @@ tag:
 # Tag and push in one step. This is the one that publishes: a pushed tag is immediately
 # resolvable by the Go module proxy and is not safely retractable afterwards.
 #   make tag-push V=v0.1.0
+# The compose bundle a release attaches (agni issue 1057): deploy/compose.yaml with the release's
+# version as its default, and the env example beside it, written to dist/ for `gh release create`.
+#   make compose-release V=v0.2.4
+compose-release:
+	@$(check_version)
+	mkdir -p dist
+	sed 's/$${AGNI_VERSION:-latest}/$${AGNI_VERSION:-$(V)}/' deploy/compose.yaml > dist/compose.yaml
+	sed 's/^AGNI_VERSION=latest/AGNI_VERSION=$(V)/' deploy/env.example > dist/env.example
+	@grep -q 'AGNI_VERSION:-$(V)' dist/compose.yaml || { echo "dist/compose.yaml was not pinned to $(V)"; exit 1; }
+
+# Run deploy/compose.yaml over the tutorial project against an image, as the images and release
+# workflows do (agni issue 1057). CONTAINER=podman uses podman compose.
+#   make compose-smoke                      the image `make image` built
+compose-smoke:
+	hack/compose_smoke.sh $(IMAGE_NAME) $(IMAGE_TAG)
+
 tag-push:
 	@$(MAKE) tag V=$(V)
 	git push origin $(TAG_REFS)

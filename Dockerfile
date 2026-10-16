@@ -144,9 +144,13 @@ COPY            LICENSE NOTICE           /usr/share/agni/
 # bind-mounted directory, such as a --review-store, would otherwise land on the operator's host
 # owned by root. Override with `docker run --user $(id -u)` to have writes land as your
 # own uid.
+#
+# /var/lib/agni/reviews exists and belongs to agni so a NAMED volume mounted there, as the compose
+# bundle mounts one (deploy/compose.yaml), starts out writable: a named volume copies the ownership
+# of the path it is mounted over, and a path the image lacks comes up owned by root.
 RUN useradd --system --create-home --uid 10001 agni \
- && mkdir -p /workspace \
- && chown -R agni:agni /workspace
+ && mkdir -p /workspace /var/lib/agni/reviews \
+ && chown -R agni:agni /workspace /var/lib/agni
 USER agni
 
 WORKDIR /srv/agni

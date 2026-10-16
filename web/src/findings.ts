@@ -98,6 +98,10 @@ export interface FindingItem {
   // computed server-side from the geometry (WS7-042c), e.g. BUS_NOT_DRAWN for a bus with no drawn wire.
   // UNSPECIFIED (the default) means the subject is drawn and highlights.
   locateReason: LocateReason;
+  // reportUrl opens an issue saying this finding looks wrong, built from a FindingFeedback, so it
+  // names agni's rule and never anything from the design (agni issues 858, 1057). Absent before the
+  // catalog has said which rules ship.
+  reportUrl?: string;
 }
 
 // SkippedRuleItem is one selected rule that could not evaluate, with the reason the ENGINE gave.

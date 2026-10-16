@@ -13,6 +13,7 @@ import (
 // type is defined. C31 is only worth enforcing while this list stays short and argued.
 var jsonEncoderExceptions = map[string]string{
 	"intake.go": "intake.Skeleton's confidentiality guarantee is structural (C16); see the type's doc comment",
+	"trial.go":  "feedback.Report crosses into a public issue and its guarantee is structural, as intake's is; see the package comment",
 }
 
 // C31's Verify. A command that hand-rolls its json is emitting a second shape of an answer the wire

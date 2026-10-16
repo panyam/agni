@@ -19,6 +19,8 @@ export interface RuleItem {
   tags: Record<string, string>;
   available: boolean;
   unavailableReason: string;
+  // shipped is whether agni ships the rule, so a report leaving the machine may name it (agni 1057).
+  shipped?: boolean;
 }
 
 export interface RulesState {
