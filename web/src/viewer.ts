@@ -377,7 +377,7 @@ export class ViewerPresenter {
   // has located nothing, so the canvas never shows a cell from an answer no longer in front.
   async releaseFocus(): Promise<void> {
     this.views.query?.setLocateNote("");
-    await this.setHighlights(focusStack(this.findings, [], []));
+    await this.setHighlights(focusStack(this.field(), [], []));
   }
 
   // locateEntity focuses a query result cell's entity (WS9-038). It navigates to the given sheet (a
@@ -399,7 +399,7 @@ export class ViewerPresenter {
     // highlight by (ref, pin) and an empty pin would silently widen the focus to the whole part.
     // Net and component callers pass nothing.
     const focus = withFocusShape(entitySpecs(kind, subject, pin), this.highlightStyle);
-    await this.setHighlights(focusStack(this.findings, [{ kind, subject, pin: "" }], focus));
+    await this.setHighlights(focusStack(this.field(), [{ kind, subject, pin: "" }], focus));
     // Explain an entity the faithful view doesn't draw (WS9-039). The server sets a reason only for
     // an entity absent from the geometry, so a drawn rail (e.g. VBUS) reports none; the note shows
     // only on a faithful layout, since an auto-layout draws every entity and always resolves.
@@ -714,7 +714,7 @@ export class ViewerPresenter {
   async setRuleSelection(names: string[]): Promise<void> {
     this.selectedRules = names;
     this.assembleFindings();
-    await this.setHighlights(subjectsToSpecs(this.findings));
+    await this.setHighlights(subjectsToSpecs(this.field()));
   }
 
   // runChecksForLink resolves a verdict a URL named, running ONE rule when the link says which (see
@@ -825,7 +825,7 @@ export class ViewerPresenter {
       }
     }
     this.assembleFindings();
-    await this.setHighlights(subjectsToSpecs(this.findings)); // light up every current finding at once
+    await this.setHighlights(subjectsToSpecs(this.field())); // every finding at once, when the reader asked for it
   }
 
   // assembleFindings rebuilds the visible list from the per-rule cache for the active ruleset (a
@@ -1372,7 +1372,7 @@ export class ViewerPresenter {
     const target = traceSheet(state);
     if (target && target !== this.currentSheet) await this.showSheet(target);
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
-    await this.setHighlights(focusStack(this.findings, subjects, focus));
+    await this.setHighlights(focusStack(this.field(), subjects, focus));
   }
 
   // refreshCoverage fetches the interface-coverage matrix for the open design (WS9-041) and pushes
@@ -1558,7 +1558,7 @@ export class ViewerPresenter {
     if (!toggleOff && this.mode === "native") await this.setMode("webgl");
     if (toggleOff) {
       this.views.findings.setFindingLocateNote("");
-      await this.setHighlights(subjectsToSpecs(this.findings)); // back to all subjects
+      await this.setHighlights(subjectsToSpecs(this.field())); // back to the field, or to nothing
       return null;
     }
     // A subject may be clicked from the expectations panel (a full-run finding) even when its rule
@@ -1597,7 +1597,28 @@ export class ViewerPresenter {
   private async reapplyFocus(subject: string, netId = ""): Promise<void> {
     const focused = this.findFinding(subject, netId);
     const focusLayers = focused ? withFocusShape(findingSpec(focused), this.highlightStyle) : [];
-    await this.setHighlights(focusStack(this.findings, focused ? [{ kind: focused.kind, subject: focused.subject, pin: focused.pin ?? "", netId: focused.netId ?? "" }] : [], focusLayers));
+    await this.setHighlights(focusStack(this.field(), focused ? [{ kind: focused.kind, subject: focused.subject, pin: focused.pin ?? "", netId: focused.netId ?? "" }] : [], focusLayers));
+  }
+
+  // showAllFindings says whether the drawing shows every finding of the run at once (agni issue 356).
+  // Off by default, since on a sheet with a few dozen findings the field lit most of the drawing in
+  // the focus colour before anything was clicked. The Sheets panel's per-sheet counts carry the
+  // overview, and a clicked finding is drawn either way.
+  private showAllFindings = false;
+
+  // field is the findings drawn as the run-wide field: every one when showAllFindings is on, none
+  // when it is off. Every path that paints the field, or stacks a focus over it, reads it here.
+  private field(): FindingItem[] {
+    return this.showAllFindings ? this.findings : [];
+  }
+
+  // setShowAllFindings turns the run-wide field on or off and repaints: a focused finding over the
+  // field, or the field alone. Whatever else was located is replaced, as any repaint replaces it.
+  async setShowAllFindings(on: boolean): Promise<void> {
+    if (this.showAllFindings === on) return;
+    this.showAllFindings = on;
+    if (this.selectedSubject) await this.reapplyFocus(this.selectedSubject, this.selectedNetId);
+    else await this.setHighlights(subjectsToSpecs(this.field()));
   }
 
   // setHighlightStyle applies a user highlight style (WS9-044) to the focus marker. Subsequent

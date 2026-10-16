@@ -120,7 +120,9 @@ are before you open anything.
 
 **Findings** is the table above. Selecting a row highlights its subject on the canvas, which a terminal
 cannot do, so you go from "net `/SFP/SFI_CONN_RX_P` has no ESD protection" to seeing where that net
-actually runs.
+actually runs. Nothing is lit until you select one, since a sheet with a few dozen findings would
+otherwise be mostly highlight. **Highlight › Show every finding** lights the whole run at once, and the
+viewer remembers the choice.
 
 **Canvas** renders faithfully when the design carries geometry and computes a layout when it does
 not, exactly as [rung 3](../03-see-it/) described. The WebGL and SVG toggle matters on large boards.

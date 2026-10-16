@@ -898,6 +898,7 @@ describe("ViewerPresenter", () => {
 
   it("highlights every current finding's subject at once after a run", async () => {
     const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     h.checkDesign.mockResolvedValueOnce({
       findings: [
         { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
@@ -920,6 +921,7 @@ describe("ViewerPresenter", () => {
 
   it("focusing a finding in SVG mode highlights just it (exact by kind) and toggles back to all", async () => {
     const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     h.checkDesign.mockResolvedValueOnce({
       findings: [
         { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
@@ -956,6 +958,7 @@ describe("ViewerPresenter", () => {
 
   it("focusing a component finding lights it up as a component (not a net)", async () => {
     const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     h.checkDesign.mockResolvedValueOnce({
       findings: [{ rule: "single-pin-net", severity: "warning", subject: { kind: "component", ref: "C1", pin: "" }, message: "c" }],
     });
@@ -972,6 +975,7 @@ describe("ViewerPresenter", () => {
 
   it("focusing a finding in Native mode hops to WebGL (no overlay for the golden document)", async () => {
     const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     h.checkDesign.mockResolvedValueOnce({
       findings: [{ rule: "single-pin-net", severity: "warning", subject: { kind: "component", ref: "R1", pin: "" }, message: "r" }],
     });
@@ -1166,6 +1170,7 @@ describe("clearHighlights (agni issue 348)", () => {
 
   it("reports through the control bar whether anything is lit, so the control can disable", async () => {
     const h = seeded();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     await openAndCheck(h, "m", "d.edn");
     expect(lastControls(h).hasHighlights).toBe(true);
 
@@ -1177,6 +1182,7 @@ describe("clearHighlights (agni issue 348)", () => {
     // The regression guard for the fix. Clearing and toggling are different intents and must stay
     // different. A toggle returns the reader to the overview, and only the clear turns it off.
     const h = seeded();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     await openAndCheck(h, "m", "d.edn");
     await h.presenter.selectFinding("R1");
     await h.presenter.selectFinding("R1"); // same subject, no sheet: the toggle-off path
@@ -1336,5 +1342,47 @@ describe("query sets", () => {
     const saved: unknown[] = [];
     await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q2");
     expect(saved).toHaveLength(1);
+  });
+});
+
+// agni issue 356: a run lights nothing on the drawing until a finding is clicked, unless the reader
+// asked for every finding at once.
+describe("the run-wide field is opt-in", () => {
+  const twoFindings = (h: ReturnType<typeof harness>) =>
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
+        { rule: "diff-pair-naming", severity: "warning", subject: { kind: "net", ref: "TXP", pin: "" }, message: "d" },
+      ],
+    });
+  const last = (h: ReturnType<typeof harness>) => h.canvas.setHighlights.mock.calls.at(-1)?.[0];
+
+  it("lights nothing after a run", async () => {
+    const h = harness();
+    twoFindings(h);
+    await openAndCheck(h, "m", "board.edn");
+    expect(last(h)).toEqual([]);
+    expect(lastFindings(h).findings).toHaveLength(2); // the findings are there, only undrawn
+  });
+
+  it("draws a clicked finding alone, and nothing again when it is clicked off", async () => {
+    const h = harness();
+    twoFindings(h);
+    await openAndCheck(h, "m", "board.edn");
+    await h.presenter.selectFinding("STUB");
+    expect(last(h)).toEqual([{ nets: ["STUB"], shape: HighlightShape.PATH }]);
+    await h.presenter.selectFinding("STUB");
+    expect(last(h)).toEqual([]);
+  });
+
+  it("draws every finding when the reader turns it on, and keeps a focus while it changes", async () => {
+    const h = harness();
+    twoFindings(h);
+    await openAndCheck(h, "m", "board.edn");
+    await h.presenter.setShowAllFindings(true);
+    expect(new Set(last(h)[0].nets)).toEqual(new Set(["STUB", "TXP"]));
+    await h.presenter.selectFinding("STUB");
+    await h.presenter.setShowAllFindings(false);
+    expect(last(h)).toEqual([{ nets: ["STUB"], shape: HighlightShape.PATH }]);
   });
 });

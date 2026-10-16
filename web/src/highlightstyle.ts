@@ -49,11 +49,39 @@ export function saveHighlightStyle(storage: StyleStorage, style: HighlightStyle)
   }
 }
 
+// SHOW_ALL_KEY remembers whether this viewer draws every finding of a run at once (agni issue 356).
+export const SHOW_ALL_KEY = "agni-highlight-show-all";
+
+// loadShowAll reads the saved choice, false when nothing is saved or the store cannot be read, which
+// is the default: a run lights nothing until a finding is clicked.
+export function loadShowAll(storage: Pick<Storage, "getItem">): boolean {
+  try {
+    return storage.getItem(SHOW_ALL_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+// saveShowAll persists the choice, best-effort as saveHighlightStyle is.
+export function saveShowAll(storage: Pick<Storage, "setItem">, on: boolean): void {
+  try {
+    storage.setItem(SHOW_ALL_KEY, on ? "1" : "0");
+  } catch {
+    // best-effort persistence
+  }
+}
+
 // highlightMenu renders the top bar's "Highlight" dropdown (WS9-044), a color picker plus opacity
 // and width sliders for the focus marker. Editing a control persists the style and calls onChange
 // with it. Reset clears the saved style and calls onChange(undefined), so the presenter restores
-// the built-in look.
-export function highlightMenu(host: HTMLElement, storage: MenuStorage, onChange: (style: HighlightStyle | undefined) => void): void {
+// the built-in look. With onShowAll it also offers "Show every finding" (agni issue 356), saved per
+// viewer and reported through onShowAll.
+export function highlightMenu(
+  host: HTMLElement,
+  storage: MenuStorage,
+  onChange: (style: HighlightStyle | undefined) => void,
+  onShowAll?: (on: boolean) => void,
+): void {
   const doc = host.ownerDocument;
   const style = loadHighlightStyle(storage) ?? { ...DEFAULT_HIGHLIGHT_STYLE };
   const btn = doc.createElement("button");
@@ -90,6 +118,19 @@ export function highlightMenu(host: HTMLElement, storage: MenuStorage, onChange:
   });
 
   panel.append(labeledRow(doc, "Color", color), labeledRow(doc, "Opacity", opacity), labeledRow(doc, "Width", width), reset);
+  if (onShowAll) {
+    const all = doc.createElement("input");
+    all.type = "checkbox";
+    all.className = "highlight-show-all";
+    all.checked = loadShowAll(storage);
+    all.addEventListener("change", () => {
+      saveShowAll(storage, all.checked);
+      onShowAll(all.checked);
+    });
+    const row = labeledRow(doc, "Show every finding", all);
+    row.title = "Light every finding of the run on the drawing at once, rather than only the one clicked";
+    panel.append(row);
+  }
   btn.addEventListener("click", () => {
     panel.style.display = panel.style.display === "none" ? "block" : "none";
   });

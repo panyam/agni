@@ -36,7 +36,7 @@ import { fetchFile } from "./wasm/fetchfile.js";
 import { BROWSER_MOUNT, installDrop } from "./wasm/drop.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
-import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
+import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
 import { appBase, currentLocation, hasFile, locationToUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { LocateReason, drawnSheets, searchPattern } from "./query.js";
@@ -725,7 +725,14 @@ class AppRoot extends BaseComponent {
     if (highlightMenuEl) {
       const saved = loadHighlightStyle(window.localStorage);
       if (saved) presenter.setHighlightStyle(saved);
-      highlightMenu(highlightMenuEl, window.localStorage, (style) => presenter.setHighlightStyle(style));
+      // Whether a run lights every finding at once is the reader's choice, off by default (agni 356).
+      if (loadShowAll(window.localStorage)) void presenter.setShowAllFindings(true);
+      highlightMenu(
+        highlightMenuEl,
+        window.localStorage,
+        (style) => presenter.setHighlightStyle(style),
+        (on) => void presenter.setShowAllFindings(on),
+      );
     }
 
     children.push(
