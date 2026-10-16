@@ -22,7 +22,7 @@ links rather than here. Log each exercise run on the mission issue.
   exercise passed at `4433e6de`, so the mission closes once someone reads the rungs end to end by eye.
 - **#845 `mission_browser_review`**, 4 of 16. The exercise is a manual walk with no logged run yet.
   #902 (a Properties panel and query tabs) is the viewer's next shape.
-- **#851 `mission_public_demo`**, 44 of 64. #1002 (P1) is the only P1, and it needs clean deployed
+- **#851 `mission_public_demo`**, 44 of 67. #1002 (P1) is the only P1, and it needs clean deployed
   runs rather than code: two deployed walks at `4433e6de` opened every seed with the one failure
   #975, so 3 of the 10 clean runs #1002 asks for. Run checks on Jetson took 5.9 s at `18cfe8f6` and
   8.8 and 16.8 s at `4433e6de`, but the engine's share stayed near 6.4 s and the rest waited on a
