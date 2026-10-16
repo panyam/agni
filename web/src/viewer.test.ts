@@ -874,6 +874,48 @@ describe("ViewerPresenter", () => {
     expect(lastFindings(h).findings).toHaveLength(2);
   });
 
+  // agni issue 390: the panel holds one run, and Run asks only for the selected rules it lacks, so a
+  // repeated Run asks nothing.
+  it("asks only for the rules the run lacks, and nothing on a repeated Run", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setRuleSelection(["single-pin-net"]);
+    await h.presenter.runChecks();
+    await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]);
+    expect(lastFindings(h).pending).toBe(1); // diff-pair-naming waits for a Run
+    h.checkDesign.mockClear();
+    await h.presenter.runChecks();
+    expect(h.checkDesign.mock.calls.map((c) => (c[0] as { rules?: string[] }).rules)).toEqual([["diff-pair-naming"]]);
+    expect(lastFindings(h).pending).toBe(0);
+    h.checkDesign.mockClear();
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+  });
+
+  it("folds a later run's answer into the one run, so both rules' findings show", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setRuleSelection(["single-pin-net"]);
+    h.checkDesign.mockResolvedValueOnce({ findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" }] });
+    await h.presenter.runChecks();
+    await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]);
+    h.checkDesign.mockResolvedValueOnce({ findings: [{ rule: "diff-pair-naming", severity: "warning", subject: { kind: "net", ref: "TXP", pin: "" }, message: "d" }] });
+    await h.presenter.runChecks();
+    expect(lastFindings(h).findings.map((f: { subject: string }) => f.subject).sort()).toEqual(["STUB", "TXP"]);
+  });
+
+  it("keeps nothing of the last run after a convention change", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    expect(lastFindings(h).findings).toHaveLength(1);
+    await h.presenter.setConvention("");
+    expect(lastFindings(h).findings).toHaveLength(0);
+    expect(lastFindings(h).pending).toBe(lastFindings(h).ruleCount);
+  });
+
   it("empty selection shows no rules selected and runs nothing", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn");

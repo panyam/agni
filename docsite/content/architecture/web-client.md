@@ -141,7 +141,15 @@ and the request's appear under a different namespace. A surviving verdict can th
 that no longer exists and answer for a subject nothing re-examined, which is a coverage claim about a
 run that never happened.
 
-The fix was to clear them together and assert it, rather than leaving the mirror between two caches to
-hold by inspection. The better fix is for the frontend not to hold answers at all, which needs the
-server to cache first or toggling a rule re-runs every selected rule. That is agni issue 390, along
-with the presenter split it enables.
+The first fix was to clear them together and assert it, rather than leaving the mirror between two
+caches to hold by inspection. Agni issue 390 then removed the mirror. The server keeps each rule's
+results on the design's cached model, so a rule it has already run costs a round trip and no
+evaluation. The presenter holds one run, the engine's `CheckDesignResponse` with the rules it
+answers, and the findings, the considered set, the skipped rules, a saved report and the Tables panel
+all read it. A new design or a convention change drops it in one place.
+
+The presenter still keeps that one answer rather than asking the server again on every Run. Run asks
+only for the selected rules the run lacks and folds the reply in. Asking for the whole selection
+each time was measured on Jetson at 0.3 to 0.8 s in the browser for an answer already on screen,
+where keeping it costs nothing. The rule is one held answer per question, never a second copy of it
+beside the first.
