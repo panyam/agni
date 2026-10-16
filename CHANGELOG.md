@@ -10,8 +10,23 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-16
+
+The engine in the browser and a static public demo, the datasheet tooling as its own module and
+image (`agnids`), project query sets and derived relations, query sets, tables and `--remote`, and a
+viewer with a Properties panel, query tabs and saved reports.  Tagged a patch with output changes a
+gate may read, as v0.2.1 was.  The full write-up is [RELEASES/v0.2.2.md](RELEASES/v0.2.2.md).
+
 ### Changed
 
+- A length is published in metres and shown in millimetres, so a threshold over one writes its unit
+  (`?w < 0.2mm`); a bare number is metres (agni issues 1035, 1037).
+- Conventions and checklists are sections of `project.yaml`, and intent a section of `design.yaml`;
+  the old files are load errors naming where their content goes.
+- The datasheet workbench is `agnids`, its own binary, module and image.
+- `agni query --set` takes a project set's name as well as a file (agni issue 745).
+- In the viewer, a click selects into Properties, and Run checks lights nothing until a finding is
+  clicked (agni issues 902, 356).
 - **Breaking.** `review --format json` emits protojson of the `Review` the `CreateReview` rpc returns,
   and several designs emit a `ListReviewsResponse`, where both used to be hand-rolled shapes (agni issue
   734).  Items keep `id`, `outcome` and `findings`, spelled as protojson spells them, and gain the whole
