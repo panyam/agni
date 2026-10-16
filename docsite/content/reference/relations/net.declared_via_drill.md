@@ -6,7 +6,7 @@ description: "the via drill a net SHOULD route at, cascaded across its classes b
 ### What it is
 
 `net.declared_via_drill(net, mm)` yields the via drill a net SHOULD be routed at according to the
-project's own net-class declarations, in millimetres, one row per net the project actually
+project's own net-class declarations, held in metres and shown in mm, one row per net the project actually
 constrained. It is the resolved answer, taken after the cascade across the net's classes has run.
 
 Pair it with `board.via_drill(net, mm)`, the ACTUAL routed value in the same units. A comparison of the

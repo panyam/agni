@@ -1,12 +1,12 @@
 ---
 title: "netclass.via_diameter"
-description: "the via diameter a net class declares (millimetres)"
+description: "the via diameter a net class declares (metres, shown in mm)"
 ---
 
 ### What it is
 
 `netclass.via_diameter(class, mm)` yields the via pad diameter a net class DECLARES its nets should
-route at, in millimetres, one row per class that states one. A class that states none yields no row,
+route at, held in metres and shown in mm, one row per class that states one. A class that states none yields no row,
 which is a meaningful fact rather than a gap, because that field then cascades to a lower-priority
 class.
 

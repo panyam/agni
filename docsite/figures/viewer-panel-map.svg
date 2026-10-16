@@ -1,5 +1,5 @@
 <svg viewBox="0 0 640 330" role="img" aria-labelledby="viewer-panel-map-title" style="width:100%;height:auto;font-family:inherit">
-  <title id="viewer-panel-map-title">A map of the viewer window. A file tree runs down the left, the canvas fills the middle and carries a per-sheet finding badge, and four panels stack down the right: Findings, Rules, Compare and Review. Each panel is annotated with the rung of the tutorial it comes from, because every one of them is a tier built earlier at the command line.</title>
+  <title id="viewer-panel-map-title">A map of the viewer window. A file tree runs down the left, the canvas fills the middle and carries a per-sheet finding badge, and four of its panels stack down the right: Checks, Rules, Diff and Review. Each panel is annotated with the rung of the tutorial it comes from, because every one of them is a tier built earlier at the command line.</title>
   <rect x="20" y="40" width="600" height="230" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.55"/>
   <line x1="20" y1="62" x2="620" y2="62" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
   <text x="32" y="56" fill="currentColor" font-size="9.5" opacity="0.55">localhost:8090</text>
@@ -20,9 +20,9 @@
   <rect x="438" y="170" width="174" height="44" rx="3"/>
   <rect x="438" y="220" width="174" height="42" rx="3"/></g>
   <g fill="currentColor" font-size="11" font-weight="600">
-  <text x="450" y="90">Findings</text>
+  <text x="450" y="90">Checks</text>
   <text x="450" y="140">Rules</text>
-  <text x="450" y="190">Compare</text>
+  <text x="450" y="190">Diff</text>
   <text x="450" y="240">Review</text></g>
   <g fill="currentColor" font-size="9" opacity="0.55">
   <text x="450" y="105">select a row to light the net, rung 2</text>

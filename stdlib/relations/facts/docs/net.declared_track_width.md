@@ -3,7 +3,7 @@
 ### What it is
 
 `net.declared_track_width(net, mm)` yields the track width a net SHOULD be routed at according to
-the project's own net-class declarations, in millimetres, one row per net the project actually
+the project's own net-class declarations, held in metres and shown in mm, one row per net the project actually
 constrained. It is the resolved answer, computed after the cascade across the net's classes.
 
 Pair it with `board.track_width(net, mm)`, the ACTUAL routed value in the same units. Declared

@@ -124,6 +124,21 @@ run a project's own checklist, ask `list_checklists(design_uri=…)` for the che
 declares, inherited ones included, and send one's `manifest` to `create_review`; the first is the
 project's default (agni issue 859).
 
+### When a request fails
+
+A failed rpc answers with a Connect error, a `code`, a `message` and a list of `details`. A
+`RunQuery` whose query does not parse fails with `invalid_argument` and carries one detail, an
+`agni.v1.webapi.TextPosition` saying where in the query's text it stopped. Its `offset` counts bytes,
+and its `line` and `column` count from 1, the column in characters as an editor counts it. A `RunQueries` answer does not
+fail for one bad query. That query's `NamedQueryResult` carries the reason in `error` and, when it
+did not parse, the place in `error_at`, while the rest of the set still answers.
+
+The CLI writes the same error. A command run with `--format json` whose request fails writes the
+error as the Connect protocol encodes it, to stdout or to `-o`'s file, and still exits non-zero with
+the text error on stderr, so a script reads one JSON shape whichever transport it used. A mistake in
+the command's own flags makes no request, so it stays text on stderr. The
+[CLI reference](../../guide/cli-reference/) shows an example, and CONSTRAINTS C31 is the rule.
+
 ## Where the two transports differ today
 
 `clients/python/tests/test_cross_transport.py` sends the same request both ways and asserts the two

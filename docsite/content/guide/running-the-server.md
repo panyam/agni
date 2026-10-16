@@ -286,6 +286,30 @@ scoping, and no session isolation, so anyone who can reach the port sees every m
 can reach `agnids` can write through the datasheets workbench. That is the right trade for localhost and the wrong one for a
 shared host. Put it behind something that authenticates before you expose it.
 
+## Analysing in the visitor's browser
+
+The viewer's analysis can run in the visitor's browser instead of on the server. The engine is the
+same Go code compiled to WebAssembly, and it answers the same calls the server does, so the panels
+cannot tell which one answered. `make wasm` builds it, and then either the server or a single page
+picks it:
+
+```
+agni serve --engine wasm --mount tut=examples/tutorial-project
+```
+
+A page's `?engine=wasm` or `?engine=server` overrides the server's choice for that page. On the
+`wasm` engine the page fetches the design's files from the server once and analyses them in a worker,
+and after that only listings and file reads reach the server. Files a visitor drops on the page stay
+in the browser whichever engine is chosen.
+
+A design whose files add up to more than `--wasm-max-bytes` (128 MB by default) goes to the server
+engine instead, and the top bar says so. The default comes from measuring a 97 MB KiCad board, which
+the browser read in 2.4 s and checked in 8.8 s.
+
+With no server at all, `agni site <outdir> --base <path> --seed <name>=<folder>` writes the viewer,
+the engine and the seeded designs as static files any web host can serve. That is how
+[the public demo](../../demos/) runs, since the project hosts no server for it.
+
 ## Kept reads
 
 The server keeps what it read between requests, so a second query, check or drawing on a design
@@ -295,8 +319,9 @@ repeated net count went from 656 ms to 2.5 ms and a one-rule check from 1.35 s t
 A kept read is checked on every use against each file it opened, walked or looked for and did not
 find: the entry, every sub-sheet, a declared companion, the board and the symbol libraries. Edit any
 of them and the next request reads the design again. A read whose project configuration cannot be
-identified is never kept. `--design-cache <n>` sets how many reads are kept (default 12), and 0 keeps
-none.
+identified is never kept. A check also keeps each rule's findings on the kept model, so a later
+check of the same design runs only the rules it has not run yet. `--design-cache <n>` sets how many
+reads are kept (default 12), and 0 keeps none.
 
 ## A work budget for served queries
 
@@ -348,6 +373,10 @@ last. The viewer asks for it when its address carries `?timing` (or `?timing=exp
 request's breakdown to the console, and the browser engine answers it just as the server does. The
 CLI's `--timing` on `check`, `query`, `trace` and `review` prints it from the same record, and
 `query --explain` prints the plans alone.
+
+To find which stage raised the memory peak, send `Agni-Timing: memory` instead, or open the page with
+`?timing=memory`, or pass `--timing-memory` on the CLI. Each stage then carries the process's memory
+as it ended, and each rule what it allocated.
 
 Stages nest, so `build.model` includes the reads beneath it (`read.netlist`, `read.board`) and the
 model it builds, and the stage list says when each started as well as how long it took.

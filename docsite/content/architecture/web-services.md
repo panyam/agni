@@ -84,6 +84,12 @@ A few contract details bite if missed.
   without another call. GetReviewManifest is the bridge for a checklist FILE, such as a YAML sibling
   of a design that belongs to no project, held by a client with a URI and no filesystem. The server
   reads and validates the checklist once, and the client sends back the value it got. The CLI skips it, because reading the file the user named is its own job.
+- **A query that does not parse says where.** RunQuery then fails with `invalid_argument` carrying
+  a `TextPosition` error detail (byte `offset`, `line` and `column` from 1, the column counted in
+  characters), which the query panel turns into a caret under the place. RunQueries answers the rest
+  of the set and marks the bad query in its `NamedQueryResult`, with `error` and `error_at`. The CLI
+  under `--format json` writes a failed request as this same Connect error JSON, so a script and a
+  client parse one shape (C31).
 - **Reviews and projects are resources, and everything else is a verb.** A review RUN outlives
   the call that made it, so it has a name and the four standard methods, with paging and filtering
   following AIP. A project and its designs carry names an operator declared, so they get `Get` and

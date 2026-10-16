@@ -9,6 +9,9 @@ If a word here is unfamiliar, that page is the glossary.
 
 ## Install
 
+To try it with nothing installed, open [the demo](../../demo/), which runs the engine in your
+browser over a few example boards or a folder of your own.
+
 If you have a Go toolchain, install the CLI straight onto your `PATH`:
 
 ```

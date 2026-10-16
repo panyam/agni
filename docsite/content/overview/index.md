@@ -26,11 +26,13 @@ the read-first version.
 
 ## What it does today
 
-- reads EDIF, KiCad, and IPC-2581 into one neutral representation,
+- reads EDIF, KiCad, IPC-2581, xschem, gEDA and Lepton, and Telesis netlists into one neutral
+  representation,
 - runs a catalog of electrical and integrity checks, each finding cited to its evidence,
 - compares two revisions as a structured diff,
 - answers datalog queries about nets, parts, copper, and datasheet limits,
-- renders schematics and boards in the browser.
+- renders schematics and boards in the browser, where [the demo](../demo/) also runs the engine
+  itself with nothing installed.
 
 ## Two ways in
 
@@ -39,7 +41,12 @@ the read-first version.
 
 ## How these docs are organized
 
-- **[Use it](../guide/)** covers running the tool on a design.
+- **[Tutorials](../tutorials/)** take one board from its first read to a checklist gating CI.
+- **[Use it](../guide/)** covers running the tool on a design, one feature per page.
 - **[Build on it](../build/)** covers adding readers, rules, or an extension.
 - **[Understand it](../architecture/)** covers how the internals fit together, by subsystem.
-- **[Reference](../reference/)** holds the software-to-hardware analogy and the format primers.
+- **[Learn the domain](../learn/)** is twelve chapters on what a hardware engineer knows, each
+  ending in the rules that encode it.
+- **[Reference](../reference/)** holds the rule and relation catalogs, the glossary, the
+  software-to-hardware analogy and the format primers.
+- **[Demos](../demos/)** says what the in-browser demo is and why it runs there.

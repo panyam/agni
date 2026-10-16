@@ -118,7 +118,7 @@ rung 1. Confirm what was read, then score it.
 The **sheet badge** carries the finding count, so a multi-sheet design shows you where the problems
 are before you open anything.
 
-**Findings** is the table above. Selecting a row highlights its subject on the canvas, which a terminal
+**Checks** holds the findings table above. Selecting a row highlights its subject on the canvas, which a terminal
 cannot do, so you go from "net `/SFP/SFI_CONN_RX_P` has no ESD protection" to seeing where that net
 actually runs. Nothing is lit until you select one, since a sheet with a few dozen findings would
 otherwise be mostly highlight. **Highlight › Show every finding** lights the whole run at once, and the
@@ -138,7 +138,35 @@ the built-in `profile/` count down by four and adds three `jetson-profiles/` rul
 project's PCIe profile replaces the built-in one wholesale and declares one requirement fewer. The
 CLI says the same thing in its `supersedes` note.
 
-**Compare** is [rung 10's](../10-compare-revisions/) diff with a revision picker.
+**Properties** follows the selection. Click something on the canvas and it shows what that thing is,
+what it connects to, and for a part whether the corpus holds its datasheet spec. Its **ask**
+row offers questions about the selection, and each opens in the Query panel with the query visible
+before it runs.
+
+**Query** is the [querying guide](../../guide/querying/) with a drawing attached. Each question gets
+a tab of its own, so an answer stays put while you ask the next one, and clicking a cell locates its
+net or part on the canvas. The **Sets** menu opens the query sets the project keeps in `queries/`,
+one tab per query. A query that does not parse shows its line with a caret under the place it
+stopped, as `agni query` prints it.
+
+**Trace** asks for two pins and follows the signal through the series parts between them, as
+`agni trace` does, then lights the route on the drawing. A pin name that matches nothing in the
+design says so, which is a different answer from two pins with no route between them.
+
+**Tables** lays the run on screen out as rows, the findings, the verdicts and the rules that were
+skipped, and a comparison's changes while one is open. A header click sorts it the way
+`--order-by` does, and Save CSV writes the csv the CLI would write for the same answer.
+
+**Coverage** shows each interface profile the design matched, with a chip per required signal, so
+the PCIe profile from rung 5 reads as signals found and signals missing. A found signal's chip
+locates its net.
+
+**Parts** lists every part whose MPN has a published spec, with its parameters, limits and the
+datasheet page each came from. It reads the `params/` rung 6 seeded, so a part with no spec there
+does not appear.
+
+**Compare** in the top bar opens [rung 10's](../10-compare-revisions/) diff with a revision picker,
+in the **Diff** and **Changes** panels.
 
 **Review** is your checklist from [rung 8](../08-write-your-checklist/), scored in the browser. It
 needs no second server, because `--review-store` was on the command at the top, and `project.yaml`
@@ -160,7 +188,7 @@ a board item as `not-applicable`, so if you have an older run in the history, th
 disagrees.
 
 A failing item lists the findings that failed it, and clicking one highlights it on the canvas, which
-is the same move Findings offers one level down.
+is the same move Checks offers one level down.
 
 Runs are kept, so the panel opens on the latest one and the picker holds the history. That is the
 browser half of [rung 11](../11-archive-and-gate/), and it compares this week's verdict against

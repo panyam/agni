@@ -39,10 +39,10 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`net.role(net, role)`](net.role/) | a role the net carries, derived from its name by the lexicon (rail, ground, feedback, switching, control, gate_drive); one row per role, the net-side twin of component.class |
 | [`net.signal_level(net, volts)`](net.signal_level/) | the signalling level a NON-RAIL net's name declares, the other half of net.nominal_voltage. A house convention that encodes a level into a signal net's name lands here rather than being read as a rail nominal; a regulator internal is on neither relation |
 | [`net.switching(net)`](net.switching/) | the net is a regulator power-stage node, the switch node or its bootstrap (must not be probed); the twin of feedback |
-| [`netclass.clearance(class, mm)`](netclass.clearance/) | the clearance a net class declares its nets should route at (millimetres) |
-| [`netclass.track_width(class, mm)`](netclass.track_width/) | the track width a net class declares its nets should route at (millimetres) |
-| [`netclass.via_diameter(class, mm)`](netclass.via_diameter/) | the via diameter a net class declares (millimetres) |
-| [`netclass.via_drill(class, mm)`](netclass.via_drill/) | the via drill a net class declares (millimetres) |
+| [`netclass.clearance(class, mm)`](netclass.clearance/) | the clearance a net class declares its nets should route at (metres, shown in mm) |
+| [`netclass.track_width(class, mm)`](netclass.track_width/) | the track width a net class declares its nets should route at (metres, shown in mm) |
+| [`netclass.via_diameter(class, mm)`](netclass.via_diameter/) | the via diameter a net class declares (metres, shown in mm) |
+| [`netclass.via_drill(class, mm)`](netclass.via_drill/) | the via drill a net class declares (metres, shown in mm) |
 | [`pin.name(ref_des, pin, name)`](pin.name/) | the part type's functional name for a pin ("SDA", "PTC11"), the spelling a datasheet and a firmware header use, against the package designator every other pin relation is keyed on; absent when the part type declares none |
 | [`pin.net(ref_des, pin, net)`](pin.net/) | the net a pin is on (absent if unconnected) |
 | [`pin.role(ref_des, pin, role)`](pin.role/) | a pin's derived role (power/ground/anode/cathode) |
@@ -56,8 +56,8 @@ The relations a datalog query joins over. Each documented relation links to its 
 | Relation | Summary |
 |---|---|
 | [`board.layer(net, layer)`](board.layer/) | a net appears on a board copper layer |
-| [`board.track_width(net, mm)`](board.track_width/) | a copper track's width on a net (millimetres) |
-| [`board.via_drill(net, mm)`](board.via_drill/) | a via's drill diameter on a net (millimetres) |
+| [`board.track_width(net, mm)`](board.track_width/) | a copper track's width on a net (metres, shown in mm) |
+| [`board.via_drill(net, mm)`](board.via_drill/) | a via's drill diameter on a net (metres, shown in mm) |
 
 ## datasheet
 

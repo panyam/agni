@@ -1,45 +1,53 @@
 ---
-title: "Demos"
-description: "Interactive playgrounds that run in your browser."
+title: "About the demo"
+description: "What the live demo is, why it runs in your browser, and how it relates to agni serve."
 playground: viewer
 ---
 
-[The demo]({{.Site.PathPrefix}}/demo/) opens a few example boards, or a design you drop on it, in the
-viewer with the engine running in your browser. A dropped design never leaves the page.
+[The demo]({{.Site.PathPrefix}}/demo/) opens a design in the agni viewer with the engine running in
+your browser. You install nothing, and nothing you open is uploaded.
 
-The goal for this section is a set of playgrounds you can drive in the browser, right inside
-the docs:
+## What it holds
 
-- a **datalog query** playground over a seeded design,
-- a **schematic and board viewer** you can pan, zoom, and highlight,
-- a **diff** view between two revisions,
-- and eventually the full **web app** with an uploaded or seeded corpus.
+The landing page lists a few seed designs. One is the gateway board the
+[tutorials](../tutorials/) use, and the others are open-source KiCad boards from the samples corpus,
+each shipped under its own licence. Open one and the viewer draws its sheets and its board, runs the
+rule catalog, answers queries and traces a signal, the same as it would against a server. Running a
+checklist needs a server for now, because the browser engine keeps no review store
+([#931](https://github.com/panyam/agni/issues/931)).
 
-## Design viewer (prototype)
+You can also drop a folder or a `.zip` of your own design files on the page, or pick them with its
+"Open files" button. The page proposes which designs the files make, shows each as the `design.yaml`
+that would declare it, and lets you edit that before opening one. Dropped files stay in the tab and
+are never sent anywhere.
 
-Drag to pan, scroll to zoom, or use the toolbar. These render a design Agni produced with
-`agni render`, baked into the page at build time. The tag and mount contract are the same
-ones the live wasm engine will drive later; only the data source changes.
+The browser engine has a size limit, 128 MB of design files by default. A page served by
+`agni serve --engine wasm` sends a design over `--wasm-max-bytes` to the server and says so in its
+top bar. The demo has no server behind it, so it is for designs under that size.
 
-### A board layout
+## Why it runs in the browser
+
+The project does not host a server for its demos. The docs are static files on GitHub Pages, so the
+demo is static files too. `agni site` (`make demo-site`) writes the viewer, the engine compiled to
+WebAssembly and the seed designs under `/agni/demo/`, and the docs workflow publishes them with every
+merge to main.
+
+The analysis needs no server because the same services run in either place. The viewer sends the
+same calls whoever answers them. `agni serve` answers them on your machine or a shared host, and the
+WebAssembly engine answers them in the visitor's browser. Either one reads the design, runs the
+checks and evaluates the queries, and the viewer only draws the answers. On your own server,
+`agni serve --engine wasm` or a page's `?engine=wasm` picks the browser engine for one design, and
+[Running the server](../guide/running-the-server/) covers both. How the two engines are held to the
+same answers is in
+[The same contract in the browser](../architecture/web-services/#the-same-contract-in-the-browser).
+
+## Two static renders
+
+These two are pictures rather than the live viewer. `agni render` drew them at build time, and you
+can drag to pan and scroll to zoom.
 
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/demo-board.svg"
              caption="Demo board with front and back copper, zones and vias"></agni-viewer>
 
-### A faithful schematic
-
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/demo-schematic.svg"
              caption="Faithful schematic render"></agni-viewer>
-
-## How these will run
-
-There is no backend. The docs are hosted as static files (GitHub Pages), so the playgrounds
-run entirely in your browser. The viewer above needs no engine at all: it pans and zooms a
-pre-rendered SVG. The richer playgrounds (query, diff, live highlight) need Agni's engine
-compiled to WebAssembly, with a small set of seeded designs preloaded into an in-browser
-virtual filesystem. The same service calls the web app makes over the network resolve against
-the wasm engine locally instead.
-
-The site scaffolding already has the hook for it. A front-matter flag (`playground: viewer`)
-selects a component bundle, built by the same esbuild toolchain the web app uses, which
-hydrates the inline `<agni-viewer>` tags on the page.
