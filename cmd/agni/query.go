@@ -137,7 +137,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				// issue 1045), so the CLI builds no response of its own.
 				resp, err := service.NewQueryService(nil, nil, nil).RunSpecLibQuery(cmd.Context(), specs, args[0], filepath.Base(paramsDir), bind)
 				if err != nil {
-					return withCaret(rpcFailed(err), args[0])
+					return withCaret(rpcFailed(err))
 				}
 				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)), orderBy)
 			}
