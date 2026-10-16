@@ -127,12 +127,22 @@ func (s QuerySet) Validate() error {
 // Compile returns the i'th query with the preamble's rules in front of it, ready to evaluate. A
 // syntax error's position is within the i'th query's own text.
 func (s QuerySet) Compile(i int) (Query, error) {
-	prefix := ""
-	if strings.TrimSpace(s.Preamble) != "" {
-		prefix = s.Preamble + ";\n"
-	}
+	prefix := s.prefix()
 	q, err := Parse(prefix + s.Queries[i].Query)
 	// A syntax error points into the query as its author wrote it, not into the text with the
 	// preamble in front.
 	return q, shifted(err, prefix, s.Queries[i].Query)
+}
+
+// Text is the i'th query as Compile parses it, with the preamble's rules in front, so a caller that
+// sends the query somewhere a set does not travel (a viewer link, agni issue 634) sends what the set
+// would have asked.
+func (s QuerySet) Text(i int) string { return s.prefix() + s.Queries[i].Query }
+
+// prefix is the preamble as the text in front of each query, "" for a set with none.
+func (s QuerySet) prefix() string {
+	if strings.TrimSpace(s.Preamble) != "" {
+		return s.Preamble + ";\n"
+	}
+	return ""
 }

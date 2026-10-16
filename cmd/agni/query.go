@@ -42,6 +42,8 @@ func queryCmd() *cobra.Command {
 	var budget int64
 	var bindArgs []string
 	var remoteURL string
+	var serverVal string
+	var srvSpec serverSpec
 	c := &cobra.Command{
 		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
@@ -95,6 +97,15 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			return cobra.ExactArgs(2)(cmd, args)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Before redirectOut, so a --server this process cannot honour refuses the run before the
+			// output file exists (agni issue 637).
+			var err error
+			if serverVal != "" && (specLib || showRelations || showExamples) {
+				return fmt.Errorf("--server links a design's view, and this run reads no design")
+			}
+			if srvSpec, err = resolveServer(serverVal); err != nil {
+				return err
+			}
 			closeOut, err := redirectOut(cmd, outPath)
 			if err != nil {
 				return err
@@ -193,7 +204,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if queryLimit != 0 {
 					return fmt.Errorf("--limit caps one query's answer; a set's queries write their own limit")
 				}
-				return runQuerySet(cmd, svc, setPath, designURI, boardURI, overlay, format, title, budget)
+				return runQuerySet(cmd, svc, setPath, designURI, boardURI, overlay, format, title, budget, queryLinker(cmd, srvSpec, args[0]))
 			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
 				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
@@ -205,6 +216,13 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			})
 			if err != nil {
 				return withCaret(rpcFailed(err))
+			}
+			// The link asks the same question again in the viewer (agni issue 634), with the values it
+			// was bound to, so it re-asks this question rather than a wider one.
+			if link := queryLinker(cmd, srvSpec, args[0]); link != nil {
+				if u := link(func(meta rpt.Report) string { return rpt.QueryURL(meta, args[1], title, bindArgs) }); u != "" {
+					defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
+				}
 			}
 			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI), orderBy)
 		},
@@ -226,6 +244,8 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons plus generator rows), as `agni serve --query-budget` does. 0, the default, sets none")
 	c.Flags().StringArrayVar(&libDirs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the query, beside any the design's project carries. Repeatable")
 	remoteFlag(c, &remoteURL)
+	serverFlag(c, &serverVal)
+	withSelfServer(c, &srvSpec)
 	c.Flags().StringVar(&relDesign, "design", "", "with --relations, a design whose project's own library (lib/) joins the catalog, so its members list beside the shipped ones")
 	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations and no member path, also print each member's full reference doc")
 	return c
@@ -391,7 +411,8 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 // path is a set file, - for stdin, or the name of a set the design's project keeps in its queries/
 // directory (agni issue 745), which ListQuerySets answers as it does for the viewer. Only a name
 // ending .yaml or .yml is read as a file, the rule --checklist follows.
-func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI string, overlay *webapi.OverlayConfig, format, title string, budget int64) error {
+func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI string, overlay *webapi.OverlayConfig, format, title string, budget int64, link linker) error {
+	named := path
 	set, path, err := readQuerySet(cmd, svc, path, designURI)
 	if err != nil {
 		return err
@@ -408,6 +429,23 @@ func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI str
 	}
 	if err := renderQuerySet(cmd.OutOrStdout(), format, set, resp); err != nil {
 		return err
+	}
+	// One link per query. A set the project keeps is linked by its name and the query's, so the link
+	// stays short and follows the set; a set read from a file is not on the server, so its link
+	// carries each query's text as the set would ask it (agni issue 634).
+	if link != nil {
+		fromProject := named != "-" && !strings.HasSuffix(named, ".yaml") && !strings.HasSuffix(named, ".yml")
+		for i, q := range set.Queries {
+			u := link(func(meta rpt.Report) string {
+				if fromProject {
+					return rpt.QuerySetURL(meta, named, q.Name)
+				}
+				return rpt.QueryURL(meta, set.Text(i), q.Name, query.BindArgs(q.Bind))
+			})
+			if u != "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "look at %s: %s\n", q.Name, u)
+			}
+		}
 	}
 	failed := 0
 	for _, r := range resp.GetResults() {
@@ -584,4 +622,29 @@ func withCaret(err error) error {
 		return err
 	}
 	return fmt.Errorf("%w\n  %s", err, strings.ReplaceAll(caret, "\n", "\n  "))
+}
+
+// linker mints one link from the run's link metadata, which it resolves once, or "" when no link is
+// safe to make.
+type linker func(build func(meta rpt.Report) string) string
+
+// queryLinker returns the linker for a query run under --server, or nil when the run asked for no
+// links. Whether a link is safe is decided by viewerLinkMeta, the helper check and trace use, from
+// this machine's mount table whichever engine answered.
+func queryLinker(cmd *cobra.Command, spec serverSpec, design string) linker {
+	if !spec.active() {
+		return nil
+	}
+	var meta *rpt.Report
+	return func(build func(rpt.Report) string) string {
+		if meta == nil {
+			localURI, err := cliArgURI(design)
+			if err != nil {
+				return ""
+			}
+			m := viewerLinkMeta(cmd, cmd.Context(), &localLoader{loader: newLoader()}, localURI, spec)
+			meta = &m
+		}
+		return build(*meta)
+	}
 }

@@ -53,6 +53,17 @@ export interface ViewerLocation {
   // It means nothing without `trace`. A link that dropped it would re-ask a NARROWER question
   // wider, so a run that said "no route within 2 crossings" could link to a route.
   traceHops: number;
+  // query is a datalog question the viewer should ask on arrival, in a query tab, "" when none (agni
+  // issue 634). Like `trace` it carries the QUESTION, so it needs no `hash`. title names the tab and
+  // binds are its bound values as `--bind` spells them (`n=GND`, `t="3"`), so the link asks the
+  // question it was minted for rather than a wider one. Both mean nothing without `query`.
+  query: string;
+  title: string;
+  binds: string[];
+  // set and q open one query of the design's project query sets by name (agni issue 634), so a
+  // link to a long query stays short and follows the set's current text. Both or neither.
+  set: string;
+  q: string;
 }
 
 // base is the path the app is served under, "/" on `agni serve` and "/agni/demo/" on the static
@@ -92,7 +103,7 @@ const VIEW_SEGMENT = "view";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0 };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -138,6 +149,15 @@ export function locationToUrl(loc: ViewerLocation): string {
   if (loc.trace) params.set("trace", loc.trace);
   // Only alongside its trace, and only when it is not the server default.
   if (loc.trace && loc.traceHops > 0) params.set("hops", String(loc.traceHops));
+  if (loc.query) {
+    params.set("query", loc.query);
+    if (loc.title) params.set("title", loc.title);
+    for (const b of loc.binds) params.append("bind", b);
+  }
+  if (loc.set && loc.q) {
+    params.set("set", loc.set);
+    params.set("q", loc.q);
+  }
   const q = params.toString();
   return designsPrefix() + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
 }
@@ -183,10 +203,33 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   // back to the server default instead of asking a question nobody wrote.
   const hops = Number(params.get("hops"));
   loc.traceHops = Number.isInteger(hops) && hops > 0 ? hops : 0;
+  loc.query = params.get("query") ?? "";
+  loc.title = loc.query ? (params.get("title") ?? "") : "";
+  loc.binds = loc.query ? params.getAll("bind") : [];
+  const set = params.get("set") ?? "";
+  const member = params.get("q") ?? "";
+  loc.set = set && member ? set : "";
+  loc.q = set && member ? member : "";
   return loc;
 }
 
 // currentLocation reads the browser's current URL into a ViewerLocation.
 export function currentLocation(): ViewerLocation {
   return parseUrl(window.location.pathname, window.location.search);
+}
+
+// bindsFromLink reads a link's `bind` values, each `name=value` as `--bind` spells it, into the query
+// panel's chips. A quoted value is text with its quotes dropped, as ParseBinding reads it; a pair with
+// no name is skipped.
+export function bindsFromLink(binds: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const b of binds) {
+    const at = b.indexOf("=");
+    const name = (at < 0 ? "" : b.slice(0, at)).trim().replace(/^\?/, "");
+    if (!name) continue;
+    let value = b.slice(at + 1);
+    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+    out[name] = value;
+  }
+  return out;
 }

@@ -732,6 +732,14 @@ A table pasted into a ticket is a
 screenshot, and nobody downstream can re-run it, scope it differently, or disagree with it. A view
 carries the question that produced it, so it can be checked the way any other claim can.
 
+**`--server` adds a link that asks the question again in the viewer**, printed as `look at it:` on
+stderr, as `check` and `trace` do. The link carries the query, its `--bind` values and its `--title`
+rather than an answer, so following it re-asks the question of the design as it is now, and
+`--server self` serves the design from the same process until Ctrl-C. A query from a project's set
+(`--set power-review`) links by the set's name and the query's, one link per query, which keeps the
+link short however long the query is. A set read from a file is on no server, so its links carry
+each query's text with the preamble in front.
+
 Two of these behaviours are deliberate:
 
 - **`csv` carries no preamble.** No title, no query, no count, because its first row has to be the

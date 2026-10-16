@@ -101,16 +101,8 @@ func traceCmd() *cobra.Command {
 			// IT GUARDS THE RESOLVED SPEC, not a flag variable. Reading a flag variable here meant
 			// `trace --server <url>` printed no link and no reason once #633 replaced --url-base with
 			// --server (agni issue 636).
-			if srvSpec.url != "" {
-				// Built from this machine's mount table whichever engine answered, as `check` does.
-				localURI, err := cliArgURI(args[0])
-				if err != nil {
-					return err
-				}
-				meta := viewerLinkMeta(cmd, cmd.Context(), ll, localURI, srvSpec)
-				if u := rpt.TraceURL(meta, a.String(), b.String(), hops); u != "" {
-					defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
-				}
+			if u := traceLink(cmd, srvSpec, args[0], a.String(), b.String(), hops); u != "" {
+				defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
 			}
 			// An endpoint that names nothing is a failed QUESTION and exits non-zero. A no-route is
 			// an answer and exits clean, so a script can tell "they are not joined" from "you named
@@ -326,4 +318,22 @@ func traceSheet(p *webapi.Trace) string {
 		}
 	}
 	return ""
+}
+
+// traceLink is the link that asks this trace again in the viewer, or "" when the run asked for none
+// or none is safe to make. It is built from this machine's mount table whichever engine answered, as
+// `check` does, and viewerLinkMeta decides whether a link is safe.
+//
+// It asks spec.active() rather than spec.url, because under --server self the url is empty and the
+// base is the one this process serves; guarding on url printed no link for self at all (agni 634).
+func traceLink(cmd *cobra.Command, spec serverSpec, design, from, to string, hops int) string {
+	if !spec.active() {
+		return ""
+	}
+	localURI, err := cliArgURI(design)
+	if err != nil {
+		return ""
+	}
+	meta := viewerLinkMeta(cmd, cmd.Context(), &localLoader{loader: newLoader()}, localURI, spec)
+	return rpt.TraceURL(meta, from, to, hops)
 }

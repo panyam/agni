@@ -143,7 +143,7 @@ function QueryPanel(props: {
   search: () => SearchItem | null;
   locateNote: () => string;
   setLocateNote: (note: string) => void;
-  prefill: () => { text: string; bindings: Record<string, string>; n: number };
+  prefill: () => { text: string; bindings: Record<string, string>; n: number; title?: string; whole?: boolean };
   selection: () => Selection | null;
   setSelection: (sel: Selection | null) => void;
   currentSheet: () => string;
@@ -324,7 +324,7 @@ function QueryPanel(props: {
   createEffect(() => {
     const p = props.prefill();
     if (!p.n) return;
-    untrack(() => openQuestion(`Query ${++blanks}`, p.text, p.bindings, STARTING_POINT_LIMIT));
+    untrack(() => openQuestion(p.title || `Query ${++blanks}`, p.text, p.bindings, p.whole ? 0 : STARTING_POINT_LIMIT));
   });
 
   // drawerOpen controls the slide-in helper drawer (examples, relations, reference), which keeps
@@ -1062,7 +1062,7 @@ export function queryPanelIsland(
   const [locateNote, setLocateNote] = signalView<string>("");
   // prefill carries a query written FOR the reader. The counter makes asking the same question twice
   // open and run it again, since an effect over identical text does not fire.
-  const [prefill, setPrefill] = signalView<{ text: string; bindings: Record<string, string>; n: number }>({ text: "", bindings: {}, n: 0 });
+  const [prefill, setPrefill] = signalView<{ text: string; bindings: Record<string, string>; n: number; title?: string; whole?: boolean }>({ text: "", bindings: {}, n: 0 });
   let prefills = 0;
   // The served questions about a selection. A signal because the panel RENDERS one (the ask button's
   // hover shows the query and what it teaches) as well as running it.
@@ -1140,7 +1140,8 @@ export function queryPanelIsland(
       setRelations,
       setExamples,
       setLocateNote,
-      setQuery: (text: string, bindings: Record<string, string> = {}) => setPrefill({ text, bindings, n: ++prefills }),
+      setQuery: (text: string, bindings: Record<string, string> = {}, opts: { title?: string; whole?: boolean } = {}) =>
+        setPrefill({ text, bindings, n: ++prefills, ...opts }),
       setEntityQueries,
       setSearch,
       setSelection,
