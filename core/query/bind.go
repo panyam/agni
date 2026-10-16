@@ -72,3 +72,25 @@ func FormatBindings(vals map[string]Value) []string {
 	sort.Strings(out)
 	return out
 }
+
+// BindArgs spells bound values as `--bind` takes them, `n=GND`, `v=3.3`, and `t="3"` for text that
+// would otherwise read as a number, sorted by name, so a value carried somewhere as text (a viewer
+// link, agni issue 634) reads back as the value ParseBinding was given.
+func BindArgs(vals map[string]Value) []string {
+	out := make([]string, 0, len(vals))
+	for k, v := range vals {
+		name := strings.TrimPrefix(k, "?")
+		switch {
+		case v.Num != nil:
+			out = append(out, name+"="+v.S)
+		default:
+			if _, err := strconv.ParseFloat(v.S, 64); err == nil {
+				out = append(out, name+`="`+v.S+`"`)
+			} else {
+				out = append(out, name+"="+v.S)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}

@@ -295,6 +295,40 @@ func TraceURL(meta Report, from, to string, hops int) string {
 	return u
 }
 
+// QueryURL builds the link that asks a query again in a running viewer's query panel, or "" when the
+// caller gave no base (agni issue 634). Like TraceURL it carries the QUESTION, so it takes no content
+// hash: following it re-asks the query of the design as it is now. binds are the values the query was
+// asked with, as `name=value` pairs spelled as `--bind` takes them, so the link asks the same
+// question rather than a wider one; title is the view's heading, "" for none.
+func QueryURL(meta Report, query, title string, binds []string) string {
+	if meta.URLBase == "" || meta.MountPath == "" || strings.TrimSpace(query) == "" {
+		return ""
+	}
+	v := url.Values{}
+	v.Set("query", query)
+	if title != "" {
+		v.Set("title", title)
+	}
+	for _, b := range binds {
+		v.Add("bind", b)
+	}
+	return meta.URLBase + "/designs/" + meta.MountPath + "/view?" + v.Encode()
+}
+
+// QuerySetURL builds the link that opens one query of a project's query set in a running viewer, by
+// the set's and the query's names, or "" when the caller gave no base. A set the project keeps has a
+// name the viewer can find (QueryService.ListQuerySets), so the link stays short however long the
+// query is, and follows the set's current text.
+func QuerySetURL(meta Report, set, query string) string {
+	if meta.URLBase == "" || meta.MountPath == "" || set == "" || query == "" {
+		return ""
+	}
+	v := url.Values{}
+	v.Set("set", set)
+	v.Set("q", query)
+	return meta.URLBase + "/designs/" + meta.MountPath + "/view?" + v.Encode()
+}
+
 // VerdictURL builds the link that opens this verdict's proof in a running viewer, or "" when the
 // caller gave no base.
 //

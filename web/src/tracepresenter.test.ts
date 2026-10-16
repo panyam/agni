@@ -152,6 +152,11 @@ describe("a trace arriving in the URL", () => {
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
       symbols: false, verdict: "", hash: "", rule: "", trace: "U1.3,J1.1", traceHops: 0,
+      query: "",
+      title: "",
+      binds: [],
+      set: "",
+      q: "",
     });
     expect(h.traceDesign).toHaveBeenCalledWith({
       uri: artifactUri("m", "proj/board.edn"),
@@ -168,6 +173,11 @@ describe("a trace arriving in the URL", () => {
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
       symbols: false, verdict: "", hash: "", rule: "", trace: "U1.3,J1.1", traceHops: 2,
+      query: "",
+      title: "",
+      binds: [],
+      set: "",
+      q: "",
     });
     const calls = h.traceDesign.mock.calls;
     expect(calls[calls.length - 1][0].hops).toBe(2);
@@ -178,6 +188,11 @@ describe("a trace arriving in the URL", () => {
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
       symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0,
+      query: "",
+      title: "",
+      binds: [],
+      set: "",
+      q: "",
     });
     expect(h.traceDesign).not.toHaveBeenCalled();
   });

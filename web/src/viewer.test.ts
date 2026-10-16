@@ -1,3 +1,4 @@
+import { emptyLocation } from "./router.js";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { TextPositionSchema } from "./gen/agni/v1/webapi/query_pb.js";
 import { describe, it, expect, vi } from "vitest";
@@ -73,7 +74,7 @@ function harness() {
   // Spies for the ports these tests assert on; every other port defaults to a no-op in
   // stubQueryView, so a method added to QueryView is one edit there rather than a runtime failure
   // in a test that never mentions it. The spies are held separately so they keep their Mock type.
-  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), setState: vi.fn(), clearAnswers: vi.fn(), setQuerySets: vi.fn() };
+  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), setState: vi.fn(), clearAnswers: vi.fn(), setQuerySets: vi.fn(), setQuery: vi.fn(), openSet: vi.fn() };
   // runQuery answers every query with one row naming the query it was asked, so a test can tell
   // which answer landed where.
   const runQuery = vi.fn(async (req: { query: string }) => ({ columns: ["q"], columnKinds: [""], rows: [{ cells: [req.query] }], total: 0 }));
@@ -411,7 +412,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "", rule: "", trace: "", traceHops: 0 });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "", rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -429,7 +430,7 @@ describe("ViewerPresenter", () => {
   // about fifteen seconds, paid again on every click, because each click is a fresh page load.
   describe("a verdict link runs only the rule it names", () => {
     function linkLoc(rule: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, trace: "", traceHops: 0 };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
     }
     // The rules the run actually asked the server for, flattened across calls.
     function asked(h: ReturnType<typeof harness>): string[] {
@@ -473,7 +474,7 @@ describe("ViewerPresenter", () => {
   describe("stale verdict links", () => {
     // A location naming a verdict and the revision it was computed against.
     function linkLoc(hash: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash, rule: "", trace: "", traceHops: 0 };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash, rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
     }
     function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
       h.getDesign.mockResolvedValue({
@@ -544,7 +545,7 @@ describe("ViewerPresenter", () => {
 
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0 });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 
@@ -1417,6 +1418,34 @@ describe("a query that would not parse", () => {
     const last = calls[calls.length - 1];
     expect(last[1]).toBe("q2");
     expect(last[0].errorAt).toBe("component.net(?r ?n)\n              ^");
+  });
+});
+
+// agni issue 634: a query link opens the question in a tab and asks it whole, and a set link opens the
+// named query of the design's project set.
+describe("a query arriving by link", () => {
+  const at = (over: object) => ({ ...emptyLocation(), mount: "m", path: "proj/board.edn", ...over });
+  it("opens a tab with the question, its bindings and title, and asks it whole", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ query: "component.net(?r, ?n), ?n = ?net => ?r", title: "On ground", binds: ["net=GND"] }));
+    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?n), ?n = ?net => ?r", { net: "GND" }, { title: "On ground", whole: true });
+  });
+
+  it("opens the named query of a project set", async () => {
+    const h = harness();
+    h.listQuerySets.mockResolvedValue({
+      project: "projects/p",
+      querySets: [{ name: "power", source: "s", set: { title: "Power", queries: [{ name: "a", query: "x(?r)" }, { name: "Rails", query: "net.rail(?n) => ?n" }] } }],
+    } as never);
+    await h.presenter.restore(at({ set: "power", q: "Rails" }));
+    expect(h.query.openSet).toHaveBeenCalledWith({ title: "Power", queries: [{ name: "Rails", query: "net.rail(?n) => ?n" }] });
+  });
+
+  it("says so when the project keeps no such query", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ set: "power", q: "Gone" }));
+    expect(h.query.openSet).not.toHaveBeenCalled();
+    expect(h.query.setLocateNote).toHaveBeenLastCalledWith(expect.stringContaining('"Gone"'));
   });
 });
 

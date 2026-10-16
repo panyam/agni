@@ -90,7 +90,9 @@ export interface QueryView {
   // setQuery hands the panel a query written FOR the reader, with the values its variables are bound
   // to (agni issue 793). It opens a tab holding the query and its binding chips and runs it, leaving
   // an editable query behind.
-  setQuery: (text: string, bindings?: Record<string, string>) => void;
+  // opts names the tab and asks for the whole answer, which a question arriving by link wants (agni
+  // issue 634); without it the tab is numbered and shows a starting page of rows.
+  setQuery: (text: string, bindings?: Record<string, string>, opts?: { title?: string; whole?: boolean }) => void;
   // setEntityQueries hands over the served questions about a selected entity, several per kind.
   setEntityQueries: (presets: EntityQueryItem[]) => void;
   // setSearch hands over the find-by-name template. Until it arrives the panel offers no search

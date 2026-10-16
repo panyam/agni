@@ -1116,6 +1116,23 @@ describe("query tabs", () => {
   });
 });
 
+// agni issue 634: a question arriving by link opens a tab under the link's title and asks for the
+// whole answer, where a question written for the reader shows a starting page.
+describe("a question handed over with a title", () => {
+  it("names the tab and asks for every row", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setQuery("component.net(?r, ?n) => ?r", { n: "GND" }, { title: "On ground", whole: true });
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?r, ?n) => ?r", { n: "GND" }, 0, expect.any(String));
+    expect([...el.querySelectorAll(".query-tab-go")].map((t) => t.getAttribute("title"))).toContain("On ground");
+  });
+
+  it("still numbers the tab and asks for a starting page without them", () => {
+    const { panel, onRun } = mountPanel();
+    panel.view.setQuery("component.net(?r, ?n) => ?r");
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?r, ?n) => ?r", {}, STARTING_POINT_LIMIT, expect.any(String));
+  });
+});
+
 // agni issue 745: a query set opens as one tab per query, from the project's sets or a file.
 describe("opening a query set", () => {
   const SET = create(QuerySetSchema, {

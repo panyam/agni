@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { emptyLocation, hasDir, hasFile, locationToUrl, parseUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
+import { bindsFromLink, emptyLocation, hasDir, hasFile, locationToUrl, parseUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -196,5 +196,29 @@ describe("the router under a base path, on a static host (agni issue 856)", () =
       setBase("/");
       setStaticHost(false);
     }
+  });
+});
+
+// agni issue 634: a query link carries the question, its title and its bindings, or one query of a
+// project set by name, and reads back as it was written.
+describe("query links", () => {
+  const reparse = (u: string) => {
+    const at = u.indexOf("?");
+    return parseUrl(u.slice(0, at), u.slice(at));
+  };
+  it("round-trips a query with its title and bindings", () => {
+    const loc = { ...emptyLocation(), mount: "m", path: "b.edn", query: "component.net(?r, ?n), ?n = ?net => ?r", title: "On ground", binds: ["net=GND", 't="3"'] };
+    const back = reparse(locationToUrl(loc));
+    expect([back.query, back.title, back.binds]).toEqual([loc.query, loc.title, loc.binds]);
+  });
+
+  it("round-trips a set member by name, and drops a set without its query", () => {
+    const back = reparse(locationToUrl({ ...emptyLocation(), mount: "m", path: "b.edn", set: "power-review", q: "Rails" }));
+    expect([back.set, back.q]).toEqual(["power-review", "Rails"]);
+    expect(parseUrl("/designs/m/b.edn/view", "?set=power-review").set).toBe("");
+  });
+
+  it("reads bindings as --bind spells them, a quoted value as text without its quotes", () => {
+    expect(bindsFromLink(["net=GND", 't="3"', "=x", "v=3.3"])).toEqual({ net: "GND", t: "3", v: "3.3" });
   });
 });

@@ -15,7 +15,7 @@ import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
-import type { ViewerLocation } from "./router.js";
+import { type ViewerLocation, bindsFromLink } from "./router.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
@@ -635,6 +635,29 @@ export class ViewerPresenter {
       const [from, to] = splitTraceParam(loc.trace);
       await this.runTrace(from, to, loc.traceHops);
     }
+    // A query link carries the question too (agni issue 634): the panel opens a tab holding it and
+    // asks it whole, as `agni query` did.
+    if (loc.query) this.views.query?.setQuery(loc.query, bindsFromLink(loc.binds), { title: loc.title, whole: true });
+    if (loc.set && loc.q) await this.openSetMember(loc.set, loc.q);
+  }
+
+  // openSetMember opens one query of the design's project sets, found by the set's name and the
+  // query's, as the Sets menu would open it. A name the project no longer keeps says so in the panel
+  // rather than opening nothing.
+  private async openSetMember(setName: string, name: string): Promise<void> {
+    if (!this.views.query || !this.query || !this.mount || !this.path) return;
+    try {
+      const resp = await this.query.listQuerySets({ designUri: artifactUri(this.mount, this.path) });
+      const set = resp.querySets.find((s) => s.name === setName)?.set;
+      const member = set?.queries.find((q) => q.name === name);
+      if (set && member) {
+        this.views.query.openSet({ ...set, queries: [member] });
+        return;
+      }
+    } catch {
+      // Falls through to the note: a link that cannot be followed says so.
+    }
+    this.views.query.setLocateNote(`This link asks "${name}" from the query set "${setName}", which this design's project does not keep.`);
   }
 
   // currentLoc snapshots the URL-addressable state.
@@ -656,6 +679,13 @@ export class ViewerPresenter {
       // disagrees with the panel.
       trace: this.tracedPins,
       traceHops: this.tracedHops,
+      // A query link is read on arrival and not written back, since the panel's tabs are the reader's
+      // own from then on.
+      query: "",
+      title: "",
+      binds: [],
+      set: "",
+      q: "",
     };
   }
 
