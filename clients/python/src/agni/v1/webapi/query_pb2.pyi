@@ -280,14 +280,16 @@ class NamedQueryResult(_message.Message):
     def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., result: _Optional[_Union[RunQueryResponse, _Mapping]] = ..., error: _Optional[str] = ..., error_at: _Optional[_Union[TextPosition, _Mapping]] = ...) -> None: ...
 
 class TextPosition(_message.Message):
-    __slots__ = ("offset", "line", "column")
+    __slots__ = ("offset", "line", "column", "caret")
     OFFSET_FIELD_NUMBER: _ClassVar[int]
     LINE_FIELD_NUMBER: _ClassVar[int]
     COLUMN_FIELD_NUMBER: _ClassVar[int]
+    CARET_FIELD_NUMBER: _ClassVar[int]
     offset: int
     line: int
     column: int
-    def __init__(self, offset: _Optional[int] = ..., line: _Optional[int] = ..., column: _Optional[int] = ...) -> None: ...
+    caret: str
+    def __init__(self, offset: _Optional[int] = ..., line: _Optional[int] = ..., column: _Optional[int] = ..., caret: _Optional[str] = ...) -> None: ...
 
 class ListQuerySetsRequest(_message.Message):
     __slots__ = ("design_uri",)

@@ -1,0 +1,10 @@
+{
+  "_comment": "Bound values spelled as a query would write them, read by core/query's TestBindingTwin (FormatBindings, the CLI's documents) and the web tier's query.test.ts (formatBinding, the panel's chips), so the two spell a binding alike (agni issue 1045). A string takes no escapes, so text goes between quotes as it is; a number is bare.",
+  "cases": [
+    {"name": "n", "text": "GND", "want": "?n = \"GND\""},
+    {"name": "p", "text": "^U1\\.?$", "want": "?p = \"^U1\\.?$\""},
+    {"name": "v", "number": 3.3, "want": "?v = 3.3"},
+    {"name": "min", "number": 3, "want": "?min = 3"},
+    {"name": "t", "text": "3", "want": "?t = \"3\""}
+  ]
+}

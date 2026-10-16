@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/panyam/agni/core/results"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
@@ -41,11 +42,17 @@ func reportFindings(rep *checkspb.CheckReport) []*checkspb.Finding {
 func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	rep = forDisplay(rep)
 	fmt.Fprintf(w, "# agni check — %s\n\n", rep.GetSource())
-	total := 0
+	// An inconclusive finding is counted apart, as the viewer counts it, since it is not a defect
+	// (agni issue 1045).
+	total, unresolved := 0, 0
 	for _, s := range rep.GetSections() {
+		if s.GetSeverity() == results.UnresolvedSection {
+			unresolved += int(s.GetCount())
+			continue
+		}
 		total += int(s.GetCount())
 	}
-	if total == 0 {
+	if total+unresolved == 0 {
 		fmt.Fprintf(w, "No findings (%d rule(s) run).\n", rep.GetRulesRun())
 		return nil
 	}
@@ -54,7 +61,11 @@ func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	for _, s := range rep.GetSections() {
 		fmt.Fprintf(w, "| %s | %d |\n", s.GetSeverity(), s.GetCount())
 	}
-	fmt.Fprintf(w, "\n%d finding(s), %d rule(s) run.\n", total, rep.GetRulesRun())
+	if unresolved > 0 {
+		fmt.Fprintf(w, "\n%d finding(s) and %d unresolved, %d rule(s) run.\n", total, unresolved, rep.GetRulesRun())
+	} else {
+		fmt.Fprintf(w, "\n%d finding(s), %d rule(s) run.\n", total, rep.GetRulesRun())
+	}
 
 	for _, s := range rep.GetSections() {
 		fmt.Fprintf(w, "\n## %s\n", s.GetSeverity())

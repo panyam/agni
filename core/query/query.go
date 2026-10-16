@@ -104,7 +104,7 @@ func Build(rules []Rule, goal []Literal, sel ...Term) Query { return datalog.Bui
 func Parse(s string) (Query, error) {
 	q, err := datalog.Parse(s)
 	if err != nil {
-		return q, syntaxError(err)
+		return q, syntaxError(err, s)
 	}
 	return q, nil
 }

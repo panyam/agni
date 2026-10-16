@@ -742,5 +742,5 @@ func TextPositionOf(err error) *webapi.TextPosition {
 	if !ok {
 		return nil
 	}
-	return &webapi.TextPosition{Offset: int32(p.Offset), Line: int32(p.Line), Column: int32(p.Column)}
+	return &webapi.TextPosition{Offset: int32(p.Offset), Line: int32(p.Line), Column: int32(p.Column), Caret: p.Caret}
 }

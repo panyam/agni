@@ -521,7 +521,9 @@ export const CheckReportSchema: GenMessage<CheckReport> = /*@__PURE__*/
  */
 export type CheckReport_SeveritySection = Message<"agni.v1.checks.CheckReport.SeveritySection"> & {
   /**
-   * "error" | "warning" | "info" (worst first in `sections`)
+   * severity is "error" | "warning" | "info", worst first in `sections` with an unrecognized
+   * severity ahead of error, and then "unresolved", the section holding every inconclusive finding
+   * whatever severity it carries, since a rule that declined to decide is not a defect.
    *
    * @generated from field: string severity = 1;
    */

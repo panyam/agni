@@ -14,6 +14,9 @@ type Position struct {
 	Offset int // bytes from the start of the text
 	Line   int
 	Column int
+	// Caret is the line of text the position is on with a caret under its column (see Caret), so
+	// every surface draws the one the engine drew. "" when the position is not inside the text.
+	Caret string
 }
 
 // SyntaxError is a query that would not parse, with where in its text the parser stopped. Its
@@ -29,14 +32,16 @@ func (e *SyntaxError) Error() string { return e.err.Error() }
 // Unwrap returns the engine's own parse error.
 func (e *SyntaxError) Unwrap() error { return e.err }
 
-// syntaxError wraps a parse failure with its position, or returns err as it is when the engine gave
-// none.
-func syntaxError(err error) error {
+// syntaxError wraps a parse failure of text with its position and caret, or returns err as it is
+// when the engine gave none.
+func syntaxError(err error, text string) error {
 	var pe *datalog.ParseError
 	if !errors.As(err, &pe) {
 		return err
 	}
-	return &SyntaxError{At: Position{Offset: pe.Offset, Line: pe.Line, Column: pe.Column}, err: err}
+	at := Position{Offset: pe.Offset, Line: pe.Line, Column: pe.Column}
+	at.Caret = Caret(text, at)
+	return &SyntaxError{At: at, err: err}
 }
 
 // ErrorPosition reports where in its query's text err points, when err is a syntax error. An error
@@ -78,9 +83,9 @@ func Caret(text string, p Position) string {
 }
 
 // shifted moves err's position back by the n bytes of text a caller put in front of the query and
-// the lines that text spanned, so it points into the query as its author wrote it. A position
-// inside the prefix is dropped, since it is not in that query's text.
-func shifted(err error, prefix string) error {
+// the lines that text spanned, so it points into the query as its author wrote it, and draws its
+// caret on that text. A position inside the prefix is dropped, since it is not in that query's text.
+func shifted(err error, prefix, text string) error {
 	se, ok := err.(*SyntaxError)
 	if !ok || prefix == "" {
 		return err
@@ -91,5 +96,6 @@ func shifted(err error, prefix string) error {
 	at := se.At
 	at.Offset -= len(prefix)
 	at.Line -= strings.Count(prefix, "\n")
+	at.Caret = Caret(text, at)
 	return &SyntaxError{At: at, err: se.err}
 }

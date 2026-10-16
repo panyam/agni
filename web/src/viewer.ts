@@ -24,7 +24,7 @@ import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
-import { type QueryResult, type QueryView, LocateReason, caretAt, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
+import { type QueryResult, type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
@@ -319,7 +319,7 @@ export class ViewerPresenter {
       this.answers.delete(tab);
       // A query that would not parse carries where it stopped, as an error detail.
       const at = e instanceof ConnectError ? e.findDetails(TextPositionSchema)[0] : undefined;
-      push(errorResult(e instanceof Error ? e.message : String(e), at ? caretAt(text, at.line, at.column) : ""));
+      push(errorResult(e instanceof Error ? e.message : String(e), at?.caret ?? ""));
     }
   }
 
@@ -359,8 +359,7 @@ export class ViewerPresenter {
           push(resultFromResponse(r.result, (ids) => this.sheetBadges(ids)), tab);
         } else {
           this.answers.delete(tab);
-          const at = r.errorAt ? caretAt(set.queries[i]?.query ?? "", r.errorAt.line, r.errorAt.column) : "";
-          push(errorResult(r.error || "This query was not answered.", at), tab);
+          push(errorResult(r.error || "This query was not answered.", r.errorAt?.caret ?? ""), tab);
         }
       });
     } catch (e) {

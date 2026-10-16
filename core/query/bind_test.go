@@ -1,6 +1,8 @@
 package query
 
 import (
+	"encoding/json"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -63,5 +65,39 @@ func TestASetQueryReadsItsBindings(t *testing.T) {
 	}
 	if _, err := ParseQuerySet([]byte("queries:\n  - name: a\n    query: x(?r)\n    bind: {r: [1, 2]}\n")); err == nil {
 		t.Error("a list bound to one variable parsed, want an error")
+	}
+}
+
+// TestBindingTwin holds FormatBindings to testdata/binding_twin.json, which the viewer's chips are
+// tested against too (agni issue 1045).
+func TestBindingTwin(t *testing.T) {
+	b, err := os.ReadFile("testdata/binding_twin.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var twin struct {
+		Cases []struct {
+			Name   string   `json:"name"`
+			Text   *string  `json:"text"`
+			Number *float64 `json:"number"`
+			Want   string   `json:"want"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(b, &twin); err != nil {
+		t.Fatal(err)
+	}
+	if len(twin.Cases) < 4 {
+		t.Fatalf("fixture has %d cases", len(twin.Cases))
+	}
+	for _, c := range twin.Cases {
+		v := Value{}
+		if c.Number != nil {
+			v = Number(*c.Number)
+		} else {
+			v = Text(*c.Text)
+		}
+		if got := FormatBindings(map[string]Value{c.Name: v}); len(got) != 1 || got[0] != c.Want {
+			t.Errorf("FormatBindings(%s) = %q, want %q", c.Name, got, c.Want)
+		}
 	}
 }

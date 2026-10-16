@@ -204,7 +204,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				WorkBudget: budget,
 			})
 			if err != nil {
-				return withCaret(rpcFailed(err), args[1])
+				return withCaret(rpcFailed(err))
 			}
 			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI), orderBy)
 		},
@@ -561,11 +561,12 @@ func parseBindings(args []string) (map[string]query.Value, error) {
 	return out, nil
 }
 
-// withCaret adds the line of text a query that would not parse stopped on, with a caret under the
-// place, read off the error in this process or off the detail a --remote server attached. Any other
-// error is returned as it is.
-func withCaret(err error, text string) error {
+// withCaret adds the line a query that would not parse stopped on, with a caret under the place, as
+// the engine drew it, read off the error in this process or off the detail a --remote server
+// attached. Any other error is returned as it is.
+func withCaret(err error) error {
 	at, ok := query.ErrorPosition(err)
+	caret := at.Caret
 	if !ok {
 		var ce *connect.Error
 		if !errors.As(err, &ce) {
@@ -574,14 +575,13 @@ func withCaret(err error, text string) error {
 		for _, d := range ce.Details() {
 			if v, derr := d.Value(); derr == nil {
 				if tp, isPos := v.(*webapi.TextPosition); isPos {
-					at, ok = query.Position{Offset: int(tp.GetOffset()), Line: int(tp.GetLine()), Column: int(tp.GetColumn())}, true
+					caret = tp.GetCaret()
 				}
 			}
 		}
 	}
-	c := query.Caret(text, at)
-	if !ok || c == "" {
+	if caret == "" {
 		return err
 	}
-	return fmt.Errorf("%w\n  %s", err, strings.ReplaceAll(c, "\n", "\n  "))
+	return fmt.Errorf("%w\n  %s", err, strings.ReplaceAll(caret, "\n", "\n  "))
 }
