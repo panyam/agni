@@ -13,15 +13,13 @@ Last pruned 2026-10-15, at `4433e6de` (PR 1029).
 
 ## At a glance
 
-Three missions are active, one per worktree, and a fourth is filed. `MISSION=mission_<slug> queue.sh` (the retriage
+Two missions are active, one per worktree, and a third is filed. #844 closed on 2026-10-15. `MISSION=mission_<slug> queue.sh` (the retriage
 skill's script) prints one mission's queue, and the order lives in GitHub labels and blocked-by
 links rather than here. Log each exercise run on the mission issue.
 
-- **#844 `mission_real_board_tutorial`**, 7 of 7. #564 moved the ladder onto Jetson, and #116 was
-  parked as `waiting` (Jetson's own schematic already carries `review --render`'s images). The
-  exercise passed at `4433e6de`, so the mission closes once someone reads the rungs end to end by eye.
-- **#845 `mission_browser_review`**, 4 of 16. The exercise is a manual walk with no logged run yet.
-  #902 (a Properties panel and query tabs) is the viewer's next shape.
+- **#845 `mission_browser_review`**, 4 of 17. The first logged walk (4433e6de) broke at the export
+  step: the Review panel cannot save a checklist run (#1030, filed). Picker, runs and clicks all
+  agree with the CLI. #902 (a Properties panel and query tabs) is the next ready ticket.
 - **#851 `mission_public_demo`**, 44 of 67. #1002 (P1) is the only P1, and it needs clean deployed
   runs rather than code: two deployed walks at `4433e6de` opened every seed with the one failure
   #975, so 3 of the 10 clean runs #1002 asks for. Run checks on Jetson took 5.9 s at `18cfe8f6` and
