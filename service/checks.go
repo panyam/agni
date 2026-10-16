@@ -245,7 +245,13 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 		return nil, err
 	}
 	specs := ov.SpecsOver(s.specs)
-	m, err := BuildModelTier(ctx, s.loader, u, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
+	// The entry, never the request URI, which for a design folder names no file a reader takes and
+	// failed every open with invalid_argument while the panel showed nothing (agni issue 736).
+	nu, _, _, err := s.projects.TierURIs(ctx, u, artifact.URI{}, false)
+	if err != nil {
+		return nil, err
+	}
+	m, err := BuildModelTier(ctx, s.loader, nu, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
