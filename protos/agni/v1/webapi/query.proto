@@ -429,6 +429,22 @@ message NamedQueryResult {
   // error says why this query could not be answered: it would not parse, or it named something the
   // design's relations do not have. The query's text is in the request.
   string error = 4;
+  // error_at is where in the query's own text a query that would not parse stopped, so a reader can
+  // be pointed at it. Unset for an error with no place in the text, such as a relation the design's
+  // vocabulary lacks.
+  TextPosition error_at = 5;
+}
+
+// TextPosition is where in a query's text a syntax error points. A RunQuery whose query would not
+// parse fails with invalid_argument carrying one as an error detail, and a set's query carries one
+// in NamedQueryResult.error_at.
+message TextPosition {
+  // offset is in bytes from the start of the text.
+  int32 offset = 1;
+  // line counts from 1.
+  int32 line = 2;
+  // column counts characters, not bytes, from 1, as an editor does.
+  int32 column = 3;
 }
 
 message ListQuerySetsRequest {

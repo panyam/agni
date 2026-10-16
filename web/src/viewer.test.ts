@@ -1,3 +1,5 @@
+import { Code, ConnectError } from "@connectrpc/connect";
+import { TextPositionSchema } from "./gen/agni/v1/webapi/query_pb.js";
 import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
@@ -1342,6 +1344,37 @@ describe("query sets", () => {
     const saved: unknown[] = [];
     await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q2");
     expect(saved).toHaveLength(1);
+  });
+});
+
+// A query that would not parse says where (jaala v0.1.62's ParseError), and the panel shows the line
+// it stopped on with a caret under the place.
+describe("a query that would not parse", () => {
+  it("points at the place, from RunQuery's error detail", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    h.runQuery.mockRejectedValueOnce(
+      new ConnectError("query: variable ?r ?n", Code.InvalidArgument, undefined, [{ desc: TextPositionSchema, value: { offset: 14, line: 1, column: 15 } }]),
+    );
+    await h.presenter.runQuery("component.net(?r ?n)", {}, 0, "q1");
+    const calls = h.query.setState.mock.calls;
+    const last = calls[calls.length - 1][0];
+    expect(last.error).toContain("variable ?r ?n");
+    expect(last.errorAt).toBe("component.net(?r ?n)\n              ^");
+  });
+
+  it("points at the place in a set's query, from its result", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    h.runQueries.mockResolvedValueOnce({
+      results: [{ name: "a", error: "query: variable ?r ?n", errorAt: { offset: 14, line: 1, column: 15 } }],
+    } as never);
+    const set = { title: "T", preamble: "", queries: [{ name: "a", query: "component.net(?r ?n)" }] } as never;
+    await h.presenter.runQuerySet(set, ["q2"]);
+    const calls = h.query.setState.mock.calls;
+    const last = calls[calls.length - 1];
+    expect(last[1]).toBe("q2");
+    expect(last[0].errorAt).toBe("component.net(?r ?n)\n              ^");
   });
 });
 

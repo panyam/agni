@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"connectrpc.com/connect"
 
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/param"
@@ -209,7 +212,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				WorkBudget: budget,
 			})
 			if err != nil {
-				return err
+				return withCaret(err, args[1])
 			}
 			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI), orderBy)
 		},
@@ -487,6 +490,9 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 	ts := rpt.TableSet{Title: resp.GetTitle(), Source: resp.GetSource(), Preamble: resp.GetPreamble()}
 	for i, r := range resp.GetResults() {
 		sec := rpt.TableSection{Name: r.GetName(), Description: r.GetDescription(), Error: r.GetError()}
+		if at := r.GetErrorAt(); at != nil {
+			sec.Error += fmt.Sprintf(" (line %d, column %d of the query)", at.GetLine(), at.GetColumn())
+		}
 		if r.GetResult() != nil {
 			sec.Table = tableFromProto(r.GetResult(), "", r.GetResult().GetQuery(), "")
 		} else {
@@ -586,4 +592,29 @@ func parseBindings(args []string) (map[string]query.Value, error) {
 		out[name] = v
 	}
 	return out, nil
+}
+
+// withCaret adds the line of text a query that would not parse stopped on, with a caret under the
+// place, read off the error in this process or off the detail a --remote server attached. Any other
+// error is returned as it is.
+func withCaret(err error, text string) error {
+	at, ok := query.ErrorPosition(err)
+	if !ok {
+		var ce *connect.Error
+		if !errors.As(err, &ce) {
+			return err
+		}
+		for _, d := range ce.Details() {
+			if v, derr := d.Value(); derr == nil {
+				if tp, isPos := v.(*webapi.TextPosition); isPos {
+					at, ok = query.Position{Offset: int(tp.GetOffset()), Line: int(tp.GetLine()), Column: int(tp.GetColumn())}, true
+				}
+			}
+		}
+	}
+	c := query.Caret(text, at)
+	if !ok || c == "" {
+		return err
+	}
+	return fmt.Errorf("%w\n  %s", err, strings.ReplaceAll(c, "\n", "\n  "))
 }

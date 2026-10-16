@@ -839,7 +839,15 @@ function QueryPanel(props: {
       </div>
 
       <Show when={state().error !== ""}>
-        <div class="query-error">{state().error}</div>
+        <div class="query-error">
+          {state().error}
+          <Show when={state().errorAt}>
+            <pre class="query-error-at">
+              {state().errorAt!.slice(0, state().errorAt!.lastIndexOf("\n") + 1)}
+              <span class="query-error-caret">{state().errorAt!.slice(state().errorAt!.lastIndexOf("\n") + 1)}</span>
+            </pre>
+          </Show>
+        </div>
       </Show>
 
       <Show when={props.locateNote() !== ""}>

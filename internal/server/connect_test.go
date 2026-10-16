@@ -11,6 +11,7 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -46,6 +47,25 @@ func TestToConnectErr(t *testing.T) {
 	// The not-enabled gate carries the actionable hint.
 	if msg := toConnectErr(service.ErrNativeNotEnabled).Error(); !strings.Contains(msg, "--enable-native") {
 		t.Errorf("not-enabled error %q should hint at --enable-native", msg)
+	}
+}
+
+// A query that would not parse reaches a client with where it stopped, as an error detail, so the
+// viewer and a --remote CLI can point at the place. Any other invalid argument carries none.
+func TestAParseErrorCarriesItsPosition(t *testing.T) {
+	_, perr := query.Parse(`component.net(?r ?n)`)
+	ce := toConnectErr(fmt.Errorf("%w: %w", service.ErrInvalidArgument, perr)).(*connect.Error)
+	var at *webapi.TextPosition
+	for _, d := range ce.Details() {
+		if v, err := d.Value(); err == nil {
+			at, _ = v.(*webapi.TextPosition)
+		}
+	}
+	if at.GetLine() != 1 || at.GetColumn() != 15 {
+		t.Errorf("detail %v, want line 1 column 15", at)
+	}
+	if n := len(toConnectErr(fmt.Errorf("%w: no netlist", service.ErrInvalidArgument)).(*connect.Error).Details()); n != 0 {
+		t.Errorf("an error with no position carried %d details", n)
 	}
 }
 

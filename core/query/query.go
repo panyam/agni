@@ -99,8 +99,15 @@ func Def(head Atom, body ...Literal) Rule { return datalog.Def(head, body...) }
 // Build assembles a Query from its rules, the goal literals to solve, and the projected answer terms.
 func Build(rules []Rule, goal []Literal, sel ...Term) Query { return datalog.Build(rules, goal, sel...) }
 
-// Parse parses the query text syntax.
-func Parse(s string) (Query, error) { return datalog.Parse(s) }
+// Parse parses the query text syntax. A query that does not parse fails with a *SyntaxError, which
+// says where in s the parser stopped (ErrorPosition).
+func Parse(s string) (Query, error) {
+	q, err := datalog.Parse(s)
+	if err != nil {
+		return q, syntaxError(err)
+	}
+	return q, nil
+}
 
 // MustParse parses a query string and panics on error, for hand-authored rules constructed at package
 // init, where a malformed built-in query is a programming error surfaced at startup.

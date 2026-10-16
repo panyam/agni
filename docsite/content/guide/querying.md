@@ -65,10 +65,20 @@ component.mpn(?ref, ?mpn), net.max_voltage(?net, ?v), ?v < 30  =>  ?ref, ?net
 
 - `?ref`, `?mpn`, `?net`, `?v` are **variables**, blanks the tool fills in.
 - Reusing a variable **joins**: `?net` in two facts means "the same net in both".
-- `?v < 30` **filters**. Operators: `< <= = != > >=`. Text in double quotes: `"VIN"`. Numbers plain.
+- `?v < 30` **filters**. Operators: `< <= = != > >=`. Text in double quotes: `"VIN"`, taken exactly as
+  written, since a string has no escapes. Numbers plain.
 - `=> ?ref, ?net` picks the answer columns. Omit it to show every variable.
 
 That is the whole language. The examples below build on it.
+
+A query that does not parse says where it stopped. `agni query` prints the line with a caret under
+the place, and the viewer's query panel shows the same under its error:
+
+```
+error: invalid argument: query: variable ?r ?n: a variable's name is letters, digits and _
+  component.net(?r ?n) => ?r
+                ^
+```
 
 ## The five-rung ladder
 
@@ -572,7 +582,8 @@ as one document with a section per query, and `--format json` writes the `RunQue
 message. csv is refused, because one csv file holds one table.
 
 A query that cannot be answered, a misspelled relation for instance, is reported under its own name
-and the rest still answer. The command then exits non-zero, after writing everything, so a script
+and the rest still answer. One that does not parse also names the line and column in its own text,
+counted without the preamble. The command then exits non-zero, after writing everything, so a script
 sees both the answers and the gap. `examples/netlist-audit` is a full audit written this way, and
 it needs no preamble at all, because what its tables share is in the shipped library (below).
 

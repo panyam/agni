@@ -41,6 +41,9 @@ export interface QueryResult {
   // total is how many rows the answer had when a limit cut it to rows (agni issue 896), and 0 when
   // rows is the whole answer. The panel then says how many it left out and offers the rest.
   total: number;
+  // errorAt is the line of query text a query that would not parse stopped on, with a caret under
+  // the place (caretAt), shown under the error. Absent for every other error.
+  errorAt?: string;
 }
 
 // STARTING_POINT_LIMIT caps the rows a question about one picked entity asks for (agni issue 896), so
@@ -320,9 +323,12 @@ export function drawnSheets(resp: RunQueryResponse, kind: string, name: string):
   return [];
 }
 
-// errorResult wraps a failure message (a parse error, or an unloadable design) as panel state.
-export function errorResult(message: string): QueryResult {
-  return { columns: [], columnKinds: [], rows: [], error: message, loading: false, ran: true, total: 0 };
+// errorResult wraps a failure message (a parse error, or an unloadable design) as panel state, with
+// the caret line for a parse error when there is one.
+export function errorResult(message: string, errorAt = ""): QueryResult {
+  const r: QueryResult = { columns: [], columnKinds: [], rows: [], error: message, loading: false, ran: true, total: 0 };
+  if (errorAt) r.errorAt = errorAt;
+  return r;
 }
 
 // reasonMessage renders a locate reason (WS9-039) as the explanation shown when clicking a cell
@@ -342,4 +348,18 @@ export function reasonMessage(reason: LocateReason, kind: string, subject: strin
     default:
       return `Couldn't locate ${kind || "entity"} ${subject} on this view.`;
   }
+}
+
+// caretAt renders the line of text a syntax error points into, with a caret under its column, as
+// core/query's Caret does for the CLI. line and column count from 1 and column counts characters. A
+// tab before the column stays a tab, so the caret lines up however wide tabs are drawn. "" when the
+// position is not in the text.
+export function caretAt(text: string, line: number, column: number): string {
+  const lines = text.split("\n");
+  if (line < 1 || line > lines.length || column < 1) return "";
+  const l = lines[line - 1].replace(/\r$/, "");
+  const chars = [...l];
+  if (column - 1 > chars.length) return "";
+  const pad = chars.slice(0, column - 1).map((c) => (c === "\t" ? "\t" : " ")).join("");
+  return `${l}\n${pad}^`;
 }

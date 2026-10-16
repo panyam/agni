@@ -111,6 +111,14 @@ describe("querypanel", () => {
     expect(el.querySelector(".query-table")).toBeNull();
   });
 
+  it("shows the line a query stopped on with a caret under the place, and none for other errors", () => {
+    const { el, push } = mountPanel();
+    push(errorResult("query: variable ?r ?n", "component.net(?r ?n)\n              ^"));
+    expect(el.querySelector(".query-error-at")!.textContent).toBe("component.net(?r ?n)\n              ^");
+    push(errorResult("unknown relation"));
+    expect(el.querySelector(".query-error-at")).toBeNull();
+  });
+
   it("renders relation chips grouped by kind, sorted by name within a group", () => {
     const { el, pushRelations } = mountPanel();
     // Before the catalog arrives, the panel shows the syntax hint, no chips.

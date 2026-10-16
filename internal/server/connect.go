@@ -46,7 +46,14 @@ func toConnectErr(err error) error {
 	case errors.Is(err, service.ErrResourceExhausted):
 		return connect.NewError(connect.CodeResourceExhausted, err)
 	default: // ErrInvalidPath, ErrInvalidArgument, and anything unclassified
-		return connect.NewError(connect.CodeInvalidArgument, err)
+		ce := connect.NewError(connect.CodeInvalidArgument, err)
+		// A query that would not parse says where, so a client can point at the place in its text.
+		if at := service.TextPositionOf(err); at != nil {
+			if d, derr := connect.NewErrorDetail(at); derr == nil {
+				ce.AddDetail(d)
+			}
+		}
+		return ce
 	}
 }
 
