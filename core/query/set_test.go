@@ -59,13 +59,14 @@ func TestCompiledQueryCarriesThePreamble(t *testing.T) {
 
 func TestQuerySetRejects(t *testing.T) {
 	cases := map[string]struct{ yaml, want string }{
-		"empty file":       {``, "empty file"},
-		"no queries":       {`title: x`, "no queries"},
-		"unknown key":      {"preambel: x\nqueries: [{name: a, query: 'entity(?n,?k)'}]", "preambel"},
-		"unnamed query":    {`queries: [{query: 'entity(?n,?k)'}]`, "query 1 has no name"},
-		"empty query":      {`queries: [{name: a}]`, `"a" has no query`},
-		"repeated name":    {"queries: [{name: a, query: 'entity(?n,?k)'}, {name: a, query: 'entity(?n,?k)'}]", "named twice"},
-		"goal in preamble": {"preamble: 'entity(?n,?k)'\nqueries: [{name: a, query: 'entity(?n,?k)'}]", "rules only"},
+		"empty file":        {``, "empty file"},
+		"no queries":        {`title: x`, "no queries"},
+		"unknown key":       {"preambel: x\nqueries: [{name: a, query: 'entity(?n,?k)'}]", "preambel"},
+		"unknown query key": {"queries:\n  - name: a\n    query: 'entity(?n,?k)'\n    descripton: typo\n", "line 4: field descripton"},
+		"unnamed query":     {`queries: [{query: 'entity(?n,?k)'}]`, "query 1 has no name"},
+		"empty query":       {`queries: [{name: a}]`, `"a" has no query`},
+		"repeated name":     {"queries: [{name: a, query: 'entity(?n,?k)'}, {name: a, query: 'entity(?n,?k)'}]", "named twice"},
+		"goal in preamble":  {"preamble: 'entity(?n,?k)'\nqueries: [{name: a, query: 'entity(?n,?k)'}]", "rules only"},
 	}
 	for name, tc := range cases {
 		_, err := ParseQuerySet([]byte(tc.yaml))

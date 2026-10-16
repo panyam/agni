@@ -35,7 +35,20 @@ type NamedQuery struct {
 
 // UnmarshalYAML reads a query's `bind:` map into typed values. A list or a map is refused, since a
 // bound variable holds one scalar as a constant in the goal does.
+//
+// A key it does not know is refused with its line, as ParseQuerySet refuses one at the top. A custom
+// decoder does not inherit the decoder's KnownFields, so a misspelled `descripton:` used to drop the
+// description with no error.
 func (q *NamedQuery) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			switch k := n.Content[i]; k.Value {
+			case "name", "query", "description", "bind":
+			default:
+				return fmt.Errorf("line %d: field %s not found in a query (want name, query, description, bind)", k.Line, k.Value)
+			}
+		}
+	}
 	type plain NamedQuery
 	var raw struct {
 		plain `yaml:",inline"`
