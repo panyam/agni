@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-16
+
+A server keeps each rule's check results with the design's cached model, so a rule already run on
+an unchanged design answers without evaluating (agni issue 390).  Findings of one rule that tie on
+subject now keep the rule's order.  The full write-up is [RELEASES/v0.2.3.md](RELEASES/v0.2.3.md).
+
 ## [0.2.2] - 2026-10-16
 
 The engine in the browser and a static public demo, the datasheet tooling as its own module and
