@@ -153,3 +153,20 @@ only for the selected rules the run lacks and folds the reply in. Asking for the
 each time was measured on Jetson at 0.3 to 0.8 s in the browser for an answer already on screen,
 where keeping it costs nothing. The rule is one held answer per question, never a second copy of it
 beside the first.
+
+## The document half and the interaction half
+
+The presenter is two objects with a one-way dependency (agni issue 390). `DocumentStore`
+(`web/src/document.ts`) holds what is true of the open design and the configuration it is checked
+under, whatever the reader is doing: the design's identity and sheets, the layouts it offers, the
+rule catalog and the active ruleset, the held check run, the expectation sidecar and the naming
+convention. It owns the requests that fill those, `ListRules` and `CheckDesign`. `ViewerPresenter`
+holds what the reader is doing (selection, focus, highlights, camera, panel tabs, the busy state),
+reads the store through `presenter.doc`, and pushes views.
+
+The direction is the point. Interaction reads the document, and the document never reads
+interaction, since "recompute the verdicts for the selected subject" would make a cycle across what
+may become a WebAssembly boundary, the expensive kind. `document.test.ts` reads `document.ts` and
+fails if it imports an interaction module or names interaction state, with a positive control that
+the same patterns match `viewer.ts`. A field the store gains belongs there only if it holds with no
+reader present; one that changes with a click belongs in the presenter.
