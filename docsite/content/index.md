@@ -17,7 +17,7 @@ hideTitle: true
 <div class="features">
 <div class="feature-card">
 <h3>Many formats, one IR</h3>
-<p>EDIF, KiCad, and IPC-2581 read into a single neutral representation. Checks, diff, query, and rendering are written once and work across every format.</p>
+<p>EDIF, KiCad, IPC-2581, xschem, gEDA and Lepton, and Telesis read into a single neutral representation. Checks, diff, query, and rendering are written once and work across every format.</p>
 <a href="{{.Site.PathPrefix}}/architecture/ingestion-and-ir/">How ingestion works &rarr;</a>
 </div>
 <div class="feature-card">
@@ -51,9 +51,13 @@ hideTitle: true
 <h3>Understand it</h3>
 <p>How the IR, net solving, geometry, diff, rules, the datasheet layer and the web app fit together.</p>
 </a>
+<a href="{{.Site.PathPrefix}}/demo/" class="section-card">
+<h3>Try the demo</h3>
+<p>Open an example board, or drop your own, in the viewer with the engine running in your browser. Nothing to install and nothing uploaded.</p>
+</a>
 <a href="{{.Site.PathPrefix}}/demos/" class="section-card">
-<h3>Demos</h3>
-<p>Try the query engine and the viewer in your browser, running against a seeded corpus.</p>
+<h3>About the demo</h3>
+<p>What the demo holds, why it runs in the browser, and how it relates to agni serve.</p>
 </a>
 </div>
 </div>

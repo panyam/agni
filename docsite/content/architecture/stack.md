@@ -1,10 +1,10 @@
 ---
 title: "Stack and platform"
-description: "The Go engine, the protobuf IR, the optional WebAssembly path, the thin TypeScript view, and the boundaries between them."
+description: "The Go engine, the protobuf IR, the browser engine built from it in WebAssembly, the thin TypeScript view, and the boundaries between them."
 ---
 
 The platform is a Go engine with a protobuf intermediate representation, a thin TypeScript view,
-and WebAssembly as an optional way to reuse the Go logic in the browser. This page records why
+and the same Go engine compiled to WebAssembly so it can run in a visitor's browser. This page records why
 each piece is where it is and where the boundaries fall.
 
 ## The engine is Go
@@ -78,20 +78,29 @@ Text metrics are the one measurement that has to travel the other way, because o
 has them. A presenter laying out labels needs them back, so the contract includes a small
 measurement callback.
 
-## WebAssembly is optional
+## The engine also runs in the browser
 
-WebAssembly is a code-reuse mechanism rather than a speed optimization, and nothing requires it. The shipped
-viewer runs entirely without it, keeping the engine server-side behind the Connect API and a thin
-TypeScript presenter in the browser. WebAssembly enters only if a surface wants to reuse the Go
-diff and IR logic in the browser directly, for an offline or zero-server viewer. A
-high-frequency surface such as an editor would use a TypeScript presenter instead, to avoid a
-per-event boundary crossing.
+The same engine compiles to WebAssembly and runs in a visitor's browser. `cmd/agni-wasm` is the
+binary, and `internal/wasmengine` composes the same services `agni serve` hosts, over in-memory
+mounts rather than host paths. The viewer does not change between the two. It sends the same Connect
+calls, and either `agni serve` or the browser engine answers them, reading the design, running the
+checks and answering the queries, while the viewer only draws.
 
-The order of work is build the viewer, profile it, and push work into WebAssembly only if
-TypeScript cannot keep up. We do not optimize the boundary until a real surface demands it.
+The public demo runs this way because the project hosts no server for it. `agni site` writes the
+viewer, the engine and a few seed designs as static files, and the docs host serves them under
+`/agni/demo/`. A visitor installs nothing, and a design dropped on the page stays in the tab.
+
+The server path still needs no WebAssembly. `agni serve` runs the engine natively, and a page asks
+for the browser engine only through `agni serve --engine wasm` or its own `?engine=`. A design larger
+than `--wasm-max-bytes` goes to the server even then. How the two hosts are held to identical
+answers is in [Web service contract](../web-services/#the-same-contract-in-the-browser).
+
+Both hosts keep the presenter in TypeScript. WebAssembly here runs the analysis, not the drawing, so
+nothing crosses the boundary per frame. A high-frequency surface such as an editor would still use a
+TypeScript presenter, to avoid a per-event boundary crossing.
 
 <details>
-<summary>How the boundary would be kept cheap, if a surface ever needs it</summary>
+<summary>How the boundary would be kept cheap, if a presenter ever runs in WebAssembly</summary>
 
 Go compiled to WebAssembly has higher per-call boundary overhead than a C or Rust equivalent, so
 if the presenter runs in the browser the boundary is designed to carry meaning, not pixels.

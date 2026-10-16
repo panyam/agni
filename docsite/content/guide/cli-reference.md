@@ -70,6 +70,7 @@ Run the rule catalog and report findings. See
 | `--params <dir>` | load a datasheet parameter set, enabling datasheet-backed rules (see [Datasheets](../datasheets/)) |
 | `--board-path <file>` | attach a board that is NOT a declared companion of the design, so board-tier rules resolve instead of finding no copper |
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
+| `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
 ### `review <file>...`
 
@@ -132,6 +133,7 @@ run. Exit codes:
 | `2` | a gate tripped |
 | `1` | the run itself failed: an unreadable design, an invalid manifest, an unknown outcome name |
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
+| `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
 `check --fail-on` uses the same codes, so one CI script can treat every gate in this CLI alike, reading
 `2` as problems in the design and `1` as the tool failing to do its job.
@@ -348,6 +350,7 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--budget <work>` | stop a query once it has done this much work and report it as over budget rather than answer late. 0, the default, sets none. `--format json` reports the work an answer cost as `work`, which is how to choose one (see [Running the server](../running-the-server/#a-work-budget-for-served-queries)) |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default). A view is a thing to hand to someone, so it wants a filename rather than a redirect. The written-file note goes to stderr |
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
+| `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 | `--explain` | print each query's evaluation plan to stderr: the order each rule body ran its literals in, the work and rows each produced, and how each relation was read and which index answered it. The tool for a query that is slower than it should be (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 
 ### `trace <file>`
@@ -375,6 +378,7 @@ pins that are not connected.
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
 | `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not, which it says so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
+| `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
 ### `tabulate <request.json|->`
 
@@ -435,10 +439,15 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--addr <addr>` | listen address (default `:8080`) |
 | `--web-dir <dir>` | the viewer's OWN assets, not designs (default `web`; then `web_dir` in the nearest `agni.yaml`, then `AGNI_WEB_DIR`) |
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
+| `--mount-root <dir>` | expose every subdirectory of this one as a mount named after it, so folders can be bind-mounted in without a `--mount` each; an explicit `--mount` of the same name wins, and a missing root yields no mounts rather than an error |
+| `--engine <server\|wasm>` | which engine the viewer analyses a design on: `server` (the default) or `wasm`, which runs it in the visitor's browser over the design's files and needs `make wasm`; a page's `?engine=` overrides it (see [Analysing in the visitor's browser](../running-the-server/#analysing-in-the-visitors-browser)) |
+| `--wasm-max-bytes <n>` | on the `wasm` engine, the largest design, in bytes of its files, the page analyses in the browser (default 128 MB); a bigger one goes to the server engine and the page says so. A page's `?wasm-max-bytes=` overrides it |
 | `--theme <name>` | render palette: `default` or `dark` |
+| `--conventions <file>` | a naming-convention config (YAML) used as this server's default: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request carrying its own convention replaces this one for that request (see [Naming conventions](../naming-conventions/)) |
 | `--params <dir>` | a directory of published PartSpecs every design is checked against, unless its project has its own `params/` |
 | `--params-url <url>` | read published PartSpecs from a datasheet service instead, such as `agnids serve --corpus` (see [Datasheets](../datasheets/#serving-a-shared-corpus)); not with `--params` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
+| `--datasheets-url <url>` | where the datasheets workbench is served, such as `http://host:8090` for a running `agnids serve`; the landing page links its Datasheets card there, and hides it when this is empty |
 | `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |
