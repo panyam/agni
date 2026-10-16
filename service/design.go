@@ -409,6 +409,7 @@ func reportToProto(r *graph.ConversionReport) *webapi.ConversionReport {
 			DeviceClass: c.Class,
 			Cell:        c.Cell,
 			Kind:        c.Kind,
+			Label:       c.Label(),
 		})
 	}
 	return out

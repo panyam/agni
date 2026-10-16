@@ -1,0 +1,12 @@
+{
+  "_comment": "Each wire Outcome as the word every surface prints, read by service's TestOutcomeTwin (OutcomeWord, and check.Outcome's own values) and the web tier's findings.test.ts (outcomeWord), so the viewer decodes the enum as the engine spells it (agni issue 1045). An unrecognised value is \"unspecified\", never blank.",
+  "outcomes": [
+    {"wire": 0, "word": "unspecified"},
+    {"wire": 1, "word": "pass"},
+    {"wire": 2, "word": "fail"},
+    {"wire": 3, "word": "no-limit"},
+    {"wire": 4, "word": "not-considered"},
+    {"wire": 5, "word": "inconclusive"},
+    {"wire": 99, "word": "unspecified"}
+  ]
+}

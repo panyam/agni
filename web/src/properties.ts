@@ -483,10 +483,10 @@ export interface ReportLines {
 
 export function reportLines(report: ConversionReport | null | undefined): ReportLines | null {
   if (!report || report.components.length === 0) return null;
-  // A glyph is labelled by its device class, anything else by how it was drawn.
+  // Each component's group is the engine's label (a glyph's device class, else how it was drawn).
   const byLabel = new Map<string, string[]>();
   for (const c of report.components) {
-    const label = c.kind === "glyph" ? c.deviceClass : c.kind;
+    const label = c.label;
     const list = byLabel.get(label) ?? [];
     list.push(c.refDes);
     byLabel.set(label, list);

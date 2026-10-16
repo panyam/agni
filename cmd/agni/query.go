@@ -133,20 +133,12 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if err != nil {
 					return err
 				}
-				q, err := query.Parse(args[0])
+				// The service answers the corpus as it answers a design, through one projection (agni
+				// issue 1045), so the CLI builds no response of its own.
+				resp, err := service.NewQueryService(nil, nil, nil).RunSpecLibQuery(cmd.Context(), specs, args[0], filepath.Base(paramsDir), bind)
 				if err != nil {
-					return err
+					return withCaret(rpcFailed(err))
 				}
-				opts := query.EvalOptions(cmd.Context())
-				if len(bind) > 0 {
-					opts = append(opts, query.Bind(bind))
-				}
-				rows, err := query.Default.Eval(cmd.Context(), q, query.NewSpecLibBase(specs), opts...)
-				if err != nil {
-					return err
-				}
-				resp := respFromRows(q, rows, args[0], filepath.Base(paramsDir))
-				resp.Bindings = service.BindingsProto(bind)
 				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)), orderBy)
 			}
 			// A design query goes through the in-process QueryService (WS9-048), the same service and
@@ -524,31 +516,6 @@ func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source stri
 		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r), Why: r.GetCellWhy()})
 	}
 	return t
-}
-
-// respFromRows builds the wire message from the --speclib path's Go rows, which evaluate against the
-// spec library and never go through the service. It exists so BOTH paths render from one shape,
-// and json works on a corpus as well as a design (agni issue 603).
-//
-// It carries no column_kinds. A spec-library answer ranges over a corpus, so no cell names an
-// entity anything could locate.
-func respFromRows(q query.Query, rows []query.Row, queryText, corpus string) *webapi.RunQueryResponse {
-	cols := q.Columns()
-	resp := &webapi.RunQueryResponse{Query: queryText, Source: corpus, Columns: make([]string, 0, len(cols))}
-	for _, c := range cols {
-		resp.Columns = append(resp.Columns, string(c))
-	}
-	sources := service.NewSourceTable(resp)
-	for _, r := range rows {
-		cells := make([]string, 0, len(cols))
-		for _, c := range cols {
-			cells = append(cells, query.Display(r.Bind[c]))
-		}
-		row := &webapi.QueryRow{Cells: cells}
-		sources.Cite(row, r.Cites)
-		resp.Rows = append(resp.Rows, row)
-	}
-	return resp
 }
 
 // addLibraries reads each --lib directory and adds its modules and pages to cfg as values, so the CLI
