@@ -397,12 +397,12 @@ func tupleKey(es []check.Entity) string {
 	return check.VerdictID(check.Verdict{Subjects: es})
 }
 
-// interpolate replaces each {var} in the template with that variable's bound string value in the
-// row; an unbound {var} renders empty (the row could not have been projected without it, so this is
-// belt-and-braces).
+// interpolate replaces each {var} in the template with that variable's bound value in the row, as
+// Display shows it; an unbound {var} renders empty (the row could not have been projected without
+// it, so this is belt-and-braces).
 func interpolate(tmpl string, row Row) string {
 	return placeholderRe.ReplaceAllStringFunc(tmpl, func(m string) string {
-		return row.Bind[Var(m[1:len(m)-1])].S
+		return Display(row.Bind[Var(m[1:len(m)-1])])
 	})
 }
 

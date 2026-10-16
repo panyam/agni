@@ -54,8 +54,11 @@ board.track_width(?n, ?w) => ?n, ?w
 Nets whose thinnest track drops below 0.2 mm:
 
 ```
-board.track_width(?n, ?w), ?w < 0.2 => ?n, ?w
+board.track_width(?n, ?w), ?w < 0.2mm => ?n, ?w
 ```
+
+Write the threshold with its unit. A width is held in metres and shown in millimetres, so a bare
+`0.2` would mean 0.2 m and every net would answer.
 
 Both need a board-bearing design (a `.kicad_pcb` or an IPC-2581 file); on a netlist-only load they
 return nothing.

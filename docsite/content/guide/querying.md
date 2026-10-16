@@ -589,7 +589,10 @@ whose verdicts also say what passed and why.
 
 ### Search the board (any tier, one language)
 
-Board facts query the same way. "Nets routed thinner than 0.3 mm":
+Board facts query the same way. A length is held in metres and every answer shows it in
+millimetres, the unit the board is drawn in, so a threshold over one writes its unit, `?w < 0.3mm`.
+A bare `0.3` would be read as 0.3 m and every net would pass it (agni issue 1035). "Nets routed
+thinner than 0.3 mm":
 
 {{ agniRun "content/guide/runs/query-board-track-width.yaml" }}
 
@@ -597,7 +600,7 @@ And you can **join across the schematic, the datasheet, and the board in one que
 routed thin that carries a high-current part":
 
 ```
-board.track_width(?net,?w), component.net(?ref,?net), component.mpn(?ref,?mpn), param.max(?mpn,"IOUT",?i), ?w < 0.25 => ?net, ?ref, ?i
+board.track_width(?net,?w), component.net(?ref,?net), component.mpn(?ref,?mpn), param.max(?mpn,"IOUT",?i), ?w < 0.25mm => ?net, ?ref, ?i
 ```
 
 ### Follow a rail through passives (reaches)

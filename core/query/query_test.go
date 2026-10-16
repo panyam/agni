@@ -28,9 +28,27 @@ func boardGeom() *geom.BoardGeometry {
 // TestBoardQuery (WS1-041): a board relation is queryable through the same engine with no evaluator
 // change. The query asks for nets routed thinner than 0.1mm.
 func TestBoardQuery(t *testing.T) {
-	rows := runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.1 => ?net, ?w`)
+	rows := runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.1mm => ?net, ?w`)
 	if len(rows) != 1 || rows[0].Bind["net"].S != "SIG" {
 		t.Errorf("rows = %+v, want SIG (0.08mm thin)", rows)
+	}
+	// Shown as the board's own tools print it, in millimetres, whatever the engine folds it to.
+	if len(rows) == 1 && Display(rows[0].Bind["w"]) != "0.08" {
+		t.Errorf("width shows as %q, want 0.08", Display(rows[0].Bind["w"]))
+	}
+}
+
+// Since jaala v0.1.59 the engine folds a millimetre to metres as it reads a fact, so a BARE number
+// compared with a length is metres: 0.1 is a 100 mm track, and both nets are thinner than that
+// (agni issue 1035). A threshold over a length writes its unit, as TestBoardQuery's does.
+func TestABareThresholdOverALengthIsMetres(t *testing.T) {
+	rows := runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.1 => ?net`)
+	if len(rows) != 2 {
+		t.Errorf("rows = %+v, want both nets, since 0.1 m is wider than either", rows)
+	}
+	rows = runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.0001 => ?net`)
+	if len(rows) != 1 || rows[0].Bind["net"].S != "SIG" {
+		t.Errorf("rows = %+v, want SIG alone, since 0.0001 m is 0.1 mm", rows)
 	}
 }
 
@@ -44,7 +62,7 @@ func TestCrossTierJoin(t *testing.T) {
 		Nets:       []*ir.Net{{Name: "SIG", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "x"}}},
 	}
 	m := check.NewModel(d, check.WithBoard(boardGeom()), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
-	rows := runQuery(t, m, `board.track_width(?net,?w), component.net(?ref,?net), component.mpn(?ref,?mpn), ?w < 0.1 => ?net, ?ref, ?mpn`)
+	rows := runQuery(t, m, `board.track_width(?net,?w), component.net(?ref,?net), component.mpn(?ref,?mpn), ?w < 0.1mm => ?net, ?ref, ?mpn`)
 	if len(rows) != 1 || rows[0].Bind["ref"].S != "U1" || rows[0].Bind["mpn"].S != "REG-24" || rows[0].Bind["net"].S != "SIG" {
 		t.Fatalf("cross-tier rows = %+v, want SIG/U1/REG-24", rows)
 	}

@@ -21,8 +21,8 @@ func TestComparingTwoDeclaredUnitsIsRefused(t *testing.T) {
 		return err
 	}
 	err := ask(`net.max_voltage(?n, ?v), board.track_width(?n, ?w), ?v < ?w => ?n`)
-	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "number[V]") || !strings.Contains(err.Error(), "number[mm]") {
-		t.Errorf("volts < millimetres: err = %v, want an invalid argument naming both units", err)
+	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "number[V]") || !strings.Contains(err.Error(), "number[m]") {
+		t.Errorf("volts < metres: err = %v, want an invalid argument naming both units", err)
 	}
 	if err := ask(`net.max_voltage(?n, ?v), net.nominal_voltage(?n, ?w), ?v < ?w => ?n`); err != nil {
 		t.Errorf("volts < volts: err = %v, want it answered", err)
