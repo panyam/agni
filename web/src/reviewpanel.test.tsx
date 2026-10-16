@@ -121,17 +121,21 @@ describe("reviewPanel empty states", () => {
   // The two empty states differ. One says the deployment cannot keep runs at
   // all; the other says nobody has reviewed this board. A user shown the wrong one goes looking for
   // a button that was never going to appear.
-  it("names the flag when the server keeps no reviews, and offers no run control", () => {
-    const { el } = mount({ storeConfigured: false });
+  // agni issue 931: an engine that keeps no store still runs a checklist, held by the page, and the
+  // panel says the run lasts until the reader leaves it.
+  it("names the flag when the server keeps no reviews, and still offers a run", () => {
+    const { el } = mount({ storeConfigured: false, checklists: [{ ref: "proj/review.yaml", label: "review.yaml" }], checklist: "proj/review.yaml" });
+    expect(el.querySelector(".rv-note")!.textContent).toContain("lasts until you leave the page");
     expect(el.textContent).toContain("--review-store");
-    expect(el.querySelector(".rv-run")).toBeNull();
-    expect(el.querySelector(".rv-checklist")).toBeNull();
+    expect((el.querySelector(".rv-run") as HTMLButtonElement).disabled).toBe(false);
+    expect(el.querySelector(".rv-checklist")).not.toBeNull();
   });
 
-  it("names neither a server nor a flag on a static page, and offers no run control", () => {
-    const { el } = mount({ storeConfigured: false }, true);
-    expect(el.textContent).toBe("This demo does not keep review runs, so a checklist cannot be run here.");
-    expect(el.querySelector(".rv-run")).toBeNull();
+  it("names neither a server nor a flag on a static page, and still offers a run", () => {
+    const { el } = mount({ storeConfigured: false, checklists: [{ ref: "proj/review.yaml", label: "review.yaml" }], checklist: "proj/review.yaml" }, true);
+    expect(el.querySelector(".rv-note")!.textContent).toBe("This demo keeps no review runs, so a run here lasts until you leave the page.");
+    expect(el.textContent).not.toContain("--review-store");
+    expect((el.querySelector(".rv-run") as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("invites a first run when the design simply has none", () => {

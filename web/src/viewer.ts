@@ -831,6 +831,8 @@ export class ViewerPresenter {
   // reviewWire holds each run the review panel shows as the server returned it, by name, so Save
   // report sends the run itself and nothing is scored again (agni issue 1030).
   private reviewWire = new Map<string, Review>();
+  // pageRuns numbers the runs this page holds because the engine stored none (agni issue 931).
+  private pageRuns = 0;
 
   // saveReviewReport writes the selected checklist run as the page `agni review --format html` writes,
   // through the same rpc, and downloads it. A failure is said in the panel.
@@ -1165,7 +1167,7 @@ export class ViewerPresenter {
       const manifest =
         chosen?.manifest ??
         (await this.reviews.getReviewManifest({ uri: artifactUri(this.doc.mount, this.reviewState.checklist) })).manifest;
-      const created = await this.reviews.createReview({
+      const req = {
         // Resolved here rather than re-derived by the server, so the run is filed under the project
         // whose config scored it. An empty parent is a real answer, since a design on a mounted
         // folder often belongs to no project.
@@ -1173,7 +1175,23 @@ export class ViewerPresenter {
         designUri: artifactUri(this.doc.mount, this.doc.path),
         manifest,
         overlay: this.overlay(),
-      });
+      };
+      // An engine that keeps no store still scores a checklist with validate_only (agni issue 931),
+      // the browser engine always among them, and this page holds the run instead of a store.
+      let created: Review;
+      if (this.reviewState.storeConfigured) {
+        try {
+          created = await this.reviews.createReview(req);
+        } catch (e) {
+          if (!isStoreUnconfigured(e)) throw e;
+          this.reviewState.storeConfigured = false;
+          created = await this.reviews.createReview({ ...req, validateOnly: true });
+        }
+      } else {
+        created = await this.reviews.createReview({ ...req, validateOnly: true });
+      }
+      // A run nothing stored has no name, so the page names it to tell its runs apart.
+      if (!created.name) created.name = `page/${++this.pageRuns}`;
       const run = reviewFromWire(created);
       this.reviewWire.set(created.name, created);
       // Prepend rather than refetch, since the new run is the newest and the server already handed
@@ -1181,8 +1199,7 @@ export class ViewerPresenter {
       this.reviewState.runs = [run, ...this.reviewState.runs];
       this.reviewState.selected = run.name;
     } catch (e) {
-      if (isStoreUnconfigured(e)) this.reviewState.storeConfigured = false;
-      else this.reviewState.error = messageOf(e);
+      this.reviewState.error = messageOf(e);
     } finally {
       this.reviewState.running = false;
       this.setBusy(false);

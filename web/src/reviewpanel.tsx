@@ -119,20 +119,19 @@ function ReviewPanel(props: {
   const run = () => selectedRun(props.state());
   return (
     <div class="review">
-      <Show
-        when={props.state().storeConfigured}
-        fallback={
-          <Show
-            when={!props.staticHost}
-            fallback={<div class="rv-empty">This demo does not keep review runs, so a checklist cannot be run here.</div>}
-          >
-            <div class="rv-empty">
-              This server does not keep review runs. Start it with <code>--review-store &lt;dir&gt;</code> to
-              run a checklist and keep the result.
-            </div>
-          </Show>
-        }
-      >
+      {/* An engine that keeps no review store still runs a checklist (agni issue 931): the run is held
+          by this page and lasts until the reader leaves it, which the note says. */}
+      <Show when={!props.state().storeConfigured}>
+        <Show
+          when={!props.staticHost}
+          fallback={<div class="rv-note">This demo keeps no review runs, so a run here lasts until you leave the page.</div>}
+        >
+          <div class="rv-note">
+            This server keeps no review runs, so a run here lasts until you leave the page. Start it with{" "}
+            <code>--review-store &lt;dir&gt;</code> to keep them.
+          </div>
+        </Show>
+      </Show>
         <div class="rv-controls">
           <select
             class="rv-checklist"
@@ -223,7 +222,6 @@ function ReviewPanel(props: {
             </div>
           )}
         </Show>
-      </Show>
     </div>
   );
 }

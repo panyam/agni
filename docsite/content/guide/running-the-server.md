@@ -192,7 +192,9 @@ project. See [interface profiles](../interface-profiles/) and
 
 `serve --review-store <dir>` turns review runs into things the server keeps. Without it the server
 still serves everything else, and the review endpoints answer that they store no reviews rather than
-running a checklist and dropping the result.
+storing a run and dropping it. The viewer's Review panel then scores the checklist without storing it
+(`CreateReview` with `validate_only`) and holds the run in the page until you leave it, as it does on
+the browser engine, which keeps no store at all.
 
 The store is a directory the server writes to, so in a container give it its own volume:
 
