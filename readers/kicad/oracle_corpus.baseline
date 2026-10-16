@@ -17,16 +17,16 @@
 #     still disagree about which pins are on which net.
 
 ## jetson-agx-thor-baseboard
-we MERGE into one net "N$154" (pins [U30.15 U30.19 U30.58 U30.8]) -> [unconnected-(U30B-DRAIN1-Pad15)_2 unconnected-(U30B-DRAIN1-Pad15)_3 unconnected-(U30B-DRAIN1-Pad15)_8 unconnected-(U30B-DRAIN1-Pad15)_9]
-we MERGE into one net "N$157" (pins [U65.10 U65.11 U65.28]) -> [unconnected-(U65-GL-Pad10) unconnected-(U65-GL-Pad10)_1 unconnected-(U65-GL-Pad10)_2]
-we MERGE into one net "N$158" (pins [U75.10 U75.11 U75.28]) -> [unconnected-(U75-GL-Pad10) unconnected-(U75-GL-Pad10)_1 unconnected-(U75-GL-Pad10)_2]
-we MERGE into one net "N$159" (pins [U12.10 U12.11 U12.28]) -> [unconnected-(U12-GL-Pad10) unconnected-(U12-GL-Pad10)_1 unconnected-(U12-GL-Pad10)_2]
-we MERGE into one net "N$160" (pins [U11.10 U11.11 U11.28]) -> [unconnected-(U11-GL-Pad10) unconnected-(U11-GL-Pad10)_1 unconnected-(U11-GL-Pad10)_2]
-we MERGE into one net "N$161" (pins [U8.10 U8.11 U8.28]) -> [unconnected-(U8-GL-Pad10) unconnected-(U8-GL-Pad10)_1 unconnected-(U8-GL-Pad10)_2]
-we MERGE into one net "N$162" (pins [U13.10 U13.11 U13.28]) -> [unconnected-(U13-GL-Pad10) unconnected-(U13-GL-Pad10)_1 unconnected-(U13-GL-Pad10)_2]
-we MERGE into one net "N$208" (pins [U36.4 U36.7]) -> [unconnected-(U36-Pad4) unconnected-(U36-Pad4)_1]
-we MERGE into one net "N$209" (pins [U36.5 U36.6]) -> [unconnected-(U36-Pad5) unconnected-(U36-Pad5)_1]
-we MERGE into one net "N$210" (pins [U30.52 U30.56 U30.57 U30.7]) -> [unconnected-(U30C-DRAIN2-Pad52) unconnected-(U30C-DRAIN2-Pad52)_1 unconnected-(U30C-DRAIN2-Pad52)_2 unconnected-(U30C-DRAIN2-Pad52)_9]
+we MERGE into one net "unconnected-(U11-GL-Pad10)" (pins [U11.10 U11.11 U11.28]) -> [unconnected-(U11-GL-Pad10) unconnected-(U11-GL-Pad10)_1 unconnected-(U11-GL-Pad10)_2]
+we MERGE into one net "unconnected-(U12-GL-Pad10)" (pins [U12.10 U12.11 U12.28]) -> [unconnected-(U12-GL-Pad10) unconnected-(U12-GL-Pad10)_1 unconnected-(U12-GL-Pad10)_2]
+we MERGE into one net "unconnected-(U13-GL-Pad10)" (pins [U13.10 U13.11 U13.28]) -> [unconnected-(U13-GL-Pad10) unconnected-(U13-GL-Pad10)_1 unconnected-(U13-GL-Pad10)_2]
+we MERGE into one net "unconnected-(U30B-DRAIN1-Pad15)" (pins [U30.15 U30.19 U30.58 U30.8]) -> [unconnected-(U30B-DRAIN1-Pad15)_2 unconnected-(U30B-DRAIN1-Pad15)_3 unconnected-(U30B-DRAIN1-Pad15)_8 unconnected-(U30B-DRAIN1-Pad15)_9]
+we MERGE into one net "unconnected-(U30C-DRAIN2-Pad52)" (pins [U30.52 U30.56 U30.57 U30.7]) -> [unconnected-(U30C-DRAIN2-Pad52) unconnected-(U30C-DRAIN2-Pad52)_1 unconnected-(U30C-DRAIN2-Pad52)_2 unconnected-(U30C-DRAIN2-Pad52)_9]
+we MERGE into one net "unconnected-(U36-Pad4)" (pins [U36.4 U36.7]) -> [unconnected-(U36-Pad4) unconnected-(U36-Pad4)_1]
+we MERGE into one net "unconnected-(U36-Pad5)" (pins [U36.5 U36.6]) -> [unconnected-(U36-Pad5) unconnected-(U36-Pad5)_1]
+we MERGE into one net "unconnected-(U65-GL-Pad10)" (pins [U65.10 U65.11 U65.28]) -> [unconnected-(U65-GL-Pad10) unconnected-(U65-GL-Pad10)_1 unconnected-(U65-GL-Pad10)_2]
+we MERGE into one net "unconnected-(U75-GL-Pad10)" (pins [U75.10 U75.11 U75.28]) -> [unconnected-(U75-GL-Pad10) unconnected-(U75-GL-Pad10)_1 unconnected-(U75-GL-Pad10)_2]
+we MERGE into one net "unconnected-(U8-GL-Pad10)" (pins [U8.10 U8.11 U8.28]) -> [unconnected-(U8-GL-Pad10) unconnected-(U8-GL-Pad10)_1 unconnected-(U8-GL-Pad10)_2]
 
 ## royalblue54L-feather
 board does not read: sexpr: "("
