@@ -40,6 +40,12 @@ const (
 	// QueryServiceListRelationsProcedure is the fully-qualified name of the QueryService's
 	// ListRelations RPC.
 	QueryServiceListRelationsProcedure = "/agni.v1.webapi.QueryService/ListRelations"
+	// QueryServiceListQuerySetsProcedure is the fully-qualified name of the QueryService's
+	// ListQuerySets RPC.
+	QueryServiceListQuerySetsProcedure = "/agni.v1.webapi.QueryService/ListQuerySets"
+	// QueryServiceParseQuerySetProcedure is the fully-qualified name of the QueryService's
+	// ParseQuerySet RPC.
+	QueryServiceParseQuerySetProcedure = "/agni.v1.webapi.QueryService/ParseQuerySet"
 )
 
 // QueryServiceClient is a client for the agni.v1.webapi.QueryService service.
@@ -68,6 +74,16 @@ type QueryServiceClient interface {
 	// and its members, or one member with its signature and, for a derived relation, its definition.
 	// `agni query --relations <path>` prints the same answer.
 	ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error)
+	// ListQuerySets returns the query sets a design's project keeps (agni issue 745), inherited ones
+	// first, each parsed and named by its file, so a viewer can open one as a tab per query and run
+	// it through RunQueries. A design in no project has none, and that is not an error.
+	ListQuerySets(context.Context, *connect.Request[webapi.ListQuerySetsRequest]) (*connect.Response[webapi.ListQuerySetsResponse], error)
+	// ParseQuerySet reads a query set file's text into the QuerySet RunQueries takes, for a caller
+	// holding the text and no parser, such as a browser given a file the reader picked. It checks
+	// what `agni query --set` checks: an unknown key, no queries, a repeated name, a preamble that
+	// holds a goal. A config value a client does not hold comes from its own rpc (C22), so RunQueries
+	// itself never takes YAML.
+	ParseQuerySet(context.Context, *connect.Request[webapi.ParseQuerySetRequest]) (*connect.Response[webapi.ParseQuerySetResponse], error)
 }
 
 // NewQueryServiceClient constructs a client for the agni.v1.webapi.QueryService service. By
@@ -99,6 +115,18 @@ func NewQueryServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(queryServiceMethods.ByName("ListRelations")),
 			connect.WithClientOptions(opts...),
 		),
+		listQuerySets: connect.NewClient[webapi.ListQuerySetsRequest, webapi.ListQuerySetsResponse](
+			httpClient,
+			baseURL+QueryServiceListQuerySetsProcedure,
+			connect.WithSchema(queryServiceMethods.ByName("ListQuerySets")),
+			connect.WithClientOptions(opts...),
+		),
+		parseQuerySet: connect.NewClient[webapi.ParseQuerySetRequest, webapi.ParseQuerySetResponse](
+			httpClient,
+			baseURL+QueryServiceParseQuerySetProcedure,
+			connect.WithSchema(queryServiceMethods.ByName("ParseQuerySet")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -107,6 +135,8 @@ type queryServiceClient struct {
 	runQuery      *connect.Client[webapi.RunQueryRequest, webapi.RunQueryResponse]
 	runQueries    *connect.Client[webapi.RunQueriesRequest, webapi.RunQueriesResponse]
 	listRelations *connect.Client[webapi.ListRelationsRequest, webapi.ListRelationsResponse]
+	listQuerySets *connect.Client[webapi.ListQuerySetsRequest, webapi.ListQuerySetsResponse]
+	parseQuerySet *connect.Client[webapi.ParseQuerySetRequest, webapi.ParseQuerySetResponse]
 }
 
 // RunQuery calls agni.v1.webapi.QueryService.RunQuery.
@@ -122,6 +152,16 @@ func (c *queryServiceClient) RunQueries(ctx context.Context, req *connect.Reques
 // ListRelations calls agni.v1.webapi.QueryService.ListRelations.
 func (c *queryServiceClient) ListRelations(ctx context.Context, req *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error) {
 	return c.listRelations.CallUnary(ctx, req)
+}
+
+// ListQuerySets calls agni.v1.webapi.QueryService.ListQuerySets.
+func (c *queryServiceClient) ListQuerySets(ctx context.Context, req *connect.Request[webapi.ListQuerySetsRequest]) (*connect.Response[webapi.ListQuerySetsResponse], error) {
+	return c.listQuerySets.CallUnary(ctx, req)
+}
+
+// ParseQuerySet calls agni.v1.webapi.QueryService.ParseQuerySet.
+func (c *queryServiceClient) ParseQuerySet(ctx context.Context, req *connect.Request[webapi.ParseQuerySetRequest]) (*connect.Response[webapi.ParseQuerySetResponse], error) {
+	return c.parseQuerySet.CallUnary(ctx, req)
 }
 
 // QueryServiceHandler is an implementation of the agni.v1.webapi.QueryService service.
@@ -150,6 +190,16 @@ type QueryServiceHandler interface {
 	// and its members, or one member with its signature and, for a derived relation, its definition.
 	// `agni query --relations <path>` prints the same answer.
 	ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error)
+	// ListQuerySets returns the query sets a design's project keeps (agni issue 745), inherited ones
+	// first, each parsed and named by its file, so a viewer can open one as a tab per query and run
+	// it through RunQueries. A design in no project has none, and that is not an error.
+	ListQuerySets(context.Context, *connect.Request[webapi.ListQuerySetsRequest]) (*connect.Response[webapi.ListQuerySetsResponse], error)
+	// ParseQuerySet reads a query set file's text into the QuerySet RunQueries takes, for a caller
+	// holding the text and no parser, such as a browser given a file the reader picked. It checks
+	// what `agni query --set` checks: an unknown key, no queries, a repeated name, a preamble that
+	// holds a goal. A config value a client does not hold comes from its own rpc (C22), so RunQueries
+	// itself never takes YAML.
+	ParseQuerySet(context.Context, *connect.Request[webapi.ParseQuerySetRequest]) (*connect.Response[webapi.ParseQuerySetResponse], error)
 }
 
 // NewQueryServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -177,6 +227,18 @@ func NewQueryServiceHandler(svc QueryServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(queryServiceMethods.ByName("ListRelations")),
 		connect.WithHandlerOptions(opts...),
 	)
+	queryServiceListQuerySetsHandler := connect.NewUnaryHandler(
+		QueryServiceListQuerySetsProcedure,
+		svc.ListQuerySets,
+		connect.WithSchema(queryServiceMethods.ByName("ListQuerySets")),
+		connect.WithHandlerOptions(opts...),
+	)
+	queryServiceParseQuerySetHandler := connect.NewUnaryHandler(
+		QueryServiceParseQuerySetProcedure,
+		svc.ParseQuerySet,
+		connect.WithSchema(queryServiceMethods.ByName("ParseQuerySet")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.QueryService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case QueryServiceRunQueryProcedure:
@@ -185,6 +247,10 @@ func NewQueryServiceHandler(svc QueryServiceHandler, opts ...connect.HandlerOpti
 			queryServiceRunQueriesHandler.ServeHTTP(w, r)
 		case QueryServiceListRelationsProcedure:
 			queryServiceListRelationsHandler.ServeHTTP(w, r)
+		case QueryServiceListQuerySetsProcedure:
+			queryServiceListQuerySetsHandler.ServeHTTP(w, r)
+		case QueryServiceParseQuerySetProcedure:
+			queryServiceParseQuerySetHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -204,4 +270,12 @@ func (UnimplementedQueryServiceHandler) RunQueries(context.Context, *connect.Req
 
 func (UnimplementedQueryServiceHandler) ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.QueryService.ListRelations is not implemented"))
+}
+
+func (UnimplementedQueryServiceHandler) ListQuerySets(context.Context, *connect.Request[webapi.ListQuerySetsRequest]) (*connect.Response[webapi.ListQuerySetsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.QueryService.ListQuerySets is not implemented"))
+}
+
+func (UnimplementedQueryServiceHandler) ParseQuerySet(context.Context, *connect.Request[webapi.ParseQuerySetRequest]) (*connect.Response[webapi.ParseQuerySetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.QueryService.ParseQuerySet is not implemented"))
 }

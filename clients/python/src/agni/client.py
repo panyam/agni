@@ -70,6 +70,17 @@ class Client:
         """
         return self.call("QueryService", "RunQueries", request, **fields)  # type: ignore[return-value]
 
+    def list_query_sets(self, request: Optional[query_pb2.ListQuerySetsRequest] = None, **fields) -> query_pb2.ListQuerySetsResponse:
+        """The query sets the design's project keeps in its ``queries/`` directory, inherited ones
+        first, each parsed. ``run_queries(set=...)`` runs one. An empty ``project`` means the design
+        belongs to none. Connect only."""
+        return self.call("QueryService", "ListQuerySets", request, **fields)  # type: ignore[return-value]
+
+    def parse_query_set(self, request: Optional[query_pb2.ParseQuerySetRequest] = None, **fields) -> query_pb2.ParseQuerySetResponse:
+        """A query set file's ``text`` read into the ``QuerySet`` ``run_queries`` takes, checked as
+        ``agni query --set`` checks it. Connect only."""
+        return self.call("QueryService", "ParseQuerySet", request, **fields)  # type: ignore[return-value]
+
     def tabulate(self, request: Optional[tables_pb2.TabulateRequest] = None, **fields) -> tables_pb2.TabulateResponse:
         """The engine's tables for an answer this client already holds: ``check=`` a CheckDesign
         response, ``query=`` a query answer or ``query_set=`` a set's, with ``order_by`` such as

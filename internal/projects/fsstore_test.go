@@ -386,3 +386,31 @@ func TestParseDesignRefusesIntentNamingAFile(t *testing.T) {
 		t.Fatalf("intent naming a file must fail and say it is declared inline now, got %v", err)
 	}
 }
+
+// TestFSStoreDiscoversQuerySetsAndHonoursAnOptOut covers the queries/ tier (agni issue 745) the way
+// the library test covers lib/: discovered with nothing declared, and off with an empty declaration.
+func TestFSStoreDiscoversQuerySetsAndHonoursAnOptOut(t *testing.T) {
+	for name, c := range map[string]struct {
+		descriptor string
+		want       []string
+	}{
+		"discovered": {"name: p\n", []string{"mount://m/queries"}},
+		"declared":   {"name: p\nqueries: queries\n", []string{"mount://m/queries"}},
+		"opted out":  {"name: p\nqueries: \"\"\n", nil},
+		"elsewhere":  {"name: p\nqueries: shared/tables\n", nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
+				"project.yaml":       c.descriptor,
+				"queries/power.yaml": "queries:\n  - {name: Rails, query: \"net.rail(?n) => ?n\"}\n",
+			})})
+			p, err := s.Project(context.Background(), "projects/p")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := p.GetConfig().GetQuerySetUris(); strings.Join(got, ",") != strings.Join(c.want, ",") {
+				t.Errorf("query set uris = %v, want %v", got, c.want)
+			}
+		})
+	}
+}

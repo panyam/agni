@@ -261,6 +261,15 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Uri: design, Query: query}))
 		return msgOf(r, err)
 	})
+	// A project's query sets are read off its queries/ directory by whichever host serves the page
+	// (agni issue 745). A fixture carrying project config keeps sets, so both listing none is a failure.
+	sets := ask("ListQuerySets", func(c parityClients) (proto.Message, error) {
+		r, err := c.query.ListQuerySets(ctx, connect.NewRequest(&webapi.ListQuerySetsRequest{DesignUri: design}))
+		return msgOf(r, err)
+	}).(*webapi.ListQuerySetsResponse)
+	if ruleFrom != "" && len(sets.GetQuerySets()) == 0 {
+		t.Fatal("ListQuerySets: no sets, so two empty lists would compare equal")
+	}
 	ask("ListDesignFiles", func(c parityClients) (proto.Message, error) {
 		r, err := c.ws.ListDesignFiles(ctx, connect.NewRequest(&webapi.ListDesignFilesRequest{Uri: design}))
 		return msgOf(r, err)

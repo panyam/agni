@@ -10,6 +10,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/query"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/profiles"
@@ -250,6 +251,9 @@ type ResolvedConfig struct {
 	// run under this config reads them through Overlay.Registry.
 	Library     []LibraryModule
 	LibraryDocs map[string]string
+	// QuerySets are the project's query sets (agni issue 745), one per file of a query-set
+	// directory, in file order. Only ListQuerySets reads them.
+	QuerySets []NamedQuerySet
 	// Digest identifies the BYTES this resolution read, so an overlay composed from it can say
 	// whether two runs saw the same config. Empty means this resolver does not report one, which is
 	// legal and costs the overlay its identity (see Overlay.Identity).
@@ -264,7 +268,15 @@ type ResolvedConfig struct {
 // dropping the tier would report a clean run against config that never loaded.
 func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 ||
-		len(cfg.GetSymbolPathUris()) > 0 || len(cfg.GetLibraryUris()) > 0
+		len(cfg.GetSymbolPathUris()) > 0 || len(cfg.GetLibraryUris()) > 0 || len(cfg.GetQuerySetUris()) > 0
+}
+
+// NamedQuerySet is one query set a project keeps: its name (the file's stem), the set, and the file
+// it was read from.
+type NamedQuerySet struct {
+	Name   string
+	Source string
+	Set    query.QuerySet
 }
 
 // OverlayFor composes the engine inputs for one design: the project's config where the design
@@ -371,6 +383,7 @@ func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 		ParamUris:      append(append([]string{}, a.GetParamUris()...), b.GetParamUris()...),
 		SymbolPathUris: append(append([]string{}, a.GetSymbolPathUris()...), b.GetSymbolPathUris()...),
 		LibraryUris:    append(append([]string{}, a.GetLibraryUris()...), b.GetLibraryUris()...),
+		QuerySetUris:   append(append([]string{}, a.GetQuerySetUris()...), b.GetQuerySetUris()...),
 		Checklists:     mergeChecklists(a.GetChecklists(), b.GetChecklists()),
 		Intent:         a.GetIntent(),
 	}

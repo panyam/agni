@@ -276,3 +276,39 @@ class NamedQueryResult(_message.Message):
     result: RunQueryResponse
     error: str
     def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., result: _Optional[_Union[RunQueryResponse, _Mapping]] = ..., error: _Optional[str] = ...) -> None: ...
+
+class ListQuerySetsRequest(_message.Message):
+    __slots__ = ("design_uri",)
+    DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
+    design_uri: str
+    def __init__(self, design_uri: _Optional[str] = ...) -> None: ...
+
+class ListQuerySetsResponse(_message.Message):
+    __slots__ = ("project", "query_sets")
+    PROJECT_FIELD_NUMBER: _ClassVar[int]
+    QUERY_SETS_FIELD_NUMBER: _ClassVar[int]
+    project: str
+    query_sets: _containers.RepeatedCompositeFieldContainer[NamedQuerySet]
+    def __init__(self, project: _Optional[str] = ..., query_sets: _Optional[_Iterable[_Union[NamedQuerySet, _Mapping]]] = ...) -> None: ...
+
+class NamedQuerySet(_message.Message):
+    __slots__ = ("name", "set", "source")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SET_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    set: QuerySet
+    source: str
+    def __init__(self, name: _Optional[str] = ..., set: _Optional[_Union[QuerySet, _Mapping]] = ..., source: _Optional[str] = ...) -> None: ...
+
+class ParseQuerySetRequest(_message.Message):
+    __slots__ = ("text",)
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    text: str
+    def __init__(self, text: _Optional[str] = ...) -> None: ...
+
+class ParseQuerySetResponse(_message.Message):
+    __slots__ = ("set",)
+    SET_FIELD_NUMBER: _ClassVar[int]
+    set: QuerySet
+    def __init__(self, set: _Optional[_Union[QuerySet, _Mapping]] = ...) -> None: ...

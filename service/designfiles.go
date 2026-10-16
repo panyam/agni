@@ -86,7 +86,7 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 			}
 			singles = append(singles, joinPath(pu.Path, ProjectDescriptorName))
 			cfg := project.GetConfig()
-			for _, list := range [][]string{cfg.GetProfileUris(), cfg.GetParamUris(), cfg.GetSymbolPathUris(), cfg.GetLibraryUris()} {
+			for _, list := range [][]string{cfg.GetProfileUris(), cfg.GetParamUris(), cfg.GetSymbolPathUris(), cfg.GetLibraryUris(), cfg.GetQuerySetUris()} {
 				for _, raw := range list {
 					cu, err := artifact.Parse(raw)
 					if err != nil {

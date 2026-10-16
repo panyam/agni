@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIoUECg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFAoMcHJvZmlsZV91cmlzGAMgAygJEhIKCnBhcmFtX3VyaXMYBCADKAkSMgoKY2hlY2tsaXN0cxgMIAMoCzIeLmFnbmkudjEud2ViYXBpLk5hbWVkQ2hlY2tsaXN0EiwKBmludGVudBgNIAEoCzIcLmFnbmkudjEuY29uZmlnLkRlc2lnbkludGVudBIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFKBAgCEANKBAgFEAZKBAgGEAdSD2NvbnZlbnRpb25zX3VyaVINY2hlY2tsaXN0X3VyaVIKaW50ZW50X3VyaSJQCg5OYW1lZENoZWNrbGlzdBIMCgRuYW1lGAEgASgJEjAKCG1hbmlmZXN0GAIgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIp0ECg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFAoMcHJvZmlsZV91cmlzGAMgAygJEhIKCnBhcmFtX3VyaXMYBCADKAkSMgoKY2hlY2tsaXN0cxgMIAMoCzIeLmFnbmkudjEud2ViYXBpLk5hbWVkQ2hlY2tsaXN0EiwKBmludGVudBgNIAEoCzIcLmFnbmkudjEuY29uZmlnLkRlc2lnbkludGVudBIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEhYKDnF1ZXJ5X3NldF91cmlzGA4gAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFKBAgCEANKBAgFEAZKBAgGEAdSD2NvbnZlbnRpb25zX3VyaVINY2hlY2tsaXN0X3VyaVIKaW50ZW50X3VyaSJQCg5OYW1lZENoZWNrbGlzdBIMCgRuYW1lGAEgASgJEjAKCG1hbmlmZXN0GAIgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming]);
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -150,6 +150,16 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
    * @generated from field: repeated string library_uris = 9;
    */
   libraryUris: string[];
+
+  /**
+   * query_set_uris are directories of the project's query sets (agni issue 745), one set per
+   * `<name>.yaml` file in the shape `agni query --set` reads. QueryService.ListQuerySets lists them
+   * by name for a viewer to open, and nothing else reads them, so no run answers differently for
+   * having them. A file that does not parse fails the listing rather than leaving a set out.
+   *
+   * @generated from field: repeated string query_set_uris = 14;
+   */
+  querySetUris: string[];
 
   /**
    * library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller

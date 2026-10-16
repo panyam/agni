@@ -224,7 +224,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	outFileFlag(c, &outPath)
 	c.Flags().Int32Var(&queryLimit, "limit", 0, "answer only the first N rows and say how many were left out (agni issue 896); where the query writes its own limit, the smaller applies. Not taken with --set")
 	c.Flags().BoolVar(&queryOmitLocations, "omit-locations", false, "leave out where each answer cell is drawn (its sheets and locate reason) and skip loading the drawing; for a script that draws nothing, this is most of a large json answer's size")
-	c.Flags().StringVar(&setPath, "set", "", "a query set (YAML, or - for stdin): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
+	c.Flags().StringVar(&setPath, "set", "", "a query set (a .yaml file, - for stdin, or the name of a set in the design's project queries/ directory): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so a net or part column puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
 	c.Flags().StringArrayVar(&bindArgs, "bind", nil, "give a query variable a value, as name=value (repeatable): `--bind n=GND` asks the query with ?n bound to GND, exactly as if \"GND\" were written in its place. A value that parses as a number binds a number; quote it (n=\"3\") to bind text. A name the query does not use is an error")
@@ -392,22 +392,14 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 // answer. Reading the file is the CLI's job; the service takes the set as a value (C22). The whole
 // document is written before any failure is reported, so a script gets the answers that exist and a
 // non-zero exit that says some are missing, rather than either alone.
+//
+// path is a set file, - for stdin, or the name of a set the design's project keeps in its queries/
+// directory (agni issue 745), which ListQuerySets answers as it does for the viewer. Only a name
+// ending .yaml or .yml is read as a file, the rule --checklist follows.
 func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI string, overlay *webapi.OverlayConfig, format, title string, budget int64) error {
-	var b []byte
-	var err error
-	if path == "-" {
-		// The Python client's CLI transport pipes a set in on stdin rather than writing a file.
-		path = "stdin"
-		b, err = io.ReadAll(cmd.InOrStdin())
-	} else {
-		b, err = os.ReadFile(path)
-	}
+	set, path, err := readQuerySet(cmd, svc, path, designURI)
 	if err != nil {
 		return err
-	}
-	set, err := query.ParseQuerySet(b)
-	if err != nil {
-		return fmt.Errorf("%s: %w", path, err)
 	}
 	if title != "" {
 		set.Title = title
@@ -432,6 +424,53 @@ func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI str
 		return fmt.Errorf("%d of %d queries in %s could not be answered", failed, len(resp.GetResults()), path)
 	}
 	return nil
+}
+
+// readQuerySet reads the set --set names, and the name to report it under.
+func readQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI string) (query.QuerySet, string, error) {
+	var b []byte
+	var err error
+	switch {
+	case path == "-":
+		// The Python client's CLI transport pipes a set in on stdin rather than writing a file.
+		path = "stdin"
+		b, err = io.ReadAll(cmd.InOrStdin())
+	case strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml"):
+		b, err = os.ReadFile(path)
+	default:
+		return projectQuerySet(cmd, svc, path, designURI)
+	}
+	if err != nil {
+		return query.QuerySet{}, path, err
+	}
+	set, err := query.ParseQuerySet(b)
+	if err != nil {
+		return query.QuerySet{}, path, fmt.Errorf("%s: %w", path, err)
+	}
+	return set, path, nil
+}
+
+// projectQuerySet finds the set called name among those the design's project keeps, and names the
+// ones it does keep when there is no such set.
+func projectQuerySet(cmd *cobra.Command, svc queryAPI, name, designURI string) (query.QuerySet, string, error) {
+	resp, err := svc.ListQuerySets(cmd.Context(), &webapi.ListQuerySetsRequest{DesignUri: designURI})
+	if err != nil {
+		return query.QuerySet{}, name, err
+	}
+	var have []string
+	for _, s := range resp.GetQuerySets() {
+		if s.GetName() == name {
+			return service.QuerySetFromProto(s.GetSet()), s.GetSource(), nil
+		}
+		have = append(have, s.GetName())
+	}
+	switch {
+	case resp.GetProject() == "":
+		return query.QuerySet{}, name, fmt.Errorf("--set %s: the design belongs to no project, so only a set file (.yaml) can be named", name)
+	case len(have) == 0:
+		return query.QuerySet{}, name, fmt.Errorf("--set %s: %s keeps no query sets (a queries/ directory of .yaml files)", name, resp.GetProject())
+	}
+	return query.QuerySet{}, name, fmt.Errorf("--set %s: %s keeps no set by that name; it keeps %s", name, resp.GetProject(), strings.Join(have, ", "))
 }
 
 // renderQuerySet writes a set's answers in the requested format. json is the wire message, as for a

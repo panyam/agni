@@ -282,6 +282,22 @@ func (a *Query) ListRelations(ctx context.Context, req *connect.Request[webapi.L
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Query) ListQuerySets(ctx context.Context, req *connect.Request[webapi.ListQuerySetsRequest]) (*connect.Response[webapi.ListQuerySetsResponse], error) {
+	resp, err := a.svc.ListQuerySets(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Query) ParseQuerySet(ctx context.Context, req *connect.Request[webapi.ParseQuerySetRequest]) (*connect.Response[webapi.ParseQuerySetResponse], error) {
+	resp, err := a.svc.ParseQuerySet(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Check) GetNamingConvention(ctx context.Context, req *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error) {
 	resp, err := a.svc.GetNamingConvention(ctx, req.Msg)
 	if err != nil {

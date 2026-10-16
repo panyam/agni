@@ -152,6 +152,7 @@ type (
 	queryAPI interface {
 		RunQuery(context.Context, *webapi.RunQueryRequest) (*webapi.RunQueryResponse, error)
 		RunQueries(context.Context, *webapi.RunQueriesRequest) (*webapi.RunQueriesResponse, error)
+		ListQuerySets(context.Context, *webapi.ListQuerySetsRequest) (*webapi.ListQuerySetsResponse, error)
 	}
 	traceAPI interface {
 		TraceDesign(context.Context, *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error)
@@ -205,6 +206,10 @@ func (r remoteQuery) RunQuery(ctx context.Context, req *webapi.RunQueryRequest) 
 
 func (r remoteQuery) RunQueries(ctx context.Context, req *webapi.RunQueriesRequest) (*webapi.RunQueriesResponse, error) {
 	return unary(ctx, r.c.RunQueries, req)
+}
+
+func (r remoteQuery) ListQuerySets(ctx context.Context, req *webapi.ListQuerySetsRequest) (*webapi.ListQuerySetsResponse, error) {
+	return unary(ctx, r.c.ListQuerySets, req)
 }
 
 type remoteTrace struct {

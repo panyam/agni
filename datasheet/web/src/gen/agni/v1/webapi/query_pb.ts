@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkizAIKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEj8KCGJpbmRpbmdzGAcgAygLMi0uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0LkJpbmRpbmdzRW50cnkSFgoOb21pdF9sb2NhdGlvbnMYCCABKAgSDQoFbGltaXQYCSABKAUaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASKvAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkSEwoLY2VsbF9lbnRpdHkYByADKAUSEgoKY2l0ZV9pbmRleBgIIAMoBRIQCghjZWxsX3doeRgJIAMoCUoECAIQA0oECAMQBEoECAQQBVIFY2l0ZXNSC2NlbGxfc2hlZXRzUgxjZWxsX3JlYXNvbnMidwoMQW5zd2VyRW50aXR5EgwKBGtpbmQYASABKAkSCwoDcmVmGAIgASgJEgsKA3BpbhgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkSLAoGcmVhc29uGAUgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uIu0CChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAxJACghiaW5kaW5ncxgHIAMoCzIuLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2UuQmluZGluZ3NFbnRyeRIuCghlbnRpdGllcxgIIAMoCzIcLmFnbmkudjEud2ViYXBpLkFuc3dlckVudGl0eRIPCgdzb3VyY2VzGAkgAygJEg0KBXRvdGFsGAogASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEiNgoKUXVlcnlWYWx1ZRIOCgR0ZXh0GAEgASgJSAASEAoGbnVtYmVyGAIgASgBSABCBgoEa2luZCJhChRMaXN0UmVsYXRpb25zUmVxdWVzdBIMCgRwYXRoGAEgASgJEgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyKAAQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCXNpZ25hdHVyZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJIscBCg1SZWxhdGlvbkVudHJ5EgwKBHBhdGgYASABKAkSEgoKZW50cnlfa2luZBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkSCwoDZG9jGAQgASgJEg4KBmRldGFpbBgFIAEoCRIOCgZtb2R1bGUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCRIQCghpbmZlcnJlZBgIIAMoCRIuCgdtZW1iZXJzGAkgAygLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSI9CgxFeGFtcGxlUXVlcnkSDQoFbGFiZWwYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSJZCgtFbnRpdHlRdWVyeRIMCgRraW5kGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkSDQoFYmluZHMYBCADKAkSDQoFbGFiZWwYBSABKAkiTAoLU2VhcmNoUXVlcnkSDQoFcXVlcnkYASABKAkSDwoHdGVhY2hlcxgCIAEoCRIMCgRiaW5kGAMgASgJEg8KB3BhdHRlcm4YBCABKAkijgIKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkSMwoOZW50aXR5X3F1ZXJpZXMYAyADKAsyGy5hZ25pLnYxLndlYmFwaS5FbnRpdHlRdWVyeRIxCgxzZWFyY2hfcXVlcnkYBCABKAsyGy5hZ25pLnYxLndlYmFwaS5TZWFyY2hRdWVyeRIsCgVlbnRyeRgFIAEoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiWAoIUXVlcnlTZXQSDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSKwoHcXVlcmllcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkixwEKCk5hbWVkUXVlcnkSDAoEbmFtZRgBIAEoCRINCgVxdWVyeRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI6CghiaW5kaW5ncxgEIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkuQmluZGluZ3NFbnRyeRpLCg1CaW5kaW5nc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEud2ViYXBpLlF1ZXJ5VmFsdWU6AjgBIskBChFSdW5RdWVyaWVzUmVxdWVzdBIlCgNzZXQYASABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBILCgN1cmkYAiABKAkSLgoHb3ZlcmxheRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSEQoJYm9hcmRfdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEhYKDm9taXRfbG9jYXRpb25zGAcgASgIIngKElJ1blF1ZXJpZXNSZXNwb25zZRINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIOCgZzb3VyY2UYAyABKAkSMQoHcmVzdWx0cxgEIAMoCzIgLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnlSZXN1bHQidgoQTmFtZWRRdWVyeVJlc3VsdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEjAKBnJlc3VsdBgDIAEoCzIgLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USDQoFZXJyb3IYBCABKAkykAIKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USUwoKUnVuUXVlcmllcxIhLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1Jlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkizAIKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEj8KCGJpbmRpbmdzGAcgAygLMi0uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0LkJpbmRpbmdzRW50cnkSFgoOb21pdF9sb2NhdGlvbnMYCCABKAgSDQoFbGltaXQYCSABKAUaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASKvAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkSEwoLY2VsbF9lbnRpdHkYByADKAUSEgoKY2l0ZV9pbmRleBgIIAMoBRIQCghjZWxsX3doeRgJIAMoCUoECAIQA0oECAMQBEoECAQQBVIFY2l0ZXNSC2NlbGxfc2hlZXRzUgxjZWxsX3JlYXNvbnMidwoMQW5zd2VyRW50aXR5EgwKBGtpbmQYASABKAkSCwoDcmVmGAIgASgJEgsKA3BpbhgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkSLAoGcmVhc29uGAUgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uIu0CChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAxJACghiaW5kaW5ncxgHIAMoCzIuLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2UuQmluZGluZ3NFbnRyeRIuCghlbnRpdGllcxgIIAMoCzIcLmFnbmkudjEud2ViYXBpLkFuc3dlckVudGl0eRIPCgdzb3VyY2VzGAkgAygJEg0KBXRvdGFsGAogASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEiNgoKUXVlcnlWYWx1ZRIOCgR0ZXh0GAEgASgJSAASEAoGbnVtYmVyGAIgASgBSABCBgoEa2luZCJhChRMaXN0UmVsYXRpb25zUmVxdWVzdBIMCgRwYXRoGAEgASgJEgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyKAAQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCXNpZ25hdHVyZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJIscBCg1SZWxhdGlvbkVudHJ5EgwKBHBhdGgYASABKAkSEgoKZW50cnlfa2luZBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkSCwoDZG9jGAQgASgJEg4KBmRldGFpbBgFIAEoCRIOCgZtb2R1bGUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCRIQCghpbmZlcnJlZBgIIAMoCRIuCgdtZW1iZXJzGAkgAygLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSI9CgxFeGFtcGxlUXVlcnkSDQoFbGFiZWwYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSJZCgtFbnRpdHlRdWVyeRIMCgRraW5kGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkSDQoFYmluZHMYBCADKAkSDQoFbGFiZWwYBSABKAkiTAoLU2VhcmNoUXVlcnkSDQoFcXVlcnkYASABKAkSDwoHdGVhY2hlcxgCIAEoCRIMCgRiaW5kGAMgASgJEg8KB3BhdHRlcm4YBCABKAkijgIKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkSMwoOZW50aXR5X3F1ZXJpZXMYAyADKAsyGy5hZ25pLnYxLndlYmFwaS5FbnRpdHlRdWVyeRIxCgxzZWFyY2hfcXVlcnkYBCABKAsyGy5hZ25pLnYxLndlYmFwaS5TZWFyY2hRdWVyeRIsCgVlbnRyeRgFIAEoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiWAoIUXVlcnlTZXQSDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSKwoHcXVlcmllcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkixwEKCk5hbWVkUXVlcnkSDAoEbmFtZRgBIAEoCRINCgVxdWVyeRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI6CghiaW5kaW5ncxgEIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkuQmluZGluZ3NFbnRyeRpLCg1CaW5kaW5nc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEud2ViYXBpLlF1ZXJ5VmFsdWU6AjgBIskBChFSdW5RdWVyaWVzUmVxdWVzdBIlCgNzZXQYASABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBILCgN1cmkYAiABKAkSLgoHb3ZlcmxheRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSEQoJYm9hcmRfdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEhYKDm9taXRfbG9jYXRpb25zGAcgASgIIngKElJ1blF1ZXJpZXNSZXNwb25zZRINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIOCgZzb3VyY2UYAyABKAkSMQoHcmVzdWx0cxgEIAMoCzIgLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnlSZXN1bHQidgoQTmFtZWRRdWVyeVJlc3VsdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEjAKBnJlc3VsdBgDIAEoCzIgLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USDQoFZXJyb3IYBCABKAkiKgoUTGlzdFF1ZXJ5U2V0c1JlcXVlc3QSEgoKZGVzaWduX3VyaRgBIAEoCSJbChVMaXN0UXVlcnlTZXRzUmVzcG9uc2USDwoHcHJvamVjdBgBIAEoCRIxCgpxdWVyeV9zZXRzGAIgAygLMh0uYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeVNldCJUCg1OYW1lZFF1ZXJ5U2V0EgwKBG5hbWUYASABKAkSJQoDc2V0GAIgASgLMhguYWduaS52MS53ZWJhcGkuUXVlcnlTZXQSDgoGc291cmNlGAMgASgJIiQKFFBhcnNlUXVlcnlTZXRSZXF1ZXN0EgwKBHRleHQYASABKAkiPgoVUGFyc2VRdWVyeVNldFJlc3BvbnNlEiUKA3NldBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5U2V0MswDCgxRdWVyeVNlcnZpY2USTQoIUnVuUXVlcnkSHy5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlcXVlc3QaIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlElMKClJ1blF1ZXJpZXMSIS5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXNwb25zZRJcCg1MaXN0UmVsYXRpb25zEiQuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVzcG9uc2USXAoNTGlzdFF1ZXJ5U2V0cxIkLmFnbmkudjEud2ViYXBpLkxpc3RRdWVyeVNldHNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFF1ZXJ5U2V0c1Jlc3BvbnNlElwKDVBhcnNlUXVlcnlTZXQSJC5hZ25pLnYxLndlYmFwaS5QYXJzZVF1ZXJ5U2V0UmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlBhcnNlUXVlcnlTZXRSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -975,6 +975,116 @@ export const NamedQueryResultSchema: GenMessage<NamedQueryResult> = /*@__PURE__*
   messageDesc(file_agni_v1_webapi_query, 16);
 
 /**
+ * @generated from message agni.v1.webapi.ListQuerySetsRequest
+ */
+export type ListQuerySetsRequest = Message<"agni.v1.webapi.ListQuerySetsRequest"> & {
+  /**
+   * design_uri is the design whose project's query sets are listed.
+   *
+   * @generated from field: string design_uri = 1;
+   */
+  designUri: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListQuerySetsRequest.
+ * Use `create(ListQuerySetsRequestSchema)` to create a new message.
+ */
+export const ListQuerySetsRequestSchema: GenMessage<ListQuerySetsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 17);
+
+/**
+ * @generated from message agni.v1.webapi.ListQuerySetsResponse
+ */
+export type ListQuerySetsResponse = Message<"agni.v1.webapi.ListQuerySetsResponse"> & {
+  /**
+   * project is the resource name of the design's project, "projects/{project}", empty when the
+   * design belongs to none.
+   *
+   * @generated from field: string project = 1;
+   */
+  project: string;
+
+  /**
+   * @generated from field: repeated agni.v1.webapi.NamedQuerySet query_sets = 2;
+   */
+  querySets: NamedQuerySet[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListQuerySetsResponse.
+ * Use `create(ListQuerySetsResponseSchema)` to create a new message.
+ */
+export const ListQuerySetsResponseSchema: GenMessage<ListQuerySetsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 18);
+
+/**
+ * NamedQuerySet is one query set a project keeps. name is its file's stem, which is what a viewer
+ * lists, and source the file it was read from, for a reader asking where it lives.
+ *
+ * @generated from message agni.v1.webapi.NamedQuerySet
+ */
+export type NamedQuerySet = Message<"agni.v1.webapi.NamedQuerySet"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: agni.v1.webapi.QuerySet set = 2;
+   */
+  set?: QuerySet | undefined;
+
+  /**
+   * @generated from field: string source = 3;
+   */
+  source: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.NamedQuerySet.
+ * Use `create(NamedQuerySetSchema)` to create a new message.
+ */
+export const NamedQuerySetSchema: GenMessage<NamedQuerySet> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 19);
+
+/**
+ * @generated from message agni.v1.webapi.ParseQuerySetRequest
+ */
+export type ParseQuerySetRequest = Message<"agni.v1.webapi.ParseQuerySetRequest"> & {
+  /**
+   * text is the set file's contents.
+   *
+   * @generated from field: string text = 1;
+   */
+  text: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ParseQuerySetRequest.
+ * Use `create(ParseQuerySetRequestSchema)` to create a new message.
+ */
+export const ParseQuerySetRequestSchema: GenMessage<ParseQuerySetRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 20);
+
+/**
+ * @generated from message agni.v1.webapi.ParseQuerySetResponse
+ */
+export type ParseQuerySetResponse = Message<"agni.v1.webapi.ParseQuerySetResponse"> & {
+  /**
+   * @generated from field: agni.v1.webapi.QuerySet set = 1;
+   */
+  set?: QuerySet | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ParseQuerySetResponse.
+ * Use `create(ParseQuerySetResponseSchema)` to create a new message.
+ */
+export const ParseQuerySetResponseSchema: GenMessage<ParseQuerySetResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 21);
+
+/**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004
  * fact base, the same relations the rules assert over) and returns the answer rows with provenance.
  * A geometry-only file with no netlist is an invalid argument; a malformed query is an invalid
@@ -1030,6 +1140,32 @@ export const QueryService: GenService<{
     methodKind: "unary";
     input: typeof ListRelationsRequestSchema;
     output: typeof ListRelationsResponseSchema;
+  },
+  /**
+   * ListQuerySets returns the query sets a design's project keeps (agni issue 745), inherited ones
+   * first, each parsed and named by its file, so a viewer can open one as a tab per query and run
+   * it through RunQueries. A design in no project has none, and that is not an error.
+   *
+   * @generated from rpc agni.v1.webapi.QueryService.ListQuerySets
+   */
+  listQuerySets: {
+    methodKind: "unary";
+    input: typeof ListQuerySetsRequestSchema;
+    output: typeof ListQuerySetsResponseSchema;
+  },
+  /**
+   * ParseQuerySet reads a query set file's text into the QuerySet RunQueries takes, for a caller
+   * holding the text and no parser, such as a browser given a file the reader picked. It checks
+   * what `agni query --set` checks: an unknown key, no queries, a repeated name, a preamble that
+   * holds a goal. A config value a client does not hold comes from its own rpc (C22), so RunQueries
+   * itself never takes YAML.
+   *
+   * @generated from rpc agni.v1.webapi.QueryService.ParseQuerySet
+   */
+  parseQuerySet: {
+    methodKind: "unary";
+    input: typeof ParseQuerySetRequestSchema;
+    output: typeof ParseQuerySetResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_query, 0);
